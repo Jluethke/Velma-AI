@@ -29,12 +29,26 @@ const PROFILE = {
         },
     ],
 
+    // Contact links shown in the sidebar
+    // Each has a label and url. Leave empty [] to hide the section.
+    contacts: [
+        { label: "GitHub", url: "https://github.com/Jluethke" },
+    ],
+
     // Quick prompt buttons shown in the sidebar
     quickPrompts: [
         "What are you working on?",
         "Tell me about your projects",
         "What tech do you use?",
         "How can I reach you?",
+    ],
+
+    // Quick reply templates — saved phrases you can send with one click.
+    // These appear in a separate sidebar section. Leave empty [] to hide.
+    quickReplies: [
+        "Tell me more about that",
+        "Can you give an example?",
+        "What else should I know?",
     ],
 
     // The welcome message shown when the chat starts
