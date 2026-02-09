@@ -19,19 +19,14 @@ const PROFILE = {
         "Hey! I'm Jluethke. Ask me about my projects, what I'm working on, my interests, or anything else. This AI assistant is powered by Claude and knows about me and my work.",
 
     // Projects listed in the sidebar
-    // Each project has a name, url (optional), and description
+    // These are defaults — they get overridden by projects.txt if it exists.
+    // To add/edit projects, edit projects.txt instead of this file.
     projects: [
         {
             name: "Velma-AI",
             url: "https://github.com/Jluethke/Velma-AI",
             description: "This personal AI chatbot website",
         },
-        // Add more projects here:
-        // {
-        //     name: "Project Name",
-        //     url: "https://github.com/Jluethke/project",
-        //     description: "Short description of the project",
-        // },
     ],
 
     // Quick prompt buttons shown in the sidebar

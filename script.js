@@ -31,6 +31,7 @@
     // ---- Initialize ----
     function init() {
         populateSidebar();
+        loadProjectsFile();
 
         if (apiKey) {
             showApp();
@@ -39,6 +40,75 @@
         }
 
         bindEvents();
+    }
+
+    // ---- Load projects.txt ----
+    async function loadProjectsFile() {
+        try {
+            const response = await fetch("projects.txt");
+            if (!response.ok) return;
+            const text = await response.text();
+            const projects = parseProjectsTxt(text);
+            if (projects.length === 0) return;
+
+            // Update PROFILE with loaded projects
+            PROFILE.projects = projects;
+
+            // Rebuild the projects section of the system prompt
+            const projectLines = projects.map((p) => {
+                const details = p.details || p.description || "";
+                return `- **${p.name}**: ${details}`;
+            });
+            const projectsSection =
+                "## Projects\n" + projectLines.join("\n");
+
+            // Replace the existing ## Projects section in the system prompt
+            PROFILE.systemPrompt = PROFILE.systemPrompt.replace(
+                /## Projects[\s\S]*?(?=\n## |$)/,
+                projectsSection + "\n"
+            );
+
+            // Re-render sidebar with new projects
+            populateSidebar();
+        } catch (e) {
+            // If projects.txt can't be loaded, fall back to profile.js defaults
+        }
+    }
+
+    function parseProjectsTxt(text) {
+        const projects = [];
+        let current = null;
+
+        for (const rawLine of text.split("\n")) {
+            const line = rawLine.trim();
+
+            // Skip comments and empty lines
+            if (line.startsWith("#")) continue;
+            if (line === "") {
+                if (current) {
+                    projects.push(current);
+                    current = null;
+                }
+                continue;
+            }
+
+            // Parse key: value pairs
+            const match = line.match(/^(name|url|description|details):\s*(.+)$/i);
+            if (match) {
+                const key = match[1].toLowerCase();
+                const value = match[2].trim();
+                if (key === "name") {
+                    current = { name: value };
+                } else if (current) {
+                    current[key] = value;
+                }
+            }
+        }
+
+        // Don't forget the last project if file doesn't end with blank line
+        if (current) projects.push(current);
+
+        return projects;
     }
 
     // ---- Sidebar Population ----
