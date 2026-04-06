@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { useAccount } from 'wagmi';
+import ConnectWalletPrompt from '../components/ConnectWalletPrompt';
 import {
   ACHIEVEMENTS,
   ACHIEVEMENT_CATEGORY_META,
@@ -11,28 +13,11 @@ import type { TrainerCard as TrainerData } from '../hooks/useTrainer';
 
 // ── Mock data for profile sections ──────────────────────────────────
 
-const MOCK_ACHIEVEMENT_STATUS: Record<string, { unlocked: boolean; unlockedAt?: string }> = Object.fromEntries(
-  ACHIEVEMENTS.slice(0, 8).map(a => [a.id, { unlocked: true, unlockedAt: '2026-03-15T12:00:00Z' }])
-);
+const MOCK_ACHIEVEMENT_STATUS: Record<string, { unlocked: boolean; unlockedAt?: string }> = {};
 
-const MOCK_SKILLDEX: { category: string; discovered: number; total: number }[] = [
-  { category: 'Code Generation', discovered: 12, total: 18 },
-  { category: 'Data Analysis', discovered: 8, total: 15 },
-  { category: 'DevOps', discovered: 5, total: 12 },
-  { category: 'Security', discovered: 3, total: 10 },
-  { category: 'Documentation', discovered: 7, total: 10 },
-  { category: 'Testing', discovered: 9, total: 14 },
-  { category: 'Research', discovered: 4, total: 8 },
-  { category: 'Design', discovered: 2, total: 8 },
-];
+const MOCK_SKILLDEX: { category: string; discovered: number; total: number }[] = [];
 
-const MOCK_EVOLVED_SKILLS: { name: string; tier: string; runs: number }[] = [
-  { name: 'code-review', tier: 'Gold', runs: 247 },
-  { name: 'bug-root-cause', tier: 'Gold', runs: 189 },
-  { name: 'api-integration-planner', tier: 'Silver', runs: 134 },
-  { name: 'codebase-mapper', tier: 'Silver', runs: 98 },
-  { name: 'test-generator', tier: 'Bronze', runs: 67 },
-];
+const MOCK_EVOLVED_SKILLS: { name: string; tier: string; runs: number }[] = [];
 
 // ── Helpers ──────────────────────────────────────────────────────────
 
@@ -386,8 +371,17 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 // ── Profile page ─────────────────────────────────────────────────────
 
 export default function Profile() {
+  const { isConnected } = useAccount();
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
+
+  if (!isConnected) {
+    return (
+      <div className="min-h-screen pt-24 px-6">
+        <ConnectWalletPrompt title="Connect to view your Profile" />
+      </div>
+    );
+  }
 
   return (
     <div

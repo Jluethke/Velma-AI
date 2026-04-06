@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { useAccount } from 'wagmi';
+import ConnectWalletPrompt from '../components/ConnectWalletPrompt';
 import { useTrainer, useQuests } from '../hooks/useTrainer';
 import { useSkills } from '../hooks/useSkills';
 import { useChains } from '../hooks/useChains';
@@ -246,11 +248,20 @@ function QuickActions() {
 }
 
 export default function Dashboard() {
+  const { isConnected } = useAccount();
   const { data: trainer } = useTrainer();
   const { data: skills } = useSkills();
   const { data: chains } = useChains();
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
+
+  if (!isConnected) {
+    return (
+      <div className="min-h-screen pt-24 px-6">
+        <ConnectWalletPrompt title="Connect to access Dashboard" />
+      </div>
+    );
+  }
 
   const t = trainer ?? MOCK_TRAINER as TrainerData;
 

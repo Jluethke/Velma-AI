@@ -1,4 +1,6 @@
 import { useState, useMemo } from 'react';
+import { useAccount } from 'wagmi';
+import ConnectWalletPrompt from '../components/ConnectWalletPrompt';
 import { agents, allDomains } from '../data/social';
 import type { AgentProfile } from '../data/social';
 
@@ -135,11 +137,20 @@ function MatchCard({ agent }: { agent: AgentProfile }) {
 type SortKey = 'trust' | 'skills' | 'earned' | 'accuracy';
 
 export default function Agents() {
+  const { isConnected } = useAccount();
   const [query, setQuery] = useState('');
   const [domain, setDomain] = useState('');
   const [minTrust, setMinTrust] = useState(0);
   const [sortBy, setSortBy] = useState<SortKey>('trust');
   const [showLeaderboard, setShowLeaderboard] = useState(false);
+
+  if (!isConnected) {
+    return (
+      <div className="min-h-screen pt-24 px-6">
+        <ConnectWalletPrompt title="Connect to access Agents" />
+      </div>
+    );
+  }
 
   const recommended = useMemo(() =>
     [...agents]
