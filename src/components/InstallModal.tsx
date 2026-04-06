@@ -1,19 +1,4 @@
-import { useState } from 'react';
-
-const BASE_URL = 'https://velma-ai.vercel.app';
-
 export default function InstallModal({ onClose }: { onClose: () => void }) {
-  const [copied, setCopied] = useState<string | null>(null);
-
-  const copy = (text: string, label: string) => {
-    navigator.clipboard.writeText(text);
-    setCopied(label);
-    setTimeout(() => setCopied(null), 2000);
-  };
-
-  const macCmd = `curl -sSL ${BASE_URL}/install.sh | bash`;
-  const winCmd = `irm ${BASE_URL}/install.bat -OutFile install.bat; .\\install.bat`;
-
   return (
     <div
       className="fixed inset-0 z-[999] flex items-center justify-center px-4"
@@ -21,7 +6,7 @@ export default function InstallModal({ onClose }: { onClose: () => void }) {
       onClick={onClose}
     >
       <div
-        className="rounded-2xl p-8 max-w-lg w-full relative"
+        className="rounded-2xl p-8 max-w-md w-full relative"
         style={{
           background: 'var(--bg-card)',
           border: '1px solid var(--border)',
@@ -40,80 +25,68 @@ export default function InstallModal({ onClose }: { onClose: () => void }) {
 
         {/* Header */}
         <h2 className="text-2xl font-bold mb-1" style={{ color: 'var(--text-primary)' }}>
-          Install SkillChain
+          Download SkillChain
         </h2>
         <p className="text-sm mb-6" style={{ color: 'var(--text-secondary)' }}>
-          One command. No pip, no git, no setup. Works with Claude Code, GPT, Cursor, and more.
+          Download, double-click, done. Works with Claude Code, GPT, Cursor, and more.
         </p>
 
-        {/* Mac/Linux */}
-        <div className="mb-4">
-          <div className="flex items-center gap-2 mb-2">
-            <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--cyan)' }}>
-              Mac / Linux
-            </span>
-          </div>
-          <div
-            className="flex items-center gap-2 rounded-lg px-4 py-3 font-mono text-sm cursor-pointer transition-all"
+        {/* Download buttons */}
+        <div className="space-y-3 mb-6">
+          <a
+            href="/install.bat"
+            download="SkillChain-Install.bat"
+            className="flex items-center gap-4 rounded-xl px-5 py-4 no-underline transition-all"
             style={{
-              background: 'rgba(0,0,0,0.4)',
-              border: '1px solid var(--border)',
-              color: 'var(--green)',
+              background: 'rgba(170,136,255,0.08)',
+              border: '1px solid rgba(170,136,255,0.25)',
             }}
-            onClick={() => copy(macCmd, 'mac')}
           >
-            <span className="flex-1 overflow-x-auto whitespace-nowrap">
-              <span style={{ color: 'var(--text-secondary)' }}>$ </span>{macCmd}
-            </span>
-            <span className="text-xs px-2 py-1 rounded flex-shrink-0" style={{
-              background: copied === 'mac' ? 'rgba(0,255,136,0.15)' : 'rgba(255,255,255,0.06)',
-              color: copied === 'mac' ? 'var(--green)' : 'var(--text-secondary)',
+            <span className="text-2xl">&#x1F5A5;</span>
+            <div className="flex-1">
+              <div className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Windows</div>
+              <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>Download .bat installer</div>
+            </div>
+            <span className="text-xs px-3 py-1.5 rounded-lg font-semibold" style={{
+              background: 'rgba(170,136,255,0.15)',
+              color: 'var(--purple)',
             }}>
-              {copied === 'mac' ? 'Copied!' : 'Copy'}
+              Download
             </span>
-          </div>
-        </div>
+          </a>
 
-        {/* Windows */}
-        <div className="mb-6">
-          <div className="flex items-center gap-2 mb-2">
-            <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--purple)' }}>
-              Windows (PowerShell)
-            </span>
-          </div>
-          <div
-            className="flex items-center gap-2 rounded-lg px-4 py-3 font-mono text-sm cursor-pointer transition-all"
+          <a
+            href="/install.sh"
+            download="SkillChain-Install.sh"
+            className="flex items-center gap-4 rounded-xl px-5 py-4 no-underline transition-all"
             style={{
-              background: 'rgba(0,0,0,0.4)',
-              border: '1px solid var(--border)',
-              color: 'var(--green)',
+              background: 'rgba(0,255,200,0.08)',
+              border: '1px solid rgba(0,255,200,0.25)',
             }}
-            onClick={() => copy(winCmd, 'win')}
           >
-            <span className="flex-1 overflow-x-auto whitespace-nowrap">
-              <span style={{ color: 'var(--text-secondary)' }}>PS&gt; </span>{winCmd}
-            </span>
-            <span className="text-xs px-2 py-1 rounded flex-shrink-0" style={{
-              background: copied === 'win' ? 'rgba(0,255,136,0.15)' : 'rgba(255,255,255,0.06)',
-              color: copied === 'win' ? 'var(--green)' : 'var(--text-secondary)',
+            <span className="text-2xl">&#x1F34E;</span>
+            <div className="flex-1">
+              <div className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Mac / Linux</div>
+              <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>Download .sh installer</div>
+            </div>
+            <span className="text-xs px-3 py-1.5 rounded-lg font-semibold" style={{
+              background: 'rgba(0,255,200,0.15)',
+              color: 'var(--cyan)',
             }}>
-              {copied === 'win' ? 'Copied!' : 'Copy'}
+              Download
             </span>
-          </div>
+          </a>
         </div>
 
         {/* What happens */}
         <div className="rounded-lg p-4" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)' }}>
-          <p className="text-xs font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>What happens:</p>
-          <ol className="text-xs space-y-1 pl-4" style={{ color: 'var(--text-secondary)' }}>
-            <li>Installs Python if needed</li>
-            <li>Installs SkillChain SDK + 120 skills + 65 chains</li>
-            <li>Auto-configures your AI agent (Claude Code, etc.)</li>
-            <li>Creates your trainer profile</li>
+          <p className="text-xs font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>After you run it:</p>
+          <ol className="text-xs space-y-1.5 pl-4" style={{ color: 'var(--text-secondary)' }}>
+            <li>Installs Python if you don't have it</li>
+            <li>Installs 120+ AI skills and 65+ skill chains</li>
+            <li>Auto-configures your AI agent</li>
+            <li>Restart Claude Code — just talk normally</li>
           </ol>
-          <p className="text-xs mt-3" style={{ color: 'var(--text-secondary)' }}>
-            Then just restart Claude Code and talk normally. Say <span style={{ color: 'var(--cyan)' }}>"help me budget"</span> or <span style={{ color: 'var(--cyan)' }}>"review my code"</span> — it finds the right skill chain.
-          </p>
         </div>
       </div>
     </div>
