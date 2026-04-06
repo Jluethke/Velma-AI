@@ -70,10 +70,16 @@ const fallbackQuests: Quest[] = [
 export function useTrainer() {
   return useQuery<TrainerCard>({
     queryKey: ['trainer'],
-    queryFn: () => apiFetch('/api/trainer'),
+    queryFn: async () => {
+      try {
+        return await apiFetch('/api/trainer');
+      } catch {
+        return fallbackTrainer;
+      }
+    },
     staleTime: 10_000,
-    placeholderData: fallbackTrainer,
-    retry: 1,
+    initialData: fallbackTrainer,
+    retry: false,
   });
 }
 
@@ -98,10 +104,16 @@ export function useSkilldex() {
 export function useQuests() {
   return useQuery<Quest[]>({
     queryKey: ['quests'],
-    queryFn: () => apiFetch('/api/quests'),
+    queryFn: async () => {
+      try {
+        return await apiFetch('/api/quests');
+      } catch {
+        return fallbackQuests;
+      }
+    },
     staleTime: 60_000,
-    placeholderData: fallbackQuests,
-    retry: 1,
+    initialData: fallbackQuests,
+    retry: false,
   });
 }
 

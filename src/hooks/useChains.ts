@@ -45,23 +45,32 @@ export interface ChainRunResult {
 }
 
 const fallbackChains: ChainSummary[] = [
-  { name: 'code-review', description: 'Full code review pipeline: lint, security scan, style check, and summary', category: 'developer', steps: 4, skills: ['repo-health', 'code-review', 'security-hardening'], free: true },
-  { name: 'content-repurpose', description: 'Transform one piece of content into 25 platform-optimized variations', category: 'content', steps: 5, skills: ['content-engine', 'velma-voice', 'social-automation'], free: false },
-  { name: 'deal-analysis', description: 'Analyze CRE deals with risk scoring, market comps, and cap rate validation', category: 'finance', steps: 6, skills: ['data-extractor', 'budget-builder'] },
-  { name: 'onboarding', description: 'New developer onboarding: repo map, architecture overview, key patterns', category: 'developer', steps: 3, skills: ['repo-health', 'task-decomposition'] },
-  { name: 'trading-signals', description: 'Multi-timeframe signal generation with regime classification', category: 'trading', steps: 5, skills: ['trading-system', 'data-extractor'] },
-  { name: 'resume-pipeline', description: 'End-to-end resume optimization: parse, score, rewrite, format', category: 'career', steps: 4, skills: ['resume-builder', 'interview-coach'] },
-  { name: 'security-audit', description: 'Comprehensive security audit: dependency scan, OWASP check, report', category: 'developer', steps: 5, skills: ['security-hardening', 'repo-health'] },
-  { name: 'api-scaffold', description: 'Design and scaffold a REST API from natural language spec', category: 'developer', steps: 4, skills: ['api-design', 'task-decomposition'] },
+  // ── FREE CHAIN — the hook ──────────────────────────────────────────
+  { name: 'get-your-life-together', description: 'Budget your money, plan your week, and meal prep — all in one shot. The chain everyone needs.', category: 'life', steps: 3, skills: ['budget-builder', 'daily-planner', 'meal-planner'], free: true },
+
+  // ── PREMIUM CHAINS — require TRUST ────────────────────────────────
+  { name: 'career-launchpad', description: 'Build your resume, prep for interviews, and plan salary negotiation — full job search pipeline', category: 'career', steps: 3, skills: ['resume-builder', 'interview-coach', 'daily-planner'], free: false },
+  { name: 'money-makeover', description: 'Audit expenses, build a budget, and create a retirement projection — take control of your finances', category: 'money', steps: 3, skills: ['expense-optimizer', 'budget-builder', 'retirement-planner'], free: false },
+  { name: 'code-review', description: 'Full code review pipeline: lint, security scan, style check, and actionable summary', category: 'developer', steps: 3, skills: ['code-review', 'complaint-letter-writer'], free: false },
+  { name: 'content-machine', description: 'Turn one piece of content into 25 platform-optimized variations with scheduling', category: 'content', steps: 3, skills: ['content-engine', 'daily-planner'], free: false },
+  { name: 'healthy-week', description: 'Plan your meals, schedule workouts, and organize your week for maximum energy', category: 'health', steps: 3, skills: ['meal-planner', 'workout-planner', 'daily-planner'], free: false },
+  { name: 'trip-ready', description: 'Plan your trip, budget it, and get a daily itinerary — from idea to packed bag', category: 'life', steps: 3, skills: ['travel-planner', 'budget-builder', 'daily-planner'], free: false },
+  { name: 'home-savings', description: 'Energy audit your home and optimize recurring expenses — find hidden savings', category: 'home', steps: 2, skills: ['energy-audit', 'expense-optimizer'], free: false },
 ];
 
 export function useChains() {
   return useQuery<ChainSummary[]>({
     queryKey: ['chains'],
-    queryFn: () => apiFetch('/api/chains'),
+    queryFn: async () => {
+      try {
+        return await apiFetch('/api/chains');
+      } catch {
+        return fallbackChains;
+      }
+    },
     staleTime: 60_000,
-    placeholderData: fallbackChains,
-    retry: 1,
+    initialData: fallbackChains,
+    retry: false,
   });
 }
 

@@ -21,10 +21,16 @@ const fallbackSkills: Skill[] = STATIC_SKILLS.map(s => ({
 export function useSkills() {
   return useQuery<Skill[]>({
     queryKey: ['skills'],
-    queryFn: () => apiFetch('/api/skills'),
+    queryFn: async () => {
+      try {
+        return await apiFetch('/api/skills');
+      } catch {
+        return fallbackSkills;
+      }
+    },
     staleTime: 60_000,
-    placeholderData: fallbackSkills,
-    retry: 1,
+    initialData: fallbackSkills,
+    retry: false,
   });
 }
 
