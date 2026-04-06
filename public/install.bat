@@ -46,7 +46,7 @@ if %errorlevel% neq 0 (
 )
 
 :: Install SkillChain
-echo   [1/6] Installing SkillChain SDK...
+echo   [1/7] Installing SkillChain SDK...
 pip install skillchain --quiet 2>nul
 if %errorlevel% neq 0 (
     echo   Note: pip install skillchain failed, installing dependencies directly...
@@ -58,7 +58,7 @@ if %errorlevel% neq 0 (
 )
 
 :: Initialize SkillChain
-echo   [2/6] Configuring Claude Code integration...
+echo   [2/7] Configuring Claude Code integration...
 python -c "from skillchain.sdk.mcp_bridge.claude_settings import install_mcp_server; install_mcp_server()" 2>nul
 if %errorlevel% neq 0 (
     echo   WARNING: Could not auto-configure Claude Code.
@@ -66,7 +66,7 @@ if %errorlevel% neq 0 (
 )
 
 :: Create directories
-echo   [3/6] Setting up directories...
+echo   [3/7] Setting up directories...
 if not exist "%SC_DIR%" mkdir "%SC_DIR%"
 if not exist "%SC_DIR%\skills" mkdir "%SC_DIR%\skills"
 if not exist "%SC_DIR%\state" mkdir "%SC_DIR%\state"
@@ -74,11 +74,13 @@ if not exist "%SC_DIR%\chains" mkdir "%SC_DIR%\chains"
 if not exist "%SC_DIR%\bin" mkdir "%SC_DIR%\bin"
 
 :: Initialize trainer
-echo   [4/6] Creating trainer profile...
+echo   [4/7] Creating trainer profile...
 python -c "from skillchain.sdk.gamification import GamificationEngine; e = GamificationEngine(); print(f'  Level {e.get_trainer_card()[\"level\"]} {e.get_trainer_card()[\"title\"]}')" 2>nul
 
 :: Register PATH using PowerShell (safe, no truncation, no 1024 char limit)
-echo   [5/6] Registering PATH...
+:: NOTE: We use PowerShell instead of setx because setx is missing on some
+:: Windows builds and has a 1024-character limit that can TRUNCATE PATH.
+echo   [5/7] Registering PATH...
 set "BIN_DIR=%SC_DIR%\bin"
 
 :: Create a wrapper CMD that invokes the SDK CLI
@@ -99,8 +101,28 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command ^
   "  Write-Host '  Restart your terminal for PATH changes to take effect.'; " ^
   "}"
 if %errorlevel% neq 0 (
-    echo   WARNING: Could not add to PATH automatically.
-    echo   Manually add to PATH: %BIN_DIR%
+    echo   WARNING: Could not add to PATH automatically via PowerShell.
+    echo   Trying fallback method...
+    :: Fallback: use reg + setx if PowerShell is unavailable
+    for /f "tokens=2,*" %%A in ('reg query "HKCU\Environment" /v Path 2^>nul') do set "CURRENT_PATH=%%B"
+    if defined CURRENT_PATH (
+        echo !CURRENT_PATH! | findstr /i /c:"%BIN_DIR%" >nul 2>&1
+        if !errorlevel! neq 0 (
+            C:\Windows\System32\setx.exe PATH "!CURRENT_PATH!;%BIN_DIR%" >nul 2>&1
+            if !errorlevel! neq 0 (
+                echo   WARNING: Could not add to PATH automatically.
+                echo   Please add this to your PATH manually: %BIN_DIR%
+                echo   Open: System Properties ^> Environment Variables ^> User PATH ^> New
+            ) else (
+                echo   Added to PATH via setx: %BIN_DIR%
+            )
+        )
+    ) else (
+        C:\Windows\System32\setx.exe PATH "%BIN_DIR%" >nul 2>&1 || (
+            echo   WARNING: Could not add to PATH automatically.
+            echo   Please add this to your PATH manually: %BIN_DIR%
+        )
+    )
 )
 
 :: Register in Add/Remove Programs
@@ -117,16 +139,45 @@ reg add "%UNINSTALL_KEY%" /v "NoRepair" /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "%UNINSTALL_KEY%" /v "URLInfoAbout" /t REG_SZ /d "https://velma-ai.vercel.app" /f >nul 2>&1
 echo   Registered.
 
-:: Copy uninstaller to install dir
-copy "%~f0\..\uninstall.bat" "%SC_DIR%\bin\uninstall.bat" >nul 2>&1
-if %errorlevel% neq 0 (
-    :: If copy fails, create a minimal uninstaller
-    echo @echo off > "%SC_DIR%\bin\uninstall.bat"
-    echo title SkillChain Uninstaller >> "%SC_DIR%\bin\uninstall.bat"
-    echo echo Downloading uninstaller... >> "%SC_DIR%\bin\uninstall.bat"
-    echo curl -sSL -o "%%TEMP%%\sc-uninstall.bat" "https://velma-ai.vercel.app/uninstall.bat" >> "%SC_DIR%\bin\uninstall.bat"
-    echo call "%%TEMP%%\sc-uninstall.bat" >> "%SC_DIR%\bin\uninstall.bat"
-)
+:: Create uninstaller in install directory (self-contained, no network dependency)
+echo   Creating uninstaller...
+(
+echo @echo off
+echo title SkillChain Uninstaller
+echo setlocal enabledelayedexpansion
+echo echo.
+echo echo   SkillChain Uninstaller
+echo echo   ======================
+echo echo.
+echo echo   This will remove SkillChain from your system.
+echo echo   Your wallet and on-chain data are NOT affected.
+echo echo.
+echo set /p CONFIRM="  Are you sure? ^(y/n^): "
+echo if /i not "%%CONFIRM%%"=="y" ^(
+echo     echo.
+echo     echo   Uninstall cancelled.
+echo     echo.
+echo     pause
+echo     exit /b 0
+echo ^)
+echo echo.
+echo echo   [1/5] Removing Claude Code integration...
+echo powershell -NoProfile -ExecutionPolicy Bypass -Command "$settingsPath = Join-Path $env:USERPROFILE '.claude\settings.json'; if (Test-Path $settingsPath) { $settings = Get-Content $settingsPath -Raw ^| ConvertFrom-Json; if ($settings.mcpServers.PSObject.Properties['skillchain']) { $settings.mcpServers.PSObject.Properties.Remove('skillchain'); $settings ^| ConvertTo-Json -Depth 10 ^| Set-Content $settingsPath -Encoding UTF8; Write-Host '  Removed from Claude Code settings.'; } else { Write-Host '  Not found in Claude Code settings.'; } } else { Write-Host '  Claude settings.json not found.'; }"
+echo echo   [2/5] Removing PATH entry...
+echo powershell -NoProfile -ExecutionPolicy Bypass -Command "$binDir = Join-Path $env:USERPROFILE '.skillchain\bin'; $currentPath = [Environment]::GetEnvironmentVariable('Path', 'User'); if ($currentPath -and $currentPath -like \"*$binDir*\") { $newPath = ($currentPath.Split(';') ^| Where-Object { $_ -ne $binDir }) -join ';'; [Environment]::SetEnvironmentVariable('Path', $newPath, 'User'); Write-Host '  Removed from PATH.'; } else { Write-Host '  Not on PATH.'; }"
+echo echo   [3/5] Removing SkillChain directory...
+echo set "SC_DIR=%%USERPROFILE%%\.skillchain"
+echo if exist "%%SC_DIR%%" ^( rmdir /s /q "%%SC_DIR%%" ^& echo   Removed %%SC_DIR%% ^) else ^( echo   Directory not found. ^)
+echo echo   [4/5] Removing from Add/Remove Programs...
+echo reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall\SkillChain" /f ^>nul 2^>^&1
+echo echo   [5/5] Uninstalling pip package...
+echo pip uninstall skillchain -y --quiet 2^>nul
+echo echo.
+echo echo   SkillChain has been uninstalled.
+echo echo   To reinstall: velma-ai.vercel.app
+echo echo.
+echo pause
+) > "%SC_DIR%\bin\uninstall.bat"
 
 :: Validate installation
 echo   [7/7] Validating installation...
@@ -177,7 +228,7 @@ echo        - "I'm scared of AI"
 echo     4. Claude will find the right skill chain
 echo        and walk you through it
 echo.
-echo   Your AI just got 120 skills and 65 chains.
+echo   Your AI just got hundreds of skills and chains.
 echo   No extra apps. No websites. Just talk.
 echo.
 pause

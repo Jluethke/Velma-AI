@@ -34,8 +34,30 @@ if ! command -v python3 &>/dev/null; then
         fi
         brew install python@3.11
     else
-        echo "  Installing Python 3..."
-        sudo apt-get update -qq && sudo apt-get install -y -qq python3 python3-pip
+        # Detect Linux distro and use the right package manager
+        if command -v apt-get &>/dev/null; then
+            echo "  Installing Python 3 via apt-get..."
+            sudo apt-get update -qq && sudo apt-get install -y -qq python3 python3-pip
+        elif command -v dnf &>/dev/null; then
+            echo "  Installing Python 3 via dnf..."
+            sudo dnf install -y python3 python3-pip
+        elif command -v yum &>/dev/null; then
+            echo "  Installing Python 3 via yum..."
+            sudo yum install -y python3 python3-pip
+        elif command -v pacman &>/dev/null; then
+            echo "  Installing Python 3 via pacman..."
+            sudo pacman -Sy --noconfirm python python-pip
+        elif command -v apk &>/dev/null; then
+            echo "  Installing Python 3 via apk..."
+            sudo apk add python3 py3-pip
+        elif command -v zypper &>/dev/null; then
+            echo "  Installing Python 3 via zypper..."
+            sudo zypper install -y python3 python3-pip
+        else
+            echo "  ERROR: Could not detect package manager."
+            echo "  Please install Python 3.11+ manually and re-run this script."
+            exit 1
+        fi
     fi
 fi
 
@@ -101,9 +123,7 @@ echo "  [6/6] Validating installation..."
 VALID=1
 
 if [[ ! -d "$SC_DIR/marketplace" ]]; then
-    echo "  WARNING: Marketplace directory not found."
-    echo "  Skills may not have been installed. Run the .exe installer for full setup."
-    VALID=0
+    echo "  Marketplace: Skills load on first use from the network."
 fi
 
 python3 -c "from skillchain.sdk.mcp_bridge.server import create_server; s = create_server(); print('  MCP server: OK')" 2>/dev/null || {
@@ -143,5 +163,5 @@ echo "       - \"I feel stuck\""
 echo "       - \"help me budget\""
 echo "    4. Claude will find the right skill chain"
 echo ""
-echo "  Your AI just got 120 skills and 65 chains."
+echo "  Your AI just got hundreds of skills and chains."
 echo ""

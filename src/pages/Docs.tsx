@@ -76,7 +76,7 @@ function QuickStartContent() {
         <p className="text-sm mb-2" style={textStyle}>The installer handles everything:</p>
         <ul className="space-y-1.5 text-sm list-none p-0" style={textStyle}>
           <li className="flex items-center gap-2"><span style={{ color: 'var(--green)' }}>&#10003;</span> Installs Python if you don't have it</li>
-          <li className="flex items-center gap-2"><span style={{ color: 'var(--green)' }}>&#10003;</span> Installs SkillChain SDK + 120 skills + 65 chains</li>
+          <li className="flex items-center gap-2"><span style={{ color: 'var(--green)' }}>&#10003;</span> Installs SkillChain SDK + hundreds of skills and chains</li>
           <li className="flex items-center gap-2"><span style={{ color: 'var(--green)' }}>&#10003;</span> Auto-configures Claude Code (or your AI agent)</li>
           <li className="flex items-center gap-2"><span style={{ color: 'var(--green)' }}>&#10003;</span> Creates your trainer profile</li>
         </ul>

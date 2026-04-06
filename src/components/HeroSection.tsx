@@ -85,15 +85,13 @@ export default function HeroSection() {
           }}
         >
           {[
-            { value: '126+', label: 'AI Skills', color: 'var(--cyan)' },
-            { value: '68+', label: 'Skill Chains', color: 'var(--purple)' },
-            { value: '38', label: 'Patent Claims', color: 'var(--gold)' },
-            { value: '5+', label: 'AI Platforms', color: 'var(--green)' },
+            { value: '100s', label: 'of AI Skills', color: 'var(--cyan)' },
+            { value: '100s', label: 'of Skill Chains', color: 'var(--purple)' },
           ].map((stat, i) => (
             <div key={i} className="flex items-center gap-2 text-sm">
               <span className="font-bold" style={{ color: stat.color }}>{stat.value}</span>
               <span style={{ color: 'var(--text-secondary)' }}>{stat.label}</span>
-              {i < 3 && <span className="hidden md:inline ml-4" style={{ color: 'var(--border)' }}>&bull;</span>}
+              {i < 1 && <span className="hidden md:inline ml-4" style={{ color: 'var(--border)' }}>&bull;</span>}
             </div>
           ))}
         </div>
