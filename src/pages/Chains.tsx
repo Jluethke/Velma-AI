@@ -1,9 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchChains, useChains, type ChainMatch } from '../hooks/useChains';
-import InstallModal from '../components/InstallModal';
-
-// Alias for inline usage within chain detail
-const InstallModalInline = InstallModal;
 
 // ── Constants ────────────────────────────────────────────────────────
 
@@ -171,17 +167,18 @@ function ChainDetail({
 }: {
   chain: ChainMatch;
 }) {
-  const [showPrompt, setShowPrompt] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const [showInstall, setShowInstall] = useState(false);
+  const [launched, setLaunched] = useState(false);
   const color = getCategoryColor(chain.category);
 
   const prompt = `Run the ${chain.chain_name} chain`;
+  const deepLink = `vscode://anthropic.claude-code/open?prompt=${encodeURIComponent(prompt)}`;
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(prompt);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const handleRun = () => {
+    // Open Claude Code with the prompt via deep link
+    window.location.href = deepLink;
+    setLaunched(true);
+    // Reset after a few seconds
+    setTimeout(() => setLaunched(false), 5000);
   };
 
   return (
@@ -260,90 +257,27 @@ function ChainDetail({
         </div>
       </div>
 
-      {/* Run Chain button */}
-      {!showPrompt ? (
-        <button
-          onClick={() => setShowPrompt(true)}
-          className="w-full py-3 rounded-lg text-sm font-semibold uppercase tracking-wider cursor-pointer transition-all"
-          style={{
-            background: 'linear-gradient(135deg, rgba(0,255,200,0.15), rgba(0,255,200,0.05))',
-            border: '1px solid rgba(0,255,200,0.4)',
-            color: 'var(--cyan)',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.boxShadow = '0 0 25px rgba(0,255,200,0.2)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.boxShadow = 'none';
-          }}
-        >
-          Run Chain
-        </button>
-      ) : (
-        <div className="space-y-4">
-          {/* Step 1: Install check */}
-          <div
-            className="rounded-lg p-4"
-            style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border)' }}
-          >
-            <div className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--text-primary)' }}>
-              Step 1 — Install SkillChain
-            </div>
-            <p className="text-xs mb-3" style={{ color: 'var(--text-secondary)' }}>
-              Already installed? Skip to step 2.
-            </p>
-            <button
-              onClick={() => setShowInstall(true)}
-              className="text-xs px-4 py-2 rounded-lg cursor-pointer transition-all"
-              style={{
-                background: 'rgba(170,136,255,0.1)',
-                border: '1px solid rgba(170,136,255,0.3)',
-                color: 'var(--purple)',
-              }}
-            >
-              Download Installer
-            </button>
-          </div>
+      {/* Run Chain button — opens Claude Code directly */}
+      <button
+        onClick={handleRun}
+        className="w-full py-3 rounded-lg text-sm font-semibold uppercase tracking-wider cursor-pointer transition-all"
+        style={{
+          background: launched
+            ? 'rgba(0,255,136,0.15)'
+            : 'linear-gradient(135deg, rgba(0,255,200,0.15), rgba(0,255,200,0.05))',
+          border: `1px solid ${launched ? 'rgba(0,255,136,0.4)' : 'rgba(0,255,200,0.4)'}`,
+          color: launched ? 'var(--green)' : 'var(--cyan)',
+        }}
+        onMouseEnter={(e) => { if (!launched) e.currentTarget.style.boxShadow = '0 0 25px rgba(0,255,200,0.2)'; }}
+        onMouseLeave={(e) => { e.currentTarget.style.boxShadow = 'none'; }}
+      >
+        {launched ? 'Opening Claude Code...' : 'Run Chain'}
+      </button>
 
-          {/* Step 2: Open Claude and paste */}
-          <div
-            className="rounded-lg p-4"
-            style={{ background: 'rgba(0,255,200,0.03)', border: '1px solid rgba(0,255,200,0.15)' }}
-          >
-            <div className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--text-primary)' }}>
-              Step 2 — Open Claude Code and say:
-            </div>
-            <div
-              className="flex items-center gap-2 rounded-lg px-4 py-3 font-mono text-sm cursor-pointer"
-              style={{
-                background: 'rgba(0,0,0,0.4)',
-                border: '1px solid var(--border)',
-                color: 'var(--cyan)',
-              }}
-              onClick={handleCopy}
-            >
-              <span className="flex-1">{prompt}</span>
-              <span className="text-xs px-2 py-1 rounded flex-shrink-0" style={{
-                background: copied ? 'rgba(0,255,136,0.15)' : 'rgba(255,255,255,0.06)',
-                color: copied ? 'var(--green)' : 'var(--text-secondary)',
-              }}>
-                {copied ? 'Copied!' : 'Copy'}
-              </span>
-            </div>
-            <p className="text-xs mt-3" style={{ color: 'var(--text-secondary)' }}>
-              SkillChain will automatically find and execute the {chain.skills.length} skills in this chain.
-            </p>
-          </div>
-        </div>
-      )}
-
-      {showInstall && (
-        <div className="fixed inset-0 z-[999]" onClick={() => setShowInstall(false)}>
-          <div onClick={e => e.stopPropagation()}>
-            {/* Reuse the install modal */}
-            <InstallModalInline onClose={() => setShowInstall(false)} />
-          </div>
-        </div>
+      {launched && (
+        <p className="text-xs text-center mt-3" style={{ color: 'var(--text-secondary)' }}>
+          Don't have SkillChain? <a href="/install.bat" download="SkillChain-Install.bat" style={{ color: 'var(--cyan)' }}>Download the installer</a> first.
+        </p>
       )}
     </div>
   );
