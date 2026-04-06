@@ -21,7 +21,7 @@ export default function Navbar() {
   };
 
   const handleDownload = () => {
-    window.location.href = '/download';
+    window.location.href = '/docs';
   };
 
   return (

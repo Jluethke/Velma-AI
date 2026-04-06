@@ -42,11 +42,24 @@ export interface ChainRunResult {
   };
 }
 
+const fallbackChains: ChainSummary[] = [
+  { name: 'code-review', description: 'Full code review pipeline: lint, security scan, style check, and summary', category: 'developer', steps: 4, skills: ['repo-health', 'code-review', 'security-hardening'] },
+  { name: 'content-repurpose', description: 'Transform one piece of content into 25 platform-optimized variations', category: 'content', steps: 5, skills: ['content-engine', 'velma-voice', 'social-automation'] },
+  { name: 'deal-analysis', description: 'Analyze CRE deals with risk scoring, market comps, and cap rate validation', category: 'finance', steps: 6, skills: ['data-extractor', 'budget-builder'] },
+  { name: 'onboarding', description: 'New developer onboarding: repo map, architecture overview, key patterns', category: 'developer', steps: 3, skills: ['repo-health', 'task-decomposition'] },
+  { name: 'trading-signals', description: 'Multi-timeframe signal generation with regime classification', category: 'trading', steps: 5, skills: ['trading-system', 'data-extractor'] },
+  { name: 'resume-pipeline', description: 'End-to-end resume optimization: parse, score, rewrite, format', category: 'career', steps: 4, skills: ['resume-builder', 'interview-coach'] },
+  { name: 'security-audit', description: 'Comprehensive security audit: dependency scan, OWASP check, report', category: 'developer', steps: 5, skills: ['security-hardening', 'repo-health'] },
+  { name: 'api-scaffold', description: 'Design and scaffold a REST API from natural language spec', category: 'developer', steps: 4, skills: ['api-design', 'task-decomposition'] },
+];
+
 export function useChains() {
   return useQuery<ChainSummary[]>({
     queryKey: ['chains'],
     queryFn: () => apiFetch('/api/chains'),
     staleTime: 60_000,
+    placeholderData: fallbackChains,
+    retry: 1,
   });
 }
 

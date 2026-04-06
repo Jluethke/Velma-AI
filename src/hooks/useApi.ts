@@ -1,5 +1,6 @@
 /**
  * Base API helper for SkillChain REST API.
+ * Falls back gracefully when API is unavailable (static deployment).
  */
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8420';

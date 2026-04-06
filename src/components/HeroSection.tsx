@@ -38,7 +38,7 @@ export default function HeroSection() {
 
         {/* Download CTA */}
         <a
-          href="/download"
+          href="/docs"
           className="inline-flex items-center gap-3 px-8 py-4 rounded-xl no-underline cursor-pointer transition-all animate-fade-in-up animate-pulse-glow"
           style={{
             background: 'linear-gradient(135deg, rgba(0,255,200,0.15), rgba(170,136,255,0.15))',
