@@ -202,7 +202,7 @@ function Web3Content() {
           <li className="flex items-center gap-2"><span style={{ color: 'var(--cyan)' }}>&#8250;</span> Python 3.10 or higher</li>
           <li className="flex items-center gap-2"><span style={{ color: 'var(--cyan)' }}>&#8250;</span> pip (any recent version)</li>
           <li className="flex items-center gap-2"><span style={{ color: 'var(--cyan)' }}>&#8250;</span> An Ethereum wallet (MetaMask, etc.)</li>
-          <li className="flex items-center gap-2"><span style={{ color: 'var(--cyan)' }}>&#8250;</span> Base Sepolia testnet ETH (for gas)</li>
+          <li className="flex items-center gap-2"><span style={{ color: 'var(--cyan)' }}>&#8250;</span> Base mainnet ETH (for gas)</li>
         </ul>
       </section>
 
@@ -221,7 +221,7 @@ function Web3Content() {
           <li><strong style={{ color: 'var(--text-primary)' }}>Registers on-chain</strong> — Node ID recorded in the NodeRegistry contract</li>
         </ol>
         <CodeBlock
-          code={`SkillChain initialised!\n  Node ID:    node_a1b2c3d4...\n  Agent:      claude\n  Skills dir: ~/.claude/skills/\n  Config:     ~/.skillchain/\n  Network:    sepolia\n  Wallet:     0x1234...abcd`}
+          code={`SkillChain initialised!\n  Node ID:    node_a1b2c3d4...\n  Agent:      claude\n  Skills dir: ~/.claude/skills/\n  Config:     ~/.skillchain/\n  Network:    base\n  Wallet:     0x1234...abcd`}
           filename="output"
         />
 

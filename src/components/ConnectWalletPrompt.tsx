@@ -34,7 +34,7 @@ export default function ConnectWalletPrompt({ title }: { title?: string }) {
         </div>
 
         <p className="text-xs mt-4" style={{ color: 'var(--text-secondary)', opacity: 0.6 }}>
-          Base Sepolia testnet &middot; No real funds required
+          Base Network &middot; Powered by TRUST token
         </p>
       </div>
     </div>
