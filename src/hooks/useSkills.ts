@@ -10,6 +10,7 @@ export interface Skill {
   execution_pattern: string;
   price: string;
   license: string;
+  free: boolean;
 }
 
 const fallbackSkills: Skill[] = STATIC_SKILLS.map(s => ({

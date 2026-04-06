@@ -7,6 +7,7 @@ export interface ChainSummary {
   category: string;
   steps: number;
   skills: string[];
+  free?: boolean;
 }
 
 export interface ChainMatch {
@@ -17,6 +18,7 @@ export interface ChainMatch {
   match_reason: string;
   skills: string[];
   step_count: number;
+  free?: boolean;
 }
 
 export interface StepResult {
@@ -43,8 +45,8 @@ export interface ChainRunResult {
 }
 
 const fallbackChains: ChainSummary[] = [
-  { name: 'code-review', description: 'Full code review pipeline: lint, security scan, style check, and summary', category: 'developer', steps: 4, skills: ['repo-health', 'code-review', 'security-hardening'] },
-  { name: 'content-repurpose', description: 'Transform one piece of content into 25 platform-optimized variations', category: 'content', steps: 5, skills: ['content-engine', 'velma-voice', 'social-automation'] },
+  { name: 'code-review', description: 'Full code review pipeline: lint, security scan, style check, and summary', category: 'developer', steps: 4, skills: ['repo-health', 'code-review', 'security-hardening'], free: true },
+  { name: 'content-repurpose', description: 'Transform one piece of content into 25 platform-optimized variations', category: 'content', steps: 5, skills: ['content-engine', 'velma-voice', 'social-automation'], free: false },
   { name: 'deal-analysis', description: 'Analyze CRE deals with risk scoring, market comps, and cap rate validation', category: 'finance', steps: 6, skills: ['data-extractor', 'budget-builder'] },
   { name: 'onboarding', description: 'New developer onboarding: repo map, architecture overview, key patterns', category: 'developer', steps: 3, skills: ['repo-health', 'task-decomposition'] },
   { name: 'trading-signals', description: 'Multi-timeframe signal generation with regime classification', category: 'trading', steps: 5, skills: ['trading-system', 'data-extractor'] },

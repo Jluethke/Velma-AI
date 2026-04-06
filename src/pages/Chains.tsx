@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchChains, useChains, type ChainMatch } from '../hooks/useChains';
+import { useGateCheck } from '../hooks/useGateCheck';
+import { ConnectButton } from '@rainbow-me/rainbowkit';
 
 // ── Constants ────────────────────────────────────────────────────────
 
@@ -164,8 +166,12 @@ function ChainCard({
 
 function ChainDetail({
   chain,
+  locked,
+  isConnected,
 }: {
   chain: ChainMatch;
+  locked: boolean;
+  isConnected: boolean;
 }) {
   const [launched, setLaunched] = useState(false);
   const color = getCategoryColor(chain.category);
@@ -174,10 +180,8 @@ function ChainDetail({
   const deepLink = `vscode://anthropic.claude-code/open?prompt=${encodeURIComponent(prompt)}`;
 
   const handleRun = () => {
-    // Open Claude Code with the prompt via deep link
     window.location.href = deepLink;
     setLaunched(true);
-    // Reset after a few seconds
     setTimeout(() => setLaunched(false), 5000);
   };
 
@@ -257,27 +261,55 @@ function ChainDetail({
         </div>
       </div>
 
-      {/* Run Chain button — opens Claude Code directly */}
-      <button
-        onClick={handleRun}
-        className="w-full py-3 rounded-lg text-sm font-semibold uppercase tracking-wider cursor-pointer transition-all"
-        style={{
-          background: launched
-            ? 'rgba(0,255,136,0.15)'
-            : 'linear-gradient(135deg, rgba(0,255,200,0.15), rgba(0,255,200,0.05))',
-          border: `1px solid ${launched ? 'rgba(0,255,136,0.4)' : 'rgba(0,255,200,0.4)'}`,
-          color: launched ? 'var(--green)' : 'var(--cyan)',
-        }}
-        onMouseEnter={(e) => { if (!launched) e.currentTarget.style.boxShadow = '0 0 25px rgba(0,255,200,0.2)'; }}
-        onMouseLeave={(e) => { e.currentTarget.style.boxShadow = 'none'; }}
-      >
-        {launched ? 'Opening Claude Code...' : 'Run Chain'}
-      </button>
-
-      {launched && (
-        <p className="text-xs text-center mt-3" style={{ color: 'var(--text-secondary)' }}>
-          Don't have SkillChain? <a href="/install.bat" download="SkillChain-Install.bat" style={{ color: 'var(--cyan)' }}>Download the installer</a> first.
-        </p>
+      {/* Run Chain / Gate */}
+      {locked ? (
+        <div className="space-y-3">
+          {!isConnected ? (
+            <div className="text-center">
+              <p className="text-xs mb-3" style={{ color: 'var(--gold)' }}>
+                Connect your wallet with TRUST tokens to unlock this chain
+              </p>
+              <ConnectButton />
+            </div>
+          ) : (
+            <div
+              className="rounded-lg p-4 text-center"
+              style={{ background: 'rgba(255,215,0,0.05)', border: '1px solid rgba(255,215,0,0.2)' }}
+            >
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--gold)', margin: '0 auto 8px' }}>
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+              </svg>
+              <p className="text-xs font-semibold" style={{ color: 'var(--gold)' }}>TRUST tokens required</p>
+              <p className="text-[10px] mt-1" style={{ color: 'var(--text-secondary)' }}>
+                Your wallet is connected but has no TRUST balance. Earn tokens by publishing skills or validating.
+              </p>
+            </div>
+          )}
+        </div>
+      ) : (
+        <>
+          <button
+            onClick={handleRun}
+            className="w-full py-3 rounded-lg text-sm font-semibold uppercase tracking-wider cursor-pointer transition-all"
+            style={{
+              background: launched
+                ? 'rgba(0,255,136,0.15)'
+                : 'linear-gradient(135deg, rgba(0,255,200,0.15), rgba(0,255,200,0.05))',
+              border: `1px solid ${launched ? 'rgba(0,255,136,0.4)' : 'rgba(0,255,200,0.4)'}`,
+              color: launched ? 'var(--green)' : 'var(--cyan)',
+            }}
+            onMouseEnter={(e) => { if (!launched) e.currentTarget.style.boxShadow = '0 0 25px rgba(0,255,200,0.2)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.boxShadow = 'none'; }}
+          >
+            {launched ? 'Opening Claude Code...' : 'Run Chain'}
+          </button>
+          {launched && (
+            <p className="text-xs text-center mt-3" style={{ color: 'var(--text-secondary)' }}>
+              Don't have SkillChain? <a href="/install.bat" download="SkillChain-Install.bat" style={{ color: 'var(--cyan)' }}>Download the installer</a> first.
+            </p>
+          )}
+        </>
       )}
     </div>
   );
@@ -329,6 +361,7 @@ function BrowseChains({
     match_reason: '',
     skills: c.skills,
     step_count: c.steps,
+    free: c.free,
   }));
 
   return (
@@ -354,6 +387,7 @@ export default function Chains() {
   const inputRef = useRef<HTMLInputElement>(null);
 
   const [selected, setSelected] = useState<ChainMatch | null>(null);
+  const { isUnlocked, isConnected } = useGateCheck();
 
   const { data: searchResults, isLoading: isSearching } = useSearchChains(debouncedQuery);
 
@@ -474,6 +508,8 @@ export default function Chains() {
             {selected ? (
               <ChainDetail
                 chain={selected}
+                locked={!selected.free && !isUnlocked}
+                isConnected={isConnected}
               />
             ) : (
               <div
@@ -516,6 +552,8 @@ export default function Chains() {
               {selected ? (
                 <ChainDetail
                   chain={selected}
+                  locked={!selected.free && !isUnlocked}
+                  isConnected={isConnected}
                 />
               ) : (
                 <div
