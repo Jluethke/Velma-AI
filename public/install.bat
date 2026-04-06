@@ -103,8 +103,33 @@ if %errorlevel% neq 0 (
     echo   Manually add to PATH: %BIN_DIR%
 )
 
+:: Register in Add/Remove Programs
+echo   [6/7] Registering in Add/Remove Programs...
+set "UNINSTALL_KEY=HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall\SkillChain"
+reg add "%UNINSTALL_KEY%" /v "DisplayName" /t REG_SZ /d "SkillChain - AI Skill Marketplace" /f >nul 2>&1
+reg add "%UNINSTALL_KEY%" /v "DisplayVersion" /t REG_SZ /d "1.0.0" /f >nul 2>&1
+reg add "%UNINSTALL_KEY%" /v "Publisher" /t REG_SZ /d "The Wayfinder Trust" /f >nul 2>&1
+reg add "%UNINSTALL_KEY%" /v "InstallLocation" /t REG_SZ /d "%SC_DIR%" /f >nul 2>&1
+reg add "%UNINSTALL_KEY%" /v "UninstallString" /t REG_SZ /d "\"%SC_DIR%\bin\uninstall.bat\"" /f >nul 2>&1
+reg add "%UNINSTALL_KEY%" /v "DisplayIcon" /t REG_SZ /d "%SC_DIR%\bin\skillchain.cmd" /f >nul 2>&1
+reg add "%UNINSTALL_KEY%" /v "NoModify" /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "%UNINSTALL_KEY%" /v "NoRepair" /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "%UNINSTALL_KEY%" /v "URLInfoAbout" /t REG_SZ /d "https://velma-ai.vercel.app" /f >nul 2>&1
+echo   Registered.
+
+:: Copy uninstaller to install dir
+copy "%~f0\..\uninstall.bat" "%SC_DIR%\bin\uninstall.bat" >nul 2>&1
+if %errorlevel% neq 0 (
+    :: If copy fails, create a minimal uninstaller
+    echo @echo off > "%SC_DIR%\bin\uninstall.bat"
+    echo title SkillChain Uninstaller >> "%SC_DIR%\bin\uninstall.bat"
+    echo echo Downloading uninstaller... >> "%SC_DIR%\bin\uninstall.bat"
+    echo curl -sSL -o "%%TEMP%%\sc-uninstall.bat" "https://velma-ai.vercel.app/uninstall.bat" >> "%SC_DIR%\bin\uninstall.bat"
+    echo call "%%TEMP%%\sc-uninstall.bat" >> "%SC_DIR%\bin\uninstall.bat"
+)
+
 :: Validate installation
-echo   [6/6] Validating installation...
+echo   [7/7] Validating installation...
 set "VALID=1"
 
 if not exist "%SC_DIR%\marketplace" (
