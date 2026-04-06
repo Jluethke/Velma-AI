@@ -35,8 +35,8 @@ export default function Navbar() {
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-0 no-underline">
-            <span className="text-xl font-bold" style={{ color: 'var(--cyan)' }}>VELMA</span>
-            <span className="text-xl font-light" style={{ color: 'var(--text-secondary)' }}>.AI</span>
+            <span className="text-xl font-bold" style={{ color: 'var(--cyan)' }}>Velma</span>
+            <span className="text-xl font-light" style={{ color: 'var(--text-secondary)' }}> AI</span>
           </Link>
 
           {/* Desktop nav */}
