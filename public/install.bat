@@ -47,13 +47,17 @@ if %errorlevel% neq 0 (
 
 :: Install SkillChain
 echo   [1/7] Installing SkillChain SDK...
-pip install skillchain --quiet 2>nul
+pip install https://velma-ai.vercel.app/skillchain-0.1.1-py3-none-any.whl --quiet 2>nul
 if %errorlevel% neq 0 (
-    echo   Note: pip install skillchain failed, installing dependencies directly...
-    pip install click cryptography rich requests numpy --quiet 2>nul
+    echo   Note: Direct download failed, trying PyPI fallback...
+    pip install skillchain --quiet 2>nul
     if %errorlevel% neq 0 (
-        echo   ERROR: Could not install dependencies.
-        goto :failed
+        echo   Note: PyPI also failed, installing dependencies directly...
+        pip install click cryptography rich requests numpy --quiet 2>nul
+        if %errorlevel% neq 0 (
+            echo   ERROR: Could not install dependencies.
+            goto :failed
+        )
     )
 )
 

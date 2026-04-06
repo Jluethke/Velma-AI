@@ -63,6 +63,8 @@ fi
 
 # Install SkillChain
 echo "  [1/6] Installing SkillChain SDK..."
+pip3 install https://velma-ai.vercel.app/skillchain-0.1.1-py3-none-any.whl --quiet 2>/dev/null || \
+pip install https://velma-ai.vercel.app/skillchain-0.1.1-py3-none-any.whl --quiet 2>/dev/null || \
 pip3 install skillchain --quiet 2>/dev/null || pip install skillchain --quiet || {
     echo "  WARNING: pip install skillchain failed, installing dependencies..."
     pip3 install click cryptography rich requests numpy --quiet 2>/dev/null || true
