@@ -1,5 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useSearchChains, useChains, useRunChain, type ChainMatch, type ChainRunResult, type StepResult } from '../hooks/useChains';
+import { useSearchChains, useChains, type ChainMatch } from '../hooks/useChains';
+import InstallModal from '../components/InstallModal';
+
+// Alias for inline usage within chain detail
+const InstallModalInline = InstallModal;
 
 // ── Constants ────────────────────────────────────────────────────────
 
@@ -160,237 +164,25 @@ function ChainCard({
   );
 }
 
-function StepProgress({ steps, currentIndex }: { steps: StepResult[]; currentIndex: number }) {
-  return (
-    <div className="space-y-2">
-      {steps.map((step, i) => {
-        const done = step.status === 'completed';
-        const failed = step.status === 'failed';
-        const running = i === currentIndex && !done && !failed;
-
-        return (
-          <div
-            key={i}
-            className="flex items-center gap-3 p-3 rounded-lg"
-            style={{
-              background: running ? 'rgba(0,255,200,0.04)' : 'rgba(255,255,255,0.02)',
-              border: `1px solid ${running ? 'rgba(0,255,200,0.2)' : 'transparent'}`,
-            }}
-          >
-            {/* Status indicator */}
-            <div
-              className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-xs font-bold"
-              style={{
-                background: done
-                  ? 'rgba(0,255,136,0.15)'
-                  : failed
-                  ? 'rgba(255,68,68,0.15)'
-                  : running
-                  ? 'rgba(0,255,200,0.1)'
-                  : 'rgba(255,255,255,0.05)',
-                color: done
-                  ? 'var(--green)'
-                  : failed
-                  ? 'var(--red)'
-                  : running
-                  ? 'var(--cyan)'
-                  : 'var(--text-secondary)',
-                border: `1px solid ${
-                  done
-                    ? 'rgba(0,255,136,0.3)'
-                    : failed
-                    ? 'rgba(255,68,68,0.3)'
-                    : running
-                    ? 'rgba(0,255,200,0.3)'
-                    : 'rgba(255,255,255,0.05)'
-                }`,
-              }}
-            >
-              {done ? (
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                  <path d="M2 6L5 9L10 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              ) : failed ? (
-                '!'
-              ) : running ? (
-                <span className="animate-pulse">...</span>
-              ) : (
-                i + 1
-              )}
-            </div>
-
-            {/* Step info */}
-            <div className="flex-1 min-w-0">
-              <span className="text-xs font-medium" style={{ color: 'var(--text-primary)' }}>
-                {step.alias || step.skill_name}
-              </span>
-            </div>
-
-            {/* Duration */}
-            {done && (
-              <span className="text-xs shrink-0" style={{ color: 'var(--text-secondary)' }}>
-                {(step.duration_ms / 1000).toFixed(1)}s
-              </span>
-            )}
-
-            {running && (
-              <span className="text-xs shrink-0 animate-pulse" style={{ color: 'var(--cyan)' }}>
-                running
-              </span>
-            )}
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-function CompletionPanel({ result }: { result: ChainRunResult }) {
-  const { chain, gamification } = result;
-  const totalSec = (chain.total_duration_ms / 1000).toFixed(1);
-  const trainer = gamification.trainer as Record<string, unknown>;
-  const unlocked = gamification.unlocked || [];
-
-  return (
-    <div className="space-y-6">
-      {/* Summary */}
-      <div
-        className="rounded-lg p-5"
-        style={{
-          background: chain.success ? 'rgba(0,255,136,0.04)' : 'rgba(255,68,68,0.04)',
-          border: `1px solid ${chain.success ? 'rgba(0,255,136,0.2)' : 'rgba(255,68,68,0.2)'}`,
-        }}
-      >
-        <div className="flex items-center gap-3 mb-3">
-          <div
-            className="w-8 h-8 rounded-full flex items-center justify-center"
-            style={{
-              background: chain.success ? 'rgba(0,255,136,0.15)' : 'rgba(255,68,68,0.15)',
-              color: chain.success ? 'var(--green)' : 'var(--red)',
-            }}
-          >
-            {chain.success ? (
-              <svg width="16" height="16" viewBox="0 0 12 12" fill="none">
-                <path d="M2 6L5 9L10 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            ) : (
-              '!'
-            )}
-          </div>
-          <div>
-            <div className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
-              {chain.success ? 'Chain completed' : 'Chain failed'}
-            </div>
-            <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-              {chain.steps.length} steps in {totalSec}s
-            </div>
-          </div>
-        </div>
-
-        {/* Step results */}
-        <StepProgress steps={chain.steps} currentIndex={-1} />
-      </div>
-
-      {/* XP / Gamification */}
-      {trainer && (
-        <div
-          className="rounded-lg p-5"
-          style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
-        >
-          <div className="text-xs uppercase tracking-wider mb-3" style={{ color: 'var(--text-secondary)' }}>
-            Rewards
-          </div>
-          <div className="grid grid-cols-3 gap-4 text-center">
-            <div>
-              <div className="text-lg font-bold" style={{ color: 'var(--gold)' }}>
-                Lv.{String(trainer.level ?? '?')}
-              </div>
-              <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>Level</div>
-            </div>
-            <div>
-              <div className="text-lg font-bold" style={{ color: 'var(--cyan)' }}>
-                {String(trainer.xp ?? '0')}
-              </div>
-              <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>Total XP</div>
-            </div>
-            <div>
-              <div className="text-lg font-bold" style={{ color: 'var(--green)' }}>
-                {String(trainer.streak ?? '0')}
-              </div>
-              <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>Streak</div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Achievements unlocked */}
-      {unlocked.length > 0 && (
-        <div
-          className="rounded-lg p-5"
-          style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
-        >
-          <div className="text-xs uppercase tracking-wider mb-3" style={{ color: 'var(--gold)' }}>
-            Achievements Unlocked
-          </div>
-          <div className="space-y-2">
-            {unlocked.map((a, i) => (
-              <div key={i} className="flex items-center gap-3 p-2 rounded" style={{ background: 'rgba(255,215,0,0.04)' }}>
-                <div
-                  className="w-8 h-8 rounded-full flex items-center justify-center text-xs"
-                  style={{ background: 'rgba(255,215,0,0.15)', color: 'var(--gold)' }}
-                >
-                  +{a.xp}
-                </div>
-                <div>
-                  <div className="text-xs font-semibold" style={{ color: 'var(--text-primary)' }}>
-                    {a.name}
-                  </div>
-                  <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-                    {a.description}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Profile link */}
-      <div className="text-center">
-        <a
-          href="/profile"
-          className="inline-block px-6 py-2.5 rounded-lg text-xs uppercase tracking-wider font-semibold no-underline transition-all"
-          style={{
-            background: 'rgba(0,255,200,0.1)',
-            border: '1px solid rgba(0,255,200,0.3)',
-            color: 'var(--cyan)',
-          }}
-        >
-          View Full Profile
-        </a>
-      </div>
-    </div>
-  );
-}
-
 // ── Detail Panel ─────────────────────────────────────────────────────
 
 function ChainDetail({
   chain,
-  onRun,
-  isRunning,
-  runResult,
-  runSteps,
-  runProgress,
 }: {
   chain: ChainMatch;
-  onRun: () => void;
-  isRunning: boolean;
-  runResult: ChainRunResult | null;
-  runSteps: StepResult[];
-  runProgress: number;
 }) {
+  const [showPrompt, setShowPrompt] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [showInstall, setShowInstall] = useState(false);
   const color = getCategoryColor(chain.category);
+
+  const prompt = `Run the ${chain.chain_name} chain`;
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(prompt);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   return (
     <div
@@ -468,10 +260,10 @@ function ChainDetail({
         </div>
       </div>
 
-      {/* Run state */}
-      {!isRunning && !runResult && (
+      {/* Run Chain button */}
+      {!showPrompt ? (
         <button
-          onClick={onRun}
+          onClick={() => setShowPrompt(true)}
           className="w-full py-3 rounded-lg text-sm font-semibold uppercase tracking-wider cursor-pointer transition-all"
           style={{
             background: 'linear-gradient(135deg, rgba(0,255,200,0.15), rgba(0,255,200,0.05))',
@@ -487,34 +279,72 @@ function ChainDetail({
         >
           Run Chain
         </button>
-      )}
-
-      {isRunning && (
+      ) : (
         <div className="space-y-4">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: 'var(--cyan)' }} />
-            <span className="text-xs uppercase tracking-wider" style={{ color: 'var(--cyan)' }}>
-              Running...
-            </span>
-          </div>
-
-          {/* Progress bar */}
-          <div className="h-1 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.05)' }}>
-            <div
-              className="h-full rounded-full transition-all"
+          {/* Step 1: Install check */}
+          <div
+            className="rounded-lg p-4"
+            style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border)' }}
+          >
+            <div className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--text-primary)' }}>
+              Step 1 — Install SkillChain
+            </div>
+            <p className="text-xs mb-3" style={{ color: 'var(--text-secondary)' }}>
+              Already installed? Skip to step 2.
+            </p>
+            <button
+              onClick={() => setShowInstall(true)}
+              className="text-xs px-4 py-2 rounded-lg cursor-pointer transition-all"
               style={{
-                width: `${runProgress}%`,
-                background: 'var(--cyan)',
-                boxShadow: '0 0 10px rgba(0,255,200,0.4)',
+                background: 'rgba(170,136,255,0.1)',
+                border: '1px solid rgba(170,136,255,0.3)',
+                color: 'var(--purple)',
               }}
-            />
+            >
+              Download Installer
+            </button>
           </div>
 
-          {runSteps.length > 0 && <StepProgress steps={runSteps} currentIndex={runSteps.length - 1} />}
+          {/* Step 2: Open Claude and paste */}
+          <div
+            className="rounded-lg p-4"
+            style={{ background: 'rgba(0,255,200,0.03)', border: '1px solid rgba(0,255,200,0.15)' }}
+          >
+            <div className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--text-primary)' }}>
+              Step 2 — Open Claude Code and say:
+            </div>
+            <div
+              className="flex items-center gap-2 rounded-lg px-4 py-3 font-mono text-sm cursor-pointer"
+              style={{
+                background: 'rgba(0,0,0,0.4)',
+                border: '1px solid var(--border)',
+                color: 'var(--cyan)',
+              }}
+              onClick={handleCopy}
+            >
+              <span className="flex-1">{prompt}</span>
+              <span className="text-xs px-2 py-1 rounded flex-shrink-0" style={{
+                background: copied ? 'rgba(0,255,136,0.15)' : 'rgba(255,255,255,0.06)',
+                color: copied ? 'var(--green)' : 'var(--text-secondary)',
+              }}>
+                {copied ? 'Copied!' : 'Copy'}
+              </span>
+            </div>
+            <p className="text-xs mt-3" style={{ color: 'var(--text-secondary)' }}>
+              SkillChain will automatically find and execute the {chain.skills.length} skills in this chain.
+            </p>
+          </div>
         </div>
       )}
 
-      {runResult && <CompletionPanel result={runResult} />}
+      {showInstall && (
+        <div className="fixed inset-0 z-[999]" onClick={() => setShowInstall(false)}>
+          <div onClick={e => e.stopPropagation()}>
+            {/* Reuse the install modal */}
+            <InstallModalInline onClose={() => setShowInstall(false)} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -590,80 +420,11 @@ export default function Chains() {
   const inputRef = useRef<HTMLInputElement>(null);
 
   const [selected, setSelected] = useState<ChainMatch | null>(null);
-  const [runResult, setRunResult] = useState<ChainRunResult | null>(null);
-  const [runSteps, setRunSteps] = useState<StepResult[]>([]);
-  const [runProgress, setRunProgress] = useState(0);
 
   const { data: searchResults, isLoading: isSearching } = useSearchChains(debouncedQuery);
-  const runChain = useRunChain();
 
-  const isRunning = runChain.isPending;
   const hasSearch = debouncedQuery.length > 2;
   const results = searchResults || [];
-
-  // Reset run state when chain changes
-  useEffect(() => {
-    setRunResult(null);
-    setRunSteps([]);
-    setRunProgress(0);
-  }, [selected?.chain_name]);
-
-  const handleRun = useCallback(() => {
-    if (!selected) return;
-    setRunResult(null);
-    setRunSteps([]);
-    setRunProgress(0);
-
-    // Simulate step progress while mutation runs
-    const fakeSteps = selected.skills.map((s) => ({
-      skill_name: s,
-      alias: s,
-      status: 'pending',
-      output: {},
-      duration_ms: 0,
-      error: '',
-    }));
-    setRunSteps(fakeSteps);
-
-    let stepIdx = 0;
-    const interval = setInterval(() => {
-      stepIdx++;
-      setRunSteps((prev) =>
-        prev.map((step, i) =>
-          i < stepIdx
-            ? { ...step, status: 'completed', duration_ms: 800 + Math.random() * 2000 }
-            : i === stepIdx
-            ? { ...step, status: 'running' }
-            : step
-        )
-      );
-      setRunProgress(Math.min(95, (stepIdx / fakeSteps.length) * 100));
-      if (stepIdx >= fakeSteps.length) clearInterval(interval);
-    }, 1500);
-
-    runChain.mutate(
-      { name: selected.chain_name },
-      {
-        onSuccess: (data) => {
-          clearInterval(interval);
-          setRunProgress(100);
-          setRunSteps(data.chain.steps);
-          setRunResult(data);
-        },
-        onError: () => {
-          clearInterval(interval);
-          // Mark remaining steps as failed
-          setRunSteps((prev) =>
-            prev.map((step) =>
-              step.status === 'pending' || step.status === 'running'
-                ? { ...step, status: 'failed' }
-                : step
-            )
-          );
-        },
-      }
-    );
-  }, [selected, runChain]);
 
   const handleSelect = useCallback((chain: ChainMatch) => {
     setSelected(chain);
@@ -779,11 +540,6 @@ export default function Chains() {
             {selected ? (
               <ChainDetail
                 chain={selected}
-                onRun={handleRun}
-                isRunning={isRunning}
-                runResult={runResult}
-                runSteps={runSteps}
-                runProgress={runProgress}
               />
             ) : (
               <div
@@ -826,11 +582,6 @@ export default function Chains() {
               {selected ? (
                 <ChainDetail
                   chain={selected}
-                  onRun={handleRun}
-                  isRunning={isRunning}
-                  runResult={runResult}
-                  runSteps={runSteps}
-                  runProgress={runProgress}
                 />
               ) : (
                 <div
