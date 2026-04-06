@@ -1,4 +1,8 @@
+import { useState } from 'react';
+import InstallModal from './InstallModal';
+
 export default function HeroSection() {
+  const [showInstall, setShowInstall] = useState(false);
 
   return (
     <section className="relative min-h-screen flex flex-col items-center justify-center px-6 overflow-hidden">
@@ -37,8 +41,8 @@ export default function HeroSection() {
         </p>
 
         {/* Download CTA */}
-        <a
-          href="/docs"
+        <button
+          onClick={() => setShowInstall(true)}
           className="inline-flex items-center gap-3 px-8 py-4 rounded-xl no-underline cursor-pointer transition-all animate-fade-in-up animate-pulse-glow"
           style={{
             background: 'linear-gradient(135deg, rgba(0,255,200,0.15), rgba(170,136,255,0.15))',
@@ -53,7 +57,7 @@ export default function HeroSection() {
           <span className="text-xs px-2 py-1 rounded" style={{ background: 'rgba(0,255,200,0.1)', color: 'var(--green)' }}>
             Free
           </span>
-        </a>
+        </button>
 
         {/* Secondary CTAs */}
         <div className="flex items-center justify-center gap-6 mt-6 animate-fade-in-up" style={{ animationDelay: '0.45s' }}>
@@ -61,7 +65,7 @@ export default function HeroSection() {
             Read the whitepaper
           </a>
           <span style={{ color: 'var(--border)' }}>|</span>
-          <a href="https://github.com" className="text-sm no-underline transition-colors" style={{ color: 'var(--text-secondary)' }}>
+          <a href="https://github.com/Jluethke/Velma-AI" className="text-sm no-underline transition-colors" style={{ color: 'var(--text-secondary)' }}>
             View on GitHub
           </a>
         </div>
@@ -94,6 +98,8 @@ export default function HeroSection() {
           ))}
         </div>
       </div>
+
+      {showInstall && <InstallModal onClose={() => setShowInstall(false)} />}
     </section>
   );
 }
