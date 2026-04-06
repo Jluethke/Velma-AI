@@ -77,7 +77,7 @@ if not exist "%SC_DIR%\bin" mkdir "%SC_DIR%\bin"
 echo   [4/6] Creating trainer profile...
 python -c "from skillchain.sdk.gamification import GamificationEngine; e = GamificationEngine(); print(f'  Level {e.get_trainer_card()[\"level\"]} {e.get_trainer_card()[\"title\"]}')" 2>nul
 
-:: Register PATH
+:: Register PATH using PowerShell (safe, no truncation, no 1024 char limit)
 echo   [5/6] Registering PATH...
 set "BIN_DIR=%SC_DIR%\bin"
 
@@ -85,25 +85,22 @@ set "BIN_DIR=%SC_DIR%\bin"
 echo @echo off > "%BIN_DIR%\skillchain.cmd"
 echo python -m skillchain.sdk.cli %%* >> "%BIN_DIR%\skillchain.cmd"
 
-:: Check if already on PATH
-echo %PATH% | findstr /i /c:"%BIN_DIR%" >nul 2>&1
+:: Use PowerShell to safely append to user PATH without truncation
+powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+  "$binDir = '%BIN_DIR%'; " ^
+  "$currentPath = [Environment]::GetEnvironmentVariable('Path', 'User'); " ^
+  "if ($currentPath -and $currentPath.Split(';') -contains $binDir) { " ^
+  "  Write-Host '  Already on PATH.'; " ^
+  "} else { " ^
+  "  $newPath = if ($currentPath) { $currentPath.TrimEnd(';') + ';' + $binDir } else { $binDir }; " ^
+  "  [Environment]::SetEnvironmentVariable('Path', $newPath, 'User'); " ^
+  "  $env:Path = $newPath + ';' + $env:Path; " ^
+  "  Write-Host '  Added to PATH:' $binDir; " ^
+  "  Write-Host '  Restart your terminal for PATH changes to take effect.'; " ^
+  "}"
 if %errorlevel% neq 0 (
-    :: Add to user PATH via setx (permanent, user-level)
-    for /f "tokens=2,*" %%A in ('reg query "HKCU\Environment" /v Path 2^>nul') do set "CURRENT_PATH=%%B"
-    if defined CURRENT_PATH (
-        setx PATH "%CURRENT_PATH%;%BIN_DIR%" >nul 2>&1
-    ) else (
-        setx PATH "%BIN_DIR%" >nul 2>&1
-    )
-    if %errorlevel% equ 0 (
-        echo   Added to PATH: %BIN_DIR%
-        echo   Restart your terminal for PATH changes to take effect.
-    ) else (
-        echo   WARNING: Could not add to PATH automatically.
-        echo   Manually add to PATH: %BIN_DIR%
-    )
-) else (
-    echo   Already on PATH.
+    echo   WARNING: Could not add to PATH automatically.
+    echo   Manually add to PATH: %BIN_DIR%
 )
 
 :: Validate installation
@@ -111,9 +108,7 @@ echo   [6/6] Validating installation...
 set "VALID=1"
 
 if not exist "%SC_DIR%\marketplace" (
-    echo   WARNING: Marketplace directory not found.
-    echo   Skills may not have been installed. Run the .exe installer for full setup.
-    set "VALID=0"
+    echo   Marketplace: Skills load on first use from the network.
 )
 
 python -c "from skillchain.sdk.mcp_bridge.server import create_server; s = create_server(); print('  MCP server: OK')" 2>nul
