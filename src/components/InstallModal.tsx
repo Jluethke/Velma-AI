@@ -82,8 +82,8 @@ export default function InstallModal({ onClose }: { onClose: () => void }) {
         <div className="rounded-lg p-4" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)' }}>
           <p className="text-xs font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>After you run it:</p>
           <ol className="text-xs space-y-1.5 pl-4" style={{ color: 'var(--text-secondary)' }}>
-            <li>Downloads 126 AI skills and 92 skill chains</li>
-            <li>Auto-configures Claude Code, Cursor, Windsurf, VS Code</li>
+            <li>Installs SkillChain via pip (Python)</li>
+            <li>Auto-configures Claude Code, Cursor, Windsurf</li>
             <li>Restart your AI tool — just talk normally</li>
           </ol>
         </div>
