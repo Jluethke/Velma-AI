@@ -40,8 +40,23 @@ tar -xzf "/tmp/skillchain-mcp.tar.gz" -C "$SC_DIR"
 rm -f "/tmp/skillchain-mcp.tar.gz"
 echo "  Downloaded and extracted."
 
+# Install Claude Code instructions
+echo "  [3/6] Installing Claude Code instructions..."
+CLAUDE_MD="$HOME/.claude/CLAUDE.md"
+mkdir -p "$HOME/.claude"
+if [ -f "$SC_DIR/INSTRUCTIONS.md" ]; then
+    if [ -f "$CLAUDE_MD" ] && grep -q "SkillChain AI Skill Marketplace" "$CLAUDE_MD" 2>/dev/null; then
+        echo "  SkillChain instructions already in CLAUDE.md"
+    else
+        cat "$SC_DIR/INSTRUCTIONS.md" >> "$CLAUDE_MD"
+        echo "  Added SkillChain instructions to CLAUDE.md"
+    fi
+else
+    echo "  WARNING: INSTRUCTIONS.md not found in package."
+fi
+
 # Configure MCP clients
-echo "  [3/5] Configuring MCP clients..."
+echo "  [4/6] Configuring MCP clients..."
 SERVER_PATH="$SC_DIR/server/index.js"
 CONFIGURED=0
 
@@ -123,7 +138,7 @@ if [ "$CONFIGURED" -eq 0 ]; then
 fi
 
 # Initialize profiles
-echo "  [4/5] Initializing profiles..."
+echo "  [5/6] Initializing profiles..."
 if [ ! -f "$SC_DIR/trainer.json" ]; then
     echo '{"xp":0,"level":1,"title":"Novice","skills_discovered":[],"chains_completed":[],"achievements_unlocked":{},"streak_current":0,"streak_best":0,"streak_last_date":"","evolution_levels":{},"daily_runs_today":[],"daily_runs_date":"","categories_today":[],"total_skill_runs":0,"total_chain_runs":0}' > "$SC_DIR/trainer.json"
 fi
@@ -132,7 +147,7 @@ if [ ! -f "$SC_DIR/profile.json" ]; then
 fi
 
 # Validate
-echo "  [5/5] Validating..."
+echo "  [6/6] Validating..."
 VALID=1
 
 if [ -f "$SC_DIR/server/index.js" ]; then

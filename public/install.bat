@@ -70,9 +70,33 @@ del "%DL_FILE%" 2>nul
 echo   Downloaded and extracted.
 
 :: ================================================================
-:: Step 3: Auto-configure any detected MCP clients (all PowerShell)
+:: Step 3: Install Claude Code instructions
 :: ================================================================
-echo   [3/6] Configuring MCP clients...
+echo   [3/7] Installing Claude Code instructions...
+set "CLAUDE_MD=%USERPROFILE%\.claude\CLAUDE.md"
+if not exist "%USERPROFILE%\.claude" mkdir "%USERPROFILE%\.claude"
+
+:: Check if SkillChain instructions already exist in CLAUDE.md
+set "ALREADY_INSTALLED=0"
+if exist "%CLAUDE_MD%" (
+    findstr /c:"SkillChain AI Skill Marketplace" "%CLAUDE_MD%" >nul 2>&1 && set "ALREADY_INSTALLED=1"
+)
+
+if "!ALREADY_INSTALLED!"=="0" (
+    if exist "%SC_DIR%\INSTRUCTIONS.md" (
+        type "%SC_DIR%\INSTRUCTIONS.md" >> "%CLAUDE_MD%"
+        echo   Added SkillChain instructions to CLAUDE.md
+    ) else (
+        echo   WARNING: INSTRUCTIONS.md not found in package.
+    )
+) else (
+    echo   SkillChain instructions already in CLAUDE.md
+)
+
+:: ================================================================
+:: Step 4: Auto-configure any detected MCP clients (all PowerShell)
+:: ================================================================
+echo   [4/7] Configuring MCP clients...
 set "SERVER_PATH=%SC_DIR%\server\index.js"
 set "CONFIGURED=0"
 
@@ -160,7 +184,7 @@ if "%CONFIGURED%"=="0" (
 :: ================================================================
 :: Step 4: Register in Add/Remove Programs
 :: ================================================================
-echo   [4/6] Registering in Add/Remove Programs...
+echo   [5/7] Registering in Add/Remove Programs...
 set "UNINSTALL_KEY=HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall\SkillChain"
 reg add "%UNINSTALL_KEY%" /v "DisplayName" /t REG_SZ /d "SkillChain - AI Skill Marketplace" /f >nul 2>&1
 reg add "%UNINSTALL_KEY%" /v "DisplayVersion" /t REG_SZ /d "0.1.0" /f >nul 2>&1
@@ -193,7 +217,7 @@ echo pause
 :: ================================================================
 :: Step 5: Initialize profiles
 :: ================================================================
-echo   [5/6] Initializing profiles...
+echo   [6/7] Initializing profiles...
 if not exist "%SC_DIR%\trainer.json" (
     echo {"xp":0,"level":1,"title":"Novice","skills_discovered":[],"chains_completed":[],"achievements_unlocked":{},"streak_current":0,"streak_best":0,"streak_last_date":"","evolution_levels":{},"daily_runs_today":[],"daily_runs_date":"","categories_today":[],"total_skill_runs":0,"total_chain_runs":0} > "%SC_DIR%\trainer.json"
 )
@@ -204,7 +228,7 @@ if not exist "%SC_DIR%\profile.json" (
 :: ================================================================
 :: Step 6: Validate
 :: ================================================================
-echo   [6/6] Validating...
+echo   [7/7] Validating...
 set "VALID=1"
 
 if exist "%SC_DIR%\server\index.js" (
