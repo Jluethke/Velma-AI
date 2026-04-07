@@ -22,13 +22,13 @@ export default function HeroSection() {
           className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 animate-fade-in-up"
           style={{ color: '#ffffff', lineHeight: 1.1 }}
         >
-          Trade AI Skills,{' '}
+          Make your AI{' '}
           <span className="block md:inline" style={{
             background: 'linear-gradient(135deg, var(--cyan), var(--purple))',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
           }}>
-            Not Promises
+            actually reliable
           </span>
         </h1>
 
@@ -36,13 +36,16 @@ export default function HeroSection() {
           className="text-base md:text-lg mb-10 max-w-2xl mx-auto animate-fade-in-up"
           style={{ color: 'var(--text-secondary)', animationDelay: '0.15s' }}
         >
-          AI skills that work with any agent. Publish once, works everywhere.
-          Validated by shadow testing, owned by creators, trusted by mathematics.
+          Fix broken code automatically &middot; Validate outputs across models &middot; Run proven skills instead of guessing
         </p>
 
-        {/* Download CTA */}
-        <button
-          onClick={() => setShowInstall(true)}
+        {/* Primary CTA — Try it now */}
+        <a
+          href="#live-demo"
+          onClick={(e) => {
+            e.preventDefault();
+            document.getElementById('live-demo')?.scrollIntoView({ behavior: 'smooth' });
+          }}
           className="inline-flex items-center gap-3 px-8 py-4 rounded-xl no-underline cursor-pointer transition-all animate-fade-in-up animate-pulse-glow"
           style={{
             background: 'linear-gradient(135deg, rgba(0,255,200,0.15), rgba(170,136,255,0.15))',
@@ -52,22 +55,36 @@ export default function HeroSection() {
           }}
         >
           <span className="text-sm md:text-base font-semibold">
-            Download SkillChain
+            Try it now
           </span>
-          <span className="text-xs px-2 py-1 rounded" style={{ background: 'rgba(0,255,200,0.1)', color: 'var(--green)' }}>
-            Free
-          </span>
-        </button>
+        </a>
 
-        {/* Secondary CTAs */}
-        <div className="flex items-center justify-center gap-6 mt-6 animate-fade-in-up" style={{ animationDelay: '0.45s' }}>
-          <a href="/whitepaper" className="text-sm no-underline transition-colors" style={{ color: 'var(--text-secondary)' }}>
-            Read the whitepaper
-          </a>
-          <span style={{ color: 'var(--border)' }}>|</span>
-          <a href="https://github.com/Jluethke/Velma-AI" className="text-sm no-underline transition-colors" style={{ color: 'var(--text-secondary)' }}>
-            View on GitHub
-          </a>
+        {/* Secondary CTA — Download */}
+        <div className="mt-4 animate-fade-in-up" style={{ animationDelay: '0.4s' }}>
+          <button
+            onClick={() => setShowInstall(true)}
+            className="text-xs no-underline cursor-pointer transition-colors bg-transparent border-0"
+            style={{ color: 'var(--text-secondary)' }}
+          >
+            or download SkillChain — it's free
+          </button>
+        </div>
+
+        {/* Powered by badge */}
+        <div
+          className="mt-6 animate-fade-in-up"
+          style={{ animationDelay: '0.5s' }}
+        >
+          <span
+            className="text-xs px-3 py-1 rounded-full"
+            style={{
+              background: 'rgba(170,136,255,0.08)',
+              border: '1px solid rgba(170,136,255,0.2)',
+              color: 'var(--purple)',
+            }}
+          >
+            Powered by SkillChain
+          </span>
         </div>
       </div>
 
@@ -85,8 +102,8 @@ export default function HeroSection() {
           }}
         >
           {[
-            { value: '100s', label: 'of AI Skills', color: 'var(--cyan)' },
-            { value: '100s', label: 'of Skill Chains', color: 'var(--purple)' },
+            { value: '126+', label: 'Proven Skills', color: 'var(--cyan)' },
+            { value: '92+', label: 'Automated Workflows', color: 'var(--purple)' },
           ].map((stat, i) => (
             <div key={i} className="flex items-center gap-2 text-sm">
               <span className="font-bold" style={{ color: stat.color }}>{stat.value}</span>

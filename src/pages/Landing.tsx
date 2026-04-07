@@ -1,5 +1,7 @@
 import { Link } from 'react-router-dom';
 import HeroSection from '../components/HeroSection';
+import LiveDemo from '../components/LiveDemo';
+import SkillShowcase from '../components/SkillShowcase';
 import ValueCards from '../components/ValueCards';
 import HowItWorks from '../components/HowItWorks';
 import TokenEconomics from '../components/TokenEconomics';
@@ -480,15 +482,17 @@ export default function Landing() {
   return (
     <>
       <HeroSection />
-      <ValueCards />
-      <OnboardingRewardsSection />
-      <SupportedPlatforms />
+      <LiveDemo />
+      <SkillShowcase />
       <HowItWorks />
+      <PricingPreview />
+      <ValueCards />
+      <SupportedPlatforms />
+      <OnboardingRewardsSection />
       <CreatorsSection />
       <ValidatorsSection />
       <TokenEconomics />
       <LifeProtocol />
-      <PricingPreview />
       <FAQ />
     </>
   );

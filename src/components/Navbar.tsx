@@ -10,6 +10,8 @@ export default function Navbar() {
 
   const navLinks = [
     { to: '/', label: 'Home' },
+    { to: '/explore', label: 'Skills' },
+    { to: '/chains', label: 'Chains' },
     { to: '/docs', label: 'Docs' },
   ];
 
@@ -62,7 +64,7 @@ export default function Navbar() {
                 color: 'var(--cyan)',
               }}
             >
-              Get SkillChain
+              Try Free
             </button>
             <ConnectButton
               chainStatus="icon"

@@ -25,10 +25,13 @@ export default function InstallModal({ onClose }: { onClose: () => void }) {
 
         {/* Header */}
         <h2 className="text-2xl font-bold mb-1" style={{ color: 'var(--text-primary)' }}>
-          Download SkillChain
+          Install in 30 seconds
         </h2>
+        <p className="text-sm mb-1" style={{ color: 'var(--cyan)' }}>
+          Run skills directly in your terminal with Claude Code, Cursor, or Windsurf
+        </p>
         <p className="text-sm mb-6" style={{ color: 'var(--text-secondary)' }}>
-          Download, double-click, done. Works with Claude Code, GPT, Cursor, and more.
+          Download, double-click, done.
         </p>
 
         {/* Download buttons */}
