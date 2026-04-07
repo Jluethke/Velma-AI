@@ -492,6 +492,15 @@ async function main() {
   await server.connect(transport);
 }
 
+// Keep the process alive — don't exit on stdin EOF or uncaught errors
+process.stdin.on("end", () => { /* stdin closed, stay alive */ });
+process.on("uncaughtException", (err) => {
+  console.error("SkillChain uncaught:", (err as Error).message);
+});
+process.on("unhandledRejection", (err) => {
+  console.error("SkillChain unhandled:", err);
+});
+
 main().catch(err => {
   console.error("SkillChain MCP server failed to start:", err);
   process.exit(1);
