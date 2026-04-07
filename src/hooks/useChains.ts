@@ -45,17 +45,16 @@ export interface ChainRunResult {
 }
 
 const fallbackChains: ChainSummary[] = [
-  // ── FREE CHAIN — the hook ──────────────────────────────────────────
+  // ── ALL CHAINS FREE ─────────────────────────────────────────────────
   { name: 'get-your-life-together', description: 'Budget your money, plan your week, and meal prep — all in one shot. The chain everyone needs.', category: 'life', steps: 3, skills: ['budget-builder', 'daily-planner', 'meal-planner'], free: true },
 
-  // ── PREMIUM CHAINS — require TRUST ────────────────────────────────
-  { name: 'career-launchpad', description: 'Build your resume, prep for interviews, and plan salary negotiation — full job search pipeline', category: 'career', steps: 3, skills: ['resume-builder', 'interview-coach', 'daily-planner'], free: false },
-  { name: 'money-makeover', description: 'Audit expenses, build a budget, and create a retirement projection — take control of your finances', category: 'money', steps: 3, skills: ['expense-optimizer', 'budget-builder', 'retirement-planner'], free: false },
-  { name: 'code-review', description: 'Full code review pipeline: lint, security scan, style check, and actionable summary', category: 'developer', steps: 3, skills: ['code-review', 'complaint-letter-writer'], free: false },
-  { name: 'content-machine', description: 'Turn one piece of content into 25 platform-optimized variations with scheduling', category: 'content', steps: 3, skills: ['content-engine', 'daily-planner'], free: false },
-  { name: 'healthy-week', description: 'Plan your meals, schedule workouts, and organize your week for maximum energy', category: 'health', steps: 3, skills: ['meal-planner', 'workout-planner', 'daily-planner'], free: false },
-  { name: 'trip-ready', description: 'Plan your trip, budget it, and get a daily itinerary — from idea to packed bag', category: 'life', steps: 3, skills: ['travel-planner', 'budget-builder', 'daily-planner'], free: false },
-  { name: 'home-savings', description: 'Energy audit your home and optimize recurring expenses — find hidden savings', category: 'home', steps: 2, skills: ['energy-audit', 'expense-optimizer'], free: false },
+  { name: 'career-launchpad', description: 'Build your resume, prep for interviews, and plan salary negotiation — full job search pipeline', category: 'career', steps: 3, skills: ['resume-builder', 'interview-coach', 'daily-planner'], free: true },
+  { name: 'money-makeover', description: 'Audit expenses, build a budget, and create a retirement projection — take control of your finances', category: 'money', steps: 3, skills: ['expense-optimizer', 'budget-builder', 'retirement-planner'], free: true },
+  { name: 'code-review', description: 'Full code review pipeline: lint, security scan, style check, and actionable summary', category: 'developer', steps: 3, skills: ['code-review', 'complaint-letter-writer'], free: true },
+  { name: 'content-machine', description: 'Turn one piece of content into 25 platform-optimized variations with scheduling', category: 'content', steps: 3, skills: ['content-engine', 'daily-planner'], free: true },
+  { name: 'healthy-week', description: 'Plan your meals, schedule workouts, and organize your week for maximum energy', category: 'health', steps: 3, skills: ['meal-planner', 'workout-planner', 'daily-planner'], free: true },
+  { name: 'trip-ready', description: 'Plan your trip, budget it, and get a daily itinerary — from idea to packed bag', category: 'life', steps: 3, skills: ['travel-planner', 'budget-builder', 'daily-planner'], free: true },
+  { name: 'home-savings', description: 'Energy audit your home and optimize recurring expenses — find hidden savings', category: 'home', steps: 2, skills: ['energy-audit', 'expense-optimizer'], free: true },
 ];
 
 export function useChains() {

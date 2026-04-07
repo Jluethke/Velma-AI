@@ -17,19 +17,9 @@ export default function SkillCard({ skill, locked = false }: SkillCardProps) {
         <h3 className="text-sm font-semibold" style={{ color: locked ? 'var(--text-secondary)' : 'var(--cyan)' }}>
           {skill.name}
         </h3>
-        {locked ? (
-          <span className="text-xs font-semibold flex items-center gap-1" style={{ color: 'var(--gold)' }}>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-            </svg>
-            TRUST
-          </span>
-        ) : (
-          <span className="text-sm font-bold" style={{ color: skill.price === '0' ? 'var(--green)' : 'var(--gold)' }}>
-            {skill.price === '0' ? 'FREE' : `${skill.price} TRUST`}
-          </span>
-        )}
+        <span className="text-sm font-bold" style={{ color: 'var(--green)' }}>
+          FREE
+        </span>
       </div>
 
       {/* Badges */}
