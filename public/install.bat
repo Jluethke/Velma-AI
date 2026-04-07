@@ -112,7 +112,7 @@ if exist "%USERPROFILE%\.claude" (
       "if(-not $s.mcpServers){$s|Add-Member -NotePropertyName mcpServers -NotePropertyValue @{} -Force};" ^
       "$entry=@{command='node';args=@('%PS_SERVER_PATH%');env=@{}};" ^
       "$s.mcpServers|Add-Member -NotePropertyName skillchain -NotePropertyValue $entry -Force;" ^
-      "$s|ConvertTo-Json -Depth 10|Set-Content $p -Encoding UTF8;" ^
+      "$s|ConvertTo-Json -Depth 10|Out-String|%{[IO.File]::WriteAllText($p,$_.Trim())};" ^
       "Write-Host '  Claude Code: configured'" 2>nul && set "CONFIGURED=1"
 ) else (
     echo   Claude Code: not detected
@@ -126,7 +126,7 @@ if exist "%USERPROFILE%\.cursor" (
       "if(-not $s.mcpServers){$s|Add-Member -NotePropertyName mcpServers -NotePropertyValue @{} -Force};" ^
       "$entry=@{command='node';args=@('%PS_SERVER_PATH%');env=@{}};" ^
       "$s.mcpServers|Add-Member -NotePropertyName skillchain -NotePropertyValue $entry -Force;" ^
-      "$s|ConvertTo-Json -Depth 10|Set-Content $p -Encoding UTF8;" ^
+      "$s|ConvertTo-Json -Depth 10|Out-String|%{[IO.File]::WriteAllText($p,$_.Trim())};" ^
       "Write-Host '  Cursor: configured'" 2>nul && set "CONFIGURED=1"
 ) else (
     echo   Cursor: not detected
@@ -140,7 +140,7 @@ if exist "%USERPROFILE%\.codeium\windsurf" (
       "if(-not $s.mcpServers){$s|Add-Member -NotePropertyName mcpServers -NotePropertyValue @{} -Force};" ^
       "$entry=@{command='node';args=@('%PS_SERVER_PATH%');env=@{}};" ^
       "$s.mcpServers|Add-Member -NotePropertyName skillchain -NotePropertyValue $entry -Force;" ^
-      "$s|ConvertTo-Json -Depth 10|Set-Content $p -Encoding UTF8;" ^
+      "$s|ConvertTo-Json -Depth 10|Out-String|%{[IO.File]::WriteAllText($p,$_.Trim())};" ^
       "Write-Host '  Windsurf: configured'" 2>nul && set "CONFIGURED=1"
 ) else (
     echo   Windsurf: not detected
@@ -154,7 +154,7 @@ if exist "%USERPROFILE%\.vscode" (
       "if(-not $s.servers){$s|Add-Member -NotePropertyName servers -NotePropertyValue @{} -Force};" ^
       "$entry=@{command='node';args=@('%PS_SERVER_PATH%');env=@{}};" ^
       "$s.servers|Add-Member -NotePropertyName skillchain -NotePropertyValue $entry -Force;" ^
-      "$s|ConvertTo-Json -Depth 10|Set-Content $p -Encoding UTF8;" ^
+      "$s|ConvertTo-Json -Depth 10|Out-String|%{[IO.File]::WriteAllText($p,$_.Trim())};" ^
       "Write-Host '  VS Code: configured'" 2>nul && set "CONFIGURED=1"
 ) else (
     echo   VS Code: not detected
@@ -177,7 +177,7 @@ if "%CONFIGURED%"=="0" (
       "if(-not $s.mcpServers){$s|Add-Member -NotePropertyName mcpServers -NotePropertyValue @{} -Force};" ^
       "$entry=@{command='node';args=@('%PS_SERVER_PATH%');env=@{}};" ^
       "$s.mcpServers|Add-Member -NotePropertyName skillchain -NotePropertyValue $entry -Force;" ^
-      "$s|ConvertTo-Json -Depth 10|Set-Content $p -Encoding UTF8;" ^
+      "$s|ConvertTo-Json -Depth 10|Out-String|%{[IO.File]::WriteAllText($p,$_.Trim())};" ^
       "Write-Host '  Pre-configured for Claude Code'" 2>nul
 )
 
