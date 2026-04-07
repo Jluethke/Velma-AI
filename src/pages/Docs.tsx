@@ -75,10 +75,10 @@ function QuickStartContent() {
 
         <p className="text-sm mb-2" style={textStyle}>The installer handles everything:</p>
         <ul className="space-y-1.5 text-sm list-none p-0" style={textStyle}>
-          <li className="flex items-center gap-2"><span style={{ color: 'var(--green)' }}>&#10003;</span> Installs Python if you don't have it</li>
-          <li className="flex items-center gap-2"><span style={{ color: 'var(--green)' }}>&#10003;</span> Installs SkillChain SDK + hundreds of skills and chains</li>
-          <li className="flex items-center gap-2"><span style={{ color: 'var(--green)' }}>&#10003;</span> Auto-configures Claude Code (or your AI agent)</li>
-          <li className="flex items-center gap-2"><span style={{ color: 'var(--green)' }}>&#10003;</span> Creates your trainer profile</li>
+          <li className="flex items-center gap-2"><span style={{ color: 'var(--green)' }}>&#10003;</span> Only needs Node.js (comes with Claude Code)</li>
+          <li className="flex items-center gap-2"><span style={{ color: 'var(--green)' }}>&#10003;</span> Installs 126 skills and 92 chains</li>
+          <li className="flex items-center gap-2"><span style={{ color: 'var(--green)' }}>&#10003;</span> Auto-configures Claude Code MCP server</li>
+          <li className="flex items-center gap-2"><span style={{ color: 'var(--green)' }}>&#10003;</span> Creates your trainer profile with gamification</li>
         </ul>
       </section>
 
@@ -118,7 +118,7 @@ function QuickStartContent() {
         </p>
         <CodeBlock code={`"What skills do I have?"\n"Show me skills for budgeting"\n"Find a skill for code review"`} filename="talk to Claude" />
         <p className="text-sm mt-4" style={textStyle}>
-          4 sample skills are free. Connect a wallet with TRUST tokens to unlock all 120+.
+          All 126 skills are included with the install. Connect a wallet with TRUST tokens to publish your own skills and earn from the marketplace.
         </p>
       </section>
 
@@ -175,7 +175,7 @@ function QuickStartContent() {
           {[
             { q: 'Do I need to know crypto to use this?', a: 'No. Install, restart Claude Code, talk normally. The crypto layer (TRUST tokens, staking, on-chain validation) is optional and only matters if you want to publish skills or unlock the full marketplace.' },
             { q: 'What AI agents does it work with?', a: 'Claude Code, GPT, Gemini, Cursor, and any MCP-compatible agent. The installer auto-detects what you have.' },
-            { q: 'Is it free?', a: 'Yes. 4 sample skills and the code-review chain are completely free. Connect a wallet with TRUST tokens to unlock all 120+ skills and 65+ chains.' },
+            { q: 'Is it free?', a: 'Yes. All 126 skills and 92 chains are included free. TRUST tokens are for publishing your own skills to the marketplace and earning from the network.' },
             { q: 'How do I earn TRUST tokens?', a: 'Publish skills that others use, validate skills for quality, or participate in governance. There is no public sale — you earn them by contributing.' },
             { q: 'Where do skills get installed?', a: 'Depends on your agent. Claude: ~/.claude/skills/. Cursor: .cursor/rules/. GPT: ~/.openai/skills/. The installer handles this automatically.' },
           ].map((item, i) => (
@@ -199,8 +199,8 @@ function Web3Content() {
       <section id="w3-prerequisites" className="mb-12">
         <h2 className="text-xl font-semibold mb-4" style={headingStyle}>Prerequisites</h2>
         <ul className="space-y-2 text-sm list-none p-0" style={textStyle}>
-          <li className="flex items-center gap-2"><span style={{ color: 'var(--cyan)' }}>&#8250;</span> Python 3.10 or higher</li>
-          <li className="flex items-center gap-2"><span style={{ color: 'var(--cyan)' }}>&#8250;</span> pip (any recent version)</li>
+          <li className="flex items-center gap-2"><span style={{ color: 'var(--cyan)' }}>&#8250;</span> Node.js 18+ (comes with Claude Code)</li>
+          <li className="flex items-center gap-2"><span style={{ color: 'var(--cyan)' }}>&#8250;</span> SkillChain installed (run the installer first)</li>
           <li className="flex items-center gap-2"><span style={{ color: 'var(--cyan)' }}>&#8250;</span> An Ethereum wallet (MetaMask, etc.)</li>
           <li className="flex items-center gap-2"><span style={{ color: 'var(--cyan)' }}>&#8250;</span> Base mainnet ETH (for gas)</li>
         </ul>

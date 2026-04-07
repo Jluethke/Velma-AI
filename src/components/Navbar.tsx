@@ -12,8 +12,6 @@ export default function Navbar() {
     { to: '/', label: 'Home' },
     { to: '/skills', label: 'Skills' },
     { to: '/chains', label: 'Chains' },
-    { to: '/dashboard', label: 'Dashboard' },
-    { to: '/portal', label: 'Portal' },
     { to: '/docs', label: 'Docs' },
   ];
 
