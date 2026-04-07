@@ -162,16 +162,21 @@ if exist "%USERPROFILE%\.vscode" (
 
 if "%CONFIGURED%"=="0" (
     echo.
-    echo   No MCP clients detected. That's OK!
-    echo   Install any of these, then restart it:
-    echo     - Claude Code  ^(claude.ai/code^)
-    echo     - Cursor       ^(cursor.com^)
-    echo     - Windsurf     ^(windsurf.com^)
-    echo     - VS Code      ^(code.visualstudio.com^)
+    echo   No MCP client found. You need one to use SkillChain.
     echo.
-    echo   SkillChain is installed and ready. Your MCP client
-    echo   will find it automatically, or add it manually:
-    echo     Server: node %SERVER_PATH%
+    echo   Opening Claude Code download page...
+    start "" "https://claude.ai/download"
+    echo.
+    echo   After installing Claude Code:
+    echo     1. Open it and sign in
+    echo     2. Re-run this installer ^(it will auto-configure^)
+    echo     3. Just talk. Say "I feel stuck" or "help me budget"
+    echo.
+    echo   Or use any MCP-compatible app: Cursor, Windsurf, VS Code
+    echo.
+    :: Pre-create Claude dir and settings so it's ready when they install
+    if not exist "%USERPROFILE%\.claude" mkdir "%USERPROFILE%\.claude"
+    node -e "const fs=require('fs'),p='%CLAUDE_SETTINGS%'.replace(/\\/g,'/');let s={};try{s=JSON.parse(fs.readFileSync(p,'utf-8'))}catch{}if(!s.mcpServers)s.mcpServers={};s.mcpServers.skillchain={command:'node',args:['%SERVER_PATH%'.replace(/\\/g,'/')],env:{}};fs.writeFileSync(p,JSON.stringify(s,null,2),'utf-8');console.log('  Pre-configured for Claude Code')" 2>nul
 )
 
 :: ================================================================
