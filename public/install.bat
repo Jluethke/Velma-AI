@@ -15,7 +15,9 @@ echo   ==================================
 echo.
 
 set "SC_DIR=%USERPROFILE%\.skillchain"
-set "DOWNLOAD_URL=https://velma-ai.vercel.app/skillchain-mcp-0.1.0.tar.gz"
+set "DOWNLOAD_URL=https://velma-ai.vercel.app/skillchain-mcp-0.1.0.zip"
+set "DL_FILE=%TEMP%\skillchain-mcp.zip"
+set "PS=%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe"
 
 :: ================================================================
 :: Step 1: Create directories
@@ -36,20 +38,20 @@ echo   [2/6] Downloading SkillChain...
 set "DL_OK=0"
 
 :: Try PowerShell (full path — works even if PATH is broken)
-if exist "%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe" (
-    "%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -ExecutionPolicy Bypass -Command "Invoke-WebRequest -Uri '%DOWNLOAD_URL%' -OutFile '%TEMP%\skillchain-mcp.tar.gz' -UseBasicParsing" 2>nul && set "DL_OK=1"
+if exist "%PS%" (
+    "%PS%" -NoProfile -ExecutionPolicy Bypass -Command "Invoke-WebRequest -Uri '%DOWNLOAD_URL%' -OutFile '%DL_FILE%' -UseBasicParsing" 2>nul && set "DL_OK=1"
 )
 :: Fallback: curl
 if "!DL_OK!"=="0" (
-    curl -sSL -o "%TEMP%\skillchain-mcp.tar.gz" "%DOWNLOAD_URL%" 2>nul && set "DL_OK=1"
+    curl -sSL -o "%DL_FILE%" "%DOWNLOAD_URL%" 2>nul && set "DL_OK=1"
 )
 :: Fallback: certutil (available since Windows Vista)
 if "!DL_OK!"=="0" (
-    certutil -urlcache -split -f "%DOWNLOAD_URL%" "%TEMP%\skillchain-mcp.tar.gz" >nul 2>&1 && set "DL_OK=1"
+    certutil -urlcache -split -f "%DOWNLOAD_URL%" "%DL_FILE%" >nul 2>&1 && set "DL_OK=1"
 )
 :: Fallback: bitsadmin
 if "!DL_OK!"=="0" (
-    bitsadmin /transfer skillchain /download /priority high "%DOWNLOAD_URL%" "%TEMP%\skillchain-mcp.tar.gz" >nul 2>&1 && set "DL_OK=1"
+    bitsadmin /transfer skillchain /download /priority high "%DOWNLOAD_URL%" "%DL_FILE%" >nul 2>&1 && set "DL_OK=1"
 )
 
 if "!DL_OK!"=="0" (
@@ -59,12 +61,12 @@ if "!DL_OK!"=="0" (
 )
 
 echo   Extracting...
-tar -xzf "%TEMP%\skillchain-mcp.tar.gz" -C "%SC_DIR%"
+"%PS%" -NoProfile -ExecutionPolicy Bypass -Command "Expand-Archive -Path '%DL_FILE%' -DestinationPath '%SC_DIR%' -Force"
 if %errorlevel% neq 0 (
     echo   ERROR: Extraction failed.
     goto :failed
 )
-del "%TEMP%\skillchain-mcp.tar.gz" 2>nul
+del "%DL_FILE%" 2>nul
 echo   Downloaded and extracted.
 
 :: ================================================================
@@ -80,7 +82,7 @@ set "PS_SERVER_PATH=%SERVER_PATH:\=/%"
 
 :: --- Claude Code ---
 if exist "%USERPROFILE%\.claude" (
-    "%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -ExecutionPolicy Bypass -Command ^
+    "%PS%" -NoProfile -ExecutionPolicy Bypass -Command ^
       "$p='%USERPROFILE%\.claude\settings.json';" ^
       "$s=@{}; if(Test-Path $p){try{$s=Get-Content $p -Raw|ConvertFrom-Json}catch{$s=@{}}};" ^
       "if(-not $s.mcpServers){$s|Add-Member -NotePropertyName mcpServers -NotePropertyValue @{} -Force};" ^
@@ -94,7 +96,7 @@ if exist "%USERPROFILE%\.claude" (
 
 :: --- Cursor ---
 if exist "%USERPROFILE%\.cursor" (
-    "%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -ExecutionPolicy Bypass -Command ^
+    "%PS%" -NoProfile -ExecutionPolicy Bypass -Command ^
       "$p='%USERPROFILE%\.cursor\mcp.json';" ^
       "$s=@{}; if(Test-Path $p){try{$s=Get-Content $p -Raw|ConvertFrom-Json}catch{$s=@{}}};" ^
       "if(-not $s.mcpServers){$s|Add-Member -NotePropertyName mcpServers -NotePropertyValue @{} -Force};" ^
@@ -108,7 +110,7 @@ if exist "%USERPROFILE%\.cursor" (
 
 :: --- Windsurf ---
 if exist "%USERPROFILE%\.codeium\windsurf" (
-    "%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -ExecutionPolicy Bypass -Command ^
+    "%PS%" -NoProfile -ExecutionPolicy Bypass -Command ^
       "$p='%USERPROFILE%\.codeium\windsurf\mcp_config.json';" ^
       "$s=@{}; if(Test-Path $p){try{$s=Get-Content $p -Raw|ConvertFrom-Json}catch{$s=@{}}};" ^
       "if(-not $s.mcpServers){$s|Add-Member -NotePropertyName mcpServers -NotePropertyValue @{} -Force};" ^
@@ -122,7 +124,7 @@ if exist "%USERPROFILE%\.codeium\windsurf" (
 
 :: --- VS Code (Copilot MCP) ---
 if exist "%USERPROFILE%\.vscode" (
-    "%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -ExecutionPolicy Bypass -Command ^
+    "%PS%" -NoProfile -ExecutionPolicy Bypass -Command ^
       "$p='%USERPROFILE%\.vscode\mcp.json';" ^
       "$s=@{}; if(Test-Path $p){try{$s=Get-Content $p -Raw|ConvertFrom-Json}catch{$s=@{}}};" ^
       "if(-not $s.servers){$s|Add-Member -NotePropertyName servers -NotePropertyValue @{} -Force};" ^
@@ -145,7 +147,7 @@ if "%CONFIGURED%"=="0" (
     echo.
     :: Pre-create Claude dir and settings so it's ready when they install
     if not exist "%USERPROFILE%\.claude" mkdir "%USERPROFILE%\.claude"
-    "%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -ExecutionPolicy Bypass -Command ^
+    "%PS%" -NoProfile -ExecutionPolicy Bypass -Command ^
       "$p='%USERPROFILE%\.claude\settings.json';" ^
       "$s=@{}; if(Test-Path $p){try{$s=Get-Content $p -Raw|ConvertFrom-Json}catch{$s=@{}}};" ^
       "if(-not $s.mcpServers){$s|Add-Member -NotePropertyName mcpServers -NotePropertyValue @{} -Force};" ^

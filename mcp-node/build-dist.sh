@@ -39,15 +39,32 @@ for chain_file in "$REPO_ROOT/marketplace/chains/"*.chain.json; do
 done
 echo "  $CHAIN_COUNT chains"
 
-# 3. Create the tarball
-echo "[3/4] Creating tarball..."
+# 3. Create archives
+echo "[3/5] Creating tarball (Unix)..."
 cd "$DIST"
 tar czf "$SCRIPT_DIR/skillchain-mcp-0.1.0.tar.gz" .
 SIZE=$(du -h "$SCRIPT_DIR/skillchain-mcp-0.1.0.tar.gz" | cut -f1)
 echo "  Archive: skillchain-mcp-0.1.0.tar.gz ($SIZE)"
 
-# 4. Also create the files for website hosting
-echo "[4/4] Done."
+echo "[4/5] Creating zip (Windows)..."
+cd "$DIST"
+python3 -c "
+import zipfile, os
+zippath = '$SCRIPT_DIR/skillchain-mcp-0.1.0.zip'
+with zipfile.ZipFile(zippath, 'w', zipfile.ZIP_DEFLATED) as zf:
+    for root, dirs, files in os.walk('server'):
+        for f in files:
+            fp = os.path.join(root, f)
+            zf.write(fp)
+    for root, dirs, files in os.walk('marketplace'):
+        for f in files:
+            fp = os.path.join(root, f)
+            zf.write(fp)
+print(f'  Archive: skillchain-mcp-0.1.0.zip ({os.path.getsize(zippath) / 1024 / 1024:.1f}M)')
+"
+
+# 5. Done
+echo "[5/5] Done."
 echo ""
 echo "Distribution package ready:"
 echo "  $DIST/"
