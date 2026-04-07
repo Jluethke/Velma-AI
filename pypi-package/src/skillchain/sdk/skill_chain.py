@@ -33,6 +33,102 @@ logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
+# File reference resolution
+# ---------------------------------------------------------------------------
+
+# Max bytes to inline per file (prevent context blowout)
+_MAX_FILE_BYTES = 200_000
+
+# Extensions we'll read as text
+_TEXT_EXTENSIONS = {
+    ".md", ".txt", ".py", ".ts", ".js", ".json", ".yaml", ".yml",
+    ".toml", ".cfg", ".ini", ".rst", ".csv", ".html", ".xml",
+    ".c", ".cpp", ".h", ".rs", ".go", ".java", ".sol",
+}
+
+
+def _resolve_file_references(context: dict[str, Any]) -> dict[str, Any]:
+    """Expand file path references in context to actual file contents.
+
+    Recognises two patterns:
+      1. ``source_paths`` key containing a list of file/directory paths.
+         Each path is expanded: files are read inline, directories have their
+         text files read and concatenated.
+      2. Any string value starting with ``file:`` — the remainder is treated
+         as a path and replaced with the file content.
+
+    Returns a new context dict (does not mutate the original).
+    """
+    ctx = dict(context)
+
+    # Pattern 1: source_paths list
+    if "source_paths" in ctx and isinstance(ctx["source_paths"], list):
+        loaded: dict[str, str] = {}
+        for raw_path in ctx["source_paths"]:
+            p = Path(str(raw_path))
+            if not p.is_absolute():
+                # Try relative to cwd
+                p = Path.cwd() / p
+            if p.is_file() and p.suffix in _TEXT_EXTENSIONS:
+                try:
+                    content = p.read_text(encoding="utf-8", errors="replace")
+                    if len(content) <= _MAX_FILE_BYTES:
+                        loaded[str(raw_path)] = content
+                    else:
+                        loaded[str(raw_path)] = (
+                            content[:_MAX_FILE_BYTES]
+                            + f"\n\n... [truncated at {_MAX_FILE_BYTES:,} bytes]"
+                        )
+                except OSError as exc:
+                    loaded[str(raw_path)] = f"[ERROR reading file: {exc}]"
+            elif p.is_dir():
+                dir_content: list[str] = []
+                for child in sorted(p.rglob("*")):
+                    if child.is_file() and child.suffix in _TEXT_EXTENSIONS:
+                        try:
+                            text = child.read_text(encoding="utf-8", errors="replace")
+                            rel = child.relative_to(p)
+                            header = f"### {rel}\n"
+                            if len(text) > _MAX_FILE_BYTES:
+                                text = text[:_MAX_FILE_BYTES] + "\n... [truncated]"
+                            dir_content.append(header + text)
+                        except OSError:
+                            continue
+                        # Stop if accumulated content is too large
+                        total = sum(len(s) for s in dir_content)
+                        if total > _MAX_FILE_BYTES * 3:
+                            dir_content.append("\n... [remaining files omitted]")
+                            break
+                if dir_content:
+                    loaded[str(raw_path)] = "\n\n".join(dir_content)
+                else:
+                    loaded[str(raw_path)] = f"[No readable text files in {raw_path}]"
+            else:
+                loaded[str(raw_path)] = f"[Path not found: {raw_path}]"
+
+        ctx["source_contents"] = loaded
+
+    # Pattern 2: file: prefix on string values
+    for key, val in list(ctx.items()):
+        if isinstance(val, str) and val.startswith("file:"):
+            fpath = Path(val[5:].strip())
+            if not fpath.is_absolute():
+                fpath = Path.cwd() / fpath
+            if fpath.is_file():
+                try:
+                    text = fpath.read_text(encoding="utf-8", errors="replace")
+                    if len(text) > _MAX_FILE_BYTES:
+                        text = text[:_MAX_FILE_BYTES] + "\n... [truncated]"
+                    ctx[key] = text
+                except OSError as exc:
+                    ctx[key] = f"[ERROR reading {fpath}: {exc}]"
+            else:
+                ctx[key] = f"[File not found: {fpath}]"
+
+    return ctx
+
+
+# ---------------------------------------------------------------------------
 # Data classes
 # ---------------------------------------------------------------------------
 
@@ -210,7 +306,7 @@ class SkillChain:
                 f"Chain validation failed: {'; '.join(errors)}"
             )
 
-        context = dict(initial_context or {})
+        context = _resolve_file_references(dict(initial_context or {}))
         order = self._topological_sort()
         step_outputs: dict[str, dict[str, Any]] = {}
         results: list[StepResult] = []

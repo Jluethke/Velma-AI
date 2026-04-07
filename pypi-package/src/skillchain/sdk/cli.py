@@ -528,6 +528,144 @@ def platforms() -> None:
             click.echo(f"  {key:10s}  {str(adapter.default_skills_dir)}")
 
 
+# -- ipfs (command group) ------------------------------------------------------
+
+@cli.group()
+def ipfs() -> None:
+    """IPFS configuration and management."""
+
+
+@ipfs.command("status")
+@click.pass_context
+def ipfs_status(ctx: click.Context) -> None:
+    """Check IPFS connection status."""
+    from .ipfs_client import IPFSClient
+    config = SkillChainConfig.load(network=ctx.obj.get("network"))
+    client = IPFSClient(
+        provider=config.ipfs_provider,
+        api_key=config.pinata_api_key,
+        secret_key=config.pinata_secret_key,
+        gateway=config.ipfs_gateway,
+    )
+
+    available = client.is_available()
+    status_str = click.style("connected", fg="green") if available else click.style("disconnected", fg="red")
+    click.echo(f"Provider:  {client.provider}")
+    click.echo(f"Gateway:   {client._gateway}")
+    click.echo(f"Status:    {status_str}")
+    click.echo(f"Can upload: {'yes' if client.can_upload else 'no (read-only)'}")
+
+    if available and client.can_upload:
+        count = client.pin_count()
+        if count >= 0:
+            click.echo(f"Pin count: {count}")
+
+
+@ipfs.command("upload")
+@click.argument("path", type=click.Path(exists=True))
+@click.pass_context
+def ipfs_upload(ctx: click.Context, path: str) -> None:
+    """Upload a file to IPFS and return its CID."""
+    from .ipfs_client import IPFSClient
+    config = SkillChainConfig.load(network=ctx.obj.get("network"))
+    client = IPFSClient(
+        provider=config.ipfs_provider,
+        api_key=config.pinata_api_key,
+        secret_key=config.pinata_secret_key,
+        gateway=config.ipfs_gateway,
+    )
+
+    p = Path(path)
+    try:
+        if p.is_dir():
+            cid = client.upload_directory(p)
+        else:
+            cid = client.upload_file(p)
+        click.echo(f"Uploaded: {cid}")
+        click.echo(f"Gateway:  {client._gateway}{cid}")
+    except SkillChainError as exc:
+        click.echo(f"Upload failed: {exc}", err=True)
+        sys.exit(1)
+
+
+@ipfs.command("download")
+@click.argument("cid")
+@click.option("--output", "-o", type=click.Path(), default=None, help="Output file path")
+@click.pass_context
+def ipfs_download(ctx: click.Context, cid: str, output: str | None) -> None:
+    """Download content from IPFS by CID."""
+    from .ipfs_client import IPFSClient
+    config = SkillChainConfig.load(network=ctx.obj.get("network"))
+    client = IPFSClient(
+        provider=config.ipfs_provider,
+        api_key=config.pinata_api_key,
+        secret_key=config.pinata_secret_key,
+        gateway=config.ipfs_gateway,
+    )
+
+    try:
+        if output:
+            out_path = Path(output)
+            client.download_to(cid, out_path)
+            click.echo(f"Downloaded to: {out_path}")
+        else:
+            data = client.download(cid)
+            click.echo(f"Downloaded {len(data)} bytes (CID: {cid})")
+            # Write to stdout if binary, show size otherwise
+            if len(data) < 4096:
+                try:
+                    click.echo(data.decode("utf-8"))
+                except UnicodeDecodeError:
+                    click.echo(f"(binary content, use -o to save to file)")
+            else:
+                click.echo(f"(large content, use -o to save to file)")
+    except SkillChainError as exc:
+        click.echo(f"Download failed: {exc}", err=True)
+        sys.exit(1)
+
+
+@ipfs.command("pin")
+@click.argument("cid")
+@click.pass_context
+def ipfs_pin(ctx: click.Context, cid: str) -> None:
+    """Pin content by CID to ensure persistence."""
+    from .ipfs_client import IPFSClient
+    config = SkillChainConfig.load(network=ctx.obj.get("network"))
+    client = IPFSClient(
+        provider=config.ipfs_provider,
+        api_key=config.pinata_api_key,
+        secret_key=config.pinata_secret_key,
+        gateway=config.ipfs_gateway,
+    )
+
+    if client.pin(cid):
+        click.echo(f"Pinned: {cid}")
+    else:
+        click.echo(f"Pin failed for: {cid}", err=True)
+        sys.exit(1)
+
+
+@ipfs.command("unpin")
+@click.argument("cid")
+@click.pass_context
+def ipfs_unpin(ctx: click.Context, cid: str) -> None:
+    """Unpin content by CID."""
+    from .ipfs_client import IPFSClient
+    config = SkillChainConfig.load(network=ctx.obj.get("network"))
+    client = IPFSClient(
+        provider=config.ipfs_provider,
+        api_key=config.pinata_api_key,
+        secret_key=config.pinata_secret_key,
+        gateway=config.ipfs_gateway,
+    )
+
+    if client.unpin(cid):
+        click.echo(f"Unpinned: {cid}")
+    else:
+        click.echo(f"Unpin failed for: {cid}", err=True)
+        sys.exit(1)
+
+
 # -- state (command group) -----------------------------------------------------
 
 @cli.group()
@@ -725,8 +863,16 @@ def chain_create(name: str) -> None:
 @click.argument("chain_file", type=click.Path(exists=True))
 @click.option("--context", "-c", default=None, help="Initial context as JSON string")
 @click.option("--no-fail-fast", is_flag=True, help="Continue on step failure")
-def chain_run(chain_file: str, context: str | None, no_fail_fast: bool) -> None:
-    """Execute a saved skill chain."""
+@click.option("--dry-run", is_flag=True, help="Validate and echo context without calling LLM")
+@click.option("--model", default=None, help="Override Claude model (e.g. claude-sonnet-4-6-20250514)")
+@click.option("--verbose", "-v", is_flag=True, help="Print prompt/response details per step")
+def chain_run(chain_file: str, context: str | None, no_fail_fast: bool,
+              dry_run: bool, model: str | None, verbose: bool) -> None:
+    """Execute a saved skill chain.
+
+    By default, each step is sent to Claude for real execution.
+    Use --dry-run to test chain structure without calling the LLM.
+    """
     from .skill_chain import SkillChain
 
     try:
@@ -738,6 +884,16 @@ def chain_run(chain_file: str, context: str | None, no_fail_fast: bool) -> None:
 
     try:
         chain_obj = SkillChain.load(Path(chain_file))
+
+        if not dry_run:
+            from .llm_executor import LLMStepExecutor
+            executor = LLMStepExecutor(model=model, verbose=verbose)
+            chain_obj.set_executor(executor)
+            if console:
+                console.print(f"[dim]Executor: LLM ({executor._model})[/dim]")
+            else:
+                click.echo(f"Executor: LLM ({executor._model})")
+
         initial = json.loads(context) if context else {}
         result = chain_obj.execute(initial_context=initial, fail_fast=not no_fail_fast)
 
@@ -766,6 +922,9 @@ def chain_run(chain_file: str, context: str | None, no_fail_fast: bool) -> None:
             click.echo(f"Duration: {result.total_duration_ms:.1f}ms")
             for step in result.steps:
                 click.echo(f"  {step.alias}: {step.status} ({step.duration_ms:.1f}ms)")
+
+        # Gamification hooks
+        _record_gamification(result, console)
 
     except SkillChainError as exc:
         click.echo(f"Error: {exc}", err=True)
@@ -891,6 +1050,359 @@ def state_clear(skill_name: str, yes: bool) -> None:
 
     store.clear_state(skill_name)
     click.echo(f"State cleared for '{skill_name}'.")
+
+
+# -- do (plain-English chain discovery + run) ---------------------------------
+
+@cli.command("do")
+@click.argument("query")
+@click.option("--context", "-c", default=None, help="Initial context as JSON string")
+@click.option("--yes", "-y", is_flag=True, help="Skip confirmation and run the best match")
+@click.option("--model", default=None, help="Override Claude model")
+@click.option("--dry-run", is_flag=True, help="Find the chain but don't execute it")
+@click.option("--top", "-n", default=5, help="Number of matches to show")
+def do_query(query: str, context: str | None, yes: bool, model: str | None,
+             dry_run: bool, top: int) -> None:
+    """Find and run a skill chain from plain English.
+
+    Describe what you need in your own words::
+
+        skillchain do "I'm scared of AI and crypto"
+        skillchain do "help me find a job"
+        skillchain do "I need to move to a new city"
+        skillchain do "I want to start a side business"
+        skillchain do "plan my retirement" -y
+
+    Use -y to auto-run the best match without confirmation.
+    """
+    from .chain_matcher import ChainMatcher
+    from .skill_chain import SkillChain
+
+    try:
+        from rich.console import Console
+        from rich.table import Table
+        from rich.panel import Panel
+        console = Console()
+    except ImportError:
+        console = None
+
+    # Load all chains from marketplace
+    chains_path = Path(__file__).resolve().parent.parent / "marketplace" / "chains"
+    chain_files = sorted(chains_path.glob("*.chain.json")) if chains_path.exists() else []
+
+    if not chain_files:
+        click.echo("No chains found in marketplace.", err=True)
+        sys.exit(1)
+
+    chains = []
+    for f in chain_files:
+        try:
+            chains.append(json.loads(f.read_text(encoding="utf-8")))
+        except Exception:
+            continue
+
+    matcher = ChainMatcher(chains)
+    matches = matcher.match(query, top_k=top)
+
+    if not matches:
+        click.echo("No chains match your query. Try different words.")
+        return
+
+    best = matches[0]
+
+    # Display results
+    if console:
+        console.print(f'\n[bold]Query:[/bold] "{query}"\n')
+
+        # Best match
+        console.print(Panel(
+            f"[bold cyan]{best.chain_name}[/bold cyan]\n\n"
+            f"{best.description}\n\n"
+            f"[dim]Skills: {' -> '.join(best.skills)}[/dim]\n"
+            f"[dim]Steps: {best.step_count} | Score: {best.score} | {best.match_reason}[/dim]",
+            title="[bold green]Best Match[/bold green]",
+            border_style="green",
+        ))
+
+        # Other matches
+        if len(matches) > 1:
+            table = Table(title="Other Matches", show_lines=True)
+            table.add_column("#", style="dim", width=3)
+            table.add_column("Chain", style="cyan")
+            table.add_column("Description")
+            table.add_column("Score", justify="right")
+
+            for i, m in enumerate(matches[1:], 2):
+                desc = m.description[:80] + "..." if len(m.description) > 80 else m.description
+                table.add_row(str(i), m.chain_name, desc, str(m.score))
+            console.print(table)
+    else:
+        click.echo(f'\nQuery: "{query}"\n')
+        click.echo(f"Best match: {best.chain_name} (score: {best.score})")
+        click.echo(f"  {best.description}")
+        click.echo(f"  Skills: {' -> '.join(best.skills)}")
+        if len(matches) > 1:
+            click.echo("\nOther matches:")
+            for i, m in enumerate(matches[1:], 2):
+                click.echo(f"  {i}. {m.chain_name} ({m.score}) — {m.description[:60]}")
+
+    if dry_run:
+        click.echo("\n(dry-run mode — not executing)")
+        return
+
+    # Confirm and run
+    if not yes:
+        if not click.confirm(f"\nRun '{best.chain_name}'?", default=True):
+            click.echo("Cancelled.")
+            return
+
+    # Find chain data and execute
+    chain_data = None
+    for cd in chains:
+        if cd.get("name") == best.chain_name:
+            chain_data = cd
+            break
+
+    if not chain_data:
+        click.echo(f"Error: chain '{best.chain_name}' data not found.", err=True)
+        sys.exit(1)
+
+    chain_obj = SkillChain.from_dict(chain_data)
+
+    try:
+        from .llm_executor import LLMStepExecutor
+        executor = LLMStepExecutor(model=model)
+        chain_obj.set_executor(executor)
+        model_name = executor._model
+    except Exception as exc:
+        click.echo(f"Warning: LLM executor unavailable ({exc}), using dry-run mode.", err=True)
+        model_name = "echo"
+
+    if console:
+        console.print(f"\n[dim]Running {best.chain_name} ({best.step_count} steps, model: {model_name})...[/dim]\n")
+    else:
+        click.echo(f"\nRunning {best.chain_name} ({best.step_count} steps)...\n")
+
+    initial = json.loads(context) if context else {}
+    result = chain_obj.execute(initial_context=initial, fail_fast=True)
+
+    # Display results
+    if console:
+        from rich.table import Table as RichTable
+        status = "[bold green]SUCCESS[/bold green]" if result.success else "[bold red]FAILED[/bold red]"
+        console.print(f"Chain: {result.chain_name}  {status}")
+        console.print(f"Duration: {result.total_duration_ms:.0f}ms\n")
+
+        table = RichTable(title="Steps", show_lines=True)
+        table.add_column("Step", style="cyan")
+        table.add_column("Skill")
+        table.add_column("Status")
+        table.add_column("Time", justify="right")
+
+        for step in result.steps:
+            style = "green" if step.status == "completed" else "red" if step.status == "failed" else "yellow"
+            table.add_row(
+                step.alias,
+                step.skill_name,
+                f"[{style}]{step.status}[/{style}]",
+                f"{step.duration_ms:.0f}ms",
+            )
+        console.print(table)
+    else:
+        click.echo(f"{'SUCCESS' if result.success else 'FAILED'} ({result.total_duration_ms:.0f}ms)")
+        for step in result.steps:
+            click.echo(f"  {step.alias}: {step.status} ({step.duration_ms:.0f}ms)")
+
+    # Gamification hooks
+    _record_gamification(result, console)
+
+
+# -- gamification helper -------------------------------------------------------
+
+def _record_gamification(result, console) -> None:
+    """Record execution results in the gamification engine."""
+    try:
+        from .gamification import GamificationEngine
+        engine = GamificationEngine()
+        all_unlocked = []
+
+        for step in result.steps:
+            if step.status == "completed":
+                unlocked = engine.record_skill_run(step.skill_name)
+                all_unlocked.extend(unlocked)
+
+        if result.success:
+            unlocked = engine.record_chain_run(
+                result.chain_name, len(result.steps), result.total_duration_ms
+            )
+            all_unlocked.extend(unlocked)
+
+        card = engine.get_trainer_card()
+
+        # Print gamification summary
+        if console:
+            console.print(f"\n[dim]+{card['xp']} XP | Level {card['level']} {card['title']} | Streak: {card['streak']}d[/dim]")
+            for ach in all_unlocked:
+                console.print(f"[bold gold1]Achievement Unlocked: {ach.name}[/bold gold1] -- {ach.description} (+{ach.xp_reward} XP)")
+        else:
+            click.echo(f"\n+{card['xp']} XP | Level {card['level']} {card['title']} | Streak: {card['streak']}d")
+            for ach in all_unlocked:
+                click.echo(f"Achievement Unlocked: {ach.name} -- {ach.description} (+{ach.xp_reward} XP)")
+    except Exception:
+        pass  # Never break execution for gamification failures
+
+
+# -- trainer (gamification commands) -------------------------------------------
+
+@cli.command("trainer")
+def trainer_card() -> None:
+    """Show your trainer card -- level, XP, streak, collection progress."""
+    from .gamification import GamificationEngine
+
+    try:
+        from rich.console import Console
+        from rich.panel import Panel
+        console = Console()
+    except ImportError:
+        console = None
+
+    engine = GamificationEngine()
+    card = engine.get_trainer_card()
+
+    xp_bar_filled = int(card["xp_progress"] * 20)
+    xp_bar = "#" * xp_bar_filled + "-" * (20 - xp_bar_filled)
+
+    if console:
+        lines = [
+            f"[bold cyan]Level {card['level']}[/bold cyan] [bold]{card['title']}[/bold]",
+            f"XP: {card['xp']:,} / {card['xp_next']:,}  [{xp_bar}]  {int(card['xp_progress'] * 100)}%",
+            f"Streak: {card['streak']} days (best: {card['streak_best']}) x{card['streak_multiplier']}",
+            "",
+            f"Skills:       {card['skills_discovered']}/{card['skills_total']}",
+            f"Chains:       {card['chains_completed']}/{card['chains_total']}",
+            f"Achievements: {card['achievements_unlocked']}/{card['achievements_total']}",
+            f"Total Runs:   {card['total_skill_runs']:,} skills, {card['total_chain_runs']:,} chains",
+        ]
+        console.print(Panel("\n".join(lines), title="[bold cyan]Trainer Card[/bold cyan]", border_style="cyan"))
+    else:
+        click.echo(f"Level {card['level']} {card['title']}")
+        click.echo(f"XP: {card['xp']:,} / {card['xp_next']:,}  [{xp_bar}]  {int(card['xp_progress'] * 100)}%")
+        click.echo(f"Streak: {card['streak']} days (best: {card['streak_best']})")
+        click.echo(f"Skills: {card['skills_discovered']}/{card['skills_total']}")
+        click.echo(f"Chains: {card['chains_completed']}/{card['chains_total']}")
+        click.echo(f"Achievements: {card['achievements_unlocked']}/{card['achievements_total']}")
+
+
+@cli.command("achievements")
+def achievements_list() -> None:
+    """List all achievements with lock/unlock status."""
+    from .gamification import GamificationEngine
+
+    try:
+        from rich.console import Console
+        from rich.table import Table
+        console = Console()
+    except ImportError:
+        console = None
+
+    engine = GamificationEngine()
+    achievements = engine.get_achievements()
+    unlocked = sum(1 for a in achievements if a["unlocked"])
+
+    if console:
+        table = Table(title=f"Achievements ({unlocked}/{len(achievements)})", show_lines=True)
+        table.add_column("", width=4)
+        table.add_column("Name", style="cyan")
+        table.add_column("Description")
+        table.add_column("XP", justify="right")
+        table.add_column("Status")
+
+        for a in achievements:
+            if a["unlocked"]:
+                status = f"[green]Unlocked[/green]"
+                name = a["name"]
+                icon = a["icon"]
+            else:
+                status = "[dim]Locked[/dim]"
+                name = f"[dim]{a['name']}[/dim]"
+                icon = f"[dim]{a['icon']}[/dim]"
+            table.add_row(icon, name, a["description"], str(a["xp_reward"]), status)
+        console.print(table)
+    else:
+        click.echo(f"Achievements ({unlocked}/{len(achievements)})")
+        for a in achievements:
+            status = "+" if a["unlocked"] else "-"
+            click.echo(f"  {status} {a['name']:20s} {a['description']:40s} +{a['xp_reward']} XP")
+
+
+@cli.command("skilldex")
+def skilldex_view() -> None:
+    """Show your skill collection progress by category."""
+    from .gamification import GamificationEngine
+
+    try:
+        from rich.console import Console
+        from rich.table import Table
+        console = Console()
+    except ImportError:
+        console = None
+
+    engine = GamificationEngine()
+    dex = engine.get_skilldex()
+
+    if console:
+        console.print(f"\n[bold]Skilldex:[/bold] {dex['total_discovered']}/{dex['total_skills']} skills discovered ({dex['percent']}%)\n")
+
+        table = Table(show_lines=True)
+        table.add_column("Category", style="cyan")
+        table.add_column("Progress", width=25)
+        table.add_column("Count", justify="right")
+
+        for cat, info in dex["categories"].items():
+            filled = int(info["percent"] / 100 * 15)
+            bar = "#" * filled + "-" * (15 - filled)
+            pct = f"{info['percent']}%"
+            table.add_row(cat, f"[{bar}] {pct}", f"{info['discovered']}/{info['total']}")
+        console.print(table)
+
+        # Show evolutions
+        evos = engine.get_evolutions()
+        if evos:
+            console.print("\n[bold]Top Evolved Skills:[/bold]")
+            for e in evos[:5]:
+                console.print(f"  {e['tier']:10s} {e['skill']}")
+    else:
+        click.echo(f"Skilldex: {dex['total_discovered']}/{dex['total_skills']} ({dex['percent']}%)")
+        for cat, info in dex["categories"].items():
+            click.echo(f"  {cat:15s} {info['discovered']}/{info['total']}")
+
+
+@cli.command("quests")
+def quests_view() -> None:
+    """Show today's daily quests."""
+    from .gamification import GamificationEngine
+
+    try:
+        from rich.console import Console
+        from rich.panel import Panel
+        console = Console()
+    except ImportError:
+        console = None
+
+    engine = GamificationEngine()
+    quests = engine.get_daily_quests()
+
+    if console:
+        lines = []
+        for q in quests:
+            check = "[green][x][/green]" if q["completed"] else "[ ]"
+            lines.append(f"  {check} {q['text']}  [dim]+{q['xp']} XP[/dim]")
+        console.print(Panel("\n".join(lines), title="[bold]Daily Quests[/bold]", border_style="yellow"))
+    else:
+        click.echo("Daily Quests:")
+        for q in quests:
+            check = "[x]" if q["completed"] else "[ ]"
+            click.echo(f"  {check} {q['text']}  +{q['xp']} XP")
 
 
 # -- profile (command group) ---------------------------------------------------
@@ -1754,7 +2266,7 @@ def debug(repo_path: str, error: str | None, mode: str, max_attempts: int, candi
     engine_mode = "diagnose-only" if mode == "diagnose" else mode
 
     try:
-        from skillchain.debugger import DebugEngine
+        from skillchain.tools.debugger import DebugEngine
 
         engine = DebugEngine()
 
@@ -1909,7 +2421,7 @@ def launch(idea: str, audience: str | None, skills: str | None, budget: str | No
             --skills "python,ML,freelancing" \\
             --budget "$500/month"
     """
-    from skillchain.solopreneur import SolopreneurEngine
+    from skillchain.tools.solopreneur import SolopreneurEngine
 
     engine = SolopreneurEngine()
     skill_list = [s.strip() for s in skills.split(",")] if skills else None
@@ -2056,10 +2568,10 @@ def model_train(samples, epochs, lr, batch_size, output, output_bin, seed):
     import logging
     logging.basicConfig(level=logging.INFO, format="%(message)s")
 
-    from skillchain.governance_net.config import TrainingConfig
-    from skillchain.governance_net.synthetic_data import SyntheticDataGenerator
-    from skillchain.governance_net.trainer import GovernanceNetTrainer
-    from skillchain.governance_net.evaluator import GovernanceNetEvaluator
+    from skillchain.core.governance_net.config import TrainingConfig
+    from skillchain.core.governance_net.synthetic_data import SyntheticDataGenerator
+    from skillchain.core.governance_net.trainer import GovernanceNetTrainer
+    from skillchain.core.governance_net.evaluator import GovernanceNetEvaluator
     import numpy as np
 
     config = TrainingConfig(
@@ -2137,10 +2649,10 @@ def model_evaluate(model_path, samples, seed):
     import logging
     logging.basicConfig(level=logging.INFO, format="%(message)s")
 
-    from skillchain.governance_net.config import TrainingConfig
-    from skillchain.governance_net.synthetic_data import SyntheticDataGenerator
-    from skillchain.governance_net.inference import SkillChainGovernanceNet
-    from skillchain.governance_net.evaluator import GovernanceNetEvaluator
+    from skillchain.core.governance_net.config import TrainingConfig
+    from skillchain.core.governance_net.synthetic_data import SyntheticDataGenerator
+    from skillchain.core.governance_net.inference import SkillChainGovernanceNet
+    from skillchain.core.governance_net.evaluator import GovernanceNetEvaluator
     import numpy as np
 
     if model_path is None:

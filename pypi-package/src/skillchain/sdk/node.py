@@ -519,9 +519,11 @@ class SkillChainNode:
         """Lazily initialise the IPFS client."""
         if self._ipfs is None:
             self._ipfs = IPFSClient(
+                provider=self._config.ipfs_provider,
+                api_key=self._config.pinata_api_key,
+                secret_key=self._config.pinata_secret_key,
+                gateway=self._config.ipfs_gateway,
                 api_url=self._config.ipfs_api,
-                gateway_url=self._config.ipfs_gateway,
-                api_key=self._config.ipfs_api_key,
             )
         return self._ipfs
 

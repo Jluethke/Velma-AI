@@ -264,7 +264,7 @@ class TestIPFSClient:
         from skillchain.sdk.exceptions import IPFSError
         empty = tmp_path / "empty"
         empty.mkdir()
-        client = IPFSClient()
+        client = IPFSClient(provider="pinata", api_key="k", secret_key="s")
         with pytest.raises(IPFSError, match="Empty directory"):
             client.upload_directory(empty)
 

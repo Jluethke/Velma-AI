@@ -1,15 +1,6 @@
-import { useState } from 'react';
 import { Link } from 'react-router-dom';
 
 export default function Footer() {
-  const [copied, setCopied] = useState(false);
-
-  const handleCopy = async () => {
-    await navigator.clipboard.writeText('pip install skillchain');
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
   return (
     <footer className="px-6 py-20" style={{ borderTop: '1px solid var(--border)' }}>
       <div className="max-w-4xl mx-auto text-center">
@@ -17,29 +8,29 @@ export default function Footer() {
           Ready to build?
         </h2>
 
-        {/* Terminal CTA */}
-        <div
-          className="inline-flex items-center gap-3 px-6 py-4 rounded-xl cursor-pointer transition-all mb-8"
+        {/* Download CTA */}
+        <a
+          href="/download"
+          className="inline-flex items-center gap-3 px-8 py-4 rounded-xl no-underline cursor-pointer transition-all mb-8"
           style={{
-            background: 'var(--bg-card)',
-            border: '1px solid var(--border)',
+            background: 'linear-gradient(135deg, rgba(0,255,200,0.15), rgba(170,136,255,0.15))',
+            border: '1px solid rgba(0,255,200,0.3)',
+            color: 'var(--cyan)',
           }}
-          onClick={handleCopy}
         >
-          <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>$</span>
-          <span className="text-sm font-medium" style={{ color: 'var(--cyan)' }}>
-            pip install skillchain
+          <span className="text-sm font-semibold">
+            Download SkillChain
           </span>
           <span
             className="text-xs px-2 py-1 rounded"
             style={{
-              background: copied ? 'rgba(0, 255, 136, 0.15)' : 'rgba(0, 255, 200, 0.1)',
-              color: copied ? 'var(--green)' : 'var(--text-secondary)',
+              background: 'rgba(0, 255, 136, 0.15)',
+              color: 'var(--green)',
             }}
           >
-            {copied ? 'copied!' : 'copy'}
+            Free
           </span>
-        </div>
+        </a>
 
         {/* Links */}
         <div className="flex flex-wrap items-center justify-center gap-6 mb-8">

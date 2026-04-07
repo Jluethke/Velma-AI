@@ -5,7 +5,7 @@ const steps = [
     number: '01',
     title: 'Install',
     description: 'Generate your node identity, select your AI agent (Claude, GPT, Gemini, Cursor, or other), and register on-chain. One command to join the network.',
-    code: 'pip install skillchain && skillchain init --agent claude',
+    code: 'skillchain init --agent claude',
   },
   {
     number: '02',

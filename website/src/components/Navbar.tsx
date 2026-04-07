@@ -1,27 +1,27 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import WalletConnect from './WalletConnect';
+import { ConnectButton } from '@rainbow-me/rainbowkit';
 
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [copied, setCopied] = useState(false);
   const location = useLocation();
 
   const navLinks = [
-    { to: '/explore', label: 'Explore' },
+    { to: '/', label: 'Home' },
+    { to: '/skills', label: 'Skills' },
     { to: '/chains', label: 'Chains' },
-    { to: '/pricing', label: 'Pricing' },
-    { to: '/agents', label: 'Agents' },
-    { to: '/bounties', label: 'Bounties' },
-    { to: '/activity', label: 'Activity' },
+    { to: '/dashboard', label: 'Dashboard' },
+    { to: '/portal', label: 'Portal' },
     { to: '/docs', label: 'Docs' },
-    { to: '/whitepaper', label: 'Whitepaper' },
   ];
 
-  const handleCopy = async () => {
-    await navigator.clipboard.writeText('pip install skillchain');
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const isActive = (to: string) => {
+    if (to === '/') return location.pathname === '/';
+    return location.pathname.startsWith(to);
+  };
+
+  const handleDownload = () => {
+    window.location.href = '/download';
   };
 
   return (
@@ -41,14 +41,14 @@ export default function Navbar() {
         </Link>
 
         {/* Desktop nav */}
-        <div className="hidden md:flex items-center gap-8">
+        <div className="hidden md:flex items-center gap-6">
           {navLinks.map(link => (
             <Link
               key={link.to}
               to={link.to}
               className="text-sm no-underline transition-colors"
               style={{
-                color: location.pathname === link.to ? 'var(--cyan)' : 'var(--text-secondary)',
+                color: isActive(link.to) ? 'var(--cyan)' : 'var(--text-secondary)',
               }}
             >
               {link.label}
@@ -59,18 +59,21 @@ export default function Navbar() {
         {/* Right side actions */}
         <div className="hidden md:flex items-center gap-3">
           <button
-            onClick={handleCopy}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs cursor-pointer transition-all"
+            onClick={handleDownload}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs cursor-pointer transition-all"
             style={{
               background: 'rgba(0, 255, 200, 0.08)',
               border: '1px solid rgba(0, 255, 200, 0.2)',
-              color: copied ? 'var(--green)' : 'var(--cyan)',
+              color: 'var(--cyan)',
             }}
           >
-            <span style={{ color: 'var(--text-secondary)' }}>$</span>
-            {copied ? 'copied!' : 'pip install skillchain'}
+            Get SkillChain
           </button>
-          <WalletConnect />
+          <ConnectButton
+            chainStatus="icon"
+            accountStatus="avatar"
+            showBalance={false}
+          />
         </div>
 
         {/* Mobile hamburger */}
@@ -103,23 +106,19 @@ export default function Navbar() {
               key={link.to}
               to={link.to}
               className="text-sm no-underline pt-4"
-              style={{ color: location.pathname === link.to ? 'var(--cyan)' : 'var(--text-secondary)' }}
+              style={{ color: isActive(link.to) ? 'var(--cyan)' : 'var(--text-secondary)' }}
               onClick={() => setMobileOpen(false)}
             >
               {link.label}
             </Link>
           ))}
-          <button
-            onClick={() => { handleCopy(); setMobileOpen(false); }}
-            className="mt-2 px-4 py-2 rounded-lg text-xs cursor-pointer"
-            style={{
-              background: 'rgba(0, 255, 200, 0.08)',
-              border: '1px solid rgba(0, 255, 200, 0.2)',
-              color: 'var(--cyan)',
-            }}
-          >
-            $ pip install skillchain
-          </button>
+          <div className="mt-2">
+            <ConnectButton
+              chainStatus="icon"
+              accountStatus="avatar"
+              showBalance={false}
+            />
+          </div>
         </div>
       )}
     </nav>

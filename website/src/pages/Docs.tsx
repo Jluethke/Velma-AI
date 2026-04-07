@@ -92,9 +92,9 @@ export default function Docs() {
           <section id="installation" className="mb-12">
             <h2 className="text-xl font-semibold mb-4" style={headingStyle}>Installation</h2>
             <p className="text-sm mb-4" style={textStyle}>
-              This installs the <code className="text-xs px-1.5 py-0.5 rounded" style={{ background: 'var(--bg-card)', color: 'var(--cyan)' }}>skillchain</code> CLI and Python SDK.
+              Download the installer from <a href="/download" style={{ color: 'var(--cyan)' }}>velma.ai/download</a> and run it. No Python required.
             </p>
-            <CodeBlock code="pip install skillchain" language="bash" filename="terminal" />
+            <CodeBlock code="# Or if you have Python and prefer pip:\npip install skillchain" language="bash" filename="terminal" />
             <p className="text-sm mt-4 mb-4" style={textStyle}>Verify the installation:</p>
             <CodeBlock code="skillchain --version" language="bash" filename="terminal" />
           </section>

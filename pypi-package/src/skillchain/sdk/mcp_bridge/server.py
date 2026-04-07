@@ -17,6 +17,7 @@ Claude Code config: add to ~/.claude/settings.json
 
 from __future__ import annotations
 
+import importlib
 import json
 import logging
 import uuid
@@ -38,6 +39,22 @@ _SKILLS_DIR_CLAUDE = Path.home() / ".claude" / "skills"
 _SKILLS_DIR_SC = Path.home() / ".skillchain" / "skills"
 _MARKETPLACE_DIR = Path(__file__).resolve().parent.parent.parent / "marketplace"
 _CHAINS_DIR = _MARKETPLACE_DIR / "chains"
+
+
+# ---------------------------------------------------------------------------
+# Hot-reload helper
+# ---------------------------------------------------------------------------
+
+def _hot_import(module_path: str):
+    """Import a module, reloading it if already loaded.
+
+    Allows code changes to sdk modules (chain_miner, gamification, etc.)
+    to take effect without restarting the MCP server process.
+    """
+    import sys as _sys
+    if module_path in _sys.modules:
+        return importlib.reload(_sys.modules[module_path])
+    return importlib.import_module(module_path)
 
 
 # ---------------------------------------------------------------------------
@@ -391,11 +408,38 @@ def create_server() -> FastMCP:
             ctx = {}
 
         chain_obj = SkillChain.from_dict(chain_data)
+
+        # Wire LLM executor for real skill execution
+        try:
+            from ..llm_executor import LLMStepExecutor
+
+            def _resolve_from_server(skill_name: str):
+                """Resolve skill.md using the server's marketplace path."""
+                skills = _installed_skills()
+                path = skills.get(skill_name)
+                if path and path.exists():
+                    return path.read_text(encoding="utf-8")
+                return None
+
+            chain_obj.set_executor(LLMStepExecutor(skill_resolver=_resolve_from_server))
+        except Exception as exc:
+            logger.warning("LLM executor not available (%s), using echo mode", exc)
+
         result = chain_obj.execute(initial_context=ctx, fail_fast=False)
 
-        # Track chain usage
+        # Track chain usage + gamification
         try:
             profile_mgr.update_chain_usage(chain_name)
+        except Exception:
+            pass
+        try:
+            from ..gamification import GamificationEngine
+            gam = GamificationEngine()
+            for step in result.steps:
+                if step.status == "completed":
+                    gam.record_skill_run(step.skill_name)
+            if result.success:
+                gam.record_chain_run(chain_name, len(result.steps), result.total_duration_ms)
         except Exception:
             pass
 
@@ -415,6 +459,233 @@ def create_server() -> FastMCP:
                 "skills": [s.get("skill_name", "") for s in c.get("steps", [])],
             })
         return json.dumps(summaries, indent=2)
+
+    @server.tool()
+    def search_chains(query: str, max_results: int = 5) -> str:
+        """Search for skill chains using plain English.
+
+        Describe what you need in your own words and get ranked matches.
+
+        Args:
+            query: What you're looking for (e.g., "I'm scared of technology",
+                   "help me find a job", "I need to start a business")
+            max_results: Maximum number of results to return.
+
+        Returns skills from the local marketplace catalog. For on-chain
+        discovery, use the full SkillChain CLI.
+        """
+        from ..chain_matcher import ChainMatcher
+
+        chains = _available_chains()
+        matcher = ChainMatcher(chains)
+        matches = matcher.match(query, top_k=max_results)
+        return json.dumps([asdict(m) for m in matches], indent=2, default=str)
+
+    @server.tool()
+    def find_and_run(query: str, auto_run: bool = False,
+                     initial_context: str = "{}") -> str:
+        """Find the best skill chain for what you need, and optionally run it.
+
+        This is the main entry point for SkillChain. Describe what you want
+        in plain English and the system finds the right chain of AI skills.
+
+        Args:
+            query: Plain English description of what you want
+                   (e.g., "I need help budgeting and saving money",
+                    "I'm starting a side business", "prepare me for a job interview")
+            auto_run: If True, automatically execute the best matching chain.
+            initial_context: JSON string of context data to pass to the chain
+                             (e.g., '{"name": "Pat", "age": 45}')
+        """
+        from ..chain_matcher import ChainMatcher
+
+        chains = _available_chains()
+        matcher = ChainMatcher(chains)
+        matches = matcher.match(query, top_k=5)
+
+        if not matches:
+            return json.dumps({"error": "No chains match your query.", "query": query})
+
+        best = matches[0]
+        result_data: dict[str, Any] = {
+            "query": query,
+            "best_match": asdict(best),
+            "other_matches": [asdict(m) for m in matches[1:]],
+        }
+
+        if auto_run:
+            # Find and execute the best chain
+            chain_data = None
+            for cd in chains:
+                if cd.get("name") == best.chain_name:
+                    chain_data = cd
+                    break
+
+            if chain_data:
+                try:
+                    ctx = json.loads(initial_context) if isinstance(initial_context, str) else initial_context
+                except json.JSONDecodeError:
+                    ctx = {}
+
+                chain_obj = SkillChain.from_dict(chain_data)
+
+                try:
+                    from ..llm_executor import LLMStepExecutor
+
+                    def _resolve(skill_name: str):
+                        skills = _installed_skills()
+                        path = skills.get(skill_name)
+                        if path and path.exists():
+                            return path.read_text(encoding="utf-8")
+                        return None
+
+                    chain_obj.set_executor(LLMStepExecutor(skill_resolver=_resolve))
+                except Exception as exc:
+                    logger.warning("LLM executor not available (%s)", exc)
+
+                exec_result = chain_obj.execute(initial_context=ctx, fail_fast=False)
+                result_data["execution"] = asdict(exec_result)
+
+                try:
+                    profile_mgr.update_chain_usage(best.chain_name)
+                except Exception:
+                    pass
+
+        return json.dumps(result_data, indent=2, default=str)
+
+    # ===================================================================
+    # GAMIFICATION TOOLS
+    # ===================================================================
+
+    @server.tool()
+    def get_trainer_profile() -> str:
+        """Get your trainer card -- level, XP, streak, collection progress.
+
+        Shows your SkillChain gamification stats: trainer level, XP progress,
+        current streak, skills discovered, chains completed, and achievements.
+        """
+        try:
+            mod = _hot_import("skillchain.sdk.gamification")
+            engine = mod.GamificationEngine()
+            return json.dumps(engine.get_trainer_card(), indent=2)
+        except Exception as exc:
+            return json.dumps({"error": str(exc)})
+
+    @server.tool()
+    def get_achievements() -> str:
+        """List all 30 achievements with locked/unlocked status.
+
+        Achievements are earned by running skills, completing chains,
+        maintaining streaks, mastering categories, and evolving skills.
+        """
+        try:
+            mod = _hot_import("skillchain.sdk.gamification")
+            engine = mod.GamificationEngine()
+            return json.dumps(engine.get_achievements(), indent=2)
+        except Exception as exc:
+            return json.dumps({"error": str(exc)})
+
+    @server.tool()
+    def get_skilldex() -> str:
+        """Show your skill collection progress by category.
+
+        Like a Pokedex but for AI skills. Shows how many of the 95 skills
+        you've discovered, broken down by category (Life, Career, Business,
+        Health, Developer, etc.).
+        """
+        try:
+            mod = _hot_import("skillchain.sdk.gamification")
+            engine = mod.GamificationEngine()
+            return json.dumps(engine.get_skilldex(), indent=2, default=str)
+        except Exception as exc:
+            return json.dumps({"error": str(exc)})
+
+    @server.tool()
+    def get_daily_quests() -> str:
+        """Get today's 3 daily quests with completion status.
+
+        Daily quests refresh each day and give bonus XP when completed.
+        """
+        try:
+            mod = _hot_import("skillchain.sdk.gamification")
+            engine = mod.GamificationEngine()
+            return json.dumps(engine.get_daily_quests(), indent=2)
+        except Exception as exc:
+            return json.dumps({"error": str(exc)})
+
+    @server.tool()
+    def mine_chains(mode: str = "scan", prompt: str = "") -> str:
+        """Mine for new chain discoveries.
+
+        Two mining modes:
+          - "scan" (default): Passive mining. Scans your execution history
+            for novel skill combinations that could become new chains.
+          - "forge": Active mining. Takes a raw idea/prompt and runs the
+            skill-to-chain meta-chain to CREATE a new skill and find which
+            chains it fits into — or design new chains around it.
+
+        Forge mode is the 2-phase pipeline:
+          Phase 1 (Build): prompt → skill → tests → quality → optimize
+          Phase 2 (Place): find chain fits → design new chains
+
+        Anti-farming: 50 TRUST/day cap, diminishing returns, quality gates,
+        7-day cooldowns, diversity requirements.
+
+        Args:
+            mode: "scan" for passive pattern detection, "forge" for active
+                  skill creation + chain placement.
+            prompt: Required for forge mode. The raw idea, workflow, or
+                    problem statement to forge into a skill.
+        """
+        try:
+            mod = _hot_import("skillchain.sdk.chain_miner")
+            miner = mod.ChainMiner()
+
+            if mode == "forge":
+                if not prompt:
+                    return json.dumps({
+                        "error": "Forge mode requires a prompt. Describe the skill idea or workflow to forge."
+                    })
+                result = miner.forge(prompt)
+                stats = miner.get_mining_stats()
+                result["stats"] = stats
+                return json.dumps(result, indent=2)
+
+            # Default: passive scan
+            discoveries = miner.scan()
+            stats = miner.get_mining_stats()
+            return json.dumps({
+                "discoveries": [
+                    {"name": d.name, "skills": d.skills, "categories": d.categories,
+                     "reward": d.reward_trust, "pattern_id": d.pattern_id}
+                    for d in discoveries
+                ],
+                "stats": stats,
+            }, indent=2)
+        except Exception as exc:
+            return json.dumps({"error": str(exc)})
+
+    @server.tool()
+    def what_now() -> str:
+        """Ask Velma what you should do right now.
+
+        Velma observes your trainer state, skill history, streaks, time of day,
+        category gaps, and progression — then tells you the chain you need.
+        No searching. No browsing. Velma just knows.
+        """
+        try:
+            mod = _hot_import("skillchain.sdk.velma_recommender")
+            velma = mod.VelmaRecommender()
+            recs = velma.what_now()
+            return json.dumps([{
+                "chain": r.chain_name,
+                "nudge": r.nudge,
+                "reason": r.reason,
+                "priority": r.priority,
+                "category": r.category,
+            } for r in recs], indent=2)
+        except Exception as exc:
+            return json.dumps({"error": str(exc)})
 
     @server.tool()
     def list_bounties(domain: str = "") -> str:

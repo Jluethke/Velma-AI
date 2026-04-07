@@ -1,13 +1,4 @@
-import { useState } from 'react';
-
 export default function HeroSection() {
-  const [copied, setCopied] = useState(false);
-
-  const handleCopy = async () => {
-    await navigator.clipboard.writeText('pip install skillchain');
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
 
   return (
     <section className="relative min-h-screen flex flex-col items-center justify-center px-6 overflow-hidden">
@@ -45,30 +36,24 @@ export default function HeroSection() {
           Validated by shadow testing, owned by creators, trusted by mathematics.
         </p>
 
-        {/* Terminal CTA */}
-        <div
-          className="inline-flex items-center gap-3 px-6 py-4 rounded-xl cursor-pointer transition-all animate-fade-in-up animate-pulse-glow"
+        {/* Download CTA */}
+        <a
+          href="/download"
+          className="inline-flex items-center gap-3 px-8 py-4 rounded-xl no-underline cursor-pointer transition-all animate-fade-in-up animate-pulse-glow"
           style={{
-            background: 'var(--bg-card)',
-            border: '1px solid var(--border)',
+            background: 'linear-gradient(135deg, rgba(0,255,200,0.15), rgba(170,136,255,0.15))',
+            border: '1px solid rgba(0,255,200,0.3)',
             animationDelay: '0.3s',
+            color: 'var(--cyan)',
           }}
-          onClick={handleCopy}
         >
-          <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>$</span>
-          <span className="text-sm md:text-base font-medium" style={{ color: 'var(--cyan)' }}>
-            pip install skillchain
+          <span className="text-sm md:text-base font-semibold">
+            Download SkillChain
           </span>
-          <span
-            className="text-xs px-2 py-1 rounded ml-2"
-            style={{
-              background: copied ? 'rgba(0, 255, 136, 0.15)' : 'rgba(0, 255, 200, 0.1)',
-              color: copied ? 'var(--green)' : 'var(--text-secondary)',
-            }}
-          >
-            {copied ? 'copied!' : 'copy'}
+          <span className="text-xs px-2 py-1 rounded" style={{ background: 'rgba(0,255,200,0.1)', color: 'var(--green)' }}>
+            Free
           </span>
-        </div>
+        </a>
 
         {/* Secondary CTAs */}
         <div className="flex items-center justify-center gap-6 mt-6 animate-fade-in-up" style={{ animationDelay: '0.45s' }}>
@@ -96,10 +81,10 @@ export default function HeroSection() {
           }}
         >
           {[
-            { value: '5+', label: 'AI Platforms', color: 'var(--cyan)' },
-            { value: '16', label: 'Genesis Skills', color: 'var(--purple)' },
-            { value: '8', label: 'Smart Contracts', color: 'var(--gold)' },
-            { value: '1B', label: 'Token Supply', color: 'var(--green)' },
+            { value: '126+', label: 'AI Skills', color: 'var(--cyan)' },
+            { value: '68+', label: 'Skill Chains', color: 'var(--purple)' },
+            { value: '38', label: 'Patent Claims', color: 'var(--gold)' },
+            { value: '5+', label: 'AI Platforms', color: 'var(--green)' },
           ].map((stat, i) => (
             <div key={i} className="flex items-center gap-2 text-sm">
               <span className="font-bold" style={{ color: stat.color }}>{stat.value}</span>

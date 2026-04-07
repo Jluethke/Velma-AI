@@ -40,6 +40,9 @@ from .exceptions import (
     ValidationError,
 )
 from .node import SkillChainNode
+from .chain_matcher import ChainMatch, ChainMatcher
+from .gamification import GamificationEngine
+from .llm_executor import LLMStepExecutor
 from .skill_chain import ChainResult, SkillChain, SkillStep, StepResult
 from .skill_state import PhaseResult, SkillRun, SkillState, SkillStateStore
 from .agent_social import (
@@ -58,6 +61,10 @@ from .user_profile import (
     ProfileManager,
     SkillRecommendation,
     UserProfile,
+)
+from .agent_skills_importer import (
+    AgentSkillsImporter,
+    ImportReport,
 )
 
 __all__ = [
@@ -99,5 +106,7 @@ __all__ = [
     "ProfileManager",
     "SkillRecommendation",
     "ChainRecommendation",
+    "AgentSkillsImporter",
+    "ImportReport",
     "__version__",
 ]

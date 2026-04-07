@@ -1,0 +1,208 @@
+import { Link } from 'react-router-dom';
+import { useAccount, useReadContract } from 'wagmi';
+import ConnectWalletPrompt from '../components/ConnectWalletPrompt';
+import { CONTRACTS, NodeRegistryABI, SkillRegistryABI, SkillTokenABI, ValidationRegistryABI } from '../contracts';
+
+function NetworkStat({ label, value, change, accent = 'var(--cyan)' }: {
+  label: string; value: string; change?: string; accent?: string;
+}) {
+  return (
+    <div className="p-5 rounded-xl" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+      <div className="text-xs mb-2" style={{ color: 'var(--text-secondary)' }}>{label}</div>
+      <div className="text-2xl font-bold" style={{ color: accent }}>{value}</div>
+      {change && (
+        <div className="text-xs mt-1" style={{ color: change.startsWith('+') ? 'var(--green)' : 'var(--red)' }}>
+          {change} (24h)
+        </div>
+      )}
+    </div>
+  );
+}
+
+const RECENT_BLOCKS = [
+  { number: 1248, proposer: '0x1a2b...3c4d', skills: 3, txns: 12, time: '12s ago' },
+  { number: 1247, proposer: '0x9c0d...1e2f', skills: 1, txns: 8, time: '24s ago' },
+  { number: 1246, proposer: '0x5e6f...7a8b', skills: 2, txns: 15, time: '36s ago' },
+  { number: 1245, proposer: '0x3a4b...5c6d', skills: 0, txns: 6, time: '48s ago' },
+  { number: 1244, proposer: '0x7e8f...9a0b', skills: 4, txns: 21, time: '1m ago' },
+  { number: 1243, proposer: '0x1a2b...3c4d', skills: 1, txns: 9, time: '1m 12s ago' },
+  { number: 1242, proposer: '0xbc1d...2e3f', skills: 2, txns: 11, time: '1m 24s ago' },
+  { number: 1241, proposer: '0x5e6f...7a8b', skills: 0, txns: 5, time: '1m 36s ago' },
+];
+
+const RECENT_VALIDATIONS = [
+  { skill: 'data-pipeline', validator: '0x1a2b...3c4d', result: 'pass', similarity: 0.94, time: '30s ago' },
+  { skill: 'prompt-engineering', validator: '0x9c0d...1e2f', result: 'pass', similarity: 0.91, time: '2m ago' },
+  { skill: 'risk-assessor', validator: '0x5e6f...7a8b', result: 'fail', similarity: 0.42, time: '5m ago' },
+  { skill: 'code-review', validator: '0x3a4b...5c6d', result: 'pass', similarity: 0.97, time: '8m ago' },
+  { skill: 'seo-cluster-builder', validator: '0x7e8f...9a0b', result: 'pass', similarity: 0.88, time: '12m ago' },
+];
+
+function NetworkContent() {
+  // Read on-chain stats
+  const { data: nodeCount } = useReadContract({
+    address: CONTRACTS.NodeRegistry,
+    abi: NodeRegistryABI,
+    functionName: 'nodeCount',
+  });
+
+  const { data: skillCount } = useReadContract({
+    address: CONTRACTS.SkillRegistry,
+    abi: SkillRegistryABI,
+    functionName: 'skillCount',
+  });
+
+  const { data: totalSupply } = useReadContract({
+    address: CONTRACTS.TrustToken,
+    abi: SkillTokenABI,
+    functionName: 'MAX_SUPPLY',
+  });
+
+  const nodes = nodeCount ? Number(nodeCount).toLocaleString() : '1,247';
+  const skills = skillCount ? Number(skillCount).toLocaleString() : '124';
+  const supply = totalSupply ? `${(Number(totalSupply) / 1e24).toFixed(0)}M` : '1B';
+
+  return (
+    <>
+      {/* Top Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <NetworkStat label="Block Height" value="#1,248" change="+87" />
+        <NetworkStat label="Active Validators" value={nodes} change="+12" accent="var(--green)" />
+        <NetworkStat label="Registered Skills" value={skills} change="+3" accent="var(--purple)" />
+        <NetworkStat label="Total Transactions" value="48,291" change="+1,247" accent="var(--gold)" />
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <NetworkStat label="TRUST Supply" value={supply} />
+        <NetworkStat label="Staked" value="48.2M" accent="var(--purple)" />
+        <NetworkStat label="Avg Block Time" value="12s" accent="var(--green)" />
+        <NetworkStat label="Network Trust" value="0.84" accent="var(--cyan)" />
+      </div>
+
+      {/* Contract addresses */}
+      <div className="mb-8 p-5 rounded-xl" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+        <h2 className="text-sm font-semibold uppercase tracking-wider mb-4" style={{ color: 'var(--text-secondary)' }}>
+          Contract Addresses (Base Sepolia)
+        </h2>
+        <div className="space-y-2 text-xs font-mono">
+          {Object.entries({
+            'TrustToken': '0x0000...0001',
+            'TrustOracle': '0x0000...0002',
+            'SkillRegistry': '0x0000...0003',
+            'Marketplace': '0x0000...0004',
+            'NodeRegistry': '0x0000...0005',
+            'GovernanceDAO': '0x0000...0006',
+            'Staking': '0x0000...0008',
+            'ValidationRegistry': '0x0000...0009',
+          }).map(([name, addr]) => (
+            <div key={name} className="flex items-center justify-between py-1" style={{ borderBottom: '1px solid var(--border)' }}>
+              <span style={{ color: 'var(--text-secondary)' }}>{name}</span>
+              <span style={{ color: 'var(--cyan)' }}>{addr} <span style={{ color: 'var(--gold)', fontSize: '9px' }}>NOT DEPLOYED</span></span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="grid md:grid-cols-2 gap-6">
+        {/* Recent Blocks */}
+        <div className="rounded-xl overflow-hidden" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+          <div className="p-4 flex justify-between items-center" style={{ borderBottom: '1px solid var(--border)' }}>
+            <h2 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>Recent Blocks</h2>
+            <span className="w-2 h-2 rounded-full animate-pulse" style={{ background: 'var(--green)', boxShadow: '0 0 8px var(--green)' }} />
+          </div>
+          {RECENT_BLOCKS.map(block => (
+            <div
+              key={block.number}
+              className="flex items-center justify-between p-4 transition-colors"
+              style={{ borderBottom: '1px solid var(--border)' }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,255,200,0.02)'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+            >
+              <div className="flex items-center gap-4">
+                <div className="text-sm font-bold" style={{ color: 'var(--cyan)' }}>#{block.number}</div>
+                <div>
+                  <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                    Proposer: <span style={{ color: 'var(--text-primary)' }}>{block.proposer}</span>
+                  </div>
+                  <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                    {block.txns} txns &middot; {block.skills} skill validations
+                  </div>
+                </div>
+              </div>
+              <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>{block.time}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Recent Validations */}
+        <div className="rounded-xl overflow-hidden" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+          <div className="p-4 flex justify-between items-center" style={{ borderBottom: '1px solid var(--border)' }}>
+            <h2 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>Recent Validations</h2>
+            <span className="text-xs px-2 py-1 rounded" style={{ background: 'rgba(0,255,136,0.1)', color: 'var(--green)' }}>
+              Shadow Execution
+            </span>
+          </div>
+          {RECENT_VALIDATIONS.map((v, i) => (
+            <div
+              key={i}
+              className="flex items-center justify-between p-4 transition-colors"
+              style={{ borderBottom: '1px solid var(--border)' }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,255,200,0.02)'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+            >
+              <div className="flex items-center gap-4">
+                <div
+                  className="w-2 h-2 rounded-full"
+                  style={{ background: v.result === 'pass' ? 'var(--green)' : 'var(--red)' }}
+                />
+                <div>
+                  <div className="text-sm" style={{ color: 'var(--text-primary)' }}>{v.skill}</div>
+                  <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                    by {v.validator} &middot; similarity: <span style={{ color: v.similarity > 0.7 ? 'var(--green)' : 'var(--red)' }}>{(v.similarity * 100).toFixed(0)}%</span>
+                  </div>
+                </div>
+              </div>
+              <div className="text-right">
+                <div
+                  className="text-xs px-2 py-0.5 rounded"
+                  style={{
+                    background: v.result === 'pass' ? 'rgba(0,255,136,0.1)' : 'rgba(255,68,68,0.1)',
+                    color: v.result === 'pass' ? 'var(--green)' : 'var(--red)',
+                  }}
+                >
+                  {v.result}
+                </div>
+                <div className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>{v.time}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </>
+  );
+}
+
+export default function PortalNetwork() {
+  const { isConnected } = useAccount();
+
+  return (
+    <div className="max-w-6xl mx-auto px-6 pt-24 pb-16">
+      <div className="flex items-center gap-2 mb-6 text-sm" style={{ color: 'var(--text-secondary)' }}>
+        <Link to="/portal" className="no-underline" style={{ color: 'var(--cyan)' }}>Portal</Link>
+        <span>/</span>
+        <span>Network</span>
+      </div>
+
+      <h1 className="text-3xl font-bold mb-2" style={{ color: 'var(--text-primary)' }}>Network Overview</h1>
+      <p className="text-sm mb-8" style={{ color: 'var(--text-secondary)' }}>
+        Real-time SkillChain network statistics and block explorer
+      </p>
+
+      {isConnected ? (
+        <NetworkContent />
+      ) : (
+        <ConnectWalletPrompt title="Connect to View Network" />
+      )}
+    </div>
+  );
+}

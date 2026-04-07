@@ -1,54 +1,62 @@
 {
   "name": "debug-and-fix",
-  "version": "2.0.0",
-  "description": "Drop your repo, get working code back. Automated debug-and-fix pipeline: scan codebase, run tests, parse errors, analyze root cause, generate minimal fixes, verify with tests, report before/after.",
+  "version": "3.0.0",
+  "description": "Drop your repo, get working code back. Scans the codebase, runs tests, parses errors, finds root cause, generates fixes, verifies with tests, reports before/after. Pure skill chain — no runtime dependencies.",
   "category": "developer",
-  "engine": "skillchain.debugger.DebugEngine",
-  "cli_command": "skillchain debug <repo_path>",
-  "supported_languages": ["python", "javascript", "typescript", "rust", "go"],
-  "modes": ["auto-fix", "diagnose-only", "explain"],
   "steps": [
     {
-      "name": "scan",
-      "description": "Detect language, framework, test runner, dependencies, and project structure.",
-      "module": "skillchain.debugger.scanner.CodebaseScanner",
-      "depends_on": []
+      "skill_name": "codebase-mapper",
+      "alias": "scan",
+      "depends_on": [],
+      "config": {
+        "instruction": "Scan the project: detect language, framework, test runner, project structure, entry points, and dependencies. Output a structured codebase map."
+      },
+      "phase_filter": null
     },
     {
-      "name": "test-before",
-      "description": "Run the test suite to capture baseline state (before).",
-      "module": "skillchain.debugger.test_runner.TestRunner",
-      "depends_on": ["scan"]
+      "skill_name": "test-coverage-generator",
+      "alias": "test_before",
+      "depends_on": ["scan"],
+      "config": {
+        "instruction": "Run the test suite to capture baseline state. Record total tests, passing, failing, error messages with stack traces. This is the BEFORE snapshot."
+      },
+      "phase_filter": null
     },
     {
-      "name": "parse-errors",
-      "description": "Parse error messages, stack traces, and test output into structured data.",
-      "module": "skillchain.debugger.error_parser.ErrorParser",
-      "depends_on": ["test-before"]
+      "skill_name": "bug-root-cause",
+      "alias": "diagnose",
+      "depends_on": ["test_before"],
+      "config": {
+        "instruction": "Analyze the failing tests. Identify root cause: which file, which function, what went wrong, and why. Produce fix hints."
+      },
+      "phase_filter": null
     },
     {
-      "name": "root-cause",
-      "description": "Analyze parsed errors to identify root cause, affected files, and fix hints.",
-      "module": "skillchain.debugger.root_cause.RootCauseAnalyzer",
-      "depends_on": ["parse-errors"]
+      "skill_name": "code-review",
+      "alias": "fix",
+      "depends_on": ["diagnose"],
+      "config": {
+        "instruction": "Generate a minimal fix based on the root cause analysis. Apply it. Keep the change as small as possible — fewer lines modified is better."
+      },
+      "phase_filter": null
     },
     {
-      "name": "generate-fix",
-      "description": "Generate minimal code fixes as unified diffs, ordered by confidence.",
-      "module": "skillchain.debugger.fix_generator.FixGenerator",
-      "depends_on": ["root-cause"]
+      "skill_name": "test-coverage-generator",
+      "alias": "test_after",
+      "depends_on": ["fix"],
+      "config": {
+        "instruction": "Run the test suite again after the fix. Record results. Compare with the BEFORE snapshot. If tests still fail, flag which ones and why."
+      },
+      "phase_filter": null
     },
     {
-      "name": "apply-and-verify",
-      "description": "Apply fix, re-run tests, verify improvement. Rollback if no improvement. Retry up to max_attempts.",
-      "module": "skillchain.debugger.engine.DebugEngine",
-      "depends_on": ["generate-fix"]
-    },
-    {
-      "name": "report",
-      "description": "Generate before/after comparison table, diffs, confidence scores, and human-readable summary.",
-      "module": "skillchain.debugger.reporter.DebugReporter",
-      "depends_on": ["apply-and-verify"]
+      "skill_name": "checklist-builder",
+      "alias": "report",
+      "depends_on": ["test_after"],
+      "config": {
+        "instruction": "Generate a before/after report: tests fixed, regressions, diff summary, confidence score. Format as a verification checklist with pass/fail for each item."
+      },
+      "phase_filter": null
     }
   ]
 }

@@ -67,6 +67,9 @@ class SkillChainConfig:
     ipfs_gateway: str = ""
     ipfs_api: str = ""
     ipfs_api_key: str = ""
+    ipfs_provider: str = "auto"  # "pinata", "local", "public", "auto"
+    pinata_api_key: str = ""  # from env var PINATA_API_KEY
+    pinata_secret_key: str = ""  # from env var PINATA_SECRET_KEY
     explorer: str = ""
     private_key: str = ""
     node_id: str = ""
@@ -127,6 +130,13 @@ class SkillChainConfig:
             cfg.private_key = pk
         if api_key := os.environ.get("SKILLCHAIN_IPFS_API_KEY"):
             cfg.ipfs_api_key = api_key
+        if ipfs_prov := os.environ.get("SKILLCHAIN_IPFS_PROVIDER"):
+            cfg.ipfs_provider = ipfs_prov
+        # Pinata keys (distinct from the generic ipfs_api_key)
+        if pinata_key := os.environ.get("PINATA_API_KEY"):
+            cfg.pinata_api_key = pinata_key
+        if pinata_secret := os.environ.get("PINATA_SECRET_KEY"):
+            cfg.pinata_secret_key = pinata_secret
 
         return cfg
 
