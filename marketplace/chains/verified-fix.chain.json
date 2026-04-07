@@ -1,0 +1,71 @@
+{
+  "name": "verified-fix",
+  "description": "The verified fix engine as a skill chain. Drop a bug description, get a tested fix back. Scans the codebase, identifies root cause, generates multiple fix candidates, tests each one, scores them on pass rate improvement + minimality + confidence, picks the winner, and produces a before-and-after verification proof. No Python tools needed — Claude does everything.",
+  "category": "developer",
+  "version": "1.0.0",
+  "steps": [
+    {
+      "skill_name": "codebase-mapper",
+      "alias": "scan",
+      "depends_on": [],
+      "config": {
+        "instruction": "Map the codebase structure: files, directories, languages, frameworks, test runner, dependencies. Identify the test command (pytest, jest, cargo test, go test, etc.) and how to run it. Output a structured map with: project_root, language, test_command, entry_points, key_files."
+      },
+      "phase_filter": null
+    },
+    {
+      "skill_name": "test-coverage-generator",
+      "alias": "baseline_tests",
+      "depends_on": ["scan"],
+      "config": {
+        "instruction": "Run the existing test suite using the test_command from the codebase scan. Record: total tests, passing, failing, error messages, stack traces. This is the BEFORE baseline. Output: test_results with total, passed, failed, and a list of failure objects (test_name, error_message, stack_trace, file, line)."
+      },
+      "phase_filter": null
+    },
+    {
+      "skill_name": "bug-root-cause",
+      "alias": "root_cause",
+      "depends_on": ["baseline_tests"],
+      "config": {
+        "instruction": "Analyze the failing tests and error messages from the baseline. Identify the root cause: which file, which function, what's wrong, why it fails. Trace the error through the call stack. Output: root_cause_file, root_cause_function, root_cause_explanation, affected_files, fix_hints."
+      },
+      "phase_filter": null
+    },
+    {
+      "skill_name": "code-review",
+      "alias": "generate_fixes",
+      "depends_on": ["root_cause"],
+      "config": {
+        "instruction": "Based on the root cause analysis, generate 3 different fix candidates. Each fix should be a minimal code change (unified diff format). Rank by: (1) smallest change that fixes the issue, (2) no regressions to passing tests, (3) follows existing code patterns. For each candidate output: candidate_id, description, diff, confidence (0-1), modified_lines_count."
+      },
+      "phase_filter": null
+    },
+    {
+      "skill_name": "test-coverage-generator",
+      "alias": "verify_fixes",
+      "depends_on": ["generate_fixes"],
+      "config": {
+        "instruction": "For each fix candidate from the previous step: (1) Apply the diff to the codebase, (2) Run the full test suite, (3) Record results: tests passed, tests failed, any new failures (regressions). (4) Compute a composite score: test_improvement (newly passing / previously failing), minimality (1 / modified_lines), regression_penalty (previously passing that now fail). (5) Roll back the diff before trying the next candidate. Output: scored_candidates sorted by composite score descending."
+      },
+      "phase_filter": null
+    },
+    {
+      "skill_name": "code-review",
+      "alias": "apply_winner",
+      "depends_on": ["verify_fixes"],
+      "config": {
+        "instruction": "Take the highest-scoring fix candidate from verify_fixes. Apply it to the codebase permanently. If the highest scorer didn't achieve 100% test passage, try the next candidate in descending score order (up to 3 attempts). For the winning fix, output: applied_diff, before_results (from baseline), after_results (from verification), tests_fixed, regressions (should be 0), verification_proof with before/after comparison."
+      },
+      "phase_filter": null
+    },
+    {
+      "skill_name": "checklist-builder",
+      "alias": "report",
+      "depends_on": ["apply_winner"],
+      "config": {
+        "instruction": "Generate a verification report for the fix. Include: (1) Bug description and root cause, (2) Fix applied (diff summary), (3) Before: X tests passing, Y failing, (4) After: X tests passing, Y failing, (5) Tests fixed (list), (6) Regressions (list — should be empty), (7) Confidence score, (8) Consensus: did multiple candidates agree on the fix location? Output as a structured checklist with pass/fail for each verification step."
+      },
+      "phase_filter": null
+    }
+  ]
+}
