@@ -122,17 +122,56 @@ if %errorlevel% neq 0 (
 )
 
 :: ================================================================
-:: Step 5: Configure Claude Code (if installed)
+:: Step 5: Auto-configure any detected MCP clients
 :: ================================================================
-echo   [5/7] Configuring Claude Code...
-set "CLAUDE_SETTINGS=%USERPROFILE%\.claude\settings.json"
-if not exist "%USERPROFILE%\.claude" mkdir "%USERPROFILE%\.claude"
+echo   [5/7] Configuring MCP clients...
+set "SERVER_PATH=%SC_DIR%\server\index.js"
+set "CONFIGURED=0"
 
-:: Use Node.js to safely merge into settings.json
-node -e "const fs=require('fs'),p='%CLAUDE_SETTINGS%'.replace(/\\/g,'/');let s={};try{s=JSON.parse(fs.readFileSync(p,'utf-8'))}catch{}if(!s.mcpServers)s.mcpServers={};s.mcpServers.skillchain={command:'node',args:['%SC_DIR%\\server\\index.js'.replace(/\\/g,'/')],env:{}};fs.writeFileSync(p,JSON.stringify(s,null,2),'utf-8');console.log('  MCP server registered in '+p)"
-if %errorlevel% neq 0 (
-    echo   WARNING: Could not auto-configure Claude Code.
-    echo   You may need to add the MCP server manually to ~/.claude/settings.json
+:: --- Claude Code ---
+set "CLAUDE_SETTINGS=%USERPROFILE%\.claude\settings.json"
+if exist "%USERPROFILE%\.claude" (
+    node -e "const fs=require('fs'),p='%CLAUDE_SETTINGS%'.replace(/\\/g,'/');let s={};try{s=JSON.parse(fs.readFileSync(p,'utf-8'))}catch{}if(!s.mcpServers)s.mcpServers={};s.mcpServers.skillchain={command:'node',args:['%SERVER_PATH%'.replace(/\\/g,'/')],env:{}};fs.writeFileSync(p,JSON.stringify(s,null,2),'utf-8');console.log('  Claude Code: configured')" 2>nul && set "CONFIGURED=1"
+) else (
+    echo   Claude Code: not detected
+)
+
+:: --- Cursor ---
+set "CURSOR_SETTINGS=%USERPROFILE%\.cursor\mcp.json"
+if exist "%USERPROFILE%\.cursor" (
+    node -e "const fs=require('fs'),p='%CURSOR_SETTINGS%'.replace(/\\/g,'/');let s={};try{s=JSON.parse(fs.readFileSync(p,'utf-8'))}catch{}if(!s.mcpServers)s.mcpServers={};s.mcpServers.skillchain={command:'node',args:['%SERVER_PATH%'.replace(/\\/g,'/')],env:{}};fs.writeFileSync(p,JSON.stringify(s,null,2),'utf-8');console.log('  Cursor: configured')" 2>nul && set "CONFIGURED=1"
+) else (
+    echo   Cursor: not detected
+)
+
+:: --- Windsurf ---
+set "WINDSURF_SETTINGS=%USERPROFILE%\.codeium\windsurf\mcp_config.json"
+if exist "%USERPROFILE%\.codeium\windsurf" (
+    node -e "const fs=require('fs'),p='%WINDSURF_SETTINGS%'.replace(/\\/g,'/');let s={};try{s=JSON.parse(fs.readFileSync(p,'utf-8'))}catch{}if(!s.mcpServers)s.mcpServers={};s.mcpServers.skillchain={command:'node',args:['%SERVER_PATH%'.replace(/\\/g,'/')],env:{}};fs.writeFileSync(p,JSON.stringify(s,null,2),'utf-8');console.log('  Windsurf: configured')" 2>nul && set "CONFIGURED=1"
+) else (
+    echo   Windsurf: not detected
+)
+
+:: --- VS Code (Copilot MCP) ---
+set "VSCODE_SETTINGS=%USERPROFILE%\.vscode\mcp.json"
+if exist "%USERPROFILE%\.vscode" (
+    node -e "const fs=require('fs'),p='%VSCODE_SETTINGS%'.replace(/\\/g,'/');let s={};try{s=JSON.parse(fs.readFileSync(p,'utf-8'))}catch{}if(!s.servers)s.servers={};s.servers.skillchain={command:'node',args:['%SERVER_PATH%'.replace(/\\/g,'/')],env:{}};fs.writeFileSync(p,JSON.stringify(s,null,2),'utf-8');console.log('  VS Code: configured')" 2>nul && set "CONFIGURED=1"
+) else (
+    echo   VS Code: not detected
+)
+
+if "%CONFIGURED%"=="0" (
+    echo.
+    echo   No MCP clients detected. That's OK!
+    echo   Install any of these, then restart it:
+    echo     - Claude Code  ^(claude.ai/code^)
+    echo     - Cursor       ^(cursor.com^)
+    echo     - Windsurf     ^(windsurf.com^)
+    echo     - VS Code      ^(code.visualstudio.com^)
+    echo.
+    echo   SkillChain is installed and ready. Your MCP client
+    echo   will find it automatically, or add it manually:
+    echo     Server: node %SERVER_PATH%
 )
 
 :: ================================================================
@@ -187,11 +226,10 @@ if exist "%SC_DIR%\server\index.js" (
     set "VALID=0"
 )
 
-if exist "%CLAUDE_SETTINGS%" (
-    node -e "const s=JSON.parse(require('fs').readFileSync('%CLAUDE_SETTINGS%'.replace(/\\/g,'/'),'utf-8'));if(s.mcpServers&&s.mcpServers.skillchain)console.log('  Claude config: OK');else{console.log('  WARNING: not in Claude settings');process.exit(1)}" 2>nul
-    if !errorlevel! neq 0 set "VALID=0"
+if "%CONFIGURED%"=="1" (
+    echo   MCP client config: OK
 ) else (
-    echo   Claude Code: not installed ^(install later from claude.ai/code^)
+    echo   MCP clients: none detected ^(install one to use SkillChain^)
 )
 
 echo.
@@ -207,8 +245,9 @@ if "%VALID%"=="1" (
 )
 echo.
 echo   What happens now:
-echo     1. Install Claude Code from https://claude.ai/code ^(if you haven't^)
-echo     2. Open Claude Code and just talk normally
+echo     1. Open any MCP-compatible AI tool:
+echo        Claude Code, Cursor, Windsurf, VS Code, etc.
+echo     2. Just talk normally
 echo     3. Say things like:
 echo        - "I hate my job"
 echo        - "I feel stuck"
