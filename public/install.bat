@@ -33,9 +33,27 @@ if not exist "%SC_DIR%\marketplace\chains" mkdir "%SC_DIR%\marketplace\chains"
 :: Step 2: Download and extract (node_modules pre-bundled)
 :: ================================================================
 echo   [2/6] Downloading SkillChain...
-powershell -NoProfile -ExecutionPolicy Bypass -Command "Invoke-WebRequest -Uri '%DOWNLOAD_URL%' -OutFile '%TEMP%\skillchain-mcp.tar.gz' -UseBasicParsing"
-if %errorlevel% neq 0 (
-    echo   ERROR: Download failed.
+set "DL_OK=0"
+
+:: Try PowerShell (full path — works even if PATH is broken)
+if exist "%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe" (
+    "%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -ExecutionPolicy Bypass -Command "Invoke-WebRequest -Uri '%DOWNLOAD_URL%' -OutFile '%TEMP%\skillchain-mcp.tar.gz' -UseBasicParsing" 2>nul && set "DL_OK=1"
+)
+:: Fallback: curl
+if "!DL_OK!"=="0" (
+    curl -sSL -o "%TEMP%\skillchain-mcp.tar.gz" "%DOWNLOAD_URL%" 2>nul && set "DL_OK=1"
+)
+:: Fallback: certutil (available since Windows Vista)
+if "!DL_OK!"=="0" (
+    certutil -urlcache -split -f "%DOWNLOAD_URL%" "%TEMP%\skillchain-mcp.tar.gz" >nul 2>&1 && set "DL_OK=1"
+)
+:: Fallback: bitsadmin
+if "!DL_OK!"=="0" (
+    bitsadmin /transfer skillchain /download /priority high "%DOWNLOAD_URL%" "%TEMP%\skillchain-mcp.tar.gz" >nul 2>&1 && set "DL_OK=1"
+)
+
+if "!DL_OK!"=="0" (
+    echo   ERROR: Download failed. No download tool available.
     echo   URL: %DOWNLOAD_URL%
     goto :failed
 )
@@ -62,7 +80,7 @@ set "PS_SERVER_PATH=%SERVER_PATH:\=/%"
 
 :: --- Claude Code ---
 if exist "%USERPROFILE%\.claude" (
-    powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+    "%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -ExecutionPolicy Bypass -Command ^
       "$p='%USERPROFILE%\.claude\settings.json';" ^
       "$s=@{}; if(Test-Path $p){try{$s=Get-Content $p -Raw|ConvertFrom-Json}catch{$s=@{}}};" ^
       "if(-not $s.mcpServers){$s|Add-Member -NotePropertyName mcpServers -NotePropertyValue @{} -Force};" ^
@@ -76,7 +94,7 @@ if exist "%USERPROFILE%\.claude" (
 
 :: --- Cursor ---
 if exist "%USERPROFILE%\.cursor" (
-    powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+    "%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -ExecutionPolicy Bypass -Command ^
       "$p='%USERPROFILE%\.cursor\mcp.json';" ^
       "$s=@{}; if(Test-Path $p){try{$s=Get-Content $p -Raw|ConvertFrom-Json}catch{$s=@{}}};" ^
       "if(-not $s.mcpServers){$s|Add-Member -NotePropertyName mcpServers -NotePropertyValue @{} -Force};" ^
@@ -90,7 +108,7 @@ if exist "%USERPROFILE%\.cursor" (
 
 :: --- Windsurf ---
 if exist "%USERPROFILE%\.codeium\windsurf" (
-    powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+    "%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -ExecutionPolicy Bypass -Command ^
       "$p='%USERPROFILE%\.codeium\windsurf\mcp_config.json';" ^
       "$s=@{}; if(Test-Path $p){try{$s=Get-Content $p -Raw|ConvertFrom-Json}catch{$s=@{}}};" ^
       "if(-not $s.mcpServers){$s|Add-Member -NotePropertyName mcpServers -NotePropertyValue @{} -Force};" ^
@@ -104,7 +122,7 @@ if exist "%USERPROFILE%\.codeium\windsurf" (
 
 :: --- VS Code (Copilot MCP) ---
 if exist "%USERPROFILE%\.vscode" (
-    powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+    "%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -ExecutionPolicy Bypass -Command ^
       "$p='%USERPROFILE%\.vscode\mcp.json';" ^
       "$s=@{}; if(Test-Path $p){try{$s=Get-Content $p -Raw|ConvertFrom-Json}catch{$s=@{}}};" ^
       "if(-not $s.servers){$s|Add-Member -NotePropertyName servers -NotePropertyValue @{} -Force};" ^
@@ -127,7 +145,7 @@ if "%CONFIGURED%"=="0" (
     echo.
     :: Pre-create Claude dir and settings so it's ready when they install
     if not exist "%USERPROFILE%\.claude" mkdir "%USERPROFILE%\.claude"
-    powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+    "%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -ExecutionPolicy Bypass -Command ^
       "$p='%USERPROFILE%\.claude\settings.json';" ^
       "$s=@{}; if(Test-Path $p){try{$s=Get-Content $p -Raw|ConvertFrom-Json}catch{$s=@{}}};" ^
       "if(-not $s.mcpServers){$s|Add-Member -NotePropertyName mcpServers -NotePropertyValue @{} -Force};" ^
