@@ -82,10 +82,9 @@ export default function InstallModal({ onClose }: { onClose: () => void }) {
         <div className="rounded-lg p-4" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)' }}>
           <p className="text-xs font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>After you run it:</p>
           <ol className="text-xs space-y-1.5 pl-4" style={{ color: 'var(--text-secondary)' }}>
-            <li>Installs Python if you don't have it</li>
-            <li>Installs 120+ AI skills and 65+ skill chains</li>
-            <li>Auto-configures your AI agent</li>
-            <li>Restart Claude Code — just talk normally</li>
+            <li>Downloads 126 AI skills and 92 skill chains</li>
+            <li>Auto-configures Claude Code, Cursor, Windsurf, VS Code</li>
+            <li>Restart your AI tool — just talk normally</li>
           </ol>
         </div>
       </div>

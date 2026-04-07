@@ -1,6 +1,6 @@
 #!/bin/bash
 # SkillChain Installer — macOS / Linux
-# No Python required. Just Node.js (which Claude Code includes).
+# Requires Claude Code (which includes Node.js).
 set -e
 
 SC_DIR="$HOME/.skillchain"
@@ -11,7 +11,6 @@ cleanup_on_failure() {
     echo ""
     echo "  Installation FAILED"
     echo "  Check the error messages above and try again."
-    echo "  Make sure Node.js is installed: https://nodejs.org"
     echo ""
     exit 1
 }
@@ -21,19 +20,18 @@ trap cleanup_on_failure ERR
 echo ""
 echo "  SkillChain - AI Skill Marketplace"
 echo "  =================================="
-echo "  No Python required. Just Node.js."
 echo ""
 
-# Check for Node.js
+# Check for Node.js (ships with Claude Code)
 echo "  [1/6] Checking Node.js..."
 if ! command -v node &>/dev/null; then
-    echo "  Node.js not found."
     echo ""
-    echo "  SkillChain requires Node.js, which comes with Claude Code."
-    echo "  If you have Claude Code installed, Node.js should be available."
+    echo "  ERROR: Node.js not found."
     echo ""
-    echo "  To install Node.js manually: https://nodejs.org"
-    echo "  Or: brew install node (macOS) / sudo apt install nodejs (Linux)"
+    echo "  SkillChain requires Claude Code, which includes Node.js."
+    echo "  Install Claude Code first: https://claude.ai/download"
+    echo ""
+    echo "  If you already have Claude Code, try restarting your terminal."
     exit 1
 fi
 echo "  Found Node.js $(node --version)"
@@ -52,7 +50,7 @@ echo "  Downloaded and extracted."
 # Install Node.js dependencies
 echo "  [4/6] Installing server dependencies..."
 cd "$SC_DIR/server"
-npm install --production --silent 2>/dev/null || npm install --production
+npm install --omit=dev --silent 2>/dev/null || npm install --omit=dev
 
 # Configure Claude Code
 echo "  [5/6] Configuring Claude Code..."

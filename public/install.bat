@@ -16,63 +16,23 @@ echo.
 
 set "SC_DIR=%USERPROFILE%\.skillchain"
 set "DOWNLOAD_URL=https://velma-ai.vercel.app/skillchain-mcp-0.1.0.tar.gz"
-set "NODE_VERSION=22.15.0"
-set "NODE_URL=https://nodejs.org/dist/v%NODE_VERSION%/node-v%NODE_VERSION%-x64.msi"
 
 :: ================================================================
-:: Step 1: Ensure Node.js is available
+:: Step 1: Verify Node.js (ships with Claude Code)
 :: ================================================================
 echo   [1/7] Checking Node.js...
 node --version >nul 2>&1
 if %errorlevel% neq 0 (
-    echo   Node.js not found. Installing automatically...
     echo.
-
-    :: Check if curl is available
-    curl --version >nul 2>&1
-    if !errorlevel! neq 0 (
-        echo   ERROR: curl not found. Cannot download Node.js.
-        echo   Please install Node.js manually from https://nodejs.org
-        echo   Then re-run this installer.
-        goto :failed
-    )
-
-    echo   Downloading Node.js v%NODE_VERSION%...
-    curl -sSL -o "%TEMP%\node-installer.msi" "%NODE_URL%"
-    if !errorlevel! neq 0 (
-        echo   ERROR: Failed to download Node.js.
-        echo   Please install Node.js manually from https://nodejs.org
-        goto :failed
-    )
-
-    echo   Installing Node.js ^(this may take a minute and request admin access^)...
-    msiexec /i "%TEMP%\node-installer.msi" /qn /norestart
-    if !errorlevel! neq 0 (
-        echo.
-        echo   Automatic install needs admin access. Trying interactive install...
-        msiexec /i "%TEMP%\node-installer.msi"
-        if !errorlevel! neq 0 (
-            echo   ERROR: Node.js installation failed.
-            echo   Please install Node.js manually from https://nodejs.org
-            del "%TEMP%\node-installer.msi" 2>nul
-            goto :failed
-        )
-    )
-    del "%TEMP%\node-installer.msi" 2>nul
-
-    :: Refresh PATH so we can find node/npm in this session
-    set "PATH=%ProgramFiles%\nodejs;%LOCALAPPDATA%\Programs\nodejs;%PATH%"
-
-    node --version >nul 2>&1
-    if !errorlevel! neq 0 (
-        echo   ERROR: Node.js installed but not found on PATH.
-        echo   Please close this window, open a new terminal, and re-run the installer.
-        goto :failed
-    )
-    for /f "tokens=*" %%v in ('node --version') do echo   Installed Node.js %%v
-) else (
-    for /f "tokens=*" %%v in ('node --version') do echo   Found Node.js %%v
+    echo   ERROR: Node.js not found.
+    echo.
+    echo   SkillChain requires Claude Code, which includes Node.js.
+    echo   Install Claude Code first: https://claude.ai/download
+    echo.
+    echo   If you already have Claude Code, try restarting your terminal.
+    goto :failed
 )
+for /f "tokens=*" %%v in ('node --version') do echo   Found Node.js %%v
 
 :: ================================================================
 :: Step 2: Create directories
@@ -90,7 +50,7 @@ if not exist "%SC_DIR%\marketplace\chains" mkdir "%SC_DIR%\marketplace\chains"
 :: Step 3: Download and extract
 :: ================================================================
 echo   [3/7] Downloading SkillChain...
-curl -sSL -o "%TEMP%\skillchain-mcp.tar.gz" "%DOWNLOAD_URL%"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "Invoke-WebRequest -Uri '%DOWNLOAD_URL%' -OutFile '%TEMP%\skillchain-mcp.tar.gz' -UseBasicParsing"
 if %errorlevel% neq 0 (
     echo   ERROR: Download failed.
     echo   URL: %DOWNLOAD_URL%
@@ -204,6 +164,7 @@ echo echo   ======================
 echo echo.
 echo set /p CONFIRM="  Remove SkillChain? ^(y/n^): "
 echo if /i not "%%CONFIRM%%"=="y" ^( echo   Cancelled. ^& pause ^& exit /b 0 ^)
+echo echo.
 echo echo   Removing...
 echo reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall\SkillChain" /f ^>nul 2^>^&1
 echo rmdir /s /q "%%USERPROFILE%%\.skillchain" 2^>nul
