@@ -1,206 +1,355 @@
 import { Link } from 'react-router-dom';
-import { useAccount, useReadContract } from 'wagmi';
-import { formatUnits } from 'viem';
-import ConnectWalletPrompt from '../components/ConnectWalletPrompt';
-import { CONTRACTS, SkillTokenABI, TrustOracleABI, StakingABI } from '../contracts';
+import { useTrainer } from '../hooks/useTrainer';
+import { useQuests } from '../hooks/useTrainer';
+import { useVelma } from '../hooks/useVelma';
 
-const MOCK_DATA = {
-  trustBalance: '12,450.00',
-  stakedAmount: '8,000.00',
-  pendingRewards: '234.50',
-  validatorStatus: 'Active',
-  trustScore: 0.87,
-  skillsValidated: 42,
-  consensusParticipation: '94.2%',
-  networkRank: 128,
-};
-
-function StatCard({ label, value, sub, accent = 'var(--cyan)' }: {
-  label: string; value: string; sub?: string; accent?: string;
+/* ─── Skeleton placeholder ─── */
+function Skeleton({ width = '100%', height = '1rem', rounded = '0.5rem' }: {
+  width?: string; height?: string; rounded?: string;
 }) {
   return (
-    <div className="p-5 rounded-xl" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
-      <div className="text-xs mb-2" style={{ color: 'var(--text-secondary)' }}>{label}</div>
-      <div className="text-2xl font-bold" style={{ color: accent }}>{value}</div>
-      {sub && <div className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>{sub}</div>}
+    <div
+      className="animate-pulse"
+      style={{
+        width, height, borderRadius: rounded,
+        background: 'linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.04) 75%)',
+        backgroundSize: '200% 100%',
+        animation: 'shimmer 1.5s infinite',
+      }}
+    />
+  );
+}
+
+/* ─── Stat card (4-grid) ─── */
+function StatCard({ label, value, total, accent = '#00ffc8' }: {
+  label: string; value: number; total?: number; accent?: string;
+}) {
+  return (
+    <div
+      className="p-5 rounded-xl transition-all"
+      style={{ background: 'rgba(26,26,46,0.6)', border: '1px solid var(--border)' }}
+    >
+      <div className="text-xs uppercase tracking-wider mb-2" style={{ color: 'var(--text-secondary)' }}>
+        {label}
+      </div>
+      <div className="text-2xl font-bold font-mono" style={{ color: accent }}>
+        {value.toLocaleString()}
+        {total != null && (
+          <span className="text-sm font-normal" style={{ color: 'var(--text-secondary)' }}>
+            {' / '}{total}
+          </span>
+        )}
+      </div>
     </div>
   );
 }
 
-function PortalLink({ to, title, description, icon }: {
+/* ─── Quick link card ─── */
+function QuickLink({ to, title, description, icon }: {
   to: string; title: string; description: string; icon: string;
 }) {
   return (
     <Link
       to={to}
       className="block p-5 rounded-xl no-underline transition-all"
-      style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
+      style={{ background: 'rgba(26,26,46,0.6)', border: '1px solid var(--border)' }}
       onMouseEnter={e => {
         e.currentTarget.style.borderColor = 'rgba(0, 255, 200, 0.3)';
         e.currentTarget.style.boxShadow = '0 0 20px rgba(0, 255, 200, 0.05)';
+        e.currentTarget.style.transform = 'translateY(-2px)';
       }}
       onMouseLeave={e => {
         e.currentTarget.style.borderColor = 'var(--border)';
         e.currentTarget.style.boxShadow = 'none';
+        e.currentTarget.style.transform = 'translateY(0)';
       }}
     >
       <div className="text-2xl mb-3">{icon}</div>
-      <div className="text-sm font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>{title}</div>
-      <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>{description}</div>
+      <div className="text-sm font-semibold mb-1" style={{ color: '#ffffff' }}>{title}</div>
+      <div className="text-xs leading-relaxed" style={{ color: 'var(--text-secondary)' }}>{description}</div>
     </Link>
   );
 }
 
-function ActivityItem({ action, detail, time, type }: {
-  action: string; detail: string; time: string; type: 'stake' | 'validate' | 'reward' | 'vote';
-}) {
+/* ─── Category badge ─── */
+function CategoryBadge({ category }: { category: string }) {
   const colors: Record<string, string> = {
-    stake: 'var(--cyan)', validate: 'var(--green)', reward: 'var(--gold)', vote: 'var(--purple)',
+    career: '#aa88ff', life: '#00ff88', health: '#00ffc8', money: '#ffd700',
+    business: '#ff8844', learning: '#44aaff', developer: '#ff66aa',
   };
+  const color = colors[category.toLowerCase()] || 'var(--text-secondary)';
   return (
-    <div className="flex items-center justify-between py-3" style={{ borderBottom: '1px solid var(--border)' }}>
-      <div className="flex items-center gap-3">
-        <div className="w-2 h-2 rounded-full" style={{ background: colors[type] }} />
-        <div>
-          <div className="text-sm" style={{ color: 'var(--text-primary)' }}>{action}</div>
-          <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>{detail}</div>
-        </div>
-      </div>
-      <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>{time}</div>
-    </div>
+    <span
+      className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] uppercase tracking-wider font-medium"
+      style={{ background: `${color}15`, color }}
+    >
+      {category}
+    </span>
   );
 }
 
-function PortalContent({ address }: { address: `0x${string}` }) {
-  // Read TRUST token balance
-  const { data: rawBalance } = useReadContract({
-    address: CONTRACTS.TrustToken,
-    abi: SkillTokenABI,
-    functionName: 'balanceOf',
-    args: [address],
-  });
-
-  // Read trust score from oracle
-  const { data: rawTrustScore } = useReadContract({
-    address: CONTRACTS.TrustOracle,
-    abi: TrustOracleABI,
-    functionName: 'getTrustScore',
-    args: [address],
-  });
-
-  // Read staking tier
-  const { data: stakingTier } = useReadContract({
-    address: CONTRACTS.Staking,
-    abi: StakingABI,
-    functionName: 'getTier',
-    args: [address],
-  });
-
-  // Use on-chain data when available, fall back to mock
-  const balance = rawBalance ? parseFloat(formatUnits(rawBalance as bigint, 18)).toLocaleString(undefined, { minimumFractionDigits: 2 }) : MOCK_DATA.trustBalance;
-  const trustScore = rawTrustScore ? (Number(rawTrustScore) / 1e18) : MOCK_DATA.trustScore;
-  const tier = stakingTier ? Number(stakingTier) : null;
-
-  return (
-    <>
-      {/* Connected address */}
-      <div className="mb-4 flex items-center gap-2">
-        <div className="w-2 h-2 rounded-full" style={{ background: 'var(--green)', boxShadow: '0 0 6px var(--green)' }} />
-        <span className="text-xs font-mono" style={{ color: 'var(--text-secondary)' }}>
-          {address.slice(0, 6)}...{address.slice(-4)}
-        </span>
-        <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: 'rgba(0,255,200,0.1)', color: 'var(--cyan)' }}>
-          Base Sepolia
-        </span>
-        {tier !== null && (
-          <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: 'rgba(170,136,255,0.1)', color: 'var(--purple)' }}>
-            Tier {tier}
-          </span>
-        )}
-      </div>
-
-      {/* Stats Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        <StatCard label="TRUST Balance" value={balance} sub="TRUST" />
-        <StatCard label="Staked" value={MOCK_DATA.stakedAmount} sub="64.3% of balance" accent="var(--purple)" />
-        <StatCard label="Pending Rewards" value={MOCK_DATA.pendingRewards} sub="TRUST" accent="var(--gold)" />
-        <StatCard label="Trust Score" value={`${(trustScore * 100).toFixed(1)}%`} sub={`Rank #${MOCK_DATA.networkRank}`} accent="var(--green)" />
-      </div>
-
-      {/* Quick Links */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        <PortalLink to="/portal/stake" title="Stake" description="Stake TRUST to become a validator" icon="&#x26A1;" />
-        <PortalLink to="/portal/marketplace" title="Marketplace" description="Buy and sell verified skills" icon="&#x1F6D2;" />
-        <PortalLink to="/portal/validators" title="Validators" description="Network validator directory" icon="&#x1F6E1;" />
-        <PortalLink to="/portal/network" title="Network" description="Chain stats and block explorer" icon="&#x1F4CA;" />
-      </div>
-
-      {/* Two column: Validator Status + Recent Activity */}
-      <div className="grid md:grid-cols-2 gap-6">
-        <div className="p-6 rounded-xl" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
-          <h2 className="text-lg font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>Validator Status</h2>
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-3 h-3 rounded-full" style={{ background: 'var(--green)', boxShadow: '0 0 8px var(--green)' }} />
-            <span className="text-sm font-semibold" style={{ color: 'var(--green)' }}>{MOCK_DATA.validatorStatus}</span>
-          </div>
-          <div className="space-y-3">
-            <div className="flex justify-between text-sm">
-              <span style={{ color: 'var(--text-secondary)' }}>Skills Validated</span>
-              <span style={{ color: 'var(--text-primary)' }}>{MOCK_DATA.skillsValidated}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span style={{ color: 'var(--text-secondary)' }}>Consensus Participation</span>
-              <span style={{ color: 'var(--text-primary)' }}>{MOCK_DATA.consensusParticipation}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span style={{ color: 'var(--text-secondary)' }}>Trust Score</span>
-              <span style={{ color: 'var(--cyan)' }}>{trustScore.toFixed(2)}</span>
-            </div>
-            <div className="mt-2">
-              <div className="w-full h-2 rounded-full" style={{ background: 'var(--bg-primary)' }}>
-                <div
-                  className="h-2 rounded-full transition-all"
-                  style={{
-                    width: `${trustScore * 100}%`,
-                    background: 'linear-gradient(90deg, var(--cyan), var(--green))',
-                    boxShadow: '0 0 8px rgba(0, 255, 200, 0.3)',
-                  }}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="p-6 rounded-xl" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
-          <h2 className="text-lg font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>Recent Activity</h2>
-          <ActivityItem action="Staked 2,000 TRUST" detail="Validator pool" time="2h ago" type="stake" />
-          <ActivityItem action="Validated skill" detail="data-extractor v1.2" time="5h ago" type="validate" />
-          <ActivityItem action="Earned 45.2 TRUST" detail="Validation reward" time="8h ago" type="reward" />
-          <ActivityItem action="Consensus vote" detail="Block #1,247" time="12h ago" type="vote" />
-          <ActivityItem action="Validated skill" detail="resume-builder v2.0" time="1d ago" type="validate" />
-        </div>
-      </div>
-    </>
-  );
-}
-
+/* ─── Main Portal ─── */
 export default function Portal() {
-  const { address, isConnected } = useAccount();
+  const { data: trainer, isLoading: trainerLoading } = useTrainer();
+  const { data: quests, isLoading: questsLoading } = useQuests();
+  const { data: recommendations } = useVelma();
+
+  const topRecs = (recommendations ?? []).slice(0, 3);
 
   return (
     <div className="max-w-6xl mx-auto px-6 pt-24 pb-16">
+      {/* Page header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2" style={{ color: 'var(--text-primary)' }}>Token Portal</h1>
+        <h1 className="text-3xl font-bold mb-2" style={{ color: '#ffffff' }}>
+          Skill Portal
+        </h1>
         <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-          Manage your TRUST tokens, staking, and validator status on Base Sepolia
+          Your AI skill training dashboard. No wallet required.
         </p>
       </div>
 
-      {isConnected && address ? (
-        <PortalContent address={address} />
-      ) : (
-        <ConnectWalletPrompt title="Connect to Token Portal" />
+      {/* ── Trainer Card ── */}
+      <div
+        className="p-6 rounded-xl mb-8"
+        style={{
+          background: 'rgba(26,26,46,0.6)',
+          border: '1px solid var(--border)',
+          boxShadow: '0 0 30px rgba(0, 255, 200, 0.04)',
+        }}
+      >
+        {trainerLoading ? (
+          <div className="space-y-4">
+            <Skeleton width="40%" height="1.5rem" />
+            <Skeleton width="100%" height="0.75rem" />
+            <Skeleton width="60%" height="1rem" />
+          </div>
+        ) : trainer ? (
+          <div>
+            {/* Top row: level badge + title + streak */}
+            <div className="flex flex-wrap items-center gap-4 mb-4">
+              {/* Level badge */}
+              <div
+                className="flex items-center justify-center w-12 h-12 rounded-lg text-lg font-bold font-mono"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(0,255,200,0.15), rgba(0,255,136,0.08))',
+                  border: '1px solid rgba(0,255,200,0.25)',
+                  color: '#00ffc8',
+                }}
+              >
+                {trainer.level}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-lg font-semibold" style={{ color: '#ffffff' }}>
+                  {trainer.title}
+                </div>
+                <div className="text-xs font-mono" style={{ color: 'var(--text-secondary)' }}>
+                  Level {trainer.level}
+                </div>
+              </div>
+              {/* Streak */}
+              <div className="flex items-center gap-2">
+                <span className="text-xl" role="img" aria-label="streak">
+                  {trainer.streak > 0 ? '\uD83D\uDD25' : '\u2744\uFE0F'}
+                </span>
+                <div className="text-right">
+                  <div className="text-sm font-mono font-semibold" style={{ color: trainer.streak > 0 ? '#ffd700' : 'var(--text-secondary)' }}>
+                    {trainer.streak}-day streak
+                  </div>
+                  <div className="text-[10px] font-mono" style={{ color: 'var(--text-secondary)' }}>
+                    {trainer.streak_multiplier}x multiplier
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* XP progress bar */}
+            <div className="mb-1 flex justify-between text-xs font-mono" style={{ color: 'var(--text-secondary)' }}>
+              <span>{trainer.xp.toLocaleString()} XP</span>
+              <span>{trainer.xp_next.toLocaleString()} XP</span>
+            </div>
+            <div className="w-full h-3 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
+              <div
+                className="h-full rounded-full transition-all duration-500"
+                style={{
+                  width: `${Math.min(trainer.xp_progress * 100, 100)}%`,
+                  background: 'linear-gradient(90deg, #00ffc8, #00ff88)',
+                  boxShadow: '0 0 12px rgba(0, 255, 200, 0.4)',
+                }}
+              />
+            </div>
+            <div className="text-[10px] font-mono mt-1" style={{ color: 'var(--text-secondary)' }}>
+              {Math.round(trainer.xp_progress * 100)}% to level {trainer.level + 1}
+            </div>
+          </div>
+        ) : null}
+      </div>
+
+      {/* ── 4-Stat Grid ── */}
+      {trainerLoading ? (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="p-5 rounded-xl" style={{ background: 'rgba(26,26,46,0.6)', border: '1px solid var(--border)' }}>
+              <Skeleton width="60%" height="0.75rem" />
+              <div className="mt-3"><Skeleton width="80%" height="1.75rem" /></div>
+            </div>
+          ))}
+        </div>
+      ) : trainer ? (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+          <StatCard label="Skills Discovered" value={trainer.skills_discovered} total={trainer.skills_total} accent="#00ffc8" />
+          <StatCard label="Chains Completed" value={trainer.chains_completed} total={trainer.chains_total} accent="#aa88ff" />
+          <StatCard label="Achievements" value={trainer.achievements_unlocked} total={trainer.achievements_total} accent="#ffd700" />
+          <StatCard label="Total Runs" value={trainer.total_skill_runs + trainer.total_chain_runs} accent="#00ff88" />
+        </div>
+      ) : null}
+
+      {/* ── Daily Quests ── */}
+      <div
+        className="p-6 rounded-xl mb-8"
+        style={{ background: 'rgba(26,26,46,0.6)', border: '1px solid var(--border)' }}
+      >
+        <h2 className="text-lg font-semibold mb-4" style={{ color: '#ffffff' }}>
+          Daily Quests
+        </h2>
+        {questsLoading ? (
+          <div className="space-y-3">
+            {[...Array(3)].map((_, i) => <Skeleton key={i} height="2.5rem" />)}
+          </div>
+        ) : quests && quests.length > 0 ? (
+          <div className="space-y-2">
+            {quests.map((q, i) => (
+              <div
+                key={i}
+                className="flex items-center justify-between p-3 rounded-lg"
+                style={{
+                  background: q.completed ? 'rgba(0,255,136,0.04)' : 'rgba(255,255,255,0.02)',
+                  border: q.completed
+                    ? '1px solid rgba(0,255,136,0.15)'
+                    : '1px solid rgba(255,255,255,0.04)',
+                }}
+              >
+                <div className="flex items-center gap-3">
+                  {/* Check / circle icon */}
+                  <div
+                    className="w-5 h-5 rounded-full flex items-center justify-center text-xs flex-shrink-0"
+                    style={q.completed ? {
+                      background: 'rgba(0,255,136,0.15)',
+                      color: '#00ff88',
+                      border: '1px solid rgba(0,255,136,0.3)',
+                    } : {
+                      background: 'transparent',
+                      border: '1.5px solid rgba(255,255,255,0.2)',
+                    }}
+                  >
+                    {q.completed && '\u2713'}
+                  </div>
+                  <span
+                    className="text-sm"
+                    style={{
+                      color: q.completed ? 'var(--text-secondary)' : '#ffffff',
+                      textDecoration: q.completed ? 'line-through' : 'none',
+                    }}
+                  >
+                    {q.text}
+                  </span>
+                </div>
+                <span
+                  className="text-xs font-mono px-2 py-0.5 rounded-full flex-shrink-0"
+                  style={{
+                    background: 'rgba(255,215,0,0.1)',
+                    color: '#ffd700',
+                  }}
+                >
+                  +{q.xp} XP
+                </span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>No quests available right now.</p>
+        )}
+      </div>
+
+      {/* ── Velma Recommends ── */}
+      {topRecs.length > 0 && (
+        <div className="mb-8">
+          <h2 className="text-lg font-semibold mb-4" style={{ color: '#ffffff' }}>
+            Velma Recommends
+          </h2>
+          <div className="grid md:grid-cols-3 gap-4">
+            {topRecs.map((rec, i) => (
+              <div
+                key={i}
+                className="p-5 rounded-xl transition-all"
+                style={{
+                  background: 'rgba(26,26,46,0.6)',
+                  border: '1px solid var(--border)',
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.borderColor = 'rgba(0, 255, 200, 0.25)';
+                  e.currentTarget.style.boxShadow = '0 0 20px rgba(0, 255, 200, 0.05)';
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.borderColor = 'var(--border)';
+                  e.currentTarget.style.boxShadow = 'none';
+                }}
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <CategoryBadge category={rec.category} />
+                  <span className="text-[10px] font-mono" style={{ color: 'var(--text-secondary)' }}>
+                    #{i + 1}
+                  </span>
+                </div>
+                <p className="text-sm mb-3 leading-relaxed" style={{ color: '#00ffc8' }}>
+                  {rec.nudge}
+                </p>
+                <Link
+                  to={`/chains`}
+                  className="text-xs font-mono no-underline transition-colors"
+                  style={{ color: 'var(--text-secondary)' }}
+                  onMouseEnter={e => (e.currentTarget.style.color = '#00ffc8')}
+                  onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-secondary)')}
+                >
+                  {rec.chain} &rarr;
+                </Link>
+              </div>
+            ))}
+          </div>
+        </div>
       )}
+
+      {/* ── Quick Links (2x2) ── */}
+      <div>
+        <h2 className="text-lg font-semibold mb-4" style={{ color: '#ffffff' }}>
+          Explore
+        </h2>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <QuickLink
+            to="/portal/trainer"
+            title="Trainer Profile"
+            description="Full stats, evolutions, and run history"
+            icon={'\uD83C\uDFC6'}
+          />
+          <QuickLink
+            to="/skills"
+            title="Skill Library"
+            description="Browse and discover 95+ AI skills"
+            icon={'\uD83D\uDCDA'}
+          />
+          <QuickLink
+            to="/achievements"
+            title="Achievements"
+            description="30 achievements to unlock"
+            icon={'\uD83C\uDF96\uFE0F'}
+          />
+          <QuickLink
+            to="/chains"
+            title="Chains"
+            description="Multi-skill pipelines for real problems"
+            icon={'\uD83D\uDD17'}
+          />
+        </div>
+      </div>
     </div>
   );
 }

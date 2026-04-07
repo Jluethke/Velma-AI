@@ -18,12 +18,12 @@ import Agents from './pages/Agents';
 import Bounties from './pages/Bounties';
 import Activity from './pages/Activity';
 
-// Web3 Portal (wallet connect required)
+// SDK Portal (real data from SkillChain API)
 import Portal from './pages/Portal';
-import PortalStake from './pages/PortalStake';
-import PortalMarketplace from './pages/PortalMarketplace';
-import PortalValidators from './pages/PortalValidators';
-import PortalNetwork from './pages/PortalNetwork';
+import PortalTrainer from './pages/PortalTrainer';
+import PortalSkills from './pages/PortalSkills';
+import PortalAchievements from './pages/PortalAchievements';
+import PortalSkilldex from './pages/PortalSkilldex';
 
 function App() {
   return (
@@ -48,12 +48,12 @@ function App() {
         <Route path="/bounties" element={<Bounties />} />
         <Route path="/activity" element={<Activity />} />
 
-        {/* Web3 Portal */}
+        {/* SDK Portal */}
         <Route path="/portal" element={<Portal />} />
-        <Route path="/portal/stake" element={<PortalStake />} />
-        <Route path="/portal/marketplace" element={<PortalMarketplace />} />
-        <Route path="/portal/validators" element={<PortalValidators />} />
-        <Route path="/portal/network" element={<PortalNetwork />} />
+        <Route path="/portal/trainer" element={<PortalTrainer />} />
+        <Route path="/portal/skills" element={<PortalSkills />} />
+        <Route path="/portal/achievements" element={<PortalAchievements />} />
+        <Route path="/portal/skilldex" element={<PortalSkilldex />} />
       </Routes>
       <Footer />
     </BrowserRouter>
