@@ -1,33 +1,83 @@
 @echo off
 title SkillChain Installer
 setlocal enabledelayedexpansion
+
+:: Safety net — if ANYTHING causes the script to exit unexpectedly, pause first
+:: so the user can actually read the error instead of the window vanishing.
+if "%~1"=="--inner" goto :main
+cmd /k "%~f0" --inner
+exit /b
+
+:main
 echo.
 echo   SkillChain - AI Skill Marketplace
 echo   ==================================
 echo.
-echo   No Python required. Just Node.js (which Claude Code includes).
-echo.
 
 set "SC_DIR=%USERPROFILE%\.skillchain"
 set "DOWNLOAD_URL=https://velma-ai.vercel.app/skillchain-mcp-0.1.0.tar.gz"
+set "NODE_VERSION=22.15.0"
+set "NODE_URL=https://nodejs.org/dist/v%NODE_VERSION%/node-v%NODE_VERSION%-x64.msi"
 
-:: Check for Node.js
-echo   [1/6] Checking Node.js...
+:: ================================================================
+:: Step 1: Ensure Node.js is available
+:: ================================================================
+echo   [1/7] Checking Node.js...
 node --version >nul 2>&1
 if %errorlevel% neq 0 (
-    echo   Node.js not found.
+    echo   Node.js not found. Installing automatically...
     echo.
-    echo   SkillChain requires Node.js, which comes with Claude Code.
-    echo   If you have Claude Code installed, Node.js should be available.
-    echo.
-    echo   To install Node.js manually: https://nodejs.org
-    echo.
-    goto :failed
-)
-for /f "tokens=*" %%v in ('node --version') do echo   Found Node.js %%v
 
-:: Create directories
-echo   [2/6] Setting up directories...
+    :: Check if curl is available
+    curl --version >nul 2>&1
+    if !errorlevel! neq 0 (
+        echo   ERROR: curl not found. Cannot download Node.js.
+        echo   Please install Node.js manually from https://nodejs.org
+        echo   Then re-run this installer.
+        goto :failed
+    )
+
+    echo   Downloading Node.js v%NODE_VERSION%...
+    curl -sSL -o "%TEMP%\node-installer.msi" "%NODE_URL%"
+    if !errorlevel! neq 0 (
+        echo   ERROR: Failed to download Node.js.
+        echo   Please install Node.js manually from https://nodejs.org
+        goto :failed
+    )
+
+    echo   Installing Node.js ^(this may take a minute and request admin access^)...
+    msiexec /i "%TEMP%\node-installer.msi" /qn /norestart
+    if !errorlevel! neq 0 (
+        echo.
+        echo   Automatic install needs admin access. Trying interactive install...
+        msiexec /i "%TEMP%\node-installer.msi"
+        if !errorlevel! neq 0 (
+            echo   ERROR: Node.js installation failed.
+            echo   Please install Node.js manually from https://nodejs.org
+            del "%TEMP%\node-installer.msi" 2>nul
+            goto :failed
+        )
+    )
+    del "%TEMP%\node-installer.msi" 2>nul
+
+    :: Refresh PATH so we can find node/npm in this session
+    set "PATH=%ProgramFiles%\nodejs;%LOCALAPPDATA%\Programs\nodejs;%PATH%"
+
+    node --version >nul 2>&1
+    if !errorlevel! neq 0 (
+        echo   ERROR: Node.js installed but not found on PATH.
+        echo   Please close this window, open a new terminal, and re-run the installer.
+        goto :failed
+    )
+    for /f "tokens=*" %%v in ('node --version') do echo   Installed Node.js %%v
+) else (
+    for /f "tokens=*" %%v in ('node --version') do echo   Found Node.js %%v
+)
+
+:: ================================================================
+:: Step 2: Create directories
+:: ================================================================
+echo   [2/7] Setting up directories...
 if not exist "%SC_DIR%" mkdir "%SC_DIR%"
 if not exist "%SC_DIR%\skills" mkdir "%SC_DIR%\skills"
 if not exist "%SC_DIR%\state" mkdir "%SC_DIR%\state"
@@ -36,8 +86,10 @@ if not exist "%SC_DIR%\server" mkdir "%SC_DIR%\server"
 if not exist "%SC_DIR%\marketplace" mkdir "%SC_DIR%\marketplace"
 if not exist "%SC_DIR%\marketplace\chains" mkdir "%SC_DIR%\marketplace\chains"
 
-:: Download and extract
-echo   [3/6] Downloading SkillChain...
+:: ================================================================
+:: Step 3: Download and extract
+:: ================================================================
+echo   [3/7] Downloading SkillChain...
 curl -sSL -o "%TEMP%\skillchain-mcp.tar.gz" "%DOWNLOAD_URL%"
 if %errorlevel% neq 0 (
     echo   ERROR: Download failed.
@@ -54,17 +106,25 @@ if %errorlevel% neq 0 (
 del "%TEMP%\skillchain-mcp.tar.gz" 2>nul
 echo   Downloaded and extracted.
 
-:: Install Node.js dependencies for the server
-echo   [4/6] Installing server dependencies...
+:: ================================================================
+:: Step 4: Install Node.js dependencies
+:: ================================================================
+echo   [4/7] Installing server dependencies...
 cd /d "%SC_DIR%\server"
-npm install --production --silent 2>nul
+npm install --omit=dev --silent 2>nul
 if %errorlevel% neq 0 (
-    echo   WARNING: npm install had issues, trying again...
-    npm install --production 2>nul
+    echo   Retrying npm install...
+    npm install --omit=dev 2>nul
+    if !errorlevel! neq 0 (
+        echo   ERROR: npm install failed.
+        goto :failed
+    )
 )
 
-:: Configure Claude Code MCP settings
-echo   [5/6] Configuring Claude Code...
+:: ================================================================
+:: Step 5: Configure Claude Code (if installed)
+:: ================================================================
+echo   [5/7] Configuring Claude Code...
 set "CLAUDE_SETTINGS=%USERPROFILE%\.claude\settings.json"
 if not exist "%USERPROFILE%\.claude" mkdir "%USERPROFILE%\.claude"
 
@@ -75,8 +135,42 @@ if %errorlevel% neq 0 (
     echo   You may need to add the MCP server manually to ~/.claude/settings.json
 )
 
-:: Initialize trainer profile
-echo   [6/6] Initializing trainer profile...
+:: ================================================================
+:: Step 6: Register in Add/Remove Programs
+:: ================================================================
+echo   [6/7] Registering in Add/Remove Programs...
+set "UNINSTALL_KEY=HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall\SkillChain"
+reg add "%UNINSTALL_KEY%" /v "DisplayName" /t REG_SZ /d "SkillChain - AI Skill Marketplace" /f >nul 2>&1
+reg add "%UNINSTALL_KEY%" /v "DisplayVersion" /t REG_SZ /d "0.1.0" /f >nul 2>&1
+reg add "%UNINSTALL_KEY%" /v "Publisher" /t REG_SZ /d "The Wayfinder Trust" /f >nul 2>&1
+reg add "%UNINSTALL_KEY%" /v "InstallLocation" /t REG_SZ /d "%SC_DIR%" /f >nul 2>&1
+reg add "%UNINSTALL_KEY%" /v "UninstallString" /t REG_SZ /d "\"%SC_DIR%\uninstall.bat\"" /f >nul 2>&1
+reg add "%UNINSTALL_KEY%" /v "NoModify" /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "%UNINSTALL_KEY%" /v "NoRepair" /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "%UNINSTALL_KEY%" /v "URLInfoAbout" /t REG_SZ /d "https://velma-ai.vercel.app" /f >nul 2>&1
+echo   Registered.
+
+:: Create uninstaller
+(
+echo @echo off
+echo title SkillChain Uninstaller
+echo echo.
+echo echo   SkillChain Uninstaller
+echo echo   ======================
+echo echo.
+echo set /p CONFIRM="  Remove SkillChain? ^(y/n^): "
+echo if /i not "%%CONFIRM%%"=="y" ^( echo   Cancelled. ^& pause ^& exit /b 0 ^)
+echo echo   Removing...
+echo reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall\SkillChain" /f ^>nul 2^>^&1
+echo rmdir /s /q "%%USERPROFILE%%\.skillchain" 2^>nul
+echo echo   Done. You may also want to remove 'skillchain' from ~/.claude/settings.json
+echo pause
+) > "%SC_DIR%\uninstall.bat"
+
+:: ================================================================
+:: Step 7: Initialize profiles and validate
+:: ================================================================
+echo   [7/7] Initializing and validating...
 if not exist "%SC_DIR%\trainer.json" (
     echo {"xp":0,"level":1,"title":"Novice","skills_discovered":[],"chains_completed":[],"achievements_unlocked":{},"streak_current":0,"streak_best":0,"streak_last_date":"","evolution_levels":{},"daily_runs_today":[],"daily_runs_date":"","categories_today":[],"total_skill_runs":0,"total_chain_runs":0} > "%SC_DIR%\trainer.json"
 )
@@ -84,28 +178,20 @@ if not exist "%SC_DIR%\profile.json" (
     echo {"display_name":"","role":"","industry":"","stage":"","team_size":"","experience_level":"","tech_stack":[],"goals":[],"preferred_output_style":"structured","preferred_tone":"friendly","favorite_domains":[],"skills_used":[],"chains_used":[],"created_at":"","updated_at":""} > "%SC_DIR%\profile.json"
 )
 
-:: Validate
-echo.
 set "VALID=1"
-node -e "const s=require('%SC_DIR%\\server\\index.js'.replace(/\\/g,'/'));console.log('  MCP server: OK')" 2>nul
-if %errorlevel% neq 0 (
-    :: Server validation via import may fail due to stdio transport — that's OK
-    if exist "%SC_DIR%\server\index.js" (
-        echo   MCP server: OK ^(installed^)
-    ) else (
-        echo   WARNING: MCP server files not found.
-        set "VALID=0"
-    )
+
+if exist "%SC_DIR%\server\index.js" (
+    echo   MCP server: OK
+) else (
+    echo   WARNING: MCP server files not found.
+    set "VALID=0"
 )
 
 if exist "%CLAUDE_SETTINGS%" (
-    node -e "const s=JSON.parse(require('fs').readFileSync('%CLAUDE_SETTINGS%'.replace(/\\/g,'/'),'utf-8'));if(s.mcpServers&&s.mcpServers.skillchain)console.log('  Claude config: OK');else{console.log('  WARNING: not in Claude settings');process.exit(1)}"
-    if %errorlevel% neq 0 (
-        set "VALID=0"
-    )
+    node -e "const s=JSON.parse(require('fs').readFileSync('%CLAUDE_SETTINGS%'.replace(/\\/g,'/'),'utf-8'));if(s.mcpServers&&s.mcpServers.skillchain)console.log('  Claude config: OK');else{console.log('  WARNING: not in Claude settings');process.exit(1)}" 2>nul
+    if !errorlevel! neq 0 set "VALID=0"
 ) else (
-    echo   WARNING: Claude settings.json not found.
-    set "VALID=0"
+    echo   Claude Code: not installed ^(install later from claude.ai/code^)
 )
 
 echo.
@@ -121,8 +207,8 @@ if "%VALID%"=="1" (
 )
 echo.
 echo   What happens now:
-echo     1. Restart Claude Code ^(or any AI with MCP support^)
-echo     2. Just talk to it normally
+echo     1. Install Claude Code from https://claude.ai/code ^(if you haven't^)
+echo     2. Open Claude Code and just talk normally
 echo     3. Say things like:
 echo        - "I hate my job"
 echo        - "I feel stuck"
@@ -134,8 +220,9 @@ echo.
 echo   Your AI just got 126 skills and 92 chains.
 echo   No extra apps. No websites. Just talk.
 echo.
-pause
-goto :eof
+echo   Press any key to close...
+pause >nul
+exit /b 0
 
 :failed
 echo.
@@ -144,7 +231,7 @@ echo   Installation FAILED
 echo   ========================================
 echo.
 echo   Check the error messages above and try again.
-echo   Make sure Node.js is installed: https://nodejs.org
 echo.
-pause
+echo   Press any key to close...
+pause >nul
 exit /b 1
