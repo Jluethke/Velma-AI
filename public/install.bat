@@ -124,7 +124,7 @@ if exist "%USERPROFILE%\.claude" (
       "$p='%USERPROFILE%\.claude\settings.json';" ^
       "$s=@{}; if(Test-Path $p){try{$s=Get-Content $p -Raw|ConvertFrom-Json}catch{$s=@{}}};" ^
       "if(-not $s.mcpServers){$s|Add-Member -NotePropertyName mcpServers -NotePropertyValue @{} -Force};" ^
-      "$entry=@{command='node';args=@('%PS_SERVER_PATH%');env=@{}};" ^
+      "$entry=@{command='node';args=@('%PS_SERVER_PATH%');env=@{};initTimeout=60000};" ^
       "$s.mcpServers|Add-Member -NotePropertyName skillchain -NotePropertyValue $entry -Force;" ^
       "$s|ConvertTo-Json -Depth 10|Out-String|%{[IO.File]::WriteAllText($p,$_.Trim())};" ^
       "Write-Host '  Claude Code: configured'" 2>nul && set "CONFIGURED=1"
