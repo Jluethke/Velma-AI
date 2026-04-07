@@ -1,13 +1,16 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import {
   ACHIEVEMENTS,
   ACHIEVEMENT_CATEGORY_META,
   CATEGORY_COLORS,
   EVOLUTION_TIERS,
+  MOCK_ACHIEVEMENT_STATUS,
+  MOCK_SKILLDEX,
+  MOCK_EVOLVED_SKILLS,
   type AchievementDef,
 } from '../data/gamification';
-import { useTrainer, useAchievements, useSkilldex, useQuests, useEvolutions } from '../hooks/useTrainer';
-import type { TrainerCard as TrainerData, Achievement as ApiAchievement } from '../hooks/useTrainer';
+import { useTrainer, useQuests } from '../hooks/useTrainer';
+import type { TrainerCard as TrainerData } from '../hooks/useTrainer';
 
 // ── Helpers ──────────────────────────────────────────────────────────
 

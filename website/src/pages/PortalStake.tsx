@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
-import { parseUnits, formatUnits } from 'viem';
+import { formatUnits } from 'viem';
 import ConnectWalletPrompt from '../components/ConnectWalletPrompt';
 import { CONTRACTS, StakingABI, SkillTokenABI } from '../contracts';
 
@@ -56,7 +56,7 @@ function StakeContent({ address }: { address: `0x${string}` }) {
       address: CONTRACTS.Staking,
       abi: StakingABI,
       functionName: 'completeUnstake', // Placeholder — real stake function TBD
-      args: [],
+      args: [`0x${'0'.repeat(64)}` as `0x${string}`],
     });
   };
 

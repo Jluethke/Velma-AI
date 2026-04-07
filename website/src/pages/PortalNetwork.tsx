@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useAccount, useReadContract } from 'wagmi';
 import ConnectWalletPrompt from '../components/ConnectWalletPrompt';
-import { CONTRACTS, NodeRegistryABI, SkillRegistryABI, SkillTokenABI, ValidationRegistryABI } from '../contracts';
+import { CONTRACTS, NodeRegistryABI, SkillRegistryABI, SkillTokenABI } from '../contracts';
 
 function NetworkStat({ label, value, change, accent = 'var(--cyan)' }: {
   label: string; value: string; change?: string; accent?: string;
