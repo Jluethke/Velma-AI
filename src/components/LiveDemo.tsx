@@ -185,15 +185,19 @@ function MatchScore({ score }: { score: number }) {
 }
 
 function ResultCard({ chain, index }: { chain: ChainMatch; index: number }) {
-  const [launched, setLaunched] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [showInstall, setShowInstall] = useState(false);
   const color = getCategoryColor(chain.category);
-  const prompt = `Run the ${chain.chain_name} chain`;
-  const deepLink = `vscode://anthropic.claude-code/open?prompt=${encodeURIComponent(prompt)}`;
 
-  const handleRun = () => {
-    window.location.href = deepLink;
-    setLaunched(true);
-    setTimeout(() => setLaunched(false), 5000);
+  // Natural language prompt — user pastes into Claude Code, MCP runtime handles the rest
+  const prompt = chain.description.length > 60
+    ? `${chain.chain_name.replace(/-/g, ' ')}`
+    : chain.description;
+
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(prompt);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 3000);
   };
 
   return (
@@ -239,36 +243,50 @@ function ResultCard({ chain, index }: { chain: ChainMatch; index: number }) {
       {/* Pipeline */}
       <PipelineViz skills={chain.skills} />
 
-      {/* Run button */}
-      <div className="mt-4">
+      {/* Action buttons */}
+      <div className="mt-4 space-y-2">
+        {/* Copy prompt — paste into Claude Code and MCP runtime handles it */}
         <button
-          onClick={handleRun}
+          onClick={handleCopy}
           className="w-full py-2.5 rounded-lg text-xs font-semibold uppercase tracking-wider cursor-pointer transition-all"
           style={{
-            background: launched
+            background: copied
               ? 'rgba(0,255,136,0.15)'
               : 'linear-gradient(135deg, rgba(0,255,200,0.12), rgba(0,255,200,0.04))',
-            border: `1px solid ${launched ? 'rgba(0,255,136,0.4)' : 'rgba(0,255,200,0.3)'}`,
-            color: launched ? 'var(--green)' : 'var(--cyan)',
+            border: `1px solid ${copied ? 'rgba(0,255,136,0.4)' : 'rgba(0,255,200,0.3)'}`,
+            color: copied ? 'var(--green)' : 'var(--cyan)',
           }}
           onMouseEnter={(e) => {
-            if (!launched) e.currentTarget.style.boxShadow = '0 0 20px rgba(0,255,200,0.15)';
+            if (!copied) e.currentTarget.style.boxShadow = '0 0 20px rgba(0,255,200,0.15)';
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.boxShadow = 'none';
           }}
         >
-          {launched ? 'Opening Claude Code...' : 'Run in Claude Code'}
+          {copied ? 'Copied — paste into Claude Code' : 'Copy prompt to clipboard'}
         </button>
-        {launched && (
-          <p className="text-[10px] text-center mt-2" style={{ color: 'var(--text-secondary)' }}>
-            Don't have SkillChain?{' '}
-            <a href="/install.bat" download="SkillChain-Install.bat" style={{ color: 'var(--cyan)' }}>
-              Download the installer
-            </a>{' '}
-            first.
-          </p>
-        )}
+
+        {/* Install hint */}
+        <div className="text-center">
+          <button
+            onClick={() => setShowInstall(!showInstall)}
+            className="text-[10px] cursor-pointer bg-transparent border-0 transition-colors"
+            style={{ color: 'var(--text-secondary)' }}
+          >
+            {showInstall ? 'Hide setup instructions' : "Don't have SkillChain yet?"}
+          </button>
+          {showInstall && (
+            <div
+              className="mt-2 p-3 rounded-lg text-left text-xs space-y-1.5"
+              style={{ background: 'rgba(0,0,0,0.3)', color: 'var(--text-secondary)' }}
+            >
+              <p style={{ color: 'var(--text-primary)' }}>One-time setup (30 seconds):</p>
+              <p>1. <a href="/install.bat" download="SkillChain-Install.bat" style={{ color: 'var(--cyan)', textDecoration: 'none' }}>Download installer</a> (Windows) or <a href="/install.sh" download="SkillChain-Install.sh" style={{ color: 'var(--cyan)', textDecoration: 'none' }}>Mac/Linux</a></p>
+              <p>2. Run it — installs SkillChain + configures Claude Code</p>
+              <p>3. Paste your prompt into Claude Code — skills run automatically</p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
