@@ -1,10 +1,9 @@
 #!/bin/bash
 # SkillChain Installer — macOS / Linux
-# Requires Claude Code (which includes Node.js).
+# No dependencies required. Downloads everything pre-bundled.
 set -e
 
 SC_DIR="$HOME/.skillchain"
-CLAUDE_DIR="$HOME/.claude"
 DOWNLOAD_URL="https://velma-ai.vercel.app/skillchain-mcp-0.1.0.tar.gz"
 
 cleanup_on_failure() {
@@ -22,61 +21,109 @@ echo "  SkillChain - AI Skill Marketplace"
 echo "  =================================="
 echo ""
 
-# Check for Node.js (ships with Claude Code)
-echo "  [1/6] Checking Node.js..."
-if ! command -v node &>/dev/null; then
-    echo ""
-    echo "  ERROR: Node.js not found."
-    echo ""
-    echo "  SkillChain requires Claude Code, which includes Node.js."
-    echo "  Install Claude Code first: https://claude.ai/download"
-    echo ""
-    echo "  If you already have Claude Code, try restarting your terminal."
-    exit 1
-fi
-echo "  Found Node.js $(node --version)"
-
 # Create directories
-echo "  [2/6] Setting up directories..."
+echo "  [1/5] Setting up directories..."
 mkdir -p "$SC_DIR"/{skills,state,chains,server,marketplace/chains}
 
-# Download and extract
-echo "  [3/6] Downloading SkillChain..."
-curl -sSL -o "/tmp/skillchain-mcp.tar.gz" "$DOWNLOAD_URL"
+# Download and extract (node_modules pre-bundled)
+echo "  [2/5] Downloading SkillChain..."
+if command -v curl &>/dev/null; then
+    curl -sSL -o "/tmp/skillchain-mcp.tar.gz" "$DOWNLOAD_URL"
+elif command -v wget &>/dev/null; then
+    wget -q -O "/tmp/skillchain-mcp.tar.gz" "$DOWNLOAD_URL"
+else
+    echo "  ERROR: Neither curl nor wget found."
+    echo "  Install one and re-run: brew install curl (macOS) / sudo apt install curl (Linux)"
+    exit 1
+fi
 tar -xzf "/tmp/skillchain-mcp.tar.gz" -C "$SC_DIR"
 rm -f "/tmp/skillchain-mcp.tar.gz"
 echo "  Downloaded and extracted."
 
-# Install Node.js dependencies
-echo "  [4/6] Installing server dependencies..."
-cd "$SC_DIR/server"
-npm install --omit=dev --silent 2>/dev/null || npm install --omit=dev
+# Configure MCP clients
+echo "  [3/5] Configuring MCP clients..."
+SERVER_PATH="$SC_DIR/server/index.js"
+CONFIGURED=0
 
-# Configure Claude Code
-echo "  [5/6] Configuring Claude Code..."
-mkdir -p "$CLAUDE_DIR"
-CLAUDE_SETTINGS="$CLAUDE_DIR/settings.json"
+configure_json() {
+    local SETTINGS_FILE="$1"
+    local KEY="$2"  # mcpServers or servers
+    local DISPLAY_NAME="$3"
 
-node -e "
-const fs = require('fs');
-const p = '$CLAUDE_SETTINGS';
-let s = {};
-try { s = JSON.parse(fs.readFileSync(p, 'utf-8')); } catch {}
-if (!s.mcpServers) s.mcpServers = {};
-s.mcpServers.skillchain = {
-  command: 'node',
-  args: ['$SC_DIR/server/index.js'],
-  env: {}
-};
-fs.writeFileSync(p, JSON.stringify(s, null, 2), 'utf-8');
-console.log('  MCP server registered in ' + p);
-" || {
-    echo "  WARNING: Could not auto-configure Claude Code."
-    echo "  You may need to add the MCP server manually."
+    # Use python3 if available, otherwise python, otherwise skip
+    local PY=""
+    if command -v python3 &>/dev/null; then PY="python3"
+    elif command -v python &>/dev/null; then PY="python"
+    fi
+
+    if [ -n "$PY" ]; then
+        $PY -c "
+import json, os
+p = '$SETTINGS_FILE'
+s = {}
+if os.path.exists(p):
+    try:
+        with open(p) as f: s = json.load(f)
+    except: pass
+if '$KEY' not in s: s['$KEY'] = {}
+s['$KEY']['skillchain'] = {'command': 'node', 'args': ['$SERVER_PATH'], 'env': {}}
+with open(p, 'w') as f: json.dump(s, f, indent=2)
+print('  $DISPLAY_NAME: configured')
+" && CONFIGURED=1
+    else
+        # Fallback: create minimal JSON if file doesn't exist
+        if [ ! -f "$SETTINGS_FILE" ]; then
+            echo "{\"$KEY\":{\"skillchain\":{\"command\":\"node\",\"args\":[\"$SERVER_PATH\"],\"env\":{}}}}" > "$SETTINGS_FILE"
+            echo "  $DISPLAY_NAME: configured (new file)"
+            CONFIGURED=1
+        else
+            echo "  $DISPLAY_NAME: skipped (no python to safely edit existing JSON)"
+        fi
+    fi
 }
 
+# Claude Code
+if [ -d "$HOME/.claude" ]; then
+    configure_json "$HOME/.claude/settings.json" "mcpServers" "Claude Code"
+else
+    echo "  Claude Code: not detected"
+fi
+
+# Cursor
+if [ -d "$HOME/.cursor" ]; then
+    configure_json "$HOME/.cursor/mcp.json" "mcpServers" "Cursor"
+else
+    echo "  Cursor: not detected"
+fi
+
+# Windsurf
+if [ -d "$HOME/.codeium/windsurf" ]; then
+    configure_json "$HOME/.codeium/windsurf/mcp_config.json" "mcpServers" "Windsurf"
+else
+    echo "  Windsurf: not detected"
+fi
+
+# VS Code
+if [ -d "$HOME/.vscode" ]; then
+    configure_json "$HOME/.vscode/mcp.json" "servers" "VS Code"
+else
+    echo "  VS Code: not detected"
+fi
+
+if [ "$CONFIGURED" -eq 0 ]; then
+    echo ""
+    echo "  No MCP client found. You need one to use SkillChain."
+    echo "  Install Claude Code: https://claude.ai/download"
+    echo "  Or use: Cursor, Windsurf, VS Code"
+    echo ""
+    echo "  After installing, re-run this installer to auto-configure."
+    # Pre-create for Claude Code
+    mkdir -p "$HOME/.claude"
+    configure_json "$HOME/.claude/settings.json" "mcpServers" "Claude Code (pre-configured)"
+fi
+
 # Initialize profiles
-echo "  [6/6] Initializing trainer profile..."
+echo "  [4/5] Initializing profiles..."
 if [ ! -f "$SC_DIR/trainer.json" ]; then
     echo '{"xp":0,"level":1,"title":"Novice","skills_discovered":[],"chains_completed":[],"achievements_unlocked":{},"streak_current":0,"streak_best":0,"streak_last_date":"","evolution_levels":{},"daily_runs_today":[],"daily_runs_date":"","categories_today":[],"total_skill_runs":0,"total_chain_runs":0}' > "$SC_DIR/trainer.json"
 fi
@@ -85,20 +132,13 @@ if [ ! -f "$SC_DIR/profile.json" ]; then
 fi
 
 # Validate
-echo ""
+echo "  [5/5] Validating..."
 VALID=1
 
 if [ -f "$SC_DIR/server/index.js" ]; then
-    echo "  MCP server: OK (installed)"
+    echo "  MCP server: OK"
 else
     echo "  WARNING: MCP server files not found."
-    VALID=0
-fi
-
-if [ -f "$CLAUDE_SETTINGS" ]; then
-    node -e "const s=JSON.parse(require('fs').readFileSync('$CLAUDE_SETTINGS','utf-8'));if(s.mcpServers&&s.mcpServers.skillchain)console.log('  Claude config: OK');else{console.log('  WARNING: not in settings');process.exit(1)}" || VALID=0
-else
-    echo "  WARNING: Claude settings.json not found."
     VALID=0
 fi
 
@@ -115,14 +155,15 @@ else
 fi
 echo ""
 echo "  What happens now:"
-echo "    1. Restart Claude Code (or any AI with MCP support)"
-echo "    2. Just talk to it normally"
+echo "    1. Open any MCP-compatible AI tool:"
+echo "       Claude Code, Cursor, Windsurf, VS Code, etc."
+echo "    2. Just talk normally"
 echo "    3. Say things like:"
 echo "       - \"I hate my job\""
 echo "       - \"I feel stuck\""
 echo "       - \"help me budget\""
 echo "       - \"I'm scared of AI\""
-echo "    4. Claude will find the right skill chain"
+echo "    4. Your AI will find the right skill chain"
 echo "       and walk you through it"
 echo ""
 echo "  Your AI just got 126 skills and 92 chains."
