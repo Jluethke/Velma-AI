@@ -77,7 +77,7 @@ function ShowcaseCard({ item }: { item: ShowcaseItem }) {
       {/* Header */}
       <div className="flex flex-wrap items-center gap-2 mb-4">
         <span className="font-semibold text-sm" style={{ color: 'var(--cyan)' }}>{item.name}</span>
-        <Badge type="domain" value={item.domain} />
+        <Badge variant="domain" label={item.domain} />
         <TrustBadge score={item.trustScore} />
       </div>
 
