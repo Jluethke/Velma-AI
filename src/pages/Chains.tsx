@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchChains, useChains, type ChainMatch } from '../hooks/useChains';
-import { useGateCheck } from '../hooks/useGateCheck';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 
 // ── Constants ────────────────────────────────────────────────────────
@@ -387,7 +386,7 @@ export default function Chains() {
   const inputRef = useRef<HTMLInputElement>(null);
 
   const [selected, setSelected] = useState<ChainMatch | null>(null);
-  const { isUnlocked, isConnected } = useGateCheck();
+  const isConnected = false; // wallet connect still available in docs
 
   const { data: searchResults, isLoading: isSearching } = useSearchChains(debouncedQuery);
 
@@ -508,7 +507,7 @@ export default function Chains() {
             {selected ? (
               <ChainDetail
                 chain={selected}
-                locked={!selected.free && !isUnlocked}
+                locked={false}
                 isConnected={isConnected}
               />
             ) : (
@@ -552,7 +551,7 @@ export default function Chains() {
               {selected ? (
                 <ChainDetail
                   chain={selected}
-                  locked={!selected.free && !isUnlocked}
+                  locked={false}
                   isConnected={isConnected}
                 />
               ) : (

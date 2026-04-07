@@ -1,12 +1,10 @@
 import { useState, useMemo } from 'react';
 import { useSkills } from '../hooks/useSkills';
-import { useGateCheck } from '../hooks/useGateCheck';
 import SkillCard from '../components/SkillCard';
 import SearchBar from '../components/SearchBar';
 
 export default function Explore() {
   const { data: skills = [], isLoading } = useSkills();
-  const { isUnlocked } = useGateCheck();
   const [query, setQuery] = useState('');
   const [domain, setDomain] = useState('');
   const [sort, setSort] = useState('name');
@@ -81,10 +79,8 @@ export default function Explore() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-8">
-          {filtered
-            .sort((a, b) => (a.free === b.free ? 0 : a.free ? -1 : 1))
-            .map(skill => (
-            <SkillCard key={skill.name} skill={skill} locked={!skill.free && !isUnlocked} />
+          {filtered.map(skill => (
+            <SkillCard key={skill.name} skill={skill} locked={false} />
           ))}
         </div>
       )}
