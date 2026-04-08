@@ -467,29 +467,86 @@ echo.
 
 cd /d "%WORKSPACE%"
 
-:: Check if Claude Code is available
+:: ============================================================
+:: Runtime detection cascade:
+::   1. Claude Code CLI (best — interactive, reads CLAUDE.md)
+::   2. ANTHROPIC_API_KEY env var (use Python SDK directly)
+::   3. Claude Desktop running (local proxy)
+::   4. Auto-install Claude Code via npm
+::   5. Nothing — show instructions
+:: ============================================================
+
+:: Try 1: Claude Code CLI
 where claude >nul 2>nul
-if %errorlevel% neq 0 (
-    echo   Claude Code not found. Installing...
+if %errorlevel% equ 0 (
+    echo   [OK] Found Claude Code CLI
+    echo   Launching interactive session...
+    echo   =========================================================================
     echo.
-    where npm >nul 2>nul
-    if %errorlevel% neq 0 (
-        echo   ERROR: npm not found. Install Node.js from https://nodejs.org
-        echo   Then run: npm install -g @anthropic-ai/claude-code
-        pause
-        exit /b 1
+    claude
+    goto :done
+)
+
+echo   Claude Code CLI not found. Checking alternatives...
+
+:: Try 2: ANTHROPIC_API_KEY environment variable
+if defined ANTHROPIC_API_KEY (
+    echo   [OK] Found ANTHROPIC_API_KEY
+    echo   Running chain via SkillChain Python SDK...
+    echo   =========================================================================
+    echo.
+    python -c "from skillchain.sdk.mcp_bridge.server import create_server; print('SDK available')" >nul 2>nul
+    if %errorlevel% equ 0 (
+        python -c "import os, json; print('Running with API key:', os.environ.get('ANTHROPIC_API_KEY','')[:8] + '...')"
+        python -m skillchain.sdk.cli mcp serve
+        goto :done
     )
-    npm install -g @anthropic-ai/claude-code
+    echo   SkillChain SDK not installed. Run: pip install skillchain
+)
+
+:: Try 3: Claude Desktop app (check if running on common ports)
+powershell -NoProfile -Command "try { $r = Invoke-WebRequest -Uri 'http://localhost:1337/health' -TimeoutSec 2 -UseBasicParsing; Write-Host 'CLAUDE_DESKTOP_RUNNING' } catch { }" 2>nul | findstr "CLAUDE_DESKTOP_RUNNING" >nul 2>nul
+if %errorlevel% equ 0 (
+    echo   [OK] Claude Desktop detected
+    echo   Note: For best experience, install Claude Code CLI:
+    echo         npm install -g @anthropic-ai/claude-code
     echo.
 )
 
-echo   Launching Claude Code...
-echo   Type your inputs when prompted. Claude will run each skill step by step.
-echo   =========================================================================
+:: Try 4: Auto-install Claude Code
+where npm >nul 2>nul
+if %errorlevel% equ 0 (
+    echo.
+    echo   Installing Claude Code CLI...
+    npm install -g @anthropic-ai/claude-code
+    echo.
+    where claude >nul 2>nul
+    if %errorlevel% equ 0 (
+        echo   [OK] Claude Code installed successfully
+        echo   Launching interactive session...
+        echo   =========================================================================
+        echo.
+        claude
+        goto :done
+    )
+)
+
+:: Try 5: Nothing found
+echo.
+echo   ==========================================
+echo   Could not find a way to run this chain.
+echo   ==========================================
+echo.
+echo   Options:
+echo     1. Install Claude Code:  npm install -g @anthropic-ai/claude-code
+echo     2. Set an API key:       set ANTHROPIC_API_KEY=sk-ant-...
+echo     3. Install the SDK:      pip install skillchain
+echo.
+echo   Your chain is saved at: %WORKSPACE%
+echo   Once you have Claude Code or an API key, re-run this script.
 echo.
 
-claude
-
+:done
 echo.
 echo   Session complete. Output saved in: %WORKSPACE%
 pause
@@ -534,24 +591,60 @@ echo ""
 
 cd "$WORKSPACE"
 
-# Check if Claude Code is available
-if ! command -v claude &> /dev/null; then
-    echo "  Claude Code not found. Installing..."
-    if command -v npm &> /dev/null; then
-        npm install -g @anthropic-ai/claude-code
+# Runtime detection cascade
+LAUNCHED=0
+
+# Try 1: Claude Code CLI
+if command -v claude &> /dev/null; then
+    echo "  [OK] Found Claude Code CLI"
+    echo "  Launching interactive session..."
+    echo "  ========================================================================="
+    echo ""
+    claude
+    LAUNCHED=1
+fi
+
+# Try 2: ANTHROPIC_API_KEY
+if [ "$LAUNCHED" -eq 0 ] && [ -n "$ANTHROPIC_API_KEY" ]; then
+    echo "  [OK] Found ANTHROPIC_API_KEY"
+    echo "  Running chain via SkillChain Python SDK..."
+    echo "  ========================================================================="
+    echo ""
+    if python3 -c "from skillchain.sdk.mcp_bridge.server import create_server" 2>/dev/null; then
+        python3 -m skillchain.sdk.cli mcp serve
+        LAUNCHED=1
     else
-        echo "  ERROR: npm not found. Install Node.js from https://nodejs.org"
-        echo "  Then run: npm install -g @anthropic-ai/claude-code"
-        exit 1
+        echo "  SkillChain SDK not installed. Run: pip install skillchain"
     fi
 fi
 
-echo "  Launching Claude Code..."
-echo "  Type your inputs when prompted. Claude will run each skill step by step."
-echo "  ========================================================================="
-echo ""
+# Try 3: Auto-install Claude Code
+if [ "$LAUNCHED" -eq 0 ] && command -v npm &> /dev/null; then
+    echo "  Installing Claude Code CLI..."
+    npm install -g @anthropic-ai/claude-code
+    if command -v claude &> /dev/null; then
+        echo "  [OK] Claude Code installed"
+        echo "  Launching interactive session..."
+        echo ""
+        claude
+        LAUNCHED=1
+    fi
+fi
 
-claude
+# Try 4: Nothing found
+if [ "$LAUNCHED" -eq 0 ]; then
+    echo ""
+    echo "  =========================================="
+    echo "  Could not find a way to run this chain."
+    echo "  =========================================="
+    echo ""
+    echo "  Options:"
+    echo "    1. Install Claude Code:  npm install -g @anthropic-ai/claude-code"
+    echo "    2. Set an API key:       export ANTHROPIC_API_KEY=sk-ant-..."
+    echo "    3. Install the SDK:      pip install skillchain"
+    echo ""
+    echo "  Your chain is saved at: $WORKSPACE"
+fi
 
 echo ""
 echo "  Session complete. Output saved in: $WORKSPACE"
