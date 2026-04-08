@@ -43,7 +43,7 @@ export default function CodeBlock({ code, filename, language }: CodeBlockProps) 
   };
 
   return (
-    <div className="relative rounded-lg overflow-hidden" style={{ background: '#0d0d14', border: '1px solid var(--border)' }}>
+    <div className="relative rounded-lg overflow-hidden" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)' }}>
       {/* Title bar */}
       <div className="flex items-center justify-between px-4 py-2" style={{ borderBottom: '1px solid var(--border)' }}>
         <div className="flex items-center gap-2">
