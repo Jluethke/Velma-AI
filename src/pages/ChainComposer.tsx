@@ -105,6 +105,58 @@ export default function ChainComposer() {
   const [scheduleTime, setScheduleTime] = useState('09:00');
   const [scheduleDay, setScheduleDay] = useState('MON');
 
+  // Featured chain templates — pre-loaded onto canvas unconnected for free users
+  const FEATURED_CHAINS = [
+    { name: 'Career Launchpad', skills: ['explain-anything', 'study-planner', 'resume-builder', 'interview-coach', 'salary-negotiator'] },
+    { name: 'Life Check-In', skills: ['energy-audit', 'money-truth', 'relationship-check', 'fear-inventory', 'future-self-letter'] },
+    { name: 'Startup Validation', skills: ['problem-decomposer', 'research-synthesizer', 'competitor-teardown', 'decision-analyzer', 'business-in-a-box'] },
+    { name: 'Content Machine', skills: ['research-synthesizer', 'seo-cluster-builder', 'growth-content-system', 'social-automation'] },
+    { name: 'Weekly Planning', skills: ['weekly-review', 'meeting-prep', 'daily-planner', 'habit-builder'] },
+  ];
+
+  const loadFeaturedChain = useCallback((chainTemplate: { name: string; skills: string[] }) => {
+    // Clear canvas
+    setNodes([]);
+    setEdges([]);
+    setExportJson(null);
+    setValidationErrors([]);
+    setChainName(chainTemplate.name.toLowerCase().replace(/\s+/g, '-'));
+
+    // Place skills on canvas unconnected
+    const newNodes: Node[] = chainTemplate.skills.map((skillName, i) => {
+      const skill = skills.find(s => s.name === skillName);
+      const id = `node-${Date.now()}-${i}`;
+      return {
+        id,
+        type: 'skillNode' as const,
+        position: { x: 150 + i * 280, y: 80 + (i % 2) * 120 },
+        data: {
+          label: skillName,
+          domain: skill?.domain ?? 'general',
+          inputs: skill?.inputs ?? [],
+          outputs: skill?.outputs ?? [],
+          originalInputs: skill?.inputs ?? [],
+          originalOutputs: skill?.outputs ?? [],
+          isCustomized: false,
+          isCustom: false,
+          customDescription: '',
+          onRemove: () => {
+            setNodes(prev => prev.filter(n => n.id !== id));
+            setEdges(prev => prev.filter(e => e.source !== id && e.target !== id));
+          },
+          onCustomize: (newInputs: string[], newOutputs: string[]) => {
+            setNodes(prev => prev.map(n => {
+              if (n.id !== id) return n;
+              return { ...n, data: { ...n.data, inputs: newInputs, outputs: newOutputs, isCustomized: true } };
+            }));
+          },
+        },
+      };
+    });
+
+    setNodes(newNodes);
+  }, [skills]);
+
   const showTrustToast = useCallback(() => {
     setTrustToast(true);
     setTimeout(() => setTrustToast(false), 3000);
@@ -830,9 +882,33 @@ echo "  To remove: crontab -l | grep -v 'SkillChain-${safeName}' | crontab -"
               </select>
             </>
           )}
-          {!isPremium && (
-            <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-              Pick a skill and click Run
+          {/* Featured chain templates — visible to everyone */}
+          <select
+            value=""
+            onChange={e => {
+              const chain = FEATURED_CHAINS.find(c => c.name === e.target.value);
+              if (chain) loadFeaturedChain(chain);
+            }}
+            style={{
+              padding: '4px 8px',
+              background: 'var(--bg-secondary)',
+              border: '1px solid var(--border)',
+              borderRadius: '4px',
+              color: 'var(--text-primary)',
+              fontSize: '12px',
+              outline: 'none',
+              cursor: 'pointer',
+            }}
+          >
+            <option value="">Try a chain template...</option>
+            {FEATURED_CHAINS.map(c => (
+              <option key={c.name} value={c.name}>{c.name} ({c.skills.length} skills)</option>
+            ))}
+          </select>
+
+          {!isPremium && nodes.length === 0 && (
+            <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+              Pick a template or add a skill, then click Run
             </span>
           )}
 
@@ -1142,7 +1218,7 @@ echo "  To remove: crontab -l | grep -v 'SkillChain-${safeName}' | crontab -"
           }}>
             <div style={{ fontSize: '48px', marginBottom: '12px', opacity: 0.3 }}>&#x1F9E9;</div>
             <div style={{ fontSize: '16px', color: 'var(--text-secondary)', marginBottom: '6px' }}>
-              Click skills in the palette to add them
+              Try a chain template above, or click skills in the palette
             </div>
             <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
               Drag from the <span style={{ color: 'var(--cyan)' }}>cyan dot</span> (bottom) to the <span style={{ color: '#ff6b6b' }}>red dot</span> (top) to connect
