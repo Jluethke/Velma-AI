@@ -60,7 +60,12 @@ export default function HeroSection() {
               <ConnectButton label="Connect Wallet to Compose" />
               {isConnected && !canChain && (
                 <span className="text-xs" style={{ color: 'var(--gold)' }}>
-                  You need TRUST tokens to unlock the composer
+                  Builder tier (500 TRUST) required to chain skills
+                </span>
+              )}
+              {!isConnected && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) && (
+                <span className="text-xs text-center max-w-xs" style={{ color: 'var(--text-secondary)' }}>
+                  On mobile? Open this site in the MetaMask app browser for easy wallet connection
                 </span>
               )}
             </div>
