@@ -161,11 +161,6 @@ export default function ChainComposer() {
     return errors.length === 0;
   }, [nodes, edges, chainName]);
 
-  const handleExport = useCallback(() => {
-    const built = buildChainJson();
-    if (built) setExportJson(built.json);
-  }, [buildChainJson]);
-
   /** Build the chain JSON from current graph state (shared by export + run) */
   const buildChainJson = useCallback((): { json: string; steps: Array<{ skill_name: string; alias: string; depends_on: string[] }> } | null => {
     if (!handleValidate()) return null;
@@ -201,6 +196,11 @@ export default function ChainComposer() {
     const chain = { name: chainName, description: chainDescription, category: chainCategory, steps };
     return { json: JSON.stringify(chain, null, 2), steps };
   }, [nodes, edges, chainName, chainDescription, chainCategory, handleValidate]);
+
+  const handleExport = useCallback(() => {
+    const built = buildChainJson();
+    if (built) setExportJson(built.json);
+  }, [buildChainJson]);
 
   /**
    * Generate and download a launcher script that:
