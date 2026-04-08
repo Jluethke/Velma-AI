@@ -2,58 +2,54 @@ import { Link } from 'react-router-dom';
 
 export default function Footer() {
   return (
-    <footer className="px-6 py-20" style={{ borderTop: '1px solid var(--border)' }}>
+    <footer className="px-6 py-16" style={{ borderTop: '1px solid var(--border)' }}>
       <div className="max-w-4xl mx-auto text-center">
-        <h2 className="text-3xl md:text-4xl font-bold mb-4" style={{ color: '#ffffff' }}>
-          Ready to build?
+        <h2 className="text-2xl md:text-3xl font-bold mb-4" style={{ color: '#ffffff' }}>
+          Ready to compose?
         </h2>
 
-        {/* Download CTA */}
-        <a
-          href="/docs"
-          className="inline-flex items-center gap-3 px-8 py-4 rounded-xl no-underline cursor-pointer transition-all mb-8"
-          style={{
-            background: 'linear-gradient(135deg, rgba(0,255,200,0.15), rgba(170,136,255,0.15))',
-            border: '1px solid rgba(0,255,200,0.3)',
-            color: 'var(--cyan)',
-          }}
-        >
-          <span className="text-sm font-semibold">
-            Download SkillChain
-          </span>
-          <span
-            className="text-xs px-2 py-1 rounded"
+        <div className="flex flex-wrap items-center justify-center gap-4 mb-8">
+          <Link
+            to="/compose"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl no-underline transition-all text-sm font-semibold"
             style={{
-              background: 'rgba(0, 255, 136, 0.15)',
-              color: 'var(--green)',
+              background: 'linear-gradient(135deg, rgba(0,255,200,0.15), rgba(170,136,255,0.15))',
+              border: '1px solid rgba(0,255,200,0.3)',
+              color: 'var(--cyan)',
             }}
           >
-            Free
-          </span>
-        </a>
-
-        {/* Links */}
-        <div className="flex flex-wrap items-center justify-center gap-6 mb-8">
-          <Link to="/whitepaper" className="text-sm no-underline transition-colors" style={{ color: 'var(--text-secondary)' }}>
-            Whitepaper
+            Open Composer
           </Link>
-          <a href="https://github.com" className="text-sm no-underline transition-colors" style={{ color: 'var(--text-secondary)' }}>
-            GitHub
-          </a>
+          <Link
+            to="/skill/budget-builder"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl no-underline transition-all text-sm"
+            style={{
+              background: 'rgba(255,255,255,0.04)',
+              border: '1px solid var(--border)',
+              color: 'var(--text-secondary)',
+            }}
+          >
+            Try a skill free
+          </Link>
+        </div>
+
+        <div className="flex flex-wrap items-center justify-center gap-6 mb-8">
           <Link to="/docs" className="text-sm no-underline transition-colors" style={{ color: 'var(--text-secondary)' }}>
             Docs
           </Link>
-          <a href="#" className="text-sm no-underline transition-colors" style={{ color: 'var(--text-secondary)' }}>
-            Community
+          <a href="https://github.com/Jluethke/Velma-AI" target="_blank" rel="noopener noreferrer" className="text-sm no-underline transition-colors" style={{ color: 'var(--text-secondary)' }}>
+            GitHub
           </a>
+          <Link to="/whitepaper" className="text-sm no-underline transition-colors" style={{ color: 'var(--text-secondary)' }}>
+            Whitepaper
+          </Link>
         </div>
 
-        {/* Copyright */}
-        <p className="text-xs mb-2" style={{ color: 'var(--text-secondary)' }}>
-          &copy; 2024-present The Wayfinder Trust. All rights reserved.
+        <p className="text-xs mb-1" style={{ color: 'var(--text-secondary)' }}>
+          &copy; 2024-present The Wayfinder Trust
         </p>
-        <p className="text-xs" style={{ color: 'rgba(136, 136, 170, 0.5)' }}>
-          Powered by trust, not promises.
+        <p className="text-xs" style={{ color: 'rgba(136, 136, 170, 0.4)' }}>
+          SkillChain — AI skills you own, chains you compose, value you earn.
         </p>
       </div>
     </footer>
