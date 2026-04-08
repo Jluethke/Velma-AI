@@ -44,7 +44,7 @@ export default function FAQ() {
 
   return (
     <section className="px-6 py-20 max-w-3xl mx-auto">
-      <h2 className="text-3xl md:text-4xl font-bold text-center mb-4" style={{ color: '#ffffff' }}>
+      <h2 className="text-3xl md:text-4xl font-bold text-center mb-4" style={{ color: 'var(--text-primary)' }}>
         FAQ
       </h2>
       <p className="text-center mb-12 text-sm" style={{ color: 'var(--text-secondary)' }}>

@@ -54,7 +54,7 @@ export default function SkillDetail() {
   if (!skillMeta && !skillLoading) {
     return (
       <div className="min-h-screen pt-24 px-6 pb-20 max-w-4xl mx-auto text-center">
-        <h1 className="text-2xl font-bold mt-20" style={{ color: '#ff6b6b' }}>
+        <h1 className="text-2xl font-bold mt-20" style={{ color: 'var(--red)' }}>
           Skill Not Found
         </h1>
         <p className="text-sm mt-4" style={{ color: 'var(--text-secondary)' }}>
@@ -65,7 +65,7 @@ export default function SkillDetail() {
           className="inline-block mt-8 px-6 py-3 rounded-lg text-sm no-underline transition-all"
           style={{
             border: '1px solid var(--border)',
-            color: '#00ffc8',
+            color: 'var(--cyan)',
           }}
           onMouseEnter={e => {
             e.currentTarget.style.borderColor = 'rgba(0, 255, 200, 0.4)';
@@ -100,7 +100,7 @@ export default function SkillDetail() {
         to="/skills"
         className="inline-flex items-center gap-1.5 text-xs no-underline mb-8 transition-colors"
         style={{ color: 'var(--text-secondary)' }}
-        onMouseEnter={e => (e.currentTarget.style.color = '#00ffc8')}
+        onMouseEnter={e => (e.currentTarget.style.color = 'var(--cyan)')}
         onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-secondary)')}
       >
         <span>&larr;</span>
@@ -110,7 +110,7 @@ export default function SkillDetail() {
       {/* Header */}
       <h1
         className="text-3xl md:text-4xl font-bold mb-4"
-        style={{ color: '#00ffc8', textShadow: '0 0 40px rgba(0, 255, 200, 0.15)' }}
+        style={{ color: 'var(--cyan)', textShadow: '0 0 40px rgba(0, 255, 200, 0.15)' }}
       >
         {skillMeta.name}
       </h1>
@@ -123,7 +123,7 @@ export default function SkillDetail() {
           className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
           style={{
             background: 'rgba(0, 255, 200, 0.08)',
-            color: '#00ffc8',
+            color: 'var(--cyan)',
           }}
         >
           {skillMeta.execution_pattern}
@@ -208,7 +208,7 @@ claude
             style={{
               background: 'linear-gradient(135deg, rgba(0,200,255,0.12), rgba(0,255,200,0.12))',
               border: '1px solid rgba(0,200,255,0.3)',
-              color: '#00c8ff',
+              color: 'var(--cyan)',
             }}
             onMouseEnter={e => {
               e.currentTarget.style.boxShadow = '0 0 20px rgba(0, 200, 255, 0.15)';
@@ -311,7 +311,7 @@ claude
             className="w-10 h-10 rounded-lg flex items-center justify-center text-sm font-bold"
             style={{
               background: 'linear-gradient(135deg, rgba(0, 255, 200, 0.15), rgba(170, 136, 255, 0.15))',
-              color: '#00ffc8',
+              color: 'var(--cyan)',
               border: '1px solid rgba(0, 255, 200, 0.2)',
             }}
           >
@@ -359,12 +359,12 @@ claude
                   }}
                 >
                   <div className="flex items-start justify-between mb-2">
-                    <h3 className="text-sm font-semibold" style={{ color: '#00ffc8' }}>
+                    <h3 className="text-sm font-semibold" style={{ color: 'var(--cyan)' }}>
                       {rs.name}
                     </h3>
                     <span
                       className="text-xs font-bold"
-                      style={{ color: rs.free ? '#00ff88' : '#ffd700' }}
+                      style={{ color: rs.free ? 'var(--green)' : 'var(--gold)' }}
                     >
                       {rs.free ? 'FREE' : `${rs.price} TRUST`}
                     </span>
