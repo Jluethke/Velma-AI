@@ -162,9 +162,14 @@ export default function ChainComposer() {
   }, [nodes, edges, chainName]);
 
   const handleExport = useCallback(() => {
-    if (!handleValidate()) return;
+    const built = buildChainJson();
+    if (built) setExportJson(built.json);
+  }, [buildChainJson]);
 
-    // Build dependency map
+  /** Build the chain JSON from current graph state (shared by export + run) */
+  const buildChainJson = useCallback((): { json: string; steps: Array<{ skill_name: string; alias: string; depends_on: string[] }> } | null => {
+    if (!handleValidate()) return null;
+
     const deps = new Map<string, Set<string>>();
     for (const node of nodes) deps.set(node.id, new Set());
     for (const edge of edges) deps.get(edge.target)?.add(edge.source);
@@ -174,7 +179,6 @@ export default function ChainComposer() {
       (n.data.label as string).replace(/-/g, '_'),
     ]));
 
-    // Topological sort
     const sorted: Node[] = [];
     const vis = new Set<string>();
     const visit = (id: string) => {
@@ -186,21 +190,168 @@ export default function ChainComposer() {
     };
     for (const node of nodes) visit(node.id);
 
-    const chain = {
-      name: chainName,
-      description: chainDescription,
-      category: chainCategory,
-      steps: sorted.map(node => ({
-        skill_name: node.data.label as string,
-        alias: (node.data.label as string).replace(/-/g, '_'),
-        depends_on: [...(deps.get(node.id) ?? [])].map(d => aliasMap.get(d) ?? d),
-        config: {},
-        phase_filter: null,
-      })),
-    };
+    const steps = sorted.map(node => ({
+      skill_name: node.data.label as string,
+      alias: (node.data.label as string).replace(/-/g, '_'),
+      depends_on: [...(deps.get(node.id) ?? [])].map(d => aliasMap.get(d) ?? d),
+      config: {},
+      phase_filter: null,
+    }));
 
-    setExportJson(JSON.stringify(chain, null, 2));
+    const chain = { name: chainName, description: chainDescription, category: chainCategory, steps };
+    return { json: JSON.stringify(chain, null, 2), steps };
   }, [nodes, edges, chainName, chainDescription, chainCategory, handleValidate]);
+
+  /**
+   * Generate and download a launcher script that:
+   * 1. Creates a workspace directory
+   * 2. Saves the chain.json to it
+   * 3. Opens Claude Code with a prompt to run the chain
+   */
+  const handleRun = useCallback(() => {
+    const built = buildChainJson();
+    if (!built) return;
+
+    const { steps } = built;
+    const safeName = chainName.replace(/[^a-z0-9-]/gi, '-').toLowerCase();
+    const timestamp = new Date().toISOString().slice(0, 10);
+    const dirName = `${safeName}-${timestamp}`;
+
+    // Build the skill list and input requirements for the prompt
+    const skillList = steps.map((s, i) => `${i + 1}. ${s.skill_name}`).join('\\n');
+
+    // Collect all unique inputs from the skills in this chain
+    const allInputs: string[] = [];
+    for (const step of steps) {
+      const skill = skills.find(s => s.name === step.skill_name);
+      if (skill) {
+        for (const input of skill.inputs) {
+          if (!allInputs.includes(input)) allInputs.push(input);
+        }
+      }
+    }
+    const inputList = allInputs.length > 0
+      ? allInputs.map(i => `- ${i}`).join('\\n')
+      : '(no specific inputs declared)';
+
+    // Escape the chain JSON for embedding in the script
+    const chainJsonEscaped = built.json.replace(/"/g, '\\"').replace(/\n/g, '\\n');
+
+    // Detect OS and generate appropriate script
+    const isWindows = navigator.userAgent.includes('Windows');
+
+    if (isWindows) {
+      const batScript = `@echo off
+title SkillChain Run: ${safeName}
+setlocal enabledelayedexpansion
+
+echo.
+echo   SkillChain Chain Runner
+echo   =======================
+echo   Chain: ${chainName}
+echo   Skills: ${steps.length}
+echo.
+
+:: Create workspace
+set "WORKSPACE=%USERPROFILE%\\SkillChain-Runs\\${dirName}"
+if not exist "%WORKSPACE%" mkdir "%WORKSPACE%"
+echo   Workspace: %WORKSPACE%
+
+:: Save chain definition
+echo ${chainJsonEscaped}> "%WORKSPACE%\\${safeName}.chain.json"
+echo   Saved chain definition.
+
+:: Change to workspace
+cd /d "%WORKSPACE%"
+
+echo.
+echo   Starting Claude Code with your chain...
+echo   =========================================
+echo.
+
+:: Launch Claude with the chain prompt
+claude -p "I need you to run a SkillChain skill chain called '${chainName}'. Here are the ${steps.length} skills to execute in order:\\n\\n${skillList}\\n\\nBefore starting, ask me for these inputs:\\n${inputList}\\n\\nFor each skill:\\n1. Call start_skill_run with the skill name\\n2. Call get_skill to read the full skill definition\\n3. Execute each phase, calling record_phase after each one\\n4. Call complete_skill_run when done\\n5. Pass relevant outputs to the next skill in the chain\\n\\nStart by asking me for the required inputs, then execute each skill step by step."
+
+echo.
+echo   Chain execution complete.
+echo   Workspace: %WORKSPACE%
+echo.
+pause
+`;
+
+      const blob = new Blob([batScript], { type: 'application/bat' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Run-${safeName}.bat`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } else {
+      const shScript = `#!/bin/bash
+# SkillChain Chain Runner: ${chainName}
+
+echo ""
+echo "  SkillChain Chain Runner"
+echo "  ======================="
+echo "  Chain: ${chainName}"
+echo "  Skills: ${steps.length}"
+echo ""
+
+# Create workspace
+WORKSPACE="$HOME/SkillChain-Runs/${dirName}"
+mkdir -p "$WORKSPACE"
+echo "  Workspace: $WORKSPACE"
+
+# Save chain definition
+cat > "$WORKSPACE/${safeName}.chain.json" << 'CHAINEOF'
+${built.json}
+CHAINEOF
+echo "  Saved chain definition."
+
+# Change to workspace
+cd "$WORKSPACE"
+
+echo ""
+echo "  Starting Claude Code with your chain..."
+echo "  ========================================="
+echo ""
+
+# Launch Claude with the chain prompt
+claude -p "I need you to run a SkillChain skill chain called '${chainName}'. Here are the ${steps.length} skills to execute in order:
+
+${steps.map((s, i) => `${i + 1}. ${s.skill_name}`).join('\n')}
+
+Before starting, ask me for these inputs:
+${allInputs.map(i => `- ${i}`).join('\n') || '(no specific inputs declared)'}
+
+For each skill:
+1. Call start_skill_run with the skill name
+2. Call get_skill to read the full skill definition
+3. Execute each phase, calling record_phase after each one
+4. Call complete_skill_run when done
+5. Pass relevant outputs to the next skill in the chain
+
+Start by asking me for the required inputs, then execute each skill step by step."
+
+echo ""
+echo "  Chain execution complete."
+echo "  Workspace: $WORKSPACE"
+echo ""
+`;
+
+      const blob = new Blob([shScript], { type: 'application/x-sh' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Run-${safeName}.sh`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+  }, [buildChainJson, chainName, chainDescription, chainCategory, skills, nodes, edges]);
 
   const handleClear = useCallback(() => {
     setNodes([]);
@@ -308,6 +459,21 @@ export default function ChainComposer() {
               }}
             >
               Export .chain.json
+            </button>
+            <button
+              onClick={handleRun}
+              style={{
+                padding: '4px 14px',
+                background: 'rgba(0,200,255,0.15)',
+                border: '1px solid rgba(0,200,255,0.3)',
+                borderRadius: '4px',
+                color: '#00c8ff',
+                fontSize: '12px',
+                cursor: 'pointer',
+                fontWeight: 600,
+              }}
+            >
+              Run
             </button>
             <button
               onClick={handleClear}
