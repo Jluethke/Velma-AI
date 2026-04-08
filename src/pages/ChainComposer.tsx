@@ -2,7 +2,7 @@
  * ChainComposer — Visual DAG editor for composing skill chains.
  * Uses @xyflow/react for the interactive graph canvas.
  */
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import {
   ReactFlow,
   Controls,

@@ -130,11 +130,27 @@ if "%CONFIGURED%"=="0" (
 :: Step 4: Register in Add/Remove Programs
 :: ================================================================
 echo   [4/5] Registering...
+
+:: Copy uninstall.bat to ~/.skillchain/bin/ so Windows can find it
+set "SC_BIN=%USERPROFILE%\.skillchain\bin"
+if not exist "%SC_BIN%" mkdir "%SC_BIN%"
+
+:: Download uninstall.bat from the same source as install.bat
+:: If running from a downloaded file, create the uninstaller inline
+if not exist "%SC_BIN%\uninstall.bat" (
+    "%PS%" -NoProfile -ExecutionPolicy Bypass -Command ^
+      "$url='https://raw.githubusercontent.com/Jluethke/Velma-AI/main/public/uninstall.bat';" ^
+      "$dest=Join-Path $env:USERPROFILE '.skillchain\bin\uninstall.bat';" ^
+      "try{Invoke-WebRequest -Uri $url -OutFile $dest -UseBasicParsing}catch{Write-Host '  Could not download uninstaller'}" 2>nul
+)
+
+set "UNINSTALL_BAT=%SC_BIN%\uninstall.bat"
 set "UNINSTALL_KEY=HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall\SkillChain"
 %SystemRoot%\System32\reg.exe add "%UNINSTALL_KEY%" /v "DisplayName" /t REG_SZ /d "SkillChain - AI Skill Marketplace" /f >nul 2>&1
-%SystemRoot%\System32\reg.exe add "%UNINSTALL_KEY%" /v "DisplayVersion" /t REG_SZ /d "0.1.0" /f >nul 2>&1
+%SystemRoot%\System32\reg.exe add "%UNINSTALL_KEY%" /v "DisplayVersion" /t REG_SZ /d "0.2.0" /f >nul 2>&1
 %SystemRoot%\System32\reg.exe add "%UNINSTALL_KEY%" /v "Publisher" /t REG_SZ /d "The Wayfinder Trust" /f >nul 2>&1
-%SystemRoot%\System32\reg.exe add "%UNINSTALL_KEY%" /v "UninstallString" /t REG_SZ /d "pip uninstall skillchain -y" /f >nul 2>&1
+%SystemRoot%\System32\reg.exe add "%UNINSTALL_KEY%" /v "UninstallString" /t REG_SZ /d "cmd /c \"%UNINSTALL_BAT%\"" /f >nul 2>&1
+%SystemRoot%\System32\reg.exe add "%UNINSTALL_KEY%" /v "InstallLocation" /t REG_SZ /d "%SC_DIR%" /f >nul 2>&1
 %SystemRoot%\System32\reg.exe add "%UNINSTALL_KEY%" /v "NoModify" /t REG_DWORD /d 1 /f >nul 2>&1
 %SystemRoot%\System32\reg.exe add "%UNINSTALL_KEY%" /v "NoRepair" /t REG_DWORD /d 1 /f >nul 2>&1
 echo   Registered.
@@ -166,7 +182,7 @@ echo        - "I'm scared of AI"
 echo     4. Your AI will find the right skill chain
 echo        and walk you through it
 echo.
-echo   Your AI just got 126 skills and 92 chains.
+echo   Your AI just got 176 skills and 190 chains.
 echo   No extra apps. No websites. Just talk.
 echo.
 echo   Press any key to close...

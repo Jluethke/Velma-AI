@@ -118,7 +118,7 @@ function ShowcaseCard({ item }: { item: ShowcaseItem }) {
           <span>OPEN license</span>
         </div>
         <Link
-          to={`/skills/${item.name}`}
+          to={`/skill/${item.name}`}
           className="text-xs no-underline transition-colors"
           style={{ color: 'var(--cyan)' }}
         >
