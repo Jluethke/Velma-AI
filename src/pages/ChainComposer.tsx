@@ -108,11 +108,23 @@ export default function ChainComposer() {
       data: {
         label: skill.name,
         domain: skill.domain,
-        inputs: skill.inputs,
-        outputs: skill.outputs,
+        inputs: [...skill.inputs],
+        outputs: [...skill.outputs],
+        originalInputs: [...skill.inputs],
+        originalOutputs: [...skill.outputs],
+        isCustomized: false,
         onRemove: () => {
           setNodes(prev => prev.filter(n => n.id !== id));
           setEdges(prev => prev.filter(e => e.source !== id && e.target !== id));
+        },
+        onCustomize: (newInputs: string[], newOutputs: string[]) => {
+          setNodes(prev => prev.map(n => {
+            if (n.id !== id) return n;
+            const origIn = (n.data.originalInputs as string[]) ?? [];
+            const origOut = (n.data.originalOutputs as string[]) ?? [];
+            const changed = JSON.stringify(newInputs) !== JSON.stringify(origIn) || JSON.stringify(newOutputs) !== JSON.stringify(origOut);
+            return { ...n, data: { ...n.data, inputs: newInputs, outputs: newOutputs, isCustomized: changed } };
+          }));
         },
       },
     };
@@ -205,8 +217,8 @@ export default function ChainComposer() {
   /**
    * Generate and download a launcher script that:
    * 1. Creates a workspace directory
-   * 2. Saves the chain.json to it
-   * 3. Opens Claude Code with a prompt to run the chain
+   * 2. Saves the chain + a CLAUDE.md with instructions
+   * 3. Opens Claude Code interactively (not -p which exits)
    */
   const handleRun = useCallback(() => {
     const built = buildChainJson();
@@ -217,32 +229,77 @@ export default function ChainComposer() {
     const timestamp = new Date().toISOString().slice(0, 10);
     const dirName = `${safeName}-${timestamp}`;
 
-    // Build the skill list and input requirements for the prompt
-    const skillList = steps.map((s, i) => `${i + 1}. ${s.skill_name}`).join('\\n');
-
-    // Collect all unique inputs from the skills in this chain
-    const allInputs: string[] = [];
-    for (const step of steps) {
+    // Only collect inputs for the FIRST step(s) — the entry points with no dependencies
+    // Downstream skills get their inputs from upstream outputs (context bridging)
+    const entrySteps = steps.filter(s => s.depends_on.length === 0);
+    const entryInputs: string[] = [];
+    for (const step of entrySteps) {
       const skill = skills.find(s => s.name === step.skill_name);
       if (skill) {
         for (const input of skill.inputs) {
-          if (!allInputs.includes(input)) allInputs.push(input);
+          if (!entryInputs.includes(input)) entryInputs.push(input);
         }
       }
     }
-    const inputList = allInputs.length > 0
-      ? allInputs.map(i => `- ${i}`).join('\\n')
-      : '(no specific inputs declared)';
 
-    // Escape the chain JSON for embedding in the script
-    const chainJsonEscaped = built.json.replace(/"/g, '\\"').replace(/\n/g, '\\n');
+    // Build step-by-step instructions with context bridging
+    const stepInstructions = steps.map((step, i) => {
+      const skill = skills.find(s => s.name === step.skill_name);
+      const deps = step.depends_on;
+      let bridge = '';
+      if (deps.length > 0) {
+        bridge = `\n   CONTEXT: Use the outputs from ${deps.join(' and ')} as input. Summarize key findings from those steps and feed them into this skill.`;
+      }
+      return `${i + 1}. **${step.skill_name}**${deps.length > 0 ? ` (after: ${deps.join(', ')})` : ' (entry point)'}${bridge}`;
+    }).join('\n');
 
-    // Detect OS and generate appropriate script
+    // Track customized skills for derivative attribution
+    const customizedSkills = nodes
+      .filter(n => n.data.isCustomized)
+      .map(n => `${n.data.label} (modified inputs/outputs)`);
+
+    // Write a CLAUDE.md that tells Claude how to run the chain
+    const claudeMd = `# SkillChain Chain: ${chainName}
+
+${chainDescription || 'Custom skill chain composed in the visual editor.'}
+
+## How to run this chain
+
+Execute these ${steps.length} skills in order. For each skill:
+1. Call \`start_skill_run\` with the skill name
+2. Call \`get_skill\` to read the full skill definition
+3. Follow each phase in the skill definition, calling \`record_phase\` after each
+4. Call \`complete_skill_run\` when done
+5. **Before starting the next skill, summarize the key outputs from this skill and carry them forward as context**
+
+## Chain steps
+
+${stepInstructions}
+
+## Required inputs (ask the user first)
+
+${entryInputs.length > 0 ? entryInputs.map(i => `- ${i}`).join('\n') : 'No specific inputs required — ask the user what they need help with.'}
+
+## Context bridging rules
+
+When moving from one skill to the next:
+- Summarize the key outputs, decisions, and findings from the completed skill
+- Frame them as inputs for the next skill (e.g., "Based on the code review, the main issues are X, Y, Z — now let\\'s create content about these findings")
+- The user should NOT have to re-explain anything — carry all context forward
+- If a skill produces structured data (lists, tables, scores), preserve that structure
+
+${customizedSkills.length > 0 ? `## Customized skills (derivatives)\n\nThese skills were modified from their originals:\n${customizedSkills.map(s => `- ${s}`).join('\n')}\n` : ''}
+## Start
+
+Ask the user for the required inputs listed above, then begin with step 1.
+`;
+
     const isWindows = navigator.userAgent.includes('Windows');
 
     if (isWindows) {
+      // Write CLAUDE.md to workspace, then open Claude interactively
       const batScript = `@echo off
-title SkillChain Run: ${safeName}
+title SkillChain: ${safeName}
 setlocal enabledelayedexpansion
 
 echo.
@@ -250,35 +307,40 @@ echo   SkillChain Chain Runner
 echo   =======================
 echo   Chain: ${chainName}
 echo   Skills: ${steps.length}
+echo   Steps: ${steps.map(s => s.skill_name).join(' -> ')}
 echo.
 
-:: Create workspace
 set "WORKSPACE=%USERPROFILE%\\SkillChain-Runs\\${dirName}"
 if not exist "%WORKSPACE%" mkdir "%WORKSPACE%"
 echo   Workspace: %WORKSPACE%
 
 :: Save chain definition
-echo ${chainJsonEscaped}> "%WORKSPACE%\\${safeName}.chain.json"
-echo   Saved chain definition.
+>${">"} "%WORKSPACE%\\${safeName}.chain.json" (
+${built.json.split('\n').map(line => `echo ${line.replace(/"/g, '').replace(/%/g, '%%').replace(/>/g, '^>').replace(/</g, '^<').replace(/&/g, '^&').replace(/\|/g, '^|')}`).join('\n')}
+)
 
-:: Change to workspace
+:: Save CLAUDE.md with chain instructions
+>${">"} "%WORKSPACE%\\CLAUDE.md" (
+${claudeMd.split('\n').map(line => `echo ${line.replace(/%/g, '%%').replace(/>/g, '^>').replace(/</g, '^<').replace(/&/g, '^&').replace(/\|/g, '^|') || '.'}`).join('\n')}
+)
+
+echo   Created CLAUDE.md with chain instructions.
+echo.
+
 cd /d "%WORKSPACE%"
 
-echo.
-echo   Starting Claude Code with your chain...
-echo   =========================================
+echo   Launching Claude Code...
+echo   Type your inputs when prompted. Claude will run each skill step by step.
+echo   =========================================================================
 echo.
 
-:: Launch Claude with the chain prompt
-claude -p "I need you to run a SkillChain skill chain called '${chainName}'. Here are the ${steps.length} skills to execute in order:\\n\\n${skillList}\\n\\nBefore starting, ask me for these inputs:\\n${inputList}\\n\\nFor each skill:\\n1. Call start_skill_run with the skill name\\n2. Call get_skill to read the full skill definition\\n3. Execute each phase, calling record_phase after each one\\n4. Call complete_skill_run when done\\n5. Pass relevant outputs to the next skill in the chain\\n\\nStart by asking me for the required inputs, then execute each skill step by step."
+:: Launch Claude interactively — it will read CLAUDE.md automatically
+claude
 
 echo.
-echo   Chain execution complete.
-echo   Workspace: %WORKSPACE%
-echo.
+echo   Session complete. Output saved in: %WORKSPACE%
 pause
 `;
-
       const blob = new Blob([batScript], { type: 'application/bat' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -297,9 +359,9 @@ echo "  SkillChain Chain Runner"
 echo "  ======================="
 echo "  Chain: ${chainName}"
 echo "  Skills: ${steps.length}"
+echo "  Steps: ${steps.map(s => s.skill_name).join(' -> ')}"
 echo ""
 
-# Create workspace
 WORKSPACE="$HOME/SkillChain-Runs/${dirName}"
 mkdir -p "$WORKSPACE"
 echo "  Workspace: $WORKSPACE"
@@ -308,39 +370,28 @@ echo "  Workspace: $WORKSPACE"
 cat > "$WORKSPACE/${safeName}.chain.json" << 'CHAINEOF'
 ${built.json}
 CHAINEOF
-echo "  Saved chain definition."
 
-# Change to workspace
+# Save CLAUDE.md with chain instructions
+cat > "$WORKSPACE/CLAUDE.md" << 'CLAUDEEOF'
+${claudeMd}
+CLAUDEEOF
+
+echo "  Created CLAUDE.md with chain instructions."
+echo ""
+
 cd "$WORKSPACE"
 
+echo "  Launching Claude Code..."
+echo "  Type your inputs when prompted. Claude will run each skill step by step."
+echo "  ========================================================================="
 echo ""
-echo "  Starting Claude Code with your chain..."
-echo "  ========================================="
-echo ""
 
-# Launch Claude with the chain prompt
-claude -p "I need you to run a SkillChain skill chain called '${chainName}'. Here are the ${steps.length} skills to execute in order:
-
-${steps.map((s, i) => `${i + 1}. ${s.skill_name}`).join('\n')}
-
-Before starting, ask me for these inputs:
-${allInputs.map(i => `- ${i}`).join('\n') || '(no specific inputs declared)'}
-
-For each skill:
-1. Call start_skill_run with the skill name
-2. Call get_skill to read the full skill definition
-3. Execute each phase, calling record_phase after each one
-4. Call complete_skill_run when done
-5. Pass relevant outputs to the next skill in the chain
-
-Start by asking me for the required inputs, then execute each skill step by step."
+# Launch Claude interactively — it reads CLAUDE.md automatically
+claude
 
 echo ""
-echo "  Chain execution complete."
-echo "  Workspace: $WORKSPACE"
-echo ""
+echo "  Session complete. Output saved in: $WORKSPACE"
 `;
-
       const blob = new Blob([shScript], { type: 'application/x-sh' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -431,20 +482,6 @@ echo ""
           </select>
 
           <div style={{ display: 'flex', gap: '6px' }}>
-            <button
-              onClick={handleValidate}
-              style={{
-                padding: '4px 12px',
-                background: 'rgba(0,255,200,0.08)',
-                border: '1px solid rgba(0,255,200,0.2)',
-                borderRadius: '4px',
-                color: 'var(--cyan)',
-                fontSize: '12px',
-                cursor: 'pointer',
-              }}
-            >
-              Validate
-            </button>
             <button
               onClick={handleExport}
               style={{
