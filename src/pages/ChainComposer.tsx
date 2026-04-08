@@ -85,6 +85,7 @@ function deleteChainFromStorage(name: string): void {
 export default function ChainComposer() {
   const [skills, setSkills] = useState<PaletteSkill[]>([]);
   const { isConnected, isUnlocked } = useGateCheck();
+  const isPremium = isConnected && isUnlocked;
   const { address } = useAccount();
   const { publish: publishSkill, state: publishState, reset: resetPublish } = usePublishSkill();
   const [publishProgress, setPublishProgress] = useState<string[]>([]);
@@ -138,15 +139,27 @@ export default function ChainComposer() {
   );
 
   const onConnect: OnConnect = useCallback(
-    (connection) => setEdges((eds) => addEdge({
-      ...connection,
-      style: { stroke: 'var(--cyan)', strokeWidth: 2 },
-      animated: true,
-    }, eds)),
-    [],
+    (connection) => {
+      if (!isPremium) {
+        showTrustToast();
+        return;
+      }
+      setEdges((eds) => addEdge({
+        ...connection,
+        style: { stroke: 'var(--cyan)', strokeWidth: 2 },
+        animated: true,
+      }, eds));
+    },
+    [isPremium],
   );
 
   const handleAddSkill = useCallback((skill: PaletteSkill) => {
+    // Free users: 1 skill max. Premium: unlimited.
+    if (!isPremium && nodes.length >= 1) {
+      showTrustToast();
+      return;
+    }
+
     const id = `node-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
     const x = 300 + (nodes.length % 3) * 320;
     const y = 80 + Math.floor(nodes.length / 3) * 250;
@@ -634,10 +647,6 @@ fi
     setValidationErrors([]);
   }, []);
 
-  // Premium features require TRUST. Free: add skills, connect, validate, run.
-  // Gated: create custom skills, save/load, publish on-chain.
-  const isPremium = isConnected && isUnlocked;
-
   return (
     <div style={{ display: 'flex', height: 'calc(100vh - 60px)', marginTop: '60px' }}>
       {/* Left: Skill Palette */}
@@ -724,7 +733,7 @@ fi
               Validate
             </button>
             <button
-              onClick={handleExport}
+              onClick={!isPremium && nodes.length > 1 ? showTrustToast : handleExport}
               style={{
                 padding: '4px 12px',
                 background: 'rgba(0,255,200,0.15)',
@@ -739,7 +748,7 @@ fi
               Export .chain.json
             </button>
             <button
-              onClick={handleRun}
+              onClick={!isPremium && nodes.length > 1 ? showTrustToast : handleRun}
               style={{
                 padding: '4px 14px',
                 background: 'rgba(0,200,255,0.15)',
