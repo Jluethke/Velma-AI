@@ -158,60 +158,47 @@ export default function SkillDetail() {
 
               // Use claude -p to send an initial prompt so it starts immediately
               // CLAUDE.md provides context, -p kicks off the action
-              const prompt = `Run the SkillChain skill "${name}". Call start_skill_run with skill name "${name}", then call get_skill to read the full definition. Ask me for any required inputs, then execute each phase step by step using record_phase. When all phases are done, call complete_skill_run. Start now.`;
+              const claudeMd = `# Run: ${name}\n\nExecute the **${name}** skill.\n\n1. Call \`start_skill_run\` with "${name}"\n2. Call \`get_skill\` to read the definition\n3. Ask me for required inputs\n4. Execute each phase with \`record_phase\`\n5. Call \`complete_skill_run\` when done\n\nStart now — read the skill and ask me for inputs.`;
+              const b64 = btoa(unescape(encodeURIComponent(claudeMd)));
 
               if (isWin) {
-                const bat = [
-                  '@echo off',
-                  `title SkillChain: ${safeName}`,
-                  `set "WS=%USERPROFILE%\\SkillChain-Runs\\${safeName}-${ts}"`,
-                  `if not exist "%WS%" mkdir "%WS%"`,
-                  `cd /d "%WS%"`,
-                  '',
-                  ':: Check for Claude Code',
-                  'where claude >nul 2>nul',
-                  'if %errorlevel% neq 0 (',
-                  '    echo   Claude Code not found. Installing...',
-                  '    where npm >nul 2>nul',
-                  '    if %errorlevel% neq 0 (',
-                  '        echo   ERROR: Install Node.js from https://nodejs.org',
-                  '        pause',
-                  '        exit /b 1',
-                  '    )',
-                  '    npm install -g @anthropic-ai/claude-code',
-                  ')',
-                  '',
-                  `echo   Running ${name}...`,
-                  'echo.',
-                  `claude -p "${prompt.replace(/"/g, "'")}"`,
-                  'echo.',
-                  'pause',
-                ].join('\n');
-
+                const bat = `@echo off
+title SkillChain: ${safeName}
+set "WS=%USERPROFILE%\\SkillChain-Runs\\${safeName}-${ts}"
+if not exist "%WS%" mkdir "%WS%"
+powershell -NoProfile -Command "[IO.File]::WriteAllText('%WS%\\CLAUDE.md', [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('${b64}')))"
+cd /d "%WS%"
+where claude >nul 2>nul
+if %errorlevel% neq 0 (
+    where npm >nul 2>nul
+    if %errorlevel% neq 0 (
+        echo Install Node.js from https://nodejs.org
+        pause
+        exit /b 1
+    )
+    echo Installing Claude Code...
+    npm install -g @anthropic-ai/claude-code
+)
+echo Running ${name}...
+echo.
+claude
+pause
+`;
                 const b = new Blob([bat], { type: 'application/bat' });
                 const u = URL.createObjectURL(b);
                 const a = document.createElement('a'); a.href = u; a.download = `Run-${safeName}.bat`;
                 document.body.appendChild(a); a.click(); document.body.removeChild(a);
                 URL.revokeObjectURL(u);
               } else {
-                const sh = [
-                  '#!/bin/bash',
-                  `WS="$HOME/SkillChain-Runs/${safeName}-${ts}"`,
-                  `mkdir -p "$WS"`,
-                  `cd "$WS"`,
-                  '',
-                  'if ! command -v claude &> /dev/null; then',
-                  '    echo "Installing Claude Code..."',
-                  '    npm install -g @anthropic-ai/claude-code 2>/dev/null || {',
-                  '        echo "Install Node.js from https://nodejs.org first"',
-                  '        exit 1',
-                  '    }',
-                  'fi',
-                  '',
-                  `echo "Running ${name}..."`,
-                  `claude -p '${prompt.replace(/'/g, "'\\''")}'`,
-                ].join('\n');
-
+                const sh = `#!/bin/bash
+WS="$HOME/SkillChain-Runs/${safeName}-${ts}"
+mkdir -p "$WS"
+echo '${b64}' | base64 -d > "$WS/CLAUDE.md"
+cd "$WS"
+command -v claude &>/dev/null || npm install -g @anthropic-ai/claude-code 2>/dev/null
+echo "Running ${name}..."
+claude
+`;
                 const b = new Blob([sh], { type: 'application/x-sh' });
                 const u = URL.createObjectURL(b);
                 const a = document.createElement('a'); a.href = u; a.download = `Run-${safeName}.sh`;

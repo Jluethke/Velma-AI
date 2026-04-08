@@ -512,121 +512,65 @@ Ask the user for the required inputs listed above, then begin with step 1.
 
     const isWindows = navigator.userAgent.includes('Windows');
 
+    // Base64-encode the content to avoid ALL escaping issues in batch/shell
+    const chainB64 = btoa(unescape(encodeURIComponent(built.json)));
+    const claudeMdB64 = btoa(unescape(encodeURIComponent(claudeMd)));
+
     if (isWindows) {
-      // Write CLAUDE.md to workspace, then open Claude interactively
       const batScript = `@echo off
 title SkillChain: ${safeName}
-setlocal enabledelayedexpansion
+setlocal
+
+set "WS=%USERPROFILE%\\SkillChain-Runs\\${dirName}"
+if not exist "%WS%" mkdir "%WS%"
 
 echo.
 echo   SkillChain Chain Runner
 echo   =======================
 echo   Chain: ${chainName}
 echo   Skills: ${steps.length}
-echo   Steps: ${steps.map(s => s.skill_name).join(' -> ')}
+echo   Workspace: %WS%
 echo.
 
-set "WORKSPACE=%USERPROFILE%\\SkillChain-Runs\\${dirName}"
-if not exist "%WORKSPACE%" mkdir "%WORKSPACE%"
-echo   Workspace: %WORKSPACE%
+:: Write chain.json and CLAUDE.md via PowerShell (avoids batch escaping)
+powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+  "[IO.File]::WriteAllText('%WS%\\${safeName}.chain.json', [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('${chainB64}')));" ^
+  "[IO.File]::WriteAllText('%WS%\\CLAUDE.md', [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('${claudeMdB64}')))"
 
-:: Save chain definition
->${">"} "%WORKSPACE%\\${safeName}.chain.json" (
-${built.json.split('\n').map(line => `echo ${line.replace(/"/g, '').replace(/%/g, '%%').replace(/>/g, '^>').replace(/</g, '^<').replace(/&/g, '^&').replace(/\|/g, '^|')}`).join('\n')}
-)
+cd /d "%WS%"
 
-:: Save CLAUDE.md with chain instructions
->${">"} "%WORKSPACE%\\CLAUDE.md" (
-${claudeMd.split('\n').map(line => `echo ${line.replace(/%/g, '%%').replace(/>/g, '^>').replace(/</g, '^<').replace(/&/g, '^&').replace(/\|/g, '^|') || '.'}`).join('\n')}
-)
-
-echo   Created CLAUDE.md with chain instructions.
-echo.
-
-cd /d "%WORKSPACE%"
-
-:: ============================================================
-:: Runtime detection cascade:
-::   1. Claude Code CLI (best — interactive, reads CLAUDE.md)
-::   2. ANTHROPIC_API_KEY env var (use Python SDK directly)
-::   3. Claude Desktop running (local proxy)
-::   4. Auto-install Claude Code via npm
-::   5. Nothing — show instructions
-:: ============================================================
-
-:: Try 1: Claude Code CLI
+:: Find and launch Claude Code
 where claude >nul 2>nul
 if %errorlevel% equ 0 (
-    echo   [OK] Found Claude Code CLI
-    echo   Launching interactive session...
-    echo   =========================================================================
+    echo   Launching Claude Code...
     echo.
     claude
     goto :done
 )
 
-echo   Claude Code CLI not found. Checking alternatives...
-
-:: Try 2: ANTHROPIC_API_KEY environment variable
-if defined ANTHROPIC_API_KEY (
-    echo   [OK] Found ANTHROPIC_API_KEY
-    echo   Running chain via SkillChain Python SDK...
-    echo   =========================================================================
-    echo.
-    python -c "from skillchain.sdk.mcp_bridge.server import create_server; print('SDK available')" >nul 2>nul
-    if %errorlevel% equ 0 (
-        python -c "import os, json; print('Running with API key:', os.environ.get('ANTHROPIC_API_KEY','')[:8] + '...')"
-        python -m skillchain.sdk.cli mcp serve
-        goto :done
-    )
-    echo   SkillChain SDK not installed. Run: pip install skillchain
-)
-
-:: Try 3: Claude Desktop app (check if running on common ports)
-powershell -NoProfile -Command "try { $r = Invoke-WebRequest -Uri 'http://localhost:1337/health' -TimeoutSec 2 -UseBasicParsing; Write-Host 'CLAUDE_DESKTOP_RUNNING' } catch { }" 2>nul | findstr "CLAUDE_DESKTOP_RUNNING" >nul 2>nul
-if %errorlevel% equ 0 (
-    echo   [OK] Claude Desktop detected
-    echo   Note: For best experience, install Claude Code CLI:
-    echo         npm install -g @anthropic-ai/claude-code
-    echo.
-)
-
-:: Try 4: Auto-install Claude Code
+echo   Claude Code not found.
 where npm >nul 2>nul
 if %errorlevel% equ 0 (
-    echo.
-    echo   Installing Claude Code CLI...
+    echo   Installing Claude Code...
     npm install -g @anthropic-ai/claude-code
-    echo.
     where claude >nul 2>nul
     if %errorlevel% equ 0 (
-        echo   [OK] Claude Code installed successfully
-        echo   Launching interactive session...
-        echo   =========================================================================
+        echo   Launching Claude Code...
         echo.
         claude
         goto :done
     )
 )
 
-:: Try 5: Nothing found
 echo.
-echo   ==========================================
-echo   Could not find a way to run this chain.
-echo   ==========================================
+echo   Could not launch Claude Code.
+echo   Install Node.js from https://nodejs.org then run:
+echo     npm install -g @anthropic-ai/claude-code
 echo.
-echo   Options:
-echo     1. Install Claude Code:  npm install -g @anthropic-ai/claude-code
-echo     2. Set an API key:       set ANTHROPIC_API_KEY=sk-ant-...
-echo     3. Install the SDK:      pip install skillchain
-echo.
-echo   Your chain is saved at: %WORKSPACE%
-echo   Once you have Claude Code or an API key, re-run this script.
-echo.
+echo   Your chain is saved at: %WS%
 
 :done
 echo.
-echo   Session complete. Output saved in: %WORKSPACE%
 pause
 `;
       const blob = new Blob([batScript], { type: 'application/bat' });
@@ -642,90 +586,37 @@ pause
       const shScript = `#!/bin/bash
 # SkillChain Chain Runner: ${chainName}
 
+WS="$HOME/SkillChain-Runs/${dirName}"
+mkdir -p "$WS"
+
 echo ""
 echo "  SkillChain Chain Runner"
-echo "  ======================="
-echo "  Chain: ${chainName}"
-echo "  Skills: ${steps.length}"
-echo "  Steps: ${steps.map(s => s.skill_name).join(' -> ')}"
+echo "  Chain: ${chainName} (${steps.length} skills)"
+echo "  Workspace: $WS"
 echo ""
 
-WORKSPACE="$HOME/SkillChain-Runs/${dirName}"
-mkdir -p "$WORKSPACE"
-echo "  Workspace: $WORKSPACE"
+# Write files via base64 decode (avoids heredoc escaping issues)
+echo '${chainB64}' | base64 -d > "$WS/${safeName}.chain.json"
+echo '${claudeMdB64}' | base64 -d > "$WS/CLAUDE.md"
 
-# Save chain definition
-cat > "$WORKSPACE/${safeName}.chain.json" << 'CHAINEOF'
-${built.json}
-CHAINEOF
+cd "$WS"
 
-# Save CLAUDE.md with chain instructions
-cat > "$WORKSPACE/CLAUDE.md" << 'CLAUDEEOF'
-${claudeMd}
-CLAUDEEOF
-
-echo "  Created CLAUDE.md with chain instructions."
-echo ""
-
-cd "$WORKSPACE"
-
-# Runtime detection cascade
-LAUNCHED=0
-
-# Try 1: Claude Code CLI
+# Find and launch Claude Code
 if command -v claude &> /dev/null; then
-    echo "  [OK] Found Claude Code CLI"
-    echo "  Launching interactive session..."
-    echo "  ========================================================================="
+    echo "  Launching Claude Code..."
     echo ""
     claude
-    LAUNCHED=1
-fi
-
-# Try 2: ANTHROPIC_API_KEY
-if [ "$LAUNCHED" -eq 0 ] && [ -n "$ANTHROPIC_API_KEY" ]; then
-    echo "  [OK] Found ANTHROPIC_API_KEY"
-    echo "  Running chain via SkillChain Python SDK..."
-    echo "  ========================================================================="
-    echo ""
-    if python3 -c "from skillchain.sdk.mcp_bridge.server import create_server" 2>/dev/null; then
-        python3 -m skillchain.sdk.cli mcp serve
-        LAUNCHED=1
-    else
-        echo "  SkillChain SDK not installed. Run: pip install skillchain"
-    fi
-fi
-
-# Try 3: Auto-install Claude Code
-if [ "$LAUNCHED" -eq 0 ] && command -v npm &> /dev/null; then
-    echo "  Installing Claude Code CLI..."
+elif command -v npm &> /dev/null; then
+    echo "  Installing Claude Code..."
     npm install -g @anthropic-ai/claude-code
     if command -v claude &> /dev/null; then
-        echo "  [OK] Claude Code installed"
-        echo "  Launching interactive session..."
-        echo ""
         claude
-        LAUNCHED=1
     fi
+else
+    echo "  Install Node.js from https://nodejs.org then run:"
+    echo "    npm install -g @anthropic-ai/claude-code"
+    echo "  Chain saved at: $WS"
 fi
-
-# Try 4: Nothing found
-if [ "$LAUNCHED" -eq 0 ]; then
-    echo ""
-    echo "  =========================================="
-    echo "  Could not find a way to run this chain."
-    echo "  =========================================="
-    echo ""
-    echo "  Options:"
-    echo "    1. Install Claude Code:  npm install -g @anthropic-ai/claude-code"
-    echo "    2. Set an API key:       export ANTHROPIC_API_KEY=sk-ant-..."
-    echo "    3. Install the SDK:      pip install skillchain"
-    echo ""
-    echo "  Your chain is saved at: $WORKSPACE"
-fi
-
-echo ""
-echo "  Session complete. Output saved in: $WORKSPACE"
 `;
       const blob = new Blob([shScript], { type: 'application/x-sh' });
       const url = URL.createObjectURL(blob);
