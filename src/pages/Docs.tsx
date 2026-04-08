@@ -4,6 +4,7 @@ import CodeBlock from '../components/CodeBlock';
 const guideSections = [
   { id: 'try-skill', label: 'Try a Skill' },
   { id: 'composer', label: 'Composer' },
+  { id: 'evolution', label: 'Skill Evolution' },
   { id: 'skill-format', label: 'Skill Format' },
   { id: 'chains', label: 'Chain Format' },
   { id: 'running', label: 'Running' },
@@ -89,6 +90,49 @@ export default function Docs() {
               <p><strong style={h}>Validate</strong> — Checks for cycles and missing info before running.</p>
               <p><strong style={h}>Run</strong> — Downloads a launcher that opens Claude Code with your chain.</p>
               <p><strong style={h}>Publish On-Chain</strong> — Registers skills and chain on Base mainnet via your wallet.</p>
+            </div>
+          </section>
+
+          {/* Skill Evolution */}
+          <section id="evolution" className="mb-14">
+            <h2 className="text-xl font-semibold mb-4" style={h}>Skill Evolution</h2>
+            <p className="text-sm mb-4" style={t}>
+              Skills aren't static. They evolve through validation:
+            </p>
+            <div className="overflow-x-auto rounded-lg mb-4" style={{ border: '1px solid var(--border)' }}>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr style={{ background: 'var(--bg-card)' }}>
+                    <th className="text-left px-4 py-2" style={t}>Stage</th>
+                    <th className="text-left px-4 py-2" style={t}>What it is</th>
+                    <th className="text-left px-4 py-2" style={t}>Trust needed</th>
+                  </tr>
+                </thead>
+                <tbody style={t}>
+                  {[
+                    ['Prompt', 'Natural language. Anyone can write one.', 'None'],
+                    ['Skill', 'Structured phases with quality gates.', 'None'],
+                    ['Validated', 'Shadow-tested across multiple runs. Trust-scored on-chain.', '5+ validations'],
+                    ['Graduated', 'Proven consistent. 0.95+ similarity across 100+ runs.', '100+ validations'],
+                    ['Compiled', 'Runs as code. No AI needed. Deterministic. Zero token cost.', 'Auto on graduation'],
+                  ].map(([stage, desc, trust]) => (
+                    <tr key={stage} style={{ borderTop: '1px solid var(--border)' }}>
+                      <td className="px-4 py-2 font-medium" style={h}>{stage}</td>
+                      <td className="px-4 py-2">{desc}</td>
+                      <td className="px-4 py-2">{trust}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="text-sm mb-4" style={t}>
+              Base skills are open infrastructure — free to run, free to build on. The value isn't in hiding skills behind a paywall. It's in the trust scores that prove they work, and the composition layer that chains them together.
+            </p>
+            <div className="p-4 rounded-lg" style={{ background: 'rgba(251,191,36,0.04)', border: '1px solid rgba(251,191,36,0.1)' }}>
+              <p className="text-xs font-semibold mb-1" style={{ color: 'var(--gold)' }}>Revenue Split (enforced by smart contract)</p>
+              <p className="text-xs" style={t}>
+                70% to the creator &middot; 15% to the original author (if derivative) &middot; 15% to validators who proved quality. Every TRUST token earned is automatically split on-chain. No invoices. No payment terms. No middleman.
+              </p>
             </div>
           </section>
 

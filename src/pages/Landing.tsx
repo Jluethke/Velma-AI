@@ -157,6 +157,74 @@ function TrustEconomy() {
   );
 }
 
+// ── Skill Evolution Section ────────────────────────────────────────
+
+function SkillEvolution() {
+  const stages = [
+    { label: 'Prompt', desc: 'Natural language. Anyone can write one.', color: 'var(--text-secondary)', opacity: 0.4 },
+    { label: 'Skill', desc: 'Structured phases with quality gates.', color: 'var(--cyan)', opacity: 0.6 },
+    { label: 'Validated', desc: 'Shadow-tested. Trust-scored on-chain.', color: 'var(--purple)', opacity: 0.8 },
+    { label: 'Graduated', desc: 'Proven consistent across hundreds of runs.', color: 'var(--gold)', opacity: 0.9 },
+    { label: 'Compiled', desc: 'Runs as code. No AI needed. Deterministic.', color: 'var(--green)', opacity: 1 },
+  ];
+
+  return (
+    <section className="px-6 py-20 max-w-5xl mx-auto">
+      <div className="text-center mb-12">
+        <h2 className="text-3xl md:text-4xl font-bold mb-3" style={{ color: '#ffffff' }}>
+          Skills{' '}
+          <span style={{ color: 'var(--green)' }}>evolve</span>
+        </h2>
+        <p className="text-sm max-w-2xl mx-auto" style={{ color: 'var(--text-secondary)' }}>
+          A skill starts as natural language. Through validation and consensus, it graduates into executable code — software born from conversation, proven by the network.
+        </p>
+      </div>
+
+      <div className="flex flex-col md:flex-row items-stretch gap-3 mb-8">
+        {stages.map((stage, i) => (
+          <div key={stage.label} className="flex-1 flex items-center gap-3">
+            <div
+              className="flex-1 p-4 rounded-xl text-center"
+              style={{
+                background: `${stage.color}08`,
+                border: `1px solid ${stage.color}20`,
+                opacity: stage.opacity,
+              }}
+            >
+              <div className="text-sm font-bold mb-1" style={{ color: stage.color }}>{stage.label}</div>
+              <div className="text-[10px] leading-relaxed" style={{ color: 'var(--text-secondary)' }}>{stage.desc}</div>
+            </div>
+            {i < stages.length - 1 && (
+              <span className="hidden md:block text-lg" style={{ color: 'var(--text-secondary)', opacity: 0.3 }}>&rarr;</span>
+            )}
+          </div>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="p-4 rounded-xl" style={{ background: 'rgba(56,189,248,0.04)', border: '1px solid rgba(56,189,248,0.1)' }}>
+          <div className="text-xs font-bold mb-2" style={{ color: 'var(--cyan)' }}>Open Infrastructure</div>
+          <p className="text-xs leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
+            Every base skill is free to run. They're the building blocks — open, validated, and available to everyone.
+          </p>
+        </div>
+        <div className="p-4 rounded-xl" style={{ background: 'rgba(251,191,36,0.04)', border: '1px solid rgba(251,191,36,0.1)' }}>
+          <div className="text-xs font-bold mb-2" style={{ color: 'var(--gold)' }}>Revenue Split</div>
+          <p className="text-xs leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
+            70% to creators. 15% to original authors (derivatives). 15% to validators. Enforced by smart contract. No middleman.
+          </p>
+        </div>
+        <div className="p-4 rounded-xl" style={{ background: 'rgba(74,222,128,0.04)', border: '1px solid rgba(74,222,128,0.1)' }}>
+          <div className="text-xs font-bold mb-2" style={{ color: 'var(--green)' }}>AI Independent</div>
+          <p className="text-xs leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
+            Graduated skills compile to code. They run without an LLM — deterministic, instant, zero token cost. Software born from language.
+          </p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 // ── Landing Page ──────────────────────────────────────────────────
 
 export default function Landing() {
@@ -166,6 +234,7 @@ export default function Landing() {
       <SkillShowcase />
       <ComposerPreview />
       <TrustEconomy />
+      <SkillEvolution />
       <FAQ />
     </>
   );
