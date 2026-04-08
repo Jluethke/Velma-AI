@@ -1,0 +1,376 @@
+{
+  "name": "api-test-generator-chain",
+  "description": "Converts an OpenAPI/Swagger specification into a comprehensive integration test suite covering happy paths, edge cases, error scenarios, security vulnerabilities, and load patterns.",
+  "steps": [
+    {
+      "id": "step_1_parse_validate",
+      "skill_name": "openapi-parser-validator",
+      "inputs": {
+        "openapi_spec": "workflow_input.openapi_spec",
+        "strict_mode": true
+      },
+      "outputs": {
+        "validated_spec": "validated_specification",
+        "validation_errors": "validation_error_list",
+        "spec_metadata": "specification_metadata"
+      },
+      "parallel_group": "group_1"
+    },
+    {
+      "id": "step_2_extract_metadata",
+      "skill_name": "endpoint-metadata-extractor",
+      "inputs": {
+        "validated_spec": "step_1_parse_validate.validated_spec",
+        "include_dependencies": true
+      },
+      "outputs": {
+        "endpoint_registry": "endpoints_with_metadata",
+        "parameter_matrix": "parameters_by_endpoint",
+        "auth_matrix": "authentication_requirements",
+        "dependency_graph": "test_sequence_dependencies"
+      },
+      "parallel_group": "group_2"
+    },
+    {
+      "id": "step_3_happy_path",
+      "skill_name": "happy-path-test-generator",
+      "inputs": {
+        "endpoint_registry": "step_2_extract_metadata.endpoint_registry",
+        "parameter_matrix": "step_2_extract_metadata.parameter_matrix",
+        "dependency_graph": "step_2_extract_metadata.dependency_graph"
+      },
+      "outputs": {
+        "happy_path_tests": "valid_endpoint_tests",
+        "test_sequence": "ordered_test_ids"
+      },
+      "parallel_group": "group_3"
+    },
+    {
+      "id": "step_4_edge_cases",
+      "skill_name": "edge-case-test-generator",
+      "inputs": {
+        "parameter_matrix": "step_2_extract_metadata.parameter_matrix",
+        "endpoint_registry": "step_2_extract_metadata.endpoint_registry",
+        "custom_edge_cases": "workflow_input.custom_edge_cases"
+      },
+      "outputs": {
+        "edge_case_tests": "boundary_and_combination_tests",
+        "coverage_matrix": "parameter_coverage_by_type"
+      },
+      "parallel_group": "group_3"
+    },
+    {
+      "id": "step_5_error_security",
+      "skill_name": "error-security-test-generator",
+      "inputs": {
+        "endpoint_registry": "step_2_extract_metadata.endpoint_registry",
+        "auth_matrix": "step_2_extract_metadata.auth_matrix",
+        "parameter_matrix": "step_2_extract_metadata.parameter_matrix",
+        "include_security_tests": "workflow_input.include_security_tests",
+        "include_auth_tests": "workflow_input.include_auth_tests"
+      },
+      "outputs": {
+        "error_path_tests": "error_triggering_test_cases",
+        "security_tests": "vulnerability_test_cases",
+        "error_coverage": "error_code_coverage_matrix",
+        "security_coverage": "vulnerability_coverage_matrix"
+      },
+      "parallel_group": "group_3"
+    },
+    {
+      "id": "step_6_load_tests",
+      "skill_name": "load-performance-test-generator",
+      "inputs": {
+        "endpoint_registry": "step_2_extract_metadata.endpoint_registry",
+        "dependency_graph": "step_2_extract_metadata.dependency_graph",
+        "include_load_tests": "workflow_input.include_load_tests",
+        "performance_sla_ms": "workflow_input.performance_sla_ms"
+      },
+      "outputs": {
+        "load_test_scenarios": "concurrent_and_sustained_load_tests",
+        "performance_assertions": "response_time_and_throughput_thresholds"
+      },
+      "parallel_group": "group_3"
+    },
+    {
+      "id": "step_7_compile_suite",
+      "skill_name": "test-suite-compiler",
+      "inputs": {
+        "happy_path_tests": "step_3_happy_path.happy_path_tests",
+        "edge_case_tests": "step_4_edge_cases.edge_case_tests",
+        "error_path_tests": "step_5_error_security.error_path_tests",
+        "security_tests": "step_5_error_security.security_tests",
+        "load_test_scenarios": "step_6_load_tests.load_test_scenarios",
+        "dependency_graph": "step_2_extract_metadata.dependency_graph",
+        "endpoint_registry": "step_2_extract_metadata.endpoint_registry"
+      },
+      "outputs": {
+        "test_suite": "structured_test_suite_object",
+        "test_execution_plan": "ordered_test_execution_sequence"
+      },
+      "parallel_group": "group_4"
+    },
+    {
+      "id": "step_8_generate_code",
+      "skill_name": "test-code-generator",
+      "inputs": {
+        "test_suite": "step_7_compile_suite.test_suite",
+        "test_framework": "workflow_input.test_framework",
+        "test_execution_plan": "step_7_compile_suite.test_execution_plan",
+        "output_format": "workflow_input.output_format",
+        "performance_sla_ms": "workflow_input.performance_sla_ms"
+      },
+      "outputs": {
+        "test_code": "executable_test_code",
+        "test_files": "framework_specific_test_files"
+      },
+      "parallel_group": "group_5"
+    },
+    {
+      "id": "step_9_documentation",
+      "skill_name": "test-documentation-generator",
+      "inputs": {
+        "test_suite": "step_7_compile_suite.test_suite",
+        "endpoint_registry": "step_2_extract_metadata.endpoint_registry",
+        "error_coverage": "step_5_error_security.error_coverage",
+        "security_coverage": "step_5_error_security.security_coverage",
+        "parameter_coverage": "step_4_edge_cases.coverage_matrix",
+        "test_execution_plan": "step_7_compile_suite.test_execution_plan",
+        "performance_assertions": "step_6_load_tests.performance_assertions"
+      },
+      "outputs": {
+        "test_documentation": "human_readable_test_plan",
+        "coverage_report": "coverage_metrics_and_gaps",
+        "execution_guide": "step_by_step_test_execution_instructions"
+      },
+      "parallel_group": "group_5"
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "step_1_parse_validate",
+      "to_step": "step_2_extract_metadata",
+      "data_type": "validated_openapi_specification",
+      "field_mapping": {
+        "source": "validated_spec",
+        "target": "validated_spec"
+      }
+    },
+    {
+      "from_step": "step_2_extract_metadata",
+      "to_step": "step_3_happy_path",
+      "data_type": "endpoint_metadata_and_parameters",
+      "field_mapping": {
+        "source": [
+          "endpoint_registry",
+          "parameter_matrix"
+        ],
+        "target": [
+          "endpoint_registry",
+          "parameter_matrix"
+        ]
+      }
+    },
+    {
+      "from_step": "step_2_extract_metadata",
+      "to_step": "step_4_edge_cases",
+      "data_type": "endpoint_metadata_and_parameters",
+      "field_mapping": {
+        "source": [
+          "endpoint_registry",
+          "parameter_matrix"
+        ],
+        "target": [
+          "endpoint_registry",
+          "parameter_matrix"
+        ]
+      }
+    },
+    {
+      "from_step": "step_2_extract_metadata",
+      "to_step": "step_5_error_security",
+      "data_type": "endpoint_metadata_auth_and_parameters",
+      "field_mapping": {
+        "source": [
+          "endpoint_registry",
+          "auth_matrix",
+          "parameter_matrix"
+        ],
+        "target": [
+          "endpoint_registry",
+          "auth_matrix",
+          "parameter_matrix"
+        ]
+      }
+    },
+    {
+      "from_step": "step_2_extract_metadata",
+      "to_step": "step_6_load_tests",
+      "data_type": "endpoint_metadata_and_dependencies",
+      "field_mapping": {
+        "source": [
+          "endpoint_registry",
+          "dependency_graph"
+        ],
+        "target": [
+          "endpoint_registry",
+          "dependency_graph"
+        ]
+      }
+    },
+    {
+      "from_step": "step_3_happy_path",
+      "to_step": "step_7_compile_suite",
+      "data_type": "happy_path_test_cases",
+      "field_mapping": {
+        "source": "happy_path_tests",
+        "target": "happy_path_tests"
+      }
+    },
+    {
+      "from_step": "step_4_edge_cases",
+      "to_step": "step_7_compile_suite",
+      "data_type": "edge_case_test_cases",
+      "field_mapping": {
+        "source": "edge_case_tests",
+        "target": "edge_case_tests"
+      }
+    },
+    {
+      "from_step": "step_5_error_security",
+      "to_step": "step_7_compile_suite",
+      "data_type": "error_and_security_test_cases",
+      "field_mapping": {
+        "source": [
+          "error_path_tests",
+          "security_tests"
+        ],
+        "target": [
+          "error_path_tests",
+          "security_tests"
+        ]
+      }
+    },
+    {
+      "from_step": "step_6_load_tests",
+      "to_step": "step_7_compile_suite",
+      "data_type": "load_test_scenarios",
+      "field_mapping": {
+        "source": "load_test_scenarios",
+        "target": "load_test_scenarios"
+      }
+    },
+    {
+      "from_step": "step_7_compile_suite",
+      "to_step": "step_8_generate_code",
+      "data_type": "compiled_test_suite",
+      "field_mapping": {
+        "source": [
+          "test_suite",
+          "test_execution_plan"
+        ],
+        "target": [
+          "test_suite",
+          "test_execution_plan"
+        ]
+      }
+    },
+    {
+      "from_step": "step_7_compile_suite",
+      "to_step": "step_9_documentation",
+      "data_type": "compiled_test_suite",
+      "field_mapping": {
+        "source": [
+          "test_suite",
+          "test_execution_plan"
+        ],
+        "target": [
+          "test_suite",
+          "test_execution_plan"
+        ]
+      }
+    },
+    {
+      "from_step": "step_5_error_security",
+      "to_step": "step_9_documentation",
+      "data_type": "coverage_matrices",
+      "field_mapping": {
+        "source": [
+          "error_coverage",
+          "security_coverage"
+        ],
+        "target": [
+          "error_coverage",
+          "security_coverage"
+        ]
+      }
+    },
+    {
+      "from_step": "step_4_edge_cases",
+      "to_step": "step_9_documentation",
+      "data_type": "parameter_coverage",
+      "field_mapping": {
+        "source": "coverage_matrix",
+        "target": "parameter_coverage"
+      }
+    },
+    {
+      "from_step": "step_6_load_tests",
+      "to_step": "step_9_documentation",
+      "data_type": "performance_assertions",
+      "field_mapping": {
+        "source": "performance_assertions",
+        "target": "performance_assertions"
+      }
+    }
+  ],
+  "entry_inputs": {
+    "openapi_spec": "OpenAPI 3.0 or Swagger 2.0 specification in JSON or YAML format",
+    "test_framework": "Target testing framework (pytest, jest, mocha, postman, or generic)",
+    "include_load_tests": "Whether to generate load/performance test scenarios",
+    "include_auth_tests": "Whether to generate authentication and authorization test cases",
+    "include_security_tests": "Whether to generate security vulnerability test cases",
+    "custom_edge_cases": "Domain-specific edge cases to include",
+    "output_format": "Output format (code, markdown, json, or postman-collection)",
+    "performance_sla_ms": "Expected response time threshold in milliseconds"
+  },
+  "terminal_outputs": {
+    "test_code": "Executable test code in the specified framework",
+    "test_suite": "Structured test suite with metadata and test cases",
+    "test_documentation": "Human-readable test plan with coverage matrix",
+    "coverage_report": "Endpoint, parameter, error code, and security test coverage"
+  },
+  "parallel_groups": [
+    [
+      "step_1_parse_validate"
+    ],
+    [
+      "step_2_extract_metadata"
+    ],
+    [
+      "step_3_happy_path",
+      "step_4_edge_cases",
+      "step_5_error_security",
+      "step_6_load_tests"
+    ],
+    [
+      "step_7_compile_suite"
+    ],
+    [
+      "step_8_generate_code",
+      "step_9_documentation"
+    ]
+  ],
+  "estimated_cost": 9,
+  "critical_path": [
+    "step_1_parse_validate",
+    "step_2_extract_metadata",
+    "step_3_happy_path",
+    "step_4_edge_cases",
+    "step_5_error_security",
+    "step_6_load_tests",
+    "step_7_compile_suite",
+    "step_8_generate_code",
+    "step_9_documentation"
+  ]
+}

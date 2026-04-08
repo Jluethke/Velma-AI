@@ -1,0 +1,218 @@
+{
+  "name": "meeting-notes-to-action-items",
+  "description": "Convert meeting notes into structured action items with owners, deadlines, reminders, and ambiguity flags for review and follow-up.",
+  "steps": [
+    {
+      "id": "step_1",
+      "skill_name": "Parse and Validate Meeting Notes",
+      "inputs": {
+        "meeting_notes": "from_context.meeting_notes",
+        "attendee_list": "from_context.attendee_list"
+      },
+      "outputs": {
+        "parsed_structure": "meeting_sections_and_attendees",
+        "validation_status": "pass_or_fail"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "step_2",
+      "skill_name": "Extract Candidate Action Items",
+      "inputs": {
+        "meeting_notes": "from_context.meeting_notes",
+        "parsed_structure": "step_1.parsed_structure",
+        "attendee_list": "step_1.attendee_list"
+      },
+      "outputs": {
+        "candidate_actions": "raw_action_phrases_with_sources"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "step_3",
+      "skill_name": "Assign Owners",
+      "inputs": {
+        "candidate_actions": "step_2.candidate_actions",
+        "attendee_list": "step_1.attendee_list",
+        "meeting_notes": "from_context.meeting_notes"
+      },
+      "outputs": {
+        "actions_with_owners": "action_items_with_owner_field_and_flags"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "step_4",
+      "skill_name": "Extract and Infer Deadlines",
+      "inputs": {
+        "actions_with_owners": "step_3.actions_with_owners",
+        "meeting_notes": "from_context.meeting_notes",
+        "timezone": "from_context.timezone"
+      },
+      "outputs": {
+        "actions_with_deadlines": "action_items_with_deadline_field_and_flags"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "step_5",
+      "skill_name": "Determine Reminder Schedule",
+      "inputs": {
+        "actions_with_deadlines": "step_4.actions_with_deadlines",
+        "default_reminder_days_before": "from_context.default_reminder_days_before",
+        "timezone": "from_context.timezone"
+      },
+      "outputs": {
+        "actions_with_reminders": "action_items_with_reminder_date_field"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "step_6",
+      "skill_name": "Flag Ambiguities and Assess Priority",
+      "inputs": {
+        "actions_with_reminders": "step_5.actions_with_reminders"
+      },
+      "outputs": {
+        "actions_with_priority": "action_items_with_priority_and_all_flags",
+        "ambiguities_summary": "aggregated_ambiguity_data"
+      },
+      "parallel_group": 6
+    },
+    {
+      "id": "step_7",
+      "skill_name": "Format and Output Structured Action Items",
+      "inputs": {
+        "actions_with_priority": "step_6.actions_with_priority",
+        "ambiguities_summary": "step_6.ambiguities_summary",
+        "timezone": "from_context.timezone",
+        "default_reminder_days_before": "from_context.default_reminder_days_before"
+      },
+      "outputs": {
+        "action_items": "structured_action_items_array",
+        "ambiguities_summary": "final_ambiguities_summary",
+        "processing_notes": "execution_summary_and_assumptions"
+      },
+      "parallel_group": 7
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "step_1",
+      "to_step": "step_2",
+      "data_type": "parsed_meeting_structure",
+      "field_mapping": {
+        "source": "step_1.parsed_structure",
+        "target": "step_2.parsed_structure"
+      }
+    },
+    {
+      "from_step": "step_1",
+      "to_step": "step_3",
+      "data_type": "attendee_list",
+      "field_mapping": {
+        "source": "step_1.attendee_list",
+        "target": "step_3.attendee_list"
+      }
+    },
+    {
+      "from_step": "step_2",
+      "to_step": "step_3",
+      "data_type": "candidate_actions",
+      "field_mapping": {
+        "source": "step_2.candidate_actions",
+        "target": "step_3.candidate_actions"
+      }
+    },
+    {
+      "from_step": "step_3",
+      "to_step": "step_4",
+      "data_type": "actions_with_owners",
+      "field_mapping": {
+        "source": "step_3.actions_with_owners",
+        "target": "step_4.actions_with_owners"
+      }
+    },
+    {
+      "from_step": "step_4",
+      "to_step": "step_5",
+      "data_type": "actions_with_deadlines",
+      "field_mapping": {
+        "source": "step_4.actions_with_deadlines",
+        "target": "step_5.actions_with_deadlines"
+      }
+    },
+    {
+      "from_step": "step_5",
+      "to_step": "step_6",
+      "data_type": "actions_with_reminders",
+      "field_mapping": {
+        "source": "step_5.actions_with_reminders",
+        "target": "step_6.actions_with_reminders"
+      }
+    },
+    {
+      "from_step": "step_6",
+      "to_step": "step_7",
+      "data_type": "actions_with_priority_and_flags",
+      "field_mapping": {
+        "source": "step_6.actions_with_priority",
+        "target": "step_7.actions_with_priority"
+      }
+    },
+    {
+      "from_step": "step_6",
+      "to_step": "step_7",
+      "data_type": "ambiguities_summary",
+      "field_mapping": {
+        "source": "step_6.ambiguities_summary",
+        "target": "step_7.ambiguities_summary"
+      }
+    }
+  ],
+  "entry_inputs": {
+    "meeting_notes": "string (required) - raw meeting notes in any text format",
+    "attendee_list": "array of strings (optional) - meeting attendee names",
+    "default_reminder_days_before": "number (optional, default: 1) - days before deadline to trigger reminder",
+    "timezone": "string (optional, default: UTC) - IANA timezone identifier for deadline conversion"
+  },
+  "terminal_outputs": {
+    "action_items": "array of objects - structured action items with id, description, owner, deadline, reminder_date, priority, ambiguity_flags",
+    "ambiguities_summary": "object - aggregated ambiguity data with total_flagged_items, by_type breakdown, items_requiring_clarification",
+    "processing_notes": "string - summary of processing decisions, assumptions, and ambiguity resolution"
+  },
+  "parallel_groups": [
+    [
+      "step_1"
+    ],
+    [
+      "step_2"
+    ],
+    [
+      "step_3"
+    ],
+    [
+      "step_4"
+    ],
+    [
+      "step_5"
+    ],
+    [
+      "step_6"
+    ],
+    [
+      "step_7"
+    ]
+  ],
+  "estimated_cost": 7,
+  "critical_path": [
+    "step_1",
+    "step_2",
+    "step_3",
+    "step_4",
+    "step_5",
+    "step_6",
+    "step_7"
+  ],
+  "critical_path_length": 7
+}

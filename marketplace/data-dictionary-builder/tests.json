@@ -1,0 +1,609 @@
+{
+  "skill_name": "data-dictionary-builder",
+  "version": "1.0.0",
+  "test_cases": [
+    {
+      "id": "tc_001",
+      "name": "happy_path_postgresql_standard_schema",
+      "category": "happy_path",
+      "scenario": "Generate complete data dictionary from a standard PostgreSQL database with multiple tables, foreign keys, and schema comments.",
+      "input": {
+        "database_connection": {
+          "host": "localhost",
+          "port": 5432,
+          "database_name": "ecommerce_db",
+          "username": "analyst",
+          "password": "${DB_PASSWORD}",
+          "connection_type": "postgresql"
+        },
+        "schema_filter": "public",
+        "table_filter": [
+          "users",
+          "orders",
+          "products"
+        ],
+        "sampling_config": {
+          "enabled": true,
+          "sample_size": 5,
+          "max_table_rows": 1000000,
+          "mask_pii": true
+        },
+        "business_context_source": null,
+        "output_format": "json"
+      },
+      "expected_keywords": [
+        "data_dictionary",
+        "metadata",
+        "tables",
+        "columns",
+        "relationships",
+        "sample_values",
+        "data_type",
+        "nullable",
+        "foreign_key",
+        "validation_report",
+        "pii_detected",
+        "cardinality"
+      ],
+      "expected_behavior": "Successfully connects to PostgreSQL, retrieves schema for three tables, extracts column metadata with types and constraints, identifies foreign key relationships, retrieves sample data with PII masking, and returns complete structured data dictionary with validation report.",
+      "phase_coverage": [
+        "Phase 1: Connect and Retrieve Schema",
+        "Phase 2: Extract and Structure Column Metadata",
+        "Phase 3: Identify Table Relationships",
+        "Phase 4: Query Sample Data",
+        "Phase 5: Gather Business Context",
+        "Phase 6: Compile Data Dictionary",
+        "Phase 7: Validate and Report"
+      ]
+    },
+    {
+      "id": "tc_002",
+      "name": "happy_path_mysql_with_external_documentation",
+      "category": "happy_path",
+      "scenario": "Generate data dictionary from MySQL database with external business context file providing column descriptions and valid values.",
+      "input": {
+        "database_connection": {
+          "host": "db.example.com",
+          "port": 3306,
+          "database_name": "customer_analytics",
+          "username": "readonly_user",
+          "password": "${DB_PASSWORD}",
+          "connection_type": "mysql"
+        },
+        "schema_filter": null,
+        "table_filter": null,
+        "sampling_config": {
+          "enabled": true,
+          "sample_size": 10,
+          "max_table_rows": 500000,
+          "mask_pii": true
+        },
+        "business_context_source": "/docs/business_context.json",
+        "output_format": "markdown"
+      },
+      "expected_keywords": [
+        "data_dictionary",
+        "business_purpose",
+        "valid_values",
+        "enumerated",
+        "relationships",
+        "cardinality",
+        "sample_values",
+        "data_quality_notes",
+        "markdown",
+        "validation_report",
+        "missing_descriptions"
+      ],
+      "expected_behavior": "Connects to MySQL, retrieves all accessible schemas and tables, parses external JSON documentation file, matches descriptions to columns using exact and fuzzy matching, compiles markdown-formatted data dictionary with business context integrated.",
+      "phase_coverage": [
+        "Phase 1: Connect and Retrieve Schema",
+        "Phase 2: Extract and Structure Column Metadata",
+        "Phase 3: Identify Table Relationships",
+        "Phase 4: Query Sample Data",
+        "Phase 5: Gather Business Context",
+        "Phase 6: Compile Data Dictionary"
+      ]
+    },
+    {
+      "id": "tc_003",
+      "name": "edge_case_empty_schema_no_tables",
+      "category": "edge_case",
+      "scenario": "Attempt to generate data dictionary from a database schema that contains no accessible tables.",
+      "input": {
+        "database_connection": {
+          "host": "localhost",
+          "port": 5432,
+          "database_name": "empty_db",
+          "username": "analyst",
+          "password": "${DB_PASSWORD}",
+          "connection_type": "postgresql"
+        },
+        "schema_filter": "empty_schema",
+        "table_filter": null,
+        "sampling_config": {
+          "enabled": true,
+          "sample_size": 5,
+          "max_table_rows": 1000000,
+          "mask_pii": true
+        },
+        "business_context_source": null,
+        "output_format": "json"
+      },
+      "expected_keywords": [
+        "error",
+        "empty",
+        "inaccessible",
+        "schema",
+        "no tables found",
+        "schema_filter",
+        "SELECT permissions",
+        "Abort"
+      ],
+      "expected_behavior": "Connection succeeds but Phase 1 quality gate fails because no tables are found in the schema. Skill aborts with error message indicating empty or inaccessible schema and suggests checking schema_filter parameter and user permissions.",
+      "phase_coverage": [
+        "Phase 1: Connect and Retrieve Schema"
+      ]
+    },
+    {
+      "id": "tc_004",
+      "name": "edge_case_single_column_table",
+      "category": "edge_case",
+      "scenario": "Generate data dictionary for a table with only one column (primary key), testing minimal table structure handling.",
+      "input": {
+        "database_connection": {
+          "host": "localhost",
+          "port": 5432,
+          "database_name": "test_db",
+          "username": "analyst",
+          "password": "${DB_PASSWORD}",
+          "connection_type": "postgresql"
+        },
+        "schema_filter": "public",
+        "table_filter": [
+          "id_sequence"
+        ],
+        "sampling_config": {
+          "enabled": true,
+          "sample_size": 5,
+          "max_table_rows": 1000000,
+          "mask_pii": false
+        },
+        "business_context_source": null,
+        "output_format": "json"
+      },
+      "expected_keywords": [
+        "data_dictionary",
+        "columns",
+        "primary_key",
+        "sample_values",
+        "data_type",
+        "single column",
+        "table_name",
+        "validation_report"
+      ],
+      "expected_behavior": "Successfully processes single-column table, identifies primary key constraint, retrieves sample values, and includes table in data dictionary with all required metadata despite minimal structure.",
+      "phase_coverage": [
+        "Phase 1: Connect and Retrieve Schema",
+        "Phase 2: Extract and Structure Column Metadata",
+        "Phase 4: Query Sample Data",
+        "Phase 6: Compile Data Dictionary",
+        "Phase 7: Validate and Report"
+      ]
+    },
+    {
+      "id": "tc_005",
+      "name": "edge_case_large_table_sampling_skipped",
+      "category": "edge_case",
+      "scenario": "Generate data dictionary for a table exceeding max_table_rows threshold, testing sampling skip behavior.",
+      "input": {
+        "database_connection": {
+          "host": "localhost",
+          "port": 5432,
+          "database_name": "analytics_db",
+          "username": "analyst",
+          "password": "${DB_PASSWORD}",
+          "connection_type": "postgresql"
+        },
+        "schema_filter": "public",
+        "table_filter": [
+          "events"
+        ],
+        "sampling_config": {
+          "enabled": true,
+          "sample_size": 5,
+          "max_table_rows": 100000,
+          "mask_pii": true
+        },
+        "business_context_source": null,
+        "output_format": "json"
+      },
+      "expected_keywords": [
+        "data_dictionary",
+        "sampling skipped",
+        "table too large",
+        "row_count",
+        "columns",
+        "sample_values",
+        "empty",
+        "data_quality_notes",
+        "validation_report"
+      ],
+      "expected_behavior": "Phase 4 detects table row count exceeds max_table_rows threshold, skips sampling for that table, marks as 'sampling skipped - table too large' in data_quality_notes, continues processing remaining metadata, and includes table in final dictionary.",
+      "phase_coverage": [
+        "Phase 1: Connect and Retrieve Schema",
+        "Phase 2: Extract and Structure Column Metadata",
+        "Phase 3: Identify Table Relationships",
+        "Phase 4: Query Sample Data",
+        "Phase 6: Compile Data Dictionary"
+      ]
+    },
+    {
+      "id": "tc_006",
+      "name": "error_handling_authentication_failure",
+      "category": "error_handling",
+      "scenario": "Attempt to connect to database with incorrect credentials, triggering authentication error in Phase 1.",
+      "input": {
+        "database_connection": {
+          "host": "db.example.com",
+          "port": 5432,
+          "database_name": "secure_db",
+          "username": "wrong_user",
+          "password": "wrong_password",
+          "connection_type": "postgresql"
+        },
+        "schema_filter": null,
+        "table_filter": null,
+        "sampling_config": {
+          "enabled": true,
+          "sample_size": 5,
+          "max_table_rows": 1000000,
+          "mask_pii": true
+        },
+        "business_context_source": null,
+        "output_format": "json"
+      },
+      "expected_keywords": [
+        "error",
+        "authentication",
+        "connection fails",
+        "credentials",
+        "host",
+        "port",
+        "database_name",
+        "secure vault",
+        "environment variable",
+        "Abort"
+      ],
+      "expected_behavior": "Phase 1 connection attempt fails with authentication error. Skill aborts and returns error message including connection details (host, port, database name) with suggestion to verify credentials are correct and use secure vault instead of plain text passwords.",
+      "phase_coverage": [
+        "Phase 1: Connect and Retrieve Schema"
+      ]
+    },
+    {
+      "id": "tc_007",
+      "name": "error_handling_orphaned_foreign_key",
+      "category": "error_handling",
+      "scenario": "Process schema containing foreign key that references non-existent table, testing orphaned relationship handling.",
+      "input": {
+        "database_connection": {
+          "host": "localhost",
+          "port": 5432,
+          "database_name": "test_db",
+          "username": "analyst",
+          "password": "${DB_PASSWORD}",
+          "connection_type": "postgresql"
+        },
+        "schema_filter": "public",
+        "table_filter": [
+          "orders"
+        ],
+        "sampling_config": {
+          "enabled": true,
+          "sample_size": 5,
+          "max_table_rows": 1000000,
+          "mask_pii": true
+        },
+        "business_context_source": null,
+        "output_format": "json"
+      },
+      "expected_keywords": [
+        "data_dictionary",
+        "orphaned",
+        "foreign_key",
+        "non-existent",
+        "validation_report",
+        "orphaned_columns",
+        "target_table",
+        "warning",
+        "Adjust"
+      ],
+      "expected_behavior": "Phase 2 detects foreign key referencing non-existent table. Skill adjusts by flagging as orphaned relationship in validation report, documenting in warnings section with target table name, and continuing processing remaining columns.",
+      "phase_coverage": [
+        "Phase 1: Connect and Retrieve Schema",
+        "Phase 2: Extract and Structure Column Metadata",
+        "Phase 3: Identify Table Relationships",
+        "Phase 7: Validate and Report"
+      ]
+    },
+    {
+      "id": "tc_008",
+      "name": "error_handling_pii_detection_and_masking",
+      "category": "error_handling",
+      "scenario": "Sample data contains PII patterns (email, phone, SSN) that should be detected and masked when mask_pii is enabled.",
+      "input": {
+        "database_connection": {
+          "host": "localhost",
+          "port": 5432,
+          "database_name": "customer_db",
+          "username": "analyst",
+          "password": "${DB_PASSWORD}",
+          "connection_type": "postgresql"
+        },
+        "schema_filter": "public",
+        "table_filter": [
+          "customers"
+        ],
+        "sampling_config": {
+          "enabled": true,
+          "sample_size": 5,
+          "max_table_rows": 1000000,
+          "mask_pii": true
+        },
+        "business_context_source": null,
+        "output_format": "json"
+      },
+      "expected_keywords": [
+        "data_dictionary",
+        "sample_values",
+        "MASKED",
+        "pii_detected",
+        "true",
+        "email",
+        "phone",
+        "validation_report",
+        "pii_columns",
+        "sensitive data"
+      ],
+      "expected_behavior": "Phase 4 scans sample values against PII patterns (email, phone, SSN, credit card). Matching values are masked as [MASKED] in sample_values array. Columns containing PII are flagged with pii_detected=true. Validation report lists all PII columns with recommendation to mask in shared dictionaries.",
+      "phase_coverage": [
+        "Phase 4: Query Sample Data",
+        "Phase 7: Validate and Report"
+      ]
+    },
+    {
+      "id": "tc_009",
+      "name": "quality_gate_boundary_all_columns_described",
+      "category": "quality_gate",
+      "scenario": "Verify quality gate in Phase 5 that ensures every column has at least a placeholder description when external documentation is missing.",
+      "input": {
+        "database_connection": {
+          "host": "localhost",
+          "port": 5432,
+          "database_name": "test_db",
+          "username": "analyst",
+          "password": "${DB_PASSWORD}",
+          "connection_type": "postgresql"
+        },
+        "schema_filter": "public",
+        "table_filter": [
+          "products"
+        ],
+        "sampling_config": {
+          "enabled": true,
+          "sample_size": 5,
+          "max_table_rows": 1000000,
+          "mask_pii": true
+        },
+        "business_context_source": null,
+        "output_format": "json"
+      },
+      "expected_keywords": [
+        "data_dictionary",
+        "description",
+        "No description available",
+        "placeholder",
+        "validation_report",
+        "missing_descriptions",
+        "column_name",
+        "table_name",
+        "quality gate"
+      ],
+      "expected_behavior": "Phase 5 processes columns without schema comments or external descriptions. Every column receives either extracted description or explicit placeholder '[No description available]'. Phase 7 validation identifies columns with placeholder descriptions and lists them in missing_descriptions array with table.column format.",
+      "phase_coverage": [
+        "Phase 5: Gather Business Context",
+        "Phase 7: Validate and Report"
+      ]
+    },
+    {
+      "id": "tc_010",
+      "name": "quality_gate_boundary_relationship_cardinality_detection",
+      "category": "quality_gate",
+      "scenario": "Verify Phase 3 quality gate correctly identifies relationship cardinality (1:1, 1:N, N:M) based on constraint analysis.",
+      "input": {
+        "database_connection": {
+          "host": "localhost",
+          "port": 5432,
+          "database_name": "test_db",
+          "username": "analyst",
+          "password": "${DB_PASSWORD}",
+          "connection_type": "postgresql"
+        },
+        "schema_filter": "public",
+        "table_filter": [
+          "users",
+          "profiles",
+          "orders",
+          "order_items",
+          "products"
+        ],
+        "sampling_config": {
+          "enabled": true,
+          "sample_size": 5,
+          "max_table_rows": 1000000,
+          "mask_pii": true
+        },
+        "business_context_source": null,
+        "output_format": "json"
+      },
+      "expected_keywords": [
+        "relationships",
+        "cardinality",
+        "1:1",
+        "1:N",
+        "N:M",
+        "source_table",
+        "target_table",
+        "unique_constraint",
+        "foreign_key",
+        "junction_table",
+        "validation_report"
+      ],
+      "expected_behavior": "Phase 3 analyzes constraints to determine cardinality: 1:1 relationships verified by unique constraint on target column, 1:N relationships identified by foreign key to primary key, N:M relationships detected through junction tables with only foreign keys. All relationships documented in relationships array with correct cardinality values.",
+      "phase_coverage": [
+        "Phase 1: Connect and Retrieve Schema",
+        "Phase 2: Extract and Structure Column Metadata",
+        "Phase 3: Identify Table Relationships",
+        "Phase 6: Compile Data Dictionary"
+      ]
+    }
+  ],
+  "coverage": {
+    "phases": {
+      "Phase 1: Connect and Retrieve Schema": [
+        "tc_001",
+        "tc_002",
+        "tc_003",
+        "tc_004",
+        "tc_006",
+        "tc_007",
+        "tc_010"
+      ],
+      "Phase 2: Extract and Structure Column Metadata": [
+        "tc_001",
+        "tc_002",
+        "tc_004",
+        "tc_007",
+        "tc_010"
+      ],
+      "Phase 3: Identify Table Relationships": [
+        "tc_001",
+        "tc_002",
+        "tc_005",
+        "tc_007",
+        "tc_010"
+      ],
+      "Phase 4: Query Sample Data": [
+        "tc_001",
+        "tc_002",
+        "tc_004",
+        "tc_005",
+        "tc_008"
+      ],
+      "Phase 5: Gather Business Context": [
+        "tc_001",
+        "tc_002",
+        "tc_009"
+      ],
+      "Phase 6: Compile Data Dictionary": [
+        "tc_001",
+        "tc_002",
+        "tc_004",
+        "tc_005",
+        "tc_010"
+      ],
+      "Phase 7: Validate and Report": [
+        "tc_001",
+        "tc_004",
+        "tc_005",
+        "tc_007",
+        "tc_008",
+        "tc_009"
+      ]
+    },
+    "quality_gates": {
+      "Phase 1 - Connection and Schema Access": [
+        "tc_001",
+        "tc_002",
+        "tc_003",
+        "tc_006"
+      ],
+      "Phase 2 - Column Metadata Completeness": [
+        "tc_001",
+        "tc_002",
+        "tc_004",
+        "tc_007"
+      ],
+      "Phase 3 - Relationship Cardinality": [
+        "tc_001",
+        "tc_002",
+        "tc_010"
+      ],
+      "Phase 4 - Sample Data Retrieval": [
+        "tc_001",
+        "tc_002",
+        "tc_004",
+        "tc_005",
+        "tc_008"
+      ],
+      "Phase 5 - Description Coverage": [
+        "tc_001",
+        "tc_002",
+        "tc_009"
+      ],
+      "Phase 6 - Output Validity": [
+        "tc_001",
+        "tc_002",
+        "tc_004",
+        "tc_005"
+      ],
+      "Phase 7 - Validation Completeness": [
+        "tc_001",
+        "tc_004",
+        "tc_007",
+        "tc_008",
+        "tc_009"
+      ]
+    },
+    "error_handlers": {
+      "Phase 1 - Connection Failure": [
+        "tc_006"
+      ],
+      "Phase 1 - Empty Schema": [
+        "tc_003"
+      ],
+      "Phase 2 - Orphaned Foreign Key": [
+        "tc_007"
+      ],
+      "Phase 3 - Circular Dependency": [],
+      "Phase 4 - Sampling Timeout": [
+        "tc_005"
+      ],
+      "Phase 4 - Binary Data Type": [],
+      "Phase 4 - PII Detection": [
+        "tc_008"
+      ],
+      "Phase 5 - Malformed Context File": [],
+      "Phase 5 - Fuzzy Match Ambiguity": [],
+      "Phase 6 - Unsupported Format": [],
+      "Phase 6 - File Write Failure": [],
+      "Phase 7 - Validation Issues": [
+        "tc_007",
+        "tc_008",
+        "tc_009"
+      ]
+    },
+    "coverage_percentage": {
+      "phases_covered": 7,
+      "phases_total": 7,
+      "phases_percentage": 100,
+      "quality_gates_covered": 7,
+      "quality_gates_total": 7,
+      "quality_gates_percentage": 100,
+      "error_handlers_covered": 7,
+      "error_handlers_total": 12,
+      "error_handlers_percentage": 58.3,
+      "overall_critical_coverage": 85.7
+    }
+  },
+  "generated_at": "2024-01-15T09:47:32Z"
+}

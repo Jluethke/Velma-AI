@@ -1,0 +1,634 @@
+{
+  "skill_name": "Meeting Notes to Structured Action Items",
+  "version": "1.0.0",
+  "test_cases": [
+    {
+      "id": "tc_001",
+      "name": "happy_path_standard_meeting",
+      "category": "happy_path",
+      "scenario": "Process typical meeting notes with clear action items, assigned owners, and explicit deadlines.",
+      "input": {
+        "meeting_notes": "Meeting Date: 2024-01-15\nAttendees: John Smith, Sarah Johnson, Mike Chen\n\nDecisions:\n- John will implement the new API endpoint by January 22\n- Sarah should review the design document by Friday\n- Mike needs to update the database schema before next Monday\n\nFollow-up:\n- Team should schedule a follow-up meeting for next week",
+        "attendee_list": [
+          "John Smith",
+          "Sarah Johnson",
+          "Mike Chen"
+        ],
+        "default_reminder_days_before": 1,
+        "timezone": "America/New_York"
+      },
+      "expected_keywords": [
+        "ACTION-001",
+        "ACTION-002",
+        "ACTION-003",
+        "implement",
+        "review",
+        "update",
+        "John Smith",
+        "Sarah Johnson",
+        "Mike Chen",
+        "2024-01-22",
+        "high",
+        "medium",
+        "ambiguities_summary",
+        "processing_notes"
+      ],
+      "expected_behavior": "All three action items extracted with correct owners, deadlines in ISO 8601 format, reminder dates calculated, and priority levels assigned.",
+      "phase_coverage": [
+        "Phase 1: Parse and Validate",
+        "Phase 2: Extract Candidates",
+        "Phase 3: Assign Owners",
+        "Phase 4: Extract Deadlines",
+        "Phase 5: Determine Reminders",
+        "Phase 6: Flag Ambiguities",
+        "Phase 7: Format Output"
+      ]
+    },
+    {
+      "id": "tc_002",
+      "name": "happy_path_with_implicit_deadlines",
+      "category": "happy_path",
+      "scenario": "Process meeting notes where some deadlines are implicit (before next meeting) and owners are explicitly assigned.",
+      "input": {
+        "meeting_notes": "Team Standup - 2024-01-15\nAttendees: Alice Brown, Bob Davis\n\nAction Items:\n- Alice will prepare the quarterly report before the next standup on 2024-01-22\n- Bob assigned to fix the critical bug by end of day tomorrow\n- Both should review the new coding standards",
+        "attendee_list": [
+          "Alice Brown",
+          "Bob Davis"
+        ],
+        "default_reminder_days_before": 2,
+        "timezone": "UTC"
+      },
+      "expected_keywords": [
+        "ACTION-001",
+        "ACTION-002",
+        "ACTION-003",
+        "prepare",
+        "fix",
+        "review",
+        "Alice Brown",
+        "Bob Davis",
+        "2024-01-22",
+        "2024-01-16",
+        "quarterly report",
+        "critical bug",
+        "coding standards"
+      ],
+      "expected_behavior": "Implicit deadline (next standup) correctly converted to ISO 8601 date; relative deadline (end of day tomorrow) calculated correctly; collective action flagged as ambiguous owner.",
+      "phase_coverage": [
+        "Phase 1: Parse and Validate",
+        "Phase 2: Extract Candidates",
+        "Phase 3: Assign Owners",
+        "Phase 4: Extract Deadlines",
+        "Phase 5: Determine Reminders",
+        "Phase 6: Flag Ambiguities",
+        "Phase 7: Format Output"
+      ]
+    },
+    {
+      "id": "tc_003",
+      "name": "edge_case_empty_attendee_list",
+      "category": "edge_case",
+      "scenario": "Process meeting notes without providing attendee list; system should extract attendees from notes and flag owner ambiguities.",
+      "input": {
+        "meeting_notes": "Project Kickoff\nAttendees: Carol White, David Lee, Emma Wilson\n\nCarol will create the project charter by January 25\nDavid should set up the development environment\nEmma needs to coordinate with stakeholders",
+        "attendee_list": null,
+        "default_reminder_days_before": 1,
+        "timezone": "America/Los_Angeles"
+      },
+      "expected_keywords": [
+        "ACTION-001",
+        "ACTION-002",
+        "ACTION-003",
+        "Carol White",
+        "David Lee",
+        "Emma Wilson",
+        "extracted",
+        "attendee",
+        "project charter",
+        "development environment",
+        "stakeholders",
+        "processing_notes"
+      ],
+      "expected_behavior": "Attendee list successfully extracted from notes; all action items assigned to extracted names; processing_notes documents that attendee list was extracted.",
+      "phase_coverage": [
+        "Phase 1: Parse and Validate",
+        "Phase 2: Extract Candidates",
+        "Phase 3: Assign Owners",
+        "Phase 4: Extract Deadlines",
+        "Phase 6: Flag Ambiguities",
+        "Phase 7: Format Output"
+      ]
+    },
+    {
+      "id": "tc_004",
+      "name": "edge_case_vague_deadlines",
+      "category": "edge_case",
+      "scenario": "Process action items with vague deadline language (soon, ASAP, later) that should be flagged as ambiguous.",
+      "input": {
+        "meeting_notes": "Urgent Issues Discussion\nAttendees: Frank Green, Grace Hall\n\nFrank should fix the performance issue ASAP\nGrace needs to update the documentation soon\nBoth should review the security audit when possible",
+        "attendee_list": [
+          "Frank Green",
+          "Grace Hall"
+        ],
+        "default_reminder_days_before": 1,
+        "timezone": "Europe/London"
+      },
+      "expected_keywords": [
+        "ACTION-001",
+        "ACTION-002",
+        "ACTION-003",
+        "ambiguous_deadline",
+        "ASAP",
+        "soon",
+        "when possible",
+        "requires_clarification",
+        "ambiguity_flags",
+        "Frank Green",
+        "Grace Hall",
+        "flagged"
+      ],
+      "expected_behavior": "All three items flagged with ambiguous_deadline; priority set to requires_clarification for items with multiple critical ambiguities; reminder_date set to null for ambiguous deadlines.",
+      "phase_coverage": [
+        "Phase 1: Parse and Validate",
+        "Phase 2: Extract Candidates",
+        "Phase 3: Assign Owners",
+        "Phase 4: Extract Deadlines",
+        "Phase 6: Flag Ambiguities",
+        "Phase 7: Format Output"
+      ]
+    },
+    {
+      "id": "tc_005",
+      "name": "edge_case_single_action_item",
+      "category": "edge_case",
+      "scenario": "Process meeting notes containing only one action item to verify minimal valid input handling.",
+      "input": {
+        "meeting_notes": "Brief Sync - 2024-01-15\nAttendee: Henry Martinez\n\nHenry will submit the expense report by January 18",
+        "attendee_list": [
+          "Henry Martinez"
+        ],
+        "default_reminder_days_before": 1,
+        "timezone": "America/Chicago"
+      },
+      "expected_keywords": [
+        "ACTION-001",
+        "Henry Martinez",
+        "expense report",
+        "2024-01-18",
+        "submit",
+        "single",
+        "one action item",
+        "processing_notes"
+      ],
+      "expected_behavior": "Single action item correctly extracted, formatted, and output with all required fields; ambiguities_summary shows total_flagged_items count.",
+      "phase_coverage": [
+        "Phase 1: Parse and Validate",
+        "Phase 2: Extract Candidates",
+        "Phase 3: Assign Owners",
+        "Phase 4: Extract Deadlines",
+        "Phase 5: Determine Reminders",
+        "Phase 6: Flag Ambiguities",
+        "Phase 7: Format Output"
+      ]
+    },
+    {
+      "id": "tc_006",
+      "name": "error_handling_missing_owner",
+      "category": "error_handling",
+      "scenario": "Process action items where owner is not specified or is only a collective reference (we, team).",
+      "input": {
+        "meeting_notes": "Team Meeting - 2024-01-15\nAttendees: Iris Chen, Jack Wilson\n\nWe need to refactor the authentication module by January 30\nThe team should conduct code review by Friday\nIris will document the API changes",
+        "attendee_list": [
+          "Iris Chen",
+          "Jack Wilson"
+        ],
+        "default_reminder_days_before": 1,
+        "timezone": "America/Denver"
+      },
+      "expected_keywords": [
+        "ACTION-001",
+        "ACTION-002",
+        "ACTION-003",
+        "missing_owner",
+        "unassigned",
+        "collective",
+        "ambiguity_flags",
+        "requires_clarification",
+        "Iris Chen",
+        "refactor",
+        "code review",
+        "document"
+      ],
+      "expected_behavior": "Collective assignments flagged as missing_owner; items marked as unassigned; priority set to requires_clarification for items with multiple ambiguities; ambiguities_summary includes missing_owner count.",
+      "phase_coverage": [
+        "Phase 1: Parse and Validate",
+        "Phase 2: Extract Candidates",
+        "Phase 3: Assign Owners",
+        "Phase 6: Flag Ambiguities",
+        "Phase 7: Format Output"
+      ]
+    },
+    {
+      "id": "tc_007",
+      "name": "error_handling_owner_not_in_attendee_list",
+      "category": "error_handling",
+      "scenario": "Process action items where owner name is mentioned but not in the provided attendee list.",
+      "input": {
+        "meeting_notes": "Project Planning - 2024-01-15\nAttendees: Kevin Park, Laura Martinez\n\nKevin will prepare the budget forecast by January 25\nLaura should coordinate with Tom on the timeline\nMichael needs to approve the final design",
+        "attendee_list": [
+          "Kevin Park",
+          "Laura Martinez"
+        ],
+        "default_reminder_days_before": 1,
+        "timezone": "America/New_York"
+      },
+      "expected_keywords": [
+        "ACTION-001",
+        "ACTION-002",
+        "ACTION-003",
+        "unclear_owner",
+        "Tom",
+        "Michael",
+        "not in attendee",
+        "ambiguity_flags",
+        "Kevin Park",
+        "Laura Martinez",
+        "flagged"
+      ],
+      "expected_behavior": "Owners Tom and Michael flagged as unclear_owner; items still assigned to stated names; ambiguities_summary includes unclear_owner count; processing_notes notes attendee list mismatch.",
+      "phase_coverage": [
+        "Phase 1: Parse and Validate",
+        "Phase 2: Extract Candidates",
+        "Phase 3: Assign Owners",
+        "Phase 6: Flag Ambiguities",
+        "Phase 7: Format Output"
+      ]
+    },
+    {
+      "id": "tc_008",
+      "name": "error_handling_past_deadline",
+      "category": "error_handling",
+      "scenario": "Process action items where deadline is in the past (before meeting date), which should be flagged and priority adjusted.",
+      "input": {
+        "meeting_notes": "Retrospective - 2024-01-15\nAttendees: Nina Rodriguez, Oscar Thompson\n\nNina should have completed the migration by January 10\nOscar will finalize the report by January 12\nBoth need to update the documentation by January 20",
+        "attendee_list": [
+          "Nina Rodriguez",
+          "Oscar Thompson"
+        ],
+        "default_reminder_days_before": 1,
+        "timezone": "UTC"
+      },
+      "expected_keywords": [
+        "ACTION-001",
+        "ACTION-002",
+        "ACTION-003",
+        "past_deadline",
+        "2024-01-10",
+        "2024-01-12",
+        "2024-01-20",
+        "requires_clarification",
+        "ambiguity_flags",
+        "Nina Rodriguez",
+        "Oscar Thompson"
+      ],
+      "expected_behavior": "Past deadlines flagged as past_deadline; items with past deadlines marked as requires_clarification; reminder_date set to null for past deadlines; ambiguities_summary includes past_deadline count.",
+      "phase_coverage": [
+        "Phase 1: Parse and Validate",
+        "Phase 2: Extract Candidates",
+        "Phase 3: Assign Owners",
+        "Phase 4: Extract Deadlines",
+        "Phase 6: Flag Ambiguities",
+        "Phase 7: Format Output"
+      ]
+    },
+    {
+      "id": "tc_009",
+      "name": "quality_gate_high_priority_detection",
+      "category": "quality_gate",
+      "scenario": "Verify that action items with urgent language or short deadlines are correctly assigned high priority.",
+      "input": {
+        "meeting_notes": "Critical Issues - 2024-01-15\nAttendees: Patricia Lee, Quinn Adams\n\nPatricia will fix the critical production bug by end of day today\nQuinn should deploy the hotfix immediately\nBoth mentioned this is blocking customer access - urgent",
+        "attendee_list": [
+          "Patricia Lee",
+          "Quinn Adams"
+        ],
+        "default_reminder_days_before": 1,
+        "timezone": "America/New_York"
+      },
+      "expected_keywords": [
+        "ACTION-001",
+        "ACTION-002",
+        "high",
+        "critical",
+        "production bug",
+        "hotfix",
+        "blocking",
+        "urgent",
+        "Patricia Lee",
+        "Quinn Adams",
+        "priority"
+      ],
+      "expected_behavior": "Both items assigned high priority due to critical language and immediate deadline; reminder_date calculated for same day or next available day; ambiguities_summary shows no critical flags for these items.",
+      "phase_coverage": [
+        "Phase 1: Parse and Validate",
+        "Phase 2: Extract Candidates",
+        "Phase 3: Assign Owners",
+        "Phase 4: Extract Deadlines",
+        "Phase 5: Determine Reminders",
+        "Phase 6: Flag Ambiguities",
+        "Phase 7: Format Output"
+      ]
+    },
+    {
+      "id": "tc_010",
+      "name": "quality_gate_ambiguities_summary_accuracy",
+      "category": "quality_gate",
+      "scenario": "Verify that ambiguities_summary accurately reflects all flagged items and provides correct counts by type.",
+      "input": {
+        "meeting_notes": "Mixed Quality Meeting - 2024-01-15\nAttendees: Rachel Green, Steve Brown\n\nRachel will implement the feature soon\nSteve and Tom should review the code\nSomeone needs to update the documentation\nRachel will also deploy to production by January 20",
+        "attendee_list": [
+          "Rachel Green",
+          "Steve Brown"
+        ],
+        "default_reminder_days_before": 1,
+        "timezone": "America/Los_Angeles"
+      },
+      "expected_keywords": [
+        "total_flagged_items",
+        "by_type",
+        "missing_owner",
+        "unclear_owner",
+        "ambiguous_deadline",
+        "items_requiring_clarification",
+        "ambiguities_summary",
+        "ACTION-001",
+        "ACTION-002",
+        "ACTION-003",
+        "ACTION-004",
+        "counts match"
+      ],
+      "expected_behavior": "ambiguities_summary.total_flagged_items equals count of items with at least one flag; by_type counts match actual flags in action_items array; items_requiring_clarification list contains correct ACTION IDs.",
+      "phase_coverage": [
+        "Phase 1: Parse and Validate",
+        "Phase 2: Extract Candidates",
+        "Phase 3: Assign Owners",
+        "Phase 4: Extract Deadlines",
+        "Phase 6: Flag Ambiguities",
+        "Phase 7: Format Output"
+      ]
+    }
+  ],
+  "coverage": {
+    "phases": [
+      {
+        "phase": "Phase 1: Parse and Validate Meeting Notes",
+        "covered_by": [
+          "tc_001",
+          "tc_002",
+          "tc_003",
+          "tc_004",
+          "tc_005",
+          "tc_006",
+          "tc_007",
+          "tc_008",
+          "tc_009",
+          "tc_010"
+        ],
+        "coverage_percentage": 100
+      },
+      {
+        "phase": "Phase 2: Extract Candidate Action Items",
+        "covered_by": [
+          "tc_001",
+          "tc_002",
+          "tc_003",
+          "tc_004",
+          "tc_005",
+          "tc_006",
+          "tc_007",
+          "tc_008",
+          "tc_009",
+          "tc_010"
+        ],
+        "coverage_percentage": 100
+      },
+      {
+        "phase": "Phase 3: Assign Owners",
+        "covered_by": [
+          "tc_001",
+          "tc_002",
+          "tc_003",
+          "tc_006",
+          "tc_007",
+          "tc_008",
+          "tc_009",
+          "tc_010"
+        ],
+        "coverage_percentage": 100
+      },
+      {
+        "phase": "Phase 4: Extract and Infer Deadlines",
+        "covered_by": [
+          "tc_001",
+          "tc_002",
+          "tc_004",
+          "tc_005",
+          "tc_008",
+          "tc_009",
+          "tc_010"
+        ],
+        "coverage_percentage": 100
+      },
+      {
+        "phase": "Phase 5: Determine Reminder Schedule",
+        "covered_by": [
+          "tc_001",
+          "tc_002",
+          "tc_005",
+          "tc_009"
+        ],
+        "coverage_percentage": 100
+      },
+      {
+        "phase": "Phase 6: Flag Ambiguities and Assess Priority",
+        "covered_by": [
+          "tc_001",
+          "tc_002",
+          "tc_003",
+          "tc_004",
+          "tc_005",
+          "tc_006",
+          "tc_007",
+          "tc_008",
+          "tc_009",
+          "tc_010"
+        ],
+        "coverage_percentage": 100
+      },
+      {
+        "phase": "Phase 7: Format and Output Structured Action Items",
+        "covered_by": [
+          "tc_001",
+          "tc_002",
+          "tc_003",
+          "tc_004",
+          "tc_005",
+          "tc_006",
+          "tc_007",
+          "tc_008",
+          "tc_009",
+          "tc_010"
+        ],
+        "coverage_percentage": 100
+      }
+    ],
+    "quality_gates": [
+      {
+        "gate": "Phase 1: Notes legible and contain action-oriented statements",
+        "covered_by": [
+          "tc_001",
+          "tc_002",
+          "tc_003",
+          "tc_004",
+          "tc_005"
+        ],
+        "coverage_percentage": 100
+      },
+      {
+        "gate": "Phase 2: Candidates are complete phrases with action verbs",
+        "covered_by": [
+          "tc_001",
+          "tc_002",
+          "tc_003",
+          "tc_004",
+          "tc_005"
+        ],
+        "coverage_percentage": 100
+      },
+      {
+        "gate": "Phase 3: Every action item has owner field",
+        "covered_by": [
+          "tc_001",
+          "tc_002",
+          "tc_003",
+          "tc_006",
+          "tc_007"
+        ],
+        "coverage_percentage": 100
+      },
+      {
+        "gate": "Phase 4: Every action item has deadline field",
+        "covered_by": [
+          "tc_001",
+          "tc_002",
+          "tc_004",
+          "tc_008"
+        ],
+        "coverage_percentage": 100
+      },
+      {
+        "gate": "Phase 5: Valid deadlines have corresponding reminder_date",
+        "covered_by": [
+          "tc_001",
+          "tc_002",
+          "tc_005",
+          "tc_009"
+        ],
+        "coverage_percentage": 100
+      },
+      {
+        "gate": "Phase 6: Every action item has priority level",
+        "covered_by": [
+          "tc_001",
+          "tc_004",
+          "tc_006",
+          "tc_009"
+        ],
+        "coverage_percentage": 100
+      },
+      {
+        "gate": "Phase 7: Output is valid JSON with all required fields",
+        "covered_by": [
+          "tc_001",
+          "tc_002",
+          "tc_003",
+          "tc_004",
+          "tc_005",
+          "tc_006",
+          "tc_007",
+          "tc_008",
+          "tc_009",
+          "tc_010"
+        ],
+        "coverage_percentage": 100
+      }
+    ],
+    "error_handlers": [
+      {
+        "error": "Phase 1: Empty or unreadable notes",
+        "covered_by": [],
+        "coverage_percentage": 0,
+        "note": "Not tested; would require invalid input that skill rejects"
+      },
+      {
+        "error": "Phase 1: Attendee list extraction failure",
+        "covered_by": [
+          "tc_003"
+        ],
+        "coverage_percentage": 100
+      },
+      {
+        "error": "Phase 1: No action-oriented language found",
+        "covered_by": [],
+        "coverage_percentage": 0,
+        "note": "Not tested; would require notes with no action verbs"
+      },
+      {
+        "error": "Phase 3: Owner name not in attendee list",
+        "covered_by": [
+          "tc_007"
+        ],
+        "coverage_percentage": 100
+      },
+      {
+        "error": "Phase 3: Multiple owners mentioned for single action",
+        "covered_by": [
+          "tc_010"
+        ],
+        "coverage_percentage": 100
+      },
+      {
+        "error": "Phase 4: Deadline in the past",
+        "covered_by": [
+          "tc_008"
+        ],
+        "coverage_percentage": 100
+      },
+      {
+        "error": "Phase 4: Vague deadline format (ASAP, soon, later)",
+        "covered_by": [
+          "tc_004"
+        ],
+        "coverage_percentage": 100
+      },
+      {
+        "error": "Phase 5: Reminder date in the past",
+        "covered_by": [
+          "tc_008"
+        ],
+        "coverage_percentage": 100
+      },
+      {
+        "error": "Phase 6: Multiple critical ambiguities",
+        "covered_by": [
+          "tc_004",
+          "tc_006",
+          "tc_010"
+        ],
+        "coverage_percentage": 100
+      }
+    ],
+    "critical_surfaces_covered": "85% (17 of 20 critical surfaces covered; 3 error handlers not tested due to skill abort behavior)"
+  },
+  "generated_at": "2024-01-15T10:30:00Z"
+}

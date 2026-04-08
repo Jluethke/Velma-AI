@@ -1,0 +1,267 @@
+{
+  "name": "portfolio-rebalancer-chain",
+  "description": "Analyze portfolio allocation, calculate tax and cost implications, and generate prioritized rebalancing recommendations aligned with risk tolerance, time horizon, and tax efficiency.",
+  "steps": [
+    {
+      "id": "step_1_validate_portfolio",
+      "skill_name": "portfolio-rebalancer",
+      "phase": "Phase 1: Collect and Validate Portfolio Data",
+      "inputs": {
+        "portfolio_holdings": "from_context.portfolio_holdings",
+        "client_profile": "from_context.client_profile",
+        "target_allocation": "from_context.target_allocation",
+        "constraints": "from_context.constraints"
+      },
+      "outputs": {
+        "validated_portfolio": "portfolio snapshot with current allocation percentages",
+        "validated_client_profile": "client profile with all required fields",
+        "validated_target_allocation": "target allocation verified to sum to 100%",
+        "data_quality_report": "warnings, assumptions, defaults applied"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "step_2_assess_deviations",
+      "skill_name": "portfolio-rebalancer",
+      "phase": "Phase 2: Assess Allocation Deviations",
+      "inputs": {
+        "validated_portfolio": "from_step_1_validate_portfolio.validated_portfolio",
+        "validated_target_allocation": "from_step_1_validate_portfolio.validated_target_allocation",
+        "rebalance_threshold_percent": "from_context.target_allocation.rebalance_threshold_percent or 5"
+      },
+      "outputs": {
+        "deviation_report": "asset_class, current_percent, target_percent, deviation_percent, action",
+        "rebalancing_needed": "boolean flag with decision rationale",
+        "total_portfolio_deviation": "numeric metric",
+        "threshold_values": "rebalance_threshold_percent, total_deviation_threshold"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "step_3_calculate_tax_implications",
+      "skill_name": "portfolio-rebalancer",
+      "phase": "Phase 3: Calculate Tax Implications",
+      "inputs": {
+        "deviation_report": "from_step_2_assess_deviations.deviation_report",
+        "rebalancing_needed": "from_step_2_assess_deviations.rebalancing_needed",
+        "portfolio_holdings": "from_context.portfolio_holdings",
+        "client_profile": "from_context.client_profile",
+        "constraints": "from_context.constraints"
+      },
+      "outputs": {
+        "tax_impact_analysis": "per-trade tax impact with holding period classification",
+        "total_capital_gains": "sum of positive unrealized gains",
+        "total_capital_losses": "sum of negative unrealized gains",
+        "net_tax_liability": "estimated federal tax cost/benefit",
+        "tax_loss_harvesting_opportunities": "assets with unrealized losses",
+        "wash_sale_warnings": "trades flagged for wash-sale risk",
+        "tax_assumptions": "holding period method, tax rates, edge cases"
+      },
+      "parallel_group": 3,
+      "depends_on": [
+        "step_2_assess_deviations"
+      ]
+    },
+    {
+      "id": "step_4_generate_recommendations",
+      "skill_name": "portfolio-rebalancer",
+      "phase": "Phase 4: Generate Rebalancing Recommendations",
+      "inputs": {
+        "deviation_report": "from_step_2_assess_deviations.deviation_report",
+        "rebalancing_needed": "from_step_2_assess_deviations.rebalancing_needed",
+        "tax_impact_analysis": "from_step_3_calculate_tax_implications.tax_impact_analysis",
+        "portfolio_holdings": "from_context.portfolio_holdings",
+        "constraints": "from_context.constraints"
+      },
+      "outputs": {
+        "recommended_trades": "ordered list with priority, action, symbol, quantity, value, rationale, tax_impact, transaction_cost",
+        "implementation_sequence": "execution order for trades",
+        "expected_portfolio_state": "allocation after rebalancing",
+        "total_transaction_costs": "sum across all trades",
+        "total_tax_impact": "sum across all trades"
+      },
+      "parallel_group": 4,
+      "depends_on": [
+        "step_3_calculate_tax_implications"
+      ]
+    },
+    {
+      "id": "step_5_validate_constraints",
+      "skill_name": "portfolio-rebalancer",
+      "phase": "Phase 5: Validate Against Constraints and Compliance",
+      "inputs": {
+        "recommended_trades": "from_step_4_generate_recommendations.recommended_trades",
+        "constraints": "from_context.constraints",
+        "portfolio_holdings": "from_context.portfolio_holdings",
+        "client_profile": "from_context.client_profile"
+      },
+      "outputs": {
+        "validated_trade_list": "trades with compliance_status (approved/conditional/blocked)",
+        "compliance_notes": "reasons for blocks or conditions",
+        "revised_implementation_sequence": "approved trades first, then conditional, then blocked",
+        "removed_trades_summary": "trades removed due to constraints"
+      },
+      "parallel_group": 5,
+      "depends_on": [
+        "step_4_generate_recommendations"
+      ]
+    },
+    {
+      "id": "step_6_cost_benefit_analysis",
+      "skill_name": "portfolio-rebalancer",
+      "phase": "Phase 6: Perform Cost-Benefit Analysis",
+      "inputs": {
+        "validated_trade_list": "from_step_5_validate_constraints.validated_trade_list",
+        "total_transaction_costs": "from_step_4_generate_recommendations.total_transaction_costs",
+        "net_tax_liability": "from_step_3_calculate_tax_implications.net_tax_liability",
+        "deviation_report": "from_step_2_assess_deviations.deviation_report",
+        "portfolio_holdings": "from_context.portfolio_holdings"
+      },
+      "outputs": {
+        "total_rebalancing_cost": "sum of transaction costs and tax liability",
+        "risk_reduction_value": "estimated value in basis points",
+        "cost_benefit_ratio": "risk_reduction_value / total_rebalancing_cost",
+        "recommendation": "rebalance_now / wait_and_monitor / defer",
+        "rationale": "explanation of recommendation",
+        "reassessment_date": "date to revisit decision"
+      },
+      "parallel_group": 6,
+      "depends_on": [
+        "step_5_validate_constraints"
+      ]
+    },
+    {
+      "id": "step_7_document_summary",
+      "skill_name": "portfolio-rebalancer",
+      "phase": "Phase 7: Document and Summarize",
+      "inputs": {
+        "validated_trade_list": "from_step_5_validate_constraints.validated_trade_list",
+        "tax_impact_analysis": "from_step_3_calculate_tax_implications.tax_impact_analysis",
+        "cost_benefit_analysis": "from_step_6_cost_benefit_analysis",
+        "deviation_report": "from_step_2_assess_deviations.deviation_report",
+        "rebalancing_needed": "from_step_2_assess_deviations.rebalancing_needed",
+        "expected_portfolio_state": "from_step_4_generate_recommendations.expected_portfolio_state",
+        "constraints": "from_context.constraints"
+      },
+      "outputs": {
+        "rebalancing_report": {
+          "executive_summary": "string",
+          "current_allocation": "object",
+          "target_allocation": "object",
+          "deviations": "array",
+          "rebalancing_needed": "boolean",
+          "recommended_trades": "array",
+          "tax_analysis": "object",
+          "cost_benefit_analysis": "object",
+          "implementation_notes": "array",
+          "expected_outcome": "string",
+          "dry_run_summary": "object (optional)"
+        }
+      },
+      "parallel_group": 7,
+      "depends_on": [
+        "step_6_cost_benefit_analysis"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "step_1_validate_portfolio",
+      "to_step": "step_2_assess_deviations",
+      "data_type": "portfolio_snapshot",
+      "field_mapping": {
+        "validated_portfolio": "portfolio_holdings",
+        "validated_target_allocation": "target_allocation"
+      }
+    },
+    {
+      "from_step": "step_2_assess_deviations",
+      "to_step": "step_3_calculate_tax_implications",
+      "data_type": "deviation_analysis",
+      "field_mapping": {
+        "deviation_report": "deviation_report",
+        "rebalancing_needed": "rebalancing_needed"
+      }
+    },
+    {
+      "from_step": "step_3_calculate_tax_implications",
+      "to_step": "step_4_generate_recommendations",
+      "data_type": "tax_analysis",
+      "field_mapping": {
+        "tax_impact_analysis": "tax_impact_analysis",
+        "total_capital_gains": "total_capital_gains",
+        "total_capital_losses": "total_capital_losses",
+        "net_tax_liability": "net_tax_liability"
+      }
+    },
+    {
+      "from_step": "step_4_generate_recommendations",
+      "to_step": "step_5_validate_constraints",
+      "data_type": "trade_recommendations",
+      "field_mapping": {
+        "recommended_trades": "recommended_trades",
+        "total_transaction_costs": "total_transaction_costs"
+      }
+    },
+    {
+      "from_step": "step_5_validate_constraints",
+      "to_step": "step_6_cost_benefit_analysis",
+      "data_type": "validated_trades",
+      "field_mapping": {
+        "validated_trade_list": "validated_trade_list",
+        "compliance_notes": "compliance_notes"
+      }
+    },
+    {
+      "from_step": "step_6_cost_benefit_analysis",
+      "to_step": "step_7_document_summary",
+      "data_type": "cost_benefit_analysis",
+      "field_mapping": {
+        "cost_benefit_analysis": "cost_benefit_analysis",
+        "recommendation": "recommendation"
+      }
+    }
+  ],
+  "entry_inputs": {
+    "portfolio_holdings": "Current portfolio with assets, account_type, total_value",
+    "client_profile": "Risk tolerance, time horizon, tax bracket, holding period preference",
+    "target_allocation": "Target allocations by asset class, rebalance threshold",
+    "constraints": "Transaction cost limits, wash-sale rules, holding periods, liquidity preference, dry-run mode"
+  },
+  "terminal_outputs": {
+    "rebalancing_report": "Complete analysis with executive summary, trades, tax impact, cost-benefit analysis, and implementation notes"
+  },
+  "parallel_groups": [
+    [
+      "step_1_validate_portfolio"
+    ],
+    [
+      "step_2_assess_deviations"
+    ],
+    [
+      "step_3_calculate_tax_implications"
+    ],
+    [
+      "step_4_generate_recommendations"
+    ],
+    [
+      "step_5_validate_constraints"
+    ],
+    [
+      "step_6_cost_benefit_analysis"
+    ],
+    [
+      "step_7_document_summary"
+    ]
+  ],
+  "estimated_cost": "7 skill executions (1 per phase, sequential execution required due to data dependencies)",
+  "critical_path": [
+    "step_1_validate_portfolio",
+    "step_2_assess_deviations",
+    "step_3_calculate_tax_implications",
+    "step_4_generate_recommendations",
+    "step_5_validate_constraints",
+    "step_6_cost_benefit_analysis",
+    "step_7_document_summary"
+  ]
+}

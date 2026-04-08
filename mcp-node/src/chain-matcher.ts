@@ -38,7 +38,7 @@ const STOPWORDS = new Set([
 ]);
 
 // Maps user intent keywords to chain categories/names
-const INTENT_MAP: Record<string, string[]> = {
+export const INTENT_MAP: Record<string, string[]> = {
   // Emotions / feelings
   "hate": ["career-pivot", "am-i-okay", "burnout-recovery"],
   "stuck": ["am-i-okay", "career-pivot", "before-you-leap"],
@@ -141,7 +141,7 @@ const INTENT_MAP: Record<string, string[]> = {
   "refund": ["complaint-escalation"],
 };
 
-function tokenize(text: string): string[] {
+export function tokenize(text: string): string[] {
   return text.toLowerCase().match(/[a-z0-9]+/g)?.filter(w => !STOPWORDS.has(w)) ?? [];
 }
 

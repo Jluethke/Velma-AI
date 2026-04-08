@@ -1,0 +1,431 @@
+{
+  "name": "ab-test-analyzer-chain",
+  "description": "Comprehensive statistical analysis pipeline for A/B test results with significance testing, confidence intervals, practical significance, power analysis, and actionable recommendations.",
+  "steps": [
+    {
+      "id": "step_1_assumption_validation",
+      "skill_name": "ab-test-analyzer",
+      "phase": "Phase 0: Pre-Flight Assumption Validation",
+      "inputs": {
+        "control_data": "from_context.control_data",
+        "treatment_data": "from_context.treatment_data",
+        "metric_name": "from_context.metric_name"
+      },
+      "outputs": {
+        "assumptions_validated": "boolean",
+        "assumption_violations": "array<string>",
+        "proceed_with_analysis": "boolean"
+      },
+      "parallel_group": 1,
+      "description": "Validates randomization, independence, metric definition, no peeking, and group comparability."
+    },
+    {
+      "id": "step_2_data_validation",
+      "skill_name": "ab-test-analyzer",
+      "phase": "Phase 1: Data Validation and Descriptive Statistics",
+      "inputs": {
+        "control_data": "from_context.control_data",
+        "treatment_data": "from_context.treatment_data",
+        "metric_name": "from_context.metric_name"
+      },
+      "outputs": {
+        "control_stats": "object",
+        "treatment_stats": "object",
+        "normality_test": "object",
+        "data_quality_notes": "array<string>",
+        "records_removed": "number"
+      },
+      "parallel_group": 1,
+      "dependencies": [
+        "step_1_assumption_validation"
+      ],
+      "description": "Calculates descriptive statistics, identifies outliers, tests for normality, assesses data distribution shape."
+    },
+    {
+      "id": "step_3_significance_testing",
+      "skill_name": "ab-test-analyzer",
+      "phase": "Phase 2: Statistical Significance Testing",
+      "inputs": {
+        "control_stats": "from_step_2_data_validation.control_stats",
+        "treatment_stats": "from_step_2_data_validation.treatment_stats",
+        "normality_test": "from_step_2_data_validation.normality_test",
+        "test_type": "from_context.test_type",
+        "alpha": "from_context.alpha"
+      },
+      "outputs": {
+        "test_type": "string",
+        "test_statistic": "number",
+        "p_value": "number",
+        "is_significant": "boolean",
+        "assumptions_met": "boolean",
+        "assumption_notes": "string",
+        "alpha_level_applied": "number"
+      },
+      "parallel_group": 2,
+      "dependencies": [
+        "step_2_data_validation"
+      ],
+      "description": "Selects appropriate statistical test based on data characteristics and executes significance testing."
+    },
+    {
+      "id": "step_4_confidence_intervals",
+      "skill_name": "ab-test-analyzer",
+      "phase": "Phase 3: Confidence Interval Estimation",
+      "inputs": {
+        "control_stats": "from_step_2_data_validation.control_stats",
+        "treatment_stats": "from_step_2_data_validation.treatment_stats",
+        "confidence_level": "from_context.confidence_level",
+        "normality_test": "from_step_2_data_validation.normality_test"
+      },
+      "outputs": {
+        "control_ci": "object",
+        "treatment_ci": "object",
+        "effect_size_ci": "object",
+        "ci_width": "number"
+      },
+      "parallel_group": 2,
+      "dependencies": [
+        "step_2_data_validation"
+      ],
+      "description": "Calculates confidence intervals for control, treatment, and effect size using appropriate methods."
+    },
+    {
+      "id": "step_5_practical_significance",
+      "skill_name": "ab-test-analyzer",
+      "phase": "Phase 4: Practical Significance Assessment",
+      "inputs": {
+        "control_stats": "from_step_2_data_validation.control_stats",
+        "treatment_stats": "from_step_2_data_validation.treatment_stats",
+        "effect_size_ci": "from_step_4_confidence_intervals.effect_size_ci",
+        "minimum_detectable_effect": "from_context.minimum_detectable_effect",
+        "business_context": "from_context.business_context"
+      },
+      "outputs": {
+        "effect_size": "number",
+        "effect_size_percent": "number",
+        "cohens_d": "number",
+        "effect_size_interpretation": "string",
+        "is_practically_significant": "boolean",
+        "mde_threshold": "number|null",
+        "mde_comparison": "string",
+        "business_context_applied": "object",
+        "justification": "string"
+      },
+      "parallel_group": 3,
+      "dependencies": [
+        "step_2_data_validation",
+        "step_4_confidence_intervals"
+      ],
+      "description": "Assesses practical significance against MDE threshold and business context parameters."
+    },
+    {
+      "id": "step_6_power_analysis",
+      "skill_name": "ab-test-analyzer",
+      "phase": "Phase 5: Power Analysis",
+      "inputs": {
+        "control_stats": "from_step_2_data_validation.control_stats",
+        "treatment_stats": "from_step_2_data_validation.treatment_stats",
+        "effect_size": "from_step_5_practical_significance.effect_size",
+        "test_type": "from_step_3_significance_testing.test_type",
+        "alpha": "from_context.alpha",
+        "enable_power_analysis": "from_context.enable_power_analysis"
+      },
+      "outputs": {
+        "post_hoc_power": "number",
+        "power_interpretation": "string",
+        "recommended_sample_size": "number|null",
+        "power_rationale": "string"
+      },
+      "parallel_group": 3,
+      "dependencies": [
+        "step_2_data_validation",
+        "step_3_significance_testing",
+        "step_5_practical_significance"
+      ],
+      "description": "Calculates post-hoc statistical power and recommends sample size if power < 0.80."
+    },
+    {
+      "id": "step_7_sensitivity_analysis",
+      "skill_name": "ab-test-analyzer",
+      "phase": "Phase 6: Sensitivity Analysis",
+      "inputs": {
+        "control_data": "from_context.control_data",
+        "treatment_data": "from_context.treatment_data",
+        "control_stats": "from_step_2_data_validation.control_stats",
+        "treatment_stats": "from_step_2_data_validation.treatment_stats",
+        "test_type": "from_step_3_significance_testing.test_type",
+        "enable_sensitivity_analysis": "from_context.enable_sensitivity_analysis"
+      },
+      "outputs": {
+        "outliers_removed_result": "object",
+        "alternative_test_result": "object",
+        "robustness_assessment": "string",
+        "sensitivity_notes": "array<string>"
+      },
+      "parallel_group": 4,
+      "dependencies": [
+        "step_2_data_validation",
+        "step_3_significance_testing"
+      ],
+      "description": "Re-runs analysis with outliers removed and alternative test types to assess robustness (optional)."
+    },
+    {
+      "id": "step_8_recommendation",
+      "skill_name": "ab-test-analyzer",
+      "phase": "Phase 7: Recommendation Generation",
+      "inputs": {
+        "is_significant": "from_step_3_significance_testing.is_significant",
+        "p_value": "from_step_3_significance_testing.p_value",
+        "is_practically_significant": "from_step_5_practical_significance.is_practically_significant",
+        "effect_size": "from_step_5_practical_significance.effect_size",
+        "effect_size_ci": "from_step_4_confidence_intervals.effect_size_ci",
+        "post_hoc_power": "from_step_6_power_analysis.post_hoc_power",
+        "ci_width": "from_step_4_confidence_intervals.ci_width",
+        "business_context": "from_context.business_context",
+        "robustness_assessment": "from_step_7_sensitivity_analysis.robustness_assessment",
+        "data_quality_notes": "from_step_2_data_validation.data_quality_notes",
+        "assumption_notes": "from_step_3_significance_testing.assumption_notes"
+      },
+      "outputs": {
+        "recommendation": "string",
+        "recommendation_rationale": "string",
+        "decision_logic_applied": "string",
+        "caveats": "array<string>",
+        "next_steps": "string"
+      },
+      "parallel_group": 5,
+      "dependencies": [
+        "step_3_significance_testing",
+        "step_4_confidence_intervals",
+        "step_5_practical_significance",
+        "step_6_power_analysis",
+        "step_7_sensitivity_analysis"
+      ],
+      "description": "Generates actionable recommendation (implement/reject/continue_testing/inconclusive) with rationale and decision logic."
+    },
+    {
+      "id": "step_9_report_compilation",
+      "skill_name": "ab-test-analyzer",
+      "phase": "Phase 8: Report Compilation",
+      "inputs": {
+        "metric_name": "from_context.metric_name",
+        "control_stats": "from_step_2_data_validation.control_stats",
+        "treatment_stats": "from_step_2_data_validation.treatment_stats",
+        "effect_size": "from_step_5_practical_significance.effect_size",
+        "effect_size_percent": "from_step_5_practical_significance.effect_size_percent",
+        "cohens_d": "from_step_5_practical_significance.cohens_d",
+        "test_type": "from_step_3_significance_testing.test_type",
+        "test_statistic": "from_step_3_significance_testing.test_statistic",
+        "p_value": "from_step_3_significance_testing.p_value",
+        "is_significant": "from_step_3_significance_testing.is_significant",
+        "control_ci": "from_step_4_confidence_intervals.control_ci",
+        "treatment_ci": "from_step_4_confidence_intervals.treatment_ci",
+        "effect_size_ci": "from_step_4_confidence_intervals.effect_size_ci",
+        "is_practically_significant": "from_step_5_practical_significance.is_practically_significant",
+        "mde_threshold": "from_step_5_practical_significance.mde_threshold",
+        "post_hoc_power": "from_step_6_power_analysis.post_hoc_power",
+        "power_interpretation": "from_step_6_power_analysis.power_interpretation",
+        "recommended_sample_size": "from_step_6_power_analysis.recommended_sample_size",
+        "robustness_assessment": "from_step_7_sensitivity_analysis.robustness_assessment",
+        "recommendation": "from_step_8_recommendation.recommendation",
+        "recommendation_rationale": "from_step_8_recommendation.recommendation_rationale",
+        "decision_logic_applied": "from_step_8_recommendation.decision_logic_applied",
+        "caveats": "from_step_8_recommendation.caveats",
+        "next_steps": "from_step_8_recommendation.next_steps"
+      },
+      "outputs": {
+        "analysis_report": "object"
+      },
+      "parallel_group": 6,
+      "dependencies": [
+        "step_2_data_validation",
+        "step_3_significance_testing",
+        "step_4_confidence_intervals",
+        "step_5_practical_significance",
+        "step_6_power_analysis",
+        "step_7_sensitivity_analysis",
+        "step_8_recommendation"
+      ],
+      "description": "Assembles all results into structured analysis_report with interpretation guide and visualizations."
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "step_1_assumption_validation",
+      "to_step": "step_2_data_validation",
+      "data_type": "validation_status",
+      "field_mapping": {
+        "proceed_with_analysis": "proceed_with_analysis"
+      },
+      "description": "Passes validation status to data validation phase; analysis proceeds only if assumptions are met."
+    },
+    {
+      "from_step": "step_2_data_validation",
+      "to_step": "step_3_significance_testing",
+      "data_type": "descriptive_statistics",
+      "field_mapping": {
+        "control_stats": "control_stats",
+        "treatment_stats": "treatment_stats",
+        "normality_test": "normality_test"
+      },
+      "description": "Passes descriptive statistics and normality test results to significance testing."
+    },
+    {
+      "from_step": "step_2_data_validation",
+      "to_step": "step_4_confidence_intervals",
+      "data_type": "descriptive_statistics",
+      "field_mapping": {
+        "control_stats": "control_stats",
+        "treatment_stats": "treatment_stats",
+        "normality_test": "normality_test"
+      },
+      "description": "Passes descriptive statistics to confidence interval calculation."
+    },
+    {
+      "from_step": "step_3_significance_testing",
+      "to_step": "step_5_practical_significance",
+      "data_type": "significance_test_results",
+      "field_mapping": {
+        "test_type": "test_type",
+        "p_value": "p_value",
+        "is_significant": "is_significant"
+      },
+      "description": "Passes significance test results to practical significance assessment."
+    },
+    {
+      "from_step": "step_3_significance_testing",
+      "to_step": "step_6_power_analysis",
+      "data_type": "significance_test_results",
+      "field_mapping": {
+        "test_type": "test_type",
+        "p_value": "p_value",
+        "is_significant": "is_significant"
+      },
+      "description": "Passes test type and significance results to power analysis."
+    },
+    {
+      "from_step": "step_3_significance_testing",
+      "to_step": "step_7_sensitivity_analysis",
+      "data_type": "significance_test_results",
+      "field_mapping": {
+        "test_type": "test_type",
+        "p_value": "p_value"
+      },
+      "description": "Passes test type to sensitivity analysis for alternative test comparison."
+    },
+    {
+      "from_step": "step_4_confidence_intervals",
+      "to_step": "step_5_practical_significance",
+      "data_type": "confidence_intervals",
+      "field_mapping": {
+        "effect_size_ci": "effect_size_ci"
+      },
+      "description": "Passes effect size confidence interval to practical significance assessment."
+    },
+    {
+      "from_step": "step_5_practical_significance",
+      "to_step": "step_6_power_analysis",
+      "data_type": "effect_size_metrics",
+      "field_mapping": {
+        "effect_size": "effect_size",
+        "cohens_d": "cohens_d"
+      },
+      "description": "Passes effect size metrics to power analysis."
+    },
+    {
+      "from_step": "step_5_practical_significance",
+      "to_step": "step_8_recommendation",
+      "data_type": "practical_significance_results",
+      "field_mapping": {
+        "is_practically_significant": "is_practically_significant",
+        "effect_size": "effect_size",
+        "mde_comparison": "mde_comparison"
+      },
+      "description": "Passes practical significance assessment to recommendation generation."
+    },
+    {
+      "from_step": "step_6_power_analysis",
+      "to_step": "step_8_recommendation",
+      "data_type": "power_analysis_results",
+      "field_mapping": {
+        "post_hoc_power": "post_hoc_power",
+        "power_interpretation": "power_interpretation"
+      },
+      "description": "Passes power analysis results to recommendation generation."
+    },
+    {
+      "from_step": "step_7_sensitivity_analysis",
+      "to_step": "step_8_recommendation",
+      "data_type": "sensitivity_analysis_results",
+      "field_mapping": {
+        "robustness_assessment": "robustness_assessment",
+        "sensitivity_notes": "sensitivity_notes"
+      },
+      "description": "Passes robustness assessment to recommendation generation."
+    },
+    {
+      "from_step": "step_8_recommendation",
+      "to_step": "step_9_report_compilation",
+      "data_type": "recommendation_results",
+      "field_mapping": {
+        "recommendation": "recommendation",
+        "recommendation_rationale": "recommendation_rationale",
+        "decision_logic_applied": "decision_logic_applied",
+        "caveats": "caveats",
+        "next_steps": "next_steps"
+      },
+      "description": "Passes recommendation and decision logic to final report compilation."
+    }
+  ],
+  "entry_inputs": {
+    "control_data": "array of numbers from A/B test control group",
+    "treatment_data": "array of numbers from A/B test treatment group",
+    "metric_name": "string identifying the metric being tested",
+    "alpha": "number (optional, default 0.05) significance level",
+    "confidence_level": "number (optional, default 0.95) confidence level for intervals",
+    "minimum_detectable_effect": "number (optional) smallest practically significant effect",
+    "test_type": "string (optional, default 'auto') statistical test type",
+    "business_context": "object (optional) with implementation_cost, cost_of_false_positive, cost_of_false_negative",
+    "enable_sensitivity_analysis": "boolean (optional, default false)",
+    "enable_power_analysis": "boolean (optional, default true)"
+  },
+  "terminal_outputs": {
+    "analysis_report": "comprehensive statistical analysis object with all metrics, tests, intervals, power analysis, sensitivity analysis, recommendation, and interpretation guide"
+  },
+  "parallel_groups": [
+    [
+      "step_1_assumption_validation"
+    ],
+    [
+      "step_2_data_validation"
+    ],
+    [
+      "step_3_significance_testing",
+      "step_4_confidence_intervals"
+    ],
+    [
+      "step_5_practical_significance"
+    ],
+    [
+      "step_6_power_analysis",
+      "step_7_sensitivity_analysis"
+    ],
+    [
+      "step_8_recommendation"
+    ],
+    [
+      "step_9_report_compilation"
+    ]
+  ],
+  "estimated_cost": 7,
+  "critical_path": [
+    "step_1_assumption_validation",
+    "step_2_data_validation",
+    "step_3_significance_testing",
+    "step_5_practical_significance",
+    "step_6_power_analysis",
+    "step_8_recommendation",
+    "step_9_report_compilation"
+  ],
+  "critical_path_length": 7
+}

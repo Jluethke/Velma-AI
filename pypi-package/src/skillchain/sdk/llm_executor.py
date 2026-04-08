@@ -489,12 +489,24 @@ class LLMStepExecutor(_StepExecutor):
         }
 
         try:
-            resp = httpx.post(
-                _OAUTH_API_URL,
-                json=body,
-                headers=headers,
-                timeout=120,
-            )
+            _CALL_TIMEOUT = 300  # 5 minutes per call
+            _MAX_RETRIES = 2
+            resp = None
+            for _attempt in range(_MAX_RETRIES + 1):
+                try:
+                    resp = httpx.post(
+                        _OAUTH_API_URL,
+                        json=body,
+                        headers=headers,
+                        timeout=_CALL_TIMEOUT,
+                    )
+                    break
+                except httpx.ReadTimeout:
+                    if _attempt < _MAX_RETRIES:
+                        logger.warning("Timeout on attempt %d, retrying...", _attempt + 1)
+                        time.sleep(2)
+                        continue
+                    raise
 
             if resp.status_code == 401:
                 # Token expired mid-session — try refresh
@@ -506,7 +518,7 @@ class LLMStepExecutor(_StepExecutor):
                         _OAUTH_API_URL,
                         json=body,
                         headers=headers,
-                        timeout=120,
+                        timeout=_CALL_TIMEOUT,
                     )
 
             if resp.status_code != 200:

@@ -12,6 +12,7 @@ export default function Navbar() {
     { to: '/', label: 'Home' },
     { to: '/explore', label: 'Skills' },
     { to: '/chains', label: 'Chains' },
+    { to: '/compose', label: 'Composer' },
     { to: '/docs', label: 'Docs' },
   ];
 

@@ -23,6 +23,13 @@ import { ChainMatcher } from "./chain-matcher.js";
 import { GamificationEngine } from "./gamification.js";
 import { ProfileManager } from "./user-profile.js";
 import { VelmaRecommender } from "./velma-recommender.js";
+import { buildManifestIndex } from "./manifest-index.js";
+import { ChainComposer } from "./chain-composer.js";
+import { MemoryStore } from "./memory-store.js";
+import { extractFacts } from "./fact-extractor.js";
+import { KnowledgeGraph } from "./knowledge-graph.js";
+import { CommunityRegistry } from "./community-registry.js";
+import { TriggerEngine } from "./trigger-engine.js";
 // ---------------------------------------------------------------------------
 // Paths
 // ---------------------------------------------------------------------------
@@ -107,6 +114,24 @@ const server = new McpServer({
 });
 const store = new SkillStateStore();
 const profileMgr = new ProfileManager();
+const memory = new MemoryStore();
+const kg = new KnowledgeGraph();
+const community = new CommunityRegistry(MARKETPLACE_DIR);
+// Trigger engine: log events but don't auto-execute chains
+// (chain execution requires Claude Code context)
+const triggerLog = [];
+const triggers = new TriggerEngine((event) => {
+    triggerLog.push(event);
+    // Keep last 50 events in memory
+    if (triggerLog.length > 50)
+        triggerLog.splice(0, triggerLog.length - 50);
+});
+// Sync L0 identity from profile on startup
+try {
+    const profile = profileMgr.load();
+    memory.syncFromProfile(profile);
+}
+catch { /* profile may not exist yet */ }
 // ===================================================================
 // TOOLS
 // ===================================================================
@@ -139,8 +164,25 @@ server.tool("start_skill_run", "Start a tracked execution of a skill. Returns a 
     const run = store.startRun(skill_name, execution_pattern);
     const runId = randomUUID().slice(0, 16);
     activeRuns.set(runId, run);
+    // Auto-load L2 room context and L0+L1 context
+    let memoryContext = {};
+    try {
+        const ctx = memory.getContext();
+        const room = memory.getSkillRoom(skill_name);
+        memoryContext = {
+            identity_summary: ctx.identity.summary || undefined,
+            relevant_facts: ctx.facts.slice(0, 5).map(f => f.content),
+            skill_room: room.run_summaries.length > 0 ? {
+                previous_runs: room.run_summaries.length,
+                last_run: room.run_summaries[room.run_summaries.length - 1]?.date,
+                recent_insights: room.insights.slice(0, 3).map(i => i.content),
+            } : undefined,
+        };
+    }
+    catch { /* memory not initialized yet */ }
     return { content: [{ type: "text", text: JSON.stringify({
                     run_id: runId, skill_name, execution_pattern, started_at: run.started_at, status: "in_progress",
+                    memory_context: memoryContext,
                 }, null, 2) }] };
 });
 server.tool("record_phase", "Record completion of a skill phase. Called after each execution phase.", {
@@ -181,9 +223,44 @@ server.tool("complete_skill_run", "Mark a skill run as complete. Archives to his
         gam.recordSkillRun(run.skill_name);
     }
     catch { /* */ }
+    // Memory: extract facts from phase outputs and store to L1/L2
+    let factsExtracted = 0;
+    try {
+        const keyOutputs = [];
+        for (const phase of run.phases) {
+            if (phase.output && Object.keys(phase.output).length > 0) {
+                const facts = extractFacts(phase.output, run.skill_name);
+                for (const fact of facts) {
+                    if (fact.importance >= 0.7) {
+                        memory.rememberFact(fact.content, fact.tags, run.skill_name, fact.importance);
+                    }
+                    else {
+                        memory.addInsight(run.skill_name, fact.content, fact.tags, fact.importance);
+                    }
+                    factsExtracted++;
+                }
+                // Collect key outputs for run summary
+                const outputKeys = Object.keys(phase.output).filter(k => typeof phase.output[k] === "string" && phase.output[k].length > 10);
+                keyOutputs.push(...outputKeys.slice(0, 2));
+            }
+        }
+        // Record run summary to L2 room
+        memory.recordRunToRoom(run.skill_name, run_id, run.phases.length, keyOutputs);
+        // Extract knowledge graph triples from phase outputs
+        for (const phase of run.phases) {
+            if (phase.output && Object.keys(phase.output).length > 0) {
+                try {
+                    await kg.extractFromOutput(phase.output, run.skill_name, run_id);
+                }
+                catch { /* */ }
+            }
+        }
+    }
+    catch { /* memory extraction is best-effort */ }
     activeRuns.delete(run_id);
     return { content: [{ type: "text", text: JSON.stringify({
-                    run_id, skill_name: run.skill_name, status, completed_at: run.completed_at, phases_completed: run.phases.length,
+                    run_id, skill_name: run.skill_name, status, completed_at: run.completed_at,
+                    phases_completed: run.phases.length, facts_extracted: factsExtracted,
                 }, null, 2) }] };
 });
 server.tool("save_skill_data", "Save persistent data for a skill (survives between runs).", {
@@ -340,6 +417,273 @@ server.tool("run_chain", "Execute a skill chain by name. Returns the chain steps
     }
     catch { /* */ }
     return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+});
+// ===================================================================
+// DYNAMIC CHAIN COMPOSITION TOOLS (Phase 1 — Patent CIP)
+// ===================================================================
+server.tool("compose_chain", "Dynamically compose a skill chain from natural language. Uses input/output matching across the skill registry with trust-weighted scoring. Falls back to curated chains if confidence is low.", {
+    query: z.string().describe("What you want to accomplish (e.g., 'validate my startup idea and build a pitch deck')"),
+    max_skills: z.number().default(5).describe("Maximum number of skills to compose"),
+    min_confidence: z.number().default(0.4).describe("Minimum confidence threshold (0-1). Below this, falls back to curated chains."),
+}, async ({ query, max_skills, min_confidence }) => {
+    const manifestIdx = buildManifestIndex(MARKETPLACE_DIR);
+    const composer = new ChainComposer(manifestIdx);
+    const chains = availableChains();
+    const result = composer.compose(query, max_skills, min_confidence, chains);
+    // Track composition in gamification
+    if (result.type === "composed" && result.steps.length > 0) {
+        try {
+            const gam = new GamificationEngine();
+            gam.recordComposition(result.chain_name, result.steps.length);
+        }
+        catch { /* */ }
+    }
+    return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+});
+server.tool("explain_composition", "Explain why specific skills would be chosen for a dynamic composition. Useful for understanding the composition engine's reasoning.", {
+    query: z.string().describe("The query to explain composition for"),
+    max_skills: z.number().default(5),
+}, async ({ query, max_skills }) => {
+    const manifestIdx = buildManifestIndex(MARKETPLACE_DIR);
+    const composer = new ChainComposer(manifestIdx);
+    const result = composer.explain(query, max_skills);
+    return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+});
+// ===================================================================
+// MEMORY TOOLS (Phase 2 — Tiered Memory System)
+// ===================================================================
+server.tool("recall", "Search your memory across all tiers (L1 critical facts, L2 skill rooms, L3 semantic index). Returns relevant memories ranked by relevance.", {
+    query: z.string().describe("What to search for in memory"),
+    max_results: z.number().default(10),
+    skill_filter: z.string().optional().describe("Optional: limit search to a specific skill's room"),
+}, async ({ query, max_results, skill_filter }) => {
+    const results = memory.recall(query, max_results, skill_filter);
+    return { content: [{ type: "text", text: JSON.stringify({
+                    query,
+                    results_count: results.length,
+                    results: results.map(r => ({
+                        content: r.memory.content,
+                        tier: r.tier,
+                        relevance: Math.round(r.relevance * 100) / 100,
+                        tags: r.memory.tags,
+                        source_skill: r.memory.source_skill,
+                        timestamp: r.memory.timestamp,
+                    })),
+                }, null, 2) }] };
+});
+server.tool("remember", "Explicitly store a fact or insight in memory. High-importance facts go to L1 (always loaded), lower importance to L2 skill rooms or L3 semantic index.", {
+    content: z.string().describe("The fact or insight to remember"),
+    tags: z.array(z.string()).default([]).describe("Tags for categorization"),
+    skill_name: z.string().default("general").describe("Which skill this relates to"),
+    importance: z.number().default(0.7).describe("Importance (0-1). >=0.7 goes to L1, <0.7 to L2/L3"),
+    tier: z.enum(["L1", "L2", "L3"]).default("L1").describe("Which memory tier to store in"),
+}, async ({ content, tags, skill_name, importance, tier }) => {
+    let entry;
+    if (tier === "L1") {
+        entry = memory.rememberFact(content, tags, skill_name, importance);
+    }
+    else if (tier === "L2") {
+        entry = memory.addInsight(skill_name, content, tags, importance);
+    }
+    else {
+        entry = memory.storeSemanticMemory(content, tags, skill_name, importance);
+    }
+    return { content: [{ type: "text", text: JSON.stringify({
+                    stored: true, tier, memory_id: entry.memory_id, importance: entry.importance,
+                }, null, 2) }] };
+});
+server.tool("get_context", "Get the always-loaded memory context (L0 identity + L1 critical facts). This is what the system knows about you across all sessions.", {}, async () => {
+    const ctx = memory.getContext();
+    return { content: [{ type: "text", text: JSON.stringify({
+                    identity: ctx.identity,
+                    critical_facts: ctx.facts.map(f => ({
+                        content: f.content,
+                        importance: f.importance,
+                        tags: f.tags,
+                        source: f.source_skill,
+                    })),
+                    facts_count: ctx.facts.length,
+                }, null, 2) }] };
+});
+// ===================================================================
+// KNOWLEDGE GRAPH TOOLS (Phase 3 — Patent CIP)
+// ===================================================================
+server.tool("kg_query", "Query the temporal knowledge graph. Supports point-in-time queries and filtering by subject, predicate, or object.", {
+    subject: z.string().optional().describe("Filter by subject entity"),
+    predicate: z.string().optional().describe("Filter by relationship type (caused, supports, contradicts, preceded, enables, produces, consumes, related_to, derived_from)"),
+    object: z.string().optional().describe("Filter by object entity"),
+    at_time: z.string().optional().describe("ISO 8601 timestamp for point-in-time query. Omit for current facts only."),
+    max_results: z.number().default(20),
+}, async ({ subject, predicate, object, at_time, max_results }) => {
+    const result = kg.query(subject, predicate, object, at_time, max_results);
+    return { content: [{ type: "text", text: JSON.stringify({
+                    ...result,
+                    stats: kg.getStats(),
+                }, null, 2) }] };
+});
+server.tool("kg_assert", "Assert a new knowledge triple in the temporal knowledge graph. Trust-weighted via on-chain validation. Automatically detects contradictions and manages validity windows.", {
+    subject: z.string().describe("The subject entity (e.g., 'user_budget', 'career_goal')"),
+    predicate: z.enum(["caused", "supports", "contradicts", "preceded", "enables", "produces", "consumes", "related_to", "derived_from"]).describe("Relationship type"),
+    object: z.string().describe("The object entity (e.g., '$3200/month', 'software_engineer')"),
+    source_skill: z.string().default("manual").describe("Which skill produced this knowledge"),
+    source_run_id: z.string().default("manual").describe("Which run produced this knowledge"),
+    confidence: z.number().default(0.7).describe("Base confidence (0-1), will be multiplied by trust score"),
+}, async ({ subject, predicate, object, source_skill, source_run_id, confidence }) => {
+    const result = await kg.assert(subject, predicate, object, source_skill, source_run_id, confidence);
+    return { content: [{ type: "text", text: JSON.stringify({
+                    asserted: true,
+                    triple: {
+                        id: result.triple.triple_id,
+                        subject: result.triple.subject,
+                        predicate: result.triple.predicate,
+                        object: result.triple.object,
+                        confidence: Math.round(result.triple.confidence * 100) / 100,
+                        trust_score: Math.round(result.triple.trust_score * 100) / 100,
+                    },
+                    contradictions_resolved: result.contradictions.length,
+                    contradicted_facts: result.contradictions.map(c => ({
+                        id: c.triple_id,
+                        object: c.object,
+                        was_valid_from: c.valid_from,
+                        invalidated_at: c.valid_until,
+                    })),
+                }, null, 2) }] };
+});
+server.tool("kg_history", "Show how facts about an entity changed over time. Reveals contradictions, superseded facts, and temporal evolution.", {
+    entity: z.string().describe("The entity to trace history for"),
+    max_results: z.number().default(20),
+}, async ({ entity, max_results }) => {
+    const result = kg.history(entity, max_results);
+    return { content: [{ type: "text", text: JSON.stringify({
+                    entity: result.entity,
+                    total_events: result.history.length,
+                    timeline: result.history.map(h => ({
+                        triple_id: h.triple.triple_id,
+                        subject: h.triple.subject,
+                        predicate: h.triple.predicate,
+                        object: h.triple.object,
+                        status: h.status,
+                        valid_from: h.triple.valid_from,
+                        valid_until: h.triple.valid_until,
+                        confidence: Math.round(h.triple.confidence * 100) / 100,
+                        source_skill: h.triple.source_skill,
+                    })),
+                }, null, 2) }] };
+});
+server.tool("kg_validate", "Validate a knowledge triple against on-chain trust data. Returns the trust score, validation consensus, and recalculated confidence.", {
+    triple_id: z.string().describe("The triple ID to validate"),
+}, async ({ triple_id }) => {
+    const result = await kg.validate(triple_id);
+    if (!result) {
+        return { content: [{ type: "text", text: JSON.stringify({ error: `Triple '${triple_id}' not found.` }) }] };
+    }
+    return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+});
+// ===================================================================
+// COMMUNITY REGISTRY TOOLS (Phase 4)
+// ===================================================================
+server.tool("submit_skill", "Submit a community skill for review. Validates format and stages for community validation.", {
+    skill_name: z.string().describe("Name for the skill (lowercase, hyphens, 3-50 chars)"),
+    skill_md: z.string().describe("Full skill.md content"),
+    manifest: z.string().default("{}").describe("JSON string of manifest metadata (name, domain, description, tags, inputs, outputs)"),
+    author: z.string().describe("Author name or identifier"),
+    author_address: z.string().optional().describe("Author's wallet address for on-chain registration"),
+}, async ({ skill_name, skill_md, manifest, author, author_address }) => {
+    let manifestObj;
+    try {
+        manifestObj = JSON.parse(manifest);
+    }
+    catch {
+        manifestObj = { name: skill_name };
+    }
+    const result = community.submitSkill(skill_name, skill_md, manifestObj, author, author_address);
+    return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+});
+server.tool("list_community_skills", "Browse community skill submissions. Filter by status: pending, validating, approved, rejected, published.", {
+    status: z.enum(["pending", "validating", "approved", "rejected", "published"]).optional().describe("Filter by submission status"),
+    limit: z.number().default(20),
+}, async ({ status, limit }) => {
+    const results = community.listSubmissions(status, limit);
+    return { content: [{ type: "text", text: JSON.stringify({
+                    count: results.length,
+                    submissions: results,
+                }, null, 2) }] };
+});
+server.tool("validate_skill", "Cast a trust-weighted validation vote on a community skill submission. Your trust score is recorded with your vote.", {
+    submission_id: z.string().describe("The submission ID to vote on"),
+    voter: z.string().describe("Your identifier (name or address)"),
+    vote: z.enum(["approve", "reject"]).describe("Your vote"),
+    reason: z.string().describe("Why you're approving or rejecting"),
+}, async ({ submission_id, voter, vote, reason }) => {
+    const result = await community.validateSkill(submission_id, voter, vote, reason);
+    return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+});
+// ===================================================================
+// TRIGGER TOOLS (Phase 6 — Event-Triggered Chains)
+// ===================================================================
+server.tool("create_trigger", "Create an event trigger that fires a chain on a schedule, webhook, or connector event.", {
+    name: z.string().describe("Human-readable trigger name"),
+    type: z.enum(["cron", "webhook", "connector"]).describe("Trigger type"),
+    pattern: z.string().describe("Cron expression (e.g., '0 9 * * 1' for Monday 9am), webhook path, or connector event pattern"),
+    chain_name: z.string().describe("Chain to execute when triggered"),
+    config: z.string().default("{}").describe("JSON context data to pass to the chain"),
+}, async ({ name, type, pattern, chain_name, config }) => {
+    let configObj;
+    try {
+        configObj = JSON.parse(config);
+    }
+    catch {
+        configObj = {};
+    }
+    try {
+        const trigger = triggers.createTrigger(name, type, pattern, chain_name, configObj);
+        const result = {
+            created: true,
+            trigger_id: trigger.id,
+            name: trigger.name,
+            type: trigger.type,
+            pattern: trigger.pattern,
+            chain_name: trigger.chain_name,
+            enabled: trigger.enabled,
+        };
+        if (trigger.webhook_secret) {
+            result.webhook_url = `http://localhost:3180/trigger/${trigger.id}?secret=${trigger.webhook_secret}`;
+            result.webhook_secret = trigger.webhook_secret;
+        }
+        return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+    }
+    catch (e) {
+        return { content: [{ type: "text", text: JSON.stringify({ error: e.message }) }] };
+    }
+});
+server.tool("list_triggers", "List all event triggers with their status and fire counts.", {
+    type_filter: z.enum(["cron", "webhook", "connector"]).optional().describe("Filter by trigger type"),
+}, async ({ type_filter }) => {
+    const list = triggers.listTriggers(type_filter);
+    const pending = triggerLog.filter(e => !e.payload._handled);
+    return { content: [{ type: "text", text: JSON.stringify({
+                    triggers: list.map(t => ({
+                        id: t.id,
+                        name: t.name,
+                        type: t.type,
+                        pattern: t.pattern,
+                        chain_name: t.chain_name,
+                        enabled: t.enabled,
+                        fire_count: t.fire_count,
+                        last_fired_at: t.last_fired_at,
+                    })),
+                    pending_events: pending.length,
+                    total_triggers: list.length,
+                }, null, 2) }] };
+});
+server.tool("delete_trigger", "Delete an event trigger by ID.", {
+    trigger_id: z.string().describe("The trigger ID to delete"),
+}, async ({ trigger_id }) => {
+    const deleted = triggers.deleteTrigger(trigger_id);
+    return { content: [{ type: "text", text: JSON.stringify({
+                    deleted,
+                    trigger_id,
+                }, null, 2) }] };
 });
 // ===================================================================
 // GAMIFICATION TOOLS

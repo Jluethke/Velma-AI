@@ -1,0 +1,295 @@
+{
+  "name": "data-dictionary-builder-chain",
+  "description": "Multi-skill pipeline to generate comprehensive data dictionaries from database schemas with validation, PII detection, and business context enrichment.",
+  "steps": [
+    {
+      "id": "step_1_schema_connect",
+      "skill_name": "Database Connection Validator",
+      "inputs": {
+        "host": "database_connection.host",
+        "port": "database_connection.port",
+        "database_name": "database_connection.database_name",
+        "username": "database_connection.username",
+        "password": "database_connection.password",
+        "connection_type": "database_connection.connection_type"
+      },
+      "outputs": {
+        "connection_status": "connection_verified",
+        "schema_metadata": "raw_schema_metadata"
+      },
+      "parallel_group": 0
+    },
+    {
+      "id": "step_2_metadata_extract",
+      "skill_name": "Schema Metadata Extractor",
+      "inputs": {
+        "raw_schema_metadata": "step_1_schema_connect.raw_schema_metadata",
+        "schema_filter": "schema_filter",
+        "table_filter": "table_filter"
+      },
+      "outputs": {
+        "column_metadata": "structured_column_metadata",
+        "constraint_mappings": "pk_fk_constraints"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "step_3_relationship_mapper",
+      "skill_name": "Relationship Graph Builder",
+      "inputs": {
+        "column_metadata": "step_2_metadata_extract.structured_column_metadata",
+        "constraint_mappings": "step_2_metadata_extract.pk_fk_constraints"
+      },
+      "outputs": {
+        "relationships_array": "documented_relationships",
+        "cardinality_map": "relationship_cardinalities"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "step_4_sample_collector",
+      "skill_name": "Data Sampler with PII Detection",
+      "inputs": {
+        "connection_status": "step_1_schema_connect.connection_verified",
+        "column_metadata": "step_2_metadata_extract.structured_column_metadata",
+        "sampling_config": "sampling_config"
+      },
+      "outputs": {
+        "sample_values": "collected_samples",
+        "pii_flags": "pii_detection_results",
+        "data_quality_notes": "quality_observations"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "step_5_business_context",
+      "skill_name": "Business Context Enricher",
+      "inputs": {
+        "column_metadata": "step_2_metadata_extract.structured_column_metadata",
+        "business_context_source": "business_context_source"
+      },
+      "outputs": {
+        "business_descriptions": "enriched_descriptions",
+        "valid_values": "enumerated_values",
+        "missing_descriptions": "gaps_identified"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "step_6_dictionary_compile",
+      "skill_name": "Data Dictionary Compiler",
+      "inputs": {
+        "column_metadata": "step_2_metadata_extract.structured_column_metadata",
+        "relationships_array": "step_3_relationship_mapper.documented_relationships",
+        "sample_values": "step_4_sample_collector.collected_samples",
+        "pii_flags": "step_4_sample_collector.pii_detection_results",
+        "data_quality_notes": "step_4_sample_collector.quality_observations",
+        "business_descriptions": "step_5_business_context.enriched_descriptions",
+        "valid_values": "step_5_business_context.enumerated_values",
+        "output_format": "output_format"
+      },
+      "outputs": {
+        "data_dictionary": "compiled_dictionary",
+        "output_file": "formatted_output"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "step_7_validation_report",
+      "skill_name": "Dictionary Validator",
+      "inputs": {
+        "data_dictionary": "step_6_dictionary_compile.compiled_dictionary",
+        "missing_descriptions": "step_5_business_context.gaps_identified",
+        "pii_flags": "step_4_sample_collector.pii_detection_results"
+      },
+      "outputs": {
+        "validation_report": "comprehensive_validation",
+        "final_dictionary": "validated_dictionary"
+      },
+      "parallel_group": 4
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "step_1_schema_connect",
+      "to_step": "step_2_metadata_extract",
+      "data_type": "SCHEMA_METADATA",
+      "field_mapping": {
+        "source": "raw_schema_metadata",
+        "target": "raw_schema_metadata"
+      }
+    },
+    {
+      "from_step": "step_1_schema_connect",
+      "to_step": "step_4_sample_collector",
+      "data_type": "CONNECTION_HANDLE",
+      "field_mapping": {
+        "source": "connection_verified",
+        "target": "connection_status"
+      }
+    },
+    {
+      "from_step": "step_2_metadata_extract",
+      "to_step": "step_3_relationship_mapper",
+      "data_type": "COLUMN_METADATA",
+      "field_mapping": {
+        "source": "structured_column_metadata",
+        "target": "column_metadata"
+      }
+    },
+    {
+      "from_step": "step_2_metadata_extract",
+      "to_step": "step_4_sample_collector",
+      "data_type": "COLUMN_METADATA",
+      "field_mapping": {
+        "source": "structured_column_metadata",
+        "target": "column_metadata"
+      }
+    },
+    {
+      "from_step": "step_2_metadata_extract",
+      "to_step": "step_5_business_context",
+      "data_type": "COLUMN_METADATA",
+      "field_mapping": {
+        "source": "structured_column_metadata",
+        "target": "column_metadata"
+      }
+    },
+    {
+      "from_step": "step_2_metadata_extract",
+      "to_step": "step_6_dictionary_compile",
+      "data_type": "COLUMN_METADATA",
+      "field_mapping": {
+        "source": "structured_column_metadata",
+        "target": "column_metadata"
+      }
+    },
+    {
+      "from_step": "step_3_relationship_mapper",
+      "to_step": "step_6_dictionary_compile",
+      "data_type": "RELATIONSHIPS",
+      "field_mapping": {
+        "source": "documented_relationships",
+        "target": "relationships_array"
+      }
+    },
+    {
+      "from_step": "step_4_sample_collector",
+      "to_step": "step_6_dictionary_compile",
+      "data_type": "SAMPLE_DATA",
+      "field_mapping": {
+        "source": "collected_samples",
+        "target": "sample_values"
+      }
+    },
+    {
+      "from_step": "step_4_sample_collector",
+      "to_step": "step_6_dictionary_compile",
+      "data_type": "PII_DETECTION",
+      "field_mapping": {
+        "source": "pii_detection_results",
+        "target": "pii_flags"
+      }
+    },
+    {
+      "from_step": "step_4_sample_collector",
+      "to_step": "step_6_dictionary_compile",
+      "data_type": "DATA_QUALITY",
+      "field_mapping": {
+        "source": "quality_observations",
+        "target": "data_quality_notes"
+      }
+    },
+    {
+      "from_step": "step_5_business_context",
+      "to_step": "step_6_dictionary_compile",
+      "data_type": "BUSINESS_CONTEXT",
+      "field_mapping": {
+        "source": "enriched_descriptions",
+        "target": "business_descriptions"
+      }
+    },
+    {
+      "from_step": "step_5_business_context",
+      "to_step": "step_6_dictionary_compile",
+      "data_type": "VALID_VALUES",
+      "field_mapping": {
+        "source": "enumerated_values",
+        "target": "valid_values"
+      }
+    },
+    {
+      "from_step": "step_5_business_context",
+      "to_step": "step_7_validation_report",
+      "data_type": "MISSING_DESCRIPTIONS",
+      "field_mapping": {
+        "source": "gaps_identified",
+        "target": "missing_descriptions"
+      }
+    },
+    {
+      "from_step": "step_6_dictionary_compile",
+      "to_step": "step_7_validation_report",
+      "data_type": "DATA_DICTIONARY",
+      "field_mapping": {
+        "source": "compiled_dictionary",
+        "target": "data_dictionary"
+      }
+    },
+    {
+      "from_step": "step_4_sample_collector",
+      "to_step": "step_7_validation_report",
+      "data_type": "PII_DETECTION",
+      "field_mapping": {
+        "source": "pii_detection_results",
+        "target": "pii_flags"
+      }
+    }
+  ],
+  "entry_inputs": {
+    "database_connection": {
+      "host": "string",
+      "port": "number",
+      "database_name": "string",
+      "username": "string",
+      "password": "string",
+      "connection_type": "string"
+    },
+    "schema_filter": "string (optional)",
+    "table_filter": "string[] (optional)",
+    "sampling_config": "object (optional)",
+    "business_context_source": "string (optional)",
+    "output_format": "string (optional, default: markdown)"
+  },
+  "terminal_outputs": {
+    "data_dictionary": "Comprehensive structured data dictionary with all tables, columns, relationships, samples, and business context",
+    "validation_report": "Validation report identifying missing descriptions, orphaned columns, naming inconsistencies, PII-flagged columns, and data quality warnings",
+    "output_file": "Formatted output file (markdown/json/csv) if file output requested"
+  },
+  "parallel_groups": [
+    [
+      "step_1_schema_connect"
+    ],
+    [
+      "step_2_metadata_extract",
+      "step_3_relationship_mapper"
+    ],
+    [
+      "step_4_sample_collector",
+      "step_5_business_context"
+    ],
+    [
+      "step_6_dictionary_compile"
+    ],
+    [
+      "step_7_validation_report"
+    ]
+  ],
+  "estimated_cost": 7,
+  "critical_path": [
+    "step_1_schema_connect",
+    "step_2_metadata_extract",
+    "step_6_dictionary_compile",
+    "step_7_validation_report"
+  ]
+}

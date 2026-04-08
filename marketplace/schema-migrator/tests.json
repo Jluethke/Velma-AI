@@ -1,0 +1,646 @@
+{
+  "skill_name": "Schema Migrator",
+  "version": "1.0.0",
+  "test_cases": [
+    {
+      "id": "tc_001",
+      "name": "happy_path_postgresql_new_schema",
+      "category": "happy_path",
+      "scenario": "User provides a complete SQL DDL schema for PostgreSQL and requests migration scripts, seed data, and ERD documentation for a new database.",
+      "input": {
+        "schema_definition": "CREATE TABLE users (id SERIAL PRIMARY KEY, email VARCHAR(255) NOT NULL UNIQUE, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP); CREATE TABLE posts (id SERIAL PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id), title VARCHAR(255) NOT NULL, content TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP); CREATE TABLE comments (id SERIAL PRIMARY KEY, post_id INTEGER NOT NULL REFERENCES posts(id), user_id INTEGER NOT NULL REFERENCES users(id), content TEXT NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);",
+        "schema_format": "sql",
+        "target_database": "postgresql",
+        "migration_framework": "flyway",
+        "erd_format": "mermaid",
+        "documentation_style": "markdown",
+        "include_seed_data": true
+      },
+      "expected_keywords": [
+        "migration_scripts",
+        "V001",
+        "CREATE TABLE users",
+        "seed_scripts",
+        "erd_description",
+        "erDiagram",
+        "documentation",
+        "migration_guide",
+        "validation_report",
+        "artifact_manifest",
+        "PASS",
+        "topological"
+      ],
+      "expected_behavior": "Skill generates migration scripts for all three tables in correct dependency order, creates seed data for lookup tables, produces a Mermaid ERD showing user-post-comment relationships, and generates complete markdown documentation with setup instructions for PostgreSQL.",
+      "phase_coverage": [
+        "Phase 0: Pre-flight Check",
+        "Phase 1: Parse and Validate Schema",
+        "Phase 2: Determine Migration Strategy",
+        "Phase 3: Generate Migration Scripts",
+        "Phase 4: Generate Seed Data Scripts",
+        "Phase 5: Generate Entity-Relationship Diagram",
+        "Phase 6: Generate Documentation",
+        "Phase 7: Validate and Package"
+      ]
+    },
+    {
+      "id": "tc_002",
+      "name": "happy_path_mysql_upgrade_migration",
+      "category": "happy_path",
+      "scenario": "User provides both current and target schemas in SQL format for MySQL and requests upgrade migration scripts with rollback procedures.",
+      "input": {
+        "schema_definition": "CREATE TABLE products (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255) NOT NULL, price DECIMAL(10,2), category_id INT, FOREIGN KEY (category_id) REFERENCES categories(id)); CREATE TABLE categories (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(100) NOT NULL UNIQUE);",
+        "schema_format": "sql",
+        "current_schema": "CREATE TABLE products (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255) NOT NULL, price DECIMAL(10,2));",
+        "target_database": "mysql",
+        "migration_framework": "liquibase",
+        "erd_format": "plantuml",
+        "documentation_style": "html",
+        "include_seed_data": true,
+        "seed_data_spec": {
+          "categories": [
+            {
+              "id": 1,
+              "name": "Electronics"
+            },
+            {
+              "id": 2,
+              "name": "Books"
+            }
+          ]
+        }
+      },
+      "expected_keywords": [
+        "migration_scripts",
+        "ALTER TABLE",
+        "ADD COLUMN",
+        "ADD CONSTRAINT",
+        "down",
+        "rollback",
+        "seed_scripts",
+        "INSERT",
+        "categories",
+        "plantuml",
+        "migration_guide",
+        "risk_level",
+        "html"
+      ],
+      "expected_behavior": "Skill identifies schema differences (new categories table, new category_id column, new foreign key), generates migration scripts with both forward and rollback SQL, creates seed data for categories, produces PlantUML ERD, and generates HTML documentation with rollback procedures.",
+      "phase_coverage": [
+        "Phase 0: Pre-flight Check",
+        "Phase 1: Parse and Validate Schema",
+        "Phase 2: Determine Migration Strategy",
+        "Phase 3: Generate Migration Scripts",
+        "Phase 4: Generate Seed Data Scripts",
+        "Phase 5: Generate Entity-Relationship Diagram",
+        "Phase 6: Generate Documentation",
+        "Phase 7: Validate and Package"
+      ]
+    },
+    {
+      "id": "tc_003",
+      "name": "edge_case_json_schema_format",
+      "category": "edge_case",
+      "scenario": "User provides schema in JSON format instead of SQL DDL, testing parser flexibility and format conversion.",
+      "input": {
+        "schema_definition": "{\"tables\": [{\"name\": \"users\", \"columns\": [{\"name\": \"id\", \"type\": \"integer\", \"primaryKey\": true}, {\"name\": \"name\", \"type\": \"varchar\", \"length\": 255, \"nullable\": false}]}, {\"name\": \"roles\", \"columns\": [{\"name\": \"id\", \"type\": \"integer\", \"primaryKey\": true}, {\"name\": \"role_name\", \"type\": \"varchar\", \"length\": 100}]}]}",
+        "schema_format": "json",
+        "target_database": "sqlite",
+        "migration_framework": "raw_sql",
+        "erd_format": "ascii",
+        "documentation_style": "markdown",
+        "include_seed_data": false
+      },
+      "expected_keywords": [
+        "parsed_schema",
+        "json",
+        "migration_scripts",
+        "CREATE TABLE",
+        "sqlite",
+        "ascii",
+        "erd_description",
+        "validation_report",
+        "PASS",
+        "artifact_manifest"
+      ],
+      "expected_behavior": "Skill successfully parses JSON schema format, generates SQLite-compatible migration scripts without seed data, produces ASCII-art ERD, and validates all outputs for consistency.",
+      "phase_coverage": [
+        "Phase 0: Pre-flight Check",
+        "Phase 1: Parse and Validate Schema",
+        "Phase 2: Determine Migration Strategy",
+        "Phase 3: Generate Migration Scripts",
+        "Phase 5: Generate Entity-Relationship Diagram",
+        "Phase 6: Generate Documentation",
+        "Phase 7: Validate and Package"
+      ]
+    },
+    {
+      "id": "tc_004",
+      "name": "edge_case_complex_schema_split_erd",
+      "category": "edge_case",
+      "scenario": "User provides a schema with 25 tables and complex relationships, triggering ERD splitting into multiple diagrams.",
+      "input": {
+        "schema_definition": "CREATE TABLE organizations (id SERIAL PRIMARY KEY, name VARCHAR(255)); CREATE TABLE departments (id SERIAL PRIMARY KEY, org_id INTEGER REFERENCES organizations(id), name VARCHAR(255)); CREATE TABLE employees (id SERIAL PRIMARY KEY, dept_id INTEGER REFERENCES departments(id), name VARCHAR(255)); CREATE TABLE projects (id SERIAL PRIMARY KEY, org_id INTEGER REFERENCES organizations(id), name VARCHAR(255)); CREATE TABLE assignments (id SERIAL PRIMARY KEY, employee_id INTEGER REFERENCES employees(id), project_id INTEGER REFERENCES projects(id)); CREATE TABLE tasks (id SERIAL PRIMARY KEY, assignment_id INTEGER REFERENCES assignments(id), project_id INTEGER REFERENCES projects(id), title VARCHAR(255)); CREATE TABLE subtasks (id SERIAL PRIMARY KEY, task_id INTEGER REFERENCES tasks(id), title VARCHAR(255)); CREATE TABLE comments (id SERIAL PRIMARY KEY, task_id INTEGER REFERENCES tasks(id), employee_id INTEGER REFERENCES employees(id), content TEXT); CREATE TABLE attachments (id SERIAL PRIMARY KEY, task_id INTEGER REFERENCES tasks(id), file_path VARCHAR(500)); CREATE TABLE time_logs (id SERIAL PRIMARY KEY, assignment_id INTEGER REFERENCES assignments(id), hours DECIMAL(5,2)); CREATE TABLE status_codes (id SERIAL PRIMARY KEY, code VARCHAR(50), description VARCHAR(255)); CREATE TABLE priorities (id SERIAL PRIMARY KEY, level VARCHAR(50)); CREATE TABLE task_status (id SERIAL PRIMARY KEY, task_id INTEGER REFERENCES tasks(id), status_id INTEGER REFERENCES status_codes(id)); CREATE TABLE task_priority (id SERIAL PRIMARY KEY, task_id INTEGER REFERENCES tasks(id), priority_id INTEGER REFERENCES priorities(id)); CREATE TABLE notifications (id SERIAL PRIMARY KEY, employee_id INTEGER REFERENCES employees(id), message TEXT); CREATE TABLE audit_logs (id SERIAL PRIMARY KEY, entity_type VARCHAR(100), entity_id INTEGER, action VARCHAR(50), timestamp TIMESTAMP); CREATE TABLE permissions (id SERIAL PRIMARY KEY, role_name VARCHAR(100), resource VARCHAR(255)); CREATE TABLE role_assignments (id SERIAL PRIMARY KEY, employee_id INTEGER REFERENCES employees(id), role_name VARCHAR(100)); CREATE TABLE budgets (id SERIAL PRIMARY KEY, project_id INTEGER REFERENCES projects(id), amount DECIMAL(12,2)); CREATE TABLE expenses (id SERIAL PRIMARY KEY, project_id INTEGER REFERENCES projects(id), amount DECIMAL(12,2)); CREATE TABLE vendors (id SERIAL PRIMARY KEY, name VARCHAR(255)); CREATE TABLE vendor_contracts (id SERIAL PRIMARY KEY, vendor_id INTEGER REFERENCES vendors(id), project_id INTEGER REFERENCES projects(id)); CREATE TABLE milestones (id SERIAL PRIMARY KEY, project_id INTEGER REFERENCES projects(id), name VARCHAR(255), due_date DATE); CREATE TABLE deliverables (id SERIAL PRIMARY KEY, milestone_id INTEGER REFERENCES milestones(id), description TEXT);",
+        "schema_format": "sql",
+        "target_database": "postgresql",
+        "migration_framework": "flyway",
+        "erd_format": "mermaid",
+        "documentation_style": "markdown",
+        "include_seed_data": true
+      },
+      "expected_keywords": [
+        "erd_sections",
+        "multiple",
+        "split",
+        "complexity",
+        "master_erd",
+        "migration_scripts",
+        "topological",
+        "seed_scripts",
+        "validation_report",
+        "PASS",
+        "25 tables",
+        "artifact_manifest"
+      ],
+      "expected_behavior": "Skill detects schema complexity exceeding 20 tables, generates multiple ERD sections (e.g., organizational structure, project management, financial tracking), creates a master ERD showing section relationships, generates all migration scripts in correct dependency order, and produces comprehensive documentation.",
+      "phase_coverage": [
+        "Phase 0: Pre-flight Check",
+        "Phase 1: Parse and Validate Schema",
+        "Phase 2: Determine Migration Strategy",
+        "Phase 3: Generate Migration Scripts",
+        "Phase 4: Generate Seed Data Scripts",
+        "Phase 5: Generate Entity-Relationship Diagram",
+        "Phase 6: Generate Documentation",
+        "Phase 7: Validate and Package"
+      ]
+    },
+    {
+      "id": "tc_005",
+      "name": "error_handling_circular_foreign_key",
+      "category": "error_handling",
+      "scenario": "User provides a schema with circular foreign key dependencies (A->B->C->A), which should be detected and reported with remediation guidance.",
+      "input": {
+        "schema_definition": "CREATE TABLE table_a (id SERIAL PRIMARY KEY, b_id INTEGER REFERENCES table_b(id)); CREATE TABLE table_b (id SERIAL PRIMARY KEY, c_id INTEGER REFERENCES table_c(id)); CREATE TABLE table_c (id SERIAL PRIMARY KEY, a_id INTEGER REFERENCES table_a(id));",
+        "schema_format": "sql",
+        "target_database": "postgresql",
+        "migration_framework": "flyway",
+        "erd_format": "mermaid",
+        "documentation_style": "markdown",
+        "include_seed_data": false
+      },
+      "expected_keywords": [
+        "validation_issues",
+        "circular",
+        "cycle",
+        "depth_first_search",
+        "HIGH",
+        "remediation",
+        "junction_table",
+        "remove_fk",
+        "validation_report",
+        "FAIL",
+        "circular_path",
+        "user_confirmation"
+      ],
+      "expected_behavior": "Skill detects circular dependency using depth-first search, reports the cycle (table_a->table_b->table_c->table_a), flags as HIGH severity, suggests remediation options (remove one FK or create junction table), and returns validation report with FAIL status until user confirms resolution.",
+      "phase_coverage": [
+        "Phase 0: Pre-flight Check",
+        "Phase 1: Parse and Validate Schema",
+        "Phase 7: Validate and Package"
+      ]
+    },
+    {
+      "id": "tc_006",
+      "name": "error_handling_missing_primary_key",
+      "category": "error_handling",
+      "scenario": "User provides a schema where one or more tables lack a primary key, which should be detected and flagged as a critical issue.",
+      "input": {
+        "schema_definition": "CREATE TABLE users (id SERIAL PRIMARY KEY, name VARCHAR(255)); CREATE TABLE audit_log (user_id INTEGER, action VARCHAR(100), timestamp TIMESTAMP);",
+        "schema_format": "sql",
+        "target_database": "postgresql",
+        "migration_framework": "flyway",
+        "erd_format": "mermaid",
+        "documentation_style": "markdown",
+        "include_seed_data": false
+      },
+      "expected_keywords": [
+        "validation_issues",
+        "primary_key",
+        "missing",
+        "HIGH",
+        "audit_log",
+        "preflight_status",
+        "FAIL",
+        "validation_report",
+        "remediation",
+        "surrogate_pk"
+      ],
+      "expected_behavior": "Skill detects that audit_log table lacks a primary key during Phase 0 pre-flight check, flags as HIGH severity issue, suggests adding a surrogate primary key (id SERIAL PRIMARY KEY), and returns FAIL status in preflight_status and validation_report.",
+      "phase_coverage": [
+        "Phase 0: Pre-flight Check",
+        "Phase 1: Parse and Validate Schema",
+        "Phase 7: Validate and Package"
+      ]
+    },
+    {
+      "id": "tc_007",
+      "name": "error_handling_unrecognized_schema_format",
+      "category": "error_handling",
+      "scenario": "User provides an unsupported schema format (e.g., 'xml') that is not in the supported list, triggering an abort response.",
+      "input": {
+        "schema_definition": "<schema><table name=\"users\"><column name=\"id\" type=\"integer\"/></table></schema>",
+        "schema_format": "xml",
+        "target_database": "postgresql",
+        "migration_framework": "flyway",
+        "erd_format": "mermaid",
+        "documentation_style": "markdown",
+        "include_seed_data": false
+      },
+      "expected_keywords": [
+        "error",
+        "unsupported",
+        "format",
+        "xml",
+        "supported_formats",
+        "sql",
+        "json",
+        "yaml",
+        "markdown",
+        "abort",
+        "preflight_status",
+        "FAIL"
+      ],
+      "expected_behavior": "Skill validates schema_format in Phase 0 pre-flight check, detects that 'xml' is not in the supported list (sql, json, yaml, markdown), aborts execution, and returns error message listing all supported formats.",
+      "phase_coverage": [
+        "Phase 0: Pre-flight Check"
+      ]
+    },
+    {
+      "id": "tc_008",
+      "name": "quality_gate_seed_data_fk_constraint_violation",
+      "category": "quality_gate",
+      "scenario": "User provides seed data that violates foreign key constraints (orphaned records), which should be detected during validation and cause abort.",
+      "input": {
+        "schema_definition": "CREATE TABLE categories (id SERIAL PRIMARY KEY, name VARCHAR(100)); CREATE TABLE products (id SERIAL PRIMARY KEY, category_id INTEGER NOT NULL REFERENCES categories(id), name VARCHAR(255));",
+        "schema_format": "sql",
+        "target_database": "postgresql",
+        "migration_framework": "flyway",
+        "erd_format": "mermaid",
+        "documentation_style": "markdown",
+        "include_seed_data": true,
+        "seed_data_spec": {
+          "products": [
+            {
+              "id": 1,
+              "category_id": 999,
+              "name": "Widget"
+            }
+          ]
+        }
+      },
+      "expected_keywords": [
+        "seed_validation_report",
+        "constraint_violation",
+        "orphaned",
+        "category_id",
+        "999",
+        "does_not_exist",
+        "abort",
+        "validation_report",
+        "FAIL",
+        "remediation",
+        "seed_data_spec"
+      ],
+      "expected_behavior": "Skill generates seed data scripts but during Phase 7 validation detects that product with category_id=999 references non-existent category, reports FK constraint violation, aborts with FAIL status, and requests user to fix seed_data_spec.",
+      "phase_coverage": [
+        "Phase 0: Pre-flight Check",
+        "Phase 1: Parse and Validate Schema",
+        "Phase 4: Generate Seed Data Scripts",
+        "Phase 7: Validate and Package"
+      ]
+    },
+    {
+      "id": "tc_009",
+      "name": "quality_gate_migration_down_script_reversibility",
+      "category": "quality_gate",
+      "scenario": "Skill generates migration scripts and validates that down scripts are true inverses of up scripts, ensuring rollback capability.",
+      "input": {
+        "schema_definition": "CREATE TABLE users (id SERIAL PRIMARY KEY, email VARCHAR(255) NOT NULL, age INTEGER);",
+        "schema_format": "sql",
+        "current_schema": "CREATE TABLE users (id SERIAL PRIMARY KEY, email VARCHAR(255) NOT NULL);",
+        "target_database": "postgresql",
+        "migration_framework": "flyway",
+        "erd_format": "mermaid",
+        "documentation_style": "markdown",
+        "include_seed_data": false
+      },
+      "expected_keywords": [
+        "migration_scripts",
+        "up",
+        "down",
+        "ADD COLUMN age",
+        "DROP COLUMN age",
+        "reversible",
+        "validation_report",
+        "PASS",
+        "down_script_inverse",
+        "verified"
+      ],
+      "expected_behavior": "Skill generates migration to add age column with up script (ALTER TABLE users ADD COLUMN age INTEGER) and down script (ALTER TABLE users DROP COLUMN age), validates during Phase 7 that down script is true inverse of up script, and confirms reversibility in validation_report.",
+      "phase_coverage": [
+        "Phase 0: Pre-flight Check",
+        "Phase 1: Parse and Validate Schema",
+        "Phase 2: Determine Migration Strategy",
+        "Phase 3: Generate Migration Scripts",
+        "Phase 7: Validate and Package"
+      ]
+    },
+    {
+      "id": "tc_010",
+      "name": "quality_gate_documentation_completeness",
+      "category": "quality_gate",
+      "scenario": "Skill generates documentation and validates that all required sections are present and non-empty, including troubleshooting with minimum 3 issues.",
+      "input": {
+        "schema_definition": "CREATE TABLE orders (id SERIAL PRIMARY KEY, customer_id INTEGER NOT NULL REFERENCES customers(id), total DECIMAL(10,2)); CREATE TABLE customers (id SERIAL PRIMARY KEY, name VARCHAR(255) NOT NULL, email VARCHAR(255));",
+        "schema_format": "sql",
+        "target_database": "postgresql",
+        "migration_framework": "flyway",
+        "erd_format": "mermaid",
+        "documentation_style": "markdown",
+        "include_seed_data": true
+      },
+      "expected_keywords": [
+        "documentation",
+        "readme",
+        "schema_overview",
+        "migration_guide",
+        "erd_visual",
+        "metadata",
+        "troubleshooting",
+        "Foreign key constraint violation",
+        "Migration timeout",
+        "Seed data conflicts",
+        "setup_instructions",
+        "rollback_instructions",
+        "validation_report",
+        "PASS"
+      ],
+      "expected_behavior": "Skill generates complete documentation package with all sections (readme, schema_overview, migration_guide, erd_visual, metadata), includes troubleshooting section with at least 3 common issues and solutions, provides example commands for PostgreSQL, and validation confirms all sections are present and non-empty.",
+      "phase_coverage": [
+        "Phase 0: Pre-flight Check",
+        "Phase 1: Parse and Validate Schema",
+        "Phase 2: Determine Migration Strategy",
+        "Phase 3: Generate Migration Scripts",
+        "Phase 4: Generate Seed Data Scripts",
+        "Phase 5: Generate Entity-Relationship Diagram",
+        "Phase 6: Generate Documentation",
+        "Phase 7: Validate and Package"
+      ]
+    }
+  ],
+  "coverage": {
+    "phases": [
+      {
+        "phase": "Phase 0: Pre-flight Check",
+        "covered_by": [
+          "tc_001",
+          "tc_002",
+          "tc_003",
+          "tc_004",
+          "tc_005",
+          "tc_006",
+          "tc_007",
+          "tc_008",
+          "tc_009",
+          "tc_010"
+        ],
+        "coverage_percentage": 100
+      },
+      {
+        "phase": "Phase 1: Parse and Validate Schema",
+        "covered_by": [
+          "tc_001",
+          "tc_002",
+          "tc_003",
+          "tc_004",
+          "tc_005",
+          "tc_006",
+          "tc_008",
+          "tc_009",
+          "tc_010"
+        ],
+        "coverage_percentage": 100
+      },
+      {
+        "phase": "Phase 2: Determine Migration Strategy",
+        "covered_by": [
+          "tc_001",
+          "tc_002",
+          "tc_004",
+          "tc_009",
+          "tc_010"
+        ],
+        "coverage_percentage": 100
+      },
+      {
+        "phase": "Phase 3: Generate Migration Scripts",
+        "covered_by": [
+          "tc_001",
+          "tc_002",
+          "tc_003",
+          "tc_004",
+          "tc_009",
+          "tc_010"
+        ],
+        "coverage_percentage": 100
+      },
+      {
+        "phase": "Phase 4: Generate Seed Data Scripts",
+        "covered_by": [
+          "tc_001",
+          "tc_002",
+          "tc_004",
+          "tc_008",
+          "tc_010"
+        ],
+        "coverage_percentage": 100
+      },
+      {
+        "phase": "Phase 5: Generate Entity-Relationship Diagram",
+        "covered_by": [
+          "tc_001",
+          "tc_002",
+          "tc_003",
+          "tc_004",
+          "tc_010"
+        ],
+        "coverage_percentage": 100
+      },
+      {
+        "phase": "Phase 6: Generate Documentation",
+        "covered_by": [
+          "tc_001",
+          "tc_002",
+          "tc_004",
+          "tc_010"
+        ],
+        "coverage_percentage": 100
+      },
+      {
+        "phase": "Phase 7: Validate and Package",
+        "covered_by": [
+          "tc_001",
+          "tc_002",
+          "tc_003",
+          "tc_004",
+          "tc_005",
+          "tc_006",
+          "tc_007",
+          "tc_008",
+          "tc_009",
+          "tc_010"
+        ],
+        "coverage_percentage": 100
+      }
+    ],
+    "quality_gates": [
+      {
+        "gate": "Phase 0: Schema format recognized and supported",
+        "covered_by": [
+          "tc_001",
+          "tc_002",
+          "tc_003",
+          "tc_007"
+        ],
+        "coverage_percentage": 100
+      },
+      {
+        "gate": "Phase 1: All foreign key dependencies form a DAG (no circular dependencies)",
+        "covered_by": [
+          "tc_001",
+          "tc_002",
+          "tc_003",
+          "tc_004",
+          "tc_005"
+        ],
+        "coverage_percentage": 100
+      },
+      {
+        "gate": "Phase 2: No circular dependencies in migration order",
+        "covered_by": [
+          "tc_001",
+          "tc_002",
+          "tc_004",
+          "tc_009"
+        ],
+        "coverage_percentage": 100
+      },
+      {
+        "gate": "Phase 3: Down scripts are true inverses of up scripts (reversible)",
+        "covered_by": [
+          "tc_001",
+          "tc_002",
+          "tc_009"
+        ],
+        "coverage_percentage": 100
+      },
+      {
+        "gate": "Phase 4: All seed data respects foreign key constraints",
+        "covered_by": [
+          "tc_001",
+          "tc_002",
+          "tc_004",
+          "tc_008"
+        ],
+        "coverage_percentage": 100
+      },
+      {
+        "gate": "Phase 5: All tables appear in ERD (or in ERD sections if split)",
+        "covered_by": [
+          "tc_001",
+          "tc_002",
+          "tc_003",
+          "tc_004"
+        ],
+        "coverage_percentage": 100
+      },
+      {
+        "gate": "Phase 6: All documentation sections present and non-empty",
+        "covered_by": [
+          "tc_001",
+          "tc_002",
+          "tc_010"
+        ],
+        "coverage_percentage": 100
+      },
+      {
+        "gate": "Phase 7: No critical errors; validation report is PASS or PASS WITH WARNINGS",
+        "covered_by": [
+          "tc_001",
+          "tc_002",
+          "tc_003",
+          "tc_004",
+          "tc_009",
+          "tc_010"
+        ],
+        "coverage_percentage": 100
+      }
+    ],
+    "error_handlers": [
+      {
+        "error": "Phase 0: Schema format is unrecognized",
+        "covered_by": [
+          "tc_007"
+        ],
+        "coverage_percentage": 100
+      },
+      {
+        "error": "Phase 0: All tables lack primary keys",
+        "covered_by": [
+          "tc_006"
+        ],
+        "coverage_percentage": 100
+      },
+      {
+        "error": "Phase 1: Schema has circular foreign key dependencies",
+        "covered_by": [
+          "tc_005"
+        ],
+        "coverage_percentage": 100
+      },
+      {
+        "error": "Phase 1: Schema has tables without primary keys",
+        "covered_by": [
+          "tc_006"
+        ],
+        "coverage_percentage": 100
+      },
+      {
+        "error": "Phase 4: Seed data violates foreign key constraints",
+        "covered_by": [
+          "tc_008"
+        ],
+        "coverage_percentage": 100
+      },
+      {
+        "error": "Phase 5: ERD is too complex (more than 20 tables)",
+        "covered_by": [
+          "tc_004"
+        ],
+        "coverage_percentage": 100
+      },
+      {
+        "error": "Phase 7: Validation finds critical errors",
+        "covered_by": [
+          "tc_005",
+          "tc_006",
+          "tc_007",
+          "tc_008"
+        ],
+        "coverage_percentage": 100
+      }
+    ],
+    "critical_surfaces_covered": 15,
+    "critical_surfaces_total": 15,
+    "coverage_percentage": 100
+  }
+}

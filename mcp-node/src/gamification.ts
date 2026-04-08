@@ -23,6 +23,7 @@ export interface TrainerState {
   categories_today: string[];
   total_skill_runs: number;
   total_chain_runs: number;
+  total_compositions: number;
 }
 
 interface Achievement {
@@ -142,6 +143,9 @@ const ALL_ACHIEVEMENTS: Achievement[] = [
   { id: "total_100", name: "Centurion", description: "100 total skill runs", xp_reward: 1000, icon: "century" },
   { id: "daily_3", name: "Busy Day", description: "Run 3 skills in one day", xp_reward: 100, icon: "zap" },
   { id: "quest_complete", name: "Quest Complete", description: "Complete a daily quest", xp_reward: 75, icon: "scroll" },
+  { id: "chain_architect", name: "Chain Architect", description: "Compose your first dynamic chain", xp_reward: 200, icon: "puzzle" },
+  { id: "dynamic_composer", name: "Dynamic Composer", description: "Compose 5 dynamic chains", xp_reward: 500, icon: "wand" },
+  { id: "composer_master", name: "Composer Master", description: "Compose 25 dynamic chains", xp_reward: 1500, icon: "architect" },
 ];
 
 const QUEST_TEMPLATES = [
@@ -199,7 +203,7 @@ export class GamificationEngine {
       evolution_levels: {},
       daily_runs_today: [], daily_runs_date: "",
       categories_today: [],
-      total_skill_runs: 0, total_chain_runs: 0,
+      total_skill_runs: 0, total_chain_runs: 0, total_compositions: 0,
     };
   }
 
@@ -291,6 +295,11 @@ export class GamificationEngine {
     // Daily
     const today = new Date().toISOString().slice(0, 10);
     if (s.daily_runs_date === today && s.daily_runs_today.length >= 3) tryU("daily_3");
+
+    // Compositions
+    if ((s.total_compositions ?? 0) >= 1) tryU("chain_architect");
+    if ((s.total_compositions ?? 0) >= 5) tryU("dynamic_composer");
+    if ((s.total_compositions ?? 0) >= 25) tryU("composer_master");
 
     return unlocked;
   }
@@ -428,6 +437,15 @@ export class GamificationEngine {
         xp_reward: q.xp,
       };
     });
+  }
+
+  recordComposition(chainName: string, stepCount: number): Achievement[] {
+    this.state.total_compositions = (this.state.total_compositions ?? 0) + 1;
+    this.addXp(20 + stepCount * 3);
+    this.updateStreak();
+    const unlocked = this.checkAchievements();
+    this.save();
+    return unlocked;
   }
 
   getState(): TrainerState {

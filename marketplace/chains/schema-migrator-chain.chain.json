@@ -1,0 +1,340 @@
+{
+  "name": "schema-migrator-chain",
+  "description": "Converts a database schema definition into migration scripts, seed data, and an Entity-Relationship Diagram for documentation.",
+  "steps": [
+    {
+      "id": "step_1_preflight",
+      "skill_name": "schema-migrator",
+      "phase": "Phase 0: Pre-flight Check",
+      "inputs": {
+        "schema_definition": "from_context.schema_definition",
+        "schema_format": "from_context.schema_format"
+      },
+      "outputs": {
+        "preflight_status": "PASS|FAIL",
+        "preflight_issues": "array",
+        "preflight_warnings": "array"
+      },
+      "parallel_group": 1,
+      "description": "Validate schema format, check for reserved keywords, verify naming conventions, ensure at least one table with PK exists"
+    },
+    {
+      "id": "step_2_parse_validate",
+      "skill_name": "schema-migrator",
+      "phase": "Phase 1: Parse and Validate Schema",
+      "inputs": {
+        "schema_definition": "from_context.schema_definition",
+        "schema_format": "from_context.schema_format",
+        "preflight_status": "step_1_preflight.preflight_status"
+      },
+      "outputs": {
+        "parsed_schema": "object",
+        "schema_statistics": "object",
+        "validation_issues": "array",
+        "dependency_graph": "object"
+      },
+      "parallel_group": 2,
+      "description": "Parse schema, extract tables/columns/constraints, validate FK references, detect circular dependencies"
+    },
+    {
+      "id": "step_3_migration_strategy",
+      "skill_name": "schema-migrator",
+      "phase": "Phase 2: Determine Migration Strategy",
+      "inputs": {
+        "parsed_schema": "step_2_parse_validate.parsed_schema",
+        "current_schema": "from_context.current_schema",
+        "schema_format": "from_context.schema_format",
+        "dependency_graph": "step_2_parse_validate.dependency_graph"
+      },
+      "outputs": {
+        "migration_plan": "array",
+        "migration_risk_level": "string",
+        "migration_dependencies": "object",
+        "data_transformation_notes": "array"
+      },
+      "parallel_group": 2,
+      "description": "Diff schemas, order migrations by FK dependencies, identify destructive operations, flag data transformations"
+    },
+    {
+      "id": "step_4_generate_migrations",
+      "skill_name": "schema-migrator",
+      "phase": "Phase 3: Generate Migration Scripts",
+      "inputs": {
+        "migration_plan": "step_3_migration_strategy.migration_plan",
+        "target_database": "from_context.target_database",
+        "migration_framework": "from_context.migration_framework",
+        "data_transformation_notes": "step_3_migration_strategy.data_transformation_notes"
+      },
+      "outputs": {
+        "migration_scripts": "object",
+        "migration_metadata": "array",
+        "sql_validation_report": "object"
+      },
+      "parallel_group": 3,
+      "description": "Generate up/down SQL scripts, wrap in framework format, validate syntax, assign version numbers"
+    },
+    {
+      "id": "step_5_generate_seeds",
+      "skill_name": "schema-migrator",
+      "phase": "Phase 4: Generate Seed Data Scripts",
+      "inputs": {
+        "parsed_schema": "step_2_parse_validate.parsed_schema",
+        "include_seed_data": "from_context.include_seed_data",
+        "seed_data_spec": "from_context.seed_data_spec",
+        "target_database": "from_context.target_database",
+        "dependency_graph": "step_2_parse_validate.dependency_graph"
+      },
+      "outputs": {
+        "seed_scripts": "object",
+        "seed_metadata": "array",
+        "seed_validation_report": "object"
+      },
+      "parallel_group": 3,
+      "description": "Identify lookup tables, generate INSERT statements, order by FK dependencies, validate FK compliance"
+    },
+    {
+      "id": "step_6_generate_erd",
+      "skill_name": "schema-migrator",
+      "phase": "Phase 5: Generate Entity-Relationship Diagram",
+      "inputs": {
+        "parsed_schema": "step_2_parse_validate.parsed_schema",
+        "erd_format": "from_context.erd_format",
+        "schema_statistics": "step_2_parse_validate.schema_statistics"
+      },
+      "outputs": {
+        "erd_description": "string",
+        "erd_metadata": "object",
+        "erd_sections": "array"
+      },
+      "parallel_group": 3,
+      "description": "Extract tables and relationships, determine cardinality, generate ERD in requested format, split if >20 tables"
+    },
+    {
+      "id": "step_7_generate_docs",
+      "skill_name": "schema-migrator",
+      "phase": "Phase 6: Generate Documentation",
+      "inputs": {
+        "parsed_schema": "step_2_parse_validate.parsed_schema",
+        "migration_metadata": "step_4_generate_migrations.migration_metadata",
+        "migration_scripts": "step_4_generate_migrations.migration_scripts",
+        "seed_metadata": "step_5_generate_seeds.seed_metadata",
+        "erd_description": "step_6_generate_erd.erd_description",
+        "erd_sections": "step_6_generate_erd.erd_sections",
+        "documentation_style": "from_context.documentation_style",
+        "target_database": "from_context.target_database",
+        "data_transformation_notes": "step_3_migration_strategy.data_transformation_notes"
+      },
+      "outputs": {
+        "documentation": "object",
+        "documentation_files": "array"
+      },
+      "parallel_group": 4,
+      "description": "Create README, schema overview, migration guide, include ERD, add metadata with setup/rollback/troubleshooting"
+    },
+    {
+      "id": "step_8_validate_package",
+      "skill_name": "schema-migrator",
+      "phase": "Phase 7: Validate and Package",
+      "inputs": {
+        "migration_scripts": "step_4_generate_migrations.migration_scripts",
+        "seed_scripts": "step_5_generate_seeds.seed_scripts",
+        "documentation": "step_7_generate_docs.documentation",
+        "erd_description": "step_6_generate_erd.erd_description",
+        "parsed_schema": "step_2_parse_validate.parsed_schema",
+        "migration_plan": "step_3_migration_strategy.migration_plan",
+        "sql_validation_report": "step_4_generate_migrations.sql_validation_report",
+        "seed_validation_report": "step_5_generate_seeds.seed_validation_report"
+      },
+      "outputs": {
+        "validation_report": "object",
+        "artifact_manifest": "object",
+        "package_structure": "string"
+      },
+      "parallel_group": 5,
+      "description": "Validate all SQL, check consistency, verify completeness, generate manifest, package outputs"
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "step_1_preflight",
+      "to_step": "step_2_parse_validate",
+      "data_type": "preflight_status",
+      "field_mapping": "preflight_status -> preflight_status",
+      "condition": "preflight_status == 'PASS'"
+    },
+    {
+      "from_step": "step_2_parse_validate",
+      "to_step": "step_3_migration_strategy",
+      "data_type": "parsed_schema",
+      "field_mapping": "parsed_schema -> parsed_schema"
+    },
+    {
+      "from_step": "step_2_parse_validate",
+      "to_step": "step_3_migration_strategy",
+      "data_type": "dependency_graph",
+      "field_mapping": "dependency_graph -> dependency_graph"
+    },
+    {
+      "from_step": "step_2_parse_validate",
+      "to_step": "step_5_generate_seeds",
+      "data_type": "parsed_schema",
+      "field_mapping": "parsed_schema -> parsed_schema"
+    },
+    {
+      "from_step": "step_2_parse_validate",
+      "to_step": "step_5_generate_seeds",
+      "data_type": "dependency_graph",
+      "field_mapping": "dependency_graph -> dependency_graph"
+    },
+    {
+      "from_step": "step_2_parse_validate",
+      "to_step": "step_6_generate_erd",
+      "data_type": "parsed_schema",
+      "field_mapping": "parsed_schema -> parsed_schema"
+    },
+    {
+      "from_step": "step_2_parse_validate",
+      "to_step": "step_6_generate_erd",
+      "data_type": "schema_statistics",
+      "field_mapping": "schema_statistics -> schema_statistics"
+    },
+    {
+      "from_step": "step_2_parse_validate",
+      "to_step": "step_7_generate_docs",
+      "data_type": "parsed_schema",
+      "field_mapping": "parsed_schema -> parsed_schema"
+    },
+    {
+      "from_step": "step_3_migration_strategy",
+      "to_step": "step_4_generate_migrations",
+      "data_type": "migration_plan",
+      "field_mapping": "migration_plan -> migration_plan"
+    },
+    {
+      "from_step": "step_3_migration_strategy",
+      "to_step": "step_4_generate_migrations",
+      "data_type": "data_transformation_notes",
+      "field_mapping": "data_transformation_notes -> data_transformation_notes"
+    },
+    {
+      "from_step": "step_3_migration_strategy",
+      "to_step": "step_7_generate_docs",
+      "data_type": "data_transformation_notes",
+      "field_mapping": "data_transformation_notes -> data_transformation_notes"
+    },
+    {
+      "from_step": "step_4_generate_migrations",
+      "to_step": "step_7_generate_docs",
+      "data_type": "migration_metadata",
+      "field_mapping": "migration_metadata -> migration_metadata"
+    },
+    {
+      "from_step": "step_4_generate_migrations",
+      "to_step": "step_7_generate_docs",
+      "data_type": "migration_scripts",
+      "field_mapping": "migration_scripts -> migration_scripts"
+    },
+    {
+      "from_step": "step_4_generate_migrations",
+      "to_step": "step_8_validate_package",
+      "data_type": "migration_scripts",
+      "field_mapping": "migration_scripts -> migration_scripts"
+    },
+    {
+      "from_step": "step_4_generate_migrations",
+      "to_step": "step_8_validate_package",
+      "data_type": "sql_validation_report",
+      "field_mapping": "sql_validation_report -> sql_validation_report"
+    },
+    {
+      "from_step": "step_5_generate_seeds",
+      "to_step": "step_7_generate_docs",
+      "data_type": "seed_metadata",
+      "field_mapping": "seed_metadata -> seed_metadata"
+    },
+    {
+      "from_step": "step_5_generate_seeds",
+      "to_step": "step_8_validate_package",
+      "data_type": "seed_scripts",
+      "field_mapping": "seed_scripts -> seed_scripts"
+    },
+    {
+      "from_step": "step_5_generate_seeds",
+      "to_step": "step_8_validate_package",
+      "data_type": "seed_validation_report",
+      "field_mapping": "seed_validation_report -> seed_validation_report"
+    },
+    {
+      "from_step": "step_6_generate_erd",
+      "to_step": "step_7_generate_docs",
+      "data_type": "erd_description",
+      "field_mapping": "erd_description -> erd_description"
+    },
+    {
+      "from_step": "step_6_generate_erd",
+      "to_step": "step_7_generate_docs",
+      "data_type": "erd_sections",
+      "field_mapping": "erd_sections -> erd_sections"
+    },
+    {
+      "from_step": "step_6_generate_erd",
+      "to_step": "step_8_validate_package",
+      "data_type": "erd_description",
+      "field_mapping": "erd_description -> erd_description"
+    },
+    {
+      "from_step": "step_7_generate_docs",
+      "to_step": "step_8_validate_package",
+      "data_type": "documentation",
+      "field_mapping": "documentation -> documentation"
+    }
+  ],
+  "entry_inputs": [
+    "schema_definition",
+    "schema_format",
+    "target_database",
+    "migration_framework",
+    "erd_format",
+    "documentation_style",
+    "include_seed_data",
+    "current_schema",
+    "seed_data_spec"
+  ],
+  "terminal_outputs": [
+    "migration_scripts",
+    "seed_scripts",
+    "erd_description",
+    "documentation",
+    "validation_report",
+    "artifact_manifest"
+  ],
+  "parallel_groups": [
+    [
+      "step_1_preflight"
+    ],
+    [
+      "step_2_parse_validate",
+      "step_3_migration_strategy"
+    ],
+    [
+      "step_4_generate_migrations",
+      "step_5_generate_seeds",
+      "step_6_generate_erd"
+    ],
+    [
+      "step_7_generate_docs"
+    ],
+    [
+      "step_8_validate_package"
+    ]
+  ],
+  "estimated_cost": 1,
+  "critical_path": [
+    "step_1_preflight",
+    "step_2_parse_validate",
+    "step_3_migration_strategy",
+    "step_4_generate_migrations",
+    "step_7_generate_docs",
+    "step_8_validate_package"
+  ]
+}
