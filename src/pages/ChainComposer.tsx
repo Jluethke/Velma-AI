@@ -2,7 +2,7 @@
  * ChainComposer — Visual DAG editor for composing skill chains.
  * Uses @xyflow/react for the interactive graph canvas.
  *
- * - Loads ALL 176 marketplace skills from /skill-catalog.json
+ * - Loads all marketplace skills from /skill-catalog.json
  * - Nodes have top (input) and bottom (output) handles for drag-to-connect
  * - Drag from bottom handle of one node to top handle of another to create flow
  */
@@ -177,14 +177,6 @@ export default function ChainComposer() {
 
     setNodes(prev => [...prev, newNode]);
   }, [nodes.length]);
-
-  /** When a new custom skill is created in the palette, add to skill list */
-  const handleCreateSkill = useCallback((skill: PaletteSkill) => {
-    setSkills(prev => {
-      if (prev.some(s => s.name === skill.name)) return prev;
-      return [...prev, skill];
-    });
-  }, []);
 
   /** Save current chain to localStorage */
   const handleSave = useCallback(() => {
@@ -643,7 +635,7 @@ fi
   return (
     <div style={{ display: 'flex', height: 'calc(100vh - 60px)', marginTop: '60px' }}>
       {/* Left: Skill Palette */}
-      <SkillPalette skills={skills} onAddSkill={handleAddSkill} onCreateSkill={isPremium ? handleCreateSkill : undefined} />
+      <SkillPalette skills={skills} onAddSkill={handleAddSkill} isPremium={isPremium} />
 
       {/* Center: Canvas + Controls */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>

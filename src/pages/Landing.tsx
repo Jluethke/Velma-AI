@@ -100,7 +100,7 @@ function TrustEconomy() {
           {
             step: '1',
             title: 'Try Skills Free',
-            desc: 'Run any of 176 skills for free in Claude Code. No wallet needed. See what AI can do with structured procedures.',
+            desc: 'Run any skill for free in Claude Code. No wallet needed. See what AI can do with structured procedures.',
             color: 'var(--cyan)',
             bg: 'rgba(0,255,200,0.06)',
             border: 'rgba(0,255,200,0.15)',

@@ -34,7 +34,7 @@ export default function HeroSection() {
           className="text-base md:text-lg mb-10 max-w-2xl mx-auto"
           style={{ color: 'var(--text-secondary)' }}
         >
-          176 AI skills you can try free. Chain them together in a visual composer.
+          Hundreds of AI skills you can try free. Chain them together in a visual composer.
           Publish on-chain and earn TRUST tokens when others use your work.
         </p>
 

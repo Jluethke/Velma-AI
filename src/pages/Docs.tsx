@@ -81,7 +81,7 @@ export default function Docs() {
               The <a href="/compose" style={{ color: 'var(--cyan)' }}>Composer</a> is a visual editor for building multi-skill chains. Requires a connected wallet with TRUST.
             </p>
             <div className="space-y-3 text-sm" style={t}>
-              <p><strong style={h}>Add skills</strong> — Click from the palette (176 skills across 13 domains) to place on the canvas.</p>
+              <p><strong style={h}>Add skills</strong> — Click from the palette (hundreds of skills across multiple domains) to place on the canvas.</p>
               <p><strong style={h}>Connect</strong> — Drag from the cyan dot (bottom) to the red dot (top) to create flow.</p>
               <p><strong style={h}>Customize</strong> — Click a node to expand. Edit inputs/outputs. Modified nodes get a "modified" badge for derivative tracking.</p>
               <p><strong style={h}>Create new skills</strong> — Click "+ Create Skill." Describe it in plain English. Claude builds it when the chain runs using <code className="text-xs px-1 rounded" style={{ background: 'var(--bg-card)', color: 'var(--cyan)' }}>skill-from-workflow</code>.</p>
