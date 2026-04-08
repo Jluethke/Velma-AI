@@ -1018,7 +1018,7 @@ echo "  To remove: crontab -l | grep -v 'SkillChain-${safeName}' | crontab -"
                   navigator.clipboard.writeText(cmd).then(() => {
                     showTrustToast();
                     setTrustToast(false); // clear the TRUST toast
-                    alert('Command copied! Open a terminal on your computer and paste it.');
+                    alert('Command copied! Open an AI chat and paste it.');
                   });
                 } else {
                   handleRun();

@@ -156,7 +156,7 @@ export default function SkillDetail() {
               if (isMobile) {
                 const cmd = `claude -p "Run the SkillChain skill '${name}'. Call start_skill_run with '${name}', then get_skill to read the definition. Ask me for inputs, execute each phase with record_phase, then complete_skill_run."`;
                 navigator.clipboard.writeText(cmd).then(() => {
-                  alert('Command copied! Open a terminal on your computer and paste it.');
+                  alert('Command copied! Open an AI chat and paste it.');
                 });
                 return;
               }
