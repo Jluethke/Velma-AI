@@ -97,14 +97,14 @@ export default function Whitepaper() {
       {/* CTAs */}
       <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
         <a
-          href="/whitepaper.pdf"
+          href="/docs"
           className="px-8 py-3 rounded-lg text-sm font-semibold no-underline transition-all"
           style={{
             background: 'var(--cyan)',
             color: '#0a0a0f',
           }}
         >
-          Download Whitepaper PDF
+          Read Full Documentation
         </a>
         <Link
           to="/docs"

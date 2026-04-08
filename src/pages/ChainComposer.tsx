@@ -98,6 +98,12 @@ export default function ChainComposer() {
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [savedChains, setSavedChains] = useState<SavedChain[]>(getSavedChains);
   const [showSaveLoad, setShowSaveLoad] = useState(false);
+  const [trustToast, setTrustToast] = useState(false);
+
+  const showTrustToast = useCallback(() => {
+    setTrustToast(true);
+    setTimeout(() => setTrustToast(false), 3000);
+  }, []);
 
   // Load full skill catalog from static JSON
   useEffect(() => {
@@ -748,7 +754,7 @@ fi
               Run
             </button>
             <button
-              onClick={isPremium ? handleSave : () => alert('Connect wallet with TRUST tokens to save chains')}
+              onClick={isPremium ? handleSave : showTrustToast}
               style={{
                 padding: '4px 12px',
                 background: 'rgba(170,136,255,0.08)',
@@ -763,7 +769,7 @@ fi
               Save
             </button>
             <button
-              onClick={isPremium ? () => { setSavedChains(getSavedChains()); setShowSaveLoad(!showSaveLoad); } : () => alert('Connect wallet with TRUST tokens to load chains')}
+              onClick={isPremium ? () => { setSavedChains(getSavedChains()); setShowSaveLoad(!showSaveLoad); } : showTrustToast}
               style={{
                 padding: '4px 12px',
                 background: 'rgba(170,136,255,0.08)',
@@ -778,7 +784,7 @@ fi
               Load
             </button>
             <button
-              onClick={isPremium ? handlePublish : () => alert('Connect wallet with TRUST tokens to publish on-chain')}
+              onClick={isPremium ? handlePublish : showTrustToast}
               disabled={publishState.status === 'signing' || publishState.status === 'confirming'}
               style={{
                 padding: '4px 14px',
@@ -818,6 +824,21 @@ fi
             {nodes.length} skills / {edges.length} connections
           </span>
         </div>
+
+        {/* TRUST token toast */}
+        {trustToast && (
+          <div style={{
+            padding: '8px 16px',
+            background: 'rgba(255,215,0,0.1)',
+            borderBottom: '1px solid rgba(255,215,0,0.25)',
+            fontSize: '12px',
+            color: 'var(--gold)',
+            textAlign: 'center',
+            fontWeight: 500,
+          }}>
+            Connect wallet with TRUST tokens to unlock this feature
+          </div>
+        )}
 
         {/* Saved chains panel */}
         {showSaveLoad && (

@@ -38,7 +38,7 @@ const tiers: Tier[] = [
       'Community support',
     ],
     cta: 'Get Started Free',
-    ctaLink: '/explore',
+    ctaLink: '/skill/budget-builder',
   },
   {
     name: 'Pro',
@@ -60,7 +60,7 @@ const tiers: Tier[] = [
       'Email support',
     ],
     cta: 'Start Pro Trial',
-    ctaLink: '#pro-signup',
+    ctaLink: '/compose',
   },
   {
     name: 'Team',
@@ -82,7 +82,7 @@ const tiers: Tier[] = [
       'Priority support',
     ],
     cta: 'Contact Sales',
-    ctaLink: '#contact-sales',
+    ctaLink: '/compose',
   },
   {
     name: 'Enterprise',
@@ -104,7 +104,7 @@ const tiers: Tier[] = [
       'SSO / SAML',
     ],
     cta: 'Talk to Us',
-    ctaLink: '#contact-enterprise',
+    ctaLink: '/docs',
   },
 ];
 
@@ -393,7 +393,7 @@ export default function Pricing() {
             to the skill marketplace, gamification, and TRUST token mining.
           </p>
           <Link
-            to="/explore"
+            to="/compose"
             className="inline-block px-6 py-2.5 rounded-lg text-sm font-bold transition-all duration-200 no-underline"
             style={{
               background: 'linear-gradient(135deg, var(--cyan), var(--green))',
