@@ -44,6 +44,41 @@ const nodeTypes: NodeTypes = {
 // ChainComposer Page
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Save/Load helpers
+// ---------------------------------------------------------------------------
+
+interface SavedChain {
+  name: string;
+  description: string;
+  category: string;
+  nodes: Array<{ id: string; label: string; domain: string; inputs: string[]; outputs: string[]; position: { x: number; y: number }; isCustom?: boolean; isCustomized?: boolean; customDescription?: string }>;
+  edges: Array<{ id: string; source: string; target: string }>;
+  savedAt: string;
+}
+
+function getSavedChains(): SavedChain[] {
+  try {
+    return JSON.parse(localStorage.getItem('skillchain-saved-chains') ?? '[]');
+  } catch { return []; }
+}
+
+function saveChainToStorage(chain: SavedChain): void {
+  const chains = getSavedChains().filter(c => c.name !== chain.name);
+  chains.unshift(chain);
+  // Keep last 20
+  localStorage.setItem('skillchain-saved-chains', JSON.stringify(chains.slice(0, 20)));
+}
+
+function deleteChainFromStorage(name: string): void {
+  const chains = getSavedChains().filter(c => c.name !== name);
+  localStorage.setItem('skillchain-saved-chains', JSON.stringify(chains));
+}
+
+// ---------------------------------------------------------------------------
+// ChainComposer Page
+// ---------------------------------------------------------------------------
+
 export default function ChainComposer() {
   const [skills, setSkills] = useState<PaletteSkill[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -54,6 +89,8 @@ export default function ChainComposer() {
   const [chainCategory, setChainCategory] = useState('general');
   const [exportJson, setExportJson] = useState<string | null>(null);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [savedChains, setSavedChains] = useState<SavedChain[]>(getSavedChains);
+  const [showSaveLoad, setShowSaveLoad] = useState(false);
 
   // Load full skill catalog from static JSON
   useEffect(() => {
@@ -113,6 +150,8 @@ export default function ChainComposer() {
         originalInputs: [...skill.inputs],
         originalOutputs: [...skill.outputs],
         isCustomized: false,
+        isCustom: skill.isCustom ?? false,
+        customDescription: skill.description ?? '',
         onRemove: () => {
           setNodes(prev => prev.filter(n => n.id !== id));
           setEdges(prev => prev.filter(e => e.source !== id && e.target !== id));
@@ -131,6 +170,93 @@ export default function ChainComposer() {
 
     setNodes(prev => [...prev, newNode]);
   }, [nodes.length]);
+
+  /** When a new custom skill is created in the palette, add to skill list */
+  const handleCreateSkill = useCallback((skill: PaletteSkill) => {
+    setSkills(prev => {
+      if (prev.some(s => s.name === skill.name)) return prev;
+      return [...prev, skill];
+    });
+  }, []);
+
+  /** Save current chain to localStorage */
+  const handleSave = useCallback(() => {
+    if (!chainName.trim()) return;
+    const chain: SavedChain = {
+      name: chainName,
+      description: chainDescription,
+      category: chainCategory,
+      nodes: nodes.map(n => ({
+        id: n.id,
+        label: n.data.label as string,
+        domain: n.data.domain as string,
+        inputs: n.data.inputs as string[],
+        outputs: n.data.outputs as string[],
+        position: n.position,
+        isCustom: n.data.isCustom as boolean | undefined,
+        isCustomized: n.data.isCustomized as boolean | undefined,
+        customDescription: n.data.customDescription as string | undefined,
+      })),
+      edges: edges.map(e => ({ id: e.id, source: e.source, target: e.target })),
+      savedAt: new Date().toISOString(),
+    };
+    saveChainToStorage(chain);
+    setSavedChains(getSavedChains());
+  }, [chainName, chainDescription, chainCategory, nodes, edges]);
+
+  /** Load a saved chain onto the canvas */
+  const handleLoad = useCallback((chain: SavedChain) => {
+    setChainName(chain.name);
+    setChainDescription(chain.description);
+    setChainCategory(chain.category);
+    setExportJson(null);
+    setValidationErrors([]);
+
+    // Rebuild nodes with callbacks
+    const newNodes: Node[] = chain.nodes.map(n => ({
+      id: n.id,
+      type: 'skillNode' as const,
+      position: n.position,
+      data: {
+        label: n.label,
+        domain: n.domain,
+        inputs: n.inputs,
+        outputs: n.outputs,
+        originalInputs: n.inputs,
+        originalOutputs: n.outputs,
+        isCustomized: n.isCustomized ?? false,
+        isCustom: n.isCustom ?? false,
+        customDescription: n.customDescription ?? '',
+        onRemove: () => {
+          setNodes(prev => prev.filter(nd => nd.id !== n.id));
+          setEdges(prev => prev.filter(e => e.source !== n.id && e.target !== n.id));
+        },
+        onCustomize: (newInputs: string[], newOutputs: string[]) => {
+          setNodes(prev => prev.map(nd => {
+            if (nd.id !== n.id) return nd;
+            return { ...nd, data: { ...nd.data, inputs: newInputs, outputs: newOutputs, isCustomized: true } };
+          }));
+        },
+      },
+    }));
+
+    const newEdges: Edge[] = chain.edges.map(e => ({
+      id: e.id,
+      source: e.source,
+      target: e.target,
+      style: { stroke: 'var(--cyan)', strokeWidth: 2 },
+      animated: true,
+    }));
+
+    setNodes(newNodes);
+    setEdges(newEdges);
+    setShowSaveLoad(false);
+  }, []);
+
+  const handleDeleteSaved = useCallback((name: string) => {
+    deleteChainFromStorage(name);
+    setSavedChains(getSavedChains());
+  }, []);
 
   const handleValidate = useCallback(() => {
     const errors: string[] = [];
@@ -252,10 +378,19 @@ export default function ChainComposer() {
       return `${i + 1}. **${step.skill_name}**${deps.length > 0 ? ` (after: ${deps.join(', ')})` : ' (entry point)'}${bridge}`;
     }).join('\n');
 
-    // Track customized skills for derivative attribution
+    // Track customized and custom skills
     const customizedSkills = nodes
       .filter(n => n.data.isCustomized)
       .map(n => `${n.data.label} (modified inputs/outputs)`);
+
+    const customSkills = nodes
+      .filter(n => n.data.isCustom)
+      .map(n => ({
+        name: n.data.label as string,
+        description: n.data.customDescription as string,
+        inputs: n.data.inputs as string[],
+        outputs: n.data.outputs as string[],
+      }));
 
     // Write a CLAUDE.md that tells Claude how to run the chain
     const claudeMd = `# SkillChain Chain: ${chainName}
@@ -287,7 +422,8 @@ When moving from one skill to the next:
 - The user should NOT have to re-explain anything — carry all context forward
 - If a skill produces structured data (lists, tables, scores), preserve that structure
 
-${customizedSkills.length > 0 ? `## Customized skills (derivatives)\n\nThese skills were modified from their originals:\n${customizedSkills.map(s => `- ${s}`).join('\n')}\n` : ''}
+${customSkills.length > 0 ? `## Custom skills to build first\n\nThese skills don't exist in the marketplace yet. Before running the chain, use the \`skill-from-workflow\` skill to create each one based on the description below. Ask the user to confirm the generated skill definition before proceeding.\n\n${customSkills.map(s => `### ${s.name}\n**Description:** ${s.description}\n**Inputs:** ${s.inputs.join(', ') || 'ask the user'}\n**Outputs:** ${s.outputs.join(', ') || 'ask the user'}\n`).join('\n')}\n` : ''}
+${customizedSkills.length > 0 ? `## Customized skills (derivatives)\n\nThese skills were modified from their originals. When publishing, they should be marked as derivatives with royalty splits to the original author:\n${customizedSkills.map(s => `- ${s}`).join('\n')}\n` : ''}
 ## Start
 
 Ask the user for the required inputs listed above, then begin with step 1.
@@ -413,7 +549,7 @@ echo "  Session complete. Output saved in: $WORKSPACE"
   return (
     <div style={{ display: 'flex', height: 'calc(100vh - 60px)', marginTop: '60px' }}>
       {/* Left: Skill Palette */}
-      <SkillPalette skills={skills} onAddSkill={handleAddSkill} />
+      <SkillPalette skills={skills} onAddSkill={handleAddSkill} onCreateSkill={handleCreateSkill} />
 
       {/* Center: Canvas + Controls */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
@@ -526,6 +662,34 @@ echo "  Session complete. Output saved in: $WORKSPACE"
               Run
             </button>
             <button
+              onClick={handleSave}
+              style={{
+                padding: '4px 12px',
+                background: 'rgba(170,136,255,0.08)',
+                border: '1px solid rgba(170,136,255,0.2)',
+                borderRadius: '4px',
+                color: 'var(--purple)',
+                fontSize: '12px',
+                cursor: 'pointer',
+              }}
+            >
+              Save
+            </button>
+            <button
+              onClick={() => { setSavedChains(getSavedChains()); setShowSaveLoad(!showSaveLoad); }}
+              style={{
+                padding: '4px 12px',
+                background: 'rgba(170,136,255,0.08)',
+                border: '1px solid rgba(170,136,255,0.2)',
+                borderRadius: '4px',
+                color: 'var(--purple)',
+                fontSize: '12px',
+                cursor: 'pointer',
+              }}
+            >
+              Load
+            </button>
+            <button
               onClick={handleClear}
               style={{
                 padding: '4px 12px',
@@ -546,6 +710,42 @@ echo "  Session complete. Output saved in: $WORKSPACE"
             {nodes.length} skills / {edges.length} connections
           </span>
         </div>
+
+        {/* Saved chains panel */}
+        {showSaveLoad && (
+          <div style={{
+            padding: '8px 16px',
+            background: 'rgba(170,136,255,0.03)',
+            borderBottom: '1px solid rgba(170,136,255,0.15)',
+            maxHeight: '150px',
+            overflowY: 'auto',
+          }}>
+            <div style={{ fontSize: '11px', color: 'var(--purple)', fontWeight: 600, marginBottom: '6px' }}>
+              Saved Chains ({savedChains.length})
+            </div>
+            {savedChains.length === 0 && (
+              <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.3)' }}>No saved chains yet. Click Save to store your current chain.</div>
+            )}
+            {savedChains.map(chain => (
+              <div key={chain.name} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 0' }}>
+                <button
+                  onClick={() => handleLoad(chain)}
+                  style={{
+                    flex: 1, textAlign: 'left', background: 'transparent', border: 'none',
+                    color: 'rgba(255,255,255,0.7)', fontSize: '11px', cursor: 'pointer', padding: '2px 0',
+                  }}
+                >
+                  <strong>{chain.name}</strong> — {chain.nodes.length} skills, {chain.edges.length} connections
+                  <span style={{ color: 'rgba(255,255,255,0.3)', marginLeft: '6px' }}>{new Date(chain.savedAt).toLocaleDateString()}</span>
+                </button>
+                <button
+                  onClick={() => handleDeleteSaved(chain.name)}
+                  style={{ background: 'transparent', border: 'none', color: '#ff6464', fontSize: '11px', cursor: 'pointer' }}
+                >del</button>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Load error */}
         {loadError && (
