@@ -20,13 +20,13 @@ export default function HeroSection() {
           className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6"
           style={{ color: 'var(--text-primary)', lineHeight: 1.1 }}
         >
-          Create flows{' '}
+          Create AI Flows.{' '}
           <span className="block md:inline" style={{
             background: 'linear-gradient(135deg, var(--cyan), var(--gold))',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
           }}>
-            built on TRUST.
+            Built on TRUST.
           </span>
         </h1>
 
