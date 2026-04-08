@@ -483,6 +483,20 @@ echo "  Session complete. Output saved in: $WORKSPACE"
 
           <div style={{ display: 'flex', gap: '6px' }}>
             <button
+              onClick={handleValidate}
+              style={{
+                padding: '4px 12px',
+                background: 'rgba(0,255,200,0.08)',
+                border: '1px solid rgba(0,255,200,0.2)',
+                borderRadius: '4px',
+                color: 'var(--cyan)',
+                fontSize: '12px',
+                cursor: 'pointer',
+              }}
+            >
+              Validate
+            </button>
+            <button
               onClick={handleExport}
               style={{
                 padding: '4px 12px',
