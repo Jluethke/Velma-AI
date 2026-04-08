@@ -8,7 +8,9 @@
  */
 import { useState, useCallback, useEffect } from 'react';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
+import { useAccount } from 'wagmi';
 import { useGateCheck } from '../hooks/useGateCheck';
+import { usePublishSkill, type LicenseType } from '../hooks/usePublishSkill';
 import {
   ReactFlow,
   Controls,
@@ -84,6 +86,9 @@ function deleteChainFromStorage(name: string): void {
 export default function ChainComposer() {
   const [skills, setSkills] = useState<PaletteSkill[]>([]);
   const { isConnected, isUnlocked, isLoading: gateLoading } = useGateCheck();
+  const { address } = useAccount();
+  const { publish: publishSkill, state: publishState, reset: resetPublish } = usePublishSkill();
+  const [publishProgress, setPublishProgress] = useState<string[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [nodes, setNodes] = useState<Node[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
@@ -342,6 +347,79 @@ export default function ChainComposer() {
     const built = buildChainJson();
     if (built) setExportJson(built.json);
   }, [buildChainJson]);
+
+  /** Publish chain + skills on-chain via SkillRegistry */
+  const handlePublish = useCallback(async () => {
+    const built = buildChainJson();
+    if (!built || !address) return;
+
+    const progress: string[] = [];
+    const addProgress = (msg: string) => {
+      progress.push(msg);
+      setPublishProgress([...progress]);
+    };
+
+    resetPublish();
+    addProgress('Starting on-chain publishing...');
+
+    const publishedSkillIds: Record<string, string> = {};
+
+    for (const node of nodes) {
+      const isCustom = node.data.isCustom as boolean;
+      const isModified = node.data.isCustomized as boolean;
+      const skillName = node.data.label as string;
+
+      if (isCustom || isModified) {
+        addProgress(`Publishing ${skillName}${isModified ? ' (derivative)' : ' (new)'}...`);
+
+        let derivedFrom: string | undefined;
+        if (isModified && !isCustom) derivedFrom = `original:${skillName}`;
+
+        const result = await publishSkill({
+          name: skillName,
+          domain: node.data.domain as string,
+          tags: skillName.split('-').filter((t: string) => t.length > 2),
+          inputs: node.data.inputs as string[],
+          outputs: node.data.outputs as string[],
+          price: 0n,
+          licenseType: 0 as LicenseType,
+          content: JSON.stringify({
+            name: skillName, description: node.data.customDescription || '',
+            inputs: node.data.inputs, outputs: node.data.outputs,
+            domain: node.data.domain, derived_from: derivedFrom, author: address,
+          }),
+          derivedFrom,
+        });
+
+        if (result) {
+          publishedSkillIds[skillName] = result.skillId;
+          addProgress(`  Registered: ${result.skillId.slice(0, 12)}... (tx: ${result.txHash.slice(0, 12)}...)`);
+        } else {
+          addProgress(`  FAILED: ${publishState.error || 'Transaction rejected'}`);
+          return;
+        }
+      }
+    }
+
+    addProgress(`Publishing chain "${chainName}"...`);
+    const chainResult = await publishSkill({
+      name: chainName, domain: chainCategory,
+      tags: ['chain', chainCategory, ...chainName.split('-').filter(t => t.length > 2)],
+      inputs: [], outputs: [], price: 0n, licenseType: 0 as LicenseType,
+      content: built.json,
+    });
+
+    if (chainResult) {
+      addProgress(`Chain: ${chainResult.skillId.slice(0, 12)}... (tx: ${chainResult.txHash.slice(0, 12)}...)`);
+      addProgress('');
+      addProgress(`Author: ${address}`);
+      addProgress(`Custom/modified skills published: ${Object.keys(publishedSkillIds).length}`);
+      addProgress(`Chain steps: ${built.steps.length}`);
+      addProgress('Royalties flow to your wallet for all derivatives.');
+    } else {
+      addProgress(`FAILED: ${publishState.error || 'Transaction rejected'}`);
+    }
+  }, [buildChainJson, address, nodes, chainName, chainCategory, publishSkill, publishState.error, resetPublish]);
 
   /**
    * Generate and download a launcher script that:
@@ -863,6 +941,26 @@ echo "  Session complete. Output saved in: $WORKSPACE"
               Load
             </button>
             <button
+              onClick={handlePublish}
+              disabled={publishState.status === 'signing' || publishState.status === 'confirming'}
+              style={{
+                padding: '4px 14px',
+                background: publishState.status === 'confirmed' ? 'rgba(0,255,136,0.15)' : 'rgba(255,215,0,0.1)',
+                border: `1px solid ${publishState.status === 'confirmed' ? 'rgba(0,255,136,0.3)' : 'rgba(255,215,0,0.25)'}`,
+                borderRadius: '4px',
+                color: publishState.status === 'confirmed' ? '#00ff88' : 'var(--gold)',
+                fontSize: '12px',
+                cursor: publishState.status === 'signing' || publishState.status === 'confirming' ? 'wait' : 'pointer',
+                fontWeight: 600,
+                opacity: publishState.status === 'signing' || publishState.status === 'confirming' ? 0.6 : 1,
+              }}
+            >
+              {publishState.status === 'signing' ? 'Sign...' :
+               publishState.status === 'confirming' ? 'Confirming...' :
+               publishState.status === 'confirmed' ? 'Published!' :
+               'Publish On-Chain'}
+            </button>
+            <button
               onClick={handleClear}
               style={{
                 padding: '4px 12px',
@@ -1031,6 +1129,39 @@ echo "  Session complete. Output saved in: $WORKSPACE"
               wordBreak: 'break-all',
             }}>
               {exportJson}
+            </pre>
+          </div>
+        )}
+
+        {/* Publish progress panel */}
+        {publishProgress.length > 0 && (
+          <div style={{
+            padding: '12px 16px',
+            background: 'rgba(255,215,0,0.03)',
+            borderTop: '1px solid rgba(255,215,0,0.15)',
+            maxHeight: '200px',
+            overflowY: 'auto',
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+              <span style={{ fontSize: '12px', color: 'var(--gold)', fontWeight: 600 }}>
+                On-Chain Publishing
+              </span>
+              <button
+                onClick={() => setPublishProgress([])}
+                style={{
+                  padding: '2px 8px', background: 'rgba(255,255,255,0.05)',
+                  border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px',
+                  color: 'rgba(255,255,255,0.4)', fontSize: '11px', cursor: 'pointer',
+                }}
+              >
+                Close
+              </button>
+            </div>
+            <pre style={{
+              margin: 0, fontSize: '11px', color: 'rgba(255,255,255,0.6)',
+              fontFamily: 'monospace', whiteSpace: 'pre-wrap',
+            }}>
+              {publishProgress.join('\n')}
             </pre>
           </div>
         )}
