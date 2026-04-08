@@ -198,20 +198,58 @@ export default function Navbar() {
               </Link>
             ))}
             {isConnected && (
-              <span className="text-xs font-mono mt-2" style={{ color: 'var(--gold)' }}>
-                {balance.display} TRUST
-                <span style={{ color: TIER_COLORS[tier], marginLeft: '4px', fontSize: '10px' }}>
-                  {TIER_LABELS[tier]}
+              <>
+                <span className="text-xs font-mono mt-2" style={{ color: 'var(--gold)' }}>
+                  {balance.display} TRUST
+                  <span style={{ color: TIER_COLORS[tier], marginLeft: '4px', fontSize: '10px' }}>
+                    {TIER_LABELS[tier]}
+                  </span>
                 </span>
-              </span>
+                <button
+                  onClick={() => { setShowSend(!showSend); resetSend(); setMobileOpen(false); }}
+                  className="px-4 py-2.5 rounded-lg text-xs cursor-pointer transition-all mt-2"
+                  style={{
+                    background: 'rgba(251, 191, 36, 0.08)',
+                    border: '1px solid rgba(251, 191, 36, 0.2)',
+                    color: 'var(--gold)',
+                  }}
+                >
+                  Send TRUST
+                </button>
+                <button
+                  onClick={() => {
+                    disconnect({ connector });
+                    localStorage.removeItem('wagmi.store');
+                    localStorage.removeItem('wagmi.connected');
+                    localStorage.removeItem('wagmi.wallet');
+                    localStorage.removeItem('rk-recent');
+                    Object.keys(localStorage).forEach(key => {
+                      if (key.startsWith('wagmi') || key.startsWith('rk-') || key.startsWith('wc@')) {
+                        localStorage.removeItem(key);
+                      }
+                    });
+                    window.location.reload();
+                  }}
+                  className="px-4 py-2.5 rounded-lg text-xs cursor-pointer transition-all mt-1"
+                  style={{
+                    background: 'rgba(248, 113, 113, 0.08)',
+                    border: '1px solid rgba(248, 113, 113, 0.2)',
+                    color: 'var(--red)',
+                  }}
+                >
+                  Disconnect
+                </button>
+              </>
             )}
-            <div className="mt-2">
-              <ConnectButton
-                chainStatus="icon"
-                accountStatus="address"
-                showBalance={false}
-              />
-            </div>
+            {!isConnected && (
+              <div className="mt-2">
+                <ConnectButton
+                  chainStatus="icon"
+                  accountStatus="address"
+                  showBalance={false}
+                />
+              </div>
+            )}
           </div>
         )}
       </nav>
@@ -228,7 +266,7 @@ export default function Navbar() {
             style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
             onClick={e => e.stopPropagation()}
           >
-            <h3 className="text-lg font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
+            <h3 className="text-lg font-semibold mb-1" style={{ color: 'var(--text-primary)', marginTop: 0 }}>
               Send TRUST
             </h3>
             <p className="text-xs mb-4" style={{ color: 'var(--text-secondary)' }}>
@@ -268,16 +306,18 @@ export default function Navbar() {
             />
 
             {/* Quick amounts */}
-            <div className="flex gap-2 mb-4">
+            <div className="flex gap-2 mb-4 flex-wrap">
               {['100', '1000', '10000', '100000'].map(amt => (
                 <button
                   key={amt}
                   onClick={() => setSendAmount(amt)}
-                  className="text-xs px-2 py-1 rounded cursor-pointer"
+                  className="text-xs px-3 py-2 rounded cursor-pointer"
                   style={{
                     background: 'rgba(251,191,36,0.06)',
                     border: '1px solid rgba(251,191,36,0.15)',
                     color: 'var(--gold)',
+                    minHeight: '36px',
+                    minWidth: '44px',
                   }}
                 >
                   {Number(amt).toLocaleString()}

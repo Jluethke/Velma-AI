@@ -81,6 +81,7 @@ export default function SkillPalette({ skills, onAddSkill, canChain, canPublish 
 
   return (
     <div
+      className="skill-palette"
       style={{
         width: '280px',
         height: '100%',

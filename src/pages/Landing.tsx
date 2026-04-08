@@ -24,7 +24,7 @@ function ComposerPreview() {
         style={{ border: '1px solid var(--border)', background: 'var(--bg-card)' }}
       >
         {/* Toolbar mock */}
-        <div className="flex items-center gap-3 px-4 py-2" style={{ borderBottom: '1px solid var(--border)' }}>
+        <div className="flex items-center gap-2 md:gap-3 px-3 md:px-4 py-2 flex-wrap overflow-x-auto" style={{ borderBottom: '1px solid var(--border)' }}>
           <span className="text-xs font-mono px-2 py-1 rounded" style={{ background: 'var(--bg-secondary)', color: 'var(--text-secondary)' }}>startup-validation</span>
           <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>|</span>
           <span className="text-[10px] px-2 py-0.5 rounded" style={{ background: 'rgba(0,255,200,0.08)', color: 'var(--cyan)', border: '1px solid rgba(0,255,200,0.2)' }}>Validate</span>
@@ -34,16 +34,16 @@ function ComposerPreview() {
         </div>
 
         {/* Canvas mock */}
-        <div className="p-8 flex items-center justify-center gap-6 flex-wrap" style={{ background: 'var(--bg-secondary)', minHeight: '260px' }}>
+        <div className="p-4 md:p-8 flex flex-col md:flex-row items-center justify-center gap-4 md:gap-6 md:flex-wrap" style={{ background: 'var(--bg-secondary)', minHeight: '260px' }}>
           {[
             { name: 'idea-validator', domain: 'business', color: '#a855f7' },
             { name: 'market-research', domain: 'business', color: '#a855f7' },
             { name: 'pricing-strategy', domain: 'business', color: '#a855f7' },
             { name: 'pitch-practice', domain: 'marketing', color: '#ff69b4' },
           ].map((skill, i, arr) => (
-            <div key={skill.name} className="flex items-center gap-4">
+            <div key={skill.name} className="flex flex-col md:flex-row items-center gap-2 md:gap-4 w-full md:w-auto">
               <div
-                className="rounded-lg p-3"
+                className="rounded-lg p-3 w-full md:w-auto"
                 style={{
                   background: 'var(--bg-card)',
                   border: `1px solid ${skill.color}40`,
@@ -54,7 +54,10 @@ function ComposerPreview() {
                 <span className="text-[9px] px-1.5 py-0.5 rounded" style={{ background: `${skill.color}20`, color: skill.color }}>{skill.domain}</span>
               </div>
               {i < arr.length - 1 && (
-                <span className="text-lg" style={{ color: 'var(--cyan)' }}>&rarr;</span>
+                <span className="text-lg hidden md:block" style={{ color: 'var(--cyan)' }}>&rarr;</span>
+              )}
+              {i < arr.length - 1 && (
+                <span className="text-lg md:hidden" style={{ color: 'var(--cyan)' }}>&darr;</span>
               )}
             </div>
           ))}

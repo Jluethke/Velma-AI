@@ -56,7 +56,32 @@ export default function Docs() {
 
         <main className="flex-1 min-w-0">
           <h1 className="text-3xl md:text-4xl font-bold mb-2" style={h}>Documentation</h1>
-          <p className="text-sm mb-8" style={t}>Everything you need to try skills, compose chains, and publish on-chain.</p>
+          <p className="text-sm mb-4" style={t}>Everything you need to try skills, compose chains, and publish on-chain.</p>
+
+          {/* Mobile section nav */}
+          <div className="lg:hidden mb-6">
+            <select
+              value={activeSection}
+              onChange={e => {
+                const el = document.getElementById(e.target.value);
+                if (el) el.scrollIntoView({ behavior: 'smooth' });
+              }}
+              style={{
+                width: '100%',
+                padding: '10px 12px',
+                background: 'var(--bg-secondary)',
+                border: '1px solid var(--border)',
+                borderRadius: '8px',
+                color: 'var(--text-primary)',
+                fontSize: '14px',
+                outline: 'none',
+              }}
+            >
+              {guideSections.map(s => (
+                <option key={s.id} value={s.id}>{s.label}</option>
+              ))}
+            </select>
+          </div>
 
           {/* Try a Skill */}
           <section id="try-skill" className="mb-14">

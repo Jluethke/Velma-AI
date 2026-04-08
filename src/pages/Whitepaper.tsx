@@ -96,7 +96,7 @@ export default function Whitepaper() {
       <Section title="5. Trust-Weighted Consensus">
         <P>Validation uses shadow testing — running candidate skills against reference test cases with multi-metric similarity scoring. Multiple validators must independently agree via trust-weighted BFT consensus.</P>
         <P>Trust is computed as:</P>
-        <div className="p-4 rounded-lg my-4 font-mono text-sm" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}>
+        <div className="p-4 rounded-lg my-4 font-mono text-xs sm:text-sm overflow-x-auto" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', color: 'var(--text-primary)', wordBreak: 'break-word' }}>
           trust = exp(-decay * divergence)<br />
           smoothed via EMA: trust_new = α * trust_raw + (1 - α) * trust_previous
         </div>

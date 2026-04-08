@@ -99,6 +99,7 @@ export default function ChainComposer() {
   const [savedChains, setSavedChains] = useState<SavedChain[]>(getSavedChains);
   const [showSaveLoad, setShowSaveLoad] = useState(false);
   const [trustToast, setTrustToast] = useState<string | false>(false);
+  const [showMobilePalette, setShowMobilePalette] = useState(false);
   const [showSchedule, setShowSchedule] = useState(false);
   const [scheduleFreq, setScheduleFreq] = useState('daily');
   const [scheduleTime, setScheduleTime] = useState('09:00');
@@ -808,21 +809,98 @@ echo "  To remove: crontab -l | grep -v 'SkillChain-${safeName}' | crontab -"
   }, []);
 
   return (
-    <div style={{ display: 'flex', height: 'calc(100vh - 60px)', marginTop: '60px' }}>
-      {/* Left: Skill Palette */}
-      <SkillPalette skills={skills} onAddSkill={handleAddSkill} canChain={canChain} canPublish={canPublish} />
+    <div style={{ display: 'flex', height: 'calc(100vh - 60px)', marginTop: '60px', position: 'relative' }}>
+      {/* Left: Skill Palette — hidden on mobile */}
+      <div className="hidden md:block">
+        <SkillPalette skills={skills} onAddSkill={handleAddSkill} canChain={canChain} canPublish={canPublish} />
+      </div>
+
+      {/* Mobile floating add button */}
+      <button
+        className="md:hidden"
+        onClick={() => setShowMobilePalette(true)}
+        style={{
+          position: 'fixed',
+          bottom: '24px',
+          right: '24px',
+          zIndex: 50,
+          width: '56px',
+          height: '56px',
+          borderRadius: '50%',
+          background: 'var(--cyan)',
+          border: 'none',
+          color: '#000',
+          fontSize: '28px',
+          fontWeight: 700,
+          cursor: 'pointer',
+          boxShadow: '0 4px 20px rgba(56, 189, 248, 0.4)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          lineHeight: 1,
+        }}
+        aria-label="Add skill"
+      >
+        +
+      </button>
+
+      {/* Mobile slide-up skill picker */}
+      {showMobilePalette && (
+        <div
+          className="md:hidden"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 100,
+            background: 'rgba(0,0,0,0.5)',
+            backdropFilter: 'blur(4px)',
+          }}
+          onClick={() => setShowMobilePalette(false)}
+        >
+          <div
+            style={{
+              position: 'absolute',
+              bottom: 0,
+              left: 0,
+              right: 0,
+              maxHeight: '70vh',
+              background: 'var(--bg-card)',
+              borderTop: '1px solid var(--border)',
+              borderRadius: '16px 16px 0 0',
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Drag handle */}
+            <div style={{ textAlign: 'center', padding: '8px 0 4px' }}>
+              <div style={{ width: '40px', height: '4px', borderRadius: '2px', background: 'var(--border)', margin: '0 auto' }} />
+            </div>
+            <SkillPalette
+              skills={skills}
+              onAddSkill={(skill) => {
+                handleAddSkill(skill);
+                setShowMobilePalette(false);
+              }}
+              canChain={canChain}
+              canPublish={canPublish}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Center: Canvas + Controls */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
         {/* Top bar */}
         <div
           style={{
-            padding: '8px 16px',
+            padding: '8px 12px',
             background: 'var(--bg-card)',
             borderBottom: '1px solid var(--border)',
             display: 'flex',
             alignItems: 'center',
-            gap: '12px',
+            gap: '8px',
             flexWrap: 'wrap',
           }}
         >
@@ -848,6 +926,7 @@ echo "  To remove: crontab -l | grep -v 'SkillChain-${safeName}' | crontab -"
                 value={chainName}
                 onChange={e => setChainName(e.target.value)}
                 placeholder="Name your chain"
+                className="w-full sm:w-40"
                 style={{
                   padding: '4px 8px',
                   background: 'var(--bg-secondary)',
@@ -855,7 +934,6 @@ echo "  To remove: crontab -l | grep -v 'SkillChain-${safeName}' | crontab -"
                   borderRadius: '4px',
                   color: 'var(--text-primary)',
                   fontSize: '13px',
-                  width: '160px',
                   outline: 'none',
                 }}
               />
@@ -864,6 +942,7 @@ echo "  To remove: crontab -l | grep -v 'SkillChain-${safeName}' | crontab -"
                 value={chainDescription}
                 onChange={e => setChainDescription(e.target.value)}
                 placeholder="What does this chain do?"
+                className="w-full sm:flex-1"
                 style={{
                   padding: '4px 8px',
                   background: 'var(--bg-secondary)',
@@ -871,8 +950,7 @@ echo "  To remove: crontab -l | grep -v 'SkillChain-${safeName}' | crontab -"
                   borderRadius: '4px',
                   color: 'var(--text-primary)',
                   fontSize: '13px',
-                  flex: 1,
-                  minWidth: '200px',
+                  minWidth: 0,
                   outline: 'none',
                 }}
               />
@@ -902,6 +980,7 @@ echo "  To remove: crontab -l | grep -v 'SkillChain-${safeName}' | crontab -"
               const chain = FEATURED_CHAINS.find(c => c.name === e.target.value);
               if (chain) loadFeaturedChain(chain);
             }}
+            className="w-full sm:w-auto"
             style={{
               padding: '4px 8px',
               background: 'var(--bg-secondary)',
@@ -925,7 +1004,7 @@ echo "  To remove: crontab -l | grep -v 'SkillChain-${safeName}' | crontab -"
             </span>
           )}
 
-          <div style={{ display: 'flex', gap: '6px' }}>
+          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
             {/* Free: Run (1 skill only). Premium: full toolbar. */}
             <button
               onClick={handleRun}
@@ -1225,9 +1304,11 @@ echo "  To remove: crontab -l | grep -v 'SkillChain-${safeName}' | crontab -"
             position: 'absolute',
             top: '50%',
             left: '50%',
-            transform: 'translate(-20%, -50%)',
+            transform: 'translate(-50%, -50%)',
             textAlign: 'center',
             pointerEvents: 'none',
+            width: '90%',
+            maxWidth: '400px',
           }}>
             <div style={{ fontSize: '48px', marginBottom: '12px', opacity: 0.3 }}>&#x1F9E9;</div>
             <div style={{ fontSize: '16px', color: 'var(--text-secondary)', marginBottom: '6px' }}>
