@@ -30,17 +30,16 @@ export default function Whitepaper() {
         <P>Individual skills are free to run. Chaining skills together, creating new skills, and publishing on-chain require TRUST tokens — earned through contribution, not purchase.</P>
       </Section>
 
-      {/* Key Numbers */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
+      {/* Core Principles */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-12">
         {[
-          { value: '169', label: 'Validated Skills', color: 'cyan' },
-          { value: '9', label: 'Smart Contracts', color: 'purple' },
-          { value: '13', label: 'Skill Domains', color: 'green' },
-          { value: '5', label: 'Evolution Stages', color: 'gold' },
-        ].map((stat) => (
-          <div key={stat.label} className="p-4 rounded-xl text-center" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
-            <div className="text-2xl font-bold mb-1" style={accent(stat.color)}>{stat.value}</div>
-            <div className="text-xs" style={t}>{stat.label}</div>
+          { label: 'Free to Run', desc: 'Every skill is free. No account needed.', color: 'cyan' },
+          { label: 'Proven by Consensus', desc: 'Shadow validation. Math, not reviews.', color: 'purple' },
+          { label: 'Language → Code', desc: 'Skills evolve from prompts to compiled software.', color: 'gold' },
+        ].map((item) => (
+          <div key={item.label} className="p-5 rounded-xl" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+            <div className="text-sm font-bold mb-1" style={accent(item.color)}>{item.label}</div>
+            <div className="text-xs leading-relaxed" style={t}>{item.desc}</div>
           </div>
         ))}
       </div>
