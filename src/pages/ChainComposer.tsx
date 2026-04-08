@@ -771,89 +771,71 @@ echo "  To remove: crontab -l | grep -v 'SkillChain-${safeName}' | crontab -"
             flexWrap: 'wrap',
           }}
         >
-          <input
-            type="text"
-            value={chainName}
-            onChange={e => setChainName(e.target.value)}
-            placeholder="Name your chain"
-            style={{
-              padding: '4px 8px',
-              background: 'var(--bg-secondary)',
-              border: '1px solid var(--border)',
-              borderRadius: '4px',
-              color: 'var(--text-primary)',
-              fontSize: '13px',
-              width: '160px',
-              outline: 'none',
-            }}
-          />
-          <input
-            type="text"
-            value={chainDescription}
-            onChange={e => setChainDescription(e.target.value)}
-            placeholder="What does this chain do?"
-            style={{
-              padding: '4px 8px',
-              background: 'var(--bg-secondary)',
-              border: '1px solid var(--border)',
-              borderRadius: '4px',
-              color: 'var(--text-primary)',
-              fontSize: '13px',
-              flex: 1,
-              minWidth: '200px',
-              outline: 'none',
-            }}
-          />
-          <select
-            value={chainCategory}
-            onChange={e => setChainCategory(e.target.value)}
-            style={{
-              padding: '4px 8px',
-              background: 'var(--bg-secondary)',
-              border: '1px solid var(--border)',
-              borderRadius: '4px',
-              color: 'var(--text-primary)',
-              fontSize: '13px',
-              outline: 'none',
-            }}
-          >
-            {['general', 'life', 'career', 'business', 'developer', 'health', 'finance', 'creative', 'education', 'ai', 'real estate'].map(cat => (
-              <option key={cat} value={cat}>{cat}</option>
-            ))}
-          </select>
+          {/* Chain metadata — only shown for premium users building chains */}
+          {isPremium && (
+            <>
+              <input
+                type="text"
+                value={chainName}
+                onChange={e => setChainName(e.target.value)}
+                placeholder="Name your chain"
+                style={{
+                  padding: '4px 8px',
+                  background: 'var(--bg-secondary)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '4px',
+                  color: 'var(--text-primary)',
+                  fontSize: '13px',
+                  width: '160px',
+                  outline: 'none',
+                }}
+              />
+              <input
+                type="text"
+                value={chainDescription}
+                onChange={e => setChainDescription(e.target.value)}
+                placeholder="What does this chain do?"
+                style={{
+                  padding: '4px 8px',
+                  background: 'var(--bg-secondary)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '4px',
+                  color: 'var(--text-primary)',
+                  fontSize: '13px',
+                  flex: 1,
+                  minWidth: '200px',
+                  outline: 'none',
+                }}
+              />
+              <select
+                value={chainCategory}
+                onChange={e => setChainCategory(e.target.value)}
+                style={{
+                  padding: '4px 8px',
+                  background: 'var(--bg-secondary)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '4px',
+                  color: 'var(--text-primary)',
+                  fontSize: '13px',
+                  outline: 'none',
+                }}
+              >
+                {['general', 'life', 'career', 'business', 'developer', 'health', 'finance', 'creative', 'education', 'ai', 'real estate'].map(cat => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
+            </>
+          )}
+          {!isPremium && (
+            <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+              Pick a skill and click Run
+            </span>
+          )}
 
           <div style={{ display: 'flex', gap: '6px' }}>
+            {/* Free: Run (1 skill only). Premium: full toolbar. */}
             <button
-              onClick={handleValidate}
-              style={{
-                padding: '4px 12px',
-                background: 'rgba(0,255,200,0.08)',
-                border: '1px solid rgba(0,255,200,0.2)',
-                borderRadius: '4px',
-                color: 'var(--cyan)',
-                fontSize: '12px',
-                cursor: 'pointer',
-              }}
-            >
-              Validate
-            </button>
-            <button
-              onClick={!isPremium && nodes.length > 1 ? showTrustToast : handleExport}
-              style={{
-                padding: '4px 12px',
-                background: 'rgba(0,255,200,0.15)',
-                border: '1px solid rgba(0,255,200,0.3)',
-                borderRadius: '4px',
-                color: 'var(--cyan)',
-                fontSize: '12px',
-                cursor: 'pointer',
-                fontWeight: 600,
-              }}
-            >
-              Export .chain.json
-            </button>
-            <button
-              onClick={!isPremium && nodes.length > 1 ? showTrustToast : handleRun}
+              onClick={handleRun}
               style={{
                 padding: '4px 14px',
                 background: 'rgba(0,200,255,0.15)',
@@ -867,21 +849,54 @@ echo "  To remove: crontab -l | grep -v 'SkillChain-${safeName}' | crontab -"
             >
               Run
             </button>
-            <button
-              onClick={isPremium ? () => setShowSchedule(!showSchedule) : showTrustToast}
-              style={{
-                padding: '4px 12px',
-                background: 'rgba(74, 222, 128, 0.08)',
-                border: '1px solid rgba(74, 222, 128, 0.2)',
-                borderRadius: '4px',
-                color: isPremium ? 'var(--green)' : 'rgba(74,222,128,0.4)',
-                fontSize: '12px',
-                cursor: 'pointer',
-              }}
-              title={isPremium ? 'Schedule recurring run' : 'Requires TRUST tokens'}
-            >
-              Schedule
-            </button>
+
+            {/* Premium-only buttons */}
+            {isPremium && (
+              <>
+                <button
+                  onClick={handleValidate}
+                  style={{
+                    padding: '4px 12px',
+                    background: 'rgba(56,189,248,0.08)',
+                    border: '1px solid rgba(56,189,248,0.2)',
+                    borderRadius: '4px',
+                    color: 'var(--cyan)',
+                    fontSize: '12px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Validate
+                </button>
+                <button
+                  onClick={handleExport}
+                  style={{
+                    padding: '4px 12px',
+                    background: 'rgba(56,189,248,0.08)',
+                    border: '1px solid rgba(56,189,248,0.2)',
+                    borderRadius: '4px',
+                    color: 'var(--cyan)',
+                    fontSize: '12px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Export
+                </button>
+                <button
+                  onClick={() => setShowSchedule(!showSchedule)}
+                  style={{
+                    padding: '4px 12px',
+                    background: 'rgba(74, 222, 128, 0.08)',
+                    border: '1px solid rgba(74, 222, 128, 0.2)',
+                    borderRadius: '4px',
+                    color: 'var(--green)',
+                    fontSize: '12px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Schedule
+                </button>
+              </>
+            )}
             <button
               onClick={isPremium ? handleSave : showTrustToast}
               style={{
