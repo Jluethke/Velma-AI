@@ -37,7 +37,7 @@ export default function SkillPalette({ skills, onAddSkill, isPremium }: SkillPal
   const [expandedDomain, setExpandedDomain] = useState<string | null>(null);
 
   // Premium domains: hidden from free users, shown with PRO badge for TRUST holders
-  const PREMIUM_DOMAINS = new Set(['meta', 'ai', 'engineering']);
+  const PREMIUM_DOMAINS = new Set(['meta', 'ai', 'engineering', 'legal']);
 
   const visibleSkills = useMemo(() => {
     return isPremium ? skills : skills.filter(s => !PREMIUM_DOMAINS.has(s.domain));
@@ -103,7 +103,7 @@ export default function SkillPalette({ skills, onAddSkill, isPremium }: SkillPal
             Pro skills unlock with TRUST
           </p>
           <p style={{ margin: '2px 0 0', fontSize: '9px', color: 'var(--text-secondary)' }}>
-            Engineering, AI agents, skill creation, chain composition
+            Engineering, AI, Legal, and skill creation tools
           </p>
         </div>
       )}
@@ -148,7 +148,7 @@ export default function SkillPalette({ skills, onAddSkill, isPremium }: SkillPal
                 }}
               >
                 <span style={{ fontSize: '11px', color, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                  {domain === 'meta' ? 'Creation Tools' : domain === 'ai' ? 'AI & Agents' : domain === 'engineering' ? 'Engineering' : domain}
+                  {domain === 'meta' ? 'Creation Tools' : domain === 'ai' ? 'AI & Agents' : domain === 'engineering' ? 'Engineering' : domain === 'legal' ? 'Legal & IP' : domain}
                 </span>
                 <span style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>
                   {domainSkills.length} {isExpanded ? '\u2212' : '+'}
