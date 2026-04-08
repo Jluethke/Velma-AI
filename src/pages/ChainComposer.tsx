@@ -446,7 +446,9 @@ export default function ChainComposer() {
     if (!built) return;
 
     const { steps } = built;
-    const safeName = chainName.replace(/[^a-z0-9-]/gi, '-').toLowerCase();
+    // Use the skill name for single-skill runs, chain name for multi-skill
+    const displayName = steps.length === 1 ? steps[0].skill_name : chainName;
+    const safeName = displayName.replace(/[^a-z0-9-]/gi, '-').toLowerCase();
     const timestamp = new Date().toISOString().slice(0, 10);
     const dirName = `${safeName}-${timestamp}`;
 
@@ -535,25 +537,26 @@ Ask the user for the required inputs listed above, then begin with step 1.
 title SkillChain: ${safeName}
 setlocal
 
+:: Ensure PATH includes common tool locations
+set "PATH=%PATH%;%APPDATA%\\npm;%USERPROFILE%\\.local\\bin;%ProgramFiles%\\nodejs"
+set "PS=%SystemRoot%\\System32\\WindowsPowerShell\\v1.0\\powershell.exe"
+
 set "WS=%USERPROFILE%\\SkillChain-Runs\\${dirName}"
 if not exist "%WS%" mkdir "%WS%"
 
 echo.
-echo   SkillChain Chain Runner
-echo   =======================
-echo   Chain: ${chainName}
-echo   Skills: ${steps.length}
+echo   SkillChain: ${displayName}
 echo   Workspace: %WS%
 echo.
 
-:: Write chain.json and CLAUDE.md via PowerShell (avoids batch escaping)
-powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+:: Write files via PowerShell (full path to avoid 'not found')
+"%PS%" -NoProfile -ExecutionPolicy Bypass -Command ^
   "[IO.File]::WriteAllText('%WS%\\${safeName}.chain.json', [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('${chainB64}')));" ^
   "[IO.File]::WriteAllText('%WS%\\CLAUDE.md', [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('${claudeMdB64}')))"
 
 cd /d "%WS%"
 
-:: Find and launch Claude Code
+:: Find Claude Code (check common locations)
 where claude >nul 2>nul
 if %errorlevel% equ 0 (
     echo   Launching Claude Code...
@@ -562,26 +565,27 @@ if %errorlevel% equ 0 (
     goto :done
 )
 
-echo   Claude Code not found.
-where npm >nul 2>nul
-if %errorlevel% equ 0 (
-    echo   Installing Claude Code...
-    npm install -g @anthropic-ai/claude-code
-    where claude >nul 2>nul
-    if %errorlevel% equ 0 (
-        echo   Launching Claude Code...
-        echo.
-        claude
-        goto :done
-    )
+:: Try npm global path directly
+if exist "%APPDATA%\\npm\\claude.cmd" (
+    echo   Launching Claude Code...
+    echo.
+    "%APPDATA%\\npm\\claude.cmd"
+    goto :done
+)
+
+:: Try local bin
+if exist "%USERPROFILE%\\.local\\bin\\claude" (
+    echo   Launching Claude Code...
+    echo.
+    "%USERPROFILE%\\.local\\bin\\claude"
+    goto :done
 )
 
 echo.
-echo   Could not launch Claude Code.
-echo   Install Node.js from https://nodejs.org then run:
+echo   Claude Code not found. Install it:
 echo     npm install -g @anthropic-ai/claude-code
 echo.
-echo   Your chain is saved at: %WS%
+echo   Your workspace is saved at: %WS%
 
 :done
 echo.

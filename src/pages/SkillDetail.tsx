@@ -164,24 +164,22 @@ export default function SkillDetail() {
               if (isWin) {
                 const bat = `@echo off
 title SkillChain: ${safeName}
+setlocal
+set "PATH=%PATH%;%APPDATA%\\npm;%USERPROFILE%\\.local\\bin;%ProgramFiles%\\nodejs"
+set "PS=%SystemRoot%\\System32\\WindowsPowerShell\\v1.0\\powershell.exe"
 set "WS=%USERPROFILE%\\SkillChain-Runs\\${safeName}-${ts}"
 if not exist "%WS%" mkdir "%WS%"
-powershell -NoProfile -Command "[IO.File]::WriteAllText('%WS%\\CLAUDE.md', [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('${b64}')))"
+"%PS%" -NoProfile -ExecutionPolicy Bypass -Command "[IO.File]::WriteAllText('%WS%\\CLAUDE.md', [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('${b64}')))"
 cd /d "%WS%"
-where claude >nul 2>nul
-if %errorlevel% neq 0 (
-    where npm >nul 2>nul
-    if %errorlevel% neq 0 (
-        echo Install Node.js from https://nodejs.org
-        pause
-        exit /b 1
-    )
-    echo Installing Claude Code...
-    npm install -g @anthropic-ai/claude-code
-)
-echo Running ${name}...
 echo.
-claude
+echo   Running ${name}...
+echo.
+:: Try common Claude locations
+where claude >nul 2>nul && (claude & goto :done)
+if exist "%APPDATA%\\npm\\claude.cmd" ("%APPDATA%\\npm\\claude.cmd" & goto :done)
+if exist "%USERPROFILE%\\.local\\bin\\claude" ("%USERPROFILE%\\.local\\bin\\claude" & goto :done)
+echo   Claude Code not found. Run: npm install -g @anthropic-ai/claude-code
+:done
 pause
 `;
                 const b = new Blob([bat], { type: 'application/bat' });
