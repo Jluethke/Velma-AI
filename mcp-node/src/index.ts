@@ -32,6 +32,7 @@ import { extractFacts } from "./fact-extractor.js";
 import { KnowledgeGraph } from "./knowledge-graph.js";
 import { CommunityRegistry } from "./community-registry.js";
 import { TriggerEngine, type TriggerEvent } from "./trigger-engine.js";
+import { SkillEvolution } from "./skill-evolution.js";
 
 // ---------------------------------------------------------------------------
 // Paths
@@ -119,6 +120,7 @@ const profileMgr = new ProfileManager();
 const memory = new MemoryStore();
 const kg = new KnowledgeGraph();
 const community = new CommunityRegistry(MARKETPLACE_DIR);
+const evolution = new SkillEvolution(MARKETPLACE_DIR);
 
 // Trigger engine: log events but don't auto-execute chains
 // (chain execution requires Claude Code context)
@@ -666,6 +668,37 @@ server.tool("kg_validate",
       return { content: [{ type: "text" as const, text: JSON.stringify({ error: `Triple '${triple_id}' not found.` }) }] };
     }
     return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
+  }
+);
+
+// ===================================================================
+// SKILL EVOLUTION TOOLS
+// ===================================================================
+
+server.tool("get_evolution_status",
+  "Check a skill's evolution stage: prompt -> skill -> validated -> graduated -> compiled.",
+  { skill_name: z.string().describe("Name of the skill to check") },
+  async ({ skill_name }) => {
+    const status = await evolution.getEvolutionStatus(skill_name);
+    return { content: [{ type: "text" as const, text: JSON.stringify(status, null, 2) }] };
+  }
+);
+
+server.tool("check_graduation",
+  "Evaluate if a skill qualifies for graduation (100+ validations at 95%+ similarity).",
+  { skill_name: z.string().describe("Name of the skill to evaluate") },
+  async ({ skill_name }) => {
+    const result = await evolution.checkGraduation(skill_name);
+    return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
+  }
+);
+
+server.tool("list_evolutions",
+  "Show all skills with their current evolution stages.",
+  {},
+  async () => {
+    const results = await evolution.listEvolutions();
+    return { content: [{ type: "text" as const, text: JSON.stringify(results, null, 2) }] };
   }
 );
 
