@@ -1,10 +1,12 @@
 /**
  * useSendTrust — send TRUST tokens to another wallet address.
+ *
+ * Uses the same writeContract pattern as PortalStake.tsx (no chain/account
+ * overrides — wagmi infers them from the connected wallet).
  */
-import { useState, useCallback } from 'react';
-import { useAccount, useWriteContract, useReadContract, useSwitchChain } from 'wagmi';
+import { useState, useCallback, useEffect } from 'react';
+import { useAccount, useWriteContract, useReadContract, useWaitForTransactionReceipt, useSwitchChain } from 'wagmi';
 import { parseUnits, formatUnits } from 'viem';
-import { base } from 'wagmi/chains';
 import { SkillTokenABI } from '../contracts/SkillToken';
 import { CONTRACTS, TARGET_CHAIN_ID } from '../contracts';
 
@@ -17,8 +19,39 @@ export interface SendState {
 export function useSendTrust() {
   const { address, chainId } = useAccount();
   const [state, setState] = useState<SendState>({ status: 'idle' });
-  const { writeContractAsync } = useWriteContract();
+
+  // Same pattern as PortalStake.tsx — synchronous writeContract + receipt watcher
+  const { writeContract, data: txHash, isPending, error: writeError, reset: resetWrite } = useWriteContract();
+  const { isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash: txHash });
   const { switchChainAsync } = useSwitchChain();
+
+  // Track confirmation
+  useEffect(() => {
+    if (isConfirmed && txHash) {
+      setState({ status: 'confirmed', txHash });
+    }
+  }, [isConfirmed, txHash]);
+
+  // Track write errors
+  useEffect(() => {
+    if (writeError) {
+      const msg = writeError.message || 'Transfer failed';
+      if (msg.includes('User rejected')) {
+        setState({ status: 'error', error: 'Transaction cancelled' });
+      } else if (msg.includes('insufficient')) {
+        setState({ status: 'error', error: 'Insufficient TRUST balance or ETH for gas' });
+      } else {
+        setState({ status: 'error', error: msg.length > 100 ? msg.slice(0, 100) + '...' : msg });
+      }
+    }
+  }, [writeError]);
+
+  // Track pending state
+  useEffect(() => {
+    if (isPending) {
+      setState({ status: 'sending' });
+    }
+  }, [isPending]);
 
   const send = useCallback(async (to: string, amount: string): Promise<boolean> => {
     if (!address) {
@@ -49,22 +82,18 @@ export function useSendTrust() {
         }
       }
 
-      setState({ status: 'sending' });
-
-      const txHash = await writeContractAsync({
+      // Use synchronous writeContract — same pattern as PortalStake.tsx
+      // Do NOT pass chain or account; wagmi infers them from the connector.
+      writeContract({
         address: CONTRACTS.TrustToken,
         abi: SkillTokenABI,
         functionName: 'transfer',
         args: [to as `0x${string}`, parseUnits(amount, 18)],
-        chain: base,
-        account: address,
       });
 
-      setState({ status: 'confirmed', txHash });
       return true;
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Transfer failed';
-      // Clean up the error message for common cases
       if (msg.includes('User rejected')) {
         setState({ status: 'error', error: 'Transaction cancelled' });
       } else if (msg.includes('insufficient')) {
@@ -74,9 +103,12 @@ export function useSendTrust() {
       }
       return false;
     }
-  }, [address, chainId, writeContractAsync, switchChainAsync]);
+  }, [address, chainId, writeContract, switchChainAsync]);
 
-  const reset = useCallback(() => setState({ status: 'idle' }), []);
+  const reset = useCallback(() => {
+    setState({ status: 'idle' });
+    resetWrite();
+  }, [resetWrite]);
 
   return { send, state, reset };
 }

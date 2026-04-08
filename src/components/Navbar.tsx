@@ -11,7 +11,7 @@ export default function Navbar() {
   const [sendTo, setSendTo] = useState('');
   const [sendAmount, setSendAmount] = useState('');
   const location = useLocation();
-  const { isConnected } = useAccount();
+  const { isConnected, connector } = useAccount();
   const { disconnect } = useDisconnect();
   const { send, state: sendState, reset: resetSend } = useSendTrust();
   const balance = useTrustBalance();
@@ -122,7 +122,7 @@ export default function Navbar() {
 
             {isConnected ? (
               <button
-                onClick={() => disconnect()}
+                onClick={() => disconnect({ connector })}
                 className="px-3 py-1.5 rounded-lg text-xs cursor-pointer transition-all"
                 style={{
                   background: 'rgba(248, 113, 113, 0.08)',
