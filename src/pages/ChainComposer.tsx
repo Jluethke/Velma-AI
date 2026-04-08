@@ -467,12 +467,27 @@ echo.
 
 cd /d "%WORKSPACE%"
 
+:: Check if Claude Code is available
+where claude >nul 2>nul
+if %errorlevel% neq 0 (
+    echo   Claude Code not found. Installing...
+    echo.
+    where npm >nul 2>nul
+    if %errorlevel% neq 0 (
+        echo   ERROR: npm not found. Install Node.js from https://nodejs.org
+        echo   Then run: npm install -g @anthropic-ai/claude-code
+        pause
+        exit /b 1
+    )
+    npm install -g @anthropic-ai/claude-code
+    echo.
+)
+
 echo   Launching Claude Code...
 echo   Type your inputs when prompted. Claude will run each skill step by step.
 echo   =========================================================================
 echo.
 
-:: Launch Claude interactively — it will read CLAUDE.md automatically
 claude
 
 echo.
@@ -519,12 +534,23 @@ echo ""
 
 cd "$WORKSPACE"
 
+# Check if Claude Code is available
+if ! command -v claude &> /dev/null; then
+    echo "  Claude Code not found. Installing..."
+    if command -v npm &> /dev/null; then
+        npm install -g @anthropic-ai/claude-code
+    else
+        echo "  ERROR: npm not found. Install Node.js from https://nodejs.org"
+        echo "  Then run: npm install -g @anthropic-ai/claude-code"
+        exit 1
+    fi
+fi
+
 echo "  Launching Claude Code..."
 echo "  Type your inputs when prompted. Claude will run each skill step by step."
 echo "  ========================================================================="
 echo ""
 
-# Launch Claude interactively — it reads CLAUDE.md automatically
 claude
 
 echo ""
