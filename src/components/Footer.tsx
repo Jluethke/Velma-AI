@@ -4,7 +4,7 @@ export default function Footer() {
   return (
     <footer className="px-6 py-16" style={{ borderTop: '1px solid var(--border)' }}>
       <div className="max-w-4xl mx-auto text-center">
-        <h2 className="text-2xl md:text-3xl font-bold mb-4" style={{ color: '#ffffff' }}>
+        <h2 className="text-2xl md:text-3xl font-bold mb-4" style={{ color: 'var(--text-primary)' }}>
           Ready to compose?
         </h2>
 
@@ -24,7 +24,7 @@ export default function Footer() {
             to="/skill/budget-builder"
             className="inline-flex items-center gap-2 px-6 py-3 rounded-xl no-underline transition-all text-sm"
             style={{
-              background: 'rgba(255,255,255,0.04)',
+              background: 'var(--bg-secondary)',
               border: '1px solid var(--border)',
               color: 'var(--text-secondary)',
             }}
@@ -48,7 +48,7 @@ export default function Footer() {
         <p className="text-xs mb-1" style={{ color: 'var(--text-secondary)' }}>
           &copy; 2024-present The Wayfinder Trust
         </p>
-        <p className="text-xs" style={{ color: 'rgba(136, 136, 170, 0.4)' }}>
+        <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
           SkillChain — AI skills you own, chains you compose, value you earn.
         </p>
       </div>

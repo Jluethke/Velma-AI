@@ -9,7 +9,7 @@ function ComposerPreview() {
   return (
     <section className="px-6 py-20 max-w-6xl mx-auto">
       <div className="text-center mb-12">
-        <h2 className="text-3xl md:text-4xl font-bold mb-3" style={{ color: '#ffffff' }}>
+        <h2 className="text-3xl md:text-4xl font-bold mb-3" style={{ color: 'var(--text-primary)' }}>
           Chain skills together.{' '}
           <span style={{ color: 'var(--cyan)' }}>Visually.</span>
         </h2>
@@ -25,8 +25,8 @@ function ComposerPreview() {
       >
         {/* Toolbar mock */}
         <div className="flex items-center gap-3 px-4 py-2" style={{ borderBottom: '1px solid var(--border)' }}>
-          <span className="text-xs font-mono px-2 py-1 rounded" style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--text-secondary)' }}>startup-validation</span>
-          <span className="text-xs" style={{ color: 'rgba(255,255,255,0.2)' }}>|</span>
+          <span className="text-xs font-mono px-2 py-1 rounded" style={{ background: 'var(--bg-secondary)', color: 'var(--text-secondary)' }}>startup-validation</span>
+          <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>|</span>
           <span className="text-[10px] px-2 py-0.5 rounded" style={{ background: 'rgba(0,255,200,0.08)', color: 'var(--cyan)', border: '1px solid rgba(0,255,200,0.2)' }}>Validate</span>
           <span className="text-[10px] px-2 py-0.5 rounded" style={{ background: 'rgba(0,255,200,0.12)', color: 'var(--cyan)', border: '1px solid rgba(0,255,200,0.25)' }}>Export</span>
           <span className="text-[10px] px-2 py-0.5 rounded font-semibold" style={{ background: 'rgba(0,200,255,0.12)', color: '#00c8ff', border: '1px solid rgba(0,200,255,0.25)' }}>Run</span>
@@ -34,7 +34,7 @@ function ComposerPreview() {
         </div>
 
         {/* Canvas mock */}
-        <div className="p-8 flex items-center justify-center gap-6 flex-wrap" style={{ background: 'rgba(5,5,10,0.8)', minHeight: '260px' }}>
+        <div className="p-8 flex items-center justify-center gap-6 flex-wrap" style={{ background: 'var(--bg-secondary)', minHeight: '260px' }}>
           {[
             { name: 'idea-validator', domain: 'business', color: '#a855f7' },
             { name: 'market-research', domain: 'business', color: '#a855f7' },
@@ -45,12 +45,12 @@ function ComposerPreview() {
               <div
                 className="rounded-lg p-3"
                 style={{
-                  background: 'rgba(15,15,25,0.95)',
+                  background: 'var(--bg-card)',
                   border: `1px solid ${skill.color}40`,
                   minWidth: '140px',
                 }}
               >
-                <div className="text-xs font-semibold mb-1" style={{ color: '#fff' }}>{skill.name}</div>
+                <div className="text-xs font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>{skill.name}</div>
                 <span className="text-[9px] px-1.5 py-0.5 rounded" style={{ background: `${skill.color}20`, color: skill.color }}>{skill.domain}</span>
               </div>
               {i < arr.length - 1 && (
@@ -85,7 +85,7 @@ function TrustEconomy() {
   return (
     <section className="px-6 py-20 max-w-5xl mx-auto">
       <div className="text-center mb-12">
-        <h2 className="text-3xl md:text-4xl font-bold mb-3" style={{ color: '#ffffff' }}>
+        <h2 className="text-3xl md:text-4xl font-bold mb-3" style={{ color: 'var(--text-primary)' }}>
           How{' '}
           <span style={{ color: 'var(--gold)' }}>TRUST</span>
           {' '}works
@@ -171,7 +171,7 @@ function SkillEvolution() {
   return (
     <section className="px-6 py-20 max-w-5xl mx-auto">
       <div className="text-center mb-12">
-        <h2 className="text-3xl md:text-4xl font-bold mb-3" style={{ color: '#ffffff' }}>
+        <h2 className="text-3xl md:text-4xl font-bold mb-3" style={{ color: 'var(--text-primary)' }}>
           Skills{' '}
           <span style={{ color: 'var(--green)' }}>evolve</span>
         </h2>

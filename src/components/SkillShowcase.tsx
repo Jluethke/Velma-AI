@@ -82,7 +82,7 @@ function ShowcaseCard({ item }: { item: ShowcaseItem }) {
       </div>
 
       {/* Input */}
-      <div className="rounded-lg p-3 mb-2" style={{ background: 'rgba(0,0,0,0.3)' }}>
+      <div className="rounded-lg p-3 mb-2" style={{ background: 'var(--bg-secondary)' }}>
         <div className="text-[10px] uppercase tracking-wider mb-1.5 font-semibold" style={{ color: 'var(--text-secondary)' }}>
           Input
         </div>

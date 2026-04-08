@@ -7,7 +7,7 @@ function SkeletonBlock({ className }: { className?: string }) {
   return (
     <div
       className={`animate-pulse rounded-lg ${className || ''}`}
-      style={{ background: 'rgba(255,255,255,0.04)' }}
+      style={{ background: 'var(--bg-secondary)' }}
     />
   );
 }
@@ -134,7 +134,7 @@ export default function SkillDetail() {
       <div
         className="rounded-xl p-6 mb-8"
         style={{
-          background: 'rgba(26,26,46,0.6)',
+          background: 'var(--bg-card)',
           border: '1px solid var(--border)',
         }}
       >
@@ -237,7 +237,7 @@ claude
           </Link>
         </div>
 
-        <p className="text-xs" style={{ color: 'rgba(255,255,255,0.25)' }}>
+        <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
           This is one skill. With TRUST tokens, you can chain multiple skills together in the Composer.
         </p>
       </div>
@@ -246,7 +246,7 @@ claude
       <div
         className="rounded-xl p-6 mb-8"
         style={{
-          background: 'rgba(26,26,46,0.6)',
+          background: 'var(--bg-card)',
           border: '1px solid var(--border)',
         }}
       >
@@ -256,7 +256,7 @@ claude
         >
           Description
         </h2>
-        <p className="text-sm leading-relaxed" style={{ color: '#ffffff' }}>
+        <p className="text-sm leading-relaxed" style={{ color: 'var(--text-primary)' }}>
           {description}
         </p>
       </div>
@@ -266,7 +266,7 @@ claude
         <div
           className="rounded-xl p-6 mb-8"
           style={{
-            background: 'rgba(26,26,46,0.6)',
+            background: 'var(--bg-card)',
             border: '1px solid var(--border)',
           }}
         >
@@ -298,7 +298,7 @@ claude
       <div
         className="rounded-xl p-6 mb-8"
         style={{
-          background: 'rgba(26,26,46,0.6)',
+          background: 'var(--bg-card)',
           border: '1px solid var(--border)',
         }}
       >
@@ -320,7 +320,7 @@ claude
             WT
           </div>
           <div>
-            <div className="text-sm font-medium" style={{ color: '#ffffff' }}>
+            <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
               The Wayfinder Trust
             </div>
           </div>
@@ -346,7 +346,7 @@ claude
                   to={`/skill/${rs.name}`}
                   className="no-underline p-5 rounded-xl transition-all block"
                   style={{
-                    background: 'rgba(26,26,46,0.6)',
+                    background: 'var(--bg-card)',
                     border: '1px solid var(--border)',
                   }}
                   onMouseEnter={e => {

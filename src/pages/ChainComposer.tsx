@@ -643,8 +643,8 @@ fi
         <div
           style={{
             padding: '8px 16px',
-            background: 'rgba(10, 10, 15, 0.95)',
-            borderBottom: '1px solid rgba(255,255,255,0.08)',
+            background: 'var(--bg-card)',
+            borderBottom: '1px solid var(--border)',
             display: 'flex',
             alignItems: 'center',
             gap: '12px',
@@ -658,10 +658,10 @@ fi
             placeholder="Name your chain"
             style={{
               padding: '4px 8px',
-              background: 'rgba(255,255,255,0.05)',
-              border: '1px solid rgba(255,255,255,0.1)',
+              background: 'var(--bg-secondary)',
+              border: '1px solid var(--border)',
               borderRadius: '4px',
-              color: '#fff',
+              color: 'var(--text-primary)',
               fontSize: '13px',
               width: '160px',
               outline: 'none',
@@ -674,10 +674,10 @@ fi
             placeholder="What does this chain do?"
             style={{
               padding: '4px 8px',
-              background: 'rgba(255,255,255,0.05)',
-              border: '1px solid rgba(255,255,255,0.1)',
+              background: 'var(--bg-secondary)',
+              border: '1px solid var(--border)',
               borderRadius: '4px',
-              color: '#fff',
+              color: 'var(--text-primary)',
               fontSize: '13px',
               flex: 1,
               minWidth: '200px',
@@ -689,10 +689,10 @@ fi
             onChange={e => setChainCategory(e.target.value)}
             style={{
               padding: '4px 8px',
-              background: 'rgba(255,255,255,0.05)',
-              border: '1px solid rgba(255,255,255,0.1)',
+              background: 'var(--bg-secondary)',
+              border: '1px solid var(--border)',
               borderRadius: '4px',
-              color: '#fff',
+              color: 'var(--text-primary)',
               fontSize: '13px',
               outline: 'none',
             }}
@@ -814,7 +814,7 @@ fi
           </div>
 
           {/* Node count */}
-          <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.3)' }}>
+          <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
             {nodes.length} skills / {edges.length} connections
           </span>
         </div>
@@ -832,7 +832,7 @@ fi
               Saved Chains ({savedChains.length})
             </div>
             {savedChains.length === 0 && (
-              <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.3)' }}>No saved chains yet. Click Save to store your current chain.</div>
+              <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>No saved chains yet. Click Save to store your current chain.</div>
             )}
             {savedChains.map(chain => (
               <div key={chain.name} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 0' }}>
@@ -840,11 +840,11 @@ fi
                   onClick={() => handleLoad(chain)}
                   style={{
                     flex: 1, textAlign: 'left', background: 'transparent', border: 'none',
-                    color: 'rgba(255,255,255,0.7)', fontSize: '11px', cursor: 'pointer', padding: '2px 0',
+                    color: 'var(--text-primary)', fontSize: '11px', cursor: 'pointer', padding: '2px 0',
                   }}
                 >
                   <strong>{chain.name}</strong> — {chain.nodes.length} skills, {chain.edges.length} connections
-                  <span style={{ color: 'rgba(255,255,255,0.3)', marginLeft: '6px' }}>{new Date(chain.savedAt).toLocaleDateString()}</span>
+                  <span style={{ color: 'var(--text-secondary)', marginLeft: '6px' }}>{new Date(chain.savedAt).toLocaleDateString()}</span>
                 </button>
                 <button
                   onClick={() => handleDeleteSaved(chain.name)}
@@ -891,20 +891,20 @@ fi
             onConnect={onConnect}
             nodeTypes={nodeTypes}
             fitView
-            style={{ background: '#0a0a0f' }}
+            style={{ background: 'var(--bg-primary)' }}
             defaultEdgeOptions={{
               style: { stroke: 'rgba(0,255,200,0.4)', strokeWidth: 2 },
               animated: true,
             }}
           >
             <Controls
-              style={{ background: 'rgba(15,15,25,0.9)', borderColor: 'rgba(255,255,255,0.1)' }}
+              style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}
             />
             <Background
               variant={BackgroundVariant.Dots}
               gap={20}
               size={1}
-              color="rgba(255,255,255,0.05)"
+              color="var(--border)"
             />
           </ReactFlow>
         </div>
@@ -920,10 +920,10 @@ fi
             pointerEvents: 'none',
           }}>
             <div style={{ fontSize: '48px', marginBottom: '12px', opacity: 0.3 }}>&#x1F9E9;</div>
-            <div style={{ fontSize: '16px', color: 'rgba(255,255,255,0.25)', marginBottom: '6px' }}>
+            <div style={{ fontSize: '16px', color: 'var(--text-secondary)', marginBottom: '6px' }}>
               Click skills in the palette to add them
             </div>
-            <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.15)' }}>
+            <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
               Drag from the <span style={{ color: 'var(--cyan)' }}>cyan dot</span> (bottom) to the <span style={{ color: '#ff6b6b' }}>red dot</span> (top) to connect
             </div>
           </div>
@@ -933,7 +933,7 @@ fi
         {exportJson && (
           <div style={{
             padding: '12px 16px',
-            background: 'rgba(10, 10, 15, 0.95)',
+            background: 'var(--bg-card)',
             borderTop: '1px solid rgba(0,255,200,0.2)',
             maxHeight: '200px',
             overflowY: 'auto',
@@ -960,7 +960,7 @@ fi
             <pre style={{
               margin: 0,
               fontSize: '11px',
-              color: 'rgba(255,255,255,0.6)',
+              color: 'var(--text-secondary)',
               fontFamily: 'monospace',
               whiteSpace: 'pre-wrap',
               wordBreak: 'break-all',
@@ -986,16 +986,16 @@ fi
               <button
                 onClick={() => setPublishProgress([])}
                 style={{
-                  padding: '2px 8px', background: 'rgba(255,255,255,0.05)',
-                  border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px',
-                  color: 'rgba(255,255,255,0.4)', fontSize: '11px', cursor: 'pointer',
+                  padding: '2px 8px', background: 'var(--bg-secondary)',
+                  border: '1px solid var(--border)', borderRadius: '4px',
+                  color: 'var(--text-secondary)', fontSize: '11px', cursor: 'pointer',
                 }}
               >
                 Close
               </button>
             </div>
             <pre style={{
-              margin: 0, fontSize: '11px', color: 'rgba(255,255,255,0.6)',
+              margin: 0, fontSize: '11px', color: 'var(--text-secondary)',
               fontFamily: 'monospace', whiteSpace: 'pre-wrap',
             }}>
               {publishProgress.join('\n')}

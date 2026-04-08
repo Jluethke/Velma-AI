@@ -18,7 +18,7 @@ export default function HeroSection() {
       <div className="relative z-10 max-w-4xl mx-auto text-center">
         <h1
           className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6"
-          style={{ color: '#ffffff', lineHeight: 1.1 }}
+          style={{ color: 'var(--text-primary)', lineHeight: 1.1 }}
         >
           Build AI skill chains.{' '}
           <span className="block md:inline" style={{
@@ -71,7 +71,7 @@ export default function HeroSection() {
             to="/skill/budget-builder"
             className="inline-flex items-center gap-2 px-6 py-3 rounded-xl no-underline cursor-pointer transition-all"
             style={{
-              background: 'rgba(255,255,255,0.04)',
+              background: 'var(--bg-secondary)',
               border: '1px solid var(--border)',
               color: 'var(--text-secondary)',
             }}
@@ -81,7 +81,7 @@ export default function HeroSection() {
           </Link>
         </div>
 
-        <p className="text-xs" style={{ color: 'rgba(255,255,255,0.25)' }}>
+        <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
           No account needed to try skills. Connect a wallet with TRUST to unlock chaining.
         </p>
       </div>

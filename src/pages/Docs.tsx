@@ -14,7 +14,7 @@ const guideSections = [
   { id: 'faq', label: 'FAQ' },
 ];
 
-const h = { color: '#ffffff' };
+const h = { color: 'var(--text-primary)' };
 const t = { color: 'var(--text-secondary)' };
 
 export default function Docs() {

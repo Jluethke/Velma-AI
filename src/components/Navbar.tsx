@@ -108,7 +108,7 @@ export default function Navbar() {
               onClick={toggleTheme}
               className="p-2 rounded-lg text-sm cursor-pointer transition-colors"
               style={{
-                background: 'rgba(255, 255, 255, 0.04)',
+                background: 'var(--bg-secondary)',
                 border: '1px solid var(--border)',
                 color: 'var(--text-secondary)',
                 lineHeight: 1,
@@ -207,7 +207,7 @@ export default function Navbar() {
               placeholder="0x..."
               style={{
                 width: '100%', padding: '8px 12px', marginBottom: '12px',
-                background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)',
+                background: 'var(--bg-secondary)', border: '1px solid var(--border)',
                 borderRadius: '8px', color: 'var(--text-primary)', fontSize: '13px',
                 outline: 'none', boxSizing: 'border-box', fontFamily: 'monospace',
               }}
@@ -223,7 +223,7 @@ export default function Navbar() {
               placeholder="100"
               style={{
                 width: '100%', padding: '8px 12px', marginBottom: '16px',
-                background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)',
+                background: 'var(--bg-secondary)', border: '1px solid var(--border)',
                 borderRadius: '8px', color: 'var(--text-primary)', fontSize: '13px',
                 outline: 'none', boxSizing: 'border-box',
               }}
@@ -263,7 +263,7 @@ export default function Navbar() {
                 disabled={sendState.status === 'sending' || !sendTo || !sendAmount}
                 className="flex-1 py-2 rounded-lg text-sm font-semibold cursor-pointer"
                 style={{
-                  background: sendTo && sendAmount ? 'rgba(251,191,36,0.12)' : 'rgba(255,255,255,0.03)',
+                  background: sendTo && sendAmount ? 'rgba(251,191,36,0.12)' : 'var(--bg-secondary)',
                   border: `1px solid ${sendTo && sendAmount ? 'rgba(251,191,36,0.3)' : 'var(--border)'}`,
                   color: sendTo && sendAmount ? 'var(--gold)' : 'var(--text-secondary)',
                   opacity: sendState.status === 'sending' ? 0.6 : 1,
@@ -275,7 +275,7 @@ export default function Navbar() {
                 onClick={() => setShowSend(false)}
                 className="px-4 py-2 rounded-lg text-sm cursor-pointer"
                 style={{
-                  background: 'rgba(255,255,255,0.04)',
+                  background: 'var(--bg-secondary)',
                   border: '1px solid var(--border)',
                   color: 'var(--text-secondary)',
                 }}

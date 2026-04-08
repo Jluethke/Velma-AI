@@ -76,8 +76,8 @@ function SkillNodeComponent({ data, selected }: SkillNodeProps) {
   return (
     <div
       style={{
-        background: 'rgba(15, 15, 25, 0.95)',
-        border: `2px solid ${data.isCustomized ? 'var(--gold)' : selected ? 'var(--cyan)' : 'rgba(255,255,255,0.1)'}`,
+        background: 'var(--bg-card)',
+        border: `2px solid ${data.isCustomized ? 'var(--gold)' : selected ? 'var(--cyan)' : 'var(--border)'}`,
         borderRadius: '12px',
         minWidth: '220px',
         maxWidth: expanded ? '340px' : '280px',
@@ -107,7 +107,7 @@ function SkillNodeComponent({ data, selected }: SkillNodeProps) {
         onClick={() => setExpanded(!expanded)}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <span style={{ color: '#fff', fontSize: '13px', fontWeight: 600 }}>
+          <span style={{ color: 'var(--text-primary)', fontSize: '13px', fontWeight: 600 }}>
             {data.label}
           </span>
           {data.isCustomized && (
@@ -117,14 +117,14 @@ function SkillNodeComponent({ data, selected }: SkillNodeProps) {
           )}
         </div>
         <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-          <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '10px' }}>
+          <span style={{ color: 'var(--text-secondary)', fontSize: '10px' }}>
             {expanded ? '\u25B2' : '\u25BC'}
           </span>
           <button
             onClick={(e) => { e.stopPropagation(); data.onRemove(); }}
             style={{
               background: 'transparent', border: 'none',
-              color: 'rgba(255,255,255,0.3)', cursor: 'pointer',
+              color: 'var(--text-secondary)', cursor: 'pointer',
               fontSize: '14px', padding: '0 2px', lineHeight: 1,
             }}
             title="Remove skill"
@@ -152,24 +152,24 @@ function SkillNodeComponent({ data, selected }: SkillNodeProps) {
         <div style={{ padding: '4px 12px 10px', display: 'flex', gap: '16px' }}>
           {data.inputs.length > 0 && (
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.35)', marginBottom: '3px', textTransform: 'uppercase' }}>In</div>
+              <div style={{ fontSize: '9px', color: 'var(--text-secondary)', marginBottom: '3px', textTransform: 'uppercase' }}>In</div>
               {data.inputs.slice(0, 3).map(input => (
-                <div key={input} style={{ fontSize: '10px', color: 'rgba(255,255,255,0.5)', padding: '1px 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{input}</div>
+                <div key={input} style={{ fontSize: '10px', color: 'var(--text-secondary)', padding: '1px 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{input}</div>
               ))}
-              {data.inputs.length > 3 && <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.25)' }}>+{data.inputs.length - 3}</div>}
+              {data.inputs.length > 3 && <div style={{ fontSize: '9px', color: 'var(--text-secondary)' }}>+{data.inputs.length - 3}</div>}
             </div>
           )}
           {data.outputs.length > 0 && (
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.35)', marginBottom: '3px', textTransform: 'uppercase' }}>Out</div>
+              <div style={{ fontSize: '9px', color: 'var(--text-secondary)', marginBottom: '3px', textTransform: 'uppercase' }}>Out</div>
               {data.outputs.slice(0, 3).map(output => (
                 <div key={output} style={{ fontSize: '10px', color: 'rgba(0,255,200,0.6)', padding: '1px 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{output}</div>
               ))}
-              {data.outputs.length > 3 && <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.25)' }}>+{data.outputs.length - 3}</div>}
+              {data.outputs.length > 3 && <div style={{ fontSize: '9px', color: 'var(--text-secondary)' }}>+{data.outputs.length - 3}</div>}
             </div>
           )}
           {data.inputs.length === 0 && data.outputs.length === 0 && (
-            <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.25)', fontStyle: 'italic' }}>Click to customize</div>
+            <div style={{ fontSize: '10px', color: 'var(--text-secondary)', fontStyle: 'italic' }}>Click to customize</div>
           )}
         </div>
       )}
@@ -179,7 +179,7 @@ function SkillNodeComponent({ data, selected }: SkillNodeProps) {
         <div style={{ padding: '4px 12px 10px' }}>
           {/* Inputs */}
           <div style={{ marginBottom: '8px' }}>
-            <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.35)', marginBottom: '4px', textTransform: 'uppercase', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ fontSize: '9px', color: 'var(--text-secondary)', marginBottom: '4px', textTransform: 'uppercase', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span>Inputs</span>
               <button
                 onClick={(e) => { e.stopPropagation(); setEditingInputs(!editingInputs); }}
@@ -190,7 +190,7 @@ function SkillNodeComponent({ data, selected }: SkillNodeProps) {
             </div>
             {data.inputs.map(input => (
               <div key={input} style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '1px 0' }}>
-                <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.5)', flex: 1 }}>{input}</span>
+                <span style={{ fontSize: '10px', color: 'var(--text-secondary)', flex: 1 }}>{input}</span>
                 {editingInputs && (
                   <button
                     onClick={(e) => { e.stopPropagation(); handleRemoveInput(input); }}
@@ -209,9 +209,9 @@ function SkillNodeComponent({ data, selected }: SkillNodeProps) {
                   placeholder="new_input"
                   onClick={e => e.stopPropagation()}
                   style={{
-                    flex: 1, padding: '2px 4px', background: 'rgba(255,255,255,0.05)',
-                    border: '1px solid rgba(255,255,255,0.1)', borderRadius: '3px',
-                    color: '#fff', fontSize: '10px', outline: 'none',
+                    flex: 1, padding: '2px 4px', background: 'var(--bg-secondary)',
+                    border: '1px solid var(--border)', borderRadius: '3px',
+                    color: 'var(--text-primary)', fontSize: '10px', outline: 'none',
                   }}
                 />
                 <button
@@ -224,7 +224,7 @@ function SkillNodeComponent({ data, selected }: SkillNodeProps) {
 
           {/* Outputs */}
           <div>
-            <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.35)', marginBottom: '4px', textTransform: 'uppercase', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ fontSize: '9px', color: 'var(--text-secondary)', marginBottom: '4px', textTransform: 'uppercase', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span>Outputs</span>
               <button
                 onClick={(e) => { e.stopPropagation(); setEditingOutputs(!editingOutputs); }}
@@ -254,9 +254,9 @@ function SkillNodeComponent({ data, selected }: SkillNodeProps) {
                   placeholder="new_output"
                   onClick={e => e.stopPropagation()}
                   style={{
-                    flex: 1, padding: '2px 4px', background: 'rgba(255,255,255,0.05)',
-                    border: '1px solid rgba(255,255,255,0.1)', borderRadius: '3px',
-                    color: '#fff', fontSize: '10px', outline: 'none',
+                    flex: 1, padding: '2px 4px', background: 'var(--bg-secondary)',
+                    border: '1px solid var(--border)', borderRadius: '3px',
+                    color: 'var(--text-primary)', fontSize: '10px', outline: 'none',
                   }}
                 />
                 <button

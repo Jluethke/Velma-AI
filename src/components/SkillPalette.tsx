@@ -75,7 +75,7 @@ export default function SkillPalette({ skills, onAddSkill, isPremium }: SkillPal
       style={{
         width: '280px',
         height: '100%',
-        background: 'rgba(9, 9, 11, 0.95)',
+        background: 'var(--bg-card)',
         borderRight: '1px solid var(--border)',
         display: 'flex',
         flexDirection: 'column',
@@ -118,7 +118,7 @@ export default function SkillPalette({ skills, onAddSkill, isPremium }: SkillPal
           style={{
             width: '100%',
             padding: '6px 10px',
-            background: 'rgba(255,255,255,0.04)',
+            background: 'var(--bg-secondary)',
             border: '1px solid var(--border)',
             borderRadius: '6px',
             color: 'var(--text-primary)',
@@ -167,7 +167,7 @@ export default function SkillPalette({ skills, onAddSkill, isPremium }: SkillPal
                   title={skill.description}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.8)' }}>{skill.name}</span>
+                    <span style={{ fontSize: '12px', color: 'var(--text-primary)' }}>{skill.name}</span>
                     {isPro && (
                       <span style={{ fontSize: '8px', color: 'var(--gold)', background: 'rgba(251,191,36,0.1)', padding: '0 3px', borderRadius: '2px' }}>PRO</span>
                     )}
