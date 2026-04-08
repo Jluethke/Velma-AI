@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useAccount } from 'wagmi';
 import { useSendTrust, useTrustBalance } from '../hooks/useSendTrust';
+import { useTheme } from '../hooks/useTheme';
 
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -13,6 +14,7 @@ export default function Navbar() {
   const { isConnected } = useAccount();
   const { send, state: sendState, reset: resetSend } = useSendTrust();
   const balance = useTrustBalance();
+  const { theme, toggleTheme } = useTheme();
 
   const navLinks = [
     { to: '/', label: 'Home' },
@@ -38,7 +40,7 @@ export default function Navbar() {
       <nav
         className="fixed top-0 left-0 right-0 z-50 px-6 py-3"
         style={{
-          background: 'rgba(9, 9, 11, 0.85)',
+          background: theme === 'dark' ? 'rgba(9, 9, 11, 0.85)' : 'rgba(255, 255, 255, 0.85)',
           backdropFilter: 'blur(20px)',
           borderBottom: '1px solid var(--border)',
         }}
@@ -101,6 +103,21 @@ export default function Navbar() {
                 Try a Skill
               </Link>
             )}
+
+            <button
+              onClick={toggleTheme}
+              className="p-2 rounded-lg text-sm cursor-pointer transition-colors"
+              style={{
+                background: 'rgba(255, 255, 255, 0.04)',
+                border: '1px solid var(--border)',
+                color: 'var(--text-secondary)',
+                lineHeight: 1,
+              }}
+              aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+              title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+            >
+              {theme === 'dark' ? '\u2600' : '\u263D'}
+            </button>
 
             <ConnectButton
               chainStatus="icon"
