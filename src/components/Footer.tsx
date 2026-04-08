@@ -49,7 +49,7 @@ export default function Footer() {
           &copy; 2024-present The Wayfinder Trust
         </p>
         <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-          FlowFabric — AI skills you own, chains you compose, value you earn.
+          FlowFabric — Create flows built on TRUST.
         </p>
       </div>
     </footer>

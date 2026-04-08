@@ -20,13 +20,13 @@ export default function HeroSection() {
           className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6"
           style={{ color: 'var(--text-primary)', lineHeight: 1.1 }}
         >
-          Build AI skill chains.{' '}
+          Create flows{' '}
           <span className="block md:inline" style={{
             background: 'linear-gradient(135deg, var(--cyan), var(--gold))',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
           }}>
-            Earn from them.
+            built on TRUST.
           </span>
         </h1>
 
@@ -34,7 +34,7 @@ export default function HeroSection() {
           className="text-base md:text-lg mb-10 max-w-2xl mx-auto"
           style={{ color: 'var(--text-secondary)' }}
         >
-          Hundreds of AI skills you can try free. Chain them together in a visual composer.
+          Hundreds of AI skills you can try free. Connect them into flows in a visual composer.
           Publish on-chain and earn TRUST tokens when others use your work.
         </p>
 
@@ -60,7 +60,7 @@ export default function HeroSection() {
               <ConnectButton label="Connect Wallet to Compose" />
               {isConnected && !canChain && (
                 <span className="text-xs" style={{ color: 'var(--gold)' }}>
-                  Builder tier (500 TRUST) required to chain skills
+                  Builder tier (500 TRUST) required to build flows
                 </span>
               )}
               {!isConnected && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) && (
@@ -87,7 +87,7 @@ export default function HeroSection() {
         </div>
 
         <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-          No account needed to try skills. Connect a wallet with TRUST to unlock chaining.
+          No account needed to try skills. Connect a wallet with TRUST to unlock flows.
         </p>
       </div>
     </section>

@@ -6,20 +6,20 @@ const faqs = [
     answer: 'A skill is a structured AI procedure — a set of phases with quality gates that an AI follows step by step. Examples: building a budget, prepping for an interview, analyzing competitors, designing an API. Each skill has defined inputs, outputs, and validation criteria. Anyone can run a skill for free.',
   },
   {
-    question: 'What is a chain?',
-    answer: 'A chain is multiple skills connected together into a workflow. For example, a "Career Launchpad" chain runs resume-builder → interview-prep → salary-negotiator in sequence, passing context between each step. Chains are where the real value is — they produce outcomes no single skill can achieve alone.',
+    question: 'What is a flow?',
+    answer: 'A flow is multiple skills connected together into a workflow. For example, a "Career Launchpad" flow runs resume-builder → interview-prep → salary-negotiator in sequence, passing context between each step. Flows are where the real value is — they produce outcomes no single skill can achieve alone.',
   },
   {
     question: 'What is TRUST?',
-    answer: 'TRUST is the token that powers the FlowFabric ecosystem, deployed on Base mainnet. You can earn TRUST by publishing skills, validating quality, or creating chains that others use. You can also buy TRUST to unlock features faster. Your TRUST balance determines your tier — from Explorer (free) to Governor (100K+).',
+    answer: 'TRUST is the token that powers the FlowFabric ecosystem, deployed on Base mainnet. You can earn TRUST by publishing skills, validating quality, or creating flows that others use. You can also buy TRUST to unlock features faster. Your TRUST balance determines your tier — from Explorer (free) to Governor (100K+).',
   },
   {
     question: 'Do I need TRUST to try a skill?',
-    answer: 'No. Individual skills are free to run. You can browse all skills in the Composer and run any one of them without a wallet or tokens. TRUST is needed to chain skills together, publish on-chain, and access premium domains like engineering, AI, and legal.',
+    answer: 'No. Individual skills are free to run. You can browse all skills in the Composer and run any one of them without a wallet or tokens. TRUST is needed to connect skills into flows, publish on-chain, and access premium domains like engineering, AI, and legal.',
   },
   {
     question: 'How do tiers work?',
-    answer: 'Your TRUST balance determines what you can do. Explorer (free): run individual skills. Builder (500 TRUST): chain skills together, save and schedule. Creator (2,500): publish on-chain, earn royalties. Validator (25K staked): validate skills for the network. Governor (100K staked): vote on protocol decisions.',
+    answer: 'Your TRUST balance determines what you can do. Explorer (free): run individual skills. Builder (500 TRUST): connect skills into flows, save and schedule. Creator (2,500): publish on-chain, earn royalties. Validator (25K staked): validate skills for the network. Governor (100K staked): vote on protocol decisions.',
   },
   {
     question: 'How do I earn TRUST?',

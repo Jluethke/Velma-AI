@@ -105,7 +105,7 @@ export default function ChainComposer() {
   const [scheduleTime, setScheduleTime] = useState('09:00');
   const [scheduleDay, setScheduleDay] = useState('MON');
 
-  // Featured chain templates — pre-loaded onto canvas unconnected for free users
+  // Featured flow templates — pre-loaded onto canvas unconnected for free users
   const FEATURED_CHAINS = [
     { name: 'Career Launchpad', skills: ['explain-anything', 'study-planner', 'resume-builder', 'interview-coach', 'salary-negotiator'] },
     { name: 'Life Check-In', skills: ['energy-audit', 'money-truth', 'relationship-check', 'fear-inventory', 'future-self-letter'] },
@@ -197,7 +197,7 @@ export default function ChainComposer() {
   const onConnect: OnConnect = useCallback(
     (connection) => {
       if (!canChain) {
-        showTrustToast('Builder tier (500 TRUST) required to connect skills');
+        showTrustToast('Builder tier (500 TRUST) required to build flows');
         return;
       }
       setEdges((eds) => addEdge({
@@ -210,7 +210,7 @@ export default function ChainComposer() {
   );
 
   const handleAddSkill = useCallback((skill: PaletteSkill) => {
-    // Free users: 3 skills max (enough to see the value of chaining). Builder+: unlimited.
+    // Free users: 3 skills max (enough to see the value of flows). Builder+: unlimited.
     if (!canChain && nodes.length >= 3) {
       showTrustToast('Builder tier (500 TRUST) required to add more than 3 skills');
       return;
@@ -340,7 +340,7 @@ export default function ChainComposer() {
     }
 
     if (!chainName.trim()) {
-      errors.push('Chain name is required');
+      errors.push('Flow name is required');
     }
 
     // Cycle detection via topological sort
@@ -366,7 +366,7 @@ export default function ChainComposer() {
       }
     }
     if (visited !== nodes.length && nodes.length > 1) {
-      errors.push('Chain has a cycle — remove a connection');
+      errors.push('Flow has a cycle — remove a connection');
     }
 
     setValidationErrors(errors);
@@ -467,7 +467,7 @@ export default function ChainComposer() {
       }
     }
 
-    addProgress(`Publishing chain "${chainName}"...`);
+    addProgress(`Publishing flow "${chainName}"...`);
     const chainResult = await publishSkill({
       name: chainName, domain: chainCategory,
       tags: ['chain', chainCategory, ...chainName.split('-').filter(t => t.length > 2)],
@@ -476,11 +476,11 @@ export default function ChainComposer() {
     });
 
     if (chainResult) {
-      addProgress(`Chain: ${chainResult.skillId.slice(0, 12)}... (tx: ${chainResult.txHash.slice(0, 12)}...)`);
+      addProgress(`Flow: ${chainResult.skillId.slice(0, 12)}... (tx: ${chainResult.txHash.slice(0, 12)}...)`);
       addProgress('');
       addProgress(`Author: ${address}`);
       addProgress(`Custom/modified skills published: ${Object.keys(publishedSkillIds).length}`);
-      addProgress(`Chain steps: ${built.steps.length}`);
+      addProgress(`Flow steps: ${built.steps.length}`);
       addProgress('Royalties flow to your wallet for all derivatives.');
     } else {
       addProgress(`FAILED: ${publishState.error || 'Transaction rejected'}`);
@@ -542,11 +542,11 @@ export default function ChainComposer() {
       }));
 
     // Write a CLAUDE.md that tells Claude how to run the chain
-    const claudeMd = `# FlowFabric Chain: ${chainName}
+    const claudeMd = `# FlowFabric Flow: ${chainName}
 
-${chainDescription || 'Custom skill chain composed in the visual editor.'}
+${chainDescription || 'Custom skill flow composed in the visual editor.'}
 
-## How to run this chain
+## How to run this flow
 
 Execute these ${steps.length} skills in order. For each skill:
 1. Call \`start_skill_run\` with the skill name
@@ -555,7 +555,7 @@ Execute these ${steps.length} skills in order. For each skill:
 4. Call \`complete_skill_run\` when done
 5. **Before starting the next skill, summarize the key outputs from this skill and carry them forward as context**
 
-## Chain steps
+## Flow steps
 
 ${stepInstructions}
 
@@ -571,7 +571,7 @@ When moving from one skill to the next:
 - The user should NOT have to re-explain anything — carry all context forward
 - If a skill produces structured data (lists, tables, scores), preserve that structure
 
-${customSkills.length > 0 ? `## Custom skills to build first\n\nThese skills don't exist in the marketplace yet. Before running the chain, use the \`skill-from-workflow\` skill to create each one based on the description below. Ask the user to confirm the generated skill definition before proceeding.\n\n${customSkills.map(s => `### ${s.name}\n**Description:** ${s.description}\n**Inputs:** ${s.inputs.join(', ') || 'ask the user'}\n**Outputs:** ${s.outputs.join(', ') || 'ask the user'}\n`).join('\n')}\n` : ''}
+${customSkills.length > 0 ? `## Custom skills to build first\n\nThese skills don't exist in the marketplace yet. Before running the flow, use the \`skill-from-workflow\` skill to create each one based on the description below. Ask the user to confirm the generated skill definition before proceeding.\n\n${customSkills.map(s => `### ${s.name}\n**Description:** ${s.description}\n**Inputs:** ${s.inputs.join(', ') || 'ask the user'}\n**Outputs:** ${s.outputs.join(', ') || 'ask the user'}\n`).join('\n')}\n` : ''}
 ${customizedSkills.length > 0 ? `## Customized skills (derivatives)\n\nThese skills were modified from their originals. When publishing, they should be marked as derivatives with royalty splits to the original author:\n${customizedSkills.map(s => `- ${s}`).join('\n')}\n` : ''}
 ## Start
 
@@ -654,14 +654,14 @@ pause
       URL.revokeObjectURL(url);
     } else {
       const shScript = `#!/bin/bash
-# FlowFabric Chain Runner: ${chainName}
+# FlowFabric Flow Runner: ${chainName}
 
 WS="$HOME/FlowFabric-Runs/${dirName}"
 mkdir -p "$WS"
 
 echo ""
-echo "  FlowFabric Chain Runner"
-echo "  Chain: ${chainName} (${steps.length} skills)"
+echo "  FlowFabric Flow Runner"
+echo "  Flow: ${chainName} (${steps.length} skills)"
 echo "  Workspace: $WS"
 echo ""
 
@@ -707,7 +707,7 @@ fi
 
     const safeName = chainName.replace(/[^a-z0-9-]/gi, '-').toLowerCase();
     const chainB64 = btoa(unescape(encodeURIComponent(built.json)));
-    const claudeMd = `# Scheduled: ${chainName}\n\nThis chain runs on a schedule. Execute all ${built.steps.length} skills in order.\n\n${built.steps.map((s, i) => `${i + 1}. ${s.skill_name}`).join('\n')}\n\nStart immediately — ask for inputs only on first run, then use saved context.`;
+    const claudeMd = `# Scheduled: ${chainName}\n\nThis flow runs on a schedule. Execute all ${built.steps.length} skills in order.\n\n${built.steps.map((s, i) => `${i + 1}. ${s.skill_name}`).join('\n')}\n\nStart immediately — ask for inputs only on first run, then use saved context.`;
     const claudeMdB64 = btoa(unescape(encodeURIComponent(claudeMd)));
     const isWindows = navigator.userAgent.includes('Windows');
 
@@ -918,14 +918,14 @@ echo "  To remove: crontab -l | grep -v 'FlowFabric-${safeName}' | crontab -"
               {TIER_LABELS[tier]}
             </span>
           )}
-          {/* Chain metadata — only shown for builder+ users building chains */}
+          {/* Flow metadata — only shown for builder+ users building flows */}
           {canChain && (
             <>
               <input
                 type="text"
                 value={chainName}
                 onChange={e => setChainName(e.target.value)}
-                placeholder="Name your chain"
+                placeholder="Name your flow"
                 className="w-full sm:w-40"
                 style={{
                   padding: '4px 8px',
@@ -941,7 +941,7 @@ echo "  To remove: crontab -l | grep -v 'FlowFabric-${safeName}' | crontab -"
                 type="text"
                 value={chainDescription}
                 onChange={e => setChainDescription(e.target.value)}
-                placeholder="What does this chain do?"
+                placeholder="What does this flow do?"
                 className="w-full sm:flex-1"
                 style={{
                   padding: '4px 8px',
@@ -973,7 +973,7 @@ echo "  To remove: crontab -l | grep -v 'FlowFabric-${safeName}' | crontab -"
               </select>
             </>
           )}
-          {/* Featured chain templates — visible to everyone */}
+          {/* Flow templates — visible to everyone */}
           <select
             value=""
             onChange={e => {
@@ -992,7 +992,7 @@ echo "  To remove: crontab -l | grep -v 'FlowFabric-${safeName}' | crontab -"
               cursor: 'pointer',
             }}
           >
-            <option value="">Try a chain template...</option>
+            <option value="">Try a flow template...</option>
             {FEATURED_CHAINS.map(c => (
               <option key={c.name} value={c.name}>{c.name} ({c.skills.length} skills)</option>
             ))}
@@ -1056,7 +1056,7 @@ echo "  To remove: crontab -l | grep -v 'FlowFabric-${safeName}' | crontab -"
                   Validate
                 </button>
                 <button
-                  onClick={canChain ? handleExport : () => showTrustToast('Builder tier (500 TRUST) required to export chains')}
+                  onClick={canChain ? handleExport : () => showTrustToast('Builder tier (500 TRUST) required to export flows')}
                   style={{
                     padding: '4px 12px',
                     background: 'rgba(56,189,248,0.08)',
@@ -1070,7 +1070,7 @@ echo "  To remove: crontab -l | grep -v 'FlowFabric-${safeName}' | crontab -"
                   Export
                 </button>
                 <button
-                  onClick={canSchedule ? () => setShowSchedule(!showSchedule) : () => showTrustToast('Builder tier (500 TRUST) required to schedule chains')}
+                  onClick={canSchedule ? () => setShowSchedule(!showSchedule) : () => showTrustToast('Builder tier (500 TRUST) required to schedule flows')}
                   style={{
                     padding: '4px 12px',
                     background: 'rgba(74, 222, 128, 0.08)',
@@ -1086,7 +1086,7 @@ echo "  To remove: crontab -l | grep -v 'FlowFabric-${safeName}' | crontab -"
               </>
             )}
             <button
-              onClick={canChain ? handleSave : () => showTrustToast('Builder tier (500 TRUST) required to save chains')}
+              onClick={canChain ? handleSave : () => showTrustToast('Builder tier (500 TRUST) required to save flows')}
               style={{
                 padding: '4px 12px',
                 background: 'rgba(170,136,255,0.08)',
@@ -1096,12 +1096,12 @@ echo "  To remove: crontab -l | grep -v 'FlowFabric-${safeName}' | crontab -"
                 fontSize: '12px',
                 cursor: 'pointer',
               }}
-              title={canChain ? 'Save chain' : 'Builder tier (500 TRUST) required'}
+              title={canChain ? 'Save flow' : 'Builder tier (500 TRUST) required'}
             >
               Save
             </button>
             <button
-              onClick={canChain ? () => { setSavedChains(getSavedChains()); setShowSaveLoad(!showSaveLoad); } : () => showTrustToast('Builder tier (500 TRUST) required to load chains')}
+              onClick={canChain ? () => { setSavedChains(getSavedChains()); setShowSaveLoad(!showSaveLoad); } : () => showTrustToast('Builder tier (500 TRUST) required to load flows')}
               style={{
                 padding: '4px 12px',
                 background: 'rgba(170,136,255,0.08)',
@@ -1111,7 +1111,7 @@ echo "  To remove: crontab -l | grep -v 'FlowFabric-${safeName}' | crontab -"
                 fontSize: '12px',
                 cursor: 'pointer',
               }}
-              title={canChain ? 'Load saved chain' : 'Builder tier (500 TRUST) required'}
+              title={canChain ? 'Load saved flow' : 'Builder tier (500 TRUST) required'}
             >
               Load
             </button>
@@ -1234,10 +1234,10 @@ echo "  To remove: crontab -l | grep -v 'FlowFabric-${safeName}' | crontab -"
             overflowY: 'auto',
           }}>
             <div style={{ fontSize: '11px', color: 'var(--purple)', fontWeight: 600, marginBottom: '6px' }}>
-              Saved Chains ({savedChains.length})
+              Saved Flows ({savedChains.length})
             </div>
             {savedChains.length === 0 && (
-              <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>No saved chains yet. Click Save to store your current chain.</div>
+              <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>No saved flows yet. Click Save to store your current flow.</div>
             )}
             {savedChains.map(chain => (
               <div key={chain.name} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 0' }}>
@@ -1328,7 +1328,7 @@ echo "  To remove: crontab -l | grep -v 'FlowFabric-${safeName}' | crontab -"
           }}>
             <div style={{ fontSize: '48px', marginBottom: '12px', opacity: 0.3 }}>&#x1F9E9;</div>
             <div style={{ fontSize: '16px', color: 'var(--text-secondary)', marginBottom: '6px' }}>
-              Try a chain template above, or click skills in the palette
+              Try a flow template above, or click skills in the palette
             </div>
             <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
               Drag from the <span style={{ color: 'var(--cyan)' }}>cyan dot</span> (bottom) to the <span style={{ color: '#ff6b6b' }}>red dot</span> (top) to connect
@@ -1347,7 +1347,7 @@ echo "  To remove: crontab -l | grep -v 'FlowFabric-${safeName}' | crontab -"
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
               <span style={{ fontSize: '12px', color: 'var(--cyan)', fontWeight: 600 }}>
-                Exported Chain
+                Exported Flow
               </span>
               <button
                 onClick={() => { navigator.clipboard.writeText(exportJson); }}

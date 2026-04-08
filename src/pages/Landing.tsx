@@ -10,11 +10,11 @@ function ComposerPreview() {
     <section className="px-6 py-20 max-w-6xl mx-auto">
       <div className="text-center mb-12">
         <h2 className="text-3xl md:text-4xl font-bold mb-3" style={{ color: 'var(--text-primary)' }}>
-          Chain skills together.{' '}
+          Connect skills into flows.{' '}
           <span style={{ color: 'var(--cyan)' }}>Visually.</span>
         </h2>
         <p className="text-sm md:text-base max-w-2xl mx-auto" style={{ color: 'var(--text-secondary)' }}>
-          Drag skills onto a canvas, connect them, customize inputs and outputs, then run the whole chain in Claude Code. Create skills that don't exist yet with natural language.
+          Drag skills onto a canvas, connect them, customize inputs and outputs, then run the whole flow in Claude Code. Create skills that don't exist yet with natural language.
         </p>
       </div>
 
@@ -94,7 +94,7 @@ function TrustEconomy() {
           {' '}works
         </h2>
         <p className="text-sm max-w-2xl mx-auto" style={{ color: 'var(--text-secondary)' }}>
-          TRUST isn't bought. It's earned. Create skills, validate quality, publish chains, earn royalties.
+          TRUST isn't bought. It's earned. Create skills, validate quality, publish flows, earn royalties.
         </p>
       </div>
 
@@ -119,7 +119,7 @@ function TrustEconomy() {
           {
             step: '3',
             title: 'Compose & Publish',
-            desc: 'Unlock the visual composer. Build chains from existing skills or create new ones. Publish on-chain — your wallet is credited as the author.',
+            desc: 'Unlock the visual composer. Build flows from existing skills or create new ones. Publish on-chain — your wallet is credited as the author.',
             color: 'var(--gold)',
             bg: 'rgba(255,215,0,0.06)',
             border: 'rgba(255,215,0,0.15)',
@@ -152,7 +152,7 @@ function TrustEconomy() {
 
       <div className="mt-8 p-4 rounded-lg text-center" style={{ background: 'rgba(255,215,0,0.04)', border: '1px solid rgba(255,215,0,0.12)' }}>
         <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-          <span className="font-semibold" style={{ color: 'var(--gold)' }}>Derivatives earn royalties for everyone in the chain.</span>{' '}
+          <span className="font-semibold" style={{ color: 'var(--gold)' }}>Derivatives earn royalties for everyone in the flow.</span>{' '}
           If you modify someone's skill and publish it, 15% of TRUST earned goes to the original creator automatically via smart contract. Innovation compounds.
         </p>
       </div>

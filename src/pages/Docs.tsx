@@ -7,7 +7,7 @@ const guideSections = [
   { id: 'composer', label: 'Composer' },
   { id: 'evolution', label: 'Skill Evolution' },
   { id: 'skill-format', label: 'Skill Format' },
-  { id: 'chains', label: 'Chain Format' },
+  { id: 'chains', label: 'Flow Format' },
   { id: 'running', label: 'Running' },
   { id: 'publishing', label: 'Publishing' },
   { id: 'trust', label: 'TRUST & Royalties' },
@@ -57,7 +57,7 @@ export default function Docs() {
 
         <main className="flex-1 min-w-0">
           <h1 className="text-3xl md:text-4xl font-bold mb-2" style={h}>Documentation</h1>
-          <p className="text-sm mb-4" style={t}>Everything you need to try skills, compose chains, and publish on-chain.</p>
+          <p className="text-sm mb-4" style={t}>Everything you need to try skills, build flows, and publish on-chain.</p>
 
           {/* Mobile section nav */}
           <div className="lg:hidden mb-6">
@@ -109,7 +109,7 @@ export default function Docs() {
             </p>
             <div className="space-y-3 text-sm" style={t}>
               <p><strong style={h}>Connect wallet</strong> — Open this site in the MetaMask mobile app's built-in browser. Tap the compass icon in MetaMask, type the URL. Wallet connects instantly.</p>
-              <p><strong style={h}>Browse and compose</strong> — The composer works on mobile with a slide-up skill picker. Tap the "+" button to add skills. Chain templates load normally.</p>
+              <p><strong style={h}>Browse and compose</strong> — The composer works on mobile with a slide-up skill picker. Tap the "+" button to add skills. Flow templates load normally.</p>
               <p><strong style={h}>Run skills</strong> — On mobile, the Run button becomes "Copy CMD". It copies a command to your clipboard. Open any AI chat (Claude, ChatGPT, etc.) and paste it. The AI will execute the skill step by step.</p>
               <p><strong style={h}>Send TRUST</strong> — Works natively through MetaMask mobile. Tap Send TRUST in the menu, enter the recipient and amount.</p>
             </div>
@@ -119,17 +119,17 @@ export default function Docs() {
           <section id="composer" className="mb-14">
             <h2 className="text-xl font-semibold mb-4" style={h}>Composer</h2>
             <p className="text-sm mb-4" style={t}>
-              The <a href="/compose" style={{ color: 'var(--cyan)' }}>Composer</a> is a visual editor for building multi-skill chains. Requires a connected wallet with TRUST.
+              The <a href="/compose" style={{ color: 'var(--cyan)' }}>Composer</a> is a visual editor for building multi-skill flows. Requires a connected wallet with TRUST.
             </p>
             <div className="space-y-3 text-sm" style={t}>
               <p><strong style={h}>Add skills</strong> — Click from the palette (hundreds of skills across multiple domains) to place on the canvas.</p>
               <p><strong style={h}>Connect</strong> — Drag from the cyan dot (bottom) to the red dot (top) to create flow.</p>
               <p><strong style={h}>Customize</strong> — Click a node to expand. Edit inputs/outputs. Modified nodes get a "modified" badge for derivative tracking.</p>
-              <p><strong style={h}>Create new skills</strong> — Click "+ Create Skill." Describe it in plain English. Claude builds it when the chain runs using <code className="text-xs px-1 rounded" style={{ background: 'var(--bg-card)', color: 'var(--cyan)' }}>skill-from-workflow</code>.</p>
-              <p><strong style={h}>Save / Load</strong> — Chains persist in your browser. Reload them anytime.</p>
+              <p><strong style={h}>Create new skills</strong> — Click "+ Create Skill." Describe it in plain English. Claude builds it when the flow runs using <code className="text-xs px-1 rounded" style={{ background: 'var(--bg-card)', color: 'var(--cyan)' }}>skill-from-workflow</code>.</p>
+              <p><strong style={h}>Save / Load</strong> — Flows persist in your browser. Reload them anytime.</p>
               <p><strong style={h}>Validate</strong> — Checks for cycles and missing info before running.</p>
-              <p><strong style={h}>Run</strong> — Downloads a launcher that opens Claude Code with your chain.</p>
-              <p><strong style={h}>Publish On-Chain</strong> — Registers skills and chain on Base mainnet via your wallet.</p>
+              <p><strong style={h}>Run</strong> — Downloads a launcher that opens Claude Code with your flow.</p>
+              <p><strong style={h}>Publish On-Chain</strong> — Registers skills and flow on Base mainnet via your wallet.</p>
             </div>
           </section>
 
@@ -166,7 +166,7 @@ export default function Docs() {
               </table>
             </div>
             <p className="text-sm mb-4" style={t}>
-              Base skills are open infrastructure — free to run, free to build on. The value isn't in hiding skills behind a paywall. It's in the trust scores that prove they work, and the composition layer that chains them together.
+              Base skills are open infrastructure — free to run, free to build on. The value isn't in hiding skills behind a paywall. It's in the trust scores that prove they work, and the composition layer that connects them into flows.
             </p>
             <div className="p-4 rounded-lg" style={{ background: 'rgba(251,191,36,0.04)', border: '1px solid rgba(251,191,36,0.1)' }}>
               <p className="text-xs font-semibold mb-1" style={{ color: 'var(--gold)' }}>Revenue Split (enforced by smart contract)</p>
@@ -204,9 +204,9 @@ export default function Docs() {
 
           {/* Chain Format */}
           <section id="chains" className="mb-14">
-            <h2 className="text-xl font-semibold mb-4" style={h}>Chain Format</h2>
+            <h2 className="text-xl font-semibold mb-4" style={h}>Flow Format</h2>
             <p className="text-sm mb-4" style={t}>
-              Chains are what the Composer produces — a DAG of skills with dependency ordering:
+              Flows are what the Composer produces — a DAG of skills with dependency ordering:
             </p>
             <CodeBlock
               code={`{\n  "name": "startup-validation",\n  "description": "Validate a startup idea end-to-end",\n  "category": "business",\n  "steps": [\n    { "skill_name": "idea-validator", "alias": "validate", "depends_on": [] },\n    { "skill_name": "market-research", "alias": "research", "depends_on": ["validate"] },\n    { "skill_name": "pricing-strategy", "alias": "pricing", "depends_on": ["research"] }\n  ]\n}`}
@@ -224,8 +224,8 @@ export default function Docs() {
               Click <strong style={{ color: '#00c8ff' }}>Run</strong> in the Composer. A launcher script downloads that:
             </p>
             <ol className="space-y-2 text-sm pl-5" style={t}>
-              <li>Creates a workspace at <code className="text-xs px-1 rounded" style={{ background: 'var(--bg-card)', color: 'var(--cyan)' }}>~/FlowFabric-Runs/chain-name-date/</code></li>
-              <li>Writes a CLAUDE.md with chain instructions and context bridging rules</li>
+              <li>Creates a workspace at <code className="text-xs px-1 rounded" style={{ background: 'var(--bg-card)', color: 'var(--cyan)' }}>~/FlowFabric-Runs/flow-name-date/</code></li>
+              <li>Writes a CLAUDE.md with flow instructions and context bridging rules</li>
               <li>Checks for Claude Code — installs it if missing</li>
               <li>Launches Claude, which reads the instructions and starts executing</li>
             </ol>
@@ -238,7 +238,7 @@ export default function Docs() {
           <section id="publishing" className="mb-14">
             <h2 className="text-xl font-semibold mb-4" style={h}>Publishing On-Chain</h2>
             <p className="text-sm mb-4" style={t}>
-              Click <strong style={{ color: 'var(--gold)' }}>Publish On-Chain</strong> in the Composer. Your wallet signs transactions to register each skill and the chain on Base mainnet.
+              Click <strong style={{ color: 'var(--gold)' }}>Publish On-Chain</strong> in the Composer. Your wallet signs transactions to register each skill and the flow on Base mainnet.
             </p>
             <p className="text-sm mb-4" style={t}>What gets recorded on-chain:</p>
             <ul className="space-y-1 text-sm list-none p-0" style={t}>
@@ -274,7 +274,7 @@ export default function Docs() {
                 <tbody style={t}>
                   {[
                     ['Explorer', '0', 'Browse and run individual skills (free)'],
-                    ['Builder', '500', 'Chain skills, save/load/export'],
+                    ['Builder', '500', 'Build flows, save/load/export'],
                     ['Creator', '2,500', 'Publish on-chain'],
                     ['Pro Creator', '10,000', 'Advanced features'],
                     ['Validator', '25,000 (staked)', 'Validate skill quality'],
@@ -342,7 +342,7 @@ export default function Docs() {
             <div className="space-y-6">
               {[
                 { q: 'Do I need to install anything?', a: 'No. The Composer runs in your browser. When you click Run, a small script downloads that opens Claude Code. If Claude Code isn\'t installed, it auto-installs.' },
-                { q: 'Do I need crypto to try a skill?', a: 'No. Single skills are free, no wallet needed. You only need TRUST tokens to use the Composer (chaining skills together) and to publish on-chain.' },
+                { q: 'Do I need crypto to try a skill?', a: 'No. Single skills are free, no wallet needed. You only need TRUST tokens to use the Composer (connecting skills into flows) and to publish on-chain.' },
                 { q: 'How do I get TRUST?', a: 'Earn TRUST by publishing skills, validating quality, or earning royalties from derivatives. You can also purchase TRUST tokens directly. Earned TRUST boosts your influence in validation and governance.' },
                 { q: 'What if someone copies my skill?', a: 'They can\'t copy your on-chain provenance, trust score, validation history, or composition references. A raw copy has none of that.' },
                 { q: 'What happens when I modify someone\'s skill?', a: 'It\'s tracked as a derivative. 15% of TRUST earned flows to the original author automatically via smart contract.' },

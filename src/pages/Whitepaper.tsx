@@ -26,8 +26,8 @@ export default function Whitepaper() {
       {/* Abstract */}
       <Section title="Abstract">
         <P>FlowFabric is a protocol for creating, validating, composing, and trading AI-executable procedures (skills) as network assets. Skills start as natural language instructions, gain trust through decentralized shadow validation, and can eventually compile into deterministic code — software born from conversation, proven by consensus.</P>
-        <P>The platform consists of three layers: an open skill marketplace with hundreds of validated skills, a visual chain composer for building multi-skill workflows, and an on-chain trust economy (TRUST token on Base mainnet) where creators earn royalties and validators earn rewards.</P>
-        <P>Individual skills are free to run. Chaining skills together, creating new skills, and publishing on-chain require TRUST tokens — earned through contribution, not purchase.</P>
+        <P>The platform consists of three layers: an open skill marketplace with hundreds of validated skills, a visual Composer for building multi-skill flows, and an on-chain trust economy (TRUST token on Base mainnet) where creators earn royalties and validators earn rewards.</P>
+        <P>Individual skills are free to run. Connecting skills into flows, creating new skills, and publishing on-chain require TRUST tokens — earned through contribution, not purchase.</P>
       </Section>
 
       {/* Core Principles */}
@@ -53,9 +53,9 @@ export default function Whitepaper() {
       {/* 2. The Solution */}
       <Section title="2. Skills as Open Infrastructure">
         <P>A skill is a structured AI procedure with defined phases, entry criteria, quality gates, and typed inputs/outputs. Skills follow the FlowFabric Open Skill Standard (FOSS), making them portable across any MCP-compatible AI agent.</P>
-        <P>Individual skills are free to run — they are open infrastructure, like open-source libraries. The value isn't in hiding skills behind a paywall. It's in the trust scores that prove they work, the compositions that chain them together, and the economy that rewards quality.</P>
+        <P>Individual skills are free to run — they are open infrastructure, like open-source libraries. The value isn't in hiding skills behind a paywall. It's in the trust scores that prove they work, the compositions that connect them into flows, and the economy that rewards quality.</P>
         <H3>Skill Package Format</H3>
-        <P>Every skill is a directory containing a skill.md (execution specification with phases and quality gates) and a manifest.json (machine-readable metadata including typed inputs and outputs). The manifest enables automated chain composition — the system matches one skill's outputs to another skill's inputs.</P>
+        <P>Every skill is a directory containing a skill.md (execution specification with phases and quality gates) and a manifest.json (machine-readable metadata including typed inputs and outputs). The manifest enables automated flow composition — the system matches one skill's outputs to another skill's inputs.</P>
       </Section>
 
       {/* 3. Skill Evolution */}
@@ -85,11 +85,11 @@ export default function Whitepaper() {
       </Section>
 
       {/* 4. Chain Composition */}
-      <Section title="4. Chain Composition">
-        <P>Individual skills are building blocks. Chains are where value compounds — multi-skill workflows that produce outcomes no single skill can achieve alone.</P>
-        <P>The visual Chain Composer allows users to drag skills onto a canvas, connect them by matching inputs to outputs, customize individual skills, and execute the entire chain interactively via Claude Code. Custom skills can be described in natural language and built on-the-fly during chain execution.</P>
+      <Section title="4. Flow Composition">
+        <P>Individual skills are building blocks. Flows are where value compounds — multi-skill workflows that produce outcomes no single skill can achieve alone.</P>
+        <P>The visual Composer allows users to drag skills onto a canvas, connect them by matching inputs to outputs, customize individual skills, and execute the entire flow interactively via Claude Code. Custom skills can be described in natural language and built on-the-fly during flow execution.</P>
         <H3>Access Model</H3>
-        <P>Free users can browse all skills, run individual skills, and load chain templates onto the canvas to see how chains work. Connecting skills into chains, creating custom skills, scheduling recurring runs, and publishing on-chain all require TRUST tokens. This ensures creators are invested in the ecosystem before they can publish to it.</P>
+        <P>Free users can browse all skills, run individual skills, and load flow templates onto the canvas to see how flows work. Connecting skills into flows, creating custom skills, scheduling recurring runs, and publishing on-chain all require TRUST tokens. This ensures creators are invested in the ecosystem before they can publish to it.</P>
       </Section>
 
       {/* 5. Trust-Weighted Consensus */}
@@ -111,7 +111,7 @@ export default function Whitepaper() {
           <table className="w-full text-sm">
             <thead><tr style={{ background: 'var(--bg-card)' }}><th className="text-left px-4 py-2" style={t}>Recipient</th><th className="text-left px-4 py-2" style={t}>Share</th><th className="text-left px-4 py-2" style={t}>Why</th></tr></thead>
             <tbody style={t}>
-              <tr style={{ borderTop: '1px solid var(--border)' }}><td className="px-4 py-2 font-medium" style={accent('gold')}>Creator</td><td className="px-4 py-2">70%</td><td className="px-4 py-2">Built or published the skill/chain</td></tr>
+              <tr style={{ borderTop: '1px solid var(--border)' }}><td className="px-4 py-2 font-medium" style={accent('gold')}>Creator</td><td className="px-4 py-2">70%</td><td className="px-4 py-2">Built or published the skill/flow</td></tr>
               <tr style={{ borderTop: '1px solid var(--border)' }}><td className="px-4 py-2 font-medium" style={accent('green')}>Original Author</td><td className="px-4 py-2">15%</td><td className="px-4 py-2">If derivative — royalties flow to the original</td></tr>
               <tr style={{ borderTop: '1px solid var(--border)' }}><td className="px-4 py-2 font-medium" style={accent('purple')}>Validators</td><td className="px-4 py-2">15%</td><td className="px-4 py-2">Proved the skill works via shadow validation</td></tr>
             </tbody>
@@ -119,7 +119,7 @@ export default function Whitepaper() {
         </div>
         <P>When someone modifies an existing skill and publishes it as a derivative, the original author receives 15% of all TRUST earned on that derivative — automatically, via smart contract, forever. This incentivizes creating skills worth forking.</P>
         <H3>Ways to Earn</H3>
-        <P>Publish skills that others use. Validate skills for quality. Create chains that compose multiple skills. Fork and improve existing skills (derivatives). All earnings are on-chain and verifiable.</P>
+        <P>Publish skills that others use. Validate skills for quality. Create flows that compose multiple skills. Fork and improve existing skills (derivatives). All earnings are on-chain and verifiable.</P>
         <H3>Token Tiers</H3>
         <P>TRUST balance determines access tier. TRUST can be earned through contribution or purchased, but earned TRUST boosts influence in validation and governance.</P>
         <div className="overflow-x-auto rounded-lg my-4" style={{ border: '1px solid var(--border)' }}>
@@ -128,8 +128,8 @@ export default function Whitepaper() {
             <tbody style={t}>
               {[
                 ['Explorer', '0', 'Browse and run individual skills (free)'],
-                ['Builder', '500', 'Chain skills, save/load/export chains'],
-                ['Creator', '2,500', 'Publish skills and chains on-chain'],
+                ['Builder', '500', 'Build flows, save/load/export flows'],
+                ['Creator', '2,500', 'Publish skills and flows on-chain'],
                 ['Pro Creator', '10,000', 'Advanced scheduling and analytics'],
                 ['Validator', '25,000 (staked)', 'Validate skill quality, earn validation rewards'],
                 ['Governor', '100,000 (staked)', 'DAO voting on protocol parameters'],
@@ -200,7 +200,7 @@ export default function Whitepaper() {
       {/* 9. Intellectual Property */}
       <Section title="9. Intellectual Property">
         <P>Patent Family F (provisional filed) covers the core innovations: trust-weighted BFT consensus where voting power derives from behavioral trust, shadow validation with multi-metric similarity scoring, domain competence gating, and the universal skill format with adapters.</P>
-        <P>Additional innovations under consideration for continuation filings: validated dynamic chain composition with confidence-gated fallback, and the autonomous compilation of validated AI procedures into executable code through trust-weighted consensus.</P>
+        <P>Additional innovations under consideration for continuation filings: validated dynamic flow composition with confidence-gated fallback, and the autonomous compilation of validated AI procedures into executable code through trust-weighted consensus.</P>
         <P>The blockchain provides complementary protection — provenance, transparency, and immutability — but does not replace patent protection against architectural copying.</P>
       </Section>
 
