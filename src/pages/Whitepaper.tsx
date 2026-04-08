@@ -1,123 +1,229 @@
 import { Link } from 'react-router-dom';
 
-const tocSections = [
-  'Abstract',
-  '1. Introduction',
-  '2. Architecture Overview',
-  '3. Trust as Consensus',
-  '4. Skill Lifecycle',
-  '5. Token Economics',
-  '6. The Autonomy Thesis',
-  '7. Smart Contract Architecture',
-  '8. Competitive Landscape',
-  '9. Roadmap',
-  '10. Team & IP',
-  'Appendix A: ALG Mathematical Specification',
-  'Appendix B: Token Distribution',
-  'Appendix C: Contract Addresses (Base Sepolia)',
-];
+const h = { color: 'var(--text-primary)' };
+const t = { color: 'var(--text-secondary)' };
+const accent = (c: string) => ({ color: `var(--${c})` });
 
 export default function Whitepaper() {
   return (
     <div className="min-h-screen pt-24 px-6 pb-20 max-w-4xl mx-auto">
       {/* Header */}
       <div className="text-center mb-16">
-        <h1 className="text-3xl md:text-4xl font-bold mb-4" style={{ color: '#ffffff' }}>
+        <h1 className="text-3xl md:text-4xl font-bold mb-4" style={h}>
           SkillChain Whitepaper
         </h1>
-        <p className="text-lg mb-2" style={{ color: 'var(--cyan)' }}>
-          A Decentralized Protocol for AI Skill Discovery, Validation, and Trade
+        <p className="text-lg mb-2" style={accent('cyan')}>
+          AI Skills That Evolve From Language to Code Through Consensus
         </p>
-        <p className="text-sm mb-8" style={{ color: 'var(--text-secondary)' }}>
-          Trust as Consensus -- A New Paradigm for AI Agent Interoperability
+        <p className="text-sm mb-8" style={t}>
+          Open infrastructure for composable, validated, trust-scored AI procedures
         </p>
-        <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-          Version 1.0 | March 2026 | The Wayfinder Trust
+        <p className="text-xs" style={t}>
+          Version 2.0 | April 2026 | The Wayfinder Trust
         </p>
       </div>
 
       {/* Abstract */}
-      <div
-        className="p-8 rounded-xl mb-12"
-        style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
-      >
-        <h2 className="text-lg font-semibold mb-4" style={{ color: 'var(--cyan)' }}>Abstract</h2>
-        <p className="text-sm leading-relaxed mb-4" style={{ color: 'var(--text-secondary)' }}>
-          AI agents are increasingly capable of learning reusable procedures -- skills -- from their own execution. But those skills remain trapped inside the systems that created them. An agent that learns to parse SEC filings cannot share that capability with another agent without manual extraction, reformatting, and blind-faith installation. There is no verification. No provenance. No market.
-        </p>
-        <p className="text-sm leading-relaxed mb-4" style={{ color: 'var(--text-secondary)' }}>
-          SkillChain is a decentralized protocol for publishing, validating, and trading AI skills as first-class network assets. Skills are packaged as .skillpack bundles containing executable procedures, test cases, and cryptographic provenance. Validation uses shadow testing -- running candidate skills against known-good outputs -- rather than subjective reviews.
-        </p>
-        <p className="text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
-          The core innovation is the integration of the Assured Learning Governor (ALG), a patented governance framework where trust is computed as exp(-decay * divergence) with EMA smoothing. Trust decays fast on failure, recovers slowly through consistent performance, and cannot be self-asserted or purchased. This creates a network where the cost of bad behavior always exceeds the benefit, and where quality is enforced by mathematics rather than moderation.
-        </p>
-      </div>
+      <Section title="Abstract">
+        <P>SkillChain is a protocol for creating, validating, composing, and trading AI-executable procedures (skills) as network assets. Skills start as natural language instructions, gain trust through decentralized shadow validation, and can eventually compile into deterministic code — software born from conversation, proven by consensus.</P>
+        <P>The platform consists of three layers: an open skill marketplace with hundreds of validated skills, a visual chain composer for building multi-skill workflows, and an on-chain trust economy (TRUST token on Base mainnet) where creators earn royalties and validators earn rewards.</P>
+        <P>Individual skills are free to run. Chaining skills together, creating new skills, and publishing on-chain require TRUST tokens — earned through contribution, not purchase.</P>
+      </Section>
 
-      {/* Key Stats */}
+      {/* Key Numbers */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
         {[
-          { value: '1B', label: 'Token Supply', color: 'var(--cyan)' },
-          { value: '8', label: 'Smart Contracts', color: 'var(--purple)' },
-          { value: '16', label: 'Genesis Skills', color: 'var(--green)' },
-          { value: '2', label: 'Patent Families', color: 'var(--gold)' },
+          { value: '169', label: 'Validated Skills', color: 'cyan' },
+          { value: '9', label: 'Smart Contracts', color: 'purple' },
+          { value: '13', label: 'Skill Domains', color: 'green' },
+          { value: '5', label: 'Evolution Stages', color: 'gold' },
         ].map((stat) => (
-          <div
-            key={stat.label}
-            className="p-4 rounded-xl text-center"
-            style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
-          >
-            <div className="text-2xl font-bold mb-1" style={{ color: stat.color }}>{stat.value}</div>
-            <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>{stat.label}</div>
+          <div key={stat.label} className="p-4 rounded-xl text-center" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+            <div className="text-2xl font-bold mb-1" style={accent(stat.color)}>{stat.value}</div>
+            <div className="text-xs" style={t}>{stat.label}</div>
           </div>
         ))}
       </div>
 
-      {/* Table of Contents */}
-      <div
-        className="p-8 rounded-xl mb-12"
-        style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
-      >
-        <h2 className="text-lg font-semibold mb-6" style={{ color: '#ffffff' }}>Table of Contents</h2>
-        <div className="space-y-2">
-          {tocSections.map((section, i) => (
-            <div
-              key={i}
-              className="flex items-center gap-3 py-2 text-sm"
-              style={{ borderBottom: i < tocSections.length - 1 ? '1px solid var(--border)' : 'none' }}
-            >
-              <span className="text-xs w-6 text-right" style={{ color: 'var(--cyan)' }}>
-                {section.startsWith('Appendix') ? '' : (i < 11 ? String(i) : '')}
-              </span>
-              <span style={{ color: 'var(--text-primary)' }}>{section}</span>
-            </div>
-          ))}
+      {/* 1. The Problem */}
+      <Section title="1. The Problem">
+        <P>AI agents can follow complex procedures — budgeting, code review, market research, career planning. But every time you close the conversation, that capability vanishes. There is no way to package a working AI procedure, prove it produces consistent results, share it with others, or earn from its use.</P>
+        <P>Existing solutions fail in different ways. Prompt libraries are unvalidated text. Agent marketplaces (AutoGPT) trade complete agents, not composable procedures. Memory systems (MemPalace) remember context but don't standardize execution. None of them create an economy around quality.</P>
+      </Section>
+
+      {/* 2. The Solution */}
+      <Section title="2. Skills as Open Infrastructure">
+        <P>A skill is a structured AI procedure with defined phases, entry criteria, quality gates, and typed inputs/outputs. Skills follow the SkillChain Open Skill Standard (SCOSS), making them portable across any MCP-compatible AI agent.</P>
+        <P>Individual skills are free to run — they are open infrastructure, like open-source libraries. The value isn't in hiding skills behind a paywall. It's in the trust scores that prove they work, the compositions that chain them together, and the economy that rewards quality.</P>
+        <H3>Skill Package Format</H3>
+        <P>Every skill is a directory containing a skill.md (execution specification with phases and quality gates) and a manifest.json (machine-readable metadata including typed inputs and outputs). The manifest enables automated chain composition — the system matches one skill's outputs to another skill's inputs.</P>
+      </Section>
+
+      {/* 3. Skill Evolution */}
+      <Section title="3. Skill Evolution: From Language to Code">
+        <P>Skills are not static. They evolve through validation:</P>
+        <div className="overflow-x-auto rounded-lg my-4" style={{ border: '1px solid var(--border)' }}>
+          <table className="w-full text-sm">
+            <thead><tr style={{ background: 'var(--bg-card)' }}><th className="text-left px-4 py-2" style={t}>Stage</th><th className="text-left px-4 py-2" style={t}>Description</th><th className="text-left px-4 py-2" style={t}>Requirement</th></tr></thead>
+            <tbody style={t}>
+              {[
+                ['Prompt', 'Natural language instruction', 'None'],
+                ['Skill', 'Structured phases with quality gates', 'Follows SCOSS standard'],
+                ['Validated', 'Shadow-tested, trust-scored on-chain', '5+ validator attestations'],
+                ['Graduated', 'Proven consistent across many runs', '100+ validations, 95%+ similarity'],
+                ['Compiled', 'Executable code, no AI needed', 'Automatic on graduation'],
+              ].map(([stage, desc, req]) => (
+                <tr key={stage} style={{ borderTop: '1px solid var(--border)' }}>
+                  <td className="px-4 py-2 font-medium" style={h}>{stage}</td>
+                  <td className="px-4 py-2">{desc}</td>
+                  <td className="px-4 py-2">{req}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
-      </div>
+        <P>A compiled skill runs as deterministic code — zero token cost, instant execution, AI-independent. This is software born from natural language and proven through decentralized consensus. It has never existed before.</P>
+      </Section>
+
+      {/* 4. Chain Composition */}
+      <Section title="4. Chain Composition">
+        <P>Individual skills are building blocks. Chains are where value compounds — multi-skill workflows that produce outcomes no single skill can achieve alone.</P>
+        <P>The visual Chain Composer allows users to drag skills onto a canvas, connect them by matching inputs to outputs, customize individual skills, and execute the entire chain interactively via Claude Code. Custom skills can be described in natural language and built on-the-fly during chain execution.</P>
+        <H3>Access Model</H3>
+        <P>Free users can browse all skills, run individual skills, and load chain templates onto the canvas to see how chains work. Connecting skills into chains, creating custom skills, scheduling recurring runs, and publishing on-chain all require TRUST tokens. This ensures creators are invested in the ecosystem before they can publish to it.</P>
+      </Section>
+
+      {/* 5. Trust-Weighted Consensus */}
+      <Section title="5. Trust-Weighted Consensus">
+        <P>Validation uses shadow testing — running candidate skills against reference test cases with multi-metric similarity scoring. Multiple validators must independently agree via trust-weighted BFT consensus.</P>
+        <P>Trust is computed as:</P>
+        <div className="p-4 rounded-lg my-4 font-mono text-sm" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}>
+          trust = exp(-decay * divergence)<br />
+          smoothed via EMA: trust_new = α * trust_raw + (1 - α) * trust_previous
+        </div>
+        <P>Key properties: trust decays fast on failure, recovers slowly through consistent performance, cannot be self-asserted or purchased. Only domain-competent validators can vote. Voting power derives from behavioral accuracy over time, not economic stake. This is fundamentally different from proof-of-stake systems.</P>
+      </Section>
+
+      {/* 6. TRUST Token Economy */}
+      <Section title="6. TRUST Token Economy">
+        <P>TRUST is the native token of the SkillChain network, deployed on Base mainnet (ERC-20). TRUST is earned through contribution, not purchased through a public sale.</P>
+        <H3>Revenue Split (enforced by smart contract)</H3>
+        <div className="overflow-x-auto rounded-lg my-4" style={{ border: '1px solid var(--border)' }}>
+          <table className="w-full text-sm">
+            <thead><tr style={{ background: 'var(--bg-card)' }}><th className="text-left px-4 py-2" style={t}>Recipient</th><th className="text-left px-4 py-2" style={t}>Share</th><th className="text-left px-4 py-2" style={t}>Why</th></tr></thead>
+            <tbody style={t}>
+              <tr style={{ borderTop: '1px solid var(--border)' }}><td className="px-4 py-2 font-medium" style={accent('gold')}>Creator</td><td className="px-4 py-2">70%</td><td className="px-4 py-2">Built or published the skill/chain</td></tr>
+              <tr style={{ borderTop: '1px solid var(--border)' }}><td className="px-4 py-2 font-medium" style={accent('green')}>Original Author</td><td className="px-4 py-2">15%</td><td className="px-4 py-2">If derivative — royalties flow to the original</td></tr>
+              <tr style={{ borderTop: '1px solid var(--border)' }}><td className="px-4 py-2 font-medium" style={accent('purple')}>Validators</td><td className="px-4 py-2">15%</td><td className="px-4 py-2">Proved the skill works via shadow validation</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <P>When someone modifies an existing skill and publishes it as a derivative, the original author receives 15% of all TRUST earned on that derivative — automatically, via smart contract, forever. This incentivizes creating skills worth forking.</P>
+        <H3>Ways to Earn</H3>
+        <P>Publish skills that others use. Validate skills for quality. Create chains that compose multiple skills. Fork and improve existing skills (derivatives). All earnings are on-chain and verifiable.</P>
+      </Section>
+
+      {/* 7. Smart Contracts */}
+      <Section title="7. Smart Contract Architecture">
+        <P>Nine contracts deployed on Base mainnet handle the full lifecycle:</P>
+        <div className="overflow-x-auto rounded-lg my-4" style={{ border: '1px solid var(--border)' }}>
+          <table className="w-full text-sm">
+            <thead><tr style={{ background: 'var(--bg-card)' }}><th className="text-left px-4 py-2" style={t}>Contract</th><th className="text-left px-4 py-2" style={t}>Purpose</th></tr></thead>
+            <tbody style={t}>
+              {[
+                ['TRUST Token', 'ERC-20 token — earned, not bought'],
+                ['SkillRegistry', 'On-chain skill registration with creator attribution'],
+                ['ValidationRegistry', 'Shadow validation results, consensus tracking'],
+                ['TrustOracle', 'Computes trust scores from validation history'],
+                ['Marketplace', 'Listings, purchases, royalty distribution'],
+                ['NodeRegistry', 'Validator identity and domain competence'],
+                ['Staking', 'Stake TRUST to unlock validator privileges'],
+                ['GovernanceDAO', 'Protocol parameter changes via weighted voting'],
+                ['LifeRewards', 'Proof-of-living rewards (future)'],
+              ].map(([name, purpose]) => (
+                <tr key={name} style={{ borderTop: '1px solid var(--border)' }}>
+                  <td className="px-4 py-2 font-medium" style={h}>{name}</td>
+                  <td className="px-4 py-2">{purpose}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Section>
+
+      {/* 8. Competitive Position */}
+      <Section title="8. Competitive Position">
+        <div className="overflow-x-auto rounded-lg my-4" style={{ border: '1px solid var(--border)' }}>
+          <table className="w-full text-sm">
+            <thead><tr style={{ background: 'var(--bg-card)' }}><th className="text-left px-4 py-2" style={t}>Platform</th><th className="text-left px-4 py-2" style={t}>Approach</th><th className="text-left px-4 py-2" style={t}>SkillChain Advantage</th></tr></thead>
+            <tbody style={t}>
+              {[
+                ['OpenClaw', 'Runtime skill composition, messaging-first', 'No validation, no trust scores, no on-chain provenance'],
+                ['MemPalace', 'Tiered memory, spatial knowledge', 'Memory only — no skill execution, no economy'],
+                ['AutoGPT', 'Visual block graph, agent marketplace', 'Low-level blocks, no skill standard, no validation'],
+                ['Prompt Libraries', 'Shared text prompts', 'Unvalidated, no composition, no evolution path'],
+              ].map(([platform, approach, advantage]) => (
+                <tr key={platform} style={{ borderTop: '1px solid var(--border)' }}>
+                  <td className="px-4 py-2 font-medium" style={h}>{platform}</td>
+                  <td className="px-4 py-2">{approach}</td>
+                  <td className="px-4 py-2">{advantage}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <P>SkillChain is the only platform where skills evolve from natural language to compiled code through decentralized consensus, with derivative royalties enforced by smart contract.</P>
+      </Section>
+
+      {/* 9. Intellectual Property */}
+      <Section title="9. Intellectual Property">
+        <P>Patent Family F (provisional filed) covers the core innovations: trust-weighted BFT consensus where voting power derives from behavioral trust, shadow validation with multi-metric similarity scoring, domain competence gating, and the universal skill format with adapters.</P>
+        <P>Additional innovations under consideration for continuation filings: validated dynamic chain composition with confidence-gated fallback, and the autonomous compilation of validated AI procedures into executable code through trust-weighted consensus.</P>
+        <P>The blockchain provides complementary protection — provenance, transparency, and immutability — but does not replace patent protection against architectural copying.</P>
+      </Section>
+
+      {/* 10. The Thesis */}
+      <Section title="10. The Thesis">
+        <P>AI capabilities will commoditize. Every model will be able to follow instructions. The scarce resource is not intelligence — it's proven, validated, composable procedures with known trust scores and verifiable provenance.</P>
+        <P>SkillChain captures this value at the procedure layer. Skills are open infrastructure. Trust is the product. Composition is the premium feature. Evolution to code is the endgame.</P>
+        <P>The cost of bad behavior always exceeds the benefit. The cost of good behavior always decreases over time. The network gets better the more people use it. And every improvement compounds through derivative royalties.</P>
+      </Section>
 
       {/* CTAs */}
-      <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-        <a
-          href="/docs"
+      <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-12">
+        <Link
+          to="/compose"
           className="px-8 py-3 rounded-lg text-sm font-semibold no-underline transition-all"
-          style={{
-            background: 'var(--cyan)',
-            color: '#0a0a0f',
-          }}
+          style={{ background: 'var(--cyan)', color: 'var(--bg-primary)' }}
         >
-          Read Full Documentation
-        </a>
+          Open the Composer
+        </Link>
         <Link
           to="/docs"
           className="px-8 py-3 rounded-lg text-sm font-semibold no-underline transition-all"
-          style={{
-            background: 'transparent',
-            color: 'var(--cyan)',
-            border: '1px solid rgba(0, 255, 200, 0.3)',
-          }}
+          style={{ border: '1px solid var(--border)', color: 'var(--cyan)' }}
         >
-          Read Getting Started Guide
+          Read Documentation
         </Link>
       </div>
     </div>
   );
+}
+
+// Reusable components
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="mb-12">
+      <h2 className="text-xl font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>{title}</h2>
+      {children}
+    </div>
+  );
+}
+
+function P({ children }: { children: React.ReactNode }) {
+  return <p className="text-sm leading-relaxed mb-4" style={{ color: 'var(--text-secondary)' }}>{children}</p>;
+}
+
+function H3({ children }: { children: React.ReactNode }) {
+  return <h3 className="text-sm font-semibold mt-6 mb-2" style={{ color: 'var(--text-primary)' }}>{children}</h3>;
 }
