@@ -244,7 +244,6 @@ export default function ChainComposer() {
 
     // Build step-by-step instructions with context bridging
     const stepInstructions = steps.map((step, i) => {
-      const skill = skills.find(s => s.name === step.skill_name);
       const deps = step.depends_on;
       let bridge = '';
       if (deps.length > 0) {
