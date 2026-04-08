@@ -1,7 +1,6 @@
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useSkill, useSkills } from '../hooks/useSkills';
-import { downloadSkill, copyInstallCommand } from '../utils/downloadSkill';
 import Badge from '../components/Badge';
 
 function SkeletonBlock({ className }: { className?: string }) {
@@ -18,8 +17,6 @@ export default function SkillDetail() {
   const { data: skillData, isLoading: skillLoading } = useSkill(name || '');
   const { data: allSkills } = useSkills();
 
-  const [downloadState, setDownloadState] = useState<'idle' | 'downloading' | 'done' | 'error'>('idle');
-  const [copyState, setCopyState] = useState<'idle' | 'done'>('idle');
 
   // Find the matching skill from the list for metadata (domain, tags, license, etc.)
   const skillMeta = useMemo(() => {
@@ -34,31 +31,6 @@ export default function SkillDetail() {
       .filter(s => s.domain === skillMeta.domain && s.name !== skillMeta.name)
       .slice(0, 3);
   }, [skillMeta, allSkills]);
-
-  const handleDownload = async () => {
-    if (!name) return;
-    setDownloadState('downloading');
-    try {
-      await downloadSkill(name);
-      setDownloadState('done');
-      setTimeout(() => setDownloadState('idle'), 2500);
-    } catch {
-      setDownloadState('error');
-      setTimeout(() => setDownloadState('idle'), 3000);
-    }
-  };
-
-  const handleCopy = async () => {
-    if (!name) return;
-    try {
-      await copyInstallCommand(name);
-      setCopyState('done');
-      setTimeout(() => setCopyState('idle'), 2000);
-    } catch {
-      // Clipboard can fail in some contexts; silently reset
-      setCopyState('idle');
-    }
-  };
 
   // Loading state
   if (skillLoading) {
@@ -158,7 +130,7 @@ export default function SkillDetail() {
         </span>
       </div>
 
-      {/* Install Section */}
+      {/* Run Section */}
       <div
         className="rounded-xl p-6 mb-8"
         style={{
@@ -167,86 +139,16 @@ export default function SkillDetail() {
         }}
       >
         <h2
-          className="text-xs font-semibold uppercase tracking-wider mb-4"
+          className="text-xs font-semibold uppercase tracking-wider mb-2"
           style={{ color: 'var(--text-secondary)' }}
         >
-          Install
+          Try this skill
         </h2>
+        <p className="text-xs mb-4" style={{ color: 'var(--text-secondary)' }}>
+          Downloads a small launcher script. Double-click to run this skill interactively in Claude Code.
+        </p>
 
-        {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row gap-3 mb-4">
-          <button
-            onClick={handleDownload}
-            disabled={downloadState === 'downloading'}
-            className="px-5 py-2.5 rounded-lg text-sm font-semibold cursor-pointer transition-all flex-1 sm:flex-none"
-            style={{
-              background:
-                downloadState === 'done'
-                  ? 'rgba(0, 255, 136, 0.2)'
-                  : downloadState === 'error'
-                    ? 'rgba(255, 107, 107, 0.15)'
-                    : 'rgba(0, 255, 136, 0.1)',
-              border: `1px solid ${
-                downloadState === 'done'
-                  ? 'rgba(0, 255, 136, 0.4)'
-                  : downloadState === 'error'
-                    ? 'rgba(255, 107, 107, 0.3)'
-                    : 'rgba(0, 255, 136, 0.25)'
-              }`,
-              color:
-                downloadState === 'done'
-                  ? '#00ff88'
-                  : downloadState === 'error'
-                    ? '#ff6b6b'
-                    : '#00ff88',
-              opacity: downloadState === 'downloading' ? 0.6 : 1,
-            }}
-            onMouseEnter={e => {
-              if (downloadState === 'idle') {
-                e.currentTarget.style.background = 'rgba(0, 255, 136, 0.18)';
-                e.currentTarget.style.boxShadow = '0 0 20px rgba(0, 255, 136, 0.1)';
-              }
-            }}
-            onMouseLeave={e => {
-              if (downloadState === 'idle') {
-                e.currentTarget.style.background = 'rgba(0, 255, 136, 0.1)';
-                e.currentTarget.style.boxShadow = 'none';
-              }
-            }}
-          >
-            {downloadState === 'downloading'
-              ? 'Downloading...'
-              : downloadState === 'done'
-                ? 'Downloaded!'
-                : downloadState === 'error'
-                  ? 'Download Failed'
-                  : 'Download Skill'}
-          </button>
-
-          <button
-            onClick={handleCopy}
-            className="px-5 py-2.5 rounded-lg text-sm font-semibold cursor-pointer transition-all flex-1 sm:flex-none"
-            style={{
-              background: copyState === 'done' ? 'rgba(0, 255, 200, 0.15)' : 'rgba(255,255,255,0.04)',
-              border: `1px solid ${copyState === 'done' ? 'rgba(0, 255, 200, 0.3)' : 'var(--border)'}`,
-              color: copyState === 'done' ? '#00ffc8' : '#ffffff',
-            }}
-            onMouseEnter={e => {
-              if (copyState === 'idle') {
-                e.currentTarget.style.borderColor = 'rgba(0, 255, 200, 0.3)';
-                e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
-              }
-            }}
-            onMouseLeave={e => {
-              if (copyState === 'idle') {
-                e.currentTarget.style.borderColor = 'var(--border)';
-                e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
-              }
-            }}
-          >
-            {copyState === 'done' ? 'Copied!' : 'Copy CLI Command'}
-          </button>
-
           <button
             onClick={() => {
               if (!name) return;
@@ -254,17 +156,62 @@ export default function SkillDetail() {
               const ts = new Date().toISOString().slice(0, 10);
               const isWin = navigator.userAgent.includes('Windows');
 
-              const claudeMd = `# SkillChain: Run ${name}\n\nRun the **${name}** skill interactively.\n\n## Instructions\n\n1. Call \\\`start_skill_run\\\` with skill name "${name}"\n2. Call \\\`get_skill\\\` to read the full skill definition\n3. Ask me for any required inputs\n4. Execute each phase, calling \\\`record_phase\\\` after each\n5. Call \\\`complete_skill_run\\\` when done\n\nStart by reading the skill definition, then ask me for inputs.\n`;
+              // Use claude -p to send an initial prompt so it starts immediately
+              // CLAUDE.md provides context, -p kicks off the action
+              const prompt = `Run the SkillChain skill "${name}". Call start_skill_run with skill name "${name}", then call get_skill to read the full definition. Ask me for any required inputs, then execute each phase step by step using record_phase. When all phases are done, call complete_skill_run. Start now.`;
 
               if (isWin) {
-                const bat = `@echo off\ntitle SkillChain: ${safeName}\nset "WS=%USERPROFILE%\\SkillChain-Runs\\${safeName}-${ts}"\nif not exist "%WS%" mkdir "%WS%"\necho ${claudeMd.replace(/\n/g, '& echo.')}> "%WS%\\CLAUDE.md"\ncd /d "%WS%"\necho.\necho   Running ${name} in Claude Code...\necho.\nclaude\npause\n`;
+                const bat = [
+                  '@echo off',
+                  `title SkillChain: ${safeName}`,
+                  `set "WS=%USERPROFILE%\\SkillChain-Runs\\${safeName}-${ts}"`,
+                  `if not exist "%WS%" mkdir "%WS%"`,
+                  `cd /d "%WS%"`,
+                  '',
+                  ':: Check for Claude Code',
+                  'where claude >nul 2>nul',
+                  'if %errorlevel% neq 0 (',
+                  '    echo   Claude Code not found. Installing...',
+                  '    where npm >nul 2>nul',
+                  '    if %errorlevel% neq 0 (',
+                  '        echo   ERROR: Install Node.js from https://nodejs.org',
+                  '        pause',
+                  '        exit /b 1',
+                  '    )',
+                  '    npm install -g @anthropic-ai/claude-code',
+                  ')',
+                  '',
+                  `echo   Running ${name}...`,
+                  'echo.',
+                  `claude -p "${prompt.replace(/"/g, "'")}"`,
+                  'echo.',
+                  'pause',
+                ].join('\n');
+
                 const b = new Blob([bat], { type: 'application/bat' });
                 const u = URL.createObjectURL(b);
                 const a = document.createElement('a'); a.href = u; a.download = `Run-${safeName}.bat`;
                 document.body.appendChild(a); a.click(); document.body.removeChild(a);
                 URL.revokeObjectURL(u);
               } else {
-                const sh = `#!/bin/bash\nWS="$HOME/SkillChain-Runs/${safeName}-${ts}"\nmkdir -p "$WS"\ncat > "$WS/CLAUDE.md" << 'EOF'\n# SkillChain: Run ${name}\n\nRun the **${name}** skill interactively.\n\n## Instructions\n\n1. Call \\\`start_skill_run\\\` with skill name "${name}"\n2. Call \\\`get_skill\\\` to read the full skill definition\n3. Ask me for any required inputs\n4. Execute each phase, calling \\\`record_phase\\\` after each\n5. Call \\\`complete_skill_run\\\` when done\n\nStart by reading the skill definition, then ask me for inputs.\nEOF\ncd "$WS"\necho "Running ${name} in Claude Code..."\nclaude\n`;
+                const sh = [
+                  '#!/bin/bash',
+                  `WS="$HOME/SkillChain-Runs/${safeName}-${ts}"`,
+                  `mkdir -p "$WS"`,
+                  `cd "$WS"`,
+                  '',
+                  'if ! command -v claude &> /dev/null; then',
+                  '    echo "Installing Claude Code..."',
+                  '    npm install -g @anthropic-ai/claude-code 2>/dev/null || {',
+                  '        echo "Install Node.js from https://nodejs.org first"',
+                  '        exit 1',
+                  '    }',
+                  'fi',
+                  '',
+                  `echo "Running ${name}..."`,
+                  `claude -p '${prompt.replace(/'/g, "'\\''")}'`,
+                ].join('\n');
+
                 const b = new Blob([sh], { type: 'application/x-sh' });
                 const u = URL.createObjectURL(b);
                 const a = document.createElement('a'); a.href = u; a.download = `Run-${safeName}.sh`;
@@ -272,36 +219,40 @@ export default function SkillDetail() {
                 URL.revokeObjectURL(u);
               }
             }}
-            className="px-5 py-2.5 rounded-lg text-sm font-semibold cursor-pointer transition-all flex-1 sm:flex-none"
+            className="px-6 py-3 rounded-lg text-sm font-semibold cursor-pointer transition-all"
             style={{
-              background: 'rgba(0, 200, 255, 0.1)',
-              border: '1px solid rgba(0, 200, 255, 0.25)',
+              background: 'linear-gradient(135deg, rgba(0,200,255,0.12), rgba(0,255,200,0.12))',
+              border: '1px solid rgba(0,200,255,0.3)',
               color: '#00c8ff',
             }}
             onMouseEnter={e => {
-              e.currentTarget.style.background = 'rgba(0, 200, 255, 0.18)';
-              e.currentTarget.style.boxShadow = '0 0 20px rgba(0, 200, 255, 0.1)';
+              e.currentTarget.style.boxShadow = '0 0 20px rgba(0, 200, 255, 0.15)';
+              e.currentTarget.style.transform = 'translateY(-1px)';
             }}
             onMouseLeave={e => {
-              e.currentTarget.style.background = 'rgba(0, 200, 255, 0.1)';
               e.currentTarget.style.boxShadow = 'none';
+              e.currentTarget.style.transform = 'translateY(0)';
             }}
           >
-            Run in Claude
+            Run in Claude Code — Free
           </button>
+
+          <Link
+            to="/compose"
+            className="px-6 py-3 rounded-lg text-sm font-semibold cursor-pointer transition-all no-underline text-center"
+            style={{
+              background: 'rgba(255,215,0,0.08)',
+              border: '1px solid rgba(255,215,0,0.2)',
+              color: 'var(--gold)',
+            }}
+          >
+            Chain with other skills &rarr;
+          </Link>
         </div>
 
-        {/* CLI code block */}
-        <div
-          className="rounded-lg px-4 py-3 font-mono text-sm"
-          style={{
-            background: '#0a0a1a',
-            border: '1px solid var(--border)',
-          }}
-        >
-          <span style={{ color: 'var(--text-secondary)' }}>$ </span>
-          <span style={{ color: '#00ffc8' }}>skillchain import {name}</span>
-        </div>
+        <p className="text-xs" style={{ color: 'rgba(255,255,255,0.25)' }}>
+          This is one skill. With TRUST tokens, you can chain multiple skills together in the Composer.
+        </p>
       </div>
 
       {/* Description */}
