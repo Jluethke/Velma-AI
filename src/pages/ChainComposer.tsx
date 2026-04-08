@@ -100,6 +100,10 @@ export default function ChainComposer() {
   const [savedChains, setSavedChains] = useState<SavedChain[]>(getSavedChains);
   const [showSaveLoad, setShowSaveLoad] = useState(false);
   const [trustToast, setTrustToast] = useState(false);
+  const [showSchedule, setShowSchedule] = useState(false);
+  const [scheduleFreq, setScheduleFreq] = useState('daily');
+  const [scheduleTime, setScheduleTime] = useState('09:00');
+  const [scheduleDay, setScheduleDay] = useState('MON');
 
   const showTrustToast = useCallback(() => {
     setTrustToast(true);
@@ -640,6 +644,107 @@ fi
     }
   }, [buildChainJson, chainName, chainDescription, chainCategory, skills, nodes, edges]);
 
+  /** Generate a launcher script with OS-level scheduling (schtasks / crontab) */
+  const handleSchedule = useCallback(() => {
+    const built = buildChainJson();
+    if (!built) return;
+
+    const safeName = chainName.replace(/[^a-z0-9-]/gi, '-').toLowerCase();
+    const chainB64 = btoa(unescape(encodeURIComponent(built.json)));
+    const claudeMd = `# Scheduled: ${chainName}\n\nThis chain runs on a schedule. Execute all ${built.steps.length} skills in order.\n\n${built.steps.map((s, i) => `${i + 1}. ${s.skill_name}`).join('\n')}\n\nStart immediately — ask for inputs only on first run, then use saved context.`;
+    const claudeMdB64 = btoa(unescape(encodeURIComponent(claudeMd)));
+    const isWindows = navigator.userAgent.includes('Windows');
+
+    // Build the cron/schtasks schedule
+    const time = scheduleTime;
+    const [hour, minute] = time.split(':');
+
+    if (isWindows) {
+      // schtasks frequency mapping
+      let schtasksSchedule = '';
+      if (scheduleFreq === 'daily') schtasksSchedule = `/sc daily /st ${time}`;
+      else if (scheduleFreq === 'weekly') schtasksSchedule = `/sc weekly /d ${scheduleDay} /st ${time}`;
+      else if (scheduleFreq === 'hourly') schtasksSchedule = `/sc hourly /st ${time}`;
+
+      const bat = `@echo off
+title SkillChain Scheduler: ${safeName}
+set "WS=%USERPROFILE%\\SkillChain-Runs\\${safeName}-scheduled"
+if not exist "%WS%" mkdir "%WS%"
+
+powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+  "[IO.File]::WriteAllText('%WS%\\${safeName}.chain.json', [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('${chainB64}')));" ^
+  "[IO.File]::WriteAllText('%WS%\\CLAUDE.md', [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('${claudeMdB64}')))"
+
+:: Create a run script that the scheduler will call
+>"%WS%\\run.bat" (
+echo @echo off
+echo cd /d "%WS%"
+echo claude
+)
+
+:: Register the scheduled task
+schtasks /create /tn "SkillChain-${safeName}" ${schtasksSchedule} /tr "%WS%\\run.bat" /f
+
+echo.
+echo   Scheduled task created!
+echo   Name:      SkillChain-${safeName}
+echo   Frequency: ${scheduleFreq} at ${time}${scheduleFreq === 'weekly' ? ` (${scheduleDay})` : ''}
+echo   Workspace: %WS%
+echo.
+echo   To remove: schtasks /delete /tn "SkillChain-${safeName}" /f
+echo.
+pause
+`;
+      const blob = new Blob([bat], { type: 'application/bat' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Schedule-${safeName}.bat`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } else {
+      const cronExpr = scheduleFreq === 'daily' ? `${minute} ${hour} * * *`
+        : scheduleFreq === 'weekly' ? `${minute} ${hour} * * ${scheduleDay}`
+        : `0 * * * *`; // hourly
+
+      const sh = `#!/bin/bash
+WS="$HOME/SkillChain-Runs/${safeName}-scheduled"
+mkdir -p "$WS"
+echo '${chainB64}' | base64 -d > "$WS/${safeName}.chain.json"
+echo '${claudeMdB64}' | base64 -d > "$WS/CLAUDE.md"
+
+# Create run script
+cat > "$WS/run.sh" << 'RUNEOF'
+#!/bin/bash
+cd "$HOME/SkillChain-Runs/${safeName}-scheduled"
+claude
+RUNEOF
+chmod +x "$WS/run.sh"
+
+# Add to crontab
+(crontab -l 2>/dev/null | grep -v "SkillChain-${safeName}"; echo "${cronExpr} $WS/run.sh # SkillChain-${safeName}") | crontab -
+
+echo ""
+echo "  Scheduled!"
+echo "  Cron: ${cronExpr}"
+echo "  To remove: crontab -l | grep -v 'SkillChain-${safeName}' | crontab -"
+`;
+      const blob = new Blob([sh], { type: 'application/x-sh' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Schedule-${safeName}.sh`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    setShowSchedule(false);
+  }, [buildChainJson, chainName, scheduleFreq, scheduleTime, scheduleDay]);
+
   const handleClear = useCallback(() => {
     setNodes([]);
     setEdges([]);
@@ -763,6 +868,21 @@ fi
               Run
             </button>
             <button
+              onClick={isPremium ? () => setShowSchedule(!showSchedule) : showTrustToast}
+              style={{
+                padding: '4px 12px',
+                background: 'rgba(74, 222, 128, 0.08)',
+                border: '1px solid rgba(74, 222, 128, 0.2)',
+                borderRadius: '4px',
+                color: isPremium ? 'var(--green)' : 'rgba(74,222,128,0.4)',
+                fontSize: '12px',
+                cursor: 'pointer',
+              }}
+              title={isPremium ? 'Schedule recurring run' : 'Requires TRUST tokens'}
+            >
+              Schedule
+            </button>
+            <button
               onClick={isPremium ? handleSave : showTrustToast}
               style={{
                 padding: '4px 12px',
@@ -846,6 +966,58 @@ fi
             fontWeight: 500,
           }}>
             Connect wallet with TRUST tokens to unlock this feature
+          </div>
+        )}
+
+        {/* Schedule picker */}
+        {showSchedule && (
+          <div style={{
+            padding: '10px 16px',
+            background: 'rgba(74,222,128,0.04)',
+            borderBottom: '1px solid rgba(74,222,128,0.15)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            flexWrap: 'wrap',
+          }}>
+            <span style={{ fontSize: '11px', color: 'var(--green)', fontWeight: 600 }}>Schedule:</span>
+            <select
+              value={scheduleFreq}
+              onChange={e => setScheduleFreq(e.target.value)}
+              style={{ padding: '3px 6px', background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '4px', color: 'var(--text-primary)', fontSize: '11px' }}
+            >
+              <option value="hourly">Every hour</option>
+              <option value="daily">Daily</option>
+              <option value="weekly">Weekly</option>
+            </select>
+            {scheduleFreq !== 'hourly' && (
+              <input
+                type="time"
+                value={scheduleTime}
+                onChange={e => setScheduleTime(e.target.value)}
+                style={{ padding: '3px 6px', background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '4px', color: 'var(--text-primary)', fontSize: '11px' }}
+              />
+            )}
+            {scheduleFreq === 'weekly' && (
+              <select
+                value={scheduleDay}
+                onChange={e => setScheduleDay(e.target.value)}
+                style={{ padding: '3px 6px', background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '4px', color: 'var(--text-primary)', fontSize: '11px' }}
+              >
+                {['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'].map(d => (
+                  <option key={d} value={d}>{d}</option>
+                ))}
+              </select>
+            )}
+            <button
+              onClick={handleSchedule}
+              style={{ padding: '3px 10px', background: 'rgba(74,222,128,0.12)', border: '1px solid rgba(74,222,128,0.3)', borderRadius: '4px', color: 'var(--green)', fontSize: '11px', cursor: 'pointer', fontWeight: 600 }}
+            >
+              Create Schedule
+            </button>
+            <span style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>
+              Creates a {navigator.userAgent.includes('Windows') ? 'Windows Scheduled Task' : 'cron job'} on your machine
+            </span>
           </div>
         )}
 
