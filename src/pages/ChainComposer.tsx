@@ -7,7 +7,6 @@
  * - Drag from bottom handle of one node to top handle of another to create flow
  */
 import { useState, useCallback, useEffect } from 'react';
-import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useAccount } from 'wagmi';
 import { useGateCheck } from '../hooks/useGateCheck';
 import { usePublishSkill, type LicenseType } from '../hooks/usePublishSkill';
@@ -85,7 +84,7 @@ function deleteChainFromStorage(name: string): void {
 
 export default function ChainComposer() {
   const [skills, setSkills] = useState<PaletteSkill[]>([]);
-  const { isConnected, isUnlocked, isLoading: gateLoading } = useGateCheck();
+  const { isConnected, isUnlocked } = useGateCheck();
   const { address } = useAccount();
   const { publish: publishSkill, state: publishState, reset: resetPublish } = usePublishSkill();
   const [publishProgress, setPublishProgress] = useState<string[]>([]);
@@ -637,61 +636,14 @@ fi
     setValidationErrors([]);
   }, []);
 
-  // Gate: require wallet + TRUST to use the composer
-  if (!isConnected || !isUnlocked) {
-    return (
-      <div style={{
-        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-        height: 'calc(100vh - 60px)', marginTop: '60px', padding: '40px',
-        background: '#0a0a0f',
-      }}>
-        <div style={{
-          maxWidth: '420px', textAlign: 'center',
-          background: 'var(--bg-card)', border: '1px solid var(--border)',
-          borderRadius: '16px', padding: '40px',
-        }}>
-          <div style={{ fontSize: '48px', marginBottom: '16px' }}>&#x1F9E9;</div>
-          <h2 style={{ color: '#fff', fontSize: '22px', marginBottom: '8px' }}>
-            Chain Composer
-          </h2>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '8px' }}>
-            Drag, drop, and connect skills to build custom chains.
-            Create new skills with natural language. Run interactively in Claude Code.
-          </p>
-
-          {!isConnected ? (
-            <>
-              <p style={{ color: 'var(--cyan)', fontSize: '13px', marginBottom: '20px' }}>
-                Connect your wallet to unlock the composer.
-              </p>
-              <ConnectButton />
-            </>
-          ) : !isUnlocked ? (
-            <>
-              <p style={{ color: 'var(--gold)', fontSize: '13px', marginBottom: '12px' }}>
-                You need TRUST tokens to use the chain composer.
-              </p>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '12px', marginBottom: '20px' }}>
-                Earn TRUST by publishing skills, validating for quality, or participating in governance. No public sale.
-              </p>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '11px' }}>
-                Want to try a single skill for free? Browse the <a href="/explore" style={{ color: 'var(--cyan)' }}>Skills</a> page.
-              </p>
-            </>
-          ) : null}
-
-          {gateLoading && (
-            <p style={{ color: 'var(--text-secondary)', fontSize: '12px' }}>Checking TRUST balance...</p>
-          )}
-        </div>
-      </div>
-    );
-  }
+  // Premium features require TRUST. Free: add skills, connect, validate, run.
+  // Gated: create custom skills, save/load, publish on-chain.
+  const isPremium = isConnected && isUnlocked;
 
   return (
     <div style={{ display: 'flex', height: 'calc(100vh - 60px)', marginTop: '60px' }}>
       {/* Left: Skill Palette */}
-      <SkillPalette skills={skills} onAddSkill={handleAddSkill} onCreateSkill={handleCreateSkill} />
+      <SkillPalette skills={skills} onAddSkill={handleAddSkill} onCreateSkill={isPremium ? handleCreateSkill : undefined} />
 
       {/* Center: Canvas + Controls */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
@@ -804,47 +756,49 @@ fi
               Run
             </button>
             <button
-              onClick={handleSave}
+              onClick={isPremium ? handleSave : () => alert('Connect wallet with TRUST tokens to save chains')}
               style={{
                 padding: '4px 12px',
                 background: 'rgba(170,136,255,0.08)',
                 border: '1px solid rgba(170,136,255,0.2)',
                 borderRadius: '4px',
-                color: 'var(--purple)',
+                color: isPremium ? 'var(--purple)' : 'rgba(170,136,255,0.4)',
                 fontSize: '12px',
                 cursor: 'pointer',
               }}
+              title={isPremium ? 'Save chain' : 'Requires TRUST tokens'}
             >
               Save
             </button>
             <button
-              onClick={() => { setSavedChains(getSavedChains()); setShowSaveLoad(!showSaveLoad); }}
+              onClick={isPremium ? () => { setSavedChains(getSavedChains()); setShowSaveLoad(!showSaveLoad); } : () => alert('Connect wallet with TRUST tokens to load chains')}
               style={{
                 padding: '4px 12px',
                 background: 'rgba(170,136,255,0.08)',
                 border: '1px solid rgba(170,136,255,0.2)',
                 borderRadius: '4px',
-                color: 'var(--purple)',
+                color: isPremium ? 'var(--purple)' : 'rgba(170,136,255,0.4)',
                 fontSize: '12px',
                 cursor: 'pointer',
               }}
+              title={isPremium ? 'Load saved chain' : 'Requires TRUST tokens'}
             >
               Load
             </button>
             <button
-              onClick={handlePublish}
+              onClick={isPremium ? handlePublish : () => alert('Connect wallet with TRUST tokens to publish on-chain')}
               disabled={publishState.status === 'signing' || publishState.status === 'confirming'}
               style={{
                 padding: '4px 14px',
-                background: publishState.status === 'confirmed' ? 'rgba(0,255,136,0.15)' : 'rgba(255,215,0,0.1)',
-                border: `1px solid ${publishState.status === 'confirmed' ? 'rgba(0,255,136,0.3)' : 'rgba(255,215,0,0.25)'}`,
+                background: isPremium ? (publishState.status === 'confirmed' ? 'rgba(0,255,136,0.15)' : 'rgba(255,215,0,0.1)') : 'rgba(255,215,0,0.05)',
+                border: `1px solid ${isPremium ? (publishState.status === 'confirmed' ? 'rgba(0,255,136,0.3)' : 'rgba(255,215,0,0.25)') : 'rgba(255,215,0,0.15)'}`,
                 borderRadius: '4px',
-                color: publishState.status === 'confirmed' ? '#00ff88' : 'var(--gold)',
+                color: isPremium ? (publishState.status === 'confirmed' ? '#00ff88' : 'var(--gold)') : 'rgba(255,215,0,0.4)',
                 fontSize: '12px',
-                cursor: publishState.status === 'signing' || publishState.status === 'confirming' ? 'wait' : 'pointer',
+                cursor: 'pointer',
                 fontWeight: 600,
-                opacity: publishState.status === 'signing' || publishState.status === 'confirming' ? 0.6 : 1,
               }}
+              title={isPremium ? 'Publish to Base mainnet' : 'Requires TRUST tokens'}
             >
               {publishState.status === 'signing' ? 'Sign...' :
                publishState.status === 'confirming' ? 'Confirming...' :

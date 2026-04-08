@@ -116,12 +116,12 @@ export default function SkillPalette({ skills, onAddSkill, onCreateSkill }: Skil
             Skills
           </h3>
           <button
-            onClick={() => setShowCreator(!showCreator)}
+            onClick={() => onCreateSkill ? setShowCreator(!showCreator) : alert('Connect wallet with TRUST tokens to create custom skills')}
             style={{
-              background: showCreator ? 'rgba(255,140,0,0.15)' : 'rgba(0,255,200,0.1)',
-              border: `1px solid ${showCreator ? 'rgba(255,140,0,0.3)' : 'rgba(0,255,200,0.2)'}`,
+              background: showCreator ? 'rgba(255,140,0,0.15)' : onCreateSkill ? 'rgba(0,255,200,0.1)' : 'rgba(255,255,255,0.03)',
+              border: `1px solid ${showCreator ? 'rgba(255,140,0,0.3)' : onCreateSkill ? 'rgba(0,255,200,0.2)' : 'rgba(255,255,255,0.1)'}`,
               borderRadius: '4px',
-              color: showCreator ? '#ff8c00' : 'var(--cyan)',
+              color: showCreator ? '#ff8c00' : onCreateSkill ? 'var(--cyan)' : 'rgba(255,255,255,0.3)',
               fontSize: '11px',
               cursor: 'pointer',
               padding: '3px 8px',
