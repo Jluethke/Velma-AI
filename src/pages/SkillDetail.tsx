@@ -152,6 +152,14 @@ export default function SkillDetail() {
           <button
             onClick={() => {
               if (!name) return;
+              const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+              if (isMobile) {
+                const cmd = `claude -p "Run the SkillChain skill '${name}'. Call start_skill_run with '${name}', then get_skill to read the definition. Ask me for inputs, execute each phase with record_phase, then complete_skill_run."`;
+                navigator.clipboard.writeText(cmd).then(() => {
+                  alert('Command copied! Open a terminal on your computer and paste it.');
+                });
+                return;
+              }
               const safeName = name.replace(/[^a-z0-9-]/gi, '-').toLowerCase();
               const ts = new Date().toISOString().slice(0, 10);
               const isWin = navigator.userAgent.includes('Windows');
@@ -219,7 +227,7 @@ claude
               e.currentTarget.style.transform = 'translateY(0)';
             }}
           >
-            Run in Claude Code — Free
+            {/iPhone|iPad|iPod|Android/i.test(navigator.userAgent) ? 'Copy Command — Free' : 'Run in Claude Code — Free'}
           </button>
 
           <Link

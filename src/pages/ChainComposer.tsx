@@ -1005,9 +1005,25 @@ echo "  To remove: crontab -l | grep -v 'SkillChain-${safeName}' | crontab -"
           )}
 
           <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-            {/* Free: Run (1 skill only). Premium: full toolbar. */}
+            {/* Run: downloads launcher on desktop, copies command on mobile */}
             <button
-              onClick={handleRun}
+              onClick={() => {
+                const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+                if (isMobile) {
+                  // Mobile: copy claude command to clipboard
+                  const built = buildChainJson();
+                  if (!built) return;
+                  const skillNames = built.steps.map(s => s.skill_name).join(', ');
+                  const cmd = `claude -p "Run these SkillChain skills in order: ${skillNames}. For each skill, call start_skill_run, get_skill, execute each phase with record_phase, then complete_skill_run. Pass outputs between steps as context."`;
+                  navigator.clipboard.writeText(cmd).then(() => {
+                    showTrustToast();
+                    setTrustToast(false); // clear the TRUST toast
+                    alert('Command copied! Open a terminal on your computer and paste it.');
+                  });
+                } else {
+                  handleRun();
+                }
+              }}
               style={{
                 padding: '4px 14px',
                 background: 'rgba(0,200,255,0.15)',
@@ -1019,7 +1035,7 @@ echo "  To remove: crontab -l | grep -v 'SkillChain-${safeName}' | crontab -"
                 fontWeight: 600,
               }}
             >
-              Run
+              {/iPhone|iPad|iPod|Android/i.test(navigator.userAgent) ? 'Copy CMD' : 'Run'}
             </button>
 
             {/* Builder+ buttons */}
