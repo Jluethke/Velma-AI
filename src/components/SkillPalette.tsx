@@ -36,9 +36,11 @@ export default function SkillPalette({ skills, onAddSkill, isPremium }: SkillPal
   const [search, setSearch] = useState('');
   const [expandedDomain, setExpandedDomain] = useState<string | null>(null);
 
-  // Filter: hide meta skills from free users
+  // Premium domains: hidden from free users, shown with PRO badge for TRUST holders
+  const PREMIUM_DOMAINS = new Set(['meta', 'ai', 'engineering']);
+
   const visibleSkills = useMemo(() => {
-    return isPremium ? skills : skills.filter(s => s.domain !== 'meta');
+    return isPremium ? skills : skills.filter(s => !PREMIUM_DOMAINS.has(s.domain));
   }, [skills, isPremium]);
 
   const filtered = useMemo(() => {
@@ -59,10 +61,11 @@ export default function SkillPalette({ skills, onAddSkill, isPremium }: SkillPal
       if (!groups[domain]) groups[domain] = [];
       groups[domain].push(skill);
     }
-    // Sort with meta at the top for premium users
+    // Sort premium domains at the top for TRUST holders
     return Object.entries(groups).sort(([a], [b]) => {
-      if (a === 'meta') return -1;
-      if (b === 'meta') return 1;
+      const aP = PREMIUM_DOMAINS.has(a) ? 0 : 1;
+      const bP = PREMIUM_DOMAINS.has(b) ? 0 : 1;
+      if (aP !== bP) return aP - bP;
       return a.localeCompare(b);
     });
   }, [filtered]);
@@ -97,10 +100,10 @@ export default function SkillPalette({ skills, onAddSkill, isPremium }: SkillPal
           borderBottom: '1px solid rgba(251, 191, 36, 0.1)',
         }}>
           <p style={{ margin: 0, fontSize: '10px', color: 'var(--gold)' }}>
-            Creation tools unlock with TRUST
+            Pro skills unlock with TRUST
           </p>
           <p style={{ margin: '2px 0 0', fontSize: '9px', color: 'var(--text-secondary)' }}>
-            Build skills via natural language, improve existing skills, design chains
+            Engineering, AI agents, skill creation, chain composition
           </p>
         </div>
       )}
@@ -132,7 +135,7 @@ export default function SkillPalette({ skills, onAddSkill, isPremium }: SkillPal
         {grouped.map(([domain, domainSkills]) => {
           const color = getDomainColor(domain);
           const isExpanded = expandedDomain === domain || !!search;
-          const isMeta = domain === 'meta';
+          const isPro = PREMIUM_DOMAINS.has(domain);
 
           return (
             <div key={domain} style={{ marginBottom: '4px' }}>
@@ -145,7 +148,7 @@ export default function SkillPalette({ skills, onAddSkill, isPremium }: SkillPal
                 }}
               >
                 <span style={{ fontSize: '11px', color, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                  {isMeta ? 'Creation Tools' : domain}
+                  {domain === 'meta' ? 'Creation Tools' : domain === 'ai' ? 'AI & Agents' : domain === 'engineering' ? 'Engineering' : domain}
                 </span>
                 <span style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>
                   {domainSkills.length} {isExpanded ? '\u2212' : '+'}
@@ -165,7 +168,7 @@ export default function SkillPalette({ skills, onAddSkill, isPremium }: SkillPal
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                     <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.8)' }}>{skill.name}</span>
-                    {isMeta && (
+                    {isPro && (
                       <span style={{ fontSize: '8px', color: 'var(--gold)', background: 'rgba(251,191,36,0.1)', padding: '0 3px', borderRadius: '2px' }}>PRO</span>
                     )}
                   </div>
