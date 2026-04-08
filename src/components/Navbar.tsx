@@ -122,7 +122,22 @@ export default function Navbar() {
 
             {isConnected ? (
               <button
-                onClick={() => disconnect({ connector })}
+                onClick={() => {
+                  disconnect({ connector });
+                  // MetaMask doesn't support programmatic disconnect.
+                  // Clear all wallet state and reload to fully disconnect.
+                  localStorage.removeItem('wagmi.store');
+                  localStorage.removeItem('wagmi.connected');
+                  localStorage.removeItem('wagmi.wallet');
+                  localStorage.removeItem('rk-recent');
+                  // Remove any wagmi/rainbowkit keys
+                  Object.keys(localStorage).forEach(key => {
+                    if (key.startsWith('wagmi') || key.startsWith('rk-') || key.startsWith('wc@')) {
+                      localStorage.removeItem(key);
+                    }
+                  });
+                  window.location.reload();
+                }}
                 className="px-3 py-1.5 rounded-lg text-xs cursor-pointer transition-all"
                 style={{
                   background: 'rgba(248, 113, 113, 0.08)',
