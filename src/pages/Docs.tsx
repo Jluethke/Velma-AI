@@ -3,6 +3,7 @@ import CodeBlock from '../components/CodeBlock';
 
 const guideSections = [
   { id: 'try-skill', label: 'Try a Skill' },
+  { id: 'mobile', label: 'Mobile' },
   { id: 'composer', label: 'Composer' },
   { id: 'evolution', label: 'Skill Evolution' },
   { id: 'skill-format', label: 'Skill Format' },
@@ -98,6 +99,20 @@ export default function Docs() {
             <p className="text-sm mt-4" style={t}>
               The launcher auto-installs Claude Code if you don't have it (requires Node.js). No SDK or pip install needed to try skills.
             </p>
+          </section>
+
+          {/* Mobile */}
+          <section id="mobile" className="mb-14">
+            <h2 className="text-xl font-semibold mb-4" style={h}>Using SkillChain on Mobile</h2>
+            <p className="text-sm mb-4" style={t}>
+              SkillChain works on mobile for browsing, composing, and managing your wallet. Running skills requires pasting a command into an AI chat.
+            </p>
+            <div className="space-y-3 text-sm" style={t}>
+              <p><strong style={h}>Connect wallet</strong> — Open this site in the MetaMask mobile app's built-in browser. Tap the compass icon in MetaMask, type the URL. Wallet connects instantly.</p>
+              <p><strong style={h}>Browse and compose</strong> — The composer works on mobile with a slide-up skill picker. Tap the "+" button to add skills. Chain templates load normally.</p>
+              <p><strong style={h}>Run skills</strong> — On mobile, the Run button becomes "Copy CMD". It copies a command to your clipboard. Open any AI chat (Claude, ChatGPT, etc.) and paste it. The AI will execute the skill step by step.</p>
+              <p><strong style={h}>Send TRUST</strong> — Works natively through MetaMask mobile. Tap Send TRUST in the menu, enter the recipient and amount.</p>
+            </div>
           </section>
 
           {/* Composer */}
