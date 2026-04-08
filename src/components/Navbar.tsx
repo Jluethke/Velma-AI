@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
-import { useAccount } from 'wagmi';
+import { useAccount, useDisconnect } from 'wagmi';
 import { useSendTrust, useTrustBalance } from '../hooks/useSendTrust';
 import { useTheme } from '../hooks/useTheme';
 
@@ -12,6 +12,7 @@ export default function Navbar() {
   const [sendAmount, setSendAmount] = useState('');
   const location = useLocation();
   const { isConnected } = useAccount();
+  const { disconnect } = useDisconnect();
   const { send, state: sendState, reset: resetSend } = useSendTrust();
   const balance = useTrustBalance();
   const { theme, toggleTheme } = useTheme();
@@ -119,11 +120,25 @@ export default function Navbar() {
               {theme === 'dark' ? '\u2600' : '\u263D'}
             </button>
 
-            <ConnectButton
-              chainStatus="icon"
-              accountStatus="address"
-              showBalance={false}
-            />
+            {isConnected ? (
+              <button
+                onClick={() => disconnect()}
+                className="px-3 py-1.5 rounded-lg text-xs cursor-pointer transition-all"
+                style={{
+                  background: 'rgba(248, 113, 113, 0.08)',
+                  border: '1px solid rgba(248, 113, 113, 0.2)',
+                  color: 'var(--red)',
+                }}
+              >
+                Disconnect
+              </button>
+            ) : (
+              <ConnectButton
+                chainStatus="icon"
+                accountStatus="address"
+                showBalance={false}
+              />
+            )}
           </div>
 
           {/* Mobile hamburger */}
