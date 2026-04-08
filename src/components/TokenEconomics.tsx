@@ -33,7 +33,7 @@ export default function TokenEconomics() {
           </h3>
           <div className="space-y-4">
             {[
-              { label: 'Name', value: 'SkillChain Trust Token' },
+              { label: 'Name', value: 'FlowFabric Trust Token' },
               { label: 'Symbol', value: 'TRUST' },
               { label: 'Supply', value: '1,000,000,000 (hard cap)' },
               { label: 'Chain', value: 'Base (Ethereum L2)' },

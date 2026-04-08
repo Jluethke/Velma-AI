@@ -45,7 +45,7 @@ export default function Activity() {
         Network Activity
       </h1>
       <p className="text-sm mb-8" style={{ color: 'var(--text-secondary)' }}>
-        Live feed of what is happening on SkillChain
+        Live feed of what is happening on FlowFabric
       </p>
 
       {/* Filter pills */}

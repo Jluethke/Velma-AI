@@ -19,7 +19,7 @@ export default function PortalAchievements() {
 
       <h1 className="text-3xl font-bold mb-2" style={{ color: '#ffffff' }}>Achievement Showcase</h1>
       <p className="text-sm mb-8" style={{ color: 'var(--text-secondary)' }}>
-        Track your progression through the SkillChain ecosystem
+        Track your progression through the FlowFabric ecosystem
       </p>
 
       {/* Summary Bar */}

@@ -305,7 +305,7 @@ function ChainDetail({
           </button>
           {launched && (
             <p className="text-xs text-center mt-3" style={{ color: 'var(--text-secondary)' }}>
-              Don't have SkillChain? <a href="/install.bat" download="SkillChain-Install.bat" style={{ color: 'var(--cyan)' }}>Download the installer</a> first.
+              Don't have FlowFabric? <a href="/install.bat" download="FlowFabric-Install.bat" style={{ color: 'var(--cyan)' }}>Download the installer</a> first.
             </p>
           )}
         </>

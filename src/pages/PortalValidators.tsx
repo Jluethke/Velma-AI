@@ -170,7 +170,7 @@ export default function PortalValidators() {
 
       <h1 className="text-3xl font-bold mb-2" style={{ color: 'var(--text-primary)' }}>Network Validators</h1>
       <p className="text-sm mb-8" style={{ color: 'var(--text-secondary)' }}>
-        Trust-weighted validators securing the SkillChain network
+        Trust-weighted validators securing the FlowFabric network
       </p>
 
       {isConnected && address ? (

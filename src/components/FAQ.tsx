@@ -11,7 +11,7 @@ const faqs = [
   },
   {
     question: 'What is TRUST?',
-    answer: 'TRUST is the token that powers the SkillChain ecosystem, deployed on Base mainnet. You can earn TRUST by publishing skills, validating quality, or creating chains that others use. You can also buy TRUST to unlock features faster. Your TRUST balance determines your tier — from Explorer (free) to Governor (100K+).',
+    answer: 'TRUST is the token that powers the FlowFabric ecosystem, deployed on Base mainnet. You can earn TRUST by publishing skills, validating quality, or creating chains that others use. You can also buy TRUST to unlock features faster. Your TRUST balance determines your tier — from Explorer (free) to Governor (100K+).',
   },
   {
     question: 'Do I need TRUST to try a skill?',
@@ -47,7 +47,7 @@ const faqs = [
   },
   {
     question: 'Is this a crypto project?',
-    answer: 'SkillChain uses blockchain for what it\'s good at: ownership, payments, and governance that no single party controls. The token economics reward contribution over speculation — earned TRUST has more influence than bought TRUST. The core innovation is trust-weighted consensus backed by deployed smart contracts on Base mainnet, not a whitepaper promise.',
+    answer: 'FlowFabric uses blockchain for what it\'s good at: ownership, payments, and governance that no single party controls. The token economics reward contribution over speculation — earned TRUST has more influence than bought TRUST. The core innovation is trust-weighted consensus backed by deployed smart contracts on Base mainnet, not a whitepaper promise.',
   },
 ];
 

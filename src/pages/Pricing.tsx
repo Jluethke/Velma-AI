@@ -111,10 +111,10 @@ const tiers: Tier[] = [
 const faqs = [
   {
     q: 'What\'s the difference between TRUST tokens and USD subscription?',
-    a: 'TRUST tokens are the on-chain currency of the SkillChain network. You earn them by running chains, validating skills, and contributing to the ecosystem. USD subscriptions unlock higher usage limits, API access, and team features. You can use SkillChain entirely for free with TRUST tokens -- the paid tiers are for businesses that need higher throughput and enterprise tooling.',
+    a: 'TRUST tokens are the on-chain currency of the FlowFabric network. You earn them by running chains, validating skills, and contributing to the ecosystem. USD subscriptions unlock higher usage limits, API access, and team features. You can use FlowFabric entirely for free with TRUST tokens -- the paid tiers are for businesses that need higher throughput and enterprise tooling.',
   },
   {
-    q: 'Can I use SkillChain without paying anything?',
+    q: 'Can I use FlowFabric without paying anything?',
     a: 'Yes. The Free tier gives you access to all 120+ skills and 66+ chains with 10 runs per day. You earn TRUST tokens through chain mining and can use those tokens within the ecosystem. Most individual users never need a paid plan.',
   },
   {
@@ -330,7 +330,7 @@ export default function Pricing() {
           <span style={{ color: 'var(--cyan)' }}>Businesses pay.</span>
         </h1>
         <p className="text-sm leading-relaxed max-w-2xl mx-auto mb-8" style={{ color: 'var(--text-secondary)' }}>
-          Every individual gets full access to the SkillChain skill marketplace at no cost.
+          Every individual gets full access to the FlowFabric skill marketplace at no cost.
           Paid plans unlock higher throughput, API access, and team collaboration for organizations.
         </p>
 
@@ -411,7 +411,7 @@ export default function Pricing() {
           Frequently Asked Questions
         </h2>
         <p className="text-center text-xs mb-8" style={{ color: 'var(--text-secondary)' }}>
-          Everything you need to know about SkillChain pricing.
+          Everything you need to know about FlowFabric pricing.
         </p>
         <div className="space-y-3">
           {faqs.map((faq) => (

@@ -38,5 +38,5 @@ export async function downloadSkill(name: string): Promise<void> {
  * Copy the CLI install command to clipboard.
  */
 export async function copyInstallCommand(name: string): Promise<void> {
-  await navigator.clipboard.writeText(`skillchain import ${name}`);
+  await navigator.clipboard.writeText(`flowfabric import ${name}`);
 }

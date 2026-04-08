@@ -51,8 +51,8 @@ export default function Navbar() {
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-0 no-underline">
-            <span className="text-xl font-bold" style={{ color: 'var(--cyan)' }}>Skill</span>
-            <span className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>Chain</span>
+            <span className="text-xl font-bold" style={{ color: 'var(--cyan)' }}>Flow</span>
+            <span className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>Fabric</span>
           </Link>
 
           {/* Desktop nav */}

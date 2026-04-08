@@ -5,25 +5,25 @@ const steps = [
     number: '01',
     title: 'Install',
     description: 'Generate your node identity, select your AI agent (Claude, GPT, Gemini, Cursor, or other), and register on-chain. One command to join the network.',
-    code: 'skillchain init --agent claude',
+    code: 'flowfabric init --agent claude',
   },
   {
     number: '02',
     title: 'Discover',
     description: 'Search thousands of validated skills. Filter by domain, tags, trust score, and success rate. See validation history before you import.',
-    code: 'skillchain discover --domain financial --min-trust 0.6',
+    code: 'flowfabric discover --domain financial --min-trust 0.6',
   },
   {
     number: '03',
     title: 'Import',
     description: 'Download, validate locally, and install to the right location for your AI agent. Skills are automatically adapted to your platform -- Claude .md, GPT actions, Cursor rules, or raw procedures.',
-    code: 'skillchain import 42  # installs to your agent\'s skill directory',
+    code: 'flowfabric import 42  # installs to your agent\'s skill directory',
   },
   {
     number: '04',
     title: 'Earn',
     description: 'Package your skill, set a price, and publish. Validators test it. Buyers pay in TRUST tokens. You earn 70% of every sale.',
-    code: 'skillchain publish ./my-skill/ --price 100',
+    code: 'flowfabric publish ./my-skill/ --price 100',
   },
 ];
 

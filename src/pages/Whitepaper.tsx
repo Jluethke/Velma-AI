@@ -10,7 +10,7 @@ export default function Whitepaper() {
       {/* Header */}
       <div className="text-center mb-16">
         <h1 className="text-3xl md:text-4xl font-bold mb-4" style={h}>
-          SkillChain Whitepaper
+          FlowFabric Whitepaper
         </h1>
         <p className="text-lg mb-2" style={accent('cyan')}>
           AI Skills That Evolve From Language to Code Through Consensus
@@ -25,7 +25,7 @@ export default function Whitepaper() {
 
       {/* Abstract */}
       <Section title="Abstract">
-        <P>SkillChain is a protocol for creating, validating, composing, and trading AI-executable procedures (skills) as network assets. Skills start as natural language instructions, gain trust through decentralized shadow validation, and can eventually compile into deterministic code — software born from conversation, proven by consensus.</P>
+        <P>FlowFabric is a protocol for creating, validating, composing, and trading AI-executable procedures (skills) as network assets. Skills start as natural language instructions, gain trust through decentralized shadow validation, and can eventually compile into deterministic code — software born from conversation, proven by consensus.</P>
         <P>The platform consists of three layers: an open skill marketplace with hundreds of validated skills, a visual chain composer for building multi-skill workflows, and an on-chain trust economy (TRUST token on Base mainnet) where creators earn royalties and validators earn rewards.</P>
         <P>Individual skills are free to run. Chaining skills together, creating new skills, and publishing on-chain require TRUST tokens — earned through contribution, not purchase.</P>
       </Section>
@@ -52,7 +52,7 @@ export default function Whitepaper() {
 
       {/* 2. The Solution */}
       <Section title="2. Skills as Open Infrastructure">
-        <P>A skill is a structured AI procedure with defined phases, entry criteria, quality gates, and typed inputs/outputs. Skills follow the SkillChain Open Skill Standard (SCOSS), making them portable across any MCP-compatible AI agent.</P>
+        <P>A skill is a structured AI procedure with defined phases, entry criteria, quality gates, and typed inputs/outputs. Skills follow the FlowFabric Open Skill Standard (FOSS), making them portable across any MCP-compatible AI agent.</P>
         <P>Individual skills are free to run — they are open infrastructure, like open-source libraries. The value isn't in hiding skills behind a paywall. It's in the trust scores that prove they work, the compositions that chain them together, and the economy that rewards quality.</P>
         <H3>Skill Package Format</H3>
         <P>Every skill is a directory containing a skill.md (execution specification with phases and quality gates) and a manifest.json (machine-readable metadata including typed inputs and outputs). The manifest enables automated chain composition — the system matches one skill's outputs to another skill's inputs.</P>
@@ -67,7 +67,7 @@ export default function Whitepaper() {
             <tbody style={t}>
               {[
                 ['Prompt', 'Natural language instruction', 'None'],
-                ['Skill', 'Structured phases with quality gates', 'Follows SCOSS standard'],
+                ['Skill', 'Structured phases with quality gates', 'Follows FOSS standard'],
                 ['Validated', 'Shadow-tested, trust-scored on-chain', '5+ validator attestations'],
                 ['Graduated', 'Proven consistent across many runs', '100+ validations, 95%+ similarity'],
                 ['Compiled', 'Executable code, no AI needed', 'Automatic on graduation'],
@@ -105,7 +105,7 @@ export default function Whitepaper() {
 
       {/* 6. TRUST Token Economy */}
       <Section title="6. TRUST Token Economy">
-        <P>TRUST is the native token of the SkillChain network, deployed on Base mainnet (ERC-20). TRUST is earned AND bought, but earned TRUST boosts influence (validator weight, governance power).</P>
+        <P>TRUST is the native token of the FlowFabric network, deployed on Base mainnet (ERC-20). TRUST is earned AND bought, but earned TRUST boosts influence (validator weight, governance power).</P>
         <H3>Revenue Split (enforced by smart contract)</H3>
         <div className="overflow-x-auto rounded-lg my-4" style={{ border: '1px solid var(--border)' }}>
           <table className="w-full text-sm">
@@ -177,7 +177,7 @@ export default function Whitepaper() {
       <Section title="8. Competitive Position">
         <div className="overflow-x-auto rounded-lg my-4" style={{ border: '1px solid var(--border)' }}>
           <table className="w-full text-sm">
-            <thead><tr style={{ background: 'var(--bg-card)' }}><th className="text-left px-4 py-2" style={t}>Platform</th><th className="text-left px-4 py-2" style={t}>Approach</th><th className="text-left px-4 py-2" style={t}>SkillChain Advantage</th></tr></thead>
+            <thead><tr style={{ background: 'var(--bg-card)' }}><th className="text-left px-4 py-2" style={t}>Platform</th><th className="text-left px-4 py-2" style={t}>Approach</th><th className="text-left px-4 py-2" style={t}>FlowFabric Advantage</th></tr></thead>
             <tbody style={t}>
               {[
                 ['OpenClaw', 'Runtime skill composition, messaging-first', 'No validation, no trust scores, no on-chain provenance'],
@@ -194,7 +194,7 @@ export default function Whitepaper() {
             </tbody>
           </table>
         </div>
-        <P>SkillChain is the only platform where skills evolve from natural language to compiled code through decentralized consensus, with derivative royalties enforced by smart contract.</P>
+        <P>FlowFabric is the only platform where skills evolve from natural language to compiled code through decentralized consensus, with derivative royalties enforced by smart contract.</P>
       </Section>
 
       {/* 9. Intellectual Property */}
@@ -207,7 +207,7 @@ export default function Whitepaper() {
       {/* 10. The Thesis */}
       <Section title="10. The Thesis">
         <P>AI capabilities will commoditize. Every model will be able to follow instructions. The scarce resource is not intelligence — it's proven, validated, composable procedures with known trust scores and verifiable provenance.</P>
-        <P>SkillChain captures this value at the procedure layer. Skills are open infrastructure. Trust is the product. Composition is the premium feature. Evolution to code is the endgame.</P>
+        <P>FlowFabric captures this value at the procedure layer. Skills are open infrastructure. Trust is the product. Composition is the premium feature. Evolution to code is the endgame.</P>
         <P>The cost of bad behavior always exceeds the benefit. The cost of good behavior always decreases over time. The network gets better the more people use it. And every improvement compounds through derivative royalties.</P>
       </Section>
 

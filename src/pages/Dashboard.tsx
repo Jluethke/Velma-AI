@@ -274,7 +274,7 @@ export default function Dashboard() {
       <div className="mb-6">
         <h1 className="text-2xl font-bold mb-1" style={{ color: '#ffffff' }}>Dashboard</h1>
         <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-          Welcome back. Here is your SkillChain overview.
+          Welcome back. Here is your FlowFabric overview.
         </p>
       </div>
 

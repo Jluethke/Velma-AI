@@ -45,7 +45,7 @@ export default function PortalSkills() {
 
       <h1 className="text-3xl font-bold mb-2" style={{ color: '#ffffff' }}>Skills Browser</h1>
       <p className="text-sm mb-8" style={{ color: 'var(--text-secondary)' }}>
-        Browse and install verified AI skills from the SkillChain registry
+        Browse and install verified AI skills from the FlowFabric registry
       </p>
 
       {/* Search + Domain Filters */}

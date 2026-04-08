@@ -37,7 +37,7 @@ export default function Footer() {
           <Link to="/docs" className="text-sm no-underline transition-colors" style={{ color: 'var(--text-secondary)' }}>
             Docs
           </Link>
-          <a href="https://github.com/Jluethke/Velma-AI" target="_blank" rel="noopener noreferrer" className="text-sm no-underline transition-colors" style={{ color: 'var(--text-secondary)' }}>
+          <a href="https://github.com/Jluethke/FlowFabric" target="_blank" rel="noopener noreferrer" className="text-sm no-underline transition-colors" style={{ color: 'var(--text-secondary)' }}>
             GitHub
           </a>
           <Link to="/whitepaper" className="text-sm no-underline transition-colors" style={{ color: 'var(--text-secondary)' }}>
@@ -49,7 +49,7 @@ export default function Footer() {
           &copy; 2024-present The Wayfinder Trust
         </p>
         <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-          SkillChain — AI skills you own, chains you compose, value you earn.
+          FlowFabric — AI skills you own, chains you compose, value you earn.
         </p>
       </div>
     </footer>

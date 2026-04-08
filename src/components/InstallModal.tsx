@@ -38,7 +38,7 @@ export default function InstallModal({ onClose }: { onClose: () => void }) {
         <div className="space-y-3 mb-6">
           <a
             href="/install.bat"
-            download="SkillChain-Install.bat"
+            download="FlowFabric-Install.bat"
             className="flex items-center gap-4 rounded-xl px-5 py-4 no-underline transition-all"
             style={{
               background: 'rgba(170,136,255,0.08)',
@@ -60,7 +60,7 @@ export default function InstallModal({ onClose }: { onClose: () => void }) {
 
           <a
             href="/install.sh"
-            download="SkillChain-Install.sh"
+            download="FlowFabric-Install.sh"
             className="flex items-center gap-4 rounded-xl px-5 py-4 no-underline transition-all"
             style={{
               background: 'rgba(0,255,200,0.08)',
@@ -85,7 +85,7 @@ export default function InstallModal({ onClose }: { onClose: () => void }) {
         <div className="rounded-lg p-4" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)' }}>
           <p className="text-xs font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>After you run it:</p>
           <ol className="text-xs space-y-1.5 pl-4" style={{ color: 'var(--text-secondary)' }}>
-            <li>Installs SkillChain via pip (Python)</li>
+            <li>Installs FlowFabric via pip (Python)</li>
             <li>Auto-configures Claude Code, Cursor, Windsurf</li>
             <li>Restart your AI tool — just talk normally</li>
           </ol>

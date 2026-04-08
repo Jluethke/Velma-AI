@@ -195,7 +195,7 @@ export default function PortalNetwork() {
 
       <h1 className="text-3xl font-bold mb-2" style={{ color: 'var(--text-primary)' }}>Network Overview</h1>
       <p className="text-sm mb-8" style={{ color: 'var(--text-secondary)' }}>
-        Real-time SkillChain network statistics and block explorer
+        Real-time FlowFabric network statistics and block explorer
       </p>
 
       {isConnected ? (

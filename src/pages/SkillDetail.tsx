@@ -154,7 +154,7 @@ export default function SkillDetail() {
               if (!name) return;
               const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
               if (isMobile) {
-                const cmd = `claude -p "Run the SkillChain skill '${name}'. Call start_skill_run with '${name}', then get_skill to read the definition. Ask me for inputs, execute each phase with record_phase, then complete_skill_run."`;
+                const cmd = `claude -p "Run the FlowFabric skill '${name}'. Call start_skill_run with '${name}', then get_skill to read the definition. Ask me for inputs, execute each phase with record_phase, then complete_skill_run."`;
                 navigator.clipboard.writeText(cmd).then(() => {
                   alert('Command copied! Open an AI chat and paste it.');
                 });
@@ -171,11 +171,11 @@ export default function SkillDetail() {
 
               if (isWin) {
                 const bat = `@echo off
-title SkillChain: ${safeName}
+title FlowFabric: ${safeName}
 setlocal
 set "PATH=%PATH%;%APPDATA%\\npm;%USERPROFILE%\\.local\\bin;%ProgramFiles%\\nodejs"
 set "PS=%SystemRoot%\\System32\\WindowsPowerShell\\v1.0\\powershell.exe"
-set "WS=%USERPROFILE%\\SkillChain-Runs\\${safeName}-${ts}"
+set "WS=%USERPROFILE%\\FlowFabric-Runs\\${safeName}-${ts}"
 if not exist "%WS%" mkdir "%WS%"
 "%PS%" -NoProfile -ExecutionPolicy Bypass -Command "[IO.File]::WriteAllText('%WS%\\CLAUDE.md', [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('${b64}')))"
 cd /d "%WS%"
@@ -197,7 +197,7 @@ pause
                 URL.revokeObjectURL(u);
               } else {
                 const sh = `#!/bin/bash
-WS="$HOME/SkillChain-Runs/${safeName}-${ts}"
+WS="$HOME/FlowFabric-Runs/${safeName}-${ts}"
 mkdir -p "$WS"
 echo '${b64}' | base64 -d > "$WS/CLAUDE.md"
 cd "$WS"

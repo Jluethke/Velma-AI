@@ -542,7 +542,7 @@ export default function ChainComposer() {
       }));
 
     // Write a CLAUDE.md that tells Claude how to run the chain
-    const claudeMd = `# SkillChain Chain: ${chainName}
+    const claudeMd = `# FlowFabric Chain: ${chainName}
 
 ${chainDescription || 'Custom skill chain composed in the visual editor.'}
 
@@ -586,18 +586,18 @@ Ask the user for the required inputs listed above, then begin with step 1.
 
     if (isWindows) {
       const batScript = `@echo off
-title SkillChain: ${safeName}
+title FlowFabric: ${safeName}
 setlocal
 
 :: Ensure PATH includes common tool locations
 set "PATH=%PATH%;%APPDATA%\\npm;%USERPROFILE%\\.local\\bin;%ProgramFiles%\\nodejs"
 set "PS=%SystemRoot%\\System32\\WindowsPowerShell\\v1.0\\powershell.exe"
 
-set "WS=%USERPROFILE%\\SkillChain-Runs\\${dirName}"
+set "WS=%USERPROFILE%\\FlowFabric-Runs\\${dirName}"
 if not exist "%WS%" mkdir "%WS%"
 
 echo.
-echo   SkillChain: ${displayName}
+echo   FlowFabric: ${displayName}
 echo   Workspace: %WS%
 echo.
 
@@ -654,13 +654,13 @@ pause
       URL.revokeObjectURL(url);
     } else {
       const shScript = `#!/bin/bash
-# SkillChain Chain Runner: ${chainName}
+# FlowFabric Chain Runner: ${chainName}
 
-WS="$HOME/SkillChain-Runs/${dirName}"
+WS="$HOME/FlowFabric-Runs/${dirName}"
 mkdir -p "$WS"
 
 echo ""
-echo "  SkillChain Chain Runner"
+echo "  FlowFabric Chain Runner"
 echo "  Chain: ${chainName} (${steps.length} skills)"
 echo "  Workspace: $WS"
 echo ""
@@ -723,8 +723,8 @@ fi
       else if (scheduleFreq === 'hourly') schtasksSchedule = `/sc hourly /st ${time}`;
 
       const bat = `@echo off
-title SkillChain Scheduler: ${safeName}
-set "WS=%USERPROFILE%\\SkillChain-Runs\\${safeName}-scheduled"
+title FlowFabric Scheduler: ${safeName}
+set "WS=%USERPROFILE%\\FlowFabric-Runs\\${safeName}-scheduled"
 if not exist "%WS%" mkdir "%WS%"
 
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
@@ -739,15 +739,15 @@ echo claude
 )
 
 :: Register the scheduled task
-schtasks /create /tn "SkillChain-${safeName}" ${schtasksSchedule} /tr "%WS%\\run.bat" /f
+schtasks /create /tn "FlowFabric-${safeName}" ${schtasksSchedule} /tr "%WS%\\run.bat" /f
 
 echo.
 echo   Scheduled task created!
-echo   Name:      SkillChain-${safeName}
+echo   Name:      FlowFabric-${safeName}
 echo   Frequency: ${scheduleFreq} at ${time}${scheduleFreq === 'weekly' ? ` (${scheduleDay})` : ''}
 echo   Workspace: %WS%
 echo.
-echo   To remove: schtasks /delete /tn "SkillChain-${safeName}" /f
+echo   To remove: schtasks /delete /tn "FlowFabric-${safeName}" /f
 echo.
 pause
 `;
@@ -766,7 +766,7 @@ pause
         : `0 * * * *`; // hourly
 
       const sh = `#!/bin/bash
-WS="$HOME/SkillChain-Runs/${safeName}-scheduled"
+WS="$HOME/FlowFabric-Runs/${safeName}-scheduled"
 mkdir -p "$WS"
 echo '${chainB64}' | base64 -d > "$WS/${safeName}.chain.json"
 echo '${claudeMdB64}' | base64 -d > "$WS/CLAUDE.md"
@@ -774,18 +774,18 @@ echo '${claudeMdB64}' | base64 -d > "$WS/CLAUDE.md"
 # Create run script
 cat > "$WS/run.sh" << 'RUNEOF'
 #!/bin/bash
-cd "$HOME/SkillChain-Runs/${safeName}-scheduled"
+cd "$HOME/FlowFabric-Runs/${safeName}-scheduled"
 claude
 RUNEOF
 chmod +x "$WS/run.sh"
 
 # Add to crontab
-(crontab -l 2>/dev/null | grep -v "SkillChain-${safeName}"; echo "${cronExpr} $WS/run.sh # SkillChain-${safeName}") | crontab -
+(crontab -l 2>/dev/null | grep -v "FlowFabric-${safeName}"; echo "${cronExpr} $WS/run.sh # FlowFabric-${safeName}") | crontab -
 
 echo ""
 echo "  Scheduled!"
 echo "  Cron: ${cronExpr}"
-echo "  To remove: crontab -l | grep -v 'SkillChain-${safeName}' | crontab -"
+echo "  To remove: crontab -l | grep -v 'FlowFabric-${safeName}' | crontab -"
 `;
       const blob = new Blob([sh], { type: 'application/x-sh' });
       const url = URL.createObjectURL(blob);
@@ -1014,7 +1014,7 @@ echo "  To remove: crontab -l | grep -v 'SkillChain-${safeName}' | crontab -"
                   const built = buildChainJson();
                   if (!built) return;
                   const skillNames = built.steps.map(s => s.skill_name).join(', ');
-                  const cmd = `claude -p "Run these SkillChain skills in order: ${skillNames}. For each skill, call start_skill_run, get_skill, execute each phase with record_phase, then complete_skill_run. Pass outputs between steps as context."`;
+                  const cmd = `claude -p "Run these FlowFabric skills in order: ${skillNames}. For each skill, call start_skill_run, get_skill, execute each phase with record_phase, then complete_skill_run. Pass outputs between steps as context."`;
                   navigator.clipboard.writeText(cmd).then(() => {
                     showTrustToast();
                     setTrustToast(false); // clear the TRUST toast

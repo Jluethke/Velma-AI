@@ -103,9 +103,9 @@ export default function Docs() {
 
           {/* Mobile */}
           <section id="mobile" className="mb-14">
-            <h2 className="text-xl font-semibold mb-4" style={h}>Using SkillChain on Mobile</h2>
+            <h2 className="text-xl font-semibold mb-4" style={h}>Using FlowFabric on Mobile</h2>
             <p className="text-sm mb-4" style={t}>
-              SkillChain works on mobile for browsing, composing, and managing your wallet. Running skills requires pasting a command into an AI chat.
+              FlowFabric works on mobile for browsing, composing, and managing your wallet. Running skills requires pasting a command into an AI chat.
             </p>
             <div className="space-y-3 text-sm" style={t}>
               <p><strong style={h}>Connect wallet</strong> — Open this site in the MetaMask mobile app's built-in browser. Tap the compass icon in MetaMask, type the URL. Wallet connects instantly.</p>
@@ -224,7 +224,7 @@ export default function Docs() {
               Click <strong style={{ color: '#00c8ff' }}>Run</strong> in the Composer. A launcher script downloads that:
             </p>
             <ol className="space-y-2 text-sm pl-5" style={t}>
-              <li>Creates a workspace at <code className="text-xs px-1 rounded" style={{ background: 'var(--bg-card)', color: 'var(--cyan)' }}>~/SkillChain-Runs/chain-name-date/</code></li>
+              <li>Creates a workspace at <code className="text-xs px-1 rounded" style={{ background: 'var(--bg-card)', color: 'var(--cyan)' }}>~/FlowFabric-Runs/chain-name-date/</code></li>
               <li>Writes a CLAUDE.md with chain instructions and context bridging rules</li>
               <li>Checks for Claude Code — installs it if missing</li>
               <li>Launches Claude, which reads the instructions and starts executing</li>
