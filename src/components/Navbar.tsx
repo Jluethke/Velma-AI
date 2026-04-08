@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useAccount, useDisconnect } from 'wagmi';
 import { useSendTrust, useTrustBalance } from '../hooks/useSendTrust';
+import { useGateCheck, TIER_LABELS, TIER_COLORS } from '../hooks/useGateCheck';
 import { useTheme } from '../hooks/useTheme';
 
 export default function Navbar() {
@@ -15,6 +16,7 @@ export default function Navbar() {
   const { disconnect } = useDisconnect();
   const { send, state: sendState, reset: resetSend } = useSendTrust();
   const balance = useTrustBalance();
+  const { tier } = useGateCheck();
   const { theme, toggleTheme } = useTheme();
 
   const navLinks = [
@@ -76,6 +78,9 @@ export default function Navbar() {
               <>
                 <span className="text-xs font-mono" style={{ color: 'var(--gold)' }}>
                   {balance.display} TRUST
+                  <span style={{ color: TIER_COLORS[tier], marginLeft: '4px', fontSize: '10px' }}>
+                    {TIER_LABELS[tier]}
+                  </span>
                 </span>
                 <button
                   onClick={() => { setShowSend(!showSend); resetSend(); }}
@@ -195,6 +200,9 @@ export default function Navbar() {
             {isConnected && (
               <span className="text-xs font-mono mt-2" style={{ color: 'var(--gold)' }}>
                 {balance.display} TRUST
+                <span style={{ color: TIER_COLORS[tier], marginLeft: '4px', fontSize: '10px' }}>
+                  {TIER_LABELS[tier]}
+                </span>
               </span>
             )}
             <div className="mt-2">

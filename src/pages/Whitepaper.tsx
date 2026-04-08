@@ -106,7 +106,7 @@ export default function Whitepaper() {
 
       {/* 6. TRUST Token Economy */}
       <Section title="6. TRUST Token Economy">
-        <P>TRUST is the native token of the SkillChain network, deployed on Base mainnet (ERC-20). TRUST is earned through contribution, not purchased through a public sale.</P>
+        <P>TRUST is the native token of the SkillChain network, deployed on Base mainnet (ERC-20). TRUST is earned AND bought, but earned TRUST boosts influence (validator weight, governance power).</P>
         <H3>Revenue Split (enforced by smart contract)</H3>
         <div className="overflow-x-auto rounded-lg my-4" style={{ border: '1px solid var(--border)' }}>
           <table className="w-full text-sm">
@@ -121,6 +121,29 @@ export default function Whitepaper() {
         <P>When someone modifies an existing skill and publishes it as a derivative, the original author receives 15% of all TRUST earned on that derivative — automatically, via smart contract, forever. This incentivizes creating skills worth forking.</P>
         <H3>Ways to Earn</H3>
         <P>Publish skills that others use. Validate skills for quality. Create chains that compose multiple skills. Fork and improve existing skills (derivatives). All earnings are on-chain and verifiable.</P>
+        <H3>Token Tiers</H3>
+        <P>TRUST balance determines access tier. TRUST can be earned through contribution or purchased, but earned TRUST boosts influence in validation and governance.</P>
+        <div className="overflow-x-auto rounded-lg my-4" style={{ border: '1px solid var(--border)' }}>
+          <table className="w-full text-sm">
+            <thead><tr style={{ background: 'var(--bg-card)' }}><th className="text-left px-4 py-2" style={t}>Tier</th><th className="text-left px-4 py-2" style={t}>TRUST Balance</th><th className="text-left px-4 py-2" style={t}>Access</th></tr></thead>
+            <tbody style={t}>
+              {[
+                ['Explorer', '0', 'Browse and run individual skills (free)'],
+                ['Builder', '500', 'Chain skills, save/load/export chains'],
+                ['Creator', '2,500', 'Publish skills and chains on-chain'],
+                ['Pro Creator', '10,000', 'Advanced scheduling and analytics'],
+                ['Validator', '25,000 (staked)', 'Validate skill quality, earn validation rewards'],
+                ['Governor', '100,000 (staked)', 'DAO voting on protocol parameters'],
+              ].map(([tier, balance, access]) => (
+                <tr key={tier} style={{ borderTop: '1px solid var(--border)' }}>
+                  <td className="px-4 py-2 font-medium" style={h}>{tier}</td>
+                  <td className="px-4 py-2">{balance}</td>
+                  <td className="px-4 py-2">{access}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </Section>
 
       {/* 7. Smart Contracts */}
@@ -131,7 +154,7 @@ export default function Whitepaper() {
             <thead><tr style={{ background: 'var(--bg-card)' }}><th className="text-left px-4 py-2" style={t}>Contract</th><th className="text-left px-4 py-2" style={t}>Purpose</th></tr></thead>
             <tbody style={t}>
               {[
-                ['TRUST Token', 'ERC-20 token — earned, not bought'],
+                ['TRUST Token', 'ERC-20 token — earned and bought, earned TRUST boosts influence'],
                 ['SkillRegistry', 'On-chain skill registration with creator attribution'],
                 ['ValidationRegistry', 'Shadow validation results, consensus tracking'],
                 ['TrustOracle', 'Computes trust scores from validation history'],

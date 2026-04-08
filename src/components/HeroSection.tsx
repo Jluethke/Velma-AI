@@ -3,7 +3,7 @@ import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useGateCheck } from '../hooks/useGateCheck';
 
 export default function HeroSection() {
-  const { isConnected, isUnlocked } = useGateCheck();
+  const { isConnected, canChain } = useGateCheck();
 
   return (
     <section className="relative min-h-[85vh] flex flex-col items-center justify-center px-6 overflow-hidden">
@@ -41,7 +41,7 @@ export default function HeroSection() {
         {/* CTAs */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-6">
           {/* Primary: Open Composer (or Connect Wallet) */}
-          {isUnlocked ? (
+          {canChain ? (
             <Link
               to="/compose"
               className="inline-flex items-center gap-3 px-8 py-4 rounded-xl no-underline cursor-pointer transition-all"
@@ -58,7 +58,7 @@ export default function HeroSection() {
           ) : (
             <div className="flex flex-col items-center gap-3">
               <ConnectButton label="Connect Wallet to Compose" />
-              {isConnected && !isUnlocked && (
+              {isConnected && !canChain && (
                 <span className="text-xs" style={{ color: 'var(--gold)' }}>
                   You need TRUST tokens to unlock the composer
                 </span>

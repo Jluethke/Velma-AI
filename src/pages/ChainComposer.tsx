@@ -8,7 +8,7 @@
  */
 import { useState, useCallback, useEffect } from 'react';
 import { useAccount } from 'wagmi';
-import { useGateCheck } from '../hooks/useGateCheck';
+import { useGateCheck, TIER_LABELS, TIER_COLORS } from '../hooks/useGateCheck';
 import { usePublishSkill, type LicenseType } from '../hooks/usePublishSkill';
 import {
   ReactFlow,
@@ -84,8 +84,7 @@ function deleteChainFromStorage(name: string): void {
 
 export default function ChainComposer() {
   const [skills, setSkills] = useState<PaletteSkill[]>([]);
-  const { isConnected, isUnlocked } = useGateCheck();
-  const isPremium = isConnected && isUnlocked;
+  const { isConnected, tier, canChain, canPublish, canSchedule } = useGateCheck();
   const { address } = useAccount();
   const { publish: publishSkill, state: publishState, reset: resetPublish } = usePublishSkill();
   const [publishProgress, setPublishProgress] = useState<string[]>([]);
@@ -99,7 +98,7 @@ export default function ChainComposer() {
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [savedChains, setSavedChains] = useState<SavedChain[]>(getSavedChains);
   const [showSaveLoad, setShowSaveLoad] = useState(false);
-  const [trustToast, setTrustToast] = useState(false);
+  const [trustToast, setTrustToast] = useState<string | false>(false);
   const [showSchedule, setShowSchedule] = useState(false);
   const [scheduleFreq, setScheduleFreq] = useState('daily');
   const [scheduleTime, setScheduleTime] = useState('09:00');
@@ -157,8 +156,8 @@ export default function ChainComposer() {
     setNodes(newNodes);
   }, [skills]);
 
-  const showTrustToast = useCallback(() => {
-    setTrustToast(true);
+  const showTrustToast = useCallback((msg?: string) => {
+    setTrustToast(msg || 'Connect wallet with TRUST tokens to unlock this feature');
     setTimeout(() => setTrustToast(false), 3000);
   }, []);
 
@@ -196,8 +195,8 @@ export default function ChainComposer() {
 
   const onConnect: OnConnect = useCallback(
     (connection) => {
-      if (!isPremium) {
-        showTrustToast();
+      if (!canChain) {
+        showTrustToast('Builder tier (500 TRUST) required to connect skills');
         return;
       }
       setEdges((eds) => addEdge({
@@ -206,13 +205,13 @@ export default function ChainComposer() {
         animated: true,
       }, eds));
     },
-    [isPremium],
+    [canChain],
   );
 
   const handleAddSkill = useCallback((skill: PaletteSkill) => {
-    // Free users: 3 skills max (enough to see the value of chaining). Premium: unlimited.
-    if (!isPremium && nodes.length >= 3) {
-      showTrustToast();
+    // Free users: 3 skills max (enough to see the value of chaining). Builder+: unlimited.
+    if (!canChain && nodes.length >= 3) {
+      showTrustToast('Builder tier (500 TRUST) required to add more than 3 skills');
       return;
     }
 
@@ -811,7 +810,7 @@ echo "  To remove: crontab -l | grep -v 'SkillChain-${safeName}' | crontab -"
   return (
     <div style={{ display: 'flex', height: 'calc(100vh - 60px)', marginTop: '60px' }}>
       {/* Left: Skill Palette */}
-      <SkillPalette skills={skills} onAddSkill={handleAddSkill} isPremium={isPremium} />
+      <SkillPalette skills={skills} onAddSkill={handleAddSkill} canChain={canChain} canPublish={canPublish} />
 
       {/* Center: Canvas + Controls */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
@@ -827,8 +826,22 @@ echo "  To remove: crontab -l | grep -v 'SkillChain-${safeName}' | crontab -"
             flexWrap: 'wrap',
           }}
         >
-          {/* Chain metadata — only shown for premium users building chains */}
-          {isPremium && (
+          {/* Tier badge */}
+          {isConnected && (
+            <span style={{
+              fontSize: '10px',
+              fontWeight: 600,
+              padding: '2px 8px',
+              borderRadius: '4px',
+              background: `color-mix(in srgb, ${TIER_COLORS[tier]} 12%, transparent)`,
+              border: `1px solid color-mix(in srgb, ${TIER_COLORS[tier]} 25%, transparent)`,
+              color: TIER_COLORS[tier],
+            }}>
+              {TIER_LABELS[tier]}
+            </span>
+          )}
+          {/* Chain metadata — only shown for builder+ users building chains */}
+          {canChain && (
             <>
               <input
                 type="text"
@@ -906,7 +919,7 @@ echo "  To remove: crontab -l | grep -v 'SkillChain-${safeName}' | crontab -"
             ))}
           </select>
 
-          {!isPremium && nodes.length === 0 && (
+          {!canChain && nodes.length === 0 && (
             <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
               Pick a template or add a skill, then click Run
             </span>
@@ -930,8 +943,8 @@ echo "  To remove: crontab -l | grep -v 'SkillChain-${safeName}' | crontab -"
               Run
             </button>
 
-            {/* Premium-only buttons */}
-            {isPremium && (
+            {/* Builder+ buttons */}
+            {canChain && (
               <>
                 <button
                   onClick={handleValidate}
@@ -948,7 +961,7 @@ echo "  To remove: crontab -l | grep -v 'SkillChain-${safeName}' | crontab -"
                   Validate
                 </button>
                 <button
-                  onClick={handleExport}
+                  onClick={canChain ? handleExport : () => showTrustToast('Builder tier (500 TRUST) required to export chains')}
                   style={{
                     padding: '4px 12px',
                     background: 'rgba(56,189,248,0.08)',
@@ -962,13 +975,13 @@ echo "  To remove: crontab -l | grep -v 'SkillChain-${safeName}' | crontab -"
                   Export
                 </button>
                 <button
-                  onClick={() => setShowSchedule(!showSchedule)}
+                  onClick={canSchedule ? () => setShowSchedule(!showSchedule) : () => showTrustToast('Builder tier (500 TRUST) required to schedule chains')}
                   style={{
                     padding: '4px 12px',
                     background: 'rgba(74, 222, 128, 0.08)',
                     border: '1px solid rgba(74, 222, 128, 0.2)',
                     borderRadius: '4px',
-                    color: 'var(--green)',
+                    color: canSchedule ? 'var(--green)' : 'rgba(74, 222, 128, 0.4)',
                     fontSize: '12px',
                     cursor: 'pointer',
                   }}
@@ -978,49 +991,49 @@ echo "  To remove: crontab -l | grep -v 'SkillChain-${safeName}' | crontab -"
               </>
             )}
             <button
-              onClick={isPremium ? handleSave : showTrustToast}
+              onClick={canChain ? handleSave : () => showTrustToast('Builder tier (500 TRUST) required to save chains')}
               style={{
                 padding: '4px 12px',
                 background: 'rgba(170,136,255,0.08)',
                 border: '1px solid rgba(170,136,255,0.2)',
                 borderRadius: '4px',
-                color: isPremium ? 'var(--purple)' : 'rgba(170,136,255,0.4)',
+                color: canChain ? 'var(--purple)' : 'rgba(170,136,255,0.4)',
                 fontSize: '12px',
                 cursor: 'pointer',
               }}
-              title={isPremium ? 'Save chain' : 'Requires TRUST tokens'}
+              title={canChain ? 'Save chain' : 'Builder tier (500 TRUST) required'}
             >
               Save
             </button>
             <button
-              onClick={isPremium ? () => { setSavedChains(getSavedChains()); setShowSaveLoad(!showSaveLoad); } : showTrustToast}
+              onClick={canChain ? () => { setSavedChains(getSavedChains()); setShowSaveLoad(!showSaveLoad); } : () => showTrustToast('Builder tier (500 TRUST) required to load chains')}
               style={{
                 padding: '4px 12px',
                 background: 'rgba(170,136,255,0.08)',
                 border: '1px solid rgba(170,136,255,0.2)',
                 borderRadius: '4px',
-                color: isPremium ? 'var(--purple)' : 'rgba(170,136,255,0.4)',
+                color: canChain ? 'var(--purple)' : 'rgba(170,136,255,0.4)',
                 fontSize: '12px',
                 cursor: 'pointer',
               }}
-              title={isPremium ? 'Load saved chain' : 'Requires TRUST tokens'}
+              title={canChain ? 'Load saved chain' : 'Builder tier (500 TRUST) required'}
             >
               Load
             </button>
             <button
-              onClick={isPremium ? handlePublish : showTrustToast}
+              onClick={canPublish ? handlePublish : () => showTrustToast('Creator tier (2,500 TRUST) required to publish on-chain')}
               disabled={publishState.status === 'signing' || publishState.status === 'confirming'}
               style={{
                 padding: '4px 14px',
-                background: isPremium ? (publishState.status === 'confirmed' ? 'rgba(0,255,136,0.15)' : 'rgba(255,215,0,0.1)') : 'rgba(255,215,0,0.05)',
-                border: `1px solid ${isPremium ? (publishState.status === 'confirmed' ? 'rgba(0,255,136,0.3)' : 'rgba(255,215,0,0.25)') : 'rgba(255,215,0,0.15)'}`,
+                background: canPublish ? (publishState.status === 'confirmed' ? 'rgba(0,255,136,0.15)' : 'rgba(255,215,0,0.1)') : 'rgba(255,215,0,0.05)',
+                border: `1px solid ${canPublish ? (publishState.status === 'confirmed' ? 'rgba(0,255,136,0.3)' : 'rgba(255,215,0,0.25)') : 'rgba(255,215,0,0.15)'}`,
                 borderRadius: '4px',
-                color: isPremium ? (publishState.status === 'confirmed' ? '#00ff88' : 'var(--gold)') : 'rgba(255,215,0,0.4)',
+                color: canPublish ? (publishState.status === 'confirmed' ? '#00ff88' : 'var(--gold)') : 'rgba(255,215,0,0.4)',
                 fontSize: '12px',
                 cursor: 'pointer',
                 fontWeight: 600,
               }}
-              title={isPremium ? 'Publish to Base mainnet' : 'Requires TRUST tokens'}
+              title={canPublish ? 'Publish to Base mainnet' : 'Creator tier (2,500 TRUST) required'}
             >
               {publishState.status === 'signing' ? 'Sign...' :
                publishState.status === 'confirming' ? 'Confirming...' :
@@ -1060,7 +1073,7 @@ echo "  To remove: crontab -l | grep -v 'SkillChain-${safeName}' | crontab -"
             textAlign: 'center',
             fontWeight: 500,
           }}>
-            Connect wallet with TRUST tokens to unlock this feature
+            {trustToast}
           </div>
         )}
 

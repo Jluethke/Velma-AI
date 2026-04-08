@@ -18,7 +18,8 @@ export interface PaletteSkill {
 interface SkillPaletteProps {
   skills: PaletteSkill[];
   onAddSkill: (skill: PaletteSkill) => void;
-  isPremium?: boolean;
+  canChain?: boolean;    // builder+ — unlocks engineering, AI
+  canPublish?: boolean;  // creator+ — unlocks legal, meta
 }
 
 const DOMAIN_COLORS: Record<string, string> = {
@@ -32,16 +33,24 @@ function getDomainColor(domain: string): string {
   return DOMAIN_COLORS[domain.toLowerCase()] ?? DOMAIN_COLORS.general;
 }
 
-export default function SkillPalette({ skills, onAddSkill, isPremium }: SkillPaletteProps) {
+export default function SkillPalette({ skills, onAddSkill, canChain, canPublish }: SkillPaletteProps) {
   const [search, setSearch] = useState('');
   const [expandedDomain, setExpandedDomain] = useState<string | null>(null);
 
-  // Premium domains: hidden from free users, shown with PRO badge for TRUST holders
-  const PREMIUM_DOMAINS = new Set(['meta', 'ai', 'engineering', 'legal']);
+  // Builder+ domains: engineering, AI
+  const BUILDER_DOMAINS = new Set(['engineering', 'ai']);
+  // Creator+ domains: legal, meta
+  const CREATOR_DOMAINS = new Set(['legal', 'meta']);
+  // All premium domains (union)
+  const PREMIUM_DOMAINS = new Set([...BUILDER_DOMAINS, ...CREATOR_DOMAINS]);
 
   const visibleSkills = useMemo(() => {
-    return isPremium ? skills : skills.filter(s => !PREMIUM_DOMAINS.has(s.domain));
-  }, [skills, isPremium]);
+    return skills.filter(s => {
+      if (CREATOR_DOMAINS.has(s.domain)) return !!canPublish;
+      if (BUILDER_DOMAINS.has(s.domain)) return !!canChain;
+      return true;
+    });
+  }, [skills, canChain, canPublish]);
 
   const filtered = useMemo(() => {
     if (!search) return visibleSkills;
@@ -92,18 +101,18 @@ export default function SkillPalette({ skills, onAddSkill, isPremium }: SkillPal
         </p>
       </div>
 
-      {/* Premium upsell for meta skills */}
-      {!isPremium && (
+      {/* Tier upsell for locked skills */}
+      {!canPublish && (
         <div style={{
           padding: '8px 16px',
           background: 'rgba(251, 191, 36, 0.04)',
           borderBottom: '1px solid rgba(251, 191, 36, 0.1)',
         }}>
           <p style={{ margin: 0, fontSize: '10px', color: 'var(--gold)' }}>
-            Pro skills unlock with TRUST
+            {!canChain ? 'Builder tier (500 TRUST) unlocks Engineering & AI skills' : 'Creator tier (2,500 TRUST) unlocks Legal & Meta skills'}
           </p>
           <p style={{ margin: '2px 0 0', fontSize: '9px', color: 'var(--text-secondary)' }}>
-            Engineering, AI, Legal, and skill creation tools
+            {!canChain ? 'Engineering, AI, Legal, and skill creation tools' : 'Legal & IP tools and skill creation tools'}
           </p>
         </div>
       )}
@@ -198,7 +207,7 @@ export default function SkillPalette({ skills, onAddSkill, isPremium }: SkillPal
         fontSize: '10px',
         color: 'var(--text-secondary)',
       }}>
-        {isPremium ? 'All skills + creation tools' : 'Browse skills'}
+        {canPublish ? 'All skills + creation tools' : canChain ? 'Builder skills unlocked' : 'Browse skills'}
       </div>
     </div>
   );

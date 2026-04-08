@@ -213,13 +213,42 @@ export default function Docs() {
           <section id="trust" className="mb-14">
             <h2 className="text-xl font-semibold mb-4" style={h}>TRUST & Royalties</h2>
             <p className="text-sm mb-4" style={t}>
-              TRUST is earned, not bought:
+              TRUST is earned AND bought, but earned TRUST boosts influence in validation and governance:
             </p>
             <ul className="space-y-2 text-sm list-none p-0" style={t}>
               <li className="flex items-center gap-2"><span style={{ color: 'var(--green)' }}>&#10003;</span> Publish skills that others use</li>
               <li className="flex items-center gap-2"><span style={{ color: 'var(--green)' }}>&#10003;</span> Validate skills for quality</li>
               <li className="flex items-center gap-2"><span style={{ color: 'var(--green)' }}>&#10003;</span> Earn royalties from derivatives of your work</li>
+              <li className="flex items-center gap-2"><span style={{ color: 'var(--green)' }}>&#10003;</span> Purchase TRUST tokens directly</li>
             </ul>
+            <h3 className="text-base font-semibold mt-6 mb-3" style={h}>Token Tiers</h3>
+            <div className="overflow-x-auto rounded-lg mb-4" style={{ border: '1px solid var(--border)' }}>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr style={{ background: 'var(--bg-card)' }}>
+                    <th className="text-left px-4 py-2" style={t}>Tier</th>
+                    <th className="text-left px-4 py-2" style={t}>TRUST Balance</th>
+                    <th className="text-left px-4 py-2" style={t}>Access</th>
+                  </tr>
+                </thead>
+                <tbody style={t}>
+                  {[
+                    ['Explorer', '0', 'Browse and run individual skills (free)'],
+                    ['Builder', '500', 'Chain skills, save/load/export'],
+                    ['Creator', '2,500', 'Publish on-chain'],
+                    ['Pro Creator', '10,000', 'Advanced features'],
+                    ['Validator', '25,000 (staked)', 'Validate skill quality'],
+                    ['Governor', '100,000 (staked)', 'DAO voting'],
+                  ].map(([tier, balance, access]) => (
+                    <tr key={tier} style={{ borderTop: '1px solid var(--border)' }}>
+                      <td className="px-4 py-2 font-medium" style={h}>{tier}</td>
+                      <td className="px-4 py-2">{balance}</td>
+                      <td className="px-4 py-2">{access}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
             <p className="text-sm mt-4 mb-4" style={t}>
               When someone modifies your skill and publishes it:
             </p>
@@ -274,7 +303,7 @@ export default function Docs() {
               {[
                 { q: 'Do I need to install anything?', a: 'No. The Composer runs in your browser. When you click Run, a small script downloads that opens Claude Code. If Claude Code isn\'t installed, it auto-installs.' },
                 { q: 'Do I need crypto to try a skill?', a: 'No. Single skills are free, no wallet needed. You only need TRUST tokens to use the Composer (chaining skills together) and to publish on-chain.' },
-                { q: 'How do I get TRUST?', a: 'Publish skills that others use, validate skill quality, or earn royalties from derivatives. TRUST is earned, not bought.' },
+                { q: 'How do I get TRUST?', a: 'Earn TRUST by publishing skills, validating quality, or earning royalties from derivatives. You can also purchase TRUST tokens directly. Earned TRUST boosts your influence in validation and governance.' },
                 { q: 'What if someone copies my skill?', a: 'They can\'t copy your on-chain provenance, trust score, validation history, or composition references. A raw copy has none of that.' },
                 { q: 'What happens when I modify someone\'s skill?', a: 'It\'s tracked as a derivative. 15% of TRUST earned flows to the original author automatically via smart contract.' },
                 { q: 'What wallet do I need?', a: 'MetaMask, Coinbase Wallet, or any WalletConnect-compatible wallet. MetaMask creates one in your browser in under a minute.' },
