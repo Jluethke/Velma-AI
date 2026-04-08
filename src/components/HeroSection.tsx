@@ -1,120 +1,90 @@
-import { useState } from 'react';
-import InstallModal from './InstallModal';
+import { Link } from 'react-router-dom';
+import { ConnectButton } from '@rainbow-me/rainbowkit';
+import { useGateCheck } from '../hooks/useGateCheck';
 
 export default function HeroSection() {
-  const [showInstall, setShowInstall] = useState(false);
+  const { isConnected, isUnlocked } = useGateCheck();
 
   return (
-    <section className="relative min-h-screen flex flex-col items-center justify-center px-6 overflow-hidden">
-      {/* Animated gradient background */}
+    <section className="relative min-h-[85vh] flex flex-col items-center justify-center px-6 overflow-hidden">
+      {/* Background */}
       <div
-        className="absolute inset-0 animate-gradient"
+        className="absolute inset-0"
         style={{
-          background: 'radial-gradient(ellipse at 20% 50%, rgba(0, 255, 200, 0.06) 0%, transparent 50%), radial-gradient(ellipse at 80% 50%, rgba(170, 136, 255, 0.06) 0%, transparent 50%), radial-gradient(ellipse at 50% 100%, rgba(0, 255, 136, 0.04) 0%, transparent 50%)',
-          backgroundSize: '200% 200%',
-          animation: 'gradient-shift 8s ease infinite',
+          background: 'radial-gradient(ellipse at 20% 50%, rgba(0, 255, 200, 0.06) 0%, transparent 50%), radial-gradient(ellipse at 80% 50%, rgba(170, 136, 255, 0.06) 0%, transparent 50%)',
         }}
       />
 
-      {/* Content */}
       <div className="relative z-10 max-w-4xl mx-auto text-center">
         <h1
-          className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 animate-fade-in-up"
+          className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6"
           style={{ color: '#ffffff', lineHeight: 1.1 }}
         >
-          Make your AI{' '}
+          Build AI skill chains.{' '}
           <span className="block md:inline" style={{
-            background: 'linear-gradient(135deg, var(--cyan), var(--purple))',
+            background: 'linear-gradient(135deg, var(--cyan), var(--gold))',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
           }}>
-            actually reliable
+            Earn from them.
           </span>
         </h1>
 
         <p
-          className="text-base md:text-lg mb-10 max-w-2xl mx-auto animate-fade-in-up"
-          style={{ color: 'var(--text-secondary)', animationDelay: '0.15s' }}
+          className="text-base md:text-lg mb-10 max-w-2xl mx-auto"
+          style={{ color: 'var(--text-secondary)' }}
         >
-          Fix broken code automatically &middot; Validate outputs across models &middot; Run proven skills instead of guessing
+          176 AI skills you can try free. Chain them together in a visual composer.
+          Publish on-chain and earn TRUST tokens when others use your work.
         </p>
 
-        {/* Primary CTA — Try it now */}
-        <a
-          href="#live-demo"
-          onClick={(e) => {
-            e.preventDefault();
-            document.getElementById('live-demo')?.scrollIntoView({ behavior: 'smooth' });
-          }}
-          className="inline-flex items-center gap-3 px-8 py-4 rounded-xl no-underline cursor-pointer transition-all animate-fade-in-up animate-pulse-glow"
-          style={{
-            background: 'linear-gradient(135deg, rgba(0,255,200,0.15), rgba(170,136,255,0.15))',
-            border: '1px solid rgba(0,255,200,0.3)',
-            animationDelay: '0.3s',
-            color: 'var(--cyan)',
-          }}
-        >
-          <span className="text-sm md:text-base font-semibold">
-            Try it now
-          </span>
-        </a>
+        {/* CTAs */}
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-6">
+          {/* Primary: Open Composer (or Connect Wallet) */}
+          {isUnlocked ? (
+            <Link
+              to="/compose"
+              className="inline-flex items-center gap-3 px-8 py-4 rounded-xl no-underline cursor-pointer transition-all"
+              style={{
+                background: 'linear-gradient(135deg, rgba(0,255,200,0.15), rgba(170,136,255,0.15))',
+                border: '1px solid rgba(0,255,200,0.3)',
+                color: 'var(--cyan)',
+              }}
+            >
+              <span className="text-sm md:text-base font-semibold">
+                Open Composer
+              </span>
+            </Link>
+          ) : (
+            <div className="flex flex-col items-center gap-3">
+              <ConnectButton label="Connect Wallet to Compose" />
+              {isConnected && !isUnlocked && (
+                <span className="text-xs" style={{ color: 'var(--gold)' }}>
+                  You need TRUST tokens to unlock the composer
+                </span>
+              )}
+            </div>
+          )}
 
-        {/* Secondary CTA — Download */}
-        <div className="mt-4 animate-fade-in-up" style={{ animationDelay: '0.4s' }}>
-          <button
-            onClick={() => setShowInstall(true)}
-            className="text-xs no-underline cursor-pointer transition-colors bg-transparent border-0"
-            style={{ color: 'var(--text-secondary)' }}
-          >
-            or download SkillChain — it's free
-          </button>
-        </div>
-
-        {/* Powered by badge */}
-        <div
-          className="mt-6 animate-fade-in-up"
-          style={{ animationDelay: '0.5s' }}
-        >
-          <span
-            className="text-xs px-3 py-1 rounded-full"
+          {/* Secondary: Try a single skill free */}
+          <Link
+            to="/skill/budget-builder"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl no-underline cursor-pointer transition-all"
             style={{
-              background: 'rgba(170,136,255,0.08)',
-              border: '1px solid rgba(170,136,255,0.2)',
-              color: 'var(--purple)',
+              background: 'rgba(255,255,255,0.04)',
+              border: '1px solid var(--border)',
+              color: 'var(--text-secondary)',
             }}
           >
-            Powered by SkillChain
-          </span>
+            <span className="text-sm">Try a skill free</span>
+            <span style={{ color: 'var(--cyan)' }}>&rarr;</span>
+          </Link>
         </div>
-      </div>
 
-      {/* Stats bar */}
-      <div
-        className="relative z-10 mt-16 md:mt-24 w-full max-w-4xl mx-auto animate-fade-in-up"
-        style={{ animationDelay: '0.6s' }}
-      >
-        <div
-          className="flex flex-wrap items-center justify-center gap-4 md:gap-8 px-6 py-4 rounded-xl"
-          style={{
-            background: 'rgba(26, 26, 46, 0.6)',
-            border: '1px solid var(--border)',
-            backdropFilter: 'blur(10px)',
-          }}
-        >
-          {[
-            { value: '126+', label: 'Proven Skills', color: 'var(--cyan)' },
-            { value: '92+', label: 'Automated Workflows', color: 'var(--purple)' },
-          ].map((stat, i) => (
-            <div key={i} className="flex items-center gap-2 text-sm">
-              <span className="font-bold" style={{ color: stat.color }}>{stat.value}</span>
-              <span style={{ color: 'var(--text-secondary)' }}>{stat.label}</span>
-              {i < 1 && <span className="hidden md:inline ml-4" style={{ color: 'var(--border)' }}>&bull;</span>}
-            </div>
-          ))}
-        </div>
+        <p className="text-xs" style={{ color: 'rgba(255,255,255,0.25)' }}>
+          No account needed to try skills. Connect a wallet with TRUST to unlock chaining.
+        </p>
       </div>
-
-      {showInstall && <InstallModal onClose={() => setShowInstall(false)} />}
     </section>
   );
 }
