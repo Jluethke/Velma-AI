@@ -1,8 +1,12 @@
 /**
  * ChainComposer — Visual DAG editor for composing skill chains.
  * Uses @xyflow/react for the interactive graph canvas.
+ *
+ * - Loads ALL 176 marketplace skills from /skill-catalog.json
+ * - Nodes have top (input) and bottom (output) handles for drag-to-connect
+ * - Drag from bottom handle of one node to top handle of another to create flow
  */
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
   ReactFlow,
   Controls,
@@ -24,30 +28,7 @@ import SkillNodeComponent from '../components/SkillNode';
 import SkillPalette, { type PaletteSkill } from '../components/SkillPalette';
 
 // ---------------------------------------------------------------------------
-// Sample marketplace skills (loaded statically for now)
-// In production, this would come from the MCP server's list_skills
-// ---------------------------------------------------------------------------
-
-const SAMPLE_SKILLS: PaletteSkill[] = [
-  { name: 'budget-builder', domain: 'finance', description: 'Build a comprehensive budget', tags: ['money', 'budget'], inputs: ['income', 'fixed_expenses', 'variable_spending'], outputs: ['spending_snapshot', 'bleed_points', 'action_plan'] },
-  { name: 'career-pivot', domain: 'career', description: 'Plan a career transition', tags: ['career', 'job'], inputs: ['current_role', 'target_role', 'skills'], outputs: ['gap_analysis', 'transition_plan', 'timeline'] },
-  { name: 'resume-builder', domain: 'career', description: 'Build a targeted resume', tags: ['resume', 'job'], inputs: ['experience', 'target_role', 'skills'], outputs: ['resume_draft', 'keywords', 'formatting_tips'] },
-  { name: 'interview-prep', domain: 'career', description: 'Prepare for job interviews', tags: ['interview', 'practice'], inputs: ['target_role', 'company', 'resume'], outputs: ['question_bank', 'talking_points', 'practice_plan'] },
-  { name: 'api-design', domain: 'backend', description: 'Design production-grade APIs', tags: ['api', 'rest', 'graphql'], inputs: ['codebase_context', 'consumer_description', 'auth_requirements'], outputs: ['resource_model', 'endpoint_spec', 'openapi_spec', 'api_documentation'] },
-  { name: 'market-research', domain: 'business', description: 'Research your target market', tags: ['market', 'research'], inputs: ['industry', 'target_audience'], outputs: ['market_size', 'trends', 'competitors', 'opportunities'] },
-  { name: 'competitive-analysis', domain: 'business', description: 'Analyze competitors', tags: ['competition'], inputs: ['industry', 'competitors'], outputs: ['swot_matrix', 'positioning_map', 'differentiation_strategy'] },
-  { name: 'startup-validator', domain: 'business', description: 'Validate a startup idea', tags: ['startup', 'validation'], inputs: ['idea_description', 'target_audience'], outputs: ['validation_score', 'risk_assessment', 'next_steps'] },
-  { name: 'pricing-strategy', domain: 'business', description: 'Develop pricing strategy', tags: ['pricing'], inputs: ['product', 'market_data', 'costs'], outputs: ['pricing_model', 'tier_structure', 'revenue_projection'] },
-  { name: 'content-machine', domain: 'creative', description: 'Create content pipeline', tags: ['content', 'writing'], inputs: ['topic', 'audience', 'platform'], outputs: ['content_calendar', 'drafts', 'distribution_plan'] },
-  { name: 'debug-and-fix', domain: 'developer', description: 'Systematic bug diagnosis', tags: ['debug', 'fix'], inputs: ['error_description', 'codebase_context'], outputs: ['root_cause', 'fix_plan', 'test_cases'] },
-  { name: 'agent-workflow-designer', domain: 'ai', description: 'Design multi-agent workflows', tags: ['agent', 'workflow'], inputs: ['goal_description', 'constraints', 'available_tools'], outputs: ['goal_decomposition', 'agent_architecture', 'workflow_design'] },
-  { name: 'meal-planner', domain: 'health', description: 'Plan healthy meals', tags: ['meal', 'nutrition'], inputs: ['dietary_preferences', 'budget', 'household_size'], outputs: ['meal_plan', 'grocery_list', 'prep_schedule'] },
-  { name: 'am-i-okay', domain: 'life', description: 'Personal wellbeing check-in', tags: ['wellbeing', 'mental health'], inputs: ['current_state'], outputs: ['assessment', 'recommendations', 'resources'] },
-  { name: 'learn-anything', domain: 'education', description: 'Master any topic', tags: ['learning'], inputs: ['topic', 'current_level', 'available_time'], outputs: ['learning_path', 'resources', 'milestones'] },
-];
-
-// ---------------------------------------------------------------------------
-// Custom node type wrapper for ReactFlow
+// Custom node type — wraps SkillNodeComponent with ReactFlow handles
 // ---------------------------------------------------------------------------
 
 const nodeTypes: NodeTypes = {
@@ -64,6 +45,8 @@ const nodeTypes: NodeTypes = {
 // ---------------------------------------------------------------------------
 
 export default function ChainComposer() {
+  const [skills, setSkills] = useState<PaletteSkill[]>([]);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [nodes, setNodes] = useState<Node[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
   const [chainName, setChainName] = useState('my-chain');
@@ -71,6 +54,28 @@ export default function ChainComposer() {
   const [chainCategory, setChainCategory] = useState('general');
   const [exportJson, setExportJson] = useState<string | null>(null);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
+
+  // Load full skill catalog from static JSON
+  useEffect(() => {
+    fetch('/skill-catalog.json')
+      .then(res => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
+      .then((data: PaletteSkill[]) => {
+        setSkills(data);
+        setLoadError(null);
+      })
+      .catch(err => {
+        setLoadError(`Could not load skill catalog: ${err.message}`);
+        // Fallback: minimal set so composer is still usable
+        setSkills([
+          { name: 'budget-builder', domain: 'finance', description: 'Build a comprehensive budget', tags: ['money'], inputs: ['income', 'fixed_expenses'], outputs: ['spending_snapshot', 'action_plan'] },
+          { name: 'career-pivot', domain: 'career', description: 'Plan a career transition', tags: ['career'], inputs: ['current_role', 'target_role'], outputs: ['gap_analysis', 'transition_plan'] },
+          { name: 'am-i-okay', domain: 'life', description: 'Personal wellbeing check-in', tags: ['wellbeing'], inputs: ['current_state'], outputs: ['assessment', 'recommendations'] },
+        ]);
+      });
+  }, []);
 
   const onNodesChange: OnNodesChange = useCallback(
     (changes) => setNodes((nds) => applyNodeChanges(changes, nds)),
@@ -92,9 +97,9 @@ export default function ChainComposer() {
   );
 
   const handleAddSkill = useCallback((skill: PaletteSkill) => {
-    const id = `node-${Date.now()}`;
+    const id = `node-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
     const x = 300 + (nodes.length % 3) * 320;
-    const y = 80 + Math.floor(nodes.length / 3) * 220;
+    const y = 80 + Math.floor(nodes.length / 3) * 250;
 
     const newNode: Node = {
       id,
@@ -126,7 +131,7 @@ export default function ChainComposer() {
       errors.push('Chain name is required');
     }
 
-    // Cycle detection
+    // Cycle detection via topological sort
     const adjList = new Map<string, string[]>();
     const inDegree = new Map<string, number>();
     for (const node of nodes) {
@@ -148,8 +153,8 @@ export default function ChainComposer() {
         if (nd === 0) queue.push(next);
       }
     }
-    if (visited !== nodes.length) {
-      errors.push('Chain has a cycle');
+    if (visited !== nodes.length && nodes.length > 1) {
+      errors.push('Chain has a cycle — remove a connection');
     }
 
     setValidationErrors(errors);
@@ -207,7 +212,7 @@ export default function ChainComposer() {
   return (
     <div style={{ display: 'flex', height: 'calc(100vh - 60px)', marginTop: '60px' }}>
       {/* Left: Skill Palette */}
-      <SkillPalette skills={SAMPLE_SKILLS} onAddSkill={handleAddSkill} />
+      <SkillPalette skills={skills} onAddSkill={handleAddSkill} />
 
       {/* Center: Canvas + Controls */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
@@ -269,7 +274,7 @@ export default function ChainComposer() {
               outline: 'none',
             }}
           >
-            {['general', 'life', 'career', 'business', 'developer', 'health', 'finance', 'creative', 'education'].map(cat => (
+            {['general', 'life', 'career', 'business', 'developer', 'health', 'finance', 'creative', 'education', 'ai', 'real estate'].map(cat => (
               <option key={cat} value={cat}>{cat}</option>
             ))}
           </select>
@@ -326,6 +331,19 @@ export default function ChainComposer() {
           </span>
         </div>
 
+        {/* Load error */}
+        {loadError && (
+          <div style={{
+            padding: '6px 16px',
+            background: 'rgba(255,200,0,0.08)',
+            borderBottom: '1px solid rgba(255,200,0,0.2)',
+            fontSize: '12px',
+            color: '#ffc800',
+          }}>
+            {loadError} — showing fallback skills
+          </div>
+        )}
+
         {/* Validation errors */}
         {validationErrors.length > 0 && (
           <div style={{
@@ -367,6 +385,26 @@ export default function ChainComposer() {
           </ReactFlow>
         </div>
 
+        {/* Empty state hint */}
+        {nodes.length === 0 && (
+          <div style={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-20%, -50%)',
+            textAlign: 'center',
+            pointerEvents: 'none',
+          }}>
+            <div style={{ fontSize: '48px', marginBottom: '12px', opacity: 0.3 }}>&#x1F9E9;</div>
+            <div style={{ fontSize: '16px', color: 'rgba(255,255,255,0.25)', marginBottom: '6px' }}>
+              Click skills in the palette to add them
+            </div>
+            <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.15)' }}>
+              Drag from the <span style={{ color: 'var(--cyan)' }}>cyan dot</span> (bottom) to the <span style={{ color: '#ff6b6b' }}>red dot</span> (top) to connect
+            </div>
+          </div>
+        )}
+
         {/* Export panel */}
         {exportJson && (
           <div style={{
@@ -381,9 +419,7 @@ export default function ChainComposer() {
                 Exported Chain
               </span>
               <button
-                onClick={() => {
-                  navigator.clipboard.writeText(exportJson);
-                }}
+                onClick={() => { navigator.clipboard.writeText(exportJson); }}
                 style={{
                   padding: '2px 8px',
                   background: 'rgba(0,255,200,0.08)',

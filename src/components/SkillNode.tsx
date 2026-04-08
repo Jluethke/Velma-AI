@@ -1,8 +1,10 @@
 /**
  * SkillNode — custom node renderer for the visual chain composer.
- * Shows skill name, domain badge, and input/output ports.
+ * Shows skill name, domain badge, input/output ports, and ReactFlow handles
+ * for drag-to-connect between nodes.
  */
 import { memo } from 'react';
+import { Handle, Position } from '@xyflow/react';
 
 interface SkillNodeProps {
   data: {
@@ -21,15 +23,22 @@ const DOMAIN_COLORS: Record<string, string> = {
   business: '#a855f7',
   health: '#22c55e',
   developer: '#00bfff',
+  backend: '#00bfff',
   finance: '#ffd700',
+  money: '#ffd700',
   creative: '#ff69b4',
   education: '#00ffc8',
+  ai: '#a855f7',
   'real estate': '#ffa500',
   general: '#888',
 };
 
 function getDomainColor(domain: string): string {
-  return DOMAIN_COLORS[domain.toLowerCase()] ?? DOMAIN_COLORS.general;
+  const key = domain.toLowerCase();
+  for (const [k, v] of Object.entries(DOMAIN_COLORS)) {
+    if (key.includes(k)) return v;
+  }
+  return DOMAIN_COLORS.general;
 }
 
 function SkillNodeComponent({ data, selected }: SkillNodeProps) {
@@ -42,17 +51,31 @@ function SkillNodeComponent({ data, selected }: SkillNodeProps) {
         border: `2px solid ${selected ? 'var(--cyan)' : 'rgba(255,255,255,0.1)'}`,
         borderRadius: '12px',
         padding: '0',
-        minWidth: '200px',
+        minWidth: '220px',
+        maxWidth: '280px',
         fontFamily: 'monospace',
         boxShadow: selected ? '0 0 20px rgba(0,255,200,0.2)' : '0 4px 12px rgba(0,0,0,0.3)',
         transition: 'all 0.2s ease',
+        position: 'relative',
       }}
     >
+      {/* Input handle (top) — where incoming connections land */}
+      <Handle
+        type="target"
+        position={Position.Top}
+        style={{
+          background: '#ff6b6b',
+          border: '2px solid rgba(255,107,107,0.5)',
+          width: '12px',
+          height: '12px',
+          top: '-6px',
+        }}
+      />
+
       {/* Header */}
       <div
         style={{
-          padding: '8px 12px',
-          borderBottom: '1px solid rgba(255,255,255,0.08)',
+          padding: '10px 12px 6px',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
@@ -70,6 +93,7 @@ function SkillNodeComponent({ data, selected }: SkillNodeProps) {
             cursor: 'pointer',
             fontSize: '14px',
             padding: '0 2px',
+            lineHeight: 1,
           }}
           title="Remove skill"
         >
@@ -78,7 +102,7 @@ function SkillNodeComponent({ data, selected }: SkillNodeProps) {
       </div>
 
       {/* Domain badge */}
-      <div style={{ padding: '6px 12px' }}>
+      <div style={{ padding: '0 12px 6px' }}>
         <span
           style={{
             background: `${color}20`,
@@ -96,7 +120,7 @@ function SkillNodeComponent({ data, selected }: SkillNodeProps) {
       </div>
 
       {/* Ports */}
-      <div style={{ padding: '4px 12px 8px', display: 'flex', gap: '16px' }}>
+      <div style={{ padding: '4px 12px 10px', display: 'flex', gap: '16px' }}>
         {/* Inputs */}
         {data.inputs.length > 0 && (
           <div style={{ flex: 1 }}>
@@ -154,7 +178,27 @@ function SkillNodeComponent({ data, selected }: SkillNodeProps) {
             )}
           </div>
         )}
+
+        {/* Show hint if no inputs/outputs */}
+        {data.inputs.length === 0 && data.outputs.length === 0 && (
+          <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.25)', fontStyle: 'italic' }}>
+            No manifest data
+          </div>
+        )}
       </div>
+
+      {/* Output handle (bottom) — drag from here to connect to next skill */}
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        style={{
+          background: 'var(--cyan)',
+          border: '2px solid rgba(0,255,200,0.5)',
+          width: '12px',
+          height: '12px',
+          bottom: '-6px',
+        }}
+      />
     </div>
   );
 }
