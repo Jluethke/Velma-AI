@@ -77,7 +77,6 @@ export function usePublishSkill() {
           params.price,
           params.licenseType,
         ],
-        chainId: TARGET_CHAIN_ID,
       });
 
       setState({ status: 'confirming' });

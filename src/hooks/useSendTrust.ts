@@ -43,7 +43,6 @@ export function useSendTrust() {
         abi: SkillTokenABI,
         functionName: 'transfer',
         args: [to as `0x${string}`, parseUnits(amount, 18)],
-        chainId: TARGET_CHAIN_ID,
       });
 
       setState({ status: 'confirmed', txHash });
