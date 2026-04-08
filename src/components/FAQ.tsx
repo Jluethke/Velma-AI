@@ -3,39 +3,51 @@ import { useState } from 'react';
 const faqs = [
   {
     question: 'What is a skill?',
-    answer: 'A skill is a reusable AI procedure -- a structured set of steps that an AI agent can follow to accomplish a specific task. Examples: parsing SEC filings, generating test cases, summarizing research papers, automating deployment workflows. Skills are packaged as .skillpack bundles containing the procedure, test cases, and cryptographic provenance.',
+    answer: 'A skill is a structured AI procedure — a set of phases with quality gates that an AI follows step by step. Examples: building a budget, prepping for an interview, analyzing competitors, designing an API. Each skill has defined inputs, outputs, and validation criteria. Anyone can run a skill for free.',
+  },
+  {
+    question: 'What is a chain?',
+    answer: 'A chain is multiple skills connected together into a workflow. For example, a "Career Launchpad" chain runs resume-builder → interview-prep → salary-negotiator in sequence, passing context between each step. Chains are where the real value is — they produce outcomes no single skill can achieve alone.',
+  },
+  {
+    question: 'What is TRUST?',
+    answer: 'TRUST is the token that powers the SkillChain ecosystem, deployed on Base mainnet. You can earn TRUST by publishing skills, validating quality, or creating chains that others use. You can also buy TRUST to unlock features faster. Your TRUST balance determines your tier — from Explorer (free) to Governor (100K+).',
+  },
+  {
+    question: 'Do I need TRUST to try a skill?',
+    answer: 'No. Individual skills are free to run. You can browse all skills in the Composer and run any one of them without a wallet or tokens. TRUST is needed to chain skills together, publish on-chain, and access premium domains like engineering, AI, and legal.',
+  },
+  {
+    question: 'How do tiers work?',
+    answer: 'Your TRUST balance determines what you can do. Explorer (free): run individual skills. Builder (500 TRUST): chain skills together, save and schedule. Creator (2,500): publish on-chain, earn royalties. Validator (25K staked): validate skills for the network. Governor (100K staked): vote on protocol decisions.',
+  },
+  {
+    question: 'How do I earn TRUST?',
+    answer: 'Publish skills that others use (70% of earnings go to you). Validate skills for quality (15% of earnings). Create derivatives that improve on existing skills (original author gets 15% royalty automatically). All splits are enforced by smart contract — no middleman.',
+  },
+  {
+    question: 'Can I buy TRUST?',
+    answer: 'Yes. TRUST can be purchased to unlock features immediately. But earned TRUST carries more weight — it boosts your visibility in the marketplace, your priority in validator selection, and your influence in governance voting. Buying gets you access. Earning gets you influence.',
+  },
+  {
+    question: 'What happens when I modify someone\'s skill?',
+    answer: 'It\'s tracked as a derivative. When you publish it, 15% of all TRUST earned on your version flows to the original author — automatically, forever, via smart contract. This incentivizes creating skills worth building on.',
   },
   {
     question: 'How is quality enforced?',
-    answer: 'Shadow validation. Every published skill is tested by independent validators who run it 5 times against known-good outputs. Similarity is scored using a weighted combination of Jaccard (60%) and bigram (40%) metrics. Skills must achieve 75% match rate across shadow runs to pass. There are no star ratings, no reviews, no subjective judgments. Either the skill produces correct outputs or it does not.',
+    answer: 'Shadow validation. Validators run skills against test cases and measure output consistency. Skills must achieve 95%+ similarity across multiple runs to graduate. Only domain-competent validators can vote. Trust scores are computed mathematically from validation outcomes — not reviews, not star ratings.',
   },
   {
-    question: 'What makes this different from an app store?',
-    answer: 'Three things. First, quality is verified by testing, not reviews. Second, skills are owned by their creators and stored on IPFS -- they cannot be removed by a platform decision. Third, trust is computed mathematically from validation outcomes, not from download counts or user ratings. The network rewards competence, not popularity.',
+    question: 'What is skill evolution?',
+    answer: 'Skills evolve through validation: Prompt → Skill → Validated → Graduated → Compiled. A graduated skill has been proven consistent enough to compile into executable code — software that runs without an AI, with zero token cost. This is the endgame: language becomes code through consensus.',
   },
   {
-    question: 'Which AI agents and models are supported?',
-    answer: 'SkillChain is agent-agnostic by design. Skills are published in a universal .skillpack format that encodes the procedure, not the model dependency. During init you select your agent -- Claude, GPT, Gemini, Cursor, or any open-source model -- and the SDK handles format adaptation automatically. Claude is fully supported at launch. GPT, Gemini, and Cursor adapters ship Q4 2026. Any agent that can read structured procedures can use SkillChain skills today.',
+    question: 'Do I need to install anything?',
+    answer: 'The Composer runs entirely in your browser. When you click Run, a small script downloads that opens Claude Code on your machine. If Claude Code isn\'t installed, it installs automatically. No SDK required for basic usage.',
   },
   {
-    question: 'How does cross-agent compatibility work?',
-    answer: 'The .skillpack format is a structured procedure with test cases and provenance -- it does not depend on any specific model or runtime. When you import a skill, SkillChain adapts it to your agent\'s native format: .md files for Claude, action schemas for GPT, rule files for Cursor, or raw procedures for open-source models. A skill published by a Claude user can be imported and used by a GPT user without modification.',
-  },
-  {
-    question: 'How do I earn TRUST tokens?',
-    answer: 'Three ways: publish skills that others purchase (earn 70% of price), validate skills (earn 15% of purchase price), or contribute to governance and ecosystem development (grants from DAO treasury). There is no public sale and no way to buy tokens at launch. You earn them.',
-  },
-  {
-    question: 'Is this another crypto project?',
-    answer: 'SkillChain uses blockchain for what blockchain is good at: ownership, payments, and governance that no single party controls. The token economics are designed to align incentives around quality, not speculation. The 5% burn creates deflationary pressure. The anti-plutocratic voting formula (sqrt(stake) * trust^2) prevents whale capture. And the core innovation -- trust-weighted consensus -- is a patented algorithm backed by a working production system, not a whitepaper promise.',
-  },
-  {
-    question: 'What is ALG?',
-    answer: 'The Assured Learning Governor (ALG) is a patented governance framework developed by The Wayfinder Trust. It computes trust using exponential decay with EMA smoothing: trust drops fast on failure and recovers slowly through consistent quality. ALG was originally built for Velma, a 385K+ line cognitive OS, and has been running in production since late 2024. SkillChain adapts ALG as its consensus weight mechanism.',
-  },
-  {
-    question: 'When does it launch?',
-    answer: 'Testnet (Base Sepolia) and SDK in Q2 2026. Mainnet token launch and marketplace in Q3 2026. Cross-agent adapters in Q4 2026. See the whitepaper for the full roadmap.',
+    question: 'Is this a crypto project?',
+    answer: 'SkillChain uses blockchain for what it\'s good at: ownership, payments, and governance that no single party controls. The token economics reward contribution over speculation — earned TRUST has more influence than bought TRUST. The core innovation is trust-weighted consensus backed by deployed smart contracts on Base mainnet, not a whitepaper promise.',
   },
 ];
 
@@ -58,7 +70,7 @@ export default function FAQ() {
             className="rounded-lg overflow-hidden transition-colors"
             style={{
               background: openIndex === i ? 'var(--bg-card)' : 'transparent',
-              border: `1px solid ${openIndex === i ? 'rgba(0, 255, 200, 0.2)' : 'var(--border)'}`,
+              border: `1px solid ${openIndex === i ? 'var(--border)' : 'var(--border)'}`,
             }}
           >
             <button
