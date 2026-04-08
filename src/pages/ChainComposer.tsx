@@ -7,6 +7,8 @@
  * - Drag from bottom handle of one node to top handle of another to create flow
  */
 import { useState, useCallback, useEffect } from 'react';
+import { ConnectButton } from '@rainbow-me/rainbowkit';
+import { useGateCheck } from '../hooks/useGateCheck';
 import {
   ReactFlow,
   Controls,
@@ -81,6 +83,7 @@ function deleteChainFromStorage(name: string): void {
 
 export default function ChainComposer() {
   const [skills, setSkills] = useState<PaletteSkill[]>([]);
+  const { isConnected, isUnlocked, isLoading: gateLoading } = useGateCheck();
   const [loadError, setLoadError] = useState<string | null>(null);
   const [nodes, setNodes] = useState<Node[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
@@ -546,6 +549,57 @@ echo "  Session complete. Output saved in: $WORKSPACE"
     setValidationErrors([]);
   }, []);
 
+  // Gate: require wallet + TRUST to use the composer
+  if (!isConnected || !isUnlocked) {
+    return (
+      <div style={{
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        height: 'calc(100vh - 60px)', marginTop: '60px', padding: '40px',
+        background: '#0a0a0f',
+      }}>
+        <div style={{
+          maxWidth: '420px', textAlign: 'center',
+          background: 'var(--bg-card)', border: '1px solid var(--border)',
+          borderRadius: '16px', padding: '40px',
+        }}>
+          <div style={{ fontSize: '48px', marginBottom: '16px' }}>&#x1F9E9;</div>
+          <h2 style={{ color: '#fff', fontSize: '22px', marginBottom: '8px' }}>
+            Chain Composer
+          </h2>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '8px' }}>
+            Drag, drop, and connect skills to build custom chains.
+            Create new skills with natural language. Run interactively in Claude Code.
+          </p>
+
+          {!isConnected ? (
+            <>
+              <p style={{ color: 'var(--cyan)', fontSize: '13px', marginBottom: '20px' }}>
+                Connect your wallet to unlock the composer.
+              </p>
+              <ConnectButton />
+            </>
+          ) : !isUnlocked ? (
+            <>
+              <p style={{ color: 'var(--gold)', fontSize: '13px', marginBottom: '12px' }}>
+                You need TRUST tokens to use the chain composer.
+              </p>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '12px', marginBottom: '20px' }}>
+                Earn TRUST by publishing skills, validating for quality, or participating in governance. No public sale.
+              </p>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '11px' }}>
+                Want to try a single skill for free? Browse the <a href="/explore" style={{ color: 'var(--cyan)' }}>Skills</a> page.
+              </p>
+            </>
+          ) : null}
+
+          {gateLoading && (
+            <p style={{ color: 'var(--text-secondary)', fontSize: '12px' }}>Checking TRUST balance...</p>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={{ display: 'flex', height: 'calc(100vh - 60px)', marginTop: '60px' }}>
       {/* Left: Skill Palette */}
@@ -569,7 +623,7 @@ echo "  Session complete. Output saved in: $WORKSPACE"
             type="text"
             value={chainName}
             onChange={e => setChainName(e.target.value)}
-            placeholder="Chain name"
+            placeholder="Name your chain"
             style={{
               padding: '4px 8px',
               background: 'rgba(255,255,255,0.05)',
@@ -585,7 +639,7 @@ echo "  Session complete. Output saved in: $WORKSPACE"
             type="text"
             value={chainDescription}
             onChange={e => setChainDescription(e.target.value)}
-            placeholder="Description"
+            placeholder="What does this chain do?"
             style={{
               padding: '4px 8px',
               background: 'rgba(255,255,255,0.05)',

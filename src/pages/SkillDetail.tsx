@@ -246,6 +246,49 @@ export default function SkillDetail() {
           >
             {copyState === 'done' ? 'Copied!' : 'Copy CLI Command'}
           </button>
+
+          <button
+            onClick={() => {
+              if (!name) return;
+              const safeName = name.replace(/[^a-z0-9-]/gi, '-').toLowerCase();
+              const ts = new Date().toISOString().slice(0, 10);
+              const isWin = navigator.userAgent.includes('Windows');
+
+              const claudeMd = `# SkillChain: Run ${name}\n\nRun the **${name}** skill interactively.\n\n## Instructions\n\n1. Call \\\`start_skill_run\\\` with skill name "${name}"\n2. Call \\\`get_skill\\\` to read the full skill definition\n3. Ask me for any required inputs\n4. Execute each phase, calling \\\`record_phase\\\` after each\n5. Call \\\`complete_skill_run\\\` when done\n\nStart by reading the skill definition, then ask me for inputs.\n`;
+
+              if (isWin) {
+                const bat = `@echo off\ntitle SkillChain: ${safeName}\nset "WS=%USERPROFILE%\\SkillChain-Runs\\${safeName}-${ts}"\nif not exist "%WS%" mkdir "%WS%"\necho ${claudeMd.replace(/\n/g, '& echo.')}> "%WS%\\CLAUDE.md"\ncd /d "%WS%"\necho.\necho   Running ${name} in Claude Code...\necho.\nclaude\npause\n`;
+                const b = new Blob([bat], { type: 'application/bat' });
+                const u = URL.createObjectURL(b);
+                const a = document.createElement('a'); a.href = u; a.download = `Run-${safeName}.bat`;
+                document.body.appendChild(a); a.click(); document.body.removeChild(a);
+                URL.revokeObjectURL(u);
+              } else {
+                const sh = `#!/bin/bash\nWS="$HOME/SkillChain-Runs/${safeName}-${ts}"\nmkdir -p "$WS"\ncat > "$WS/CLAUDE.md" << 'EOF'\n# SkillChain: Run ${name}\n\nRun the **${name}** skill interactively.\n\n## Instructions\n\n1. Call \\\`start_skill_run\\\` with skill name "${name}"\n2. Call \\\`get_skill\\\` to read the full skill definition\n3. Ask me for any required inputs\n4. Execute each phase, calling \\\`record_phase\\\` after each\n5. Call \\\`complete_skill_run\\\` when done\n\nStart by reading the skill definition, then ask me for inputs.\nEOF\ncd "$WS"\necho "Running ${name} in Claude Code..."\nclaude\n`;
+                const b = new Blob([sh], { type: 'application/x-sh' });
+                const u = URL.createObjectURL(b);
+                const a = document.createElement('a'); a.href = u; a.download = `Run-${safeName}.sh`;
+                document.body.appendChild(a); a.click(); document.body.removeChild(a);
+                URL.revokeObjectURL(u);
+              }
+            }}
+            className="px-5 py-2.5 rounded-lg text-sm font-semibold cursor-pointer transition-all flex-1 sm:flex-none"
+            style={{
+              background: 'rgba(0, 200, 255, 0.1)',
+              border: '1px solid rgba(0, 200, 255, 0.25)',
+              color: '#00c8ff',
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.background = 'rgba(0, 200, 255, 0.18)';
+              e.currentTarget.style.boxShadow = '0 0 20px rgba(0, 200, 255, 0.1)';
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.background = 'rgba(0, 200, 255, 0.1)';
+              e.currentTarget.style.boxShadow = 'none';
+            }}
+          >
+            Run in Claude
+          </button>
         </div>
 
         {/* CLI code block */}
