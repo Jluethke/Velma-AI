@@ -18,7 +18,7 @@ if /i not "%CONFIRM%"=="y" (
 )
 
 echo.
-echo   [1/4] Removing Claude Code integration...
+echo   [1/6] Removing Claude Code integration...
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
   "$settingsPath = Join-Path $env:USERPROFILE '.claude\settings.json'; " ^
   "if (Test-Path $settingsPath) { " ^
@@ -34,7 +34,25 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command ^
   "  Write-Host '  Claude settings.json not found.'; " ^
   "}"
 
-echo   [2/4] Removing PATH entry...
+echo   [2/6] Removing CLAUDE.md instructions...
+powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+  "$mdPath = Join-Path $env:USERPROFILE '.claude\CLAUDE.md'; " ^
+  "if (Test-Path $mdPath) { " ^
+  "  $content = Get-Content $mdPath -Raw; " ^
+  "  $cleaned = $content -replace '(?s)## SkillChain AI Skill Marketplace.*?(?=\r?\n## |\z)', ''; " ^
+  "  $cleaned = $cleaned.Trim(); " ^
+  "  if ($cleaned) { " ^
+  "    Set-Content $mdPath -Value $cleaned -Encoding UTF8; " ^
+  "    Write-Host '  Cleaned SkillChain from CLAUDE.md'; " ^
+  "  } else { " ^
+  "    Remove-Item $mdPath; " ^
+  "    Write-Host '  Removed empty CLAUDE.md'; " ^
+  "  } " ^
+  "} else { " ^
+  "  Write-Host '  CLAUDE.md not found.'; " ^
+  "}"
+
+echo   [3/6] Removing PATH entry...
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
   "$binDir = Join-Path $env:USERPROFILE '.skillchain\bin'; " ^
   "$currentPath = [Environment]::GetEnvironmentVariable('Path', 'User'); " ^
@@ -46,7 +64,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command ^
   "  Write-Host '  Not on PATH.'; " ^
   "}"
 
-echo   [3/4] Removing SkillChain directory...
+echo   [4/6] Removing SkillChain directory...
 set "SC_DIR=%USERPROFILE%\.skillchain"
 if exist "%SC_DIR%" (
     rmdir /s /q "%SC_DIR%"
@@ -55,7 +73,7 @@ if exist "%SC_DIR%" (
     echo   Directory not found.
 )
 
-echo   [4/5] Removing from Add/Remove Programs...
+echo   [5/6] Removing from Add/Remove Programs...
 reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall\SkillChain" /f >nul 2>&1
 if %errorlevel% equ 0 (
     echo   Registry entry removed.
@@ -63,7 +81,7 @@ if %errorlevel% equ 0 (
     echo   Registry entry not found.
 )
 
-echo   [5/5] Uninstalling pip package...
+echo   [6/6] Uninstalling pip package...
 pip uninstall skillchain -y --quiet 2>nul
 if %errorlevel% equ 0 (
     echo   Package removed.
@@ -77,10 +95,12 @@ echo   SkillChain has been uninstalled.
 echo   ========================================
 echo.
 echo   What was removed:
-echo     - MCP server from Claude Code
+echo     - MCP server from Claude Code settings
+echo     - SkillChain instructions from CLAUDE.md
 echo     - ~/.skillchain/ directory
 echo     - skillchain pip package
 echo     - PATH entry
+echo     - Add/Remove Programs registry entry
 echo.
 echo   What was NOT removed:
 echo     - Your wallet and TRUST tokens
