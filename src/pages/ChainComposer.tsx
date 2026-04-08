@@ -158,8 +158,8 @@ export default function ChainComposer() {
   );
 
   const handleAddSkill = useCallback((skill: PaletteSkill) => {
-    // Free users: 1 skill max. Premium: unlimited.
-    if (!isPremium && nodes.length >= 1) {
+    // Free users: 3 skills max (enough to see the value of chaining). Premium: unlimited.
+    if (!isPremium && nodes.length >= 3) {
       showTrustToast();
       return;
     }
