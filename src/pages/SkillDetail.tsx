@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useSkill, useSkills } from '../hooks/useSkills';
 import { useGateCheck } from '../hooks/useGateCheck';
@@ -18,12 +18,46 @@ function SkeletonBlock({ className }: { className?: string }) {
   );
 }
 
+/** Toast banner for tier-gating messages */
+function ToastBanner({ message, onDismiss }: { message: string; onDismiss: () => void }) {
+  useEffect(() => {
+    const t = setTimeout(onDismiss, 5000);
+    return () => clearTimeout(t);
+  }, [onDismiss]);
+
+  return (
+    <div
+      className="fixed top-6 left-1/2 z-[999] animate-fade-in-up"
+      style={{ transform: 'translateX(-50%)', maxWidth: '90vw' }}
+    >
+      <div
+        className="glass-card flex items-center gap-3 px-5 py-3 rounded-xl text-sm"
+        style={{
+          color: 'var(--gold)',
+          border: '1px solid rgba(255,215,0,0.3)',
+        }}
+      >
+        <span style={{ fontSize: '1.1em' }}>&#x1f512;</span>
+        <span>{message}</span>
+        <button
+          onClick={onDismiss}
+          className="ml-2 cursor-pointer"
+          style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', fontSize: '16px' }}
+        >
+          &times;
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function SkillDetail() {
   const { name } = useParams<{ name: string }>();
   const { data: skillData, isLoading: skillLoading } = useSkill(name || '');
   const { data: allSkills } = useSkills();
   const { canChain, canPublish } = useGateCheck();
   const [showRunner, setShowRunner] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
 
   // Find the matching skill from the list for metadata (domain, tags, license, etc.)
   const skillMeta = useMemo(() => {
@@ -69,19 +103,8 @@ export default function SkillDetail() {
         </p>
         <Link
           to="/skills"
-          className="inline-block mt-8 px-6 py-3 rounded-lg text-sm no-underline transition-all"
-          style={{
-            border: '1px solid var(--border)',
-            color: 'var(--cyan)',
-          }}
-          onMouseEnter={e => {
-            e.currentTarget.style.borderColor = 'rgba(0, 255, 200, 0.4)';
-            e.currentTarget.style.boxShadow = '0 0 20px rgba(0, 255, 200, 0.1)';
-          }}
-          onMouseLeave={e => {
-            e.currentTarget.style.borderColor = 'var(--border)';
-            e.currentTarget.style.boxShadow = 'none';
-          }}
+          className="btn-secondary inline-block mt-8 px-6 py-3 text-sm no-underline"
+          style={{ color: 'var(--cyan)' }}
         >
           Back to Skills
         </Link>
@@ -102,10 +125,13 @@ export default function SkillDetail() {
 
   return (
     <div className="min-h-screen pt-24 px-6 pb-20 max-w-5xl mx-auto">
+      {/* Toast banner for tier gating */}
+      {toast && <ToastBanner message={toast} onDismiss={() => setToast(null)} />}
+
       {/* Back link */}
       <Link
         to="/skills"
-        className="inline-flex items-center gap-1.5 text-xs no-underline mb-8 transition-colors"
+        className="inline-flex items-center gap-1.5 text-xs no-underline mb-8 transition-colors animate-fade-in-up"
         style={{ color: 'var(--text-secondary)' }}
         onMouseEnter={e => (e.currentTarget.style.color = 'var(--cyan)')}
         onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-secondary)')}
@@ -115,15 +141,12 @@ export default function SkillDetail() {
       </Link>
 
       {/* Header */}
-      <h1
-        className="text-3xl md:text-4xl font-bold mb-4"
-        style={{ color: 'var(--cyan)', textShadow: '0 0 40px rgba(0, 255, 200, 0.15)' }}
-      >
+      <h1 className="text-3xl md:text-4xl font-bold mb-4 gradient-text animate-fade-in-up stagger-1">
         {skillMeta.name}
       </h1>
 
       {/* Badges */}
-      <div className="flex flex-wrap items-center gap-2 mb-6">
+      <div className="flex flex-wrap items-center gap-2 mb-6 animate-fade-in-up stagger-2">
         <Badge label={skillMeta.domain} variant="domain" />
         <Badge label={skillMeta.license} variant={licenseVariant} />
         <span
@@ -138,13 +161,7 @@ export default function SkillDetail() {
       </div>
 
       {/* Run Section */}
-      <div
-        className="rounded-xl p-6 mb-8"
-        style={{
-          background: 'var(--bg-card)',
-          border: '1px solid var(--border)',
-        }}
-      >
+      <div className="glass-card rounded-xl p-6 mb-8 animate-fade-in-up stagger-3">
         <h2
           className="text-xs font-semibold uppercase tracking-wider mb-2"
           style={{ color: 'var(--text-secondary)' }}
@@ -152,7 +169,7 @@ export default function SkillDetail() {
           Try this skill
         </h2>
         <p className="text-xs mb-4" style={{ color: 'var(--text-secondary)' }}>
-          Downloads a small launcher script. Double-click to run this skill interactively in Claude Code.
+          Run this skill directly in your browser. An AI assistant will guide you through it interactively.
         </p>
 
         <div className="flex flex-col sm:flex-row gap-3 mb-4">
@@ -162,29 +179,17 @@ export default function SkillDetail() {
               // Check if this skill requires TRUST
               const domain = skillMeta.domain?.toLowerCase() || '';
               if (CREATOR_DOMAINS.has(domain) && !canPublish) {
-                alert('Creator tier (2,500 TRUST) required for Legal & Meta skills');
+                setToast('Creator tier (2,500 TRUST) required for Legal & Meta skills');
                 return;
               }
               if (BUILDER_DOMAINS.has(domain) && !canChain) {
-                alert('Builder tier (500 TRUST) required for Engineering & AI skills');
+                setToast('Builder tier (500 TRUST) required for Engineering & AI skills');
                 return;
               }
               setShowRunner(true);
             }}
-            className="px-6 py-3 rounded-lg text-sm font-semibold cursor-pointer transition-all"
-            style={{
-              background: 'linear-gradient(135deg, rgba(0,200,255,0.12), rgba(0,255,200,0.12))',
-              border: '1px solid rgba(0,200,255,0.3)',
-              color: 'var(--cyan)',
-            }}
-            onMouseEnter={e => {
-              e.currentTarget.style.boxShadow = '0 0 20px rgba(0, 200, 255, 0.15)';
-              e.currentTarget.style.transform = 'translateY(-1px)';
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.boxShadow = 'none';
-              e.currentTarget.style.transform = 'translateY(0)';
-            }}
+            className="btn-primary px-6 py-3 text-sm font-semibold cursor-pointer w-full sm:w-auto"
+            style={{ color: 'var(--cyan)' }}
           >
             {(() => {
               const domain = skillMeta?.domain?.toLowerCase() || '';
@@ -196,12 +201,8 @@ export default function SkillDetail() {
 
           <Link
             to="/compose"
-            className="px-6 py-3 rounded-lg text-sm font-semibold cursor-pointer transition-all no-underline text-center"
-            style={{
-              background: 'rgba(255,215,0,0.08)',
-              border: '1px solid rgba(255,215,0,0.2)',
-              color: 'var(--gold)',
-            }}
+            className="btn-secondary px-6 py-3 text-sm font-semibold cursor-pointer no-underline text-center w-full sm:w-auto"
+            style={{ color: 'var(--gold)' }}
           >
             Connect with other skills &rarr;
           </Link>
@@ -213,13 +214,7 @@ export default function SkillDetail() {
       </div>
 
       {/* Description */}
-      <div
-        className="rounded-xl p-6 mb-8"
-        style={{
-          background: 'var(--bg-card)',
-          border: '1px solid var(--border)',
-        }}
-      >
+      <div className="glass-card rounded-xl p-6 mb-8 animate-fade-in-up stagger-4">
         <h2
           className="text-xs font-semibold uppercase tracking-wider mb-3"
           style={{ color: 'var(--text-secondary)' }}
@@ -233,13 +228,7 @@ export default function SkillDetail() {
 
       {/* Tags */}
       {skillMeta.tags.length > 0 && (
-        <div
-          className="rounded-xl p-6 mb-8"
-          style={{
-            background: 'var(--bg-card)',
-            border: '1px solid var(--border)',
-          }}
-        >
+        <div className="glass-card rounded-xl p-6 mb-8 animate-fade-in-up stagger-5">
           <h2
             className="text-xs font-semibold uppercase tracking-wider mb-3"
             style={{ color: 'var(--text-secondary)' }}
@@ -265,13 +254,7 @@ export default function SkillDetail() {
       )}
 
       {/* Creator */}
-      <div
-        className="rounded-xl p-6 mb-8"
-        style={{
-          background: 'var(--bg-card)',
-          border: '1px solid var(--border)',
-        }}
-      >
+      <div className="glass-card rounded-xl p-6 mb-8 animate-fade-in-up">
         <h2
           className="text-xs font-semibold uppercase tracking-wider mb-3"
           style={{ color: 'var(--text-secondary)' }}
@@ -299,7 +282,7 @@ export default function SkillDetail() {
 
       {/* Related Skills */}
       {relatedSkills.length > 0 && (
-        <div>
+        <div className="animate-fade-in-up">
           <h2
             className="text-xs font-semibold uppercase tracking-wider mb-4"
             style={{ color: 'var(--text-secondary)' }}
@@ -314,21 +297,7 @@ export default function SkillDetail() {
                 <Link
                   key={rs.name}
                   to={`/skill/${rs.name}`}
-                  className="no-underline p-5 rounded-xl transition-all block"
-                  style={{
-                    background: 'var(--bg-card)',
-                    border: '1px solid var(--border)',
-                  }}
-                  onMouseEnter={e => {
-                    e.currentTarget.style.borderColor = 'rgba(0, 255, 200, 0.3)';
-                    e.currentTarget.style.boxShadow = '0 0 25px rgba(0, 255, 200, 0.06)';
-                    e.currentTarget.style.transform = 'translateY(-2px)';
-                  }}
-                  onMouseLeave={e => {
-                    e.currentTarget.style.borderColor = 'var(--border)';
-                    e.currentTarget.style.boxShadow = 'none';
-                    e.currentTarget.style.transform = 'translateY(0)';
-                  }}
+                  className="glass-card no-underline p-5 rounded-xl block"
                 >
                   <div className="flex items-start justify-between mb-2">
                     <h3 className="text-sm font-semibold" style={{ color: 'var(--cyan)' }}>

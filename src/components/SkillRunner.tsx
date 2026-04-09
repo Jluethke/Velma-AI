@@ -36,26 +36,37 @@ export default function SkillRunner({ skillName, skillDescription, onClose }: Sk
   return (
     <div
       className="fixed inset-0 z-[998] flex items-end sm:items-center justify-center"
-      style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}
+      style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' }}
       onClick={onClose}
     >
       <div
-        className="w-full sm:max-w-2xl sm:rounded-2xl rounded-t-2xl flex flex-col"
+        className="glass-card w-full sm:max-w-2xl sm:rounded-2xl rounded-t-2xl flex flex-col animate-fade-in-up"
         style={{
-          background: 'var(--bg-card)',
-          border: '1px solid var(--border)',
-          maxHeight: '85vh',
-          height: '85vh',
+          maxHeight: '100vh',
+          height: '100dvh',
+          borderTop: '2px solid rgba(56, 189, 248, 0.3)',
         }}
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: '1px solid var(--border)' }}>
+        <div
+          className="flex items-center justify-between px-5 py-3.5 shrink-0"
+          style={{
+            borderBottom: '1px solid var(--border)',
+            background: 'linear-gradient(135deg, rgba(56,189,248,0.04), rgba(167,139,250,0.04))',
+          }}
+        >
           <div>
-            <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+            <span className="text-sm font-semibold gradient-text">
               {skillName}
             </span>
-            <span className="text-xs ml-2" style={{ color: state.status === 'streaming' ? 'var(--cyan)' : 'var(--text-secondary)' }}>
+            <span
+              className="text-xs ml-2"
+              style={{
+                color: state.status === 'streaming' ? 'var(--cyan)' : 'var(--text-secondary)',
+                ...(state.status === 'streaming' ? { animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite' } : {}),
+              }}
+            >
               {state.status === 'streaming' ? 'running...' : state.status === 'waiting' ? 'your turn' : state.status === 'error' ? 'error' : state.status === 'idle' ? 'starting...' : 'done'}
             </span>
           </div>
@@ -63,16 +74,16 @@ export default function SkillRunner({ skillName, skillDescription, onClose }: Sk
             {state.status === 'streaming' && (
               <button
                 onClick={stop}
-                className="text-xs px-3 py-1 rounded cursor-pointer"
-                style={{ background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.2)', color: 'var(--red)' }}
+                className="btn-secondary text-xs px-3 py-1.5 cursor-pointer"
+                style={{ color: 'var(--red)', borderColor: 'rgba(248,113,113,0.3)' }}
               >
                 Stop
               </button>
             )}
             <button
               onClick={onClose}
-              className="text-xs px-3 py-1 rounded cursor-pointer"
-              style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', color: 'var(--text-secondary)' }}
+              className="btn-secondary text-xs px-3 py-1.5 cursor-pointer"
+              style={{ color: 'var(--text-secondary)' }}
             >
               Close
             </button>
@@ -84,11 +95,20 @@ export default function SkillRunner({ skillName, skillDescription, onClose }: Sk
           {state.messages.map((msg, i) => (
             <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
               <div
-                className="rounded-xl px-4 py-3 text-sm leading-relaxed"
+                className="rounded-2xl px-4 py-3 text-sm leading-relaxed"
                 style={{
                   maxWidth: '85%',
-                  background: msg.role === 'user' ? 'var(--cyan)' : 'var(--bg-secondary)',
-                  color: msg.role === 'user' ? 'var(--bg-primary)' : 'var(--text-primary)',
+                  ...(msg.role === 'user'
+                    ? {
+                        background: 'linear-gradient(135deg, rgba(56,189,248,0.15), rgba(0,255,200,0.1))',
+                        border: '1px solid rgba(56,189,248,0.2)',
+                        color: 'var(--text-primary)',
+                      }
+                    : {
+                        background: 'var(--bg-secondary)',
+                        border: '1px solid var(--border)',
+                        color: 'var(--text-primary)',
+                      }),
                   whiteSpace: 'pre-wrap',
                   wordBreak: 'break-word',
                 }}
@@ -98,8 +118,31 @@ export default function SkillRunner({ skillName, skillDescription, onClose }: Sk
             </div>
           ))}
 
+          {state.status === 'streaming' && (
+            <div className="flex justify-start">
+              <div
+                className="rounded-2xl px-4 py-3 text-xs"
+                style={{
+                  background: 'var(--bg-secondary)',
+                  border: '1px solid var(--border)',
+                  color: 'var(--text-secondary)',
+                  animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                }}
+              >
+                AI is working...
+              </div>
+            </div>
+          )}
+
           {state.status === 'error' && (
-            <div className="text-xs p-3 rounded-lg" style={{ background: 'rgba(248,113,113,0.08)', color: 'var(--red)', border: '1px solid rgba(248,113,113,0.15)' }}>
+            <div
+              className="text-xs p-3 rounded-xl"
+              style={{
+                background: 'rgba(248,113,113,0.08)',
+                color: 'var(--red)',
+                border: '1px solid rgba(248,113,113,0.15)',
+              }}
+            >
               {state.error}
             </div>
           )}
@@ -109,7 +152,13 @@ export default function SkillRunner({ skillName, skillDescription, onClose }: Sk
 
         {/* Input */}
         {(state.status === 'waiting' || state.status === 'error') && (
-          <div className="px-4 py-3 flex gap-2" style={{ borderTop: '1px solid var(--border)' }}>
+          <div
+            className="px-4 py-3 flex gap-2 shrink-0"
+            style={{
+              borderTop: '1px solid var(--border)',
+              paddingBottom: 'max(12px, env(safe-area-inset-bottom))',
+            }}
+          >
             <input
               type="text"
               value={input}
@@ -117,25 +166,30 @@ export default function SkillRunner({ skillName, skillDescription, onClose }: Sk
               onKeyDown={e => e.key === 'Enter' && handleSend()}
               placeholder="Type your response..."
               autoFocus
+              className="flex-1"
               style={{
-                flex: 1,
-                padding: '10px 14px',
+                padding: '12px 16px',
                 background: 'var(--bg-secondary)',
                 border: '1px solid var(--border)',
-                borderRadius: '10px',
+                borderRadius: '14px',
                 color: 'var(--text-primary)',
-                fontSize: '14px',
+                fontSize: '16px',
                 outline: 'none',
               }}
             />
             <button
               onClick={handleSend}
               disabled={!input.trim()}
-              className="px-4 rounded-lg text-sm font-semibold cursor-pointer"
+              className={`px-5 rounded-xl text-sm font-semibold cursor-pointer ${input.trim() ? 'btn-primary' : ''}`}
               style={{
-                background: input.trim() ? 'var(--cyan)' : 'var(--bg-secondary)',
-                color: input.trim() ? 'var(--bg-primary)' : 'var(--text-secondary)',
-                border: 'none',
+                ...(!input.trim()
+                  ? {
+                      background: 'var(--bg-secondary)',
+                      color: 'var(--text-secondary)',
+                      border: '1px solid var(--border)',
+                      borderRadius: '14px',
+                    }
+                  : { color: 'var(--cyan)' }),
               }}
             >
               Send
@@ -144,11 +198,36 @@ export default function SkillRunner({ skillName, skillDescription, onClose }: Sk
         )}
 
         {state.status === 'streaming' && (
-          <div className="px-4 py-2 text-center" style={{ borderTop: '1px solid var(--border)' }}>
-            <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>AI is working...</span>
+          <div
+            className="px-4 py-3 text-center shrink-0"
+            style={{
+              borderTop: '1px solid var(--border)',
+              paddingBottom: 'max(12px, env(safe-area-inset-bottom))',
+            }}
+          >
+            <span
+              className="text-xs"
+              style={{
+                color: 'var(--cyan)',
+                animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+              }}
+            >
+              AI is working...
+            </span>
           </div>
         )}
       </div>
+
+      {/* Mobile: full-screen override */}
+      <style>{`
+        @media (max-width: 639px) {
+          .glass-card[style] {
+            border-radius: 0 !important;
+            max-height: 100dvh !important;
+            height: 100dvh !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }
