@@ -69,11 +69,11 @@ export default function HeroSection() {
           <span style={{ color: 'var(--text-primary)' }}>Create AI Flows.</span>
           <br />
           <span
-            className="animate-shimmer gradient-text-gold"
+            className="animate-shimmer gradient-text"
             style={{
               display: 'inline-block',
               marginTop: '0.1em',
-              filter: 'drop-shadow(0 0 20px rgba(251, 191, 36, 0.15))',
+              filter: 'drop-shadow(0 0 20px rgba(56, 189, 248, 0.2))',
             }}
           >
             Built on TRUST.

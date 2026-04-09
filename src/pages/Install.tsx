@@ -12,7 +12,7 @@ function detectPlatform(): Platform {
 
 const MCP_URL = 'https://flowfabric.io/api/mcp';
 
-const CLAUDE_WEB_LINK = `https://claude.ai/settings/integrations/add?url=${encodeURIComponent(MCP_URL)}&name=${encodeURIComponent('FlowFabric Flows')}`;
+const CLAUDE_WEB_LINK = 'https://claude.ai/settings/connectors?modal=add-custom-connector';
 
 const DESKTOP_CONFIG = {
   mcpServers: {
@@ -292,14 +292,37 @@ export default function Install() {
               className="text-sm mb-6"
               style={{ color: 'var(--text-secondary)' }}
             >
-              One click — opens Claude and adds FlowFabric as an integration.
+              Two steps — open Claude settings, paste one URL. Under 30 seconds.
             </p>
 
             <div style={stepStyle}>
               <div style={stepNumber}>1</div>
               <div>
                 <p className="text-sm mb-3" style={{ color: 'var(--text-primary)' }}>
-                  Click the button below to open Claude with FlowFabric pre-configured:
+                  Copy the FlowFabric connector URL:
+                </p>
+                <div className="flex items-center gap-2 mb-3">
+                  <code
+                    className="text-xs px-3 py-2 rounded-lg flex-1"
+                    style={{ background: 'var(--bg-secondary)', color: 'var(--cyan)', border: '1px solid var(--border)', wordBreak: 'break-all' }}
+                  >
+                    {MCP_URL}
+                  </code>
+                  <button
+                    onClick={() => copyToClipboard(MCP_URL, setCopied)}
+                    style={{ ...btnPrimary, padding: '8px 16px' }}
+                  >
+                    {copied ? 'Copied!' : 'Copy'}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div style={stepStyle}>
+              <div style={stepNumber}>2</div>
+              <div>
+                <p className="text-sm mb-3" style={{ color: 'var(--text-primary)' }}>
+                  Open Claude's connector settings and paste the URL:
                 </p>
                 <a
                   href={CLAUDE_WEB_LINK}
@@ -307,21 +330,10 @@ export default function Install() {
                   rel="noopener noreferrer"
                   style={btnPrimary}
                 >
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-                    <polyline points="15 3 21 3 21 9" />
-                    <line x1="10" y1="14" x2="21" y2="3" />
-                  </svg>
-                  Add to Claude
+                  Open Claude Settings &rarr;
                 </a>
-              </div>
-            </div>
-
-            <div style={stepStyle}>
-              <div style={stepNumber}>2</div>
-              <div>
-                <p className="text-sm" style={{ color: 'var(--text-primary)' }}>
-                  Confirm the integration in Claude's settings when prompted.
+                <p className="text-xs mt-2" style={{ color: 'var(--text-secondary)' }}>
+                  Click "Add custom connector" → paste the URL → confirm.
                 </p>
               </div>
             </div>
@@ -330,13 +342,22 @@ export default function Install() {
               <div style={stepNumber}>3</div>
               <div>
                 <p className="text-sm" style={{ color: 'var(--text-primary)' }}>
-                  Start a new conversation and ask Claude to use FlowFabric — for example:
+                  Start a new conversation and ask Claude to use FlowFabric:
                 </p>
-                <p
-                  className="text-sm mt-2 italic"
-                  style={{ color: 'var(--text-secondary)' }}
-                >
+                <p className="text-sm mt-2 italic" style={{ color: 'var(--text-secondary)' }}>
                   "Help me build a monthly budget" or "Search FlowFabric flows for career coaching"
+                </p>
+              </div>
+            </div>
+
+            <div style={{ ...stepStyle, marginTop: '24px', borderTop: '1px solid var(--border)', paddingTop: '20px' }}>
+              <div style={{ ...stepNumber, background: 'rgba(248,113,113,0.1)', color: 'var(--red)', borderColor: 'rgba(248,113,113,0.3)' }}>✕</div>
+              <div>
+                <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+                  To disconnect FlowFabric
+                </p>
+                <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>
+                  Go to <a href="https://claude.ai/settings/connectors" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--cyan)' }}>Claude Settings → Connectors</a> → find FlowFabric → click Remove.
                 </p>
               </div>
             </div>
