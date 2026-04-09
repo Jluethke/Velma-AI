@@ -38,8 +38,6 @@ import { SkillEvolution } from "./skill-evolution.js";
 // Paths
 // ---------------------------------------------------------------------------
 
-const SKILLS_DIR_CLAUDE = join(homedir(), ".claude", "skills");
-const SKILLS_DIR_SC = join(homedir(), ".skillchain", "skills");
 
 // Marketplace can be: bundled with the package, or in ~/.skillchain/marketplace
 function findMarketplace(): string {
@@ -64,13 +62,6 @@ const CHAINS_DIR = join(MARKETPLACE_DIR, "chains");
 
 function installedSkills(): Map<string, string> {
   const skills = new Map<string, string>(); // name -> path
-  for (const dir of [SKILLS_DIR_CLAUDE, SKILLS_DIR_SC]) {
-    if (existsSync(dir)) {
-      for (const f of readdirSync(dir)) {
-        if (f.endsWith(".md")) skills.set(f.replace(/\.md$/, ""), join(dir, f));
-      }
-    }
-  }
   if (existsSync(MARKETPLACE_DIR)) {
     for (const d of readdirSync(MARKETPLACE_DIR)) {
       const skillMd = join(MARKETPLACE_DIR, d, "skill.md");
