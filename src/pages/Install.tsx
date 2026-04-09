@@ -27,18 +27,6 @@ const DESKTOP_CONFIG_LOCAL = {
 // Use local npx install — faster, auto-updates, works offline for cached flows
 const DESKTOP_CONFIG = DESKTOP_CONFIG_LOCAL;
 
-function configPath(platform: Platform) {
-  switch (platform) {
-    case 'mac':
-      return '~/Library/Application Support/Claude/claude_desktop_config.json';
-    case 'windows':
-      return '%APPDATA%\\Claude\\claude_desktop_config.json';
-    case 'linux':
-      return '~/.config/Claude/claude_desktop_config.json';
-    default:
-      return '~/.config/Claude/claude_desktop_config.json';
-  }
-}
 
 function downloadInstaller(platform: Platform) {
   const configJson = JSON.stringify(DESKTOP_CONFIG, null, 2);
@@ -58,20 +46,8 @@ echo.
 
 if not exist "%CONFIG_DIR%" mkdir "%CONFIG_DIR%"
 
-:: Check if config already exists and has other servers
-if exist "%CONFIG_FILE%" (
-    echo   Existing config found. Adding FlowFabric...
-    "%PS%" -NoProfile -ExecutionPolicy Bypass -Command ^
-      "$p='%CONFIG_FILE%';" ^
-      "$c=Get-Content $p -Raw|ConvertFrom-Json;" ^
-      "if(-not $c.mcpServers){$c|Add-Member -NotePropertyName mcpServers -NotePropertyValue @{} -Force};" ^
-      "$c.mcpServers|Add-Member -NotePropertyName flowfabric -NotePropertyValue @{command='npx';args=@('-y','@jluethke/flowfabric@latest')} -Force;" ^
-      "$c|ConvertTo-Json -Depth 10|Set-Content $p -Encoding UTF8"
-) else (
-    echo   Creating new config...
-    "%PS%" -NoProfile -ExecutionPolicy Bypass -Command ^
-      "[IO.File]::WriteAllText('%CONFIG_FILE%', [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('${configB64}')))"
-)
+echo   Configuring FlowFabric...
+node -e "const fs=require('fs'),p='%CONFIG_FILE%'.replace(/\\\\/g,'\\\\\\\\');let c={};try{c=JSON.parse(fs.readFileSync(p,'utf8'))}catch(e){};if(!c.mcpServers)c.mcpServers={};c.mcpServers.flowfabric={command:'npx',args:['-y','@jluethke/flowfabric@latest']};fs.writeFileSync(p,JSON.stringify(c,null,2),'utf8');console.log('  Done!');"
 
 echo.
 echo   Done! FlowFabric is now connected to Claude Desktop.
@@ -181,22 +157,6 @@ export default function Install() {
     transition: 'all 0.2s',
   };
 
-  const btnSecondary = {
-    display: 'inline-flex' as const,
-    alignItems: 'center' as const,
-    gap: '8px',
-    padding: '12px 24px',
-    borderRadius: '12px',
-    background: 'var(--bg-secondary)',
-    border: '1px solid var(--border)',
-    color: 'var(--text-primary)',
-    fontSize: '15px',
-    fontWeight: 600,
-    cursor: 'pointer',
-    textDecoration: 'none',
-    transition: 'all 0.2s',
-  };
-
   const stepStyle = {
     display: 'flex' as const,
     gap: '16px',
@@ -216,18 +176,6 @@ export default function Install() {
     fontSize: '13px',
     fontWeight: 700,
     flexShrink: 0,
-  };
-
-  const codeBlock = {
-    background: 'var(--bg-secondary)',
-    border: '1px solid var(--border)',
-    borderRadius: '10px',
-    padding: '16px',
-    fontFamily: 'monospace',
-    fontSize: '13px',
-    color: 'var(--text-primary)',
-    overflowX: 'auto' as const,
-    position: 'relative' as const,
   };
 
   return (
