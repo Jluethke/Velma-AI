@@ -28,7 +28,7 @@ const DESKTOP_CONFIG_LOCAL = {
   mcpServers: {
     flowfabric: {
       command: 'npx',
-      args: ['-y', 'skillchain-mcp@latest'],
+      args: ['-y', '@jluethke/flowfabric@latest'],
     },
   },
 };
