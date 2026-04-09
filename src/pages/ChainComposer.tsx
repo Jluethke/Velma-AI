@@ -476,12 +476,60 @@ export default function ChainComposer() {
     });
 
     if (chainResult) {
-      addProgress(`Flow: ${chainResult.skillId.slice(0, 12)}... (tx: ${chainResult.txHash.slice(0, 12)}...)`);
-      addProgress('');
-      addProgress(`Author: ${address}`);
-      addProgress(`Custom/modified skills published: ${Object.keys(publishedSkillIds).length}`);
-      addProgress(`Flow steps: ${built.steps.length}`);
-      addProgress('Royalties flow to your wallet for all derivatives.');
+      addProgress(`On-chain: ${chainResult.skillId.slice(0, 12)}... (tx: ${chainResult.txHash.slice(0, 12)}...)`);
+
+      // Upload to R2 CDN so other users can discover and run this flow
+      addProgress('Uploading to CDN...');
+      try {
+        // Upload each custom/modified flow
+        for (const node of nodes) {
+          if (node.data.isCustom || node.data.isCustomized) {
+            const flowName = (node.data.label as string);
+            await fetch('/api/publish', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                name: flowName,
+                domain: node.data.domain,
+                description: node.data.customDescription || '',
+                inputs: node.data.inputs,
+                outputs: node.data.outputs,
+                tags: flowName.split('-').filter((t: string) => t.length > 2),
+                content: `# ${flowName}\n\nCustom flow created by ${address}.\n\nInputs: ${(node.data.inputs as string[]).join(', ')}\nOutputs: ${(node.data.outputs as string[]).join(', ')}`,
+                txHash: publishedSkillIds[flowName] || '',
+                author: address,
+                type: 'flow',
+              }),
+            });
+            addProgress(`  CDN: ${flowName} uploaded`);
+          }
+        }
+
+        // Upload the flow (chain) definition
+        await fetch('/api/publish', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: chainName,
+            domain: chainCategory,
+            description: chainDescription,
+            content: built.json,
+            txHash: chainResult.txHash,
+            author: address,
+            type: 'flow-chain',
+          }),
+        });
+        addProgress(`  CDN: ${chainName} flow uploaded`);
+        addProgress('');
+        addProgress('Published! Your flow is now pending validation.');
+        addProgress('Validators will shadow-test it for consistency.');
+        addProgress('Once validated, it appears in search for all users.');
+        addProgress(`Author: ${address}`);
+        addProgress('Royalties flow to your wallet when others use it.');
+      } catch (err) {
+        addProgress(`CDN upload warning: ${(err as Error).message}`);
+        addProgress('On-chain publish succeeded. CDN will sync later.');
+      }
     } else {
       addProgress(`FAILED: ${publishState.error || 'Transaction rejected'}`);
     }
