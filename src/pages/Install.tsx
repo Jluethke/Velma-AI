@@ -146,7 +146,7 @@ function copyToClipboard(text: string, setCopied: (v: boolean) => void) {
 
 export default function Install() {
   const [platform, setPlatform] = useState<Platform>('unknown');
-  const [tab, setTab] = useState<'web' | 'desktop'>('web');
+  const [tab, setTab] = useState<'web' | 'desktop'>('desktop');
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -234,15 +234,14 @@ export default function Install() {
             className="text-3xl font-bold mb-3"
             style={{ color: 'var(--text-primary)' }}
           >
-            Connect{' '}
-            <span style={{ color: 'var(--cyan)' }}>FlowFabric</span>{' '}
-            to Claude
+            Install{' '}
+            <span className="gradient-text">FlowFabric</span>
           </h1>
           <p
             className="text-base"
             style={{ color: 'var(--text-secondary)', maxWidth: '480px', margin: '0 auto' }}
           >
-            Give Claude access to 120+ structured AI flows — budgeting, career coaching, business planning, and more.
+            One install. Flows work automatically — say "I hate my job" and Claude runs a career pivot flow. No prompting needed.
           </p>
         </div>
 
@@ -256,17 +255,6 @@ export default function Install() {
           }}
         >
           <button
-            onClick={() => setTab('web')}
-            className="flex-1 py-2.5 px-4 rounded-lg text-sm font-medium cursor-pointer transition-all"
-            style={{
-              background: tab === 'web' ? 'rgba(56, 189, 248, 0.1)' : 'transparent',
-              border: tab === 'web' ? '1px solid rgba(56, 189, 248, 0.25)' : '1px solid transparent',
-              color: tab === 'web' ? 'var(--cyan)' : 'var(--text-secondary)',
-            }}
-          >
-            Claude Web
-          </button>
-          <button
             onClick={() => setTab('desktop')}
             className="flex-1 py-2.5 px-4 rounded-lg text-sm font-medium cursor-pointer transition-all"
             style={{
@@ -275,7 +263,18 @@ export default function Install() {
               color: tab === 'desktop' ? 'var(--cyan)' : 'var(--text-secondary)',
             }}
           >
-            Claude Desktop
+            Desktop (Recommended)
+          </button>
+          <button
+            onClick={() => setTab('web')}
+            className="flex-1 py-2.5 px-4 rounded-lg text-sm font-medium cursor-pointer transition-all"
+            style={{
+              background: tab === 'web' ? 'rgba(56, 189, 248, 0.1)' : 'transparent',
+              border: tab === 'web' ? '1px solid rgba(56, 189, 248, 0.25)' : '1px solid transparent',
+              color: tab === 'web' ? 'var(--cyan)' : 'var(--text-secondary)',
+            }}
+          >
+            Web
           </button>
         </div>
 
@@ -292,7 +291,7 @@ export default function Install() {
               className="text-sm mb-6"
               style={{ color: 'var(--text-secondary)' }}
             >
-              Two steps — open Claude settings, paste one URL. Under 30 seconds.
+              Web connectors require you to say "use FlowFabric" to trigger flows. For automatic flow detection, use Desktop instead.
             </p>
 
             <div style={stepStyle}>
