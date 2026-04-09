@@ -11,32 +11,32 @@ interface ShowcaseItem {
 
 const showcaseItems: ShowcaseItem[] = [
   {
-    name: 'code-review',
-    domain: 'developer',
-    trustScore: 93,
-    input: `function getUser(id) {\n  let data = fetch("/api/users/" + id)\n  return data.json()\n}`,
-    output: `async function getUser(id: string) {\n  const res = await fetch(\`/api/users/\${id}\`)\n  if (!res.ok) throw new Error(res.statusText)\n  return res.json()\n}`,
-  },
-  {
-    name: 'budget-builder',
-    domain: 'money',
-    trustScore: 94,
-    input: 'I make $5,000/month, rent is $1,500',
-    output: `Rent:       $1,500  (30%)\nSavings:    $1,000  (20%)\nFood:         $400  (8%)\nTransport:    $300  (6%)\nUtilities:    $250  (5%)\nFlexible:   $1,550  (31%)`,
-  },
-  {
-    name: 'resume-builder',
+    name: 'Career Launchpad',
     domain: 'career',
-    trustScore: 91,
-    input: 'Software engineer, 3 years experience, React & Node',
-    output: `• Led migration of legacy jQuery app to React 18, reducing load time by 40% and improving Core Web Vitals\n• Designed and shipped RESTful API serving 2M+ requests/day with 99.9% uptime using Node.js and PostgreSQL\n• Mentored 2 junior engineers through code reviews, reducing PR cycle time by 30%`,
+    trustScore: 94,
+    input: 'I want to switch from marketing to product management',
+    output: `Flow: career-pivot → resume-builder → interview-prep\n\n✓ Gap analysis: need PM certification + SQL basics\n✓ Resume rewritten: 3 PM-targeted bullet points\n✓ Interview prep: 12 behavioral questions with STAR answers\n✓ Salary range: $95K-$125K based on market data\n\nTimeline: 8-12 weeks to job-ready`,
   },
   {
-    name: 'daily-planner',
+    name: 'Startup Validation',
+    domain: 'business',
+    trustScore: 93,
+    input: 'AI tool that helps restaurants manage food waste',
+    output: `Flow: idea-validator → market-research → pricing-strategy\n\n✓ Market size: $2.1B by 2028 (12% CAGR)\n✓ Competitors: 3 direct, none using predictive AI\n✓ Validation score: 78/100 — strong unit economics\n✓ Pricing: $299/mo SaaS, break-even at 40 restaurants\n✓ Risk: integration with existing POS systems`,
+  },
+  {
+    name: 'Money Makeover',
+    domain: 'finance',
+    trustScore: 95,
+    input: 'I make $5,000/month, rent is $1,500, $8K credit card debt',
+    output: `Flow: budget-builder → debt-payoff → savings-goal\n\n✓ Budget: $1,550 flexible → $800 to debt, $250 emergency\n✓ Debt-free in 11 months (avalanche method)\n✓ 3 subscriptions cancelled: save $47/mo\n✓ Emergency fund hits $3K by month 14\n✓ Then redirect $800/mo → investment account`,
+  },
+  {
+    name: 'Weekly Ops',
     domain: 'life',
     trustScore: 92,
-    input: 'I have 3 meetings and a deadline tomorrow',
-    output: `08:00  Deep work — deadline task (high energy)\n10:00  Meeting 1 — standup (15 min)\n10:30  Deep work — deadline sprint\n12:00  Lunch + walk\n13:00  Meeting 2 — project sync\n14:00  Meeting 3 — 1:1\n15:00  Buffer — wrap up deadline\n16:00  Admin & tomorrow's prep`,
+    input: 'Overwhelmed. 3 deadlines, kid has soccer, house is a mess.',
+    output: `Flow: weekly-review → daily-planner → habit-builder\n\n✓ Priority stack: deadline A (Tue) > B (Thu) > C (Fri)\n✓ Mon: deep work AM, soccer pickup 4pm, batch cook PM\n✓ Tue: deliver A, start B, 20min declutter\n✓ Wed: B sprint, kid homework, laundry\n✓ Thu: deliver B, start C, soccer practice\n✓ Habit: 20min daily declutter → house reset by Sunday`,
   },
 ];
 
@@ -129,7 +129,7 @@ function ShowcaseCard({ item, index }: { item: ShowcaseItem; index: number }) {
           <span>OPEN license</span>
         </div>
         <Link
-          to={`/skill/${item.name}`}
+          to="/compose"
           className="text-xs no-underline font-medium"
           style={{
             color: 'var(--cyan)',
@@ -142,7 +142,7 @@ function ShowcaseCard({ item, index }: { item: ShowcaseItem; index: number }) {
             (e.currentTarget as HTMLElement).style.textShadow = 'none';
           }}
         >
-          Try this flow &rarr;
+          Build this flow &rarr;
         </Link>
       </div>
     </div>
