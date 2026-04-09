@@ -77,21 +77,45 @@ async function getSkill(name: string) {
   return { ...meta, content };
 }
 
+// Premium domain gating — matches the website tiers
+const BUILDER_DOMAINS = new Set(['engineering', 'ai']);
+const CREATOR_DOMAINS = new Set(['legal', 'meta']);
+
+function getTierRequirement(domain: string): string | null {
+  if (BUILDER_DOMAINS.has(domain)) return 'Builder (500 TRUST)';
+  if (CREATOR_DOMAINS.has(domain)) return 'Creator (2,500 TRUST)';
+  return null; // free
+}
+
 async function runSkill(name: string) {
   const catalog = await loadCatalog();
   const meta = catalog.find((s) => s.name === name);
-  const content = await loadSkillMd(name);
 
-  // Extract just the phase names for a quick overview
+  // Check if this flow is premium
+  if (meta) {
+    const tier = getTierRequirement(meta.domain);
+    if (tier) {
+      return {
+        flow: name,
+        blocked: true,
+        tier_required: tier,
+        domain: meta.domain,
+        message: `This flow requires ${tier} tier. Visit https://www.flowfabric.io to connect your wallet and get TRUST tokens. Free flows are available in life, career, business, health, finance, thinking, learning, data, and marketing domains.`,
+      };
+    }
+  }
+
+  const content = await loadSkillMd(name);
   const phases = content.match(/^##\s+Phase\s+\d+[:\s]+(.+)/gm)
     ?.map(p => p.replace(/^##\s+Phase\s+\d+[:\s]+/, '').trim()) || [];
 
   return {
     flow: name,
+    blocked: false,
     description: meta?.description || '',
     inputs: meta?.inputs || [],
     phases,
-    instructions: `Execute the "${name}" flow step by step. Here is the full flow definition. For each phase: explain what you're doing, ask the user for any inputs you need, then execute the phase actions and show the outputs. Check the quality gate before moving to the next phase.`,
+    instructions: `Execute the "${name}" flow step by step. For each phase: explain what you're doing, ask the user for any inputs you need, then execute the phase actions and show the outputs. Check the quality gate before moving to the next phase.`,
     content,
   };
 }
@@ -129,7 +153,8 @@ async function searchSkills(query: string) {
     .map((s) => {
       const haystack = `${s.name} ${s.domain} ${s.tags.join(' ')} ${s.description}`.toLowerCase();
       const score = terms.reduce((acc, t) => acc + (haystack.includes(t) ? 1 : 0), 0);
-      return { name: s.name, domain: s.domain, description: s.description, score, type: 'flow' as const };
+      const tier = getTierRequirement(s.domain);
+      return { name: s.name, domain: s.domain, description: s.description, score, type: 'flow' as const, requires: tier || 'free' };
     })
     .filter((x) => x.score > 0);
 
@@ -146,7 +171,7 @@ async function searchSkills(query: string) {
   return [...chainResults, ...flowResults]
     .sort((a, b) => b.score - a.score)
     .slice(0, 20)
-    .map((x) => ({ name: x.name, domain: x.domain, description: x.description, score: x.score, type: x.type, run_url: `https://www.flowfabric.io/skill/${x.name}` }));
+    .map((x) => ({ name: x.name, domain: x.domain, description: x.description, score: x.score, type: x.type, requires: ('requires' in x) ? x.requires : 'free', run_url: `https://www.flowfabric.io/skill/${x.name}` }));
 }
 
 // ---------------------------------------------------------------------------
