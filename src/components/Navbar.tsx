@@ -42,29 +42,50 @@ export default function Navbar() {
   return (
     <>
       <nav
-        className="fixed top-0 left-0 right-0 z-50 px-6 py-3"
+        className="fixed top-0 left-0 right-0 z-50 px-6 py-3 gradient-border-bottom"
         style={{
-          background: theme === 'dark' ? 'rgba(9, 9, 11, 0.85)' : 'rgba(255, 255, 255, 0.85)',
-          backdropFilter: 'blur(20px)',
-          borderBottom: '1px solid var(--border)',
+          background: theme === 'dark' ? 'rgba(9, 9, 11, 0.8)' : 'rgba(250, 250, 249, 0.8)',
+          backdropFilter: 'blur(24px) saturate(180%)',
+          WebkitBackdropFilter: 'blur(24px) saturate(180%)',
         }}
       >
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-0 no-underline">
-            <span className="text-xl font-bold" style={{ color: 'var(--cyan)' }}>Flow</span>
-            <span className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>Fabric</span>
+            <span
+              className="text-xl font-bold gradient-text"
+              style={{ letterSpacing: '-0.02em' }}
+            >
+              Flow
+            </span>
+            <span className="text-xl font-bold" style={{ color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>Fabric</span>
           </Link>
 
           {/* Desktop nav */}
-          <div className="hidden md:flex items-center gap-6">
+          <div className="hidden md:flex items-center gap-1">
             {navLinks.map(link => (
               <Link
                 key={link.to}
                 to={link.to}
-                className="text-sm no-underline transition-colors"
+                className="text-sm no-underline px-3 py-1.5 rounded-lg"
                 style={{
                   color: isActive(link.to) ? 'var(--cyan)' : 'var(--text-secondary)',
+                  background: isActive(link.to) ? 'rgba(56, 189, 248, 0.08)' : 'transparent',
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  position: 'relative',
+                  fontWeight: isActive(link.to) ? 500 : 400,
+                }}
+                onMouseEnter={(e) => {
+                  if (!isActive(link.to)) {
+                    (e.currentTarget as HTMLElement).style.color = 'var(--text-primary)';
+                    (e.currentTarget as HTMLElement).style.background = 'rgba(56, 189, 248, 0.04)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!isActive(link.to)) {
+                    (e.currentTarget as HTMLElement).style.color = 'var(--text-secondary)';
+                    (e.currentTarget as HTMLElement).style.background = 'transparent';
+                  }
                 }}
               >
                 {link.label}
@@ -85,11 +106,20 @@ export default function Navbar() {
                 </span>
                 <button
                   onClick={() => { setShowSend(!showSend); resetSend(); }}
-                  className="px-3 py-1.5 rounded-lg text-xs cursor-pointer transition-all"
+                  className="px-3 py-1.5 rounded-lg text-xs cursor-pointer"
                   style={{
                     background: 'rgba(251, 191, 36, 0.08)',
                     border: '1px solid rgba(251, 191, 36, 0.2)',
                     color: 'var(--gold)',
+                    transition: 'all 0.3s',
+                  }}
+                  onMouseEnter={(e) => {
+                    (e.currentTarget as HTMLElement).style.background = 'rgba(251, 191, 36, 0.15)';
+                    (e.currentTarget as HTMLElement).style.boxShadow = '0 0 16px rgba(251, 191, 36, 0.1)';
+                  }}
+                  onMouseLeave={(e) => {
+                    (e.currentTarget as HTMLElement).style.background = 'rgba(251, 191, 36, 0.08)';
+                    (e.currentTarget as HTMLElement).style.boxShadow = 'none';
                   }}
                 >
                   Send TRUST
@@ -100,11 +130,20 @@ export default function Navbar() {
             {!isConnected && (
               <Link
                 to="/skill/budget-builder"
-                className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs no-underline transition-all"
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs no-underline"
                 style={{
                   background: 'rgba(56, 189, 248, 0.08)',
                   border: '1px solid rgba(56, 189, 248, 0.2)',
                   color: 'var(--cyan)',
+                  transition: 'all 0.3s',
+                }}
+                onMouseEnter={(e) => {
+                  (e.currentTarget as HTMLElement).style.background = 'rgba(56, 189, 248, 0.15)';
+                  (e.currentTarget as HTMLElement).style.boxShadow = '0 0 16px rgba(56, 189, 248, 0.1)';
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLElement).style.background = 'rgba(56, 189, 248, 0.08)';
+                  (e.currentTarget as HTMLElement).style.boxShadow = 'none';
                 }}
               >
                 Try a Skill
@@ -113,15 +152,24 @@ export default function Navbar() {
 
             <button
               onClick={toggleTheme}
-              className="p-2 rounded-lg text-sm cursor-pointer transition-colors"
+              className="p-2 rounded-lg text-sm cursor-pointer"
               style={{
                 background: 'var(--bg-secondary)',
                 border: '1px solid var(--border)',
                 color: 'var(--text-secondary)',
                 lineHeight: 1,
+                transition: 'all 0.3s',
               }}
               aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
               title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLElement).style.borderColor = 'rgba(56, 189, 248, 0.2)';
+                (e.currentTarget as HTMLElement).style.transform = 'rotate(15deg)';
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)';
+                (e.currentTarget as HTMLElement).style.transform = 'rotate(0deg)';
+              }}
             >
               {theme === 'dark' ? '\u2600' : '\u263D'}
             </button>
@@ -130,13 +178,10 @@ export default function Navbar() {
               <button
                 onClick={() => {
                   disconnect({ connector });
-                  // MetaMask doesn't support programmatic disconnect.
-                  // Clear all wallet state and reload to fully disconnect.
                   localStorage.removeItem('wagmi.store');
                   localStorage.removeItem('wagmi.connected');
                   localStorage.removeItem('wagmi.wallet');
                   localStorage.removeItem('rk-recent');
-                  // Remove any wagmi/rainbowkit keys
                   Object.keys(localStorage).forEach(key => {
                     if (key.startsWith('wagmi') || key.startsWith('rk-') || key.startsWith('wc@')) {
                       localStorage.removeItem(key);
@@ -144,11 +189,12 @@ export default function Navbar() {
                   });
                   window.location.reload();
                 }}
-                className="px-3 py-1.5 rounded-lg text-xs cursor-pointer transition-all"
+                className="px-3 py-1.5 rounded-lg text-xs cursor-pointer"
                 style={{
                   background: 'rgba(248, 113, 113, 0.08)',
                   border: '1px solid rgba(248, 113, 113, 0.2)',
                   color: 'var(--red)',
+                  transition: 'all 0.3s',
                 }}
               >
                 Disconnect
@@ -169,17 +215,20 @@ export default function Navbar() {
             onClick={() => setMobileOpen(!mobileOpen)}
             aria-label="Toggle menu"
           >
-            <span className="block w-5 h-0.5 transition-transform" style={{
+            <span className="block w-5 h-0.5" style={{
               background: 'var(--text-primary)',
               transform: mobileOpen ? 'rotate(45deg) translateY(4px)' : 'none',
+              transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
             }} />
-            <span className="block w-5 h-0.5 transition-opacity" style={{
+            <span className="block w-5 h-0.5" style={{
               background: 'var(--text-primary)',
               opacity: mobileOpen ? 0 : 1,
+              transition: 'opacity 0.2s',
             }} />
-            <span className="block w-5 h-0.5 transition-transform" style={{
+            <span className="block w-5 h-0.5" style={{
               background: 'var(--text-primary)',
               transform: mobileOpen ? 'rotate(-45deg) translateY(-4px)' : 'none',
+              transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
             }} />
           </button>
         </div>
@@ -259,19 +308,19 @@ export default function Navbar() {
       {showSend && (
         <div
           className="fixed inset-0 z-[999] flex items-center justify-center px-4"
-          style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}
+          style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)' }}
           onClick={() => setShowSend(false)}
         >
           <div
-            className="rounded-2xl p-6 max-w-sm w-full"
-            style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
+            className="glass-card p-6 max-w-sm w-full animate-fade-in-up"
+            style={{ animationDuration: '0.3s' }}
             onClick={e => e.stopPropagation()}
           >
             <h3 className="text-lg font-semibold mb-1" style={{ color: 'var(--text-primary)', marginTop: 0 }}>
               Send TRUST
             </h3>
             <p className="text-xs mb-4" style={{ color: 'var(--text-secondary)' }}>
-              Balance: <span style={{ color: 'var(--gold)' }}>{balance.display} TRUST</span>
+              Balance: <span className="gradient-text-gold" style={{ fontWeight: 600 }}>{balance.display} TRUST</span>
             </p>
 
             <label className="block text-xs mb-1" style={{ color: 'var(--text-secondary)' }}>
@@ -287,7 +336,10 @@ export default function Navbar() {
                 background: 'var(--bg-secondary)', border: '1px solid var(--border)',
                 borderRadius: '8px', color: 'var(--text-primary)', fontSize: '13px',
                 outline: 'none', boxSizing: 'border-box', fontFamily: 'monospace',
+                transition: 'border-color 0.3s',
               }}
+              onFocus={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(56, 189, 248, 0.4)'; }}
+              onBlur={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'; }}
             />
 
             <label className="block text-xs mb-1" style={{ color: 'var(--text-secondary)' }}>
@@ -303,7 +355,10 @@ export default function Navbar() {
                 background: 'var(--bg-secondary)', border: '1px solid var(--border)',
                 borderRadius: '8px', color: 'var(--text-primary)', fontSize: '13px',
                 outline: 'none', boxSizing: 'border-box',
+                transition: 'border-color 0.3s',
               }}
+              onFocus={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(251, 191, 36, 0.4)'; }}
+              onBlur={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'; }}
             />
 
             {/* Quick amounts */}
@@ -319,6 +374,15 @@ export default function Navbar() {
                     color: 'var(--gold)',
                     minHeight: '36px',
                     minWidth: '44px',
+                    transition: 'all 0.2s',
+                  }}
+                  onMouseEnter={(e) => {
+                    (e.currentTarget as HTMLElement).style.background = 'rgba(251,191,36,0.12)';
+                    (e.currentTarget as HTMLElement).style.borderColor = 'rgba(251,191,36,0.3)';
+                  }}
+                  onMouseLeave={(e) => {
+                    (e.currentTarget as HTMLElement).style.background = 'rgba(251,191,36,0.06)';
+                    (e.currentTarget as HTMLElement).style.borderColor = 'rgba(251,191,36,0.15)';
                   }}
                 >
                   {Number(amt).toLocaleString()}
@@ -346,18 +410,14 @@ export default function Navbar() {
                   border: `1px solid ${sendTo && sendAmount ? 'rgba(251,191,36,0.3)' : 'var(--border)'}`,
                   color: sendTo && sendAmount ? 'var(--gold)' : 'var(--text-secondary)',
                   opacity: sendState.status === 'sending' ? 0.6 : 1,
+                  transition: 'all 0.3s',
                 }}
               >
                 {sendState.status === 'sending' ? 'Sending...' : 'Send'}
               </button>
               <button
                 onClick={() => setShowSend(false)}
-                className="px-4 py-2 rounded-lg text-sm cursor-pointer"
-                style={{
-                  background: 'var(--bg-secondary)',
-                  border: '1px solid var(--border)',
-                  color: 'var(--text-secondary)',
-                }}
+                className="btn-secondary px-4 py-2 text-sm cursor-pointer"
               >
                 Close
               </button>

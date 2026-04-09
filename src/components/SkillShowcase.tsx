@@ -43,36 +43,24 @@ const showcaseItems: ShowcaseItem[] = [
 function TrustBadge({ score }: { score: number }) {
   return (
     <span
-      className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full"
+      className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full animate-trust-pulse"
       style={{
-        background: 'rgba(0,255,200,0.1)',
-        border: '1px solid rgba(0,255,200,0.25)',
+        background: 'rgba(56, 189, 248, 0.08)',
+        border: '1px solid rgba(56, 189, 248, 0.2)',
         color: 'var(--cyan)',
+        fontWeight: 500,
       }}
     >
-      &#10003; {score}% trust score
+      &#10003; {score}% trust
     </span>
   );
 }
 
-function ShowcaseCard({ item }: { item: ShowcaseItem }) {
+function ShowcaseCard({ item, index }: { item: ShowcaseItem; index: number }) {
   return (
     <div
-      className="rounded-xl p-5 transition-all"
-      style={{
-        background: 'var(--bg-card)',
-        border: '1px solid var(--border)',
-      }}
-      onMouseEnter={(e) => {
-        (e.currentTarget as HTMLElement).style.borderColor = 'rgba(0,255,200,0.3)';
-        (e.currentTarget as HTMLElement).style.boxShadow = '0 0 20px rgba(0,255,200,0.05)';
-        (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)';
-      }}
-      onMouseLeave={(e) => {
-        (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)';
-        (e.currentTarget as HTMLElement).style.boxShadow = 'none';
-        (e.currentTarget as HTMLElement).style.transform = 'translateY(0)';
-      }}
+      className={`glass-card p-5 animate-fade-in-up stagger-${index + 1}`}
+      style={{ cursor: 'default' }}
     >
       {/* Header */}
       <div className="flex flex-wrap items-center gap-2 mb-4">
@@ -82,7 +70,14 @@ function ShowcaseCard({ item }: { item: ShowcaseItem }) {
       </div>
 
       {/* Input */}
-      <div className="rounded-lg p-3 mb-2" style={{ background: 'var(--bg-secondary)' }}>
+      <div
+        className="rounded-lg p-3 mb-2"
+        style={{
+          background: 'var(--bg-secondary)',
+          border: '1px solid transparent',
+          transition: 'border-color 0.3s',
+        }}
+      >
         <div className="text-[10px] uppercase tracking-wider mb-1.5 font-semibold" style={{ color: 'var(--text-secondary)' }}>
           Input
         </div>
@@ -94,11 +89,27 @@ function ShowcaseCard({ item }: { item: ShowcaseItem }) {
         </pre>
       </div>
 
-      {/* Arrow */}
-      <div className="text-center my-2" style={{ color: 'var(--cyan)', fontSize: '14px' }}>&#x2193;</div>
+      {/* Animated Arrow */}
+      <div
+        className="text-center my-2"
+        style={{
+          color: 'var(--cyan)',
+          fontSize: '16px',
+          animation: 'arrow-bounce 2s ease-in-out infinite',
+        }}
+      >
+        &#x2193;
+      </div>
 
       {/* Output */}
-      <div className="rounded-lg p-3 mb-3" style={{ background: 'rgba(0,255,200,0.03)', border: '1px solid rgba(0,255,200,0.08)' }}>
+      <div
+        className="rounded-lg p-3 mb-3"
+        style={{
+          background: 'rgba(56, 189, 248, 0.03)',
+          border: '1px solid rgba(56, 189, 248, 0.08)',
+          transition: 'all 0.3s',
+        }}
+      >
         <div className="text-[10px] uppercase tracking-wider mb-1.5 font-semibold" style={{ color: 'var(--cyan)' }}>
           Output
         </div>
@@ -113,14 +124,23 @@ function ShowcaseCard({ item }: { item: ShowcaseItem }) {
       {/* Footer */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--text-secondary)' }}>
-          <span style={{ color: 'var(--green)' }}>FREE</span>
+          <span style={{ color: 'var(--green)', fontWeight: 600 }}>FREE</span>
           <span>&middot;</span>
           <span>OPEN license</span>
         </div>
         <Link
           to={`/skill/${item.name}`}
-          className="text-xs no-underline transition-colors"
-          style={{ color: 'var(--cyan)' }}
+          className="text-xs no-underline font-medium"
+          style={{
+            color: 'var(--cyan)',
+            transition: 'all 0.3s',
+          }}
+          onMouseEnter={(e) => {
+            (e.currentTarget as HTMLElement).style.textShadow = '0 0 12px rgba(56, 189, 248, 0.3)';
+          }}
+          onMouseLeave={(e) => {
+            (e.currentTarget as HTMLElement).style.textShadow = 'none';
+          }}
         >
           Try this skill &rarr;
         </Link>
@@ -131,23 +151,23 @@ function ShowcaseCard({ item }: { item: ShowcaseItem }) {
 
 export default function SkillShowcase() {
   return (
-    <section className="py-20 px-6">
+    <section className="py-24 px-6">
       <div className="max-w-5xl mx-auto">
-        <div className="text-center mb-12">
+        <div className="text-center mb-16">
           <h2
-            className="text-3xl md:text-4xl font-bold mb-3"
-            style={{ color: 'var(--text-primary)' }}
+            className="text-3xl md:text-5xl font-bold mb-4"
+            style={{ color: 'var(--text-primary)', letterSpacing: '-0.02em' }}
           >
             See what skills can do
           </h2>
-          <p className="text-sm md:text-base" style={{ color: 'var(--text-secondary)' }}>
+          <p className="text-sm md:text-base max-w-lg mx-auto" style={{ color: 'var(--text-secondary)', lineHeight: 1.7 }}>
             Every skill is validated. Every output has a trust score.
           </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {showcaseItems.map((item) => (
-            <ShowcaseCard key={item.name} item={item} />
+          {showcaseItems.map((item, i) => (
+            <ShowcaseCard key={item.name} item={item} index={i} />
           ))}
         </div>
       </div>
