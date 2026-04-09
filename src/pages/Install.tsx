@@ -65,7 +65,7 @@ if exist "%CONFIG_FILE%" (
       "$p='%CONFIG_FILE%';" ^
       "$c=Get-Content $p -Raw|ConvertFrom-Json;" ^
       "if(-not $c.mcpServers){$c|Add-Member -NotePropertyName mcpServers -NotePropertyValue @{} -Force};" ^
-      "$c.mcpServers|Add-Member -NotePropertyName flowfabric -NotePropertyValue @{url='${MCP_URL}'} -Force;" ^
+      "$c.mcpServers|Add-Member -NotePropertyName flowfabric -NotePropertyValue @{command='npx';args=@('-y','@jluethke/flowfabric@latest')} -Force;" ^
       "$c|ConvertTo-Json -Depth 10|Set-Content $p -Encoding UTF8"
 ) else (
     echo   Creating new config...
@@ -117,7 +117,7 @@ except:
     config = {}
 if 'mcpServers' not in config:
     config['mcpServers'] = {}
-config['mcpServers']['flowfabric'] = {'url': '${MCP_URL}'}
+config['mcpServers']['flowfabric'] = {'command': 'npx', 'args': ['-y', '@jluethke/flowfabric@latest']}
 with open(path, 'w') as f:
     json.dump(config, f, indent=2)
 print('  Done!')
@@ -388,34 +388,16 @@ export default function Install() {
               <div style={stepNumber}>1</div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <p className="text-sm mb-3" style={{ color: 'var(--text-primary)' }}>
-                  Download the config file or copy the JSON below:
+                  Download and run the installer — it handles everything automatically:
                 </p>
-                <div className="flex gap-3 flex-wrap mb-4">
-                  <button onClick={() => downloadInstaller(platform)} style={btnPrimary}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                      <polyline points="7 10 12 15 17 10" />
-                      <line x1="12" y1="15" x2="12" y2="3" />
-                    </svg>
-                    Download Config
-                  </button>
-                  <button
-                    onClick={() =>
-                      copyToClipboard(
-                        JSON.stringify(DESKTOP_CONFIG, null, 2),
-                        setCopied,
-                      )
-                    }
-                    style={btnSecondary}
-                  >
-                    {copied ? 'Copied!' : 'Copy JSON'}
-                  </button>
-                </div>
-                <div style={codeBlock}>
-                  <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
-                    {JSON.stringify(DESKTOP_CONFIG, null, 2)}
-                  </pre>
-                </div>
+                <button onClick={() => downloadInstaller(platform)} style={btnPrimary}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="7 10 12 15 17 10" />
+                    <line x1="12" y1="15" x2="12" y2="3" />
+                  </svg>
+                  Download Installer
+                </button>
               </div>
             </div>
 
@@ -423,20 +405,8 @@ export default function Install() {
               <div style={stepNumber}>2</div>
               <div>
                 <p className="text-sm" style={{ color: 'var(--text-primary)' }}>
-                  Place the file (or merge the JSON) at:
+                  {platform === 'windows' ? 'Double-click FlowFabric-Connect.bat to run it.' : 'Run the installer: bash FlowFabric-Connect.sh'}
                 </p>
-                <code
-                  className="text-xs mt-1 block"
-                  style={{
-                    color: 'var(--cyan)',
-                    background: 'var(--bg-secondary)',
-                    padding: '8px 12px',
-                    borderRadius: '8px',
-                    border: '1px solid var(--border)',
-                  }}
-                >
-                  {configPath(platform)}
-                </code>
               </div>
             </div>
 
