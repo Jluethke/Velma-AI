@@ -72,7 +72,7 @@ function MarketplaceContent({ address }: { address: `0x${string}` }) {
           </div>
           {onChainSkills !== null && (
             <div className="pl-4" style={{ borderLeft: '1px solid var(--border)' }}>
-              <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>On-chain Skills</div>
+              <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>On-chain Flows</div>
               <div className="text-lg font-bold" style={{ color: 'var(--cyan)' }}>{onChainSkills}</div>
             </div>
           )}
@@ -88,7 +88,7 @@ function MarketplaceContent({ address }: { address: `0x${string}` }) {
           type="text"
           value={search}
           onChange={e => setSearch(e.target.value)}
-          placeholder="Search skills..."
+          placeholder="Search flows..."
           className="flex-1 min-w-[200px] px-4 py-2 rounded-lg text-sm"
           style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-primary)', outline: 'none', fontFamily: 'inherit' }}
         />
@@ -184,9 +184,9 @@ export default function PortalMarketplace() {
         <span>Marketplace</span>
       </div>
 
-      <h1 className="text-3xl font-bold mb-2" style={{ color: 'var(--text-primary)' }}>Skill Marketplace</h1>
+      <h1 className="text-3xl font-bold mb-2" style={{ color: 'var(--text-primary)' }}>Flow Marketplace</h1>
       <p className="text-sm mb-8" style={{ color: 'var(--text-secondary)' }}>
-        Browse, purchase, and deploy verified AI skills with TRUST tokens
+        Browse, purchase, and deploy verified AI flows with TRUST tokens
       </p>
 
       {isConnected && address ? (

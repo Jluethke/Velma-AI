@@ -23,7 +23,7 @@ export default function Footer() {
             to="/skill/budget-builder"
             className="btn-secondary inline-flex items-center gap-2 px-6 py-3 no-underline text-sm"
           >
-            Try a skill free
+            Try a flow free
           </Link>
         </div>
 

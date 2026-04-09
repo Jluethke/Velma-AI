@@ -121,7 +121,7 @@ function TrainerCard() {
           {/* Stats row */}
           <div className="flex gap-6 justify-center md:justify-start">
             {[
-              { label: 'Skills', val: `${t.skills_discovered}/${t.skills_total}` },
+              { label: 'Flows', val: `${t.skills_discovered}/${t.skills_total}` },
               { label: 'Chains', val: `${t.chains_completed}/${t.chains_total}` },
               { label: 'Achievements', val: `${t.achievements_unlocked}/${t.achievements_total}` },
             ].map(s => (

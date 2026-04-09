@@ -2,44 +2,44 @@ import { useState } from 'react';
 
 const faqs = [
   {
-    question: 'What is a skill?',
-    answer: 'A skill is a structured AI procedure — a set of phases with quality gates that an AI follows step by step. Examples: building a budget, prepping for an interview, analyzing competitors, designing an API. Each skill has defined inputs, outputs, and validation criteria. Anyone can run a skill for free.',
+    question: 'What is a flow?',
+    answer: 'A flow is a structured AI procedure — a set of phases with quality gates that an AI follows step by step. Examples: building a budget, prepping for an interview, analyzing competitors, designing an API. Each flow has defined inputs, outputs, and validation criteria. Anyone can run a flow for free.',
   },
   {
-    question: 'What is a flow?',
-    answer: 'A flow is multiple skills connected together into a workflow. For example, a "Career Launchpad" flow runs resume-builder → interview-prep → salary-negotiator in sequence, passing context between each step. Flows are where the real value is — they produce outcomes no single skill can achieve alone.',
+    question: 'What is a flow chain?',
+    answer: 'A flow chain is multiple flows connected together into a pipeline. For example, a "Career Launchpad" chain runs resume-builder → interview-prep → salary-negotiator in sequence, passing context between each step. Chains are where the real value is — they produce outcomes no single flow can achieve alone.',
   },
   {
     question: 'What is TRUST?',
-    answer: 'TRUST is the token that powers the FlowFabric ecosystem, deployed on Base mainnet. You can earn TRUST by publishing skills, validating quality, or creating flows that others use. You can also buy TRUST to unlock features faster. Your TRUST balance determines your tier — from Explorer (free) to Governor (100K+).',
+    answer: 'TRUST is the token that powers the FlowFabric ecosystem, deployed on Base mainnet. You can earn TRUST by publishing flows, validating quality, or creating chains that others use. You can also buy TRUST to unlock features faster. Your TRUST balance determines your tier — from Explorer (free) to Governor (100K+).',
   },
   {
-    question: 'Do I need TRUST to try a skill?',
-    answer: 'No. Individual skills are free to run. You can browse all skills in the Composer and run any one of them without a wallet or tokens. TRUST is needed to connect skills into flows, publish on-chain, and access premium domains like engineering, AI, and legal.',
+    question: 'Do I need TRUST to try a flow?',
+    answer: 'No. Individual flows are free to run. You can browse all flows in the Composer and run any one of them without a wallet or tokens. TRUST is needed to connect flows into chains, publish on-chain, and access premium domains like engineering, AI, and legal.',
   },
   {
     question: 'How do tiers work?',
-    answer: 'Your TRUST balance determines what you can do. Explorer (free): run individual skills. Builder (500 TRUST): connect skills into flows, save and schedule. Creator (2,500): publish on-chain, earn royalties. Validator (25K staked): validate skills for the network. Governor (100K staked): vote on protocol decisions.',
+    answer: 'Your TRUST balance determines what you can do. Explorer (free): run individual flows. Builder (500 TRUST): connect flows into chains, save and schedule. Creator (2,500): publish on-chain, earn royalties. Validator (25K staked): validate flows for the network. Governor (100K staked): vote on protocol decisions.',
   },
   {
     question: 'How do I earn TRUST?',
-    answer: 'Publish skills that others use (70% of earnings go to you). Validate skills for quality (15% of earnings). Create derivatives that improve on existing skills (original author gets 15% royalty automatically). All splits are enforced by smart contract — no middleman.',
+    answer: 'Publish flows that others use (70% of earnings go to you). Validate flows for quality (15% of earnings). Create derivatives that improve on existing flows (original author gets 15% royalty automatically). All splits are enforced by smart contract — no middleman.',
   },
   {
     question: 'Can I buy TRUST?',
     answer: 'Yes. TRUST can be purchased to unlock features immediately. But earned TRUST carries more weight — it boosts your visibility in the marketplace, your priority in validator selection, and your influence in governance voting. Buying gets you access. Earning gets you influence.',
   },
   {
-    question: 'What happens when I modify someone\'s skill?',
-    answer: 'It\'s tracked as a derivative. When you publish it, 15% of all TRUST earned on your version flows to the original author — automatically, forever, via smart contract. This incentivizes creating skills worth building on.',
+    question: 'What happens when I modify someone\'s flow?',
+    answer: 'It\'s tracked as a derivative. When you publish it, 15% of all TRUST earned on your version goes to the original author — automatically, forever, via smart contract. This incentivizes creating flows worth building on.',
   },
   {
     question: 'How is quality enforced?',
-    answer: 'Shadow validation. Validators run skills against test cases and measure output consistency. Skills must achieve 95%+ similarity across multiple runs to graduate. Only domain-competent validators can vote. Trust scores are computed mathematically from validation outcomes — not reviews, not star ratings.',
+    answer: 'Shadow validation. Validators run flows against test cases and measure output consistency. Flows must achieve 95%+ similarity across multiple runs to graduate. Only domain-competent validators can vote. Trust scores are computed mathematically from validation outcomes — not reviews, not star ratings.',
   },
   {
-    question: 'What is skill evolution?',
-    answer: 'Skills evolve through validation: Prompt → Skill → Validated → Graduated → Compiled. A graduated skill has been proven consistent enough to compile into executable code — software that runs without an AI, with zero token cost. This is the endgame: language becomes code through consensus.',
+    question: 'What is flow evolution?',
+    answer: 'Flows evolve through validation: Prompt → Flow → Validated → Graduated → Compiled. A graduated flow has been proven consistent enough to compile into executable code — software that runs without an AI, with zero token cost. This is the endgame: language becomes code through consensus.',
   },
   {
     question: 'Do I need to install anything?',

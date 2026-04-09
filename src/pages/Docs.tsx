@@ -2,11 +2,11 @@ import { useState, useEffect } from 'react';
 import CodeBlock from '../components/CodeBlock';
 
 const guideSections = [
-  { id: 'try-skill', label: 'Try a Skill' },
+  { id: 'try-skill', label: 'Try a Flow' },
   { id: 'mobile', label: 'Mobile' },
   { id: 'composer', label: 'Composer' },
-  { id: 'evolution', label: 'Skill Evolution' },
-  { id: 'skill-format', label: 'Skill Format' },
+  { id: 'evolution', label: 'Flow Evolution' },
+  { id: 'skill-format', label: 'Flow Format' },
   { id: 'chains', label: 'Flow Format' },
   { id: 'running', label: 'Running' },
   { id: 'publishing', label: 'Publishing' },
@@ -57,7 +57,7 @@ export default function Docs() {
 
         <main className="flex-1 min-w-0">
           <h1 className="text-3xl md:text-4xl font-bold mb-2" style={h}>Documentation</h1>
-          <p className="text-sm mb-4" style={t}>Everything you need to try skills, build flows, and publish on-chain.</p>
+          <p className="text-sm mb-4" style={t}>Everything you need to try flows, build chains, and publish on-chain.</p>
 
           {/* Mobile section nav */}
           <div className="lg:hidden mb-6">
@@ -84,20 +84,20 @@ export default function Docs() {
             </select>
           </div>
 
-          {/* Try a Skill */}
+          {/* Try a Flow */}
           <section id="try-skill" className="mb-14">
-            <h2 className="text-xl font-semibold mb-4" style={h}>Try a Skill</h2>
+            <h2 className="text-xl font-semibold mb-4" style={h}>Try a Flow</h2>
             <p className="text-sm mb-4" style={t}>
-              Every skill is free to try. No account, no wallet, no install.
+              Every flow is free to try. No account, no wallet, no install.
             </p>
             <ol className="space-y-2 text-sm pl-5" style={t}>
-              <li>Pick a skill from the <a href="/" style={{ color: 'var(--cyan)' }}>home page</a> (e.g., <a href="/skill/budget-builder" style={{ color: 'var(--cyan)' }}>budget-builder</a>)</li>
+              <li>Pick a flow from the <a href="/" style={{ color: 'var(--cyan)' }}>home page</a> (e.g., <a href="/skill/budget-builder" style={{ color: 'var(--cyan)' }}>budget-builder</a>)</li>
               <li>Click <strong style={{ color: '#00c8ff' }}>Run in Claude Code</strong></li>
               <li>A small launcher script downloads — double-click it</li>
-              <li>Claude Code opens and executes the skill interactively</li>
+              <li>Claude Code opens and executes the flow interactively</li>
             </ol>
             <p className="text-sm mt-4" style={t}>
-              The launcher auto-installs Claude Code if you don't have it (requires Node.js). No SDK or pip install needed to try skills.
+              The launcher auto-installs Claude Code if you don't have it (requires Node.js). No SDK or pip install needed to try flows.
             </p>
           </section>
 
@@ -105,12 +105,12 @@ export default function Docs() {
           <section id="mobile" className="mb-14">
             <h2 className="text-xl font-semibold mb-4" style={h}>Using FlowFabric on Mobile</h2>
             <p className="text-sm mb-4" style={t}>
-              FlowFabric works on mobile for browsing, composing, and managing your wallet. Running skills requires pasting a command into an AI chat.
+              FlowFabric works on mobile for browsing, composing, and managing your wallet. Running flows requires pasting a command into an AI chat.
             </p>
             <div className="space-y-3 text-sm" style={t}>
               <p><strong style={h}>Connect wallet</strong> — Open this site in the MetaMask mobile app's built-in browser. Tap the compass icon in MetaMask, type the URL. Wallet connects instantly.</p>
-              <p><strong style={h}>Browse and compose</strong> — The composer works on mobile with a slide-up skill picker. Tap the "+" button to add skills. Flow templates load normally.</p>
-              <p><strong style={h}>Run skills</strong> — On mobile, the Run button becomes "Copy CMD". It copies a command to your clipboard. Open any AI chat (Claude, ChatGPT, etc.) and paste it. The AI will execute the skill step by step.</p>
+              <p><strong style={h}>Browse and compose</strong> — The composer works on mobile with a slide-up flow picker. Tap the "+" button to add flows. Chain templates load normally.</p>
+              <p><strong style={h}>Run flows</strong> — On mobile, the Run button becomes "Copy CMD". It copies a command to your clipboard. Open any AI chat (Claude, ChatGPT, etc.) and paste it. The AI will execute the flow step by step.</p>
               <p><strong style={h}>Send TRUST</strong> — Works natively through MetaMask mobile. Tap Send TRUST in the menu, enter the recipient and amount.</p>
             </div>
           </section>
@@ -119,25 +119,25 @@ export default function Docs() {
           <section id="composer" className="mb-14">
             <h2 className="text-xl font-semibold mb-4" style={h}>Composer</h2>
             <p className="text-sm mb-4" style={t}>
-              The <a href="/compose" style={{ color: 'var(--cyan)' }}>Composer</a> is a visual editor for building multi-skill flows. Requires a connected wallet with TRUST.
+              The <a href="/compose" style={{ color: 'var(--cyan)' }}>Composer</a> is a visual editor for building multi-flow chains. Requires a connected wallet with TRUST.
             </p>
             <div className="space-y-3 text-sm" style={t}>
-              <p><strong style={h}>Add skills</strong> — Click from the palette (hundreds of skills across multiple domains) to place on the canvas.</p>
+              <p><strong style={h}>Add flows</strong> — Click from the palette (hundreds of flows across multiple domains) to place on the canvas.</p>
               <p><strong style={h}>Connect</strong> — Drag from the cyan dot (bottom) to the red dot (top) to create flow.</p>
               <p><strong style={h}>Customize</strong> — Click a node to expand. Edit inputs/outputs. Modified nodes get a "modified" badge for derivative tracking.</p>
-              <p><strong style={h}>Create new skills</strong> — Click "+ Create Skill." Describe it in plain English. Claude builds it when the flow runs using <code className="text-xs px-1 rounded" style={{ background: 'var(--bg-card)', color: 'var(--cyan)' }}>skill-from-workflow</code>.</p>
+              <p><strong style={h}>Create new flows</strong> — Click "+ Create Flow." Describe it in plain English. Claude builds it when the chain runs using <code className="text-xs px-1 rounded" style={{ background: 'var(--bg-card)', color: 'var(--cyan)' }}>skill-from-workflow</code>.</p>
               <p><strong style={h}>Save / Load</strong> — Flows persist in your browser. Reload them anytime.</p>
               <p><strong style={h}>Validate</strong> — Checks for cycles and missing info before running.</p>
               <p><strong style={h}>Run</strong> — Downloads a launcher that opens Claude Code with your flow.</p>
-              <p><strong style={h}>Publish On-Chain</strong> — Registers skills and flow on Base mainnet via your wallet.</p>
+              <p><strong style={h}>Publish On-Chain</strong> — Registers flows and chain on Base mainnet via your wallet.</p>
             </div>
           </section>
 
-          {/* Skill Evolution */}
+          {/* Flow Evolution */}
           <section id="evolution" className="mb-14">
-            <h2 className="text-xl font-semibold mb-4" style={h}>Skill Evolution</h2>
+            <h2 className="text-xl font-semibold mb-4" style={h}>Flow Evolution</h2>
             <p className="text-sm mb-4" style={t}>
-              Skills aren't static. They evolve through validation:
+              Flows aren't static. They evolve through validation:
             </p>
             <div className="overflow-x-auto rounded-lg mb-4" style={{ border: '1px solid var(--border)' }}>
               <table className="w-full text-sm">
@@ -151,7 +151,7 @@ export default function Docs() {
                 <tbody style={t}>
                   {[
                     ['Prompt', 'Natural language. Anyone can write one.', 'None'],
-                    ['Skill', 'Structured phases with quality gates.', 'None'],
+                    ['Flow', 'Structured phases with quality gates.', 'None'],
                     ['Validated', 'Shadow-tested across multiple runs. Trust-scored on-chain.', '5+ validations'],
                     ['Graduated', 'Proven consistent. 0.95+ similarity across 100+ runs.', '100+ validations'],
                     ['Compiled', 'Runs as code. No AI needed. Deterministic. Zero token cost.', 'Auto on graduation'],
@@ -166,7 +166,7 @@ export default function Docs() {
               </table>
             </div>
             <p className="text-sm mb-4" style={t}>
-              Base skills are open infrastructure — free to run, free to build on. The value isn't in hiding skills behind a paywall. It's in the trust scores that prove they work, and the composition layer that connects them into flows.
+              Base flows are open infrastructure — free to run, free to build on. The value isn't in hiding flows behind a paywall. It's in the trust scores that prove they work, and the composition layer that connects them into chains.
             </p>
             <div className="p-4 rounded-lg" style={{ background: 'rgba(251,191,36,0.04)', border: '1px solid rgba(251,191,36,0.1)' }}>
               <p className="text-xs font-semibold mb-1" style={{ color: 'var(--gold)' }}>Revenue Split (enforced by smart contract)</p>
@@ -176,11 +176,11 @@ export default function Docs() {
             </div>
           </section>
 
-          {/* Skill Format */}
+          {/* Flow Format */}
           <section id="skill-format" className="mb-14">
-            <h2 className="text-xl font-semibold mb-4" style={h}>Skill Format</h2>
+            <h2 className="text-xl font-semibold mb-4" style={h}>Flow Format</h2>
             <p className="text-sm mb-4" style={t}>
-              A skill is a directory with two files:
+              A flow is a directory with two files:
             </p>
             <CodeBlock
               code={`my-skill/\n  skill.md           # What the AI does (phases, quality gates)\n  manifest.json      # How it connects (inputs, outputs, domain)`}
@@ -188,14 +188,14 @@ export default function Docs() {
             />
 
             <h3 className="text-sm font-semibold mt-6 mb-3" style={h}>manifest.json</h3>
-            <p className="text-sm mb-3" style={t}>This is how the Composer knows which skills can connect. Skill A's outputs feed into Skill B's inputs.</p>
+            <p className="text-sm mb-3" style={t}>This is how the Composer knows which flows can connect. Flow A's outputs feed into Flow B's inputs.</p>
             <CodeBlock
               code={`{\n  "name": "budget-builder",\n  "version": "1.0.0",\n  "domain": "finance",\n  "tags": ["budget", "money", "expenses"],\n  "description": "Build a comprehensive personal budget",\n  "inputs": ["income", "fixed_expenses", "variable_spending"],\n  "outputs": ["spending_snapshot", "bleed_points", "action_plan"],\n  "execution_pattern": "phase_pipeline",\n  "price": "0",\n  "license": "OPEN"\n}`}
               filename="manifest.json"
             />
 
             <h3 className="text-sm font-semibold mt-6 mb-3" style={h}>skill.md — Phases & Quality Gates</h3>
-            <p className="text-sm mb-3" style={t}>Each skill defines execution phases. Every phase has entry criteria, actions, outputs, and a quality gate that must pass before the next phase starts.</p>
+            <p className="text-sm mb-3" style={t}>Each flow defines execution phases. Every phase has entry criteria, actions, outputs, and a quality gate that must pass before the next phase starts.</p>
             <CodeBlock
               code={`## Phase 1: INTAKE\n### Entry Criteria\n- User has provided income and expenses\n### Actions\n- Categorize expenses: fixed, variable, discretionary\n- Identify recurring subscriptions\n### Outputs\n- Financial data organized by category\n### Quality Gate\n- All amounts are numeric\n- Categories cover 80%+ of spending`}
               filename="skill.md (phase example)"
@@ -206,7 +206,7 @@ export default function Docs() {
           <section id="chains" className="mb-14">
             <h2 className="text-xl font-semibold mb-4" style={h}>Flow Format</h2>
             <p className="text-sm mb-4" style={t}>
-              Flows are what the Composer produces — a DAG of skills with dependency ordering:
+              Chains are what the Composer produces — a DAG of flows with dependency ordering:
             </p>
             <CodeBlock
               code={`{\n  "name": "startup-validation",\n  "description": "Validate a startup idea end-to-end",\n  "category": "business",\n  "steps": [\n    { "skill_name": "idea-validator", "alias": "validate", "depends_on": [] },\n    { "skill_name": "market-research", "alias": "research", "depends_on": ["validate"] },\n    { "skill_name": "pricing-strategy", "alias": "pricing", "depends_on": ["research"] }\n  ]\n}`}
@@ -230,7 +230,7 @@ export default function Docs() {
               <li>Launches Claude, which reads the instructions and starts executing</li>
             </ol>
             <p className="text-sm mt-4" style={t}>
-              For custom skills (ones you described in the palette), Claude builds the skill definition first using <code className="text-xs px-1 rounded" style={{ background: 'var(--bg-card)', color: 'var(--cyan)' }}>skill-from-workflow</code>, then executes it.
+              For custom flows (ones you described in the palette), Claude builds the flow definition first using <code className="text-xs px-1 rounded" style={{ background: 'var(--bg-card)', color: 'var(--cyan)' }}>skill-from-workflow</code>, then executes it.
             </p>
           </section>
 
@@ -238,14 +238,14 @@ export default function Docs() {
           <section id="publishing" className="mb-14">
             <h2 className="text-xl font-semibold mb-4" style={h}>Publishing On-Chain</h2>
             <p className="text-sm mb-4" style={t}>
-              Click <strong style={{ color: 'var(--gold)' }}>Publish On-Chain</strong> in the Composer. Your wallet signs transactions to register each skill and the flow on Base mainnet.
+              Click <strong style={{ color: 'var(--gold)' }}>Publish On-Chain</strong> in the Composer. Your wallet signs transactions to register each flow and the chain on Base mainnet.
             </p>
             <p className="text-sm mb-4" style={t}>What gets recorded on-chain:</p>
             <ul className="space-y-1 text-sm list-none p-0" style={t}>
-              <li className="flex items-center gap-2"><span style={{ color: 'var(--cyan)' }}>&#8250;</span> Skill name, domain, tags, inputs, outputs</li>
+              <li className="flex items-center gap-2"><span style={{ color: 'var(--cyan)' }}>&#8250;</span> Flow name, domain, tags, inputs, outputs</li>
               <li className="flex items-center gap-2"><span style={{ color: 'var(--cyan)' }}>&#8250;</span> Content hash (integrity proof)</li>
               <li className="flex items-center gap-2"><span style={{ color: 'var(--cyan)' }}>&#8250;</span> Your wallet as the permanent creator</li>
-              <li className="flex items-center gap-2"><span style={{ color: 'var(--cyan)' }}>&#8250;</span> Derivative links to original skills (if modified)</li>
+              <li className="flex items-center gap-2"><span style={{ color: 'var(--cyan)' }}>&#8250;</span> Derivative links to original flows (if modified)</li>
             </ul>
           </section>
 
@@ -256,8 +256,8 @@ export default function Docs() {
               TRUST is earned AND bought, but earned TRUST boosts influence in validation and governance:
             </p>
             <ul className="space-y-2 text-sm list-none p-0" style={t}>
-              <li className="flex items-center gap-2"><span style={{ color: 'var(--green)' }}>&#10003;</span> Publish skills that others use</li>
-              <li className="flex items-center gap-2"><span style={{ color: 'var(--green)' }}>&#10003;</span> Validate skills for quality</li>
+              <li className="flex items-center gap-2"><span style={{ color: 'var(--green)' }}>&#10003;</span> Publish flows that others use</li>
+              <li className="flex items-center gap-2"><span style={{ color: 'var(--green)' }}>&#10003;</span> Validate flows for quality</li>
               <li className="flex items-center gap-2"><span style={{ color: 'var(--green)' }}>&#10003;</span> Earn royalties from derivatives of your work</li>
               <li className="flex items-center gap-2"><span style={{ color: 'var(--green)' }}>&#10003;</span> Purchase TRUST tokens directly</li>
             </ul>
@@ -273,11 +273,11 @@ export default function Docs() {
                 </thead>
                 <tbody style={t}>
                   {[
-                    ['Explorer', '0', 'Browse and run individual skills (free)'],
+                    ['Explorer', '0', 'Browse and run individual flows (free)'],
                     ['Builder', '500', 'Build flows, save/load/export'],
                     ['Creator', '2,500', 'Publish on-chain'],
                     ['Pro Creator', '10,000', 'Advanced features'],
-                    ['Validator', '25,000 (staked)', 'Validate skill quality'],
+                    ['Validator', '25,000 (staked)', 'Validate flow quality'],
                     ['Governor', '100,000 (staked)', 'DAO voting'],
                   ].map(([tier, balance, access]) => (
                     <tr key={tier} style={{ borderTop: '1px solid var(--border)' }}>
@@ -290,7 +290,7 @@ export default function Docs() {
               </table>
             </div>
             <p className="text-sm mt-4 mb-4" style={t}>
-              When someone modifies your skill and publishes it:
+              When someone modifies your flow and publishes it:
             </p>
             <div className="overflow-x-auto rounded-lg" style={{ border: '1px solid var(--border)' }}>
               <table className="w-full text-sm">
@@ -342,10 +342,10 @@ export default function Docs() {
             <div className="space-y-6">
               {[
                 { q: 'Do I need to install anything?', a: 'No. The Composer runs in your browser. When you click Run, a small script downloads that opens Claude Code. If Claude Code isn\'t installed, it auto-installs.' },
-                { q: 'Do I need crypto to try a skill?', a: 'No. Single skills are free, no wallet needed. You only need TRUST tokens to use the Composer (connecting skills into flows) and to publish on-chain.' },
-                { q: 'How do I get TRUST?', a: 'Earn TRUST by publishing skills, validating quality, or earning royalties from derivatives. You can also purchase TRUST tokens directly. Earned TRUST boosts your influence in validation and governance.' },
-                { q: 'What if someone copies my skill?', a: 'They can\'t copy your on-chain provenance, trust score, validation history, or composition references. A raw copy has none of that.' },
-                { q: 'What happens when I modify someone\'s skill?', a: 'It\'s tracked as a derivative. 15% of TRUST earned flows to the original author automatically via smart contract.' },
+                { q: 'Do I need crypto to try a flow?', a: 'No. Single flows are free, no wallet needed. You only need TRUST tokens to use the Composer (connecting flows into chains) and to publish on-chain.' },
+                { q: 'How do I get TRUST?', a: 'Earn TRUST by publishing flows, validating quality, or earning royalties from derivatives. You can also purchase TRUST tokens directly. Earned TRUST boosts your influence in validation and governance.' },
+                { q: 'What if someone copies my flow?', a: 'They can\'t copy your on-chain provenance, trust score, validation history, or composition references. A raw copy has none of that.' },
+                { q: 'What happens when I modify someone\'s flow?', a: 'It\'s tracked as a derivative. 15% of TRUST earned goes to the original author automatically via smart contract.' },
                 { q: 'What wallet do I need?', a: 'MetaMask, Coinbase Wallet, or any WalletConnect-compatible wallet. MetaMask creates one in your browser in under a minute.' },
               ].map((item, i) => (
                 <div key={i}>

@@ -96,17 +96,17 @@ export default function SkillDetail() {
     return (
       <div className="min-h-screen pt-24 px-6 pb-20 max-w-4xl mx-auto text-center">
         <h1 className="text-2xl font-bold mt-20" style={{ color: 'var(--red)' }}>
-          Skill Not Found
+          Flow Not Found
         </h1>
         <p className="text-sm mt-4" style={{ color: 'var(--text-secondary)' }}>
-          No skill matching "{name}" exists in the registry.
+          No flow matching "{name}" exists in the registry.
         </p>
         <Link
           to="/skills"
           className="btn-secondary inline-block mt-8 px-6 py-3 text-sm no-underline"
           style={{ color: 'var(--cyan)' }}
         >
-          Back to Skills
+          Back to Flows
         </Link>
       </div>
     );
@@ -137,7 +137,7 @@ export default function SkillDetail() {
         onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-secondary)')}
       >
         <span>&larr;</span>
-        <span>Back to Skills</span>
+        <span>Back to Flows</span>
       </Link>
 
       {/* Header */}
@@ -166,10 +166,10 @@ export default function SkillDetail() {
           className="text-xs font-semibold uppercase tracking-wider mb-2"
           style={{ color: 'var(--text-secondary)' }}
         >
-          Try this skill
+          Try this flow
         </h2>
         <p className="text-xs mb-4" style={{ color: 'var(--text-secondary)' }}>
-          Run this skill directly in your browser. An AI assistant will guide you through it interactively.
+          Run this flow directly in your browser. An AI assistant will guide you through it interactively.
         </p>
 
         <div className="flex flex-col sm:flex-row gap-3 mb-4">
@@ -195,7 +195,7 @@ export default function SkillDetail() {
               const domain = skillMeta?.domain?.toLowerCase() || '';
               if (CREATOR_DOMAINS.has(domain)) return 'Run — Creator Tier';
               if (BUILDER_DOMAINS.has(domain)) return 'Run — Builder Tier';
-              return 'Run This Skill — Free';
+              return 'Run This Flow — Free';
             })()}
           </button>
 
@@ -204,12 +204,12 @@ export default function SkillDetail() {
             className="btn-secondary px-6 py-3 text-sm font-semibold cursor-pointer no-underline text-center w-full sm:w-auto"
             style={{ color: 'var(--gold)' }}
           >
-            Connect with other skills &rarr;
+            Connect with other flows &rarr;
           </Link>
         </div>
 
         <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-          This is one skill. With TRUST tokens, you can connect multiple skills into flows in the Composer.
+          This is one flow. With TRUST tokens, you can connect multiple flows into chains in the Composer.
         </p>
       </div>
 
@@ -287,7 +287,7 @@ export default function SkillDetail() {
             className="text-xs font-semibold uppercase tracking-wider mb-4"
             style={{ color: 'var(--text-secondary)' }}
           >
-            Related Skills in {skillMeta.domain}
+            Related Flows in {skillMeta.domain}
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {relatedSkills.map(rs => {

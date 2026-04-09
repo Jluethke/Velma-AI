@@ -139,7 +139,7 @@ export default function PortalTrainer() {
                   <span style={{ color: 'rgba(255,255,255,0.15)' }}>|</span>
                   <span>{trainer.total_skill_runs + trainer.total_chain_runs} total runs</span>
                   <span style={{ color: 'rgba(255,255,255,0.15)' }}>|</span>
-                  <span>{trainer.skills_discovered} skills discovered</span>
+                  <span>{trainer.skills_discovered} flows discovered</span>
                 </div>
               </div>
 
@@ -204,10 +204,10 @@ export default function PortalTrainer() {
             </div>
           ) : trainer ? (
             <div>
-              <StatRow label="Skills Discovered" value={`${trainer.skills_discovered} / ${trainer.skills_total}`} accent="#00ffc8" />
+              <StatRow label="Flows Discovered" value={`${trainer.skills_discovered} / ${trainer.skills_total}`} accent="#00ffc8" />
               <StatRow label="Chains Completed" value={`${trainer.chains_completed} / ${trainer.chains_total}`} accent="#aa88ff" />
               <StatRow label="Achievements Unlocked" value={`${trainer.achievements_unlocked} / ${trainer.achievements_total}`} accent="#ffd700" />
-              <StatRow label="Total Skill Runs" value={trainer.total_skill_runs} accent="#00ff88" />
+              <StatRow label="Total Flow Runs" value={trainer.total_skill_runs} accent="#00ff88" />
               <StatRow label="Total Chain Runs" value={trainer.total_chain_runs} accent="#44aaff" />
               <StatRow label="Current Streak" value={`${trainer.streak} days`} accent={trainer.streak > 0 ? '#ffd700' : '#8888aa'} />
               <StatRow label="Best Streak" value={`${trainer.streak_best} days`} accent="#ffd700" />
@@ -216,7 +216,7 @@ export default function PortalTrainer() {
               {/* Completion bars */}
               <div className="mt-5 space-y-3">
                 <CompletionBar
-                  label="Skill Discovery"
+                  label="Flow Discovery"
                   current={trainer.skills_discovered}
                   total={trainer.skills_total}
                   color="#00ffc8"
@@ -323,7 +323,7 @@ export default function PortalTrainer() {
         style={{ background: 'rgba(26,26,46,0.6)', border: '1px solid var(--border)' }}
       >
         <h3 className="text-base font-semibold mb-4" style={{ color: '#ffffff' }}>
-          Skill Evolutions
+          Flow Evolutions
         </h3>
         {evosLoading ? (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -373,7 +373,7 @@ export default function PortalTrainer() {
           <div className="text-center py-8">
             <div className="text-3xl mb-3">{'\uD83C\uDF31'}</div>
             <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-              No evolutions yet. Keep running skills to evolve them.
+              No evolutions yet. Keep running flows to evolve them.
             </p>
           </div>
         )}
@@ -389,7 +389,7 @@ export default function PortalTrainer() {
             Run Statistics
           </h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <RunStatBlock label="Skill Runs" value={trainer.total_skill_runs} color="#00ffc8" />
+            <RunStatBlock label="Flow Runs" value={trainer.total_skill_runs} color="#00ffc8" />
             <RunStatBlock label="Chain Runs" value={trainer.total_chain_runs} color="#aa88ff" />
             <RunStatBlock
               label="Avg. Runs/Day"

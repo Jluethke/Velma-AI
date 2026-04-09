@@ -53,7 +53,7 @@ export default function PortalSkilldex() {
         Skilldex
       </h1>
       <p className="text-sm mb-8" style={{ color: 'var(--text-secondary)' }}>
-        Your skill collection progress. Discover them all.
+        Your flow collection progress. Discover them all.
       </p>
 
       {isLoading || !skilldex ? (
@@ -91,7 +91,7 @@ export default function PortalSkilldex() {
                 <span style={{ color: '#00ffc8' }}>{skilldex.total_discovered}</span>
                 {' / '}
                 <span>{skilldex.total_skills}</span>
-                {' Skills Discovered'}
+                {' Flows Discovered'}
               </span>
               <span
                 className="inline-flex items-center px-3 py-1 rounded-full text-sm font-bold"

@@ -224,7 +224,7 @@ function ChainDetail({
       {/* Pipeline visualization */}
       <div className="mb-6">
         <div className="text-xs uppercase tracking-wider mb-3" style={{ color: 'var(--text-secondary)' }}>
-          Skill Pipeline
+          Flow Pipeline
         </div>
         <div className="space-y-2">
           {chain.skills.map((skill, i) => (
@@ -281,7 +281,7 @@ function ChainDetail({
               </svg>
               <p className="text-xs font-semibold" style={{ color: 'var(--gold)' }}>TRUST tokens required</p>
               <p className="text-[10px] mt-1" style={{ color: 'var(--text-secondary)' }}>
-                Your wallet is connected but has no TRUST balance. Earn tokens by publishing skills or validating.
+                Your wallet is connected but has no TRUST balance. Earn tokens by publishing flows or validating.
               </p>
             </div>
           )}
@@ -406,10 +406,10 @@ export default function Chains() {
       {/* Header */}
       <div className="text-center mb-10">
         <h1 className="text-3xl md:text-4xl font-bold mb-3" style={{ color: '#ffffff' }}>
-          Skill Chains
+          Flow Chains
         </h1>
         <p className="text-sm max-w-lg mx-auto" style={{ color: 'var(--text-secondary)' }}>
-          Multi-step AI pipelines that chain skills together. Describe what you need and
+          Multi-step AI pipelines that chain flows together. Describe what you need and
           let the system find the right sequence.
         </p>
       </div>
@@ -522,7 +522,7 @@ export default function Chains() {
                   Select a chain to view details
                 </div>
                 <div className="text-xs" style={{ color: 'var(--text-secondary)', opacity: 0.6 }}>
-                  Click any result to see the skill pipeline and run it
+                  Click any result to see the flow pipeline and run it
                 </div>
               </div>
             )}
@@ -566,7 +566,7 @@ export default function Chains() {
                     Select a chain to view details
                   </div>
                   <div className="text-xs" style={{ color: 'var(--text-secondary)', opacity: 0.6 }}>
-                    Click any chain to see its skill pipeline and run it
+                    Click any chain to see its flow pipeline and run it
                   </div>
                 </div>
               )}

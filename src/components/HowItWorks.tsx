@@ -10,14 +10,14 @@ const steps = [
   {
     number: '02',
     title: 'Discover',
-    description: 'Search thousands of validated skills. Filter by domain, tags, trust score, and success rate. See validation history before you import.',
+    description: 'Search thousands of validated flows. Filter by domain, tags, trust score, and success rate. See validation history before you import.',
     code: 'flowfabric discover --domain financial --min-trust 0.6',
   },
   {
     number: '03',
     title: 'Import',
-    description: 'Download, validate locally, and install to the right location for your AI agent. Skills are automatically adapted to your platform -- Claude .md, GPT actions, Cursor rules, or raw procedures.',
-    code: 'flowfabric import 42  # installs to your agent\'s skill directory',
+    description: 'Download, validate locally, and install to the right location for your AI agent. Flows are automatically adapted to your platform -- Claude .md, GPT actions, Cursor rules, or raw procedures.',
+    code: 'flowfabric import 42  # installs to your agent\'s flow directory',
   },
   {
     number: '04',

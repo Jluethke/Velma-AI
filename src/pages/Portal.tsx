@@ -101,10 +101,10 @@ export default function Portal() {
       {/* Page header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2" style={{ color: '#ffffff' }}>
-          Skill Portal
+          Flow Portal
         </h1>
         <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-          Your AI skill training dashboard. No wallet required.
+          Your AI flow training dashboard. No wallet required.
         </p>
       </div>
 
@@ -196,7 +196,7 @@ export default function Portal() {
         </div>
       ) : trainer ? (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          <StatCard label="Skills Discovered" value={trainer.skills_discovered} total={trainer.skills_total} accent="#00ffc8" />
+          <StatCard label="Flows Discovered" value={trainer.skills_discovered} total={trainer.skills_total} accent="#00ffc8" />
           <StatCard label="Chains Completed" value={trainer.chains_completed} total={trainer.chains_total} accent="#aa88ff" />
           <StatCard label="Achievements" value={trainer.achievements_unlocked} total={trainer.achievements_total} accent="#ffd700" />
           <StatCard label="Total Runs" value={trainer.total_skill_runs + trainer.total_chain_runs} accent="#00ff88" />
@@ -332,8 +332,8 @@ export default function Portal() {
           />
           <QuickLink
             to="/skills"
-            title="Skill Library"
-            description="Browse and discover 95+ AI skills"
+            title="Flow Library"
+            description="Browse and discover 95+ AI flows"
             icon={'\uD83D\uDCDA'}
           />
           <QuickLink
@@ -345,7 +345,7 @@ export default function Portal() {
           <QuickLink
             to="/chains"
             title="Chains"
-            description="Multi-skill pipelines for real problems"
+            description="Multi-flow pipelines for real problems"
             icon={'\uD83D\uDD17'}
           />
         </div>

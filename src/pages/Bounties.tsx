@@ -57,7 +57,7 @@ export default function Bounties() {
       <div className="flex items-start justify-between mb-8">
         <div>
           <h1 className="text-3xl md:text-4xl font-bold mb-2" style={{ color: '#ffffff' }}>
-            Skill Bounties
+            Flow Bounties
           </h1>
           <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
             {bounties.filter(b => b.status === 'open').length} open bounties --{' '}

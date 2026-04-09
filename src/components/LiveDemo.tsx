@@ -283,7 +283,7 @@ function ResultCard({ chain, index }: { chain: ChainMatch; index: number }) {
               <p style={{ color: 'var(--text-primary)' }}>One-time setup (30 seconds):</p>
               <p>1. <a href="/install.bat" download="FlowFabric-Install.bat" style={{ color: 'var(--cyan)', textDecoration: 'none' }}>Download installer</a> (Windows) or <a href="/install.sh" download="FlowFabric-Install.sh" style={{ color: 'var(--cyan)', textDecoration: 'none' }}>Mac/Linux</a></p>
               <p>2. Run it — installs FlowFabric + configures Claude Code</p>
-              <p>3. Paste your prompt into Claude Code — skills run automatically</p>
+              <p>3. Paste your prompt into Claude Code — flows run automatically</p>
             </div>
           )}
         </div>
@@ -353,7 +353,7 @@ export default function LiveDemo() {
           <span style={{ color: 'var(--cyan)' }}>right now.</span>
         </h2>
         <p className="text-sm max-w-lg mx-auto" style={{ color: 'var(--text-secondary)' }}>
-          Describe what you need. FlowFabric finds the right skill chain and runs it inside Claude Code.
+          Describe what you need. FlowFabric finds the right flow chain and runs it inside Claude Code.
         </p>
       </div>
 

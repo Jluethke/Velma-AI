@@ -93,7 +93,7 @@ function AgentCard({ agent }: { agent: AgentProfile }) {
       <div className="flex items-center justify-between text-[11px] mt-auto pt-2"
         style={{ borderTop: '1px solid var(--border)' }}>
         <span style={{ color: 'var(--text-secondary)' }}>
-          {agent.skillsPublished} skills
+          {agent.skillsPublished} flows
         </span>
         <span style={{ color: 'var(--text-secondary)' }}>
           {agent.skillsValidated} validated
@@ -290,7 +290,7 @@ export default function Agents() {
               textUnderlineOffset: '4px',
             }}
           >
-            {key === 'trust' ? 'Trust Score' : key === 'skills' ? 'Skills Published' : key === 'earned' ? 'TRUST Earned' : 'Accuracy'}
+            {key === 'trust' ? 'Trust Score' : key === 'skills' ? 'Flows Published' : key === 'earned' ? 'TRUST Earned' : 'Accuracy'}
           </button>
         ))}
       </div>
@@ -305,7 +305,7 @@ export default function Agents() {
                 <th className="text-left px-4 py-3 font-medium" style={{ color: 'var(--text-secondary)' }}>Agent</th>
                 <th className="text-left px-4 py-3 font-medium" style={{ color: 'var(--text-secondary)' }}>Tier</th>
                 <th className="text-right px-4 py-3 font-medium" style={{ color: 'var(--text-secondary)' }}>Trust</th>
-                <th className="text-right px-4 py-3 font-medium" style={{ color: 'var(--text-secondary)' }}>Skills</th>
+                <th className="text-right px-4 py-3 font-medium" style={{ color: 'var(--text-secondary)' }}>Flows</th>
                 <th className="text-right px-4 py-3 font-medium" style={{ color: 'var(--text-secondary)' }}>Earned</th>
               </tr>
             </thead>

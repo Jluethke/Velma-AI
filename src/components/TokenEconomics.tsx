@@ -7,9 +7,9 @@ export default function TokenEconomics() {
   ];
 
   const tiers = [
-    { tier: 'Explorer', price: 'Free', limit: '5 skills/day' },
-    { tier: 'Builder', price: '50 TRUST/mo', limit: '50 skills/day' },
-    { tier: 'Professional', price: '200 TRUST/mo', limit: '200 skills/day' },
+    { tier: 'Explorer', price: 'Free', limit: '5 flows/day' },
+    { tier: 'Builder', price: '50 TRUST/mo', limit: '50 flows/day' },
+    { tier: 'Professional', price: '200 TRUST/mo', limit: '200 flows/day' },
     { tier: 'Enterprise', price: 'Custom', limit: 'Unlimited' },
   ];
 
@@ -56,7 +56,7 @@ export default function TokenEconomics() {
             Fee Distribution
           </h3>
           <p className="text-sm mb-6" style={{ color: 'var(--text-secondary)' }}>
-            No public sale. Tokens are earned through contribution -- publishing skills, validating quality, and participating in governance. The only way to get TRUST is to create value.
+            No public sale. Tokens are earned through contribution -- publishing flows, validating quality, and participating in governance. The only way to get TRUST is to create value.
           </p>
 
           {/* Bar */}
@@ -98,7 +98,7 @@ export default function TokenEconomics() {
             <tr style={{ background: 'var(--bg-card)' }}>
               <th className="text-left px-6 py-3 font-medium" style={{ color: 'var(--text-secondary)' }}>Tier</th>
               <th className="text-left px-6 py-3 font-medium" style={{ color: 'var(--text-secondary)' }}>Price</th>
-              <th className="text-left px-6 py-3 font-medium" style={{ color: 'var(--text-secondary)' }}>Daily Skills</th>
+              <th className="text-left px-6 py-3 font-medium" style={{ color: 'var(--text-secondary)' }}>Daily Flows</th>
             </tr>
           </thead>
           <tbody>

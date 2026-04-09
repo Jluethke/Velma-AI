@@ -40,12 +40,12 @@ export default function PortalSkills() {
       <div className="flex items-center gap-2 mb-6 text-sm" style={{ color: 'var(--text-secondary)' }}>
         <Link to="/portal" className="no-underline" style={{ color: '#00ffc8' }}>Portal</Link>
         <span>/</span>
-        <span>Skills</span>
+        <span>Flows</span>
       </div>
 
-      <h1 className="text-3xl font-bold mb-2" style={{ color: '#ffffff' }}>Skills Browser</h1>
+      <h1 className="text-3xl font-bold mb-2" style={{ color: '#ffffff' }}>Flows Browser</h1>
       <p className="text-sm mb-8" style={{ color: 'var(--text-secondary)' }}>
-        Browse and install verified AI skills from the FlowFabric registry
+        Browse and install verified AI flows from the FlowFabric registry
       </p>
 
       {/* Search + Domain Filters */}
@@ -54,7 +54,7 @@ export default function PortalSkills() {
           type="text"
           value={search}
           onChange={e => setSearch(e.target.value)}
-          placeholder="Search skills by name, description, or tag..."
+          placeholder="Search flows by name, description, or tag..."
           className="flex-1 min-w-[240px] px-4 py-2.5 rounded-lg text-sm"
           style={{
             background: 'rgba(26,26,46,0.6)',
@@ -120,7 +120,7 @@ export default function PortalSkills() {
           style={{ background: 'rgba(26,26,46,0.4)', border: '1px solid var(--border)' }}
         >
           <div className="text-4xl mb-4" style={{ opacity: 0.3 }}>&#x1F50D;</div>
-          <div className="text-lg font-medium mb-2" style={{ color: '#ffffff' }}>No skills found</div>
+          <div className="text-lg font-medium mb-2" style={{ color: '#ffffff' }}>No flows found</div>
           <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>
             Try adjusting your search or domain filter
           </div>

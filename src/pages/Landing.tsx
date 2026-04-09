@@ -20,11 +20,11 @@ function ComposerPreview() {
           className="text-3xl md:text-5xl font-bold mb-4"
           style={{ color: 'var(--text-primary)', letterSpacing: '-0.02em' }}
         >
-          Connect skills into flows.{' '}
+          Connect flows into chains.{' '}
           <span className="gradient-text">Visually.</span>
         </h2>
         <p className="text-sm md:text-base max-w-2xl mx-auto" style={{ color: 'var(--text-secondary)', lineHeight: 1.7 }}>
-          Drag skills onto a canvas, connect them, customize inputs and outputs, then run the whole flow in Claude Code. Create skills that don't exist yet with natural language.
+          Drag flows onto a canvas, connect them, customize inputs and outputs, then run the whole chain in Claude Code. Create flows that don't exist yet with natural language.
         </p>
       </div>
 
@@ -162,8 +162,8 @@ function TrustEconomy() {
   const steps = [
     {
       step: '1',
-      title: 'Try Skills Free',
-      desc: 'Run any skill for free in Claude Code. No wallet needed. See what AI can do with structured procedures.',
+      title: 'Try Flows Free',
+      desc: 'Run any flow for free in Claude Code. No wallet needed. See what AI can do with structured procedures.',
       color: 'var(--cyan)',
     },
     {
@@ -175,13 +175,13 @@ function TrustEconomy() {
     {
       step: '3',
       title: 'Compose & Publish',
-      desc: 'Unlock the visual composer. Build flows from existing skills or create new ones. Publish on-chain — your wallet is credited as the author.',
+      desc: 'Unlock the visual composer. Build chains from existing flows or create new ones. Publish on-chain — your wallet is credited as the author.',
       color: 'var(--gold)',
     },
     {
       step: '4',
       title: 'Earn TRUST',
-      desc: 'When others use your skills or derivatives of them, TRUST flows to your wallet. 70% to creators, 15% to validators, 15% to the treasury.',
+      desc: 'When others use your flows or derivatives of them, TRUST goes to your wallet. 70% to creators, 15% to validators, 15% to the treasury.',
       color: 'var(--green)',
     },
   ];
@@ -198,7 +198,7 @@ function TrustEconomy() {
           {' '}works
         </h2>
         <p className="text-sm max-w-2xl mx-auto" style={{ color: 'var(--text-secondary)', lineHeight: 1.7 }}>
-          TRUST isn't bought. It's earned. Create skills, validate quality, publish flows, earn royalties.
+          TRUST isn't bought. It's earned. Create flows, validate quality, publish chains, earn royalties.
         </p>
       </div>
 
@@ -255,7 +255,7 @@ function TrustEconomy() {
       >
         <p className="text-xs" style={{ color: 'var(--text-secondary)', lineHeight: 1.7 }}>
           <span className="font-semibold gradient-text-gold">Derivatives earn royalties for everyone in the flow.</span>{' '}
-          If you modify someone's skill and publish it, 15% of TRUST earned goes to the original creator automatically via smart contract. Innovation compounds.
+          If you modify someone's flow and publish it, 15% of TRUST earned goes to the original creator automatically via smart contract. Innovation compounds.
         </p>
       </div>
     </section>
@@ -267,7 +267,7 @@ function TrustEconomy() {
 function SkillEvolution() {
   const stages = [
     { label: 'Prompt', desc: 'Natural language. Anyone can write one.', color: 'var(--text-secondary)', scale: 0.85 },
-    { label: 'Skill', desc: 'Structured phases with quality gates.', color: 'var(--cyan)', scale: 0.9 },
+    { label: 'Flow', desc: 'Structured phases with quality gates.', color: 'var(--cyan)', scale: 0.9 },
     { label: 'Validated', desc: 'Shadow-tested. Trust-scored on-chain.', color: 'var(--purple)', scale: 0.95 },
     { label: 'Graduated', desc: 'Proven consistent across hundreds of runs.', color: 'var(--gold)', scale: 1.0 },
     { label: 'Compiled', desc: 'Runs as code. No AI needed. Deterministic.', color: 'var(--green)', scale: 1.05 },
@@ -280,11 +280,11 @@ function SkillEvolution() {
           className="text-3xl md:text-5xl font-bold mb-4"
           style={{ color: 'var(--text-primary)', letterSpacing: '-0.02em' }}
         >
-          Skills{' '}
+          Flows{' '}
           <span style={{ color: 'var(--green)' }}>evolve</span>
         </h2>
         <p className="text-sm max-w-2xl mx-auto" style={{ color: 'var(--text-secondary)', lineHeight: 1.7 }}>
-          A skill starts as natural language. Through validation and consensus, it graduates into executable code — software born from conversation, proven by the network.
+          A flow starts as natural language. Through validation and consensus, it graduates into executable code — software born from conversation, proven by the network.
         </p>
       </div>
 
@@ -334,7 +334,7 @@ function SkillEvolution() {
         {[
           {
             title: 'Open Infrastructure',
-            desc: 'Every base skill is free to run. They\'re the building blocks — open, validated, and available to everyone.',
+            desc: 'Every base flow is free to run. They\'re the building blocks — open, validated, and available to everyone.',
             color: 'var(--cyan)',
           },
           {
@@ -344,7 +344,7 @@ function SkillEvolution() {
           },
           {
             title: 'AI Independent',
-            desc: 'Graduated skills compile to code. They run without an LLM — deterministic, instant, zero token cost. Software born from language.',
+            desc: 'Graduated flows compile to code. They run without an LLM — deterministic, instant, zero token cost. Software born from language.',
             color: 'var(--green)',
           },
         ].map(card => (

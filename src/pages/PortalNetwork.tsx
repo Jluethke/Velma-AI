@@ -68,7 +68,7 @@ function NetworkContent() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         <NetworkStat label="Block Height" value="#1,248" change="+87" />
         <NetworkStat label="Active Validators" value={nodes} change="+12" accent="var(--green)" />
-        <NetworkStat label="Registered Skills" value={skills} change="+3" accent="var(--purple)" />
+        <NetworkStat label="Registered Flows" value={skills} change="+3" accent="var(--purple)" />
         <NetworkStat label="Total Transactions" value="48,291" change="+1,247" accent="var(--gold)" />
       </div>
 
@@ -125,7 +125,7 @@ function NetworkContent() {
                     Proposer: <span style={{ color: 'var(--text-primary)' }}>{block.proposer}</span>
                   </div>
                   <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-                    {block.txns} txns &middot; {block.skills} skill validations
+                    {block.txns} txns &middot; {block.skills} flow validations
                   </div>
                 </div>
               </div>

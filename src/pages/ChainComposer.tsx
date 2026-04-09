@@ -212,7 +212,7 @@ export default function ChainComposer() {
   const handleAddSkill = useCallback((skill: PaletteSkill) => {
     // Free users: 3 skills max (enough to see the value of flows). Builder+: unlimited.
     if (!canChain && nodes.length >= 3) {
-      showTrustToast('Builder tier (500 TRUST) required to add more than 3 skills');
+      showTrustToast('Builder tier (500 TRUST) required to add more than 3 flows');
       return;
     }
 
@@ -544,16 +544,16 @@ export default function ChainComposer() {
     // Write a CLAUDE.md that tells Claude how to run the chain
     const claudeMd = `# FlowFabric Flow: ${chainName}
 
-${chainDescription || 'Custom skill flow composed in the visual editor.'}
+${chainDescription || 'Custom flow composed in the visual editor.'}
 
 ## How to run this flow
 
-Execute these ${steps.length} skills in order. For each skill:
-1. Call \`start_skill_run\` with the skill name
-2. Call \`get_skill\` to read the full skill definition
-3. Follow each phase in the skill definition, calling \`record_phase\` after each
+Execute these ${steps.length} flows in order. For each flow:
+1. Call \`start_skill_run\` with the flow name
+2. Call \`get_skill\` to read the full flow definition
+3. Follow each phase in the flow definition, calling \`record_phase\` after each
 4. Call \`complete_skill_run\` when done
-5. **Before starting the next skill, summarize the key outputs from this skill and carry them forward as context**
+5. **Before starting the next flow, summarize the key outputs from this flow and carry them forward as context**
 
 ## Flow steps
 
@@ -565,14 +565,14 @@ ${entryInputs.length > 0 ? entryInputs.map(i => `- ${i}`).join('\n') : 'No speci
 
 ## Context bridging rules
 
-When moving from one skill to the next:
-- Summarize the key outputs, decisions, and findings from the completed skill
-- Frame them as inputs for the next skill (e.g., "Based on the code review, the main issues are X, Y, Z — now let\\'s create content about these findings")
+When moving from one flow to the next:
+- Summarize the key outputs, decisions, and findings from the completed flow
+- Frame them as inputs for the next flow (e.g., "Based on the code review, the main issues are X, Y, Z — now let\\'s create content about these findings")
 - The user should NOT have to re-explain anything — carry all context forward
-- If a skill produces structured data (lists, tables, scores), preserve that structure
+- If a flow produces structured data (lists, tables, scores), preserve that structure
 
-${customSkills.length > 0 ? `## Custom skills to build first\n\nThese skills don't exist in the marketplace yet. Before running the flow, use the \`skill-from-workflow\` skill to create each one based on the description below. Ask the user to confirm the generated skill definition before proceeding.\n\n${customSkills.map(s => `### ${s.name}\n**Description:** ${s.description}\n**Inputs:** ${s.inputs.join(', ') || 'ask the user'}\n**Outputs:** ${s.outputs.join(', ') || 'ask the user'}\n`).join('\n')}\n` : ''}
-${customizedSkills.length > 0 ? `## Customized skills (derivatives)\n\nThese skills were modified from their originals. When publishing, they should be marked as derivatives with royalty splits to the original author:\n${customizedSkills.map(s => `- ${s}`).join('\n')}\n` : ''}
+${customSkills.length > 0 ? `## Custom flows to build first\n\nThese flows don't exist in the marketplace yet. Before running the chain, use the \`skill-from-workflow\` flow to create each one based on the description below. Ask the user to confirm the generated flow definition before proceeding.\n\n${customSkills.map(s => `### ${s.name}\n**Description:** ${s.description}\n**Inputs:** ${s.inputs.join(', ') || 'ask the user'}\n**Outputs:** ${s.outputs.join(', ') || 'ask the user'}\n`).join('\n')}\n` : ''}
+${customizedSkills.length > 0 ? `## Customized flows (derivatives)\n\nThese flows were modified from their originals. When publishing, they should be marked as derivatives with royalty splits to the original author:\n${customizedSkills.map(s => `- ${s}`).join('\n')}\n` : ''}
 ## Start
 
 Ask the user for the required inputs listed above, then begin with step 1.
@@ -661,7 +661,7 @@ mkdir -p "$WS"
 
 echo ""
 echo "  FlowFabric Flow Runner"
-echo "  Flow: ${chainName} (${steps.length} skills)"
+echo "  Flow: ${chainName} (${steps.length} flows)"
 echo "  Workspace: $WS"
 echo ""
 
@@ -707,7 +707,7 @@ fi
 
     const safeName = chainName.replace(/[^a-z0-9-]/gi, '-').toLowerCase();
     const chainB64 = btoa(unescape(encodeURIComponent(built.json)));
-    const claudeMd = `# Scheduled: ${chainName}\n\nThis flow runs on a schedule. Execute all ${built.steps.length} skills in order.\n\n${built.steps.map((s, i) => `${i + 1}. ${s.skill_name}`).join('\n')}\n\nStart immediately — ask for inputs only on first run, then use saved context.`;
+    const claudeMd = `# Scheduled: ${chainName}\n\nThis flow runs on a schedule. Execute all ${built.steps.length} flows in order.\n\n${built.steps.map((s, i) => `${i + 1}. ${s.skill_name}`).join('\n')}\n\nStart immediately — ask for inputs only on first run, then use saved context.`;
     const claudeMdB64 = btoa(unescape(encodeURIComponent(claudeMd)));
     const isWindows = navigator.userAgent.includes('Windows');
 
@@ -994,13 +994,13 @@ echo "  To remove: crontab -l | grep -v 'FlowFabric-${safeName}' | crontab -"
           >
             <option value="">Try a flow template...</option>
             {FEATURED_CHAINS.map(c => (
-              <option key={c.name} value={c.name}>{c.name} ({c.skills.length} skills)</option>
+              <option key={c.name} value={c.name}>{c.name} ({c.skills.length} flows)</option>
             ))}
           </select>
 
           {!canChain && nodes.length === 0 && (
             <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
-              Pick a template or add a skill, then click Run
+              Pick a template or add a flow, then click Run
             </span>
           )}
 
@@ -1014,7 +1014,7 @@ echo "  To remove: crontab -l | grep -v 'FlowFabric-${safeName}' | crontab -"
                   const built = buildChainJson();
                   if (!built) return;
                   const skillNames = built.steps.map(s => s.skill_name).join(', ');
-                  const cmd = `claude -p "Run these FlowFabric skills in order: ${skillNames}. For each skill, call start_skill_run, get_skill, execute each phase with record_phase, then complete_skill_run. Pass outputs between steps as context."`;
+                  const cmd = `claude -p "Run these FlowFabric flows in order: ${skillNames}. For each flow, call start_skill_run, get_skill, execute each phase with record_phase, then complete_skill_run. Pass outputs between steps as context."`;
                   navigator.clipboard.writeText(cmd).then(() => {
                     showTrustToast();
                     setTrustToast(false); // clear the TRUST toast
@@ -1153,7 +1153,7 @@ echo "  To remove: crontab -l | grep -v 'FlowFabric-${safeName}' | crontab -"
 
           {/* Node count */}
           <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
-            {nodes.length} skills / {edges.length} connections
+            {nodes.length} flows / {edges.length} connections
           </span>
         </div>
 
@@ -1248,7 +1248,7 @@ echo "  To remove: crontab -l | grep -v 'FlowFabric-${safeName}' | crontab -"
                     color: 'var(--text-primary)', fontSize: '11px', cursor: 'pointer', padding: '2px 0',
                   }}
                 >
-                  <strong>{chain.name}</strong> — {chain.nodes.length} skills, {chain.edges.length} connections
+                  <strong>{chain.name}</strong> — {chain.nodes.length} flows, {chain.edges.length} connections
                   <span style={{ color: 'var(--text-secondary)', marginLeft: '6px' }}>{new Date(chain.savedAt).toLocaleDateString()}</span>
                 </button>
                 <button
@@ -1269,7 +1269,7 @@ echo "  To remove: crontab -l | grep -v 'FlowFabric-${safeName}' | crontab -"
             fontSize: '12px',
             color: '#ffc800',
           }}>
-            {loadError} — showing fallback skills
+            {loadError} — showing fallback flows
           </div>
         )}
 
@@ -1328,7 +1328,7 @@ echo "  To remove: crontab -l | grep -v 'FlowFabric-${safeName}' | crontab -"
           }}>
             <div style={{ fontSize: '48px', marginBottom: '12px', opacity: 0.3 }}>&#x1F9E9;</div>
             <div style={{ fontSize: '16px', color: 'var(--text-secondary)', marginBottom: '6px' }}>
-              Try a flow template above, or click skills in the palette
+              Try a flow template above, or click flows in the palette
             </div>
             <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
               Drag from the <span style={{ color: 'var(--cyan)' }}>cyan dot</span> (bottom) to the <span style={{ color: '#ff6b6b' }}>red dot</span> (top) to connect

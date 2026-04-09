@@ -146,7 +146,7 @@ export default function Navbar() {
                   (e.currentTarget as HTMLElement).style.boxShadow = 'none';
                 }}
               >
-                Try a Skill
+                Try a Flow
               </Link>
             )}
 

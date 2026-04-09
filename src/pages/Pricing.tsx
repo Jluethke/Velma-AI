@@ -29,8 +29,8 @@ const tiers: Tier[] = [
     accentBorder: 'rgba(0, 255, 200, 0.2)',
     popular: false,
     features: [
-      '120+ AI skills',
-      '66+ skill flows',
+      '120+ AI flows',
+      '66+ flow chains',
       'Plain-English flow discovery',
       'Gamification (XP, levels, achievements, streaks)',
       'Flow mining -- earn 50 TRUST/day',
@@ -52,7 +52,7 @@ const tiers: Tier[] = [
     features: [
       'Everything in Free',
       '100 flow runs/day',
-      'Custom private skills',
+      'Custom private flows',
       'REST API access',
       'Priority LLM execution',
       'Usage analytics',
@@ -76,7 +76,7 @@ const tiers: Tier[] = [
       'Everything in Pro',
       '500 flow runs/day per seat',
       'Team dashboard',
-      'Shared skills library',
+      'Shared flows library',
       'Team analytics',
       '500 TRUST/day mining cap',
       'Priority support',
@@ -111,11 +111,11 @@ const tiers: Tier[] = [
 const faqs = [
   {
     q: 'What\'s the difference between TRUST tokens and USD subscription?',
-    a: 'TRUST tokens are the on-chain currency of the FlowFabric network. You earn them by running flows, validating skills, and contributing to the ecosystem. USD subscriptions unlock higher usage limits, API access, and team features. You can use FlowFabric entirely for free with TRUST tokens -- the paid tiers are for businesses that need higher throughput and enterprise tooling.',
+    a: 'TRUST tokens are the on-chain currency of the FlowFabric network. You earn them by running flows, validating quality, and contributing to the ecosystem. USD subscriptions unlock higher usage limits, API access, and team features. You can use FlowFabric entirely for free with TRUST tokens -- the paid tiers are for businesses that need higher throughput and enterprise tooling.',
   },
   {
     q: 'Can I use FlowFabric without paying anything?',
-    a: 'Yes. The Free tier gives you access to all 120+ skills and 66+ flows with 10 runs per day. You earn TRUST tokens through flow mining and can use those tokens within the ecosystem. Most individual users never need a paid plan.',
+    a: 'Yes. The Free tier gives you access to all 120+ flows and 66+ chains with 10 runs per day. You earn TRUST tokens through flow mining and can use those tokens within the ecosystem. Most individual users never need a paid plan.',
   },
   {
     q: 'What happens if I hit my daily limit?',
@@ -330,7 +330,7 @@ export default function Pricing() {
           <span style={{ color: 'var(--cyan)' }}>Businesses pay.</span>
         </h1>
         <p className="text-sm leading-relaxed max-w-2xl mx-auto mb-8" style={{ color: 'var(--text-secondary)' }}>
-          Every individual gets full access to the FlowFabric skill marketplace at no cost.
+          Every individual gets full access to the FlowFabric flow marketplace at no cost.
           Paid plans unlock higher throughput, API access, and team collaboration for organizations.
         </p>
 
@@ -390,7 +390,7 @@ export default function Pricing() {
           </h3>
           <p className="text-xs mb-4" style={{ color: 'var(--text-secondary)' }}>
             Start free. Upgrade only when your usage demands it. Every plan includes full access
-            to the skill marketplace, gamification, and TRUST token mining.
+            to the flow marketplace, gamification, and TRUST token mining.
           </p>
           <Link
             to="/compose"
@@ -400,7 +400,7 @@ export default function Pricing() {
               color: '#000',
             }}
           >
-            Explore Skills for Free
+            Explore Flows for Free
           </Link>
         </div>
       </section>

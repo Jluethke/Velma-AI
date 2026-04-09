@@ -238,7 +238,7 @@ export default function PortalStake() {
 
       <h1 className="text-3xl font-bold mb-2" style={{ color: 'var(--text-primary)' }}>Stake TRUST</h1>
       <p className="text-sm mb-8" style={{ color: 'var(--text-secondary)' }}>
-        Stake tokens to become a validator and earn rewards for skill verification
+        Stake tokens to become a validator and earn rewards for flow verification
       </p>
 
       {isConnected && address ? (

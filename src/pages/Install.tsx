@@ -12,7 +12,7 @@ function detectPlatform(): Platform {
 
 const MCP_URL = 'https://flowfabric.io/api/mcp';
 
-const CLAUDE_WEB_LINK = `https://claude.ai/settings/integrations/add?url=${encodeURIComponent(MCP_URL)}&name=${encodeURIComponent('FlowFabric Skills')}`;
+const CLAUDE_WEB_LINK = `https://claude.ai/settings/integrations/add?url=${encodeURIComponent(MCP_URL)}&name=${encodeURIComponent('FlowFabric Flows')}`;
 
 const DESKTOP_CONFIG = {
   mcpServers: {
@@ -242,7 +242,7 @@ export default function Install() {
             className="text-base"
             style={{ color: 'var(--text-secondary)', maxWidth: '480px', margin: '0 auto' }}
           >
-            Give Claude access to 120+ structured AI skills — budgeting, career coaching, business planning, and more.
+            Give Claude access to 120+ structured AI flows — budgeting, career coaching, business planning, and more.
           </p>
         </div>
 
@@ -336,7 +336,7 @@ export default function Install() {
                   className="text-sm mt-2 italic"
                   style={{ color: 'var(--text-secondary)' }}
                 >
-                  "Help me build a monthly budget" or "Search FlowFabric skills for career coaching"
+                  "Help me build a monthly budget" or "Search FlowFabric flows for career coaching"
                 </p>
               </div>
             </div>
@@ -438,19 +438,19 @@ export default function Install() {
             {[
               {
                 label: 'list_skills',
-                desc: 'Browse all 120+ skills with domains and descriptions',
+                desc: 'Browse all 120+ flows with domains and descriptions',
               },
               {
                 label: 'search_skills',
-                desc: 'Find skills by keyword or natural language query',
+                desc: 'Find flows by keyword or natural language query',
               },
               {
                 label: 'get_skill',
-                desc: 'Read the full skill definition and phases',
+                desc: 'Read the full flow definition and phases',
               },
               {
                 label: 'run_skill',
-                desc: 'Start guided skill execution inside Claude',
+                desc: 'Start guided flow execution inside Claude',
               },
             ].map((tool) => (
               <div

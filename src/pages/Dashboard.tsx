@@ -214,7 +214,7 @@ function ActivityWidget() {
 
 function QuickActions() {
   const actions = [
-    { label: 'Explore Skills', to: '/explore', color: 'var(--cyan)', icon: 'M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z' },
+    { label: 'Explore Flows', to: '/explore', color: 'var(--cyan)', icon: 'M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z' },
     { label: 'Run a Chain', to: '/chains', color: 'var(--purple)', icon: 'M13 10V3L4 14h7v7l9-11h-7z' },
     { label: 'Achievements', to: '/profile', color: 'var(--gold)', icon: 'M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z' },
     { label: 'View Docs', to: '/docs', color: 'var(--green)', icon: 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253' },
@@ -281,13 +281,13 @@ export default function Dashboard() {
       {/* Quick Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <StatCard
-          label="Skills Available"
+          label="Flows Available"
           value={skills?.length ?? '126+'}
           color="var(--cyan)"
           sub="across all domains"
         />
         <StatCard
-          label="Skill Chains"
+          label="Flow Chains"
           value={chains?.length ?? '68+'}
           color="var(--purple)"
           sub="multi-step pipelines"

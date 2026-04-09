@@ -84,7 +84,7 @@ export default function HeroSection() {
           className="text-base md:text-lg mb-12 max-w-2xl mx-auto animate-fade-in-up stagger-2"
           style={{ color: 'var(--text-secondary)', lineHeight: 1.7 }}
         >
-          Hundreds of AI skills you can try free. Connect them into flows in a visual composer.
+          Hundreds of AI flows you can try free. Connect them into pipelines in a visual composer.
           Publish on-chain and earn TRUST tokens when others use your work.
         </p>
 
@@ -115,18 +115,18 @@ export default function HeroSection() {
             </div>
           )}
 
-          {/* Secondary: Try a single skill free */}
+          {/* Secondary: Try a single flow free */}
           <Link
             to="/skill/budget-builder"
             className="btn-secondary inline-flex items-center gap-2 px-6 py-3 no-underline cursor-pointer"
           >
-            <span className="text-sm">Try a skill free</span>
+            <span className="text-sm">Try a flow free</span>
             <span style={{ color: 'var(--cyan)', transition: 'transform 0.3s' }}>&rarr;</span>
           </Link>
         </div>
 
         <p className="text-xs animate-fade-in-up stagger-4" style={{ color: 'var(--text-secondary)', opacity: 0.7 }}>
-          No account needed to try skills. Connect a wallet with TRUST to unlock flows.
+          No account needed to try flows. Connect a wallet with TRUST to unlock composition.
         </p>
       </div>
     </section>

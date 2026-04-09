@@ -142,7 +142,7 @@ function ShowcaseCard({ item, index }: { item: ShowcaseItem; index: number }) {
             (e.currentTarget as HTMLElement).style.textShadow = 'none';
           }}
         >
-          Try this skill &rarr;
+          Try this flow &rarr;
         </Link>
       </div>
     </div>
@@ -158,10 +158,10 @@ export default function SkillShowcase() {
             className="text-3xl md:text-5xl font-bold mb-4"
             style={{ color: 'var(--text-primary)', letterSpacing: '-0.02em' }}
           >
-            See what skills can do
+            See what flows can do
           </h2>
           <p className="text-sm md:text-base max-w-lg mx-auto" style={{ color: 'var(--text-secondary)', lineHeight: 1.7 }}>
-            Every skill is validated. Every output has a trust score.
+            Every flow is validated. Every output has a trust score.
           </p>
         </div>
 

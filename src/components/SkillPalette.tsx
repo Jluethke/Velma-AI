@@ -95,14 +95,14 @@ export default function SkillPalette({ skills, onAddSkill, canChain, canPublish 
       {/* Header */}
       <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)' }}>
         <h3 style={{ margin: 0, fontSize: '14px', color: 'var(--text-primary)', fontWeight: 600 }}>
-          Skills
+          Flows
         </h3>
         <p style={{ margin: '4px 0 0', fontSize: '10px', color: 'var(--text-secondary)' }}>
           Click to add to canvas
         </p>
       </div>
 
-      {/* Tier upsell for locked skills */}
+      {/* Tier upsell for locked flows */}
       {!canPublish && (
         <div style={{
           padding: '8px 16px',
@@ -110,10 +110,10 @@ export default function SkillPalette({ skills, onAddSkill, canChain, canPublish 
           borderBottom: '1px solid rgba(251, 191, 36, 0.1)',
         }}>
           <p style={{ margin: 0, fontSize: '10px', color: 'var(--gold)' }}>
-            {!canChain ? 'Builder tier (500 TRUST) unlocks Engineering & AI skills' : 'Creator tier (2,500 TRUST) unlocks Legal & Meta skills'}
+            {!canChain ? 'Builder tier (500 TRUST) unlocks Engineering & AI flows' : 'Creator tier (2,500 TRUST) unlocks Legal & Meta flows'}
           </p>
           <p style={{ margin: '2px 0 0', fontSize: '9px', color: 'var(--text-secondary)' }}>
-            {!canChain ? 'Engineering, AI, Legal, and skill creation tools' : 'Legal & IP tools and skill creation tools'}
+            {!canChain ? 'Engineering, AI, Legal, and flow creation tools' : 'Legal & IP tools and flow creation tools'}
           </p>
         </div>
       )}
@@ -124,7 +124,7 @@ export default function SkillPalette({ skills, onAddSkill, canChain, canPublish 
           type="text"
           value={search}
           onChange={e => setSearch(e.target.value)}
-          placeholder="Search skills..."
+          placeholder="Search flows..."
           style={{
             width: '100%',
             padding: '6px 10px',
@@ -196,7 +196,7 @@ export default function SkillPalette({ skills, onAddSkill, canChain, canPublish 
 
         {filtered.length === 0 && (
           <div style={{ padding: '16px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '12px' }}>
-            No skills match "{search}"
+            No flows match "{search}"
           </div>
         )}
       </div>
@@ -208,7 +208,7 @@ export default function SkillPalette({ skills, onAddSkill, canChain, canPublish 
         fontSize: '10px',
         color: 'var(--text-secondary)',
       }}>
-        {canPublish ? 'All skills + creation tools' : canChain ? 'Builder skills unlocked' : 'Browse skills'}
+        {canPublish ? 'All flows + creation tools' : canChain ? 'Builder flows unlocked' : 'Browse flows'}
       </div>
     </div>
   );

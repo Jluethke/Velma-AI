@@ -51,10 +51,10 @@ export default function Explore() {
   return (
     <div className="min-h-screen pt-24 px-6 pb-20 max-w-6xl mx-auto">
       <h1 className="text-3xl md:text-4xl font-bold mb-2" style={{ color: '#ffffff' }}>
-        Explore Skills
+        Explore Flows
       </h1>
       <p className="text-sm mb-8" style={{ color: 'var(--text-secondary)' }}>
-        {isLoading ? 'Loading...' : `${filtered.length} skill${filtered.length !== 1 ? 's' : ''} available`}
+        {isLoading ? 'Loading...' : `${filtered.length} flow${filtered.length !== 1 ? 's' : ''} available`}
       </p>
 
       <SearchBar
@@ -88,7 +88,7 @@ export default function Explore() {
       {!isLoading && filtered.length === 0 && (
         <div className="text-center py-20">
           <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-            No skills match your search.
+            No flows match your search.
           </p>
         </div>
       )}

@@ -30,7 +30,7 @@ export default function SearchBar({ query, onQueryChange, domain, onDomainChange
         </svg>
         <input
           type="text"
-          placeholder="Search skills..."
+          placeholder="Search flows..."
           value={query}
           onChange={(e) => onQueryChange(e.target.value)}
           className="w-full pl-10 pr-4 py-2.5 rounded-lg text-sm outline-none transition-colors"

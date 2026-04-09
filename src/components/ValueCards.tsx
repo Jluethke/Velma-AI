@@ -14,7 +14,7 @@ const cards = [
   },
   {
     title: 'Discover',
-    description: 'Find validated skills that work with Claude, GPT, Gemini, Cursor, or any AI agent. Every result has been shadow-tested against real outputs. Filter by trust score, success rate, and validation count. Import with one command.',
+    description: 'Find validated flows that work with Claude, GPT, Gemini, Cursor, or any AI agent. Every result has been shadow-tested against real outputs. Filter by trust score, success rate, and validation count. Import with one command.',
     icon: (
       <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="11" cy="11" r="8" />
@@ -26,7 +26,7 @@ const cards = [
   },
   {
     title: 'Trust',
-    description: 'Every published skill runs through 5 independent shadow validations. Validators compare outputs against known-good results using Jaccard + bigram similarity scoring. Skills that pass earn trust. Skills that fail get quarantined. No star ratings. No fake reviews. Math.',
+    description: 'Every published flow runs through 5 independent shadow validations. Validators compare outputs against known-good results using Jaccard + bigram similarity scoring. Flows that pass earn trust. Flows that fail get quarantined. No star ratings. No fake reviews. Math.',
     icon: (
       <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
