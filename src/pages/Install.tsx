@@ -380,19 +380,19 @@ export default function Install() {
           <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
             {[
               {
-                label: 'list_skills',
+                label: 'list_flows',
                 desc: 'Browse all 120+ flows with domains and descriptions',
               },
               {
-                label: 'search_skills',
+                label: 'search_flows',
                 desc: 'Find flows by keyword or natural language query',
               },
               {
-                label: 'get_skill',
+                label: 'get_flow',
                 desc: 'Read the full flow definition and phases',
               },
               {
-                label: 'run_skill',
+                label: 'start_flow_run',
                 desc: 'Start guided flow execution inside Claude',
               },
             ].map((tool) => (

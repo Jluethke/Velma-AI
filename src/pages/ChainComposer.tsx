@@ -597,10 +597,10 @@ ${chainDescription || 'Custom flow composed in the visual editor.'}
 ## How to run this flow
 
 Execute these ${steps.length} flows in order. For each flow:
-1. Call \`start_skill_run\` with the flow name
-2. Call \`get_skill\` to read the full flow definition
+1. Call \`start_flow_run\` with the flow name
+2. Call \`get_flow\` to read the full flow definition
 3. Follow each phase in the flow definition, calling \`record_phase\` after each
-4. Call \`complete_skill_run\` when done
+4. Call \`complete_flow_run\` when done
 5. **Before starting the next flow, summarize the key outputs from this flow and carry them forward as context**
 
 ## Flow steps
@@ -1062,7 +1062,7 @@ echo "  To remove: crontab -l | grep -v 'FlowFabric-${safeName}' | crontab -"
                   const built = buildChainJson();
                   if (!built) return;
                   const skillNames = built.steps.map(s => s.skill_name).join(', ');
-                  const cmd = `claude -p "Run these FlowFabric flows in order: ${skillNames}. For each flow, call start_skill_run, get_skill, execute each phase with record_phase, then complete_skill_run. Pass outputs between steps as context."`;
+                  const cmd = `claude -p "Run these FlowFabric flows in order: ${skillNames}. For each flow, call start_flow_run, get_flow, execute each phase with record_phase, then complete_flow_run. Pass outputs between steps as context."`;
                   navigator.clipboard.writeText(cmd).then(() => {
                     showTrustToast();
                     setTrustToast(false); // clear the TRUST toast

@@ -141,7 +141,7 @@ try {
 // TOOLS
 // ===================================================================
 
-server.tool("list_skills",
+server.tool("list_flows",
   "List all installed skills with their execution patterns and descriptions.",
   {},
   async () => {
@@ -160,7 +160,7 @@ server.tool("list_skills",
   }
 );
 
-server.tool("get_skill",
+server.tool("get_flow",
   "Get the full content of an installed skill.",
   { skill_name: z.string().describe("Name of the skill to read") },
   async ({ skill_name }) => {
@@ -173,7 +173,7 @@ server.tool("get_skill",
   }
 );
 
-server.tool("start_skill_run",
+server.tool("start_flow_run",
   "Start a tracked execution of a skill. Returns a run_id for tracking phases.",
   {
     skill_name: z.string().describe("Name of the skill to run"),
@@ -227,7 +227,7 @@ server.tool("record_phase",
   }
 );
 
-server.tool("complete_skill_run",
+server.tool("complete_flow_run",
   "Mark a skill run as complete. Archives to history.",
   {
     run_id: z.string().describe("The run ID to complete"),
@@ -284,7 +284,7 @@ server.tool("complete_skill_run",
   }
 );
 
-server.tool("save_skill_data",
+server.tool("save_flow_data",
   "Save persistent data for a skill (survives between runs).",
   {
     skill_name: z.string(), key: z.string(), data: z.string().default("{}"),
@@ -297,7 +297,7 @@ server.tool("save_skill_data",
   }
 );
 
-server.tool("load_skill_data",
+server.tool("load_flow_data",
   "Load persistent data from a previous skill run.",
   { skill_name: z.string(), key: z.string() },
   async ({ skill_name, key }) => {
@@ -308,7 +308,7 @@ server.tool("load_skill_data",
   }
 );
 
-server.tool("get_skill_history",
+server.tool("get_flow_history",
   "Get recent execution history for a skill.",
   { skill_name: z.string(), limit: z.number().default(5) },
   async ({ skill_name, limit }) => {
@@ -319,7 +319,7 @@ server.tool("get_skill_history",
   }
 );
 
-server.tool("discover_skills",
+server.tool("discover_flows",
   "Search for skills in the marketplace by domain.",
   { domain: z.string().default(""), max_results: z.number().default(10) },
   async ({ domain, max_results }) => {
@@ -706,7 +706,7 @@ server.tool("list_evolutions",
 // COMMUNITY REGISTRY TOOLS (Phase 4)
 // ===================================================================
 
-server.tool("submit_skill",
+server.tool("submit_flow",
   "Submit a community skill for review. Validates format and stages for community validation.",
   {
     skill_name: z.string().describe("Name for the skill (lowercase, hyphens, 3-50 chars)"),
@@ -723,7 +723,7 @@ server.tool("submit_skill",
   }
 );
 
-server.tool("list_community_skills",
+server.tool("list_community_flows",
   "Browse community skill submissions. Filter by status: pending, validating, approved, rejected, published.",
   {
     status: z.enum(["pending", "validating", "approved", "rejected", "published"]).optional().describe("Filter by submission status"),
@@ -738,7 +738,7 @@ server.tool("list_community_skills",
   }
 );
 
-server.tool("validate_skill",
+server.tool("validate_flow",
   "Cast a trust-weighted validation vote on a community skill submission. Your trust score is recorded with your vote.",
   {
     submission_id: z.string().describe("The submission ID to vote on"),
@@ -851,7 +851,7 @@ server.tool("get_achievements",
   }
 );
 
-server.tool("get_skilldex",
+server.tool("get_flowdex",
   "Show your skill collection progress by category. Like a Pokedex but for AI skills.",
   {},
   async () => {
