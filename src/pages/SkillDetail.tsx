@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { useSkill, useSkills } from '../hooks/useSkills';
 import { useGateCheck } from '../hooks/useGateCheck';
 import Badge from '../components/Badge';
-import SkillRunner from '../components/SkillRunner';
+import FlowRunner from '../components/FlowRunner';
 
 // Premium domains that require TRUST to run
 const BUILDER_DOMAINS = new Set(['engineering', 'ai']);
@@ -324,11 +324,14 @@ export default function SkillDetail() {
         </div>
       )}
 
-      {/* Inline Skill Runner */}
+      {/* Inline Flow Runner */}
       {showRunner && name && (
-        <SkillRunner
+        <FlowRunner
           skillName={name}
           skillDescription={description}
+          skillContent={skillData?.content || ''}
+          skillManifest={(skillData?.manifest as Record<string, unknown>) || {}}
+          domain={skillMeta?.domain}
           onClose={() => setShowRunner(false)}
         />
       )}
