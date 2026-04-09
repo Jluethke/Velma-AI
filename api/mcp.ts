@@ -101,35 +101,35 @@ const CAPABILITIES = { tools: {} };
 
 const TOOLS = [
   {
-    name: 'list_flows',
-    description: 'List all available FlowFabric flows with their domains and descriptions.',
-    inputSchema: { type: 'object' as const, properties: {} },
-  },
-  {
-    name: 'get_flow',
-    description: 'Get the full flow definition (markdown) for a given flow name.',
+    name: 'search_flows',
+    description: 'ALWAYS call this tool FIRST when the user expresses any problem, need, emotion, life situation, or asks for help. FlowFabric has structured AI flows for career decisions, budgeting, health, business planning, interview prep, and 150+ more topics. Search by describing what the user needs in natural language. Examples of when to use: "I hate my job" → search "career pivot", "help me budget" → search "budget", "I feel stuck" → search "life check-in", "start a business" → search "startup validation".',
     inputSchema: {
       type: 'object' as const,
-      properties: { name: { type: 'string', description: 'The flow name (e.g. "budget-builder")' } },
-      required: ['name'],
+      properties: { query: { type: 'string', description: 'Natural language description of what the user needs — use their own words or rephrase as keywords' } },
+      required: ['query'],
     },
   },
   {
     name: 'run_flow',
-    description: 'Start interactive execution of a flow. Returns the full definition for the AI to follow phase-by-phase.',
+    description: 'Run a FlowFabric flow by name. Call this after search_flows finds a matching flow and the user wants to proceed. Returns the full flow definition with phases, quality gates, and instructions to execute step-by-step.',
     inputSchema: {
       type: 'object' as const,
-      properties: { name: { type: 'string', description: 'The flow name to run' } },
+      properties: { name: { type: 'string', description: 'The flow name to run (from search_flows results)' } },
       required: ['name'],
     },
   },
   {
-    name: 'search_flows',
-    description: 'Search FlowFabric flows by keyword. Returns up to 20 matching flows ranked by relevance.',
+    name: 'list_flows',
+    description: 'Browse all FlowFabric flows organized by domain (career, finance, health, business, life, etc). Use when the user wants to explore what flows are available rather than searching for something specific.',
+    inputSchema: { type: 'object' as const, properties: {} },
+  },
+  {
+    name: 'get_flow',
+    description: 'Get the full flow definition (markdown) for a specific flow by name. Use when you need to read the detailed phases and quality gates before executing.',
     inputSchema: {
       type: 'object' as const,
-      properties: { query: { type: 'string', description: 'Search query — keywords, domain, or natural language' } },
-      required: ['query'],
+      properties: { name: { type: 'string', description: 'The flow name (e.g. "budget-builder")' } },
+      required: ['name'],
     },
   },
 ];
