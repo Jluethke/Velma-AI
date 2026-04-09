@@ -35,16 +35,106 @@ function configPath(platform: Platform) {
   }
 }
 
-function downloadConfig() {
-  const blob = new Blob([JSON.stringify(DESKTOP_CONFIG, null, 2)], {
-    type: 'application/json',
-  });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'claude_desktop_config.json';
-  a.click();
-  URL.revokeObjectURL(url);
+function downloadInstaller(platform: Platform) {
+  const configJson = JSON.stringify(DESKTOP_CONFIG, null, 2);
+  const configB64 = btoa(configJson);
+
+  if (platform === 'windows') {
+    const bat = `@echo off
+title FlowFabric - Claude Desktop Setup
+setlocal
+set "PS=%SystemRoot%\\System32\\WindowsPowerShell\\v1.0\\powershell.exe"
+set "CONFIG_DIR=%APPDATA%\\Claude"
+set "CONFIG_FILE=%CONFIG_DIR%\\claude_desktop_config.json"
+
+echo.
+echo   FlowFabric - Connecting to Claude Desktop
+echo.
+
+if not exist "%CONFIG_DIR%" mkdir "%CONFIG_DIR%"
+
+:: Check if config already exists and has other servers
+if exist "%CONFIG_FILE%" (
+    echo   Existing config found. Adding FlowFabric...
+    "%PS%" -NoProfile -ExecutionPolicy Bypass -Command ^
+      "$p='%CONFIG_FILE%';" ^
+      "$c=Get-Content $p -Raw|ConvertFrom-Json;" ^
+      "if(-not $c.mcpServers){$c|Add-Member -NotePropertyName mcpServers -NotePropertyValue @{} -Force};" ^
+      "$c.mcpServers|Add-Member -NotePropertyName flowfabric -NotePropertyValue @{url='${MCP_URL}'} -Force;" ^
+      "$c|ConvertTo-Json -Depth 10|Set-Content $p -Encoding UTF8"
+) else (
+    echo   Creating new config...
+    "%PS%" -NoProfile -ExecutionPolicy Bypass -Command ^
+      "[IO.File]::WriteAllText('%CONFIG_FILE%', [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('${configB64}')))"
+)
+
+echo.
+echo   Done! FlowFabric is now connected to Claude Desktop.
+echo   Restart Claude Desktop to activate.
+echo.
+pause
+`;
+    const blob = new Blob([bat], { type: 'application/bat' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'FlowFabric-Connect.bat';
+    a.click();
+    URL.revokeObjectURL(url);
+  } else {
+    // Mac / Linux
+    const configDir = platform === 'mac'
+      ? '$HOME/Library/Application\\ Support/Claude'
+      : '$HOME/.config/Claude';
+
+    const sh = `#!/bin/bash
+# FlowFabric - Claude Desktop Setup
+
+CONFIG_DIR="${configDir}"
+CONFIG_FILE="$CONFIG_DIR/claude_desktop_config.json"
+
+echo ""
+echo "  FlowFabric - Connecting to Claude Desktop"
+echo ""
+
+mkdir -p "$CONFIG_DIR"
+
+if [ -f "$CONFIG_FILE" ]; then
+    echo "  Existing config found. Adding FlowFabric..."
+    # Merge into existing config using python (available on Mac/Linux)
+    python3 -c "
+import json, os
+path = os.path.expanduser('${configDir.replace(/\\/g, '')}/claude_desktop_config.json')
+try:
+    with open(path) as f:
+        config = json.load(f)
+except:
+    config = {}
+if 'mcpServers' not in config:
+    config['mcpServers'] = {}
+config['mcpServers']['flowfabric'] = {'url': '${MCP_URL}'}
+with open(path, 'w') as f:
+    json.dump(config, f, indent=2)
+print('  Done!')
+"
+else
+    echo "  Creating new config..."
+    echo '${configB64}' | base64 -d > "$CONFIG_FILE"
+fi
+
+echo ""
+echo "  FlowFabric is now connected to Claude Desktop."
+echo "  Restart Claude Desktop to activate."
+echo ""
+`;
+    const blob = new Blob([sh], { type: 'application/x-sh' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'FlowFabric-Connect.sh';
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 }
 
 function copyToClipboard(text: string, setCopied: (v: boolean) => void) {
@@ -276,7 +366,7 @@ export default function Install() {
                   Download the config file or copy the JSON below:
                 </p>
                 <div className="flex gap-3 flex-wrap mb-4">
-                  <button onClick={downloadConfig} style={btnPrimary}>
+                  <button onClick={() => downloadInstaller(platform)} style={btnPrimary}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
                       <polyline points="7 10 12 15 17 10" />
