@@ -1,8 +1,13 @@
 import { useMemo, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useSkill, useSkills } from '../hooks/useSkills';
+import { useGateCheck } from '../hooks/useGateCheck';
 import Badge from '../components/Badge';
 import SkillRunner from '../components/SkillRunner';
+
+// Premium domains that require TRUST to run
+const BUILDER_DOMAINS = new Set(['engineering', 'ai']);
+const CREATOR_DOMAINS = new Set(['legal', 'meta']);
 
 function SkeletonBlock({ className }: { className?: string }) {
   return (
@@ -17,6 +22,7 @@ export default function SkillDetail() {
   const { name } = useParams<{ name: string }>();
   const { data: skillData, isLoading: skillLoading } = useSkill(name || '');
   const { data: allSkills } = useSkills();
+  const { canChain, canPublish } = useGateCheck();
   const [showRunner, setShowRunner] = useState(false);
 
   // Find the matching skill from the list for metadata (domain, tags, license, etc.)
@@ -152,66 +158,18 @@ export default function SkillDetail() {
         <div className="flex flex-col sm:flex-row gap-3 mb-4">
           <button
             onClick={() => {
-              if (!name) return;
-              const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-              if (isMobile) {
-                const cmd = `claude -p "Run the FlowFabric skill '${name}'. Call start_skill_run with '${name}', then get_skill to read the definition. Ask me for inputs, execute each phase with record_phase, then complete_skill_run."`;
-                navigator.clipboard.writeText(cmd).then(() => {
-                  alert('Command copied! Open an AI chat and paste it.');
-                });
+              if (!name || !skillMeta) return;
+              // Check if this skill requires TRUST
+              const domain = skillMeta.domain?.toLowerCase() || '';
+              if (CREATOR_DOMAINS.has(domain) && !canPublish) {
+                alert('Creator tier (2,500 TRUST) required for Legal & Meta skills');
                 return;
               }
-              const safeName = name.replace(/[^a-z0-9-]/gi, '-').toLowerCase();
-              const ts = new Date().toISOString().slice(0, 10);
-              const isWin = navigator.userAgent.includes('Windows');
-
-              // Use claude -p to send an initial prompt so it starts immediately
-              // CLAUDE.md provides context, -p kicks off the action
-              const claudeMd = `# Run: ${name}\n\nExecute the **${name}** skill.\n\n1. Call \`start_skill_run\` with "${name}"\n2. Call \`get_skill\` to read the definition\n3. Ask me for required inputs\n4. Execute each phase with \`record_phase\`\n5. Call \`complete_skill_run\` when done\n\nStart now — read the skill and ask me for inputs.`;
-              const b64 = btoa(unescape(encodeURIComponent(claudeMd)));
-
-              if (isWin) {
-                const bat = `@echo off
-title FlowFabric: ${safeName}
-setlocal
-set "PATH=%PATH%;%APPDATA%\\npm;%USERPROFILE%\\.local\\bin;%ProgramFiles%\\nodejs"
-set "PS=%SystemRoot%\\System32\\WindowsPowerShell\\v1.0\\powershell.exe"
-set "WS=%USERPROFILE%\\FlowFabric-Runs\\${safeName}-${ts}"
-if not exist "%WS%" mkdir "%WS%"
-"%PS%" -NoProfile -ExecutionPolicy Bypass -Command "[IO.File]::WriteAllText('%WS%\\CLAUDE.md', [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('${b64}')))"
-cd /d "%WS%"
-echo.
-echo   Running ${name}...
-echo.
-:: Try common Claude locations
-where claude >nul 2>nul && (claude & goto :done)
-if exist "%APPDATA%\\npm\\claude.cmd" ("%APPDATA%\\npm\\claude.cmd" & goto :done)
-if exist "%USERPROFILE%\\.local\\bin\\claude" ("%USERPROFILE%\\.local\\bin\\claude" & goto :done)
-echo   Claude Code not found. Run: npm install -g @anthropic-ai/claude-code
-:done
-pause
-`;
-                const b = new Blob([bat], { type: 'application/bat' });
-                const u = URL.createObjectURL(b);
-                const a = document.createElement('a'); a.href = u; a.download = `Run-${safeName}.bat`;
-                document.body.appendChild(a); a.click(); document.body.removeChild(a);
-                URL.revokeObjectURL(u);
-              } else {
-                const sh = `#!/bin/bash
-WS="$HOME/FlowFabric-Runs/${safeName}-${ts}"
-mkdir -p "$WS"
-echo '${b64}' | base64 -d > "$WS/CLAUDE.md"
-cd "$WS"
-command -v claude &>/dev/null || npm install -g @anthropic-ai/claude-code 2>/dev/null
-echo "Running ${name}..."
-claude
-`;
-                const b = new Blob([sh], { type: 'application/x-sh' });
-                const u = URL.createObjectURL(b);
-                const a = document.createElement('a'); a.href = u; a.download = `Run-${safeName}.sh`;
-                document.body.appendChild(a); a.click(); document.body.removeChild(a);
-                URL.revokeObjectURL(u);
+              if (BUILDER_DOMAINS.has(domain) && !canChain) {
+                alert('Builder tier (500 TRUST) required for Engineering & AI skills');
+                return;
               }
+              setShowRunner(true);
             }}
             className="px-6 py-3 rounded-lg text-sm font-semibold cursor-pointer transition-all"
             style={{
@@ -228,7 +186,12 @@ claude
               e.currentTarget.style.transform = 'translateY(0)';
             }}
           >
-            {/iPhone|iPad|iPod|Android/i.test(navigator.userAgent) ? 'Copy Command — Free' : 'Run in Claude Code — Free'}
+            {(() => {
+              const domain = skillMeta?.domain?.toLowerCase() || '';
+              if (CREATOR_DOMAINS.has(domain)) return 'Run — Creator Tier';
+              if (BUILDER_DOMAINS.has(domain)) return 'Run — Builder Tier';
+              return 'Run This Skill — Free';
+            })()}
           </button>
 
           <Link
