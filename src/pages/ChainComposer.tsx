@@ -155,6 +155,16 @@ export default function ChainComposer() {
     });
 
     setNodes(newNodes);
+
+    // Wire nodes sequentially so the generated chain.json has proper depends_on relationships
+    const newEdges: Edge[] = newNodes.slice(1).map((node, i) => ({
+      id: `edge-template-${i}`,
+      source: newNodes[i].id,
+      target: node.id,
+      style: { stroke: 'var(--cyan)', strokeWidth: 2 },
+      animated: true,
+    }));
+    setEdges(newEdges);
   }, [skills]);
 
   const showTrustToast = useCallback((msg?: string) => {
@@ -1064,8 +1074,6 @@ echo "  To remove: crontab -l | grep -v 'FlowFabric-${safeName}' | crontab -"
                   const skillNames = built.steps.map(s => s.skill_name).join(', ');
                   const cmd = `claude -p "Run these FlowFabric flows in order: ${skillNames}. For each flow, call start_flow_run, get_flow, execute each phase with record_phase, then complete_flow_run. Pass outputs between steps as context."`;
                   navigator.clipboard.writeText(cmd).then(() => {
-                    showTrustToast();
-                    setTrustToast(false); // clear the TRUST toast
                     alert('Command copied! Open an AI chat and paste it.');
                   });
                 } else {
