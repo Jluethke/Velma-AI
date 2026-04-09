@@ -102,7 +102,7 @@ const activeRuns = new Map<string, SkillRun>();
 // ---------------------------------------------------------------------------
 
 const server = new McpServer({
-  name: "skillchain",
+  name: "flowfabric",
   version: "0.1.0",
 });
 
@@ -364,7 +364,7 @@ server.tool("search_chains",
 );
 
 server.tool("find_and_run",
-  "Find the best flow chain for what you need. This is the main entry point for SkillChain. Describe what you want in plain English.",
+  "Find the best flow chain for what you need. This is the main entry point for FlowFabric. Describe what you want in plain English.",
   {
     query: z.string().describe("Plain English description (e.g., 'I need help budgeting', 'prepare me for an interview')"),
     auto_run: z.boolean().default(false).describe("If true, automatically execute the best match"),
@@ -875,7 +875,7 @@ server.tool("what_now",
 // ===================================================================
 
 server.tool("get_profile",
-  "Get the user's SkillChain profile (role, goals, tech stack, etc.).",
+  "Get the user's FlowFabric profile (role, goals, tech stack, etc.).",
   {},
   async () => {
     const profile = profileMgr.load();
@@ -902,14 +902,14 @@ server.tool("get_recommendations",
 // ===================================================================
 
 server.tool("check_access",
-  "Check if SkillChain MCP server is running and accessible. Returns server status and marketplace stats.",
+  "Check if FlowFabric MCP server is running and accessible. Returns server status and marketplace stats.",
   {},
   async () => {
     const skills = installedSkills();
     const chains = availableChains();
     return { content: [{ type: "text" as const, text: JSON.stringify({
       status: "ok",
-      server: "skillchain-mcp",
+      server: "flowfabric-mcp",
       version: "0.1.0",
       runtime: "node",
       flows_available: skills.size,
