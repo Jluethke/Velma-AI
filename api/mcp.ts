@@ -13,8 +13,11 @@ export const config = {
   supportsResponseStreaming: true,
 };
 
-const GITHUB_RAW =
-  'https://raw.githubusercontent.com/Jluethke/Velma-AI/main';
+// R2 CDN for flow content (set R2_PUBLIC_URL in Vercel env vars)
+// Falls back to GitHub raw if R2 is not configured
+const R2_URL = process.env.R2_PUBLIC_URL || '';
+const GITHUB_RAW = 'https://raw.githubusercontent.com/Jluethke/Velma-AI/main';
+const CDN_BASE = R2_URL || GITHUB_RAW;
 
 // ---------------------------------------------------------------------------
 // Skill data
@@ -33,24 +36,53 @@ let catalogCache: Skill[] | null = null;
 
 async function loadCatalog(): Promise<Skill[]> {
   if (catalogCache) return catalogCache;
-  // Load from GitHub since the Vercel SPA rewrite might intercept the static file
-  const res = await fetch(`${GITHUB_RAW}/public/skill-catalog.json`);
-  if (!res.ok) throw new Error(`Failed to load catalog: ${res.status}`);
-  catalogCache = (await res.json()) as Skill[];
-  return catalogCache;
+  // Try R2 first, fall back to GitHub
+  for (const url of [
+    R2_URL ? `${R2_URL}/catalog.json` : '',
+    `${GITHUB_RAW}/public/skill-catalog.json`,
+  ].filter(Boolean)) {
+    try {
+      const res = await fetch(url);
+      if (res.ok) {
+        catalogCache = (await res.json()) as Skill[];
+        return catalogCache;
+      }
+    } catch {}
+  }
+  throw new Error('Failed to load flow catalog');
 }
 
-async function loadSkillMd(name: string): Promise<string> {
-  // Try individual flow first
-  const res = await fetch(`${GITHUB_RAW}/marketplace/${name}/skill.md`);
-  if (res.ok) return await res.text();
+async function loadFlowContent(name: string): Promise<string> {
+  // Try R2 first (pre-built JSON with content), then GitHub raw
+  for (const url of [
+    R2_URL ? `${R2_URL}/flows/${name}.json` : '',
+    `${GITHUB_RAW}/marketplace/${name}/skill.md`,
+  ].filter(Boolean)) {
+    try {
+      const res = await fetch(url);
+      if (!res.ok) continue;
+      // R2 returns JSON with content field, GitHub returns raw markdown
+      const contentType = res.headers.get('content-type') || '';
+      if (contentType.includes('json')) {
+        const data = await res.json();
+        return (data as { content: string }).content;
+      }
+      return await res.text();
+    } catch {}
+  }
 
   // Try as a chain definition
-  const chainRes = await fetch(`${GITHUB_RAW}/marketplace/chains/${name}.chain.json`);
-  if (chainRes.ok) {
-    const chain = await chainRes.json();
-    const steps = (chain.steps || []).map((s: { skill_name: string }, i: number) => `${i + 1}. ${s.skill_name}`).join('\n');
-    return `# ${chain.name}\n\n${chain.description}\n\n## Flow Steps\n\n${steps}\n\nExecute each step in order, passing outputs from one step as context to the next.`;
+  for (const url of [
+    R2_URL ? `${R2_URL}/chains/${name}.json` : '',
+    `${GITHUB_RAW}/marketplace/chains/${name}.chain.json`,
+  ].filter(Boolean)) {
+    try {
+      const res = await fetch(url);
+      if (!res.ok) continue;
+      const chain = await res.json() as { name: string; description: string; steps: Array<{ skill_name: string }> };
+      const steps = (chain.steps || []).map((s, i) => `${i + 1}. ${s.skill_name}`).join('\n');
+      return `# ${chain.name}\n\n${chain.description}\n\n## Flow Steps\n\n${steps}\n\nExecute each step in order, passing outputs from one step as context to the next.`;
+    } catch {}
   }
 
   throw new Error(`Flow "${name}" not found`);
@@ -73,7 +105,7 @@ async function getSkill(name: string) {
   const catalog = await loadCatalog();
   const meta = catalog.find((s) => s.name === name);
   if (!meta) throw new Error(`Flow "${name}" not found in catalog`);
-  const content = await loadSkillMd(name);
+  const content = await loadFlowContent(name);
   return { ...meta, content };
 }
 
@@ -105,7 +137,7 @@ async function runSkill(name: string) {
     }
   }
 
-  const content = await loadSkillMd(name);
+  const content = await loadFlowContent(name);
   const phases = content.match(/^##\s+Phase\s+\d+[:\s]+(.+)/gm)
     ?.map(p => p.replace(/^##\s+Phase\s+\d+[:\s]+/, '').trim()) || [];
 
