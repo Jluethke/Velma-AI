@@ -114,7 +114,6 @@ PHASE 5: DELIVER    --> Executive summary + detailed findings + confidence level
    - **Contested claims**: Sources disagree. Needs further analysis.
    - **Singleton claims**: Only one source. Flag for verification.
 
-2. **Detect contradictions.** Apply Velma's ContradictionDetector methodology:
    - For each pair of claims within the same sub-question cluster:
      - Compute **keyword overlap** (Jaccard similarity): `|words_a AND words_b| / |words_a OR words_b|`
      - If similarity >= 0.4 (claims discuss the same topic):
@@ -277,9 +276,7 @@ Source credibility is the foundation of research quality. A synthesis is only as
 - Vendor promoting own product: +0.05
 - Undisclosed conflict of interest: +0.0
 
-### Contradiction Detection Algorithm (Ported from Velma)
 
-This is a direct port of Velma's `ContradictionDetector` from `neuros/knowledge/contradiction_detector.py`:
 
 ```python
 NEGATION_MARKERS = {

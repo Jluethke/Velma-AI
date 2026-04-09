@@ -78,9 +78,7 @@ ACT     --> Output contradiction report with specific conflicting claims, shared
    words_b = set(claim_b.lower().split())
    overlap = words_a AND words_b
    max_len = max(|words_a|, |words_b|)
-   similarity = |overlap| / max_len    // Velma uses max-normalized, not union-normalized
    ```
-   If `similarity < 0.4`: skip this pair (not discussing the same topic). This threshold is calibrated from Velma's production experience -- below 0.4, false positives dominate.
 
    **Step 2 -- Check for negation markers:**
    ```
@@ -273,7 +271,6 @@ The skill is DONE when:
 
 ### The Contradiction Detection Algorithm
 
-This algorithm is ported directly from Velma's `ContradictionDetector` (`neuros/knowledge/contradiction_detector.py`), which has been running in production on Velma's semantic memory since 2024. The algorithm prioritizes speed and precision over recall -- it catches obvious contradictions reliably rather than attempting deep semantic understanding.
 
 **Design philosophy:**
 - Keyword overlap (Jaccard) is a cheap proxy for topical relatedness. It misses synonyms but avoids the computational cost of embeddings.
@@ -299,7 +296,6 @@ Alternative framing:  instead, rather
 
 ### Antonym Pairs -- Extended Set
 
-The core set from Velma's ContradictionDetector, plus extensions for broader domain coverage:
 
 | Pair | Domain | Notes |
 |---|---|---|
