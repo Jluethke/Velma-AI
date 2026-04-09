@@ -68,10 +68,20 @@ async function getSkill(name: string) {
 }
 
 async function runSkill(name: string) {
+  const catalog = await loadCatalog();
+  const meta = catalog.find((s) => s.name === name);
   const content = await loadSkillMd(name);
+
+  // Extract just the phase names for a quick overview
+  const phases = content.match(/^##\s+Phase\s+\d+[:\s]+(.+)/gm)
+    ?.map(p => p.replace(/^##\s+Phase\s+\d+[:\s]+/, '').trim()) || [];
+
   return {
     flow: name,
-    instructions: 'Follow the flow definition below phase-by-phase. Ask the user for any required inputs before starting each phase. Execute every phase in order.',
+    description: meta?.description || '',
+    inputs: meta?.inputs || [],
+    phases,
+    instructions: `Execute the "${name}" flow step by step. Here is the full flow definition. For each phase: explain what you're doing, ask the user for any inputs you need, then execute the phase actions and show the outputs. Check the quality gate before moving to the next phase.`,
     content,
   };
 }
@@ -89,7 +99,7 @@ async function searchSkills(query: string) {
     .filter((x) => x.score > 0)
     .sort((a, b) => b.score - a.score)
     .slice(0, 20)
-    .map((x) => ({ name: x.skill.name, domain: x.skill.domain, description: x.skill.description, score: x.score }));
+    .map((x) => ({ name: x.skill.name, domain: x.skill.domain, description: x.skill.description, score: x.score, run_url: `https://www.flowfabric.io/skill/${x.skill.name}` }));
 }
 
 // ---------------------------------------------------------------------------
