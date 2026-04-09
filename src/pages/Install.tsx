@@ -10,7 +10,7 @@ function detectPlatform(): Platform {
   return 'unknown';
 }
 
-const MCP_URL = 'https://flowfabric.io/api/mcp';
+const MCP_URL = 'https://www.flowfabric.io/api/mcp';
 
 const CLAUDE_WEB_LINK = 'https://claude.ai/settings/connectors?modal=add-custom-connector';
 

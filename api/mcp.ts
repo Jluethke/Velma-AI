@@ -4,7 +4,7 @@
  * Implements MCP (Model Context Protocol) over Streamable HTTP.
  * Claude.ai connects to this as a custom connector.
  *
- * URL: https://flowfabric.io/api/mcp
+ * URL: https://www.flowfabric.io/api/mcp
  */
 
 export const config = {
