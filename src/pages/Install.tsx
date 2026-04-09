@@ -14,13 +14,27 @@ const MCP_URL = 'https://www.flowfabric.io/api/mcp';
 
 const CLAUDE_WEB_LINK = 'https://claude.ai/settings/connectors?modal=add-custom-connector';
 
-const DESKTOP_CONFIG = {
+// Remote MCP (simpler, no local install needed)
+const DESKTOP_CONFIG_REMOTE = {
   mcpServers: {
     flowfabric: {
       url: MCP_URL,
     },
   },
 };
+
+// Local MCP via npx (faster, works offline for cached flows, auto-updates)
+const DESKTOP_CONFIG_LOCAL = {
+  mcpServers: {
+    flowfabric: {
+      command: 'npx',
+      args: ['-y', 'skillchain-mcp@latest'],
+    },
+  },
+};
+
+// Use local npx install — faster, auto-updates, works offline for cached flows
+const DESKTOP_CONFIG = DESKTOP_CONFIG_LOCAL;
 
 function configPath(platform: Platform) {
   switch (platform) {
