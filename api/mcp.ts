@@ -15,7 +15,7 @@ export const config = {
 
 // R2 CDN for flow content (set R2_PUBLIC_URL in Vercel env vars)
 // Falls back to GitHub raw if R2 is not configured
-const R2_URL = process.env.R2_PUBLIC_URL || '';
+const R2_URL = process.env.R2_PUBLIC_URL || 'https://pub-b7ac6670aa9145689edf77a11d3e2d6e.r2.dev';
 const GITHUB_RAW = 'https://raw.githubusercontent.com/Jluethke/Velma-AI/main';
 const CDN_BASE = R2_URL || GITHUB_RAW;
 
