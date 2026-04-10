@@ -94,6 +94,7 @@ Done when: (1) complaint letter is complete with specific facts, amounts, and de
 | REASON | Company is known to be unresponsive | Adjust -- skip initial letter, start at escalation level 2 (executive email) or regulatory filing |
 | PLAN | Multiple issues with same company | Adjust -- consolidate into one comprehensive letter, list issues chronologically |
 | ACT | User rejects the draft letter or says it doesn't match their situation | **Adjust** -- incorporate specific feedback (e.g., tone too aggressive or too soft, missing a key fact, wrong remedy amount), revise the affected sections of the letter, and regenerate the final version; do not restart from OBSERVE unless the core facts of the situation were misunderstood |
+| ACT | User rejects final output | **Targeted revision** -- ask which letter section, tone, or remedy demand fell short and rerun only that section. Do not regenerate the full letter. |
 
 ## Reference
 

@@ -407,7 +407,7 @@ export const MarketplaceABI = [
       {
         "name": "",
         "type": "address",
-        "internalType": "contract SkillToken"
+        "internalType": "contract TrustToken"
       }
     ],
     "stateMutability": "view"

@@ -397,6 +397,7 @@ The audit is COMPLETE when:
 | Phase 10 | Post-audit stress rating is higher than baseline | **Adjust** -- Normalize: "Sometimes naming stressors makes stress feel bigger at first. But now you have a plan. Let's see how you feel after you start the quick wins." Emphasize the action plan as a path forward. |
 | General | User discloses a mental health crisis (suicidal ideation, severe anxiety, self-harm, substance abuse) | **Abort** -- Pause the audit. Provide crisis resources (crisis hotline, emergency services). Recommend professional mental health support before continuing. Do not attempt to resolve the crisis within this skill. |
 | General | User is in acute distress during the audit | **Adjust** -- Pause. Ask: "Do you need a break? Would you like to continue or reschedule?" Offer grounding techniques (5-4-3-2-1 sensory exercise, breathing). Proceed only if user is ready. |
+| General | User rejects final output | **Targeted revision** -- ask which stressor category, action item, or coping strategy fell short and rerun only that section. Do not regenerate the full stress audit. |
 
 ---
 

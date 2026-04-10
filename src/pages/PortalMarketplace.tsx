@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAccount, useReadContract } from 'wagmi';
 import { formatUnits } from 'viem';
 import ConnectWalletPrompt from '../components/ConnectWalletPrompt';
-import { CONTRACTS, SkillTokenABI, SkillRegistryABI } from '../contracts';
+import { CONTRACTS, TrustTokenABI, SkillRegistryABI } from '../contracts';
 
 interface MarketSkill {
   name: string;
@@ -37,7 +37,7 @@ function MarketplaceContent({ address }: { address: `0x${string}` }) {
   // Read balance for purchase power display
   const { data: rawBalance } = useReadContract({
     address: CONTRACTS.TrustToken,
-    abi: SkillTokenABI,
+    abi: TrustTokenABI,
     functionName: 'balanceOf',
     args: [address],
   });

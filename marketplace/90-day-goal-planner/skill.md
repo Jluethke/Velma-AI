@@ -270,6 +270,7 @@ The skill is DONE when:
 | Phase 6 | Resource bottleneck cannot be resolved (over-allocated every week) | **Adjust** -- add resources (hire, contract, or borrow from other projects), defer non-critical (P2) tasks, or extend timeline. Document trade-offs and obtain stakeholder approval. |
 | Phase 7 | Metrics are unmeasurable or targets are unrealistic | **Adjust** -- redefine metrics to be SMART (Specific, Measurable, Achievable, Relevant, Time-bound). Adjust targets based on team feedback and historical data. |
 | Phase 8 | Stakeholders reject the plan | **Adjust** -- document feedback, identify conflicts (e.g., scope, timeline, resources), and revise. Repeat stakeholder review until approved. If conflicts cannot be resolved, escalate to decision-maker. |
+| Phase 8 | User rejects final output | **Targeted revision** -- ask which goal milestone, task estimate, or KRA fell short and rerun only that phase. Do not regenerate the full 90-day plan. |
 
 ---
 

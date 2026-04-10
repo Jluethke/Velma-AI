@@ -1,6 +1,6 @@
 import { useAccount, useReadContract } from 'wagmi';
 import { formatUnits } from 'viem';
-import { SkillTokenABI } from '../contracts/SkillToken';
+import { TrustTokenABI } from '../contracts/TrustToken';
 import { CONTRACTS, TARGET_CHAIN_ID } from '../contracts';
 
 export type TrustTier = 'explorer' | 'builder' | 'creator' | 'pro' | 'validator' | 'governor';
@@ -67,7 +67,7 @@ export function useGateCheck(): GateState {
 
   const { data: balance, isLoading } = useReadContract({
     address: CONTRACTS.TrustToken,
-    abi: SkillTokenABI,
+    abi: TrustTokenABI,
     functionName: 'balanceOf',
     args: address ? [address] : undefined,
     chainId: TARGET_CHAIN_ID,

@@ -408,7 +408,7 @@ export const StakingABI = [
       {
         "name": "",
         "type": "address",
-        "internalType": "contract SkillToken"
+        "internalType": "contract TrustToken"
       }
     ],
     "stateMutability": "view"

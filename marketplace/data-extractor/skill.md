@@ -112,6 +112,7 @@ The skill is DONE when:
 | REASON | Required field not found anywhere | **Flag** -- set to null, add extraction note, continue with other fields |
 | REASON | Type coercion fails (e.g., "TBD" for a date field) | **Adjust** -- keep as string, note type mismatch |
 | ACT | Output JSON exceeds reasonable size | **Adjust** -- truncate list fields, note truncation |
+| ACT | User rejects final output | **Targeted revision** -- ask which field extraction, confidence score, or type coercion fell short and rerun only that field. Do not re-extract the full document. |
 
 ## State Persistence
 

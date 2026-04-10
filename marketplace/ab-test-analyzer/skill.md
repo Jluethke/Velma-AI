@@ -378,6 +378,7 @@ The skill is complete when:
 | Phase 7 | Recommendation conflicts with business context | **Adjust** -- Highlight the conflict in rationale. Recommend stakeholder review before implementation. Document which thresholds were applied. |
 | Phase 8 | Report exceeds 500 lines | **Adjust** -- Summarize detailed statistics in appendix. Keep main report to key findings, recommendation, and interpretation guide. |
 | ACT | User rejects the recommendation or disputes the statistical conclusions | **Adjust** -- Incorporate the user's specific objection (e.g., disagreement with MDE threshold, alpha level, or practical significance definition), update the relevant phase inputs, and regenerate the affected section; do not restart from Phase 0 unless the original data or test design was wrong |
+| ACT | User rejects final output | **Targeted revision** -- ask which statistical finding, effect size calculation, or recommendation fell short and rerun only that phase. Do not re-run the full analysis. |
 
 ---
 

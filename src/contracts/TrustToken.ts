@@ -1,4 +1,4 @@
-export const SkillTokenABI = [
+export const TrustTokenABI = [
   {
     "type": "constructor",
     "inputs": [

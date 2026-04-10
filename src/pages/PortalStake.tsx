@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { formatUnits } from 'viem';
 import ConnectWalletPrompt from '../components/ConnectWalletPrompt';
-import { CONTRACTS, StakingABI, SkillTokenABI } from '../contracts';
+import { CONTRACTS, StakingABI, TrustTokenABI } from '../contracts';
 
 const MOCK_STAKE = {
   available: 4450.0,
@@ -31,7 +31,7 @@ function StakeContent({ address }: { address: `0x${string}` }) {
   // Read on-chain balance
   const { data: rawBalance } = useReadContract({
     address: CONTRACTS.TrustToken,
-    abi: SkillTokenABI,
+    abi: TrustTokenABI,
     functionName: 'balanceOf',
     args: [address],
   });

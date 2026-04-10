@@ -380,6 +380,7 @@ The skill is DONE when:
 | GAPS | No clear gaps found (competitors cover everything) | **Adjust** -- focus on experience, speed, price, or segment gaps instead of feature gaps |
 | ACTIONS | Team lacks resources for recommended priorities | **Adjust** -- rank by impact/effort, recommend smallest viable competitive response |
 | ACT | User rejects the competitive analysis or requests significant changes to the findings | **Adjust** -- incorporate specific feedback (e.g., a competitor was miscategorized, a feature score is wrong, a gap was missed), update the affected profiles and matrices, and regenerate the recommendations; do not restart from Phase 1 unless the company profile or market context was fundamentally incorrect |
+| ACT | User rejects final output | **Targeted revision** -- ask which competitor profile, feature comparison, or gap finding fell short and rerun only that section. Do not re-analyze all competitors. |
 
 ## State Persistence
 

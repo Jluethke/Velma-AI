@@ -7,7 +7,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useAccount, useWriteContract, useReadContract, useWaitForTransactionReceipt, useSwitchChain } from 'wagmi';
 import { parseUnits, formatUnits } from 'viem';
-import { SkillTokenABI } from '../contracts/SkillToken';
+import { TrustTokenABI } from '../contracts/TrustToken';
 import { CONTRACTS, TARGET_CHAIN_ID } from '../contracts';
 
 export interface SendState {
@@ -86,7 +86,7 @@ export function useSendTrust() {
       // Do NOT pass chain or account; wagmi infers them from the connector.
       writeContract({
         address: CONTRACTS.TrustToken,
-        abi: SkillTokenABI,
+        abi: TrustTokenABI,
         functionName: 'transfer',
         args: [to as `0x${string}`, parseUnits(amount, 18)],
       });
@@ -118,7 +118,7 @@ export function useTrustBalance() {
 
   const { data: balance } = useReadContract({
     address: CONTRACTS.TrustToken,
-    abi: SkillTokenABI,
+    abi: TrustTokenABI,
     functionName: 'balanceOf',
     args: address ? [address] : undefined,
     chainId: TARGET_CHAIN_ID,

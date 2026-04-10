@@ -118,6 +118,7 @@ The skill is DONE when:
 | REASON | Two options tied exactly | **Adjust** -- add tiebreaker criterion (cost of switching, gut preference, reversibility) |
 | PLAN | Confidence too low to recommend | **Escalate** -- present the matrix without a recommendation, ask user to refine weights |
 | ACT | User rejects the recommendation or disputes specific scores | **Adjust** -- incorporate specific feedback (e.g., a score is wrong due to domain knowledge the model lacked, a criterion weight doesn't reflect actual priorities), update the affected cells and recompute weighted totals; do not restart from OBSERVE unless new options need to be added or criteria fundamentally changed |
+| ACT | User rejects final output | **Targeted revision** -- ask which option score, criterion weight, or recommendation fell short and rerun only that section. Do not rebuild the full comparison matrix. |
 
 ## Reference
 

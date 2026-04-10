@@ -521,7 +521,7 @@ export const LifeRewardsABI = [
       {
         "name": "",
         "type": "address",
-        "internalType": "contract SkillToken"
+        "internalType": "contract TrustToken"
       }
     ],
     "stateMutability": "view"

@@ -324,6 +324,7 @@ The skill is DONE when:
 | Phase 7 | Generated code exceeds 500 lines | **Adjust** -- split into multiple test files by endpoint or test type (happy_path.py, edge_cases.py, error_paths.py, security.py, load.py); document file structure |
 | Phase 7 | Generated code has syntax errors | **Abort** -- return specific syntax errors and regenerate code |
 | ACT | User rejects the generated test suite or requests significant changes | **Adjust** -- incorporate specific feedback (e.g., different edge cases, additional security tests, revised performance thresholds) and regenerate the affected test categories; do not restart from Phase 1 unless the OpenAPI specification itself was wrong |
+| ACT | User rejects final output | **Targeted revision** -- ask which test category, endpoint, or edge case fell short and regenerate only that section. Do not regenerate the full test suite. |
 
 ---
 

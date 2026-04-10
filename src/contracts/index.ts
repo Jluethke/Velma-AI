@@ -6,7 +6,7 @@ export { GovernanceDAOABI } from './GovernanceDAO';
 export { LifeRewardsABI } from './LifeRewards';
 export { StakingABI } from './Staking';
 export { ValidationRegistryABI } from './ValidationRegistry';
-export { SkillTokenABI } from './SkillToken';
+export { TrustTokenABI } from './TrustToken';
 
 /**
  * Contract addresses — deployed to Base Mainnet (chain ID 8453).

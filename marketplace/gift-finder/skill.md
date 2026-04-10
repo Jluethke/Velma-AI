@@ -86,6 +86,7 @@ Done when: (1) at least 5 personalized gift suggestions are provided with reason
 | REASON | Recipient "has everything" or is a minimalist | Adjust -- focus on experiences, consumables, and charitable donations in their name. Avoid physical objects |
 | PLAN | Preferred gift is out of stock or discontinued | Adjust -- promote next-ranked alternative, find similar items from other brands |
 | ACT | User rejects all suggestions | Reset -- ask what felt wrong about them (too impersonal, too expensive, wrong vibe) and regenerate with refined profile |
+| ACT | User rejects final output | **Targeted revision** -- ask which gift suggestion, category, or personalization factor fell short and rerun only that section. Do not regenerate the full gift list. |
 
 ## State Persistence
 - Recipient profiles (interests, past gifts, known preferences -- builds better suggestions over time)

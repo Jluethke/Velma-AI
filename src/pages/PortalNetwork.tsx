@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useAccount, useReadContract } from 'wagmi';
 import ConnectWalletPrompt from '../components/ConnectWalletPrompt';
-import { CONTRACTS, NodeRegistryABI, SkillRegistryABI, SkillTokenABI } from '../contracts';
+import { CONTRACTS, NodeRegistryABI, SkillRegistryABI, TrustTokenABI } from '../contracts';
 
 function NetworkStat({ label, value, change, accent = 'var(--cyan)' }: {
   label: string; value: string; change?: string; accent?: string;
@@ -54,7 +54,7 @@ function NetworkContent() {
 
   const { data: totalSupply } = useReadContract({
     address: CONTRACTS.TrustToken,
-    abi: SkillTokenABI,
+    abi: TrustTokenABI,
     functionName: 'MAX_SUPPLY',
   });
 
