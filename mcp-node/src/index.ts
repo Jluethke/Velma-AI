@@ -91,18 +91,25 @@ function availableChains(): Array<Record<string, unknown>> {
     .filter(Boolean) as Array<Record<string, unknown>>;
 }
 
-/** Parse required and optional inputs from a skill.md ## Inputs section. */
+/** Parse required and optional inputs from a skill.md ## Inputs section.
+ *  Handles two formats:
+ *   - field_name: type -- description
+ *   - `field_name`: type -- description  (backtick variant)
+ *  Optional markers: "(Optional)" or "(optional)" anywhere in the description.
+ */
 function parseSkillInputs(skillMd: string): { required: Array<{name: string; desc: string}>; optional: Array<{name: string; desc: string}> } {
   const required: Array<{name: string; desc: string}> = [];
   const optional: Array<{name: string; desc: string}> = [];
   const section = skillMd.match(/## Inputs\n([\s\S]*?)(?=\n## |\n---)/);
   if (!section) return { required, optional };
   for (const line of section[1].split("\n")) {
-    const m = line.match(/^- (\w[\w-]*):\s*\S+\s+--\s+(.+)/);
+    // Match: - `name`: type -- desc  OR  - name: type -- desc
+    const m = line.match(/^-\s+`?(\w[\w-]*)`?:\s+\S[\S]*\s+--\s+(.+)/);
     if (!m) continue;
     const [, name, desc] = m;
-    if (desc.includes("(Optional)")) {
-      optional.push({ name, desc: desc.replace(/^\(Optional\)\s*/, "") });
+    const isOptional = /\(optional\)/i.test(desc);
+    if (isOptional) {
+      optional.push({ name, desc: desc.replace(/\(optional\)\s*/i, "").trim() });
     } else {
       required.push({ name, desc });
     }

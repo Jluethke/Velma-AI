@@ -1,130 +1,117 @@
 # Solopreneur Engine
 
-> Tell me your idea. Get a running business back.
+Tell me your idea. Get a running business back. Full launch pipeline: validate the idea, analyze the market, pick a strategy, build the business plan, generate outreach content, and design your operating system — everything a solo founder needs from zero to launch.
 
-## What It Does
+## Execution Pattern: ORPA Loop
 
-The Solopreneur Engine is a complete business launch pipeline. A solo founder provides their idea, target audience, skills, and budget -- and the engine produces everything needed to launch and run the business.
+## Inputs
+- idea: string -- Your business idea in plain language. Don't filter it — just say what it is. "AI-powered invoicing for freelancers", "custom dog treat bakery", "tutoring for kids who hate math."
+- target_audience: string -- Who has the problem your idea solves. Be specific: not "small businesses" but "freelance designers doing $50K-$200K/year with 10+ active clients."
+- founder_skills: array -- What you're good at — professionally, technically, personally. Include job skills, hobbies, software, domain knowledge. Everything counts.
+- budget: string -- How much you can invest upfront without stress, and your monthly burn limit while the business ramps up. Be honest.
+- business_type: string -- (Optional) What kind of business: saas, service, ecommerce, marketplace, content, agency, or consulting. If unknown, will be recommended based on your idea and skills.
+- risk_tolerance: string -- (Optional) Conservative (need near-guaranteed income, minimal upfront spend), moderate (can invest a few hundred and wait 2-3 months), or aggressive (willing to invest $1K+ and wait 6+ months).
+- constraints: array -- (Optional) Dealbreakers and hard limits: no client-facing work, non-compete at current job, can't use real name online, specific industries to avoid, time constraints.
 
-## Pipeline Stages
+## Outputs
+- validation_score: object -- Go/no-go recommendation with scores on problem clarity, audience definition, willingness to pay, competition level, and founder fit. STRONG GO, GO WITH CAVEATS, PIVOT, or NO GO.
+- market_analysis: object -- TAM/SAM/SOM estimates, competitor map with strengths and weaknesses, market gaps, 3 positioning angles, pricing benchmarks, and distribution channels.
+- strategy_recommendation: object -- Three strategy candidates (LEAN, PREMIUM, GROWTH) scored and ranked. Winner selected with reasoning and trade-offs.
+- business_plan: object -- One-liner pitch, value proposition, MVP scope, pricing tiers, revenue model, 90-day week-by-week timeline, budget breakdown, top 5 risks with mitigations, first-10-customers playbook.
+- outreach_content: object -- 5 cold email variants, 5 LinkedIn outreach sequences (3 messages each), 10 social posts, complete landing page copy, 30-second elevator pitch.
+- operating_system: object -- Time-blocked daily schedule, weekly rhythm, KPI dashboard, automation opportunities with tool recommendations, full tool stack (free/cheap tier), 13-week sprint plan.
 
-### 1. VALIDATE (Idea Scoring)
-Scores the idea on 5 dimensions using the Mom Test framework:
-- **Problem clarity** (0-10): Is the problem specific and painful?
-- **Audience definition** (0-10): Who exactly has this problem?
-- **Willingness to pay** (0-10): Would they pay to solve it?
-- **Competition level** (0-10): Crowded or open market?
-- **Founder fit** (0-10): Does the founder have relevant skills?
+## Execution
 
-Produces a go/no-go recommendation: STRONG GO, GO WITH CAVEATS, PIVOT, or NO GO.
+### OBSERVE: Intake and Validate
+**Entry criteria:** Idea, target audience, founder skills, and budget provided.
+**Actions:**
+1. Score the idea on 5 dimensions (0-10 each) using the Mom Test framework:
+   - Problem clarity: Is the problem specific and painful enough that people would pay to solve it?
+   - Audience definition: Can you name the exact person who has this problem and find 100 of them?
+   - Willingness to pay: Evidence — real or inferred — that this audience pays for solutions like this.
+   - Competition level: Market crowding (low competition = opportunity; high = need differentiation).
+   - Founder fit: Do the founder's skills, network, and experience give them an unfair advantage here?
+2. Produce a go/no-go recommendation: STRONG GO (40-50pts), GO WITH CAVEATS (30-39), PIVOT (20-29), or NO GO (<20).
+3. For PIVOT recommendations, generate 2-3 adjacent ideas that score higher given the founder's profile.
+4. Analyze the market: estimate TAM/SAM/SOM bottom-up, map 3-5 competitors with strengths/weaknesses/gaps, identify underserved niches, benchmark pricing by business type.
+5. Determine or confirm the business type based on the idea and founder skills if not provided.
 
-### 2. SCAN (Market Analysis)
-- TAM/SAM/SOM estimation (bottom-up)
-- Competitor mapping with strengths/weaknesses
-- Market gaps and underserved niches
-- 3 positioning angles (Specialist, Simplifier, Premium)
-- Pricing benchmarks by business type
-- Distribution channel identification
+**Output:** Validation scorecard with recommendation, market sizing, competitor map, positioning opportunities.
+**Quality gate:** All 5 validation dimensions scored. Business type confirmed. At least 1 clear market gap identified.
 
-### 3. STRATEGIZE (Tournament Selection)
-Generates 3 strategy candidates and scores each:
-- **LEAN**: Smallest MVP, manual processes first, fastest to revenue
-- **PREMIUM**: Quality-first, higher prices, fewer customers
-- **GROWTH**: Aggressive acquisition, optimize for speed and scale
+### REASON: Build Strategy and Plan
+**Entry criteria:** Validation complete, go/pivot direction confirmed.
+**Actions:**
+1. Generate 3 strategy candidates and score each on: time to first revenue (30%), capital required (20%), risk level (20%), scalability potential (15%), founder fit (15%).
+   - LEAN: Smallest possible MVP, manual processes first, fastest path to paying customers.
+   - PREMIUM: Quality-first positioning, higher prices, fewer customers, slower but more defensible.
+   - GROWTH: Aggressive acquisition, optimize for speed and scale, higher risk and capital needs.
+2. Select the winning strategy based on scoring, then build the full business plan around it:
+   - One-liner pitch (max 15 words, must say who it helps and what it does).
+   - Value proposition: what it does, for whom, and why it's better.
+   - MVP scope: must-have features vs cut-for-later list.
+   - Pricing tiers: 2-3 options with anchoring logic.
+   - Revenue model: subscription, one-time, retainer, usage-based, etc.
+   - 90-day timeline: week-by-week milestones from day 1 to first revenue.
+   - Budget breakdown: upfront costs, monthly recurring, where to cut if budget is tight.
+   - Top 5 risks with specific mitigations (not generic "market risk").
+   - First-10-customers playbook: exactly where to find them and how to reach them.
 
-Scoring dimensions (weighted):
-- Time to first revenue (30%)
-- Capital required (20%)
-- Risk level (20%)
-- Scalability potential (15%)
-- Founder fit (15%)
+**Output:** Scored strategy comparison, winning strategy rationale, complete business plan.
+**Quality gate:** Strategy scoring is transparent and defensible. Business plan has week-by-week milestones. First-10-customers plan is specific (names, platforms, outreach method), not generic.
 
-### 4. PLAN (Business Plan)
-Using the winning strategy:
-- One-liner elevator pitch (max 15 words)
-- Value proposition
-- MVP scope (must-have vs cut-for-later)
-- Pricing tiers (2-3 tiers)
-- Revenue model template
-- Week-by-week 90-day timeline
-- Budget breakdown
-- 5 key milestones with success metrics
-- Top 5 risks with mitigations
-- First-10-customers playbook
+### PLAN: Generate Outreach and Operations
+**Entry criteria:** Business plan approved.
+**Actions:**
+1. Write outreach content ready to personalize and send:
+   - 5 cold email variants using different frameworks: AIDA (Attention-Interest-Desire-Action), PAS (Problem-Agitate-Solution), BAB (Before-After-Bridge), DIRECT (one-ask, no fluff), STORY (personal narrative lead).
+   - 5 LinkedIn outreach sequences — 3 messages each: connection request, follow-up with value, close with ask.
+   - 10 social media posts: 70% value/education, 20% founder story, 10% promotional. Ready for LinkedIn, Twitter/X, or Instagram (platform-agnostic copy).
+   - Landing page copy: hero section (headline + subheadline + CTA), 3 feature/benefit blocks, pricing section, FAQ (5 questions), footer CTA. Ready to paste into Carrd, Framer, or Webflow.
+   - 30-second elevator pitch: for networking events, intro calls, DMs. Memorizable.
+2. Design the operating system for running the business day-to-day:
+   - Time-blocked daily schedule based on available hours from the intake.
+   - Weekly rhythm: Monday-Sunday structure with recurring tasks.
+   - KPI dashboard: 5-7 metrics specific to the business type with targets and review cadence.
+   - Automation opportunities: which manual tasks to automate first, with tool recommendations.
+   - Full tool stack at free/cheap tier: CRM, email, payments, project management, comms, website.
+   - 13-week sprint plan: quarterly goals broken into weekly sprints with success metrics.
 
-### 5. OUTREACH (Content Generation)
-- 5 cold email variants (AIDA, PAS, BAB, DIRECT, STORY frameworks)
-- 5 LinkedIn outreach sequences (3 messages each)
-- 10 social media posts (70% value, 20% story, 10% promo)
-- Complete landing page copy (hero, features, pricing, FAQ, CTA)
-- 30-second elevator pitch
+**Output:** Complete outreach content suite, landing page copy, operating system, tool stack.
+**Quality gate:** Cold emails are ready to send with only name/company personalization needed. Landing page copy is complete. Tool stack has no tool over $50/month (unless explicitly requested).
 
-### 6. OPS (Operating System)
-- Time-blocked daily schedule
-- Weekly rhythm (Monday-Sunday)
-- KPI dashboard (5-7 key metrics by business type)
-- Automation opportunities with tool recommendations
-- Full tool stack (free/cheap tier)
-- 13-week sprint plan with success metrics
-- Review cadence (daily/weekly/monthly)
+### ACT: Deliver and Prioritize
+**Entry criteria:** All materials generated.
+**Actions:**
+1. Present the full package section by section with context: "Here's why I chose the LEAN strategy for your situation..." — not just outputs, but reasoning.
+2. Give a prioritized action list for the first 7 days: exactly what to do, in order, to get the first paying customer as fast as possible.
+3. Flag the highest-risk assumption in the plan: "The biggest bet here is [X]. Here's a cheap, fast way to test it before investing further."
+4. Provide the "if nothing else" minimum: if the founder only does 3 things from this entire plan, these are the 3 that matter most.
+5. Offer to go deeper on any section: generate more email variants, rework the pitch, stress-test the pricing, or run a specific section again with different parameters.
 
-## Supported Business Types
+**Output:** Full launch package with prioritized action list, key risk flag, and minimum viable action set.
+**Quality gate:** First 7-day action list is specific (not "start marketing" but "post in r/freelance with this exact message"). Risk flag is honest. Minimum viable actions are genuinely the highest-leverage moves.
 
-- **SaaS** -- subscription software (8-week MVP)
-- **Service** -- freelance/done-for-you (2-week MVP)
-- **Ecommerce** -- physical/digital product sales (4-week MVP)
-- **Marketplace** -- two-sided platform (12-week MVP)
-- **Content** -- newsletter, course, membership (1-week MVP)
-- **Agency** -- client services at scale (2-week MVP)
-- **Consulting** -- expert advisory (1-week MVP)
+## Exit Criteria
+Done when: (1) idea has a go/no-go recommendation with scores, (2) winning strategy is selected with rationale, (3) business plan covers all sections, (4) outreach content is ready to use, (5) operating system covers daily/weekly rhythm and KPIs, (6) 7-day action list is delivered.
 
-## Usage
+## Error Handling
+| Phase | Failure Mode | Response |
+|---|---|---|
+| OBSERVE | Idea is too vague ("I want to make money online") | Escalate — ask 3 clarifying questions: What specific problem? Who specifically has it? What would they pay for it? |
+| OBSERVE | Idea scores NO GO | Pivot — don't just say no. Identify what's salvageable and generate 2-3 adjacent ideas that score better with the founder's skills. |
+| REASON | Budget is too low for the business type | Adjust — downscope to a business type that fits. Service businesses can start for under $100. Recommend the lowest-cost path to validation. |
+| PLAN | Founder has no audience or network | Adjust — focus outreach on platforms where their target audience already congregates. Include community infiltration tactics before cold outreach. |
+| ACT | Founder is paralyzed by the volume of output | Simplify — cut to the minimum viable action set. "Do these 3 things this week, nothing else." |
 
-```python
-from skillchain.solopreneur import SolopreneurEngine
+## State Persistence
+- Idea iterations (each version scored, with why it changed)
+- Competitor intelligence (updates as market evolves)
+- Outreach performance (which emails/posts got responses, open rates if tracked)
+- Sprint outcomes (week-by-week actual vs planned, what worked)
+- Customer discovery notes (what early customers said, what surprised you)
 
-engine = SolopreneurEngine()
-result = engine.run(
-    idea="AI-powered invoice processing for freelancers",
-    target_audience="freelancers doing $50K-200K/year with 10+ clients",
-    founder_skills=["python", "ML", "was a freelancer for 5 years"],
-    budget="$500/month",
-    business_type="saas",
-)
+---
 
-# Summary report
-print(result.report)
-
-# Full detailed report with all content
-print(result.full_report)
-```
-
-### CLI
-
-```bash
-# Full pipeline
-skillchain launch "AI invoice processing for freelancers" \
-    --audience "freelancers doing $50K-200K/year" \
-    --skills "python,ML,freelancing" \
-    --budget "$500/month" \
-    --type saas \
-    --output launch_report.txt
-
-# Quick validation only
-skillchain launch "my idea" --audience "my audience" --validate-only
-
-# Outreach content only
-skillchain launch "my idea" --audience "my audience" --outreach-only
-```
-
-## Key Design Decisions
-
-1. **Template-based, not LLM-dependent**: Every stage runs deterministically from structured templates and scoring rubrics. No API calls needed. Instant results.
-
-2. **Tournament selection**: Like Verified Fix Mode's candidate approach, we don't just generate one strategy -- we generate three and pick the best using weighted scoring.
-
-3. **Ready-to-use output**: Cold emails are ready to personalize and send. Landing page copy is ready to paste into Carrd. The 90-day sprint is ready to execute.
-
-4. **Founder-fit aware**: Scoring accounts for the founder's actual skills, not just the idea's market potential.
-
-5. **Business-type specialized**: Every output (KPIs, pricing, tools, channels, risks) is tailored to the specific business type.
+Copyright 2024-present The Wayfinder Trust. All rights reserved.

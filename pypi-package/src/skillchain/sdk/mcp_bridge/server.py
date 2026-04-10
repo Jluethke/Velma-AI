@@ -65,19 +65,25 @@ import re as _re
 
 
 def _parse_skill_inputs(skill_md: str) -> tuple[list[dict], list[dict]]:
-    """Parse ## Inputs section from skill.md. Returns (required, optional) lists."""
+    """Parse ## Inputs section from skill.md. Returns (required, optional) lists.
+
+    Handles two formats:
+      - field_name: type -- description
+      - `field_name`: type -- description  (backtick variant)
+    Optional markers: "(Optional)" or "(optional)" anywhere in the description.
+    """
     required: list[dict] = []
     optional: list[dict] = []
     section = _re.search(r"## Inputs\n([\s\S]*?)(?=\n## |\n---)", skill_md)
     if not section:
         return required, optional
     for line in section.group(1).splitlines():
-        m = _re.match(r"^- (\w[\w-]*):\s*\S+\s+--\s+(.+)", line)
+        m = _re.match(r"^-\s+`?(\w[\w-]*)`?:\s+\S\S*\s+--\s+(.+)", line)
         if not m:
             continue
         name, desc = m.group(1), m.group(2)
-        if "(Optional)" in desc:
-            optional.append({"name": name, "desc": desc.replace("(Optional)", "").strip()})
+        if _re.search(r"\(optional\)", desc, _re.IGNORECASE):
+            optional.append({"name": name, "desc": _re.sub(r"\(optional\)\s*", "", desc, flags=_re.IGNORECASE).strip()})
         else:
             required.append({"name": name, "desc": desc})
     return required, optional
