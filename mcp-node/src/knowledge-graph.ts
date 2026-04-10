@@ -5,9 +5,9 @@
  * execution outputs and validated via on-chain TrustOracle consensus.
  *
  * PATENT FAMILY F CIP — Novel combination:
- * - Temporal KG (from MemPalace/NeurOS patterns)
- * - Trust-weighted validation (from SkillChain on-chain consensus)
- * - Skill execution provenance (source_skill, source_run_id)
+ * - Trust-weighted validation (SkillChain on-chain consensus via TrustOracle)
+ * - Skill execution provenance (source_skill, source_run_id) tied to KG triples
+ * - Temporal KG architecture (derived from NeurOS NeuroFS)
  *
  * Edge types ported from NeurOS: caused, supports, contradicts, preceded, enables
  */

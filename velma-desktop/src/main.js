@@ -172,7 +172,7 @@ function createPanelWindow() {
 
   panelWin = new BrowserWindow({
     width: 320,
-    height: 480,
+    height: 540,
     x: companion.x - 330,
     y: companion.y - 360,
     frame: false,
@@ -229,17 +229,47 @@ ipcMain.handle('get-panel-data', async () => {
   const walletAddress = loadWalletAddress();
   const trustBalance = await fetchTrustBalance(walletAddress);
 
-  // Load recent MCP activity
+  // Apply care decay based on time since last update
+  if (state.care && state.last_care_update) {
+    const hoursIdle = Math.max(0, (Date.now() - new Date(state.last_care_update).getTime()) / 3600000);
+    const DECAY = { hunger: 8, happiness: 4, energy: 2, curiosity: 1 };
+    const clamp = (v, mn = 0, mx = 100) => Math.min(mx, Math.max(mn, v));
+    state.care = {
+      hunger:    clamp(state.care.hunger    - DECAY.hunger    * hoursIdle),
+      happiness: clamp(state.care.happiness - DECAY.happiness * hoursIdle),
+      energy:    clamp(state.care.energy    - DECAY.energy    * hoursIdle),
+      curiosity: clamp(state.care.curiosity - DECAY.curiosity * hoursIdle),
+    };
+  }
+
+  // Load recent L1 memory facts
   let recentActivity = [];
   try {
-    const memPath = path.join(SKILLCHAIN_DIR, 'memory.json');
-    if (fs.existsSync(memPath)) {
-      const mem = JSON.parse(fs.readFileSync(memPath, 'utf8'));
+    const l1Path = path.join(SKILLCHAIN_DIR, 'memory', 'l1_facts.json');
+    const legacyPath = path.join(SKILLCHAIN_DIR, 'memory.json');
+    if (fs.existsSync(l1Path)) {
+      const facts = JSON.parse(fs.readFileSync(l1Path, 'utf8'));
+      recentActivity = (Array.isArray(facts) ? facts : facts.facts ?? [])
+        .slice(-5).map(f => f.content ?? f.text ?? f);
+    } else if (fs.existsSync(legacyPath)) {
+      const mem = JSON.parse(fs.readFileSync(legacyPath, 'utf8'));
       recentActivity = (mem.recent_facts ?? []).slice(-5).map(f => f.content ?? f);
     }
   } catch {}
 
-  // Random Velma thought based on mood + time
+  // Build suggestion from state
+  const openLoops = state.open_loops ?? [];
+  const patterns = state.patterns ?? [];
+  const personality = state.personality ?? {};
+  let suggestion = state.last_thought ?? null;
+  if (openLoops.length > 0) {
+    suggestion = `Open loop: "${openLoops[0]}" — want to finish it?`;
+  } else if (personality.dominant_domain) {
+    const count = personality.domain_counts?.[personality.dominant_domain] ?? 0;
+    suggestion = `You've run ${count} ${personality.dominant_domain} flows. Ready to chain them?`;
+  }
+
+  // Fallback thought
   const hour = new Date().getHours();
   const thoughts = {
     morning: ["Morning. You always start early.", "Coffee first. Then world domination.", "Back again. Good."],
@@ -251,14 +281,43 @@ ipcMain.handle('get-panel-data', async () => {
   const thoughtList = thoughts[timeKey];
   const randomThought = thoughtList[Math.floor(Math.random() * thoughtList.length)];
 
+  // Load schedule from state (written by MCP ETL)
+  const schedule = (state.schedule ?? []).filter(s => {
+    const now = new Date().getHours();
+    const diff = (s.suggested_hour - now + 24) % 24;
+    return diff <= 2;
+  });
+
   return {
     state,
     walletAddress,
     trustBalance,
     recentActivity,
     randomThought,
-    witnessedRecent: (state.witnessed ?? []).slice(-5).reverse(),
+    witnessedRecent: (state.witnessed ?? []).slice(-5).map(w => w.event ?? w).reverse(),
+    suggestion,
+    openLoops,
+    patterns,
+    personality,
+    schedule,
   };
+});
+
+ipcMain.handle('rest-velma', () => {
+  const VELMA_STATE_PATH_LOCAL = path.join(os.homedir(), '.skillchain', 'velma.json');
+  if (fs.existsSync(VELMA_STATE_PATH_LOCAL)) {
+    try {
+      const s = JSON.parse(fs.readFileSync(VELMA_STATE_PATH_LOCAL, 'utf8'));
+      const clamp = (v) => Math.min(100, Math.max(0, v));
+      if (s.care) {
+        s.care.energy    = clamp((s.care.energy    ?? 50) + 30);
+        s.care.happiness = clamp((s.care.happiness ?? 50) + 5);
+      }
+      s.last_care_update = new Date().toISOString();
+      fs.writeFileSync(VELMA_STATE_PATH_LOCAL, JSON.stringify(s, null, 2));
+    } catch {}
+  }
+  return { ok: true };
 });
 
 ipcMain.on('open-panel', () => createPanelWindow());

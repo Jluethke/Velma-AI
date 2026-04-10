@@ -152,6 +152,32 @@ function availableChains(): Array<Record<string, unknown>> {
     .filter(Boolean) as Array<Record<string, unknown>>;
 }
 
+/**
+ * Returns all searchable flows: chains + standalone skills that don't already
+ * have a chain wrapper. Standalone skills are represented as single-step
+ * synthetic chains so ChainMatcher can rank them alongside real chains.
+ */
+function allFlowsForSearch(): Array<Record<string, unknown>> {
+  const chains = availableChains();
+  const chainNames = new Set(chains.map(c => (c as Record<string, unknown>).name as string));
+  const skills = installedSkills();
+  const standaloneEntries: Array<Record<string, unknown>> = [];
+  for (const [name] of skills) {
+    if (chainNames.has(name)) continue; // already covered by a chain
+    const manifest = loadManifest(name);
+    standaloneEntries.push({
+      name,
+      description: manifest.description ?? "",
+      category: manifest.domain ?? "general",
+      tags: manifest.tags ?? [],
+      flow_type: "standalone_skill",
+      execution_pattern: manifest.execution_pattern ?? "phase_pipeline",
+      steps: [{ skill_name: name, alias: name }],
+    });
+  }
+  return [...chains, ...standaloneEntries];
+}
+
 /** Parse required and optional inputs from a skill.md ## Inputs section.
  *  Handles two formats:
  *   - field_name: type -- description
@@ -444,8 +470,8 @@ server.tool("search_flows",
     max_results: z.number().default(5),
   },
   async ({ query, max_results }) => {
-    const chains = availableChains();
-    const matcher = new ChainMatcher(chains as Array<{ name: string; description?: string; category?: string; steps?: Array<{ skill_name: string; alias?: string }> }>);
+    const allFlows = allFlowsForSearch();
+    const matcher = new ChainMatcher(allFlows as Array<{ name: string; description?: string; category?: string; steps?: Array<{ skill_name: string; alias?: string }> }>);
     const matches = matcher.match(query, max_results);
     return { content: [{ type: "text" as const, text: JSON.stringify(matches, null, 2) }] };
   }
@@ -459,12 +485,12 @@ server.tool("find_and_run",
     initial_context: z.string().default("{}").describe("JSON context data for the chain"),
   },
   async ({ query, auto_run, initial_context }) => {
-    const chains = availableChains();
-    const matcher = new ChainMatcher(chains as Array<{ name: string; description?: string; category?: string; steps?: Array<{ skill_name: string; alias?: string }> }>);
+    const allFlows = allFlowsForSearch();
+    const matcher = new ChainMatcher(allFlows as Array<{ name: string; description?: string; category?: string; steps?: Array<{ skill_name: string; alias?: string }> }>);
     const matches = matcher.match(query, 5);
 
     if (matches.length === 0) {
-      return { content: [{ type: "text" as const, text: JSON.stringify({ error: "No chains match your query.", query }) }] };
+      return { content: [{ type: "text" as const, text: JSON.stringify({ error: "No flows match your query.", query }) }] };
     }
 
     const best = matches[0];
@@ -475,21 +501,24 @@ server.tool("find_and_run",
     };
 
     if (auto_run) {
-      // Find chain and execute (simplified — returns steps for Claude to execute)
-      const chainData = chains.find(c => (c as Record<string, unknown>).name === best.chain_name);
-      if (chainData) {
-        const steps = ((chainData as Record<string, unknown>).steps as Array<Record<string, string>>) ?? [];
+      const flowData = allFlows.find(c => (c as Record<string, unknown>).name === best.chain_name);
+      if (flowData) {
+        const steps = ((flowData as Record<string, unknown>).steps as Array<Record<string, string>>) ?? [];
         let ctx: Record<string, unknown>;
         try { ctx = JSON.parse(initial_context); } catch { ctx = {}; }
+        const isStandalone = (flowData as Record<string, unknown>).flow_type === "standalone_skill";
         resultData.execution = {
           chain_name: best.chain_name,
+          flow_type: isStandalone ? "standalone_skill" : "chain",
           status: "ready",
           steps: steps.map(s => ({
             skill_name: s.skill_name,
             alias: s.alias ?? s.skill_name,
           })),
           initial_context: ctx,
-          instructions: "Execute each flow in order using start_flow_run, get_flow, record_phase, and complete_flow_run.",
+          instructions: isStandalone
+            ? "This is a standalone skill. Use start_flow_run, get_flow, record_phase, and complete_flow_run to execute it. Collect required inputs from the user first."
+            : "Execute each flow in order using start_flow_run, get_flow, record_phase, and complete_flow_run.",
         };
 
         // Track
@@ -521,38 +550,83 @@ server.tool("run_flow",
   async ({ flow_name, initial_context }) => {
     const chains = availableChains();
     const chainData = chains.find(c => (c as Record<string, unknown>).name === flow_name);
-    if (!chainData) return { content: [{ type: "text" as const, text: JSON.stringify({ error: `Flow '${flow_name}' not found.` }) }] };
 
     let ctx: Record<string, unknown>;
     try { ctx = JSON.parse(initial_context); } catch { ctx = {}; }
 
-    const steps = ((chainData as Record<string, unknown>).steps as Array<Record<string, string>>) ?? [];
-    const result = {
-      flow_name,
-      status: "ready",
-      steps: steps.map(s => ({
-        flow_step: s.skill_name,
-        alias: s.alias ?? s.skill_name,
-        depends_on: (s as Record<string, unknown>).depends_on ?? [],
-      })),
-      initial_context: ctx,
-      instructions: "Use preview_flow to show the user the plan, then run_flow_step to execute one step at a time with human approval between steps.",
-    };
+    // Chain flow
+    if (chainData) {
+      const steps = ((chainData as Record<string, unknown>).steps as Array<Record<string, string>>) ?? [];
+      const result = {
+        flow_name,
+        status: "ready",
+        steps: steps.map(s => ({
+          flow_step: s.skill_name,
+          alias: s.alias ?? s.skill_name,
+          depends_on: (s as Record<string, unknown>).depends_on ?? [],
+        })),
+        initial_context: ctx,
+        instructions: "Use preview_flow to show the user the plan, then run_flow_step to execute one step at a time with human approval between steps.",
+      };
 
-    try { profileMgr.updateChainUsage(flow_name); } catch { /* */ }
-    try {
-      const gam = new GamificationEngine();
-      gam.recordChainRun(flow_name, steps.length, 0);
-    } catch { /* */ }
-    try { new VelmaCompanion().witnessChain(flow_name); } catch { /* */ }
+      try { profileMgr.updateChainUsage(flow_name); } catch { /* */ }
+      try {
+        const gam = new GamificationEngine();
+        gam.recordChainRun(flow_name, steps.length, 0);
+      } catch { /* */ }
+      try { new VelmaCompanion().witnessChain(flow_name); } catch { /* */ }
 
-    // Record on-chain usage
-    try {
-      const userAddress = profileMgr.load().wallet_address;
-      await recordFlowUsage(userAddress, flow_name);
-    } catch { /* */ }
+      try {
+        const userAddress = profileMgr.load().wallet_address;
+        await recordFlowUsage(userAddress, flow_name);
+      } catch { /* */ }
 
-    return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
+      return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
+    }
+
+    // Standalone skill (not a chain) — e.g. business-in-a-box, phase_pipeline skills
+    const skillMap = installedSkills();
+    const skillPath = skillMap.get(flow_name);
+    if (skillPath && existsSync(skillPath)) {
+      const manifest = loadManifest(flow_name);
+      const skillContent = readFileSync(skillPath, "utf-8");
+      const { required: requiredInputs, optional: optionalInputs } = parseSkillInputs(skillContent);
+      const alreadyProvided = Object.keys(ctx);
+      const missingRequired = requiredInputs.filter(i => !alreadyProvided.includes(i.name));
+
+      const intakeBlock = missingRequired.length > 0
+        ? `COLLECT INPUTS FIRST — Ask the user for the following before executing:\n${missingRequired.map(i => `  • ${i.name}: ${i.desc}`).join("\n")}${optionalInputs.length > 0 ? `\n\nAlso ask (optional):\n${optionalInputs.map(i => `  • ${i.name}: ${i.desc}`).join("\n")}` : ""}\n\nThen execute the skill once inputs are collected.`
+        : "All inputs provided. Execute the skill using the skill_definition below.";
+
+      try { profileMgr.updateUsage(flow_name); } catch { /* */ }
+      try {
+        const gam = new GamificationEngine();
+        gam.recordSkillRun(flow_name);
+      } catch { /* */ }
+      try { new VelmaCompanion().witnessFlow(flow_name); } catch { /* */ }
+
+      try {
+        const userAddress = profileMgr.load().wallet_address;
+        await recordFlowUsage(userAddress, flow_name);
+      } catch { /* */ }
+
+      return { content: [{ type: "text" as const, text: JSON.stringify({
+        flow_name,
+        flow_type: "standalone_skill",
+        execution_pattern: manifest.execution_pattern ?? "phase_pipeline",
+        description: manifest.description ?? "",
+        required_inputs: requiredInputs,
+        optional_inputs: optionalInputs,
+        inputs_provided: ctx,
+        skill_definition: skillContent,
+        instructions: intakeBlock,
+      }, null, 2) }] };
+    }
+
+    return { content: [{ type: "text" as const, text: JSON.stringify({
+      error: `Flow '${flow_name}' not found.`,
+      tip: "Use list_flows to see all available flows, or search_flows to find by description.",
+    }) }] };
   }
 );
 
