@@ -453,6 +453,7 @@ The curriculum is DONE when:
 | Phase 7 | Assessments cannot be aligned with objectives | **Adjust** -- Revise learning objectives to be more measurable or use alternative assessment methods |
 | Phase 8 | Curriculum exceeds 50 pages | **Adjust** -- Split into primary curriculum + supplementary modules; use modular format |
 | Phase 9 | Learner feedback indicates fundamental curriculum flaws | **Adjust** -- Loop back to Phase 3 or 4 to redesign skill levels or learning path |
+| Phase 8 | User rejects final output | **Targeted revision** -- ask which section fell short (a specific module, resource list, exercise, or assessment criteria) and rerun only that section. Do not regenerate the full curriculum. |
 
 ---
 

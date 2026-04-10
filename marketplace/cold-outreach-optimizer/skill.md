@@ -201,6 +201,7 @@ The skill is DONE when:
 | TEST | Insufficient historical data for optimization | **Skip** -- use industry benchmarks, note that optimization will improve after 50+ sends |
 | OPTIMIZE | No clear winning pattern in data | **Adjust** -- recommend continued testing with larger sample, flag that current sample may be too small for significance |
 | ACT | User rejects the outreach copy or sequence and requests significant changes | **Adjust** -- incorporate specific feedback (e.g., wrong tone for the persona, CTA is too aggressive, subject line doesn't fit the brand), revise the affected copy elements, and regenerate the impacted touches; do not restart from Phase 1 unless the prospect profile or product context was fundamentally wrong |
+| ACT | User rejects final output | **Targeted revision** -- ask which outreach touch, subject line, or personalization angle fell short and rerun only that section. Do not regenerate the full sequence. |
 
 ## State Persistence
 

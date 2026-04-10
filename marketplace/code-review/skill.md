@@ -182,6 +182,7 @@ The skill is DONE when:
 | PLAN | Too many findings (> 20) | **Adjust** -- group related findings, focus on top 10 most impactful |
 | ACT | Cannot suggest a fix for a blocking issue | **Escalate** -- flag the issue with "I believe this is a problem but I'm not sure of the best fix -- let's discuss" |
 | ACT | Author rejects a blocking comment or disputes the finding | **Adjust** -- engage with the specific technical objection, re-evaluate the finding with the author's context in mind, and either confirm with additional evidence or downgrade from blocking to suggestion if the concern is not confirmed; do not change the approval decision without resolving the underlying concern |
+| ACT | User rejects final output | **Targeted revision** -- ask which finding category, specific comment, or severity rating fell short and rerun only that review section. Do not re-review the full diff. |
 
 ## State Persistence
 

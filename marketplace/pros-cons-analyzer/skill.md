@@ -127,6 +127,7 @@ The skill is DONE when:
 | REASON | Cannot generate 5 pros (seems like an obvious rejection) | **Adjust** -- steelman the proposal. Ask "what would need to be true for this to be right?" |
 | PLAN | Pros and cons are exactly balanced | **Adjust** -- apply the "regret minimization" tiebreaker: which choice would you regret more at age 80? |
 | PLAN | Critical information is missing | **Hold** -- recommend gathering specific information before deciding |
+| ACT | User rejects final output | **Targeted revision** -- ask which section fell short (pro/con weights, hidden factors, recommendation, or reversibility assessment) and rerun only that section. Do not regenerate the full analysis. |
 
 ## State Persistence
 
@@ -134,6 +135,51 @@ Between runs, this skill accumulates:
 - **Decision log**: past analyses with outcomes (when available) for calibration
 - **Hidden factor library**: commonly overlooked factors per decision domain
 - **Confidence calibration**: how often each confidence level matched actual outcomes
+
+---
+
+## Reference
+
+### Weighted Impact Formula
+
+`weighted_impact = importance (1-5) × likelihood (0.0-1.0)`
+
+Example: importance=4, likelihood=0.6 → weighted_impact=2.4
+
+Total pro score = sum of all pro weighted_impacts. Total con score = sum of all con weighted_impacts.
+
+### Risk Tolerance Adjustment
+
+| Tolerance | Con Multiplier | Pro Multiplier |
+|---|---|---|
+| Conservative | 1.5× | 1.0× |
+| Moderate | 1.0× | 1.0× |
+| Aggressive | 1.0× | 1.5× |
+
+### Dealbreaker Threshold
+
+Any single con where importance = 5 AND likelihood > 0.7 is a potential dealbreaker. Flag explicitly. Do not let it be buried in the weighted totals.
+
+### Recommendation Decision Rules
+
+| Outcome | Recommendation |
+|---|---|
+| Pros clearly outweigh cons + no dealbreakers + acceptable reversibility | Proceed |
+| Pros outweigh cons but conditions needed | Proceed with conditions |
+| Analysis inconclusive or key info missing | Hold |
+| Cons outweigh pros or dealbreaker present | Reject |
+
+### Tiebreaker: Regret Minimization
+
+When pros and cons are balanced, ask: "At age 80, which choice would you regret more — having done it or not having done it?" Jeff Bezos framework: failure is recoverable; regret of inaction compounds.
+
+### Reversibility Classification
+
+| Class | Description | Threshold for Proceeding |
+|---|---|---|
+| Easily reversible | Low switching cost (days, small $) | Low bar — proceed with normal confidence |
+| Moderately reversible | Meaningful cost (months, significant $) | Moderate bar — ensure pros outweigh cons by 1.5× |
+| Irreversible | Cannot undo (reputation, relationships, major $) | High bar — require high confidence (>0.7) |
 
 ---
 

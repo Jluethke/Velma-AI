@@ -175,6 +175,55 @@ The skill is DONE when:
 | ANALYZE | Root cause is "human error" | **Adjust** -- "human error" is never a root cause. Ask: why was the human able to make that error? What system allowed it? Dig deeper. |
 | EXTRACT | Team cannot identify anything that worked well | **Adjust** -- the fact that the event was detected and is being reviewed is itself something that worked. Start there. |
 | COMMIT | No people_involved provided for action item ownership | **Adjust** -- assign by role ("engineering lead", "ops team") and note that names need to be filled in |
+| COMMIT | User rejects final output | **Targeted revision** -- ask which section fell short (timeline, root cause chain, lessons, action items, or stakeholder summary) and rerun only that section. Do not regenerate the full report. |
+
+---
+
+## Reference
+
+### 5 Whys Structure
+
+| Level | Question | Purpose |
+|---|---|---|
+| Why 1 | Why did [outcome] happen? | Proximate cause — the trigger |
+| Why 2 | Why did [Why 1] happen? | Immediate enabling condition |
+| Why 3 | Why did [Why 2] happen? | Systemic gap usually appears here |
+| Why 4 | Why did [Why 3] happen? | Process or cultural root |
+| Why 5 | Why did [Why 4] happen? | Deepest structural cause |
+
+Rule: "Human error" is never an acceptable Why answer. Always ask: what system, process, or design allowed that error to occur?
+
+### Contributing Factor Categories
+
+| Category | Example Factors |
+|---|---|
+| Process | No review step, missing checklist, unclear ownership, no runbook |
+| Communication | Wrong person notified, delayed escalation, info siloed |
+| Tooling | Monitoring gap, no alerts, missing test coverage, poor observability |
+| Knowledge | Undocumented procedure, tribal knowledge, training gap, new team member |
+| Environment | Friday deploy, holiday weekend, resource constraints, external deadline pressure |
+
+### Action Item Priority Rules
+
+| Priority | Deadline | Criteria |
+|---|---|---|
+| Critical | Within 1 week | Must complete before next similar event |
+| High | Within sprint (2 weeks) | Directly prevents recurrence |
+| Medium | Within quarter | Reduces likelihood or severity |
+| Low | Backlog | Nice-to-have improvement |
+
+### Blameless Language Guide
+
+| Judgment (avoid) | Fact (use instead) |
+|---|---|
+| "irresponsibly deployed" | "deployed at 4 PM Friday without change review" |
+| "ignored the alert" | "no on-call acknowledgment for 45 minutes" |
+| "failed to test" | "no integration test covered this code path" |
+| "poor communication" | "escalation path had not been updated since Q2" |
+
+### Stakeholder Summary Formula
+
+"On [date], [brief what happened]. The impact was [quantified outcome]. Root cause was [one sentence]. Contributing factors included [2-3 factors]. We are taking [N] action items to prevent recurrence, including [most important action]. Expected completion: [date]." (Target: under 100 words.)
 
 ---
 

@@ -124,6 +124,34 @@ The flow is DONE when:
 | REASON | Flow scores 9+ on all dimensions already | **Abort** -- flow is already high quality. Return the audit report with a note that no improvements are needed |
 | PLAN | More than 20 issues identified | **Adjust** -- focus on the top 10 highest-impact issues only to avoid a complete rewrite |
 | ACT | Rewriting a section changes the flow's fundamental purpose | **Adjust** -- flag the section as needing author review rather than rewriting it |
+| ACT | User rejects final output | **Targeted revision** -- ask which section of the improved flow still falls short (specific quality gate, error handler, or phase) and rerun only that section's improvement. Do not restart the full audit. |
+
+## Reference
+
+### Quality Dimension Scoring Cheat Sheet
+
+| Dimension | Passing Score (6+) | Common Failure |
+|---|---|---|
+| Description | One-liner says what it DOES with an action verb | Uses "helps" or "assists"; passive voice |
+| Inputs | All have name, type, required/optional flag | Missing types; vague "the data" |
+| Outputs | Specific artifacts named, not "result" | Outputs named "output" or "result" |
+| Phase quality | Entry criteria + numbered actions + output + quality gate | Missing entry criteria; actions say "ensure" without how |
+| Quality gate strength | Binary, measurable, specific condition with verification | Uses "good," "appropriate," or "complete" without a test |
+| Error handling | One failure mode per phase with Retry/Adjust/Abort | Missing section; responses say "handle appropriately" |
+| Exit criteria | 3+ concrete, testable conditions | Uses "complete" without definition; mirrors single phase gate |
+
+### Quality Gate Rewrite Formula
+
+Before: "Output is complete and accurate"
+After: "[Specific artifact] contains [minimum N items / passes condition Y] -- verified by: [specific check]"
+
+### Improvement Priority Ranking
+
+1. Missing sections (no error handling, no exit criteria, no quality gates)
+2. Vague quality gates (cannot determine pass/fail without subjective judgment)
+3. Weak error handling (responses say "handle appropriately" or "deal with it")
+4. Unclear actions (say "ensure" or "check" without specifying how)
+5. Style issues (passive voice, inconsistent formatting)
 
 ---
 

@@ -184,6 +184,7 @@ Done when: (1) risk assessment identifies top threats for the specific location,
 | EVACUATION | Household member cannot self-evacuate (wheelchair, infant, dementia) | Adjust -- assign a specific evacuation buddy for that person, pre-stage equipment (wheelchair ramp, car seat), register with local fire department's special needs registry if available |
 | DOCUMENTS | Important documents are missing or lost | Adjust -- provide replacement process for each document type (passport: State Department, birth certificate: vital records office in birth state/county, Social Security card: ssa.gov) |
 | DRILLS | Family won't take drills seriously | Adjust -- make it low-pressure and practical. Time the fire drill and challenge the family to beat their time. Reward kids for completing go-bag packing. Frame it as "this is what smart families do" not "here's something scary" |
+| ACT | User rejects final output | Targeted revision -- ask which section fell short (supply checklist, evacuation routes, contact card, or drill schedule) and rerun only that section adjusted for actual household constraints. |
 
 ## State Persistence
 - Household roster (members, medical needs, medications, schools -- updated when household changes)
@@ -191,6 +192,54 @@ Done when: (1) risk assessment identifies top threats for the specific location,
 - Drill log (when drills were conducted, results, improvements identified)
 - Document storage status (which documents are secured, which need updating, renewal dates for passports and IDs)
 - Plan version history (when the plan was last reviewed and what changed -- ensures the plan evolves with the household)
+
+## Reference
+
+### 72-Hour Go-Bag Checklist (Per Person)
+
+| Category | Items | Quantity |
+|---|---|---|
+| Water | Bottled water | 3 gallons per person |
+| Food | Non-perishable, no-cook foods | 3-day supply |
+| First aid | Bandages, antiseptic, OTC pain reliever, personal meds | 3-day supply of prescriptions |
+| Documents | Copies of IDs, insurance cards, medication list | Waterproof bag |
+| Cash | Small bills | $200 minimum |
+| Light / power | Flashlight, extra batteries, portable battery bank | 1 set |
+| Tools | Multi-tool, whistle, dust mask, work gloves | 1 set |
+| Hygiene | Toothbrush, soap, hand sanitizer, menstrual/infant supplies | Per need |
+| Clothing | One change, sturdy shoes, rain poncho, layers | Per person |
+| Comfort | Small toy or familiar snack for children | Per child |
+
+### Disaster Response Quick Reference
+
+| Disaster | Immediate Action | Key Mistake to Avoid |
+|---|---|---|
+| House fire | Get out and stay out; call 911 | Going back inside for belongings |
+| Earthquake | Drop, cover, hold on | Running outside during shaking |
+| Tornado | Interior room, lowest floor, away from windows | Staying in a mobile home |
+| Flood | Move to high ground; never drive through water | Driving through standing water (6 inches can knock a person down) |
+| Wildfire | Evacuate when ordered; do not wait | Waiting to see if it spreads |
+| Power outage | Keep refrigerator closed; use flashlights | Using candles near curtains or paper |
+| Chemical spill | Shelter in place; seal doors with plastic and tape; turn off HVAC | Opening windows or doors |
+
+### Supply Rotation Calendar
+
+| Frequency | What to Check |
+|---|---|
+| Quarterly | Prescription medications in go-bag, flashlight batteries, charge battery banks |
+| Every 6 months | Stored water, smoke/CO detector test |
+| Annually | Food expiration dates, document updates, full plan review |
+| After any emergency | Debrief, restock anything used, update plan |
+
+### US Emergency Contact Reference
+
+| Service | Contact |
+|---|---|
+| Poison Control | 1-800-222-1222 |
+| FEMA | 1-800-621-3362 or disasterassistance.gov |
+| Red Cross | 1-800-733-2767 |
+| Annual credit reports | annualcreditreport.com |
+| Report online crime (IC3) | ic3.gov |
 
 ---
 

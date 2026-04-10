@@ -345,6 +345,7 @@ The skill is DONE when:
 | IMPLEMENT | Agent prompt too long (>4000 tokens) | **Adjust** -- move reference data to tools (RAG retrieval), keep prompt focused on role and rules |
 | VALIDATE | Acceptance test scenario fails to trace | **Retry** -- return to Phase 2, identify the missing agent or handoff, redesign |
 | ACT | User rejects the agent architecture or requests significant design changes | **Adjust** -- incorporate specific feedback (e.g., topology change, new agent role, revised handoff rules) and regenerate the affected phases; do not restart from Phase 1 unless the original goal description was wrong |
+| ACT | User rejects final output | **Targeted revision** -- ask which agent role, handoff logic, or workflow topology fell short and regenerate only the affected phases. Do not restart from Phase 1. |
 
 ## State Persistence
 

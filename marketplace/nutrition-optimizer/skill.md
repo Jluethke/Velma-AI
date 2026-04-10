@@ -159,6 +159,7 @@ The skill completes one cycle when adjusted targets and an updated plan are deli
 | PLAN | User dislikes all suggested foods | Adjust -- request a list of acceptable foods and build plan from those |
 | TRACK | Insufficient tracking data (<7 days) | Skip adjustment phase -- request more data before making changes |
 | ADJUST | Weight loss has stalled for 3+ weeks despite verified deficit | Adjust -- implement 2-week diet break at maintenance, then resume deficit |
+| ADJUST | User rejects final output | **Targeted revision** -- ask which meal plan, macro target, or food substitution fell short and rerun only that section. Do not regenerate the full nutrition plan. |
 
 ## Reference
 

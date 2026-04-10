@@ -210,6 +210,7 @@ The skill is DONE when:
 | VALIDATE | Quality checks fail on sample data | **Retry** -- adjust transforms to handle the failing cases, max 3 retries |
 | VALIDATE | Idempotency test fails | **Retry** -- fix load logic (add batch_id tracking or upsert) |
 | MONITOR | Monitoring tool not available | **Adjust** -- generate file-based logging with manual review instructions |
+| MONITOR | User rejects final output | **Targeted revision** -- ask which pipeline stage, transform logic, or monitoring alert fell short and rerun only that section. Do not redesign the full pipeline. |
 
 ## State Persistence
 

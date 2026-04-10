@@ -269,6 +269,7 @@ The skill is complete when:
 | Phase 7 | Sensitivity analysis shows the business is fragile (profit is highly sensitive to one variable, e.g., 50%+ change in profit from ±10% change in price) | **Adjust** -- add a note in critical_success_factors and recommendation. Recommend validating or controlling that variable before launch. |
 | Phase 7 | Time commitment validation shows projected hours exceed available hours | **Adjust** -- flag in time_commitment_validation.flag = true. Recommend either increasing available hours, reducing unit volume targets, or automating/outsourcing tasks. |
 | Phase 7 | Recommendation is unclear or contradictory (e.g., break-even is 18 months but recommendation is "Go") | **Adjust** -- ensure recommendation.rationale explicitly addresses break-even timeline, cash runway, market validation confidence, and time commitment. Revise recommendation if needed. |
+| Phase 7 | User rejects final output | **Targeted revision** -- ask which revenue projection, cost assumption, or break-even calculation fell short and rerun only that section. Do not regenerate the full financial model. |
 
 ---
 

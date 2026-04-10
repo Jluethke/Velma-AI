@@ -135,6 +135,7 @@ Complete when: (1) at least 5 test cases are generated in valid SkillChain forma
 | GENERATE | Domain is unfamiliar (cannot generate realistic inputs) | Adjust -- generate generic structural tests (phase coverage) and flag for domain expert review |
 | VALIDATE | Coverage score below 50% | Retry -- generate additional test cases targeting uncovered elements |
 | SCORE | Insufficient data for prediction (very short flow.md) | Adjust -- provide prediction with high uncertainty range, note limited confidence |
+| SCORE | User rejects final output | **Targeted revision** -- ask which test case, phase coverage gap, or validation scenario fell short and regenerate only that section. Do not regenerate the full test suite. |
 
 ## Reference
 

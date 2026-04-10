@@ -262,6 +262,7 @@ The skill is complete when:
 | Phase 6 | Founder-market fit score < 4 | **Adjust** -- Recommend recruiting a co-founder with domain expertise, hiring key team members, or reconsidering the idea. |
 | Phase 7 | Validation score is borderline (50-69) | **Adjust** -- Produce a "Conditional Go" recommendation with specific validation milestones (e.g., "proceed if 5 customers commit to pilot"). |
 | Phase 8 | Next steps are unclear or too ambitious | **Adjust** -- Break next steps into smaller, 2-week sprints. Prioritize the highest-risk assumptions to validate first. |
+| Phase 8 | User rejects final output | **Targeted revision** -- ask which validation score, assumption, or next step fell short and rerun only that phase. Do not restart the full validation. |
 
 ---
 

@@ -172,6 +172,7 @@ The pipeline is complete when all five outputs are delivered: idea validation, m
 | BUSINESS | Unit economics are negative (LTV < CAC) | Adjust -- can price increase? Can CAC decrease with different channels? Can churn decrease? If none work, the business model needs restructuring before launch |
 | LAUNCH | No budget for paid acquisition and no organic audience | Adjust -- focus entirely on community and content. Extend timeline. Build audience before product (audience-first approach) |
 | ACT | User rejects one or more outputs and requests significant revisions | **Adjust** -- incorporate specific feedback (e.g., market sizing methodology is wrong, MVP scope needs expanding, pricing model doesn't fit the customer), revise the affected phase output, and update downstream phases that depend on it; do not restart from Phase 1 unless the core business idea or target audience has fundamentally changed |
+| ACT | User rejects final output | **Targeted revision** -- ask which business phase (validation, MVP, pricing, launch) fell short and rerun only that phase. Do not restart the full business build. |
 
 ## Reference
 

@@ -165,6 +165,7 @@ Done when: (1) current snapshot shows net worth, savings rate, and trajectory, (
 | SOCIAL SEC | Person is divorced (may be eligible for ex-spouse's benefits) | Flag -- divorced after 10+ years of marriage may be eligible for benefits based on ex-spouse's record. This is a critical question for an advisor |
 | GAP | Gap is so large that no reasonable lever closes it | Escalate -- be direct but compassionate. Focus on maximizing Social Security, reducing expenses, part-time work, and government assistance programs. Discuss whether the retirement age needs to move |
 | QUESTIONS | Person says they can't afford a financial advisor | Adjust -- recommend free resources: AARP Financial Planning, local community college workshops, VITA tax help, Benefits.gov for assistance programs, fee-only advisors who charge hourly ($150-300 for a single session) |
+| QUESTIONS | User rejects final output | **Targeted revision** -- ask which section fell short (snapshot, projections, Social Security analysis, gap analysis, or advisor questions) and rerun only that section. Do not rebuild the full plan. |
 
 ## State Persistence
 - Financial snapshot (account balances, income, debts at time of analysis -- baseline for tracking progress)
@@ -173,6 +174,65 @@ Done when: (1) current snapshot shows net worth, savings rate, and trajectory, (
 - Gap closure progress (which levers were pulled, contribution changes made, debts paid off)
 - Advisor meeting outcomes (what was discussed, recommendations given, actions taken)
 - Life event triggers (job change, inheritance, health change, spouse retirement -- events that warrant re-running the analysis)
+
+---
+
+## Reference
+
+### Savings Rate Benchmarks
+
+| Rate | Assessment |
+|---|---|
+| Below 10% | Behind for most; course correction needed |
+| 10-15% | Adequate if you started saving in your 20s-30s |
+| 15-20% | Good for mid-career starters |
+| 20%+ | Strong; especially effective for late starters |
+
+### Savings Milestone Targets by Age (Fidelity Rule of Thumb)
+
+| Age | Target Saved (multiple of current salary) |
+|---|---|
+| 30 | 1x |
+| 40 | 3x |
+| 50 | 6x |
+| 60 | 8x |
+| 67 | 10x |
+
+### Social Security Claiming Age Comparison
+
+| Claim Age | Benefit Level | Good If |
+|---|---|---|
+| 62 | ~70% of full benefit | Health concerns, need income now, high-earning spouse |
+| 67 | 100% of full benefit | Decent health, some savings to bridge |
+| 70 | ~124% of full benefit | Healthy, savings bridge available, expect to live past 82 |
+
+Breakeven 62 vs 67: approximately age 78-80. Breakeven 67 vs 70: approximately age 82-83.
+
+### 4% Rule Summary
+
+Withdraw 4% of total retirement savings per year as a sustainable 30-year rate.
+- $300,000 saved → ~$12,000/year → ~$1,000/month from savings
+- $500,000 saved → ~$20,000/year → ~$1,667/month from savings
+- $1,000,000 saved → ~$40,000/year → ~$3,333/month from savings
+
+Note: 4% is a guideline, not a guarantee. Adjust for longevity risk and sequence-of-returns risk.
+
+### 2025 Contribution Limits (US)
+
+| Account | Under 50 | Age 50+ (with catch-up) |
+|---|---|---|
+| 401(k) / 403(b) | $23,500 | $31,000 |
+| IRA / Roth IRA | $7,000 | $8,000 |
+
+### Advisor Type Quick Reference
+
+| Type | Cost Structure | Acts in Your Interest? |
+|---|---|---|
+| Fee-only fiduciary | Flat fee or hourly | Yes — legally required |
+| Commission-based | Earns from product sales | Not necessarily |
+| Robo-advisor | Low % AUM fee | Automated; good for simple cases |
+
+Find fee-only fiduciaries at: NAPFA.org, Garrett Planning Network
 
 ---
 

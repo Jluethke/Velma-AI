@@ -154,6 +154,7 @@ PHASE 5: VALIDATE      --> Test event delivery, handler failures, correlation de
 | CORRELATION | Window too large, buffer grows unbounded | **Adjust** -- reduce window size, add max buffer cap |
 | IMPLEMENT | Synchronous dispatch blocks too long (slow handler) | **Adjust** -- move slow handler to post-tick hook instead |
 | VALIDATE | Correlation fires false positives | **Adjust** -- increase min_events threshold or reduce window |
+| VALIDATE | User rejects final output | **Targeted revision** -- ask which event schema, subscriber handler, or correlation rule fell short and rerun only that design phase. Do not regenerate the full event bus design. |
 
 ## State Persistence
 

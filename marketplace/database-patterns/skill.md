@@ -158,6 +158,7 @@ The skill is DONE when:
 | PLAN | Conflicting fixes (fix A makes fix B unnecessary) | **Adjust** -- reorder plan, note the dependency |
 | ACT | Generated migration is too risky for production | **Adjust** -- break into smaller steps, add more safety checks |
 | ACT | Cannot determine correct index type without query patterns | **Escalate** -- ask user for representative queries |
+| ACT | User rejects final output | **Targeted revision** -- ask which schema pattern, index recommendation, or migration script fell short and rerun only that section. Do not regenerate the full database analysis. |
 
 ## State Persistence
 

@@ -132,6 +132,51 @@ The skill is DONE when:
 | REASON | Prior review not available for pattern detection | **Adjust** -- skip trend analysis, note that patterns will emerge after 3+ consecutive reviews |
 | PLAN | All 3 priorities are carryovers from last week | **Adjust** -- flag this as a "stuck" pattern, suggest reducing scope or eliminating blockers before re-committing |
 | ACT | Review exceeds 500 words | **Adjust** -- cut the least actionable lessons and merge overlapping priorities |
+| ACT | User rejects final output | **Targeted revision** -- ask which section fell short (goal scorecard, lessons learned, energy audit, or next-week priorities) and rerun only that section. Do not regenerate the full review. |
+
+---
+
+## Reference
+
+### Goal Status Definitions
+
+| Status | Criteria |
+|---|---|
+| Completed | Deliverable shipped or objective fully met |
+| Partial | Started but not finished; note what remains |
+| Missed | Not started; identify why (deprioritized, blocked, forgot, overwhelmed) |
+| Pivoted | Replaced by something more important; note what replaced it and why |
+
+### Energy Ratio Benchmark
+
+`Energizing % = energizing activities ÷ total activities × 100`
+
+- 50%+ energizing: sustainable pace
+- 30-50%: manageable; watch trends
+- Below 30%: unsustainable; structural change needed
+
+### Lesson Learned Formula
+
+"I learned that [observation], so next time I will [specific behavior change]."
+
+Generic is not a lesson: "Things were hard" → No action follows.
+Actionable is a lesson: "I learned that I can't write well after 3 PM, so next time I will schedule deep work before noon."
+
+### Priority Capacity Check
+
+Total estimated effort for 3 priorities should not exceed 60% of available working hours. Remaining 40% = recurring commitments (meetings, admin, unexpected tasks).
+
+If priorities sum to more than 60%, either reduce scope or cut the lowest-priority item.
+
+### Commitment Statement Formula
+
+"This week I will focus on [top priority] because [reason from analysis — pattern, lesson, or goal]."
+
+Keep it one sentence. Post it somewhere visible.
+
+### Pattern Detection Trigger
+
+A frustration or miss that appears 2+ weeks in a row is a systemic issue, not a willpower issue. Structural fixes (scheduling, delegation, environment change) outperform trying harder.
 
 ---
 

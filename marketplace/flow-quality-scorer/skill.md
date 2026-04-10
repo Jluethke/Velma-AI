@@ -141,6 +141,7 @@ Complete when the quality report is delivered with a numerical score, per-dimens
 | REASON | Flow uses a non-standard execution pattern (not ORPA or Phase Pipeline) | Adjust -- evaluate against general principles (defined phases, quality gates, etc.) but flag pattern non-compliance |
 | PLAN | All dimensions scored perfectly (no issues) | Skip improvement suggestions -- congratulate, recommend maintaining quality as flow evolves |
 | ACT | No previous version data for comparison | Skip comparison -- deliver standalone report |
+| ACT | User rejects final output | **Targeted revision** -- ask which dimension score, specific finding, or improvement suggestion fell short and rerun only that scoring section. Do not re-score the full flow. |
 
 ## Reference
 

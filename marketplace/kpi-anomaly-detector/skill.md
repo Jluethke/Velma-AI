@@ -208,6 +208,7 @@ The skill is DONE when:
 | PLAN | No root cause hypotheses available | **Adjust** -- report anomaly with "unknown cause, manual investigation required" |
 | PLAN | Alert history unavailable | **Adjust** -- skip deduplication, note potential for duplicate alerts |
 | ACT | Baseline update conflicts with manual override | **Escalate** -- preserve manual override, log conflict |
+| ACT | User rejects final output | **Targeted revision** -- ask which anomaly detection, root cause hypothesis, or alert threshold fell short and rerun only that section. Do not re-analyze all KPIs. |
 
 ## State Persistence
 

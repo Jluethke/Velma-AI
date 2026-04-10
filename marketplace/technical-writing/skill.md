@@ -185,6 +185,7 @@ The skill is DONE when:
 | VALIDATE | Code example no longer works (API changed) | **Retry** -- update the example to match current API, max 2 retries |
 | VALIDATE | Prerequisites are complex (5+ tools required) | **Adjust** -- provide a Docker setup or devcontainer as alternative |
 | PUBLISH | Docs system not available | **Adjust** -- deliver as standalone markdown files |
+| PUBLISH | User rejects final output | **Targeted revision** -- ask which section, code example, or audience calibration fell short and rerun only that phase. Do not regenerate the full document. |
 
 ## State Persistence
 

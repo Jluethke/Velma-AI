@@ -111,6 +111,7 @@ Done when: (1) symptoms are documented and organized, (2) possible causes are pr
 | REASON | User has multiple complex conditions that interact | Escalate -- recommend seeing their primary care doctor who knows their full history, rather than providing a generic assessment |
 | PLAN | User says they cannot afford a doctor visit | Adjust -- provide information about community health centers, telehealth options, and urgent care vs ER cost differences. Still recommend care |
 | ACT | User asks "so do I have X?" wanting a definitive answer | Redirect -- "I can't diagnose conditions. What I can tell you is that your symptoms are consistent with X, and a doctor can confirm with [test/exam]." |
+| ACT | User rejects final output | **Targeted revision** -- ask which section fell short (possible causes ranking, care recommendation level, appointment summary, or self-care guidance) and rerun only that section. Do not restart the symptom intake. |
 
 ## Prominent Disclaimers
 
@@ -125,6 +126,50 @@ Done when: (1) symptoms are documented and organized, (2) possible causes are pr
 - User health profile (age, known conditions, medications -- avoids re-entering every time)
 - Past assessments and outcomes (if the user reports back: "doctor said it was X" -- improves future relevance)
 - Red-flag history (symptoms that previously triggered urgent recommendations)
+
+---
+
+## Reference
+
+### Care Level Decision Criteria
+
+| Level | Criteria |
+|---|---|
+| Self-care at home | Mild, common, self-limiting symptoms; no red flags; clear monitoring plan possible |
+| Schedule doctor (this week) | Warrants evaluation but not urgent; nothing dangerous likely right now |
+| Visit urgent care (today) | Same-day evaluation needed; not life-threatening; regular appointment too slow |
+| ER / call 911 | Red-flag symptoms present; immediate intervention needed |
+
+### Universal Red-Flag Symptoms (Go to ER Now)
+
+- Chest pain or pressure with shortness of breath
+- Sudden severe headache ("worst headache of my life")
+- Sudden numbness or weakness on one side of the body
+- Difficulty breathing or speaking
+- Uncontrolled bleeding
+- Signs of severe allergic reaction (throat swelling, difficulty swallowing)
+- High fever (over 103F / 39.4C) not responding to medication
+
+### Symptom Characterization Questions (OLDCART)
+
+- **O**nset — When did it start?
+- **L**ocation — Where exactly?
+- **D**uration — Constant or comes and goes?
+- **C**haracter — Sharp, dull, burning, pressure, tingling?
+- **A**ggravating factors — What makes it worse?
+- **R**elieving factors — What makes it better?
+- **T**reatments tried — What have you already done?
+
+### Appointment Summary Card Structure
+
+1. Main complaint (one sentence)
+2. Symptom timeline (when started, how changed)
+3. What makes it better / worse
+4. What has been tried
+5. Other associated symptoms
+6. Current medications (if known)
+7. Relevant history (if known)
+8. 2-3 questions to ask the doctor
 
 ---
 

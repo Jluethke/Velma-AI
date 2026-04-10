@@ -311,6 +311,7 @@ The skill is DONE when:
 | Phase 6 | Output format is unsupported | **Abort** -- Return error listing supported formats: markdown, json, csv. |
 | Phase 6 | File write fails (permissions, disk full) | **Abort** -- Return error with file path and system error message. Suggest checking directory permissions and available disk space. |
 | Phase 7 | Validation detects critical schema issues (circular dependencies, orphaned FKs) | **Adjust** -- Document in validation report with severity level (CRITICAL, WARNING, INFO). Flag for manual review. Continue processing. |
+| Phase 7 | User rejects final output | **Targeted revision** -- ask which table, column, or relationship description fell short and rerun only that section's enrichment. Do not regenerate the full dictionary. |
 
 ---
 

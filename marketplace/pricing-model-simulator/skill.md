@@ -384,6 +384,7 @@ The skill is DONE when:
 | SIMULATE | Price elasticity unknown | **Adjust** -- use conservative estimates (10% churn for >20% price increase), recommend A/B testing |
 | COMPARE | Two models score within 5% of each other | **Adjust** -- recommend the simpler model, note that either could work, suggest A/B testing |
 | RECOMMEND | Billing system can't support recommended model | **Escalate** -- recommend billing system upgrade as prerequisite, offer simpler interim pricing |
+| RECOMMEND | User rejects final output | **Targeted revision** -- ask which pricing model, scenario, or recommendation fell short and rerun only that simulation. Do not re-run all pricing models. |
 
 ## State Persistence
 

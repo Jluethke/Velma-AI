@@ -121,6 +121,7 @@ The flow is complete when: (1) all sub-flows in the roadmap are assessed at or a
 | CURRICULUM | Cannot generate exercises for a domain (too abstract) | Adjust -- provide project-based learning instead of isolated exercises |
 | PRACTICE | User success rate stuck at 50-60% for 3+ attempts | Escalate -- suggest external resources (tutor, course, peer learning) for this specific sub-flow |
 | EVALUATE | User passes mastery test but can't apply in real projects | Adjust -- add real-world project phase between mastery test and completion |
+| EVALUATE | User rejects final output | **Targeted revision** -- ask which roadmap phase, exercise set, or competency assessment fell short and rerun only that section. Do not regenerate the full acquisition plan. |
 
 ## Reference
 

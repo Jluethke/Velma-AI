@@ -234,6 +234,7 @@ The EDA plan is DONE when:
 | Phase 7 | analysis_scope is "quick" | **Adjust** -- skip feature engineering phase; focus on simple transformations (log, grouping) only. |
 | Phase 8 | Fewer than 3 meaningful correlations identified | **Adjust** -- generate hypotheses from univariate distributions and domain knowledge instead. Recommend domain expert consultation. |
 | Phase 9 | Estimated effort exceeds 40 hours | **Adjust** -- recommend splitting into "quick" (Phases 1-4) and "deep" (Phases 5-9) sub-plans. Prioritize by business impact. |
+| Phase 9 | User rejects final output | **Targeted revision** -- ask which section fell short (a specific phase plan, visualization recommendation, feature engineering suggestion, or hypothesis) and rerun only that section. Do not regenerate the full EDA plan. |
 
 ---
 

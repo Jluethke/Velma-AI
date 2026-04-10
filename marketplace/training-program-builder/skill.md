@@ -353,6 +353,7 @@ The skill is DONE when:
 | Phase 6 | User abandons program mid-way (missed 2+ weeks) | **Adjust** -- Provide contingency protocol: repeat the previous week, then resume normal progression. Do not skip ahead. |
 | Phase 7 | Generated program exceeds 25 pages | **Adjust** -- Condense exercise descriptions to 1 sentence each, combine similar phases, and offer a "quick reference" version (5-page summary). |
 | Phase 7 | User reports injury during program execution | **Adjust** -- Provide injury modification protocol: stop the problematic exercise, substitute with pain-free alternative, deload for 1 week, then resume. Recommend consulting a medical professional. |
+| Phase 7 | User rejects final output | **Targeted revision** -- ask which training phase, exercise selection, or progression scheme fell short and rerun only that section. Do not regenerate the full training program. |
 
 ---
 

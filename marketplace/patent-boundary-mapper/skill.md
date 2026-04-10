@@ -147,6 +147,7 @@ The skill is DONE when:
 | DELINEATE | Both families have equal claim to an element | **Flag** -- present options, require human decision |
 | CROSSREF | No clear interface between families | **Adjust** -- mark as independent, skip cross-reference |
 | DOCUMENT | Too many families for clear visualization | **Adjust** -- group related families, use hierarchical layout |
+| ACT | User rejects final output | **Targeted revision** -- ask which family pair's boundary ruling or which cross-reference language fell short and rerun only that pair's analysis. Do not rebuild the full mapping. |
 
 ## State Persistence
 
@@ -154,6 +155,34 @@ Between runs, this skill accumulates:
 - **Family registry**: all patent families mapped with current scope
 - **Boundary precedents**: how overlaps were resolved in past mappings
 - **Cross-reference templates**: reusable language for common relationships
+
+## Reference
+
+### Family Relationship Categories
+
+| Relationship Type | Definition | Action Required |
+|---|---|---|
+| Interface | Families connect but don't overlap (A's output feeds B's input) | Add cross-reference statement |
+| Overlap | Both families claim similar elements | Resolve: assign to core family; peripheral family references |
+| Complement | Families cover different aspects of the same system | Add cross-reference statement describing each family's scope |
+| Independent | No meaningful relationship | Document; skip cross-reference |
+
+### Claim Ownership Resolution Rule
+
+When two families overlap on an element:
+- The family where the element is CORE to the inventive concept owns it
+- The family where it is PERIPHERAL references it via cross-reference dependent claim
+- No element should appear in independent claims of more than one family
+
+### Boundary Rule Template
+
+"[Element X] is claimed in [Family A]. [Family B] references [Element X] but does not independently claim it. See cross-reference from [Family B] Claim [N] to [Family A]."
+
+### Cross-Reference Statement Templates
+
+For interfaces: "Related to [Family Name] ([application number if known]): [Family Name] describes [brief scope]. The [element] described herein interfaces with the [other system element] disclosed therein."
+
+For complements: "The present invention operates in conjunction with the [other invention] described in [co-pending application]. The [other invention] governs [scope A]; the present invention governs [scope B]."
 
 ---
 

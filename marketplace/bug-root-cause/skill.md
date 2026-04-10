@@ -237,6 +237,7 @@ The skill is DONE when:
 | PLAN | Fix has high regression risk | **Adjust** -- recommend the hotfix (temporary mitigation) first, then the structural fix as a follow-up |
 | ACT | Bug is a known issue in a third-party dependency | **Adjust** -- recommend workaround, file/find upstream issue, pin dependency version |
 | ACT | User rejects the root cause analysis or disputes the proposed fix | **Adjust** -- incorporate specific objections (e.g., the identified root cause is already handled elsewhere, the fix introduces unacceptable risk), re-rank the remaining hypotheses, and regenerate the fix recommendation and regression test; do not restart from OBSERVE unless new evidence changes the fundamental evidence package |
+| ACT | User rejects final output | **Targeted revision** -- ask which hypothesis, root cause evidence, or fix recommendation fell short and rerun only that analysis phase. Do not restart from evidence collection. |
 
 ## State Persistence
 

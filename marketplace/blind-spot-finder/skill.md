@@ -85,6 +85,7 @@ Done when: (1) at least 5 blind spots are surfaced as questions, (2) at least 3 
 | PLAN | Investigation feels overwhelming | Prioritize ruthlessly. "If you can only check one thing, check THIS." |
 | ACT | Person gets defensive | Reframe: these aren't criticisms, they're free intelligence. |
 | ACT | Person rejects the blind spots or says they've already considered them | **Adjust** -- acknowledge what they've already addressed, dig one level deeper into each dismissed blind spot, and surface second- or third-order consequences they may not have traced; do not restart from OBSERVE unless the original situation description was fundamentally incomplete |
+| ACT | User rejects final output | **Targeted revision** -- ask which blind spot category or assumption fell short and rerun only that analysis. Do not re-examine all dimensions. |
 
 ## Reference
 

@@ -134,6 +134,41 @@ The skill is DONE when:
 | MAP | No clear dependency order between tasks | **Adjust** -- order by frequency (most common task first) instead of dependency |
 | BUILD | Existing resources cover most of what the guide would say | **Adjust** -- create a "navigator" guide that links to existing resources in the right order with context for each |
 | VALIDATE | More than 3 gaps found in the walkthrough | **Retry** -- return to Phase 3 and fill each gap before finalizing |
+| ACT | User rejects final output | **Targeted revision** -- ask which section fell short (Day 1 guide, a specific task walkthrough, glossary, or ramp criteria) and rerun only that section. Do not rebuild the full guide. |
+
+## Reference
+
+### Guide Section Checklist
+
+| Section | Completeness Test |
+|---|---|
+| Welcome | States who it is for, what it covers, how long it takes |
+| Prerequisites | Every item is verifiable and has instructions if missing |
+| Day 1 guide | New person can follow steps with zero prior knowledge |
+| Core concepts | 3-5 concepts with what, why, and one example each |
+| Task walkthroughs | Numbered steps for each learning objective with error handling per step |
+| Common mistakes | Each mistake has: what it is, why it happens, how to fix, how to prevent |
+| Who to ask | Categorized by topic; includes what to include in your request |
+| Glossary | Every domain term used anywhere in the guide appears here |
+| Ramp criteria | 5-8 statements starting with "You're ramped up when you can [specific action]..." |
+
+### Ramp Criteria Formula
+
+"You're ramped up when you can [specific action] without [looking it up / asking for help / making a common mistake]."
+
+Examples:
+- "You're ramped up when you can create and deploy a new flow without checking the documentation."
+- "You're ramped up when you can diagnose a failing build from the CI log without asking a teammate."
+
+Avoid vague criteria like "you feel confident" or "you understand the system."
+
+### Audience Level Calibration
+
+| Level | Detail Needed | Analogy Style |
+|---|---|---|
+| Beginner | Every click; every term defined; screenshots helpful | Everyday life comparisons |
+| Intermediate | Conceptual overview; key distinctions | Domain parallels ("like X in [adjacent tool]") |
+| Expert in adjacent field | Mapping to what they already know; exceptions and gotchas | Direct comparisons to their prior tool |
 
 ---
 

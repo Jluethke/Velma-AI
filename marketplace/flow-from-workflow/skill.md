@@ -121,6 +121,43 @@ The flow is DONE when:
 | DECOMPOSE | Cannot identify more than 2 phases | **Adjust** -- the workflow may be too simple for a flow; suggest keeping it as a checklist instead |
 | FORMALIZE | Domain knowledge is too specialized to capture in text | **Adjust** -- add a "requires expertise in X" note and document what can be captured |
 | GENERATE | Generated flow exceeds 200 lines | **Adjust** -- split into a primary flow and one or more sub-flows linked by composition |
+| ACT | User rejects final output | **Targeted revision** -- ask which section of the generated flow missed the mark (structure, quality gates, error handling, or a specific phase) and rerun only that section. Do not regenerate the full flow. |
+
+## Reference
+
+### ORPA vs. Phase Pipeline Decision Criteria
+
+| Use ORPA when... | Use Phase Pipeline when... |
+|---|---|
+| Workflow reacts to discovered state | Workflow always follows the same sequence |
+| Steps loop back based on findings | Each step's output feeds the next without branching |
+| Iterations are expected before completion | Steps are discrete and non-overlapping |
+| Examples: analysis, coaching, diagnosis | Examples: document generation, data transformation |
+
+### Quality Gate Formula
+
+Strong quality gates follow the pattern:
+"[Condition] is verified by [specific check]"
+
+Examples:
+- "Every step has a defined input and output -- verified by: none say 'handle it' without specifics"
+- "Execution pattern is justified -- verified by: ORPA or Phase Pipeline rationale is stated"
+
+Weak quality gates to avoid: "output is complete," "steps are clear," "quality is acceptable"
+
+### Flow Completeness Checklist
+
+| Section | Required | Common Gap |
+|---|---|---|
+| Title + one-liner | Yes | One-liner describes output, not procedure |
+| Execution pattern declaration | Yes | Missing justification |
+| Inputs with types | Yes | No required/optional distinction |
+| Outputs with structure | Yes | Vague "results" outputs |
+| Phases with entry criteria | Yes | Entry criteria missing or just restate prior output |
+| Quality gate per phase | Yes | Gate says "good" or "complete" without a test |
+| Exit criteria | Yes | Fewer than 3, or mirror a single phase gate |
+| Error handling per phase | Yes | Missing Abort cases for infeasible inputs |
+| Reference section | Recommended | Domain knowledge left implicit |
 
 ---
 

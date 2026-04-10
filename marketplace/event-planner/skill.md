@@ -304,6 +304,7 @@ The event planning workflow is DONE when:
 | PHASE 8 | AV or critical equipment fails during event | **Retry** -- have backup equipment on-site. If unavailable, pivot to alternative format (e.g., no video, audio-only). |
 | PHASE 9 | Feedback is overwhelmingly negative (satisfaction <3/5 average) | **Adjust** -- conduct root cause analysis, identify specific failures, and create action plan for next event. |
 | PHASE 9 | Budget variance is >10% | **Adjust** -- analyze causes (vendor overages, unexpected costs, scope creep), document lessons learned, and identify cost-saving opportunities for next event. |
+| PHASE 9 | User rejects final output | **Targeted revision** -- ask which section fell short (venue recommendations, vendor selections, timeline, budget breakdown, or runsheet) and rerun only that section. Do not regenerate the full event plan. |
 
 ---
 

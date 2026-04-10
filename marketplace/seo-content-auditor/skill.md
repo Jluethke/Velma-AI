@@ -374,6 +374,7 @@ The skill is complete when:
 | Phase 7 | Publish date not provided | **Adjust** -- mark freshness audit as incomplete; note that manual date review needed |
 | Phase 8 | Conflicting recommendations from different audits | **Adjust** -- prioritize by SEO impact score (keyword optimization > header structure > readability); if tied, prioritize user experience; document decision logic in report |
 | Phase 8 | Previous audit result provided but metrics incompatible | **Adjust** -- note incompatibility; skip improvement comparison; generate standard report without delta analysis |
+| Phase 8 | User rejects final output | **Targeted revision** -- ask which audit finding, keyword recommendation, or content fix fell short and rerun only that section. Do not re-audit the entire content set. |
 
 ---
 

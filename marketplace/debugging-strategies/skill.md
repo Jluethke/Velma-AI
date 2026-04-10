@@ -172,6 +172,7 @@ The skill is DONE when:
 | ACT | Fix works but root cause is still unclear | **Adjust** -- document the fix, add monitoring, schedule follow-up investigation |
 | ACT | Stuck for 30+ minutes on same hypothesis | **Retry** -- step back, re-examine assumptions, try a fundamentally different approach |
 | ACT | 2+ hours without progress | **Escalate** -- pair with someone, write up and share |
+| ACT | User rejects final output | **Targeted revision** -- ask which hypothesis, diagnostic step, or fix suggestion fell short and rerun only that investigation phase. Do not restart the full debug session. |
 
 ## State Persistence
 

@@ -151,6 +151,7 @@ The skill is DONE when:
 | PLAN | Prompt exceeds context window | **Adjust** -- compress context, remove examples, split into multi-call chain |
 | ACT | Output quality is low across all dimensions | **Retry** -- try a fundamentally different approach (switch technique), max 3 major iterations |
 | ACT | Model consistently refuses the task | **Adjust** -- reframe task, add legitimate context, use system prompt (see Reference: Refusal Bypass) |
+| ACT | User rejects final output | **Targeted revision** -- ask which prompt component, technique, or evaluation criterion fell short and rerun only that iteration. Do not restart from prompt zero. |
 
 ## State Persistence
 

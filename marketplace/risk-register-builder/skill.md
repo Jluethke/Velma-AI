@@ -349,6 +349,7 @@ The skill is complete when:
 | Phase 7 | Stakeholder validation reveals missing critical risks | **Retry** -- Return to Phase 2, add missing risks, re-assess probability/impact (Phase 3), develop mitigation (Phase 5), define EWIs (Phase 6), and re-compile register (Phase 7). Update register and re-validate. |
 | Phase 7 | Risk register exceeds 50 risks | **Adjust** -- Consolidate low-priority risks into "watch list" (monitored but not actively mitigated). Focus detailed mitigation on top 20-30 risks. Document watch list separately. |
 | Phase 7 | Project team or stakeholders reject register as incomplete or unrealistic | **Adjust** -- Document feedback and specific concerns. Identify which risks are disputed and why. Revise assessments or mitigation strategies based on feedback. Re-validate and re-present. If disagreement persists, escalate to project sponsor for decision. |
+| Phase 7 | User rejects final output | **Targeted revision** -- ask which risk entry, probability/impact score, or mitigation strategy fell short and rerun only that section. Do not rebuild the full risk register. |
 
 ---
 

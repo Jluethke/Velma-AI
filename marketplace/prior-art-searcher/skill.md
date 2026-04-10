@@ -136,6 +136,7 @@ The skill is DONE when:
 | REASON | Reference is in a foreign language | **Flag** -- note language, attempt title/abstract analysis only |
 | PLAN | No differentiation possible for a HIGH-risk reference | **Escalate** -- report BLOCKED status with details |
 | ACT | New references discovered during analysis | **Loop** -- return to OBSERVE for additional searching |
+| ACT | User rejects final output | **Targeted revision** -- ask which reference's analysis fell short (overlap rating, differentiation language, or claim modification) and rerun only that reference's REASON-PLAN phases. Do not re-search everything. |
 
 ## State Persistence
 
@@ -143,6 +144,59 @@ Between runs, this skill accumulates:
 - **Reference database**: all prior art found across patent families
 - **Search patterns**: effective query formulations per domain
 - **Differentiation templates**: reusable language for common distinctions
+
+---
+
+## Reference
+
+### Prior Art Risk Level Criteria
+
+| Risk Level | Condition | Action Required |
+|---|---|---|
+| HIGH | Reference covers 3+ elements of an independent claim | Must differentiate or modify claim |
+| MEDIUM | Reference covers 1-2 elements; misses key novel component | Draft differentiation language |
+| LOW | Overlaps in general domain only; different mechanism | Note in report; no claim change needed |
+| NONE | Different problem, different approach | Log in search_log; no action |
+
+### Combination Risk Test
+
+Two or more LOW/MEDIUM references together may constitute obviousness if:
+1. They are from the same technical domain
+2. A PHOSITA would have motivation to combine them
+3. Together they cover all elements of an independent claim
+
+If all three conditions hold: treat the combination as HIGH risk.
+
+### Differentiation Language Template
+
+"[Prior art name] discloses [what it does]. However, [prior art name] does not disclose [novel element], which is required to achieve [technical result]. The present invention differs in that [specific mechanism] achieves [specific result] that [prior art] cannot provide."
+
+### Clearance Status Decision Rules
+
+| Status | Condition |
+|---|---|
+| CLEARED | No HIGH-risk references; all claims defensible as-is |
+| AT_RISK | 1+ HIGH-risk references exist but differentiation is possible with claim modifications |
+| BLOCKED | Reference covers the core novel combination; no viable differentiation |
+
+### Search Source Priority
+
+| Source | Best For |
+|---|---|
+| Google Patents / USPTO | US patent applications and grants |
+| EPO Espacenet | European patents and international families |
+| IEEE Xplore | Peer-reviewed technical papers |
+| arXiv | Pre-print papers (especially ML, CS, physics) |
+| Google Scholar | Broad academic coverage |
+| GitHub / open-source | Non-patent prior art (products, libraries) |
+
+### Common CPC Code Families (Software/AI)
+
+- G06N — Machine learning and neural networks
+- G06F 11 — Error detection and fault tolerance
+- G06F 21 — Security and access control
+- H04L 41/069 — Network management by policy
+- G06Q — Business methods and financial systems
 
 ---
 

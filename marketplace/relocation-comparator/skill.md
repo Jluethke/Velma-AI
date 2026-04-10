@@ -341,6 +341,7 @@ The skill is complete when:
 | 8 | Weights do not sum to 100 | **Abort** -- Return to Phase 1 and recalculate weights. |
 | 9 | Comparison matrix is too large to display (>10 cities) | **Adjust** -- This should not occur (Phase 2 limits to 10 cities). If it does, split matrix into sub-tables by criterion. |
 | 10 | Sensitivity analysis shows ranking is unstable (changes with small weight adjustments) | **Adjust** -- Flag this in recommendation: "Top cities are close competitors; final choice depends on which criteria matter most to you." Recommend trial period to reduce risk. |
+| 10 | User rejects final output | **Targeted revision** -- ask which city comparison, criterion weight, or cost estimate fell short and rerun only that section. Do not re-run the full comparison matrix. |
 
 ---
 

@@ -95,6 +95,7 @@ Done when: (1) all topics are sequenced and scheduled within the available time,
 | REASON | User has zero free days for flex time | Adjust -- build 15-minute buffer into each session instead of full flex days. Flag that falling behind will be harder to recover from |
 | PLAN | Cannot create practice questions (highly specialized topic) | Adjust -- create comprehension questions instead: "Explain X in your own words" and "How does X relate to Y?" |
 | ACT | User falls behind schedule | Adjust -- recalculate from current position. Drop lowest-priority topics if needed. Never abandon the review schedule for old topics to cram new ones |
+| ACT | User rejects final output | **Targeted revision** -- ask which section fell short (topic sequence, time allocation, spaced repetition intervals, or practice questions for a specific topic) and rerun only that section. Do not rebuild the full plan. |
 
 ## State Persistence
 - Study progress per topic (not started, in progress, learned, reviewing, mastered)
@@ -103,6 +104,47 @@ Done when: (1) all topics are sequenced and scheduled within the available time,
 - Preferred session length and time of day (optimize future plans)
 - Questions the user got wrong (feed into targeted review sessions)
 - Effective study techniques for this user (which methods produced the best checkpoint scores)
+
+---
+
+## Reference
+
+### Spaced Repetition Intervals
+
+| Review Session | Timing After Initial Study | Session Length |
+|---|---|---|
+| Review 1 | Day 1 (next day) | 10 min quick recall |
+| Review 2 | Day 3-4 | 15 min with practice questions |
+| Review 3 | Day 7-8 | 10 min weak spots only |
+| Review 4 | Day 14-15 | Final review or move to long-term |
+
+### Session Length Guidelines
+
+- Maximum single session: 90 minutes (break required after)
+- Pomodoro blocks: 25 min on / 5 min off for sessions over 45 minutes
+- Alternate heavy and light topics within a day to prevent fatigue
+- Final 10-15% of timeline: review and practice exams only (no new material)
+
+### Practice Question Levels
+
+| Level | Type | Example Prompt |
+|---|---|---|
+| 1 — Recall | Definition, fact | "What is [term]? Define [concept]." |
+| 2 — Understanding | Explanation, comparison | "Explain why X happens. Compare X and Y." |
+| 3 — Application | Scenario-based | "Given [situation], how would you apply X?" |
+| 4 — Analysis | Prediction, critique | "What would happen if X changed? Why does this approach fail?" |
+
+### Time Budget Reality Check
+
+`Available hours = (hours/week) × (weeks remaining) × 0.9` (10% buffer for life)
+
+If available hours < estimated hours needed: either narrow scope to high-yield topics, extend the deadline, or increase weekly hours. Cramming is less effective than distributed practice at a lower pace.
+
+### Checkpoint Pass Criteria
+
+- Below 70% → spend flex day on review before moving to new material
+- 70-85% → continue on schedule; flag weak topics for extra repetition
+- Above 85% → ahead of plan; use buffer for harder topics or extended practice
 
 ---
 

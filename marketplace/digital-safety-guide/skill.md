@@ -132,6 +132,7 @@ Done when: (1) current risk is assessed and communicated without panic, (2) prio
 | PLAN | Person doesn't have a smartphone for two-factor authentication | Adjust -- recommend email-based two-factor (backup codes, email verification) or a hardware security key. Note that even SMS to a basic phone works |
 | PLAN | Person manages accounts for an elderly relative remotely | Adjust -- provide instructions for setting up password manager with shared vault, backup recovery contacts, and a check-in schedule |
 | ACT | Person asks about VPNs, antivirus, or other products | Address briefly -- "A good free antivirus (Windows Defender, which is already on your computer) is sufficient for most people. A VPN is useful if you regularly use public WiFi for sensitive tasks, but it's lower priority than passwords and two-factor" |
+| ACT | User rejects final output | Targeted revision -- ask which section fell short (password guidance, two-factor setup, phishing examples, or emergency plan) and rerun only that section with more detail or simpler instructions. |
 
 ## State Persistence
 - Accounts secured (which accounts have strong passwords and two-factor enabled)
@@ -139,6 +140,48 @@ Done when: (1) current risk is assessed and communicated without panic, (2) prio
 - Phishing encounters (suspicious messages flagged, actions taken)
 - Household members covered (who has been set up with safe practices)
 - Security improvement timeline (when each major change was made, for tracking progress)
+
+## Reference
+
+### Account Priority Tiers
+
+| Tier | Accounts | Why |
+|---|---|---|
+| Tier 1 (secure first) | Email, banking, Social Security-linked portals | Email is the master reset key for everything else |
+| Tier 2 (secure next) | Shopping with saved payment info, social media, photo storage | Financial and reputational risk |
+| Tier 3 (when you get to it) | Streaming, forums, newsletters | Low consequence if compromised |
+
+### Password Manager Options by Comfort Level
+
+| Tool | Comfort Level | Cost | Notes |
+|---|---|---|---|
+| Apple Keychain | iOS/Mac users | Free | Built in, auto-fills, syncs across Apple devices |
+| Google Password Manager | Chrome users | Free | Built into Chrome, syncs with Google account |
+| Bitwarden | Any device | Free (premium $10/yr) | Open source, cross-platform, most privacy-focused |
+| 1Password | Any device | $3/mo | Polished UI, good for families |
+
+### Two-Factor Authentication Options (Best to Least Secure)
+
+| Method | Security Level | Ease of Setup |
+|---|---|---|
+| Hardware key (YubiKey) | Highest | Moderate |
+| Authenticator app (Google/Microsoft Authenticator) | High | Moderate |
+| SMS text code | Medium | Easiest |
+| Email code | Medium | Easiest |
+
+### The One Phishing Test
+
+Before clicking any link in any email or text: "Was I expecting this message?"
+
+If NO → Go to the website by typing the URL yourself. Never click the link.
+
+### 5-Rule Quick Reference Card
+
+1. Different password for every account (use a password manager)
+2. Two-factor on email and banking (do this today)
+3. Never click links in unexpected messages (type the URL yourself)
+4. Lock your phone with a PIN or fingerprint
+5. When in doubt, go to the website directly
 
 ---
 

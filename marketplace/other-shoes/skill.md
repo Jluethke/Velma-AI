@@ -118,6 +118,34 @@ Done when: (1) every identified stakeholder has a fleshed-out perspective, (2) a
 | REASON | User demonizes a stakeholder | Gently: "I hear that you're frustrated with them. But right now we need to understand them, not judge them. What's driving them?" |
 | PLAN | No blind spots found | Probe harder: "If I asked [most critical stakeholder] what you're getting wrong, what would they say?" |
 | ACT | User won't adjust their approach | Respect it, but ask: "Are you choosing not to change because you've considered the perspectives, or because you don't want to?" |
+| ACT | User rejects final output | Targeted revision -- ask which stakeholder perspective felt inaccurate or superficial and rerun only that perspective with deeper prompting. Do not restart the full exercise. |
+
+## Reference
+
+### Stakeholder Mapping Categories
+
+| Category | Who belongs here | Why they're often missed |
+|---|---|---|
+| Direct players | People in the room, on the email, making the decision | Usually identified immediately |
+| Indirect players | People who feel the consequences but aren't at the table | Easy to overlook when focused on the immediate conflict |
+| Future players | Future self, future customers, future team members | Abstract; not yet present |
+| Invisible stakeholders | People with power but low visibility (HR, legal, silent partners) | Their reactions can derail what seems like a bilateral decision |
+
+### Stakeholder Influence / Impact Matrix
+
+| Quadrant | High Power | Low Power |
+|---|---|---|
+| High Impact | Manage closely -- their buy-in is critical | Advocate for -- they're affected most but have least voice |
+| Low Impact | Keep informed -- don't neglect but don't over-invest | Monitor -- lowest priority but note for completeness |
+
+### Perspective Shift Prompts
+
+When a stakeholder perspective is hard to access:
+
+1. "You're their lawyer. Build the best case for their side."
+2. "What does this look like from their job title, not their personality?"
+3. "What is this person afraid of losing? That's usually the core of their position."
+4. "What would they tell their spouse or friend about this situation tonight?"
 
 ---
 

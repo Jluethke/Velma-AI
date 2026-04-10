@@ -400,6 +400,7 @@ The skill is DONE when:
 | Phase 7 | Estimated combined retention_lift exceeds 50% (unrealistic) | **Adjust** -- cap combined_lift at 0.50; note that strategies may have diminishing returns or overlap; document assumption in report; recommend phased implementation to measure incremental impact. |
 | Phase 8 | Report exceeds 50 pages or is too complex for stakeholders | **Adjust** -- create executive summary (2–3 pages) and detailed appendix; split into separate reports for different audiences (e.g., product team, finance team, executive leadership); provide interactive dashboard link if available. |
 | All Phases | Input data is not in valid format (not JSON, CSV, or database query result) | **Abort** -- require data in structured format; suggest using data export or API to retrieve data in standard format. |
+| ACT | User rejects final output | **Targeted revision** -- ask which section fell short (retention curves, LTV projections, strategy recommendations, or report format) and rerun only that section. Do not regenerate the full analysis. |
 
 ---
 

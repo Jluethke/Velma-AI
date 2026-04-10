@@ -320,6 +320,7 @@ The project-based lesson design is DONE when:
 | Phase 8 | Validation score is <80 (poor alignment with learning objective) | **Adjust** -- Identify gaps using the gap analysis table. Either modify the project (add steps, change deliverable, add checkpoints) or modify the learning objective (narrow scope). Re-validate. |
 | Phase 8 | Resources required for the project are not available | **Adjust** -- Modify the project to use available resources, or document resource requirements and provide alternatives (e.g., "if Python is not available, use JavaScript instead"). |
 | Phase 9 | Differentiation pathways are not concrete or actionable | **Adjust** -- Specify exactly which steps fast learners skip or which steps struggling learners repeat. Provide specific scaffolding materials for struggling learners. Document identification criteria (e.g., "if checkpoint 1 score is <70%, use struggling-learner pathway"). |
+| Phase 9 | User rejects final output | **Targeted revision** -- ask which project step, rubric criterion, or differentiation pathway fell short and rerun only that phase. Do not redesign the full lesson. |
 
 ---
 

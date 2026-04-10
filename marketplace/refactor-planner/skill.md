@@ -266,6 +266,7 @@ The skill is DONE when:
 | SEQUENCE | Circular dependency between steps | **Adjust** -- merge the circular steps into a single larger step with a combined verification |
 | EXECUTE | Before/after example is ambiguous (multiple valid interpretations) | **Adjust** -- provide the full file context, not just the changed function |
 | VERIFY | No tests exist to verify behavioral equivalence | **Adjust** -- generate the tests as part of the plan (Phase 3 Rule 1: tests first) |
+| VERIFY | User rejects final output | **Targeted revision** -- ask which refactoring step, code smell analysis, or sequencing fell short and rerun only that phase. Do not regenerate the full refactor plan. |
 
 ## State Persistence
 

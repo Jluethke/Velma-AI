@@ -143,6 +143,45 @@ The skill is DONE when:
 | STRATEGY | Desired outcome conflicts with attendee priorities | **Adjust** -- identify the overlap zone and reframe the ask to align with shared interests |
 | MATERIALS | Too many objections to address (> 7) | **Adjust** -- prioritize the top 5 by likelihood, note the others as secondary |
 | FOLLOWUP | Meeting type is "brainstorm" where commitments are unusual | **Adjust** -- replace commitments with "ideas to explore" and owner for each |
+| ACT | User rejects final output | Targeted revision -- ask which section fell short (agenda timing, talking points, specific objection responses, or the follow-up template) and rerun only that section. Do not rebuild the full prep package. |
+
+## Reference
+
+### Meeting Arc Time Allocation (30-Minute Default)
+
+| Phase | Time | Purpose |
+|---|---|---|
+| Opening | 2-3 min | Set tone; confirm agenda; establish shared goal |
+| Core discussion | 15-18 min | Core ask + supporting points + attendee input |
+| Q&A / Objections | 5-7 min | Address pushback; confirm understanding |
+| Closing / Commitments | 3-5 min | Lock in specific next steps with owners and dates |
+
+Scale proportionally for 45 or 60-minute meetings.
+
+### Question Types by Purpose
+
+| Type | When to Use | Example |
+|---|---|---|
+| Discovery | Early; learn what you don't know | "What's been your experience with [topic] so far?" |
+| Confirmation | Mid-meeting; validate assumptions | "So it sounds like [X] is the main concern -- is that right?" |
+| Commitment | Closing; move toward action | "Does it make sense to schedule a follow-up by [date]?" |
+
+### Commitment Format
+
+All commitments should follow: "[Person] will [specific action] by [date]."
+
+Weak: "We'll think about it."
+Strong: "Sarah will send the revised proposal by Thursday, April 10."
+
+### Meeting Type Quick Adjustments
+
+| Meeting Type | Opening Tone | Primary Risk |
+|---|---|---|
+| Sales call | Credibility + curiosity | Talking too much; not listening |
+| 1:1 (manager/report) | Psychological safety | Agenda drift; no decisions made |
+| Difficult conversation | Direct naming of topic | Avoidance; vague close without resolution |
+| Board / exec | Clear ask + pre-read assumed | Over-explaining; no explicit ask |
+| Job interview | Confidence + genuine interest | Failing to answer what was actually asked |
 
 ---
 

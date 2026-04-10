@@ -294,6 +294,7 @@ The skill is complete when:
 | Quality Validation | Coverage <70% (major concepts missing) | **Adjust** -- generate additional cards for missing concepts; request supplementary material. Output: "Coverage is [X]%. Missing concepts: [list]. Suggest adding [N] cards or providing supplementary material." |
 | Input Validation | Study material is not text format (binary file, corrupted text) | **Abort** -- input is not readable. Output: "Study material is not readable text. Please provide plain text, markdown, or structured outline." |
 | Input Validation | Study material is empty or <100 characters | **Abort** -- input is too small. Output: "Study material is too short (minimum 100 characters). Please provide more detailed material." |
+| Quality Validation | User rejects final output | **Targeted revision** -- ask which card, concept coverage area, or spaced repetition schedule fell short and regenerate only that section. Do not regenerate the full deck. |
 
 ---
 

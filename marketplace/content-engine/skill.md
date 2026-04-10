@@ -155,6 +155,7 @@ PHASE 5: DISTRIBUTE    --> Format final output, generate publishing schedule
 | VALIDATE | All variations non-compliant for a platform | **Adjust** -- regenerate with shorter content, simpler templates |
 | DISTRIBUTE | StreamShark LLM returns invalid JSON | **Retry** -- re-prompt with explicit "Return ONLY valid JSON, no markdown wrapping" (max 2 retries) |
 | DISTRIBUTE | Topic bank depleted (StreamShark) | **Adjust** -- regenerate topic bank from content pillars |
+| ACT | User rejects final output | **Targeted revision** -- ask which platform or variation format fell short and rerun only that section. Do not regenerate all 25 pieces. |
 
 ## State Persistence
 

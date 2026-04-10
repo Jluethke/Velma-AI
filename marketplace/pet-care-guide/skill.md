@@ -96,6 +96,7 @@ Done when: (1) daily care routine is outlined with specific feeding, exercise, a
 | REASON | Multiple conflicting dietary needs (multi-pet household) | Adjust -- separate feeding stations, timed feeding instead of free-feeding, species-appropriate food for each |
 | PLAN | Owner can't afford recommended care (vet visits, quality food) | Adjust -- prioritize essentials (vaccines, parasite prevention, quality food), suggest low-cost vet clinics, pet food banks, and which expenses to never skip vs. where to save |
 | ACT | Pet is showing symptoms that suggest immediate medical attention | Escalate -- stop the guide, direct owner to emergency vet or poison control immediately. Health emergencies override everything |
+| ACT | User rejects final output | Targeted revision -- ask which section fell short (feeding plan, health calendar, behavior guide, or emergency reference) and rerun only that section with more breed- or age-specific detail. |
 
 ## State Persistence
 - Pet health record (vaccination dates, vet visits, weight history, medications, allergies)
@@ -103,6 +104,46 @@ Done when: (1) daily care routine is outlined with specific feeding, exercise, a
 - Behavioral log (training progress, socialization milestones, incidents)
 - Vet contact info (regular vet, emergency vet, specialist if applicable)
 - Life stage tracking (automatically adjusts care recommendations as pet ages)
+
+## Reference
+
+### Vaccination Schedule Reference (US)
+
+**Dogs (core vaccines):**
+- Distemper/Parvovirus/Adenovirus (DHPP): 6-8 weeks, 10-12 weeks, 14-16 weeks, 12-16 months, then every 1-3 years
+- Rabies: 12-16 weeks, then 1 year, then every 1-3 years (varies by local law)
+
+**Cats (core vaccines):**
+- FVRCP: 6-8 weeks, 10-12 weeks, 14-16 weeks, 12-16 months, then every 1-3 years
+- Rabies: 12-16 weeks, then 1 year, then annually or every 3 years
+
+### Go-to-Vet-Now Criteria
+
+| Symptom | Species | Urgency |
+|---|---|---|
+| Breathing difficulty, gasping | All | Emergency now |
+| Collapse or can't stand | All | Emergency now |
+| Suspected ingestion of toxin | All | Emergency now or call poison control |
+| Bloated, distended abdomen with retching (no vomit) | Dogs | Emergency now (GDV) |
+| Urinary straining, no output | Cats (male) | Emergency now (urinary blockage) |
+| Seizure lasting >5 min or recurring | All | Emergency now |
+| Vomiting or diarrhea (blood) | All | Same-day vet |
+| Not eating for 24 hrs (cats), 48 hrs (dogs) | All | Same-day vet |
+| Eye discharge, squinting | All | Same-day vet |
+
+### Emergency Contact Reference (US)
+
+- ASPCA Poison Control: 888-426-4435 (fee may apply)
+- Pet Poison Helpline: 855-764-7661 (fee applies)
+
+### Common Toxic Foods by Species
+
+| Species | Toxic Items |
+|---|---|
+| Dogs | Chocolate, grapes/raisins, xylitol (in sugar-free gum/candy), onions/garlic, macadamia nuts, raw yeast dough |
+| Cats | All lilies (true lilies), onions/garlic, raw fish (thiaminase), xylitol, raw eggs (long-term) |
+| Birds | Avocado, chocolate, caffeine, onions, xylitol, alcohol, salt |
+| Rabbits | Iceberg lettuce, rhubarb, avocado, chocolate, anything from the allium family |
 
 ---
 

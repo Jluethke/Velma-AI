@@ -371,6 +371,7 @@ The skill is DONE when:
 | POSITION | Too many potential angles | **Adjust** -- pick the 1 angle with strongest proof point, test others later |
 | STRATEGY | Budget insufficient for recommended channels | **Adjust** -- prioritize lowest-CAC channel, extend timeline, reduce scope |
 | RISKS | Team unwilling to set kill criteria | **Escalate** -- without kill criteria, the analysis is incomplete; this is non-negotiable |
+| RISKS | User rejects final output | **Targeted revision** -- ask which market sizing, competitive analysis, or go-to-market strategy fell short and rerun only that phase. Do not re-run the full market entry analysis. |
 
 ## State Persistence
 

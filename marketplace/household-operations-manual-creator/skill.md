@@ -320,6 +320,7 @@ The skill is DONE when:
 | Phase 6 | Vendor information is outdated or incorrect during validation | **Adjust** -- update vendor directory with current information; note that vendors should be re-verified annually during scheduled reviews; flag vendors with outdated info for immediate contact |
 | Phase 7 | Household members do not engage with the manual after distribution | **Adjust** -- simplify format (reduce to essential tasks only); create a visual calendar or checklist; schedule a follow-up meeting to address concerns; consider switching to a different format (e.g., from printed to shared cloud doc); identify barriers to adoption and address them |
 | Phase 7 | Task completion tracking reveals tasks are consistently incomplete | **Adjust** -- review time estimates and adjust if unrealistic; reassign tasks to members with more availability; identify skill gaps and provide training; consider outsourcing to vendors if household cannot execute |
+| Phase 7 | User rejects final output | **Targeted revision** -- ask which manual section, task assignment, or vendor entry fell short and regenerate only that section. Do not rebuild the full manual. |
 
 ---
 

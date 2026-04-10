@@ -104,6 +104,7 @@ Done when: (1) idea has a go/no-go recommendation with scores, (2) winning strat
 | REASON | Budget is too low for the business type | Adjust — downscope to a business type that fits. Service businesses can start for under $100. Recommend the lowest-cost path to validation. |
 | PLAN | Founder has no audience or network | Adjust — focus outreach on platforms where their target audience already congregates. Include community infiltration tactics before cold outreach. |
 | ACT | Founder is paralyzed by the volume of output | Simplify — cut to the minimum viable action set. "Do these 3 things this week, nothing else." |
+| ACT | User rejects final output | **Targeted revision** -- ask which section fell short (validation scores, market analysis, strategy selection, business plan section, outreach content, or operating system) and rerun only that section. Do not re-run the full pipeline. |
 
 ## State Persistence
 - Idea iterations (each version scored, with why it changed)
@@ -111,6 +112,59 @@ Done when: (1) idea has a go/no-go recommendation with scores, (2) winning strat
 - Outreach performance (which emails/posts got responses, open rates if tracked)
 - Sprint outcomes (week-by-week actual vs planned, what worked)
 - Customer discovery notes (what early customers said, what surprised you)
+
+---
+
+## Reference
+
+### Validation Scoring (Mom Test Framework)
+
+| Dimension | 8-10 | 4-7 | 1-3 |
+|---|---|---|---|
+| Problem clarity | Specific, painful, verifiable | Real but vague | Unclear or assumed |
+| Audience definition | Can name 100 specific people | General segment | "Everyone" |
+| Willingness to pay | Evidence of actual payment | Logical inference | Hope-based |
+| Competition level | Clear gap in market | Some differentiation needed | Saturated |
+| Founder fit | Unfair advantage | Learnable | Mismatched |
+
+Total scores: 40-50 = STRONG GO, 30-39 = GO WITH CAVEATS, 20-29 = PIVOT, <20 = NO GO
+
+### Strategy Scoring Weights
+
+| Factor | Weight |
+|---|---|
+| Time to first revenue | 30% |
+| Capital required | 20% |
+| Risk level | 20% |
+| Scalability potential | 15% |
+| Founder fit | 15% |
+
+### Business Type Capital Requirements (Rough)
+
+| Type | Minimum to Start |
+|---|---|
+| Service / consulting | Under $100 |
+| Content / info products | Under $500 |
+| SaaS (no-code MVP) | $500-2,000 |
+| E-commerce (dropship) | $500-1,500 |
+| E-commerce (own inventory) | $2,000-10,000 |
+| Marketplace | $5,000+ |
+
+### Outreach Framework Bank
+
+| Framework | Structure |
+|---|---|
+| AIDA | Attention → Interest → Desire → Action |
+| PAS | Problem → Agitate → Solution |
+| BAB | Before → After → Bridge |
+| DIRECT | One ask, no fluff, clear CTA |
+| STORY | Personal narrative → relevance → ask |
+
+### The 3-Message LinkedIn Sequence
+
+1. Connection request (no pitch): shared interest or genuine compliment
+2. Follow-up with value: something useful, no ask
+3. Close with ask: specific, low-commitment request
 
 ---
 

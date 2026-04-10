@@ -127,6 +127,7 @@ Done when: (1) brand voice guide captures the user's authentic tone with specifi
 | CALENDAR | User's available time can't sustain the minimum posting frequency | Adjust -- reduce to 2 posts per week on one platform. Quality and consistency beat volume every time. One great post a week outperforms 7 mediocre ones |
 | CONTENT PACK | User can't create video content | Adjust -- focus on text, carousels, and static graphics. Instagram carousels outperform reels for many business accounts. LinkedIn is text-native. Use Canva for visual posts |
 | REPURPOSE MAP | User only uses one platform | Adjust -- repurposing becomes reformatting: turn one long post into a story sequence, a thread into a carousel, a reel into a static quote. Still works within a single platform |
+| REPURPOSE MAP | User rejects final output | **Targeted revision** -- ask which section fell short (brand voice guide, a specific content pillar, calendar slot, content pack entry, or repurposing chain) and rerun only that section. Do not regenerate the full plan. |
 
 ## State Persistence
 - Brand voice guide (evolves over time as the user finds their voice and gets audience feedback)
@@ -135,6 +136,58 @@ Done when: (1) brand voice guide captures the user's authentic tone with specifi
 - Content bank (unused ideas, high-performing posts to refresh and repost, seasonal content to recycle annually)
 - Audience insights (what topics get saves/shares vs. likes-only, what questions followers ask repeatedly, DM themes)
 - Platform-specific learnings (Instagram algorithm shifts, LinkedIn format changes, TikTok trend cycles -- update strategy accordingly)
+
+---
+
+## Reference
+
+### Content Pillar Ratio Guide
+
+| Pillar | Ratio | Purpose |
+|---|---|---|
+| Educate | 30-40% | Credibility; teaches something useful |
+| Relate | 20-25% | Connection; behind-the-scenes, journey, vulnerability |
+| Entertain | 15-20% | Reach; shareable, trends, humor |
+| Promote | 10-15% | Revenue; offers, testimonials, CTAs |
+| Community | 10% | Retention; polls, Q&As, collabs |
+
+### Minimum Viable Posting Frequency
+
+| Platform | Minimum | Growth Mode |
+|---|---|---|
+| Instagram | 3x/week | 5-7x/week + daily stories |
+| LinkedIn | 2x/week | 3-5x/week |
+| TikTok | 3x/week | 5-7x/week |
+| X (Twitter) | 5x/week | Daily + 2 threads/week |
+| YouTube | 1x/week | 2x/week |
+
+If total time is under 3 hours/week: pick 1 platform and commit.
+
+### Optimal Posting Times (General)
+
+| Platform | Best Times |
+|---|---|
+| LinkedIn | Tue-Thu 8-10 AM or 5-6 PM |
+| Instagram | Mon-Fri 11 AM-1 PM; Tue/Thu evenings for reels |
+| TikTok | Evenings 7-9 PM; weekends for longer content |
+| X | Mornings 8-9 AM; lunchtime 12-1 PM; evenings for threads |
+
+### Hook Formula Bank
+
+- Problem-agitate: "Stop doing [X] — it's costing you [result]."
+- Curiosity gap: "I tried [thing] for 30 days. Here's what actually happened."
+- Contrarian: "Unpopular opinion: [industry norm] is terrible advice."
+- List: "[N] things I do every [timeframe] that [result]."
+- Story: "Last [timeframe], [event happened]. It changed how I think about [topic]."
+
+### Hashtag Count by Platform
+
+| Platform | Recommended Count | Mix |
+|---|---|---|
+| Instagram | 5-15 | Popular (100K+), medium (10K-100K), niche (<10K) |
+| LinkedIn | 3-5 | Industry-relevant only |
+| TikTok | 3-5 | Trending + niche |
+| X | 1-2 or none | Use sparingly; they reduce reach |
 
 ---
 

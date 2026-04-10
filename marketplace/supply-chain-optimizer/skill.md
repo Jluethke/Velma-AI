@@ -136,6 +136,7 @@ The pipeline completes when: (1) supply chain map is documented, (2) risks are s
 | OPTIMIZE | No alternate suppliers exist for a critical component | Escalate -- flag as "critical unmitigable risk," recommend: design-out the component, build internal capacity, or negotiate long-term supply agreement with contractual guarantees |
 | SIMULATE | Demand forecast has high uncertainty | Adjust -- run scenarios at multiple demand levels (low/mid/high) to show sensitivity |
 | MONITOR | Supplier refuses to share performance data | Escalate -- limited visibility is itself a risk factor, increase safety stock or accelerate alternate qualification |
+| MONITOR | User rejects final output | **Targeted revision** -- ask which supplier mapping, risk scenario, or optimization recommendation fell short and rerun only that section. Do not re-map the full supply chain. |
 
 ## Reference
 

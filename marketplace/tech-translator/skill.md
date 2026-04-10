@@ -132,6 +132,7 @@ Done when: (1) the message is translated into plain English with zero unexplaine
 | REASON | Message has multiple possible meanings depending on context | Expand -- provide both interpretations: "This could mean A (if you were doing X) or B (if you were doing Y). Which sounds closer to what was happening?" |
 | PLAN | Person is panicking because they think they broke something | Reassure first -- "You almost certainly did not break anything. Most error messages are the computer's way of saying 'I need help with something' not 'something is permanently damaged.'" Then provide the translation |
 | ACT | Person comes back with a follow-up message from the same issue | Build on previous -- connect the new message to the earlier one. "This is related to what we looked at before. It means the issue from earlier [was resolved / is still happening / has changed to...]" |
+| ACT | User rejects final output | **Targeted revision** -- ask whether the plain English explanation was unclear, the recommendation was wrong, or the steps were too complex or too simple, and rerun only that section. Do not re-translate the full message. |
 
 ## State Persistence
 - Translation history (messages translated, contexts, what the actual fix was -- builds a personalized dictionary)
@@ -139,6 +140,56 @@ Done when: (1) the message is translated into plain English with zero unexplaine
 - Recurring issues (same type of error appearing multiple times -- flag for deeper investigation)
 - Permission decisions made (what they allowed/denied -- useful for troubleshooting "why isn't X working" later)
 - Scam encounters (fake warnings seen, how they were handled -- builds awareness over time)
+
+---
+
+## Reference
+
+### Message Type Classification
+
+| Type | Key Signals | Priority |
+|---|---|---|
+| Scam popup | Phone number, alarm sounds, won't close, "call us now" | URGENT — close first, explain second |
+| Security warning | Certificate, SSL, unverified, HTTPS, invalid | Yellow — take action but don't panic |
+| Error message | Failed, couldn't, unavailable, error code | Depends on severity |
+| Permission request | "wants to access," "allow/deny" | Normal — explain each option |
+| Update notification | "update available," "new version" | Normal — explain what to do |
+| Settings description | Configuration, toggle options | Normal — rewrite in plain English |
+| Connection problem | DNS, DHCP, server, network, unable to connect | Normal — standard fix steps |
+
+### Scam Popup Red Flags
+
+Any one of these = SCAM:
+- Phone number to call in the message
+- Loud alarm sound from a browser window
+- Message that won't let you close the browser
+- "Your computer is infected" in a browser popup
+- "Windows detected a virus — click here" from a website
+- Claims to be from Apple/Microsoft but came from a random website
+
+### Common Error Message Translations
+
+| Technical Term | Plain English |
+|---|---|
+| DNS server unavailable | Your internet can't find the website |
+| SSL certificate expired | Website's security license is out of date |
+| Insufficient storage | Your device is full |
+| Session expired | You were logged out for being idle too long |
+| DHCP lookup failed | Your device can't get an internet address from your router |
+| 404 | The page doesn't exist (or moved) |
+| 503 | The website's server is down or overloaded |
+| Kernel panic / Blue Screen | Computer hit a fatal error and had to restart |
+
+### Permission Request Recommendations
+
+| Permission | Recommendation |
+|---|---|
+| Location: While Using | OK for maps, weather, navigation |
+| Location: Always | Rarely needed; say No for most apps |
+| Track across apps (iOS) | Almost always No |
+| Send notifications | No for most apps; Yes for messaging, alarms |
+| Access contacts | Only if the app genuinely needs your contacts |
+| Access camera/microphone | Only for apps that take photos/video/audio |
 
 ---
 

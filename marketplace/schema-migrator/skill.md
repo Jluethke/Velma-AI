@@ -351,6 +351,7 @@ The skill is DONE when:
 | Phase 6 | Documentation style is unsupported | **Abort** -- return error listing supported styles: markdown, html, asciidoc. |
 | Phase 7 | Validation finds critical errors (syntax, missing references) | **Abort** -- return validation_report with FAIL status and detailed error list with line numbers. Do not package artifacts until errors are resolved. |
 | Phase 7 | Artifact manifest cannot be generated (e.g., file system error) | **Adjust** -- generate manifest in memory and return as JSON. Warn user to verify file outputs manually. |
+| Phase 7 | User rejects final output | **Targeted revision** -- ask which migration script, field mapping, or rollback procedure fell short and regenerate only that section. Do not regenerate the full migration. |
 
 ---
 

@@ -120,6 +120,43 @@ Done when: (1) core financial numbers are established, (2) survival months calcu
 | REASON | User's situation is genuinely dire | Drop the framework. Be direct: "Let's focus on the next 30 days only. What's the most urgent bill? What's the minimum you need?" |
 | PLAN | All spending feels essential | Challenge one item: "If someone offered you $500/month to give up [item], would you take it? Then it's not essential -- it's a choice." |
 | ACT | User won't commit to the one move | Shrink it: "What if the move was just LOOKING at the number? Not doing anything about it yet. Just looking." |
+| ACT | User rejects final output | Targeted revision -- ask which part of the reality check felt off or incomplete (survival calculation, spending categorization, leak identification, or the one-move recommendation) and rerun only that section. |
+
+## Reference
+
+### Survival Months Formula
+
+`Survival months = Total liquid savings ÷ Monthly fixed costs`
+
+Fixed costs only (rent, insurance, car, minimum debt payments) -- NOT discretionary spending.
+
+- < 1 month: financial emergency; immediate action required
+- 1-3 months: vulnerable; building this is the top priority
+- 3-6 months: foundation; recommended minimum
+- 6+ months: stable; can focus on growth
+
+### Spending Category Framework
+
+| Category | Definition | Examples |
+|---|---|---|
+| Life support | Non-negotiable survival costs | Rent, food, health insurance, utilities, minimum debt payments |
+| Life quality | Real contributions to wellbeing | Gym membership you actually use, quality food, experiences that matter |
+| Life leaks | Money spent with no survival or joy return | Forgotten subscriptions, impulse purchases, convenience spending driven by avoidance |
+
+### Monthly Savings Rate Formula
+
+`Savings rate = (Monthly income - Monthly total spending) ÷ Monthly income × 100`
+
+- < 5%: nearly nothing accumulating
+- 5-15%: building slowly
+- 15-25%: solid foundation-building
+- > 25%: accelerating toward financial independence
+
+### The Real Number Calculation
+
+`Your enough number = Monthly fixed costs + Monthly chosen quality spending (honest version)`
+
+Most people have never calculated this. They optimize for more income when they need to calculate enough first.
 
 ---
 

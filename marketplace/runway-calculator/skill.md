@@ -302,6 +302,7 @@ The skill is DONE when:
 | SENSITIVITY | Too many variables requested | **Adjust** -- prioritize top 5 by expected impact, note others in appendix |
 | ALERTS | Actuals tracking data unavailable | **Adjust** -- skip actuals-vs-projection alerts, recommend establishing tracking |
 | RECOMMEND | Company is already in danger zone (<6 months) | **Escalate** -- prioritize immediate cost cuts and emergency fundraising over optimization |
+| RECOMMEND | User rejects final output | **Targeted revision** -- ask which scenario, expense projection, or runway recommendation fell short and rerun only that section. Do not rebuild the full financial model. |
 
 ## State Persistence
 

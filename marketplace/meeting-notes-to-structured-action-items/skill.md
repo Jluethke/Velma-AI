@@ -262,6 +262,7 @@ The skill is complete when:
 | Phase 6 | Action item has 2+ critical ambiguities (missing owner AND missing deadline) | **Adjust** -- mark priority as "requires_clarification", include all flags, add to items_requiring_clarification list |
 | Phase 7 | Output exceeds reasonable size (more than 50 action items) | **Adjust** -- include all items in output, add note to processing_notes: "Large number of action items detected. Consider splitting into multiple meetings or grouping by owner for clarity." |
 | Phase 7 | JSON validation fails (malformed output structure) | **Abort** -- return error message with validation details; do not return partial output |
+| Phase 7 | User rejects final output | **Targeted revision** -- ask which action item, owner assignment, or deadline fell short and rerun only that extraction phase. Do not re-process the full meeting notes. |
 
 ---
 

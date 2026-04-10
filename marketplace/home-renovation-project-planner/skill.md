@@ -410,6 +410,7 @@ The skill is complete when:
 | Phase 9: Project Execution | Contingency is exhausted before completion | **Adjust** — identify additional funding or reduce remaining scope with stakeholder approval |
 | Phase 10: Project Closeout | Contractor refuses to complete punch list items | **Adjust** — invoke contract dispute resolution or withhold final payment |
 | Phase 10: Project Closeout | Lien waivers not provided | **Adjust** — withhold final payment until received; consult legal counsel if contractor refuses |
+| Phase 10: Project Closeout | User rejects final output | **Targeted revision** -- ask which phase's plan, budget estimate, or contractor schedule fell short and rerun only that section. Do not regenerate the full project plan. |
 
 ---
 

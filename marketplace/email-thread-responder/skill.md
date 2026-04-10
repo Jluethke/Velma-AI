@@ -285,6 +285,7 @@ The skill is complete when:
 | Phase 6 | Response tone conflicts with inferred tone after Phase 5 revision | **Adjust** -- revise response again; if conflict persists, flag in validation_notes with category "flag" and confidence = "low"; document in iteration_count |
 | Phase 6 | Response commits to something that conflicts with prior commitments in thread | **Adjust** -- flag in validation_notes with category "flag" and recommendation to review before sending; do not block finalization but alert user |
 | Phase 7 | Two iteration loops completed but score still <70 | **Adjust** -- finalize response with iteration_count = 2 and ready_to_send = false; include detailed validation_notes explaining remaining issues; recommend user review and manual revision |
+| Phase 7 | User rejects final output | **Targeted revision** -- ask which aspect fell short (tone, addressed points, response length, or resolution framing) and rerun only Phase 5-6 for that aspect. Do not re-analyze the full thread. |
 
 ---
 

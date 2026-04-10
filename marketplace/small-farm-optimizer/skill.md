@@ -152,6 +152,7 @@ One cycle completes when a season report with yield data and next-season recomme
 | SCHEDULE | Growing season too short for desired crops | Adjust -- recommend season extension (row cover, cold frame, greenhouse) or substitute fast-maturing varieties |
 | OPTIMIZE | Labor hours insufficient for farm size | Adjust -- reduce cultivated area to match labor, prioritize highest-ROI crops, recommend labor-saving infrastructure |
 | MONITOR | No yield data collected | Skip -- deliver generic rotation plan, emphasize importance of record-keeping for next season |
+| MONITOR | User rejects final output | **Targeted revision** -- ask which crop plan, soil recommendation, or schedule fell short and rerun only that phase. Do not regenerate the full farm plan. |
 
 ## Reference
 

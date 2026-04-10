@@ -199,6 +199,7 @@ The skill is DONE when:
 | VALIDATE | Security issue found in generated config | **Retry** -- fix the issue and re-validate, max 3 retries |
 | OPTIMIZE | Caching doesn't reduce build time | **Skip** -- remove cache step to reduce complexity, document why |
 | ACT | User rejects the generated pipeline configuration or requests significant changes | **Adjust** -- incorporate specific feedback (e.g., different deployment strategy, additional security checks, alternative CI platform), update the affected phases, and regenerate only the changed configuration sections; do not restart from Phase 1 unless the project stack or deployment target has changed |
+| ACT | User rejects final output | **Targeted revision** -- ask which pipeline stage, configuration option, or deployment step fell short and rerun only that section. Do not regenerate the full pipeline. |
 
 ## State Persistence
 

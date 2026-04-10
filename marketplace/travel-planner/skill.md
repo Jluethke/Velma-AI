@@ -133,6 +133,7 @@ Done when: (1) day-by-day itinerary covers every day of the trip with activities
 | ITINERARY | More must-see items than days available | Adjust -- prioritize by uniqueness (things you can only do HERE), cut items available elsewhere, suggest extending trip if possible |
 | PRACTICAL | Traveling with serious medical needs | Escalate -- recommend consulting travel medicine clinic, ensure accommodation is near medical facilities |
 | BACKUP | Destination has significant safety concerns | Escalate -- present government travel advisories, suggest safer alternatives, don't sugarcoat the risk |
+| BACKUP | User rejects final output | **Targeted revision** -- ask which section fell short (itinerary day, accommodation options, budget breakdown, packing list, or practical guide) and rerun only that section. Do not rebuild the full trip plan. |
 
 ## State Persistence
 - Traveler profiles (passport details, airline loyalty programs, accommodation preferences, dietary needs)
@@ -140,6 +141,56 @@ Done when: (1) day-by-day itinerary covers every day of the trip with activities
 - Price benchmarks (actual costs vs estimates -- improves budget accuracy for similar destinations)
 - Packing list templates (base list that adapts per trip rather than starting from scratch)
 - Restaurant and attraction reviews (personal ratings build better future recommendations)
+
+---
+
+## Reference
+
+### Budget Classification by Destination Type
+
+| Style | Daily Budget (per person) | What It Gets |
+|---|---|---|
+| Backpacker | $25-60 | Hostel dorm, street food, free attractions |
+| Budget | $60-120 | Private room, local restaurants, some paid attractions |
+| Mid-range | $120-250 | 3-star hotel, sit-down restaurants, most attractions |
+| Luxury | $250+ | 4-5 star hotel, fine dining, VIP experiences |
+
+Adjust significantly by destination: $60/day is luxury in Southeast Asia and budget in Scandinavia.
+
+### Daily Budget Per-Person Calculator
+
+`Daily operating budget = (Total budget - flight cost) ÷ trip days`
+
+Typical flight cost ranges: short-haul domestic $100-400, long-haul international $600-1,500, peak season ×1.5
+
+### Itinerary Design Rules
+
+- Day 1: low-key arrival (no major attractions; jet lag recovery)
+- Max 2 major attractions per day
+- Cluster activities geographically (no zigzagging)
+- 30-minute buffer between activities
+- One free afternoon for trips over 5 days
+- Last day: flexible morning + airport transit
+
+### Visa Processing Time Guide (Rough)
+
+| Visa Type | Lead Time Needed |
+|---|---|
+| Visa-free / on arrival | 0 days (just check passport validity) |
+| E-visa / electronic | 3-7 business days |
+| Embassy appointment | 4-8 weeks |
+| Complex visa (US, Schengen, UK) | 6-12 weeks in peak season |
+
+Passport validity requirement: 6 months beyond return date for most countries.
+
+### Emergency Reference Card (Template)
+
+- Local emergency number: [country-specific]
+- Embassy/consulate: [nearest to destination]
+- Travel insurance hotline: [from policy document]
+- Airline rebooking: [airline's 24-hr number]
+- Hotel emergency contact: [at check-in]
+- Key addresses offline: hotel address in local language + nearest hospital
 
 ---
 

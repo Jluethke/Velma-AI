@@ -318,6 +318,7 @@ The skill is DONE when:
 | Phase 6 | User's time_to_implement is very short (1 week) and flexibility_score is low | **Adjust** -- Create a minimal 1-phase protocol with 1-2 highest-impact changes only. Add note: "You have limited time and flexibility. This protocol focuses on the highest-impact changes you can implement in one week. After one week, reassess and consider expanding to additional changes." |
 | Phase 7 | Generated protocol document is difficult to read or contains jargon | **Adjust** -- Simplify language, add explanations for technical terms, break long paragraphs into bullet points, add visual elements (tables, checklists). Test readability by ensuring a non-expert could follow it. |
 | Phase 7 | User's constraints are not adequately reflected in protocol | **Adjust** -- Expand "Personalization Notes" section to explicitly address each constraint and how recommendations were tailored. Example: "You mentioned a shared bedroom. We prioritized recommendations that don't disturb your partner: earplugs instead of white noise machine, personal cooling pad instead of room temperature change, etc." |
+| Phase 7 | User rejects final output | **Targeted revision** -- ask which protocol phase, sleep intervention, or schedule timing fell short and rerun only that section. Do not regenerate the full sleep protocol. |
 
 ---
 

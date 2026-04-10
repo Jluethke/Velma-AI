@@ -218,6 +218,7 @@ The skill is DONE when:
 | REASON | All pricing models score similarly | **Adjust** -- default to tiered pricing (most flexible), recommend A/B testing 2 models |
 | PLAN | Sensitivity analysis shows all scenarios negative | **Escalate** -- current pricing may be at maximum willingness-to-pay. Recommend value addition before price increase. |
 | ACT | Implementation plan conflicts with business constraints | **Adjust** -- offer alternative rollout timeline, flag constraints for business owner decision |
+| ACT | User rejects final output | **Targeted revision** -- ask which pricing model, tier structure, or competitive positioning fell short and rerun only that phase. Do not regenerate the full pricing strategy. |
 
 ## State Persistence
 

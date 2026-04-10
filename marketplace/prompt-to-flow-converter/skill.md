@@ -286,6 +286,7 @@ The flow is DONE when:
 | STRUCTURE | Prompt's implicit knowledge is too extensive to capture | **Adjust** -- capture the top 80% and document remaining knowledge gaps as "requires domain expertise" |
 | GENERATE | Generated flow.md exceeds reasonable length (>2000 lines) | **Adjust** -- split reference material into multiple flows, make the main flow import them |
 | VALIDATE | Consistency score < 75% after first attempt | **Retry** -- return to Phase 3, tighten quality gates and add more specific action descriptions, re-generate and re-validate (max 2 retries) |
+| VALIDATE | User rejects final output | **Targeted revision** -- ask which flow section, quality gate, or execution phase fell short and regenerate only that section. Do not reconvert the full prompt. |
 
 ## State Persistence
 

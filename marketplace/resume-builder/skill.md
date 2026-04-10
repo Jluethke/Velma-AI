@@ -96,6 +96,7 @@ Done when: (1) resume is complete in ATS-friendly and human-readable formats, (2
 | REASON | Career history is non-linear or unusual | Adjust -- use a functional or combination format that leads with transferable skills rather than chronological history |
 | PLAN | Cannot quantify any achievements | Adjust -- use scope indicators instead: team size, budget range, project count, client count, geographic reach |
 | ACT | User wants to include something inadvisable (photo, age, salary history, references on resume) | Advise -- explain why it hurts more than helps, but respect the user's final decision |
+| ACT | User rejects final output | **Targeted revision** -- ask which section fell short (bullet rewrites, keyword matching, summary statement, or gap strategy) and rerun only that section. Do not rebuild the full resume. |
 
 ## State Persistence
 - Master experience inventory (all jobs, skills, and achievements -- not just what's on the current resume)
@@ -103,6 +104,50 @@ Done when: (1) resume is complete in ATS-friendly and human-readable formats, (2
 - Bullet point library (reusable accomplishment bullets organized by skill category)
 - Resume versions (track which version was sent to which company)
 - What worked (if user reports getting interviews, note which resume elements were present)
+
+---
+
+## Reference
+
+### XYZ Bullet Formula
+
+"Accomplished [X] as measured by [Y] by doing [Z]."
+
+Example: "Reduced customer onboarding time by 40% (from 5 days to 3) by redesigning the intake form and automating document collection."
+
+### ATS Keyword Match Rate Benchmarks
+
+| Match Rate | Outcome |
+|---|---|
+| < 50% | Likely filtered out before human review |
+| 50-65% | Marginal; may pass with strong format |
+| 65-80% | Good; typically clears ATS filters |
+| 80%+ | Excellent; prioritized in results |
+
+### Resume Format Decision Matrix
+
+| Situation | Recommended Format |
+|---|---|
+| Linear career, clear progression | Reverse chronological |
+| Career change, significant gaps | Functional / skills-based |
+| Strong skills + chronological history | Combination |
+| New grad, limited experience | Reverse chronological (1 page) |
+
+### Employment Gap Handling Rules
+
+| Gap Duration | Strategy |
+|---|---|
+| Under 6 months | Use years only (not months); no explanation needed |
+| 6-12 months | Brief entry: "Freelance consulting" or "Family leave" |
+| Over 12 months | Short entry with honest description + relevant activities |
+
+### Strong Action Verb Bank
+
+Built, launched, reduced, grew, negotiated, streamlined, delivered, secured, transformed, spearheaded, scaled, designed, led, directed, generated, saved, recovered, exceeded, developed, implemented.
+
+### Summary Statement Formula
+
+"[Years] of experience in [domain]. [Single most impressive achievement]. Seeking [target role] to [how you'll contribute]." (Target: 2-3 sentences, under 60 words.)
 
 ---
 

@@ -121,6 +121,43 @@ Done when: (1) at least 5 fears are named and scored, (2) each is classified as 
 | REASON | Probability genuinely is high | Acknowledge: "This is a real risk, not a phantom fear. Let's focus on preparation and contingency, not on pretending it won't happen." |
 | PLAN | All fears classified as protective | Challenge gently: "Is it possible that some of these are disguised as protective when they're actually just comfortable? What would [person you admire] classify them as?" |
 | ACT | User won't commit to facing any fear | Start smaller: "What if the action was just writing the fear down and reading it out loud? Just naming it with your voice. That's a step." |
+| ACT | User rejects final output | Targeted revision -- ask which fear classification felt wrong or which section lacked depth and rerun only that analysis. Do not restart the full inventory. |
+
+## Reference
+
+### Fear Scoring Matrix
+
+For each fear, score these four dimensions:
+
+| Dimension | Low | Medium | High |
+|---|---|---|---|
+| Probability | < 20% likely | 20-50% likely | > 50% likely |
+| Impact if true | Uncomfortable, passes quickly | Painful but recoverable in months | Life-altering, long recovery |
+| Recovery time | Weeks | Months | Years |
+| Cost of avoidance | Minor inconvenience | Meaningful lost opportunity | Life-defining loss |
+
+### Fear Classification Rules
+
+| Classification | Criteria | What to Do |
+|---|---|---|
+| Protective (keep) | High probability + high impact + slow recovery | Respect it; plan around it with smart precautions |
+| Limiting (override) | Low-medium probability + medium impact + recoverable + HIGH cost of avoidance | Identify the smallest step in; take it this week |
+| Phantom (dissolve) | Low probability + vague or inherited + no real evidence base | Trace to origin; name the source; starve by stopping avoidance behaviors |
+
+### The 10-10-10 Decision Test
+
+Ask for any feared action:
+- How will you feel about this in 10 minutes? (short-term discomfort)
+- How will you feel about this in 10 months? (medium-term consequence)
+- How will you feel about this in 10 years? (long-term cost of avoidance)
+
+If the 10-year answer is "I wish I'd done it," the 10-minute discomfort is the price of admission.
+
+### Fear Behind the Fear Probe
+
+Surface fear → "What does it mean if this happens?" → Deeper fear → "What does that mean about you?" → Core fear
+
+Example: "I'm afraid of failing the presentation" → "It means I'm not competent" → "It means I don't belong here" → Core fear: identity threat (imposter syndrome)
 
 ---
 

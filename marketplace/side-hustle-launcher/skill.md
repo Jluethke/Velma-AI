@@ -127,6 +127,7 @@ Done when: (1) skills inventory identifies at least 3 monetizable skills, (2) to
 | REALITY-TEST | Market is saturated for all 3 finalists | Adjust -- look for a niche angle within the saturated market (specialize by audience, geography, or format) or evaluate less obvious hustle categories |
 | LAUNCH MAP | User has zero existing network for warm outreach | Adjust -- start with platform-based hustles (Fiverr, Upwork, Etsy, TaskRabbit) where the platform provides the audience, then build a network from paying customers |
 | GUARDRAILS | User wants to skip boundaries and "just go for it" | Advise -- explain that guardrails aren't pessimism, they're what lets you take risks without ruining your financial life. Set them anyway as reference points |
+| GUARDRAILS | User rejects final output | **Targeted revision** -- ask which section fell short (hustle scoring, financial projections, launch plan week, or guardrail numbers) and rerun only that section. Do not re-run the full pipeline. |
 
 ## State Persistence
 - Skills inventory with monetizability ratings (reusable if first hustle doesn't work and user tries another)
@@ -135,6 +136,47 @@ Done when: (1) skills inventory identifies at least 3 monetizable skills, (2) to
 - Time tracking (actual hours spent vs. planned, which tasks take longer than expected)
 - Pivot history (if the user tried and abandoned a hustle, what went wrong and what was learned)
 - Network contacts (clients, collaborators, mentors encountered during the hustle)
+
+---
+
+## Reference
+
+### Hustle Scoring Dimensions (1-10 each)
+
+| Dimension | 8-10 (Strong) | 4-7 (Moderate) | 1-3 (Weak) |
+|---|---|---|---|
+| Skill fit | Start immediately | Need some learning | Wrong hustle |
+| Time fit | Fits schedule constraints | Minor adjustments needed | Conflicts with availability |
+| Budget fit | Within stated budget + buffer | Stretches budget | Exceeds budget |
+| Income potential | Exceeds goal within timeline | May hit goal with optimization | Unlikely to hit goal |
+| Speed to revenue | First dollar within 2-4 weeks | 1-3 months | 3+ months |
+| Burnout risk | Feels different from day job | Some overlap | Feels like second day job |
+
+### Revenue Projection Benchmarks (Realistic, Not Optimistic)
+
+| Timeline | Typical Range |
+|---|---|
+| Month 1 | $0-200 (most people earn nothing in month 1) |
+| Month 3 | $200-800 if consistently working |
+| Month 6 | $500-2K if product-market fit is emerging |
+| Month 12 | $1K-5K if it's working |
+
+Apply 60% realism multiplier to stated available hours.
+
+### Hours per Week vs. Hustle Type
+
+| Hours Available | Recommended Hustle Category |
+|---|---|
+| 2-4 hours | Passive/near-passive: digital products, print-on-demand, affiliate content |
+| 5-10 hours | Freelance services, micro-consulting, content creation |
+| 10-20 hours | E-commerce, tutoring, local services, consulting |
+| 20+ hours | Full side business; evaluate whether this is a business, not a hustle |
+
+### Guardrail Formulas
+
+- **Investment cap** = stated upfront budget (never exceed without revenue in)
+- **Monthly burn limit** = stated monthly budget; if costs exceed this, audit before continuing
+- **Emergency brake** = 3 consecutive months of expenses > revenue → stop and reassess model
 
 ---
 

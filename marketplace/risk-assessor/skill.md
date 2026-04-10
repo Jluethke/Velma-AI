@@ -149,6 +149,51 @@ The skill is DONE when:
 | REASON | All risks score Low (1-4) | **Adjust** -- re-examine assumptions; either the plan is genuinely low-risk or the scoring is too optimistic. Flag for review. |
 | PLAN | No stakeholders provided to assign as owners | **Adjust** -- assign ownership by role ("project lead", "finance team") rather than by name |
 | ACT | Risk register exceeds 30 entries | **Adjust** -- merge similar risks and focus detail on the top 15. List the remainder as a watch list. |
+| ACT | User rejects final output | **Targeted revision** -- ask which risk's scoring, mitigation strategy, or monitoring trigger fell short and rerun only that risk's REASON-PLAN phases. Do not reassess all risks. |
+
+---
+
+## Reference
+
+### Risk Score Matrix
+
+| Score | Level | Response |
+|---|---|---|
+| 1-4 | Low | Accept; document rationale |
+| 5-9 | Medium | Brief mitigation recommendation |
+| 10-15 | High | Full mitigation plan with owner + deadline |
+| 16-25 | Critical | Immediate escalation; plan may need redesign |
+
+### Risk Appetite Escalation Thresholds
+
+| Appetite | Escalate at Score... |
+|---|---|
+| Conservative | 5+ (Medium and above) |
+| Moderate | 10+ (High and above) |
+| Aggressive | 16+ (Critical only) |
+
+### Mitigation Strategy Types
+
+| Type | When to Use |
+|---|---|
+| Avoid | Change the plan to eliminate the risk entirely |
+| Reduce | Lower likelihood (better testing) or impact (backup plan) |
+| Transfer | Insurance, outsourcing, contracts, SLAs |
+| Accept | Conscious decision after applying risk appetite; Low risks |
+
+### Seven Risk Categories Checklist
+
+- Technical: technology failure, integration issues, performance
+- Resource: people, budget, time, skills
+- External: market, regulation, competitors, supply chain
+- Operational: process, communication, handoffs
+- Financial: cost overruns, revenue shortfalls, cash flow
+- Reputational: public perception, trust, media
+- Legal/Compliance: regulation, contracts, IP
+
+### Monitoring Trigger Formula
+
+"If [observable leading indicator] occurs [frequency/threshold], the [risk name] risk is materializing and [response action] must begin within [timeframe]."
 
 ---
 

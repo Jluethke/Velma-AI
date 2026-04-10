@@ -277,6 +277,7 @@ The skill is complete when:
 | Validation | Sequence does not address all primary goals | **Adjust** — return to Phase 3 and reselect techniques; log adjustment in validation_status |
 | Validation | Sequence violates physical constraints | **Adjust** — apply modifications or reselect techniques; log adjustment in validation_status |
 | Validation | Sequence order is not pedagogically sound | **Adjust** — reorder techniques according to pedagogical sequence (grounding → breathing → body scan → visualization → loving-kindness → concentration → insight) |
+| Validation | User rejects final output | **Targeted revision** -- ask which technique selection, timing, or sequence order fell short and rerun only that phase. Do not regenerate the full sequence. |
 
 ---
 

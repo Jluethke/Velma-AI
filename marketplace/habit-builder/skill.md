@@ -92,6 +92,7 @@ The skill is complete on initial run when the full habit formation package is de
 | PLAN | User wants to skip the two-minute phase | Escalate -- explain the science, strongly recommend compliance, but allow override |
 | ACT | No check-in data for adjustment cycle | Skip -- deliver generic recommendations, request data collection |
 | ACT | Completion rate below 50% for 2+ weeks | Adjust -- reduce to two-minute version, reassess barriers, consider if this is the right habit |
+| ACT | User rejects final output | **Targeted revision** -- ask which habit design, cue, reward, or implementation intention fell short and rerun only that phase. Do not restart the full habit plan. |
 
 ## Reference
 

@@ -142,6 +142,7 @@ Done when: (1) a 4-week plan is generated matching the user's limitations, equip
 | REASON | User is over 70 with multiple limitations | Adjust -- shift focus to functional fitness: getting up from chairs, balance, walking endurance, reaching overhead. These directly improve quality of life |
 | PLAN | Exercise description is hard to explain in text without video | Adjust -- use vivid analogies ("imagine you're squeezing a grapefruit between your shoulder blades"), reference familiar movements ("like picking up a grocery bag from the floor") |
 | ACT | User completes week 1 and reports significant soreness | Adjust -- repeat week 1 instead of advancing. Reduce reps by 20-30%. Soreness means we started too hard, not that they are weak |
+| ACT | User rejects final output | Targeted revision -- ask which week's plan, which specific exercise instructions, or which progression felt wrong and rerun only that portion with adjusted intensity or alternative exercises. |
 
 ## State Persistence
 - User physical profile (age, limitations, equipment, time availability)
@@ -150,6 +151,44 @@ Done when: (1) a 4-week plan is generated matching the user's limitations, equip
 - Limitation updates (knee feeling better, new shoulder issue, etc.)
 - Milestone achievements (week 1 completed, first full month, etc.)
 - Preferred exercises and disliked exercises (personalizes future plans)
+
+## Reference
+
+### 4-Week Progression Framework
+
+| Week | Sessions | Duration | Intensity (RPE) | Goal |
+|---|---|---|---|---|
+| 1 | 2-3 | 15-20 min | 3-4/10 | Just show up; establish routine |
+| 2 | 3 | 20-25 min | 4-5/10 | Build confidence; start tracking |
+| 3 | 3-4 | 25-30 min | 5-6/10 | Find rhythm; add light resistance |
+| 4 | 3-4 | 25-30 min | 5-6/10 | See measurable progress |
+
+Volume increase rule: never add more than 20-25% per week. Soreness = overload; repeat the week.
+
+### Exercise Substitution by Limitation
+
+| Limitation | Avoid | Safe Alternatives |
+|---|---|---|
+| Knee pain | Deep squats, lunges, jumping | Chair sit-to-stand, wall sit, leg extensions, swimming |
+| Lower back pain | Heavy spinal loading, crunches, toe touches | Bird-dogs, dead bugs, glute bridges, planks (modified) |
+| Shoulder issues | Overhead press, behind-neck movements | Front raises within pain-free range, band pull-aparts |
+| Balance concerns | Single-leg exercises | All standing work near a wall or chair |
+| Arthritis | High-rep joint stress | Range-of-motion work, low-impact movement |
+
+### Session Structure Template
+
+1. Warm-up: 3 minutes (marching, arm circles, torso twists, hip circles, knee lifts)
+2. Main work: 4-6 exercises (legs, upper push, upper pull, core, full-body movement)
+3. Cool-down: 3-4 minutes (slow march + 4-5 stretches held 20-30 seconds)
+
+### Pain vs. Soreness Guide
+
+| Sensation | Meaning | Action |
+|---|---|---|
+| Muscle aches 24-48 hrs after exercise | Normal delayed onset muscle soreness (DOMS) | Continue; reduce intensity next session |
+| Sharp pain during movement | Possible injury signal | Stop immediately; rest; see a doctor if it persists |
+| Joint pain (knee, shoulder, hip) | Possible overuse or form issue | Stop the exercise; substitute; review form |
+| Shortness of breath during light effort | Possible cardiovascular signal | Stop; see a doctor before continuing |
 
 ---
 

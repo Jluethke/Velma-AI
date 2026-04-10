@@ -149,6 +149,7 @@ The skill is DONE when:
 | INDEPENDENT | Claims too narrow or too broad | **Adjust** -- iterate on scope, note trade-offs in red_flags |
 | DEPENDENT | Too few narrowing features | **Adjust** -- re-examine source code for additional claimable features |
 | VALIDATE | Implementation language found | **Fix** -- replace with functional equivalents, re-validate |
+| ACT | User rejects final output | **Targeted revision** -- ask which claim or claim type (system, method, CRM, or a specific dependent) fell short and redraft only that claim. Do not regenerate the full claim set. |
 
 ## State Persistence
 
@@ -156,6 +157,42 @@ Between runs, this skill accumulates:
 - **Claim patterns**: successful claim structures per domain
 - **Forbidden term dictionary**: terms flagged across patent families
 - **Cross-reference map**: which families reference which others
+
+## Reference
+
+### Claim Language Rules
+
+| Allowed | Forbidden |
+|---|---|
+| "a module configured to..." | "a Python class that..." |
+| "a processor operable to..." | "a function named..." |
+| "a configurable threshold" | "a threshold of 0.3" |
+| "a non-transitory computer-readable medium" | "a hard drive" or "flash memory" |
+| "identifying, by the system, ..." | "calling the identify() method" |
+| Generic functional terms | Product names, library names, framework names |
+
+### Independent Claim Structure
+
+**System Claim:**
+"A system comprising: a [first module] configured to [functional description]; a [second module] configured to [functional description]; wherein the [first module] is operably connected to the [second module] to [combined function]."
+
+**Method Claim:**
+"A method comprising: [gerund-ing], by a processor, [first step]; [gerund-ing], by the processor, [second step]; [gerund-ing], based on [result of prior step], [third step]."
+
+**CRM Claim:**
+"A non-transitory computer-readable medium storing instructions that, when executed by a processor, cause the processor to: [first action]; [second action]; [third action]."
+
+### Claim Breadth Ladder
+
+Broadest (independent) → Moderately broad (first dependent) → Narrow but defensible (subsequent dependents)
+
+Each dependent claim is a fallback position if a broader claim is invalidated.
+
+### Antecedent Basis Rule
+
+Every noun in a dependent claim must have been introduced in its parent claim chain with "a" or "an" before it can be referenced with "the."
+
+Example: Independent says "a scoring module" → Dependent may say "wherein the scoring module further comprises..."
 
 ---
 

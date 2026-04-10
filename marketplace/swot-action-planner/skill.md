@@ -333,6 +333,7 @@ The skill is DONE when:
 | PLAN | All high-scoring strategies exceed budget | **Adjust** -- break strategies into smaller, funded increments; identify minimum viable version |
 | PLAN | Team can't agree on scoring | **Escalate** -- present 2-3 scoring scenarios with different weightings, let decision-maker choose |
 | ACT | No clear owner for an action | **Escalate** -- action without owner will not execute; flag as blocker |
+| ACT | User rejects final output | **Targeted revision** -- ask which strategy, action item, or scoring fell short and rerun only that phase. Do not re-run the full SWOT analysis. |
 
 ## State Persistence
 

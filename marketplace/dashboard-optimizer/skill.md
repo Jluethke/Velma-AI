@@ -239,6 +239,7 @@ The skill is DONE when:
 | Phase 5 | Metrics interdependency map reveals circular dependencies or unclear causality | **Adjust** -- Flag these relationships as "requires validation" and suggest A/B testing or statistical analysis to confirm causality. Document assumptions explicitly. |
 | Phase 6 | Recommended changes exceed the scope of a single dashboard | **Adjust** -- Suggest splitting into multiple dashboards (e.g., executive summary + detailed analytics). Link them via drill-down. Document the multi-dashboard architecture in the improvement report. |
 | Phase 6 | Data quality assessment reveals that multiple recommended KPIs depend on unreliable data sources | **Adjust** -- Prioritize data infrastructure improvements in Phase 1. Suggest interim KPIs using more reliable data sources. Flag data quality as a blocker for specific recommendations. |
+| Phase 6 | User rejects final output | **Targeted revision** -- ask which section fell short (vanity metric identification, a specific KPI recommendation, the hierarchy proposal, or a drill-down path) and rerun only that section. Do not regenerate the full report. |
 
 ---
 

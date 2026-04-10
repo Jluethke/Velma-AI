@@ -228,6 +228,7 @@ The skill is complete when:
 | Phase 7 | Plan is too large or complex to execute | **Adjust** -- prioritize high-influence stakeholders; phase in lower-priority groups. **Retry** with phased rollout approach |
 | Phase 7 | Engagement tracking metrics are difficult to measure or collect | **Adjust** -- simplify metrics to those easily captured by existing tools (email open rates, meeting attendance); document data collection process |
 | Phase 7 | Responsibility matrix reveals gaps or conflicts in ownership | **Adjust** -- clarify roles and escalation paths with project sponsor and communications lead; update matrix. **Retry** after clarification |
+| Phase 7 | User rejects final output | **Targeted revision** -- ask which stakeholder segment, message, or channel recommendation fell short and rerun only that section. Do not regenerate the full communication plan. |
 
 ---
 

@@ -118,6 +118,7 @@ The skill is DONE when:
 | REASON | Cannot generate "don't forget" items (unfamiliar domain) | **Adjust** -- use generic "don't forget" patterns: test the plan, have a backup, communicate to stakeholders, document what you did |
 | PLAN | Too many items (50+) | **Adjust** -- group into phases, deliver phase 1 checklist first with a note about subsequent phases |
 | ACT | User rejects the checklist or requests significant changes | **Adjust** -- incorporate specific feedback (e.g., wrong categories, missing items, unrealistic deadlines), update the affected sections, and regenerate the timeline and ordering; do not restart from OBSERVE unless the goal or deadline fundamentally changed |
+| ACT | User rejects final output | **Targeted revision** -- ask which checklist section, dependency, or deadline fell short and rerun only that section. Do not regenerate the full checklist. |
 
 ## Reference
 

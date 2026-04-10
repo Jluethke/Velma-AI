@@ -273,6 +273,7 @@ The skill is DONE when:
 | VALIDATE | Sandbox behavior differs from production | **Escalate** -- document discrepancies, recommend gradual production rollout with monitoring |
 | HARDEN | Cannot add circuit breaker (architectural constraint) | **Adjust** -- implement timeout + retry as minimum hardening, document circuit breaker as future work |
 | ACT | User rejects the integration architecture or requests significant changes | **Adjust** -- incorporate specific feedback (e.g., different integration pattern, revised retry policy, alternative caching strategy) and regenerate the affected phases; do not restart from Phase 1 unless the API documentation or integration requirements were wrong |
+| ACT | User rejects final output | **Targeted revision** -- ask which integration pattern, error handling strategy, or endpoint mapping fell short and regenerate only those affected phases. Do not restart from Phase 1. |
 
 ## State Persistence
 

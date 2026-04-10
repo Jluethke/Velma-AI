@@ -124,6 +124,53 @@ Done when: (1) all five relationship dimensions are assessed, (2) unsaid things 
 | REASON | User realizes the relationship may need to end | Don't push either direction: "That's a big realization. You don't have to decide that today. But let's be honest about what you're seeing." |
 | PLAN | User is afraid to have the conversation | Normalize: "Most important conversations feel scary beforehand. What's the worst realistic outcome of having it vs. the cost of never having it?" |
 | ACT | User wants to fix everything at once | Focus: "Pick one thing. The relationship didn't get here overnight and it won't get better overnight. One conversation. One habit. Start there." |
+| ACT | User rejects final output | **Targeted revision** -- ask which section fell short (health snapshot dimensions, unsaid inventory, conversation design, or maintenance habit) and rerun only that section. Do not restart the full check-in. |
+
+---
+
+## Reference
+
+### Five Relationship Dimensions
+
+| Dimension | Health Signal | Warning Signal |
+|---|---|---|
+| Communication | Regular substantive exchanges | Only logistics; walking on eggshells |
+| Trust | Nothing hidden for fear of reaction | Secrets kept; things suspected unsaid |
+| Reciprocity | Roughly balanced giving/taking | Persistent one-sidedness with no acknowledgment |
+| Growth | Both people evolving; change welcomed | One person changed; the other didn't; distance growing |
+| Appreciation | Specific, recent, unprompted acknowledgment | "They know I appreciate them" without saying it |
+
+### Perception Gap Diagnostic
+
+Ask two questions:
+1. "How would you rate this relationship 1-10?"
+2. "How would THEY rate it if they were honest?"
+
+| Gap | Interpretation |
+|---|---|
+| 0-1 points | Well-calibrated; low blind spot risk |
+| 2-3 points | Moderate blind spot; worth exploring |
+| 4+ points | Significant blind spot; divergent realities |
+
+### Conversation Opener Templates
+
+**Non-confrontational entry:**
+"I've been thinking about us, and there's something I want to talk about. Not because anything's wrong — I just want us to be intentional."
+
+**Appreciation-first entry:**
+"I realized I've been taking [specific thing] for granted, and I wanted to say something. Also, I want to talk about [topic]."
+
+**Direct entry:**
+"Something has been on my mind and I'd rather say it than keep not saying it."
+
+### Maintenance Habit Menu
+
+| Habit | Time | Best For |
+|---|---|---|
+| Weekly specific appreciation | 2 min | Any relationship type |
+| Monthly 30-min check-in conversation | 30 min | Partners, co-founders |
+| Quarterly relationship review | 1 hour | Business partners, close friends |
+| Annual relationship audit (this skill) | Variable | All relationships |
 
 ---
 

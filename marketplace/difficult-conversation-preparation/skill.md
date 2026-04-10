@@ -237,6 +237,7 @@ The skill is DONE when:
 | Phase 6 | Mental rehearsal reveals you are not ready (too anxious, too angry, too unprepared) | **Adjust** -- Identify what is missing: more practice, more information, more emotional regulation, adjustments to your approach. Address it before the conversation. Consider postponing the conversation if you are too dysregulated. |
 | Phase 6 | Your confidence level is below 6/10 | **Adjust** -- Identify the specific gap (unclear opening, missing tactic, unrealistic success criteria, high anxiety). Address it. If the gap is emotional regulation, consider postponing the conversation. If it is preparation, spend more time on phases 1-5. |
 | Phase 6 | You realize you do not actually want to have this conversation | **Abort** -- Honor that instinct. Ask yourself: Is this conversation necessary? Is the timing right? Am I avoiding it because I am afraid, or because it is genuinely not the right move? If it is necessary, address your fear. If it is not necessary, let it go. |
+| Phase 6 | User rejects final output | **Targeted revision** -- ask which section fell short (core issue framing, the opening script, reaction plans, or success criteria) and rerun only that section. Do not regenerate the full preparation. |
 
 ---
 

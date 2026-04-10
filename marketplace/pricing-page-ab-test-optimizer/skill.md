@@ -318,6 +318,7 @@ The skill is complete when:
 | Phase 5 | All variations are high-risk | **Adjust** — Add at least one low-risk, incremental variation (e.g., charm pricing, visual emphasis, copy change, or feature reordering). Ensure at least 1 variation is low-risk to provide a safe baseline test. |
 | Phase 6 | Cannot define measurable success metrics (e.g., conversion rate is not tracked) | **Adjust** — Use proxy metrics (e.g., "Tier selection rate" if conversion rate is not tracked, or "Customer support inquiries about pricing" as a proxy for confusion). Document the limitation in the report and recommend implementing proper tracking before test. |
 | Phase 6 | Variations are ranked but no clear winner emerges (e.g., multiple variations have same priority) | **Adjust** — Break ties using secondary criteria: (1) implementation ease, (2) speed to test, (3) reversibility (easier to rollback). Document the tiebreaker logic in the report. |
+| Phase 6 | User rejects final output | **Targeted revision** -- ask which variation, psychology principle, or success metric fell short and rerun only that section. Do not regenerate all variations. |
 
 ---
 

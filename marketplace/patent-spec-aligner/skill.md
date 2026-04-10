@@ -123,3 +123,37 @@ Done when:
 | MAP | Drawing numeral has no claim term | INFO -- acceptable for context elements |
 | VALIDATE | Same numeral used for different components | CRITICAL -- renumber one component |
 | GENERATE | Figure too complex for single paragraph | Split into sub-paragraphs (FIG. Xa, Xb) |
+| ACT | User rejects final output | **Targeted revision** -- ask which section fell short (the cross-reference table, the Detailed Description, the Brief Description, or a specific consistency violation resolution) and rerun only that section. |
+
+## Reference
+
+### Consistency Violation Severity
+
+| Severity | Condition | Impact |
+|---|---|---|
+| CRITICAL | Claim term missing from all drawings | Examiner may reject for lack of support |
+| CRITICAL | Drawing numeral contradicts claim term | Creates ambiguity; validity risk |
+| CRITICAL | Same numeral used for different components | Direct USPTO rejection (37 CFR 1.84) |
+| WARNING | Dependent claim term not in drawings | Suboptimal; acceptable |
+| INFO | Drawing shows element not in any claim | Acceptable as context; no action required |
+
+### Reference Numeral Conventions
+
+- 3-digit numbers starting at 100
+- Group by subsystem: 100-series for first major subsystem, 200-series for second
+- Sub-components get sequential numbers within their group
+- Same component must carry the same numeral in all figures
+- Connections/flows only get numerals if they carry named, claimable data
+
+### Detailed Description Paragraph Formula
+
+"Referring to FIG. [X], [figure describes / illustrates] [main topic]. The [first component] ([numeral]) [function]. The [second component] ([numeral]) receives [data] from the [first component] ([numeral]) and [function]. [Continue for each connection.]"
+
+First mention: "the scoring module (104)" — numeral in parentheses immediately after term.
+Subsequent mentions: same form or "(104)" alone in context.
+
+### Terminology Consistency Rule
+
+The exact same noun phrase must appear in claims, specification, and drawing labels.
+
+Claim says "trust inference module" → Specification must say "trust inference module" → Drawing label must say "Trust Inference Module" (capitalization OK; different words are NOT OK).

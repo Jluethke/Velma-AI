@@ -145,6 +145,7 @@ The skill is DONE when:
 | VALIDATE | Blocking issues found | **Retry** -- return to Phase 2 with the specific issues to fix |
 | DOCUMENT | Examples fail to run against the spec | **Retry** -- fix the spec or examples, max 2 retries |
 | ACT | User rejects the API design or requests significant structural changes | **Adjust** -- incorporate specific feedback (e.g., different resource naming, alternative pagination strategy, revised auth model) and regenerate the affected phases; do not restart from Phase 1 unless the consumer requirements or domain model were wrong |
+| ACT | User rejects final output | **Targeted revision** -- ask which endpoint, schema, or authentication design fell short and regenerate only those affected phases. Do not restart from Phase 1. |
 
 ## State Persistence
 

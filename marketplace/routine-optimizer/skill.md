@@ -353,6 +353,7 @@ The skill is DONE when:
 | Phase 5-6 | Optimized routine violates user constraints (e.g., must leave by 8 AM but optimized routine requires 8:15 AM) | **Abort** -- Clarify constraints. Redesign routine respecting all constraints. If impossible, ask user to negotiate constraint (e.g., "Can you leave 15 min later?") or accept current routine. |
 | Phase 7 | Report exceeds 5 pages | **Adjust** -- Condense analysis. Move detailed micro-habit descriptions to appendix. Focus report on: key changes, before/after comparison, Week 1 implementation plan, top 3 troubleshooting obstacles. Keep tracking template in main report. |
 | Phase 7 | User cannot implement Week 1 starter set without clarification | **Adjust** -- Simplify starter set (reduce to 2-3 habits). Provide video or example of each micro-habit. Offer weekly check-in to troubleshoot obstacles. |
+| Phase 7 | User rejects final output | **Targeted revision** -- ask which routine phase, habit selection, or schedule timing fell short and rerun only that section. Do not regenerate the full routine optimization. |
 
 ---
 

@@ -88,6 +88,7 @@ Done when: (1) the core concept is explained at the requested level, (2) at leas
 | REASON | Topic requires extensive prerequisites | Adjust -- build a mini prerequisite explanation first, clearly labeled: "To understand X, we first need to cover Y" |
 | PLAN | Explanation is too long for requested format | Adjust -- cut to the core insight and single best analogy. Offer the full version as a follow-up |
 | ACT | User says "I still don't get it" after explanation | Retry -- try a completely different analogy from a different domain. If second attempt fails, break the concept into smaller pieces |
+| ACT | User rejects final output | Targeted revision -- ask which part was unclear (analogy, level of detail, misconception section, or the "so what") and rerun only that part at a different level or with a different example. |
 
 ## State Persistence
 - User's comprehension level history (track which levels work best for this person)
@@ -95,6 +96,37 @@ Done when: (1) the core concept is explained at the requested level, (2) at leas
 - Analogies that resonated (reuse the same analogy style: sports person gets sports analogies)
 - Misconceptions the user held (track corrections to reinforce in future topics)
 - Preferred format (some users always want ELI5, others want the full lesson)
+
+## Reference
+
+### Comprehension Level Guide
+
+| Level | Audience | Vocabulary | Analogy Source | Length Target |
+|---|---|---|---|---|
+| Child (8-12) | No prior knowledge | No words over 3 syllables if avoidable | Playground, food, family, games | 2-3 short paragraphs |
+| Teen (13-17) | Basic schooling, media-literate | Common words, occasional terms defined | Social media, money, school, relationships | 3-4 paragraphs |
+| Curious adult | General public | Plain English, jargon defined on first use | Work, household, driving, cooking | 4-6 paragraphs |
+| Student | Studying the subject | Proper terminology, introduced systematically | Cross-domain technical parallels | Full lesson with sections |
+| Professional | Deep domain knowledge | Technical language assumed | Abstract or domain-specific parallels | Dense, can assume prerequisites |
+
+### Analogy Domain Map by Audience
+
+| For this audience... | Try analogies from... |
+|---|---|
+| Sports fans | Sports strategy, team dynamics, training |
+| Parents | Raising children, household management |
+| Cooks | Recipes, ingredients, timing, heat |
+| Business people | Investments, supply chains, teams |
+| Tech workers | Code, databases, networks |
+| Students | Classroom, exams, research papers |
+
+### Common Explanation Mistakes
+
+- Leading with history or etymology (readers want the concept, not its origin)
+- Using the word being defined in the definition
+- Stacking analogies without checking if the first one landed
+- Over-qualifying instead of making the key point first
+- Forgetting to answer "so what" -- why this matters to this person
 
 ---
 

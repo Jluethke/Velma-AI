@@ -397,6 +397,7 @@ The skill maintains execution state to enable resumption if interrupted:
 | 6 | Planning horizon too short for critical path | **Adjust** -- extend planning horizon and note recommendation. |
 | 7 | Output format not recognized | **Abort** -- request valid format. |
 | 7 | Generated output is invalid | **Abort** -- report as internal error. |
+| 7 | User rejects final output | **Targeted revision** -- ask which feature's ranking, quarter assignment, or risk assessment fell short and rerun only that feature's Phase 2-6. Do not re-prioritize the full backlog. |
 
 ---
 

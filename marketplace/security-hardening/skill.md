@@ -156,6 +156,7 @@ The skill is DONE when:
 | PRIORITIZE | Cannot assess exploitability without deployment context | **Escalate** -- ask user for deployment details |
 | REMEDIATE | Fix requires architectural change beyond scope | **Escalate** -- document the issue and recommend a dedicated project |
 | VERIFY | Cannot run verification tests (no test environment) | **Adjust** -- provide manual verification steps instead |
+| VERIFY | User rejects final output | **Targeted revision** -- ask which vulnerability finding, remediation step, or priority ranking fell short and rerun only that section. Do not re-scan the full codebase. |
 
 ## State Persistence
 

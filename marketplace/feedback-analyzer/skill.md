@@ -126,6 +126,7 @@ The skill is DONE when:
 | REASON | No clear themes emerge (all feedback is unique) | **Adjust** -- report at the individual-item level, suggest collecting more feedback before drawing conclusions |
 | REASON | Feedback is in multiple languages | **Adjust** -- analyze each language group separately, then merge themes |
 | PLAN | All feedback is positive (no pains to address) | **Adjust** -- look for "even better if" suggestions, minor friction points, and feature requests hidden in positive reviews |
+| ACT | User rejects final output | **Targeted revision** -- ask which section fell short (theme extraction, sentiment scoring, action item prioritization, or outlier analysis) and rerun only that section. Do not re-analyze the full corpus. |
 
 ## State Persistence
 
@@ -133,6 +134,46 @@ Between runs, this skill accumulates:
 - **Theme taxonomy**: stable theme categories per product/service, enabling consistent tracking over time
 - **Baseline metrics**: sentiment and theme frequencies from previous analyses, powering trend detection
 - **Action item tracking**: previously recommended actions and whether they were implemented, enabling impact measurement
+
+## Reference
+
+### Theme Significance Threshold
+
+A theme is significant if it appears in at least 10% of items OR at least 3 items, whichever is smaller.
+
+### Priority Assignment Rules
+
+| Priority | Conditions |
+|---|---|
+| Critical | High frequency (>20% of items) + high intensity (4-5) + causes churn or safety risk |
+| High | High frequency OR high intensity; significant pain but not existential |
+| Medium | Moderate frequency (10-20%) and moderate intensity (2-3) |
+| Low | Low frequency (<10%) but valid and actionable |
+
+### Sentiment Classification Guide
+
+| Classification | Signal |
+|---|---|
+| Positive | Net positive language, satisfaction, recommends to others |
+| Negative | Frustration, regret, churn intent, complaint language |
+| Neutral | Factual, descriptive, no emotional valence |
+| Mixed | Contains both strong positive AND strong negative elements in the same item |
+
+Note: Use full text, not just star ratings. A 3-star review can be very negative in language.
+
+### Intensity Scale
+
+| Score | Signal Words / Patterns |
+|---|---|
+| 1 | Mild mention, passing reference ("it could be better") |
+| 2 | Clear preference or mild frustration |
+| 3 | Explicit opinion, repeated in multiple items |
+| 4 | Strong language, emotional tone, likely influenced behavior |
+| 5 | Passionate, extreme language, all-caps, multiple exclamations, drove a specific action (churn, referral, return) |
+
+### Common Theme Categories
+
+Pricing, onboarding, performance/speed, reliability/uptime, customer support, documentation, feature gaps, UI/UX, billing, integrations, mobile experience, value for money
 
 ---
 

@@ -122,6 +122,7 @@ ACT     --> Generate health report, cleanup commands, maintenance schedule
 | REASON | No issues found (perfect health) | **Skip** -- report score 1.0 HEALTHY, no remediation needed |
 | PLAN | Remediation command would be destructive (force delete) | **Escalate** -- flag for human review before execution |
 | ACT | Report generation fails mid-compilation | **Retry** -- regenerate from cached scan data (max 2 retries) |
+| ACT | User rejects final output | **Targeted revision** -- ask which health dimension, remediation step, or score fell short and rerun only that section. Do not re-scan the full repository. |
 
 ## State Persistence
 

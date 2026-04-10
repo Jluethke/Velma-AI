@@ -78,6 +78,7 @@ Done when: (1) 12-month calendar covers all major home systems, (2) overdue item
 | OBSERVE | Condo/townhouse with HOA | Adjust -- exclude exterior maintenance handled by HOA, focus on interior systems |
 | REASON | Climate zone ambiguous | Adjust -- use nearest major city's climate pattern, note assumption |
 | PLAN | Budget constraint is very tight | Adjust -- prioritize safety-critical tasks (carbon monoxide, water damage, fire risk), defer cosmetic maintenance |
+| ACT | User rejects final output | Targeted revision -- ask which section fell short (calendar sequencing, cost estimates, DIY vs. pro designations, or red flag guide) and rerun only that section. Do not rebuild the full schedule. |
 
 ## State Persistence
 - Maintenance log (what was done, when, by whom, cost)
@@ -85,6 +86,52 @@ Done when: (1) 12-month calendar covers all major home systems, (2) overdue item
 - Vendor contacts and service history
 - Cost history (actual vs estimated, to improve future estimates)
 - Seasonal reminders (what's coming up next month)
+
+## Reference
+
+### Maintenance Frequency Reference
+
+| Task | Frequency | DIY or Pro | Consequence of Neglect |
+|---|---|---|---|
+| HVAC filter replacement | Monthly (1-inch filters) or every 3 months (4-inch) | DIY | Reduced efficiency, equipment failure |
+| HVAC system service | 2x per year (spring + fall) | Pro | Shortened equipment life, carbon monoxide risk |
+| Smoke/CO detector test | Quarterly | DIY | Safety hazard |
+| Gutter cleaning | 2x per year (spring + fall; add if near trees) | DIY or Pro | Foundation damage, roof rot, ice dams |
+| Roof inspection | Annual | DIY visual or Pro | Leaks, structural damage |
+| Water heater flush | Annual | DIY | Sediment buildup, reduced efficiency, early failure |
+| Exterior caulk/weatherstripping check | Annual | DIY | Energy loss, moisture intrusion |
+| Dryer vent cleaning | Annual | DIY or Pro | Fire hazard |
+| Pest inspection | Annual or biannual | Pro (in high-risk zones) | Structural damage (termites), health risks |
+| Exterior paint | Every 5-7 years | DIY or Pro | Moisture damage to siding and structure |
+
+### System Expected Lifespan Reference
+
+| System | Expected Lifespan | Action at 75% of Life |
+|---|---|---|
+| Asphalt shingle roof | 20-25 years | Begin budgeting for replacement |
+| HVAC system | 15-20 years | Increase inspection frequency; get replacement quotes |
+| Water heater (tank) | 8-12 years | Inspect anode rod; budget for replacement |
+| Water heater (tankless) | 20+ years | Scale inspection at 15 years |
+| Refrigerator | 10-15 years | Monitor compressor performance |
+| Washer/dryer | 10-13 years | Inspect hoses and lint traps carefully |
+
+### Annual Maintenance Budget Rule of Thumb
+
+1% of home value per year for newer homes (< 10 years)
+2% of home value per year for older homes (> 20 years)
+
+Example: $350,000 home = $3,500-7,000 per year in maintenance reserve.
+
+### Red Flag Quick Reference
+
+| Warning Sign | Likely Issue | Urgency |
+|---|---|---|
+| Water stain on ceiling | Active or recent roof or plumbing leak | Immediate |
+| Musty smell in basement | Moisture intrusion or mold | High |
+| Rotten egg smell near gas appliances | Gas leak | Emergency -- evacuate and call gas company |
+| Strange HVAC smell (burning or chemical) | Potential carbon monoxide or electrical issue | Immediate |
+| Foundation cracks wider than 1/4 inch | Structural settling or soil movement | High -- consult structural engineer |
+| Slow drains throughout house | Main sewer line issue | High |
 
 ---
 

@@ -258,6 +258,7 @@ The skill is DONE when:
 | IDENTIFY | Cannot assess resource utilization (no metrics) | **Escalate** -- recommend implementing monitoring as a prerequisite |
 | RECOMMEND | All opportunities are high-effort | **Adjust** -- break into smaller increments, identify partial implementations |
 | TRACK | Baseline spend changes due to business growth | **Adjust** -- normalize savings to per-employee or per-revenue-dollar basis |
+| TRACK | User rejects final output | **Targeted revision** -- ask which expense category, savings opportunity, or benchmark comparison fell short and rerun only that section. Do not re-analyze the full expense profile. |
 
 ## State Persistence
 

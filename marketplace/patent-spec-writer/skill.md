@@ -202,6 +202,7 @@ The skill is DONE when:
 | DESCRIPTION | Claim element too abstract to describe | **Flag** -- describe at highest level possible, note that element may need narrowing |
 | SUMMARY | Abstract exceeds 150 words | **Fix** -- compress until under limit |
 | REVIEW | Claim element not covered in specification | **Fix** -- add description, re-review |
+| ACT | User rejects final output | **Targeted revision** -- ask which section or claim element's description fell short and rerun only that section. Do not regenerate the full specification. |
 
 ## State Persistence
 
@@ -209,6 +210,39 @@ Between runs, this skill accumulates:
 - **Section templates**: effective specification structures per domain
 - **Prior art database**: prior art references with differentiation language
 - **Term glossary**: functional equivalents for common implementation terms
+
+## Reference
+
+### Required Specification Sections (USPTO Order)
+
+| Section | Purpose | Key Requirement |
+|---|---|---|
+| Title | Identify the invention | Under 15 words; no product names |
+| Cross-Reference to Related Applications | Link to related patents/applications | List all co-pending families |
+| Field of the Invention | Technical field | 1-2 sentences |
+| Background | Problem and prior art distinction | Must specifically distinguish, not just describe |
+| Summary | Overview of what the invention provides | Mirror independent claims in prose |
+| Brief Description of Drawings | Label every figure | One sentence per figure |
+| Detailed Description | Enable every claim element | Skilled practitioner could implement from this alone |
+| Claims | Legal scope definition | Separate document; referenced here |
+| Abstract | Technical disclosure summary | Under 150 words; no legal language |
+
+### Enablement Standard
+
+The specification must describe how to make and use the invention in sufficient detail that a person having ordinary skill in the relevant art (PHOSITA) could do so without undue experimentation.
+
+Practical test: for each claim element, can you answer "how does this work in detail?" from the specification alone?
+
+### Forbidden Language (Specification)
+
+Same rules as claims: no product names, library names, language names, framework names, or fixed numeric values without "configurable" qualifier.
+
+Also avoid: "the present invention is the best..." or "the only way to..." (creates unnecessary limitations).
+
+### Abstract Formula
+
+One paragraph, under 150 words:
+"A [system/method] for [functional purpose] is disclosed. The [system] comprises [component A] configured to [function], [component B] configured to [function], and [component C] operable to [function]. The [method] includes [step 1], [step 2], and [step 3], thereby [achieving the technical result]."
 
 ---
 

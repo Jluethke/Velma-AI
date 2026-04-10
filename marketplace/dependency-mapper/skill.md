@@ -182,6 +182,7 @@ The skill is complete when:
 | Recommendations | No decoupling strategy is obvious for a cycle | **Adjust** -- provide generic recommendation: "Consider architectural review to break this cycle; options include dependency injection, interface extraction, or module reorganization." Flag for manual inspection. |
 | Visualization | Requested format is unsupported (not "dot", "json", or "both") | **Abort** -- return error message: "output_format must be 'dot', 'json', or 'both'; got '{format}'." |
 | Visualization | DOT output is syntactically invalid | **Adjust** -- log error; return JSON format instead; add warning to report. |
+| Visualization | User rejects final output | **Targeted revision** -- ask which dependency mapping, cycle detection result, or recommendation fell short and rerun only that section. Do not re-map the full codebase. |
 
 ## Reference Section
 

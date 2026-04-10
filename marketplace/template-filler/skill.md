@@ -122,6 +122,7 @@ The skill is DONE when:
 | REASON | Ambiguous match (context has two possible values for one placeholder) | **Flag** -- use the more specific match, note the alternative in review_flags |
 | PLAN | Filled value breaks document grammar | **Adjust** -- try alternative formatting (singular/plural, with/without article) |
 | PLAN | Template has conditional sections (if/else blocks) | **Adjust** -- evaluate conditions against context, include/exclude sections accordingly |
+| ACT | User rejects final output | **Targeted revision** -- ask which placeholder's fill value or formatting is wrong and rerun only that placeholder's REASON-PLAN phases. Do not re-fill the entire document. |
 
 ## State Persistence
 
@@ -129,6 +130,48 @@ Between runs, this skill accumulates:
 - **Synonym maps**: placeholder name to context key mappings that have been confirmed (e.g., `company` = `organization_name`)
 - **Format preferences**: per-template or per-user formatting preferences
 - **Inference patterns**: successful inferences that can be reused (e.g., extracting first name from email address)
+
+---
+
+## Reference
+
+### Placeholder Syntax Patterns
+
+| Format | Example |
+|---|---|
+| Double curly brace | `{{company_name}}` |
+| Single curly brace | `{company_name}` |
+| Square bracket | `[COMPANY NAME]` |
+| Angle bracket | `<company_name>` |
+| Dollar prefix | `$company_name` |
+| Percent wrap | `%company_name%` |
+| Double angle | `<<company_name>>` |
+
+### Confidence Score Guide
+
+| Score | Source | Action |
+|---|---|---|
+| 0.95+ | Exact match (case-insensitive) | Fill; no flag needed |
+| 0.7-0.9 | Semantic match (synonym/abbreviation) | Fill; note in fill report |
+| 0.4-0.7 | Inferred from context | Fill; add to review_flags |
+| 0.3-0.5 | Default value applied | Fill; always add to review_flags |
+| 0.0 | Unfilled | Leave as `[NEEDS: placeholder_name]` |
+
+### Format Rules Reference
+
+| Data Type | Default Behavior |
+|---|---|
+| Date | Match format used elsewhere in template; fallback to ISO (YYYY-MM-DD) |
+| Currency | Match currency symbol in template; include thousands separator |
+| Numbers | Match precision used in template context |
+| Text capitalization | Match surrounding text (ALL CAPS / Title Case / lowercase) |
+| Lists / arrays | Comma-separated inline; bulleted if template has list formatting |
+
+### Unfilled Placeholder Handling
+
+Never silently delete an unfilled placeholder. Wrap as: `[NEEDS: placeholder_name]`
+
+This makes the gap visible during review so the user knows exactly what to supply.
 
 ---
 

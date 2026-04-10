@@ -289,6 +289,7 @@ The skill is complete when:
 | Phase 5 | Cannot generate appropriate remediation exercise for a misconception | **Adjust** -- Document the misconception and recommend instructor-designed remediation; note in report; do not skip the misconception |
 | Phase 6 | Remediation plan exceeds 120 minutes estimated duration | **Adjust** -- Prioritize top 3-5 misconceptions by rank; recommend phased remediation over multiple sessions; document in plan |
 | Phase 7 | Student does not complete remediation exercises | **Adjust** -- Document completion status; note which exercises were not completed; recommend follow-up session; do not mark as "Not Resolved" without evidence |
+| Phase 7 | User rejects final output | **Targeted revision** -- ask which misconception diagnosis, severity rating, or remediation plan fell short and rerun only that section. Do not re-diagnose the full concept map. |
 
 ---
 

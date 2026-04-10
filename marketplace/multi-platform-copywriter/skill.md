@@ -230,6 +230,7 @@ The skill is complete when:
 | Phase 5 | Brand alignment score is <75 | **Adjust** -- Review variations against provided brand guidelines. Identify which variations deviate from tone, vocabulary level, or key values. Regenerate outlier variations. Re-score and verify ≥75. |
 | Phase 5 | Platform compliance flags are raised (e.g., Twitter exceeds 280 chars) | **Adjust** -- Fix flagged variations by shortening or expanding to meet platform constraints. Recount and re-validate. Clear platform_compliance_flags if all pass. |
 | Phase 5 | More than 3 variations require regeneration (tone consistency or brand alignment <75) | **Adjust** -- Instead of regenerating individual variations, regenerate all variations from Phase 2-4 using stricter brand voice enforcement. Re-score and verify all dimensions ≥75. |
+| Phase 5 | User rejects final output | **Targeted revision** -- ask which platform variation, tone, or messaging angle fell short and regenerate only that variation. Do not regenerate all platform copy. |
 
 ---
 

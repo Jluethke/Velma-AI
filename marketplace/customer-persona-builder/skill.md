@@ -138,8 +138,44 @@ The skill is DONE when:
 | SEGMENT | All candidate segments score identically | **Adjust** -- split by channel preference or decision process to differentiate |
 | BUILD | Existing customer data contradicts a generated persona | **Adjust** -- weight real customer data over generated assumptions, note the conflict |
 | SCORE | Two personas score within 2 points of each other | **Adjust** -- present both as co-primary targets and recommend A/B testing messaging |
+| ACT | User rejects final output | Targeted revision -- ask which persona fell short (missing depth, wrong pain points, wrong channel) and rebuild only that persona. Do not regenerate all personas. |
 
 ---
+
+## Reference
+
+### Persona Scoring Dimensions (1-10 each, max 50)
+
+| Dimension | What to Measure |
+|---|---|
+| Pain severity | How acutely does this persona feel the problem? (1 = mild inconvenience, 10 = crisis) |
+| Willingness to pay | Do they have budget authority and urgency to spend? |
+| Market size | How many people match this profile? |
+| Reachability | Can you get in front of them via paid, content, or outbound? |
+| Speed to close | How fast do they typically decide (days vs. months)? |
+
+### Product Category Framework
+
+| Category | Meaning | Implication for Messaging |
+|---|---|---|
+| Painkiller | Solves acute, recurring pain | Lead with relief: "Stop [pain] today" |
+| Vitamin | Nice-to-have improvement | Lead with aspiration: "Become [better version]" |
+| Candy | Pure desire or status | Lead with identity: "Join [group you admire]" |
+
+### Messaging Hook Formula
+
+Pain + Implication + Relief hint = Hook that stops the scroll
+
+Example: "Still losing deals to [competitor]? [Product] gives your reps the [outcome] they need to close faster."
+
+### Anti-Persona Disqualifiers
+
+Common traits that exclude a lead despite surface similarity:
+- Budget below minimum viable contract value
+- Problem severity too low to justify switching cost
+- Decision cycle longer than your runway
+- Stakeholder count too high for a self-serve motion
+- Already locked into a long-term competitor contract
 
 **License:** Free to use (price: 0 TRUST). Royalties apply to published derivatives.
 

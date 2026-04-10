@@ -126,6 +126,45 @@ Done when: (1) full week is mapped with energy scores, (2) mismatches are quanti
 | REASON | User scores everything as "fine" / neutral | Push: "Imagine doing this activity for 8 hours straight. Still neutral? What would shift?" Extremes reveal truth. |
 | PLAN | User says they can't change anything | Challenge one thing: "If I told you that you had to cut 3 hours from your week or face a consequence -- what would you cut? That's your answer." |
 | ACT | User makes the swap too ambitious | Scale down: "That's a great target for month 2. For this week, what's the smallest version of that swap?" |
+| ACT | User rejects final output | Targeted revision -- ask which section felt off (energy scores, mismatch analysis, redesigned schedule, or the swap recommendation) and rerun only that section with different framing. |
+
+## Reference
+
+### Energy Scoring Formula
+
+For each activity: `weekly_hours × energy_score = energy_cost`
+
+| Score | Meaning | Weekly Example |
+|---|---|---|
+| +2 | Actively energizing (you feel better after) | 5 hrs × +2 = +10 |
+| +1 | Mildly energizing | 10 hrs × +1 = +10 |
+| 0 | Neutral, no noticeable impact | any hours × 0 = 0 |
+| -1 | Mildly draining | 10 hrs × -1 = -10 |
+| -2 | Actively depleting (need recovery after) | 5 hrs × -2 = -10 |
+
+Activities with the largest negative products are the highest-leverage targets for change.
+
+### Activity Category Reference
+
+| Category | Examples | Common Energy Pattern |
+|---|---|---|
+| Work — deep focus | Writing, designing, coding, analysis | +1 to +2 when matched to peak hours |
+| Work — admin | Email, scheduling, approvals | -1 to 0; do in valley hours |
+| Work — meetings | Recurring standups, status updates | -1 to -2 if unstructured |
+| Maintenance | Cooking, cleaning, errands | 0 to -1 |
+| Relationships | Quality time with people you enjoy | +1 to +2 |
+| Relationships (obligatory) | Events you attend from guilt | -1 to -2 |
+| Exercise | Most forms post-workout | +1 to +2 (effort during, energy after) |
+| Passive consumption | TV, social media scroll | -1 to -2 (often mistaken for recovery) |
+| Active recovery | Walk, meditation, reading for pleasure | +1 to +2 |
+
+### Peak/Valley Chronotype Guide
+
+| Chronotype | Peak Window | Valley Window | Best Use of Peak |
+|---|---|---|---|
+| Morning (most common) | 8 AM – 12 PM | 1 PM – 3 PM | Deep creative or analytical work |
+| Midday | 10 AM – 2 PM | 3 PM – 5 PM | Long-form projects, complex decisions |
+| Evening | 4 PM – 9 PM | 10 AM – 12 PM | Creative work, learning, writing |
 
 ---
 

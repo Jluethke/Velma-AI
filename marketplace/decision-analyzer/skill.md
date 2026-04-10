@@ -200,6 +200,7 @@ The skill is DONE when:
 | REASON | Scoring data unavailable for a criterion | Adjust -- use best estimate and flag confidence as reduced |
 | PLAN | Confidence too low for any recommendation | Escalate -- report the analysis but flag that more information is needed before deciding |
 | ACT | Loop detected (3+ cycles without convergence) | Abort -- deliver best-available analysis with explicit uncertainty disclaimer |
+| ACT | User rejects final output | **Targeted revision** -- ask which option scoring, criterion weighting, or recommendation fell short and rerun only that analysis phase. Do not restart the full decision framework. |
 
 ## State Persistence
 

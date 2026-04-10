@@ -336,6 +336,7 @@ The skill is DONE when:
 | PHASE 7 | Tone is inconsistent across threads | **Retry** -- Rewrite off-tone threads to match the established voice and style. Use the tone_consistency assessment to identify specific examples of inconsistency. Verify that the revised threads match the specified tone (technical, accessible, provocative, or professional-engaging). |
 | PHASE 7 | Engagement potential is low for multiple threads (<66% on engagement rubric) | **Adjust** -- Prioritize the highest-engagement threads and remove lower-priority ones. Consider splitting the campaign into two publishing cycles (e.g., 3 high-engagement threads now, 2 lower-engagement threads later). Document the decision in the publishing_schedule. |
 | PHASE 8 | Publishing package exceeds 10 threads | **Adjust** -- Prioritize the highest-engagement threads (based on engagement_potential scores) and remove lower-priority ones. Consider splitting into two publishing campaigns (e.g., "Campaign A: Top 5 insights" and "Campaign B: Supporting insights"). Document the decision in publishing_schedule. |
+| PHASE 8 | User rejects final output | **Targeted revision** -- ask which thread, insight extraction, or platform adaptation fell short and rerun only that section. Do not regenerate the full thread set. |
 
 ---
 

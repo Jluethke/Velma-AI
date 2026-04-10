@@ -131,6 +131,7 @@ Done when: (1) total compensation is broken down and valued, (2) market salary r
 | REASON | User's walk-away number is above market rate | Escalate -- explain the gap honestly: "The market for this role in your area is $X-$Y. Asking for $Z may not be realistic. Here's how to build toward that number over 1-2 years" |
 | PLAN | User is too anxious to negotiate at all | Adjust -- provide an email-only strategy (no phone negotiation required). Frame it as a single email with a single ask. "You don't have to be a negotiator. You just have to send one email" |
 | ACT | Employer rescinds the offer during negotiation | Emergency protocol -- this is extremely rare and usually means the company has serious culture problems. Provide script to ask if original offer stands. If truly rescinded, reframe as a bullet dodged |
+| ACT | User rejects final output | **Targeted revision** -- ask which section fell short (market analysis, three-number range, a specific script, or the employer tactics guide) and rerun only that section. Do not rebuild the full strategy. |
 
 ## State Persistence
 - Salary history and progression (track offers, negotiations, and outcomes over time)
@@ -139,6 +140,54 @@ Done when: (1) total compensation is broken down and valued, (2) market salary r
 - Benefits valuation models (health insurance costs, 401k match value, equity calculations)
 - Negotiation comfort level trajectory (track improvement from "never done it" to "comfortable")
 - Company-specific negotiation intelligence (which companies negotiate, which don't, typical flexibility areas)
+
+---
+
+## Reference
+
+### Three-Number Framework
+
+| Number | Definition | Typical Range vs. Offer |
+|---|---|---|
+| Walk-away | Minimum acceptable; below this, don't take the job | Market minimum or current salary |
+| Target | What you'd be genuinely happy with | 10-20% above offer (strong leverage) / 5-10% (moderate) |
+| Aspirational | Opening counter; ambitious but defensible | 15-25% above offer |
+
+### Leverage Assessment
+
+| Level | Signals |
+|---|---|
+| Strong | Competing offer in hand, rare skills, currently employed, employer urgency |
+| Moderate | Strong interview, relevant experience exceeding requirements, industry connections |
+| Weak | No competing offers, career change, long unemployment, entry-level with many candidates |
+
+### Negotiation Sequence (Order Matters)
+
+1. Base salary — compounds into future raises, bonuses, 401(k) matches
+2. Signing bonus — one-time cost; easier to approve when base is "firm"
+3. Equity / bonus structure
+4. PTO, start date, title, remote flexibility
+5. Professional development budget, WFH stipend (easy concessions — save for last)
+
+### Common Employer Tactics + Counter-Strategies
+
+| Tactic | Counter |
+|---|---|
+| "This is our best offer" | "I understand. Is there flexibility in signing bonus, PTO, or equity?" |
+| "We don't negotiate" | Negotiate start date, title, review timeline instead |
+| "We need an answer by Friday" | "Can I have until Wednesday? I want to give this the consideration it deserves." |
+| "What are you making now?" | "I'd rather focus on the value I'd bring and what's fair for the market." |
+| "We already stretched for you" | Stay appreciative but firm: "I really appreciate that, and I want to make this work." |
+
+### Benefits Valuation Quick Reference
+
+| Benefit | Rough Annual Value |
+|---|---|
+| Health insurance (employer share) | $5,000-$15,000 |
+| 401(k) match (5% on $80K salary) | $4,000 |
+| Each week of PTO | ~2% of base salary |
+| Remote work (no commute) | $3,000-$7,000 in time + costs |
+| Signing bonus (one-time) | Face value ÷ years before you can leave |
 
 ---
 

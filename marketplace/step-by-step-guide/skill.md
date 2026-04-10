@@ -118,6 +118,7 @@ The skill is DONE when:
 | REASON | Task cannot be broken into sequential steps (parallel work required) | **Adjust** -- use grouped steps with a "do these in any order" note |
 | REASON | A step requires tools/access the user may not have | **Flag** -- add to prerequisites with acquisition instructions |
 | PLAN | Guide exceeds 20 steps | **Adjust** -- group related steps into sections with section headers |
+| ACT | User rejects final output | **Targeted revision** -- ask which step is unclear or missing and rerun only that step's REASON-PLAN phases. Do not regenerate the full guide. |
 
 ## State Persistence
 
@@ -125,6 +126,45 @@ Between runs, this skill accumulates:
 - **Step libraries**: reusable step sequences for common sub-tasks (e.g., "set up a virtual environment" appears in many guides)
 - **Audience calibration**: what level of detail each audience level actually needs, refined by feedback
 - **Mistake patterns**: frequently encountered errors per domain, improving the common mistakes section over time
+
+---
+
+## Reference
+
+### Step Granularity Rules
+
+| Signal | Action |
+|---|---|
+| Step contains "and" joining two distinct actions | Split into two steps |
+| Step has no observable output | Merge with the next step |
+| Step requires a decision ("if X, do Y") | Add a decision point with both paths |
+| Step could cause data loss or security issues | Add an explicit WARNING before the step |
+
+### Audience Level Calibration
+
+| Level | What to Include | What to Skip |
+|---|---|---|
+| Beginner | Define all terms; explain why each step matters; include examples | Nothing — assume no prior knowledge |
+| Intermediate | Task-specific steps; skip setup basics | Basic installation, environment setup |
+| Expert | Commands/actions only; no explanations unless non-obvious | Everything obvious to the domain |
+
+### Time Estimate Padding Rules
+
+- Beginner audience: multiply raw estimate by 1.5
+- Intermediate audience: multiply by 1.2
+- Expert audience: use raw estimate
+
+### Verification Checkpoint Formula
+
+"After completing this step, you should see/have/be able to [specific observable result]. If you see [error symptom] instead, see Troubleshooting step N."
+
+### Common Mistakes Structure
+
+| Field | Content |
+|---|---|
+| Mistake | What the person did wrong |
+| Symptom | What they observe as a result |
+| Fix | Exact corrective action |
 
 ---
 

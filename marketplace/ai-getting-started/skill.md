@@ -120,6 +120,7 @@ Done when: (1) AI is explained in a way that connects to something the person al
 | ACT | Person asks a follow-up fear question not originally raised | Expand -- address the new concern with the same honest, direct approach before continuing |
 | ACT | Person is excited and wants to go deeper immediately | Redirect -- suggest 2-3 next skills (Digital Safety Guide, Tech Translator) rather than overloading this session |
 | ACT | Person rejects the explanation or says it didn't help them understand | **Adjust** -- incorporate their specific feedback (e.g., analogy didn't land, walkthrough was too fast, tasks weren't relevant), swap in a different analogy or platform, and regenerate only the affected section; do not restart the whole guide |
+| ACT | User rejects final output | **Targeted revision** -- ask which analogy, walkthrough step, or task example fell short and rerun only that section. Do not regenerate the full guide. |
 
 ## Reference
 

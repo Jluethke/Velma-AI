@@ -219,6 +219,7 @@ The skill is DONE when:
 | REASON | All items classify as signal (threshold too low) | Adjust -- raise threshold by 20%, re-classify |
 | PLAN | Alert fatigue rule eliminates all signals | Adjust -- keep top 3 regardless of threshold |
 | ACT | User feedback contradicts filter logic consistently | Escalate -- present the conflict, ask user to update priority framework |
+| ACT | User rejects final output | **Targeted revision** -- ask which signal classification, source reliability score, or filtered item fell short and rerun only that section. Do not re-filter the full stream. |
 
 ## State Persistence
 

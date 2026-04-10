@@ -122,6 +122,7 @@ Done when: (1) question bank covers all likely categories for the interview type
 | REASON | Interview is tomorrow with no prep time | Adjust -- skip the full prep, deliver only: "tell me about yourself" script, top 5 likely questions with quick frameworks, 3 questions to ask, and the parking-lot cheat sheet |
 | PLAN | User has extreme interview anxiety | Adjust -- add grounding techniques (box breathing, power posing), reframe the interview as a conversation not an interrogation, emphasize that they're also evaluating the company |
 | ACT | User gives weak answers in mock interview | Coach -- never say "that was bad." Instead: "Good start -- here's how to make it stronger: lead with the result, then explain how you got there" |
+| ACT | User rejects final output | Targeted revision -- ask which section fell short (question bank, STAR frameworks for specific questions, mock interview feedback, or the cheat sheet) and rerun only that section. Do not regenerate the full prep package. |
 
 ## State Persistence
 - Interview history (roles applied for, questions encountered, outcomes)
@@ -129,6 +130,52 @@ Done when: (1) question bank covers all likely categories for the interview type
 - Company research cache (culture notes, Glassdoor insights, interview process details by company)
 - Coaching progress (which weaknesses have improved, which need more practice)
 - Thank-you email templates (personalized per interview, tracked for follow-up timing)
+
+## Reference
+
+### STAR Method Template
+
+| Component | Prompt | Length Target |
+|---|---|---|
+| Situation | Set the scene: when, where, what was happening | 1-2 sentences |
+| Task | Your specific responsibility or challenge | 1 sentence |
+| Action | What YOU did (use "I", not "we") | 3-5 sentences; most detail here |
+| Result | What happened? Quantify if possible. What did you learn? | 1-3 sentences |
+
+Total answer target: 90-120 seconds (about 200-250 words spoken)
+
+### Common Behavioral Question Bank by Competency
+
+| Competency | Example Question |
+|---|---|
+| Leadership | "Tell me about a time you led a team through a difficult situation." |
+| Problem-solving | "Describe a time you solved a problem with limited resources." |
+| Conflict resolution | "Tell me about a time you disagreed with a colleague or manager." |
+| Failure recovery | "Tell me about your biggest professional failure and what you learned." |
+| Teamwork | "Describe a time you had to work with someone very different from you." |
+| Initiative | "Give me an example of a time you went beyond your job description." |
+| Time management | "Tell me about a time you had to manage multiple competing priorities." |
+| Adaptability | "Describe a time when your plans changed unexpectedly and how you responded." |
+
+### Curveball Question Scripts
+
+| Question | Strategy |
+|---|---|
+| "What's your biggest weakness?" | Real weakness + active improvement + evidence of progress |
+| "Why are you leaving?" | Move toward opportunity, not away from frustration |
+| "Where do you see yourself in 5 years?" | Growth within this field; ambition without claiming the interviewer's job |
+| "Why should we hire you?" | 3 specific strengths tied to 3 specific job requirements |
+| Salary expectations | "I'd like to learn more about the full scope first -- can you share the budgeted range?" |
+
+### Smart Questions to Ask Interviewers
+
+| Category | Question |
+|---|---|
+| Role clarity | "What does success look like in the first 90 days?" |
+| Team dynamics | "How would you describe the team I'd be working with?" |
+| Growth | "What growth opportunities exist for someone in this role?" |
+| Culture | "What's something about working here that surprised you?" |
+| Decision | "What are the next steps in your process?" |
 
 ---
 

@@ -230,6 +230,7 @@ The skill is DONE when:
 | ANALYZE | Too many contradictions to resolve (>50% of claims contested) | Escalate -- report the contested landscape rather than forcing a synthesis |
 | SYNTHESIZE | Cannot form coherent narrative (findings are disconnected) | Adjust -- reframe sub-questions to find connecting threads, or deliver findings as a structured list rather than narrative |
 | DELIVER | Confidence is speculative across all findings | Adjust -- explicitly label the report as preliminary/exploratory, recommend specific follow-up research |
+| DELIVER | User rejects final output | **Targeted revision** -- ask which sub-question synthesis, source assessment, or conclusion fell short and rerun only that section. Do not regenerate the full research synthesis. |
 
 ## State Persistence
 

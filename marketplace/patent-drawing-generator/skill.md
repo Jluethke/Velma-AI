@@ -172,6 +172,7 @@ Done when:
 | IMAGE | Mermaid.ink API unreachable | Save .mmd files; instruct user to render at mermaid.live |
 | IMAGE | Rendered image too small/corrupt | Increase scale factor; retry with simplified diagram |
 | COMPLY | Color required for clarity | Note petition needed for color drawings (37 CFR 1.84(a)(2)) |
+| ACT | User rejects final output | **Targeted revision** -- ask which figure's layout, reference numeral assignment, or Mermaid code fell short and rerun only that figure's Phase 3-4. Do not regenerate all figures. |
 
 ## USPTO Drawing Standards Reference (37 CFR 1.84)
 

@@ -280,6 +280,7 @@ The skill is DONE when:
 | GENERATE | Cannot mock a dependency (e.g., hardware, proprietary SDK) | **Adjust** -- generate integration test stub with TODO for manual setup |
 | VALIDATE | Test requires environment not available (database, API key) | **Adjust** -- mark as integration test, add skip decorator with reason |
 | REPORT | No existing coverage data for trend analysis | **Adjust** -- establish baseline, skip trend section |
+| REPORT | User rejects final output | **Targeted revision** -- ask which test case, coverage gap, or prioritization fell short and regenerate only that section. Do not regenerate the full test suite. |
 
 ## State Persistence
 

@@ -277,6 +277,7 @@ The skill is DONE when:
 | Phase 4 | Debt payoff timeline exceeds 10 years (120 months) | **Adjust** -- Flag in report as extended timeline. Output recommendation: "Debt payoff timeline exceeds 10 years. Consider increasing debt payments or reducing other allocations to accelerate payoff." Continue with plan but highlight in report. |
 | Phase 6 | Rounding errors cause balance ≠ 0 | **Adjust** -- Adjust largest allocation by rounding difference to achieve zero-based balance (balance = 0). Log: "Rounding adjustment: [category] adjusted by $[amount]." |
 | Phase 7 | Debt payoff timeline exceeds 10 years | **Adjust** -- Flag in report as extended timeline. Output recommendation: "Debt payoff timeline exceeds 10 years. Consider increasing debt payments or reducing other allocations to accelerate payoff." |
+| Phase 7 | User rejects final output | **Targeted revision** -- ask which budget category, allocation percentage, or debt payoff plan fell short and rerun only that section. Do not regenerate the full budget. |
 
 ---
 

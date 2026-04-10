@@ -116,6 +116,7 @@ Complete when an allocation plan is delivered with utilization metrics and speci
 | REASON | All resources are bottlenecks simultaneously | Escalate -- system is fundamentally under-resourced. Recommend reducing number of needs or acquiring more resources before attempting allocation |
 | PLAN | Hard constraints make all demands infeasible simultaneously | Adjust -- identify which constraints can be relaxed (with stakeholder approval) or which demands can be deferred |
 | ACT | Stakeholders reject the optimal allocation on equity grounds | Adjust -- present Pareto frontier scenarios that balance efficiency and equity |
+| ACT | User rejects final output | **Targeted revision** -- ask which allocation decision, bottleneck analysis, or constraint trade-off fell short and rerun only that section. Do not re-optimize the full allocation. |
 
 ## Reference
 

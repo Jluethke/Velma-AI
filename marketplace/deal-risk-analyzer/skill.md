@@ -216,6 +216,7 @@ The skill is DONE when:
 | REASON | Stakeholder data missing for most deals | **Adjust** -- score champion risk at 50 (unknown) for all missing deals, flag as a CRM hygiene issue |
 | PLAN | No clear save action for a specific risk pattern | **Escalate** -- flag for sales leadership review, may require strategic intervention beyond standard playbook |
 | ACT | State persistence fails | **Skip** -- deliver report without trend data, warn that velocity tracking will restart |
+| ACT | User rejects final output | **Targeted revision** -- ask which deal's risk score, signal interpretation, or save action fell short and rerun only that deal's analysis. Do not re-analyze the full pipeline. |
 
 ## State Persistence
 

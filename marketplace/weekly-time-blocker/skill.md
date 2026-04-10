@@ -354,6 +354,7 @@ The skill is DONE when:
 | Phase 6 | Validation fails on multiple fronts (conflicts, overload, shortfall) | **Adjust** -- generate a "trade-off analysis" showing 3 alternative schedules: (a) all meetings, minimal deep work (show recovery %, deep work hours, constraint violations); (b) deep work protected, some meetings deferred (show same metrics); (c) recovery prioritized, aggressive meeting density (show same metrics). Ask user to choose. |
 | Phase 7 | Optimization cannot resolve conflicts after 2 iterations (feasibility <80%) | **Adjust** -- flag as "requires scope negotiation" and return the best feasible schedule with a note: "This week cannot accommodate all requested meetings and deep work. Recommend deferring [task] or rescheduling [meeting]." Include specific suggestions. |
 | Phase 8 | Calendar output format is invalid (JSON parse error or ICS RFC violation) | **Retry** -- regenerate with stricter validation: validate JSON against schema (all required fields, correct types, ISO 8601 datetimes); validate ICS against RFC 5545 (VEVENT structure, proper escaping). If both fail, return JSON as fallback with error_log documenting validation failures. |
+| Phase 8 | User rejects final output | **Targeted revision** -- ask which time block, deep work window, or meeting placement fell short and rerun only that scheduling phase. Do not regenerate the full week's schedule. |
 
 ---
 

@@ -156,6 +156,7 @@ Life OS is a continuous loop -- it never fully exits while active. Each ORPA cyc
 | REASON | All domains are thriving (no imbalances) | Skip rebalancing -- focus on growth goals and peak performance optimization |
 | PLAN | Insufficient discretionary time for all critical domains | Adjust -- audit commitments. Are any "non-negotiable" commitments actually negotiable? If truly no time: triage to 1-2 critical domains, let others coast |
 | ACT | User stops doing check-ins after 1 week | Escalate -- simplify check-in to a single question ("What domain did you invest in today?") to reduce friction. Any data is better than no data |
+| ACT | User rejects final output | **Targeted revision** -- ask which life domain assessment, priority ranking, or action plan fell short and rerun only that section. Do not regenerate the full life OS. |
 
 ## Reference
 

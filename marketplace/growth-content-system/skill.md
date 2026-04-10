@@ -301,6 +301,7 @@ The skill is DONE when:
 | CREATE | Only one distribution channel | **Adjust** -- create maximum value on that channel with format variety (long-form, short-form, visual, text). |
 | OPTIMIZE | Content fails readability check | **Retry** -- simplify sentence structure, break long paragraphs, replace jargon. Max 2 retries. |
 | DISTRIBUTE | No historical performance data | **Adjust** -- use industry benchmarks for channel performance, establish baseline tracking from first publication. |
+| DISTRIBUTE | User rejects final output | **Targeted revision** -- ask which content piece, audience segment, or channel strategy fell short and regenerate only that section. Do not regenerate the full content calendar. |
 
 ## State Persistence
 

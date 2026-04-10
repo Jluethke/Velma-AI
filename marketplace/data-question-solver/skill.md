@@ -328,6 +328,7 @@ The skill is complete when:
 | Phase 7 | Visualization does not fit the data shape | **Adjust** -- Select alternative visualization type or break into multiple visualizations. |
 | Phase 7 | Governance controls cannot be implemented in visualization tool | **Adjust** -- Implement controls at pipeline level (mask PII before loading to visualization tool) or use alternative tool. Document workaround. |
 | Phase 8 | Stakeholder rejects solution | **Adjust** -- Gather specific feedback. Determine which phase needs revision (e.g., clarified question, pipeline design, visualization). Return to appropriate phase and iterate. Document feedback and changes. |
+| Phase 8 | User rejects final output | **Targeted revision** -- ask which section fell short (question clarification, pipeline design, SQL query, visualization spec, or documentation) and rerun only that section. Do not restart the full solution. |
 
 ---
 

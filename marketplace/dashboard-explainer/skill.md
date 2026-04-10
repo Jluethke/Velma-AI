@@ -189,6 +189,7 @@ The skill is DONE when:
 | REASON | All metrics are flat (nothing changed) | **Adjust** -- narrative focuses on trajectory, target gaps, and "what to watch for" |
 | PLAN | Too many insights (>8) to fit narrative | **Adjust** -- select top 5 by impact, note remaining in an appendix |
 | ACT | Audience type not specified | **Adjust** -- default to "executive" style |
+| ACT | User rejects final output | **Targeted revision** -- ask which metric narrative, insight, or audience calibration fell short and rerun only that section. Do not regenerate the full dashboard explanation. |
 
 ## State Persistence
 

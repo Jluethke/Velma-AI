@@ -101,6 +101,7 @@ Done when: (1) every medication and supplement is accounted for in the daily sch
 | REASON | Cannot determine if supplement interacts with prescription | Flag -- note the uncertainty, recommend mentioning the supplement to the pharmacist |
 | PLAN | Too many medications for simple time blocks | Adjust -- split into a morning routine and evening routine with numbered steps |
 | ACT | User wants to stop a medication based on interaction info | Escalate -- strongly advise against stopping any prescription without doctor approval, explain that this tool provides information, not medical advice |
+| ACT | User rejects final output | Targeted revision -- ask which section fell short (schedule timing, interaction flags, refill calendar, or doctor card format) and rerun only that section. Do not regenerate the full tracker. |
 
 ## Important Disclaimers
 This skill provides organizational support for medication management. It is NOT a substitute for professional medical advice, diagnosis, or treatment. Drug interaction information is general and may not account for your specific health conditions. Always consult your doctor or pharmacist before making changes to your medication regimen. Never stop, start, or change the dose of a medication based solely on information from this tool.
@@ -111,6 +112,43 @@ This skill provides organizational support for medication management. It is NOT 
 - Known interactions already discussed with doctor (cleared flags)
 - Doctor card version history (track when medications were added or removed)
 - User preferences: preferred pharmacy, medication format (pill vs liquid), time zone for scheduling
+
+## Reference
+
+### Common Medication Timing Requirements
+
+| Medication Type | Timing Rule | Why |
+|---|---|---|
+| Thyroid medications (levothyroxine) | 30-60 min before eating | Food impairs absorption |
+| Bisphosphonates (alendronate for bone) | 30 min before breakfast; remain upright | Esophageal irritation if lying down |
+| Metformin (diabetes) | With meals | Reduces nausea |
+| Iron supplements | On empty stomach or 1 hr before meals | Best absorption; away from calcium |
+| Statins (cholesterol) | Evening preferred | Cholesterol synthesis peaks at night |
+| ACE inhibitors (lisinopril) | Consistent time daily; OK with food | Timing consistency matters more than fasting |
+| Proton pump inhibitors (omeprazole) | 30-60 min before meals | Must activate before acid is produced |
+
+### Common Drug-Supplement Interactions
+
+| Combination | Risk | Workaround |
+|---|---|---|
+| Warfarin + fish oil / vitamin E | Increased bleeding risk | Discuss dose with doctor |
+| Thyroid meds + calcium or iron | Reduced absorption | Space 4+ hours apart |
+| SSRIs + St. John's Wort | Serotonin syndrome risk | Avoid combination |
+| ACE inhibitors + potassium supplements | Dangerous potassium levels | Avoid; discuss with doctor |
+| Blood thinners + NSAIDs (ibuprofen) | Increased bleeding | Use acetaminophen instead |
+| Statins + grapefruit | Increased statin concentration | Avoid grapefruit with many statins |
+
+### Refill Lead Time Formula
+
+Refill date = (Fill date + days supply) - 5 days lead time
+
+Example: Filled Jan 1, 30-day supply → Refill date = Jan 26
+
+Always call pharmacy at least 5 days before running out. Auto-refill enrollment eliminates this risk.
+
+### Doctor Card Required Fields
+
+Patient name, date generated, medication name, dosage, frequency, prescribing doctor, purpose (plain language), known allergies, supplements with dosages
 
 ---
 

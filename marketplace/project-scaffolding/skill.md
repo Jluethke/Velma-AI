@@ -211,6 +211,7 @@ The skill is DONE when:
 | VALIDATE | Build fails due to system dependency | **Adjust** -- add installation instructions to README prerequisites |
 | VALIDATE | Linter has too many rules for the team's taste | **Adjust** -- start with recommended ruleset, note how to customize |
 | DOCUMENT | Project is too early for full documentation | **Adjust** -- generate minimal README with install and run, add TODO for expanded docs |
+| DOCUMENT | User rejects final output | **Targeted revision** -- ask which directory structure, configuration file, or documentation section fell short and rerun only that phase. Do not re-scaffold the full project. |
 
 ## State Persistence
 

@@ -159,6 +159,7 @@ Done when: (1) all income and expenses are categorized into IRS-appropriate cate
 | DEDUCTION DIG | User's home office is also used as a guest room | Flag -- the "exclusive use" test means a room that doubles as anything else doesn't qualify. If the desk area is a dedicated section of a room, the square footage of just that area may still qualify |
 | STATEMENTS | Net loss on the business for multiple years | Advise -- the IRS hobby loss rule (Section 183) says if you show a loss 3 out of 5 years, they may reclassify your business as a hobby and disallow deductions. Document profit intent: business plan, marketing efforts, professional development |
 | SYSTEM | User insists they'll never keep up with weekly tracking | Adjust -- fall back to monthly tracking (first Saturday of each month, 30-45 minutes) or quarterly tracking (before estimated tax deadlines). Worse than weekly but infinitely better than annual panic |
+| SYSTEM | User rejects final output | **Targeted revision** -- ask which section fell short (categorization, a specific deduction, P&L figures, quarterly estimates, or the bookkeeping system) and rerun only that section. Do not recategorize everything. |
 
 ## State Persistence
 - Categorized transaction history (builds a pattern library so recurring expenses auto-categorize in future periods)
@@ -167,6 +168,57 @@ Done when: (1) all income and expenses are categorized into IRS-appropriate cate
 - Year-over-year P&L comparison (is revenue growing? are expenses proportional? is net profit improving?)
 - IRS category mappings for the user's specific vendors (once you know "Adobe = Software Subscription = Other Expenses," it never needs re-categorizing)
 - Tax deadline history (which deadlines were met vs. missed, penalty amounts if any)
+
+---
+
+## Reference
+
+### IRS Schedule C Category Quick Reference
+
+| Category | What Goes Here |
+|---|---|
+| Advertising | Website, social media ads, business cards, branded merch |
+| Car and truck | Business mileage or actual vehicle expenses (not commuting) |
+| Contract labor | Freelancers, subcontractors, VAs paid $600+ (may need 1099) |
+| Insurance | Business liability, professional indemnity (not health insurance) |
+| Office expenses | Supplies, printer ink, postage, items under $2,500 |
+| Rent or lease | Co-working space, storage unit, equipment rental (not home office) |
+| Utilities | Business phone line, internet (business %), website hosting |
+| Other expenses | Software subscriptions, payment processing fees, professional development |
+
+### 2025 Key Rates and Limits
+
+| Item | Amount |
+|---|---|
+| Standard mileage rate | 70 cents per mile |
+| SE tax rate | 15.3% on 92.35% of net profit |
+| Section 179 small asset threshold | $2,500 (items above = capital expense) |
+| SEP-IRA max contribution | 25% of net self-employment income |
+| Solo 401(k) employee limit | $23,500 ($31,000 if age 50+) |
+| Home office simplified method max | $1,500 ($5/sq ft × 300 sq ft max) |
+| 1099-K reporting threshold (2024+) | $600 from any single platform |
+
+### Quarterly Estimated Tax Due Dates
+
+| Quarter | Due Date |
+|---|---|
+| Q1 (Jan-Mar) | April 15 |
+| Q2 (Apr-May) | June 15 |
+| Q3 (Jun-Aug) | September 15 |
+| Q4 (Sep-Dec) | January 15 (following year) |
+
+### Mixed-Use Expense Deductibility Rules
+
+| Expense | Deductible Rule |
+|---|---|
+| Phone | Business-use percentage only (estimate honestly) |
+| Internet | Business-use percentage (internet + streaming → lower %) |
+| Car | Business miles / total miles × actual costs; or standard mileage × business miles |
+| Home office | Office sq ft / total home sq ft × home costs (regular method) |
+
+### The Hobby Loss Test (Section 183)
+
+If the business shows a loss 3+ years out of 5, the IRS may reclassify as a hobby. Document profit intent: business plan, marketing efforts, professional development spending, industry knowledge. Losses from hobbies are not deductible.
 
 ---
 

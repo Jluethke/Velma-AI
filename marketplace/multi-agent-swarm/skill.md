@@ -181,6 +181,7 @@ PHASE 5: OPTIMIZE      --> Performance tuning, goal evolution, self-directed lea
 | IMPLEMENT | Governance gate blocks all work | **Skip** -- wait for governance phase to allow tasks |
 | VALIDATE | Trust leaks upward in specialist chain | **Abort** -- trust violation is a security issue, fix before proceeding |
 | OPTIMIZE | Goal evolution produces degenerate goals | **Adjust** -- reset goals to defaults, increase evolution interval |
+| OPTIMIZE | User rejects final output | **Targeted revision** -- ask which agent role, routing logic, or coordination pattern fell short and rerun only that design phase. Do not redesign the full swarm. |
 
 ## State Persistence
 

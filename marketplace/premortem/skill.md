@@ -118,6 +118,50 @@ Done when: (1) at least 5 failure modes are identified and categorized, (2) prev
 | REASON | User resists imagining failure | Normalize it: "This isn't pessimism. Surgeons walk through complications before every operation. It's how they save lives." |
 | PLAN | Everything feels unpreventable | Challenge: "If someone offered you $1M to prevent this specific failure, what would you do differently? That's the action." |
 | ACT | User won't commit to immediate action | Shrink it: "What's the smallest version of this you could do in 10 minutes?" |
+| ACT | User rejects final output | **Targeted revision** -- ask which section fell short (failure autopsy depth, vulnerability categorization, or action commitments) and rerun only that section. Do not restart the full premortem. |
+
+---
+
+## Reference
+
+### Failure Mode Categories
+
+| Category | Description | Example |
+|---|---|---|
+| Preventable | Eliminable with action NOW | Not having a backup contact list |
+| Mitigatable | Can't prevent; can limit damage | Market downturn — maintain 3-month runway |
+| Acceptable risk | Eyes-open choice to proceed | Competitor may copy the idea |
+
+### Premortem Question Bank
+
+**Blind spot probes:**
+- "What failure are you most embarrassed to admit you're worried about?"
+- "What would your most critical stakeholder say was obviously going to go wrong?"
+- "What happened last time you tried something like this?"
+
+**Comfortable lie detector:**
+- "Where in this plan are you saying 'it'll probably be fine' without evidence?"
+- "What assumption are you treating as certain that isn't?"
+
+**Self-failure probe:**
+- "What's the version where circumstances go fine but YOU are why it failed?"
+
+### Confidence Recalibration Guide
+
+| Direction | Interpretation |
+|---|---|
+| Confidence went UP after premortem | Naming fears reduces ambient anxiety; real confidence increased |
+| Confidence stayed same | Risks already consciously accounted for; well-calibrated |
+| Confidence went DOWN | Previously unexamined risks surfaced; valuable — better now than later |
+
+### Top-3 Priority Forcing Question
+
+When everything feels urgent: "If you could only protect against three of these, which three would you choose?" Forces triage before decision fatigue sets in.
+
+### Tripwire Formula
+
+For each mitigatable risk: "If [leading indicator], then [response action] within [timeframe]."
+Example: "If signups drop below 10 in week 3, then reduce ad spend and pivot messaging within 48 hours."
 
 ---
 

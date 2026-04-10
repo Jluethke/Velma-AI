@@ -150,6 +150,7 @@ The skill is DONE when:
 | OPTIMIZE | Constraints make the chain infeasible (e.g., max_steps < critical path length) | **Adjust** -- relax constraints and note which ones were violated, or merge skills to reduce step count |
 | EXPORT | A skill referenced in the chain has been removed from available_skills | **Retry** -- re-run from Phase 2 with the updated skill list |
 | ACT | User rejects the chain definition or requests significant structural changes | **Adjust** -- incorporate specific feedback (e.g., wrong skill order, missing parallel path, incorrect data mapping), update the affected DAG edges and execution plan, and regenerate the .chain.json; do not restart from Phase 1 unless the goal itself has changed |
+| ACT | User rejects final output | **Targeted revision** -- ask which skill connection, data mapping, or parallel path fell short and regenerate only the affected chain sections. Do not restart from Phase 1. |
 
 ---
 

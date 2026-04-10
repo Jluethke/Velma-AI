@@ -124,6 +124,7 @@ Done when: (1) a clear verdict is delivered (scam, likely scam, suspicious, or l
 | PLAN | Person already sent money and is panicking | Prioritize -- lead with the single most important damage control step. Time-sensitive actions first, reporting second. Be calm and direct |
 | PLAN | Person doesn't believe it's a scam (emotionally invested, especially romance scams) | Adjust -- present red flags factually without being condescending. Suggest one specific verification step they can take to confirm for themselves |
 | ACT | Person is elderly or non-technical | Adjust -- simplify all instructions. Use "click the X in the corner to close" level of specificity. Suggest calling a trusted family member for help with technical steps |
+| ACT | User rejects final output | **Targeted revision** -- ask which section fell short (verdict confidence, a specific red flag explanation, or damage control steps) and rerun only that section. Do not re-analyze the full message. |
 
 ## State Persistence
 - Scam pattern library (types encountered, evolving tactics, new variants)
@@ -131,6 +132,56 @@ Done when: (1) a clear verdict is delivered (scam, likely scam, suspicious, or l
 - Report submission history (what was reported to which agency, reference numbers)
 - Damage control actions taken (passwords changed, accounts frozen, credit alerts placed)
 - Vulnerability profile (which scam types this person is most exposed to, for future awareness)
+
+---
+
+## Reference
+
+### Red Flag Scoring
+
+| Count | Verdict |
+|---|---|
+| 0 | Appears legitimate |
+| 1-2 | Suspicious — verify independently before acting |
+| 3-4 | Likely a scam |
+| 5+ | Definitely a scam |
+
+### Scam Type Quick Reference
+
+| Type | Key Signal | Typical Ask |
+|---|---|---|
+| Phishing | Impersonates bank/service; link to fake site | Login credentials |
+| IRS impersonation | Claims you owe taxes; threatens arrest | Wire, gift card, crypto |
+| Tech support | Pop-up or call claiming virus/infection | Remote access or payment |
+| Romance | Online relationship; never meets; emergency | Wire transfer |
+| Grandparent | "Grandma it's me, I'm in trouble" | Gift cards |
+| Fake job | Unsolicited job offer; wants upfront payment | Deposit + wire back |
+| Advance fee | Prize, inheritance, investment; pay fees first | Fees to release funds |
+| Package delivery | Text to reschedule delivery; click link | Personal/payment info |
+| Overpayment | Sends overpayment check; wants refund | Refund before check clears |
+
+### The One Universal Test
+
+"Are they asking me to do something urgently, with a short deadline, using an unusual payment method?"
+Legitimate organizations give you time. Scammers need you to act before you think.
+
+### Damage Control Priority Order (If Already Responded)
+
+1. Remote access given → Disconnect from internet; run antivirus; change all passwords from a different device
+2. Credentials entered → Change password immediately + everywhere reused; enable 2FA
+3. Bank/card info given → Call bank NOW to freeze; dispute unauthorized charges
+4. SSN given → Fraud alert at all 3 credit bureaus; consider credit freeze; file at identitytheft.gov
+5. Money wired → Contact wire service immediately to attempt recall; file police report
+6. Gift cards sent → Call gift card company with card numbers; some can freeze remaining balance
+7. Crypto sent → File FTC + IC3 reports; recovery is rare but document everything
+
+### Reporting Channels (US)
+
+- FTC: reportfraud.ftc.gov
+- FBI Internet Crime: ic3.gov
+- Identity theft: identitytheft.gov
+- Scam text messages: forward to 7726 (SPAM)
+- Phishing emails: forward to the impersonated company + report to your email provider
 
 ---
 

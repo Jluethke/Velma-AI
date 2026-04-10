@@ -288,6 +288,7 @@ The skill is DONE when:
 | SEQUENCE | Circular dependency detected | Adjust -- split one of the tasks into independent phases to break the cycle |
 | PLAN | No owner available for critical path task | Escalate -- flag as blocking resource gap, recommend hire/contract/reassignment |
 | VALIDATE | Success criterion has no mapped sub-problem | Retry -- return to DECOMPOSE phase with the gap identified |
+| VALIDATE | User rejects final output | **Targeted revision** -- ask which sub-problem, root cause, or sequencing fell short and rerun only that decomposition phase. Do not restart the full problem tree. |
 
 ## State Persistence
 

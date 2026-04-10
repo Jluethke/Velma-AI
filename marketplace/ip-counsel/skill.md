@@ -178,6 +178,7 @@ The skill is DONE when:
 | RESEARCH | Prior art fully anticipates a claimed innovation | Adjust -- narrow the claim scope to the specific combination or abandon the claim |
 | DRAFT | Cannot generate claims without implementation language | Adjust -- flag the specific claims for attorney rewrite |
 | REVIEW | Budget insufficient for any filings | Adjust -- recommend provisional-only strategy ($150-$300 each), prioritize by disclosure risk |
+| REVIEW | User rejects final output | **Targeted revision** -- ask which claim draft, prior art finding, or filing recommendation fell short and rerun only that section. Do not regenerate the full IP analysis. |
 
 ## State Persistence
 

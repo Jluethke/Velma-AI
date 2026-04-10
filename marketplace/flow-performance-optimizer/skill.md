@@ -115,6 +115,7 @@ Complete when: (1) performance profile is quantified, (2) root causes are identi
 | REASON | Cannot determine root cause (multiple possible explanations) | Adjust -- present multiple hypotheses ranked by likelihood, recommend A/B testing to confirm |
 | PLAN | Recommended changes conflict with each other | Adjust -- present changes as alternative paths, recommend implementing one at a time and measuring |
 | ACT | Flow is already high-performing (>90% validation pass rate) | Skip major recommendations -- focus on marginal improvements and maintenance |
+| ACT | User rejects final output | **Targeted revision** -- ask which performance metric, bottleneck finding, or optimization recommendation fell short and rerun only that section. Do not re-analyze the full flow. |
 
 ## Reference
 

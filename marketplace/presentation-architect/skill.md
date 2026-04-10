@@ -275,6 +275,7 @@ The skill is complete when:
 | Phase 7 | Visual strategy exceeds 10 distinct visuals | **Adjust** -- Consolidate visuals by theme. Ensure each visual reinforces a key message. Remove decorative visuals that do not support the narrative. |
 | Phase 8 | Architecture exceeds 3000 words | **Adjust** -- Consider splitting into a primary presentation architecture (core narrative, key messages, Q&A) and a detailed reference document (full stakeholder analysis, extended objection handling, visual design specs). Ensure speaker notes are concise (under 500 words). |
 | Phase 8 | Internal consistency check fails (e.g., a key message is not addressed in Q&A, or a stakeholder type is not addressed in objection handling) | **Adjust** -- Identify the missing component. Loop back to the relevant phase (Phase 4, 5, or 6) to add the missing content. Re-run the consistency check. |
+| Phase 8 | User rejects final output | **Targeted revision** -- ask which slide structure, narrative arc, or objection-handling section fell short and rerun only that phase. Do not rebuild the full architecture. |
 
 ---
 

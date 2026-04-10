@@ -142,6 +142,7 @@ PHASE 5: TRACK         --> Monitor completion, propagate failures to parents
 | PRIORITIZE | All tasks same priority (no differentiation) | **Skip** -- use FIFO ordering (insertion order) |
 | DISPATCH | No handler/agent available for task domain | **Retry** -- keep task in queue, increment no_agent_found counter, try next tick |
 | TRACK | Parent completion check finds inconsistent state | **Escalate** -- log inconsistency, flag for human review |
+| TRACK | User rejects final output | **Targeted revision** -- ask which task breakdown, priority assignment, or subtask fell short and rerun only that decomposition phase. Do not re-decompose the full task tree. |
 
 ## State Persistence
 

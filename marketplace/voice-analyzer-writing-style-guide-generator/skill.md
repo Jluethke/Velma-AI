@@ -319,6 +319,7 @@ The skill is DONE when ALL of the following conditions are met:
 | Phase 6 | Style guide exceeds 3000 words | **Adjust** -- Prioritize most distinctive elements. Remove least important sections or consolidate examples. Ensure final word count is 1500-2500. |
 | Phase 7 | Validation confidence < 70 | **Adjust** -- Return validation_report with flag: "REFINEMENT_RECOMMENDED". List specific sections of style_guide to revise in refinement_recommendations. Do not mark skill as complete; suggest user review recommendations and optionally re-run Phase 7 after revisions. |
 | Phase 7 | Test content generation fails (language model error or timeout) | **Retry** -- Attempt test content generation up to 2 times. If both attempts fail, **Adjust** -- Return validation_report with confidence_score = 0 and note: "Validation could not be completed due to test content generation failure. Review style_guide manually or provide feedback on AI-generated content." |
+| Phase 7 | User rejects final output | **Targeted revision** -- ask which voice attribute, style rule, or example fell short and rerun only that section. Do not regenerate the full style guide. |
 
 ---
 

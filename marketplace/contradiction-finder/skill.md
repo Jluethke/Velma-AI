@@ -255,6 +255,7 @@ The skill is DONE when:
 | REASON | All pairs have similarity < 0.4 | Abort -- claims are topically unrelated, contradiction detection not applicable |
 | PLAN | No contradictions found (conflict scores all < 0.25) | Report consistency score of 1.0, note that the claim body appears consistent |
 | ACT | Too many contradictions to report usefully (>50) | Adjust -- report only top 20 by conflict score, provide summary statistics for the rest |
+| ACT | User rejects final output | **Targeted revision** -- ask which contradiction finding, conflict score, or resolution suggestion fell short and rerun only that section. Do not re-analyze the full claim set. |
 
 ## State Persistence
 

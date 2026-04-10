@@ -150,6 +150,7 @@ Done when: (1) every targeted room has a sorting plan with specific criteria, (2
 | SORT | Grief-connected items (deceased loved one's belongings) | Adjust -- slow down significantly. No timelines on grief. Suggest keeping a memory box of key items, photographing the rest, and giving yourself permission to take months |
 | DISPOSE | No car, no local donation centers, no ability to haul things | Adjust -- schedule donation pickups (Salvation Army, Vietnam Veterans, local charities), use Buy Nothing groups where people come to you, request bulk trash pickup from municipality |
 | MAINTAIN | Re-cluttering happens within weeks | Adjust -- identify the source: is it shopping? Gifts? Mail? Paper? Target the specific inflow rather than re-doing the whole declutter |
+| ACT | User rejects final output | Targeted revision -- ask which room plan, sorting criteria, or disposal path fell short and rerun only that section. Do not rebuild the entire plan. |
 
 ## State Persistence
 - Room progress tracker (which rooms are done, in progress, or untouched)
@@ -157,6 +158,49 @@ Done when: (1) every targeted room has a sorting plan with specific criteria, (2
 - Undecided box inventory (what's in the 30-day box, when the timer expires)
 - Maintenance compliance (are the daily/weekly routines happening?)
 - Clutter hotspot patterns (which areas re-clutter fastest -- these need systemic solutions, not just willpower)
+
+## Reference
+
+### Room Difficulty Sequence (Easy to Hard)
+
+| Tier | Rooms | Why |
+|---|---|---|
+| Easy | Bathroom, laundry room, linen closet | Low emotional attachment, mostly expired/outgrown items |
+| Medium | Kitchen, kids' rooms, living room | Some sentimental items, but mostly functional decisions |
+| Hard | Master closet, home office, garage, attic | Identity items, paper avalanche, years of deferred decisions |
+| Hardest | Deceased loved one's belongings, childhood memorabilia | Grief-connected; no timeline applies |
+
+### Keep / Donate / Trash / Sell Decision Matrix
+
+| Condition | Action |
+|---|---|
+| Used in past 12 months AND fits AND good condition | Keep |
+| Not used in 12 months, resale value > $30, good condition | Sell (Facebook Marketplace, Poshmark, eBay) |
+| Not used in 12 months, resale value < $30, good condition | Donate |
+| Broken, stained, worn out, non-recyclable | Trash |
+| Broken but recyclable (electronics, batteries, paint) | Recycle (proper disposal) |
+| Undecided | 30-day box: seal, date, donate without opening if unopened after 30 days |
+
+### Common Sentimental Sticking Points and Scripts
+
+| Objection | Response |
+|---|---|
+| "But I paid a lot for it" | Sunk cost. Selling recovers some; keeping recovers nothing. |
+| "Someone gave it to me" | The gift was the gesture. You honored it by receiving it. You can release the object. |
+| "I might need it someday" | If replaceable for under $20 and unused for a year, let it go. |
+| "It belonged to [deceased]" | Keep the meaningful pieces. Photograph the rest. Permission to take months. |
+
+### Donation Destination Quick Reference
+
+| Item Type | Best Destination |
+|---|---|
+| Clothing (good condition) | Goodwill, Salvation Army, ThredUp |
+| Professional clothing | Women's shelters, Dress for Success |
+| Furniture, tools, building materials | Habitat for Humanity ReStore |
+| Electronics (working) | Goodwill, local Buy Nothing group |
+| Electronics (broken) | Best Buy, Staples e-waste program |
+| Books | Library, Little Free Library, Better World Books |
+| Large items (fast) | Facebook Marketplace (free), Freecycle, Buy Nothing |
 
 ---
 

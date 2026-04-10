@@ -208,6 +208,7 @@ The skill is DONE when:
 | OPTIMIZE | Platform-specific rules unknown (uncommon platform) | **Adjust** -- apply Amazon rules as the most restrictive baseline, flag that platform-specific validation may be incomplete |
 | VALIDATE | Compliance violation found in optimized copy | **Retry** -- return to Phase 3, rewrite the violating element, re-validate (max 2 retries) |
 | MONITOR | No baseline data available for comparison | **Adjust** -- use category averages as baseline, note that improvement tracking will be approximate |
+| MONITOR | User rejects final output | **Targeted revision** -- ask which title, bullet point, or keyword optimization fell short and rerun only that section. Do not regenerate the full listing. |
 
 ## State Persistence
 

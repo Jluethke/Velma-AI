@@ -152,6 +152,7 @@ PHASE 5: MONITOR       --> Add statistics, tick latency tracking, health indicat
 | IMPLEMENT | Background thread doesn't stop on shutdown | **Abort** -- redesign shutdown signaling, use daemon threads |
 | VALIDATE | Tick latency exceeds interval | **Adjust** -- profile hooks, move heavy ones to post-tick |
 | MONITOR | Statistics collection itself slows ticks | **Adjust** -- use atomic counters, sample instead of tracking every tick |
+| MONITOR | User rejects final output | **Targeted revision** -- ask which tick interval, hook design, or validation finding fell short and rerun only that phase. Do not regenerate the full tick engine design. |
 
 ## State Persistence
 

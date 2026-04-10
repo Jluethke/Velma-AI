@@ -124,6 +124,7 @@ Done when: (1) master checklist covers 8 weeks pre-move through 1 month post-mov
 | LOGISTICS | Unknown utility providers at new address | Adjust -- provide generic checklist, recommend calling new landlord or checking city website |
 | PACKING | Hoarding situation (extreme volume) | Escalate -- recommend professional organizer before packing, adjust timeline |
 | DAY-OF | No help available (solo move) | Adjust -- extend timeline to 2 days, prioritize essentials-only for day 1 |
+| ACT | User rejects final output | Targeted revision -- ask which section fell short (timeline, logistics tracker, packing plan, day-of schedule) and rerun only that section adjusted to the actual move situation. |
 
 ## State Persistence
 - Move progress (which checklist items are done vs pending)
@@ -131,6 +132,42 @@ Done when: (1) master checklist covers 8 weeks pre-move through 1 month post-mov
 - Box inventory (what's in each labeled box -- invaluable for unpacking)
 - Vendor contacts (mover info, real estate agent, utility account numbers)
 - Budget actuals (what was spent vs estimated per category)
+
+## Reference
+
+### Move Volume Estimates by Home Size
+
+| Home Size | Estimated Weight | Small Truck | Full Truck |
+|---|---|---|---|
+| Studio / 1BR | 1,500-3,500 lbs | 10-ft truck | May fit |
+| 2BR | 4,000-5,500 lbs | 15-ft truck | Comfortable |
+| 3BR | 6,000-8,000 lbs | 20-ft truck | Comfortable |
+| 4BR+ | 8,000+ lbs | 26-ft truck or 2 trips | |
+
+### Address Change Master List
+
+**Government / Legal:** USPS mail forwarding, driver's license/DMV, voter registration, Social Security Administration, IRS (Form 8822), passport (next renewal)
+
+**Financial:** All bank accounts, credit cards, investment accounts, PayPal/Venmo, HSA/FSA
+
+**Insurance:** Auto, home/renters, health, life, umbrella
+
+**Medical:** All doctors, dentists, specialists, pharmacy, health insurance portal
+
+**Subscriptions:** Amazon, streaming services, gym membership, magazines, news, meal kits, software
+
+**Other:** Employer/payroll, loyalty programs, online shopping accounts, attorney or accountant
+
+### USPS Mail Forwarding Timeline
+
+- File online at usps.com/move at least 1 week before move date
+- Forwarding starts within 7-10 business days of start date
+- First-class mail forwarded for 12 months; magazines for 60 days
+- Update permanent addresses promptly -- forwarding is a bridge, not a solution
+
+### Essentials Box Contents
+
+Items to pack last and access first: toiletries, medications, phone chargers, change of clothes, important documents (IDs, lease, closing docs), snacks, paper plates/cups, a few cooking basics, basic tools (screwdriver, Allen key set), toilet paper, first aid kit
 
 ---
 

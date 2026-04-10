@@ -124,6 +124,7 @@ The skill is DONE when:
 | REASON | Target length is too short for mandatory elements | **Adjust** -- produce the shortest possible summary that includes all decisions/action items, note that target was exceeded and why |
 | REASON | No clear decisions or action items in source | **Adjust** -- shift priority to key facts and conclusions |
 | PLAN | Summary accuracy check fails (distorted by compression) | **Retry** -- expand the summary slightly to preserve nuance, or add a caveat |
+| ACT | User rejects final output | **Targeted revision** -- ask whether the issue is length, missing elements, wrong priority, or inaccurate representation, and rerun only the REASON or PLAN phase. Do not re-analyze the full source. |
 
 ## State Persistence
 
@@ -131,6 +132,46 @@ Between runs, this skill accumulates:
 - **Summarization patterns**: effective structures per content type (what works for meeting transcripts vs. reports vs. articles)
 - **Audience profiles**: what different audience types care about, refined by feedback
 - **Compression benchmarks**: what compression ratios work well for different content types
+
+---
+
+## Reference
+
+### Importance Hierarchy (Descending Priority)
+
+1. Decisions made — change the state of the world; must survive any compression
+2. Action items with owners — someone is responsible; must survive
+3. Key conclusions / recommendations — the "so what"
+4. Supporting data and evidence — numbers and facts that substantiate conclusions
+5. Context and background — important for understanding but first to cut
+6. Process details — how things were discussed; almost always cuttable
+
+### Target Length Guides
+
+| Target | Word Range | Structure |
+|---|---|---|
+| One-line | ~15 words | "[Subject] [verb] [object] [because/resulting in] [context]." |
+| Paragraph | ~100 words | Lead with conclusion; 2-3 supporting facts; end with key action or open question |
+| One-page | ~400 words | Opening paragraph + key findings (bullets) + action items + open questions |
+| Executive brief | ~800 words | Overview / Key Decisions / Findings / Action Items / Risks / Next Steps |
+
+### Compression Ratio Guide
+
+| Ratio | Approach |
+|---|---|
+| 2:1 | Light editing; can preserve nuance and supporting detail |
+| 5:1 | Moderate compression; cut process details and context |
+| 10:1 | Aggressive compression; only decisions, actions, and one-line conclusions survive |
+| 20:1+ | Extreme compression; essentially a headline + 2-3 bullets |
+
+### Audience Priority Adjustments
+
+| Audience | Boost | Demote |
+|---|---|---|
+| Executive | Decisions, bottom-line impact, risks | Technical details, process steps |
+| Engineer / technical | Action items, technical specifications | Background, context |
+| Legal | Commitments, risks, ambiguities | Summary conclusions without evidence |
+| General | Conclusions, what changes for them | Jargon, supporting data |
 
 ---
 

@@ -124,6 +124,50 @@ Done when: (1) every question is answered in plain English with a real-world ana
 - Situation status (initial concern resolved or ongoing)
 - Related skills suggested (Digital Safety Guide, Tech Translator, Scam Detector)
 
+## Error Handling (additions)
+
+| Phase | Failure Mode | Response |
+|---|---|---|
+| ACT | User rejects final output | Targeted revision -- ask which explanation was unclear or which concern was not addressed, then rerun only that section with a different analogy or framing. Do not restart from scratch. |
+
+## Reference
+
+### Crypto Scam Red Flags
+
+| Signal | Risk Level | Typical Pattern |
+|---|---|---|
+| Guaranteed returns | Critical | "Double your money in 30 days" |
+| Urgency / FOMO | Critical | "Offer closes tonight" |
+| Unsolicited contact | High | DM, email, or phone out of nowhere |
+| Romance lead-in | Critical | Online relationship pivots to investing |
+| Celebrity endorsement | High | Fake Elon Musk giveaway posts |
+| Pay in crypto only | High | Bitcoin ATM, gift cards requested |
+| Private key requested | Critical | Any request for seed phrase or private key |
+
+### Crypto Terminology Cheat Sheet
+
+| Term | Plain-English Translation |
+|---|---|
+| Blockchain | Shared spreadsheet everyone can see but nobody can alter |
+| Bitcoin | Digital currency tracked on a blockchain; fixed supply of 21 million |
+| Wallet | Mailbox with a lock -- public address visible, private key secret |
+| Private key | Password that unlocks your wallet; lose it = lose your money permanently |
+| Seed phrase | 12-24 word backup for the private key -- treat like a bank PIN |
+| Mining | Computers solving math puzzles to earn new Bitcoin |
+| Exchange | Platform to buy/sell crypto (Coinbase, Kraken, Binance) |
+| NFT | Digital certificate of ownership for a specific item |
+| DeFi | Financial services without banks; high risk, high volatility |
+| Gas fee | Transaction fee paid to the network to process a transfer |
+
+### Realistic Risk Comparison
+
+| Scenario | Actual Risk | Common Perception |
+|---|---|---|
+| Keeping crypto on a reputable exchange | Moderate (exchange hacks possible) | Overestimated by beginners |
+| Keeping crypto in your own wallet | Lower (you control keys) | Underestimated -- losing key = permanent loss |
+| Investing in a new altcoin | Very high (most fail) | Underestimated due to hype |
+| Responding to unsolicited crypto offers | Near-certain scam | Underestimated |
+
 ---
 
 Copyright 2024-present The Wayfinder Trust. All rights reserved.

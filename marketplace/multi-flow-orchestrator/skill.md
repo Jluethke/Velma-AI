@@ -133,6 +133,7 @@ Complete when: (1) all flows in the chain have executed (or been marked as block
 | EXECUTE | Upstream flow fails, blocking downstream chain | Adjust -- attempt with default/placeholder data for the blocked input, flag results as degraded |
 | EXECUTE | All flows succeed but with low-quality outputs | Adjust -- re-run with refined inputs based on first-pass outputs (second iteration) |
 | SYNTHESIZE | Irreconcilable conflicts between flow outputs | Escalate -- present both options with trade-off analysis, ask user to decide |
+| SYNTHESIZE | User rejects final output | **Targeted revision** -- ask which sub-flow result, integration point, or synthesized conclusion fell short and rerun only that section. Do not re-orchestrate the full flow chain. |
 
 ## Reference
 

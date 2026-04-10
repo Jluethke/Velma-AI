@@ -86,6 +86,7 @@ Done when: (1) 7 days of meals are planned covering breakfast, lunch, dinner, an
 | REASON | Pantry items are expired or questionable | Flag -- note which items to check before using |
 | PLAN | Specialty ingredients unavailable locally | Adjust -- suggest substitutions, note which recipes are affected |
 | ACT | Skill level mismatch detected mid-plan | Adjust -- default to beginner instructions with optional "shortcut" notes for experienced cooks |
+| ACT | User rejects final output | Targeted revision -- ask which meals, which days, or which part of the grocery list fell short and rebuild only those sections. Do not regenerate the full week. |
 
 ## State Persistence
 - Household profile (dietary needs, preferences, skill level)
@@ -93,6 +94,45 @@ Done when: (1) 7 days of meals are planned covering breakfast, lunch, dinner, an
 - Ingredient price memory (actual costs vs estimates -- improves budget accuracy over time)
 - Favorite meals (meals the household rated positively -- reuse in future plans)
 - Seasonal adjustments (produce availability and pricing by month)
+
+## Reference
+
+### Per-Meal Budget Calculator
+
+Weekly budget ÷ (household_size × meals_per_day × 7) = per-meal target
+
+Example: $100/week ÷ (2 people × 2 meals × 7 days) = $3.57/meal
+
+### Protein Cost per Serving (Approximate US Averages)
+
+| Protein | Cost/Serving | Notes |
+|---|---|---|
+| Eggs | $0.25-0.50 | Versatile, quick |
+| Canned beans/lentils | $0.25-0.50 | High fiber, no prep |
+| Chicken thighs | $0.75-1.25 | Cheaper than breast, more forgiving to cook |
+| Ground turkey | $1.00-1.50 | Swaps for ground beef at lower cost |
+| Canned tuna/salmon | $1.00-1.75 | Quick protein, minimal prep |
+| Chicken breast | $1.25-2.00 | Lean, widely used |
+| Ground beef (80/20) | $1.50-2.50 | Flavorful; higher fat |
+| Steak / salmon fillet | $4.00-8.00+ | Reserve for weekends if budget-constrained |
+
+### Meal Prep Time Categories
+
+| Category | Active Prep Time | Examples |
+|---|---|---|
+| Express | < 15 minutes | Scrambled eggs, grain bowls, wraps, pasta with jar sauce |
+| Quick | 15-30 minutes | Stir-fry, tacos, simple soups, sheet-pan veggies |
+| Standard | 30-60 minutes | Roast chicken, casseroles, stews |
+| Batch cook | 1-2 hours on Sunday | Grains, roasted veggies, protein -- assembles into 3+ meals |
+
+### Leftover Reuse Patterns
+
+| Sunday Cook | Monday Lunch | Tuesday Dinner |
+|---|---|---|
+| Roast chicken | Chicken salad sandwich | Chicken tacos |
+| Ground beef tacos | Burrito bowl (add rice + beans) | Stuffed peppers |
+| Roasted vegetables | Grain bowl with eggs | Veggie frittata |
+| Cooked pasta | Pasta salad (cold) | Baked pasta |
 
 ---
 

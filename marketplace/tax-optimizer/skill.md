@@ -250,6 +250,7 @@ The skill is complete when:
 | Phase 6 | Recommended actions conflict with each other (e.g., bunching deductions vs. income deferral) | **Adjust** -- document trade-offs; provide decision framework (e.g., "Choose bunching if income will be lower next year; choose deferral if income will be higher"); flag as requiring client decision |
 | Phase 6 | Recommendation requires documentation client cannot obtain | **Adjust** -- note in documentation_required; flag as high-risk; recommend alternative approach or professional help |
 | Phase 6 | Recommendation has high audit risk and low confidence | **Adjust** -- flag prominently; recommend professional review before implementation; consider excluding from primary recommendations |
+| Phase 6 | User rejects final output | **Targeted revision** -- ask which strategy, savings estimate, or risk assessment fell short and rerun only that section. Do not regenerate the full tax optimization plan. |
 
 ---
 

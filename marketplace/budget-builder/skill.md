@@ -129,6 +129,7 @@ Done when: (1) complete spending snapshot shows where every dollar goes, (2) mon
 | LEVERS | Person has already cut everything obvious | Adjust -- shift focus to income side (overtime, side work, selling unused items, assistance programs) |
 | GUARDRAILS | Previous budgets always failed within 2 months | Adjust -- start with tracking only (no restrictions) for month 1, then introduce limits gradually |
 | ACT | User rejects the budget or says it doesn't reflect their real life | **Adjust** -- incorporate specific feedback (e.g., a category is set too low, a cut is not realistic, a goal isn't the right priority), update the affected categories, and regenerate the impacted blueprint and lever recommendations; do not restart from Phase 1 unless the income or expense data was significantly wrong |
+| ACT | User rejects final output | **Targeted revision** -- ask which budget category, savings target, or reduction lever fell short and rerun only that section. Do not rebuild the full budget. |
 
 ## State Persistence
 - Monthly income and expense baseline (for tracking changes over time)

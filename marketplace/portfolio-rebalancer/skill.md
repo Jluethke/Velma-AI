@@ -352,6 +352,7 @@ The skill is DONE when:
 | Phase 5 | Account type does not allow proposed trade (e.g., short selling in IRA) | **Abort** -- remove trade from recommendation; flag in compliance notes: "[Trade] cannot be executed in [account_type] account. Reason: [Reason]. Alternative: [Alternative trade if available]." |
 | Phase 6 | Cost-benefit ratio cannot be calculated (total_rebalancing_cost = 0) | **Adjust** -- set ratio = ∞; recommendation = "rebalance_now" (free rebalancing with positive benefit) |
 | Phase 7 | Recommended trades do not achieve target allocation (residual deviation > 1%) | **Adjust** -- document residual deviation in expected_outcome; explain why (constraints, costs, etc.): "After rebalancing, [Asset_Class] will be [Residual%] away from target due to [Reason]." |
+| Phase 7 | User rejects final output | **Targeted revision** -- ask which asset class allocation, trade recommendation, or tax-loss harvesting suggestion fell short and rerun only that section. Do not re-run the full rebalance. |
 
 ---
 

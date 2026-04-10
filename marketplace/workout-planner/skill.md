@@ -114,6 +114,7 @@ Initial run: complete when a full weekly program is delivered with tracking temp
 | PLAN | Injury prevents key compound movements | Adjust -- substitute with safe alternatives (e.g., leg press instead of squat, floor press instead of bench) |
 | ACT | No training log data for adjustments | Skip -- deliver generic progression rules, emphasize the importance of logging |
 | ACT | All lifts declining simultaneously | Abort current mesocycle -- recommend immediate deload + sleep/nutrition review |
+| ACT | User rejects final output | **Targeted revision** -- ask which exercise selection, set/rep scheme, or progression plan fell short and rerun only that phase. Do not regenerate the full training program. |
 
 ## Reference
 

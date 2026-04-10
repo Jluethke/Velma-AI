@@ -140,6 +140,7 @@ The skill is DONE when:
 | PLAN | Insufficient leads to meet target_count after 2 OBSERVE loops | **Abort** -- deliver available leads with explanation, recommend ICP broadening |
 | ACT | State persistence fails | **Skip** -- deliver results anyway, warn that duplicate tracking may be affected next run |
 | ACT | User rejects the scored lead list or outreach approaches and requests significant changes | **Adjust** -- incorporate specific feedback (e.g., wrong scoring weights, irrelevant outreach angle, incorrect company tier), update the affected ICP dimensions or scoring rules, and regenerate the lead ranking; do not restart from OBSERVE unless the ICP definition itself was wrong |
+| ACT | User rejects final output | **Targeted revision** -- ask which lead scoring, ICP fit, or outreach angle fell short and rerun only that section. Do not restart the full lead discovery. |
 
 ## State Persistence
 

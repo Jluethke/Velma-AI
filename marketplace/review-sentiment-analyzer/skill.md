@@ -251,6 +251,7 @@ The skill is DONE when:
 | CLUSTER | Negative reviews are too diverse to cluster (<3 per theme) | **Adjust** -- report as "diffuse dissatisfaction" with no dominant issue. Recommend improving overall quality rather than targeting specific issues. |
 | PRIORITIZE | All clusters score similarly | **Adjust** -- break ties by actionability (which can be fixed fastest/cheapest) |
 | RECOMMEND | No clear fix for a high-priority cluster | **Escalate** -- flag for product team investigation, provide the data and quotes to support their analysis |
+| RECOMMEND | User rejects final output | **Targeted revision** -- ask which sentiment cluster, aspect analysis, or recommendation fell short and rerun only that section. Do not re-analyze the full review set. |
 
 ## State Persistence
 

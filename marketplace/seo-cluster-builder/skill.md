@@ -247,6 +247,7 @@ The skill is DONE when:
 | MAP | Too few keywords for pillar structure | **Adjust** -- create a single comprehensive page instead of pillar+cluster. Recommend expanding the topic in future iterations. |
 | PLAN | Publishing cadence exceeds available resources | **Adjust** -- reduce to 1 post/week and extend the calendar. Prioritize ruthlessly -- do fewer pieces better rather than many pieces poorly. |
 | BRIEF | Competitor analysis shows an extremely saturated topic | **Adjust** -- recommend targeting lower-competition long-tail keywords first to build domain authority before attacking head terms. |
+| BRIEF | User rejects final output | **Targeted revision** -- ask which keyword cluster, content brief, or publishing calendar entry fell short and rerun only that section. Do not regenerate the full cluster strategy. |
 
 ## State Persistence
 

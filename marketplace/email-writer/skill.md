@@ -86,12 +86,51 @@ Done when: (1) email draft has a subject line and body, (2) tone matches the sit
 | OBSERVE | Legal situation detected (termination, harassment, threat) | Flag -- recommend consulting HR or legal counsel, draft only with explicit consent |
 | REASON | Conflicting goals ("I want to complain but not upset them") | Adjust -- draft the diplomatic version, explain tradeoffs between directness and relationship preservation |
 | PLAN | Email is inherently impossible ("make them give me a refund they've already denied 3 times") | Adjust -- suggest escalation paths (supervisor, chargeback, consumer protection agency) instead |
+| ACT | User rejects final output | Targeted revision -- ask which specific element fell short (subject line, opening, tone, length, or closing call to action) and rerun only that section. Do not regenerate the full email. |
 
 ## State Persistence
 - Recipient profiles (formality level, past interactions)
 - Email templates that worked well (user-confirmed sends)
 - Follow-up tracking (which emails are awaiting responses)
 - Tone calibration (user feedback on "too formal" / "too casual" adjustments)
+
+## Reference
+
+### Email Structure Templates by Type
+
+| Email Type | Structure |
+|---|---|
+| Request | Context (1 sentence) → Specific ask → Why it matters → Clear next step |
+| Complaint | Specific issue → Impact on you → What you want done → Deadline |
+| Apology | Acknowledge exactly what happened → Take responsibility → How you'll fix it → No excuses |
+| Negotiation | Appreciate current position → Evidence for your case → Proposed solution → Leave room for dialogue |
+| Decline | Thank them → Clear no → Brief reason (optional) → Positive close |
+| Condolence | Acknowledge the loss → Specific memory or kind observation → Offer of concrete help → Brief |
+
+### Subject Line Rules
+
+- Specific beats vague: "Follow-up on Tuesday's invoice #4521" beats "Following up"
+- Action-oriented: "Request for 15-min call this week" beats "Question"
+- Under 60 characters to avoid mobile truncation
+- Never "Hello" or "Hi [name]" as a subject
+
+### Tone vs. Relationship Matrix
+
+| Relationship | Formality | Tone to Use |
+|---|---|---|
+| Senior executive / new contact | High | Professional, concise, no contractions |
+| Direct manager | Medium | Professional but warmer, light contractions OK |
+| Peer / colleague | Low-Medium | Friendly, direct |
+| Customer service | Medium | Firm but polite, document-focused |
+| Personal contact | Low | Conversational, warm |
+
+### Common Mistakes to Avoid
+
+- Burying the ask in paragraph 3 (put it in sentence 1 or 2)
+- "I hope this email finds you well" (skip it)
+- "Per my last email" (hostile)
+- Passive voice ("Mistakes were made" → "I made a mistake")
+- Unclear next step ("Let me know" → "Could you reply by Friday?")
 
 ---
 

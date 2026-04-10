@@ -148,6 +148,49 @@ The skill is DONE when:
 | DESIGN | Not enough testable surfaces for the requested test_count | **Adjust** -- reduce test_count to match available surfaces and note the limitation |
 | GENERATE | Cannot create realistic input data for a skill domain (e.g., requires real API responses) | **Adjust** -- use synthetic but structurally valid data, mark the test case as "needs real data validation" |
 | VALIDATE | Keyword overlap exceeds 50% on more than half the test cases | **Retry** -- return to Phase 3 and regenerate with more diverse scenarios |
+| VALIDATE | User rejects final output | **Targeted revision** -- ask which test case's inputs, expected keywords, or category assignment fell short and rerun only that test case's Phase 3-4. Do not regenerate the full test suite. |
+
+---
+
+## Reference
+
+### Test Case Category Distribution
+
+| Category | Allocation | Purpose |
+|---|---|---|
+| Happy path | 40% of test_count | Typical inputs, all phases execute, all outputs produced |
+| Edge cases | 25% | Boundary inputs (empty, minimal, maximal, Unicode) |
+| Error handling | 20% | Inputs that trigger specific failure modes in the error table |
+| Quality gate | 15% | Inputs that barely pass or barely fail a defined gate |
+
+Minimum 1 test case per category regardless of test_count.
+
+### Expected Keywords Quality Rules
+
+- Minimum 8, maximum 12 keywords per test case
+- Keywords must be specific to the correct output (not generic words like "the", "and", "is")
+- No two test cases may share more than 50% keyword overlap
+- Error handling test cases: keywords should include the error type or recovery action
+- Happy path test cases: keywords should validate all phases executed and all outputs are present
+
+### Coverage Target
+
+At least 70% of critical testable surfaces (quality gates and error handlers) must be covered by at least one test case. Document uncovered surfaces in the coverage matrix.
+
+### Test Case JSON Structure
+
+```json
+{
+  "id": "tc_001",
+  "name": "happy_path_standard_input",
+  "category": "happy_path",
+  "scenario": "One-sentence description of what is being tested",
+  "input": { /* realistic, concrete input data */ },
+  "expected_keywords": ["keyword1", "keyword2", ...],
+  "expected_behavior": "One sentence: what should happen",
+  "phase_coverage": ["PHASE_1", "PHASE_2", ...]
+}
+```
 
 ---
 

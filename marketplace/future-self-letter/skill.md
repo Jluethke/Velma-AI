@@ -113,6 +113,36 @@ Done when: (1) current state and trajectory are honestly mapped, (2) gratitude a
 | REASON | User gets overwhelmed by regret | Ground them: "The point isn't to feel bad about the past. The point is that today is the earliest you can start. Future-you is already grateful you're doing this right now." |
 | PLAN | Letter is too generic or positive | Push: "This reads like a greeting card. Future-you is being too polite. What do they REALLY want to say? The thing that's hard to hear?" |
 | ACT | User won't commit to actions | Shrink: "What if the only action was reading this letter once a month? Just reading it. Would that be enough to nudge you?" |
+| ACT | User rejects final output | Targeted revision -- ask which section felt generic, dishonest, or incomplete (trajectory analysis, the letter itself, or the action bridge) and rerun only that section with more specific prompting. |
+
+## Reference
+
+### Letter Structure (5 Required Sections)
+
+| Section | Prompt | What Honest Looks Like |
+|---|---|---|
+| What I'm grateful you did | "Thank you for..." | Specific habits or decisions that compounded over time |
+| What I wish you'd known | "I wish someone had told you..." | Things that seemed important but weren't; things that seemed small but mattered enormously |
+| What I wish you'd started sooner | "The one thing I'd beg you to start today is..." | The action whose value compounds most with time |
+| What I need you to stop | "Please stop..." | Specific avoidance pattern, habit, or comfortable lie |
+| How it turned out | "Here's what actually happened..." | Honest projection; hope without delusion |
+
+### Time Horizon Guide
+
+| Horizon | What It Reveals | Best Use |
+|---|---|---|
+| 1 year | Habits, project momentum, immediate decisions | Accountability for specific changes underway |
+| 5 years | Career trajectory, relationship structure, identity drift | Strategic direction and values alignment |
+| 10 years | Who you've become, what you've built, what you stand for | Existential clarity; correcting deep patterns |
+
+### Trajectory vs. Intention Gap Probe
+
+Ask for each stated goal:
+1. What is the declared intention? (What you SAY you want)
+2. What does revealed behavior show? (Calendar, bank account, daily actions)
+3. If behavior continues unchanged for [time horizon], what is the most likely outcome?
+
+The gap between #1 and #3 is what the letter addresses.
 
 ---
 

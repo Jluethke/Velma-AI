@@ -91,6 +91,7 @@ The skill is complete when: (1) a conflict-free time-blocked schedule is produce
 | PLAN | Overcommitted by >50% | Adjust -- eliminate Q4, defer Q3, split Q2 tasks across days |
 | PLAN | No peak hours available (all meetings) | Adjust -- identify "best available" slots, recommend rescheduling one meeting |
 | ACT | State persistence unavailable | Skip -- deliver schedule without historical tracking |
+| ACT | User rejects final output | **Targeted revision** -- ask which time block, task priority, or scheduling decision fell short and rerun only that section. Do not regenerate the full day plan. |
 
 ## State Persistence
 
