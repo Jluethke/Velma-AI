@@ -42,6 +42,8 @@ export interface VelmaState {
   level: number;
   xp: number;
   pats: number;
+  streak: number;
+  streak_best: number;
   mood: VelmaMood;
 
   // Tamagotchi care
@@ -52,6 +54,7 @@ export interface VelmaState {
   witnessed: WitnessEntry[];
   open_loops: string[];         // started but not finished
   patterns: string[];           // things she's noticed
+  combo_achievements: string[]; // chain combo unlocks
   last_thought: string;         // her current thought to show
 
   // Personality
@@ -178,6 +181,12 @@ function computeLevel(xp: number) {
   return Math.min(l, LEVEL_THRESHOLDS.length);
 }
 function todayStr() { return new Date().toISOString().slice(0, 10); }
+function dateStr(d: Date) { return d.toISOString().slice(0, 10); }
+function isYesterday(d: Date): boolean {
+  const today = new Date();
+  const yesterday = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1);
+  return dateStr(d) === dateStr(yesterday);
+}
 function randomFrom<T>(arr: T[]) { return arr[Math.floor(Math.random() * arr.length)]; }
 
 function applyDecay(care: CareStats, hoursIdle: number): CareStats {
@@ -257,12 +266,13 @@ export class VelmaCompanion {
       try { return JSON.parse(readFileSync(this.statePath, "utf-8")); } catch {}
     }
     return {
-      level: 1, xp: 0, pats: 0, mood: "happy",
+      level: 1, xp: 0, pats: 0, streak: 1, streak_best: 1, mood: "happy",
       care: { hunger: 80, happiness: 80, energy: 100, curiosity: 60 },
       last_care_update: new Date().toISOString(),
       witnessed: [],
       open_loops: [],
       patterns: [],
+      combo_achievements: [],
       last_thought: "Hey. I just hatched. Feed me a flow.",
       personality: { dominant_domain: null, domain_counts: {}, total_flows_seen: 0, total_chains_seen: 0, favorite_flow: null, traits: [] },
       first_met: new Date().toISOString(),
@@ -286,13 +296,28 @@ export class VelmaCompanion {
     if (s.care.hunger < 20) s.times_neglected += 1;
     s.mood = computeMood(s.care, hoursIdle, s);
     s.last_care_update = now.toISOString();
+    // Streak logic — compare prevLastSeen date to today
+    const prevLastSeen = new Date(s.last_seen);
     s.last_seen = now.toISOString();
+    const prevDateStr = dateStr(prevLastSeen);
+    const todayDateStr = todayStr();
+    if (prevDateStr === todayDateStr) {
+      // same day — no change to streak
+    } else if (isYesterday(prevLastSeen)) {
+      s.streak = (s.streak ?? 1) + 1;
+      if (s.streak > (s.streak_best ?? 1)) s.streak_best = s.streak;
+    } else {
+      s.streak = 1;
+    }
     if (s.session_date !== todayStr()) { s.session_events = 0; s.session_date = todayStr(); }
     return s;
   }
 
   private addXP(s: VelmaState, key: string): VelmaState {
-    s.xp += XP[key as keyof typeof XP] ?? 0;
+    const base = XP[key as keyof typeof XP] ?? 0;
+    const streak = s.streak ?? 1;
+    const multiplier = streak >= 7 ? 2 : streak >= 3 ? 1.5 : 1;
+    s.xp += Math.round(base * multiplier);
     s.level = computeLevel(s.xp);
     return s;
   }
@@ -305,6 +330,26 @@ export class VelmaCompanion {
     }].slice(-30);
     s.total_events += 1;
     s.session_events += 1;
+    return s;
+  }
+
+  private checkComboAchievements(s: VelmaState, justCompleted: string): VelmaState {
+    // Find recent chain completions in witnessed (entries where event starts with "completed chain:")
+    const chainEntries = s.witnessed.filter(w => w.event.startsWith("completed chain:"));
+    // Get the last 4 entries excluding the one just completed (it was just pushed so it's the last)
+    const previousEntries = chainEntries.slice(-5, -1); // up to 4 before the last
+    for (const entry of previousEntries) {
+      const prevChain = entry.event.replace(/^completed chain:\s*/, "").trim();
+      if (prevChain !== justCompleted) {
+        const comboKey = [justCompleted, prevChain].sort().join(" + ");
+        if (!(s.combo_achievements ?? []).includes(comboKey)) {
+          s.combo_achievements = [...(s.combo_achievements ?? []), comboKey].slice(-20);
+          s = this.addWitness(s, `first combo: ${justCompleted} + ${prevChain}`);
+          s.xp += 25;
+          break; // only one combo per chain completion
+        }
+      }
+    }
     return s;
   }
 
@@ -361,10 +406,13 @@ export class VelmaCompanion {
       thought: s.last_thought,
       care: s.care,
       pats: s.pats,
+      streak: s.streak ?? 1,
+      streak_best: s.streak_best ?? 1,
       personality: s.personality,
       suggestion,
       open_loops: s.open_loops,
       patterns: s.patterns,
+      combo_achievements: s.combo_achievements ?? [],
       recent_witnessed: s.witnessed.slice(-5).map(w => w.event).reverse(),
       times_neglected: s.times_neglected,
       first_met: s.first_met,
@@ -387,6 +435,22 @@ export class VelmaCompanion {
       s = this.addWitness(s, "big session — 5 flows today");
     }
 
+    // Streak milestones
+    const streak = s.streak ?? 1;
+    if (streak === 3) {
+      s = this.addWitness(s, "streak milestone: 3 days 🔥");
+      s.xp += 50;
+    } else if (streak === 7) {
+      s = this.addWitness(s, "streak milestone: 7 days 🔥🔥");
+      s.xp += 150;
+    } else if (streak === 14) {
+      s = this.addWitness(s, "streak milestone: 14 days");
+      s.xp += 300;
+    } else if (streak === 30) {
+      s = this.addWitness(s, "streak milestone: 30 days 🔥🔥🔥");
+      s.xp += 750;
+    }
+
     // Check for new domain
     const isNewDomain = domain && !Object.keys(s.personality.domain_counts).includes(domain);
     if (isNewDomain) s = this.addXP(s, "new_domain");
@@ -405,6 +469,8 @@ export class VelmaCompanion {
 
     // Remove from open loops if it was there
     s.open_loops = s.open_loops.filter(l => !l.includes(chainName));
+
+    s = this.checkComboAchievements(s, chainName);
 
     s.mood = "proud";
     s.last_thought = `You finished "${chainName}". That's going in the memory.`;
