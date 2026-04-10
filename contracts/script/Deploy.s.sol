@@ -18,9 +18,9 @@ import "../src/OnboardingRewards.sol";
 
 /**
  * @title Deploy
- * @notice Deploys all SkillChain contracts and wires cross-references.
- * @dev Target: Base Sepolia. Run with:
- *      forge script script/Deploy.s.sol --rpc-url base-sepolia --broadcast
+ * @notice Deploys all FlowFabric contracts and wires cross-references.
+ * @dev Target: Base Mainnet. Run with:
+ *      forge script script/Deploy.s.sol --rpc-url base --broadcast --verify
  */
 contract Deploy is Script {
     function run() external {
@@ -107,6 +107,10 @@ contract Deploy is Script {
         token.mint(deployer, 10_000_000 * 1e18);
         token.approve(address(onboarding), 10_000_000 * 1e18);
         onboarding.fundPool(10_000_000 * 1e18);
+
+        // Grant RECORDER_ROLE to deployer so the MCP server wallet can be added later
+        // via marketplace.grantRole(RECORDER_ROLE, mcpServerAddress)
+        marketplace.grantRole(marketplace.RECORDER_ROLE(), deployer);
 
         vm.stopBroadcast();
 

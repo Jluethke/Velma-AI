@@ -320,11 +320,11 @@ export default function Docs() {
                 <thead><tr style={{ background: 'var(--bg-card)' }}><th className="text-left px-4 py-2" style={t}>Contract</th><th className="text-left px-4 py-2" style={t}>Address</th></tr></thead>
                 <tbody style={t}>
                   {[
-                    ['TRUST Token', '0xAd96F3d1d6F6622f35baAcF72134765Da3C562be'],
-                    ['SkillRegistry', '0x3B400Abeb3385aB5401D0076488c74AA5550f09D'],
-                    ['Marketplace', '0xaCFDBF10009Bad15840b7FfBf59B61D3A234aB6B'],
-                    ['TrustOracle', '0x5e3b7016FE47eb6Dbdc276104494e55d540173e3'],
-                    ['ValidationRegistry', '0x4794204ADedC2390e387d02df3906FC3C768f73A'],
+                    ['TRUST Token', '0x61d6a2Ce3D89B509eD1Cf2323B609512584De247'],
+                    ['SkillRegistry', '0x45f1aaA8834f03BAd40f0eE73236D1A5C07d22F5'],
+                    ['Marketplace', '0x679B5CD7C2CdF504768cf31163aB6dFB4bF3fd48'],
+                    ['TrustOracle', '0x8AcD34480432f2472536062A01462b188b310140'],
+                    ['ValidationRegistry', '0x59645dc6eCE206703e4c56aF9D461cD6d0F9653C'],
                   ].map(([name, addr]) => (
                     <tr key={name} style={{ borderTop: '1px solid var(--border)' }}>
                       <td className="px-4 py-2 font-medium" style={h}>{name}</td>

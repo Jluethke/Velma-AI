@@ -13,15 +13,16 @@ export { TrustTokenABI } from './TrustToken';
  * Deployed 2026-04-06 via forge script.
  */
 export const CONTRACTS = {
-  TrustToken:         '0xAd96F3d1d6F6622f35baAcF72134765Da3C562be' as `0x${string}`,
-  TrustOracle:        '0x5e3b7016FE47eb6Dbdc276104494e55d540173e3' as `0x${string}`,
-  SkillRegistry:      '0x3B400Abeb3385aB5401D0076488c74AA5550f09D' as `0x${string}`,
-  Marketplace:        '0xaCFDBF10009Bad15840b7FfBf59B61D3A234aB6B' as `0x${string}`,
-  NodeRegistry:       '0x1EC05D141873eF47B46DEa8A30ae773E5630A3BE' as `0x${string}`,
-  GovernanceDAO:      '0xF8c6ef013B7e02806C0BeE0619797c929E8741A0' as `0x${string}`,
-  LifeRewards:        '0x1e436599C869Ab91161c08d7095C2e9E51dA93D0' as `0x${string}`,
-  Staking:            '0x02e6157d73Fe895cde4c5D2649fFfD2E93011894' as `0x${string}`,
-  ValidationRegistry: '0x4794204ADedC2390e387d02df3906FC3C768f73A' as `0x${string}`,
+  TrustToken:         '0x61d6a2Ce3D89B509eD1Cf2323B609512584De247' as `0x${string}`,
+  TrustOracle:        '0x8AcD34480432f2472536062A01462b188b310140' as `0x${string}`,
+  SkillRegistry:      '0x45f1aaA8834f03BAd40f0eE73236D1A5C07d22F5' as `0x${string}`,
+  Marketplace:        '0x679B5CD7C2CdF504768cf31163aB6dFB4bF3fd48' as `0x${string}`,
+  NodeRegistry:       '0xd869d3110BE9a711597Cc7AA505a6ddFc0a90196' as `0x${string}`,
+  GovernanceDAO:      '0x031360865ED0C521487A9aa8F8BE2958C41a33BF' as `0x${string}`,
+  LifeRewards:        '0xb793b8B0b23359EAe7BAf534da7aE54ba3c9d12d' as `0x${string}`,
+  Staking:            '0x8eF891BDD235cb6a5B558bF5ee9abbBc20841658' as `0x${string}`,
+  ValidationRegistry: '0x59645dc6eCE206703e4c56aF9D461cD6d0F9653C' as `0x${string}`,
+  OnboardingRewards:  '0x881F2eFB238F1eB29C2D06bb3e6b89eC2c27146e' as `0x${string}`,
 } as const;
 
 /** Base Mainnet chain ID */

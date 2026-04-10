@@ -2,117 +2,210 @@
 pragma solidity ^0.8.24;
 
 import "forge-std/Test.sol";
-import "../src/SkillToken.sol";
+import "../src/TrustToken.sol";
 import "../src/NodeRegistry.sol";
 import "../src/SkillRegistry.sol";
 import "../src/Marketplace.sol";
 
 contract MarketplaceTest is Test {
-    SkillToken public token;
+    TrustToken public token;
     NodeRegistry public nodeReg;
     SkillRegistry public skillReg;
     Marketplace public marketplace;
 
-    address admin = address(0xA);
-    address creator = address(0xB);
-    address buyer = address(0xC);
+    address admin    = address(0xA);
+    address creator  = address(0xB);
+    address buyer    = address(0xC);
     address treasury = address(0xD);
+    address recorder = address(0xE); // MCP server wallet
 
-    bytes32 skillId;
+    bytes32 premiumSkillId; // price = 1000 TRUST
+    bytes32 freeSkillId;    // price = 0
 
     function setUp() public {
         vm.startPrank(admin);
-        token = new SkillToken(admin, admin, treasury);
-        nodeReg = new NodeRegistry(address(token));
-        skillReg = new SkillRegistry();
+        token      = new TrustToken(admin, admin, treasury);
+        nodeReg    = new NodeRegistry(address(token));
+        skillReg   = new SkillRegistry();
         marketplace = new Marketplace(
             address(token), address(skillReg), address(nodeReg), treasury
         );
 
-        // Fund users
-        token.mint(creator, 10000 * 1e18);
-        token.mint(buyer, 10000 * 1e18);
+        // Grant RECORDER_ROLE to the mock MCP server wallet
+        marketplace.grantRole(marketplace.RECORDER_ROLE(), recorder);
+
+        token.mint(creator, 10_000 * 1e18);
+        token.mint(buyer,   10_000 * 1e18);
         vm.stopPrank();
 
-        // Register a skill
-        string[] memory tags = new string[](1);
-        tags[0] = "test";
-        string[] memory inputs = new string[](1);
-        inputs[0] = "input";
-        string[] memory outputs = new string[](1);
-        outputs[0] = "output";
+        string[] memory tags    = new string[](1); tags[0]    = "test";
+        string[] memory inputs  = new string[](1); inputs[0]  = "input";
+        string[] memory outputs = new string[](1); outputs[0] = "output";
 
-        vm.prank(creator);
-        skillId = skillReg.registerSkill(
-            "QmMarketSkill", "MarketSkill", "test", tags, inputs, outputs,
+        vm.startPrank(creator);
+        // Premium flow — 1000 TRUST to purchase
+        premiumSkillId = skillReg.registerSkill(
+            "QmPremiumSkill", "PremiumFlow", "test", tags, inputs, outputs,
             1000 * 1e18, SkillRegistry.LicenseType.COMMERCIAL
         );
+        // Free flow — 0 TRUST, open license
+        freeSkillId = skillReg.registerSkill(
+            "QmFreeSkill", "FreeFlow", "test", tags, inputs, outputs,
+            0, SkillRegistry.LicenseType.OPEN
+        );
+        vm.stopPrank();
     }
 
-    // ── Purchases ──────────────────────────────────────────────────────
+    // ── Premium Purchases ──────────────────────────────────────────────
 
-    function test_PurchaseSkill() public {
+    function test_PurchasePremiumSkill() public {
         vm.startPrank(buyer);
         token.approve(address(marketplace), 1000 * 1e18);
-        marketplace.purchaseSkill(skillId);
+        marketplace.purchaseSkill(premiumSkillId);
         vm.stopPrank();
 
-        assertTrue(marketplace.hasPurchased(buyer, skillId));
+        assertTrue(marketplace.hasPurchased(buyer, premiumSkillId));
     }
 
     function test_PurchaseFeeSplit() public {
         uint256 price = 1000 * 1e18;
         uint256 treasuryBefore = token.balanceOf(treasury);
-        uint256 supplyBefore = token.totalSupply();
+        uint256 supplyBefore   = token.totalSupply();
 
         vm.startPrank(buyer);
         token.approve(address(marketplace), price);
-        marketplace.purchaseSkill(skillId);
+        marketplace.purchaseSkill(premiumSkillId);
         vm.stopPrank();
 
-        // Treasury should get 10%
+        // Treasury: 10%
         uint256 treasuryShare = (price * 1000) / 10000;
         assertEq(token.balanceOf(treasury) - treasuryBefore, treasuryShare);
 
-        // 5% should be burned
+        // Burned: 5%
         uint256 burnAmount = price - (price * 7000 / 10000) - (price * 1500 / 10000) - treasuryShare;
         assertEq(supplyBefore - token.totalSupply(), burnAmount);
 
-        // Creator royalties accrued
-        uint256 creatorShare = (price * 7000) / 10000;
-        assertEq(marketplace.creatorRoyalties(skillId), creatorShare);
+        // Creator royalties: 70%
+        assertEq(marketplace.creatorRoyalties(premiumSkillId), (price * 7000) / 10000);
     }
 
     function test_PurchaseDuplicateReverts() public {
         vm.startPrank(buyer);
         token.approve(address(marketplace), 2000 * 1e18);
-        marketplace.purchaseSkill(skillId);
+        marketplace.purchaseSkill(premiumSkillId);
 
         vm.expectRevert("Marketplace: already purchased");
-        marketplace.purchaseSkill(skillId);
+        marketplace.purchaseSkill(premiumSkillId);
         vm.stopPrank();
     }
 
-    // ── Royalty Claims ─────────────────────────────────────────────────
+    function test_PurchaseFreeSkillReverts() public {
+        // Free skills cannot be purchased — they're accessed via recordUsage
+        vm.prank(buyer);
+        vm.expectRevert("Marketplace: flow is free, use recordUsage");
+        marketplace.purchaseSkill(freeSkillId);
+    }
 
-    function test_ClaimRoyalties() public {
+    function test_PurchaseDoesNotConsumeQuota() public {
+        // Purchasing a premium flow should NOT consume daily free-flow quota
         vm.startPrank(buyer);
         token.approve(address(marketplace), 1000 * 1e18);
-        marketplace.purchaseSkill(skillId);
+        marketplace.purchaseSkill(premiumSkillId);
         vm.stopPrank();
 
-        uint256 creatorBefore = token.balanceOf(creator);
-        vm.prank(creator);
-        marketplace.claimRoyalties(skillId);
-
-        uint256 creatorShare = (1000 * 1e18 * 7000) / 10000;
-        assertEq(token.balanceOf(creator) - creatorBefore, creatorShare);
+        // After purchase, buyer still has full 5/day quota for free flows
+        (,,,uint256 remaining) = marketplace.checkAccess(buyer, freeSkillId);
+        assertEq(remaining, 5);
     }
 
-    function test_ClaimRoyaltiesNotCreator() public {
+    // ── checkAccess ────────────────────────────────────────────────────
+
+    function test_CheckAccessPremiumPurchased() public {
+        vm.startPrank(buyer);
+        token.approve(address(marketplace), 1000 * 1e18);
+        marketplace.purchaseSkill(premiumSkillId);
+        vm.stopPrank();
+
+        (bool canAccess, bool isPremium, bool isPurchased,) = marketplace.checkAccess(buyer, premiumSkillId);
+        assertTrue(canAccess);
+        assertTrue(isPremium);
+        assertTrue(isPurchased);
+    }
+
+    function test_CheckAccessPremiumNotPurchased() public {
+        (bool canAccess, bool isPremium, bool isPurchased,) = marketplace.checkAccess(buyer, premiumSkillId);
+        assertFalse(canAccess);
+        assertTrue(isPremium);
+        assertFalse(isPurchased);
+    }
+
+    function test_CheckAccessFreeSkill() public {
+        (bool canAccess, bool isPremium,, uint256 remaining) = marketplace.checkAccess(buyer, freeSkillId);
+        assertTrue(canAccess);
+        assertFalse(isPremium);
+        assertEq(remaining, 5); // Explorer: 5/day
+    }
+
+    // ── Free Flow Usage / Daily Limit ──────────────────────────────────
+
+    function test_RecordUsageDecrementsQuota() public {
+        vm.prank(recorder);
+        marketplace.recordUsage(buyer, freeSkillId);
+
+        (,,, uint256 remaining) = marketplace.checkAccess(buyer, freeSkillId);
+        assertEq(remaining, 4);
+    }
+
+    function test_DailyLimitEnforced() public {
+        // Use up all 5 Explorer slots
+        vm.startPrank(recorder);
+        for (uint256 i = 0; i < 5; i++) {
+            marketplace.recordUsage(buyer, freeSkillId);
+        }
+
+        // 6th should revert
+        vm.expectRevert("Marketplace: daily limit reached");
+        marketplace.recordUsage(buyer, freeSkillId);
+        vm.stopPrank();
+    }
+
+    function test_DailyLimitResetsNextDay() public {
+        vm.startPrank(recorder);
+        for (uint256 i = 0; i < 5; i++) {
+            marketplace.recordUsage(buyer, freeSkillId);
+        }
+        vm.stopPrank();
+
+        // Warp to next day
+        vm.warp(block.timestamp + 1 days);
+
+        // Should be able to use again
+        vm.prank(recorder);
+        marketplace.recordUsage(buyer, freeSkillId);
+
+        (,,, uint256 remaining) = marketplace.checkAccess(buyer, freeSkillId);
+        assertEq(remaining, 4);
+    }
+
+    function test_RecordUsageRequiresRecorderRole() public {
         vm.prank(buyer);
-        vm.expectRevert("Marketplace: not creator");
-        marketplace.claimRoyalties(skillId);
+        vm.expectRevert();
+        marketplace.recordUsage(buyer, freeSkillId);
+    }
+
+    function test_PurchasedPremiumSkipsDailyCount() public {
+        // After purchasing a premium skill, recordUsage is a no-op (no daily decrement)
+        vm.startPrank(buyer);
+        token.approve(address(marketplace), 1000 * 1e18);
+        marketplace.purchaseSkill(premiumSkillId);
+        vm.stopPrank();
+
+        vm.prank(recorder);
+        marketplace.recordUsage(buyer, premiumSkillId); // should not revert, should not count
+
+        // Free flow quota still untouched
+        (,,, uint256 remaining) = marketplace.checkAccess(buyer, freeSkillId);
+        assertEq(remaining, 5);
     }
 
     // ── Subscriptions ──────────────────────────────────────────────────
@@ -123,70 +216,51 @@ contract MarketplaceTest is Test {
         marketplace.subscribe(Marketplace.SubscriptionTier.BUILDER);
         vm.stopPrank();
 
-        (Marketplace.SubscriptionTier tier, uint256 expiresAt, ,) = marketplace.subscriptions(buyer);
+        (Marketplace.SubscriptionTier tier, uint256 expiresAt,,) = marketplace.subscriptions(buyer);
         assertEq(uint8(tier), uint8(Marketplace.SubscriptionTier.BUILDER));
         assertEq(expiresAt, block.timestamp + 30 days);
+    }
+
+    function test_BuilderHas50PerDayQuota() public {
+        vm.startPrank(buyer);
+        token.approve(address(marketplace), 50 * 1e18);
+        marketplace.subscribe(Marketplace.SubscriptionTier.BUILDER);
+        vm.stopPrank();
+
+        (,,, uint256 remaining) = marketplace.checkAccess(buyer, freeSkillId);
+        assertEq(remaining, 50);
     }
 
     function test_SubscribeExplorerFree() public {
         vm.prank(buyer);
         marketplace.subscribe(Marketplace.SubscriptionTier.EXPLORER);
 
-        (Marketplace.SubscriptionTier tier, , ,) = marketplace.subscriptions(buyer);
+        (Marketplace.SubscriptionTier tier,,,) = marketplace.subscriptions(buyer);
         assertEq(uint8(tier), uint8(Marketplace.SubscriptionTier.EXPLORER));
     }
 
-    // ── Access Control ─────────────────────────────────────────────────
+    // ── Royalty Claims ─────────────────────────────────────────────────
 
-    function test_CheckAccessPurchased() public {
+    function test_ClaimRoyalties() public {
         vm.startPrank(buyer);
         token.approve(address(marketplace), 1000 * 1e18);
-        marketplace.purchaseSkill(skillId);
+        marketplace.purchaseSkill(premiumSkillId);
         vm.stopPrank();
 
-        assertTrue(marketplace.checkAccess(buyer, skillId));
-    }
-
-    function test_DailyLimitEnforced() public {
-        // Explorer tier: 5/day limit
-        // Purchase 5 different skills to hit limit
-        for (uint256 i = 0; i < 5; i++) {
-            string memory cid = string(abi.encodePacked("QmLimit", vm.toString(i)));
-            string[] memory tags = new string[](0);
-            string[] memory inputs = new string[](0);
-            string[] memory outputs = new string[](0);
-
-            vm.prank(creator);
-            bytes32 sid = skillReg.registerSkill(
-                cid, "Skill", "test", tags, inputs, outputs,
-                10 * 1e18, SkillRegistry.LicenseType.OPEN
-            );
-
-            vm.startPrank(buyer);
-            token.approve(address(marketplace), 10 * 1e18);
-            marketplace.purchaseSkill(sid);
-            vm.stopPrank();
-        }
-
-        // 6th purchase should fail due to daily limit
-        string[] memory tags2 = new string[](0);
-        string[] memory inputs2 = new string[](0);
-        string[] memory outputs2 = new string[](0);
-
+        uint256 creatorBefore = token.balanceOf(creator);
         vm.prank(creator);
-        bytes32 sid6 = skillReg.registerSkill(
-            "QmLimit6", "Skill6", "test", tags2, inputs2, outputs2,
-            10 * 1e18, SkillRegistry.LicenseType.OPEN
-        );
+        marketplace.claimRoyalties(premiumSkillId);
 
-        vm.startPrank(buyer);
-        token.approve(address(marketplace), 10 * 1e18);
-        vm.expectRevert("Marketplace: daily limit");
-        marketplace.purchaseSkill(sid6);
-        vm.stopPrank();
+        assertEq(token.balanceOf(creator) - creatorBefore, (1000 * 1e18 * 7000) / 10000);
     }
 
-    // ── Treasury ───────────────────────────────────────────────────────
+    function test_ClaimRoyaltiesNotCreator() public {
+        vm.prank(buyer);
+        vm.expectRevert("Marketplace: not creator");
+        marketplace.claimRoyalties(premiumSkillId);
+    }
+
+    // ── Admin ──────────────────────────────────────────────────────────
 
     function test_SetTreasury() public {
         address newTreasury = address(0xF);
