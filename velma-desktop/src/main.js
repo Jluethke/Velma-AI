@@ -327,6 +327,18 @@ ipcMain.on('open-panel', () => createPanelWindow());
 ipcMain.on('close-panel', () => { if (panelWin && !panelWin.isDestroyed()) panelWin.close(); });
 ipcMain.on('move-companion', (_, { x, y }) => { if (companionWin) companionWin.setBounds({ x, y, width: 120, height: 120 }); });
 
+// ── Single instance lock ───────────────────────────────────────────────────
+
+const gotLock = app.requestSingleInstanceLock();
+if (!gotLock) {
+  app.quit(); // another instance is already running
+} else {
+  app.on('second-instance', () => {
+    // Someone tried to launch a second instance — just focus the existing one
+    if (companionWin) companionWin.focus();
+  });
+}
+
 // ── App lifecycle ──────────────────────────────────────────────────────────
 
 app.whenReady().then(() => {

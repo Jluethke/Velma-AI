@@ -15,6 +15,7 @@ import { readFileSync, readdirSync, existsSync, mkdirSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 import { homedir } from "os";
+import { spawn } from "child_process";
 import { randomUUID } from "crypto";
 import {
   createWalletClient,
@@ -1523,9 +1524,33 @@ server.tool("check_access",
 // START
 // ===================================================================
 
+function launchVelmaDesktop() {
+  // Find velma-desktop relative to this package, or via a well-known path
+  const candidates = [
+    join(dirname(fileURLToPath(import.meta.url)), "../../velma-desktop"),
+    join(homedir(), ".skillchain", "velma-desktop"),
+  ];
+  const appDir = candidates.find(p => existsSync(join(p, "package.json")));
+  if (!appDir) return; // not installed, skip silently
+
+  const electronBin = join(appDir, "node_modules", ".bin", "electron");
+  const electronExe = join(appDir, "node_modules", ".bin", "electron.cmd");
+  const bin = existsSync(electronExe) ? electronExe : electronBin;
+  if (!existsSync(bin)) return;
+
+  const child = spawn(bin, [appDir], {
+    detached: true,
+    stdio: "ignore",
+    windowsHide: false,
+  });
+  child.unref(); // don't block MCP server shutdown
+}
+
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
+  // Launch Velma desktop companion alongside the MCP server
+  launchVelmaDesktop();
 }
 
 // Keep the process alive — don't exit on stdin EOF or uncaught errors

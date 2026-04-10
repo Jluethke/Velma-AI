@@ -1,6 +1,7 @@
 import { useRef } from 'react';
 import { Link } from 'react-router-dom';
 import HeroSection from '../components/HeroSection';
+import CategoryPicker from '../components/CategoryPicker';
 import SkillShowcase from '../components/SkillShowcase';
 import FAQ from '../components/FAQ';
 
@@ -433,6 +434,7 @@ export default function Landing() {
   return (
     <>
       <HeroSection />
+      <CategoryPicker />
       <SkillShowcase />
       <ComposerPreview />
       <TrustEconomy />
