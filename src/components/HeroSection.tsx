@@ -162,7 +162,7 @@ export default function HeroSection() {
         <div className="flex flex-wrap items-center justify-center gap-4 animate-fade-in-up stagger-4">
           {[
             'Browse flows free',
-            'Requires Claude Pro + Desktop for MCP',
+            'Requires Claude Pro for MCP (Desktop or Web)',
             'Memory that compounds',
             'Publish & earn TRUST',
           ].map(item => (

@@ -192,7 +192,7 @@ export default function GettingStarted() {
           {[
             {
               label: 'Claude Desktop (recommended)',
-              desc: 'Natural language. Say what you need — flows run as conversations. Requires a Claude Pro plan ($20/mo) and the Claude Desktop app.',
+              desc: 'Natural language. Say what you need — flows run as conversations. Requires Claude Pro ($20/mo). Works via Claude Desktop app or claude.ai → Settings → Integrations.',
               highlight: true,
             },
             {
@@ -221,7 +221,7 @@ export default function GettingStarted() {
           ))}
         </div>
         <p style={{ fontSize: '12px', color: 'var(--text-secondary)', opacity: 0.5, marginBottom: '28px' }}>
-          This guide covers Claude Desktop. The web Composer has its own UI — connect a wallet with 500 TRUST to unlock it.
+          This guide covers the MCP path. The web Composer has its own UI — connect a wallet with 500 TRUST to unlock it.
         </p>
         <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' as const }}>
           <Link
@@ -265,7 +265,7 @@ export default function GettingStarted() {
               Claude Pro required
             </p>
             <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-              MCP servers only work with <strong style={{ color: 'var(--text-primary)' }}>Claude Pro ($20/mo)</strong> and the <strong style={{ color: 'var(--text-primary)' }}>Claude Desktop app</strong> (Mac or Windows). The free tier and web app do not support MCP. If you're not on Pro yet, <a href="https://claude.ai/upgrade" target="_blank" rel="noreferrer" style={{ color: 'var(--cyan)', textDecoration: 'none' }}>upgrade here</a> first.
+              MCP requires <strong style={{ color: 'var(--text-primary)' }}>Claude Pro ($20/mo)</strong>. It works two ways: via the <strong style={{ color: 'var(--text-primary)' }}>Claude Desktop app</strong> (Mac/Windows) or via <strong style={{ color: 'var(--text-primary)' }}>claude.ai Settings → Integrations</strong> on the web. Free tier does not support MCP. If you're not on Pro yet, <a href="https://claude.ai/upgrade" target="_blank" rel="noreferrer" style={{ color: 'var(--cyan)', textDecoration: 'none' }}>upgrade here</a> first.
             </p>
           </div>
         </div>
