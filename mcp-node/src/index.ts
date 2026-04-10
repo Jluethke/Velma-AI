@@ -359,8 +359,8 @@ server.tool("discover_flows",
   }
 );
 
-server.tool("list_chains",
-  "List all available pre-built flow chains.",
+server.tool("list_flows",
+  "List all available FlowFabric flows (multi-step pipelines).",
   {},
   async () => {
     const chains = availableChains();
@@ -375,8 +375,8 @@ server.tool("list_chains",
   }
 );
 
-server.tool("search_chains",
-  "Search for flow chains using plain English. Describe what you need and get ranked matches.",
+server.tool("search_flows",
+  "Search for FlowFabric flows using plain English. Describe what you need and get ranked matches.",
   {
     query: z.string().describe("What you're looking for (e.g., 'I hate my job', 'help me budget')"),
     max_results: z.number().default(5),
@@ -443,37 +443,37 @@ server.tool("find_and_run",
   }
 );
 
-server.tool("run_chain",
-  "Execute a flow chain by name. Returns the chain steps for execution.",
+server.tool("run_flow",
+  "Execute a FlowFabric flow by name. Returns the flow steps for execution.",
   {
-    chain_name: z.string().describe("Name of the chain to run"),
+    flow_name: z.string().describe("Name of the flow to run (e.g. 'job-search-blitz')"),
     initial_context: z.string().default("{}").describe("JSON context data"),
   },
-  async ({ chain_name, initial_context }) => {
+  async ({ flow_name, initial_context }) => {
     const chains = availableChains();
-    const chainData = chains.find(c => (c as Record<string, unknown>).name === chain_name);
-    if (!chainData) return { content: [{ type: "text" as const, text: JSON.stringify({ error: `Chain '${chain_name}' not found.` }) }] };
+    const chainData = chains.find(c => (c as Record<string, unknown>).name === flow_name);
+    if (!chainData) return { content: [{ type: "text" as const, text: JSON.stringify({ error: `Flow '${flow_name}' not found.` }) }] };
 
     let ctx: Record<string, unknown>;
     try { ctx = JSON.parse(initial_context); } catch { ctx = {}; }
 
     const steps = ((chainData as Record<string, unknown>).steps as Array<Record<string, string>>) ?? [];
     const result = {
-      chain_name,
+      flow_name,
       status: "ready",
       steps: steps.map(s => ({
-        skill_name: s.skill_name,
+        flow_step: s.skill_name,
         alias: s.alias ?? s.skill_name,
         depends_on: (s as Record<string, unknown>).depends_on ?? [],
       })),
       initial_context: ctx,
-      instructions: "Execute each flow step using: get_flow → start_flow_run → record_phase (per phase) → complete_flow_run. Pass outputs between dependent steps.",
+      instructions: "Use preview_flow to show the user the plan, then run_flow_step to execute one step at a time with human approval between steps.",
     };
 
-    try { profileMgr.updateChainUsage(chain_name); } catch { /* */ }
+    try { profileMgr.updateChainUsage(flow_name); } catch { /* */ }
     try {
       const gam = new GamificationEngine();
-      gam.recordChainRun(chain_name, steps.length, 0);
+      gam.recordChainRun(flow_name, steps.length, 0);
     } catch { /* */ }
 
     return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
@@ -625,15 +625,211 @@ server.tool("run_flow_step",
 );
 
 // ===================================================================
+// DOCUMENT ANALYSIS TOOL
+// ===================================================================
+
+/** Text-readable file extensions */
+const TEXT_EXTENSIONS = new Set([
+  ".txt", ".md", ".markdown", ".csv", ".json", ".yaml", ".yml",
+  ".ts", ".tsx", ".js", ".jsx", ".py", ".rb", ".go", ".rs",
+  ".html", ".htm", ".xml", ".toml", ".ini", ".cfg", ".conf",
+  ".sh", ".bat", ".ps1", ".log", ".env",
+]);
+
+/** Document extensions that are readable by name/metadata but not content */
+const DOC_EXTENSIONS = new Set([
+  ".pdf", ".docx", ".doc", ".xlsx", ".xls", ".pptx", ".ppt",
+  ".odt", ".ods", ".odp", ".rtf",
+]);
+
+const DIR_STOPWORDS = new Set([
+  "the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for",
+  "of", "with", "by", "from", "is", "are", "was", "were", "be", "been",
+  "have", "has", "had", "do", "does", "did", "will", "would", "could",
+  "should", "may", "might", "can", "this", "that", "these", "those",
+  "i", "you", "we", "they", "it", "he", "she", "my", "your", "our",
+  "its", "not", "no", "so", "as", "if", "than", "then", "when", "where",
+  "what", "which", "who", "how", "all", "each", "more", "some", "any",
+  "also", "just", "very", "get", "use", "used", "using", "make", "made",
+  "new", "one", "two", "three", "first", "last", "next", "other",
+]);
+
+function scanDirectory(dir: string, depth = 0, maxDepth = 2): string[] {
+  if (depth > maxDepth || !existsSync(dir)) return [];
+  const paths: string[] = [];
+  try {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      if (entry.name.startsWith(".")) continue; // skip hidden
+      const full = join(dir, entry.name);
+      if (entry.isDirectory() && depth < maxDepth) {
+        paths.push(...scanDirectory(full, depth + 1, maxDepth));
+      } else if (entry.isFile()) {
+        paths.push(full);
+      }
+    }
+  } catch { /* permission denied etc */ }
+  return paths;
+}
+
+function extractKeywords(text: string, topN = 30): string[] {
+  const freq = new Map<string, number>();
+  for (const raw of text.toLowerCase().match(/[a-z][a-z'-]{2,}/g) ?? []) {
+    const word = raw.replace(/^'+|'+$/g, "");
+    if (word.length < 3 || DIR_STOPWORDS.has(word)) continue;
+    freq.set(word, (freq.get(word) ?? 0) + 1);
+  }
+  return [...freq.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, topN)
+    .map(([w]) => w);
+}
+
+server.tool("analyze_directory",
+  "Onboarding: learn about a user by analyzing their documents and files, then recommend personalized FlowFabric flows. Say: 'To learn more about you and recommend the right flows, share a folder or files you want me to analyze.' Reads documents, detects themes (finance, career, health, business, code), and surfaces the most relevant flows. Run this at the start of a new conversation to personalize the experience.",
+  {
+    directory: z.string().describe("Absolute path to the directory or folder to analyze (e.g. C:/Users/you/Documents or /Users/you/Desktop/work)"),
+    max_files: z.number().default(50).describe("Maximum number of files to read (default: 50)"),
+    max_depth: z.number().default(2).describe("How deep to scan subdirectories (default: 2)"),
+    read_content: z.boolean().default(true).describe("Read text file contents for deeper analysis. False = filenames only (faster, less accurate)."),
+  },
+  async ({ directory, max_files, max_depth, read_content }) => {
+    type ChainData = Record<string, unknown>;
+    type StepData = { skill_name: string; alias?: string };
+
+    // Validate directory
+    if (!existsSync(directory)) {
+      return { content: [{ type: "text" as const, text: JSON.stringify({
+        error: `Directory not found: ${directory}`,
+      }) }] };
+    }
+
+    // Scan files
+    const allPaths = scanDirectory(directory, 0, max_depth).slice(0, max_files * 3);
+    const inventory: Array<{ path: string; name: string; ext: string; readable: boolean; binary: boolean }> = [];
+
+    for (const p of allPaths) {
+      const name = p.split(/[\\/]/).pop() ?? p;
+      const ext = name.includes(".") ? "." + name.split(".").pop()!.toLowerCase() : "";
+      inventory.push({
+        path: p,
+        name,
+        ext,
+        readable: TEXT_EXTENSIONS.has(ext),
+        binary: DOC_EXTENSIONS.has(ext),
+      });
+    }
+
+    // Read content from text files
+    const contentChunks: string[] = [];
+    let filesRead = 0;
+    const filesSummary: Array<{ name: string; ext: string; size_bytes: number; excerpt?: string }> = [];
+
+    for (const f of inventory) {
+      if (filesRead >= max_files) break;
+
+      if (f.readable && read_content) {
+        try {
+          const raw = readFileSync(f.path, "utf-8").slice(0, 3000);
+          contentChunks.push(f.name + " " + raw);
+          filesSummary.push({ name: f.name, ext: f.ext, size_bytes: raw.length, excerpt: raw.slice(0, 120).replace(/\n/g, " ") });
+          filesRead++;
+        } catch { /* skip unreadable */ }
+      } else {
+        // Still use filename as signal
+        contentChunks.push(f.name.replace(/[._-]/g, " "));
+        filesSummary.push({ name: f.name, ext: f.ext, size_bytes: 0 });
+        filesRead++;
+      }
+    }
+
+    // Extract keywords from all content
+    const allText = contentChunks.join(" ");
+    const keywords = extractKeywords(allText, 40);
+
+    // Detect domain signals from extensions
+    const extCounts: Record<string, number> = {};
+    for (const f of inventory) {
+      extCounts[f.ext] = (extCounts[f.ext] ?? 0) + 1;
+    }
+
+    // Build context string for ChainMatcher
+    // Augment with domain signals from file types
+    const domainSignals: string[] = [];
+    const codeExts = new Set([".ts", ".tsx", ".js", ".jsx", ".py", ".go", ".rs", ".rb"]);
+    const dataExts = new Set([".csv", ".xlsx", ".xls", ".json"]);
+    const docExts = new Set([".pdf", ".docx", ".doc"]);
+
+    if (Object.keys(extCounts).some(e => codeExts.has(e))) domainSignals.push("code programming software development");
+    if (Object.keys(extCounts).some(e => dataExts.has(e))) domainSignals.push("data analysis spreadsheet");
+    if (Object.keys(extCounts).some(e => docExts.has(e))) domainSignals.push("documents reports");
+    if (allText.match(/invoice|receipt|expense|budget|revenue|profit|loss/i)) domainSignals.push("finance budget money");
+    if (allText.match(/resume|cv|cover letter|job|hiring|candidate/i)) domainSignals.push("resume job career hiring");
+    if (allText.match(/marketing|seo|content|social media|campaign|funnel/i)) domainSignals.push("marketing content social media");
+    if (allText.match(/customer|client|crm|lead|prospect|sales/i)) domainSignals.push("customer sales crm");
+    if (allText.match(/contract|legal|agreement|terms|compliance|patent/i)) domainSignals.push("legal contract compliance");
+    if (allText.match(/health|medical|patient|clinical|symptom|medication/i)) domainSignals.push("health medical");
+    if (allText.match(/research|literature|paper|study|hypothesis|methodology/i)) domainSignals.push("research synthesis analysis");
+
+    const matchQuery = [...keywords.slice(0, 20), ...domainSignals].join(" ");
+
+    // Run chain matcher
+    const chains = availableChains();
+    const matcher = new ChainMatcher(
+      chains as Array<{ name: string; description?: string; category?: string; steps?: StepData[] }>
+    );
+    const matches = matcher.match(matchQuery, 8);
+
+    // Group by category for the response
+    const byCategory: Record<string, typeof matches> = {};
+    for (const m of matches) {
+      if (!byCategory[m.category]) byCategory[m.category] = [];
+      byCategory[m.category].push(m);
+    }
+
+    // Build reasons tied to what was found in the directory
+    const suggestions = matches.slice(0, 6).map(m => {
+      const flowDesc = (m.description + " " + m.skills.join(" ")).toLowerCase();
+      const triggerWords = keywords.filter(k => flowDesc.includes(k)).slice(0, 4);
+      return {
+        flow: m.chain_name,
+        description: m.description,
+        category: m.category,
+        score: m.score,
+        steps: m.skills,
+        why: triggerWords.length > 0
+          ? `Found in your documents: "${triggerWords.join('", "')}"`
+          : m.match_reason,
+      };
+    });
+
+    const topFlow = suggestions[0];
+    return { content: [{ type: "text" as const, text: JSON.stringify({
+      onboarding_message: "Here's what I found in your files and the flows I'd recommend based on them.",
+      directory,
+      files_found: inventory.length,
+      files_read: filesRead,
+      file_types: extCounts,
+      detected_themes: domainSignals,
+      top_keywords: keywords.slice(0, 20),
+      recommended_flows: suggestions,
+      files_analyzed: filesSummary.slice(0, 30),
+      next_step: topFlow
+        ? `I'd suggest starting with '${topFlow.flow}' — ${topFlow.description}. Call preview_flow('${topFlow.flow}') to see the plan and I'll walk you through it step by step.`
+        : "I couldn't find a strong match. Tell me more about what you're working on and I'll find the right flow.",
+    }, null, 2) }] };
+  }
+);
+
+// ===================================================================
 // DYNAMIC CHAIN COMPOSITION TOOLS (Phase 1 — Patent CIP)
 // ===================================================================
 
-server.tool("compose_chain",
-  "Dynamically compose a flow chain from natural language. Uses input/output matching across the flow registry with trust-weighted scoring. Falls back to curated chains if confidence is low.",
+server.tool("compose_flow",
+  "Dynamically compose a multi-step FlowFabric flow from natural language. Uses input/output matching across the flow library with trust-weighted scoring. Falls back to curated flows if confidence is low.",
   {
     query: z.string().describe("What you want to accomplish (e.g., 'validate my startup idea and build a pitch deck')"),
-    max_skills: z.number().default(5).describe("Maximum number of flows to compose"),
-    min_confidence: z.number().default(0.4).describe("Minimum confidence threshold (0-1). Below this, falls back to curated chains."),
+    max_skills: z.number().default(5).describe("Maximum number of flow steps to compose"),
+    min_confidence: z.number().default(0.4).describe("Minimum confidence threshold (0-1). Below this, falls back to curated flows."),
   },
   async ({ query, max_skills, min_confidence }) => {
     const manifestIdx = buildManifestIndex(MARKETPLACE_DIR);

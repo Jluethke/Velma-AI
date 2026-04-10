@@ -222,8 +222,8 @@ def create_server() -> FastMCP:
     # ===================================================================
 
     @server.tool()
-    def list_skills() -> str:
-        """List all installed skills with their execution patterns and descriptions."""
+    def list_flows() -> str:
+        """List all available FlowFabric flows with their domains and descriptions."""
         installed = _installed_skills()
         results: list[dict[str, Any]] = []
         for name in sorted(installed.keys()):
@@ -238,13 +238,13 @@ def create_server() -> FastMCP:
         return json.dumps(results, indent=2)
 
     @server.tool()
-    def get_skill(skill_name: str) -> str:
-        """Get the full content of an installed skill."""
+    def get_flow(flow_name: str) -> str:
+        """Get the full definition of a FlowFabric flow."""
         skills = _installed_skills()
-        path = skills.get(skill_name)
+        path = skills.get(flow_name)
         if path and path.exists():
             return path.read_text(encoding="utf-8")
-        return f"Skill '{skill_name}' not found. Use list_skills() to see available skills."
+        return f"Flow '{flow_name}' not found. Use list_flows() to see available flows."
 
     @server.tool()
     def check_access(skill_name: str = "", chain_name: str = "") -> str:
@@ -274,26 +274,26 @@ def create_server() -> FastMCP:
         }, indent=2, default=str)
 
     @server.tool()
-    def start_skill_run(skill_name: str, execution_pattern: str = "orpa") -> str:
-        """Start a tracked execution of a skill. Returns a run_id for tracking phases."""
-        # Gate check: premium skills require TRUST tokens
+    def start_flow_run(flow_name: str, execution_pattern: str = "orpa") -> str:
+        """Start a tracked execution of a FlowFabric flow. Returns a run_id for tracking phases."""
+        # Gate check: premium flows require TRUST tokens
         from ..connectors.gate import get_gate, FREE_SKILLS
         gate = get_gate()
-        if not gate.is_skill_allowed(skill_name):
+        if not gate.is_skill_allowed(flow_name):
             result = gate.check()
             return json.dumps({
-                "error": "premium_skill",
-                "message": f"'{skill_name}' requires TRUST tokens. Connect a wallet with TRUST balance to unlock.",
+                "error": "premium_flow",
+                "message": f"'{flow_name}' requires TRUST tokens. Connect a wallet with TRUST balance to unlock.",
                 "tier": result.tier,
                 "wallet": result.wallet,
-                "free_skills": sorted(list(FREE_SKILLS)),
+                "free_flows": sorted(list(FREE_SKILLS)),
             }, indent=2)
-        run = store.start_run(skill_name, execution_pattern)
+        run = store.start_run(flow_name, execution_pattern)
         run_id = uuid.uuid4().hex[:16]
         _active_runs[run_id] = run
         return json.dumps({
             "run_id": run_id,
-            "skill_name": skill_name,
+            "flow_name": flow_name,
             "execution_pattern": execution_pattern,
             "started_at": run.started_at,
             "status": "in_progress",
@@ -301,10 +301,10 @@ def create_server() -> FastMCP:
 
     @server.tool()
     def record_phase(run_id: str, phase: str, status: str, output: str = "{}") -> str:
-        """Record completion of a skill phase. Called after each execution phase.
+        """Record completion of a flow execution phase. Called after each phase.
 
         Args:
-            run_id: The run ID returned by start_skill_run.
+            run_id: The run ID returned by start_flow_run.
             phase: Phase name (e.g. 'observe', 'reflect', 'plan', 'act').
             status: Phase status ('completed', 'failed', 'skipped').
             output: JSON string of phase output data.
@@ -326,8 +326,8 @@ def create_server() -> FastMCP:
         }, indent=2)
 
     @server.tool()
-    def complete_skill_run(run_id: str, status: str = "completed") -> str:
-        """Mark a skill run as complete. Archives to history."""
+    def complete_flow_run(run_id: str, status: str = "completed") -> str:
+        """Mark a flow run as complete. Archives to history."""
         run = _active_runs.get(run_id)
         if not run:
             return json.dumps({"error": f"Run '{run_id}' not found."})
@@ -356,11 +356,11 @@ def create_server() -> FastMCP:
         }, indent=2)
 
     @server.tool()
-    def save_skill_data(skill_name: str, key: str, data: str = "{}") -> str:
-        """Save persistent data for a skill (survives between runs).
+    def save_flow_data(flow_name: str, key: str, data: str = "{}") -> str:
+        """Save persistent data for a flow (survives between runs).
 
         Args:
-            skill_name: Name of the skill.
+            flow_name: Name of the flow.
             key: Data key (e.g. 'analysis', 'inventory', 'config').
             data: JSON string of data to persist.
         """
@@ -368,33 +368,32 @@ def create_server() -> FastMCP:
             data_obj = json.loads(data) if isinstance(data, str) else data
         except json.JSONDecodeError:
             data_obj = {"raw": data}
-        store.save_data(skill_name, key, data_obj)
+        store.save_data(flow_name, key, data_obj)
         return json.dumps({
-            "skill_name": skill_name,
+            "flow_name": flow_name,
             "key": key,
             "saved": True,
         })
 
     @server.tool()
-    def load_skill_data(skill_name: str, key: str) -> str:
-        """Load persistent data from a previous skill run."""
-        result = store.load_data(skill_name, key)
+    def load_flow_data(flow_name: str, key: str) -> str:
+        """Load persistent data from a previous flow run."""
+        result = store.load_data(flow_name, key)
         if result is None:
-            return json.dumps({"skill_name": skill_name, "key": key, "found": False, "data": None})
-        return json.dumps({"skill_name": skill_name, "key": key, "found": True, "data": result}, default=str)
+            return json.dumps({"flow_name": flow_name, "key": key, "found": False, "data": None})
+        return json.dumps({"flow_name": flow_name, "key": key, "found": True, "data": result}, default=str)
 
     @server.tool()
-    def get_skill_history(skill_name: str, limit: int = 5) -> str:
-        """Get recent execution history for a skill."""
-        history = store.get_run_history(skill_name, limit=limit)
-        return json.dumps({"skill_name": skill_name, "runs": history, "count": len(history)}, indent=2, default=str)
+    def get_flow_history(flow_name: str, limit: int = 5) -> str:
+        """Get recent execution history for a flow."""
+        history = store.get_run_history(flow_name, limit=limit)
+        return json.dumps({"flow_name": flow_name, "runs": history, "count": len(history)}, indent=2, default=str)
 
     @server.tool()
-    def discover_skills(domain: str = "", max_results: int = 10) -> str:
-        """Search for skills in the SkillChain marketplace by domain.
+    def discover_flows(domain: str = "", max_results: int = 10) -> str:
+        """Search for FlowFabric flows in the marketplace by domain.
 
-        Returns skills from the local marketplace catalog. For on-chain
-        discovery, use the full SkillChain CLI.
+        Returns flows from the local marketplace catalog.
         """
         installed = _installed_skills()
         results: list[dict[str, Any]] = []
@@ -418,27 +417,27 @@ def create_server() -> FastMCP:
         return json.dumps(results, indent=2)
 
     @server.tool()
-    def import_skill(skill_name: str) -> str:
-        """Import a skill from the marketplace into ~/.claude/skills/.
+    def import_flow(flow_name: str) -> str:
+        """Import a flow from the FlowFabric marketplace into ~/.claude/skills/.
 
-        Copies the skill.md from marketplace to the Claude skills directory.
+        Copies the flow definition from marketplace to the local skills directory.
         """
-        # Sanitize skill_name to prevent path traversal
-        safe_name = skill_name.replace("/", "").replace("\\", "").replace("\0", "")
+        # Sanitize flow_name to prevent path traversal
+        safe_name = flow_name.replace("/", "").replace("\\", "").replace("\0", "")
         while ".." in safe_name:
             safe_name = safe_name.replace("..", "")
         safe_name = safe_name.lstrip(".")
         if not safe_name:
-            return json.dumps({"error": "Invalid skill name."})
+            return json.dumps({"error": "Invalid flow name."})
         source = _MARKETPLACE_DIR / safe_name / "skill.md"
         if not source.exists():
-            return json.dumps({"error": f"Skill '{skill_name}' not found in marketplace."})
+            return json.dumps({"error": f"Flow '{flow_name}' not found in marketplace."})
         dest_dir = _SKILLS_DIR_CLAUDE
         dest_dir.mkdir(parents=True, exist_ok=True)
         dest = dest_dir / f"{safe_name}.md"
         dest.write_text(source.read_text(encoding="utf-8"), encoding="utf-8")
         return json.dumps({
-            "skill_name": skill_name,
+            "flow_name": flow_name,
             "installed_to": str(dest),
             "success": True,
         })
@@ -461,24 +460,27 @@ def create_server() -> FastMCP:
         }, indent=2)
 
     @server.tool()
-    def run_chain(chain_name: str, initial_context: str = "{}") -> str:
-        """Execute a skill chain by name. Returns results from all steps.
+    def run_flow_pipeline(flow_name: str, initial_context: str = "{}") -> str:
+        """Execute a multi-step FlowFabric flow pipeline by name.
 
         Args:
-            chain_name: Name of the chain to run (e.g. 'startup-validation').
+            flow_name: Name of the flow pipeline to run (e.g. 'job-search-blitz').
             initial_context: JSON string of initial context data.
+
+        Prefer run_flow_step for human-in-the-loop step-by-step execution.
         """
-        # Gate check: premium chains require TRUST tokens
+        chain_name = flow_name  # internal alias
+        # Gate check: premium flows require TRUST tokens
         from ..connectors.gate import get_gate, FREE_CHAINS
         gate = get_gate()
         if not gate.is_chain_allowed(chain_name):
             result = gate.check()
             return json.dumps({
-                "error": "premium_chain",
-                "message": f"'{chain_name}' requires TRUST tokens. Connect a wallet with TRUST balance to unlock.",
+                "error": "premium_flow",
+                "message": f"'{flow_name}' requires TRUST tokens. Connect a wallet with TRUST balance to unlock.",
                 "tier": result.tier,
                 "wallet": result.wallet,
-                "free_chains": sorted(list(FREE_CHAINS)),
+                "free_flows": sorted(list(FREE_CHAINS)),
             }, indent=2)
 
         # Find the chain definition
@@ -534,8 +536,8 @@ def create_server() -> FastMCP:
         return json.dumps(asdict(result), indent=2, default=str)
 
     @server.tool()
-    def list_chains() -> str:
-        """List all available pre-built skill chains."""
+    def list_flow_pipelines() -> str:
+        """List all available multi-step FlowFabric pipelines (flows with multiple steps)."""
         chains = _available_chains()
         summaries = []
         for c in chains:
@@ -543,14 +545,14 @@ def create_server() -> FastMCP:
                 "name": c.get("name", ""),
                 "description": c.get("description", ""),
                 "category": c.get("category", ""),
-                "steps": len(c.get("steps", [])),
-                "skills": [s.get("skill_name", "") for s in c.get("steps", [])],
+                "step_count": len(c.get("steps", [])),
+                "flow_steps": [s.get("skill_name", "") for s in c.get("steps", [])],
             })
         return json.dumps(summaries, indent=2)
 
     @server.tool()
-    def search_chains(query: str, max_results: int = 5) -> str:
-        """Search for skill chains using plain English.
+    def search_flows(query: str, max_results: int = 5) -> str:
+        """Search for FlowFabric flows using plain English.
 
         Describe what you need in your own words and get ranked matches.
 
@@ -558,9 +560,6 @@ def create_server() -> FastMCP:
             query: What you're looking for (e.g., "I'm scared of technology",
                    "help me find a job", "I need to start a business")
             max_results: Maximum number of results to return.
-
-        Returns skills from the local marketplace catalog. For on-chain
-        discovery, use the full SkillChain CLI.
         """
         from ..chain_matcher import ChainMatcher
 
