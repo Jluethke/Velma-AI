@@ -128,22 +128,26 @@ function ShowcaseCard({ item, index }: { item: ShowcaseItem; index: number }) {
           <span>&middot;</span>
           <span>OPEN license</span>
         </div>
-        <Link
-          to="/compose"
-          className="text-xs no-underline font-medium"
-          style={{
-            color: 'var(--cyan)',
-            transition: 'all 0.3s',
-          }}
-          onMouseEnter={(e) => {
-            (e.currentTarget as HTMLElement).style.textShadow = '0 0 12px rgba(56, 189, 248, 0.3)';
-          }}
-          onMouseLeave={(e) => {
-            (e.currentTarget as HTMLElement).style.textShadow = 'none';
-          }}
-        >
-          Build this flow &rarr;
-        </Link>
+        <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '4px', alignItems: 'flex-end' }}>
+          <Link
+            to="/get-started"
+            className="text-xs no-underline font-medium"
+            style={{ color: 'var(--cyan)', transition: 'all 0.3s' }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.textShadow = '0 0 12px rgba(56, 189, 248, 0.3)'; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.textShadow = 'none'; }}
+          >
+            Use this flow &rarr;
+          </Link>
+          <Link
+            to="/compose"
+            className="text-xs no-underline"
+            style={{ color: 'var(--text-secondary)', transition: 'all 0.3s', opacity: 0.6 }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.opacity = '1'; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.opacity = '0.6'; }}
+          >
+            Develop new flow &rarr;
+          </Link>
+        </div>
       </div>
     </div>
   );
