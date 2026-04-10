@@ -92,7 +92,7 @@ export default function HeroSection() {
               textTransform: 'uppercase',
             }}
           >
-            165+ flows and counting · Claude Desktop · Free to start
+            165+ flows and counting · Claude Pro + Desktop · Free to browse
           </span>
         </div>
 
@@ -161,8 +161,8 @@ export default function HeroSection() {
         {/* Social proof / trust line */}
         <div className="flex flex-wrap items-center justify-center gap-4 animate-fade-in-up stagger-4">
           {[
-            'No account required',
-            'Runs in Claude Desktop',
+            'Browse flows free',
+            'Requires Claude Pro + Desktop for MCP',
             'Memory that compounds',
             'Publish & earn TRUST',
           ].map(item => (

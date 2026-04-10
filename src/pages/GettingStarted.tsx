@@ -192,7 +192,7 @@ export default function GettingStarted() {
           {[
             {
               label: 'Claude Desktop (recommended)',
-              desc: 'Natural language. Say what you need — flows run as conversations.',
+              desc: 'Natural language. Say what you need — flows run as conversations. Requires a Claude Pro plan ($20/mo) and the Claude Desktop app.',
               highlight: true,
             },
             {
@@ -246,6 +246,28 @@ export default function GettingStarted() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
           <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(56,189,248,0.12)', border: '1px solid rgba(56,189,248,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--cyan)', fontWeight: 800, fontSize: '14px' }}>1</div>
           <h2 style={{ ...sectionHeading, marginBottom: 0 }}>Install the MCP server</h2>
+        </div>
+
+        {/* Pro requirement callout */}
+        <div style={{
+          background: 'rgba(251,191,36,0.06)',
+          border: '1px solid rgba(251,191,36,0.25)',
+          borderRadius: '10px',
+          padding: '14px 18px',
+          marginBottom: '20px',
+          display: 'flex',
+          gap: '12px',
+          alignItems: 'flex-start',
+        }}>
+          <span style={{ color: 'var(--gold)', fontSize: '16px', lineHeight: 1, marginTop: '2px' }}>!</span>
+          <div>
+            <p style={{ margin: 0, fontSize: '13px', color: 'var(--gold)', fontWeight: 600, marginBottom: '4px' }}>
+              Claude Pro required
+            </p>
+            <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+              MCP servers only work with <strong style={{ color: 'var(--text-primary)' }}>Claude Pro ($20/mo)</strong> and the <strong style={{ color: 'var(--text-primary)' }}>Claude Desktop app</strong> (Mac or Windows). The free tier and web app do not support MCP. If you're not on Pro yet, <a href="https://claude.ai/upgrade" target="_blank" rel="noreferrer" style={{ color: 'var(--cyan)', textDecoration: 'none' }}>upgrade here</a> first.
+            </p>
+          </div>
         </div>
 
         <div style={card}>
