@@ -85,6 +85,7 @@ import { ChainMatcher } from "./chain-matcher.js";
 import { GamificationEngine } from "./gamification.js";
 import { ProfileManager } from "./user-profile.js";
 import { VelmaRecommender } from "./velma-recommender.js";
+import { VelmaCompanion } from "./velma-companion.js";
 import { buildManifestIndex } from "./manifest-index.js";
 import { ChainComposer } from "./chain-composer.js";
 import { MemoryStore } from "./memory-store.js";
@@ -319,6 +320,7 @@ server.tool("complete_flow_run",
       const gam = new GamificationEngine();
       gam.recordSkillRun(run.skill_name);
     } catch { /* */ }
+    try { new VelmaCompanion().witnessFlow(run.skill_name); } catch { /* */ }
 
     // Memory: extract facts from phase outputs and store to L1/L2
     let factsExtracted = 0;
@@ -496,6 +498,7 @@ server.tool("find_and_run",
           const gam = new GamificationEngine();
           gam.recordChainRun(best.chain_name, steps.length, 0);
         } catch { /* */ }
+        try { new VelmaCompanion().witnessChain(best.chain_name); } catch { /* */ }
 
         // Record on-chain usage
         try {
@@ -541,6 +544,7 @@ server.tool("run_flow",
       const gam = new GamificationEngine();
       gam.recordChainRun(flow_name, steps.length, 0);
     } catch { /* */ }
+    try { new VelmaCompanion().witnessChain(flow_name); } catch { /* */ }
 
     // Record on-chain usage
     try {
@@ -676,6 +680,11 @@ server.tool("run_flow_step",
       const gam = new GamificationEngine();
       gam.recordSkillRun(skillName);
       if (isLast) gam.recordChainRun(flow_name, steps.length, 0);
+    } catch { /* */ }
+    try {
+      const velma = new VelmaCompanion();
+      velma.witnessFlow(skillName);
+      if (isLast) velma.witnessChain(flow_name);
     } catch { /* */ }
 
     // Record on-chain usage when the chain completes
@@ -1263,6 +1272,30 @@ server.tool("delete_trigger",
       deleted,
       trigger_id,
     }, null, 2) }] };
+  }
+);
+
+// ===================================================================
+// VELMA COMPANION TOOLS
+// ===================================================================
+
+server.tool("pet_velma",
+  "Pet Velma. She's been watching. She deserves it.",
+  {},
+  async () => {
+    const velma = new VelmaCompanion();
+    const result = velma.pet();
+    return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
+  }
+);
+
+server.tool("get_velma_status",
+  "Check in on Velma — her mood, level, XP, what she's witnessed recently.",
+  {},
+  async () => {
+    const velma = new VelmaCompanion();
+    const status = velma.getStatus();
+    return { content: [{ type: "text" as const, text: JSON.stringify(status, null, 2) }] };
   }
 );
 
