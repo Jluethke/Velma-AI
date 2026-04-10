@@ -159,7 +159,7 @@ function Sprite32bit({ color, mood }: { color: string; mood: VelmaMood }) {
   );
 }
 
-function SpriteHolographic({ color, mood }: { color: string; mood: VelmaMood }) {
+function SpriteHolographic({ color }: { color: string; mood?: VelmaMood }) {
   return (
     <svg width="112" height="112" viewBox="0 0 112 112">
       <defs>
