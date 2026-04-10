@@ -144,6 +144,7 @@ The skill is DONE when:
 | SPECIFY | Schema circular reference | **Adjust** -- break cycle with `$ref` to a shared component |
 | VALIDATE | Blocking issues found | **Retry** -- return to Phase 2 with the specific issues to fix |
 | DOCUMENT | Examples fail to run against the spec | **Retry** -- fix the spec or examples, max 2 retries |
+| ACT | User rejects the API design or requests significant structural changes | **Adjust** -- incorporate specific feedback (e.g., different resource naming, alternative pagination strategy, revised auth model) and regenerate the affected phases; do not restart from Phase 1 unless the consumer requirements or domain model were wrong |
 
 ## State Persistence
 

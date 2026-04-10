@@ -198,6 +198,7 @@ The skill is complete when:
 | Phase 5 | Fewer than 3 analogies remain after validation | **Abort** -- Insufficient analogies to proceed. Return to Phase 3 and identify additional bridges, or request additional user knowledge domains. |
 | Phase 6 | Integrated explanation exceeds 5 paragraphs or 600 words | **Adjust** -- Consolidate analogies. Remove the lowest-confidence analogy or merge two related ones. Rewrite for conciseness. |
 | Phase 6 | Integrated explanation does not explicitly return to the original struggling concept | **Adjust** -- Add a closing paragraph that names the original concept, restates the core insight, and connects it to the intended application. |
+| ACT | User rejects the analogies or says they don't help them understand the concept | **Adjust** -- Incorporate specific feedback (e.g., the source domain is unfamiliar, the boundary conditions are too restrictive, the explanation is too long), replace the weakest analogy with one from a different knowledge domain, and regenerate only the integrated explanation; do not restart from Phase 1 unless the struggling concept was misidentified |
 
 ---
 

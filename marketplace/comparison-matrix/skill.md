@@ -117,6 +117,44 @@ The skill is DONE when:
 | REASON | Cannot score an option on a criterion (no data) | **Adjust** -- assign score of 5 (neutral), flag as estimated, reduce confidence |
 | REASON | Two options tied exactly | **Adjust** -- add tiebreaker criterion (cost of switching, gut preference, reversibility) |
 | PLAN | Confidence too low to recommend | **Escalate** -- present the matrix without a recommendation, ask user to refine weights |
+| ACT | User rejects the recommendation or disputes specific scores | **Adjust** -- incorporate specific feedback (e.g., a score is wrong due to domain knowledge the model lacked, a criterion weight doesn't reflect actual priorities), update the affected cells and recompute weighted totals; do not restart from OBSERVE unless new options need to be added or criteria fundamentally changed |
+
+## Reference
+
+### Scoring Anchors (1–10 Scale)
+
+| Score | Meaning |
+|---|---|
+| 10 | Best realistic outcome — exceeds all requirements |
+| 8–9 | Strong — fully meets requirements with notable upside |
+| 6–7 | Acceptable — meets core requirements, minor gaps |
+| 4–5 | Marginal — meets some requirements, notable gaps |
+| 2–3 | Weak — significant shortfall on this criterion |
+| 1 | Worst realistic — fails the criterion entirely |
+
+### Sensitivity Threshold Rule
+
+A criterion is **sensitivity-flagged** if:
+- Moving its weight by ±20% (absolute) would change the top-ranked option
+- The gap between the top two options is less than 5 points on a 100-point normalized scale
+
+When sensitivity flags exist, report as: "The winner changes if [criterion] weight moves from X to Y."
+
+### Effective Tie Rule
+
+Options are **effectively tied** when their normalized total scores are within 5 points. In a tie:
+1. Identify the criterion with the largest score difference between the two tied options
+2. Ask the user to rate that single criterion's weight relative to their actual priorities
+3. Use the response to break the tie — never recommend arbitrarily when tied
+
+### Common Weight Distributions by Decision Type
+
+| Decision Type | Common High-Weight Criteria |
+|---|---|
+| Vendor / tool selection | Reliability (0.25), Cost (0.20), Support (0.20) |
+| Job offer comparison | Compensation (0.25), Growth potential (0.25), Culture fit (0.20) |
+| Location / relocation | Cost of living (0.20), Career opportunity (0.20), Quality of life (0.20) |
+| Product purchase | Core feature fit (0.30), Price (0.25), Reliability (0.20) |
 
 ## State Persistence
 

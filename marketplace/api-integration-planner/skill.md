@@ -272,6 +272,7 @@ The skill is DONE when:
 | IMPLEMENT | Official SDK exists but is buggy or outdated | **Adjust** -- generate custom client, document SDK issues for potential contribution |
 | VALIDATE | Sandbox behavior differs from production | **Escalate** -- document discrepancies, recommend gradual production rollout with monitoring |
 | HARDEN | Cannot add circuit breaker (architectural constraint) | **Adjust** -- implement timeout + retry as minimum hardening, document circuit breaker as future work |
+| ACT | User rejects the integration architecture or requests significant changes | **Adjust** -- incorporate specific feedback (e.g., different integration pattern, revised retry policy, alternative caching strategy) and regenerate the affected phases; do not restart from Phase 1 unless the API documentation or integration requirements were wrong |
 
 ## State Persistence
 

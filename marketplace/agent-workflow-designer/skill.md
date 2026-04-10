@@ -344,6 +344,7 @@ The skill is DONE when:
 | DESIGN | Error recovery makes the system too complex | **Adjust** -- simplify to "retry once, then escalate to human" for all failure modes |
 | IMPLEMENT | Agent prompt too long (>4000 tokens) | **Adjust** -- move reference data to tools (RAG retrieval), keep prompt focused on role and rules |
 | VALIDATE | Acceptance test scenario fails to trace | **Retry** -- return to Phase 2, identify the missing agent or handoff, redesign |
+| ACT | User rejects the agent architecture or requests significant design changes | **Adjust** -- incorporate specific feedback (e.g., topology change, new agent role, revised handoff rules) and regenerate the affected phases; do not restart from Phase 1 unless the original goal description was wrong |
 
 ## State Persistence
 

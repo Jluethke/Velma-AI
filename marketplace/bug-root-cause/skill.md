@@ -236,6 +236,7 @@ The skill is DONE when:
 | PLAN | Fix requires changes to a system you don't own | **Escalate** -- document the root cause and recommended fix for the owning team |
 | PLAN | Fix has high regression risk | **Adjust** -- recommend the hotfix (temporary mitigation) first, then the structural fix as a follow-up |
 | ACT | Bug is a known issue in a third-party dependency | **Adjust** -- recommend workaround, file/find upstream issue, pin dependency version |
+| ACT | User rejects the root cause analysis or disputes the proposed fix | **Adjust** -- incorporate specific objections (e.g., the identified root cause is already handled elsewhere, the fix introduces unacceptable risk), re-rank the remaining hypotheses, and regenerate the fix recommendation and regression test; do not restart from OBSERVE unless new evidence changes the fundamental evidence package |
 
 ## State Persistence
 

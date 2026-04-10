@@ -221,6 +221,7 @@ The skill is DONE when:
 | REASON | Cannot determine architectural layer for a module | **Adjust** -- assign "uncategorized" layer, flag for human review |
 | PLAN | Previous map schema doesn't match current version | **Adjust** -- skip drift detection, generate fresh map |
 | ACT | Architecture map exceeds output size limits | **Adjust** -- summarize small modules, detail only top 20 by size |
+| ACT | User rejects the architecture map or disputes the layer assignments and coupling findings | **Adjust** -- incorporate specific feedback (e.g., a module is miscategorized, a dependency edge is wrong, dead code findings are incorrect), update the affected module assignments or metrics, and regenerate the impacted sections of the map; do not restart from OBSERVE unless the repository path or scan depth was wrong |
 
 ## State Persistence
 

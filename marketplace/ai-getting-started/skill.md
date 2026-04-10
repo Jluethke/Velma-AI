@@ -119,6 +119,42 @@ Done when: (1) AI is explained in a way that connects to something the person al
 | PLAN | Person seems overwhelmed by the amount of information | Simplify -- cut to just 3 sections: what it is (2 sentences), how to try it (5 steps), one thing to type right now |
 | ACT | Person asks a follow-up fear question not originally raised | Expand -- address the new concern with the same honest, direct approach before continuing |
 | ACT | Person is excited and wants to go deeper immediately | Redirect -- suggest 2-3 next skills (Digital Safety Guide, Tech Translator) rather than overloading this session |
+| ACT | Person rejects the explanation or says it didn't help them understand | **Adjust** -- incorporate their specific feedback (e.g., analogy didn't land, walkthrough was too fast, tasks weren't relevant), swap in a different analogy or platform, and regenerate only the affected section; do not restart the whole guide |
+
+## Reference
+
+### AI Analogy Library (by Background)
+
+| User Background | Best Analogy | Key Point |
+|---|---|---|
+| Cook / home chef | A well-read assistant who has memorized millions of recipes and articles — brilliant sometimes, confidently wrong other times | Pattern-matching, not understanding |
+| Office worker | Autocomplete on your phone, but for entire paragraphs and conversations | Prediction, not thinking |
+| TV/streaming viewer | Netflix recommendations, but for words — trained on billions of pages, predicts the helpful next sentence | Trained patterns, not awareness |
+| Parent / caregiver | A very fast researcher who can summarize anything but sometimes makes up details — always verify medical or legal specifics | Useful assistant, requires verification |
+
+### Platform Quick-Start by Device
+
+| Device | Platform | First Step |
+|---|---|---|
+| iPhone / iPad | ChatGPT app (App Store, free) | Open App Store → Search "ChatGPT" → Install → Sign up |
+| Android phone | ChatGPT app (Google Play, free) | Open Play Store → Search "ChatGPT" → Install → Sign up |
+| Any computer | chat.openai.com (free, no install) | Open browser → Go to chat.openai.com → Sign up |
+| Google account holder | gemini.google.com (free) | Open browser → Go to gemini.google.com → Sign in with Google |
+
+### The One Safety Rule (Memorable Form)
+"Don't type anything you'd be embarrassed to see on a billboard."
+- Never type: passwords, Social Security numbers, bank account details, private medical information you want kept secret
+- Safe to type: questions, writing help requests, summaries of public documents, recipe ideas, travel planning
+
+### Fear Response Framework
+
+| Fear | Honest Answer | Practical Takeaway |
+|---|---|---|
+| "It'll steal my data" | Partially valid — some AI companies use conversations for training. Use the data controls in settings. | Read the privacy settings; opt out of training data if the option exists |
+| "I'm too old" | Not valid — if you can send a text, you can use AI. Age has no bearing. | Start with texting-style short questions |
+| "It'll replace my job" | Depends entirely on the job. Honest answer: some tasks, yes; full jobs, rarely. | Focus on what it can help you do faster, not what it might replace |
+| "I'll break something" | Not possible — you can only type words, and you can always start a new chat | There is no "break" button in a chat window |
+| "It feels creepy" | Valid emotional response. It mimics human conversation without being human. | Knowing it's a prediction machine (not a person) helps most people feel more comfortable |
 
 ## State Persistence
 - Comfort level progression (from initial skepticism to first successful interaction to regular use)

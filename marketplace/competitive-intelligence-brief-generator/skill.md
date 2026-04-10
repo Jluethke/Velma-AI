@@ -253,6 +253,7 @@ The skill is DONE when:
 | Phase 6 | Brief exceeds 5 pages | **Adjust** -- move detailed evidence tables to appendix, keep main brief to Executive Summary + key sections (Positioning, Strengths, Weaknesses, Recommendations). Ensure brief is still readable in 10 minutes. |
 | Phase 6 | Internal contradiction between sections (e.g., strength in Phase 2 contradicts weakness in Phase 3) | **Adjust** -- flag the contradiction in confidence_notes and mark brief_status as "partial". Do not auto-resolve; recommend author review to clarify the contradiction. |
 | Phase 6 | Data quality is poor (average source age >12 months, >50% of sections missing) | **Adjust** -- mark brief_status as "partial" or "failed". Explain gaps in confidence_notes. Recommend re-running analysis with more recent data sources or conducting primary research (customer interviews). |
+| ACT | User rejects the brief or disputes specific findings | **Adjust** -- incorporate specific feedback (e.g., a strength is overstated, a recent move is misinterpreted, a recommendation doesn't fit the competitive context), update the affected phase output with the corrected evidence, and regenerate the impacted sections; do not restart from Phase 1 unless the company name or scope was wrong |
 
 ---
 

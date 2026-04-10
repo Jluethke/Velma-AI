@@ -128,6 +128,7 @@ Done when: (1) complete spending snapshot shows where every dollar goes, (2) mon
 | BLUEPRINT | Cannot make the math work without major life changes | Flag -- be direct that no budget trick fixes a structural income-to-cost problem. List the hard options honestly |
 | LEVERS | Person has already cut everything obvious | Adjust -- shift focus to income side (overtime, side work, selling unused items, assistance programs) |
 | GUARDRAILS | Previous budgets always failed within 2 months | Adjust -- start with tracking only (no restrictions) for month 1, then introduce limits gradually |
+| ACT | User rejects the budget or says it doesn't reflect their real life | **Adjust** -- incorporate specific feedback (e.g., a category is set too low, a cut is not realistic, a goal isn't the right priority), update the affected categories, and regenerate the impacted blueprint and lever recommendations; do not restart from Phase 1 unless the income or expense data was significantly wrong |
 
 ## State Persistence
 - Monthly income and expense baseline (for tracking changes over time)
@@ -136,6 +137,50 @@ Done when: (1) complete spending snapshot shows where every dollar goes, (2) mon
 - Debt payoff progress (balances over time, interest saved, projected payoff dates)
 - Seasonal spending patterns (which months consistently run over budget and by how much)
 - "What worked" log (which budget strategies this specific person actually follows vs. ignores)
+
+## Reference
+
+### Budget Category Allocation Benchmarks
+
+| Category | Tight Budget (<$3K/mo take-home) | Standard Budget | Healthy Budget |
+|---|---|---|---|
+| Non-negotiables (housing, utilities, insurance, minimums) | 65–75% | 50–60% | 45–55% |
+| Important but flexible (food, transport, phone) | 10–15% | 10–15% | 10–15% |
+| Lifestyle (dining, entertainment, subscriptions, hobbies) | 5–10% | 15–20% | 20–25% |
+| Savings / debt payoff | 0–5% | 10–20% | 20–30% |
+
+If non-negotiables exceed 70%, this is a structural income problem, not a spending discipline problem.
+
+### Impact-to-Pain Ratio (IPR) Decision Tree
+
+```
+Is the savings ≥ $50/month?
+├── Yes → Is the lifestyle cost low (habit change or one-time action)?
+│   ├── Yes → High IPR: Recommend immediately
+│   └── No → Medium IPR: Recommend with caveat about sustainability
+└── No → Is it a "set and forget" action (cancel subscription, refinance)?
+    ├── Yes → Low-medium IPR: Worth doing, low effort
+    └── No → Low IPR: Skip — mental energy cost exceeds benefit
+```
+
+### Biweekly Income Conversion
+
+Biweekly (26 pays/year): Monthly income = (gross annual / 12) OR (paycheck × 26 / 12)
+NOT paycheck × 2 — this loses 2 paychecks per year and causes a recurring deficit.
+
+### Debt Payoff Methods
+
+| Method | Best For | How It Works |
+|---|---|---|
+| Avalanche | Mathematically optimal; suits analytical personalities | Pay minimums on all debts; apply extra to highest-APR debt first |
+| Snowball | Psychologically motivating; suits people who need wins | Pay minimums on all debts; apply extra to smallest-balance debt first |
+| Hybrid | Motivation + optimization | Use snowball until 1-2 quick wins, then switch to avalanche |
+
+### The "Latte Factor" Reality Check
+
+Before recommending any cut, calculate: (daily cost × 365) / 12 = monthly impact
+- $5/day coffee = $152/month. Meaningful if eliminated. But if it's the one daily pleasure, cutting it usually causes budget failure within 60 days.
+- Rule: only cut what the user agrees feels like waste, not what feels like survival.
 
 ---
 

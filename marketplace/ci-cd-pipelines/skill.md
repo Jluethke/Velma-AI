@@ -198,6 +198,7 @@ The skill is DONE when:
 | GENERATE | CI system has feature limitations (no matrix, no services) | **Adjust** -- use workarounds (Docker Compose for services, manual parallelization) |
 | VALIDATE | Security issue found in generated config | **Retry** -- fix the issue and re-validate, max 3 retries |
 | OPTIMIZE | Caching doesn't reduce build time | **Skip** -- remove cache step to reduce complexity, document why |
+| ACT | User rejects the generated pipeline configuration or requests significant changes | **Adjust** -- incorporate specific feedback (e.g., different deployment strategy, additional security checks, alternative CI platform), update the affected phases, and regenerate only the changed configuration sections; do not restart from Phase 1 unless the project stack or deployment target has changed |
 
 ## State Persistence
 

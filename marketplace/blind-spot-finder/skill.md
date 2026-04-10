@@ -84,6 +84,47 @@ Done when: (1) at least 5 blind spots are surfaced as questions, (2) at least 3 
 | REASON | All blind spots are obvious | Go deeper. Look at relationships, identity, precedent, and opportunity cost. |
 | PLAN | Investigation feels overwhelming | Prioritize ruthlessly. "If you can only check one thing, check THIS." |
 | ACT | Person gets defensive | Reframe: these aren't criticisms, they're free intelligence. |
+| ACT | Person rejects the blind spots or says they've already considered them | **Adjust** -- acknowledge what they've already addressed, dig one level deeper into each dismissed blind spot, and surface second- or third-order consequences they may not have traced; do not restart from OBSERVE unless the original situation description was fundamentally incomplete |
+
+## Reference
+
+### Blind Spot Categories Framework
+
+| Category | What to Look For | Example Prompt |
+|---|---|---|
+| Financial | Hidden costs, opportunity costs, funding gaps | "What does this cost in time, money, and attention that you haven't accounted for?" |
+| Relational | Impact on people not mentioned, relationship debt | "Who else is affected by this decision who hasn't been consulted?" |
+| Temporal | Short-term vs long-term tradeoffs, irreversibility | "What is true now that won't be true in 12 months?" |
+| Second-order | Downstream consequences of expected outcomes | "If X happens as planned, then what? And then what?" |
+| Regulatory / Legal | Compliance requirements, liability exposure | "What permission, approval, or compliance does this require?" |
+| Psychological | Confirmation bias, sunk cost, loss aversion | "What evidence would change your mind, and are you actually looking for it?" |
+
+### Inversion Method (Work Backward from Failure)
+
+1. State the goal: "I want [outcome]."
+2. Invert: "How would I guarantee this fails?"
+3. List failure conditions: everything that must go right that is outside your control
+4. For each: Is this assumption validated? What is the consequence if it's wrong? Is it reversible?
+
+### Assumption Testing Matrix
+
+| Assumption | How to Test | Cost | Time | Point of No Return? |
+|---|---|---|---|---|
+| (fill per situation) | Ask / research / small experiment | Low/Med/High | Days/Weeks/Months | Yes/No |
+
+**Point-of-no-return assumptions** are those that, if wrong, cannot be corrected after you commit. These must be tested first.
+
+### Second-Order Consequence Chain
+
+```
+First-order:  [Expected outcome]
+              ↓
+Second-order: [What happens next as a result]
+              ↓
+Third-order:  [What happens after that — the part nobody thinks about]
+```
+
+Example: Get promoted → Manage people → Less time coding → Lose the skill you most enjoy
 
 ## State Persistence
 - Previous blind spot analyses (to spot patterns: "you always forget to consider the relationship impact")

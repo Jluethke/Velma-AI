@@ -142,6 +142,7 @@ Company Operator is a continuous loop running weekly (or bi-weekly for smaller c
 | REASON | Everything is GREEN (company running smoothly) | Adjust -- shift focus from firefighting to strategic planning. What opportunities should we pursue? What experiments should we run? |
 | PLAN | Too many issues to address (>10 RED/AMBER items) | Adjust -- force-rank by revenue impact. Top 3 only. The rest wait. Trying to fix everything fixes nothing |
 | ACT | Previous action items were not completed | Escalate -- understand why. Ownership unclear? Actions too big? Team overwhelmed? This is a management signal, not just a tracking issue |
+| ACT | Operator rejects the briefing or disputes specific KPI interpretations or action items | **Adjust** -- incorporate specific feedback (e.g., a RAG status is wrong due to missing context, an action item owner is incorrect, a risk flag is a known false positive), update the affected section, and regenerate the briefing; do not restart the full ORPA cycle unless the underlying metric data has changed |
 
 ## Reference
 

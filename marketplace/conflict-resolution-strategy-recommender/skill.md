@@ -298,6 +298,7 @@ The skill is complete when:
 | Phase 7 | Confidence is low due to missing information | **Abort** -- Return a partial recommendation with clear caveats and ask for more details. Suggest that the user gather information (e.g., ask trusted colleagues, observe the other party's behavior, consult the other party directly) before implementing strategies. |
 | Phase 7 | Conflict involves cultural differences | **Adjust** -- Add a cultural context note explaining that the Thomas-Kilmann framework is Western-centric. Recommend consulting a cultural mediator or expert if the conflict involves parties from different cultural backgrounds. |
 | Phase 8 | Strategy was attempted but had no effect or made things worse | **Adjust** -- Assess whether the mode was correct, whether the strategy was executed as planned, or whether external factors intervened. Recommend trying a secondary strategy, shifting to a different mode, or seeking external mediation. |
+| ACT | User rejects the recommended strategies or says they don't fit the specific relationship or situation | **Adjust** -- incorporate specific feedback (e.g., the recommended mode doesn't account for a power imbalance, an implementation step is not feasible, cultural context was missed), revise the Thomas-Kilmann analysis if needed, and regenerate the strategies and implementation guidance; do not restart from Phase 1 unless the conflict description was fundamentally incomplete |
 
 ---
 

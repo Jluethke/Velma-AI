@@ -1227,7 +1227,7 @@ server.tool("get_daily_quests",
 );
 
 server.tool("what_now",
-  "Ask Velma what you should do right now. Velma observes your state, history, streaks, time of day, and tells you the chain you need. No searching. Velma just knows.",
+  "Ask FlowFabric what you should do right now. Reads your L0 identity (name, role, goals, top domains), your flow run history across all L2 flow rooms, and your knowledge graph (facts extracted from previous flow outputs) to give personalized next-step recommendations. No searching required — context is already loaded.",
   {},
   async () => {
     const velma = new VelmaRecommender(MARKETPLACE_DIR);

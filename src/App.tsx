@@ -14,6 +14,7 @@ import Chains from './pages/Chains';
 import SkillDetail from './pages/SkillDetail';
 import ChainComposer from './pages/ChainComposer';
 import Install from './pages/Install';
+import Memory from './pages/Memory';
 
 function App() {
   return (
@@ -33,6 +34,7 @@ function App() {
         <Route path="/skill/:name" element={<SkillDetail />} />
         <Route path="/compose" element={<ChainComposer />} />
         <Route path="/install" element={<Install />} />
+        <Route path="/memory" element={<Memory />} />
       </Routes>
       <Footer />
     </BrowserRouter>

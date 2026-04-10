@@ -93,6 +93,51 @@ Done when: (1) complaint letter is complete with specific facts, amounts, and de
 | OBSERVE | Legal situation beyond consumer complaint (fraud, discrimination, injury) | Flag -- recommend attorney consultation, note that this skill is not legal advice |
 | REASON | Company is known to be unresponsive | Adjust -- skip initial letter, start at escalation level 2 (executive email) or regulatory filing |
 | PLAN | Multiple issues with same company | Adjust -- consolidate into one comprehensive letter, list issues chronologically |
+| ACT | User rejects the draft letter or says it doesn't match their situation | **Adjust** -- incorporate specific feedback (e.g., tone too aggressive or too soft, missing a key fact, wrong remedy amount), revise the affected sections of the letter, and regenerate the final version; do not restart from OBSERVE unless the core facts of the situation were misunderstood |
+
+## Reference
+
+### Complaint Type → Best Leverage Point
+
+| Complaint Type | Strongest Leverage | Regulatory Body (US) |
+|---|---|---|
+| Credit card billing error | Chargeback right (Fair Credit Billing Act, 60-day window) | CFPB |
+| Defective product | Implied warranty of merchantability | State AG / FTC |
+| Insurance denial | State insurance regulations, bad faith laws | State Insurance Commissioner |
+| Landlord issue | State tenant rights laws, habitability requirements | State Housing Authority |
+| HOA dispute | CC&Rs, state HOA statutes | State Real Estate Commission |
+| Service failure | Contract breach, consumer protection law | State AG / BBB |
+| Privacy violation | CCPA (California), GDPR (EU), COPPA | FTC |
+
+### Effective Complaint Letter Formula
+
+```
+PROBLEM (1-2 sentences) + EVIDENCE (specific dates, amounts, reference numbers)
++ IMPACT (what you lost: money, time, safety)
++ ASK (exact remedy with dollar amount or specific action)
++ DEADLINE (10-14 business days)
++ ESCALATION WARNING (state next step you will take if not resolved)
+```
+
+### Escalation Ladder
+
+1. Customer service (email + phone, same day)
+2. Supervisor / executive escalation (3-5 days after step 1)
+3. Regulatory filing (BBB, CFPB, state AG) — creates official record
+4. Credit card chargeback — must be within 60-120 days of charge
+5. Small claims court — typically under $5,000–$10,000 (varies by state)
+6. Demand letter with attorney (for larger amounts or serious violations)
+
+### Chargeback Time Windows (US)
+
+| Card Network | Window |
+|---|---|
+| Visa | 120 days from transaction |
+| Mastercard | 120 days from transaction |
+| American Express | 120 days from transaction |
+| Discover | 120 days from transaction |
+
+If outside the window, skip chargeback and go directly to regulatory filing.
 
 ## State Persistence
 - Complaint tracker (issue, company, status, response history)

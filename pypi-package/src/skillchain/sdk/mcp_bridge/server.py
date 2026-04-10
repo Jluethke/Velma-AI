@@ -1,15 +1,15 @@
 """
-SkillChain MCP Server
+FlowFabric MCP Server
 =====================
 
-Serves installed skills as MCP tools and resources.
+Serves installed skills and flow pipelines as MCP tools and resources.
 Claude Code connects to this server and can:
 - List available skills
 - Read skill content (as resources)
 - Execute skill phases (as tools)
 - Access skill state (persistent data)
 - Discover and import new skills
-- Run skill chains
+- Run flow pipelines
 
 Start with: skillchain mcp serve
 Claude Code config: add to ~/.claude/settings.json
@@ -247,15 +247,15 @@ def create_server() -> FastMCP:
         return f"Flow '{flow_name}' not found. Use list_flows() to see available flows."
 
     @server.tool()
-    def check_access(skill_name: str = "", chain_name: str = "") -> str:
-        """Check if the user has access to a skill or chain.
+    def check_access(skill_name: str = "", flow_name: str = "") -> str:
+        """Check if the user has access to a skill or flow pipeline.
 
         Returns the user's access tier (free, holder, staker) and whether
-        the requested skill/chain is accessible.
+        the requested skill/flow is accessible.
 
         Args:
             skill_name: Skill to check (optional)
-            chain_name: Chain to check (optional)
+            flow_name: Flow pipeline to check (optional)
         """
         from ..connectors.gate import get_gate
         gate = get_gate()
@@ -263,8 +263,8 @@ def create_server() -> FastMCP:
         allowed = True
         if skill_name:
             allowed = gate.is_skill_allowed(skill_name)
-        elif chain_name:
-            allowed = gate.is_chain_allowed(chain_name)
+        elif flow_name:
+            allowed = gate.is_chain_allowed(flow_name)
         return json.dumps({
             "tier": result.tier,
             "wallet": result.wallet,
@@ -569,23 +569,23 @@ def create_server() -> FastMCP:
         return json.dumps([asdict(m) for m in matches], indent=2, default=str)
 
     @server.tool()
-    def preview_chain(chain_name: str = "", query: str = "") -> str:
-        """Preview what a chain will do — shows each step, skill, and expected output.
+    def preview_flow(flow_name: str = "", query: str = "") -> str:
+        """Preview what a flow pipeline will do — shows each step, skill, and expected output.
 
-        ALWAYS call this before run_chain or find_and_run(auto_run=True).
+        ALWAYS call this before run_flow_pipeline or find_and_run(auto_run=True).
         Show the preview to the user and get explicit approval before executing.
 
         Args:
-            chain_name: Exact chain name to preview (e.g. 'job-search-blitz').
-            query: Natural language query to find the best chain to preview.
-                   Used only when chain_name is not provided.
+            flow_name: Exact flow pipeline name to preview (e.g. 'job-search-blitz').
+            query: Natural language query to find the best flow pipeline to preview.
+                   Used only when flow_name is not provided.
         """
         chains = _available_chains()
 
         chain_data = None
-        if chain_name:
+        if flow_name:
             for c in chains:
-                if c.get("name") == chain_name:
+                if c.get("name") == flow_name:
                     chain_data = c
                     break
         elif query:
@@ -600,7 +600,7 @@ def create_server() -> FastMCP:
 
         if not chain_data:
             return json.dumps({
-                "error": f"Chain '{chain_name or query}' not found.",
+                "error": f"Flow '{flow_name or query}' not found.",
                 "available": [c.get("name", "") for c in chains[:10]],
             })
 
@@ -611,7 +611,7 @@ def create_server() -> FastMCP:
             manifest = _load_manifest(skill)
             step_previews.append({
                 "step": i + 1,
-                "skill": skill,
+                "flow": skill,
                 "alias": step.get("alias", skill),
                 "description": manifest.get("description", step.get("description", "")),
                 "output_type": manifest.get("output_type", "structured analysis"),
@@ -619,7 +619,7 @@ def create_server() -> FastMCP:
             })
 
         return json.dumps({
-            "chain": chain_data.get("name"),
+            "flow_pipeline": chain_data.get("name"),
             "description": chain_data.get("description", ""),
             "category": chain_data.get("category", ""),
             "total_steps": len(steps),
@@ -628,57 +628,57 @@ def create_server() -> FastMCP:
             "instructions": (
                 "Show this plan to the user. Ask: 'Ready to run? I'll execute each "
                 "flow one at a time and show you the output before continuing.' "
-                "If approved, use run_chain_step to execute step by step."
+                "If approved, use run_flow_step to execute step by step."
             ),
         }, indent=2)
 
     @server.tool()
-    def run_chain_step(
-        chain_name: str,
+    def run_flow_step(
+        flow_name: str,
         step_index: int,
         context: str = "{}",
     ) -> str:
-        """Execute a single step of a chain. Shows output before the next step runs.
+        """Execute a single step of a flow pipeline. Shows output before the next step runs.
 
         Human-in-the-loop execution: run one step, show the user the output,
         get approval, then call this again with step_index + 1.
 
         Args:
-            chain_name: Name of the chain (e.g. 'job-search-blitz').
+            flow_name: Name of the flow pipeline (e.g. 'job-search-blitz').
             step_index: Zero-based index of the step to run (0 = first step).
             context: JSON string of accumulated context from previous steps.
         """
         chains = _available_chains()
         chain_data = None
         for c in chains:
-            if c.get("name") == chain_name:
+            if c.get("name") == flow_name:
                 chain_data = c
                 break
 
         if not chain_data:
-            return json.dumps({"error": f"Chain '{chain_name}' not found."})
+            return json.dumps({"error": f"Flow '{flow_name}' not found."})
 
         steps = chain_data.get("steps", [])
         if step_index < 0 or step_index >= len(steps):
             return json.dumps({
-                "error": f"step_index {step_index} out of range (chain has {len(steps)} steps).",
+                "error": f"step_index {step_index} out of range (flow has {len(steps)} steps).",
                 "total_steps": len(steps),
             })
 
         step = steps[step_index]
-        skill_name = step.get("skill_name", "")
+        flow_step_name = step.get("skill_name", "")
 
         try:
             ctx = json.loads(context) if isinstance(context, str) else context
         except json.JSONDecodeError:
             ctx = {}
 
-        # Read the skill definition
+        # Read the flow definition
         skills = _installed_skills()
-        skill_path = skills.get(skill_name)
+        skill_path = skills.get(flow_step_name)
         skill_content = skill_path.read_text(encoding="utf-8") if skill_path and skill_path.exists() else None
 
-        # Parse required/optional inputs from skill definition
+        # Parse required/optional inputs from flow definition
         required_inputs, optional_inputs = (
             _parse_skill_inputs(skill_content) if skill_content else ([], [])
         )
@@ -701,53 +701,231 @@ def create_server() -> FastMCP:
         is_last = step_index == len(steps) - 1
         next_step = None if is_last else {
             "step_index": step_index + 1,
-            "skill": steps[step_index + 1].get("skill_name", ""),
+            "flow": steps[step_index + 1].get("skill_name", ""),
             "alias": steps[step_index + 1].get("alias", ""),
         }
 
         continue_msg = (
-            "All done! Chain complete." if is_last
+            "All done! Flow pipeline complete." if is_last
             else (
                 f"Step {step_index + 1} complete. Show the full output, then ask: "
                 f"'Ready for step {step_index + 2} "
-                f"({next_step['skill'] if next_step else ''})?' "
-                f"Call run_chain_step with step_index={step_index + 1} to continue."
+                f"({next_step['flow'] if next_step else ''})?' "
+                f"Call run_flow_step with step_index={step_index + 1} to continue."
             )
         )
 
         return json.dumps({
-            "chain": chain_name,
+            "flow_pipeline": flow_name,
             "step": step_index + 1,
             "total_steps": len(steps),
-            "skill": skill_name,
-            "alias": step.get("alias", skill_name),
+            "flow": flow_step_name,
+            "alias": step.get("alias", flow_step_name),
             "required_inputs": required_inputs,
             "optional_inputs": optional_inputs,
             "inputs_already_provided": already_provided,
-            "skill_definition": skill_content,
+            "flow_definition": skill_content,
             "context": ctx,
             "is_last_step": is_last,
             "next_step": next_step,
             "instructions": (
-                f"{intake_block}Execute the '{skill_name}' flow using the skill definition "
+                f"{intake_block}Execute the '{flow_step_name}' flow using the flow definition "
                 f"and all collected inputs. Show the user the complete output. Then: {continue_msg}"
+            ),
+        }, indent=2, default=str)
+
+    @server.tool()
+    def analyze_directory(
+        directory: str,
+        max_files: int = 50,
+        max_depth: int = 2,
+        read_content: bool = True,
+    ) -> str:
+        """Onboarding: learn about a user by analyzing their documents and files, then recommend personalized FlowFabric flows.
+
+        Say: 'To learn more about you and recommend the right flows, share a folder or files you want me to analyze.'
+        Reads documents, detects themes (finance, career, health, business, code), and surfaces the most relevant flows.
+        Run this at the start of a new conversation to personalize the experience.
+
+        Args:
+            directory: Absolute path to the directory to analyze (e.g. /Users/you/Documents).
+            max_files: Maximum number of files to read (default 50).
+            max_depth: How deep to scan subdirectories (default 2).
+            read_content: Read text file contents for deeper analysis (default True).
+        """
+        import os
+
+        text_extensions = {
+            ".txt", ".md", ".markdown", ".csv", ".json", ".yaml", ".yml",
+            ".ts", ".tsx", ".js", ".jsx", ".py", ".rb", ".go", ".rs",
+            ".html", ".htm", ".xml", ".toml", ".ini", ".cfg", ".conf",
+            ".sh", ".bat", ".ps1", ".log", ".env",
+        }
+        doc_extensions = {
+            ".pdf", ".docx", ".doc", ".xlsx", ".xls", ".pptx", ".ppt",
+            ".odt", ".ods", ".odp", ".rtf",
+        }
+        stopwords = {
+            "the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for",
+            "of", "with", "by", "from", "is", "are", "was", "were", "be", "been",
+            "have", "has", "had", "do", "does", "did", "will", "would", "could",
+            "should", "may", "might", "can", "this", "that", "these", "those",
+            "i", "you", "we", "they", "it", "he", "she", "my", "your", "our",
+            "its", "not", "no", "so", "as", "if", "than", "then", "when", "where",
+            "what", "which", "who", "how", "all", "each", "more", "some", "any",
+            "also", "just", "very", "get", "use", "used", "using", "make", "made",
+            "new", "one", "two", "three", "first", "last", "next", "other",
+        }
+
+        if not os.path.isdir(directory):
+            return json.dumps({"error": f"Directory not found: {directory}"})
+
+        # Scan files recursively up to max_depth
+        def scan_dir(path: str, depth: int = 0) -> list[str]:
+            if depth > max_depth:
+                return []
+            result = []
+            try:
+                for entry in os.scandir(path):
+                    if entry.name.startswith("."):
+                        continue
+                    if entry.is_dir(follow_symlinks=False) and depth < max_depth:
+                        result.extend(scan_dir(entry.path, depth + 1))
+                    elif entry.is_file():
+                        result.append(entry.path)
+            except PermissionError:
+                pass
+            return result
+
+        all_paths = scan_dir(directory)[:max_files * 3]
+
+        # Build inventory
+        inventory = []
+        for p in all_paths:
+            name = os.path.basename(p)
+            ext = ("." + name.rsplit(".", 1)[-1].lower()) if "." in name else ""
+            inventory.append({
+                "path": p, "name": name, "ext": ext,
+                "readable": ext in text_extensions,
+                "binary": ext in doc_extensions,
+            })
+
+        # Read content
+        content_chunks: list[str] = []
+        files_read = 0
+        files_summary = []
+
+        for f in inventory:
+            if files_read >= max_files:
+                break
+            if f["readable"] and read_content:
+                try:
+                    raw = Path(f["path"]).read_text(encoding="utf-8", errors="ignore")[:3000]
+                    content_chunks.append(f["name"] + " " + raw)
+                    files_summary.append({"name": f["name"], "ext": f["ext"],
+                                          "excerpt": raw[:120].replace("\n", " ")})
+                    files_read += 1
+                except OSError:
+                    pass
+            else:
+                content_chunks.append(f["name"].replace(".", " ").replace("_", " ").replace("-", " "))
+                files_summary.append({"name": f["name"], "ext": f["ext"]})
+                files_read += 1
+
+        # Extract keywords
+        all_text = " ".join(content_chunks)
+        freq: dict[str, int] = {}
+        for word in _re.findall(r"[a-z][a-z'\-]{2,}", all_text.lower()):
+            word = word.strip("'")
+            if len(word) >= 3 and word not in stopwords:
+                freq[word] = freq.get(word, 0) + 1
+        top_keywords = [w for w, _ in sorted(freq.items(), key=lambda x: -x[1])[:40]]
+
+        # Detect domain signals
+        ext_counts: dict[str, int] = {}
+        for f in inventory:
+            ext_counts[f["ext"]] = ext_counts.get(f["ext"], 0) + 1
+
+        domain_signals: list[str] = []
+        code_exts = {".ts", ".tsx", ".js", ".jsx", ".py", ".go", ".rs", ".rb"}
+        data_exts = {".csv", ".xlsx", ".xls", ".json"}
+        doc_exts = {".pdf", ".docx", ".doc"}
+
+        if any(e in code_exts for e in ext_counts):
+            domain_signals.append("code programming software development")
+        if any(e in data_exts for e in ext_counts):
+            domain_signals.append("data analysis spreadsheet")
+        if any(e in doc_exts for e in ext_counts):
+            domain_signals.append("documents reports")
+        if _re.search(r"invoice|receipt|expense|budget|revenue|profit|loss", all_text, _re.I):
+            domain_signals.append("finance budget money")
+        if _re.search(r"resume|cv|cover letter|job|hiring|candidate", all_text, _re.I):
+            domain_signals.append("resume job career hiring")
+        if _re.search(r"marketing|seo|content|social media|campaign|funnel", all_text, _re.I):
+            domain_signals.append("marketing content social media")
+        if _re.search(r"customer|client|crm|lead|prospect|sales", all_text, _re.I):
+            domain_signals.append("customer sales crm")
+        if _re.search(r"contract|legal|agreement|terms|compliance|patent", all_text, _re.I):
+            domain_signals.append("legal contract compliance")
+        if _re.search(r"health|medical|patient|clinical|symptom|medication", all_text, _re.I):
+            domain_signals.append("health medical")
+        if _re.search(r"research|literature|paper|study|hypothesis|methodology", all_text, _re.I):
+            domain_signals.append("research synthesis analysis")
+
+        match_query = " ".join(top_keywords[:20] + domain_signals)
+
+        # Match flows
+        from ..chain_matcher import ChainMatcher
+        chains = _available_chains()
+        matcher = ChainMatcher(chains)
+        matches = matcher.match(match_query, top_k=8)
+
+        suggestions = []
+        for m in matches[:6]:
+            flow_text = (getattr(m, "description", "") + " " + " ".join(getattr(m, "skills", []))).lower()
+            trigger_words = [k for k in top_keywords if k in flow_text][:4]
+            suggestions.append({
+                "flow": m.chain_name,
+                "description": getattr(m, "description", ""),
+                "category": getattr(m, "category", ""),
+                "score": getattr(m, "score", 0),
+                "why": (f'Found in your documents: "{", ".join(trigger_words)}"'
+                        if trigger_words else getattr(m, "match_reason", "")),
+            })
+
+        top_flow = suggestions[0] if suggestions else None
+        return json.dumps({
+            "onboarding_message": "Here's what I found in your files and the flows I'd recommend based on them.",
+            "directory": directory,
+            "files_found": len(inventory),
+            "files_read": files_read,
+            "file_types": ext_counts,
+            "detected_themes": domain_signals,
+            "top_keywords": top_keywords[:20],
+            "recommended_flows": suggestions,
+            "files_analyzed": files_summary[:30],
+            "next_step": (
+                f"I'd suggest starting with '{top_flow['flow']}' — {top_flow['description']}. "
+                f"Call preview_flow('{top_flow['flow']}') to see the plan and I'll walk you through it step by step."
+                if top_flow else
+                "I couldn't find a strong match. Tell me more about what you're working on and I'll find the right flow."
             ),
         }, indent=2, default=str)
 
     @server.tool()
     def find_and_run(query: str, auto_run: bool = False,
                      initial_context: str = "{}") -> str:
-        """Find the best skill chain for what you need, and optionally run it.
+        """Find the best flow pipeline for what you need, and optionally run it.
 
-        This is the main entry point for SkillChain. Describe what you want
-        in plain English and the system finds the right chain of AI skills.
+        This is the main entry point for FlowFabric. Describe what you want
+        in plain English and the system finds the right flow pipeline.
 
         Args:
             query: Plain English description of what you want
                    (e.g., "I need help budgeting and saving money",
                     "I'm starting a side business", "prepare me for a job interview")
-            auto_run: If True, automatically execute the best matching chain.
-            initial_context: JSON string of context data to pass to the chain
+            auto_run: If True, automatically execute the best matching flow pipeline.
+            initial_context: JSON string of context data to pass to the flow
                              (e.g., '{"name": "Pat", "age": 45}')
         """
         from ..chain_matcher import ChainMatcher
@@ -757,7 +935,7 @@ def create_server() -> FastMCP:
         matches = matcher.match(query, top_k=5)
 
         if not matches:
-            return json.dumps({"error": "No chains match your query.", "query": query})
+            return json.dumps({"error": "No flow pipelines match your query.", "query": query})
 
         best = matches[0]
         result_data: dict[str, Any] = {
@@ -1010,14 +1188,14 @@ def create_server() -> FastMCP:
 
     @server.prompt()
     def chain_execution_prompt(chain_name: str) -> str:
-        """Generate a prompt for executing a full skill chain."""
+        """Generate a prompt for executing a full flow pipeline."""
         chain_data = None
         for cd in _available_chains():
             if cd.get("name") == chain_name:
                 chain_data = cd
                 break
         if not chain_data:
-            return f"Chain '{chain_name}' not found. Use list_chains() to see available chains."
+            return f"Flow '{chain_name}' not found. Use list_flow_pipelines() to see available flows."
 
         steps = chain_data.get("steps", [])
         step_desc = "\n".join(
@@ -1026,7 +1204,7 @@ def create_server() -> FastMCP:
             for i, s in enumerate(steps)
         )
 
-        return f"""You are executing the '{chain_name}' skill chain.
+        return f"""You are executing the '{chain_name}' flow pipeline.
 
 ## Description
 {chain_data.get('description', 'No description.')}

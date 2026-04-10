@@ -117,6 +117,44 @@ The skill is DONE when:
 | REASON | Dependency chain exceeds available time | **Flag** -- highlight the conflict, suggest items to cut, parallelize, or delegate |
 | REASON | Cannot generate "don't forget" items (unfamiliar domain) | **Adjust** -- use generic "don't forget" patterns: test the plan, have a backup, communicate to stakeholders, document what you did |
 | PLAN | Too many items (50+) | **Adjust** -- group into phases, deliver phase 1 checklist first with a note about subsequent phases |
+| ACT | User rejects the checklist or requests significant changes | **Adjust** -- incorporate specific feedback (e.g., wrong categories, missing items, unrealistic deadlines), update the affected sections, and regenerate the timeline and ordering; do not restart from OBSERVE unless the goal or deadline fundamentally changed |
+
+## Reference
+
+### Checklist Item Quality Criteria
+
+A well-formed checklist item must be:
+- **Actionable**: starts with an imperative verb (Book, Write, Send, Confirm, Test, Buy, Schedule)
+- **Specific**: names the exact thing to do, not a category ("Book the caterer" not "Handle catering")
+- **Completable**: has an unambiguous done state that any reviewer could verify
+
+**Red flag phrases**: "handle X", "deal with Y", "make sure Z" — these are not items, they are categories. Break them down.
+
+### Dependency Pattern Library
+
+Common dependency structures by goal type:
+
+| Goal Type | Typical Dependency Chain |
+|---|---|
+| Product launch | Build → Test → Fix → Document → Announce |
+| Event | Book venue → Confirm catering → Send invitations → Confirm RSVPs → Prepare materials |
+| Move | Book movers → Pack → Transfer utilities → Update addresses → Clean old place |
+| Hiring | Write job description → Post → Screen → Interview → Reference check → Offer |
+
+### Buffer Time Guidelines
+
+| Item Type | Recommended Buffer |
+|---|---|
+| External vendor or approval (you don't control) | +50–100% |
+| Critical-path item (delay = project delay) | +30–50% |
+| Internal task (familiar work) | +20% |
+| Internal task (unfamiliar work) | +40% |
+| First-time experience overall | Add 1 full category of buffer time at the end |
+
+### Checkpoint Insertion Rule
+
+Insert a checkpoint after every 3–5 items AND after any critical milestone. A checkpoint is:
+"Stop here. Verify that everything above is actually done — not just checked, but done. Only proceed when confirmed."
 
 ## State Persistence
 

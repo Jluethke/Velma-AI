@@ -181,7 +181,7 @@ export default function Whitepaper() {
             <tbody style={t}>
               {[
                 ['OpenClaw', 'Runtime flow composition, messaging-first', 'No validation, no trust scores, no on-chain provenance'],
-                ['MemPalace', 'Tiered memory, spatial knowledge', 'Memory only — no flow execution, no economy'],
+                ['MemPalace', 'Tiered memory, spatial knowledge', 'L0–L3 tiered memory + temporal knowledge graph built into every flow run. MemPalace stops at memory; FlowFabric adds execution, validation, and a creator economy on top.'],
                 ['AutoGPT', 'Visual block graph, agent marketplace', 'Low-level blocks, no flow standard, no validation'],
                 ['Prompt Libraries', 'Shared text prompts', 'Unvalidated, no composition, no evolution path'],
               ].map(([platform, approach, advantage]) => (

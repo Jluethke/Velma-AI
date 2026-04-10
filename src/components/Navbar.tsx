@@ -23,6 +23,7 @@ export default function Navbar() {
     { to: '/', label: 'Home' },
     { to: '/install', label: 'Install' },
     { to: '/compose', label: 'Composer' },
+    { to: '/memory', label: 'Memory' },
     { to: '/docs', label: 'Docs' },
   ];
 

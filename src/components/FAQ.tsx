@@ -6,8 +6,8 @@ const faqs = [
     answer: 'A flow is a structured AI procedure — a set of phases with quality gates that an AI follows step by step. Examples: building a budget, prepping for an interview, analyzing competitors, designing an API. Each flow has defined inputs, outputs, and validation criteria. Anyone can run a flow for free.',
   },
   {
-    question: 'What is a flow chain?',
-    answer: 'A flow chain is multiple flows connected together into a pipeline. For example, a "Career Launchpad" chain runs resume-builder → interview-prep → salary-negotiator in sequence, passing context between each step. Chains are where the real value is — they produce outcomes no single flow can achieve alone.',
+    question: 'What is a flow pipeline?',
+    answer: 'A flow pipeline is multiple flows connected together into a sequence. For example, a "Career Launchpad" pipeline runs resume-builder → interview-prep → salary-negotiator in order, passing context between each step. Pipelines are where the real value is — they produce outcomes no single flow can achieve alone.',
   },
   {
     question: 'What is TRUST?',
@@ -15,15 +15,15 @@ const faqs = [
   },
   {
     question: 'Do I need TRUST to try a flow?',
-    answer: 'No. Individual flows are free to run. You can browse all flows in the Composer and run any one of them without a wallet or tokens. TRUST is needed to connect flows into chains, publish on-chain, and access premium domains like engineering, AI, and legal.',
+    answer: 'No. Individual flows are free to run. You can browse all flows in the Composer and run any one of them without a wallet or tokens. TRUST is needed to connect flows into pipelines, publish on-chain, and access premium domains like engineering, AI, and legal.',
   },
   {
     question: 'How do tiers work?',
-    answer: 'Your TRUST balance determines what you can do. Explorer (free): run individual flows. Builder (500 TRUST): connect flows into chains, save and schedule. Creator (2,500): publish on-chain, earn royalties. Validator (25K staked): validate flows for the network. Governor (100K staked): vote on protocol decisions.',
+    answer: 'Your TRUST balance determines what you can do. Explorer (free): run individual flows. Builder (500 TRUST): connect flows into pipelines, save and schedule. Creator (2,500): publish on-chain, earn royalties. Validator (25K staked): validate flows for the network. Governor (100K staked): vote on protocol decisions.',
   },
   {
     question: 'How do I earn TRUST?',
-    answer: 'Publish flows that others use (70% of earnings go to you). Validate flows for quality (15% of earnings). Create derivatives that improve on existing flows (original author gets 15% royalty automatically). All splits are enforced by smart contract — no middleman.',
+    answer: 'Publish flows that others use (70% of earnings go to you). Validate flows for quality (15% of earnings). Create derivatives that improve on existing flows (original author gets 15% royalty automatically). All splits are enforced by smart contract — no middleman. You also earn TRUST by building pipelines that others run.',
   },
   {
     question: 'Can I buy TRUST?',

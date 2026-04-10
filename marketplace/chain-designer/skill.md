@@ -149,6 +149,48 @@ The skill is DONE when:
 | CONNECT | Cycle detected in the graph | **Adjust** -- identify the cycle, break it at the weakest edge (least critical data dependency), insert a manual checkpoint |
 | OPTIMIZE | Constraints make the chain infeasible (e.g., max_steps < critical path length) | **Adjust** -- relax constraints and note which ones were violated, or merge skills to reduce step count |
 | EXPORT | A skill referenced in the chain has been removed from available_skills | **Retry** -- re-run from Phase 2 with the updated skill list |
+| ACT | User rejects the chain definition or requests significant structural changes | **Adjust** -- incorporate specific feedback (e.g., wrong skill order, missing parallel path, incorrect data mapping), update the affected DAG edges and execution plan, and regenerate the .chain.json; do not restart from Phase 1 unless the goal itself has changed |
+
+---
+
+## Reference
+
+### DAG Validity Rules
+
+A valid chain graph must satisfy all of the following:
+1. **No cycles** — every path through the graph has a definite end; no skill can depend on its own output (directly or transitively)
+2. **Reachable nodes** — every skill is reachable from at least one entry node
+3. **Productive terminal nodes** — every terminal (no outgoing edges) produces at least one goal requirement
+4. **Complete data mappings** — every edge specifies which output field from the source skill maps to which input field of the target skill
+
+### Parallelism Decision Rule
+
+Two skills can run in parallel if and only if:
+- Neither skill's input depends on the other skill's output (no edge between them in either direction)
+- They do not share a mutable state resource (e.g., both writing to the same file)
+
+### Critical Path Calculation
+
+The critical path is the longest chain of sequential dependencies from any entry node to any terminal node. Minimum execution time = sum of latencies along the critical path (not the sum of all skills).
+
+### Skill Compatibility Matrix
+
+When connecting two skills, verify:
+| Check | Pass Condition |
+|---|---|
+| Output type → Input type | Types match (or a transform step is inserted) |
+| Cardinality | Skill A produces one object; Skill B expects one object (not an array) |
+| Required fields | All required input fields of Skill B are produced by Skill A or already in existing_data |
+| Optional fields | Optional fields that improve Skill B's output are noted but not blocking |
+
+### Gap Severity Classification
+
+| Gap Type | Severity | Action |
+|---|---|---|
+| Requirement has no matching skill | Critical | List in missing_skills; block chain export |
+| Requirement partially covered (skill covers 60-80% of need) | Major | Note in coverage_report; add manual review gate |
+| Data transform needed between skills | Minor | Insert transform step; document in execution plan |
+| Skill exists but is lower confidence | Low | Include with confidence note |
 
 ---
 
