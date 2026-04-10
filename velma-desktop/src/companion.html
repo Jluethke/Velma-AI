@@ -10,16 +10,12 @@
     width: 120px; height: 120px;
     display: flex; align-items: center; justify-content: center;
     position: relative;
-    cursor: pointer;
+    cursor: grab;
     -webkit-app-region: no-drag;
   }
+  #root.dragging { cursor: grabbing; }
 
-  /* Drag handle — top area */
-  #drag-handle {
-    position: absolute; top: 0; left: 0; right: 0; height: 20px;
-    -webkit-app-region: drag;
-    cursor: move;
-  }
+  #drag-handle { display: none; }
 
   #sprite-wrap {
     position: relative;
@@ -342,9 +338,38 @@ async function init() {
   if (state.last_comment) showBubble(state.last_comment);
 }
 
-// Click = open panel
+// ── Drag to move ──
+let dragStart = null;
+let dragMoved = false;
+
+document.getElementById('root').addEventListener('mousedown', (e) => {
+  if (e.button !== 0) return; // left button only
+  dragStart = { mx: e.screenX, my: e.screenY };
+  dragMoved = false;
+  document.getElementById('root').classList.add('dragging');
+});
+
+window.addEventListener('mousemove', (e) => {
+  if (!dragStart) return;
+  const dx = e.screenX - dragStart.mx;
+  const dy = e.screenY - dragStart.my;
+  if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+    dragMoved = true;
+    const bounds = { x: window.screenX + dx, y: window.screenY + dy };
+    window.velma.moveCompanion(bounds.x, bounds.y);
+    dragStart = { mx: e.screenX, my: e.screenY };
+  }
+});
+
+window.addEventListener('mouseup', () => {
+  dragStart = null;
+  document.getElementById('root').classList.remove('dragging');
+});
+
+// Click = open panel (only if it wasn't a drag)
 document.getElementById('sprite-wrap').addEventListener('click', (e) => {
   e.stopPropagation();
+  if (dragMoved) return;
   window.velma.openPanel();
 });
 

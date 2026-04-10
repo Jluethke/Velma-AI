@@ -191,8 +191,11 @@ function createPanelWindow() {
   panelWin.loadFile(path.join(__dirname, 'panel.html'));
   panelWin.setAlwaysOnTop(true, 'screen-saver');
 
+  // Small delay so clicking inside the panel doesn't immediately close it
   panelWin.on('blur', () => {
-    if (panelWin && !panelWin.isDestroyed()) panelWin.close();
+    setTimeout(() => {
+      if (panelWin && !panelWin.isDestroyed()) panelWin.close();
+    }, 200);
   });
 
   if (process.argv.includes('--dev')) {
