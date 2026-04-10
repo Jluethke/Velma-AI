@@ -92,7 +92,7 @@ export default function HeroSection() {
               textTransform: 'uppercase',
             }}
           >
-            165 flows · Claude Desktop · Free to start
+            165+ flows and counting · Claude Desktop · Free to start
           </span>
         </div>
 
@@ -152,7 +152,7 @@ export default function HeroSection() {
               to="/flows"
               className="btn-secondary inline-flex items-center gap-2 px-6 py-3 no-underline cursor-pointer"
             >
-              <span className="text-sm">Browse 165 flows</span>
+              <span className="text-sm">Browse 165+ flows</span>
               <span style={{ color: 'var(--cyan)' }}>&rarr;</span>
             </Link>
           )}

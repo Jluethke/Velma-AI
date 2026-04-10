@@ -26,8 +26,8 @@ export default function Whitepaper() {
       {/* Abstract */}
       <Section title="Abstract">
         <P>FlowFabric is a protocol for creating, validating, composing, and trading AI-executable procedures (flows) as network assets. Flows start as natural language instructions, gain trust through decentralized shadow validation, and can eventually compile into deterministic code — software born from conversation, proven by consensus.</P>
-        <P>The platform consists of three layers: an open flow marketplace with hundreds of validated flows, a visual Composer for building multi-flow chains, and an on-chain trust economy (TRUST token on Base mainnet) where creators earn royalties and validators earn rewards.</P>
-        <P>Individual flows are free to run. Connecting flows into chains, creating new flows, and publishing on-chain require TRUST tokens — earned through contribution, not purchase.</P>
+        <P>The platform consists of three layers: an open flow marketplace (165+ flows and growing — no cap on contributions), a visual Composer for building multi-flow pipelines, and an on-chain trust economy (TRUST token on Base mainnet) where creators earn royalties and validators earn rewards.</P>
+        <P>Individual flows are free to run. Connecting flows into pipelines, creating new flows, and publishing on-chain require TRUST tokens — earned through contribution, not purchase.</P>
       </Section>
 
       {/* Core Principles */}
