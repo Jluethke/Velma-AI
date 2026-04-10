@@ -17,6 +17,9 @@ import SkillDetail from './pages/SkillDetail';
 import ChainComposer from './pages/ChainComposer';
 import Install from './pages/Install';
 import Memory from './pages/Memory';
+import Bounties from './pages/Bounties';
+import Activity from './pages/Activity';
+import Leaderboard from './pages/Leaderboard';
 
 const BANNER_KEY = 'flowfabric-mobile-banner-dismissed';
 
@@ -103,6 +106,9 @@ function App() {
         <Route path="/compose" element={<ChainComposer />} />
         <Route path="/install" element={<Install />} />
         <Route path="/memory" element={<Memory />} />
+        <Route path="/bounties" element={<Bounties />} />
+        <Route path="/activity" element={<Activity />} />
+        <Route path="/leaderboard" element={<Leaderboard />} />
       </Routes>
       <Footer />
     </BrowserRouter>

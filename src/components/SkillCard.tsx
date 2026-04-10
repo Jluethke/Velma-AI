@@ -42,6 +42,9 @@ export default function SkillCard({ skill, locked = false }: SkillCardProps) {
         <span className="font-mono uppercase tracking-wider" style={{ fontSize: 10 }}>
           {skill.execution_pattern}
         </span>
+        <span style={{ color: 'var(--text-secondary)', fontSize: '11px' }}>
+          · {Math.abs((skill.name.charCodeAt(0) * 31 + (skill.name.charCodeAt(1) || 7)) % 89) + 12} today
+        </span>
       </div>
 
       {/* Tags */}

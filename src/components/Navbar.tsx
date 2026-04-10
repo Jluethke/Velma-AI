@@ -26,6 +26,9 @@ export default function Navbar() {
     { to: '/compose', label: 'Composer' },
     { to: '/memory', label: 'Memory' },
     { to: '/docs', label: 'Docs' },
+    { to: '/leaderboard', label: 'Leaderboard' },
+    { to: '/bounties', label: 'Bounties' },
+    { to: '/activity', label: 'Activity' },
   ];
 
   const isActive = (to: string) => {
