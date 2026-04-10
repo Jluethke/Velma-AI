@@ -16,9 +16,69 @@ import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 import { homedir } from "os";
 import { randomUUID } from "crypto";
+import {
+  createWalletClient,
+  createPublicClient,
+  http,
+  keccak256,
+  toHex,
+  parseAbi,
+  type Address,
+} from "viem";
+import { privateKeyToAccount } from "viem/accounts";
+import { base } from "viem/chains";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+
+// ---------------------------------------------------------------------------
+// On-chain: Marketplace contract
+// ---------------------------------------------------------------------------
+
+const MARKETPLACE_ADDRESS = "0x679B5CD7C2CdF504768cf31163aB6dFB4bF3fd48" as Address;
+const MARKETPLACE_ABI = parseAbi([
+  "function recordUsage(address user, bytes32 skillId) external",
+  "function checkAccess(address user, bytes32 skillId) external view returns (bool canAccess, bool isPremium, bool isPurchased, uint256 dailyRemaining)",
+]);
+
+/**
+ * Derive a bytes32 skillId from a flow name, matching keccak256(abi.encodePacked(flowName)).
+ * We use keccak256(toHex(flowName)) which produces the same bytes when the string is UTF-8 encoded.
+ */
+function flowNameToSkillId(flowName: string): `0x${string}` {
+  return keccak256(toHex(flowName));
+}
+
+/**
+ * Record on-chain usage for a free flow execution.
+ * Silently skips if RECORDER_PRIVATE_KEY is not configured or userAddress is unknown.
+ */
+async function recordFlowUsage(userAddress: string | undefined, flowName: string): Promise<void> {
+  try {
+    const privateKey = process.env.RECORDER_PRIVATE_KEY;
+    if (!privateKey) return; // graceful degradation — not configured
+    if (!userAddress) return; // no wallet address available for this user
+
+    const rpcUrl = process.env.BASE_RPC_URL ?? "https://mainnet.base.org";
+    const account = privateKeyToAccount(privateKey as `0x${string}`);
+    const walletClient = createWalletClient({
+      account,
+      chain: base,
+      transport: http(rpcUrl),
+    });
+
+    const skillId = flowNameToSkillId(flowName);
+
+    await walletClient.writeContract({
+      address: MARKETPLACE_ADDRESS,
+      abi: MARKETPLACE_ABI,
+      functionName: "recordUsage",
+      args: [userAddress as Address, skillId],
+    });
+  } catch {
+    // Best-effort — never break flow execution due to on-chain recording failure
+  }
+}
 
 import { SkillStateStore, type SkillRun } from "./skill-state.js";
 import { ChainMatcher } from "./chain-matcher.js";
@@ -436,6 +496,12 @@ server.tool("find_and_run",
           const gam = new GamificationEngine();
           gam.recordChainRun(best.chain_name, steps.length, 0);
         } catch { /* */ }
+
+        // Record on-chain usage
+        try {
+          const userAddress = profileMgr.load().wallet_address;
+          await recordFlowUsage(userAddress, best.chain_name);
+        } catch { /* */ }
       }
     }
 
@@ -474,6 +540,12 @@ server.tool("run_flow",
     try {
       const gam = new GamificationEngine();
       gam.recordChainRun(flow_name, steps.length, 0);
+    } catch { /* */ }
+
+    // Record on-chain usage
+    try {
+      const userAddress = profileMgr.load().wallet_address;
+      await recordFlowUsage(userAddress, flow_name);
     } catch { /* */ }
 
     return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
@@ -605,6 +677,14 @@ server.tool("run_flow_step",
       gam.recordSkillRun(skillName);
       if (isLast) gam.recordChainRun(flow_name, steps.length, 0);
     } catch { /* */ }
+
+    // Record on-chain usage when the chain completes
+    if (isLast) {
+      try {
+        const userAddress = profileMgr.load().wallet_address;
+        await recordFlowUsage(userAddress, flow_name);
+      } catch { /* */ }
+    }
 
     return { content: [{ type: "text" as const, text: JSON.stringify({
       flow_pipeline: flow_name,
@@ -1260,6 +1340,52 @@ server.tool("get_recommendations",
       flow_recommendations: skillRecs.slice(0, 15),
       chain_recommendations: chainRecs,
     }, null, 2) }] };
+  }
+);
+
+// ===================================================================
+// ON-CHAIN ACCESS STATUS
+// ===================================================================
+
+server.tool("get_access_status",
+  "Check on-chain access status for a user and flow. Returns canAccess, isPremium, isPurchased, and dailyRemaining from the Marketplace contract.",
+  {
+    user_address: z.string().describe("The user's EVM wallet address (0x...)"),
+    flow_name: z.string().describe("The flow name to check access for"),
+  },
+  async ({ user_address, flow_name }) => {
+    try {
+      const rpcUrl = process.env.BASE_RPC_URL ?? "https://mainnet.base.org";
+      const publicClient = createPublicClient({
+        chain: base,
+        transport: http(rpcUrl),
+      });
+
+      const skillId = flowNameToSkillId(flow_name);
+
+      const [canAccess, isPremium, isPurchased, dailyRemaining] = await publicClient.readContract({
+        address: MARKETPLACE_ADDRESS,
+        abi: MARKETPLACE_ABI,
+        functionName: "checkAccess",
+        args: [user_address as Address, skillId],
+      }) as [boolean, boolean, boolean, bigint];
+
+      return { content: [{ type: "text" as const, text: JSON.stringify({
+        user_address,
+        flow_name,
+        skill_id: skillId,
+        can_access: canAccess,
+        is_premium: isPremium,
+        is_purchased: isPurchased,
+        daily_remaining: dailyRemaining.toString(),
+      }, null, 2) }] };
+    } catch (e) {
+      return { content: [{ type: "text" as const, text: JSON.stringify({
+        error: `Failed to check on-chain access: ${(e as Error).message}`,
+        user_address,
+        flow_name,
+      }, null, 2) }] };
+    }
   }
 );
 

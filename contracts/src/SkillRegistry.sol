@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-// Copyright (c) 2024-present The Wayfinder Trust — SkillChain
+// Copyright (c) 2024-present The Wayfinder Trust — FlowFabric
 // All Rights Reserved. Proprietary and Confidential.
 
 pragma solidity ^0.8.24;
@@ -13,7 +13,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
  *      CID and price (bumps version). Deactivation is permanent.
  *
  * Mirrors Velma's graduation pipeline: skills must be registered before
- * they can be validated, traded, or composed in the SkillChain network.
+ * they can be validated, traded, or composed in the FlowFabric network.
  */
 contract SkillRegistry is Ownable {
 

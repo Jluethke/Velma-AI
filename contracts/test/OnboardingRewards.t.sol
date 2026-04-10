@@ -2,7 +2,7 @@
 pragma solidity ^0.8.24;
 
 import "forge-std/Test.sol";
-import "../src/SkillToken.sol";
+import "../src/TrustToken.sol";
 import "../src/NodeRegistry.sol";
 import "../src/SkillRegistry.sol";
 import "../src/TrustOracle.sol";
@@ -12,7 +12,7 @@ import "../src/LifeRewards.sol";
 import "../src/OnboardingRewards.sol";
 
 contract OnboardingRewardsTest is Test {
-    SkillToken public token;
+    TrustToken public token;
     NodeRegistry public nodeReg;
     SkillRegistry public skillReg;
     TrustOracle public oracle;
@@ -32,7 +32,7 @@ contract OnboardingRewardsTest is Test {
     function setUp() public {
         vm.startPrank(admin);
 
-        token = new SkillToken(admin, admin, treasury);
+        token = new TrustToken(admin, admin, treasury);
         nodeReg = new NodeRegistry(address(token));
         skillReg = new SkillRegistry();
         oracle = new TrustOracle(address(nodeReg));

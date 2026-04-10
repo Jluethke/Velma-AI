@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-// Copyright (c) 2024-present The Wayfinder Trust — SkillChain
+// Copyright (c) 2024-present The Wayfinder Trust — FlowFabric
 // All Rights Reserved. Proprietary and Confidential.
 
 pragma solidity ^0.8.24;
@@ -13,7 +13,7 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 /**
  * @title OnboardingRewards
  * @notice Distributes starter tokens and milestone bonuses to bootstrap the
- *         SkillChain ecosystem. Rewards come from a pre-funded pool — no
+ *         FlowFabric ecosystem. Rewards come from a pre-funded pool — no
  *         minting occurs here.
  *
  * Bonuses (one-time per wallet):

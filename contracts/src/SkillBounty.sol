@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-// Copyright (c) 2024-present The Wayfinder Trust — SkillChain
+// Copyright (c) 2024-present The Wayfinder Trust — FlowFabric
 // All Rights Reserved. Proprietary and Confidential.
 
 pragma solidity ^0.8.24;
@@ -10,7 +10,7 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 /**
  * @title SkillBounty
- * @notice On-chain bounty board for the SkillChain network.
+ * @notice On-chain bounty board for the FlowFabric network.
  * @dev Creators lock TRUST tokens in escrow when posting a bounty.
  *      Claimants submit a skill. The creator approves to release escrow,
  *      or disputes go to 3-validator arbitration.

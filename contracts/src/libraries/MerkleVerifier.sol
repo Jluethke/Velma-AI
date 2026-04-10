@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-// Copyright (c) 2024-present The Wayfinder Trust — SkillChain
+// Copyright (c) 2024-present The Wayfinder Trust — FlowFabric
 // All Rights Reserved. Proprietary and Confidential.
 
 pragma solidity ^0.8.24;
@@ -7,7 +7,7 @@ pragma solidity ^0.8.24;
 /**
  * @title MerkleVerifier
  * @notice Standard Merkle proof verification library.
- * @dev Used for off-chain data attestation in the SkillChain network.
+ * @dev Used for off-chain data attestation in the FlowFabric network.
  */
 library MerkleVerifier {
     /**

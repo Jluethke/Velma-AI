@@ -20,6 +20,7 @@ export interface UserProfile {
   favorite_domains: string[];
   skills_used: string[];
   chains_used: string[];
+  wallet_address?: string;
   created_at: string;
   updated_at: string;
 }

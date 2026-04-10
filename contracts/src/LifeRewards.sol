@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-// Copyright (c) 2024-present The Wayfinder Trust — SkillChain
+// Copyright (c) 2024-present The Wayfinder Trust — FlowFabric
 // All Rights Reserved. Proprietary and Confidential.
 
 pragma solidity ^0.8.24;
@@ -16,7 +16,7 @@ import "./NodeRegistry.sol";
  * @notice The Life Protocol — Proof of Living. Rewards human contribution
  *         across six categories: Move, Learn, Build, Teach, Serve, Produce.
  * @dev Verified by the same trust-weighted attestation system used for
- *      SkillChain skill validation. TRUST tokens are minted from a dedicated
+ *      FlowFabric skill validation. TRUST tokens are minted from a dedicated
  *      Life Protocol emission pool.
  *
  * Key mechanics:

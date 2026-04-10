@@ -2,13 +2,13 @@
 pragma solidity ^0.8.24;
 
 import "forge-std/Test.sol";
-import "../src/SkillToken.sol";
+import "../src/TrustToken.sol";
 import "../src/NodeRegistry.sol";
 import "../src/SkillRegistry.sol";
 import "../src/ValidationRegistry.sol";
 
 contract ValidationRegistryTest is Test {
-    SkillToken public token;
+    TrustToken public token;
     NodeRegistry public nodeReg;
     SkillRegistry public skillReg;
     ValidationRegistry public valReg;
@@ -30,7 +30,7 @@ contract ValidationRegistryTest is Test {
 
     function setUp() public {
         vm.startPrank(admin);
-        token = new SkillToken(admin, admin, admin);
+        token = new TrustToken(admin, admin, admin);
         nodeReg = new NodeRegistry(address(token));
         skillReg = new SkillRegistry();
         valReg = new ValidationRegistry(address(nodeReg), address(skillReg));

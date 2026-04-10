@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-// Copyright (c) 2024-present The Wayfinder Trust — SkillChain
+// Copyright (c) 2024-present The Wayfinder Trust — FlowFabric
 // All Rights Reserved. Proprietary and Confidential.
 
 pragma solidity ^0.8.24;
@@ -10,7 +10,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 /**
  * @title NodeRegistry
- * @notice Registers SkillChain validator/contributor nodes.
+ * @notice Registers FlowFabric validator/contributor nodes.
  * @dev Requires a minimum TRUST stake (100 tokens) held in escrow.
  *      Nodes are identified by a unique bytes32 nodeId.
  */

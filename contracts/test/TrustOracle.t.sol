@@ -2,12 +2,12 @@
 pragma solidity ^0.8.24;
 
 import "forge-std/Test.sol";
-import "../src/SkillToken.sol";
+import "../src/TrustToken.sol";
 import "../src/NodeRegistry.sol";
 import "../src/TrustOracle.sol";
 
 contract TrustOracleTest is Test {
-    SkillToken public token;
+    TrustToken public token;
     NodeRegistry public nodeReg;
     TrustOracle public oracle;
 
@@ -26,7 +26,7 @@ contract TrustOracleTest is Test {
         vm.roll(7200);
 
         vm.startPrank(admin);
-        token = new SkillToken(admin, admin, admin);
+        token = new TrustToken(admin, admin, admin);
         nodeReg = new NodeRegistry(address(token));
         oracle = new TrustOracle(address(nodeReg));
 

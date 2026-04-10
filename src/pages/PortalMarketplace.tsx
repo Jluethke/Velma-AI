@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { useAccount, useReadContract } from 'wagmi';
-import { formatUnits } from 'viem';
+import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
+import { formatUnits, parseUnits, keccak256, toBytes } from 'viem';
 import ConnectWalletPrompt from '../components/ConnectWalletPrompt';
-import { CONTRACTS, TrustTokenABI, SkillRegistryABI } from '../contracts';
+import { CONTRACTS, TrustTokenABI, SkillRegistryABI, MarketplaceABI } from '../contracts';
 
 interface MarketSkill {
   name: string;
@@ -17,22 +17,127 @@ interface MarketSkill {
 }
 
 const MOCK_SKILLS: MarketSkill[] = [
-  { name: 'data-extractor', domain: 'developer', price: 0, creator: '0x1a2b...3c4d', trustScore: 0.95, validations: 48, downloads: 12400, status: 'graduated' },
-  { name: 'resume-builder', domain: 'career', price: 5, creator: '0x5e6f...7a8b', trustScore: 0.91, validations: 35, downloads: 8200, status: 'graduated' },
-  { name: 'code-review', domain: 'developer', price: 10, creator: '0x9c0d...1e2f', trustScore: 0.88, validations: 52, downloads: 15600, status: 'graduated' },
-  { name: 'budget-builder', domain: 'finance', price: 3, creator: '0x3a4b...5c6d', trustScore: 0.93, validations: 29, downloads: 6100, status: 'validated' },
-  { name: 'security-hardening', domain: 'developer', price: 15, creator: '0x7e8f...9a0b', trustScore: 0.89, validations: 41, downloads: 9800, status: 'graduated' },
-  { name: 'meal-planner', domain: 'life', price: 2, creator: '0xbc1d...2e3f', trustScore: 0.86, validations: 22, downloads: 4300, status: 'validated' },
-  { name: 'interview-coach', domain: 'career', price: 8, creator: '0x4a5b...6c7d', trustScore: 0.90, validations: 31, downloads: 7500, status: 'graduated' },
-  { name: 'api-design', domain: 'developer', price: 12, creator: '0x8e9f...0a1b', trustScore: 0.87, validations: 38, downloads: 11200, status: 'graduated' },
+  { name: 'data-extractor',    domain: 'developer', price: 0,  creator: '0x1a2b...3c4d', trustScore: 0.95, validations: 48, downloads: 12400, status: 'graduated' },
+  { name: 'resume-builder',    domain: 'career',    price: 5,  creator: '0x5e6f...7a8b', trustScore: 0.91, validations: 35, downloads: 8200,  status: 'graduated' },
+  { name: 'code-review',       domain: 'developer', price: 10, creator: '0x9c0d...1e2f', trustScore: 0.88, validations: 52, downloads: 15600, status: 'graduated' },
+  { name: 'budget-builder',    domain: 'finance',   price: 3,  creator: '0x3a4b...5c6d', trustScore: 0.93, validations: 29, downloads: 6100,  status: 'validated' },
+  { name: 'security-hardening',domain: 'developer', price: 15, creator: '0x7e8f...9a0b', trustScore: 0.89, validations: 41, downloads: 9800,  status: 'graduated' },
+  { name: 'meal-planner',      domain: 'life',      price: 2,  creator: '0xbc1d...2e3f', trustScore: 0.86, validations: 22, downloads: 4300,  status: 'validated' },
+  { name: 'interview-coach',   domain: 'career',    price: 8,  creator: '0x4a5b...6c7d', trustScore: 0.90, validations: 31, downloads: 7500,  status: 'graduated' },
+  { name: 'api-design',        domain: 'developer', price: 12, creator: '0x8e9f...0a1b', trustScore: 0.87, validations: 38, downloads: 11200, status: 'graduated' },
 ];
 
 const DOMAINS = ['all', 'developer', 'career', 'finance', 'life', 'business', 'legal'];
+
+// Tier daily limits by subscription tier index (0=Explorer…3=Enterprise)
+const TIER_DAILY_LIMITS: (number | typeof Infinity)[] = [5, 50, 200, Infinity];
+
+/** Derive a deterministic bytes32 skill ID from the skill name */
+function skillIdFromName(name: string): `0x${string}` {
+  return keccak256(toBytes(name));
+}
+
+function SkillAccessBadge({
+  skill,
+  address,
+  onPurchase,
+  isPurchasing,
+}: {
+  skill: MarketSkill;
+  address: `0x${string}`;
+  onPurchase: (skill: MarketSkill) => void;
+  isPurchasing: boolean;
+}) {
+  const skillId = skillIdFromName(skill.name);
+  const isPremium = skill.price > 0;
+
+  // Check if user has already purchased this premium skill
+  const { data: purchasedData } = useReadContract({
+    address: CONTRACTS.Marketplace,
+    abi: MarketplaceABI,
+    functionName: 'hasPurchased',
+    args: [address, skillId],
+    query: { enabled: isPremium },
+  });
+
+  // Read subscription to derive daily remaining for free skills
+  const { data: subData } = useReadContract({
+    address: CONTRACTS.Marketplace,
+    abi: MarketplaceABI,
+    functionName: 'subscriptions',
+    args: [address],
+    query: { enabled: !isPremium },
+  });
+
+  const isPurchased = purchasedData === true;
+
+  if (!isPremium) {
+    const subTuple = subData as readonly [number, bigint, bigint, bigint] | undefined;
+    const tierIndex = subTuple ? Number(subTuple[0]) : 0;
+    const dailyUsed = subTuple ? Number(subTuple[2]) : 0;
+    const expiresAt = subTuple ? Number(subTuple[1]) : 0;
+    const isSubActive = tierIndex === 0 || expiresAt * 1000 > Date.now();
+    const limit = isSubActive ? (TIER_DAILY_LIMITS[tierIndex] ?? 5) : 5;
+    const remaining = limit === Infinity ? 'Unlimited' : String(Math.max(0, (limit as number) - dailyUsed));
+
+    return (
+      <div className="flex items-center gap-2">
+        <div
+          className="px-2 py-1 rounded text-xs font-medium"
+          style={{ background: 'rgba(0,255,136,0.1)', border: '1px solid rgba(0,255,136,0.2)', color: 'var(--green)' }}
+        >
+          {remaining}/day left
+        </div>
+        <button
+          className="px-4 py-2 rounded-lg text-xs font-medium cursor-pointer transition-all"
+          style={{
+            background: 'rgba(0,255,136,0.1)',
+            border: '1px solid rgba(0,255,136,0.3)',
+            color: 'var(--green)',
+            fontFamily: 'inherit',
+          }}
+        >
+          Install
+        </button>
+      </div>
+    );
+  }
+
+  if (isPurchased) {
+    return (
+      <div
+        className="px-3 py-2 rounded-lg text-xs font-semibold"
+        style={{ background: 'rgba(170,136,255,0.15)', border: '1px solid rgba(170,136,255,0.3)', color: 'var(--purple)' }}
+      >
+        Unlocked
+      </div>
+    );
+  }
+
+  // Premium, not yet purchased
+  return (
+    <button
+      onClick={() => onPurchase(skill)}
+      disabled={isPurchasing}
+      className="px-4 py-2 rounded-lg text-xs font-medium cursor-pointer transition-all"
+      style={{
+        background: 'rgba(255,215,0,0.1)',
+        border: '1px solid rgba(255,215,0,0.3)',
+        color: 'var(--gold)',
+        opacity: isPurchasing ? 0.5 : 1,
+        fontFamily: 'inherit',
+      }}
+    >
+      {isPurchasing ? 'Processing...' : `Purchase — ${skill.price} TRUST`}
+    </button>
+  );
+}
 
 function MarketplaceContent({ address }: { address: `0x${string}` }) {
   const [search, setSearch] = useState('');
   const [domain, setDomain] = useState('all');
   const [sort, setSort] = useState<'downloads' | 'price' | 'trust'>('downloads');
+  const [purchasingSkill, setPurchasingSkill] = useState<MarketSkill | null>(null);
 
   // Read balance for purchase power display
   const { data: rawBalance } = useReadContract({
@@ -49,8 +154,46 @@ function MarketplaceContent({ address }: { address: `0x${string}` }) {
     functionName: 'skillCount',
   });
 
+  // Step 1: approve TRUST spend
+  const { writeContract: writeApprove, data: approveTxHash, isPending: isApprovePending } = useWriteContract();
+  const { isLoading: isApproveConfirming, isSuccess: isApproveConfirmed } = useWaitForTransactionReceipt({ hash: approveTxHash });
+
+  // Step 2: purchaseSkill
+  const { writeContract: writePurchase, data: purchaseTxHash, isPending: isPurchasePending } = useWriteContract();
+  const { isLoading: isPurchaseConfirming, isSuccess: isPurchaseConfirmed } = useWaitForTransactionReceipt({ hash: purchaseTxHash });
+
+  // After approve confirms, fire purchaseSkill
+  useEffect(() => {
+    if (isApproveConfirmed && purchasingSkill !== null) {
+      writePurchase({
+        address: CONTRACTS.Marketplace,
+        abi: MarketplaceABI,
+        functionName: 'purchaseSkill',
+        args: [skillIdFromName(purchasingSkill.name)],
+      });
+    }
+  }, [isApproveConfirmed]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // After purchase confirms, clear state
+  useEffect(() => {
+    if (isPurchaseConfirmed) {
+      setPurchasingSkill(null);
+    }
+  }, [isPurchaseConfirmed]);
+
   const balance = rawBalance ? parseFloat(formatUnits(rawBalance as bigint, 18)) : 12450;
   const onChainSkills = skillCount ? Number(skillCount) : null;
+  const isBusy = isApprovePending || isApproveConfirming || isPurchasePending || isPurchaseConfirming;
+
+  function handlePurchase(skill: MarketSkill) {
+    setPurchasingSkill(skill);
+    writeApprove({
+      address: CONTRACTS.TrustToken,
+      abi: TrustTokenABI,
+      functionName: 'approve',
+      args: [CONTRACTS.Marketplace, parseUnits(String(skill.price), 18)],
+    });
+  }
 
   const filtered = MOCK_SKILLS
     .filter(s => domain === 'all' || s.domain === domain)
@@ -155,20 +298,30 @@ function MarketplaceContent({ address }: { address: `0x${string}` }) {
               <div className="text-lg font-bold" style={{ color: skill.price === 0 ? 'var(--green)' : 'var(--gold)' }}>
                 {skill.price === 0 ? 'FREE' : `${skill.price} TRUST`}
               </div>
-              <button
-                className="px-4 py-2 rounded-lg text-xs font-medium cursor-pointer transition-all"
-                style={{
-                  background: skill.price === 0 ? 'rgba(0,255,136,0.1)' : 'rgba(255,215,0,0.1)',
-                  border: `1px solid ${skill.price === 0 ? 'rgba(0,255,136,0.3)' : 'rgba(255,215,0,0.3)'}`,
-                  color: skill.price === 0 ? 'var(--green)' : 'var(--gold)',
-                }}
-              >
-                {skill.price === 0 ? 'Install' : balance >= skill.price ? 'Purchase' : 'Insufficient TRUST'}
-              </button>
+              <SkillAccessBadge
+                skill={skill}
+                address={address}
+                onPurchase={handlePurchase}
+                isPurchasing={isBusy && purchasingSkill?.name === skill.name}
+              />
             </div>
           </div>
         ))}
       </div>
+
+      {purchaseTxHash && (
+        <div className="mt-4 text-xs text-center" style={{ color: 'var(--text-secondary)' }}>
+          Purchase tx:{' '}
+          <a
+            href={`https://basescan.org/tx/${purchaseTxHash}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: 'var(--cyan)' }}
+          >
+            {purchaseTxHash.slice(0, 10)}...{purchaseTxHash.slice(-8)}
+          </a>
+        </div>
+      )}
     </>
   );
 }

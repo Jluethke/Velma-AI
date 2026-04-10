@@ -2,12 +2,12 @@
 pragma solidity ^0.8.24;
 
 import "forge-std/Test.sol";
-import "../src/SkillToken.sol";
+import "../src/TrustToken.sol";
 import "../src/NodeRegistry.sol";
 import "../src/Staking.sol";
 
 contract StakingTest is Test {
-    SkillToken public token;
+    TrustToken public token;
     NodeRegistry public nodeReg;
     Staking public staking;
 
@@ -20,7 +20,7 @@ contract StakingTest is Test {
 
     function setUp() public {
         vm.startPrank(admin);
-        token = new SkillToken(admin, admin, admin);
+        token = new TrustToken(admin, admin, admin);
         nodeReg = new NodeRegistry(address(token));
         staking = new Staking(address(token), address(nodeReg));
 

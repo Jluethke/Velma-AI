@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-// Copyright (c) 2024-present The Wayfinder Trust — SkillChain
+// Copyright (c) 2024-present The Wayfinder Trust — FlowFabric
 // All Rights Reserved. Proprietary and Confidential.
 
 pragma solidity ^0.8.24;
@@ -13,7 +13,7 @@ import "./libraries/TrustMath.sol";
 
 /**
  * @title GovernanceDAO
- * @notice Trust-weighted decentralized governance for the SkillChain network.
+ * @notice Trust-weighted decentralized governance for the FlowFabric network.
  * @dev Voting power = sqrt(stake) * trustScore * (1 + log2(reputation)).
  *      Mirrors ALG GovernanceAction tiers: proposals move through voting,
  *      timelock, and execution phases.
