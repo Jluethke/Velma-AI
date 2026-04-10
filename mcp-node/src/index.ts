@@ -91,6 +91,25 @@ function availableChains(): Array<Record<string, unknown>> {
     .filter(Boolean) as Array<Record<string, unknown>>;
 }
 
+/** Parse required and optional inputs from a skill.md ## Inputs section. */
+function parseSkillInputs(skillMd: string): { required: Array<{name: string; desc: string}>; optional: Array<{name: string; desc: string}> } {
+  const required: Array<{name: string; desc: string}> = [];
+  const optional: Array<{name: string; desc: string}> = [];
+  const section = skillMd.match(/## Inputs\n([\s\S]*?)(?=\n## |\n---)/);
+  if (!section) return { required, optional };
+  for (const line of section[1].split("\n")) {
+    const m = line.match(/^- (\w[\w-]*):\s*\S+\s+--\s+(.+)/);
+    if (!m) continue;
+    const [, name, desc] = m;
+    if (desc.includes("(Optional)")) {
+      optional.push({ name, desc: desc.replace(/^\(Optional\)\s*/, "") });
+    } else {
+      required.push({ name, desc });
+    }
+  }
+  return { required, optional };
+}
+
 // ---------------------------------------------------------------------------
 // In-memory run tracking
 // ---------------------------------------------------------------------------
@@ -557,9 +576,21 @@ server.tool("run_flow_step",
       alias: steps[step_index + 1].alias ?? steps[step_index + 1].skill_name,
     };
 
+    // Parse required/optional inputs from skill definition
+    const { required: requiredInputs, optional: optionalInputs } = skillContent
+      ? parseSkillInputs(skillContent)
+      : { required: [], optional: [] };
+
+    const alreadyProvided = Object.keys(ctx);
+    const missingRequired = requiredInputs.filter(i => !alreadyProvided.includes(i.name));
+
+    const intakeBlock = missingRequired.length > 0
+      ? `STEP 1 — COLLECT INPUTS FIRST (do not skip):\nAsk the user for the following before executing any phases:\n${missingRequired.map(i => `  • ${i.name}: ${i.desc}`).join("\n")}${optionalInputs.length > 0 ? `\n\nAlso ask (optional, but improves results):\n${optionalInputs.map(i => `  • ${i.name}: ${i.desc}`).join("\n")}` : ""}\n\nSTEP 2 — EXECUTE once inputs are collected:\n`
+      : "";
+
     const continueMsg = isLast
-      ? "'All done! Chain complete.'"
-      : `'Step ${step_index + 1} complete. Ready for step ${step_index + 2} (${nextStep?.skill ?? ""})? Call run_flow_step with step_index=${step_index + 1} to continue.'`;
+      ? "All done! Chain complete."
+      : `Step ${step_index + 1} complete. Show the full output above, then ask: 'Ready for step ${step_index + 2} (${nextStep?.skill ?? ""})?' Call run_flow_step with step_index=${step_index + 1} to continue.`;
 
     // Track in gamification
     try {
@@ -574,11 +605,14 @@ server.tool("run_flow_step",
       total_steps: steps.length,
       skill: skillName,
       alias: step.alias ?? skillName,
+      required_inputs: requiredInputs,
+      optional_inputs: optionalInputs,
+      inputs_already_provided: alreadyProvided,
       skill_definition: skillContent,
       context: ctx,
       is_last_step: isLast,
       next_step: nextStep,
-      instructions: `Execute the '${skillName}' flow now using the skill definition above. Show the user the full output. Then ask: ${continueMsg}`,
+      instructions: `${intakeBlock}Execute the '${skillName}' flow using the skill definition and collected inputs. Show the user the complete output. Then: ${continueMsg}`,
     }, null, 2) }] };
   }
 );

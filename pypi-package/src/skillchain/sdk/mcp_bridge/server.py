@@ -61,6 +61,28 @@ def _hot_import(module_path: str):
 # Helpers
 # ---------------------------------------------------------------------------
 
+import re as _re
+
+
+def _parse_skill_inputs(skill_md: str) -> tuple[list[dict], list[dict]]:
+    """Parse ## Inputs section from skill.md. Returns (required, optional) lists."""
+    required: list[dict] = []
+    optional: list[dict] = []
+    section = _re.search(r"## Inputs\n([\s\S]*?)(?=\n## |\n---)", skill_md)
+    if not section:
+        return required, optional
+    for line in section.group(1).splitlines():
+        m = _re.match(r"^- (\w[\w-]*):\s*\S+\s+--\s+(.+)", line)
+        if not m:
+            continue
+        name, desc = m.group(1), m.group(2)
+        if "(Optional)" in desc:
+            optional.append({"name": name, "desc": desc.replace("(Optional)", "").strip()})
+        else:
+            required.append({"name": name, "desc": desc})
+    return required, optional
+
+
 def _installed_skills() -> dict[str, Path]:
     """Return {name: path} of all installed skills across known directories."""
     skills: dict[str, Path] = {}
@@ -651,6 +673,26 @@ def create_server() -> FastMCP:
         skill_path = skills.get(skill_name)
         skill_content = skill_path.read_text(encoding="utf-8") if skill_path and skill_path.exists() else None
 
+        # Parse required/optional inputs from skill definition
+        required_inputs, optional_inputs = (
+            _parse_skill_inputs(skill_content) if skill_content else ([], [])
+        )
+        already_provided = list(ctx.keys())
+        missing_required = [i for i in required_inputs if i["name"] not in already_provided]
+
+        if missing_required:
+            intake_lines = "\n".join(f"  • {i['name']}: {i['desc']}" for i in missing_required)
+            opt_lines = ("\n\nAlso ask (optional, improves results):\n" +
+                         "\n".join(f"  • {i['name']}: {i['desc']}" for i in optional_inputs)
+                         ) if optional_inputs else ""
+            intake_block = (
+                f"STEP 1 — COLLECT INPUTS FIRST (do not skip):\n"
+                f"Ask the user for the following before executing any phases:\n"
+                f"{intake_lines}{opt_lines}\n\nSTEP 2 — EXECUTE once inputs are collected:\n"
+            )
+        else:
+            intake_block = ""
+
         is_last = step_index == len(steps) - 1
         next_step = None if is_last else {
             "step_index": step_index + 1,
@@ -658,23 +700,32 @@ def create_server() -> FastMCP:
             "alias": steps[step_index + 1].get("alias", ""),
         }
 
+        continue_msg = (
+            "All done! Chain complete." if is_last
+            else (
+                f"Step {step_index + 1} complete. Show the full output, then ask: "
+                f"'Ready for step {step_index + 2} "
+                f"({next_step['skill'] if next_step else ''})?' "
+                f"Call run_chain_step with step_index={step_index + 1} to continue."
+            )
+        )
+
         return json.dumps({
             "chain": chain_name,
             "step": step_index + 1,
             "total_steps": len(steps),
             "skill": skill_name,
             "alias": step.get("alias", skill_name),
+            "required_inputs": required_inputs,
+            "optional_inputs": optional_inputs,
+            "inputs_already_provided": already_provided,
             "skill_definition": skill_content,
             "context": ctx,
             "is_last_step": is_last,
             "next_step": next_step,
             "instructions": (
-                f"Execute the '{skill_name}' flow now using the skill definition above. "
-                f"Show the user the full output. Then ask: "
-                + ("'All done! Chain complete.' " if is_last
-                   else f"'Step {step_index + 1} complete. Ready for step {step_index + 2} "
-                        f"({next_step['skill'] if next_step else ''})? "
-                        "Call run_chain_step with step_index=" + str(step_index + 1) + " to continue.'")
+                f"{intake_block}Execute the '{skill_name}' flow using the skill definition "
+                f"and all collected inputs. Show the user the complete output. Then: {continue_msg}"
             ),
         }, indent=2, default=str)
 
