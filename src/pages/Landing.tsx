@@ -73,11 +73,11 @@ function ComposerPreview() {
           className="text-3xl md:text-5xl font-bold mb-4"
           style={{ color: 'var(--text-primary)', letterSpacing: '-0.02em' }}
         >
-          Connect flows into chains.{' '}
+          Build pipelines.{' '}
           <span className="gradient-text">Visually.</span>
         </h2>
         <p className="text-sm md:text-base max-w-2xl mx-auto" style={{ color: 'var(--text-secondary)', lineHeight: 1.7 }}>
-          Drag flows onto a canvas, connect them, customize inputs and outputs, then run the whole chain in Claude Code. Create flows that don't exist yet with natural language.
+          The web Composer lets you drag flows onto a canvas, connect them into pipelines, and publish them on-chain. Prefer natural language? The Claude Desktop MCP server does the same thing — just describe what you need.
         </p>
       </div>
 

@@ -186,6 +186,43 @@ export default function GettingStarted() {
           built in. Here's the thing: once it's set up, you never think about it again.
           You just describe what you need.
         </p>
+
+        {/* Two paths */}
+        <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', flexWrap: 'wrap' as const, marginBottom: '12px' }}>
+          {[
+            {
+              label: 'Claude Desktop (recommended)',
+              desc: 'Natural language. Say what you need — flows run as conversations.',
+              highlight: true,
+            },
+            {
+              label: 'Web Composer',
+              desc: 'Visual drag-and-drop canvas. Build and publish pipelines on-chain.',
+              highlight: false,
+            },
+          ].map(path => (
+            <div
+              key={path.label}
+              style={{
+                flex: '1 1 220px',
+                maxWidth: '280px',
+                background: path.highlight ? 'rgba(56,189,248,0.06)' : 'var(--bg-card)',
+                border: `1px solid ${path.highlight ? 'rgba(56,189,248,0.25)' : 'var(--border)'}`,
+                borderRadius: '12px',
+                padding: '16px 20px',
+                textAlign: 'left' as const,
+              }}
+            >
+              <div style={{ fontSize: '13px', fontWeight: 700, color: path.highlight ? 'var(--cyan)' : 'var(--text-primary)', marginBottom: '6px' }}>
+                {path.label}
+              </div>
+              <div style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>{path.desc}</div>
+            </div>
+          ))}
+        </div>
+        <p style={{ fontSize: '12px', color: 'var(--text-secondary)', opacity: 0.5, marginBottom: '28px' }}>
+          This guide covers Claude Desktop. The web Composer has its own UI — connect a wallet with 500 TRUST to unlock it.
+        </p>
         <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' as const }}>
           <Link
             to="/install"
