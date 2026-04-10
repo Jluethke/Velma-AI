@@ -7,59 +7,77 @@ export default function HeroSection() {
 
   return (
     <section className="relative min-h-[90vh] flex flex-col items-center justify-center px-6 overflow-hidden">
-      {/* Animated gradient orbs */}
-      <div
-        className="absolute animate-float"
-        style={{
-          width: '600px',
-          height: '600px',
-          top: '-10%',
-          left: '-10%',
-          borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(56, 189, 248, 0.08) 0%, transparent 70%)',
-          filter: 'blur(60px)',
-          pointerEvents: 'none',
-        }}
-      />
-      <div
-        className="absolute animate-float-delayed"
-        style={{
-          width: '500px',
-          height: '500px',
-          bottom: '-5%',
-          right: '-10%',
-          borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(167, 139, 250, 0.08) 0%, transparent 70%)',
-          filter: 'blur(60px)',
-          pointerEvents: 'none',
-        }}
-      />
-      <div
-        className="absolute"
-        style={{
-          width: '300px',
-          height: '300px',
-          top: '40%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(251, 191, 36, 0.04) 0%, transparent 70%)',
-          filter: 'blur(40px)',
-          pointerEvents: 'none',
-          animation: 'float 10s ease-in-out infinite reverse',
-        }}
-      />
+      {/* Keyframes for the layered gradient mesh */}
+      <style>{`
+        @keyframes hero-mesh-a {
+          0%   { transform: translate(0%, 0%) scale(1); }
+          33%  { transform: translate(8%, -12%) scale(1.08); }
+          66%  { transform: translate(-6%, 10%) scale(0.95); }
+          100% { transform: translate(0%, 0%) scale(1); }
+        }
+        @keyframes hero-mesh-b {
+          0%   { transform: translate(0%, 0%) scale(1); }
+          33%  { transform: translate(-10%, 8%) scale(1.05); }
+          66%  { transform: translate(12%, -6%) scale(1.1); }
+          100% { transform: translate(0%, 0%) scale(1); }
+        }
+        @keyframes hero-mesh-c {
+          0%   { transform: translate(0%, 0%) scale(1); }
+          50%  { transform: translate(6%, 6%) scale(1.06); }
+          100% { transform: translate(0%, 0%) scale(1); }
+        }
+      `}</style>
 
-      {/* Subtle dot grid */}
+      {/* Deep layered gradient mesh — three orbs that drift independently */}
       <div
         className="absolute inset-0"
-        style={{
-          backgroundImage: 'radial-gradient(circle, var(--text-secondary) 0.5px, transparent 0.5px)',
+        style={{ pointerEvents: 'none', overflow: 'hidden' }}
+      >
+        {/* Orb A — cyan, top-left */}
+        <div style={{
+          position: 'absolute',
+          width: '800px',
+          height: '800px',
+          top: '-20%',
+          left: '-15%',
+          borderRadius: '50%',
+          background: 'radial-gradient(circle, rgba(56,189,248,0.13) 0%, rgba(56,189,248,0.04) 40%, transparent 70%)',
+          filter: 'blur(80px)',
+          animation: 'hero-mesh-a 22s ease-in-out infinite',
+        }} />
+        {/* Orb B — purple, bottom-right */}
+        <div style={{
+          position: 'absolute',
+          width: '700px',
+          height: '700px',
+          bottom: '-15%',
+          right: '-10%',
+          borderRadius: '50%',
+          background: 'radial-gradient(circle, rgba(167,139,250,0.12) 0%, rgba(167,139,250,0.04) 40%, transparent 70%)',
+          filter: 'blur(80px)',
+          animation: 'hero-mesh-b 28s ease-in-out infinite',
+        }} />
+        {/* Orb C — gold, centre */}
+        <div style={{
+          position: 'absolute',
+          width: '400px',
+          height: '400px',
+          top: '35%',
+          left: '45%',
+          borderRadius: '50%',
+          background: 'radial-gradient(circle, rgba(251,191,36,0.06) 0%, transparent 70%)',
+          filter: 'blur(60px)',
+          animation: 'hero-mesh-c 18s ease-in-out infinite',
+        }} />
+        {/* Fine dot grid layered on top of the mesh */}
+        <div style={{
+          position: 'absolute',
+          inset: 0,
+          backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.35) 0.5px, transparent 0.5px)',
           backgroundSize: '48px 48px',
-          opacity: 0.04,
-          pointerEvents: 'none',
-        }}
-      />
+          opacity: 0.05,
+        }} />
+      </div>
 
       <div className="relative z-10 max-w-4xl mx-auto text-center">
         <h1

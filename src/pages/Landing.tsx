@@ -1,7 +1,60 @@
+import { useRef } from 'react';
 import { Link } from 'react-router-dom';
 import HeroSection from '../components/HeroSection';
 import SkillShowcase from '../components/SkillShowcase';
 import FAQ from '../components/FAQ';
+
+// ── 3-D tilt helper ───────────────────────────────────────────────
+
+function useTilt() {
+  const ref = useRef<HTMLDivElement>(null);
+
+  const onMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const el = ref.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const cx = rect.width / 2;
+    const cy = rect.height / 2;
+    const rotateX = ((y - cy) / cy) * -5;   // max ±5 deg
+    const rotateY = ((x - cx) / cx) * 5;
+    el.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(-4px)`;
+    el.style.boxShadow = `0 16px 40px rgba(0,0,0,0.2), 0 0 0 1px rgba(56,189,248,0.12)`;
+  };
+
+  const onMouseLeave = () => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg) translateY(0)';
+    el.style.boxShadow = '';
+  };
+
+  return { ref, onMouseMove, onMouseLeave };
+}
+
+// ── Reusable tilt card wrapper ────────────────────────────────────
+
+function TiltCard({ children, color }: { children: React.ReactNode; color?: string }) {
+  const tilt = useTilt();
+  return (
+    <div
+      ref={tilt.ref}
+      onMouseMove={tilt.onMouseMove}
+      onMouseLeave={tilt.onMouseLeave}
+      className="glass-card p-5"
+      style={{
+        borderColor: color ? `${color}10` : undefined,
+        transition: 'transform 0.15s ease, box-shadow 0.15s ease',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        willChange: 'transform',
+      }}
+    >
+      {children}
+    </div>
+  );
+}
 
 // ── Composer Preview Section ──────────────────────────────────────
 
@@ -158,6 +211,41 @@ function ComposerPreview() {
 
 // ── TRUST Economy Section ─────────────────────────────────────────
 
+function TrustStepCard({ item, delay }: { item: { step: string; title: string; desc: string; color: string }; delay: number }) {
+  const tilt = useTilt();
+  return (
+    <div
+      ref={tilt.ref}
+      onMouseMove={tilt.onMouseMove}
+      onMouseLeave={tilt.onMouseLeave}
+      className={`glass-card p-5 animate-fade-in-up stagger-${delay}`}
+      style={{
+        position: 'relative',
+        transition: 'transform 0.15s ease, box-shadow 0.15s ease',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        willChange: 'transform',
+      }}
+    >
+      <div
+        className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold mb-4"
+        style={{
+          background: `linear-gradient(135deg, ${item.color}25, ${item.color}10)`,
+          border: `2px solid ${item.color}40`,
+          color: item.color,
+          boxShadow: `0 0 16px ${item.color}10`,
+          position: 'relative',
+          zIndex: 1,
+        }}
+      >
+        {item.step}
+      </div>
+      <h3 className="text-sm font-bold mb-2" style={{ color: item.color }}>{item.title}</h3>
+      <p className="text-xs leading-relaxed" style={{ color: 'var(--text-secondary)' }}>{item.desc}</p>
+    </div>
+  );
+}
+
 function TrustEconomy() {
   const steps = [
     {
@@ -220,28 +308,7 @@ function TrustEconomy() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {steps.map((item, i) => (
-            <div
-              key={item.step}
-              className={`glass-card p-5 animate-fade-in-up stagger-${i + 1}`}
-              style={{ position: 'relative' }}
-            >
-              {/* Step number with gradient fill */}
-              <div
-                className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold mb-4"
-                style={{
-                  background: `linear-gradient(135deg, ${item.color}25, ${item.color}10)`,
-                  border: `2px solid ${item.color}40`,
-                  color: item.color,
-                  boxShadow: `0 0 16px ${item.color}10`,
-                  position: 'relative',
-                  zIndex: 1,
-                }}
-              >
-                {item.step}
-              </div>
-              <h3 className="text-sm font-bold mb-2" style={{ color: item.color }}>{item.title}</h3>
-              <p className="text-xs leading-relaxed" style={{ color: 'var(--text-secondary)' }}>{item.desc}</p>
-            </div>
+            <TrustStepCard key={item.step} item={item} delay={i + 1} />
           ))}
         </div>
       </div>
@@ -348,16 +415,12 @@ function SkillEvolution() {
             color: 'var(--green)',
           },
         ].map(card => (
-          <div
-            key={card.title}
-            className="glass-card p-5"
-            style={{ borderColor: `${card.color}10` }}
-          >
+          <TiltCard key={card.title} color={card.color}>
             <div className="text-xs font-bold mb-2" style={{ color: card.color }}>{card.title}</div>
             <p className="text-xs leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
               {card.desc}
             </p>
-          </div>
+          </TiltCard>
         ))}
       </div>
     </section>

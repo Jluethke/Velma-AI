@@ -22,6 +22,7 @@ export default function Navbar() {
   const navLinks = [
     { to: '/', label: 'Home' },
     { to: '/install', label: 'Install' },
+    { to: '/get-started', label: 'Get Started' },
     { to: '/compose', label: 'Composer' },
     { to: '/memory', label: 'Memory' },
     { to: '/docs', label: 'Docs' },
