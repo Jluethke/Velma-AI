@@ -34,8 +34,6 @@ import { SkillEvolution } from "./skill-evolution.js";
 // ---------------------------------------------------------------------------
 // Paths
 // ---------------------------------------------------------------------------
-const SKILLS_DIR_CLAUDE = join(homedir(), ".claude", "skills");
-const SKILLS_DIR_SC = join(homedir(), ".skillchain", "skills");
 // Marketplace can be: bundled with the package, or in ~/.skillchain/marketplace
 function findMarketplace() {
     // 1. ~/.skillchain/marketplace (installed)
@@ -59,14 +57,6 @@ const CHAINS_DIR = join(MARKETPLACE_DIR, "chains");
 // ---------------------------------------------------------------------------
 function installedSkills() {
     const skills = new Map(); // name -> path
-    for (const dir of [SKILLS_DIR_CLAUDE, SKILLS_DIR_SC]) {
-        if (existsSync(dir)) {
-            for (const f of readdirSync(dir)) {
-                if (f.endsWith(".md"))
-                    skills.set(f.replace(/\.md$/, ""), join(dir, f));
-            }
-        }
-    }
     if (existsSync(MARKETPLACE_DIR)) {
         for (const d of readdirSync(MARKETPLACE_DIR)) {
             const skillMd = join(MARKETPLACE_DIR, d, "skill.md");
@@ -110,7 +100,7 @@ const activeRuns = new Map();
 // Server
 // ---------------------------------------------------------------------------
 const server = new McpServer({
-    name: "skillchain",
+    name: "flowfabric",
     version: "0.1.0",
 });
 const store = new SkillStateStore();
@@ -137,7 +127,7 @@ catch { /* profile may not exist yet */ }
 // ===================================================================
 // TOOLS
 // ===================================================================
-server.tool("list_skills", "List all installed skills with their execution patterns and descriptions.", {}, async () => {
+server.tool("list_flows", "List all available flows with their execution patterns and descriptions.", {}, async () => {
     const skills = installedSkills();
     const results = [...skills.keys()].sort().map(name => {
         const manifest = loadManifest(name);
@@ -151,30 +141,30 @@ server.tool("list_skills", "List all installed skills with their execution patte
     });
     return { content: [{ type: "text", text: JSON.stringify(results, null, 2) }] };
 });
-server.tool("get_skill", "Get the full content of an installed skill.", { skill_name: z.string().describe("Name of the skill to read") }, async ({ skill_name }) => {
+server.tool("get_flow", "Get the full content of an installed flow.", { flow_name: z.string().describe("Name of the flow to read") }, async ({ flow_name }) => {
     const skills = installedSkills();
-    const path = skills.get(skill_name);
+    const path = skills.get(flow_name);
     if (path && existsSync(path)) {
         return { content: [{ type: "text", text: readFileSync(path, "utf-8") }] };
     }
-    return { content: [{ type: "text", text: `Skill '${skill_name}' not found. Use list_skills() to see available skills.` }] };
+    return { content: [{ type: "text", text: `Flow '${flow_name}' not found. Use list_flows() to see available flows.` }] };
 });
-server.tool("start_skill_run", "Start a tracked execution of a skill. Returns a run_id for tracking phases.", {
-    skill_name: z.string().describe("Name of the skill to run"),
+server.tool("start_flow_run", "Start a tracked execution of a flow. Returns a run_id for tracking phases.", {
+    flow_name: z.string().describe("Name of the flow to run"),
     execution_pattern: z.string().default("orpa").describe("Execution pattern (orpa, phase_pipeline, etc.)"),
-}, async ({ skill_name, execution_pattern }) => {
-    const run = store.startRun(skill_name, execution_pattern);
+}, async ({ flow_name, execution_pattern }) => {
+    const run = store.startRun(flow_name, execution_pattern);
     const runId = randomUUID().slice(0, 16);
     activeRuns.set(runId, run);
     // Auto-load L2 room context and L0+L1 context
     let memoryContext = {};
     try {
         const ctx = memory.getContext();
-        const room = memory.getSkillRoom(skill_name);
+        const room = memory.getSkillRoom(flow_name);
         memoryContext = {
             identity_summary: ctx.identity.summary || undefined,
             relevant_facts: ctx.facts.slice(0, 5).map(f => f.content),
-            skill_room: room.run_summaries.length > 0 ? {
+            flow_room: room.run_summaries.length > 0 ? {
                 previous_runs: room.run_summaries.length,
                 last_run: room.run_summaries[room.run_summaries.length - 1]?.date,
                 recent_insights: room.insights.slice(0, 3).map(i => i.content),
@@ -183,12 +173,12 @@ server.tool("start_skill_run", "Start a tracked execution of a skill. Returns a 
     }
     catch { /* memory not initialized yet */ }
     return { content: [{ type: "text", text: JSON.stringify({
-                    run_id: runId, skill_name, execution_pattern, started_at: run.started_at, status: "in_progress",
+                    run_id: runId, flow_name, execution_pattern, started_at: run.started_at, status: "in_progress",
                     memory_context: memoryContext,
                 }, null, 2) }] };
 });
-server.tool("record_phase", "Record completion of a skill phase. Called after each execution phase.", {
-    run_id: z.string().describe("The run ID returned by start_skill_run"),
+server.tool("record_phase", "Record completion of a flow phase. Called after each execution phase.", {
+    run_id: z.string().describe("The run ID returned by start_flow_run"),
     phase: z.string().describe("Phase name (e.g. observe, reflect, plan, act)"),
     status: z.string().describe("Phase status (completed, failed, skipped)"),
     output: z.string().default("{}").describe("JSON string of phase output data"),
@@ -208,7 +198,7 @@ server.tool("record_phase", "Record completion of a skill phase. Called after ea
                     run_id, phase, status, timestamp: result.timestamp, total_phases: run.phases.length,
                 }, null, 2) }] };
 });
-server.tool("complete_skill_run", "Mark a skill run as complete. Archives to history.", {
+server.tool("complete_flow_run", "Mark a flow run as complete. Archives to history.", {
     run_id: z.string().describe("The run ID to complete"),
     status: z.string().default("completed").describe("Final status"),
 }, async ({ run_id, status }) => {
@@ -261,13 +251,13 @@ server.tool("complete_skill_run", "Mark a skill run as complete. Archives to his
     catch { /* memory extraction is best-effort */ }
     activeRuns.delete(run_id);
     return { content: [{ type: "text", text: JSON.stringify({
-                    run_id, skill_name: run.skill_name, status, completed_at: run.completed_at,
+                    run_id, flow_name: run.skill_name, status, completed_at: run.completed_at,
                     phases_completed: run.phases.length, facts_extracted: factsExtracted,
                 }, null, 2) }] };
 });
-server.tool("save_skill_data", "Save persistent data for a skill (survives between runs).", {
-    skill_name: z.string(), key: z.string(), data: z.string().default("{}"),
-}, async ({ skill_name, key, data }) => {
+server.tool("save_flow_data", "Save persistent data for a flow (survives between runs).", {
+    flow_name: z.string(), key: z.string(), data: z.string().default("{}"),
+}, async ({ flow_name, key, data }) => {
     let dataObj;
     try {
         dataObj = JSON.parse(data);
@@ -275,22 +265,22 @@ server.tool("save_skill_data", "Save persistent data for a skill (survives betwe
     catch {
         dataObj = { raw: data };
     }
-    store.saveData(skill_name, key, dataObj);
-    return { content: [{ type: "text", text: JSON.stringify({ skill_name, key, saved: true }) }] };
+    store.saveData(flow_name, key, dataObj);
+    return { content: [{ type: "text", text: JSON.stringify({ flow_name, key, saved: true }) }] };
 });
-server.tool("load_skill_data", "Load persistent data from a previous skill run.", { skill_name: z.string(), key: z.string() }, async ({ skill_name, key }) => {
-    const result = store.loadData(skill_name, key);
+server.tool("load_flow_data", "Load persistent data from a previous flow run.", { flow_name: z.string(), key: z.string() }, async ({ flow_name, key }) => {
+    const result = store.loadData(flow_name, key);
     return { content: [{ type: "text", text: JSON.stringify({
-                    skill_name, key, found: result !== null, data: result,
+                    flow_name, key, found: result !== null, data: result,
                 }, null, 2) }] };
 });
-server.tool("get_skill_history", "Get recent execution history for a skill.", { skill_name: z.string(), limit: z.number().default(5) }, async ({ skill_name, limit }) => {
-    const history = store.getRunHistory(skill_name, limit);
+server.tool("get_flow_history", "Get recent execution history for a flow.", { flow_name: z.string(), limit: z.number().default(5) }, async ({ flow_name, limit }) => {
+    const history = store.getRunHistory(flow_name, limit);
     return { content: [{ type: "text", text: JSON.stringify({
-                    skill_name, runs: history, count: history.length,
+                    flow_name, runs: history, count: history.length,
                 }, null, 2) }] };
 });
-server.tool("discover_skills", "Search for skills in the marketplace by domain.", { domain: z.string().default(""), max_results: z.number().default(10) }, async ({ domain, max_results }) => {
+server.tool("discover_flows", "Search for flows in the marketplace by domain.", { domain: z.string().default(""), max_results: z.number().default(10) }, async ({ domain, max_results }) => {
     const skills = installedSkills();
     const results = [];
     for (const name of [...skills.keys()].sort()) {
@@ -309,7 +299,7 @@ server.tool("discover_skills", "Search for skills in the marketplace by domain."
     }
     return { content: [{ type: "text", text: JSON.stringify(results, null, 2) }] };
 });
-server.tool("list_chains", "List all available pre-built skill chains.", {}, async () => {
+server.tool("list_chains", "List all available pre-built flow chains.", {}, async () => {
     const chains = availableChains();
     const summaries = chains.map(c => ({
         name: c.name ?? "",
@@ -320,7 +310,7 @@ server.tool("list_chains", "List all available pre-built skill chains.", {}, asy
     }));
     return { content: [{ type: "text", text: JSON.stringify(summaries, null, 2) }] };
 });
-server.tool("search_chains", "Search for skill chains using plain English. Describe what you need and get ranked matches.", {
+server.tool("search_chains", "Search for flow chains using plain English. Describe what you need and get ranked matches.", {
     query: z.string().describe("What you're looking for (e.g., 'I hate my job', 'help me budget')"),
     max_results: z.number().default(5),
 }, async ({ query, max_results }) => {
@@ -329,7 +319,7 @@ server.tool("search_chains", "Search for skill chains using plain English. Descr
     const matches = matcher.match(query, max_results);
     return { content: [{ type: "text", text: JSON.stringify(matches, null, 2) }] };
 });
-server.tool("find_and_run", "Find the best skill chain for what you need. This is the main entry point for SkillChain. Describe what you want in plain English.", {
+server.tool("find_and_run", "Find the best flow chain for what you need. This is the main entry point for FlowFabric. Describe what you want in plain English.", {
     query: z.string().describe("Plain English description (e.g., 'I need help budgeting', 'prepare me for an interview')"),
     auto_run: z.boolean().default(false).describe("If true, automatically execute the best match"),
     initial_context: z.string().default("{}").describe("JSON context data for the chain"),
@@ -366,7 +356,7 @@ server.tool("find_and_run", "Find the best skill chain for what you need. This i
                     alias: s.alias ?? s.skill_name,
                 })),
                 initial_context: ctx,
-                instructions: "Execute each skill step in order using start_skill_run, get_skill, record_phase, and complete_skill_run.",
+                instructions: "Execute each flow in order using start_flow_run, get_flow, record_phase, and complete_flow_run.",
             };
             // Track
             try {
@@ -382,7 +372,7 @@ server.tool("find_and_run", "Find the best skill chain for what you need. This i
     }
     return { content: [{ type: "text", text: JSON.stringify(resultData, null, 2) }] };
 });
-server.tool("run_chain", "Execute a skill chain by name. Returns the chain steps for execution.", {
+server.tool("run_chain", "Execute a flow chain by name. Returns the chain steps for execution.", {
     chain_name: z.string().describe("Name of the chain to run"),
     initial_context: z.string().default("{}").describe("JSON context data"),
 }, async ({ chain_name, initial_context }) => {
@@ -407,7 +397,7 @@ server.tool("run_chain", "Execute a skill chain by name. Returns the chain steps
             depends_on: s.depends_on ?? [],
         })),
         initial_context: ctx,
-        instructions: "Execute each skill step using: get_skill → start_skill_run → record_phase (per phase) → complete_skill_run. Pass outputs between dependent steps.",
+        instructions: "Execute each flow step using: get_flow → start_flow_run → record_phase (per phase) → complete_flow_run. Pass outputs between dependent steps.",
     };
     try {
         profileMgr.updateChainUsage(chain_name);
@@ -421,11 +411,120 @@ server.tool("run_chain", "Execute a skill chain by name. Returns the chain steps
     return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
 });
 // ===================================================================
+// HUMAN-IN-THE-LOOP EXECUTION TOOLS
+// ===================================================================
+server.tool("preview_flow", "Preview what a chain will do before running it. Shows each step, skill, and expected output. ALWAYS call this first — show the user and get approval before executing.", {
+    chain_name: z.string().default("").describe("Exact chain name to preview (e.g. 'job-search-blitz')"),
+    query: z.string().default("").describe("Natural language query to find the best chain to preview. Used when chain_name is not provided."),
+}, async ({ chain_name, query }) => {
+    const chains = availableChains();
+    let chainData;
+    if (chain_name) {
+        chainData = chains.find(c => c.name === chain_name);
+    }
+    else if (query) {
+        const matcher = new ChainMatcher(chains);
+        const matches = matcher.match(query, 1);
+        if (matches.length > 0) {
+            chainData = chains.find(c => c.name === matches[0].chain_name);
+        }
+    }
+    if (!chainData) {
+        return { content: [{ type: "text", text: JSON.stringify({
+                        error: `Chain '${chain_name || query}' not found.`,
+                        available: chains.slice(0, 10).map(c => c.name),
+                    }) }] };
+    }
+    const steps = (chainData.steps ?? []);
+    const stepPreviews = steps.map((step, i) => {
+        const manifest = loadManifest(step.skill_name);
+        return {
+            step: i + 1,
+            skill: step.skill_name,
+            alias: step.alias ?? step.skill_name,
+            description: manifest.description ?? "",
+            depends_on: step.depends_on ?? [],
+        };
+    });
+    return { content: [{ type: "text", text: JSON.stringify({
+                    chain: chainData.name,
+                    description: chainData.description ?? "",
+                    category: chainData.category ?? "",
+                    total_steps: steps.length,
+                    steps: stepPreviews,
+                    approval_required: true,
+                    instructions: "Show this plan to the user. Ask: 'Ready to run? I'll execute each flow one at a time and show you the output before continuing.' If approved, use run_flow_step to execute step by step.",
+                }, null, 2) }] };
+});
+server.tool("run_flow_step", "Execute a single step of a chain and show the output. Human-in-the-loop: run one flow, show output, get user approval, then call again with step_index + 1.", {
+    chain_name: z.string().describe("Name of the chain (e.g. 'job-search-blitz')"),
+    step_index: z.number().describe("Zero-based step index (0 = first step)"),
+    context: z.string().default("{}").describe("JSON context from previous steps"),
+}, async ({ chain_name, step_index, context }) => {
+    const chains = availableChains();
+    const chainData = chains.find(c => c.name === chain_name);
+    if (!chainData) {
+        return { content: [{ type: "text", text: JSON.stringify({ error: `Chain '${chain_name}' not found.` }) }] };
+    }
+    const steps = (chainData.steps ?? []);
+    if (step_index < 0 || step_index >= steps.length) {
+        return { content: [{ type: "text", text: JSON.stringify({
+                        error: `step_index ${step_index} out of range (chain has ${steps.length} steps).`,
+                        total_steps: steps.length,
+                    }) }] };
+    }
+    const step = steps[step_index];
+    const skillName = step.skill_name;
+    let ctx;
+    try {
+        ctx = JSON.parse(context);
+    }
+    catch {
+        ctx = {};
+    }
+    // Read the skill definition
+    const skillMap = installedSkills();
+    const skillPath = skillMap.get(skillName);
+    let skillContent = null;
+    if (skillPath && existsSync(skillPath)) {
+        skillContent = readFileSync(skillPath, "utf-8");
+    }
+    const isLast = step_index === steps.length - 1;
+    const nextStep = isLast ? null : {
+        step_index: step_index + 1,
+        skill: steps[step_index + 1].skill_name,
+        alias: steps[step_index + 1].alias ?? steps[step_index + 1].skill_name,
+    };
+    const continueMsg = isLast
+        ? "'All done! Chain complete.'"
+        : `'Step ${step_index + 1} complete. Ready for step ${step_index + 2} (${nextStep?.skill ?? ""})? Call run_flow_step with step_index=${step_index + 1} to continue.'`;
+    // Track in gamification
+    try {
+        const gam = new GamificationEngine();
+        gam.recordSkillRun(skillName);
+        if (isLast)
+            gam.recordChainRun(chain_name, steps.length, 0);
+    }
+    catch { /* */ }
+    return { content: [{ type: "text", text: JSON.stringify({
+                    chain: chain_name,
+                    step: step_index + 1,
+                    total_steps: steps.length,
+                    skill: skillName,
+                    alias: step.alias ?? skillName,
+                    skill_definition: skillContent,
+                    context: ctx,
+                    is_last_step: isLast,
+                    next_step: nextStep,
+                    instructions: `Execute the '${skillName}' flow now using the skill definition above. Show the user the full output. Then ask: ${continueMsg}`,
+                }, null, 2) }] };
+});
+// ===================================================================
 // DYNAMIC CHAIN COMPOSITION TOOLS (Phase 1 — Patent CIP)
 // ===================================================================
-server.tool("compose_chain", "Dynamically compose a skill chain from natural language. Uses input/output matching across the skill registry with trust-weighted scoring. Falls back to curated chains if confidence is low.", {
+server.tool("compose_chain", "Dynamically compose a flow chain from natural language. Uses input/output matching across the flow registry with trust-weighted scoring. Falls back to curated chains if confidence is low.", {
     query: z.string().describe("What you want to accomplish (e.g., 'validate my startup idea and build a pitch deck')"),
-    max_skills: z.number().default(5).describe("Maximum number of skills to compose"),
+    max_skills: z.number().default(5).describe("Maximum number of flows to compose"),
     min_confidence: z.number().default(0.4).describe("Minimum confidence threshold (0-1). Below this, falls back to curated chains."),
 }, async ({ query, max_skills, min_confidence }) => {
     const manifestIdx = buildManifestIndex(MARKETPLACE_DIR);
@@ -442,7 +541,7 @@ server.tool("compose_chain", "Dynamically compose a skill chain from natural lan
     }
     return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
 });
-server.tool("explain_composition", "Explain why specific skills would be chosen for a dynamic composition. Useful for understanding the composition engine's reasoning.", {
+server.tool("explain_composition", "Explain why specific flows would be chosen for a dynamic composition. Useful for understanding the composition engine's reasoning.", {
     query: z.string().describe("The query to explain composition for"),
     max_skills: z.number().default(5),
 }, async ({ query, max_skills }) => {
@@ -454,12 +553,12 @@ server.tool("explain_composition", "Explain why specific skills would be chosen 
 // ===================================================================
 // MEMORY TOOLS (Phase 2 — Tiered Memory System)
 // ===================================================================
-server.tool("recall", "Search your memory across all tiers (L1 critical facts, L2 skill rooms, L3 semantic index). Returns relevant memories ranked by relevance.", {
+server.tool("recall", "Search your memory across all tiers (L1 critical facts, L2 flow rooms, L3 semantic index). Returns relevant memories ranked by relevance.", {
     query: z.string().describe("What to search for in memory"),
     max_results: z.number().default(10),
-    skill_filter: z.string().optional().describe("Optional: limit search to a specific skill's room"),
-}, async ({ query, max_results, skill_filter }) => {
-    const results = memory.recall(query, max_results, skill_filter);
+    flow_filter: z.string().optional().describe("Optional: limit search to a specific flow's room"),
+}, async ({ query, max_results, flow_filter }) => {
+    const results = memory.recall(query, max_results, flow_filter);
     return { content: [{ type: "text", text: JSON.stringify({
                     query,
                     results_count: results.length,
@@ -468,33 +567,33 @@ server.tool("recall", "Search your memory across all tiers (L1 critical facts, L
                         tier: r.tier,
                         relevance: Math.round(r.relevance * 100) / 100,
                         tags: r.memory.tags,
-                        source_skill: r.memory.source_skill,
+                        source_flow: r.memory.source_skill,
                         timestamp: r.memory.timestamp,
                     })),
                 }, null, 2) }] };
 });
-server.tool("remember", "Explicitly store a fact or insight in memory. High-importance facts go to L1 (always loaded), lower importance to L2 skill rooms or L3 semantic index.", {
+server.tool("remember", "Explicitly store a fact or insight in memory. High-importance facts go to L1 (always loaded), lower importance to L2 flow rooms or L3 semantic index.", {
     content: z.string().describe("The fact or insight to remember"),
     tags: z.array(z.string()).default([]).describe("Tags for categorization"),
-    skill_name: z.string().default("general").describe("Which skill this relates to"),
+    flow_name: z.string().default("general").describe("Which flow this relates to"),
     importance: z.number().default(0.7).describe("Importance (0-1). >=0.7 goes to L1, <0.7 to L2/L3"),
     tier: z.enum(["L1", "L2", "L3"]).default("L1").describe("Which memory tier to store in"),
-}, async ({ content, tags, skill_name, importance, tier }) => {
+}, async ({ content, tags, flow_name, importance, tier }) => {
     let entry;
     if (tier === "L1") {
-        entry = memory.rememberFact(content, tags, skill_name, importance);
+        entry = memory.rememberFact(content, tags, flow_name, importance);
     }
     else if (tier === "L2") {
-        entry = memory.addInsight(skill_name, content, tags, importance);
+        entry = memory.addInsight(flow_name, content, tags, importance);
     }
     else {
-        entry = memory.storeSemanticMemory(content, tags, skill_name, importance);
+        entry = memory.storeSemanticMemory(content, tags, flow_name, importance);
     }
     return { content: [{ type: "text", text: JSON.stringify({
                     stored: true, tier, memory_id: entry.memory_id, importance: entry.importance,
                 }, null, 2) }] };
 });
-server.tool("get_context", "Get the always-loaded memory context (L0 identity + L1 critical facts). This is what the system knows about you across all sessions.", {}, async () => {
+server.tool("get_context", "Get the always-loaded memory context (L0 identity + L1 critical facts). This is what the system knows about you across all flow sessions.", {}, async () => {
     const ctx = memory.getContext();
     return { content: [{ type: "text", text: JSON.stringify({
                     identity: ctx.identity,
@@ -502,7 +601,7 @@ server.tool("get_context", "Get the always-loaded memory context (L0 identity + 
                         content: f.content,
                         importance: f.importance,
                         tags: f.tags,
-                        source: f.source_skill,
+                        source_flow: f.source_skill,
                     })),
                     facts_count: ctx.facts.length,
                 }, null, 2) }] };
@@ -527,11 +626,11 @@ server.tool("kg_assert", "Assert a new knowledge triple in the temporal knowledg
     subject: z.string().describe("The subject entity (e.g., 'user_budget', 'career_goal')"),
     predicate: z.enum(["caused", "supports", "contradicts", "preceded", "enables", "produces", "consumes", "related_to", "derived_from"]).describe("Relationship type"),
     object: z.string().describe("The object entity (e.g., '$3200/month', 'software_engineer')"),
-    source_skill: z.string().default("manual").describe("Which skill produced this knowledge"),
+    source_flow: z.string().default("manual").describe("Which flow produced this knowledge"),
     source_run_id: z.string().default("manual").describe("Which run produced this knowledge"),
     confidence: z.number().default(0.7).describe("Base confidence (0-1), will be multiplied by trust score"),
-}, async ({ subject, predicate, object, source_skill, source_run_id, confidence }) => {
-    const result = await kg.assert(subject, predicate, object, source_skill, source_run_id, confidence);
+}, async ({ subject, predicate, object, source_flow, source_run_id, confidence }) => {
+    const result = await kg.assert(subject, predicate, object, source_flow, source_run_id, confidence);
     return { content: [{ type: "text", text: JSON.stringify({
                     asserted: true,
                     triple: {
@@ -568,7 +667,7 @@ server.tool("kg_history", "Show how facts about an entity changed over time. Rev
                         valid_from: h.triple.valid_from,
                         valid_until: h.triple.valid_until,
                         confidence: Math.round(h.triple.confidence * 100) / 100,
-                        source_skill: h.triple.source_skill,
+                        source_flow: h.triple.source_skill,
                     })),
                 }, null, 2) }] };
 });
@@ -582,41 +681,41 @@ server.tool("kg_validate", "Validate a knowledge triple against on-chain trust d
     return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
 });
 // ===================================================================
-// SKILL EVOLUTION TOOLS
+// FLOW EVOLUTION TOOLS
 // ===================================================================
-server.tool("get_evolution_status", "Check a skill's evolution stage: prompt -> skill -> validated -> graduated -> compiled.", { skill_name: z.string().describe("Name of the skill to check") }, async ({ skill_name }) => {
-    const status = await evolution.getEvolutionStatus(skill_name);
+server.tool("get_evolution_status", "Check a flow's evolution stage: prompt -> flow -> validated -> graduated -> compiled.", { flow_name: z.string().describe("Name of the flow to check") }, async ({ flow_name }) => {
+    const status = await evolution.getEvolutionStatus(flow_name);
     return { content: [{ type: "text", text: JSON.stringify(status, null, 2) }] };
 });
-server.tool("check_graduation", "Evaluate if a skill qualifies for graduation (100+ validations at 95%+ similarity).", { skill_name: z.string().describe("Name of the skill to evaluate") }, async ({ skill_name }) => {
-    const result = await evolution.checkGraduation(skill_name);
+server.tool("check_graduation", "Evaluate if a flow qualifies for graduation (100+ validations at 95%+ similarity).", { flow_name: z.string().describe("Name of the flow to evaluate") }, async ({ flow_name }) => {
+    const result = await evolution.checkGraduation(flow_name);
     return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
 });
-server.tool("list_evolutions", "Show all skills with their current evolution stages.", {}, async () => {
+server.tool("list_evolutions", "Show all flows with their current evolution stages.", {}, async () => {
     const results = await evolution.listEvolutions();
     return { content: [{ type: "text", text: JSON.stringify(results, null, 2) }] };
 });
 // ===================================================================
 // COMMUNITY REGISTRY TOOLS (Phase 4)
 // ===================================================================
-server.tool("submit_skill", "Submit a community skill for review. Validates format and stages for community validation.", {
-    skill_name: z.string().describe("Name for the skill (lowercase, hyphens, 3-50 chars)"),
+server.tool("submit_flow", "Submit a community flow for review. Validates format and stages for community validation.", {
+    flow_name: z.string().describe("Name for the flow (lowercase, hyphens, 3-50 chars)"),
     skill_md: z.string().describe("Full skill.md content"),
     manifest: z.string().default("{}").describe("JSON string of manifest metadata (name, domain, description, tags, inputs, outputs)"),
     author: z.string().describe("Author name or identifier"),
     author_address: z.string().optional().describe("Author's wallet address for on-chain registration"),
-}, async ({ skill_name, skill_md, manifest, author, author_address }) => {
+}, async ({ flow_name, skill_md, manifest, author, author_address }) => {
     let manifestObj;
     try {
         manifestObj = JSON.parse(manifest);
     }
     catch {
-        manifestObj = { name: skill_name };
+        manifestObj = { name: flow_name };
     }
-    const result = community.submitSkill(skill_name, skill_md, manifestObj, author, author_address);
+    const result = community.submitSkill(flow_name, skill_md, manifestObj, author, author_address);
     return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
 });
-server.tool("list_community_skills", "Browse community skill submissions. Filter by status: pending, validating, approved, rejected, published.", {
+server.tool("list_community_flows", "Browse community flow submissions. Filter by status: pending, validating, approved, rejected, published.", {
     status: z.enum(["pending", "validating", "approved", "rejected", "published"]).optional().describe("Filter by submission status"),
     limit: z.number().default(20),
 }, async ({ status, limit }) => {
@@ -626,7 +725,7 @@ server.tool("list_community_skills", "Browse community skill submissions. Filter
                     submissions: results,
                 }, null, 2) }] };
 });
-server.tool("validate_skill", "Cast a trust-weighted validation vote on a community skill submission. Your trust score is recorded with your vote.", {
+server.tool("validate_flow", "Cast a trust-weighted validation vote on a community flow submission. Your trust score is recorded with your vote.", {
     submission_id: z.string().describe("The submission ID to vote on"),
     voter: z.string().describe("Your identifier (name or address)"),
     vote: z.enum(["approve", "reject"]).describe("Your vote"),
@@ -713,7 +812,7 @@ server.tool("get_achievements", "List all 30 achievements with locked/unlocked s
     const gam = new GamificationEngine();
     return { content: [{ type: "text", text: JSON.stringify(gam.getAchievements(), null, 2) }] };
 });
-server.tool("get_skilldex", "Show your skill collection progress by category. Like a Pokedex but for AI skills.", {}, async () => {
+server.tool("get_flowdex", "Show your flow collection progress by category. Like a Pokedex but for AI flows.", {}, async () => {
     const gam = new GamificationEngine();
     return { content: [{ type: "text", text: JSON.stringify(gam.getSkilldex(), null, 2) }] };
 });
@@ -729,31 +828,31 @@ server.tool("what_now", "Ask Velma what you should do right now. Velma observes 
 // ===================================================================
 // PROFILE TOOLS
 // ===================================================================
-server.tool("get_profile", "Get the user's SkillChain profile (role, goals, tech stack, etc.).", {}, async () => {
+server.tool("get_profile", "Get the user's FlowFabric profile (role, goals, tech stack, etc.).", {}, async () => {
     const profile = profileMgr.load();
     return { content: [{ type: "text", text: JSON.stringify(profile, null, 2) }] };
 });
-server.tool("get_recommendations", "Get personalized skill and chain recommendations based on your profile.", {}, async () => {
+server.tool("get_recommendations", "Get personalized flow and chain recommendations based on your profile.", {}, async () => {
     const skills = [...installedSkills().keys()];
     const skillRecs = profileMgr.suggestSkills(skills);
     const chainRecs = profileMgr.suggestChains();
     return { content: [{ type: "text", text: JSON.stringify({
-                    skill_recommendations: skillRecs.slice(0, 15),
+                    flow_recommendations: skillRecs.slice(0, 15),
                     chain_recommendations: chainRecs,
                 }, null, 2) }] };
 });
 // ===================================================================
 // HEALTH / META
 // ===================================================================
-server.tool("check_access", "Check if SkillChain MCP server is running and accessible. Returns server status and marketplace stats.", {}, async () => {
+server.tool("check_access", "Check if FlowFabric MCP server is running and accessible. Returns server status and marketplace stats.", {}, async () => {
     const skills = installedSkills();
     const chains = availableChains();
     return { content: [{ type: "text", text: JSON.stringify({
                     status: "ok",
-                    server: "skillchain-mcp",
+                    server: "flowfabric-mcp",
                     version: "0.1.0",
                     runtime: "node",
-                    skills_available: skills.size,
+                    flows_available: skills.size,
                     chains_available: chains.length,
                     marketplace_dir: MARKETPLACE_DIR,
                     marketplace_exists: existsSync(MARKETPLACE_DIR),

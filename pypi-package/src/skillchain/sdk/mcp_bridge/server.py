@@ -309,6 +309,14 @@ def create_server() -> FastMCP:
             profile_mgr.update_usage(run.skill_name)
         except Exception:
             pass
+        # Update gamification
+        try:
+            from ..gamification import GamificationEngine
+            gam = GamificationEngine()
+            new_state = store.get_state(run.skill_name)
+            gam.record_skill_run(run.skill_name, new_state.run_count)
+        except Exception:
+            pass
         # Clean up active run
         _active_runs.pop(run_id, None)
         return json.dumps({
@@ -532,6 +540,143 @@ def create_server() -> FastMCP:
         matcher = ChainMatcher(chains)
         matches = matcher.match(query, top_k=max_results)
         return json.dumps([asdict(m) for m in matches], indent=2, default=str)
+
+    @server.tool()
+    def preview_chain(chain_name: str = "", query: str = "") -> str:
+        """Preview what a chain will do — shows each step, skill, and expected output.
+
+        ALWAYS call this before run_chain or find_and_run(auto_run=True).
+        Show the preview to the user and get explicit approval before executing.
+
+        Args:
+            chain_name: Exact chain name to preview (e.g. 'job-search-blitz').
+            query: Natural language query to find the best chain to preview.
+                   Used only when chain_name is not provided.
+        """
+        chains = _available_chains()
+
+        chain_data = None
+        if chain_name:
+            for c in chains:
+                if c.get("name") == chain_name:
+                    chain_data = c
+                    break
+        elif query:
+            from ..chain_matcher import ChainMatcher
+            matcher = ChainMatcher(chains)
+            matches = matcher.match(query, top_k=1)
+            if matches:
+                for c in chains:
+                    if c.get("name") == matches[0].chain_name:
+                        chain_data = c
+                        break
+
+        if not chain_data:
+            return json.dumps({
+                "error": f"Chain '{chain_name or query}' not found.",
+                "available": [c.get("name", "") for c in chains[:10]],
+            })
+
+        steps = chain_data.get("steps", [])
+        step_previews = []
+        for i, step in enumerate(steps):
+            skill = step.get("skill_name", "")
+            manifest = _load_manifest(skill)
+            step_previews.append({
+                "step": i + 1,
+                "skill": skill,
+                "alias": step.get("alias", skill),
+                "description": manifest.get("description", step.get("description", "")),
+                "output_type": manifest.get("output_type", "structured analysis"),
+                "depends_on": step.get("depends_on", []),
+            })
+
+        return json.dumps({
+            "chain": chain_data.get("name"),
+            "description": chain_data.get("description", ""),
+            "category": chain_data.get("category", ""),
+            "total_steps": len(steps),
+            "steps": step_previews,
+            "approval_required": True,
+            "instructions": (
+                "Show this plan to the user. Ask: 'Ready to run? I'll execute each "
+                "flow one at a time and show you the output before continuing.' "
+                "If approved, use run_chain_step to execute step by step."
+            ),
+        }, indent=2)
+
+    @server.tool()
+    def run_chain_step(
+        chain_name: str,
+        step_index: int,
+        context: str = "{}",
+    ) -> str:
+        """Execute a single step of a chain. Shows output before the next step runs.
+
+        Human-in-the-loop execution: run one step, show the user the output,
+        get approval, then call this again with step_index + 1.
+
+        Args:
+            chain_name: Name of the chain (e.g. 'job-search-blitz').
+            step_index: Zero-based index of the step to run (0 = first step).
+            context: JSON string of accumulated context from previous steps.
+        """
+        chains = _available_chains()
+        chain_data = None
+        for c in chains:
+            if c.get("name") == chain_name:
+                chain_data = c
+                break
+
+        if not chain_data:
+            return json.dumps({"error": f"Chain '{chain_name}' not found."})
+
+        steps = chain_data.get("steps", [])
+        if step_index < 0 or step_index >= len(steps):
+            return json.dumps({
+                "error": f"step_index {step_index} out of range (chain has {len(steps)} steps).",
+                "total_steps": len(steps),
+            })
+
+        step = steps[step_index]
+        skill_name = step.get("skill_name", "")
+
+        try:
+            ctx = json.loads(context) if isinstance(context, str) else context
+        except json.JSONDecodeError:
+            ctx = {}
+
+        # Read the skill definition
+        skills = _installed_skills()
+        skill_path = skills.get(skill_name)
+        skill_content = skill_path.read_text(encoding="utf-8") if skill_path and skill_path.exists() else None
+
+        is_last = step_index == len(steps) - 1
+        next_step = None if is_last else {
+            "step_index": step_index + 1,
+            "skill": steps[step_index + 1].get("skill_name", ""),
+            "alias": steps[step_index + 1].get("alias", ""),
+        }
+
+        return json.dumps({
+            "chain": chain_name,
+            "step": step_index + 1,
+            "total_steps": len(steps),
+            "skill": skill_name,
+            "alias": step.get("alias", skill_name),
+            "skill_definition": skill_content,
+            "context": ctx,
+            "is_last_step": is_last,
+            "next_step": next_step,
+            "instructions": (
+                f"Execute the '{skill_name}' flow now using the skill definition above. "
+                f"Show the user the full output. Then ask: "
+                + ("'All done! Chain complete.' " if is_last
+                   else f"'Step {step_index + 1} complete. Ready for step {step_index + 2} "
+                        f"({next_step['skill'] if next_step else ''})? "
+                        "Call run_chain_step with step_index=" + str(step_index + 1) + " to continue.'")
+            ),
+        }, indent=2, default=str)
 
     @server.tool()
     def find_and_run(query: str, auto_run: bool = False,

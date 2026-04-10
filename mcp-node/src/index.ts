@@ -455,6 +455,135 @@ server.tool("run_chain",
 );
 
 // ===================================================================
+// HUMAN-IN-THE-LOOP EXECUTION TOOLS
+// ===================================================================
+
+server.tool("preview_flow",
+  "Preview what a chain will do before running it. Shows each step, skill, and expected output. ALWAYS call this first — show the user and get approval before executing.",
+  {
+    chain_name: z.string().default("").describe("Exact chain name to preview (e.g. 'job-search-blitz')"),
+    query: z.string().default("").describe("Natural language query to find the best chain to preview. Used when chain_name is not provided."),
+  },
+  async ({ chain_name, query }) => {
+    const chains = availableChains();
+    type ChainData = Record<string, unknown>;
+    type StepData = { skill_name: string; alias?: string; depends_on?: string[] };
+
+    let chainData: ChainData | undefined;
+    if (chain_name) {
+      chainData = chains.find(c => (c as ChainData).name === chain_name) as ChainData | undefined;
+    } else if (query) {
+      const matcher = new ChainMatcher(chains as Array<{ name: string; description?: string; category?: string; steps?: StepData[] }>);
+      const matches = matcher.match(query, 1);
+      if (matches.length > 0) {
+        chainData = chains.find(c => (c as ChainData).name === matches[0].chain_name) as ChainData | undefined;
+      }
+    }
+
+    if (!chainData) {
+      return { content: [{ type: "text" as const, text: JSON.stringify({
+        error: `Chain '${chain_name || query}' not found.`,
+        available: chains.slice(0, 10).map(c => (c as ChainData).name),
+      }) }] };
+    }
+
+    const steps = ((chainData.steps as StepData[]) ?? []);
+    const stepPreviews = steps.map((step, i) => {
+      const manifest = loadManifest(step.skill_name);
+      return {
+        step: i + 1,
+        skill: step.skill_name,
+        alias: step.alias ?? step.skill_name,
+        description: (manifest as Record<string, string>).description ?? "",
+        depends_on: step.depends_on ?? [],
+      };
+    });
+
+    return { content: [{ type: "text" as const, text: JSON.stringify({
+      chain: chainData.name,
+      description: chainData.description ?? "",
+      category: chainData.category ?? "",
+      total_steps: steps.length,
+      steps: stepPreviews,
+      approval_required: true,
+      instructions: "Show this plan to the user. Ask: 'Ready to run? I'll execute each flow one at a time and show you the output before continuing.' If approved, use run_flow_step to execute step by step.",
+    }, null, 2) }] };
+  }
+);
+
+server.tool("run_flow_step",
+  "Execute a single step of a chain and show the output. Human-in-the-loop: run one flow, show output, get user approval, then call again with step_index + 1.",
+  {
+    chain_name: z.string().describe("Name of the chain (e.g. 'job-search-blitz')"),
+    step_index: z.number().describe("Zero-based step index (0 = first step)"),
+    context: z.string().default("{}").describe("JSON context from previous steps"),
+  },
+  async ({ chain_name, step_index, context }) => {
+    const chains = availableChains();
+    type ChainData = Record<string, unknown>;
+    type StepData = { skill_name: string; alias?: string; depends_on?: string[] };
+
+    const chainData = chains.find(c => (c as ChainData).name === chain_name) as ChainData | undefined;
+    if (!chainData) {
+      return { content: [{ type: "text" as const, text: JSON.stringify({ error: `Chain '${chain_name}' not found.` }) }] };
+    }
+
+    const steps = ((chainData.steps as StepData[]) ?? []);
+    if (step_index < 0 || step_index >= steps.length) {
+      return { content: [{ type: "text" as const, text: JSON.stringify({
+        error: `step_index ${step_index} out of range (chain has ${steps.length} steps).`,
+        total_steps: steps.length,
+      }) }] };
+    }
+
+    const step = steps[step_index];
+    const skillName = step.skill_name;
+
+    let ctx: Record<string, unknown>;
+    try { ctx = JSON.parse(context); } catch { ctx = {}; }
+
+    // Read the skill definition
+    const skillMap = installedSkills();
+    const skillPath = skillMap.get(skillName);
+    let skillContent: string | null = null;
+    if (skillPath && existsSync(skillPath)) {
+      skillContent = readFileSync(skillPath, "utf-8");
+    }
+
+    const isLast = step_index === steps.length - 1;
+    const nextStep = isLast ? null : {
+      step_index: step_index + 1,
+      skill: steps[step_index + 1].skill_name,
+      alias: steps[step_index + 1].alias ?? steps[step_index + 1].skill_name,
+    };
+
+    const continueMsg = isLast
+      ? "'All done! Chain complete.'"
+      : `'Step ${step_index + 1} complete. Ready for step ${step_index + 2} (${nextStep?.skill ?? ""})? Call run_flow_step with step_index=${step_index + 1} to continue.'`;
+
+    // Track in gamification
+    try {
+      const gam = new GamificationEngine();
+      gam.recordSkillRun(skillName);
+      if (isLast) gam.recordChainRun(chain_name, steps.length, 0);
+    } catch { /* */ }
+
+    return { content: [{ type: "text" as const, text: JSON.stringify({
+      chain: chain_name,
+      step: step_index + 1,
+      total_steps: steps.length,
+      skill: skillName,
+      alias: step.alias ?? skillName,
+      skill_definition: skillContent,
+      context: ctx,
+      is_last_step: isLast,
+      next_step: nextStep,
+      instructions: `Execute the '${skillName}' flow now using the skill definition above. Show the user the full output. Then ask: ${continueMsg}`,
+    }, null, 2) }] };
+  }
+);
+
+// ===================================================================
 // DYNAMIC CHAIN COMPOSITION TOOLS (Phase 1 — Patent CIP)
 // ===================================================================
 
