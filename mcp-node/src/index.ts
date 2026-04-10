@@ -485,19 +485,19 @@ server.tool("run_flow",
 // ===================================================================
 
 server.tool("preview_flow",
-  "Preview what a chain will do before running it. Shows each step, skill, and expected output. ALWAYS call this first — show the user and get approval before executing.",
+  "Preview what a flow pipeline will do before running it. Shows each step and expected output. ALWAYS call this first — show the user and get approval before executing.",
   {
-    chain_name: z.string().default("").describe("Exact chain name to preview (e.g. 'job-search-blitz')"),
-    query: z.string().default("").describe("Natural language query to find the best chain to preview. Used when chain_name is not provided."),
+    flow_name: z.string().default("").describe("Exact flow pipeline name to preview (e.g. 'job-search-blitz')"),
+    query: z.string().default("").describe("Natural language query to find the best flow pipeline to preview. Used when flow_name is not provided."),
   },
-  async ({ chain_name, query }) => {
+  async ({ flow_name, query }) => {
     const chains = availableChains();
     type ChainData = Record<string, unknown>;
     type StepData = { skill_name: string; alias?: string; depends_on?: string[] };
 
     let chainData: ChainData | undefined;
-    if (chain_name) {
-      chainData = chains.find(c => (c as ChainData).name === chain_name) as ChainData | undefined;
+    if (flow_name) {
+      chainData = chains.find(c => (c as ChainData).name === flow_name) as ChainData | undefined;
     } else if (query) {
       const matcher = new ChainMatcher(chains as Array<{ name: string; description?: string; category?: string; steps?: StepData[] }>);
       const matches = matcher.match(query, 1);
@@ -508,7 +508,7 @@ server.tool("preview_flow",
 
     if (!chainData) {
       return { content: [{ type: "text" as const, text: JSON.stringify({
-        error: `Chain '${chain_name || query}' not found.`,
+        error: `Flow '${flow_name || query}' not found.`,
         available: chains.slice(0, 10).map(c => (c as ChainData).name),
       }) }] };
     }
@@ -518,7 +518,7 @@ server.tool("preview_flow",
       const manifest = loadManifest(step.skill_name);
       return {
         step: i + 1,
-        skill: step.skill_name,
+        flow: step.skill_name,
         alias: step.alias ?? step.skill_name,
         description: (manifest as Record<string, string>).description ?? "",
         depends_on: step.depends_on ?? [],
@@ -526,7 +526,7 @@ server.tool("preview_flow",
     });
 
     return { content: [{ type: "text" as const, text: JSON.stringify({
-      chain: chainData.name,
+      flow_pipeline: chainData.name,
       description: chainData.description ?? "",
       category: chainData.category ?? "",
       total_steps: steps.length,
@@ -538,26 +538,26 @@ server.tool("preview_flow",
 );
 
 server.tool("run_flow_step",
-  "Execute a single step of a chain and show the output. Human-in-the-loop: run one flow, show output, get user approval, then call again with step_index + 1.",
+  "Execute a single step of a flow pipeline and show the output. Human-in-the-loop: run one flow, show output, get user approval, then call again with step_index + 1.",
   {
-    chain_name: z.string().describe("Name of the chain (e.g. 'job-search-blitz')"),
+    flow_name: z.string().describe("Name of the flow pipeline (e.g. 'job-search-blitz')"),
     step_index: z.number().describe("Zero-based step index (0 = first step)"),
     context: z.string().default("{}").describe("JSON context from previous steps"),
   },
-  async ({ chain_name, step_index, context }) => {
+  async ({ flow_name, step_index, context }) => {
     const chains = availableChains();
     type ChainData = Record<string, unknown>;
     type StepData = { skill_name: string; alias?: string; depends_on?: string[] };
 
-    const chainData = chains.find(c => (c as ChainData).name === chain_name) as ChainData | undefined;
+    const chainData = chains.find(c => (c as ChainData).name === flow_name) as ChainData | undefined;
     if (!chainData) {
-      return { content: [{ type: "text" as const, text: JSON.stringify({ error: `Chain '${chain_name}' not found.` }) }] };
+      return { content: [{ type: "text" as const, text: JSON.stringify({ error: `Flow '${flow_name}' not found.` }) }] };
     }
 
     const steps = ((chainData.steps as StepData[]) ?? []);
     if (step_index < 0 || step_index >= steps.length) {
       return { content: [{ type: "text" as const, text: JSON.stringify({
-        error: `step_index ${step_index} out of range (chain has ${steps.length} steps).`,
+        error: `step_index ${step_index} out of range (flow has ${steps.length} steps).`,
         total_steps: steps.length,
       }) }] };
     }
@@ -596,18 +596,18 @@ server.tool("run_flow_step",
       : "";
 
     const continueMsg = isLast
-      ? "All done! Chain complete."
+      ? "All done! Flow pipeline complete."
       : `Step ${step_index + 1} complete. Show the full output above, then ask: 'Ready for step ${step_index + 2} (${nextStep?.skill ?? ""})?' Call run_flow_step with step_index=${step_index + 1} to continue.`;
 
     // Track in gamification
     try {
       const gam = new GamificationEngine();
       gam.recordSkillRun(skillName);
-      if (isLast) gam.recordChainRun(chain_name, steps.length, 0);
+      if (isLast) gam.recordChainRun(flow_name, steps.length, 0);
     } catch { /* */ }
 
     return { content: [{ type: "text" as const, text: JSON.stringify({
-      chain: chain_name,
+      flow_pipeline: flow_name,
       step: step_index + 1,
       total_steps: steps.length,
       skill: skillName,
@@ -1250,7 +1250,7 @@ server.tool("get_profile",
 );
 
 server.tool("get_recommendations",
-  "Get personalized flow and chain recommendations based on your profile.",
+  "Get personalized flow recommendations based on your profile.",
   {},
   async () => {
     const skills = [...installedSkills().keys()];

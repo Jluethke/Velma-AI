@@ -1098,18 +1098,18 @@ def create_server() -> FastMCP:
 
     @server.tool()
     def what_now() -> str:
-        """Ask Velma what you should do right now.
+        """Ask what flow you should run right now.
 
-        Velma observes your trainer state, skill history, streaks, time of day,
-        category gaps, and progression — then tells you the chain you need.
-        No searching. No browsing. Velma just knows.
+        Reads your trainer state, flow history, streaks, time of day, category gaps,
+        memory (L0 identity, L1 critical facts), and knowledge graph — then recommends
+        the most relevant flow pipeline for this moment. No searching. No browsing.
         """
         try:
             mod = _hot_import("skillchain.sdk.velma_recommender")
             velma = mod.VelmaRecommender()
             recs = velma.what_now()
             return json.dumps([{
-                "chain": r.chain_name,
+                "flow": r.chain_name,
                 "nudge": r.nudge,
                 "reason": r.reason,
                 "priority": r.priority,

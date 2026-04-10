@@ -441,14 +441,14 @@ server.tool("run_flow", "Execute a FlowFabric flow by name. Returns the flow ste
 // ===================================================================
 // HUMAN-IN-THE-LOOP EXECUTION TOOLS
 // ===================================================================
-server.tool("preview_flow", "Preview what a chain will do before running it. Shows each step, skill, and expected output. ALWAYS call this first — show the user and get approval before executing.", {
-    chain_name: z.string().default("").describe("Exact chain name to preview (e.g. 'job-search-blitz')"),
-    query: z.string().default("").describe("Natural language query to find the best chain to preview. Used when chain_name is not provided."),
-}, async ({ chain_name, query }) => {
+server.tool("preview_flow", "Preview what a flow pipeline will do before running it. Shows each step and expected output. ALWAYS call this first — show the user and get approval before executing.", {
+    flow_name: z.string().default("").describe("Exact flow pipeline name to preview (e.g. 'job-search-blitz')"),
+    query: z.string().default("").describe("Natural language query to find the best flow pipeline to preview. Used when flow_name is not provided."),
+}, async ({ flow_name, query }) => {
     const chains = availableChains();
     let chainData;
-    if (chain_name) {
-        chainData = chains.find(c => c.name === chain_name);
+    if (flow_name) {
+        chainData = chains.find(c => c.name === flow_name);
     }
     else if (query) {
         const matcher = new ChainMatcher(chains);
@@ -459,7 +459,7 @@ server.tool("preview_flow", "Preview what a chain will do before running it. Sho
     }
     if (!chainData) {
         return { content: [{ type: "text", text: JSON.stringify({
-                        error: `Chain '${chain_name || query}' not found.`,
+                        error: `Flow '${flow_name || query}' not found.`,
                         available: chains.slice(0, 10).map(c => c.name),
                     }) }] };
     }
@@ -468,14 +468,14 @@ server.tool("preview_flow", "Preview what a chain will do before running it. Sho
         const manifest = loadManifest(step.skill_name);
         return {
             step: i + 1,
-            skill: step.skill_name,
+            flow: step.skill_name,
             alias: step.alias ?? step.skill_name,
             description: manifest.description ?? "",
             depends_on: step.depends_on ?? [],
         };
     });
     return { content: [{ type: "text", text: JSON.stringify({
-                    chain: chainData.name,
+                    flow_pipeline: chainData.name,
                     description: chainData.description ?? "",
                     category: chainData.category ?? "",
                     total_steps: steps.length,
@@ -484,20 +484,20 @@ server.tool("preview_flow", "Preview what a chain will do before running it. Sho
                     instructions: "Show this plan to the user. Ask: 'Ready to run? I'll execute each flow one at a time and show you the output before continuing.' If approved, use run_flow_step to execute step by step.",
                 }, null, 2) }] };
 });
-server.tool("run_flow_step", "Execute a single step of a chain and show the output. Human-in-the-loop: run one flow, show output, get user approval, then call again with step_index + 1.", {
-    chain_name: z.string().describe("Name of the chain (e.g. 'job-search-blitz')"),
+server.tool("run_flow_step", "Execute a single step of a flow pipeline and show the output. Human-in-the-loop: run one flow, show output, get user approval, then call again with step_index + 1.", {
+    flow_name: z.string().describe("Name of the flow pipeline (e.g. 'job-search-blitz')"),
     step_index: z.number().describe("Zero-based step index (0 = first step)"),
     context: z.string().default("{}").describe("JSON context from previous steps"),
-}, async ({ chain_name, step_index, context }) => {
+}, async ({ flow_name, step_index, context }) => {
     const chains = availableChains();
-    const chainData = chains.find(c => c.name === chain_name);
+    const chainData = chains.find(c => c.name === flow_name);
     if (!chainData) {
-        return { content: [{ type: "text", text: JSON.stringify({ error: `Chain '${chain_name}' not found.` }) }] };
+        return { content: [{ type: "text", text: JSON.stringify({ error: `Flow '${flow_name}' not found.` }) }] };
     }
     const steps = (chainData.steps ?? []);
     if (step_index < 0 || step_index >= steps.length) {
         return { content: [{ type: "text", text: JSON.stringify({
-                        error: `step_index ${step_index} out of range (chain has ${steps.length} steps).`,
+                        error: `step_index ${step_index} out of range (flow has ${steps.length} steps).`,
                         total_steps: steps.length,
                     }) }] };
     }
@@ -533,18 +533,18 @@ server.tool("run_flow_step", "Execute a single step of a chain and show the outp
         ? `STEP 1 — COLLECT INPUTS FIRST (do not skip):\nAsk the user for the following before executing any phases:\n${missingRequired.map(i => `  • ${i.name}: ${i.desc}`).join("\n")}${optionalInputs.length > 0 ? `\n\nAlso ask (optional, but improves results):\n${optionalInputs.map(i => `  • ${i.name}: ${i.desc}`).join("\n")}` : ""}\n\nSTEP 2 — EXECUTE once inputs are collected:\n`
         : "";
     const continueMsg = isLast
-        ? "All done! Chain complete."
+        ? "All done! Flow pipeline complete."
         : `Step ${step_index + 1} complete. Show the full output above, then ask: 'Ready for step ${step_index + 2} (${nextStep?.skill ?? ""})?' Call run_flow_step with step_index=${step_index + 1} to continue.`;
     // Track in gamification
     try {
         const gam = new GamificationEngine();
         gam.recordSkillRun(skillName);
         if (isLast)
-            gam.recordChainRun(chain_name, steps.length, 0);
+            gam.recordChainRun(flow_name, steps.length, 0);
     }
     catch { /* */ }
     return { content: [{ type: "text", text: JSON.stringify({
-                    chain: chain_name,
+                    flow_pipeline: flow_name,
                     step: step_index + 1,
                     total_steps: steps.length,
                     skill: skillName,
@@ -1045,7 +1045,7 @@ server.tool("get_daily_quests", "Get today's 3 daily quests with completion stat
     const gam = new GamificationEngine();
     return { content: [{ type: "text", text: JSON.stringify(gam.getDailyQuests(), null, 2) }] };
 });
-server.tool("what_now", "Ask Velma what you should do right now. Velma observes your state, history, streaks, time of day, and tells you the chain you need. No searching. Velma just knows.", {}, async () => {
+server.tool("what_now", "Ask FlowFabric what you should do right now. Reads your L0 identity (name, role, goals, top domains), your flow run history across all L2 flow rooms, and your knowledge graph (facts extracted from previous flow outputs) to give personalized next-step recommendations. No searching required — context is already loaded.", {}, async () => {
     const velma = new VelmaRecommender(MARKETPLACE_DIR);
     const recs = velma.whatNow();
     return { content: [{ type: "text", text: JSON.stringify(recs, null, 2) }] };
@@ -1057,7 +1057,7 @@ server.tool("get_profile", "Get the user's FlowFabric profile (role, goals, tech
     const profile = profileMgr.load();
     return { content: [{ type: "text", text: JSON.stringify(profile, null, 2) }] };
 });
-server.tool("get_recommendations", "Get personalized flow and chain recommendations based on your profile.", {}, async () => {
+server.tool("get_recommendations", "Get personalized flow recommendations based on your profile.", {}, async () => {
     const skills = [...installedSkills().keys()];
     const skillRecs = profileMgr.suggestSkills(skills);
     const chainRecs = profileMgr.suggestChains();
