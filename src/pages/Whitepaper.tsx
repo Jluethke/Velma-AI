@@ -130,6 +130,35 @@ export default function Whitepaper() {
 
         <H3>Derivative royalties</H3>
         <P>When a contributor improves an existing flow and publishes a derivative, the original author automatically receives 15% of all TRUST earned on that derivative — enforced by smart contract, with no platform intermediary, forever. This creates a direct financial incentive to build flows worth improving, and to improve flows worth using. The quality of the network compounds through every fork.</P>
+
+        <H3>Tokenomics</H3>
+        <P>TRUST has a hard cap of one billion tokens. That ceiling is enforced by the contract — no governance vote or admin action can exceed it. Of the 1B supply: 20% was allocated to the DAO treasury at launch, 15% is vested to the founding team over four years with a one-year cliff, and the remaining 65% enters circulation through network activity — flow runs, validation rewards, and onboarding incentives.</P>
+
+        <div className="overflow-x-auto rounded-lg my-4" style={{ border: '1px solid var(--border)' }}>
+          <table className="w-full text-sm">
+            <thead><tr style={{ background: 'var(--bg-card)' }}>
+              <th className="text-left px-4 py-2" style={t}>Allocation</th>
+              <th className="text-left px-4 py-2" style={t}>Amount</th>
+              <th className="text-left px-4 py-2" style={t}>Vesting</th>
+            </tr></thead>
+            <tbody style={t}>
+              {[
+                ['DAO Treasury', '200M (20%)', 'Immediate — governed by DAO'],
+                ['Founding Team', '150M (15%)', '4-year linear, 1-year cliff'],
+                ['Ecosystem / Activity', '650M (65%)', 'Emitted via flow runs, validation, onboarding rewards'],
+              ].map(([alloc, amount, vest]) => (
+                <tr key={alloc} style={{ borderTop: '1px solid var(--border)' }}>
+                  <td className="px-4 py-2 font-medium" style={h}>{alloc}</td>
+                  <td className="px-4 py-2">{amount}</td>
+                  <td className="px-4 py-2">{vest}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <P>Subscription prices are denominated in USD and converted to TRUST at the current market rate at the moment of payment — $5/mo for Builder, $20/mo for Professional, $100/mo for Enterprise. As TRUST appreciates, subscribers pay fewer tokens for the same access. This makes holding TRUST economically meaningful: the longer you hold, the cheaper the platform becomes in token terms.</P>
+        <P>A deflationary pressure is built in: 2% of every premium flow purchase is permanently burned. Staking slashes also burn tokens — 50% of any slashed validator stake is destroyed. Neither mechanism is dramatic in isolation, but both compound steadily as network activity scales.</P>
       </Section>
 
       {/* 4. Flows — the building blocks */}
