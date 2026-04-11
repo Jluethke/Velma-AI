@@ -357,7 +357,7 @@ function SkillEvolution() {
       </div>
 
       {/* Evolution stages with progressive scaling */}
-      <div className="flex flex-col md:flex-row items-stretch gap-3 mb-10">
+      <div className="flex flex-col md:flex-row items-stretch gap-3 mb-10" style={{ overflow: 'hidden' }}>
         {stages.map((stage, i) => (
           <div key={stage.label} className="flex-1 flex items-center gap-3">
             <div

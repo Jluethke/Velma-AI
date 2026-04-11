@@ -238,8 +238,9 @@ export default function CategoryPicker() {
         </p>
       </div>
 
-      {/* Category tiles */}
-      <div className="flex gap-2 mb-8 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none', maxWidth: '100%', WebkitOverflowScrolling: 'touch' }}>
+      {/* Category tiles — outer clip prevents page-level overflow on iOS */}
+      <div style={{ overflow: 'hidden', marginBottom: '2rem' }}>
+      <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}>
         {CATEGORIES.map(cat => (
           <CategoryTile
             key={cat.id}
@@ -248,6 +249,7 @@ export default function CategoryPicker() {
             onClick={() => setSelected(cat.id)}
           />
         ))}
+      </div>
       </div>
 
       {/* Flow panel — animates on change */}
