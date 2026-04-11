@@ -84,11 +84,10 @@ async function fetchSession(sessionId: string): Promise<LiveSession | null> {
 }
 
 async function triggerSynthesis(sessionId: string, hostToken: string): Promise<void> {
-  const apiKey = localStorage.getItem('flowfabric-anthropic-key') ?? undefined;
   const res = await fetch(`/api/fabric/${sessionId}/synthesize`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ hostToken, apiKey }),
+    body: JSON.stringify({ hostToken }),
   });
   if (res.status === 402) throw new Error('NO_API_KEY');
   if (!res.ok) throw new Error(`synthesis_failed_${res.status}`);
@@ -1032,78 +1031,38 @@ export default function Fabric() {
             borderRadius: '20px',
             animation: 'fabric-fade-up 0.4s ease both',
           }}>
-            {synthError === 'no_api_key' ? (
+            {synthError ? (
               <>
-                <p style={{ color: 'var(--purple)', fontWeight: 700, margin: '0 0 8px', fontSize: '16px' }}>
-                  Claude API key required
+                <p style={{ color: 'var(--red)', fontWeight: 600, margin: '0 0 8px', fontSize: '16px' }}>
+                  Synthesis unavailable
                 </p>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '14px', margin: '0 0 20px', lineHeight: 1.6 }}>
-                  Both sides submitted successfully. To run synthesis, the host needs to add an Anthropic API key in Settings.
+                  Both answers were saved successfully. The synthesis service is temporarily unavailable — your session is preserved and will complete once the service is restored.
                 </p>
-                <Link
-                  to="/settings"
-                  style={{
-                    display: 'inline-block',
-                    background: 'linear-gradient(135deg, rgba(167,139,250,0.2), rgba(167,139,250,0.1))',
-                    border: '1px solid rgba(167,139,250,0.4)',
-                    borderRadius: '10px',
-                    padding: '10px 20px',
-                    color: 'var(--purple)',
-                    fontSize: '14px',
-                    fontWeight: 600,
-                    textDecoration: 'none',
-                  }}
-                >
-                  Go to Settings →
-                </Link>
               </>
             ) : (
               <>
                 <p style={{ color: 'var(--red)', fontWeight: 600, margin: '0 0 8px', fontSize: '16px' }}>
-                  {synthError === 'failed' ? 'Synthesis failed' : 'Something went wrong'}
+                  Something went wrong
                 </p>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '14px', margin: '0 0 20px' }}>
-                  {synthError === 'failed'
-                    ? 'Both answers are saved. Synthesis could not complete — check your API key in Settings and try again.'
-                    : "Couldn't submit your answers. Please try again."}
+                  Couldn't submit your answers. Please try again.
                 </p>
-                <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
-                  {synthError === 'failed' && (
-                    <Link
-                      to="/settings"
-                      style={{
-                        display: 'inline-block',
-                        background: 'rgba(248,113,113,0.08)',
-                        border: '1px solid rgba(248,113,113,0.25)',
-                        borderRadius: '10px',
-                        padding: '10px 20px',
-                        color: 'var(--red)',
-                        fontSize: '14px',
-                        fontWeight: 600,
-                        textDecoration: 'none',
-                      }}
-                    >
-                      Check Settings
-                    </Link>
-                  )}
-                  {!synthError && (
-                    <button
-                      onClick={() => { setSynthError(null); setPageState('form'); }}
-                      style={{
-                        background: 'rgba(248,113,113,0.1)',
-                        border: '1px solid rgba(248,113,113,0.3)',
-                        borderRadius: '10px',
-                        padding: '10px 20px',
-                        color: 'var(--red)',
-                        fontSize: '14px',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                      }}
-                    >
-                      Try again
-                    </button>
-                  )}
-                </div>
+                <button
+                  onClick={() => { setSynthError(null); setPageState('form'); }}
+                  style={{
+                    background: 'rgba(248,113,113,0.1)',
+                    border: '1px solid rgba(248,113,113,0.3)',
+                    borderRadius: '10px',
+                    padding: '10px 20px',
+                    color: 'var(--red)',
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Try again
+                </button>
               </>
             )}
           </div>
