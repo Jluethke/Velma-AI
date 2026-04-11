@@ -132,25 +132,25 @@ export default function HeroSection() {
         }
       `}</style>
 
-      {/* Background orbs */}
+      {/* Background orbs — no filter:blur (breaks overflow:hidden on iOS Safari) */}
       <div className="absolute inset-0" style={{ pointerEvents: 'none', overflow: 'hidden' }}>
         <div style={{
           position: 'absolute', width: '900px', height: '900px',
           top: '-25%', left: '-20%', borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(56,189,248,0.11) 0%, rgba(56,189,248,0.03) 40%, transparent 70%)',
-          filter: 'blur(80px)', animation: 'hero-orb-a 22s ease-in-out infinite',
+          background: 'radial-gradient(circle, rgba(56,189,248,0.09) 0%, rgba(56,189,248,0.04) 35%, rgba(56,189,248,0.01) 60%, transparent 80%)',
+          animation: 'hero-orb-a 22s ease-in-out infinite',
         }} />
         <div style={{
           position: 'absolute', width: '700px', height: '700px',
           bottom: '-15%', right: '-10%', borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(167,139,250,0.1) 0%, rgba(167,139,250,0.03) 40%, transparent 70%)',
-          filter: 'blur(80px)', animation: 'hero-orb-b 28s ease-in-out infinite',
+          background: 'radial-gradient(circle, rgba(167,139,250,0.08) 0%, rgba(167,139,250,0.04) 35%, rgba(167,139,250,0.01) 60%, transparent 80%)',
+          animation: 'hero-orb-b 28s ease-in-out infinite',
         }} />
         <div style={{
           position: 'absolute', width: '500px', height: '500px',
           top: '40%', left: '42%', borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(74,222,128,0.05) 0%, transparent 70%)',
-          filter: 'blur(60px)', animation: 'hero-orb-c 18s ease-in-out infinite',
+          background: 'radial-gradient(circle, rgba(74,222,128,0.04) 0%, rgba(74,222,128,0.01) 50%, transparent 75%)',
+          animation: 'hero-orb-c 18s ease-in-out infinite',
         }} />
         <div style={{
           position: 'absolute', inset: 0,
