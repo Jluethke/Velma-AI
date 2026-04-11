@@ -65,13 +65,20 @@ export default async function handler(
   session.guest.sharedFields = body.sharedFields ?? [];
   session.guest.submitted = true;
 
-  if (session.host.submitted) {
+  const bothReady = session.host.submitted && session.guest.submitted;
+  if (bothReady) {
     session.synthesis.status = "ready";
   }
 
   await saveSession(session);
 
-  const view = { ...publicView(session), readyForSynthesis: session.host.submitted && session.guest.submitted };
+  // Return public metadata + only the guest's own submitted data.
+  // The host's raw data is intentionally omitted — it never crosses party boundaries.
+  const view = {
+    ...publicView(session),
+    myData: session.guest.data,
+    readyForSynthesis: bothReady,
+  };
   res.writeHead(200, { "Content-Type": "application/json" });
   res.end(JSON.stringify(view));
 }

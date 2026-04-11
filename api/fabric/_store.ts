@@ -38,7 +38,24 @@ export interface FabricSession {
   synthesis: FabricSynthesis;
 }
 
-export type PublicSession = Omit<FabricSession, "hostToken">;
+/** What any client (guest browser, GET endpoint) is allowed to see.
+ *  Raw data from either party is intentionally absent — only synthesis output
+ *  is ever exposed across party boundaries. */
+export interface FabricSidePublic {
+  submitted: boolean;
+  sharedFields: string[];
+}
+
+export interface PublicSession {
+  id: string;
+  flowSlug: string;
+  title?: string;
+  createdAt: number;
+  expiresAt: number;
+  host: FabricSidePublic;
+  guest: FabricSidePublic;
+  synthesis: FabricSynthesis;
+}
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -89,7 +106,31 @@ export async function saveSession(session: FabricSession): Promise<void> {
   await kv.set(key(session.id), session, { ex: remainingSeconds });
 }
 
+/** Safe public view — strips all raw answer data from both parties.
+ *  Never returns host.data or guest.data across party boundaries. */
 export function publicView(session: FabricSession): PublicSession {
-  const { hostToken: _hostToken, ...pub } = session;
-  return pub;
+  return {
+    id: session.id,
+    flowSlug: session.flowSlug,
+    title: session.title,
+    createdAt: session.createdAt,
+    expiresAt: session.expiresAt,
+    host: { submitted: session.host.submitted, sharedFields: session.host.sharedFields },
+    guest: { submitted: session.guest.submitted, sharedFields: session.guest.sharedFields },
+    synthesis: session.synthesis,
+  };
+}
+
+/** Wraps user-supplied text in XML data tags so the model can distinguish
+ *  between instructions (system/user prompt) and data (party answers).
+ *  Also strips the most common injection trigger phrases. */
+export function sanitizeForPrompt(text: string): string {
+  const cleaned = text
+    .replace(/ignore\s+(previous|all|prior)\s+instructions?/gi, '[redacted]')
+    .replace(/disregard\s+(previous|all|prior)\s+instructions?/gi, '[redacted]')
+    .replace(/you\s+are\s+now\s+/gi, '[redacted] ')
+    .replace(/system\s*prompt/gi, '[redacted]')
+    .replace(/\bACT\s+AS\b/g, '[redacted]')
+    .replace(/\bDAN\b/g, '[redacted]');
+  return `<user_data>\n${cleaned}\n</user_data>`;
 }
