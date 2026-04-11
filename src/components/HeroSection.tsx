@@ -121,7 +121,7 @@ function FlowPreview() {
 // ── Hero ──────────────────────────────────────────────────────────
 
 export default function HeroSection() {
-  const { canChain } = useGateCheck();
+  useGateCheck();
 
   return (
     <section className="relative min-h-[95vh] flex flex-col items-center justify-center px-6 overflow-hidden">
