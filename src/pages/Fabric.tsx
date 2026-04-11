@@ -83,14 +83,51 @@ async function fetchSession(sessionId: string): Promise<LiveSession | null> {
   }
 }
 
+const PROXY_URL = 'http://localhost:8082';
+
+async function proxyAvailable(): Promise<boolean> {
+  try {
+    const r = await fetch(`${PROXY_URL}/v1/models`, { signal: AbortSignal.timeout(1500) });
+    return r.ok || r.status === 404; // proxy is up even if endpoint unknown
+  } catch {
+    return false;
+  }
+}
+
 async function triggerSynthesis(sessionId: string, hostToken: string): Promise<void> {
-  const res = await fetch(`/api/fabric/${sessionId}/synthesize`, {
+  // 1. Fetch the assembled prompt from the server
+  const promptRes = await fetch(`/api/fabric/${sessionId}/prompt`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ hostToken }),
   });
-  if (res.status === 402) throw new Error('NO_API_KEY');
-  if (!res.ok) throw new Error(`synthesis_failed_${res.status}`);
+  if (!promptRes.ok) throw new Error(`prompt_fetch_${promptRes.status}`);
+  const { systemPrompt, userPrompt, model, max_tokens } =
+    await promptRes.json() as { systemPrompt: string; userPrompt: string; model: string; max_tokens: number };
+
+  // 2. Run synthesis locally via claude-code-proxy
+  const claudeRes = await fetch(`${PROXY_URL}/v1/messages`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-api-key': 'local' },
+    body: JSON.stringify({
+      model,
+      max_tokens,
+      system: systemPrompt,
+      messages: [{ role: 'user', content: userPrompt }],
+    }),
+  });
+  if (!claudeRes.ok) throw new Error(`proxy_${claudeRes.status}`);
+  const claudeData = await claudeRes.json() as { content?: Array<{ type: string; text: string }> };
+  const output = claudeData.content?.find(b => b.type === 'text')?.text ?? '';
+  if (!output) throw new Error('empty_output');
+
+  // 3. Save the result back to the server
+  const saveRes = await fetch(`/api/fabric/${sessionId}/save-synthesis`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ hostToken, output }),
+  });
+  if (!saveRes.ok) throw new Error(`save_${saveRes.status}`);
 }
 
 // ── Animation keyframes injected once ────────────────────────────
@@ -576,7 +613,8 @@ export default function Fabric() {
   const [prefilling, setPrefilling] = useState(false);
   const [prefillDone, setPrefillDone] = useState(false);
   const [synthesisOutput, setSynthesisOutput] = useState('');
-  const [synthError, setSynthError] = useState<'no_api_key' | 'failed' | null>(null);
+  const [synthError, setSynthError] = useState<'no_proxy' | 'failed' | null>(null);
+  const [proxyChecked, setProxyChecked] = useState(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const pollRef   = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -623,11 +661,18 @@ export default function Fabric() {
         clearInterval(pollRef.current!);
         pollRef.current = null;
         witnessEvent('synthesis_triggered', 'synthesis_triggered', 'synthesis_triggered');
+        // Check proxy before attempting
+        const up = await proxyAvailable();
+        setProxyChecked(true);
+        if (!up) {
+          setSynthError('no_proxy');
+          setPageState('error');
+          return;
+        }
         try {
           await triggerSynthesis(sessionId, hostToken);
-        } catch (err) {
-          const isKeyMissing = err instanceof Error && err.message === 'NO_API_KEY';
-          setSynthError(isKeyMissing ? 'no_api_key' : 'failed');
+        } catch {
+          setSynthError('failed');
           setPageState('error');
           return;
         }
@@ -746,11 +791,17 @@ export default function Fabric() {
       if (isHost && hostToken && result.readyForSynthesis) {
         setPageState('waiting');
         witnessEvent('synthesis_triggered', 'synthesis_triggered', 'synthesis_triggered');
+        const up = await proxyAvailable();
+        setProxyChecked(true);
+        if (!up) {
+          setSynthError('no_proxy');
+          setPageState('error');
+          return;
+        }
         try {
           await triggerSynthesis(sessionId, hostToken);
-        } catch (err) {
-          const isKeyMissing = err instanceof Error && err.message === 'NO_API_KEY';
-          setSynthError(isKeyMissing ? 'no_api_key' : 'failed');
+        } catch {
+          setSynthError('failed');
           setPageState('error');
           return;
         }
@@ -1031,30 +1082,36 @@ export default function Fabric() {
             borderRadius: '20px',
             animation: 'fabric-fade-up 0.4s ease both',
           }}>
-            {synthError ? (
+            {synthError === 'no_proxy' ? (
               <>
                 <p style={{ color: 'var(--purple)', fontWeight: 700, margin: '0 0 8px', fontSize: '16px' }}>
-                  Subscription required
+                  Start your Claude proxy
                 </p>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '14px', margin: '0 0 20px', lineHeight: 1.6 }}>
-                  Both answers were saved. Synthesis is available on paid plans — upgrade to Pro or Team to unlock it.
+                <p style={{ color: 'var(--text-secondary)', fontSize: '14px', margin: '0 0 16px', lineHeight: 1.6 }}>
+                  Both answers are saved. Synthesis runs on your Claude plan — open a terminal and run:
                 </p>
-                <a
-                  href="/pricing"
+                <div style={{
+                  background: 'rgba(9,9,11,0.8)', border: '1px solid rgba(167,139,250,0.2)',
+                  borderRadius: '10px', padding: '12px 16px', marginBottom: '20px',
+                  fontFamily: '"JetBrains Mono", monospace', fontSize: '13px',
+                  color: 'var(--purple)', textAlign: 'left',
+                }}>
+                  npx claude-code-proxy
+                </div>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '12px', margin: '0 0 20px' }}>
+                  Then come back and click below.
+                </p>
+                <button
+                  onClick={() => { setSynthError(null); setProxyChecked(false); startPolling(); }}
                   style={{
-                    display: 'inline-block',
                     background: 'linear-gradient(135deg, rgba(167,139,250,0.2), rgba(167,139,250,0.1))',
                     border: '1px solid rgba(167,139,250,0.4)',
-                    borderRadius: '10px',
-                    padding: '10px 20px',
-                    color: 'var(--purple)',
-                    fontSize: '14px',
-                    fontWeight: 600,
-                    textDecoration: 'none',
+                    borderRadius: '10px', padding: '10px 20px',
+                    color: 'var(--purple)', fontSize: '14px', fontWeight: 600, cursor: 'pointer',
                   }}
                 >
-                  View plans →
-                </a>
+                  Try again →
+                </button>
               </>
             ) : (
               <>

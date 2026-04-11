@@ -17,6 +17,8 @@ import guest from './_guest.js';
 import synthesize from './_synthesize.js';
 import outcome from './_outcome.js';
 import extend from './_extend.js';
+import prompt from './_prompt.js';
+import saveSynthesis from './_save-synthesis.js';
 
 type Req = IncomingMessage & { body?: unknown; query?: Record<string, string> };
 
@@ -26,6 +28,8 @@ const ROUTES: Record<string, (req: Req, res: ServerResponse) => Promise<void> | 
   synthesize,
   outcome,
   extend,
+  prompt,
+  'save-synthesis': saveSynthesis,
 };
 
 export default async function handler(req: Req, res: ServerResponse) {
