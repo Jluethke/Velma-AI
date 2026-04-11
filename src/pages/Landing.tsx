@@ -89,7 +89,7 @@ function ComposerPreview() {
       >
         {/* Toolbar mock */}
         <div
-          className="flex items-center gap-2 md:gap-3 px-3 md:px-4 py-2.5 flex-wrap overflow-x-auto"
+          className="flex items-center gap-2 md:gap-3 px-3 md:px-4 py-2.5 flex-wrap overflow-x-hidden"
           style={{ borderBottom: '1px solid var(--glass-border)' }}
         >
           <span className="text-xs font-mono px-2 py-1 rounded" style={{ background: 'var(--bg-secondary)', color: 'var(--text-secondary)' }}>

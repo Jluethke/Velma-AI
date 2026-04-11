@@ -239,7 +239,7 @@ export default function CategoryPicker() {
       </div>
 
       {/* Category tiles */}
-      <div className="flex gap-2 mb-8 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
+      <div className="flex gap-2 mb-8 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none', maxWidth: '100%', WebkitOverflowScrolling: 'touch' }}>
         {CATEGORIES.map(cat => (
           <CategoryTile
             key={cat.id}
