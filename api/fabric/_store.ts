@@ -1,154 +1,137 @@
 /**
  * Fabric Session Store
  * ====================
- * In-memory store for Fabric multiplayer sessions.
- * Module-level state persists across warm serverless invocations.
- * Sessions are also written to /tmp/fabric-sessions.json for warm-start
- * recovery (best-effort — /tmp is ephemeral on Vercel).
+ * In-memory Map with /tmp JSON warm-restart cache.
+ * Sessions expire after 7 days.
  *
- * NOTE: For production, replace with Vercel KV / Redis / Upstash.
+ * To upgrade to Vercel KV: replace the three functions
+ * (memStore.get / memStore.set / loadFromDisk+saveToDisk)
+ * with kv.get / kv.set — interface stays the same.
  */
 
-import { randomUUID } from "crypto";
-import { readFileSync, writeFileSync, existsSync } from "fs";
+import { randomBytes } from "crypto";
+import { readFileSync, writeFileSync, mkdirSync } from "fs";
+import { join } from "path";
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
+// ─── Types ───────────────────────────────────────────────────────────────────
+
+export interface FabricSide {
+  submitted: boolean;
+  data: Record<string, unknown>;
+  sharedFields: string[];
+}
+
+export interface FabricSynthesis {
+  status: "pending" | "ready" | "complete";
+  output?: string;
+}
 
 export interface FabricSession {
   id: string;
-  flowSlug: string;
-  title: string;
   hostToken: string;
-  createdAt: string;
-  expiresAt: string;
-  host: {
-    submitted: boolean;
-    data: Record<string, unknown>;
-    sharedFields: string[];
-  };
-  guest: {
-    submitted: boolean;
-    data: Record<string, unknown>;
-    sharedFields: string[];
-  };
-  synthesis: {
-    status: "pending" | "ready";
-    output: string | null;
-  };
+  flowSlug: string;
+  title?: string;
+  createdAt: number;
+  expiresAt: number;
+  host: FabricSide;
+  guest: FabricSide;
+  synthesis: FabricSynthesis;
 }
 
-// ---------------------------------------------------------------------------
-// Persistence helpers
-// ---------------------------------------------------------------------------
+export type PublicSession = Omit<FabricSession, "hostToken">;
 
-const STORE_PATH = "/tmp/fabric-sessions.json";
+// ─── Constants ───────────────────────────────────────────────────────────────
 
-function loadFromDisk(): Map<string, FabricSession> {
+const TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+const CACHE_DIR = "/tmp";
+const CACHE_FILE = join(CACHE_DIR, "fabric-sessions.json");
+
+// ─── In-memory store ─────────────────────────────────────────────────────────
+
+const memStore = new Map<string, FabricSession>();
+let loaded = false;
+
+function ensureLoaded(): void {
+  if (loaded) return;
+  loaded = true;
   try {
-    if (existsSync(STORE_PATH)) {
-      const raw = readFileSync(STORE_PATH, "utf-8");
-      const obj = JSON.parse(raw) as Record<string, FabricSession>;
-      return new Map(Object.entries(obj));
+    const raw = readFileSync(CACHE_FILE, "utf8");
+    const sessions = JSON.parse(raw) as FabricSession[];
+    const now = Date.now();
+    for (const session of sessions) {
+      if (session.expiresAt > now) {
+        memStore.set(session.id, session);
+      }
     }
   } catch {
-    // /tmp may not be available or file corrupted — start fresh
-  }
-  return new Map();
-}
-
-function saveToDisk(sessions: Map<string, FabricSession>): void {
-  try {
-    const obj: Record<string, FabricSession> = {};
-    for (const [k, v] of sessions) {
-      obj[k] = v;
-    }
-    writeFileSync(STORE_PATH, JSON.stringify(obj, null, 2), "utf-8");
-  } catch {
-    // best-effort — /tmp write failure should not break the API
+    // File doesn't exist or is corrupt — start fresh
   }
 }
 
-// ---------------------------------------------------------------------------
-// In-memory store (module singleton)
-// ---------------------------------------------------------------------------
-
-const sessions: Map<string, FabricSession> = loadFromDisk();
-
-// ---------------------------------------------------------------------------
-// TTL pruning — remove expired sessions on each write
-// ---------------------------------------------------------------------------
+function persistToDisk(): void {
+  try {
+    mkdirSync(CACHE_DIR, { recursive: true });
+    const sessions = Array.from(memStore.values());
+    writeFileSync(CACHE_FILE, JSON.stringify(sessions), "utf8");
+  } catch {
+    // /tmp write failures are non-fatal — memory is still the source of truth
+  }
+}
 
 function pruneExpired(): void {
   const now = Date.now();
-  for (const [id, session] of sessions) {
-    if (new Date(session.expiresAt).getTime() < now) {
-      sessions.delete(id);
+  for (const [id, session] of memStore) {
+    if (session.expiresAt <= now) {
+      memStore.delete(id);
     }
   }
 }
 
-// ---------------------------------------------------------------------------
-// Public API
-// ---------------------------------------------------------------------------
+// ─── Public API ──────────────────────────────────────────────────────────────
 
-/**
- * Create a new Fabric session. Returns the full session object including
- * the secret hostToken (never expose to guests).
- */
 export function createSession(flowSlug: string, title?: string): FabricSession {
+  ensureLoaded();
   pruneExpired();
 
-  const id = randomUUID();
-  const hostToken = randomUUID();
-  const now = new Date();
-  const expiresAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString();
+  const id = randomBytes(16).toString("hex");
+  const hostToken = randomBytes(32).toString("hex");
+  const now = Date.now();
 
   const session: FabricSession = {
     id,
-    flowSlug,
-    title: title ?? flowSlug,
     hostToken,
-    createdAt: now.toISOString(),
-    expiresAt,
+    flowSlug,
+    title,
+    createdAt: now,
+    expiresAt: now + TTL_MS,
     host: { submitted: false, data: {}, sharedFields: [] },
     guest: { submitted: false, data: {}, sharedFields: [] },
-    synthesis: { status: "pending", output: null },
+    synthesis: { status: "pending" },
   };
 
-  sessions.set(id, session);
-  saveToDisk(sessions);
+  memStore.set(id, session);
+  persistToDisk();
   return session;
 }
 
-/**
- * Look up a session by ID. Returns null if not found or expired.
- */
-export function getSession(id: string): FabricSession | null {
-  const session = sessions.get(id);
-  if (!session) return null;
-  if (new Date(session.expiresAt).getTime() < Date.now()) {
-    sessions.delete(id);
-    saveToDisk(sessions);
-    return null;
+export function getSession(id: string): FabricSession | undefined {
+  ensureLoaded();
+  const session = memStore.get(id);
+  if (!session) return undefined;
+  if (session.expiresAt <= Date.now()) {
+    memStore.delete(id);
+    persistToDisk();
+    return undefined;
   }
   return session;
 }
 
-/**
- * Persist a modified session back to the store.
- */
 export function saveSession(session: FabricSession): void {
-  sessions.set(session.id, session);
-  saveToDisk(sessions);
+  memStore.set(session.id, session);
+  persistToDisk();
 }
 
-/**
- * Build the guest-safe view of a session (strips hostToken).
- */
-export function publicView(session: FabricSession): Omit<FabricSession, "hostToken"> {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function publicView(session: FabricSession): PublicSession {
   const { hostToken: _hostToken, ...pub } = session;
   return pub;
 }
