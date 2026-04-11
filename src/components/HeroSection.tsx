@@ -222,7 +222,7 @@ export default function HeroSection() {
             className="gradient-text"
             style={{ filter: 'drop-shadow(0 0 24px rgba(56,189,248,0.18))' }}
           >
-            Practitioners run procedures.
+            This is how you actually use it.
           </span>
         </h1>
 
