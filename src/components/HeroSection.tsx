@@ -183,13 +183,13 @@ export default function HeroSection() {
             maxWidth: '100%',
           }}
         >
-          <span style={{ color: 'var(--text-primary)' }}>Every AI session resets.</span>
+          <span style={{ color: 'var(--text-primary)' }}>You got the answer.</span>
           <br />
           <span
             className="gradient-text"
             style={{ filter: 'drop-shadow(0 0 24px rgba(56,189,248,0.18))' }}
           >
-            FlowFabric compounds.
+            Now get the outcome.
           </span>
         </h1>
 
@@ -198,17 +198,17 @@ export default function HeroSection() {
           className="text-base md:text-lg mb-3 max-w-2xl mx-auto animate-fade-in-up stagger-2 px-2"
           style={{ color: 'var(--text-secondary)', lineHeight: 1.75, overflowWrap: 'break-word' }}
         >
-          165+ expert procedures for your career, business, and finances.
-          Each one asks exactly what it needs, runs step-by-step with your approval,
-          and stacks your context — so every session picks up where the last one left off.
+          Proven expert procedures for salary negotiation, business planning, budgeting, and more —
+          each one asks exactly what it needs, runs step-by-step with your approval,
+          and builds your context across every session.
         </p>
 
         <p
           className="text-sm mb-10 animate-fade-in-up stagger-2 px-2"
           style={{ color: 'var(--text-secondary)', opacity: 0.55, overflowWrap: 'break-word' }}
         >
-          Not answers.{' '}
-          <span style={{ color: 'var(--cyan)', opacity: 1 }}>Outcomes.</span>
+          Not advice.{' '}
+          <span style={{ color: 'var(--cyan)', opacity: 1 }}>Action.</span>
         </p>
 
         {/* CTAs */}
