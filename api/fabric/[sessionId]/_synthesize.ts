@@ -3,7 +3,10 @@
  * ========================================
  * Triggers server-side neutral synthesis. Authenticated by hostToken.
  *
- * Body: { hostToken: string }
+ * Body: { hostToken: string, apiKey?: string }
+ *
+ * apiKey: the host's own Anthropic API key. If provided it is used for this
+ * request only and never persisted. Falls back to ANTHROPIC_API_KEY env var.
  *
  * Security model — two-phase extraction:
  *   Phase 1a: Claude extracts structured positions from host data only
@@ -252,7 +255,7 @@ export default async function handler(
     return;
   }
 
-  const body = (req.body ?? {}) as { hostToken?: string };
+  const body = (req.body ?? {}) as { hostToken?: string; apiKey?: string };
   const authHeader = (req.headers?.authorization ?? '') as string;
   const providedToken =
     body.hostToken ??
@@ -284,10 +287,12 @@ export default async function handler(
     return;
   }
 
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  // Host's own key takes priority — they bring their Claude account.
+  // Falls back to server env var if set (useful for dev/testing).
+  const apiKey = (body.apiKey?.trim() || undefined) ?? process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
-    res.writeHead(500, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ error: 'API key not configured' }));
+    res.writeHead(402, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'A Claude API key is required to run synthesis. The host must provide one.' }));
     return;
   }
 

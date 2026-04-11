@@ -83,10 +83,11 @@ async function fetchSession(sessionId: string): Promise<LiveSession | null> {
 }
 
 async function triggerSynthesis(sessionId: string, hostToken: string): Promise<void> {
+  const apiKey = localStorage.getItem('flowfabric-anthropic-key') ?? undefined;
   await fetch(`/api/fabric/${sessionId}/synthesize`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ hostToken }),
+    body: JSON.stringify({ hostToken, apiKey }),
   });
 }
 
