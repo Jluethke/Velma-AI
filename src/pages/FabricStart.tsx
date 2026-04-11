@@ -4,6 +4,7 @@
  */
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAccount } from 'wagmi';
 import { useVelma } from '../contexts/VelmaContext';
 
 // ── Session storage ───────────────────────────────────────────────────────────
@@ -232,6 +233,7 @@ function SessionCreated({
 export default function FabricStart() {
   const navigate = useNavigate();
   const { witnessEvent } = useVelma();
+  const { address } = useAccount();
   const [selected, setSelected] = useState<UseCase | null>(null);
   const [title, setTitle] = useState('');
   const [loading, setLoading] = useState(false);
@@ -252,6 +254,7 @@ export default function FabricStart() {
           flowSlug: selected.slug,
           title: title.trim() || selected.label,
           maxGuests: 1,
+          walletAddress: address,
         }),
       });
       if (!res.ok) throw new Error(`Server error ${res.status}`);

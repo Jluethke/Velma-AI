@@ -33,6 +33,7 @@ export interface FabricSession {
   maxGuests: number;
   flowSlug: string;
   title?: string;
+  hostWallet?: string;   // lowercase — used for subscription gate at synthesis time
   createdAt: number;
   expiresAt: number;
   submissionDeadline: number;
@@ -76,7 +77,8 @@ function key(id: string) {
 export async function createSession(
   flowSlug: string,
   title?: string,
-  maxGuests?: number
+  maxGuests?: number,
+  hostWallet?: string
 ): Promise<FabricSession> {
   const id = randomBytes(16).toString("hex");
   const hostToken = randomBytes(32).toString("hex");
@@ -94,6 +96,7 @@ export async function createSession(
     maxGuests: resolvedMaxGuests,
     flowSlug,
     title,
+    hostWallet: hostWallet?.toLowerCase(),
     createdAt: now,
     expiresAt: now + TTL_SECONDS * 1000,
     submissionDeadline: now + 48 * 60 * 60 * 1000,

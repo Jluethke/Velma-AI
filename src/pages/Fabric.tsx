@@ -1033,12 +1033,28 @@ export default function Fabric() {
           }}>
             {synthError ? (
               <>
-                <p style={{ color: 'var(--red)', fontWeight: 600, margin: '0 0 8px', fontSize: '16px' }}>
-                  Synthesis unavailable
+                <p style={{ color: 'var(--purple)', fontWeight: 700, margin: '0 0 8px', fontSize: '16px' }}>
+                  Subscription required
                 </p>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '14px', margin: '0 0 20px', lineHeight: 1.6 }}>
-                  Both answers were saved successfully. The synthesis service is temporarily unavailable — your session is preserved and will complete once the service is restored.
+                  Both answers were saved. Synthesis is available on paid plans — upgrade to Pro or Team to unlock it.
                 </p>
+                <a
+                  href="/pricing"
+                  style={{
+                    display: 'inline-block',
+                    background: 'linear-gradient(135deg, rgba(167,139,250,0.2), rgba(167,139,250,0.1))',
+                    border: '1px solid rgba(167,139,250,0.4)',
+                    borderRadius: '10px',
+                    padding: '10px 20px',
+                    color: 'var(--purple)',
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    textDecoration: 'none',
+                  }}
+                >
+                  View plans →
+                </a>
               </>
             ) : (
               <>

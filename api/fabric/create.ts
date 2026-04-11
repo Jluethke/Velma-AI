@@ -30,7 +30,7 @@ export default async function handler(
     return;
   }
 
-  const body = (req.body ?? {}) as { flowSlug?: string; title?: string; maxGuests?: number };
+  const body = (req.body ?? {}) as { flowSlug?: string; title?: string; maxGuests?: number; walletAddress?: string };
 
   if (!body.flowSlug || typeof body.flowSlug !== "string") {
     res.writeHead(400, { "Content-Type": "application/json" });
@@ -42,7 +42,7 @@ export default async function handler(
     ? Math.min(Math.max(1, body.maxGuests), 10)
     : 1;
 
-  const session = await createSession(body.flowSlug, body.title, maxGuests);
+  const session = await createSession(body.flowSlug, body.title, maxGuests, body.walletAddress);
 
   const host = req.headers?.host ?? "flowfabric.io";
   const baseUrl = process.env.FABRIC_BASE_URL ?? `https://${host}`;

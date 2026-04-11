@@ -27,6 +27,45 @@ import { writeNotification } from '../../_notifications.js';
 
 const ANTHROPIC_API = 'https://api.anthropic.com/v1/messages';
 
+// ── Subscription gate ─────────────────────────────────────────────────────────
+// Marketplace.subscriptions(address) → (tier, expiresAt, dailyUsed, lastUsedDay)
+// tier 0 = None, 1+ = active plan. We require tier >= 1 and expiresAt > now.
+
+const MARKETPLACE = '0x679B5CD7C2CdF504768cf31163aB6dFB4bF3fd48';
+const BASE_RPC    = 'https://mainnet.base.org';
+// keccak256("subscriptions(address)") → first 4 bytes
+const SUBS_SIG    = '0x1e5ded0b';
+
+async function hasActiveSub(wallet: string): Promise<boolean> {
+  try {
+    // ABI-encode the address argument: pad to 32 bytes
+    const padded = wallet.toLowerCase().replace('0x', '').padStart(64, '0');
+    const data   = SUBS_SIG + padded;
+
+    const resp = await fetch(BASE_RPC, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jsonrpc: '2.0', id: 1, method: 'eth_call',
+        params: [{ to: MARKETPLACE, data }, 'latest'],
+      }),
+    });
+
+    const json = await resp.json() as { result?: string };
+    const hex  = json.result ?? '0x';
+    if (hex.length < 2 + 64 * 2) return false; // unexpected response
+
+    // Decode: (uint8 tier, uint256 expiresAt, uint256 dailyUsed, uint256 lastUsedDay)
+    const raw    = hex.replace('0x', '');
+    const tier   = parseInt(raw.slice(0, 64), 16);
+    const expiry = parseInt(raw.slice(64, 128), 16);
+
+    return tier >= 1 && expiry * 1000 > Date.now();
+  } catch {
+    return false;
+  }
+}
+
 interface Position {
   topic: string;
   position: string;
@@ -287,14 +326,31 @@ export default async function handler(
     return;
   }
 
-  // Host's own key takes priority — they bring their Claude account.
-  // Falls back to server env var if set (useful for dev/testing).
-  const apiKey = (body.apiKey?.trim() || undefined) ?? process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
-    res.writeHead(402, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ error: 'A Claude API key is required to run synthesis. The host must provide one.' }));
+  // Gate synthesis on an active on-chain subscription.
+  // Host's wallet was stored at session-create time; we verify it live against
+  // Marketplace.subscriptions(address) on Base mainnet — no trusted auth needed.
+  const platformKey = process.env.ANTHROPIC_API_KEY;
+  if (!platformKey) {
+    res.writeHead(500, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'Platform synthesis service not configured.' }));
     return;
   }
+
+  const hostWallet = session.hostWallet;
+  if (!hostWallet) {
+    res.writeHead(402, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'A FlowFabric subscription is required to run synthesis. Connect your wallet and upgrade at flowfabric.io/pricing.' }));
+    return;
+  }
+
+  const subscribed = await hasActiveSub(hostWallet);
+  if (!subscribed) {
+    res.writeHead(402, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'Your FlowFabric subscription has expired or is inactive. Upgrade at flowfabric.io/pricing.' }));
+    return;
+  }
+
+  const apiKey = platformKey;
 
   try {
     // Phase 1: extract positions from host and each guest independently (all parallel).
