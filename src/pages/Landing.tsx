@@ -558,10 +558,10 @@ function FabricSection() {
           className="btn-primary inline-flex items-center gap-2 px-8 py-3 text-sm font-semibold no-underline"
           style={{ borderColor: 'rgba(167,139,250,0.4)', background: 'rgba(167,139,250,0.1)', color: 'var(--purple)' }}
         >
-          Join the Fabric waitlist →
+          Start a Fabric session →
         </Link>
         <p className="text-xs mt-4" style={{ color: 'var(--text-secondary)', opacity: 0.4 }}>
-          Early access. Human in the loop. Always.
+          Host pays. Guest never needs an account.
         </p>
       </div>
     </section>
