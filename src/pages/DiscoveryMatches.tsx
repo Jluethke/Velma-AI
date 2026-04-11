@@ -112,11 +112,8 @@ function MatchCard({
           <p style={{ color: 'var(--text-primary)', fontWeight: 600, fontSize: '14px', margin: '0 0 6px' }}>
             {ml.title}
           </p>
-          <p style={{
-            color: 'var(--text-secondary)', fontSize: '12px', lineHeight: 1.6, margin: 0,
-            display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
-          }}>
-            {ml.description}
+          <p style={{ color: 'var(--text-secondary)', fontSize: '12px', lineHeight: 1.6, margin: 0 }}>
+            {ml.description.length > 110 ? ml.description.slice(0, 110) + '…' : ml.description}
           </p>
           {ml.market && (
             <span style={{

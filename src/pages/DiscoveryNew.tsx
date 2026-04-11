@@ -10,17 +10,17 @@ import { useCreateListing } from '../hooks/useDiscovery';
 
 // ─── Well-known flows (curated list for the picker) ───────────────────────────
 
-const POPULAR_FLOWS = [
+const POPULAR_FLOWS: { slug: string; label: string }[] = [
   { slug: 'freelancer-client', label: 'Freelancer / Client' },
   { slug: 'job-offer-negotiation', label: 'Job Offer Negotiation' },
   { slug: 'cofounder-alignment', label: 'Co-founder Alignment' },
   { slug: 'investor-founder-term-sheet', label: 'Investor / Founder' },
-  { slug: 'partnership-agreement', slug2: 'business-partnership', label: 'Business Partnership' },
+  { slug: 'business-partnership', label: 'Business Partnership' },
   { slug: 'real-estate-offer-negotiation', label: 'Real Estate Offer' },
   { slug: 'vendor-client-sow', label: 'Vendor / Client SOW' },
   { slug: 'consultant-engagement', label: 'Consulting Engagement' },
   { slug: 'financial-planner-client', label: 'Financial Planning' },
-  { slug: 'executive-coaching-engagement', slug2: 'coaching-executive-engagement', label: 'Executive Coaching' },
+  { slug: 'coaching-executive-engagement', label: 'Executive Coaching' },
   { slug: 'media-creator-brand-deal', label: 'Creator Brand Deal' },
   { slug: 'startup-accelerator-founder', label: 'Startup Accelerator' },
   { slug: 'school-district-vendor', label: 'Ed-Tech Partnership' },

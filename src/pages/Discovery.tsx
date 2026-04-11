@@ -94,15 +94,8 @@ function ListingCard({
       </div>
 
       {/* Description */}
-      <p style={{
-        color: 'var(--text-secondary)', fontSize: '13px', lineHeight: 1.6,
-        margin: 0,
-        display: '-webkit-box',
-        WebkitLineClamp: 3,
-        WebkitBoxOrient: 'vertical',
-        overflow: 'hidden',
-      }}>
-        {listing.description}
+      <p style={{ color: 'var(--text-secondary)', fontSize: '13px', lineHeight: 1.6, margin: 0 }}>
+        {listing.description.length > 140 ? listing.description.slice(0, 140) + '…' : listing.description}
       </p>
 
       {/* Tags + market */}
