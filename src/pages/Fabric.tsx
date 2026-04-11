@@ -477,6 +477,34 @@ function SynthesisCard({ output }: { output: string }) {
   );
 }
 
+// ── Guest done state (no synthesis — host only) ───────────────────
+
+function GuestDoneCard() {
+  return (
+    <div style={{
+      textAlign: 'center', padding: '48px 32px',
+      background: 'rgba(28,28,34,0.6)', border: '1px solid var(--border)',
+      borderRadius: '20px', backdropFilter: 'blur(20px)',
+      WebkitBackdropFilter: 'blur(20px)', animation: 'fabric-fade-up 0.5s ease both',
+    }}>
+      <div style={{
+        width: '48px', height: '48px', borderRadius: '50%',
+        background: 'rgba(74,222,128,0.1)', border: '2px solid rgba(74,222,128,0.4)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        margin: '0 auto 20px', fontSize: '22px',
+      }}>
+        ✓
+      </div>
+      <p style={{ color: 'var(--text-primary)', fontWeight: 600, fontSize: '16px', margin: '0 0 8px' }}>
+        You're done
+      </p>
+      <p style={{ color: 'var(--text-secondary)', fontSize: '14px', lineHeight: 1.6, margin: 0, maxWidth: '320px', marginLeft: 'auto', marginRight: 'auto' }}>
+        Your answers were submitted privately. The host will receive the neutral analysis — your raw answers are never shared.
+      </p>
+    </div>
+  );
+}
+
 // ── Waiting state ─────────────────────────────────────────────────
 
 function WaitingCard({ hostName }: { hostName: string }) {
@@ -947,7 +975,9 @@ export default function Fabric() {
 
         {/* ── Synthesis done ── */}
         {pageState === 'done' && (
-          <SynthesisCard output={synthesisOutput || 'Synthesis complete \u2014 both sides submitted.'} />
+          isHost
+            ? <SynthesisCard output={synthesisOutput || 'Synthesis complete \u2014 both sides submitted.'} />
+            : <GuestDoneCard />
         )}
 
         {/* ── Error state ── */}
