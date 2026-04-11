@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import VelmaWidget from './components/VelmaWidget';
+import { VelmaProvider } from './contexts/VelmaContext';
 
 // Public pages (no auth)
 import Landing from './pages/Landing';
@@ -96,44 +97,46 @@ function MobileBanner() {
 function App() {
   return (
     <BrowserRouter>
-      <MobileBanner />
-      <Navbar />
-      {/* page-wrap clips horizontal overflow without touching fixed Navbar/Banner */}
-      <div style={{ overflowX: 'hidden', width: '100%', position: 'relative' }}>
-        <Routes>
-          {/* Public */}
-          <Route path="/" element={<Landing />} />
-          <Route path="/docs" element={<Docs />} />
-          <Route path="/whitepaper" element={<Whitepaper />} />
-          <Route path="/pricing" element={<Pricing />} />
-          <Route path="/get-started" element={<GettingStarted />} />
+      <VelmaProvider>
+        <MobileBanner />
+        <Navbar />
+        {/* page-wrap clips horizontal overflow without touching fixed Navbar/Banner */}
+        <div style={{ overflowX: 'hidden', width: '100%', position: 'relative' }}>
+          <Routes>
+            {/* Public */}
+            <Route path="/" element={<Landing />} />
+            <Route path="/docs" element={<Docs />} />
+            <Route path="/whitepaper" element={<Whitepaper />} />
+            <Route path="/pricing" element={<Pricing />} />
+            <Route path="/get-started" element={<GettingStarted />} />
 
-          {/* Content */}
-          <Route path="/skills" element={<Explore />} />
-          <Route path="/explore" element={<Explore />} />
-          <Route path="/chains" element={<Chains />} />
-          <Route path="/skill/:name" element={<SkillDetail />} />
-          <Route path="/compose" element={<ChainComposer />} />
-          <Route path="/install" element={<Install />} />
-          <Route path="/memory" element={<Memory />} />
-          <Route path="/bounties" element={<Bounties />} />
-          <Route path="/activity" element={<Activity />} />
-          <Route path="/leaderboard" element={<Leaderboard />} />
+            {/* Content */}
+            <Route path="/skills" element={<Explore />} />
+            <Route path="/explore" element={<Explore />} />
+            <Route path="/chains" element={<Chains />} />
+            <Route path="/skill/:name" element={<SkillDetail />} />
+            <Route path="/compose" element={<ChainComposer />} />
+            <Route path="/install" element={<Install />} />
+            <Route path="/memory" element={<Memory />} />
+            <Route path="/bounties" element={<Bounties />} />
+            <Route path="/activity" element={<Activity />} />
+            <Route path="/leaderboard" element={<Leaderboard />} />
 
-          {/* Fabric — multiplayer flow sessions */}
-          <Route path="/start" element={<FabricStart />} />
-          <Route path="/sessions" element={<Sessions />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="/fabric/:sessionId" element={<Fabric />} />
+            {/* Fabric — multiplayer flow sessions */}
+            <Route path="/start" element={<FabricStart />} />
+            <Route path="/sessions" element={<Sessions />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/fabric/:sessionId" element={<Fabric />} />
 
-          {/* Discovery — AI-powered counterpart matching */}
-          <Route path="/discover" element={<Discovery />} />
-          <Route path="/discover/new" element={<DiscoveryNew />} />
-          <Route path="/discover/matches" element={<DiscoveryMatches />} />
-        </Routes>
-        <Footer />
-      </div>
-      <VelmaWidget />
+            {/* Discovery — AI-powered counterpart matching */}
+            <Route path="/discover" element={<Discovery />} />
+            <Route path="/discover/new" element={<DiscoveryNew />} />
+            <Route path="/discover/matches" element={<DiscoveryMatches />} />
+          </Routes>
+          <Footer />
+        </div>
+        <VelmaWidget />
+      </VelmaProvider>
     </BrowserRouter>
   );
 }

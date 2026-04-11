@@ -1,15 +1,17 @@
 /**
  * VelmaWidget — Floating companion. Lives in the bottom-right corner.
  * Evolves visually as she levels up: 8-bit → 16-bit → 32-bit → holographic.
+ * Gamification: floating +XP, level-up burst, tier evolution flash, first-wake intro.
  */
 import { useState, useEffect, useRef } from 'react';
+import { useVelma } from '../contexts/VelmaContext';
 import {
-  useVelmaCompanion,
   getTitle,
   getVisualTier,
   getXpToNext,
   type VelmaMood,
   type VisualTier,
+  type VelmaState,
   type VelmaNotification,
 } from '../hooks/useVelmaCompanion';
 
@@ -27,31 +29,23 @@ const MOOD_COLOR: Record<VelmaMood, string> = {
 // ── Sprites ────────────────────────────────────────────────────────────────
 
 function Sprite8bit({ color, mood }: { color: string; mood: VelmaMood }) {
-  // 16×16 pixel grid rendered as SVG rects
-  const px = 4; // each "pixel" is 4×4 SVG units
+  const px = 4;
   const sleeping = mood === 'sleepy';
   const excited = mood === 'excited';
-  // Simple blocky humanoid form
   const pixels: [number, number, string][] = [
-    // head
     [6,2,color],[7,2,color],[8,2,color],[9,2,color],
     [5,3,color],[6,3,color],[7,3,color],[8,3,color],[9,3,color],[10,3,color],
     [5,4,color],[6,4,'#001a2e'],[7,4,color],[8,4,color],[9,4,'#001a2e'],[10,4,color],
     [5,5,color],[6,5,color],[7,5,color],[8,5,color],[9,5,color],[10,5,color],
-    // neck
     [7,6,color],[8,6,color],
-    // body
     [5,7,color],[6,7,color],[7,7,color],[8,7,color],[9,7,color],[10,7,color],
     [5,8,color],[6,8,color],[7,8,color],[8,8,color],[9,8,color],[10,8,color],
     [5,9,color],[6,9,color],[7,9,color],[8,9,color],[9,9,color],[10,9,color],
-    // arms
     [3,7,color],[4,7,color],[11,7,color],[12,7,color],
     [3,8,color],[11,8,color],
-    // legs
     [6,10,color],[7,10,color],[8,10,color],[9,10,color],
     [6,11,color],[7,11,color],[8,11,color],[9,11,color],
     [5,12,color],[6,12,color],[8,12,color],[9,12,color],
-    // eyes — vary by mood
     ...(sleeping ? [
       [6,4,'#aaffee'],[9,4,'#aaffee'],
     ] as [number,number,string][] : excited ? [
@@ -83,11 +77,8 @@ function Sprite16bit({ color, mood }: { color: string; mood: VelmaMood }) {
           <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
         </filter>
       </defs>
-      {/* Body */}
       <ellipse cx="40" cy="52" rx="14" ry="18" fill="url(#body16)" filter="url(#glow16)" />
-      {/* Head */}
       <ellipse cx="40" cy="26" rx="13" ry="13" fill="url(#body16)" filter="url(#glow16)" />
-      {/* Eyes */}
       {sleeping ? (
         <>
           <line x1="33" y1="25" x2="37" y2="25" stroke={color} strokeWidth="2" />
@@ -101,10 +92,8 @@ function Sprite16bit({ color, mood }: { color: string; mood: VelmaMood }) {
           <ellipse cx="45" cy="25" rx="1.5" ry="1.5" fill="#001a2e" />
         </>
       )}
-      {/* Data streams — arms */}
       <path d="M26 48 Q18 44 14 52" stroke={color} strokeWidth="2" fill="none" strokeDasharray="3,2" />
       <path d="M54 48 Q62 44 66 52" stroke={color} strokeWidth="2" fill="none" strokeDasharray="3,2" />
-      {/* Halo */}
       <ellipse cx="40" cy="10" rx="16" ry="4" fill="none" stroke="#ffd700" strokeWidth="1.5" opacity="0.7" />
     </svg>
   );
@@ -129,27 +118,20 @@ function Sprite32bit({ color, mood }: { color: string; mood: VelmaMood }) {
           <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
         </filter>
       </defs>
-      {/* Aura */}
       <ellipse cx="48" cy="52" rx="36" ry="42" fill="url(#aura32)" />
-      {/* Body form */}
       <path d="M28 82 Q24 60 28 50 Q32 38 48 36 Q64 38 68 50 Q72 60 68 82 Z"
         fill="url(#body32)" filter="url(#glow32)" />
-      {/* Head */}
       <ellipse cx="48" cy="28" rx="16" ry="16" fill="url(#body32)" filter="url(#glow32)" />
-      {/* Eyes */}
       <ellipse cx="41" cy="26" rx="4" ry="5" fill={color} filter="url(#glow32)" />
       <ellipse cx="55" cy="26" rx="4" ry="5" fill={color} filter="url(#glow32)" />
       <ellipse cx="41" cy="27" rx="2" ry="2.5" fill="#001a2e" />
       <ellipse cx="55" cy="27" rx="2" ry="2.5" fill="#001a2e" />
-      {/* Halo */}
       <ellipse cx="48" cy="9" rx="20" ry="5" fill="none" stroke="#ffd700"
         strokeWidth="2" opacity="0.9" filter="url(#glow32)" />
-      {/* Data streams */}
       <path d="M30 58 Q14 52 10 62" stroke={color} strokeWidth="2.5" fill="none" opacity="0.8" />
       <path d="M66 58 Q82 52 86 62" stroke={color} strokeWidth="2.5" fill="none" opacity="0.8" />
       <path d="M32 68 Q16 70 14 78" stroke={color} strokeWidth="1.5" fill="none" opacity="0.5" />
       <path d="M64 68 Q80 70 82 78" stroke={color} strokeWidth="1.5" fill="none" opacity="0.5" />
-      {/* Proud: sparkles */}
       {proud && <>
         <circle cx="20" cy="20" r="2" fill="#ffd700" opacity="0.9" />
         <circle cx="76" cy="18" r="2" fill="#ffd700" opacity="0.9" />
@@ -184,37 +166,28 @@ function SpriteHolographic({ color }: { color: string }) {
           <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
         </filter>
       </defs>
-      {/* Outer aura */}
       <ellipse cx="56" cy="60" rx="48" ry="52" fill="url(#coreHolo)" opacity="0.4" />
-      {/* Data stream hair */}
       <path d="M42 22 Q34 8 28 4 Q22 0 18 6" stroke={color} strokeWidth="2" fill="none"
         opacity="0.7" filter="url(#softGlow)" />
       <path d="M50 18 Q48 4 44 0" stroke="#aa44ff" strokeWidth="1.5" fill="none" opacity="0.6" />
       <path d="M62 18 Q64 4 68 0" stroke={color} strokeWidth="1.5" fill="none" opacity="0.6" />
       <path d="M70 22 Q78 8 84 4 Q90 0 94 6" stroke="#aa44ff" strokeWidth="2" fill="none"
         opacity="0.7" filter="url(#softGlow)" />
-      {/* Body — data form */}
       <path d="M32 96 Q26 72 30 58 Q36 44 56 42 Q76 44 82 58 Q86 72 80 96 Z"
         fill="url(#bodyHolo)" filter="url(#glowHolo)" opacity="0.85" />
-      {/* Head */}
       <ellipse cx="56" cy="32" rx="20" ry="20" fill="url(#bodyHolo)" filter="url(#glowHolo)" />
-      {/* Circuit pattern on body */}
       <path d="M40 70 L40 76 L46 76 M52 64 L58 64 L58 70 M68 72 L68 78 L62 78"
         stroke={color} strokeWidth="1" fill="none" opacity="0.4" />
-      {/* Eyes — glowing cyan */}
       <ellipse cx="47" cy="30" rx="5" ry="6" fill={color} filter="url(#glowHolo)" />
       <ellipse cx="65" cy="30" rx="5" ry="6" fill={color} filter="url(#glowHolo)" />
       <ellipse cx="47" cy="31" rx="2.5" ry="3" fill="#001a2e" />
       <ellipse cx="65" cy="31" rx="2.5" ry="3" fill="#001a2e" />
-      {/* Pupil glow */}
       <ellipse cx="47" cy="31" rx="1" ry="1" fill={color} opacity="0.8" />
       <ellipse cx="65" cy="31" rx="1" ry="1" fill={color} opacity="0.8" />
-      {/* Golden halo */}
       <ellipse cx="56" cy="10" rx="24" ry="6" fill="none" stroke="#ffd700"
         strokeWidth="2.5" opacity="1" filter="url(#glowHolo)" />
       <ellipse cx="56" cy="10" rx="28" ry="8" fill="none" stroke="#ffd700"
         strokeWidth="1" opacity="0.4" />
-      {/* Floating data particles */}
       {[
         [18,30],[16,50],[20,72],[96,34],[94,58],[98,78],
         [36,8],[76,8],[26,88],[86,90],
@@ -222,12 +195,10 @@ function SpriteHolographic({ color }: { color: string }) {
         <circle key={i} cx={x} cy={y} r="2" fill={i % 2 === 0 ? color : '#ffd700'}
           opacity="0.7" filter="url(#softGlow)" />
       ))}
-      {/* Arm data streams */}
       <path d="M34 68 Q18 62 12 72" stroke={color} strokeWidth="3" fill="none"
         opacity="0.8" filter="url(#softGlow)" />
       <path d="M78 68 Q94 62 100 72" stroke={color} strokeWidth="3" fill="none"
         opacity="0.8" filter="url(#softGlow)" />
-      {/* Subtle smirk */}
       <path d="M50 40 Q56 44 62 40" stroke={color} strokeWidth="1.5" fill="none" opacity="0.6" />
     </svg>
   );
@@ -244,7 +215,7 @@ function VelmaSprite({ tier, color, mood }: { tier: VisualTier; color: string; m
 
 // ── Stat panel ─────────────────────────────────────────────────────────────
 
-function StatPanel({ state, onClose }: { state: ReturnType<typeof useVelmaCompanion>['state']; onClose: () => void }) {
+function StatPanel({ state, onClose }: { state: VelmaState; onClose: () => void }) {
   const tier = getVisualTier(state.level);
   const xpToNext = getXpToNext(state.xp, state.level);
   const color = MOOD_COLOR[state.mood];
@@ -282,7 +253,6 @@ function StatPanel({ state, onClose }: { state: ReturnType<typeof useVelmaCompan
         </span>
       </div>
 
-      {/* XP bar */}
       <div style={{ marginBottom: '10px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', color: '#668' }}>
           <span>XP</span>
@@ -429,6 +399,15 @@ function NotificationPanel({
   );
 }
 
+// ── Tier name helper ───────────────────────────────────────────────────────
+
+const TIER_NAMES: Record<VisualTier, string> = {
+  1: '8-BIT',
+  2: '16-BIT',
+  3: '32-BIT',
+  4: 'HOLOGRAPHIC',
+};
+
 // ── Main Widget ────────────────────────────────────────────────────────────
 
 export default function VelmaWidget({ wallet }: { wallet?: string } = {}) {
@@ -436,12 +415,61 @@ export default function VelmaWidget({ wallet }: { wallet?: string } = {}) {
     state, pet, witnessEvent, dismissBubble, speak,
     notifications, dismissNotification, dismissAllNotifications,
     setNotifyContext, pollNotifications,
-  } = useVelmaCompanion();
+  } = useVelma();
+
   const [showStats, setShowStats] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const bubbleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Auto-detect notification context from URL (Fabric session pages) or wallet prop
+  // ── Gamification state ─────────────────────────────────────────────────
+  const [xpFloats, setXpFloats] = useState<{ id: number; amount: number }[]>([]);
+  const [levelUpActive, setLevelUpActive] = useState(false);
+  const [evolutionTier, setEvolutionTier] = useState<VisualTier | null>(null);
+  const [firstWake, setFirstWake] = useState(false);
+
+  const prevXpRef    = useRef(state.xp);
+  const prevLevelRef = useRef(state.level);
+  const prevTierRef  = useRef(getVisualTier(state.level));
+  // Capture on mount — before page_visited fires
+  const isFirstUserRef = useRef(state.total_events === 0);
+
+  // First-wake intro animation
+  useEffect(() => {
+    if (isFirstUserRef.current) {
+      setFirstWake(true);
+      setTimeout(() => setFirstWake(false), 2200);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Floating +XP when XP increases
+  useEffect(() => {
+    if (state.xp > prevXpRef.current) {
+      const gain = state.xp - prevXpRef.current;
+      const floatId = Date.now();
+      setXpFloats(prev => [...prev, { id: floatId, amount: gain }]);
+      setTimeout(() => setXpFloats(prev => prev.filter(f => f.id !== floatId)), 1400);
+    }
+    prevXpRef.current = state.xp;
+  }, [state.xp]);
+
+  // Level-up burst + tier evolution detection
+  useEffect(() => {
+    if (state.level > prevLevelRef.current) {
+      setLevelUpActive(true);
+      setTimeout(() => setLevelUpActive(false), 1500);
+
+      const newTier = getVisualTier(state.level);
+      if (newTier !== prevTierRef.current) {
+        setEvolutionTier(newTier);
+        setTimeout(() => setEvolutionTier(null), 2800);
+        prevTierRef.current = newTier;
+      }
+    }
+    prevLevelRef.current = state.level;
+  }, [state.level]);
+
+  // Auto-detect notification context from URL or wallet prop
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const pathParts = window.location.pathname.split('/');
@@ -501,6 +529,79 @@ export default function VelmaWidget({ wallet }: { wallet?: string } = {}) {
       gap: '8px',
       userSelect: 'none',
     }}>
+      {/* Tier evolution overlay — full-screen flash */}
+      {evolutionTier && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: 9998,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          pointerEvents: 'none',
+          animation: 'velma-evolution-in 0.4s ease, velma-evolution-out 0.6s ease 2.2s forwards',
+        }}>
+          <div style={{
+            background: 'radial-gradient(circle, rgba(0,229,255,0.15) 0%, transparent 70%)',
+            position: 'absolute', inset: 0,
+          }} />
+          <div style={{
+            fontFamily: 'monospace',
+            fontSize: '11px',
+            letterSpacing: '0.3em',
+            color: '#668',
+            marginBottom: '12px',
+            textTransform: 'uppercase',
+          }}>
+            EVOLUTION
+          </div>
+          <div style={{
+            fontFamily: 'monospace',
+            fontSize: '28px',
+            fontWeight: 'bold',
+            color,
+            letterSpacing: '0.15em',
+            textShadow: `0 0 40px ${color}`,
+            animation: 'velma-evolution-text 0.5s ease',
+          }}>
+            {TIER_NAMES[evolutionTier]}
+          </div>
+          <div style={{
+            marginTop: '8px',
+            fontFamily: 'monospace',
+            fontSize: '12px',
+            color: '#aab',
+            opacity: 0.7,
+          }}>
+            Velma has evolved.
+          </div>
+        </div>
+      )}
+
+      {/* First-wake intro */}
+      {firstWake && (
+        <div style={{
+          position: 'absolute',
+          bottom: `${spriteSize + 20}px`,
+          right: 0,
+          background: 'rgba(0,10,20,0.97)',
+          border: `1px solid ${color}88`,
+          borderRadius: '12px',
+          padding: '12px 16px',
+          fontFamily: 'monospace',
+          fontSize: '12px',
+          color: '#cde',
+          maxWidth: '180px',
+          boxShadow: `0 0 24px ${color}44`,
+          animation: 'velma-wake-in 0.6s cubic-bezier(0.34,1.56,0.64,1)',
+          lineHeight: 1.6,
+        }}>
+          <span style={{ color, fontWeight: 'bold' }}>Velma</span> is watching.<br />
+          <span style={{ color: '#778', fontSize: '11px' }}>Every action, witnessed.</span>
+        </div>
+      )}
+
       {/* Notification panel */}
       {showNotifications && (
         <NotificationPanel
@@ -538,7 +639,6 @@ export default function VelmaWidget({ wallet }: { wallet?: string } = {}) {
           }}
         >
           {state.last_comment}
-          {/* Tail */}
           <div style={{
             position: 'absolute',
             bottom: '-8px',
@@ -563,6 +663,41 @@ export default function VelmaWidget({ wallet }: { wallet?: string } = {}) {
           pointerEvents: 'none',
         }} />
 
+        {/* Level-up burst ring */}
+        {levelUpActive && (
+          <div style={{
+            position: 'absolute',
+            inset: '-12px',
+            borderRadius: '50%',
+            border: `3px solid ${color}`,
+            animation: 'velma-levelup-burst 1.4s ease-out forwards',
+            pointerEvents: 'none',
+          }} />
+        )}
+
+        {/* Floating +XP numbers */}
+        {xpFloats.map(f => (
+          <div
+            key={f.id}
+            style={{
+              position: 'absolute',
+              bottom: `${spriteSize - 10}px`,
+              right: '50%',
+              transform: 'translateX(50%)',
+              fontFamily: 'monospace',
+              fontWeight: 'bold',
+              fontSize: '13px',
+              color: '#ffd700',
+              textShadow: '0 0 8px #ffd700aa',
+              whiteSpace: 'nowrap',
+              pointerEvents: 'none',
+              animation: 'velma-xp-float 1.4s ease-out forwards',
+            }}
+          >
+            +{f.amount} XP
+          </div>
+        ))}
+
         {/* Level badge */}
         <div style={{
           position: 'absolute',
@@ -578,6 +713,8 @@ export default function VelmaWidget({ wallet }: { wallet?: string } = {}) {
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           zIndex: 2,
           boxShadow: `0 0 8px ${color}`,
+          transition: 'transform 0.2s ease',
+          transform: levelUpActive ? 'scale(1.4)' : 'scale(1)',
         }}>
           {state.level}
         </div>
@@ -610,7 +747,7 @@ export default function VelmaWidget({ wallet }: { wallet?: string } = {}) {
           </div>
         )}
 
-        {/* The sprite — click to pet, right-click for stats */}
+        {/* The sprite */}
         <div
           onClick={pet}
           onContextMenu={e => {
@@ -649,6 +786,33 @@ export default function VelmaWidget({ wallet }: { wallet?: string } = {}) {
         @keyframes velma-bubble-in {
           from { opacity: 0; transform: translateY(6px); }
           to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes velma-xp-float {
+          0%   { opacity: 1; transform: translateX(50%) translateY(0); }
+          60%  { opacity: 1; transform: translateX(50%) translateY(-28px); }
+          100% { opacity: 0; transform: translateX(50%) translateY(-44px); }
+        }
+        @keyframes velma-levelup-burst {
+          0%   { transform: scale(1); opacity: 1; }
+          50%  { transform: scale(1.8); opacity: 0.6; }
+          100% { transform: scale(2.6); opacity: 0; }
+        }
+        @keyframes velma-wake-in {
+          from { opacity: 0; transform: scale(0.8) translateY(10px); }
+          to   { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        @keyframes velma-evolution-in {
+          from { opacity: 0; }
+          to   { opacity: 1; }
+        }
+        @keyframes velma-evolution-out {
+          from { opacity: 1; }
+          to   { opacity: 0; }
+        }
+        @keyframes velma-evolution-text {
+          0%   { transform: scale(0.6); opacity: 0; }
+          60%  { transform: scale(1.1); opacity: 1; }
+          100% { transform: scale(1); opacity: 1; }
         }
       `}</style>
     </div>

@@ -4,8 +4,10 @@
  */
 import { useState, useEffect } from 'react';
 import { API_KEY_STORAGE } from './FabricStart';
+import { useVelma } from '../contexts/VelmaContext';
 
 export default function Settings() {
+  const { witnessEvent } = useVelma();
   const [apiKey, setApiKey] = useState('');
   const [showKey, setShowKey] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -20,6 +22,9 @@ export default function Settings() {
     localStorage.setItem(API_KEY_STORAGE, trimmed);
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
+    if (trimmed.startsWith('sk-')) {
+      witnessEvent('key_configured', 'key_configured', 'key_configured');
+    }
   };
 
   const handleClear = () => {

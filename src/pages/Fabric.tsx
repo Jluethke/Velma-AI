@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useParams, Link, useSearchParams } from 'react-router-dom';
+import { useVelma } from '../contexts/VelmaContext';
 
 // ── Types ─────────────────────────────────────────────────────────
 
@@ -533,6 +534,7 @@ function WaitingCard({ hostName }: { hostName: string }) {
 // ── Main page ─────────────────────────────────────────────────────
 
 export default function Fabric() {
+  const { witnessEvent } = useVelma();
   const { sessionId = '' } = useParams<{ sessionId: string }>();
   const [searchParams] = useSearchParams();
   const listingId   = searchParams.get('listingId');
@@ -607,6 +609,7 @@ export default function Fabric() {
       if (isHost && hostToken && status === 'ready') {
         clearInterval(pollRef.current!);
         pollRef.current = null;
+        witnessEvent('synthesis_triggered', 'synthesis_triggered', 'synthesis_triggered');
         await triggerSynthesis(sessionId, hostToken);
         // Re-poll to pick up the completed synthesis
         pollRef.current = setInterval(async () => {
@@ -709,9 +712,12 @@ export default function Fabric() {
       if (!res.ok) throw new Error('submit failed');
       const result = await res.json() as { readyForSynthesis?: boolean };
 
+      witnessEvent('answers_submitted', 'answers_submitted', 'answers_submitted');
+
       // If both sides are already in, host triggers synthesis immediately
       if (isHost && hostToken && result.readyForSynthesis) {
         setPageState('waiting');
+        witnessEvent('synthesis_triggered', 'synthesis_triggered', 'synthesis_triggered');
         await triggerSynthesis(sessionId, hostToken);
         startPolling();
       } else {

@@ -60,6 +60,63 @@ const XP_TABLE: Record<string, number> = {
   subscribed: 25,
   staked: 20,
   daily_first: 10,
+  // Fabric
+  session_created: 20,
+  answers_submitted: 15,
+  synthesis_triggered: 30,
+  guest_link_copied: 5,
+  // Discovery
+  discovery_submitted: 15,
+  match_found: 25,
+  // Settings
+  key_configured: 10,
+};
+
+// Action-specific comments override the generic mood comment for big moments
+export const ACTION_COMMENTS: Record<string, string[]> = {
+  first_action: [
+    "Hey. Found you. Let's go.",
+    "There you are. I've been waiting.",
+    "First move. This is where it starts.",
+  ],
+  level_up: [
+    "Level up. I felt that.",
+    "Growth looks good on you.",
+    "And we keep climbing.",
+    "New tier unlocked. You earned it.",
+  ],
+  session_created: [
+    "Session live. Now send them the link.",
+    "Smart move — get both sides on record.",
+    "This is how alignment actually happens.",
+  ],
+  answers_submitted: [
+    "Locked in. Waiting on the other side now.",
+    "Your side's done. Velma's watching the clock.",
+    "Good. Private and sealed.",
+  ],
+  synthesis_triggered: [
+    "Truth laid bare. That's what we're here for.",
+    "Nobody can argue with the neutral read.",
+    "Claude saw everything. Time to see what it found.",
+  ],
+  key_configured: [
+    "Claude key set. You're ready to run synthesis.",
+    "Setup done. Now the real work starts.",
+  ],
+  wallet_connected: [
+    "Wallet connected. I can see you now.",
+    "Identity verified. Welcome to the network.",
+    "On-chain now. Let's make it count.",
+  ],
+  match_found: [
+    "Somebody out there fits. Don't sleep on this.",
+    "New match dropped. I'd look at this one.",
+  ],
+  skill_purchased: [
+    "Investment made. That flow's yours permanently.",
+    "Bought and unlocked. No daily limits.",
+  ],
 };
 
 const MOOD_COMMENTS: Record<VelmaMood, string[]> = {
@@ -227,11 +284,13 @@ export function useVelmaCompanion() {
     });
   }, [mutate]);
 
-  const witnessEvent = useCallback((event: string, xpKey?: string) => {
+  const witnessEvent = useCallback((event: string, xpKey?: string, actionKey?: string) => {
     mutate(s => {
       const gain = xpKey ? (XP_TABLE[xpKey] ?? 0) : 0;
       const mood = detectMood({ ...s, session_events: s.session_events + 1 });
-      const comment = randomFrom(MOOD_COMMENTS[mood]);
+      const comment = actionKey && ACTION_COMMENTS[actionKey]
+        ? randomFrom(ACTION_COMMENTS[actionKey])
+        : randomFrom(MOOD_COMMENTS[mood]);
       return {
         ...s,
         xp: s.xp + gain,

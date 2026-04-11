@@ -4,6 +4,7 @@
  */
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useVelma } from '../contexts/VelmaContext';
 
 // ── Session storage ───────────────────────────────────────────────────────────
 
@@ -107,6 +108,7 @@ function SessionCreated({
 }) {
   const [copiedHost, setCopiedHost] = useState(false);
   const [copiedGuest, setCopiedGuest] = useState(false);
+  const { witnessEvent } = useVelma();
 
   const base = window.location.origin;
   const hostUrl = `${base}/fabric/${session.id}?hostToken=${session.hostToken}`;
@@ -114,8 +116,14 @@ function SessionCreated({
 
   const copy = (text: string, which: 'host' | 'guest') => {
     navigator.clipboard.writeText(text).then(() => {
-      if (which === 'host') { setCopiedHost(true); setTimeout(() => setCopiedHost(false), 2000); }
-      else { setCopiedGuest(true); setTimeout(() => setCopiedGuest(false), 2000); }
+      if (which === 'host') {
+        setCopiedHost(true);
+        setTimeout(() => setCopiedHost(false), 2000);
+      } else {
+        setCopiedGuest(true);
+        setTimeout(() => setCopiedGuest(false), 2000);
+        witnessEvent('guest_link_copied', 'guest_link_copied', 'session_created');
+      }
     });
   };
 
@@ -223,6 +231,7 @@ function SessionCreated({
 
 export default function FabricStart() {
   const navigate = useNavigate();
+  const { witnessEvent } = useVelma();
   const [selected, setSelected] = useState<UseCase | null>(null);
   const [title, setTitle] = useState('');
   const [loading, setLoading] = useState(false);
@@ -263,6 +272,7 @@ export default function FabricStart() {
       };
       saveSession(session);
       setCreated(session);
+      witnessEvent('session_created', 'session_created', 'session_created');
     } catch (err) {
       setError(String(err));
     } finally {
