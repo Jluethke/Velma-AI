@@ -1,4 +1,5 @@
 export { TrustOracleABI } from './TrustOracle';
+export { CommunityPoolABI } from './CommunityPool';
 export { SkillRegistryABI } from './SkillRegistry';
 export { MarketplaceABI } from './Marketplace';
 export { NodeRegistryABI } from './NodeRegistry';
@@ -23,6 +24,8 @@ export const CONTRACTS = {
   Staking:            '0x8eF891BDD235cb6a5B558bF5ee9abbBc20841658' as `0x${string}`,
   ValidationRegistry: '0x59645dc6eCE206703e4c56aF9D461cD6d0F9653C' as `0x${string}`,
   OnboardingRewards:  '0x881F2eFB238F1eB29C2D06bb3e6b89eC2c27146e' as `0x${string}`,
+  // CommunityPool: deploy pending — address populated after redeployment
+  CommunityPool:      '0x0000000000000000000000000000000000000000' as `0x${string}`,
 } as const;
 
 /** Base Mainnet chain ID */

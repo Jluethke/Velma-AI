@@ -15,6 +15,7 @@ import "../src/Staking.sol";
 import "../src/GovernanceDAO.sol";
 import "../src/LifeRewards.sol";
 import "../src/OnboardingRewards.sol";
+import "../src/CommunityPool.sol";
 
 /**
  * @title Deploy
@@ -51,13 +52,20 @@ contract Deploy is Script {
         // 6. Staking — validator staking with tiers and slashing
         Staking staking = new Staking(address(token), address(nodeReg));
 
-        // 7. Marketplace — purchases, royalties, subscriptions
+        // 7a. CommunityPool — purchase premium → earner yield
+        CommunityPool communityPool = new CommunityPool(address(token));
+
+        // 7b. Marketplace — purchases, royalties, subscriptions
         Marketplace marketplace = new Marketplace(
             address(token),
             address(skillReg),
             address(nodeReg),
-            deployer // treasury
+            deployer, // treasury
+            address(communityPool)
         );
+
+        // Grant Marketplace the DEPOSITOR_ROLE so it can deposit into the pool
+        communityPool.grantRole(communityPool.DEPOSITOR_ROLE(), address(marketplace));
 
         // 8. GovernanceDAO — trust-weighted governance
         GovernanceDAO dao = new GovernanceDAO(
@@ -125,5 +133,6 @@ contract Deploy is Script {
         console.log("GovernanceDAO:      ", address(dao));
         console.log("LifeRewards:        ", address(lifeRewards));
         console.log("OnboardingRewards:  ", address(onboarding));
+        console.log("CommunityPool:      ", address(communityPool));
     }
 }

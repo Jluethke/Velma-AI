@@ -11,6 +11,7 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "./SkillRegistry.sol";
 import "./TrustToken.sol";
 import "./NodeRegistry.sol";
+import "./CommunityPool.sol";
 
 /**
  * @title Marketplace
@@ -28,7 +29,17 @@ import "./NodeRegistry.sol";
  *   PREMIUM flows (price > 0, set by creator)
  *     Must call purchaseSkill() once. Pays TRUST, unlocks permanently.
  *     Purchased flows do NOT consume daily quota — they are always accessible.
- *     Fee split: Creator 70%, Validator pool 15%, Treasury 10%, Burned 5%.
+ *     Fee split: Creator 70%, Validator pool 15%, Treasury 8%, Community 5%, Burned 2%.
+ *
+ * Community Pool
+ * ─────────────
+ *   A portion of every purchase and subscription payment is routed to the
+ *   CommunityPool contract, where it accrues to addresses that EARNED their
+ *   TRUST through LifeRewards / OnboardingRewards / etc. This "purchase premium"
+ *   values earned TRUST above purchased TRUST — buyers subsidise earners.
+ *
+ *   Premium purchases:  5% → CommunityPool (COMMUNITY_FEE_BPS)
+ *   Subscriptions:      25% of subscription fee → CommunityPool
  *
  * Usage recording (free flows):
  *   The MCP server calls recordUsage() after executing a free flow to
@@ -45,13 +56,23 @@ contract Marketplace is AccessControl, ReentrancyGuard {
 
     address public treasury;
 
+    /// @notice Community pool — receives purchase premium from buys + subscriptions.
+    CommunityPool public communityPool;
+
     // ── Fee Split (basis points, total = 10000) ────────────────────────
+    // Premium flow purchases: 70% creator · 15% validators · 8% treasury
+    //                         · 5% community pool (earner yield) · 2% burned
 
     uint256 public constant CREATOR_FEE_BPS    = 7000;
     uint256 public constant VALIDATOR_FEE_BPS  = 1500;
-    uint256 public constant TREASURY_FEE_BPS   = 1000;
-    uint256 public constant BURN_FEE_BPS       = 500;
+    uint256 public constant TREASURY_FEE_BPS   =  800;
+    uint256 public constant COMMUNITY_FEE_BPS  =  500;  // purchase premium → earners
+    uint256 public constant BURN_FEE_BPS       =  200;
     uint256 public constant BPS_DENOMINATOR    = 10000;
+
+    // Subscription fee split: 75% treasury, 25% community pool
+    uint256 public constant SUB_COMMUNITY_BPS  = 2500;
+    uint256 public constant SUB_TREASURY_BPS   = 7500;
 
     // ── Subscription Tiers ─────────────────────────────────────────────
 
@@ -98,6 +119,7 @@ contract Marketplace is AccessControl, ReentrancyGuard {
     event ValidatorRewardsClaimed(bytes32 indexed nodeId, address indexed owner, uint256 amount);
     event Subscribed(address indexed user, SubscriptionTier tier, uint256 expiresAt);
     event TreasuryUpdated(address newTreasury);
+    event CommunityPoolUpdated(address newPool);
 
     // ── Constructor ────────────────────────────────────────────────────
 
@@ -105,17 +127,20 @@ contract Marketplace is AccessControl, ReentrancyGuard {
         address _trustToken,
         address _skillRegistry,
         address _nodeRegistry,
-        address _treasury
+        address _treasury,
+        address _communityPool
     ) {
-        require(_trustToken   != address(0), "Marketplace: zero token");
+        require(_trustToken    != address(0), "Marketplace: zero token");
         require(_skillRegistry != address(0), "Marketplace: zero skillReg");
         require(_nodeRegistry  != address(0), "Marketplace: zero nodeReg");
         require(_treasury      != address(0), "Marketplace: zero treasury");
+        require(_communityPool != address(0), "Marketplace: zero communityPool");
 
         trustToken    = TrustToken(_trustToken);
         skillRegistry = SkillRegistry(_skillRegistry);
         nodeRegistry  = NodeRegistry(_nodeRegistry);
         treasury      = _treasury;
+        communityPool = CommunityPool(_communityPool);
 
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
 
@@ -149,13 +174,19 @@ contract Marketplace is AccessControl, ReentrancyGuard {
         uint256 creatorAmount   = (price * CREATOR_FEE_BPS)   / BPS_DENOMINATOR;
         uint256 validatorAmount = (price * VALIDATOR_FEE_BPS)  / BPS_DENOMINATOR;
         uint256 treasuryAmount  = (price * TREASURY_FEE_BPS)   / BPS_DENOMINATOR;
-        uint256 burnAmount      = price - creatorAmount - validatorAmount - treasuryAmount;
+        uint256 communityAmount = (price * COMMUNITY_FEE_BPS)  / BPS_DENOMINATOR;
+        uint256 burnAmount      = price
+            - creatorAmount - validatorAmount - treasuryAmount - communityAmount;
 
         creatorRoyalties[skillId]  += creatorAmount;
         _validatorPool[skillId]    += validatorAmount;
 
         IERC20(address(trustToken)).safeTransfer(treasury, treasuryAmount);
         trustToken.burn(burnAmount);
+
+        // Route purchase premium to community pool — earners receive this yield
+        IERC20(address(trustToken)).approve(address(communityPool), communityAmount);
+        communityPool.deposit(communityAmount);
 
         hasPurchased[msg.sender][skillId] = true;
         purchaseCountOf[msg.sender]++;
@@ -233,9 +264,18 @@ contract Marketplace is AccessControl, ReentrancyGuard {
         TierConfig memory config = tierConfigs[tier];
 
         if (config.monthlyPrice > 0) {
+            uint256 communityShare = (config.monthlyPrice * SUB_COMMUNITY_BPS) / BPS_DENOMINATOR;
+            uint256 treasuryShare  = config.monthlyPrice - communityShare;
+
+            // Treasury portion
+            IERC20(address(trustToken)).safeTransferFrom(msg.sender, treasury, treasuryShare);
+
+            // Community pool portion — earners receive yield from subscription revenue
             IERC20(address(trustToken)).safeTransferFrom(
-                msg.sender, treasury, config.monthlyPrice
+                msg.sender, address(this), communityShare
             );
+            IERC20(address(trustToken)).approve(address(communityPool), communityShare);
+            communityPool.deposit(communityShare);
         }
 
         uint256 expiresAt = (tier == SubscriptionTier.EXPLORER)
@@ -314,6 +354,15 @@ contract Marketplace is AccessControl, ReentrancyGuard {
         require(newTreasury != address(0), "Marketplace: zero treasury");
         treasury = newTreasury;
         emit TreasuryUpdated(newTreasury);
+    }
+
+    /**
+     * @notice Update the community pool address.
+     */
+    function setCommunityPool(address newPool) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(newPool != address(0), "Marketplace: zero communityPool");
+        communityPool = CommunityPool(newPool);
+        emit CommunityPoolUpdated(newPool);
     }
 
     // ── Internal ───────────────────────────────────────────────────────

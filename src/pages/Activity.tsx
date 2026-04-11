@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { activityEvents } from '../data/social';
+import CommunityPoolCard from '../components/CommunityPoolCard';
 
 const eventIcons: Record<string, { icon: string; color: string }> = {
   skill_published: { icon: '+', color: 'var(--green)' },
@@ -47,6 +48,11 @@ export default function Activity() {
       <p className="text-sm mb-8" style={{ color: 'var(--text-secondary)' }}>
         Live feed of what is happening on FlowFabric
       </p>
+
+      {/* Community pool — earner yield from purchase activity */}
+      <div className="mb-8">
+        <CommunityPoolCard />
+      </div>
 
       {/* Filter pills */}
       <div className="flex flex-wrap gap-2 mb-8">

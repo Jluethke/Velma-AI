@@ -6,11 +6,13 @@ import "../src/TrustToken.sol";
 import "../src/NodeRegistry.sol";
 import "../src/SkillRegistry.sol";
 import "../src/Marketplace.sol";
+import "../src/CommunityPool.sol";
 
 contract MarketplaceTest is Test {
     TrustToken public token;
     NodeRegistry public nodeReg;
     SkillRegistry public skillReg;
+    CommunityPool public communityPool;
     Marketplace public marketplace;
 
     address admin    = address(0xA);
@@ -24,12 +26,16 @@ contract MarketplaceTest is Test {
 
     function setUp() public {
         vm.startPrank(admin);
-        token      = new TrustToken(admin, admin, treasury);
-        nodeReg    = new NodeRegistry(address(token));
-        skillReg   = new SkillRegistry();
-        marketplace = new Marketplace(
-            address(token), address(skillReg), address(nodeReg), treasury
+        token        = new TrustToken(admin, admin, treasury);
+        nodeReg      = new NodeRegistry(address(token));
+        skillReg     = new SkillRegistry();
+        communityPool = new CommunityPool(address(token));
+        marketplace  = new Marketplace(
+            address(token), address(skillReg), address(nodeReg), treasury, address(communityPool)
         );
+
+        // Grant Marketplace the DEPOSITOR_ROLE so it can fund the pool
+        communityPool.grantRole(communityPool.DEPOSITOR_ROLE(), address(marketplace));
 
         // Grant RECORDER_ROLE to the mock MCP server wallet
         marketplace.grantRole(marketplace.RECORDER_ROLE(), recorder);

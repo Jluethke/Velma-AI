@@ -8,6 +8,7 @@ import "../src/SkillRegistry.sol";
 import "../src/TrustOracle.sol";
 import "../src/ValidationRegistry.sol";
 import "../src/Marketplace.sol";
+import "../src/CommunityPool.sol";
 import "../src/LifeRewards.sol";
 import "../src/OnboardingRewards.sol";
 
@@ -17,6 +18,7 @@ contract OnboardingRewardsTest is Test {
     SkillRegistry public skillReg;
     TrustOracle public oracle;
     ValidationRegistry public valReg;
+    CommunityPool public communityPool;
     Marketplace public marketplace;
     LifeRewards public lifeRewards;
     OnboardingRewards public onboarding;
@@ -37,9 +39,11 @@ contract OnboardingRewardsTest is Test {
         skillReg = new SkillRegistry();
         oracle = new TrustOracle(address(nodeReg));
         valReg = new ValidationRegistry(address(nodeReg), address(skillReg));
+        communityPool = new CommunityPool(address(token));
         marketplace = new Marketplace(
-            address(token), address(skillReg), address(nodeReg), treasury
+            address(token), address(skillReg), address(nodeReg), treasury, address(communityPool)
         );
+        communityPool.grantRole(communityPool.DEPOSITOR_ROLE(), address(marketplace));
         lifeRewards = new LifeRewards(
             address(token), address(oracle), address(nodeReg), 100_000 * 1e18
         );
