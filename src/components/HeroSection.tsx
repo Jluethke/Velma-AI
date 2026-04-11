@@ -181,17 +181,17 @@ export default function HeroSection() {
 
         {/* Headline */}
         <h1
-          className="font-bold mb-6 animate-fade-in-up"
+          className="font-bold mb-6 animate-fade-in-up px-2"
           style={{
-            fontSize: 'clamp(2rem, 7vw, 5.5rem)',
-            lineHeight: 1.06,
+            fontSize: 'clamp(1.75rem, 6vw, 5.5rem)',
+            lineHeight: 1.1,
             letterSpacing: '-0.03em',
+            overflowWrap: 'break-word',
+            wordBreak: 'break-word',
           }}
         >
-          <span style={{ color: 'var(--text-primary)' }}>Your AI keeps</span>
+          <span style={{ color: 'var(--text-primary)' }}>Your AI keeps forgetting.</span>
           <br />
-          <span style={{ color: 'var(--text-primary)' }}>forgetting.</span>
-          {' '}
           <span
             className="gradient-text"
             style={{ filter: 'drop-shadow(0 0 24px rgba(56,189,248,0.18))' }}
@@ -202,8 +202,8 @@ export default function HeroSection() {
 
         {/* Sub */}
         <p
-          className="text-base md:text-lg mb-3 max-w-2xl mx-auto animate-fade-in-up stagger-2"
-          style={{ color: 'var(--text-secondary)', lineHeight: 1.75 }}
+          className="text-base md:text-lg mb-3 max-w-2xl mx-auto animate-fade-in-up stagger-2 px-2"
+          style={{ color: 'var(--text-secondary)', lineHeight: 1.75, overflowWrap: 'break-word' }}
         >
           FlowFabric gives Claude structured, step-by-step flows that ask for what they need,
           execute with your approval, and build a memory across every session —
@@ -211,8 +211,8 @@ export default function HeroSection() {
         </p>
 
         <p
-          className="text-sm mb-10 animate-fade-in-up stagger-2"
-          style={{ color: 'var(--text-secondary)', opacity: 0.55 }}
+          className="text-sm mb-10 animate-fade-in-up stagger-2 px-2"
+          style={{ color: 'var(--text-secondary)', opacity: 0.55, overflowWrap: 'break-word' }}
         >
           No prompt engineering.{' '}
           <span style={{ color: 'var(--cyan)', opacity: 1 }}>Just describe what you need and run.</span>
