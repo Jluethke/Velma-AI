@@ -183,13 +183,13 @@ export default function HeroSection() {
             maxWidth: '100%',
           }}
         >
-          <span style={{ color: 'var(--text-primary)' }}>You got the answer.</span>
+          <span style={{ color: 'var(--text-primary)' }}>You've been chatting with AI.</span>
           <br />
           <span
             className="gradient-text"
             style={{ filter: 'drop-shadow(0 0 24px rgba(56,189,248,0.18))' }}
           >
-            Now get the outcome.
+            Practitioners run procedures.
           </span>
         </h1>
 
@@ -198,17 +198,17 @@ export default function HeroSection() {
           className="text-base md:text-lg mb-3 max-w-2xl mx-auto animate-fade-in-up stagger-2 px-2"
           style={{ color: 'var(--text-secondary)', lineHeight: 1.75, overflowWrap: 'break-word' }}
         >
-          Proven expert procedures for salary negotiation, business planning, budgeting, and more —
+          165+ expert procedures for salary negotiation, business planning, budgeting, and more —
           each one asks exactly what it needs, runs step-by-step with your approval,
-          and builds your context across every session.
+          and builds your context so every session starts ahead of the last.
         </p>
 
         <p
           className="text-sm mb-10 animate-fade-in-up stagger-2 px-2"
           style={{ color: 'var(--text-secondary)', opacity: 0.55, overflowWrap: 'break-word' }}
         >
-          Not advice.{' '}
-          <span style={{ color: 'var(--cyan)', opacity: 1 }}>Action.</span>
+          This is what your AI{' '}
+          <span style={{ color: 'var(--cyan)', opacity: 1 }}>was supposed to be.</span>
         </p>
 
         {/* CTAs */}
