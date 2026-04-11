@@ -216,13 +216,13 @@ export default function HeroSection() {
             maxWidth: '100%',
           }}
         >
-          <span style={{ color: 'var(--text-primary)' }}>You've been chatting with AI.</span>
+          <span style={{ color: 'var(--text-primary)' }}>Flows.</span>
           <br />
           <span
             className="gradient-text"
             style={{ filter: 'drop-shadow(0 0 24px rgba(56,189,248,0.18))' }}
           >
-            This is how you actually use it.
+            And Fabric.
           </span>
         </h1>
 
@@ -231,17 +231,16 @@ export default function HeroSection() {
           className="text-base md:text-lg mb-3 max-w-2xl mx-auto animate-fade-in-up stagger-2 px-2"
           style={{ color: 'var(--text-secondary)', lineHeight: 1.75, overflowWrap: 'break-word' }}
         >
-          165+ expert procedures for salary negotiation, business planning, budgeting, and more —
-          each one asks exactly what it needs, runs step-by-step with your approval,
-          and builds your context so every session starts ahead of the last.
+          Expert procedures for what you need to do.
+          Shared sessions for what you need to work through with someone else.
         </p>
 
         <p
           className="text-sm mb-10 animate-fade-in-up stagger-2 px-2"
           style={{ color: 'var(--text-secondary)', opacity: 0.55, overflowWrap: 'break-word' }}
         >
-          This is what your AI{' '}
-          <span style={{ color: 'var(--cyan)', opacity: 1 }}>was supposed to be.</span>
+          Run alone.{' '}
+          <span style={{ color: 'var(--cyan)', opacity: 1 }}>Or weave together.</span>
         </p>
 
         {/* CTAs */}
@@ -253,15 +252,13 @@ export default function HeroSection() {
             Run your first flow
             <span style={{ fontSize: 18 }}>→</span>
           </Link>
-          {canChain ? (
-            <Link to="/compose" className="btn-secondary inline-flex items-center gap-2 px-6 py-3 no-underline text-sm">
-              Open Composer <span style={{ color: 'var(--cyan)' }}>→</span>
-            </Link>
-          ) : (
-            <Link to="/flows" className="btn-secondary inline-flex items-center gap-2 px-6 py-3 no-underline text-sm">
-              Browse procedures <span style={{ color: 'var(--cyan)' }}>→</span>
-            </Link>
-          )}
+          <Link
+            to="/get-started"
+            className="btn-secondary inline-flex items-center gap-2 px-6 py-3 no-underline text-sm"
+            style={{ borderColor: 'rgba(167,139,250,0.3)', color: 'var(--purple)' }}
+          >
+            Join the Fabric waitlist <span>→</span>
+          </Link>
         </div>
 
         {/* Social proof */}

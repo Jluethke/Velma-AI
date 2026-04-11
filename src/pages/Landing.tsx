@@ -428,6 +428,145 @@ function SkillEvolution() {
   );
 }
 
+// ── Fabric Section ────────────────────────────────────────────────
+
+function FabricSection() {
+  return (
+    <section className="px-6 py-24 max-w-5xl mx-auto">
+      <div className="flex justify-center mb-8">
+        <span
+          className="text-xs font-semibold px-3 py-1.5 rounded-full flex items-center gap-2"
+          style={{
+            background: 'rgba(167,139,250,0.08)',
+            border: '1px solid rgba(167,139,250,0.2)',
+            color: 'var(--purple)',
+            letterSpacing: '0.04em',
+          }}
+        >
+          <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--purple)', display: 'inline-block' }} />
+          Coming soon
+        </span>
+      </div>
+
+      <div className="text-center mb-16">
+        <h2
+          className="text-3xl md:text-5xl font-bold mb-4"
+          style={{ color: 'var(--text-primary)', letterSpacing: '-0.02em' }}
+        >
+          The structure underneath every{' '}
+          <span style={{ color: 'var(--purple)' }}>conversation that matters.</span>
+        </h2>
+        <p className="text-sm md:text-base max-w-2xl mx-auto" style={{ color: 'var(--text-secondary)', lineHeight: 1.7 }}>
+          Fabric connects two people's flows into a shared session. Each side brings their context privately.
+          The flow mediates. Both humans decide. No account needed for the other person — just a link.
+        </p>
+      </div>
+
+      {/* Fabric mockup */}
+      <div
+        className="glass-card p-5 md:p-8 max-w-2xl mx-auto mb-12"
+        style={{ borderColor: 'rgba(167,139,250,0.2)' }}
+      >
+        {/* Header */}
+        <div className="flex items-center gap-2 mb-6 pb-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+          <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--purple)', display: 'inline-block', boxShadow: '0 0 8px rgba(167,139,250,0.8)' }} />
+          <span className="text-xs font-mono font-semibold" style={{ color: 'var(--purple)' }}>contract-scope-alignment</span>
+          <span className="text-xs ml-auto font-semibold uppercase tracking-widest" style={{ color: 'var(--purple)', opacity: 0.5 }}>Fabric</span>
+        </div>
+
+        {/* Two sides */}
+        <div className="grid grid-cols-2 gap-4 md:gap-6 mb-6">
+          {[
+            {
+              label: 'You',
+              color: 'var(--cyan)',
+              bg: 'rgba(56,189,248,0.04)',
+              border: 'rgba(56,189,248,0.1)',
+              items: ['Budget ceiling: $24K', 'Timeline: 6 weeks firm', 'Quality over speed'],
+            },
+            {
+              label: 'Sarah Chen',
+              color: 'var(--purple)',
+              bg: 'rgba(167,139,250,0.04)',
+              border: 'rgba(167,139,250,0.1)',
+              items: ['Budget ceiling: $30K', 'Timeline: 8 weeks ideal', 'Speed, then quality'],
+              guest: true,
+            },
+          ].map(side => (
+            <div key={side.label} className="rounded-xl p-3 md:p-4" style={{ background: side.bg, border: `1px solid ${side.border}` }}>
+              <div className="flex items-center gap-1.5 mb-3">
+                <div className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold" style={{ background: side.bg, border: `1px solid ${side.border}`, color: side.color }}>
+                  {side.label[0]}
+                </div>
+                <span className="text-xs font-semibold" style={{ color: side.color }}>{side.label}</span>
+                {side.guest && <span className="text-xs ml-auto" style={{ color: 'var(--text-secondary)', opacity: 0.4 }}>guest link</span>}
+              </div>
+              <div className="flex flex-col gap-1.5">
+                {side.items.map((item, i) => (
+                  <div key={i} className="flex items-start gap-1.5">
+                    <span className="text-xs mt-0.5 shrink-0" style={{ color: side.color }}>✓</span>
+                    <span className="text-xs leading-relaxed" style={{ color: 'var(--text-secondary)' }}>{item}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Synthesis */}
+        <div className="rounded-xl p-4 mb-5" style={{ background: 'rgba(167,139,250,0.06)', border: '1px solid rgba(167,139,250,0.15)' }}>
+          <div className="text-xs font-semibold uppercase tracking-widest mb-2" style={{ color: 'var(--purple)', opacity: 0.6 }}>Synthesis</div>
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-center gap-2 text-xs">
+              <span style={{ color: 'var(--green)' }}>✓</span>
+              <span style={{ color: 'var(--text-secondary)' }}>Budget overlap — room to meet at <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>$26K</span></span>
+            </div>
+            <div className="flex items-center gap-2 text-xs">
+              <span style={{ color: 'var(--gold)' }}>→</span>
+              <span style={{ color: 'var(--text-secondary)' }}>Timeline gap: 2 weeks. Suggest <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>7 weeks with 4-week review</span></span>
+            </div>
+            <div className="flex items-center gap-2 text-xs">
+              <span style={{ color: 'var(--gold)' }}>→</span>
+              <span style={{ color: 'var(--text-secondary)' }}>Priority mismatch — worth 10 minutes at the start of the call</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="w-full text-xs py-2.5 rounded-lg font-semibold text-center" style={{ background: 'rgba(167,139,250,0.06)', border: '1px solid rgba(167,139,250,0.2)', color: 'var(--purple)' }}>
+          Send Fabric link to Sarah →
+        </div>
+      </div>
+
+      {/* Three truths */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-16">
+        {[
+          { title: 'Human in the loop. Always.', desc: 'Each side approves what gets shared. The flow structures the conversation — the humans make the call.', color: 'var(--cyan)' },
+          { title: 'No account needed.', desc: 'Send anyone a link. They answer their side in the browser. No install, no signup, no friction.', color: 'var(--purple)' },
+          { title: 'Both sides leave with clarity.', desc: 'Where you agree. Where you don\'t. A concrete path forward. Built on both contexts, not assumptions.', color: 'var(--green)' },
+        ].map(card => (
+          <TiltCard key={card.title} color={card.color}>
+            <div className="text-xs font-bold mb-2" style={{ color: card.color }}>{card.title}</div>
+            <p className="text-xs leading-relaxed" style={{ color: 'var(--text-secondary)' }}>{card.desc}</p>
+          </TiltCard>
+        ))}
+      </div>
+
+      <div className="text-center">
+        <Link
+          to="/get-started"
+          className="btn-primary inline-flex items-center gap-2 px-8 py-3 text-sm font-semibold no-underline"
+          style={{ borderColor: 'rgba(167,139,250,0.4)', background: 'rgba(167,139,250,0.1)', color: 'var(--purple)' }}
+        >
+          Join the Fabric waitlist →
+        </Link>
+        <p className="text-xs mt-4" style={{ color: 'var(--text-secondary)', opacity: 0.4 }}>
+          Early access. Human in the loop. Always.
+        </p>
+      </div>
+    </section>
+  );
+}
+
 // ── Landing Page ──────────────────────────────────────────────────
 
 export default function Landing() {
@@ -436,6 +575,7 @@ export default function Landing() {
       <HeroSection />
       <CategoryPicker />
       <SkillShowcase />
+      <FabricSection />
       <ComposerPreview />
       <TrustEconomy />
       <SkillEvolution />
