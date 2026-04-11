@@ -166,7 +166,7 @@ export default function HeroSection() {
             }}
           >
             <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--green)', display: 'inline-block', flexShrink: 0, boxShadow: '0 0 6px rgba(74,222,128,0.8)' }} />
-            165+ proven flows · Claude Code + Desktop
+            165+ proven flows · runs in Claude
           </span>
         </div>
 
@@ -183,13 +183,13 @@ export default function HeroSection() {
             maxWidth: '100%',
           }}
         >
-          <span style={{ color: 'var(--text-primary)' }}>Agents improvise.</span>
+          <span style={{ color: 'var(--text-primary)' }}>Every AI session resets.</span>
           <br />
           <span
             className="gradient-text"
             style={{ filter: 'drop-shadow(0 0 24px rgba(56,189,248,0.18))' }}
           >
-            Flows are proven.
+            FlowFabric compounds.
           </span>
         </h1>
 
@@ -198,17 +198,17 @@ export default function HeroSection() {
           className="text-base md:text-lg mb-3 max-w-2xl mx-auto animate-fade-in-up stagger-2 px-2"
           style={{ color: 'var(--text-secondary)', lineHeight: 1.75, overflowWrap: 'break-word' }}
         >
-          165+ expert-built procedures for your career, business, and finances.
-          Each flow asks exactly what it needs, runs step-by-step with your approval,
-          and compounds your context — so every run starts ahead of the last.
+          165+ expert procedures for your career, business, and finances.
+          Each one asks exactly what it needs, runs step-by-step with your approval,
+          and stacks your context — so every session picks up where the last one left off.
         </p>
 
         <p
           className="text-sm mb-10 animate-fade-in-up stagger-2 px-2"
           style={{ color: 'var(--text-secondary)', opacity: 0.55, overflowWrap: 'break-word' }}
         >
-          Not a chatbot. Not an agent.{' '}
-          <span style={{ color: 'var(--cyan)', opacity: 1 }}>A system that gets better every run.</span>
+          Not answers.{' '}
+          <span style={{ color: 'var(--cyan)', opacity: 1 }}>Outcomes.</span>
         </p>
 
         {/* CTAs */}
