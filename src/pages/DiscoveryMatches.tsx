@@ -285,6 +285,13 @@ function ListingStatusMenu({
 
 // ─── Listing section ──────────────────────────────────────────────────────────
 
+interface SourceResult {
+  listingId: string;
+  searchTerms: string[];
+  claudePrompt: string;
+  openInClaude: string;
+}
+
 function ListingSection({ listing }: { listing: DiscoveryListing }) {
   const navigate      = useNavigate();
   const respond       = useRespondToMatch();
@@ -294,6 +301,10 @@ function ListingSection({ listing }: { listing: DiscoveryListing }) {
   const [acceptingId, setAcceptingId] = useState<string | null>(null);
   const [sessionUrl, setSessionUrl] = useState('');
   const [autoScored, setAutoScored] = useState(false);
+  const [showSourceModal, setShowSourceModal] = useState(false);
+  const [sourceData, setSourceData] = useState<SourceResult | null>(null);
+  const [sourcePending, setSourcePending] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   // Auto-score on first load if listing is active and has no matches yet
   useEffect(() => {
@@ -322,6 +333,33 @@ function ListingSection({ listing }: { listing: DiscoveryListing }) {
       }
     } finally {
       setAcceptingId(null);
+    }
+  };
+
+  const handleSourceExternally = async () => {
+    setSourcePending(true);
+    try {
+      const res = await fetch('/api/discovery/source', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ listingId: listing.id }),
+      });
+      if (res.ok) {
+        const data = (await res.json()) as SourceResult;
+        setSourceData(data);
+        setShowSourceModal(true);
+      }
+    } finally {
+      setSourcePending(false);
+    }
+  };
+
+  const handleCopyPrompt = () => {
+    if (sourceData) {
+      void navigator.clipboard.writeText(sourceData.claudePrompt).then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      });
     }
   };
 
@@ -443,16 +481,35 @@ function ListingSection({ listing }: { listing: DiscoveryListing }) {
           <p style={{ color: 'var(--text-secondary)', fontSize: '13px', margin: '0 0 10px' }}>
             No matches on the board yet — check back soon.
           </p>
-          <button
-            onClick={() => refresh.mutate(listing.id)}
-            style={{
-              background: 'rgba(167,139,250,0.08)', border: '1px solid rgba(167,139,250,0.2)',
-              borderRadius: '8px', padding: '7px 14px', fontSize: '12px',
-              color: 'var(--purple)', cursor: 'pointer',
-            }}
-          >
-            Rescan now
-          </button>
+          <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap' }}>
+            <button
+              onClick={() => refresh.mutate(listing.id)}
+              style={{
+                background: 'rgba(167,139,250,0.08)', border: '1px solid rgba(167,139,250,0.2)',
+                borderRadius: '8px', padding: '7px 14px', fontSize: '12px',
+                color: 'var(--purple)', cursor: 'pointer',
+              }}
+            >
+              Rescan now
+            </button>
+            <button
+              onClick={() => void handleSourceExternally()}
+              disabled={sourcePending}
+              style={{
+                background: 'rgba(56,189,248,0.08)',
+                border: '1px solid rgba(56,189,248,0.2)',
+                color: 'var(--cyan)',
+                borderRadius: '8px',
+                padding: '8px 14px',
+                fontSize: '12px',
+                fontWeight: 600,
+                cursor: sourcePending ? 'not-allowed' : 'pointer',
+                opacity: sourcePending ? 0.6 : 1,
+              }}
+            >
+              {sourcePending ? 'Preparing...' : 'Find external matches via Claude'}
+            </button>
+          </div>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -501,6 +558,139 @@ function ListingSection({ listing }: { listing: DiscoveryListing }) {
               accepting={acceptingId === m.id}
             />
           ))}
+
+          {/* Expand search button — shown when fewer than 3 matches score >= 6.0 */}
+          {matches.filter(m => m.score >= 6.0).length < 3 && (
+            <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '4px' }}>
+              <button
+                onClick={() => void handleSourceExternally()}
+                disabled={sourcePending}
+                style={{
+                  background: 'rgba(56,189,248,0.08)',
+                  border: '1px solid rgba(56,189,248,0.2)',
+                  color: 'var(--cyan)',
+                  borderRadius: '8px',
+                  padding: '8px 14px',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  cursor: sourcePending ? 'not-allowed' : 'pointer',
+                  opacity: sourcePending ? 0.6 : 1,
+                }}
+              >
+                {sourcePending ? 'Preparing...' : 'Find external matches via Claude'}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* External sourcing modal */}
+      {showSourceModal && sourceData && (
+        <div
+          onClick={() => setShowSourceModal(false)}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 1000,
+            background: 'rgba(0,0,0,0.6)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: '20px',
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              background: 'rgba(18,18,24,0.96)',
+              border: '1px solid rgba(56,189,248,0.25)',
+              borderRadius: '18px',
+              padding: '28px',
+              maxWidth: '600px',
+              width: '100%',
+              boxShadow: '0 24px 60px rgba(0,0,0,0.6)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '16px',
+              backdropFilter: 'blur(16px)',
+            }}
+          >
+            {/* Modal header */}
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px' }}>
+              <div>
+                <h2 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text-primary)', margin: '0 0 6px', letterSpacing: '-0.02em' }}>
+                  Expand your search externally
+                </h2>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '13px', margin: 0, lineHeight: 1.5 }}>
+                  Claude will search Vibe Prospecting for real-world matches and add them to your board.
+                </p>
+              </div>
+              <button
+                onClick={() => setShowSourceModal(false)}
+                style={{
+                  background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
+                  borderRadius: '8px', padding: '5px 10px',
+                  fontSize: '13px', color: 'var(--text-secondary)', cursor: 'pointer', flexShrink: 0,
+                }}
+              >
+                Close
+              </button>
+            </div>
+
+            {/* Prompt textarea */}
+            <textarea
+              readOnly
+              value={sourceData.claudePrompt}
+              style={{
+                width: '100%',
+                height: '220px',
+                background: 'rgba(255,255,255,0.03)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                borderRadius: '10px',
+                padding: '12px',
+                fontSize: '12px',
+                color: 'var(--text-secondary)',
+                lineHeight: 1.6,
+                fontFamily: '"Inter", monospace',
+                resize: 'vertical',
+                boxSizing: 'border-box',
+              }}
+            />
+
+            {/* Actions */}
+            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+              <button
+                onClick={handleCopyPrompt}
+                style={{
+                  background: 'rgba(255,255,255,0.05)',
+                  border: '1px solid rgba(255,255,255,0.12)',
+                  color: copied ? 'var(--green)' : 'var(--text-primary)',
+                  borderRadius: '9px',
+                  padding: '9px 16px',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'color 0.2s',
+                }}
+              >
+                {copied ? 'Copied!' : 'Copy prompt'}
+              </button>
+              <a
+                href={sourceData.openInClaude}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: '6px',
+                  background: 'rgba(56,189,248,0.1)',
+                  border: '1px solid rgba(56,189,248,0.3)',
+                  color: 'var(--cyan)',
+                  borderRadius: '9px',
+                  padding: '9px 16px',
+                  fontSize: '13px',
+                  fontWeight: 700,
+                  textDecoration: 'none',
+                }}
+              >
+                Open in Claude {'→'}
+              </a>
+            </div>
+          </div>
         </div>
       )}
     </div>

@@ -8,18 +8,18 @@
  * Security model — two-phase extraction:
  *   Phase 1a: Claude extracts structured positions from host data only
  *             (guest data is NOT in this context window)
- *   Phase 1b: Claude extracts structured positions from guest data only
- *             (host data is NOT in this context window)
- *   Phase 2:  Claude synthesises the two position extracts as a neutral
- *             mediator — raw answers from neither party are in this context,
- *             so prompt injection in one party's answers cannot expose the other's
+ *   Phase 1b: Claude extracts structured positions from each guest data only
+ *             (host data and other guests' data are NOT in this context window)
+ *   Phase 2:  Claude synthesises the position extracts as a neutral evaluator —
+ *             raw answers from no party are in this context, so prompt injection
+ *             in one party's answers cannot expose another's
  *
  * The raw data from each party NEVER appears in the same Claude context.
  * The synthesis output is the only thing ever returned to either client.
  */
 
 import type { IncomingMessage, ServerResponse } from 'http';
-import { getSession, saveSession, publicView, sanitizeForPrompt } from '../_store.js';
+import { getSession, saveSession, publicView, sanitizeForPrompt, FabricSide } from '../_store.js';
 
 const ANTHROPIC_API = 'https://api.anthropic.com/v1/messages';
 
@@ -96,7 +96,7 @@ Return ONLY this JSON structure:
   }
 }
 
-// ── Phase 2: neutral mediation from structured extracts only ──────────────────
+// ── Phase 2 (bilateral): neutral mediation from structured extracts only ───────
 // Raw answers from neither party are present here. Injection-safe.
 
 async function synthesizePositions(
@@ -128,6 +128,75 @@ Party B (guest) extracted positions:
 ${JSON.stringify(guestPositions.positions, null, 2)}
 
 Synthesise these positions as a neutral mediator. Be specific and actionable. Do not reveal or reconstruct the raw answers — work only from these structured extracts.`;
+
+  const res = await fetch(ANTHROPIC_API, {
+    method: 'POST',
+    headers: {
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 2048,
+      stream: false,
+      system: systemPrompt,
+      messages: [{ role: 'user', content: userPrompt }],
+    }),
+  });
+
+  if (!res.ok) throw new Error(`Anthropic ${res.status}`);
+
+  const d = await res.json() as { content: Array<{ type: string; text: string }> };
+  return d.content.find(b => b.type === 'text')?.text ?? 'Synthesis unavailable.';
+}
+
+// ── Phase 2 (multi-party): compare candidates against host requirements ────────
+// Raw answers from no party are present here. Injection-safe.
+
+async function synthesizeMultiParty(
+  hostPositions: ExtractedPositions,
+  guestPositionsList: ExtractedPositions[],
+  session: { flowSlug: string; title?: string; guests: FabricSide[] },
+  apiKey: string
+): Promise<string> {
+  const systemPrompt = `You are a neutral evaluator helping a host choose among multiple candidates for a structured session.
+Compare each candidate against the host's requirements and against each other.
+Be specific, use evidence from the positions. Do not advocate for any party.`;
+
+  const candidateLines = guestPositionsList
+    .map((g, i) => `Candidate ${i + 1}:\n${JSON.stringify(g.positions, null, 2)}`)
+    .join('\n\n');
+
+  const userPrompt = `Session: ${session.title ?? session.flowSlug}
+
+Host requirements:
+${JSON.stringify(hostPositions.positions, null, 2)}
+
+Candidate evaluations:
+${candidateLines}
+
+For each candidate:
+1. Score their fit against host requirements (0-10)
+2. List their key strengths relative to the host's needs
+3. List any gaps or mismatches
+
+Then:
+- Recommend the strongest overall candidate with reasoning
+- If host prioritises [flexibility/speed/quality], suggest which candidate excels there
+
+Format:
+📋 Host requirements summary
+
+👤 Candidate 1: score X/10
+  Strengths: ...
+  Gaps: ...
+
+👤 Candidate 2: score X/10
+  ...
+
+⚖ Overall recommendation: Candidate N — [2-3 sentence reason]
+→ If you value [X] most: Candidate M`;
 
   const res = await fetch(ANTHROPIC_API, {
     method: 'POST',
@@ -194,12 +263,16 @@ export default async function handler(
     return;
   }
 
-  if (!session.host.submitted || !session.guest.submitted) {
+  const allGuestsSubmitted =
+    session.guests.filter(g => g?.submitted).length === session.maxGuests;
+
+  if (!session.host.submitted || !allGuestsSubmitted) {
     res.writeHead(422, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({
-      error: 'Both sides must be submitted before synthesis',
+      error: 'All sides must be submitted before synthesis',
       hostSubmitted: session.host.submitted,
-      guestSubmitted: session.guest.submitted,
+      guestsSubmitted: session.guests.filter(g => g?.submitted).length,
+      maxGuests: session.maxGuests,
     }));
     return;
   }
@@ -218,22 +291,34 @@ export default async function handler(
   }
 
   try {
-    // Phase 1: extract positions from each party independently.
-    // These calls run in parallel — each sees ONLY one party's data.
-    const [hostPositions, guestPositions] = await Promise.all([
+    // Phase 1: extract positions from host and each guest independently (all parallel).
+    // Each call sees ONLY one party's data.
+    const [hostPositions, ...guestPositionsList] = await Promise.all([
       extractPositions(session.host.data, session.flowSlug, 'host', apiKey),
-      extractPositions(session.guest.data, session.flowSlug, 'guest', apiKey),
+      ...session.guests.map(g => extractPositions(g.data, session.flowSlug, 'guest', apiKey)),
     ]);
 
     // Phase 2: neutral synthesis from structured extracts only.
-    // Raw answers from neither party are in this context window.
-    const output = await synthesizePositions(
-      hostPositions,
-      guestPositions,
-      session.flowSlug,
-      session.title,
-      apiKey
-    );
+    // Raw answers from no party are in this context window.
+    let output: string;
+    if (session.maxGuests === 1) {
+      // Bilateral: mediation between host and single guest
+      output = await synthesizePositions(
+        hostPositions,
+        guestPositionsList[0],
+        session.flowSlug,
+        session.title,
+        apiKey
+      );
+    } else {
+      // Multi-party: evaluate each candidate against host requirements
+      output = await synthesizeMultiParty(
+        hostPositions,
+        guestPositionsList,
+        session,
+        apiKey
+      );
+    }
 
     session.synthesis.status = 'complete';
     session.synthesis.output = output;

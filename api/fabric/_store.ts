@@ -29,12 +29,16 @@ export interface FabricSynthesis {
 export interface FabricSession {
   id: string;
   hostToken: string;
+  guestTokens: string[];
+  maxGuests: number;
   flowSlug: string;
   title?: string;
   createdAt: number;
   expiresAt: number;
+  submissionDeadline: number;
+  reminded: boolean;
   host: FabricSide;
-  guest: FabricSide;
+  guests: FabricSide[];
   synthesis: FabricSynthesis;
 }
 
@@ -52,8 +56,10 @@ export interface PublicSession {
   title?: string;
   createdAt: number;
   expiresAt: number;
+  submissionDeadline: number;
+  reminded: boolean;
   host: FabricSidePublic;
-  guest: FabricSidePublic;
+  guests: FabricSidePublic[];
   synthesis: FabricSynthesis;
 }
 
@@ -69,25 +75,36 @@ function key(id: string) {
 
 export async function createSession(
   flowSlug: string,
-  title?: string
+  title?: string,
+  maxGuests?: number
 ): Promise<FabricSession> {
   const id = randomBytes(16).toString("hex");
   const hostToken = randomBytes(32).toString("hex");
   const now = Date.now();
 
+  const resolvedMaxGuests = Math.min(Math.max(1, maxGuests ?? 1), 10);
+  const guestTokens = Array.from({ length: resolvedMaxGuests }, () =>
+    randomBytes(32).toString("hex")
+  );
+
   const session: FabricSession = {
     id,
     hostToken,
+    guestTokens,
+    maxGuests: resolvedMaxGuests,
     flowSlug,
     title,
     createdAt: now,
     expiresAt: now + TTL_SECONDS * 1000,
+    submissionDeadline: now + 48 * 60 * 60 * 1000,
+    reminded: false,
     host: { submitted: false, data: {}, sharedFields: [] },
-    guest: { submitted: false, data: {}, sharedFields: [] },
+    guests: [],
     synthesis: { status: "pending" },
   };
 
   await kv.set(key(id), session, { ex: TTL_SECONDS });
+  await addToActiveIndex(id);
   return session;
 }
 
@@ -106,8 +123,8 @@ export async function saveSession(session: FabricSession): Promise<void> {
   await kv.set(key(session.id), session, { ex: remainingSeconds });
 }
 
-/** Safe public view — strips all raw answer data from both parties.
- *  Never returns host.data or guest.data across party boundaries. */
+/** Safe public view — strips all raw answer data from all parties.
+ *  Never returns host.data or any guest.data across party boundaries. */
 export function publicView(session: FabricSession): PublicSession {
   return {
     id: session.id,
@@ -115,10 +132,31 @@ export function publicView(session: FabricSession): PublicSession {
     title: session.title,
     createdAt: session.createdAt,
     expiresAt: session.expiresAt,
+    submissionDeadline: session.submissionDeadline,
+    reminded: session.reminded,
     host: { submitted: session.host.submitted, sharedFields: session.host.sharedFields },
-    guest: { submitted: session.guest.submitted, sharedFields: session.guest.sharedFields },
+    guests: session.guests.map(g => ({ submitted: g.submitted, sharedFields: g.sharedFields })),
     synthesis: session.synthesis,
   };
+}
+
+// ─── Active Session Index ─────────────────────────────────────────────────────
+
+const ACTIVE_INDEX_KEY = 'fabric:active';
+
+export async function addToActiveIndex(id: string): Promise<void> {
+  await kv.sadd(ACTIVE_INDEX_KEY, id);
+}
+
+export async function removeFromActiveIndex(id: string): Promise<void> {
+  await kv.srem(ACTIVE_INDEX_KEY, id);
+}
+
+export async function getActiveSessions(): Promise<FabricSession[]> {
+  const ids = await kv.smembers(ACTIVE_INDEX_KEY) as string[];
+  if (ids.length === 0) return [];
+  const sessions = await Promise.all(ids.map(id => getSession(id)));
+  return sessions.filter((s): s is FabricSession => s !== undefined);
 }
 
 /** Wraps user-supplied text in XML data tags so the model can distinguish

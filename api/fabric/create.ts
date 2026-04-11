@@ -3,8 +3,8 @@
  * ========================
  * Create a new Fabric session.
  *
- * Body: { flowSlug: string, title?: string }
- * Returns: { sessionId, guestUrl, hostToken, expiresAt }
+ * Body: { flowSlug: string, title?: string, maxGuests?: number }
+ * Returns: { id, hostToken, guestTokens, guestUrls, expiresAt }
  */
 
 import type { IncomingMessage, ServerResponse } from "http";
@@ -30,7 +30,7 @@ export default async function handler(
     return;
   }
 
-  const body = (req.body ?? {}) as { flowSlug?: string; title?: string };
+  const body = (req.body ?? {}) as { flowSlug?: string; title?: string; maxGuests?: number };
 
   if (!body.flowSlug || typeof body.flowSlug !== "string") {
     res.writeHead(400, { "Content-Type": "application/json" });
@@ -38,17 +38,25 @@ export default async function handler(
     return;
   }
 
-  const session = await createSession(body.flowSlug, body.title);
+  const maxGuests = typeof body.maxGuests === "number"
+    ? Math.min(Math.max(1, body.maxGuests), 10)
+    : 1;
+
+  const session = await createSession(body.flowSlug, body.title, maxGuests);
 
   const host = req.headers?.host ?? "flowfabric.io";
   const baseUrl = process.env.FABRIC_BASE_URL ?? `https://${host}`;
-  const guestUrl = `${baseUrl}/fabric/${session.id}`;
+
+  const guestUrls = session.guestTokens.map(
+    token => `/fabric/${session.id}?guestToken=${token}`
+  );
 
   res.writeHead(201, { "Content-Type": "application/json" });
   res.end(JSON.stringify({
-    sessionId: session.id,
-    guestUrl,
+    id: session.id,
     hostToken: session.hostToken,
+    guestTokens: session.guestTokens,
+    guestUrls,
     expiresAt: session.expiresAt,
   }));
 }

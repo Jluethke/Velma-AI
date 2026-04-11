@@ -231,3 +231,97 @@ export async function getCandidates(listing: DiscoveryListing): Promise<Discover
   });
   return supaFetch(`discovery_listings?${qs}`);
 }
+
+// ─── Trust profiles ───────────────────────────────────────────────────────────
+
+export interface TrustProfile {
+  wallet: string;
+  totalSessions: number;
+  agreementRate: number;
+  avgRating: number | null;
+  byFlow: Record<string, { sessions: number; agreementRate: number; avgRating: number | null }>;
+}
+
+interface OutcomeRow {
+  wallet_address: string;
+  outcome: string;
+  flow_slug: string | null;
+  rating: number | null;
+}
+
+function buildEmptyTrustProfile(wallet: string): TrustProfile {
+  return { wallet, totalSessions: 0, agreementRate: 0, avgRating: null, byFlow: {} };
+}
+
+/**
+ * Batch-fetch trust outcomes for a list of wallet addresses.
+ * Returns a map of wallet -> TrustProfile.
+ * Wallets with no history get empty profiles.
+ */
+export async function getCandidateTrustScores(
+  walletAddresses: string[]
+): Promise<Record<string, TrustProfile>> {
+  if (walletAddresses.length === 0) return {};
+
+  const normalised = walletAddresses.map(w => w.toLowerCase());
+  // Supabase PostgREST in() filter: wallet_address=in.(addr1,addr2,...)
+  const inList = normalised.join(',');
+  const qs = new URLSearchParams({
+    wallet_address: `in.(${inList})`,
+    select: 'wallet_address,outcome,flow_slug,rating',
+  });
+
+  const rows: OutcomeRow[] = await supaFetch(`fabric_outcomes?${qs}`);
+
+  // Initialise empty profiles for all requested wallets
+  const result: Record<string, TrustProfile> = {};
+  for (const w of normalised) {
+    result[w] = buildEmptyTrustProfile(w);
+  }
+
+  // Group rows by wallet
+  const grouped: Record<string, OutcomeRow[]> = {};
+  for (const row of rows ?? []) {
+    const w = row.wallet_address.toLowerCase();
+    if (!grouped[w]) grouped[w] = [];
+    grouped[w].push(row);
+  }
+
+  for (const [wallet, walletRows] of Object.entries(grouped)) {
+    const totalSessions = walletRows.length;
+    const agreedCount = walletRows.filter(r => r.outcome === 'agreed').length;
+    const agreementRate = agreedCount / totalSessions;
+
+    const ratedRows = walletRows.filter(r => r.rating !== null);
+    const avgRating =
+      ratedRows.length > 0
+        ? ratedRows.reduce((sum, r) => sum + (r.rating as number), 0) / ratedRows.length
+        : null;
+
+    const flowMap: Record<string, OutcomeRow[]> = {};
+    for (const row of walletRows) {
+      const slug = row.flow_slug ?? '__unknown__';
+      if (!flowMap[slug]) flowMap[slug] = [];
+      flowMap[slug].push(row);
+    }
+
+    const byFlow: TrustProfile['byFlow'] = {};
+    for (const [slug, flowRows] of Object.entries(flowMap)) {
+      const sessions = flowRows.length;
+      const flowAgreed = flowRows.filter(r => r.outcome === 'agreed').length;
+      const flowRated = flowRows.filter(r => r.rating !== null);
+      byFlow[slug] = {
+        sessions,
+        agreementRate: flowAgreed / sessions,
+        avgRating:
+          flowRated.length > 0
+            ? flowRated.reduce((sum, r) => sum + (r.rating as number), 0) / flowRated.length
+            : null,
+      };
+    }
+
+    result[wallet] = { wallet, totalSessions, agreementRate, avgRating, byFlow };
+  }
+
+  return result;
+}

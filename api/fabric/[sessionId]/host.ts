@@ -71,7 +71,10 @@ export default async function handler(
   session.host.sharedFields = body.sharedFields ?? [];
   session.host.submitted = true;
 
-  const bothReady = session.host.submitted && session.guest.submitted;
+  const bothReady =
+    session.host.submitted &&
+    session.guests.filter(g => g?.submitted).length === session.maxGuests;
+
   if (bothReady) {
     session.synthesis.status = "ready";
   }
@@ -79,7 +82,7 @@ export default async function handler(
   await saveSession(session);
 
   // Return public metadata + only the host's own submitted data.
-  // The guest's raw data is intentionally omitted — it never crosses party boundaries.
+  // Guest raw data is intentionally omitted — it never crosses party boundaries.
   const view = {
     ...publicView(session),
     myData: session.host.data,

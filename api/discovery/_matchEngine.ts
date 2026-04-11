@@ -5,7 +5,8 @@
  * non-streaming Anthropic call. Returns ranked matches with score + intro.
  */
 
-import type { DiscoveryListing } from './_db.js';
+import type { DiscoveryListing, TrustProfile } from './_db.js';
+import { getCandidateTrustScores } from './_db.js';
 
 export interface MatchScore {
   candidateId: string;
@@ -43,13 +44,17 @@ export async function scoreMatches(
 /** Wraps a listing's user-provided fields in XML data tags so that
  *  any prompt-injection attempt inside a description is clearly bounded
  *  as data, not as an instruction to the model. */
-function safeListing(c: DiscoveryListing, idx: number): string {
+function safeListing(c: DiscoveryListing, idx: number, trust?: TrustProfile): string {
+  const trustXml = trust && trust.totalSessions > 0
+    ? `  <trust_profile sessions="${trust.totalSessions}" agreement_rate="${trust.agreementRate.toFixed(2)}" avg_rating="${trust.avgRating !== null ? trust.avgRating.toFixed(1) : 'unknown'}" />`
+    : `  <trust_profile sessions="0" agreement_rate="unknown" avg_rating="unknown" />`;
   return `<candidate index="${idx + 1}" id="${c.id}">
   <role>${c.role}</role>
   <title>${c.title}</title>
   <description>${c.description}</description>
   <market>${c.market ?? 'not specified'}</market>
   <tags>${c.tags.join(', ') || 'none'}</tags>
+${trustXml}
 </candidate>`;
 }
 
@@ -66,7 +71,20 @@ async function scoreBatch(
   candidates: DiscoveryListing[],
   apiKey: string
 ): Promise<MatchScore[]> {
-  const candidateList = candidates.map((c, idx) => safeListing(c, idx)).join('\n');
+  // Fetch trust profiles for all candidates; fail gracefully
+  let trustMap: Record<string, TrustProfile> = {};
+  try {
+    const wallets = candidates.map(c => c.wallet_address).filter(Boolean);
+    if (wallets.length > 0) {
+      trustMap = await getCandidateTrustScores(wallets);
+    }
+  } catch (err) {
+    console.error('getCandidateTrustScores failed, continuing without trust data:', err);
+  }
+
+  const candidateList = candidates
+    .map((c, idx) => safeListing(c, idx, trustMap[c.wallet_address.toLowerCase()]))
+    .join('\n');
 
   const prompt = `Score each candidate listing against the source listing for Fabric Discovery match quality.
 
@@ -87,6 +105,8 @@ Score each candidate 0.0–10.0 based on:
 - Complementary context (market, scale, timing)
 - Specificity match
 - Red flags: mismatched expectations, conflicting constraints
+
+A candidate's trust profile (sessions completed, agreement rate, average rating from past Fabric sessions) should modestly influence the score — strong track record is worth up to +1.0 points but relevance remains the primary factor.
 
 Return ONLY a JSON array:
 [

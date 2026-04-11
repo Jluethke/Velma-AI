@@ -22,6 +22,22 @@ function json(res: ServerResponse, status: number, body: unknown) {
   res.end(JSON.stringify(body));
 }
 
+export async function scoreAndPersist(listingId: string): Promise<void> {
+  const listing = await getListing(listingId);
+  if (!listing) throw new Error(`Listing not found: ${listingId}`);
+
+  const candidates = await getCandidates(listing);
+  if (candidates.length === 0) return;
+
+  const scores = await scoreMatches(listing, candidates);
+
+  await Promise.all(
+    scores.map(s =>
+      upsertMatch(listing.id, s.candidateId, s.score, s.introText, s.reasoning)
+    )
+  );
+}
+
 export default async function handler(
   req: IncomingMessage & { body?: unknown; query?: Record<string, string> },
   res: ServerResponse

@@ -2,9 +2,9 @@
  * POST /api/fabric/:sessionId/guest
  * ===================================
  * Guest submits their side of the session.
- * No auth required — the sessionId itself is the secret.
+ * Authenticated by guestToken — each guest slot has a unique token.
  *
- * Body: { data: Record<string, unknown>, sharedFields?: string[] }
+ * Body: { guestToken: string, data: Record<string, unknown>, sharedFields?: string[] }
  */
 
 import type { IncomingMessage, ServerResponse } from "http";
@@ -44,16 +44,30 @@ export default async function handler(
     return;
   }
 
-  if (session.guest.submitted) {
+  const body = (req.body ?? {}) as {
+    guestToken?: string;
+    data?: Record<string, unknown>;
+    sharedFields?: string[];
+  };
+
+  if (!body.guestToken || typeof body.guestToken !== "string") {
+    res.writeHead(401, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ error: "guestToken is required" }));
+    return;
+  }
+
+  const slotIndex = session.guestTokens.indexOf(body.guestToken);
+  if (slotIndex === -1) {
+    res.writeHead(401, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ error: "Invalid guest token" }));
+    return;
+  }
+
+  if (session.guests[slotIndex]?.submitted) {
     res.writeHead(409, { "Content-Type": "application/json" });
     res.end(JSON.stringify({ error: "Guest has already submitted" }));
     return;
   }
-
-  const body = (req.body ?? {}) as {
-    data?: Record<string, unknown>;
-    sharedFields?: string[];
-  };
 
   if (!body.data || typeof body.data !== "object") {
     res.writeHead(400, { "Content-Type": "application/json" });
@@ -61,22 +75,28 @@ export default async function handler(
     return;
   }
 
-  session.guest.data = body.data;
-  session.guest.sharedFields = body.sharedFields ?? [];
-  session.guest.submitted = true;
+  session.guests[slotIndex] = {
+    submitted: true,
+    data: body.data,
+    sharedFields: body.sharedFields ?? [],
+  };
 
-  const bothReady = session.host.submitted && session.guest.submitted;
+  const bothReady =
+    session.host.submitted &&
+    session.guests.filter(g => g?.submitted).length === session.maxGuests;
+
   if (bothReady) {
     session.synthesis.status = "ready";
   }
 
   await saveSession(session);
 
-  // Return public metadata + only the guest's own submitted data.
-  // The host's raw data is intentionally omitted — it never crosses party boundaries.
+  // Return public metadata + only this guest's own submitted data.
+  // The host's raw data and other guests' data are intentionally omitted.
   const view = {
     ...publicView(session),
-    myData: session.guest.data,
+    myData: body.data,
+    slotIndex,
     readyForSynthesis: bothReady,
   };
   res.writeHead(200, { "Content-Type": "application/json" });

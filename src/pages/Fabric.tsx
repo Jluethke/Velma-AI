@@ -15,6 +15,8 @@ interface FabricSession {
   flowSlug: string;
   hostName: string;
   questions: Question[];
+  submissionDeadline?: number;
+  synthesis?: { status: string };
 }
 
 type PageState = 'loading' | 'form' | 'submitting' | 'waiting' | 'done' | 'error';
@@ -784,6 +786,27 @@ export default function Fabric() {
             </span>
           </div>
         </div>
+
+        {/* ── Deadline banner ── */}
+        {session.submissionDeadline && (pageState === 'form' || pageState === 'submitting') && session.synthesis?.status !== 'complete' && (() => {
+          const remaining = session.submissionDeadline - Date.now();
+          const hours = Math.max(0, Math.floor(remaining / (1000 * 60 * 60)));
+          const isUrgent = remaining < 4 * 60 * 60 * 1000;
+          return (
+            <div style={{
+              fontSize: '11px',
+              fontWeight: 600,
+              color: isUrgent ? 'var(--red, #ef4444)' : 'var(--gold)',
+              padding: '4px 0',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+            }}>
+              <span>{isUrgent ? '\u26a0' : '\u23f1'}</span>
+              <span>Submit within {hours}h or this session expires</span>
+            </div>
+          );
+})()}
 
         {/* ── Progress bar ── */}
         {pageState === 'form' && (
