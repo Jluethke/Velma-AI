@@ -34,6 +34,7 @@ export interface VelmaState {
   session_events: number;
   session_date: string;
   first_met: string;
+  onboarded: boolean;        // true after completing the first-click guide
 }
 
 // Tier 1: L1–3 (8-bit), Tier 2: L4–6 (16-bit), Tier 3: L7–10 (32-bit), Tier 4: L11+ (holographic)
@@ -213,6 +214,7 @@ function loadState(): VelmaState {
     witnessed: [], last_comment: "Hey. I'm Velma. I watch.",
     show_bubble: true, total_events: 0, session_events: 0,
     session_date: todayStr(), first_met: new Date().toISOString(),
+    onboarded: false,
   };
 }
 
@@ -307,6 +309,23 @@ export function useVelmaCompanion() {
     setState(s => ({ ...s, show_bubble: false }));
   }, []);
 
+  const completeOnboarding = useCallback(() => {
+    mutate(s => {
+      const gain = XP_TABLE.daily_first;
+      const comment = randomFrom(ACTION_COMMENTS.first_action);
+      return {
+        ...s,
+        onboarded: true,
+        xp: s.xp + gain,
+        total_events: s.total_events + 1,
+        session_events: s.session_events + 1,
+        witnessed: [...s.witnessed, 'onboarding_complete'].slice(-20),
+        last_comment: comment,
+        show_bubble: true,
+      };
+    });
+  }, [mutate]);
+
   const speak = useCallback(() => {
     setState(s => {
       const comment = randomFrom(MOOD_COMMENTS[s.mood]);
@@ -395,6 +414,7 @@ export function useVelmaCompanion() {
     addXP,
     dismissBubble,
     speak,
+    completeOnboarding,
     notifications,
     setNotifyContext,
     pollNotifications,

@@ -408,17 +408,181 @@ const TIER_NAMES: Record<VisualTier, string> = {
   4: 'HOLOGRAPHIC',
 };
 
+// ── Onboarding guide panel ─────────────────────────────────────────────────
+
+const API_KEY_STORAGE = 'flowfabric-anthropic-key';
+
+const GUIDE_STEPS = [
+  {
+    icon: '🔑',
+    label: 'Set your Claude key',
+    desc: 'Synthesis needs it. One time. Stays on your device.',
+    href: '/settings',
+    check: () => Boolean(localStorage.getItem(API_KEY_STORAGE)?.trim()),
+    urgentIfMissing: true,
+  },
+  {
+    icon: '🤝',
+    label: 'Start a Fabric session',
+    desc: 'Both sides answer privately. Claude finds the alignment.',
+    href: '/start',
+    check: () => false,
+    urgentIfMissing: false,
+  },
+  {
+    icon: '⚡',
+    label: 'Explore flows',
+    desc: '165+ flows ready to run. Career, money, decisions, life.',
+    href: '/explore',
+    check: () => false,
+    urgentIfMissing: false,
+  },
+  {
+    icon: '🔗',
+    label: 'Find your match',
+    desc: 'Tell me what you need. I'll find who fits.',
+    href: '/discover',
+    check: () => false,
+    urgentIfMissing: false,
+  },
+];
+
+function VelmaGuidePanel({
+  color,
+  onClose,
+  onDone,
+}: {
+  color: string;
+  onClose: () => void;
+  onDone: () => void;
+}) {
+  const hasKey = Boolean(localStorage.getItem(API_KEY_STORAGE)?.trim());
+
+  return (
+    <div style={{
+      position: 'absolute',
+      bottom: '120px',
+      right: 0,
+      width: '280px',
+      background: 'rgba(0,10,20,0.97)',
+      border: `1px solid ${color}55`,
+      borderRadius: '14px',
+      padding: '18px',
+      boxShadow: `0 0 32px ${color}22`,
+      fontFamily: 'monospace',
+      fontSize: '12px',
+      color: '#cdd',
+      animation: 'velma-bubble-in 0.25s ease',
+    }}>
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '14px' }}>
+        <div>
+          <div style={{ color, fontWeight: 'bold', fontSize: '13px', marginBottom: '3px' }}>
+            You're new here.
+          </div>
+          <div style={{ color: '#778', fontSize: '11px' }}>
+            Let me be brief.
+          </div>
+        </div>
+        <button
+          onClick={onClose}
+          style={{ background: 'none', border: 'none', color: '#556', cursor: 'pointer', fontSize: '16px', lineHeight: 1 }}
+        >
+          ×
+        </button>
+      </div>
+
+      {/* Steps */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '14px' }}>
+        {GUIDE_STEPS.map((step, i) => {
+          const done = step.check();
+          const urgent = step.urgentIfMissing && !done;
+          return (
+            <a
+              key={i}
+              href={step.href}
+              onClick={onDone}
+              style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '10px',
+                padding: '10px 12px',
+                borderRadius: '9px',
+                background: urgent ? `${color}0d` : '#0a1a2a',
+                border: `1px solid ${urgent ? color + '44' : done ? 'rgba(74,222,128,0.2)' : '#1a2a3a'}`,
+                textDecoration: 'none',
+                transition: 'border-color 0.15s',
+                cursor: 'pointer',
+              }}
+            >
+              <span style={{ fontSize: '16px', lineHeight: 1, marginTop: '1px', flexShrink: 0 }}>
+                {done ? '✓' : step.icon}
+              </span>
+              <div style={{ minWidth: 0 }}>
+                <div style={{
+                  color: done ? 'rgba(74,222,128,0.8)' : urgent ? color : '#cde',
+                  fontWeight: 'bold',
+                  fontSize: '12px',
+                  marginBottom: '2px',
+                }}>
+                  {step.label}
+                  {urgent && <span style={{ color, fontSize: '10px', marginLeft: '6px' }}>← start here</span>}
+                </div>
+                <div style={{ color: '#668', fontSize: '10px', lineHeight: 1.4 }}>
+                  {step.desc}
+                </div>
+              </div>
+            </a>
+          );
+        })}
+      </div>
+
+      {/* CTA */}
+      <button
+        onClick={onDone}
+        style={{
+          width: '100%',
+          padding: '9px',
+          borderRadius: '8px',
+          background: `${color}15`,
+          border: `1px solid ${color}44`,
+          color,
+          fontSize: '12px',
+          fontWeight: 'bold',
+          fontFamily: 'monospace',
+          cursor: 'pointer',
+          letterSpacing: '0.03em',
+        }}
+      >
+        {hasKey ? "Got it. I'll take it from here." : "Got it — I'll set the key first."}
+      </button>
+
+      {/* Bubble tail */}
+      <div style={{
+        position: 'absolute',
+        bottom: '-8px',
+        right: '28px',
+        width: 0, height: 0,
+        borderLeft: '8px solid transparent',
+        borderRight: '8px solid transparent',
+        borderTop: `8px solid ${color}55`,
+      }} />
+    </div>
+  );
+}
+
 // ── Main Widget ────────────────────────────────────────────────────────────
 
 export default function VelmaWidget({ wallet }: { wallet?: string } = {}) {
   const {
-    state, pet, witnessEvent, dismissBubble, speak,
+    state, pet, witnessEvent, dismissBubble, speak, completeOnboarding,
     notifications, dismissNotification, dismissAllNotifications,
     setNotifyContext, pollNotifications,
   } = useVelma();
 
   const [showStats, setShowStats] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showGuide, setShowGuide] = useState(false);
   const bubbleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── Gamification state ─────────────────────────────────────────────────
@@ -602,6 +766,18 @@ export default function VelmaWidget({ wallet }: { wallet?: string } = {}) {
         </div>
       )}
 
+      {/* Onboarding guide panel */}
+      {showGuide && (
+        <VelmaGuidePanel
+          color={color}
+          onClose={() => setShowGuide(false)}
+          onDone={() => {
+            setShowGuide(false);
+            completeOnboarding();
+          }}
+        />
+      )}
+
       {/* Notification panel */}
       {showNotifications && (
         <NotificationPanel
@@ -749,7 +925,15 @@ export default function VelmaWidget({ wallet }: { wallet?: string } = {}) {
 
         {/* The sprite */}
         <div
-          onClick={pet}
+          onClick={() => {
+            if (!state.onboarded) {
+              setShowGuide(s => !s);
+              setShowStats(false);
+              setShowNotifications(false);
+            } else {
+              pet();
+            }
+          }}
           onContextMenu={e => {
             e.preventDefault();
             if (notifications.length > 0) {
@@ -760,7 +944,9 @@ export default function VelmaWidget({ wallet }: { wallet?: string } = {}) {
               setShowNotifications(false);
             }
           }}
-          title={`Velma — Level ${state.level} ${getTitle(state.level)} (click to pet, right-click for ${notifications.length > 0 ? 'notifications' : 'stats'})`}
+          title={state.onboarded
+            ? `Velma — Level ${state.level} ${getTitle(state.level)} (click to pat, right-click for ${notifications.length > 0 ? 'notifications' : 'stats'})`
+            : 'Velma — click to get started'}
           style={{
             cursor: 'pointer',
             width: `${spriteSize}px`,
