@@ -2,9 +2,10 @@
  * /discover/matches — Your listings + AI-scored matches
  */
 
-import { useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { useAccount } from 'wagmi';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   useMyListings,
   useMatches,
@@ -233,11 +234,12 @@ function ListingStatusMenu({
 }) {
   const [open, setOpen] = useState(false);
 
-  const options: { label: string; status: 'active' | 'paused' | 'closed'; color?: string }[] = [
+  const allOptions: { label: string; status: 'active' | 'paused' | 'closed'; color?: string }[] = [
     { label: 'Set active', status: 'active' },
     { label: 'Pause', status: 'paused' },
     { label: 'Close listing', status: 'closed', color: 'var(--red)' },
-  ].filter(o => o.status !== listing.status);
+  ];
+  const options = allOptions.filter(o => o.status !== listing.status);
 
   return (
     <div style={{ position: 'relative' }}>
@@ -284,20 +286,40 @@ function ListingStatusMenu({
 // ─── Listing section ──────────────────────────────────────────────────────────
 
 function ListingSection({ listing }: { listing: DiscoveryListing }) {
+  const navigate      = useNavigate();
   const respond       = useRespondToMatch();
   const refresh       = useRefreshMatches();
   const updateStatus  = useUpdateListingStatus();
   const { data: matches = [], isLoading } = useMatches(listing.id);
   const [acceptingId, setAcceptingId] = useState<string | null>(null);
   const [sessionUrl, setSessionUrl] = useState('');
+  const [autoScored, setAutoScored] = useState(false);
+
+  // Auto-score on first load if listing is active and has no matches yet
+  useEffect(() => {
+    if (!autoScored && !isLoading && matches.length === 0 && listing.status === 'active') {
+      setAutoScored(true);
+      refresh.mutate(listing.id);
+    }
+  }, [autoScored, isLoading, matches.length, listing.status, listing.id, refresh]);
 
   const pendingCount = matches.filter(m => m.status === 'pending').length;
 
-  const handleAccept = async (matchId: string) => {
+  // Top pending match — shown as Claude's recommendation if score ≥ 7.5
+  const topPending = matches
+    .filter(m => m.status === 'pending')
+    .sort((a, b) => b.score - a.score)[0];
+
+  const handleAccept = async (matchId: string, autoNavigate = false) => {
     setAcceptingId(matchId);
     try {
       const result = await respond.mutateAsync({ matchId, action: 'accept' });
-      if (result.guestUrl) setSessionUrl(result.guestUrl);
+      if (result.guestUrl) {
+        setSessionUrl(result.guestUrl);
+        if (autoNavigate && result.sessionId) {
+          navigate(`/fabric/${result.sessionId}?listingId=${listing.id}`);
+        }
+      }
     } finally {
       setAcceptingId(null);
     }
@@ -403,15 +425,23 @@ function ListingSection({ listing }: { listing: DiscoveryListing }) {
         <p style={{ color: 'rgba(161,161,170,0.4)', fontSize: '12px', padding: '8px 0' }}>
           Listing is {listing.status} — no new matches will be scored.
         </p>
-      ) : isLoading ? (
-        <p style={{ color: 'var(--text-secondary)', fontSize: '13px', padding: '16px 0' }}>Loading matches…</p>
+      ) : isLoading || refresh.isPending ? (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '16px 0', color: 'var(--text-secondary)', fontSize: '13px' }}>
+          <span style={{
+            width: '14px', height: '14px', borderRadius: '50%', flexShrink: 0,
+            border: '2px solid rgba(167,139,250,0.3)', borderTopColor: 'var(--purple)',
+            animation: 'ls-spin 0.8s linear infinite', display: 'inline-block',
+          }} />
+          <style>{`@keyframes ls-spin { to { transform: rotate(360deg); } }`}</style>
+          Claude is scanning for matches…
+        </div>
       ) : matches.length === 0 ? (
         <div style={{
           background: 'rgba(28,28,34,0.4)', border: '1px solid var(--border)',
           borderRadius: '10px', padding: '20px', textAlign: 'center',
         }}>
           <p style={{ color: 'var(--text-secondary)', fontSize: '13px', margin: '0 0 10px' }}>
-            No matches yet — Claude is scanning the board.
+            No matches on the board yet — check back soon.
           </p>
           <button
             onClick={() => refresh.mutate(listing.id)}
@@ -421,16 +451,52 @@ function ListingSection({ listing }: { listing: DiscoveryListing }) {
               color: 'var(--purple)', cursor: 'pointer',
             }}
           >
-            Check now
+            Rescan now
           </button>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          {/* Claude recommends banner */}
+          {topPending && topPending.score >= 7.5 && (
+            <div style={{
+              background: 'linear-gradient(135deg, rgba(167,139,250,0.08), rgba(167,139,250,0.04))',
+              border: '1px solid rgba(167,139,250,0.3)',
+              borderRadius: '12px', padding: '14px 16px',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              flexWrap: 'wrap', gap: '10px',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <span style={{ fontSize: '16px' }}>✦</span>
+                <div>
+                  <p style={{ color: 'var(--purple)', fontWeight: 700, fontSize: '13px', margin: '0 0 2px' }}>
+                    Claude recommends this match
+                  </p>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '12px', margin: 0 }}>
+                    Score {topPending.score.toFixed(1)} · {topPending.matched_listing?.title ?? 'Unknown'}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => handleAccept(topPending.id, true)}
+                disabled={acceptingId === topPending.id}
+                style={{
+                  background: 'linear-gradient(135deg, rgba(167,139,250,0.22), rgba(167,139,250,0.12))',
+                  border: '1px solid rgba(167,139,250,0.4)',
+                  borderRadius: '9px', padding: '8px 16px',
+                  fontSize: '12px', fontWeight: 700, color: 'var(--purple)',
+                  cursor: 'pointer', whiteSpace: 'nowrap',
+                }}
+              >
+                {acceptingId === topPending.id ? 'Starting…' : 'Accept & start →'}
+              </button>
+            </div>
+          )}
+
           {matches.map(m => (
             <MatchCard
               key={m.id}
               match={m}
-              onAccept={handleAccept}
+              onAccept={id => handleAccept(id)}
               onReject={id => respond.mutate({ matchId: id, action: 'reject' })}
               accepting={acceptingId === m.id}
             />
@@ -447,8 +513,16 @@ export default function DiscoveryMatches() {
   const { address } = useAccount();
   const [searchParams] = useSearchParams();
   const highlightId = searchParams.get('listingId');
+  const qc = useQueryClient();
 
   const { data: myListings = [], isLoading } = useMyListings();
+
+  // Invalidate badge when this page is visited (user has seen their matches)
+  useEffect(() => {
+    if (address) {
+      qc.invalidateQueries({ queryKey: ['discovery-summary', address] });
+    }
+  }, [address, qc]);
 
   const sorted = highlightId
     ? [...myListings.filter(l => l.id === highlightId), ...myListings.filter(l => l.id !== highlightId)]

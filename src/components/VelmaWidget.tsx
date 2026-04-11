@@ -237,7 +237,7 @@ function VelmaSprite({ tier, color, mood }: { tier: VisualTier; color: string; m
     case 1: return <Sprite8bit color={color} mood={mood} />;
     case 2: return <Sprite16bit color={color} mood={mood} />;
     case 3: return <Sprite32bit color={color} mood={mood} />;
-    case 4: return <SpriteHolographic color={color} mood={mood} />;
+    case 4: return <SpriteHolographic color={color} />;
   }
 }
 

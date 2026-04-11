@@ -5,6 +5,7 @@ import { useAccount, useDisconnect } from 'wagmi';
 import { useSendTrust, useTrustBalance } from '../hooks/useSendTrust';
 import { useGateCheck, TIER_LABELS, TIER_COLORS } from '../hooks/useGateCheck';
 import { useTheme } from '../hooks/useTheme';
+import { useMatchBadge } from '../hooks/useMatchBadge';
 
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -19,6 +20,7 @@ export default function Navbar() {
   const balance = useTrustBalance();
   const { tier } = useGateCheck();
   const { theme, toggleTheme } = useTheme();
+  const pendingMatches = useMatchBadge();
 
   const navLinks = [
     { to: '/install', label: 'Install' },
@@ -82,6 +84,10 @@ export default function Navbar() {
                   background: isActive(link.to) ? 'rgba(56, 189, 248, 0.08)' : 'transparent',
                   transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                   fontWeight: isActive(link.to) ? 500 : 400,
+                  position: 'relative',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px',
                 }}
                 onMouseEnter={(e) => {
                   if (!isActive(link.to)) {
@@ -97,6 +103,17 @@ export default function Navbar() {
                 }}
               >
                 {link.label}
+                {link.to === '/discover' && pendingMatches > 0 && (
+                  <span style={{
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                    minWidth: '16px', height: '16px', borderRadius: '8px',
+                    background: 'var(--purple)', color: '#fff',
+                    fontSize: '9px', fontWeight: 800, letterSpacing: '0',
+                    padding: '0 4px', lineHeight: 1,
+                  }}>
+                    {pendingMatches > 9 ? '9+' : pendingMatches}
+                  </span>
+                )}
               </Link>
             ))}
             {/* More dropdown */}

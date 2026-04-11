@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useSearchParams } from 'react-router-dom';
 
 // ── Types ─────────────────────────────────────────────────────────
 
@@ -515,18 +515,50 @@ function WaitingCard({ hostName }: { hostName: string }) {
 
 export default function Fabric() {
   const { sessionId = 'abc123' } = useParams<{ sessionId: string }>();
+  const [searchParams] = useSearchParams();
+  const listingId = searchParams.get('listingId');
+
   const session = useMockSession(sessionId);
 
   const [pageState, setPageState] = useState<PageState>('form');
   const [activeIndex, setActiveIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
-  const [visibleUpTo, setVisibleUpTo] = useState(0); // how many questions are visible
+  const [visibleUpTo, setVisibleUpTo] = useState(0);
+  const [prefilling, setPrefilling] = useState(false);
+  const [prefillDone, setPrefillDone] = useState(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     injectKeyframes();
   }, []);
+
+  // Pre-fill answers from Discovery listing via Claude
+  const handlePrefill = async () => {
+    if (!listingId || prefilling) return;
+    setPrefilling(true);
+    try {
+      const res = await fetch('/api/discovery/prefill', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          listingId,
+          questions: session.questions.map(q => ({ id: q.id, label: q.label })),
+        }),
+      });
+      if (!res.ok) throw new Error('prefill failed');
+      const { answers: drafted } = await res.json() as { answers: Record<string, string> };
+      setAnswers(drafted);
+      // Reveal all questions at once in review mode
+      setVisibleUpTo(session.questions.length);
+      setActiveIndex(session.questions.length - 1);
+      setPrefillDone(true);
+    } catch {
+      // silently fail — user can still fill manually
+    } finally {
+      setPrefilling(false);
+    }
+  };
 
   // Reveal first question after brief delay
   useEffect(() => {
@@ -660,6 +692,67 @@ export default function Fabric() {
             <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{session.hostName}</span>
             {' '}invited you to align on this together. Answer {session.questions.length} quick questions — no account needed.
           </p>
+
+          {/* Pre-fill from Discovery listing */}
+          {listingId && !prefillDone && pageState === 'form' && (
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              flexWrap: 'wrap', gap: '10px',
+              background: 'rgba(167,139,250,0.06)', border: '1px solid rgba(167,139,250,0.2)',
+              borderRadius: '12px', padding: '12px 16px', marginTop: '20px',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <span style={{ fontSize: '16px' }}>✦</span>
+                <div>
+                  <p style={{ color: 'var(--purple)', fontWeight: 700, fontSize: '13px', margin: '0 0 2px' }}>
+                    Claude can draft your answers
+                  </p>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '12px', margin: 0 }}>
+                    From your Discovery listing — review before submitting
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={handlePrefill}
+                disabled={prefilling}
+                style={{
+                  background: 'linear-gradient(135deg, rgba(167,139,250,0.2), rgba(167,139,250,0.1))',
+                  border: '1px solid rgba(167,139,250,0.4)',
+                  borderRadius: '9px', padding: '8px 14px',
+                  fontSize: '12px', fontWeight: 700, color: 'var(--purple)',
+                  cursor: prefilling ? 'not-allowed' : 'pointer',
+                  display: 'flex', alignItems: 'center', gap: '7px',
+                }}
+              >
+                {prefilling ? (
+                  <>
+                    <span style={{
+                      width: '12px', height: '12px', borderRadius: '50%',
+                      border: '2px solid rgba(167,139,250,0.3)', borderTopColor: 'var(--purple)',
+                      animation: 'fabric-spin 0.8s linear infinite', display: 'inline-block',
+                    }} />
+                    Drafting…
+                  </>
+                ) : 'Draft my answers →'}
+              </button>
+            </div>
+          )}
+
+          {/* Pre-fill done banner */}
+          {prefillDone && pageState === 'form' && (
+            <div style={{
+              background: 'rgba(74,222,128,0.05)', border: '1px solid rgba(74,222,128,0.2)',
+              borderRadius: '12px', padding: '10px 14px', marginTop: '16px',
+              display: 'flex', alignItems: 'center', gap: '8px',
+            }}>
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                <path d="M2 7l4 4 6-6" stroke="var(--green)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              <p style={{ color: 'var(--green)', fontSize: '12px', fontWeight: 600, margin: 0 }}>
+                Claude drafted your answers — review each one and edit anything before submitting.
+              </p>
+            </div>
+          )}
 
           {/* Host attribution */}
           <div style={{

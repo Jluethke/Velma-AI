@@ -502,8 +502,8 @@ export default function DiscoveryNew() {
                   }}>{r}</p>
                   <p style={{ color: 'var(--text-secondary)', fontSize: '13px', margin: 0 }}>
                     {r === 'host'
-                      ? 'You're initiating — you have the need or the project.'
-                      : 'You're responding — you bring the skill, service, or resource.'}
+                      ? "You\u2019re initiating \u2014 you have the need or the project."
+                      : "You\u2019re responding \u2014 you bring the skill, service, or resource."}
                   </p>
                 </button>
               ))}
@@ -525,7 +525,7 @@ export default function DiscoveryNew() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '18px', marginBottom: '8px' }}>
               {[
                 { key: 'title' as const, label: 'Title', placeholder: 'e.g. Looking for an executive coach in SaaS', rows: undefined },
-                { key: 'description' as const, label: 'What you're looking for *', placeholder: 'Describe your goals, situation, and ideal match…', rows: 5 },
+                { key: 'description' as const, label: "What you\u2019re looking for *", placeholder: 'Describe your goals, situation, and ideal match\u2026', rows: 5 },
                 { key: 'market' as const, label: 'Market / Location (optional)', placeholder: 'e.g. US · B2B · Series A', rows: undefined },
                 { key: 'tags' as const, label: 'Tags — comma-separated (optional)', placeholder: 'remote, fintech, $500k ARR', rows: undefined },
               ].map(field => (
