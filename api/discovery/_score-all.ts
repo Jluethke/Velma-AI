@@ -9,7 +9,7 @@
 
 import type { IncomingMessage, ServerResponse } from 'http';
 import { getListings } from './_db.js';
-import { scoreAndPersist } from './score.js';
+import { scoreAndPersist } from './_score.js';
 
 function json(res: ServerResponse, status: number, body: unknown) {
   res.writeHead(status, { 'Content-Type': 'application/json' });
