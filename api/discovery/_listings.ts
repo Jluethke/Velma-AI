@@ -52,7 +52,13 @@ export default async function handler(
       });
       json(res, 200, { listings });
     } catch (err) {
-      json(res, 500, { error: String(err) });
+      const msg = String(err);
+      // Return empty board when Supabase isn't configured rather than a hard 500
+      if (msg.includes('SUPABASE_NOT_CONFIGURED')) {
+        json(res, 200, { listings: [] });
+        return;
+      }
+      json(res, 500, { error: msg });
     }
     return;
   }

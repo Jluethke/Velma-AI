@@ -97,6 +97,7 @@ function baseHeaders() {
 }
 
 async function supaFetch(path: string, init?: RequestInit) {
+  if (!SUPABASE_URL) throw new Error('SUPABASE_NOT_CONFIGURED');
   const url = `${SUPABASE_URL}/rest/v1/${path}`;
   const res = await fetch(url, { ...init, headers: { ...baseHeaders(), ...(init?.headers ?? {}) } });
   if (!res.ok) {

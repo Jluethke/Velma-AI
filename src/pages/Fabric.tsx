@@ -85,11 +85,13 @@ async function fetchSession(sessionId: string): Promise<LiveSession | null> {
 
 async function triggerSynthesis(sessionId: string, hostToken: string): Promise<void> {
   const apiKey = localStorage.getItem('flowfabric-anthropic-key') ?? undefined;
-  await fetch(`/api/fabric/${sessionId}/synthesize`, {
+  const res = await fetch(`/api/fabric/${sessionId}/synthesize`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ hostToken, apiKey }),
   });
+  if (res.status === 402) throw new Error('NO_API_KEY');
+  if (!res.ok) throw new Error(`synthesis_failed_${res.status}`);
 }
 
 // ── Animation keyframes injected once ────────────────────────────
@@ -575,6 +577,7 @@ export default function Fabric() {
   const [prefilling, setPrefilling] = useState(false);
   const [prefillDone, setPrefillDone] = useState(false);
   const [synthesisOutput, setSynthesisOutput] = useState('');
+  const [synthError, setSynthError] = useState<'no_api_key' | 'failed' | null>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const pollRef   = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -598,7 +601,18 @@ export default function Fabric() {
   // ── Polling — runs after submit until synthesis is complete ──────
   const startPolling = () => {
     if (pollRef.current) return;
+    // Give up after 3 minutes
+    const deadline = Date.now() + 3 * 60 * 1000;
+
     pollRef.current = setInterval(async () => {
+      if (Date.now() > deadline) {
+        clearInterval(pollRef.current!);
+        pollRef.current = null;
+        setSynthError('failed');
+        setPageState('error');
+        return;
+      }
+
       const updated = await fetchSession(sessionId);
       if (!updated) return;
       setLiveSession(updated);
@@ -610,9 +624,24 @@ export default function Fabric() {
         clearInterval(pollRef.current!);
         pollRef.current = null;
         witnessEvent('synthesis_triggered', 'synthesis_triggered', 'synthesis_triggered');
-        await triggerSynthesis(sessionId, hostToken);
-        // Re-poll to pick up the completed synthesis
+        try {
+          await triggerSynthesis(sessionId, hostToken);
+        } catch (err) {
+          const isKeyMissing = err instanceof Error && err.message === 'NO_API_KEY';
+          setSynthError(isKeyMissing ? 'no_api_key' : 'failed');
+          setPageState('error');
+          return;
+        }
+        // Re-poll to pick up the completed synthesis — 2-minute inner deadline
+        const innerDeadline = Date.now() + 2 * 60 * 1000;
         pollRef.current = setInterval(async () => {
+          if (Date.now() > innerDeadline) {
+            clearInterval(pollRef.current!);
+            pollRef.current = null;
+            setSynthError('failed');
+            setPageState('error');
+            return;
+          }
           const final = await fetchSession(sessionId);
           if (final?.synthesis?.status === 'complete') {
             clearInterval(pollRef.current!);
@@ -718,7 +747,14 @@ export default function Fabric() {
       if (isHost && hostToken && result.readyForSynthesis) {
         setPageState('waiting');
         witnessEvent('synthesis_triggered', 'synthesis_triggered', 'synthesis_triggered');
-        await triggerSynthesis(sessionId, hostToken);
+        try {
+          await triggerSynthesis(sessionId, hostToken);
+        } catch (err) {
+          const isKeyMissing = err instanceof Error && err.message === 'NO_API_KEY';
+          setSynthError(isKeyMissing ? 'no_api_key' : 'failed');
+          setPageState('error');
+          return;
+        }
         startPolling();
       } else {
         setPageState('waiting');
@@ -991,32 +1027,85 @@ export default function Fabric() {
           <div style={{
             textAlign: 'center',
             padding: '48px 32px',
-            background: 'rgba(248,113,113,0.05)',
-            border: '1px solid rgba(248,113,113,0.2)',
+            background: synthError === 'no_api_key' ? 'rgba(167,139,250,0.04)' : 'rgba(248,113,113,0.05)',
+            border: `1px solid ${synthError === 'no_api_key' ? 'rgba(167,139,250,0.25)' : 'rgba(248,113,113,0.2)'}`,
             borderRadius: '20px',
             animation: 'fabric-fade-up 0.4s ease both',
           }}>
-            <p style={{ color: 'var(--red)', fontWeight: 600, margin: '0 0 8px', fontSize: '16px' }}>
-              Something went wrong
-            </p>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '14px', margin: '0 0 20px' }}>
-              Couldn't submit your answers. Please try again.
-            </p>
-            <button
-              onClick={() => setPageState('form')}
-              style={{
-                background: 'rgba(248,113,113,0.1)',
-                border: '1px solid rgba(248,113,113,0.3)',
-                borderRadius: '10px',
-                padding: '10px 20px',
-                color: 'var(--red)',
-                fontSize: '14px',
-                fontWeight: 600,
-                cursor: 'pointer',
-              }}
-            >
-              Try again
-            </button>
+            {synthError === 'no_api_key' ? (
+              <>
+                <p style={{ color: 'var(--purple)', fontWeight: 700, margin: '0 0 8px', fontSize: '16px' }}>
+                  Claude API key required
+                </p>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '14px', margin: '0 0 20px', lineHeight: 1.6 }}>
+                  Both sides submitted successfully. To run synthesis, the host needs to add an Anthropic API key in Settings.
+                </p>
+                <Link
+                  to="/settings"
+                  style={{
+                    display: 'inline-block',
+                    background: 'linear-gradient(135deg, rgba(167,139,250,0.2), rgba(167,139,250,0.1))',
+                    border: '1px solid rgba(167,139,250,0.4)',
+                    borderRadius: '10px',
+                    padding: '10px 20px',
+                    color: 'var(--purple)',
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    textDecoration: 'none',
+                  }}
+                >
+                  Go to Settings →
+                </Link>
+              </>
+            ) : (
+              <>
+                <p style={{ color: 'var(--red)', fontWeight: 600, margin: '0 0 8px', fontSize: '16px' }}>
+                  {synthError === 'failed' ? 'Synthesis failed' : 'Something went wrong'}
+                </p>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '14px', margin: '0 0 20px' }}>
+                  {synthError === 'failed'
+                    ? 'Both answers are saved. Synthesis could not complete — check your API key in Settings and try again.'
+                    : "Couldn't submit your answers. Please try again."}
+                </p>
+                <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                  {synthError === 'failed' && (
+                    <Link
+                      to="/settings"
+                      style={{
+                        display: 'inline-block',
+                        background: 'rgba(248,113,113,0.08)',
+                        border: '1px solid rgba(248,113,113,0.25)',
+                        borderRadius: '10px',
+                        padding: '10px 20px',
+                        color: 'var(--red)',
+                        fontSize: '14px',
+                        fontWeight: 600,
+                        textDecoration: 'none',
+                      }}
+                    >
+                      Check Settings
+                    </Link>
+                  )}
+                  {!synthError && (
+                    <button
+                      onClick={() => { setSynthError(null); setPageState('form'); }}
+                      style={{
+                        background: 'rgba(248,113,113,0.1)',
+                        border: '1px solid rgba(248,113,113,0.3)',
+                        borderRadius: '10px',
+                        padding: '10px 20px',
+                        color: 'var(--red)',
+                        fontSize: '14px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Try again
+                    </button>
+                  )}
+                </div>
+              </>
+            )}
           </div>
         )}
 
