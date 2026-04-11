@@ -90,27 +90,30 @@ function App() {
     <BrowserRouter>
       <MobileBanner />
       <Navbar />
-      <Routes>
-        {/* Public */}
-        <Route path="/" element={<Landing />} />
-        <Route path="/docs" element={<Docs />} />
-        <Route path="/whitepaper" element={<Whitepaper />} />
-        <Route path="/pricing" element={<Pricing />} />
-        <Route path="/get-started" element={<GettingStarted />} />
+      {/* page-wrap clips horizontal overflow without touching fixed Navbar/Banner */}
+      <div style={{ overflowX: 'hidden', width: '100%', position: 'relative' }}>
+        <Routes>
+          {/* Public */}
+          <Route path="/" element={<Landing />} />
+          <Route path="/docs" element={<Docs />} />
+          <Route path="/whitepaper" element={<Whitepaper />} />
+          <Route path="/pricing" element={<Pricing />} />
+          <Route path="/get-started" element={<GettingStarted />} />
 
-        {/* Content */}
-        <Route path="/skills" element={<Explore />} />
-        <Route path="/explore" element={<Explore />} />
-        <Route path="/chains" element={<Chains />} />
-        <Route path="/skill/:name" element={<SkillDetail />} />
-        <Route path="/compose" element={<ChainComposer />} />
-        <Route path="/install" element={<Install />} />
-        <Route path="/memory" element={<Memory />} />
-        <Route path="/bounties" element={<Bounties />} />
-        <Route path="/activity" element={<Activity />} />
-        <Route path="/leaderboard" element={<Leaderboard />} />
-      </Routes>
-      <Footer />
+          {/* Content */}
+          <Route path="/skills" element={<Explore />} />
+          <Route path="/explore" element={<Explore />} />
+          <Route path="/chains" element={<Chains />} />
+          <Route path="/skill/:name" element={<SkillDetail />} />
+          <Route path="/compose" element={<ChainComposer />} />
+          <Route path="/install" element={<Install />} />
+          <Route path="/memory" element={<Memory />} />
+          <Route path="/bounties" element={<Bounties />} />
+          <Route path="/activity" element={<Activity />} />
+          <Route path="/leaderboard" element={<Leaderboard />} />
+        </Routes>
+        <Footer />
+      </div>
     </BrowserRouter>
   );
 }
