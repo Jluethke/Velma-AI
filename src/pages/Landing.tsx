@@ -6,6 +6,108 @@ import SkillShowcase from '../components/SkillShowcase';
 import FAQ from '../components/FAQ';
 import FabricWalkthrough from '../components/FabricWalkthrough';
 
+// ── Discovery Section ─────────────────────────────────────────────
+
+function DiscoverySection() {
+  const posts = [
+    { role: 'host', flow: 'kitchen-renovation', title: 'Need a kitchen designer in Austin', desc: 'Open plan reno, ~$40K budget. Looking for someone who has done modern-farmhouse before.', color: 'var(--cyan)', score: null },
+    { role: 'guest', flow: 'interior-design-consult', title: 'Interior designer — Austin & remote', desc: 'Specialising in open-plan residential. Portfolio: 12 completed kitchens 2023–24.', color: 'var(--purple)', score: 9.2 },
+    { role: 'guest', flow: 'contractor-bid', title: 'Licensed GC — kitchens & baths', desc: 'Base in Austin. Modern builds preferred. Availability: Q3 2026.', color: 'var(--green)', score: 7.8 },
+  ];
+
+  return (
+    <section className="px-6 py-24 max-w-5xl mx-auto">
+      <div className="flex justify-center mb-8">
+        <span
+          className="text-xs font-semibold px-3 py-1.5 rounded-full flex items-center gap-2"
+          style={{
+            background: 'rgba(56,189,248,0.08)',
+            border: '1px solid rgba(56,189,248,0.2)',
+            color: 'var(--cyan)',
+            letterSpacing: '0.04em',
+          }}
+        >
+          <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--cyan)', display: 'inline-block' }} />
+          Fabric Discovery
+        </span>
+      </div>
+
+      <div className="text-center mb-16">
+        <h2
+          className="text-3xl md:text-5xl font-bold mb-4"
+          style={{ color: 'var(--text-primary)', letterSpacing: '-0.02em' }}
+        >
+          The network that finds{' '}
+          <span style={{ color: 'var(--cyan)' }}>the other end.</span>
+        </h2>
+        <p className="text-sm md:text-base max-w-2xl mx-auto" style={{ color: 'var(--text-secondary)', lineHeight: 1.7 }}>
+          Post what you need in plain English. Claude reads every listing on the board, scores the best counterparts, and puts everyone in the same Fabric session. No search. No cold outreach. No back-and-forth.
+        </p>
+      </div>
+
+      {/* Mock discovery board */}
+      <div className="glass-card p-5 md:p-8 max-w-2xl mx-auto mb-12" style={{ borderColor: 'rgba(56,189,248,0.15)' }}>
+        <div className="flex items-center gap-2 mb-6 pb-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+          <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--cyan)', display: 'inline-block', boxShadow: '0 0 8px rgba(56,189,248,0.8)' }} />
+          <span className="text-xs font-mono font-semibold" style={{ color: 'var(--cyan)' }}>discovery board</span>
+          <span className="text-xs ml-auto px-2 py-0.5 rounded-full font-semibold" style={{ background: 'rgba(56,189,248,0.1)', color: 'var(--cyan)', border: '1px solid rgba(56,189,248,0.2)' }}>Claude scoring&hellip;</span>
+        </div>
+
+        <div className="flex flex-col gap-3">
+          {posts.map((post, i) => (
+            <div key={i} className="rounded-xl p-4" style={{ background: i === 0 ? `rgba(56,189,248,0.04)` : 'rgba(255,255,255,0.02)', border: `1px solid ${post.color}20` }}>
+              <div className="flex items-start justify-between gap-3 mb-2">
+                <div>
+                  <span className="text-[10px] uppercase tracking-widest font-semibold mr-2" style={{ color: post.color, opacity: 0.7 }}>{post.role}</span>
+                  <span className="text-xs font-mono" style={{ color: 'var(--text-secondary)', opacity: 0.4 }}>{post.flow}</span>
+                </div>
+                {post.score !== null && (
+                  <span className="text-xs font-bold px-2 py-0.5 rounded-full shrink-0" style={{ background: post.score >= 9 ? 'rgba(74,222,128,0.12)' : 'rgba(251,191,36,0.1)', color: post.score >= 9 ? 'var(--green)' : 'var(--gold)', border: `1px solid ${post.score >= 9 ? 'rgba(74,222,128,0.25)' : 'rgba(251,191,36,0.2)'}` }}>
+                    {post.score} match
+                  </span>
+                )}
+              </div>
+              <div className="text-sm font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>{post.title}</div>
+              <div className="text-xs leading-relaxed" style={{ color: 'var(--text-secondary)' }}>{post.desc}</div>
+              {post.score !== null && post.score >= 9 && (
+                <div className="mt-3 text-xs py-2 rounded-lg font-semibold text-center cursor-default" style={{ background: 'rgba(74,222,128,0.08)', border: '1px solid rgba(74,222,128,0.2)', color: 'var(--green)' }}>
+                  Accept &amp; start Fabric session &rarr;
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Three pillars */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-16">
+        {[
+          { title: 'Every industry. Every role.', desc: 'Homeowners and contractors. Founders and investors. Freelancers and clients. Candidates and hiring managers. The board is open to any intent, any market, any size.', color: 'var(--cyan)' },
+          { title: 'Claude reads both sides.', desc: 'AI scores every possible match on your behalf — reviewing descriptions, context, and fit. You see the reasoning, set the threshold, and decide. The human always makes the call.', color: 'var(--purple)' },
+          { title: 'One tap into a structured session.', desc: 'Accepting a match creates a Fabric alignment session instantly. Both parties enter with their context. The flow mediates. No scheduling, no cold DMs, no wasted calls.', color: 'var(--green)' },
+        ].map(card => (
+          <div key={card.title} className="glass-card p-5" style={{ borderColor: `${card.color}10` }}>
+            <div className="text-xs font-bold mb-2" style={{ color: card.color }}>{card.title}</div>
+            <p className="text-xs leading-relaxed" style={{ color: 'var(--text-secondary)' }}>{card.desc}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="text-center">
+        <Link
+          to="/discover"
+          className="btn-primary inline-flex items-center gap-2 px-8 py-3 text-sm font-semibold no-underline"
+        >
+          Post your first listing &rarr;
+        </Link>
+        <p className="text-xs mt-4" style={{ color: 'var(--text-secondary)', opacity: 0.4 }}>
+          Free &middot; No account &middot; Claude handles the search
+        </p>
+      </div>
+    </section>
+  );
+}
+
 // ── 3-D tilt helper ───────────────────────────────────────────────
 
 function useTilt() {
@@ -445,7 +547,7 @@ function FabricSection() {
           }}
         >
           <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--purple)', display: 'inline-block' }} />
-          Coming soon
+          Fabric Sessions
         </span>
       </div>
 
@@ -454,12 +556,14 @@ function FabricSection() {
           className="text-3xl md:text-5xl font-bold mb-4"
           style={{ color: 'var(--text-primary)', letterSpacing: '-0.02em' }}
         >
-          The structure underneath every{' '}
-          <span style={{ color: 'var(--purple)' }}>conversation that matters.</span>
+          Put everyone in the{' '}
+          <span style={{ color: 'var(--purple)' }}>same room.</span>
         </h2>
         <p className="text-sm md:text-base max-w-2xl mx-auto" style={{ color: 'var(--text-secondary)', lineHeight: 1.7 }}>
-          Fabric connects two people's flows into a shared session. Each side brings their context privately.
-          The flow mediates. Both humans decide. No account needed for the other person — just a link.
+          Discovery finds your match. Fabric is what happens next.
+          Each side enters their context privately. The flow mediates.
+          Both parties see the synthesis and decide together.
+          No account needed for the other person &mdash; just a link.
         </p>
       </div>
 
@@ -473,6 +577,12 @@ function FabricSection() {
           <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--purple)', display: 'inline-block', boxShadow: '0 0 8px rgba(167,139,250,0.8)' }} />
           <span className="text-xs font-mono font-semibold" style={{ color: 'var(--purple)' }}>contract-scope-alignment</span>
           <span className="text-xs ml-auto font-semibold uppercase tracking-widest" style={{ color: 'var(--purple)', opacity: 0.5 }}>Fabric</span>
+        </div>
+
+        {/* Privacy notice */}
+        <div className="flex items-center justify-center gap-1.5 mb-4 text-xs" style={{ color: 'var(--text-secondary)', opacity: 0.45 }}>
+          <span>&#128274;</span>
+          <span>Each side submits privately &mdash; neither party sees the other&apos;s raw inputs</span>
         </div>
 
         {/* Two sides */}
@@ -541,9 +651,9 @@ function FabricSection() {
       {/* Three truths */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-16">
         {[
-          { title: 'Human in the loop. Always.', desc: 'Each side approves what gets shared. The flow structures the conversation — the humans make the call.', color: 'var(--cyan)' },
+          { title: 'Your answers stay private.', desc: "Each side submits their own context independently. The other party never sees your raw inputs — only the synthesis. What you share is between you and the flow.", color: 'var(--cyan)' },
           { title: 'No account needed.', desc: 'Send anyone a link. They answer their side in the browser. No install, no signup, no friction.', color: 'var(--purple)' },
-          { title: 'Both sides leave with clarity.', desc: 'Where you agree. Where you don\'t. A concrete path forward. Built on both contexts, not assumptions.', color: 'var(--green)' },
+          { title: 'Works for any transaction.', desc: 'A contract scope call. A kitchen brief to three builders. A co-founder alignment. A sales call where both sides prep first. The flow is what makes it structured.', color: 'var(--green)' },
         ].map(card => (
           <TiltCard key={card.title} color={card.color}>
             <div className="text-xs font-bold mb-2" style={{ color: card.color }}>{card.title}</div>
@@ -554,14 +664,14 @@ function FabricSection() {
 
       <div className="text-center">
         <Link
-          to="/get-started"
+          to="/discover"
           className="btn-primary inline-flex items-center gap-2 px-8 py-3 text-sm font-semibold no-underline"
           style={{ borderColor: 'rgba(167,139,250,0.4)', background: 'rgba(167,139,250,0.1)', color: 'var(--purple)' }}
         >
-          Start a Fabric session →
+          Find your match &rarr;
         </Link>
         <p className="text-xs mt-4" style={{ color: 'var(--text-secondary)', opacity: 0.4 }}>
-          Host pays. Guest never needs an account.
+          Post free &middot; Claude scores &middot; One tap to Fabric
         </p>
       </div>
     </section>
@@ -576,6 +686,7 @@ export default function Landing() {
       <HeroSection />
       <CategoryPicker />
       <SkillShowcase />
+      <DiscoverySection />
       <FabricSection />
       <FabricWalkthrough />
       <ComposerPreview />

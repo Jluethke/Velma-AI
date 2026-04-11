@@ -186,7 +186,7 @@ export default function HeroSection() {
 
       <div className="relative z-10 max-w-4xl mx-auto text-center">
 
-        {/* MCP pill */}
+        {/* Pill */}
         <div className="flex justify-center mb-8 animate-fade-in-up px-4">
           <span
             className="text-xs font-semibold px-3 py-1.5 rounded-full flex items-center gap-2 text-center"
@@ -199,7 +199,7 @@ export default function HeroSection() {
             }}
           >
             <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--green)', display: 'inline-block', flexShrink: 0, boxShadow: '0 0 6px rgba(74,222,128,0.8)' }} />
-            165+ proven flows · runs in Claude
+            165+ proven flows &middot; AI matchmaking &middot; runs in Claude
           </span>
         </div>
 
@@ -217,12 +217,14 @@ export default function HeroSection() {
           }}
         >
           <span style={{ color: 'var(--text-primary)' }}>Flows.</span>
+          {' '}
+          <span style={{ color: 'var(--purple)' }}>Fabric.</span>
           <br />
           <span
             className="gradient-text"
             style={{ filter: 'drop-shadow(0 0 24px rgba(56,189,248,0.18))' }}
           >
-            And Fabric.
+            Discovery.
           </span>
         </h1>
 
@@ -232,15 +234,16 @@ export default function HeroSection() {
           style={{ color: 'var(--text-secondary)', lineHeight: 1.75, overflowWrap: 'break-word' }}
         >
           Expert procedures for what you need to do.
-          Shared sessions for what you need to work through with someone else.
+          Shared sessions for what you need to work through together.
+          And AI that finds who you need to work with.
         </p>
 
         <p
           className="text-sm mb-10 animate-fade-in-up stagger-2 px-2"
           style={{ color: 'var(--text-secondary)', opacity: 0.55, overflowWrap: 'break-word' }}
         >
-          Run alone.{' '}
-          <span style={{ color: 'var(--cyan)', opacity: 1 }}>Or weave together.</span>
+          Post what you need.{' '}
+          <span style={{ color: 'var(--cyan)', opacity: 1 }}>Claude finds the match. One tap starts a Fabric session.</span>
         </p>
 
         {/* CTAs */}
@@ -253,17 +256,17 @@ export default function HeroSection() {
             <span style={{ fontSize: 18 }}>→</span>
           </Link>
           <Link
-            to="/get-started"
+            to="/discover"
             className="btn-secondary inline-flex items-center gap-2 px-6 py-3 no-underline text-sm"
             style={{ borderColor: 'rgba(167,139,250,0.3)', color: 'var(--purple)' }}
           >
-            Join the Fabric waitlist <span>→</span>
+            Post to Discovery <span>→</span>
           </Link>
         </div>
 
         {/* Social proof */}
         <p className="text-xs mb-10 animate-fade-in-up stagger-3" style={{ color: 'var(--text-secondary)', opacity: 0.4 }}>
-          Free to start · No prompt engineering · Runs in Claude
+          Free to start &middot; No account needed &middot; Works across every industry
         </p>
 
         {/* Flow preview card */}

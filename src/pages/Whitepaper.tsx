@@ -26,7 +26,7 @@ export default function Whitepaper() {
       {/* Abstract */}
       <Section title="Abstract">
         <P>FlowFabric is a protocol for creating, validating, composing, and trading AI-executable procedures (flows) as network assets. Flows start as natural language instructions, gain trust through decentralized shadow validation, and can eventually compile into deterministic code — software born from conversation, proven by consensus.</P>
-        <P>The platform consists of three layers: an open flow marketplace (165+ flows and growing — no cap on contributions), a visual Composer for building multi-flow pipelines, and an on-chain trust economy (TRUST token on Base mainnet) where creators earn royalties and validators earn rewards.</P>
+        <P>The platform consists of four layers: an open flow marketplace (165+ flows and growing), a visual Composer for building multi-flow pipelines, Fabric — shared alignment sessions where two parties bring their private context and a flow mediates the exchange — and Fabric Discovery, an AI-powered matchmaking board where any user can post an intent and Claude finds, scores, and connects the best counterpart from across the network.</P>
         <P>Individual flows are free to run. Connecting flows into pipelines, creating new flows, and publishing on-chain require TRUST tokens — earned through contribution, not purchase.</P>
       </Section>
 
@@ -82,6 +82,16 @@ export default function Whitepaper() {
           </table>
         </div>
         <P>A compiled flow runs as deterministic code — zero token cost, instant execution, AI-independent. This is software born from natural language and proven through decentralized consensus. It has never existed before.</P>
+      </Section>
+
+      {/* 3.5 Fabric & Discovery */}
+      <Section title="3.5 Fabric Sessions and Discovery">
+        <P>Fabric is the multi-party layer of FlowFabric. A Fabric session connects two parties inside a shared flow — each side submits their private context (budget, goals, constraints, preferences) and the flow synthesises the inputs into a joint view: where they agree, where they differ, and a concrete path forward. Neither party sees the other's raw inputs — only the synthesis. Privacy is the design principle: the flow mediates, not exposes.</P>
+        <P>Fabric Discovery extends this into a matchmaking network. Any user can post a listing — a plain-English description of what they need, want to sell, or want to collaborate on. Claude reads every listing on the board, scores the best counterparts using a multi-factor alignment model, and surfaces ranked matches with reasoning. A single action by either party creates a Fabric session immediately.</P>
+        <H3>Discovery Use Cases</H3>
+        <P>The network is industry-agnostic. Examples: a homeowner posting a kitchen brief gets matched to designers and contractors who enter a scoped-project Fabric session; a startup founder looking for a co-founder gets scored against matching candidates; a freelancer advertising services gets matched to a client brief; a buyer and seller negotiate terms through a mediated flow. The format is identical across all cases — only the flow changes.</P>
+        <H3>Privacy Model</H3>
+        <P>Discovery listings are intentionally public — users post what they are comfortable advertising. Fabric sessions are private and ephemeral. Once a session is created, each party's answers are visible only to the synthesis layer; the other party never sees raw inputs. Sessions expire. No persistent profile is required. Wallet address is the only identity anchor.</P>
       </Section>
 
       {/* 4. Chain Composition */}
@@ -180,10 +190,11 @@ export default function Whitepaper() {
             <thead><tr style={{ background: 'var(--bg-card)' }}><th className="text-left px-4 py-2" style={t}>Platform</th><th className="text-left px-4 py-2" style={t}>Approach</th><th className="text-left px-4 py-2" style={t}>FlowFabric Advantage</th></tr></thead>
             <tbody style={t}>
               {[
-                ['OpenClaw', 'Runtime flow composition, messaging-first', 'No validation, no trust scores, no on-chain provenance'],
-                ['MemPalace', 'Tiered memory, spatial knowledge', 'L0–L3 tiered memory + temporal knowledge graph built into every flow run. MemPalace stops at memory; FlowFabric adds execution, validation, and a creator economy on top.'],
-                ['AutoGPT', 'Visual block graph, agent marketplace', 'Low-level blocks, no flow standard, no validation'],
-                ['Prompt Libraries', 'Shared text prompts', 'Unvalidated, no composition, no evolution path'],
+                ['OpenClaw', 'Runtime flow composition, messaging-first', 'No validation, no trust scores, no on-chain provenance, no matchmaking layer'],
+                ['MemPalace', 'Tiered memory, spatial knowledge', 'L0–L3 tiered memory + temporal knowledge graph built into every flow run. MemPalace stops at memory; FlowFabric adds execution, validation, a creator economy, and a Discovery network on top.'],
+                ['AutoGPT', 'Visual block graph, agent marketplace', 'Low-level blocks, no flow standard, no validation, no two-party session model'],
+                ['LinkedIn / marketplaces', 'Profiles, search, messaging', 'Discovery is AI-scored matching into a structured session — not a directory. The flow mediates the introduction. No cold outreach needed.'],
+                ['Prompt Libraries', 'Shared text prompts', 'Unvalidated, no composition, no evolution path, no matchmaking'],
               ].map(([platform, approach, advantage]) => (
                 <tr key={platform} style={{ borderTop: '1px solid var(--border)' }}>
                   <td className="px-4 py-2 font-medium" style={h}>{platform}</td>
@@ -194,7 +205,7 @@ export default function Whitepaper() {
             </tbody>
           </table>
         </div>
-        <P>FlowFabric is the only platform where flows evolve from natural language to compiled code through decentralized consensus, with derivative royalties enforced by smart contract.</P>
+        <P>FlowFabric is the only platform where flows evolve from natural language to compiled code through decentralized consensus, with derivative royalties enforced by smart contract — and the only network that uses AI matchmaking to route people into structured two-party sessions at the moment of intent.</P>
       </Section>
 
       {/* 9. Intellectual Property */}
@@ -207,8 +218,9 @@ export default function Whitepaper() {
       {/* 10. The Thesis */}
       <Section title="10. The Thesis">
         <P>AI capabilities will commoditize. Every model will be able to follow instructions. The scarce resource is not intelligence — it's proven, validated, composable procedures with known trust scores and verifiable provenance.</P>
-        <P>FlowFabric captures this value at the procedure layer. Flows are open infrastructure. Trust is the product. Composition is the premium feature. Evolution to code is the endgame.</P>
-        <P>The cost of bad behavior always exceeds the benefit. The cost of good behavior always decreases over time. The network gets better the more people use it. And every improvement compounds through derivative royalties.</P>
+        <P>But the deeper scarce resource is the right counterpart. The right builder for your renovation. The right investor for your round. The right candidate for the role. Finding them is expensive, slow, and full of friction. FlowFabric collapses that into: post your intent, let Claude find the match, one tap to a structured session.</P>
+        <P>FlowFabric captures value at two layers: the procedure layer (flows, chains, validation, creator economy) and the coordination layer (Discovery, Fabric sessions, AI-mediated alignment). Flows are open infrastructure. Trust is the product. Discovery is the distribution. And every session that runs is a data point that makes the matching better.</P>
+        <P>The cost of bad behavior always exceeds the benefit. The cost of good behavior always decreases over time. The network gets better the more people use it. And every improvement compounds through derivative royalties and a richer Discovery board.</P>
       </Section>
 
       {/* CTAs */}
