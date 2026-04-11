@@ -200,7 +200,7 @@ function CategoryTile({
         borderColor: selected ? `${cat.color}40` : 'rgba(255,255,255,0.06)',
         boxShadow: selected ? `0 0 20px ${cat.glow}` : 'none',
         minWidth: 0,
-        flex: '1 1 0',
+        width: '100%',
       }}
     >
       <span style={{ fontSize: 22, lineHeight: 1 }}>{cat.icon}</span>
@@ -238,9 +238,8 @@ export default function CategoryPicker() {
         </p>
       </div>
 
-      {/* Category tiles — outer clip prevents page-level overflow on iOS */}
-      <div style={{ overflow: 'hidden', marginBottom: '2rem' }}>
-      <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}>
+      {/* Category tiles — 5-col grid on mobile (2 rows), 9-col on desktop (1 row) */}
+      <div className="grid grid-cols-5 md:grid-cols-9 gap-2 mb-8">
         {CATEGORIES.map(cat => (
           <CategoryTile
             key={cat.id}
@@ -249,7 +248,6 @@ export default function CategoryPicker() {
             onClick={() => setSelected(cat.id)}
           />
         ))}
-      </div>
       </div>
 
       {/* Flow panel — animates on change */}
