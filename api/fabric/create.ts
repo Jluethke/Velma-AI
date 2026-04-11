@@ -10,7 +10,10 @@
 import type { IncomingMessage, ServerResponse } from "http";
 import { createSession } from "./_store.js";
 
-export default function handler(req: IncomingMessage & { body?: unknown; query?: Record<string, string> }, res: ServerResponse) {
+export default async function handler(
+  req: IncomingMessage & { body?: unknown; query?: Record<string, string> },
+  res: ServerResponse
+) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
@@ -35,7 +38,7 @@ export default function handler(req: IncomingMessage & { body?: unknown; query?:
     return;
   }
 
-  const session = createSession(body.flowSlug, body.title);
+  const session = await createSession(body.flowSlug, body.title);
 
   const host = req.headers?.host ?? "flowfabric.io";
   const baseUrl = process.env.FABRIC_BASE_URL ?? `https://${host}`;

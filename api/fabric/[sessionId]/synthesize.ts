@@ -14,7 +14,7 @@
 import type { IncomingMessage, ServerResponse } from "http";
 import { getSession, saveSession, publicView } from "../_store.js";
 
-export default function handler(
+export default async function handler(
   req: IncomingMessage & { body?: unknown; query?: Record<string, string> },
   res: ServerResponse
 ) {
@@ -41,7 +41,7 @@ export default function handler(
     return;
   }
 
-  const session = getSession(sessionId);
+  const session = await getSession(sessionId);
   if (!session) {
     res.writeHead(404, { "Content-Type": "application/json" });
     res.end(JSON.stringify({ error: "Session not found or expired" }));
@@ -74,9 +74,10 @@ export default function handler(
   session.synthesis.status = "ready";
   if (typeof body.output === "string") {
     session.synthesis.output = body.output;
+    session.synthesis.status = "complete";
   }
 
-  saveSession(session);
+  await saveSession(session);
 
   res.writeHead(200, { "Content-Type": "application/json" });
   res.end(JSON.stringify(publicView(session)));
