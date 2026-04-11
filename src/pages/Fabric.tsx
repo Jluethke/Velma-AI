@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useParams, Link, useSearchParams } from 'react-router-dom';
 
 // ── Types ─────────────────────────────────────────────────────────
@@ -9,33 +9,85 @@ interface Question {
   type: 'text';
 }
 
-interface FabricSession {
-  id: string;
-  title: string;
-  flowSlug: string;
-  hostName: string;
-  questions: Question[];
-  submissionDeadline?: number;
-  synthesis?: { status: string };
-}
-
 type PageState = 'loading' | 'form' | 'submitting' | 'waiting' | 'done' | 'error';
 
-// ── Mock data ─────────────────────────────────────────────────────
+// ── Flow questions registry ───────────────────────────────────────
+// Questions are defined per flow slug. Any flow not listed falls back
+// to the universal alignment set.
 
-function useMockSession(_sessionId: string): FabricSession {
-  return useMemo<FabricSession>(() => ({
-    id: 'abc123',
-    title: 'contract-scope-alignment',
-    flowSlug: 'contract-scope-alignment',
-    hostName: 'Jonathan',
-    questions: [
-      { id: 'budget',   label: "What's your budget range for this project?",      type: 'text' },
-      { id: 'timeline', label: 'What timeline works for you?',                    type: 'text' },
-      { id: 'priority', label: 'What matters most — speed, quality, or cost?',    type: 'text' },
-      { id: 'concerns', label: 'Any concerns or non-negotiables going in?',        type: 'text' },
-    ],
-  }), []);
+const UNIVERSAL_QUESTIONS: Question[] = [
+  { id: 'goals',     label: 'What are your main goals for this session?',          type: 'text' },
+  { id: 'context',   label: 'Give me the relevant context — situation, background.', type: 'text' },
+  { id: 'needs',     label: 'What do you need from the other party?',              type: 'text' },
+  { id: 'concerns',  label: 'Any concerns or non-negotiables going in?',           type: 'text' },
+];
+
+const FLOW_QUESTIONS: Record<string, Question[]> = {
+  'contract-scope-alignment': [
+    { id: 'budget',    label: 'What is your budget range for this project?',       type: 'text' },
+    { id: 'timeline',  label: 'What timeline works for you?',                      type: 'text' },
+    { id: 'priority',  label: 'What matters most \u2014 speed, quality, or cost?', type: 'text' },
+    { id: 'concerns',  label: 'Any concerns or non-negotiables going in?',         type: 'text' },
+  ],
+  'co-founder-alignment': [
+    { id: 'vision',    label: 'What is your vision for the company in 5 years?',   type: 'text' },
+    { id: 'role',      label: 'What role do you want to own long-term?',           type: 'text' },
+    { id: 'equity',    label: 'What split feels fair to you and why?',             type: 'text' },
+    { id: 'dealbreak', label: 'What would make you walk away from this partnership?', type: 'text' },
+  ],
+  'salary-negotiation': [
+    { id: 'target',    label: 'What compensation are you targeting (base + equity)?', type: 'text' },
+    { id: 'batna',     label: 'What is your best alternative if this does not work out?', type: 'text' },
+    { id: 'priorities', label: 'Beyond base salary, what matters most to you?',    type: 'text' },
+    { id: 'timeline',  label: 'When do you need a decision by?',                   type: 'text' },
+  ],
+  'kitchen-renovation': [
+    { id: 'budget',    label: 'What is your total budget for the renovation?',     type: 'text' },
+    { id: 'scope',     label: 'Describe the scope \u2014 what stays, what changes?', type: 'text' },
+    { id: 'timeline',  label: 'When do you need it complete?',                     type: 'text' },
+    { id: 'style',     label: 'What is your style vision? Any reference images or keywords?', type: 'text' },
+  ],
+  'freelance-brief': [
+    { id: 'deliverable', label: 'What exactly are you delivering?',                type: 'text' },
+    { id: 'rate',      label: 'What is your rate and preferred payment structure?', type: 'text' },
+    { id: 'timeline',  label: 'What is your available timeline for this project?', type: 'text' },
+    { id: 'terms',     label: 'Any specific terms, IP ownership, or revision limits?', type: 'text' },
+  ],
+};
+
+function getQuestionsForFlow(flowSlug: string): Question[] {
+  return FLOW_QUESTIONS[flowSlug] ?? UNIVERSAL_QUESTIONS;
+}
+
+// ── Real session API ──────────────────────────────────────────────
+
+interface LiveSession {
+  id: string;
+  flowSlug: string;
+  title?: string;
+  submissionDeadline?: number;
+  synthesis: { status: string; output?: string };
+  host: { submitted: boolean };
+  guests: { submitted: boolean }[];
+  maxGuests?: number;
+}
+
+async function fetchSession(sessionId: string): Promise<LiveSession | null> {
+  try {
+    const res = await fetch(`/api/fabric/${sessionId}`);
+    if (!res.ok) return null;
+    return await res.json() as LiveSession;
+  } catch {
+    return null;
+  }
+}
+
+async function triggerSynthesis(sessionId: string, hostToken: string): Promise<void> {
+  await fetch(`/api/fabric/${sessionId}/synthesize`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ hostToken }),
+  });
 }
 
 // ── Animation keyframes injected once ────────────────────────────
@@ -369,15 +421,7 @@ function ProgressBar({ answered, total }: { answered: number; total: number }) {
 
 // ── Synthesis output card ─────────────────────────────────────────
 
-function SynthesisCard({ hostName }: { hostName: string }) {
-  // Simulated synthesis — in production this comes from the API
-  const items = [
-    { label: 'Budget alignment', value: 'Ranges overlap — room to negotiate', status: 'aligned' as const },
-    { label: 'Timeline',         value: 'Both sides flexible within Q1',       status: 'aligned' as const },
-    { label: 'Priority',         value: 'Host: quality · Guest: speed — discuss', status: 'tension' as const },
-    { label: 'Non-negotiables',  value: 'No conflicts identified',              status: 'clear' as const },
-  ];
-
+function SynthesisCard({ output }: { output: string }) {
   return (
     <div style={{ animation: 'fabric-fade-up 0.6s cubic-bezier(0.34,1.2,0.64,1) both' }}>
       <div style={{
@@ -391,14 +435,9 @@ function SynthesisCard({ hostName }: { hostName: string }) {
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '24px' }}>
           <div style={{
-            width: '36px',
-            height: '36px',
-            borderRadius: '10px',
-            background: 'rgba(167,139,250,0.15)',
-            border: '1px solid rgba(167,139,250,0.3)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
+            width: '36px', height: '36px', borderRadius: '10px',
+            background: 'rgba(167,139,250,0.15)', border: '1px solid rgba(167,139,250,0.3)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
             <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
               <path d="M3 9h12M9 3l6 6-6 6" stroke="var(--purple)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
@@ -409,71 +448,28 @@ function SynthesisCard({ hostName }: { hostName: string }) {
               Synthesis ready
             </p>
             <p style={{ color: 'var(--text-secondary)', fontSize: '12px', margin: 0 }}>
-              Both sides are in — here's what we found
+              Claude mediated both sides \u2014 here is what was found
             </p>
           </div>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          {items.map(item => (
-            <div key={item.label} style={{
-              display: 'flex',
-              alignItems: 'flex-start',
-              justifyContent: 'space-between',
-              gap: '16px',
-              padding: '14px 16px',
-              background: 'rgba(255,255,255,0.02)',
-              border: '1px solid rgba(255,255,255,0.05)',
-              borderRadius: '12px',
-            }}>
-              <div style={{ flex: 1 }}>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '11px', fontWeight: 600, margin: '0 0 4px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                  {item.label}
-                </p>
-                <p style={{ color: 'var(--text-primary)', fontSize: '14px', lineHeight: 1.5, margin: 0 }}>
-                  {item.value}
-                </p>
-              </div>
-              <span style={{
-                flexShrink: 0,
-                padding: '3px 10px',
-                borderRadius: '20px',
-                fontSize: '11px',
-                fontWeight: 600,
-                background: item.status === 'aligned'
-                  ? 'rgba(74,222,128,0.1)'
-                  : item.status === 'tension'
-                    ? 'rgba(251,191,36,0.1)'
-                    : 'rgba(167,139,250,0.1)',
-                border: item.status === 'aligned'
-                  ? '1px solid rgba(74,222,128,0.25)'
-                  : item.status === 'tension'
-                    ? '1px solid rgba(251,191,36,0.25)'
-                    : '1px solid rgba(167,139,250,0.25)',
-                color: item.status === 'aligned'
-                  ? 'var(--green)'
-                  : item.status === 'tension'
-                    ? 'var(--gold)'
-                    : 'var(--purple)',
-                marginTop: '2px',
-              }}>
-                {item.status === 'aligned' ? 'Aligned' : item.status === 'tension' ? 'Discuss' : 'Clear'}
-              </span>
-            </div>
-          ))}
+        {/* Real synthesis output from Claude — rendered as plain text with line breaks */}
+        <div style={{
+          background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)',
+          borderRadius: '14px', padding: '20px',
+          color: 'var(--text-primary)', fontSize: '14px', lineHeight: 1.8,
+          whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+        }}>
+          {output}
         </div>
 
         <p style={{
-          color: 'var(--text-secondary)',
-          fontSize: '13px',
-          lineHeight: 1.7,
-          margin: '20px 0 0',
-          padding: '16px',
-          background: 'rgba(167,139,250,0.04)',
-          border: '1px solid rgba(167,139,250,0.12)',
+          color: 'var(--text-secondary)', fontSize: '13px', lineHeight: 1.7,
+          margin: '20px 0 0', padding: '16px',
+          background: 'rgba(167,139,250,0.04)', border: '1px solid rgba(167,139,250,0.12)',
           borderRadius: '12px',
         }}>
-          A synthesis doc has been shared with {hostName}. You're both set to start the conversation with full context.
+          Neither party\u2019s raw answers were shared \u2014 only this synthesis. Your private inputs stayed private.
         </p>
       </div>
     </div>
@@ -485,29 +481,21 @@ function SynthesisCard({ hostName }: { hostName: string }) {
 function WaitingCard({ hostName }: { hostName: string }) {
   return (
     <div style={{
-      textAlign: 'center',
-      padding: '48px 32px',
-      background: 'rgba(28,28,34,0.6)',
-      border: '1px solid var(--border)',
-      borderRadius: '20px',
-      backdropFilter: 'blur(20px)',
-      WebkitBackdropFilter: 'blur(20px)',
-      animation: 'fabric-fade-up 0.5s ease both',
+      textAlign: 'center', padding: '48px 32px',
+      background: 'rgba(28,28,34,0.6)', border: '1px solid var(--border)',
+      borderRadius: '20px', backdropFilter: 'blur(20px)',
+      WebkitBackdropFilter: 'blur(20px)', animation: 'fabric-fade-up 0.5s ease both',
     }}>
       <div style={{
-        width: '48px',
-        height: '48px',
-        borderRadius: '50%',
-        border: '2px solid rgba(167,139,250,0.3)',
-        borderTopColor: 'var(--purple)',
-        animation: 'fabric-spin 1s linear infinite',
-        margin: '0 auto 20px',
+        width: '48px', height: '48px', borderRadius: '50%',
+        border: '2px solid rgba(167,139,250,0.3)', borderTopColor: 'var(--purple)',
+        animation: 'fabric-spin 1s linear infinite', margin: '0 auto 20px',
       }} />
       <p style={{ color: 'var(--text-primary)', fontWeight: 600, fontSize: '16px', margin: '0 0 8px' }}>
         Waiting for {hostName}
       </p>
       <p style={{ color: 'var(--text-secondary)', fontSize: '14px', lineHeight: 1.6, margin: 0, maxWidth: '320px', marginLeft: 'auto', marginRight: 'auto' }}>
-        Your answers are in. Once {hostName} completes their side, the synthesis will appear here automatically.
+        Your answers are in. Claude will synthesise both sides the moment the other party submits \u2014 this page updates automatically.
       </p>
     </div>
   );
@@ -516,23 +504,105 @@ function WaitingCard({ hostName }: { hostName: string }) {
 // ── Main page ─────────────────────────────────────────────────────
 
 export default function Fabric() {
-  const { sessionId = 'abc123' } = useParams<{ sessionId: string }>();
+  const { sessionId = '' } = useParams<{ sessionId: string }>();
   const [searchParams] = useSearchParams();
-  const listingId = searchParams.get('listingId');
+  const listingId   = searchParams.get('listingId');
+  const hostToken   = searchParams.get('hostToken');
+  const guestToken  = searchParams.get('guestToken');
+  const isHost      = !!hostToken;
 
-  const session = useMockSession(sessionId);
+  // ── Live session state ──────────────────────────────────────────
+  const [liveSession, setLiveSession] = useState<LiveSession | null>(null);
+  const [sessionLoading, setSessionLoading] = useState(true);
 
-  const [pageState, setPageState] = useState<PageState>('form');
+  useEffect(() => {
+    if (!sessionId) { setSessionLoading(false); return; }
+    fetchSession(sessionId).then(s => {
+      setLiveSession(s);
+      setSessionLoading(false);
+      // If synthesis is already complete when the page loads, go straight to done
+      if (s?.synthesis?.status === 'complete') setPageState('done');
+    });
+  }, [sessionId]);
+
+  // Derive questions and display title from live session
+  const questions = liveSession ? getQuestionsForFlow(liveSession.flowSlug) : UNIVERSAL_QUESTIONS;
+  const session = {
+    id: liveSession?.id ?? sessionId,
+    title: liveSession?.title ?? liveSession?.flowSlug ?? 'Fabric Session',
+    flowSlug: liveSession?.flowSlug ?? '',
+    hostName: 'the host',
+    questions,
+    submissionDeadline: liveSession?.submissionDeadline,
+    synthesis: liveSession?.synthesis,
+  };
+
+  const [pageState, setPageState] = useState<PageState>('loading');
   const [activeIndex, setActiveIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [visibleUpTo, setVisibleUpTo] = useState(0);
   const [prefilling, setPrefilling] = useState(false);
   const [prefillDone, setPrefillDone] = useState(false);
+  const [synthesisOutput, setSynthesisOutput] = useState('');
 
   const scrollRef = useRef<HTMLDivElement>(null);
+  const pollRef   = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     injectKeyframes();
+  }, []);
+
+  // Transition from loading → form once session is ready
+  useEffect(() => {
+    if (!sessionLoading && pageState === 'loading') {
+      if (liveSession?.synthesis?.status === 'complete') {
+        setSynthesisOutput(liveSession.synthesis.output ?? '');
+        setPageState('done');
+      } else {
+        setPageState('form');
+      }
+    }
+  }, [sessionLoading, liveSession, pageState]);
+
+  // ── Polling — runs after submit until synthesis is complete ──────
+  const startPolling = () => {
+    if (pollRef.current) return;
+    pollRef.current = setInterval(async () => {
+      const updated = await fetchSession(sessionId);
+      if (!updated) return;
+      setLiveSession(updated);
+
+      const status = updated.synthesis?.status;
+
+      // Host auto-triggers synthesis when both sides are ready
+      if (isHost && hostToken && status === 'ready') {
+        clearInterval(pollRef.current!);
+        pollRef.current = null;
+        await triggerSynthesis(sessionId, hostToken);
+        // Re-poll to pick up the completed synthesis
+        pollRef.current = setInterval(async () => {
+          const final = await fetchSession(sessionId);
+          if (final?.synthesis?.status === 'complete') {
+            clearInterval(pollRef.current!);
+            pollRef.current = null;
+            setSynthesisOutput(final.synthesis.output ?? '');
+            setPageState('done');
+          }
+        }, 3000);
+        return;
+      }
+
+      if (status === 'complete') {
+        clearInterval(pollRef.current!);
+        pollRef.current = null;
+        setSynthesisOutput(updated.synthesis.output ?? '');
+        setPageState('done');
+      }
+    }, 5000);
+  };
+
+  useEffect(() => {
+    return () => { if (pollRef.current) clearInterval(pollRef.current); };
   }, []);
 
   // Pre-fill answers from Discovery listing via Claude
@@ -551,7 +621,6 @@ export default function Fabric() {
       if (!res.ok) throw new Error('prefill failed');
       const { answers: drafted } = await res.json() as { answers: Record<string, string> };
       setAnswers(drafted);
-      // Reveal all questions at once in review mode
       setVisibleUpTo(session.questions.length);
       setActiveIndex(session.questions.length - 1);
       setPrefillDone(true);
@@ -580,16 +649,12 @@ export default function Fabric() {
     const q = session.questions[index];
     const val = answers[q.id];
     if (!val?.trim()) return;
-
     const nextIndex = index + 1;
-
     if (nextIndex >= session.questions.length) {
-      // All answered — submit
-      handleSubmitAll();
+      void handleSubmitAll();
     } else {
       setActiveIndex(nextIndex);
       setVisibleUpTo(nextIndex + 1);
-      // Scroll to bottom after new card appears
       setTimeout(() => {
         scrollRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
       }, 200);
@@ -599,18 +664,31 @@ export default function Fabric() {
   const handleSubmitAll = async () => {
     setPageState('submitting');
     try {
-      // POST to API (mocked — API not yet built)
-      await fetch(`/api/fabric/${session.id}/guest`, {
+      const endpoint = isHost
+        ? `/api/fabric/${sessionId}/host`
+        : `/api/fabric/${sessionId}/guest`;
+
+      const token = isHost ? hostToken : guestToken;
+      const tokenKey = isHost ? 'hostToken' : 'guestToken';
+
+      const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ answers }),
-      }).catch(() => {/* API not built yet — swallow the error */});
+        body: JSON.stringify({ [tokenKey]: token, data: answers }),
+      });
 
-      // Simulate waiting briefly, then show "waiting for host"
-      setTimeout(() => setPageState('waiting'), 600);
+      if (!res.ok) throw new Error('submit failed');
+      const result = await res.json() as { readyForSynthesis?: boolean };
 
-      // After 4s, simulate synthesis arriving (demo only)
-      setTimeout(() => setPageState('done'), 4600);
+      // If both sides are already in, host triggers synthesis immediately
+      if (isHost && hostToken && result.readyForSynthesis) {
+        setPageState('waiting');
+        await triggerSynthesis(sessionId, hostToken);
+        startPolling();
+      } else {
+        setPageState('waiting');
+        startPolling();
+      }
     } catch {
       setPageState('error');
     }
@@ -861,14 +939,14 @@ export default function Fabric() {
           </div>
         )}
 
-        {/* ── Waiting for host ── */}
+        {/* ── Waiting ── */}
         {pageState === 'waiting' && (
-          <WaitingCard hostName={session.hostName} />
+          <WaitingCard hostName={isHost ? 'the other party' : session.hostName} />
         )}
 
         {/* ── Synthesis done ── */}
         {pageState === 'done' && (
-          <SynthesisCard hostName={session.hostName} />
+          <SynthesisCard output={synthesisOutput || 'Synthesis complete \u2014 both sides submitted.'} />
         )}
 
         {/* ── Error state ── */}
