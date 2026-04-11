@@ -176,148 +176,14 @@ function ChainDetail({
   const color = getCategoryColor(chain.category);
 
   const handleRun = () => {
-    const safeName = chain.chain_name.replace(/[^a-z0-9-]/gi, '-').toLowerCase();
-    const timestamp = new Date().toISOString().slice(0, 10);
-    const dirName = `${safeName}-${timestamp}`;
-
-    const stepInstructions = chain.skills.map((skill, i) =>
-      `${i + 1}. **${skill}**${i === 0 ? ' (entry point)' : ` (after: ${chain.skills[i - 1]})`}`
-    ).join('\n');
-
-    const claudeMd = `# FlowFabric Chain: ${chain.chain_name.replace(/-/g, ' ')}
-
-${chain.description}
-
-## How to run this chain
-
-Execute these ${chain.skills.length} flows in order. For each flow:
-1. Call \`start_flow_run\` with the flow name
-2. Call \`get_flow\` to read the full flow definition
-3. Follow each phase, calling \`record_phase\` after each
-4. Call \`complete_flow_run\` when done
-5. **Before the next flow, summarize key outputs and carry them forward**
-
-## Flow steps
-
-${stepInstructions}
-
-## Context bridging
-
-When moving between flows, summarize key outputs and feed them into the next flow. The user should NOT have to re-explain anything.
-
-## Start
-
-Ask the user what they need help with, then begin with step 1.
-`;
-
-    const chainJson = JSON.stringify({ chain_name: chain.chain_name, skills: chain.skills }, null, 2);
-    const chainB64 = btoa(unescape(encodeURIComponent(chainJson)));
-    const claudeMdB64 = btoa(unescape(encodeURIComponent(claudeMd)));
-    const isWindows = navigator.userAgent.includes('Windows');
-
-    if (isWindows) {
-      const batScript = `@echo off
-title FlowFabric: ${safeName}
-setlocal
-
-set "PATH=%PATH%;%APPDATA%\\npm;%USERPROFILE%\\.local\\bin;%ProgramFiles%\\nodejs"
-set "PS=%SystemRoot%\\System32\\WindowsPowerShell\\v1.0\\powershell.exe"
-set "WS=%USERPROFILE%\\FlowFabric-Runs\\${dirName}"
-if not exist "%WS%" mkdir "%WS%"
-
-echo.
-echo   FlowFabric: ${chain.chain_name.replace(/-/g, ' ')}
-echo   Workspace: %WS%
-echo.
-
-"%PS%" -NoProfile -ExecutionPolicy Bypass -Command ^
-  "[IO.File]::WriteAllText('%WS%\\${safeName}.chain.json', [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('${chainB64}')));" ^
-  "[IO.File]::WriteAllText('%WS%\\CLAUDE.md', [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('${claudeMdB64}')))"
-
-cd /d "%WS%"
-
-where claude >nul 2>nul
-if %errorlevel% equ 0 (
-    echo   Launching Claude Code...
-    echo.
-    claude
-    goto :done
-)
-
-if exist "%APPDATA%\\npm\\claude.cmd" (
-    echo   Launching Claude Code...
-    echo.
-    "%APPDATA%\\npm\\claude.cmd"
-    goto :done
-)
-
-echo.
-echo   Claude Code not found. Install it:
-echo     npm install -g @anthropic-ai/claude-code
-echo.
-echo   Your workspace is saved at: %WS%
-
-:done
-echo.
-pause
-`;
-      const blob = new Blob([batScript], { type: 'application/bat' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `Run-${safeName}.bat`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    } else {
-      const shScript = `#!/bin/bash
-# FlowFabric Chain Runner: ${chain.chain_name}
-
-WS="$HOME/FlowFabric-Runs/${dirName}"
-mkdir -p "$WS"
-
-echo ""
-echo "  FlowFabric Chain Runner"
-echo "  Chain: ${chain.chain_name.replace(/-/g, ' ')} (${chain.skills.length} flows)"
-echo "  Workspace: $WS"
-echo ""
-
-echo '${chainB64}' | base64 -d > "$WS/${safeName}.chain.json"
-echo '${claudeMdB64}' | base64 -d > "$WS/CLAUDE.md"
-
-cd "$WS"
-
-if command -v claude &> /dev/null; then
-    echo "  Launching Claude Code..."
-    echo ""
-    claude
-elif command -v npm &> /dev/null; then
-    echo "  Installing Claude Code..."
-    npm install -g @anthropic-ai/claude-code
-    if command -v claude &> /dev/null; then
-        claude
-    fi
-else
-    echo "  Install Node.js from https://nodejs.org then run:"
-    echo "    npm install -g @anthropic-ai/claude-code"
-    echo "  Chain saved at: $WS"
-fi
-`;
-      const blob = new Blob([shScript], { type: 'application/x-sh' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `Run-${safeName}.sh`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    }
-
+    const displayName = chain.chain_name.replace(/-/g, ' ');
+    const skillList = chain.skills.join(', ');
+    const prompt = `Run the "${displayName}" chain via FlowFabric. The chain has ${chain.skills.length} flows in order: ${skillList}. Use the FlowFabric MCP tools — call run_chain or find_and_run to start. Ask me for any inputs you need.`;
+    window.open(`https://claude.ai/new?q=${encodeURIComponent(prompt)}`, '_blank');
     setLaunched(true);
-    setTimeout(() => setLaunched(false), 5000);
+    setTimeout(() => setLaunched(false), 4000);
   };
+
 
   return (
     <div
@@ -436,11 +302,11 @@ fi
             onMouseEnter={(e) => { if (!launched) e.currentTarget.style.boxShadow = '0 0 25px rgba(0,255,200,0.2)'; }}
             onMouseLeave={(e) => { e.currentTarget.style.boxShadow = 'none'; }}
           >
-            {launched ? 'Launcher downloaded!' : 'Run Chain'}
+            {launched ? 'Opening Claude...' : 'Run in Claude'}
           </button>
           {launched && (
             <p className="text-xs text-center mt-3" style={{ color: 'var(--text-secondary)' }}>
-              Double-click the downloaded script to open Claude Code with your chain.{' '}
+              FlowFabric MCP required.{' '}
               <a href="/getting-started" style={{ color: 'var(--cyan)' }}>Setup guide</a>
             </p>
           )}
