@@ -43,8 +43,14 @@ function LiveTicker() {
 
   return (
     <div
-      className="w-full overflow-hidden"
-      style={{ maskImage: 'linear-gradient(90deg, transparent, black 8%, black 92%, transparent)' }}
+      className="w-full"
+      style={{
+        overflow: 'hidden',
+        overflowX: 'clip',
+        maxWidth: '100vw',
+        maskImage: 'linear-gradient(90deg, transparent, black 8%, black 92%, transparent)',
+        WebkitMaskImage: 'linear-gradient(90deg, transparent, black 8%, black 92%, transparent)',
+      }}
     >
       <div
         className="flex gap-3 w-max"
