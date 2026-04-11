@@ -20,7 +20,7 @@ export default async function handler(
   req: IncomingMessage & { headers: Record<string, string | string[] | undefined> },
   res: ServerResponse
 ) {
-  if (req.method !== 'POST') { json(res, 405, { error: 'Method not allowed' }); return; }
+  if (req.method !== 'GET') { json(res, 405, { error: 'Method not allowed' }); return; }
 
   const cronSecret = process.env.CRON_SECRET;
   if (!cronSecret) { json(res, 401, { error: 'Unauthorized' }); return; }

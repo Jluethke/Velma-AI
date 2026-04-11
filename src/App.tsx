@@ -29,6 +29,18 @@ import Settings from './pages/Settings';
 import Discovery from './pages/Discovery';
 import DiscoveryNew from './pages/DiscoveryNew';
 import DiscoveryMatches from './pages/DiscoveryMatches';
+import Dashboard from './pages/Dashboard';
+import Profile from './pages/Profile';
+import Agents from './pages/Agents';
+import Portal from './pages/Portal';
+import PortalTrainer from './pages/PortalTrainer';
+import PortalAchievements from './pages/PortalAchievements';
+import PortalSkilldex from './pages/PortalSkilldex';
+import PortalSkills from './pages/PortalSkills';
+import PortalNetwork from './pages/PortalNetwork';
+import PortalStake from './pages/PortalStake';
+import PortalMarketplace from './pages/PortalMarketplace';
+import PortalValidators from './pages/PortalValidators';
 
 const BANNER_KEY = 'flowfabric-mobile-banner-dismissed';
 
@@ -132,6 +144,22 @@ function App() {
             <Route path="/discover" element={<Discovery />} />
             <Route path="/discover/new" element={<DiscoveryNew />} />
             <Route path="/discover/matches" element={<DiscoveryMatches />} />
+
+            {/* User — dashboard, profile, agents */}
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/agents" element={<Agents />} />
+
+            {/* Portal — on-chain stats and gamification */}
+            <Route path="/portal" element={<Portal />} />
+            <Route path="/portal/trainer" element={<PortalTrainer />} />
+            <Route path="/portal/achievements" element={<PortalAchievements />} />
+            <Route path="/portal/skilldex" element={<PortalSkilldex />} />
+            <Route path="/portal/skills" element={<PortalSkills />} />
+            <Route path="/portal/network" element={<PortalNetwork />} />
+            <Route path="/portal/stake" element={<PortalStake />} />
+            <Route path="/portal/marketplace" element={<PortalMarketplace />} />
+            <Route path="/portal/validators" element={<PortalValidators />} />
           </Routes>
           <Footer />
         </div>
