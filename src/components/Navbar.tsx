@@ -28,9 +28,9 @@ export default function Navbar() {
   const pendingMatches = useMatchBadge();
 
   const navLinks = [
-    { to: '/sessions', label: 'Sessions' },
+    { to: '/start', label: 'Start a Session' },
     { to: '/discover', label: 'Find a Match' },
-    { to: '/get-started', label: 'Get Started' },
+    { to: '/sessions', label: 'My Sessions' },
     { to: '/compose', label: 'Composer' },
     { to: '/docs', label: 'Docs' },
   ];

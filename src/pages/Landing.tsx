@@ -354,26 +354,26 @@ function TrustEconomy() {
   const steps = [
     {
       step: '1',
-      title: 'Try Flows Free',
-      desc: 'Run any flow for free in Claude Code. No wallet needed. See what AI can do with structured procedures.',
+      title: 'Sessions run on flows',
+      desc: 'Every Fabric session is powered by a structured flow — a procedure that shapes the questions, the format, and the quality of Claude\'s synthesis.',
       color: 'var(--cyan)',
     },
     {
       step: '2',
-      title: 'Connect Wallet',
-      desc: 'Create a MetaMask wallet right in your browser. Connect it on the site. This is your identity in the TRUST ecosystem.',
+      title: 'Contributors built them',
+      desc: 'Every flow was built by someone in the network. When a session runs on their flow, they earn. 70% to the creator, 15% to validators who proved it works.',
       color: 'var(--purple)',
     },
     {
       step: '3',
-      title: 'Compose & Publish',
-      desc: 'Unlock the visual composer. Build chains from existing flows or create new ones. Publish on-chain — your wallet is credited as the author.',
+      title: 'Better flows, better sessions',
+      desc: 'The more sessions run, the more creators earn, the more they build. Fork an existing flow, improve it, publish it — the original author earns royalties on your version forever.',
       color: 'var(--gold)',
     },
     {
       step: '4',
-      title: 'Earn TRUST',
-      desc: 'When others use your flows or derivatives of them, TRUST goes to your wallet. 70% to creators, 15% to validators, 15% to the treasury.',
+      title: 'Anyone can earn',
+      desc: 'Connect a wallet, build flows people use, validate quality. Your contributions are on-chain — provenance, royalties, and reputation that no platform can revoke.',
       color: 'var(--green)',
     },
   ];
@@ -385,12 +385,11 @@ function TrustEconomy() {
           className="text-3xl md:text-5xl font-bold mb-4"
           style={{ color: 'var(--text-primary)', letterSpacing: '-0.02em' }}
         >
-          How{' '}
-          <span className="gradient-text-gold">TRUST</span>
-          {' '}works
+          The earners{' '}
+          <span className="gradient-text-gold">behind every session</span>
         </h2>
         <p className="text-sm max-w-2xl mx-auto" style={{ color: 'var(--text-secondary)', lineHeight: 1.7 }}>
-          TRUST isn't bought. It's earned. Create flows, validate quality, publish chains, earn royalties.
+          Collaboration is seamless. Behind it is an open network of contributors who build the flows, prove they work, and earn when they run.
         </p>
       </div>
 

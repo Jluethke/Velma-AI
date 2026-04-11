@@ -149,6 +149,47 @@ export default function GettingStarted() {
   return (
     <div className="min-h-screen pt-24 px-6 pb-24" style={{ maxWidth: '760px', margin: '0 auto' }}>
 
+      {/* ── Quick start for Fabric users ── */}
+      <div style={{
+        background: 'rgba(167,139,250,0.04)',
+        border: '1px solid rgba(167,139,250,0.2)',
+        borderRadius: '16px',
+        padding: '24px 28px',
+        marginBottom: '48px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: '24px',
+        flexWrap: 'wrap' as const,
+      }}>
+        <div>
+          <p style={{ color: 'var(--text-primary)', fontWeight: 700, fontSize: '15px', margin: '0 0 6px' }}>
+            Just want to align with someone?
+          </p>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '13px', margin: 0, lineHeight: 1.6 }}>
+            Start a Fabric session — no install needed. Both sides answer privately, Claude shows you the neutral synthesis.
+          </p>
+        </div>
+        <div style={{ display: 'flex', gap: '10px', flexShrink: 0, flexWrap: 'wrap' as const }}>
+          <Link to="/start" style={{
+            background: 'linear-gradient(135deg, rgba(167,139,250,0.2), rgba(167,139,250,0.1))',
+            border: '1px solid rgba(167,139,250,0.4)',
+            borderRadius: '10px', padding: '10px 18px',
+            fontSize: '13px', fontWeight: 600, color: 'var(--purple)', textDecoration: 'none',
+          }}>
+            Start a session →
+          </Link>
+          <Link to="/discover/new" style={{
+            background: 'rgba(56,189,248,0.06)',
+            border: '1px solid rgba(56,189,248,0.2)',
+            borderRadius: '10px', padding: '10px 18px',
+            fontSize: '13px', fontWeight: 600, color: 'var(--cyan)', textDecoration: 'none',
+          }}>
+            Find a counterpart →
+          </Link>
+        </div>
+      </div>
+
       {/* ── Hero ── */}
       <div style={{ textAlign: 'center', marginBottom: '56px' }}>
         <div style={{
