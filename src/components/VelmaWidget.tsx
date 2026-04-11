@@ -440,7 +440,7 @@ const GUIDE_STEPS = [
   {
     icon: '🔗',
     label: 'Find your match',
-    desc: 'Tell me what you need. I'll find who fits.',
+    desc: "Tell me what you need. I'll find who fits.",
     href: '/discover',
     check: () => false,
     urgentIfMissing: false,
