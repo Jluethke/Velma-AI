@@ -188,6 +188,8 @@ export default function HeroSection() {
             letterSpacing: '-0.03em',
             overflowWrap: 'break-word',
             wordBreak: 'break-word',
+            width: '100%',
+            maxWidth: '100%',
           }}
         >
           <span style={{ color: 'var(--text-primary)' }}>Your AI keeps forgetting.</span>
