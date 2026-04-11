@@ -4,6 +4,7 @@ import HeroSection from '../components/HeroSection';
 import CategoryPicker from '../components/CategoryPicker';
 import SkillShowcase from '../components/SkillShowcase';
 import FAQ from '../components/FAQ';
+import FabricWalkthrough from '../components/FabricWalkthrough';
 
 // ── 3-D tilt helper ───────────────────────────────────────────────
 
@@ -576,6 +577,7 @@ export default function Landing() {
       <CategoryPicker />
       <SkillShowcase />
       <FabricSection />
+      <FabricWalkthrough />
       <ComposerPreview />
       <TrustEconomy />
       <SkillEvolution />
