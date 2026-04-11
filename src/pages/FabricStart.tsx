@@ -225,18 +225,14 @@ export default function FabricStart() {
   const navigate = useNavigate();
   const [selected, setSelected] = useState<UseCase | null>(null);
   const [title, setTitle] = useState('');
-  const [apiKey, setApiKey] = useState(() => localStorage.getItem(API_KEY_STORAGE) ?? '');
-  const [showKey, setShowKey] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [created, setCreated] = useState<StoredSession | null>(null);
 
+  const hasApiKey = Boolean(localStorage.getItem(API_KEY_STORAGE)?.trim());
+
   const handleCreate = async () => {
     if (!selected) return;
-    const trimmedKey = apiKey.trim();
-    if (!trimmedKey) { setError('Add your Anthropic API key to host a session.'); return; }
-    if (!trimmedKey.startsWith('sk-')) { setError('That doesn\u2019t look like a valid Anthropic API key (should start with sk-).'); return; }
-    localStorage.setItem(API_KEY_STORAGE, trimmedKey);
     setLoading(true);
     setError('');
     try {
@@ -353,47 +349,19 @@ export default function FabricStart() {
                 />
               </div>
 
-              {/* Anthropic API key */}
-              <div className="mb-5">
-                <label className="block text-xs font-semibold mb-1 uppercase tracking-widest" style={{ color: 'var(--text-secondary)', opacity: 0.6 }}>
-                  Your Anthropic API key
-                </label>
-                <p className="text-xs mb-2" style={{ color: 'var(--text-secondary)', opacity: 0.5 }}>
-                  You need a Claude account to host. Guests don\u2019t. Your key is stored locally and never sent to our servers except to run the synthesis.{' '}
-                  <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noreferrer"
-                    style={{ color: 'var(--cyan)', textDecoration: 'none', borderBottom: '1px solid rgba(56,189,248,0.3)' }}>
-                    Get your key \u2192
-                  </a>
-                </p>
-                <div className="flex gap-2">
-                  <input
-                    type={showKey ? 'text' : 'password'}
-                    value={apiKey}
-                    onChange={e => setApiKey(e.target.value)}
-                    placeholder="sk-ant-..."
-                    style={{
-                      flex: 1, padding: '10px 14px',
-                      background: 'var(--bg-primary)', border: '1px solid var(--border)',
-                      borderRadius: '10px', color: 'var(--text-primary)', fontSize: '13px',
-                      fontFamily: 'monospace', outline: 'none', boxSizing: 'border-box' as const,
-                      transition: 'border-color 0.2s',
-                    }}
-                    onFocus={e => { e.currentTarget.style.borderColor = 'rgba(56,189,248,0.4)'; }}
-                    onBlur={e => { e.currentTarget.style.borderColor = 'var(--border)'; }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowKey(s => !s)}
-                    className="px-3 rounded-lg text-xs cursor-pointer"
-                    style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', color: 'var(--text-secondary)' }}
-                  >
-                    {showKey ? 'Hide' : 'Show'}
-                  </button>
+              {/* API key nudge — only shown if not yet configured */}
+              {!hasApiKey && (
+                <div className="mb-5 px-4 py-3 rounded-xl flex items-center gap-3"
+                  style={{ background: 'rgba(251,191,36,0.06)', border: '1px solid rgba(251,191,36,0.15)' }}>
+                  <span style={{ fontSize: '16px', lineHeight: 1 }}>🔑</span>
+                  <p className="text-xs leading-relaxed" style={{ color: 'var(--text-secondary)', margin: 0 }}>
+                    A Claude API key is needed to run synthesis.{' '}
+                    <a href="/settings" style={{ color: 'var(--gold)', textDecoration: 'none', borderBottom: '1px solid rgba(251,191,36,0.3)' }}>
+                      Set it up once in Settings \u2192
+                    </a>
+                  </p>
                 </div>
-                {apiKey.trim().startsWith('sk-') && (
-                  <p className="text-xs mt-1.5" style={{ color: 'var(--green)' }}>Key saved locally.</p>
-                )}
-              </div>
+              )}
 
               {error && (
                 <p className="text-xs mb-4" style={{ color: 'var(--red)' }}>{error}</p>
@@ -409,7 +377,7 @@ export default function FabricStart() {
               </button>
 
               <p className="text-xs text-center mt-3" style={{ color: 'var(--text-secondary)', opacity: 0.4 }}>
-                Your key is only used when synthesis runs. Guests just need the link.
+                {hasApiKey ? 'Claude API key configured. Guests just need the link.' : 'Session creation is free. API key only needed at synthesis time.'}
               </p>
             </div>
           )}

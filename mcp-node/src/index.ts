@@ -1636,13 +1636,12 @@ server.tool(
 
 server.tool(
   "get_fabric_status",
-  "Check the status of a Fabric session. Returns both sides (host + guest) and the synthesis output when ready. Pass hostToken to see private host data; omit for the guest-safe view.",
+  "Check the status of a Fabric session. When both sides have submitted and synthesis hasn't run yet, automatically triggers server-side neutral synthesis using your ANTHROPIC_API_KEY environment variable. Returns the synthesis output when ready.",
   {
     session_id: z.string().describe("The Fabric session ID"),
-    host_token: z.string().optional().describe("The secret hostToken (required to trigger synthesis or write output)"),
-    synthesis_output: z.string().optional().describe("If you've run the synthesis flow and have the result, pass it here to store it in the session"),
+    host_token: z.string().optional().describe("The secret hostToken returned by create_fabric_session — required to trigger synthesis"),
   },
-  async ({ session_id, host_token, synthesis_output }) => {
+  async ({ session_id, host_token }) => {
     // Get session state
     const session = await fabricGet(`/api/fabric/${session_id}`);
 
@@ -1651,62 +1650,54 @@ server.tool(
     }
 
     const hostSub = (session.host as Record<string,unknown>)?.submitted as boolean;
-    const guestSub = (session.guest as Record<string,unknown>)?.submitted as boolean;
+    const guestsSubmitted = (session.guestsSubmitted as number) ?? ((session.guest as Record<string,unknown>)?.submitted ? 1 : 0);
+    const maxGuests = (session.maxGuests as number) ?? 1;
+    const allGuestsIn = guestsSubmitted >= maxGuests;
     const synthStatus = (session.synthesis as Record<string,unknown>)?.status as string;
+    const synthOutput = (session.synthesis as Record<string,unknown>)?.output as string ?? null;
 
-    // If caller has hostToken and synthesis_output — write it
-    if (host_token && synthesis_output && hostSub && guestSub) {
+    // Both sides ready and synthesis not yet run — trigger it automatically
+    if (host_token && hostSub && allGuestsIn && synthStatus !== "complete") {
+      const apiKey = process.env.ANTHROPIC_API_KEY;
+      if (!apiKey) {
+        return { content: [{ type: "text" as const, text: JSON.stringify({
+          session_id,
+          host_submitted: hostSub,
+          guests_submitted: guestsSubmitted,
+          synthesis_status: "pending",
+          error: "ANTHROPIC_API_KEY is not set in your environment. Set it and try again, or trigger synthesis from the web UI.",
+        }, null, 2) }] };
+      }
+
       const synthResult = await fabricPost(`/api/fabric/${session_id}/synthesize`, {
         hostToken: host_token,
-        output: synthesis_output,
+        apiKey,
       });
+
       if (synthResult.error) {
-        return { content: [{ type: "text" as const, text: JSON.stringify(synthResult) }] };
+        return { content: [{ type: "text" as const, text: JSON.stringify({ error: synthResult.error }) }] };
       }
+
       return { content: [{ type: "text" as const, text: JSON.stringify({
         ...synthResult,
-        message: "Synthesis stored. Both parties can now see the shared output.",
+        message: "Synthesis complete. Both parties can now see the shared neutral analysis.",
       }, null, 2) }] };
-    }
-
-    // If both sides ready but no synthesis yet — generate synthesis prompt
-    let synthesisPrompt: string | null = null;
-    if (hostSub && guestSub && synthStatus !== "ready") {
-      const hostData = (session.host as Record<string,unknown>)?.data as Record<string,unknown> ?? {};
-      const guestData = (session.guest as Record<string,unknown>)?.data as Record<string,unknown> ?? {};
-      const hostShared = (session.host as Record<string,unknown>)?.sharedFields as string[] ?? [];
-      const sharedHostData: Record<string,unknown> = {};
-      for (const k of hostShared) {
-        if (k in hostData) sharedHostData[k] = hostData[k];
-      }
-      synthesisPrompt = [
-        `Run the '${session.flowSlug as string}' flow with both sides as input:`,
-        "",
-        "HOST'S SHARED PERSPECTIVE:",
-        JSON.stringify(sharedHostData, null, 2),
-        "",
-        "GUEST'S PERSPECTIVE:",
-        JSON.stringify(guestData, null, 2),
-        "",
-        "Synthesize both viewpoints into a shared output. Focus on alignment, gaps, and recommended next steps.",
-        `When complete, call get_fabric_status('${session_id}', '<hostToken>', synthesisOutput) to store the result.`,
-      ].join("\n");
     }
 
     return { content: [{ type: "text" as const, text: JSON.stringify({
       ...session,
       host_submitted: hostSub,
-      guest_submitted: guestSub,
-      synthesis_status: synthStatus,
-      synthesis_output: (session.synthesis as Record<string,unknown>)?.output ?? null,
-      synthesis_prompt: synthesisPrompt,
+      guests_submitted: guestsSubmitted,
+      max_guests: maxGuests,
+      synthesis_status: synthStatus ?? "pending",
+      synthesis_output: synthOutput,
       next_step: !hostSub
         ? "Waiting for host to submit. Call submit_fabric_host_side."
-        : !guestSub
-        ? "Waiting for guest. Share the guest_url and ask them to fill out their side."
-        : synthStatus === "ready"
-        ? "Synthesis complete. See synthesis_output."
-        : "Both sides in! Use synthesis_prompt above to run the flow, then call get_fabric_status with synthesis_output.",
+        : !allGuestsIn
+        ? `Waiting for ${maxGuests - guestsSubmitted} guest(s). Share the guest URL and ask them to fill out their side.`
+        : synthStatus === "complete"
+        ? "Synthesis complete. See synthesis_output above."
+        : "Both sides in — call get_fabric_status with your host_token to trigger synthesis.",
     }, null, 2) }] };
   }
 );

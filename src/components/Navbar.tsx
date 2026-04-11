@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useAccount, useDisconnect } from 'wagmi';
@@ -11,6 +11,11 @@ export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [showSend, setShowSend] = useState(false);
+  const [hasApiKey, setHasApiKey] = useState(false);
+
+  useEffect(() => {
+    setHasApiKey(Boolean(localStorage.getItem('flowfabric-anthropic-key')?.trim()));
+  }, []);
   const [sendTo, setSendTo] = useState('');
   const [sendAmount, setSendAmount] = useState('');
   const location = useLocation();
@@ -209,6 +214,29 @@ export default function Navbar() {
               }}
             >
               + Start Session
+            </Link>
+
+            <Link
+              to="/settings"
+              title={hasApiKey ? 'Settings (Claude key configured)' : 'Settings (Claude key needed)'}
+              style={{
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                width: '32px', height: '32px', borderRadius: '8px', fontSize: '14px',
+                background: hasApiKey ? 'rgba(74,222,128,0.06)' : 'var(--bg-secondary)',
+                border: `1px solid ${hasApiKey ? 'rgba(74,222,128,0.2)' : 'var(--border)'}`,
+                color: hasApiKey ? 'var(--green)' : 'var(--text-secondary)',
+                textDecoration: 'none', lineHeight: 1, transition: 'all 0.2s',
+                position: 'relative',
+              }}
+            >
+              ⚙
+              {!hasApiKey && (
+                <span style={{
+                  position: 'absolute', top: '-3px', right: '-3px',
+                  width: '8px', height: '8px', borderRadius: '50%',
+                  background: 'var(--gold)', border: '1.5px solid var(--bg-primary)',
+                }} />
+              )}
             </Link>
 
             <button

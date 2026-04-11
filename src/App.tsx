@@ -24,6 +24,7 @@ import Leaderboard from './pages/Leaderboard';
 import Fabric from './pages/Fabric';
 import FabricStart from './pages/FabricStart';
 import Sessions from './pages/Sessions';
+import Settings from './pages/Settings';
 import Discovery from './pages/Discovery';
 import DiscoveryNew from './pages/DiscoveryNew';
 import DiscoveryMatches from './pages/DiscoveryMatches';
@@ -122,6 +123,7 @@ function App() {
           {/* Fabric — multiplayer flow sessions */}
           <Route path="/start" element={<FabricStart />} />
           <Route path="/sessions" element={<Sessions />} />
+          <Route path="/settings" element={<Settings />} />
           <Route path="/fabric/:sessionId" element={<Fabric />} />
 
           {/* Discovery — AI-powered counterpart matching */}

@@ -1282,6 +1282,187 @@ server.tool("get_access_status", "Check on-chain access status for a user and fl
     }
 });
 // ===================================================================
+// FABRIC — MULTIPLAYER FLOW TOOLS
+// ===================================================================
+/**
+ * Fabric API base URL. Defaults to the production deployment; can be
+ * overridden via FABRIC_API_URL env var for local dev.
+ */
+function fabricApiUrl() {
+    return (process.env.FABRIC_API_URL ?? "https://www.flowfabric.io").replace(/\/$/, "");
+}
+/**
+ * POST a JSON body to a Fabric API endpoint.
+ */
+async function fabricPost(path, body) {
+    const url = `${fabricApiUrl()}${path}`;
+    const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+    });
+    const text = await res.text();
+    try {
+        return JSON.parse(text);
+    }
+    catch {
+        return { raw: text, status: res.status };
+    }
+}
+/**
+ * GET a Fabric API endpoint.
+ */
+async function fabricGet(path) {
+    const url = `${fabricApiUrl()}${path}`;
+    const res = await fetch(url);
+    const text = await res.text();
+    try {
+        return JSON.parse(text);
+    }
+    catch {
+        return { raw: text, status: res.status };
+    }
+}
+server.tool("create_fabric_session", "Start a new Fabric multiplayer session. Fabric lets two people — the host (you) and a guest (no account needed) — each fill out their side of a flow, then synthesizes both perspectives into a shared output. Returns a shareable guest URL and a secret hostToken you must keep.", {
+    flow_slug: z.string().describe("The flow this session is based on (e.g. 'contract-scope-alignment')"),
+    title: z.string().optional().describe("Human-readable title for the session"),
+    host_data: z.string().default("{}").describe("Optional JSON of host's initial data to submit immediately"),
+    shared_fields: z.string().default("[]").describe("JSON array of field names the host wants to share with the guest"),
+}, async ({ flow_slug, title, host_data, shared_fields }) => {
+    // 1. Create the session
+    const created = await fabricPost("/api/fabric/create", {
+        flowSlug: flow_slug,
+        title: title ?? flow_slug,
+    });
+    if (created.error) {
+        return { content: [{ type: "text", text: JSON.stringify({ error: created.error }) }] };
+    }
+    const sessionId = created.sessionId;
+    const hostToken = created.hostToken;
+    // 2. Optionally submit host data immediately if provided
+    let hostSide = null;
+    let parsedData = {};
+    let parsedFields = [];
+    try {
+        parsedData = JSON.parse(host_data);
+    }
+    catch { /* ok */ }
+    try {
+        parsedFields = JSON.parse(shared_fields);
+    }
+    catch { /* ok */ }
+    if (Object.keys(parsedData).length > 0) {
+        hostSide = await fabricPost(`/api/fabric/${sessionId}/host`, {
+            hostToken,
+            data: parsedData,
+            sharedFields: parsedFields,
+        });
+    }
+    return { content: [{ type: "text", text: JSON.stringify({
+                    session_id: sessionId,
+                    guest_url: created.guestUrl,
+                    host_token: hostToken,
+                    expires_at: created.expiresAt,
+                    host_submitted: hostSide?.host != null ? hostSide.host.submitted : false,
+                    instructions: [
+                        `1. Share this link with your guest: ${created.guestUrl}`,
+                        "2. They fill out their side in the browser (no account needed).",
+                        "3. Once they submit, call get_fabric_status to check progress.",
+                        "4. When both sides are in, call submit_fabric_host_side (if you haven't yet), then get_fabric_status to read the synthesis prompt and run the flow.",
+                    ].join("\n"),
+                }, null, 2) }] };
+});
+server.tool("submit_fabric_host_side", "Submit the host's answers for a Fabric session. Call this after collecting the host's inputs for the shared flow. Requires the hostToken returned by create_fabric_session.", {
+    session_id: z.string().describe("The Fabric session ID"),
+    host_token: z.string().describe("The secret hostToken returned by create_fabric_session"),
+    data: z.string().default("{}").describe("JSON object of the host's form data / answers"),
+    shared_fields: z.string().default("[]").describe("JSON array of field names to share with the guest (the rest stay private)"),
+}, async ({ session_id, host_token, data, shared_fields }) => {
+    let parsedData = {};
+    let parsedFields = [];
+    try {
+        parsedData = JSON.parse(data);
+    }
+    catch { /* ok */ }
+    try {
+        parsedFields = JSON.parse(shared_fields);
+    }
+    catch { /* ok */ }
+    if (Object.keys(parsedData).length === 0) {
+        return { content: [{ type: "text", text: JSON.stringify({ error: "data must be a non-empty JSON object" }) }] };
+    }
+    const result = await fabricPost(`/api/fabric/${session_id}/host`, {
+        hostToken: host_token,
+        data: parsedData,
+        sharedFields: parsedFields,
+    });
+    if (result.error) {
+        return { content: [{ type: "text", text: JSON.stringify(result) }] };
+    }
+    const ready = result.readyForSynthesis;
+    return { content: [{ type: "text", text: JSON.stringify({
+                    ...result,
+                    next_step: ready
+                        ? `Both sides submitted! Call get_fabric_status('${session_id}', '${host_token}') to get the synthesis prompt and run the flow.`
+                        : "Waiting for guest to submit their side. Call get_fabric_status to check.",
+                }, null, 2) }] };
+});
+server.tool("get_fabric_status", "Check the status of a Fabric session. When both sides have submitted and synthesis hasn't run yet, automatically triggers server-side neutral synthesis using your ANTHROPIC_API_KEY environment variable. Returns the synthesis output when ready.", {
+    session_id: z.string().describe("The Fabric session ID"),
+    host_token: z.string().optional().describe("The secret hostToken returned by create_fabric_session — required to trigger synthesis"),
+}, async ({ session_id, host_token }) => {
+    // Get session state
+    const session = await fabricGet(`/api/fabric/${session_id}`);
+    if (session.error) {
+        return { content: [{ type: "text", text: JSON.stringify(session) }] };
+    }
+    const hostSub = session.host?.submitted;
+    const guestsSubmitted = session.guestsSubmitted ?? (session.guest?.submitted ? 1 : 0);
+    const maxGuests = session.maxGuests ?? 1;
+    const allGuestsIn = guestsSubmitted >= maxGuests;
+    const synthStatus = session.synthesis?.status;
+    const synthOutput = session.synthesis?.output ?? null;
+    // Both sides ready and synthesis not yet run — trigger it automatically
+    if (host_token && hostSub && allGuestsIn && synthStatus !== "complete") {
+        const apiKey = process.env.ANTHROPIC_API_KEY;
+        if (!apiKey) {
+            return { content: [{ type: "text", text: JSON.stringify({
+                            session_id,
+                            host_submitted: hostSub,
+                            guests_submitted: guestsSubmitted,
+                            synthesis_status: "pending",
+                            error: "ANTHROPIC_API_KEY is not set in your environment. Set it and try again, or trigger synthesis from the web UI.",
+                        }, null, 2) }] };
+        }
+        const synthResult = await fabricPost(`/api/fabric/${session_id}/synthesize`, {
+            hostToken: host_token,
+            apiKey,
+        });
+        if (synthResult.error) {
+            return { content: [{ type: "text", text: JSON.stringify({ error: synthResult.error }) }] };
+        }
+        return { content: [{ type: "text", text: JSON.stringify({
+                        ...synthResult,
+                        message: "Synthesis complete. Both parties can now see the shared neutral analysis.",
+                    }, null, 2) }] };
+    }
+    return { content: [{ type: "text", text: JSON.stringify({
+                    ...session,
+                    host_submitted: hostSub,
+                    guests_submitted: guestsSubmitted,
+                    max_guests: maxGuests,
+                    synthesis_status: synthStatus ?? "pending",
+                    synthesis_output: synthOutput,
+                    next_step: !hostSub
+                        ? "Waiting for host to submit. Call submit_fabric_host_side."
+                        : !allGuestsIn
+                            ? `Waiting for ${maxGuests - guestsSubmitted} guest(s). Share the guest URL and ask them to fill out their side.`
+                            : synthStatus === "complete"
+                                ? "Synthesis complete. See synthesis_output above."
+                                : "Both sides in — call get_fabric_status with your host_token to trigger synthesis.",
+                }, null, 2) }] };
+});
+// ===================================================================
 // HEALTH / META
 // ===================================================================
 server.tool("check_access", "Check if FlowFabric MCP server is running and accessible. Returns server status and marketplace stats.", {}, async () => {
