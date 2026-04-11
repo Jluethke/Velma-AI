@@ -12,6 +12,7 @@ import "./SkillRegistry.sol";
 import "./TrustToken.sol";
 import "./NodeRegistry.sol";
 import "./CommunityPool.sol";
+import "./PriceOracle.sol";
 
 /**
  * @title Marketplace
@@ -22,11 +23,15 @@ import "./CommunityPool.sol";
  *   FREE flows (price == 0)
  *     Anyone can run them. Usage is rate-limited by subscription tier.
  *     Explorer (free):     5 flows/day
- *     Builder  (50 TRUST/mo): 50 flows/day
- *     Professional (200 TRUST/mo): 200 flows/day
- *     Enterprise (1000 TRUST/mo): unlimited
+ *     Builder  ($5/mo):   50 flows/day
+ *     Professional ($20/mo): 200 flows/day
+ *     Enterprise ($100/mo): unlimited
  *
- *   PREMIUM flows (price > 0, set by creator)
+ *   Subscription prices are denominated in USD and converted to TRUST at the
+ *   current oracle price at the moment of subscription. As TRUST appreciates,
+ *   fewer tokens are required — holding TRUST becomes more valuable over time.
+ *
+ *   PREMIUM flows (price > 0, set by creator in USD cents)
  *     Must call purchaseSkill() once. Pays TRUST, unlocks permanently.
  *     Purchased flows do NOT consume daily quota — they are always accessible.
  *     Fee split: Creator 70%, Validator pool 15%, Treasury 8%, Community 5%, Burned 2%.
@@ -64,6 +69,9 @@ contract Marketplace is AccessControl, ReentrancyGuard {
     /// @notice Community pool — receives purchase premium from buys + subscriptions.
     CommunityPool public communityPool;
 
+    /// @notice Price oracle — converts USD tier prices to TRUST at current market rate.
+    PriceOracle public priceOracle;
+
     // ── Fee Split (basis points, total = 10000) ────────────────────────
     // Premium flow purchases: 70% creator · 15% validators · 8% treasury
     //                         · 5% community pool (earner yield) · 2% burned
@@ -84,7 +92,7 @@ contract Marketplace is AccessControl, ReentrancyGuard {
     enum SubscriptionTier { EXPLORER, BUILDER, PROFESSIONAL, ENTERPRISE }
 
     struct TierConfig {
-        uint256 monthlyPrice;     // TRUST tokens (WAD). 0 = free.
+        uint256 monthlyUsd;       // USD price per month, 18 decimals (WAD). 0 = free.
         uint256 dailyLimit;       // Max free-flow uses per day. 0 = unlimited.
     }
 
@@ -125,6 +133,7 @@ contract Marketplace is AccessControl, ReentrancyGuard {
     event Subscribed(address indexed user, SubscriptionTier tier, uint256 expiresAt);
     event TreasuryUpdated(address newTreasury);
     event CommunityPoolUpdated(address newPool);
+    event PriceOracleUpdated(address newOracle);
 
     // ── Constructor ────────────────────────────────────────────────────
 
@@ -133,27 +142,30 @@ contract Marketplace is AccessControl, ReentrancyGuard {
         address _skillRegistry,
         address _nodeRegistry,
         address _treasury,
-        address _communityPool
+        address _communityPool,
+        address _priceOracle
     ) {
         require(_trustToken    != address(0), "Marketplace: zero token");
         require(_skillRegistry != address(0), "Marketplace: zero skillReg");
         require(_nodeRegistry  != address(0), "Marketplace: zero nodeReg");
         require(_treasury      != address(0), "Marketplace: zero treasury");
         require(_communityPool != address(0), "Marketplace: zero communityPool");
+        require(_priceOracle   != address(0), "Marketplace: zero oracle");
 
         trustToken    = TrustToken(_trustToken);
         skillRegistry = SkillRegistry(_skillRegistry);
         nodeRegistry  = NodeRegistry(_nodeRegistry);
         treasury      = _treasury;
         communityPool = CommunityPool(_communityPool);
+        priceOracle   = PriceOracle(_priceOracle);
 
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
 
-        // Subscription tier configs
-        tierConfigs[SubscriptionTier.EXPLORER]     = TierConfig({ monthlyPrice: 0,           dailyLimit: 5   });
-        tierConfigs[SubscriptionTier.BUILDER]      = TierConfig({ monthlyPrice: 50  * 1e18,  dailyLimit: 50  });
-        tierConfigs[SubscriptionTier.PROFESSIONAL] = TierConfig({ monthlyPrice: 200 * 1e18,  dailyLimit: 200 });
-        tierConfigs[SubscriptionTier.ENTERPRISE]   = TierConfig({ monthlyPrice: 1000 * 1e18, dailyLimit: 0   });
+        // Subscription tier configs — prices in USD (18 decimals)
+        tierConfigs[SubscriptionTier.EXPLORER]     = TierConfig({ monthlyUsd: 0,          dailyLimit: 5   });
+        tierConfigs[SubscriptionTier.BUILDER]      = TierConfig({ monthlyUsd: 5   * 1e18, dailyLimit: 50  });
+        tierConfigs[SubscriptionTier.PROFESSIONAL] = TierConfig({ monthlyUsd: 20  * 1e18, dailyLimit: 200 });
+        tierConfigs[SubscriptionTier.ENTERPRISE]   = TierConfig({ monthlyUsd: 100 * 1e18, dailyLimit: 0   });
     }
 
     // ── Premium Flow Purchases ─────────────────────────────────────────
@@ -268,15 +280,27 @@ contract Marketplace is AccessControl, ReentrancyGuard {
     // ── Subscriptions ──────────────────────────────────────────────────
 
     /**
-     * @notice Subscribe to a tier. Paid tiers require TRUST approval.
+     * @notice Returns the current TRUST cost to subscribe to a tier.
+     * @dev Call this before subscribe() to get the exact approval amount.
+     * @param tier The subscription tier.
+     * @return trustAmount TRUST tokens required (18 decimals). 0 for Explorer.
+     */
+    function subscribeCost(SubscriptionTier tier) public view returns (uint256 trustAmount) {
+        uint256 usdAmount = tierConfigs[tier].monthlyUsd;
+        if (usdAmount == 0) return 0;
+        return priceOracle.usdToTrust(usdAmount);
+    }
+
+    /**
+     * @notice Subscribe to a tier. Paid tiers require TRUST approval for subscribeCost(tier).
      * @param tier The subscription tier to purchase.
      */
     function subscribe(SubscriptionTier tier) external nonReentrant {
-        TierConfig memory config = tierConfigs[tier];
+        uint256 trustAmount = subscribeCost(tier);
 
-        if (config.monthlyPrice > 0) {
-            uint256 communityShare = (config.monthlyPrice * SUB_COMMUNITY_BPS) / BPS_DENOMINATOR;
-            uint256 treasuryShare  = config.monthlyPrice - communityShare;
+        if (trustAmount > 0) {
+            uint256 communityShare = (trustAmount * SUB_COMMUNITY_BPS) / BPS_DENOMINATOR;
+            uint256 treasuryShare  = trustAmount - communityShare;
 
             // Treasury portion
             IERC20(address(trustToken)).safeTransferFrom(msg.sender, treasury, treasuryShare);
@@ -380,6 +404,15 @@ contract Marketplace is AccessControl, ReentrancyGuard {
         require(newPool != address(0), "Marketplace: zero communityPool");
         communityPool = CommunityPool(newPool);
         emit CommunityPoolUpdated(newPool);
+    }
+
+    /**
+     * @notice Update the price oracle address.
+     */
+    function setPriceOracle(address newOracle) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(newOracle != address(0), "Marketplace: zero oracle");
+        priceOracle = PriceOracle(newOracle);
+        emit PriceOracleUpdated(newOracle);
     }
 
     // ── Internal ───────────────────────────────────────────────────────

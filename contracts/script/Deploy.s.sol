@@ -10,6 +10,7 @@ import "../src/NodeRegistry.sol";
 import "../src/SkillRegistry.sol";
 import "../src/TrustOracle.sol";
 import "../src/ValidationRegistry.sol";
+import "../src/PriceOracle.sol";
 import "../src/Marketplace.sol";
 import "../src/Staking.sol";
 import "../src/GovernanceDAO.sol";
@@ -55,13 +56,18 @@ contract Deploy is Script {
         // 7a. CommunityPool — purchase premium → earner yield
         CommunityPool communityPool = new CommunityPool(address(token));
 
-        // 7b. Marketplace — purchases, royalties, subscriptions
+        // 7b. PriceOracle — starts at $0.01/TRUST (manual mode), switch to TWAP after pool has history
+        // Initial price: $0.01 = 1e16 (18 decimals)
+        PriceOracle priceOracle = new PriceOracle(deployer, 1e16);
+
+        // 7c. Marketplace — purchases, royalties, subscriptions (USD-denominated tiers)
         Marketplace marketplace = new Marketplace(
             address(token),
             address(skillReg),
             address(nodeReg),
             deployer, // treasury
-            address(communityPool)
+            address(communityPool),
+            address(priceOracle)
         );
 
         // Grant Marketplace the DEPOSITOR_ROLE so it can deposit into the pool,
@@ -131,6 +137,7 @@ contract Deploy is Script {
         console.log("TrustOracle:        ", address(oracle));
         console.log("ValidationRegistry: ", address(valReg));
         console.log("Staking:            ", address(staking));
+        console.log("PriceOracle:        ", address(priceOracle));
         console.log("Marketplace:        ", address(marketplace));
         console.log("GovernanceDAO:      ", address(dao));
         console.log("LifeRewards:        ", address(lifeRewards));

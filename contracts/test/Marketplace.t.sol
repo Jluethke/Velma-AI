@@ -5,6 +5,7 @@ import "forge-std/Test.sol";
 import "../src/TrustToken.sol";
 import "../src/NodeRegistry.sol";
 import "../src/SkillRegistry.sol";
+import "../src/PriceOracle.sol";
 import "../src/Marketplace.sol";
 import "../src/CommunityPool.sol";
 
@@ -30,8 +31,9 @@ contract MarketplaceTest is Test {
         nodeReg      = new NodeRegistry(address(token));
         skillReg     = new SkillRegistry();
         communityPool = new CommunityPool(address(token));
+        PriceOracle priceOracle = new PriceOracle(admin, 1e16); // $0.01/TRUST
         marketplace  = new Marketplace(
-            address(token), address(skillReg), address(nodeReg), treasury, address(communityPool)
+            address(token), address(skillReg), address(nodeReg), treasury, address(communityPool), address(priceOracle)
         );
 
         // Grant Marketplace the DEPOSITOR_ROLE so it can fund the pool
