@@ -178,7 +178,7 @@ function ChainDetail({
   const handleRun = () => {
     const displayName = chain.chain_name.replace(/-/g, ' ');
     const skillList = chain.skills.join(', ');
-    const prompt = `Run the "${displayName}" chain via FlowFabric. The chain has ${chain.skills.length} flows in order: ${skillList}. Use the FlowFabric MCP tools — call run_chain or find_and_run to start. Ask me for any inputs you need.`;
+    const prompt = `Run the "${displayName}" pipeline via FlowFabric. It has ${chain.skills.length} flows in order: ${skillList}. Use the FlowFabric MCP tools — call run_chain or find_and_run to start. Ask me for any inputs you need.`;
     window.open(`https://claude.ai/new?q=${encodeURIComponent(prompt)}`, '_blank');
     setLaunched(true);
     setTimeout(() => setLaunched(false), 4000);
@@ -267,7 +267,7 @@ function ChainDetail({
           {!isConnected ? (
             <div className="text-center">
               <p className="text-xs mb-3" style={{ color: 'var(--gold)' }}>
-                Connect your wallet with TRUST tokens to unlock this chain
+                Connect your wallet with TRUST tokens to unlock this pipeline
               </p>
               <ConnectButton />
             </div>
@@ -348,7 +348,7 @@ function BrowseChains({
   if (!allChains || allChains.length === 0) {
     return (
       <div className="text-center py-16">
-        <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>No chains available.</p>
+        <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>No pipelines available.</p>
       </div>
     );
   }
@@ -408,11 +408,11 @@ export default function Chains() {
       {/* Header */}
       <div className="text-center mb-10">
         <h1 className="text-3xl md:text-4xl font-bold mb-3" style={{ color: '#ffffff' }}>
-          Flow Chains
+          Flow Pipelines
         </h1>
         <p className="text-sm max-w-lg mx-auto" style={{ color: 'var(--text-secondary)' }}>
-          Multi-step AI pipelines that chain flows together. Describe what you need and
-          let the system find the right sequence.
+          Multi-step flows that run in sequence. Describe what you need and
+          let the system find the right pipeline.
         </p>
       </div>
 
@@ -481,7 +481,7 @@ export default function Chains() {
         {isSearching && hasSearch && (
           <div className="mt-3 flex items-center gap-2">
             <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: 'var(--cyan)' }} />
-            <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>Searching chains...</span>
+            <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>Searching pipelines...</span>
           </div>
         )}
       </div>
@@ -492,7 +492,7 @@ export default function Chains() {
           {/* Results list */}
           <div className="lg:col-span-3 space-y-3">
             <div className="text-xs uppercase tracking-wider mb-2" style={{ color: 'var(--text-secondary)' }}>
-              {results.length} chain{results.length !== 1 ? 's' : ''} found
+              {results.length} pipeline{results.length !== 1 ? 's' : ''} found
             </div>
             {results.map((chain) => (
               <ChainCard
@@ -521,10 +521,10 @@ export default function Chains() {
                 }}
               >
                 <div className="text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>
-                  Select a chain to view details
+                  Select a pipeline to view details
                 </div>
                 <div className="text-xs" style={{ color: 'var(--text-secondary)', opacity: 0.6 }}>
-                  Click any result to see the flow pipeline and run it
+                  Click any result to see its flows and run it
                 </div>
               </div>
             )}
@@ -533,7 +533,7 @@ export default function Chains() {
       ) : hasSearch && !isSearching ? (
         <div className="text-center py-16">
           <p className="text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>
-            No chains match that query.
+            No pipelines match that query.
           </p>
           <p className="text-xs" style={{ color: 'var(--text-secondary)', opacity: 0.6 }}>
             Try a different description of what you need.
@@ -543,7 +543,7 @@ export default function Chains() {
         /* Browse all chains when no search */
         <div>
           <div className="text-xs uppercase tracking-wider mb-4" style={{ color: 'var(--text-secondary)' }}>
-            Browse All Chains
+            Browse All Pipelines
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
             <div className="lg:col-span-3">
@@ -565,10 +565,10 @@ export default function Chains() {
                   }}
                 >
                   <div className="text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>
-                    Select a chain to view details
+                    Select a pipeline to view details
                   </div>
                   <div className="text-xs" style={{ color: 'var(--text-secondary)', opacity: 0.6 }}>
-                    Click any chain to see its flow pipeline and run it
+                    Click any pipeline to see its flows and run it
                   </div>
                 </div>
               )}
