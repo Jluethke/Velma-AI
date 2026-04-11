@@ -157,18 +157,19 @@ export default function HeroSection() {
       <div className="relative z-10 max-w-4xl mx-auto text-center">
 
         {/* MCP pill */}
-        <div className="inline-flex items-center gap-2 mb-8 animate-fade-in-up">
+        <div className="flex justify-center mb-8 animate-fade-in-up px-4">
           <span
-            className="text-xs font-semibold px-3 py-1.5 rounded-full flex items-center gap-2"
+            className="text-xs font-semibold px-3 py-1.5 rounded-full flex items-center gap-2 text-center"
             style={{
               background: 'rgba(74,222,128,0.08)',
               border: '1px solid rgba(74,222,128,0.2)',
               color: 'var(--green)',
               letterSpacing: '0.04em',
+              maxWidth: '100%',
             }}
           >
-            <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--green)', display: 'inline-block', boxShadow: '0 0 6px rgba(74,222,128,0.8)' }} />
-            Native MCP · Claude Code + Desktop + Web
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--green)', display: 'inline-block', flexShrink: 0, boxShadow: '0 0 6px rgba(74,222,128,0.8)' }} />
+            Native MCP · Claude Code + Desktop
           </span>
         </div>
 
@@ -176,7 +177,7 @@ export default function HeroSection() {
         <h1
           className="font-bold mb-6 animate-fade-in-up"
           style={{
-            fontSize: 'clamp(2.8rem, 7vw, 5.5rem)',
+            fontSize: 'clamp(2rem, 7vw, 5.5rem)',
             lineHeight: 1.06,
             letterSpacing: '-0.03em',
           }}
