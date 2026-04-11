@@ -1,118 +1,80 @@
 import { Link } from 'react-router-dom';
 import { useGateCheck } from '../hooks/useGateCheck';
 
-// ── Live ticker data ──────────────────────────────────────────────
+// ── How it works steps ────────────────────────────────────────────
 
-const TICKER_ITEMS = [
-  { flow: 'business-in-a-box', ago: '2m ago' },
-  { flow: 'salary-negotiator', ago: '4m ago' },
-  { flow: 'resume-builder', ago: '7m ago' },
-  { flow: 'idea-validator', ago: '9m ago' },
-  { flow: 'budget-builder', ago: '12m ago' },
-  { flow: 'interview-coach', ago: '14m ago' },
-  { flow: 'career-pivot', ago: '18m ago' },
-  { flow: 'market-research', ago: '21m ago' },
-  { flow: 'pricing-strategy', ago: '23m ago' },
-  { flow: 'debt-payoff-planner', ago: '27m ago' },
-  { flow: 'sleep-protocol-designer', ago: '30m ago' },
-  { flow: 'competitor-teardown', ago: '33m ago' },
+const STEPS = [
+  {
+    n: '1',
+    title: 'Start a session',
+    body: 'Pick what you\'re working through — hiring, negotiating, co-founding, scoping. Give it a name. You get a private link and a guest link to send to the other side.',
+    color: 'var(--cyan)',
+  },
+  {
+    n: '2',
+    title: 'Both sides answer privately',
+    body: 'You answer on your end. They answer on theirs. Neither of you sees the other\'s responses. No posturing. No anchoring. Just honest answers.',
+    color: 'var(--purple)',
+  },
+  {
+    n: '3',
+    title: 'Claude shows you the truth',
+    body: 'Once both sides submit, Claude reads each set of answers in isolation, extracts both positions, then synthesises them into a neutral analysis — common ground, gaps, and a concrete path forward.',
+    color: 'var(--green)',
+  },
 ];
 
-// CSS animation: position:absolute removes from layout flow so iOS Safari
-// can't measure the wide inner div as page scroll width.
-function LiveTicker() {
-  const doubled = [...TICKER_ITEMS, ...TICKER_ITEMS];
+// ── Synthesis preview card ────────────────────────────────────────
 
+function SynthesisPreview() {
   return (
-    <div
-      className="w-full"
-      style={{
-        overflow: 'hidden',
-        position: 'relative',
-        height: '36px',
-        maskImage: 'linear-gradient(90deg, transparent, black 8%, black 92%, transparent)',
-        WebkitMaskImage: 'linear-gradient(90deg, transparent, black 8%, black 92%, transparent)',
-      }}
-    >
-      <div
-        className="flex gap-3"
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          animation: 'ticker-scroll 48s linear infinite',
-        }}
-      >
-        {doubled.map((item, i) => (
-          <div
-            key={i}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-full shrink-0"
-            style={{
-              background: 'rgba(255,255,255,0.04)',
-              border: '1px solid rgba(255,255,255,0.07)',
-              width: '210px',
-            }}
-          >
-            <span
-              style={{
-                width: 6,
-                height: 6,
-                borderRadius: '50%',
-                background: 'var(--green)',
-                flexShrink: 0,
-                boxShadow: '0 0 6px rgba(74,222,128,0.6)',
-              }}
-            />
-            <span className="text-xs font-mono truncate" style={{ color: 'var(--text-secondary)' }}>
-              {item.flow}
-            </span>
-            <span className="text-xs ml-auto shrink-0" style={{ color: 'var(--text-secondary)', opacity: 0.4 }}>
-              {item.ago}
-            </span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// ── Flow preview card ─────────────────────────────────────────────
-
-function FlowPreview() {
-  return (
-    <div
-      className="glass-card p-4 md:p-5 max-w-lg mx-auto mb-14 animate-fade-in-up stagger-4 text-left"
-      style={{ borderColor: 'rgba(56,189,248,0.12)' }}
-    >
-      <div className="flex items-center gap-2 mb-4 pb-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-        <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--green)', display: 'inline-block', boxShadow: '0 0 8px rgba(74,222,128,0.8)' }} />
-        <span className="text-xs font-mono font-semibold" style={{ color: 'var(--cyan)' }}>salary-negotiator</span>
-        <span className="text-xs ml-auto font-mono" style={{ color: 'var(--text-secondary)', opacity: 0.4 }}>Phase 3 of 5</span>
+    <div className="glass-card p-5 md:p-6 max-w-lg mx-auto text-left"
+      style={{ borderColor: 'rgba(74,222,128,0.15)' }}>
+      {/* Header */}
+      <div className="flex items-center gap-2 mb-5 pb-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+        <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--green)', boxShadow: '0 0 8px rgba(74,222,128,0.8)' }} />
+        <span className="text-xs font-mono font-semibold" style={{ color: 'var(--green)' }}>
+          synthesis complete
+        </span>
+        <span className="ml-auto text-xs font-mono" style={{ color: 'var(--text-secondary)', opacity: 0.4 }}>
+          freelance-brief
+        </span>
       </div>
 
-      <div className="flex flex-col gap-2 mb-4">
-        {[
-          { icon: '✓', text: 'Role: Senior Engineer · 6 YOE', hi: false },
-          { icon: '✓', text: 'Current: $112K · Offer received: $128K', hi: false },
-          { icon: '→', text: 'Market range: $138K–$162K · Your leverage: High', hi: true },
-        ].map((row, i) => (
-          <div key={i} className="flex items-start gap-2">
-            <span className="text-xs mt-0.5 shrink-0" style={{ color: row.hi ? 'var(--cyan)' : 'var(--green)' }}>{row.icon}</span>
-            <span className="text-xs leading-relaxed" style={{ color: row.hi ? 'var(--text-primary)' : 'var(--text-secondary)', fontWeight: row.hi ? 500 : 400 }}>{row.text}</span>
+      {/* Agreement */}
+      <div className="mb-4">
+        <div className="text-xs font-semibold mb-2 uppercase tracking-widest" style={{ color: 'var(--green)', opacity: 0.7 }}>
+          \u2713 Where you agree
+        </div>
+        {['$120\u2013$140/day rate range', 'Remote-first, async communication', '6-week timeline'].map(item => (
+          <div key={item} className="flex items-center gap-2 mb-1.5">
+            <span className="text-xs" style={{ color: 'var(--green)' }}>\u2714</span>
+            <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{item}</span>
           </div>
         ))}
       </div>
 
-      <div className="rounded-lg p-3 mb-4" style={{ background: 'rgba(74,222,128,0.04)', border: '1px solid rgba(74,222,128,0.1)' }}>
-        <div className="text-xs mb-1.5 font-semibold uppercase tracking-widest" style={{ color: 'var(--text-secondary)', opacity: 0.4 }}>Procedure output</div>
-        <p className="text-xs leading-relaxed" style={{ color: 'var(--text-primary)' }}>
-          Counter at <span style={{ color: 'var(--green)', fontWeight: 600 }}>$148K</span> + $10K signing bonus.
-          Lead with market data. Your BATNA is strong — don't accept same-day.
-        </p>
+      {/* Gap */}
+      <div className="mb-4">
+        <div className="text-xs font-semibold mb-2 uppercase tracking-widest" style={{ color: 'var(--gold)', opacity: 0.7 }}>
+          \u2192 Gap to bridge
+        </div>
+        <div className="rounded-lg p-3" style={{ background: 'rgba(251,191,36,0.04)', border: '1px solid rgba(251,191,36,0.12)' }}>
+          <div className="text-xs font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>Revision rounds</div>
+          <div className="text-xs leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
+            Client expects unlimited. Freelancer budgeted for 2. <span style={{ color: 'var(--gold)' }}>Suggest: 3 rounds included, \u00d41.5x day rate after.</span>
+          </div>
+        </div>
       </div>
 
-      <div className="w-full text-xs py-2.5 rounded-lg font-semibold text-center" style={{ background: 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.15)', color: 'var(--cyan)' }}>
-        Approve &amp; run Phase 4: Counter-offer script →
+      {/* Trade-off */}
+      <div>
+        <div className="text-xs font-semibold mb-2 uppercase tracking-widest" style={{ color: 'var(--cyan)', opacity: 0.7 }}>
+          \u2696 Trade-off
+        </div>
+        <div className="text-xs leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
+          Freelancer accepts slightly lower day rate in exchange for a firm revision cap. Client gets certainty on cost. Both get what they actually care about.
+        </div>
       </div>
     </div>
   );
@@ -124,7 +86,7 @@ export default function HeroSection() {
   useGateCheck();
 
   return (
-    <section className="relative min-h-[95vh] flex flex-col items-center justify-center px-6 overflow-hidden">
+    <section className="relative min-h-[95vh] flex flex-col items-center justify-center px-6 pt-24 pb-16 overflow-hidden">
       <style>{`
         @keyframes hero-orb-a {
           0%   { transform: translate(0%, 0%) scale(1); }
@@ -138,44 +100,25 @@ export default function HeroSection() {
           66%  { transform: translate(12%, -6%) scale(1.1); }
           100% { transform: translate(0%, 0%) scale(1); }
         }
-        @keyframes hero-orb-c {
-          0%   { transform: translate(0%, 0%) scale(1); }
-          50%  { transform: translate(6%, 6%) scale(1.06); }
-          100% { transform: translate(0%, 0%) scale(1); }
-        }
-        @keyframes word-in {
-          from { opacity: 0; transform: translateY(12px); filter: blur(4px); }
-          to   { opacity: 1; transform: translateY(0);    filter: blur(0);   }
-        }
-        .word-animate {
-          display: inline-block;
-          animation: word-in 0.5s cubic-bezier(0.4, 0, 0.2, 1) both;
-        }
         @keyframes ticker-scroll {
           from { transform: translateX(0); }
           to   { transform: translateX(-50%); }
         }
       `}</style>
 
-      {/* Background orbs — no filter:blur (breaks overflow:hidden on iOS Safari) */}
+      {/* Background orbs */}
       <div className="absolute inset-0" style={{ pointerEvents: 'none', overflow: 'hidden' }}>
         <div style={{
           position: 'absolute', width: '900px', height: '900px',
           top: '-25%', left: '-20%', borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(56,189,248,0.09) 0%, rgba(56,189,248,0.04) 35%, rgba(56,189,248,0.01) 60%, transparent 80%)',
+          background: 'radial-gradient(circle, rgba(56,189,248,0.09) 0%, rgba(56,189,248,0.04) 35%, transparent 70%)',
           animation: 'hero-orb-a 22s ease-in-out infinite',
         }} />
         <div style={{
           position: 'absolute', width: '700px', height: '700px',
           bottom: '-15%', right: '-10%', borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(167,139,250,0.08) 0%, rgba(167,139,250,0.04) 35%, rgba(167,139,250,0.01) 60%, transparent 80%)',
+          background: 'radial-gradient(circle, rgba(167,139,250,0.08) 0%, rgba(167,139,250,0.04) 35%, transparent 70%)',
           animation: 'hero-orb-b 28s ease-in-out infinite',
-        }} />
-        <div style={{
-          position: 'absolute', width: '500px', height: '500px',
-          top: '40%', left: '42%', borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(74,222,128,0.04) 0%, rgba(74,222,128,0.01) 50%, transparent 75%)',
-          animation: 'hero-orb-c 18s ease-in-out infinite',
         }} />
         <div style={{
           position: 'absolute', inset: 0,
@@ -187,100 +130,75 @@ export default function HeroSection() {
       <div className="relative z-10 max-w-4xl mx-auto text-center">
 
         {/* Pill */}
-        <div className="flex justify-center mb-8 animate-fade-in-up px-4">
-          <span
-            className="text-xs font-semibold px-3 py-1.5 rounded-full flex items-center gap-2 text-center"
-            style={{
-              background: 'rgba(74,222,128,0.08)',
-              border: '1px solid rgba(74,222,128,0.2)',
-              color: 'var(--green)',
-              letterSpacing: '0.04em',
-              maxWidth: '100%',
-            }}
-          >
-            <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--green)', display: 'inline-block', flexShrink: 0, boxShadow: '0 0 6px rgba(74,222,128,0.8)' }} />
-            165+ proven flows &middot; AI matchmaking &middot; runs in Claude
+        <div className="flex justify-center mb-8 animate-fade-in-up">
+          <span className="text-xs font-semibold px-3 py-1.5 rounded-full flex items-center gap-2"
+            style={{ background: 'rgba(74,222,128,0.08)', border: '1px solid rgba(74,222,128,0.2)', color: 'var(--green)', letterSpacing: '0.04em' }}>
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--green)', boxShadow: '0 0 6px rgba(74,222,128,0.8)' }} />
+            Free to use &middot; No account needed &middot; Works across every industry
           </span>
         </div>
 
         {/* Headline */}
         <h1
-          className="font-bold mb-6 animate-fade-in-up px-2"
+          className="font-bold mb-5 animate-fade-in-up px-2"
           style={{
-            fontSize: 'clamp(1.75rem, 6vw, 5.5rem)',
-            lineHeight: 1.1,
+            fontSize: 'clamp(2rem, 6.5vw, 5.5rem)',
+            lineHeight: 1.08,
             letterSpacing: '-0.03em',
-            overflowWrap: 'break-word',
-            wordBreak: 'break-word',
-            width: '100%',
-            maxWidth: '100%',
+            color: 'var(--text-primary)',
           }}
         >
-          <span style={{ color: 'var(--text-primary)' }}>Flows.</span>
-          {' '}
-          <span style={{ color: 'var(--purple)' }}>Fabric.</span>
-          <br />
-          <span
-            className="gradient-text"
-            style={{ filter: 'drop-shadow(0 0 24px rgba(56,189,248,0.18))' }}
-          >
-            Discovery.
+          Get aligned<br />
+          <span className="gradient-text" style={{ filter: 'drop-shadow(0 0 24px rgba(56,189,248,0.18))' }}>
+            before you commit.
           </span>
         </h1>
 
         {/* Sub */}
-        <p
-          className="text-base md:text-lg mb-3 max-w-2xl mx-auto animate-fade-in-up stagger-2 px-2"
-          style={{ color: 'var(--text-secondary)', lineHeight: 1.75, overflowWrap: 'break-word' }}
-        >
-          Expert procedures for what you need to do.
-          Shared sessions for what you need to work through together.
-          And AI that finds who you need to work with.
+        <p className="text-base md:text-lg mb-3 max-w-2xl mx-auto animate-fade-in-up stagger-2 px-2"
+          style={{ color: 'var(--text-secondary)', lineHeight: 1.75 }}>
+          Both sides answer privately. Claude reads each set of answers in isolation,
+          then shows you both the same neutral analysis &mdash; common ground, gaps, and a path forward.
         </p>
-
-        <p
-          className="text-sm mb-10 animate-fade-in-up stagger-2 px-2"
-          style={{ color: 'var(--text-secondary)', opacity: 0.55, overflowWrap: 'break-word' }}
-        >
-          Post what you need.{' '}
-          <span style={{ color: 'var(--cyan)', opacity: 1 }}>Claude finds the match. One tap starts a Fabric session.</span>
+        <p className="text-sm mb-10 animate-fade-in-up stagger-2"
+          style={{ color: 'var(--text-secondary)', opacity: 0.5 }}>
+          No awkward calls. No anchoring. No one shows their hand first.
         </p>
 
         {/* CTAs */}
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-4 animate-fade-in-up stagger-3">
-          <Link
-            to="/get-started"
-            className="btn-primary inline-flex items-center gap-3 px-8 py-4 no-underline text-sm md:text-base font-semibold"
-          >
-            Run your first flow
-            <span style={{ fontSize: 18 }}>→</span>
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-14 animate-fade-in-up stagger-3">
+          <Link to="/start" className="btn-primary inline-flex items-center gap-3 px-8 py-4 no-underline text-sm md:text-base font-semibold">
+            Start an alignment session
+            <span style={{ fontSize: 18 }}>&rarr;</span>
           </Link>
-          <Link
-            to="/discover"
+          <Link to="/discover/new"
             className="btn-secondary inline-flex items-center gap-2 px-6 py-3 no-underline text-sm"
-            style={{ borderColor: 'rgba(167,139,250,0.3)', color: 'var(--purple)' }}
-          >
-            Post to Discovery <span>→</span>
+            style={{ borderColor: 'rgba(167,139,250,0.3)', color: 'var(--purple)' }}>
+            Find a counterpart &rarr;
           </Link>
         </div>
 
-        {/* Social proof */}
-        <p className="text-xs mb-10 animate-fade-in-up stagger-3" style={{ color: 'var(--text-secondary)', opacity: 0.4 }}>
-          Free to start &middot; No account needed &middot; Works across every industry
-        </p>
+        {/* Synthesis preview */}
+        <div className="mb-20 animate-fade-in-up stagger-4">
+          <SynthesisPreview />
+        </div>
 
-        {/* Flow preview card */}
-        <FlowPreview />
-
-        {/* Live ticker */}
-        <div className="animate-fade-in-up stagger-4">
-          <div className="flex items-center justify-center gap-2 mb-3">
-            <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--green)', display: 'inline-block', boxShadow: '0 0 6px rgba(74,222,128,0.8)' }} />
-            <span className="text-xs" style={{ color: 'var(--text-secondary)', opacity: 0.5 }}>
-              flows running now
-            </span>
-          </div>
-          <LiveTicker />
+        {/* How it works */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-left">
+          {STEPS.map(step => (
+            <div key={step.n} className="glass-card p-5" style={{ borderColor: `${step.color}15` }}>
+              <div className="w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold mb-3"
+                style={{ background: `${step.color}12`, color: step.color, border: `1px solid ${step.color}25` }}>
+                {step.n}
+              </div>
+              <div className="text-sm font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
+                {step.title}
+              </div>
+              <p className="text-xs leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
+                {step.body}
+              </p>
+            </div>
+          ))}
         </div>
 
       </div>

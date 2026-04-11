@@ -23,11 +23,10 @@ export default function Navbar() {
   const pendingMatches = useMatchBadge();
 
   const navLinks = [
-    { to: '/install', label: 'Install' },
+    { to: '/sessions', label: 'Sessions' },
+    { to: '/discover', label: 'Find a Match' },
     { to: '/get-started', label: 'Get Started' },
-    { to: '/discover', label: 'Discover' },
     { to: '/compose', label: 'Composer' },
-    { to: '/memory', label: 'Memory' },
     { to: '/docs', label: 'Docs' },
   ];
 
@@ -191,28 +190,26 @@ export default function Navbar() {
               </>
             )}
 
-            {!isConnected && (
-              <Link
-                to="/skill/budget-builder"
-                className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs no-underline"
-                style={{
-                  background: 'rgba(56, 189, 248, 0.08)',
-                  border: '1px solid rgba(56, 189, 248, 0.2)',
-                  color: 'var(--cyan)',
-                  transition: 'all 0.3s',
-                }}
-                onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLElement).style.background = 'rgba(56, 189, 248, 0.15)';
-                  (e.currentTarget as HTMLElement).style.boxShadow = '0 0 16px rgba(56, 189, 248, 0.1)';
-                }}
-                onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLElement).style.background = 'rgba(56, 189, 248, 0.08)';
-                  (e.currentTarget as HTMLElement).style.boxShadow = 'none';
-                }}
-              >
-                Try a Flow
-              </Link>
-            )}
+            <Link
+              to="/start"
+              className="flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs no-underline font-semibold"
+              style={{
+                background: 'rgba(56, 189, 248, 0.1)',
+                border: '1px solid rgba(56, 189, 248, 0.25)',
+                color: 'var(--cyan)',
+                transition: 'all 0.3s',
+              }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLElement).style.background = 'rgba(56, 189, 248, 0.18)';
+                (e.currentTarget as HTMLElement).style.boxShadow = '0 0 16px rgba(56, 189, 248, 0.12)';
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLElement).style.background = 'rgba(56, 189, 248, 0.1)';
+                (e.currentTarget as HTMLElement).style.boxShadow = 'none';
+              }}
+            >
+              + Start Session
+            </Link>
 
             <button
               onClick={toggleTheme}

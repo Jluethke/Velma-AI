@@ -22,6 +22,8 @@ import Bounties from './pages/Bounties';
 import Activity from './pages/Activity';
 import Leaderboard from './pages/Leaderboard';
 import Fabric from './pages/Fabric';
+import FabricStart from './pages/FabricStart';
+import Sessions from './pages/Sessions';
 import Discovery from './pages/Discovery';
 import DiscoveryNew from './pages/DiscoveryNew';
 import DiscoveryMatches from './pages/DiscoveryMatches';
@@ -118,6 +120,8 @@ function App() {
           <Route path="/leaderboard" element={<Leaderboard />} />
 
           {/* Fabric — multiplayer flow sessions */}
+          <Route path="/start" element={<FabricStart />} />
+          <Route path="/sessions" element={<Sessions />} />
           <Route path="/fabric/:sessionId" element={<Fabric />} />
 
           {/* Discovery — AI-powered counterpart matching */}
