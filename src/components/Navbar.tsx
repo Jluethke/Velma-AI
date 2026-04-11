@@ -8,6 +8,7 @@ import { useTheme } from '../hooks/useTheme';
 
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
   const [showSend, setShowSend] = useState(false);
   const [sendTo, setSendTo] = useState('');
   const [sendAmount, setSendAmount] = useState('');
@@ -20,12 +21,14 @@ export default function Navbar() {
   const { theme, toggleTheme } = useTheme();
 
   const navLinks = [
-    { to: '/', label: 'Home' },
     { to: '/install', label: 'Install' },
     { to: '/get-started', label: 'Get Started' },
     { to: '/compose', label: 'Composer' },
     { to: '/memory', label: 'Memory' },
     { to: '/docs', label: 'Docs' },
+  ];
+
+  const moreLinks = [
     { to: '/leaderboard', label: 'Leaderboard' },
     { to: '/bounties', label: 'Bounties' },
     { to: '/activity', label: 'Activity' },
@@ -77,7 +80,6 @@ export default function Navbar() {
                   color: isActive(link.to) ? 'var(--cyan)' : 'var(--text-secondary)',
                   background: isActive(link.to) ? 'rgba(56, 189, 248, 0.08)' : 'transparent',
                   transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                  position: 'relative',
                   fontWeight: isActive(link.to) ? 500 : 400,
                 }}
                 onMouseEnter={(e) => {
@@ -96,6 +98,45 @@ export default function Navbar() {
                 {link.label}
               </Link>
             ))}
+            {/* More dropdown */}
+            <div style={{ position: 'relative' }}>
+              <button
+                onClick={() => setMoreOpen(!moreOpen)}
+                onBlur={() => setTimeout(() => setMoreOpen(false), 150)}
+                className="text-sm px-3 py-1.5 rounded-lg cursor-pointer"
+                style={{
+                  background: 'none', border: 'none',
+                  color: moreLinks.some(l => isActive(l.to)) ? 'var(--cyan)' : 'var(--text-secondary)',
+                  fontWeight: moreLinks.some(l => isActive(l.to)) ? 500 : 400,
+                  transition: 'color 0.2s',
+                }}
+              >
+                More ▾
+              </button>
+              {moreOpen && (
+                <div style={{
+                  position: 'absolute', top: '110%', left: 0, zIndex: 200,
+                  background: 'var(--bg-secondary)', border: '1px solid var(--border)',
+                  borderRadius: '10px', padding: '6px', minWidth: '140px',
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+                }}>
+                  {moreLinks.map(link => (
+                    <Link
+                      key={link.to}
+                      to={link.to}
+                      onClick={() => setMoreOpen(false)}
+                      className="no-underline block px-3 py-2 rounded-lg text-sm"
+                      style={{
+                        color: isActive(link.to) ? 'var(--cyan)' : 'var(--text-secondary)',
+                        background: isActive(link.to) ? 'rgba(56,189,248,0.08)' : 'transparent',
+                      }}
+                    >
+                      {link.label}
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Right side */}
@@ -241,7 +282,7 @@ export default function Navbar() {
         {/* Mobile menu */}
         {mobileOpen && (
           <div className="md:hidden mt-4 pb-4 flex flex-col gap-4 items-center" style={{ borderTop: '1px solid var(--border)' }}>
-            {navLinks.map(link => (
+            {[...navLinks, ...moreLinks].map(link => (
               <Link
                 key={link.to}
                 to={link.to}
