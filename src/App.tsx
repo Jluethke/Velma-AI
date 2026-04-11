@@ -21,6 +21,9 @@ import Bounties from './pages/Bounties';
 import Activity from './pages/Activity';
 import Leaderboard from './pages/Leaderboard';
 import Fabric from './pages/Fabric';
+import Discovery from './pages/Discovery';
+import DiscoveryNew from './pages/DiscoveryNew';
+import DiscoveryMatches from './pages/DiscoveryMatches';
 
 const BANNER_KEY = 'flowfabric-mobile-banner-dismissed';
 
@@ -115,6 +118,11 @@ function App() {
 
           {/* Fabric — multiplayer flow sessions */}
           <Route path="/fabric/:sessionId" element={<Fabric />} />
+
+          {/* Discovery — AI-powered counterpart matching */}
+          <Route path="/discover" element={<Discovery />} />
+          <Route path="/discover/new" element={<DiscoveryNew />} />
+          <Route path="/discover/matches" element={<DiscoveryMatches />} />
         </Routes>
         <Footer />
       </div>
