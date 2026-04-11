@@ -1498,6 +1498,220 @@ server.tool("get_access_status",
 );
 
 // ===================================================================
+// FABRIC — MULTIPLAYER FLOW TOOLS
+// ===================================================================
+
+/**
+ * Fabric API base URL. Defaults to the production deployment; can be
+ * overridden via FABRIC_API_URL env var for local dev.
+ */
+function fabricApiUrl(): string {
+  return (process.env.FABRIC_API_URL ?? "https://www.flowfabric.io").replace(/\/$/, "");
+}
+
+/**
+ * POST a JSON body to a Fabric API endpoint.
+ */
+async function fabricPost(path: string, body: Record<string, unknown>): Promise<Record<string, unknown>> {
+  const url = `${fabricApiUrl()}${path}`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const text = await res.text();
+  try {
+    return JSON.parse(text) as Record<string, unknown>;
+  } catch {
+    return { raw: text, status: res.status };
+  }
+}
+
+/**
+ * GET a Fabric API endpoint.
+ */
+async function fabricGet(path: string): Promise<Record<string, unknown>> {
+  const url = `${fabricApiUrl()}${path}`;
+  const res = await fetch(url);
+  const text = await res.text();
+  try {
+    return JSON.parse(text) as Record<string, unknown>;
+  } catch {
+    return { raw: text, status: res.status };
+  }
+}
+
+server.tool(
+  "create_fabric_session",
+  "Start a new Fabric multiplayer session. Fabric lets two people — the host (you) and a guest (no account needed) — each fill out their side of a flow, then synthesizes both perspectives into a shared output. Returns a shareable guest URL and a secret hostToken you must keep.",
+  {
+    flow_slug: z.string().describe("The flow this session is based on (e.g. 'contract-scope-alignment')"),
+    title: z.string().optional().describe("Human-readable title for the session"),
+    host_data: z.string().default("{}").describe("Optional JSON of host's initial data to submit immediately"),
+    shared_fields: z.string().default("[]").describe("JSON array of field names the host wants to share with the guest"),
+  },
+  async ({ flow_slug, title, host_data, shared_fields }) => {
+    // 1. Create the session
+    const created = await fabricPost("/api/fabric/create", {
+      flowSlug: flow_slug,
+      title: title ?? flow_slug,
+    });
+
+    if (created.error) {
+      return { content: [{ type: "text" as const, text: JSON.stringify({ error: created.error }) }] };
+    }
+
+    const sessionId = created.sessionId as string;
+    const hostToken = created.hostToken as string;
+
+    // 2. Optionally submit host data immediately if provided
+    let hostSide: Record<string, unknown> | null = null;
+    let parsedData: Record<string, unknown> = {};
+    let parsedFields: string[] = [];
+    try { parsedData = JSON.parse(host_data); } catch { /* ok */ }
+    try { parsedFields = JSON.parse(shared_fields) as string[]; } catch { /* ok */ }
+
+    if (Object.keys(parsedData).length > 0) {
+      hostSide = await fabricPost(`/api/fabric/${sessionId}/host`, {
+        hostToken,
+        data: parsedData,
+        sharedFields: parsedFields,
+      });
+    }
+
+    return { content: [{ type: "text" as const, text: JSON.stringify({
+      session_id: sessionId,
+      guest_url: created.guestUrl,
+      host_token: hostToken,
+      expires_at: created.expiresAt,
+      host_submitted: hostSide?.host != null ? (hostSide.host as Record<string,unknown>).submitted : false,
+      instructions: [
+        `1. Share this link with your guest: ${created.guestUrl}`,
+        "2. They fill out their side in the browser (no account needed).",
+        "3. Once they submit, call get_fabric_status to check progress.",
+        "4. When both sides are in, call submit_fabric_host_side (if you haven't yet), then get_fabric_status to read the synthesis prompt and run the flow.",
+      ].join("\n"),
+    }, null, 2) }] };
+  }
+);
+
+server.tool(
+  "submit_fabric_host_side",
+  "Submit the host's answers for a Fabric session. Call this after collecting the host's inputs for the shared flow. Requires the hostToken returned by create_fabric_session.",
+  {
+    session_id: z.string().describe("The Fabric session ID"),
+    host_token: z.string().describe("The secret hostToken returned by create_fabric_session"),
+    data: z.string().default("{}").describe("JSON object of the host's form data / answers"),
+    shared_fields: z.string().default("[]").describe("JSON array of field names to share with the guest (the rest stay private)"),
+  },
+  async ({ session_id, host_token, data, shared_fields }) => {
+    let parsedData: Record<string, unknown> = {};
+    let parsedFields: string[] = [];
+    try { parsedData = JSON.parse(data); } catch { /* ok */ }
+    try { parsedFields = JSON.parse(shared_fields) as string[]; } catch { /* ok */ }
+
+    if (Object.keys(parsedData).length === 0) {
+      return { content: [{ type: "text" as const, text: JSON.stringify({ error: "data must be a non-empty JSON object" }) }] };
+    }
+
+    const result = await fabricPost(`/api/fabric/${session_id}/host`, {
+      hostToken: host_token,
+      data: parsedData,
+      sharedFields: parsedFields,
+    });
+
+    if (result.error) {
+      return { content: [{ type: "text" as const, text: JSON.stringify(result) }] };
+    }
+
+    const ready = result.readyForSynthesis as boolean;
+    return { content: [{ type: "text" as const, text: JSON.stringify({
+      ...result,
+      next_step: ready
+        ? `Both sides submitted! Call get_fabric_status('${session_id}', '${host_token}') to get the synthesis prompt and run the flow.`
+        : "Waiting for guest to submit their side. Call get_fabric_status to check.",
+    }, null, 2) }] };
+  }
+);
+
+server.tool(
+  "get_fabric_status",
+  "Check the status of a Fabric session. Returns both sides (host + guest) and the synthesis output when ready. Pass hostToken to see private host data; omit for the guest-safe view.",
+  {
+    session_id: z.string().describe("The Fabric session ID"),
+    host_token: z.string().optional().describe("The secret hostToken (required to trigger synthesis or write output)"),
+    synthesis_output: z.string().optional().describe("If you've run the synthesis flow and have the result, pass it here to store it in the session"),
+  },
+  async ({ session_id, host_token, synthesis_output }) => {
+    // Get session state
+    const session = await fabricGet(`/api/fabric/${session_id}`);
+
+    if (session.error) {
+      return { content: [{ type: "text" as const, text: JSON.stringify(session) }] };
+    }
+
+    const hostSub = (session.host as Record<string,unknown>)?.submitted as boolean;
+    const guestSub = (session.guest as Record<string,unknown>)?.submitted as boolean;
+    const synthStatus = (session.synthesis as Record<string,unknown>)?.status as string;
+
+    // If caller has hostToken and synthesis_output — write it
+    if (host_token && synthesis_output && hostSub && guestSub) {
+      const synthResult = await fabricPost(`/api/fabric/${session_id}/synthesize`, {
+        hostToken: host_token,
+        output: synthesis_output,
+      });
+      if (synthResult.error) {
+        return { content: [{ type: "text" as const, text: JSON.stringify(synthResult) }] };
+      }
+      return { content: [{ type: "text" as const, text: JSON.stringify({
+        ...synthResult,
+        message: "Synthesis stored. Both parties can now see the shared output.",
+      }, null, 2) }] };
+    }
+
+    // If both sides ready but no synthesis yet — generate synthesis prompt
+    let synthesisPrompt: string | null = null;
+    if (hostSub && guestSub && synthStatus !== "ready") {
+      const hostData = (session.host as Record<string,unknown>)?.data as Record<string,unknown> ?? {};
+      const guestData = (session.guest as Record<string,unknown>)?.data as Record<string,unknown> ?? {};
+      const hostShared = (session.host as Record<string,unknown>)?.sharedFields as string[] ?? [];
+      const sharedHostData: Record<string,unknown> = {};
+      for (const k of hostShared) {
+        if (k in hostData) sharedHostData[k] = hostData[k];
+      }
+      synthesisPrompt = [
+        `Run the '${session.flowSlug as string}' flow with both sides as input:`,
+        "",
+        "HOST'S SHARED PERSPECTIVE:",
+        JSON.stringify(sharedHostData, null, 2),
+        "",
+        "GUEST'S PERSPECTIVE:",
+        JSON.stringify(guestData, null, 2),
+        "",
+        "Synthesize both viewpoints into a shared output. Focus on alignment, gaps, and recommended next steps.",
+        `When complete, call get_fabric_status('${session_id}', '<hostToken>', synthesisOutput) to store the result.`,
+      ].join("\n");
+    }
+
+    return { content: [{ type: "text" as const, text: JSON.stringify({
+      ...session,
+      host_submitted: hostSub,
+      guest_submitted: guestSub,
+      synthesis_status: synthStatus,
+      synthesis_output: (session.synthesis as Record<string,unknown>)?.output ?? null,
+      synthesis_prompt: synthesisPrompt,
+      next_step: !hostSub
+        ? "Waiting for host to submit. Call submit_fabric_host_side."
+        : !guestSub
+        ? "Waiting for guest. Share the guest_url and ask them to fill out their side."
+        : synthStatus === "ready"
+        ? "Synthesis complete. See synthesis_output."
+        : "Both sides in! Use synthesis_prompt above to run the flow, then call get_fabric_status with synthesis_output.",
+    }, null, 2) }] };
+  }
+);
+
+// ===================================================================
 // HEALTH / META
 // ===================================================================
 

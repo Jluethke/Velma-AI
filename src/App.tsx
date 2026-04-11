@@ -20,6 +20,7 @@ import Memory from './pages/Memory';
 import Bounties from './pages/Bounties';
 import Activity from './pages/Activity';
 import Leaderboard from './pages/Leaderboard';
+import Fabric from './pages/Fabric';
 
 const BANNER_KEY = 'flowfabric-mobile-banner-dismissed';
 
@@ -111,6 +112,9 @@ function App() {
           <Route path="/bounties" element={<Bounties />} />
           <Route path="/activity" element={<Activity />} />
           <Route path="/leaderboard" element={<Leaderboard />} />
+
+          {/* Fabric — multiplayer flow sessions */}
+          <Route path="/fabric/:sessionId" element={<Fabric />} />
         </Routes>
         <Footer />
       </div>
