@@ -46,8 +46,7 @@ function LiveTicker() {
       className="w-full"
       style={{
         overflow: 'hidden',
-        overflowX: 'clip',
-        maxWidth: '100vw',
+        maxWidth: '100%',
         maskImage: 'linear-gradient(90deg, transparent, black 8%, black 92%, transparent)',
         WebkitMaskImage: 'linear-gradient(90deg, transparent, black 8%, black 92%, transparent)',
       }}
