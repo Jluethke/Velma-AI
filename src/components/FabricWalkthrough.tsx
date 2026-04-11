@@ -16,7 +16,7 @@ const STEPS = [
   {
     id: 2,
     label: 'Both sides submit privately',
-    sublabel: 'Neither sees the other's context yet.',
+    sublabel: "Neither sees the other's context yet.",
   },
   {
     id: 3,
