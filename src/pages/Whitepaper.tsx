@@ -7,35 +7,36 @@ const accent = (c: string) => ({ color: `var(--${c})` });
 export default function Whitepaper() {
   return (
     <div className="min-h-screen pt-24 px-6 pb-20 max-w-4xl mx-auto">
+
       {/* Header */}
       <div className="text-center mb-16">
         <h1 className="text-3xl md:text-4xl font-bold mb-4" style={h}>
           FlowFabric Whitepaper
         </h1>
         <p className="text-lg mb-2" style={accent('cyan')}>
-          AI Flows That Evolve From Language to Code Through Consensus
+          Seamless collaboration, sustained by an open earners network
         </p>
         <p className="text-sm mb-8" style={t}>
-          Open infrastructure for composable, validated, trust-scored AI procedures
+          How a shared alignment layer and a contributor economy grow together
         </p>
         <p className="text-xs" style={t}>
-          Version 2.0 | April 2026 | The Wayfinder Trust
+          Version 2.0 &middot; April 2026 &middot; The Wayfinder Trust
         </p>
       </div>
 
       {/* Abstract */}
       <Section title="Abstract">
-        <P>FlowFabric is a protocol for creating, validating, composing, and trading AI-executable procedures (flows) as network assets. Flows start as natural language instructions, gain trust through decentralized shadow validation, and can eventually compile into deterministic code — software born from conversation, proven by consensus.</P>
-        <P>The platform consists of four layers: an open flow marketplace (165+ flows and growing), a visual Composer for building multi-flow pipelines, Fabric — shared alignment sessions where two parties bring their private context and a flow mediates the exchange — and Fabric Discovery, an AI-powered matchmaking board where any user can post an intent and Claude finds, scores, and connects the best counterpart from across the network.</P>
-        <P>Individual flows are free to run. Connecting flows into pipelines, creating new flows, and publishing on-chain require TRUST tokens — earned through contribution, not purchase.</P>
+        <P>FlowFabric is a collaboration network. On the surface, it gives any two people a structured, private way to align — on a contract, a co-founding split, a hire, a renovation scope, a business partnership. Both sides answer privately. Claude mediates. Neither party sees the other's raw inputs. Both receive the same neutral synthesis: what you agree on, where the gaps are, and a concrete path forward.</P>
+        <P>Behind that surface is an earners ecosystem. The flows that power every session — the structured procedures Claude follows — are built, validated, and maintained by contributors who earn for their work. Every time a flow runs, the people who made it worth running get paid. The better the contributors, the better the collaboration. The better the collaboration, the more sessions run. The more sessions run, the more contributors earn.</P>
+        <P>This document explains both layers: how the collaboration works, and how the economy that sustains it is designed.</P>
       </Section>
 
-      {/* Core Principles */}
+      {/* Three pillars */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-12">
         {[
-          { label: 'Free to Run', desc: 'Every flow is free. No account needed.', color: 'cyan' },
-          { label: 'Proven by Consensus', desc: 'Shadow validation. Math, not reviews.', color: 'purple' },
-          { label: 'Language → Code', desc: 'Flows evolve from prompts to compiled software.', color: 'gold' },
+          { label: 'Free to use', desc: 'Fabric sessions cost nothing to start. No account needed. Works across any industry, any counterpart.', color: 'cyan' },
+          { label: 'Earners behind it', desc: 'Every flow was built by someone who gets paid when it runs. Contributors, validators, and authors earn on-chain.', color: 'green' },
+          { label: 'Self-sustaining', desc: 'The more people collaborate, the more contributors earn. The more contributors earn, the better the flows get.', color: 'gold' },
         ].map((item) => (
           <div key={item.label} className="p-5 rounded-xl" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
             <div className="text-sm font-bold mb-1" style={accent(item.color)}>{item.label}</div>
@@ -46,103 +47,76 @@ export default function Whitepaper() {
 
       {/* 1. The Problem */}
       <Section title="1. The Problem">
-        <P>AI agents can follow complex procedures — budgeting, code review, market research, career planning. But every time you close the conversation, that capability vanishes. There is no way to package a working AI procedure, prove it produces consistent results, share it with others, or earn from its use.</P>
-        <P>Existing solutions fail in different ways. Prompt libraries are unvalidated text. Agent marketplaces (AutoGPT) trade complete agents, not composable procedures. Memory systems (MemPalace) remember context but don't standardize execution. None of them create an economy around quality.</P>
+        <P>Getting two parties aligned is one of the most friction-heavy interactions in professional life. The co-founder conversation that drags on for weeks. The freelance brief that collapses because neither side surfaced their real constraints early enough. The salary negotiation where one side anchors and the other spends the rest of the conversation reacting to it. The contractor bid where the client's budget and the contractor's floor are $10K apart — and nobody found out until two hours into a scoping call.</P>
+        <P>The problem isn't that people can't communicate. It's that the format of most professional conversations rewards strategic ambiguity over honest disclosure. You don't show your hand first. You anchor high and negotiate down. You wait to see what the other side says before committing. Everyone does this, everyone knows everyone does this, and it still costs everyone time, money, and bad deals.</P>
+        <P>Separately: finding the right counterpart in the first place is slow and expensive. Job boards, marketplaces, LinkedIn, referrals — all require cold outreach, which means one party reaches out, the other decides whether to respond, and weeks pass before both parties are in the same conversation with enough context to know whether they're even a fit.</P>
       </Section>
 
-      {/* 2. The Solution */}
-      <Section title="2. Flows as Open Infrastructure">
-        <P>A flow is a structured AI procedure with defined phases, entry criteria, quality gates, and typed inputs/outputs. Flows follow the FlowFabric Open Skill Standard (FOSS), making them portable across any MCP-compatible AI agent.</P>
-        <P>Individual flows are free to run — they are open infrastructure, like open-source libraries. The value isn't in hiding flows behind a paywall. It's in the trust scores that prove they work, the compositions that connect them into chains, and the economy that rewards quality.</P>
-        <H3>Flow Package Format</H3>
-        <P>Every flow is a directory containing a skill.md (execution specification with phases and quality gates) and a manifest.json (machine-readable metadata including typed inputs and outputs). The manifest enables automated chain composition — the system matches one flow's outputs to another flow's inputs.</P>
+      {/* 2. The Collaboration Layer */}
+      <Section title="2. The Collaboration Layer">
+        <P>FlowFabric's answer to the alignment problem is Fabric — a structured session format where both parties answer privately and Claude synthesises both sides into a neutral analysis. The session runs in three steps.</P>
+
+        <H3>How a Fabric session works</H3>
+        <P>The host picks a use case — freelance brief, co-founder alignment, salary negotiation, renovation scope, or any other structured interaction — and sends a private link to the other party. Both sides answer the same set of questions independently, through the same interface, with no knowledge of what the other side is writing. Once both sides submit, Claude reads each set of answers in complete isolation, extracts the key positions from each party independently, and then synthesises those positions into a neutral report: where the parties agree, where the gaps are, and a concrete suggestion for bridging each one.</P>
+        <P>The raw answers from either party are never shared with the other. The synthesis is the only output either party sees. This eliminates anchoring, posturing, and strategic sequencing — neither party can game the result because neither party sees the other's inputs until the synthesis is already done.</P>
+
+        <H3>Fabric Discovery</H3>
+        <P>Discovery solves the counterpart problem. Any user can post a plain-English listing — what they need, what they offer, who they are looking for. Claude reads every listing on the board, scores the best counterparts using a multi-factor alignment model, and surfaces ranked matches with AI-written introductions explaining the fit. Accepting a match creates a Fabric session immediately. No cold outreach. No back-and-forth scheduling. No wasted calls to find out you weren't a fit.</P>
+        <P>The board is industry-agnostic by design. A homeowner looking for a kitchen contractor. A founder looking for a co-founder. A freelancer advertising their services to inbound clients. A buyer and a seller negotiating terms. The format is identical across every use case — only the flow changes.</P>
+
+        <H3>Privacy model</H3>
+        <P>Discovery listings are intentionally public — users post what they are comfortable advertising. Fabric sessions are private and ephemeral. Each party's answers are visible only to the synthesis layer; the other party never sees raw inputs. Sessions expire after seven days. No persistent profile is required. Wallet address is the only identity anchor, and even that is optional for guests.</P>
       </Section>
 
-      {/* 3. Flow Evolution */}
-      <Section title="3. Flow Evolution: From Language to Code">
-        <P>Flows are not static. They evolve through validation:</P>
+      {/* 3. The Earners Ecosystem */}
+      <Section title="3. The Earners Ecosystem">
+        <P>Every Fabric session runs on a flow — a structured procedure that defines the questions, the synthesis format, and the quality of the output. Those flows were built by contributors. When a flow runs, the contributor who built it earns. When someone improves an existing flow and publishes a derivative, the original author earns a royalty on every run of the derivative, automatically, enforced by smart contract, forever.</P>
+        <P>This is not a subsidy or a platform incentive. It is the economic structure of the network. Collaboration is the use case. The earners ecosystem is what makes it self-sustaining.</P>
+
+        <H3>Who earns</H3>
         <div className="overflow-x-auto rounded-lg my-4" style={{ border: '1px solid var(--border)' }}>
           <table className="w-full text-sm">
-            <thead><tr style={{ background: 'var(--bg-card)' }}><th className="text-left px-4 py-2" style={t}>Stage</th><th className="text-left px-4 py-2" style={t}>Description</th><th className="text-left px-4 py-2" style={t}>Requirement</th></tr></thead>
+            <thead><tr style={{ background: 'var(--bg-card)' }}>
+              <th className="text-left px-4 py-2" style={t}>Role</th>
+              <th className="text-left px-4 py-2" style={t}>What they do</th>
+              <th className="text-left px-4 py-2" style={t}>What they earn</th>
+            </tr></thead>
             <tbody style={t}>
               {[
-                ['Prompt', 'Natural language instruction', 'None'],
-                ['Flow', 'Structured phases with quality gates', 'Follows FOSS standard'],
-                ['Validated', 'Shadow-tested, trust-scored on-chain', '5+ validator attestations'],
-                ['Graduated', 'Proven consistent across many runs', '100+ validations, 95%+ similarity'],
-                ['Compiled', 'Executable code, no AI needed', 'Automatic on graduation'],
-              ].map(([stage, desc, req]) => (
-                <tr key={stage} style={{ borderTop: '1px solid var(--border)' }}>
-                  <td className="px-4 py-2 font-medium" style={h}>{stage}</td>
-                  <td className="px-4 py-2">{desc}</td>
-                  <td className="px-4 py-2">{req}</td>
+                ['Flow Creator', 'Builds and publishes a flow used in sessions', '70% of TRUST generated on their flows'],
+                ['Original Author', 'Published a flow that others fork and improve', '15% royalty on all derivative earnings, forever'],
+                ['Validator', 'Shadow-tests flows to prove they produce consistent results', '15% of TRUST on flows they validated'],
+                ['Chain Builder', 'Connects flows into multi-step pipelines', 'TRUST on every chain run'],
+              ].map(([role, what, earns]) => (
+                <tr key={role} style={{ borderTop: '1px solid var(--border)' }}>
+                  <td className="px-4 py-2 font-medium" style={h}>{role}</td>
+                  <td className="px-4 py-2">{what}</td>
+                  <td className="px-4 py-2" style={accent('green')}>{earns}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-        <P>A compiled flow runs as deterministic code — zero token cost, instant execution, AI-independent. This is software born from natural language and proven through decentralized consensus. It has never existed before.</P>
-      </Section>
 
-      {/* 3.5 Fabric & Discovery */}
-      <Section title="3.5 Fabric Sessions and Discovery">
-        <P>Fabric is the multi-party layer of FlowFabric. A Fabric session connects two parties inside a shared flow — each side submits their private context (budget, goals, constraints, preferences) and the flow synthesises the inputs into a joint view: where they agree, where they differ, and a concrete path forward. Neither party sees the other's raw inputs — only the synthesis. Privacy is the design principle: the flow mediates, not exposes.</P>
-        <P>Fabric Discovery extends this into a matchmaking network. Any user can post a listing — a plain-English description of what they need, want to sell, or want to collaborate on. Claude reads every listing on the board, scores the best counterparts using a multi-factor alignment model, and surfaces ranked matches with reasoning. A single action by either party creates a Fabric session immediately.</P>
-        <H3>Discovery Use Cases</H3>
-        <P>The network is industry-agnostic. Examples: a homeowner posting a kitchen brief gets matched to designers and contractors who enter a scoped-project Fabric session; a startup founder looking for a co-founder gets scored against matching candidates; a freelancer advertising services gets matched to a client brief; a buyer and seller negotiate terms through a mediated flow. The format is identical across all cases — only the flow changes.</P>
-        <H3>Privacy Model</H3>
-        <P>Discovery listings are intentionally public — users post what they are comfortable advertising. Fabric sessions are private and ephemeral. Once a session is created, each party's answers are visible only to the synthesis layer; the other party never sees raw inputs. Sessions expire. No persistent profile is required. Wallet address is the only identity anchor.</P>
-      </Section>
+        <H3>TRUST token</H3>
+        <P>TRUST is the native token of the FlowFabric network, deployed on Base mainnet (ERC-20). TRUST is both earned and purchasable, but earned TRUST carries more weight — it boosts validator influence and governance voting power in ways purchased TRUST does not. This means the people with the most say over the network are those who have contributed to it, not just bought into it.</P>
+        <P>TRUST balance also determines what you can do on the network. Higher tiers unlock the ability to build chains, publish flows on-chain, and participate in validation — which are also the activities that generate more earnings. Access and earnings scale together.</P>
 
-      {/* 4. Chain Composition */}
-      <Section title="4. Chain Composition">
-        <P>Individual flows are building blocks. Chains are where value compounds — multi-flow pipelines that produce outcomes no single flow can achieve alone.</P>
-        <P>The visual Composer allows users to drag flows onto a canvas, connect them by matching inputs to outputs, customize individual flows, and execute the entire chain interactively via Claude Code. Custom flows can be described in natural language and built on-the-fly during chain execution.</P>
-        <H3>Access Model</H3>
-        <P>Free users can browse all flows, run individual flows, and load chain templates onto the canvas to see how chains work. Connecting flows into chains, creating custom flows, scheduling recurring runs, and publishing on-chain all require TRUST tokens. This ensures creators are invested in the ecosystem before they can publish to it.</P>
-      </Section>
-
-      {/* 5. Trust-Weighted Consensus */}
-      <Section title="5. Trust-Weighted Consensus">
-        <P>Validation uses shadow testing — running candidate flows against reference test cases with multi-metric similarity scoring. Multiple validators must independently agree via trust-weighted BFT consensus.</P>
-        <P>Trust is computed as:</P>
-        <div className="p-4 rounded-lg my-4 font-mono text-xs sm:text-sm overflow-x-auto" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', color: 'var(--text-primary)', wordBreak: 'break-word' }}>
-          trust = exp(-decay * divergence)<br />
-          smoothed via EMA: trust_new = α * trust_raw + (1 - α) * trust_previous
-        </div>
-        <P>Key properties: trust decays fast on failure, recovers slowly through consistent performance, cannot be self-asserted or purchased. Only domain-competent validators can vote. Voting power derives from behavioral accuracy over time, not economic stake. This is fundamentally different from proof-of-stake systems.</P>
-      </Section>
-
-      {/* 6. TRUST Token Economy */}
-      <Section title="6. TRUST Token Economy">
-        <P>TRUST is the native token of the FlowFabric network, deployed on Base mainnet (ERC-20). TRUST is earned AND bought, but earned TRUST boosts influence (validator weight, governance power).</P>
-        <H3>Revenue Split (enforced by smart contract)</H3>
         <div className="overflow-x-auto rounded-lg my-4" style={{ border: '1px solid var(--border)' }}>
           <table className="w-full text-sm">
-            <thead><tr style={{ background: 'var(--bg-card)' }}><th className="text-left px-4 py-2" style={t}>Recipient</th><th className="text-left px-4 py-2" style={t}>Share</th><th className="text-left px-4 py-2" style={t}>Why</th></tr></thead>
-            <tbody style={t}>
-              <tr style={{ borderTop: '1px solid var(--border)' }}><td className="px-4 py-2 font-medium" style={accent('gold')}>Creator</td><td className="px-4 py-2">70%</td><td className="px-4 py-2">Built or published the skill/flow</td></tr>
-              <tr style={{ borderTop: '1px solid var(--border)' }}><td className="px-4 py-2 font-medium" style={accent('green')}>Original Author</td><td className="px-4 py-2">15%</td><td className="px-4 py-2">If derivative — royalties flow to the original</td></tr>
-              <tr style={{ borderTop: '1px solid var(--border)' }}><td className="px-4 py-2 font-medium" style={accent('purple')}>Validators</td><td className="px-4 py-2">15%</td><td className="px-4 py-2">Proved the flow works via shadow validation</td></tr>
-            </tbody>
-          </table>
-        </div>
-        <P>When someone modifies an existing flow and publishes it as a derivative, the original author receives 15% of all TRUST earned on that derivative — automatically, via smart contract, forever. This incentivizes creating flows worth forking.</P>
-        <H3>Ways to Earn</H3>
-        <P>Publish flows that others use. Validate flows for quality. Create chains that compose multiple flows. Fork and improve existing flows (derivatives). All earnings are on-chain and verifiable.</P>
-        <H3>Token Tiers</H3>
-        <P>TRUST balance determines access tier. TRUST can be earned through contribution or purchased, but earned TRUST boosts influence in validation and governance.</P>
-        <div className="overflow-x-auto rounded-lg my-4" style={{ border: '1px solid var(--border)' }}>
-          <table className="w-full text-sm">
-            <thead><tr style={{ background: 'var(--bg-card)' }}><th className="text-left px-4 py-2" style={t}>Tier</th><th className="text-left px-4 py-2" style={t}>TRUST Balance</th><th className="text-left px-4 py-2" style={t}>Access</th></tr></thead>
+            <thead><tr style={{ background: 'var(--bg-card)' }}>
+              <th className="text-left px-4 py-2" style={t}>Tier</th>
+              <th className="text-left px-4 py-2" style={t}>TRUST Required</th>
+              <th className="text-left px-4 py-2" style={t}>What unlocks</th>
+            </tr></thead>
             <tbody style={t}>
               {[
-                ['Explorer', '0', 'Browse and run individual flows (free)'],
-                ['Builder', '500', 'Build chains, save/load/export chains'],
-                ['Creator', '2,500', 'Publish flows and chains on-chain'],
-                ['Pro Creator', '10,000', 'Advanced scheduling and analytics'],
-                ['Validator', '25,000 (staked)', 'Validate flow quality, earn validation rewards'],
-                ['Governor', '100,000 (staked)', 'DAO voting on protocol parameters'],
+                ['Explorer', '0', 'Browse flows, run individual flows, start Fabric sessions'],
+                ['Builder', '500', 'Build chains, save and export pipelines'],
+                ['Creator', '2,500', 'Publish flows and chains on-chain, earn on every run'],
+                ['Pro Creator', '10,000', 'Advanced scheduling, detailed analytics, API access'],
+                ['Validator', '25,000 staked', 'Validate flow quality, earn 15% on validated flows'],
+                ['Governor', '100,000 staked', 'DAO voting on protocol parameters'],
               ].map(([tier, balance, access]) => (
                 <tr key={tier} style={{ borderTop: '1px solid var(--border)' }}>
                   <td className="px-4 py-2 font-medium" style={h}>{tier}</td>
@@ -153,25 +127,81 @@ export default function Whitepaper() {
             </tbody>
           </table>
         </div>
+
+        <H3>Derivative royalties</H3>
+        <P>When a contributor improves an existing flow and publishes a derivative, the original author automatically receives 15% of all TRUST earned on that derivative — enforced by smart contract, with no platform intermediary, forever. This creates a direct financial incentive to build flows worth improving, and to improve flows worth using. The quality of the network compounds through every fork.</P>
       </Section>
 
-      {/* 7. Smart Contracts */}
-      <Section title="7. Smart Contract Architecture">
-        <P>Nine contracts deployed on Base mainnet handle the full lifecycle:</P>
+      {/* 4. Flows — the building blocks */}
+      <Section title="4. Flows — The Building Blocks">
+        <P>A flow is a structured AI procedure with defined phases, entry criteria, quality gates, and typed inputs and outputs. Flows follow the FlowFabric Open Skill Standard (FOSS), making them portable across any MCP-compatible AI agent. There are currently 165+ flows on the network covering career decisions, contract negotiation, health planning, financial analysis, business strategy, and dozens of other use cases.</P>
+        <P>Individual flows are free to run. The value isn't in charging for access to procedures — it's in the trust scores that prove they work, the compositions that connect them into chains, and the earnings that flow to the people who made them.</P>
+
+        <H3>Chain composition</H3>
+        <P>Individual flows are building blocks. Chains are where value compounds — multi-flow pipelines where the output of one flow feeds into the next, producing outcomes no single flow can achieve alone. The visual Composer allows anyone to drag flows onto a canvas, connect them by matching inputs to outputs, and execute the entire chain interactively via Claude Code.</P>
+
+        <H3>Flow evolution</H3>
+        <P>Flows are not static. They evolve as validators prove their consistency:</P>
         <div className="overflow-x-auto rounded-lg my-4" style={{ border: '1px solid var(--border)' }}>
           <table className="w-full text-sm">
-            <thead><tr style={{ background: 'var(--bg-card)' }}><th className="text-left px-4 py-2" style={t}>Contract</th><th className="text-left px-4 py-2" style={t}>Purpose</th></tr></thead>
+            <thead><tr style={{ background: 'var(--bg-card)' }}>
+              <th className="text-left px-4 py-2" style={t}>Stage</th>
+              <th className="text-left px-4 py-2" style={t}>Description</th>
+              <th className="text-left px-4 py-2" style={t}>Requirement</th>
+            </tr></thead>
             <tbody style={t}>
               {[
-                ['TRUST Token', 'ERC-20 token — earned and bought, earned TRUST boosts influence'],
-                ['SkillRegistry', 'On-chain flow registration with creator attribution'],
-                ['ValidationRegistry', 'Shadow validation results, consensus tracking'],
-                ['TrustOracle', 'Computes trust scores from validation history'],
-                ['Marketplace', 'Listings, purchases, royalty distribution'],
-                ['NodeRegistry', 'Validator identity and domain competence'],
-                ['Staking', 'Stake TRUST to unlock validator privileges'],
-                ['GovernanceDAO', 'Protocol parameter changes via weighted voting'],
-                ['LifeRewards', 'Proof-of-living rewards (future)'],
+                ['Prompt', 'Natural language instruction', 'None'],
+                ['Flow', 'Structured phases with quality gates', 'Follows FOSS standard'],
+                ['Validated', 'Shadow-tested, trust-scored on-chain', '5+ validator attestations'],
+                ['Graduated', 'Proven consistent across many runs', '100+ validations, 95%+ similarity'],
+                ['Compiled', 'Executable code — zero AI cost, instant execution', 'Automatic on graduation'],
+              ].map(([stage, desc, req]) => (
+                <tr key={stage} style={{ borderTop: '1px solid var(--border)' }}>
+                  <td className="px-4 py-2 font-medium" style={h}>{stage}</td>
+                  <td className="px-4 py-2">{desc}</td>
+                  <td className="px-4 py-2">{req}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <P>A compiled flow runs as deterministic code with zero token cost and instant execution. It started as a plain-English instruction and became software through use and consensus. The people who validated it along the way earned for every step of that journey.</P>
+      </Section>
+
+      {/* 5. How validation works */}
+      <Section title="5. How Validation Works">
+        <P>Validation uses shadow testing — running candidate flows against reference test cases with multi-metric similarity scoring. Multiple validators run independently and must converge on the result via trust-weighted consensus before a flow's score updates. No single validator can move a trust score alone.</P>
+        <P>Trust is computed as:</P>
+        <div className="p-4 rounded-lg my-4 font-mono text-xs sm:text-sm overflow-x-auto"
+          style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', color: 'var(--text-primary)', wordBreak: 'break-word' }}>
+          trust = exp(-decay &times; divergence)<br />
+          smoothed via EMA: trust_new = &alpha; &times; trust_raw + (1 - &alpha;) &times; trust_previous
+        </div>
+        <P>Key properties: trust decays fast on failure and recovers slowly through consistent performance. It cannot be purchased or self-asserted. Only domain-competent validators can vote, and voting power derives from behavioral accuracy over time — not economic stake. This is fundamentally different from proof-of-stake systems, where capital buys influence regardless of competence.</P>
+      </Section>
+
+      {/* 6. Smart Contracts */}
+      <Section title="6. Smart Contract Architecture">
+        <P>Ten contracts deployed on Base mainnet handle the full lifecycle — from token issuance to validation consensus to royalty distribution:</P>
+        <div className="overflow-x-auto rounded-lg my-4" style={{ border: '1px solid var(--border)' }}>
+          <table className="w-full text-sm">
+            <thead><tr style={{ background: 'var(--bg-card)' }}>
+              <th className="text-left px-4 py-2" style={t}>Contract</th>
+              <th className="text-left px-4 py-2" style={t}>Purpose</th>
+            </tr></thead>
+            <tbody style={t}>
+              {[
+                ['TRUST Token', 'ERC-20 token — earned and purchased; earned TRUST boosts validator and governance weight'],
+                ['SkillRegistry', 'On-chain flow registration with creator attribution and derivative lineage'],
+                ['ValidationRegistry', 'Shadow validation results and consensus tracking'],
+                ['TrustOracle', 'Computes trust scores from full validation history'],
+                ['Marketplace', 'Listings, purchases, and automatic royalty distribution'],
+                ['NodeRegistry', 'Validator identity, domain competence, and stake tracking'],
+                ['Staking', 'Stake TRUST to unlock validator and governor privileges'],
+                ['GovernanceDAO', 'Protocol parameter changes via trust-weighted voting'],
+                ['LifeRewards', 'Proof-of-living contribution rewards'],
+                ['CommunityPool', 'Yield pool funded by network activity, distributed to contributors'],
               ].map(([name, purpose]) => (
                 <tr key={name} style={{ borderTop: '1px solid var(--border)' }}>
                   <td className="px-4 py-2 font-medium" style={h}>{name}</td>
@@ -183,59 +213,69 @@ export default function Whitepaper() {
         </div>
       </Section>
 
-      {/* 8. Competitive Position */}
-      <Section title="8. Competitive Position">
+      {/* 7. Competitive Position */}
+      <Section title="7. Competitive Position">
         <div className="overflow-x-auto rounded-lg my-4" style={{ border: '1px solid var(--border)' }}>
           <table className="w-full text-sm">
-            <thead><tr style={{ background: 'var(--bg-card)' }}><th className="text-left px-4 py-2" style={t}>Platform</th><th className="text-left px-4 py-2" style={t}>Approach</th><th className="text-left px-4 py-2" style={t}>FlowFabric Advantage</th></tr></thead>
+            <thead><tr style={{ background: 'var(--bg-card)' }}>
+              <th className="text-left px-4 py-2" style={t}>Platform</th>
+              <th className="text-left px-4 py-2" style={t}>What they do</th>
+              <th className="text-left px-4 py-2" style={t}>What they miss</th>
+            </tr></thead>
             <tbody style={t}>
               {[
-                ['OpenClaw', 'Runtime flow composition, messaging-first', 'No validation, no trust scores, no on-chain provenance, no matchmaking layer'],
-                ['MemPalace', 'Tiered memory, spatial knowledge', 'L0–L3 tiered memory + temporal knowledge graph built into every flow run. MemPalace stops at memory; FlowFabric adds execution, validation, a creator economy, and a Discovery network on top.'],
-                ['AutoGPT', 'Visual block graph, agent marketplace', 'Low-level blocks, no flow standard, no validation, no two-party session model'],
-                ['LinkedIn / marketplaces', 'Profiles, search, messaging', 'Discovery is AI-scored matching into a structured session — not a directory. The flow mediates the introduction. No cold outreach needed.'],
-                ['Prompt Libraries', 'Shared text prompts', 'Unvalidated, no composition, no evolution path, no matchmaking'],
-              ].map(([platform, approach, advantage]) => (
+                ['LinkedIn / marketplaces', 'Profiles, search, cold outreach', 'No AI matching into structured sessions. Finding someone is step one — aligning is the hard part, and nothing helps with that.'],
+                ['AutoGPT / agent platforms', 'Visual block graphs, agent marketplaces', 'No two-party session model, no validation, no trust scores, no earnings for builders.'],
+                ['Prompt libraries', 'Shared text prompts', 'Unvalidated, no earnings model, no composition, no counterpart matching.'],
+                ['MemPalace', 'Tiered memory, spatial knowledge graphs', 'Memory without execution. FlowFabric adds validation, a creator economy, and a Discovery network on top.'],
+                ['Calendly / Notion forms', 'Scheduling and intake forms', 'One-sided data collection. No synthesis, no mediation, no private dual-submission.'],
+              ].map(([platform, what, miss]) => (
                 <tr key={platform} style={{ borderTop: '1px solid var(--border)' }}>
                   <td className="px-4 py-2 font-medium" style={h}>{platform}</td>
-                  <td className="px-4 py-2">{approach}</td>
-                  <td className="px-4 py-2">{advantage}</td>
+                  <td className="px-4 py-2">{what}</td>
+                  <td className="px-4 py-2">{miss}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-        <P>FlowFabric is the only platform where flows evolve from natural language to compiled code through decentralized consensus, with derivative royalties enforced by smart contract — and the only network that uses AI matchmaking to route people into structured two-party sessions at the moment of intent.</P>
+        <P>No other platform combines AI-mediated two-party alignment with an open earners network. The collaboration layer and the contributor economy are not separate products — they are the same product, viewed from two different angles.</P>
       </Section>
 
-      {/* 9. Intellectual Property */}
-      <Section title="9. Intellectual Property">
-        <P>Patent Family F (provisional filed) covers the core innovations: trust-weighted BFT consensus where voting power derives from behavioral trust, shadow validation with multi-metric similarity scoring, domain competence gating, and the universal flow format with adapters.</P>
-        <P>Additional innovations under consideration for continuation filings: validated dynamic flow composition with confidence-gated fallback, and the autonomous compilation of validated AI procedures into executable code through trust-weighted consensus.</P>
-        <P>The blockchain provides complementary protection — provenance, transparency, and immutability — but does not replace patent protection against architectural copying.</P>
+      {/* 8. IP */}
+      <Section title="8. Intellectual Property">
+        <P>Patent Family F (provisional filed) covers the core innovations: trust-weighted BFT consensus where voting power derives from behavioral trust rather than economic stake, shadow validation with multi-metric similarity scoring, domain competence gating for validators, and the universal flow format with cross-platform adapters.</P>
+        <P>Additional innovations under consideration for continuation filings include validated dynamic flow composition with confidence-gated fallback, and the autonomous compilation of validated AI procedures into executable code through trust-weighted consensus.</P>
+        <P>Blockchain deployment provides complementary protection — provenance, transparency, and immutability — but does not replace patent protection against architectural copying.</P>
       </Section>
 
-      {/* 10. The Thesis */}
-      <Section title="10. The Thesis">
-        <P>AI capabilities will commoditize. Every model will be able to follow instructions. The scarce resource is not intelligence — it's proven, validated, composable procedures with known trust scores and verifiable provenance.</P>
-        <P>But the deeper scarce resource is the right counterpart. The right builder for your renovation. The right investor for your round. The right candidate for the role. Finding them is expensive, slow, and full of friction. FlowFabric collapses that into: post your intent, let Claude find the match, one tap to a structured session.</P>
-        <P>FlowFabric captures value at two layers: the procedure layer (flows, chains, validation, creator economy) and the coordination layer (Discovery, Fabric sessions, AI-mediated alignment). Flows are open infrastructure. Trust is the product. Discovery is the distribution. And every session that runs is a data point that makes the matching better.</P>
-        <P>The cost of bad behavior always exceeds the benefit. The cost of good behavior always decreases over time. The network gets better the more people use it. And every improvement compounds through derivative royalties and a richer Discovery board.</P>
+      {/* 9. The Thesis */}
+      <Section title="9. The Thesis">
+        <P>The hardest part of most professional interactions is not the work itself. It is the conversation before the work starts — finding the right person, disclosing enough without exposing too much, and reaching agreement without either side gaming the process. FlowFabric eliminates that friction at the protocol level.</P>
+        <P>Behind that protocol is an economy designed to sustain itself. The people who build the flows that power every session earn when those flows run. The validators who prove those flows work earn for the proof. The original authors earn forever on every improvement others make to their work. The network gets better as more people use it, and every improvement compounds through derivative royalties and a richer Discovery board.</P>
+        <P>The collaboration is the product. The earners ecosystem is what makes it permanent.</P>
       </Section>
 
       {/* CTAs */}
       <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-12">
         <Link
-          to="/compose"
+          to="/start"
           className="px-8 py-3 rounded-lg text-sm font-semibold no-underline transition-all"
           style={{ background: 'var(--cyan)', color: 'var(--bg-primary)' }}
         >
-          Open the Composer
+          Start a session
+        </Link>
+        <Link
+          to="/discover/new"
+          className="px-8 py-3 rounded-lg text-sm font-semibold no-underline transition-all"
+          style={{ border: '1px solid rgba(167,139,250,0.3)', color: 'var(--purple)' }}
+        >
+          Post to Discovery
         </Link>
         <Link
           to="/docs"
           className="px-8 py-3 rounded-lg text-sm font-semibold no-underline transition-all"
-          style={{ border: '1px solid var(--border)', color: 'var(--cyan)' }}
+          style={{ border: '1px solid var(--border)', color: 'var(--text-secondary)' }}
         >
           Read Documentation
         </Link>
