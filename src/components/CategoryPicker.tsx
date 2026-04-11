@@ -230,11 +230,11 @@ export default function CategoryPicker() {
           className="text-3xl md:text-5xl font-bold mb-4"
           style={{ color: 'var(--text-primary)', letterSpacing: '-0.02em' }}
         >
-          What do you{' '}
-          <span className="gradient-text">actually need?</span>
+          Find your{' '}
+          <span className="gradient-text">procedure.</span>
         </h2>
         <p className="text-sm max-w-xl mx-auto" style={{ color: 'var(--text-secondary)', lineHeight: 1.7 }}>
-          Pick a category. See what's ready to run.
+          Expert workflows for every domain of your life. Ready to run right now.
         </p>
       </div>
 

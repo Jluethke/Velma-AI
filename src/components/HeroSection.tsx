@@ -76,14 +76,47 @@ function LiveTicker() {
   );
 }
 
-// ── Stat strip ────────────────────────────────────────────────────
+// ── Flow preview card ─────────────────────────────────────────────
 
-const STATS = [
-  { value: '165+', label: 'flows' },
-  { value: '166', label: 'pipelines' },
-  { value: '9', label: 'categories' },
-  { value: '∞', label: 'memory' },
-];
+function FlowPreview() {
+  return (
+    <div
+      className="glass-card p-4 md:p-5 max-w-lg mx-auto mb-14 animate-fade-in-up stagger-4 text-left"
+      style={{ borderColor: 'rgba(56,189,248,0.12)' }}
+    >
+      <div className="flex items-center gap-2 mb-4 pb-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+        <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--green)', display: 'inline-block', boxShadow: '0 0 8px rgba(74,222,128,0.8)' }} />
+        <span className="text-xs font-mono font-semibold" style={{ color: 'var(--cyan)' }}>salary-negotiator</span>
+        <span className="text-xs ml-auto font-mono" style={{ color: 'var(--text-secondary)', opacity: 0.4 }}>Phase 3 of 5</span>
+      </div>
+
+      <div className="flex flex-col gap-2 mb-4">
+        {[
+          { icon: '✓', text: 'Role: Senior Engineer · 6 YOE', hi: false },
+          { icon: '✓', text: 'Current: $112K · Offer received: $128K', hi: false },
+          { icon: '→', text: 'Market range: $138K–$162K · Your leverage: High', hi: true },
+        ].map((row, i) => (
+          <div key={i} className="flex items-start gap-2">
+            <span className="text-xs mt-0.5 shrink-0" style={{ color: row.hi ? 'var(--cyan)' : 'var(--green)' }}>{row.icon}</span>
+            <span className="text-xs leading-relaxed" style={{ color: row.hi ? 'var(--text-primary)' : 'var(--text-secondary)', fontWeight: row.hi ? 500 : 400 }}>{row.text}</span>
+          </div>
+        ))}
+      </div>
+
+      <div className="rounded-lg p-3 mb-4" style={{ background: 'rgba(74,222,128,0.04)', border: '1px solid rgba(74,222,128,0.1)' }}>
+        <div className="text-xs mb-1.5 font-semibold uppercase tracking-widest" style={{ color: 'var(--text-secondary)', opacity: 0.4 }}>Procedure output</div>
+        <p className="text-xs leading-relaxed" style={{ color: 'var(--text-primary)' }}>
+          Counter at <span style={{ color: 'var(--green)', fontWeight: 600 }}>$148K</span> + $10K signing bonus.
+          Lead with market data. Your BATNA is strong — don't accept same-day.
+        </p>
+      </div>
+
+      <div className="w-full text-xs py-2.5 rounded-lg font-semibold text-center" style={{ background: 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.15)', color: 'var(--cyan)' }}>
+        Approve &amp; run Phase 4: Counter-offer script →
+      </div>
+    </div>
+  );
+}
 
 // ── Hero ──────────────────────────────────────────────────────────
 
@@ -212,12 +245,12 @@ export default function HeroSection() {
         </p>
 
         {/* CTAs */}
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8 animate-fade-in-up stagger-3">
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-4 animate-fade-in-up stagger-3">
           <Link
             to="/get-started"
             className="btn-primary inline-flex items-center gap-3 px-8 py-4 no-underline text-sm md:text-base font-semibold"
           >
-            Get started free
+            Run your first flow
             <span style={{ fontSize: 18 }}>→</span>
           </Link>
           {canChain ? (
@@ -226,29 +259,18 @@ export default function HeroSection() {
             </Link>
           ) : (
             <Link to="/flows" className="btn-secondary inline-flex items-center gap-2 px-6 py-3 no-underline text-sm">
-              Browse 165+ flows <span style={{ color: 'var(--cyan)' }}>→</span>
+              Browse procedures <span style={{ color: 'var(--cyan)' }}>→</span>
             </Link>
           )}
         </div>
 
-        {/* Stat strip */}
-        <div
-          className="inline-flex items-center gap-6 md:gap-10 mb-14 animate-fade-in-up stagger-4 flex-wrap justify-center"
-        >
-          {STATS.map((s, i) => (
-            <div key={i} className="text-center">
-              <div
-                className="text-xl md:text-2xl font-bold"
-                style={{ color: 'var(--text-primary)', fontFamily: "'Space Grotesk', sans-serif" }}
-              >
-                {s.value}
-              </div>
-              <div className="text-xs" style={{ color: 'var(--text-secondary)', opacity: 0.5 }}>
-                {s.label}
-              </div>
-            </div>
-          ))}
-        </div>
+        {/* Social proof */}
+        <p className="text-xs mb-10 animate-fade-in-up stagger-3" style={{ color: 'var(--text-secondary)', opacity: 0.4 }}>
+          Free to start · No prompt engineering · Runs in Claude
+        </p>
+
+        {/* Flow preview card */}
+        <FlowPreview />
 
         {/* Live ticker */}
         <div className="animate-fade-in-up stagger-4">
