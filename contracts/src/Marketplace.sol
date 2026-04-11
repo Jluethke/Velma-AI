@@ -35,11 +35,16 @@ import "./CommunityPool.sol";
  * ─────────────
  *   A portion of every purchase and subscription payment is routed to the
  *   CommunityPool contract, where it accrues to addresses that EARNED their
- *   TRUST through LifeRewards / OnboardingRewards / etc. This "purchase premium"
- *   values earned TRUST above purchased TRUST — buyers subsidise earners.
+ *   TRUST through real activity. This "purchase premium" values earned TRUST
+ *   above purchased TRUST — buyers subsidise earners.
  *
  *   Premium purchases:  5% → CommunityPool (COMMUNITY_FEE_BPS)
  *   Subscriptions:      25% of subscription fee → CommunityPool
+ *
+ *   Earner weight is registered at earning time (not claim time):
+ *     - Flow creators:  notifyEarned(creator, 70% of purchase) on purchaseSkill()
+ *     - Validators:     notifyEarned(nodeOwner, share) on distributeValidatorReward()
+ *     - Life/Onboard:   called directly by those contracts (EARNER_ROLE)
  *
  * Usage recording (free flows):
  *   The MCP server calls recordUsage() after executing a free flow to
@@ -187,6 +192,12 @@ contract Marketplace is AccessControl, ReentrancyGuard {
         // Route purchase premium to community pool — earners receive this yield
         IERC20(address(trustToken)).approve(address(communityPool), communityAmount);
         communityPool.deposit(communityAmount);
+
+        // Register creator's earned weight in the community pool at the moment of earning.
+        // This means creators who publish popular flows accrue pool share automatically —
+        // they don't need to claim royalties first for the weight to count.
+        address creator = skillRegistry.creatorOf(skillId);
+        communityPool.notifyEarned(creator, creatorAmount);
 
         hasPurchased[msg.sender][skillId] = true;
         purchaseCountOf[msg.sender]++;
@@ -343,6 +354,12 @@ contract Marketplace is AccessControl, ReentrancyGuard {
         require(_validatorPool[skillId] >= shareAmount, "Marketplace: insufficient pool");
         _validatorPool[skillId] -= shareAmount;
         validatorRewards[nodeId] += shareAmount;
+
+        // Register validator node owner's earned weight at distribution time.
+        address nodeOwner = nodeRegistry.nodeOwner(nodeId);
+        if (nodeOwner != address(0)) {
+            communityPool.notifyEarned(nodeOwner, shareAmount);
+        }
     }
 
     // ── Admin ──────────────────────────────────────────────────────────

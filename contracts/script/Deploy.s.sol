@@ -64,8 +64,10 @@ contract Deploy is Script {
             address(communityPool)
         );
 
-        // Grant Marketplace the DEPOSITOR_ROLE so it can deposit into the pool
+        // Grant Marketplace the DEPOSITOR_ROLE so it can deposit into the pool,
+        // and EARNER_ROLE so it can register creator + validator earned weights.
         communityPool.grantRole(communityPool.DEPOSITOR_ROLE(), address(marketplace));
+        communityPool.grantRole(communityPool.EARNER_ROLE(), address(marketplace));
 
         // 8. GovernanceDAO — trust-weighted governance
         GovernanceDAO dao = new GovernanceDAO(
