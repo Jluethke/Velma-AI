@@ -614,7 +614,6 @@ export default function Fabric() {
   const [prefillDone, setPrefillDone] = useState(false);
   const [synthesisOutput, setSynthesisOutput] = useState('');
   const [synthError, setSynthError] = useState<'no_proxy' | 'failed' | null>(null);
-  const [proxyChecked, setProxyChecked] = useState(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const pollRef   = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -663,7 +662,6 @@ export default function Fabric() {
         witnessEvent('synthesis_triggered', 'synthesis_triggered', 'synthesis_triggered');
         // Check proxy before attempting
         const up = await proxyAvailable();
-        setProxyChecked(true);
         if (!up) {
           setSynthError('no_proxy');
           setPageState('error');
@@ -792,7 +790,6 @@ export default function Fabric() {
         setPageState('waiting');
         witnessEvent('synthesis_triggered', 'synthesis_triggered', 'synthesis_triggered');
         const up = await proxyAvailable();
-        setProxyChecked(true);
         if (!up) {
           setSynthError('no_proxy');
           setPageState('error');
@@ -1077,8 +1074,8 @@ export default function Fabric() {
           <div style={{
             textAlign: 'center',
             padding: '48px 32px',
-            background: synthError === 'no_api_key' ? 'rgba(167,139,250,0.04)' : 'rgba(248,113,113,0.05)',
-            border: `1px solid ${synthError === 'no_api_key' ? 'rgba(167,139,250,0.25)' : 'rgba(248,113,113,0.2)'}`,
+            background: synthError === 'no_proxy' ? 'rgba(167,139,250,0.04)' : 'rgba(248,113,113,0.05)',
+            border: `1px solid ${synthError === 'no_proxy' ? 'rgba(167,139,250,0.25)' : 'rgba(248,113,113,0.2)'}`,
             borderRadius: '20px',
             animation: 'fabric-fade-up 0.4s ease both',
           }}>
@@ -1102,7 +1099,7 @@ export default function Fabric() {
                   Then come back and click below.
                 </p>
                 <button
-                  onClick={() => { setSynthError(null); setProxyChecked(false); startPolling(); }}
+                  onClick={() => { setSynthError(null); startPolling(); }}
                   style={{
                     background: 'linear-gradient(135deg, rgba(167,139,250,0.2), rgba(167,139,250,0.1))',
                     border: '1px solid rgba(167,139,250,0.4)',
