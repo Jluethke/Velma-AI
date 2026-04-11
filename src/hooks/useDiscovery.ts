@@ -168,3 +168,42 @@ export function useRefreshMatches() {
     },
   });
 }
+
+// ─── Update listing status ────────────────────────────────────────────────────
+
+export function useUpdateListingStatus() {
+  const qc = useQueryClient();
+  const { address } = useAccount();
+
+  return useMutation({
+    mutationFn: (data: { listingId: string; status: 'active' | 'paused' | 'closed' }) =>
+      apiFetch<{ listing: DiscoveryListing }>('/api/discovery/manage', {
+        method: 'PATCH',
+        body: JSON.stringify({ ...data, walletAddress: address }),
+      }).then(d => d.listing),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['discovery-listings'] });
+      qc.invalidateQueries({ queryKey: ['discovery-my-listings'] });
+    },
+  });
+}
+
+// ─── Infer listing from free text ─────────────────────────────────────────────
+
+export interface InferredListing {
+  flowSlug: string;
+  role: 'host' | 'guest';
+  title: string;
+  description: string;
+  tags: string[];
+}
+
+export function useInferListing() {
+  return useMutation({
+    mutationFn: (text: string) =>
+      apiFetch<InferredListing>('/api/discovery/infer', {
+        method: 'POST',
+        body: JSON.stringify({ text }),
+      }),
+  });
+}
