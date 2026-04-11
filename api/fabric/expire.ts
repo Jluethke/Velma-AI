@@ -6,6 +6,7 @@
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { getActiveSessions, saveSession, removeFromActiveIndex } from './_store.js';
+import { writeNotification } from '../_notifications.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
@@ -28,6 +29,29 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     session.synthesis.status = 'complete';
     session.synthesis.output = 'This session expired — one or both parties did not submit within the deadline.';
+
+    // Notify both sides
+    const label = session.title ?? session.flowSlug;
+    const expireMsg = `${label} session expired without both sides submitting.`;
+    await writeNotification({
+      session_id: session.id,
+      side: 'host',
+      type: 'session_expired',
+      title: 'Fabric session expired',
+      message: expireMsg,
+      action_url: `/fabric/${session.id}?hostToken=${session.hostToken}`,
+    }).catch(() => { /* non-fatal */ });
+
+    for (let i = 0; i < session.guestTokens.length; i++) {
+      await writeNotification({
+        session_id: session.id,
+        side: `guest:${i}`,
+        type: 'session_expired',
+        title: 'Fabric session expired',
+        message: expireMsg,
+        action_url: `/fabric/${session.id}?guestToken=${session.guestTokens[i]}`,
+      }).catch(() => { /* non-fatal */ });
+    }
 
     await removeFromActiveIndex(session.id);
     await saveSession(session);

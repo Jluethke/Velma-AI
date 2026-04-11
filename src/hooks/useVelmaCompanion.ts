@@ -1,10 +1,26 @@
 /**
  * useVelmaCompanion — Velma's persistent state, stored in localStorage.
  * Tracks XP, level, mood, witnessed events, pats. Grows over time.
+ * Also polls for in-app notifications from the server.
  */
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 
 export type VelmaMood = 'calm' | 'curious' | 'excited' | 'focused' | 'sleepy' | 'proud';
+
+export interface VelmaNotification {
+  id: string;
+  type: 'fabric_reminder' | 'session_expired' | 'synthesis_ready' | 'match_found';
+  title: string;
+  message: string;
+  action_url: string | null;
+  created_at: string;
+}
+
+export interface VelmaNotifyContext {
+  wallet?: string;
+  sessionId?: string;
+  token?: string;
+}
 
 export interface VelmaState {
   level: number;
@@ -239,5 +255,91 @@ export function useVelmaCompanion() {
     });
   }, []);
 
-  return { state, pet, witnessEvent, addXP, dismissBubble, speak };
+  // ── Notification polling ─────────────────────────────────────────────────
+
+  const [notifications, setNotifications] = useState<VelmaNotification[]>([]);
+  const notifyCtxRef = useRef<VelmaNotifyContext>({});
+
+  const setNotifyContext = useCallback((ctx: VelmaNotifyContext) => {
+    notifyCtxRef.current = ctx;
+  }, []);
+
+  const pollNotifications = useCallback(async () => {
+    const ctx = notifyCtxRef.current;
+    const params = new URLSearchParams();
+    if (ctx.wallet) {
+      params.set('wallet', ctx.wallet);
+    } else if (ctx.sessionId && ctx.token) {
+      params.set('sessionId', ctx.sessionId);
+      params.set('token', ctx.token);
+    } else {
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/velma/notifications?${params}`);
+      if (!res.ok) return;
+      const data = await res.json() as { notifications: VelmaNotification[] };
+      if (data.notifications.length > 0) {
+        setNotifications(data.notifications);
+        // Wake Velma when a new notification arrives
+        const first = data.notifications[0];
+        mutate(s => ({
+          ...s,
+          last_comment: first.title,
+          show_bubble: true,
+        }));
+      }
+    } catch { /* non-fatal */ }
+  }, [mutate]);
+
+  const dismissNotification = useCallback(async (id: string) => {
+    setNotifications(prev => prev.filter(n => n.id !== id));
+    try {
+      await fetch('/api/velma/dismiss', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      });
+    } catch { /* non-fatal */ }
+  }, []);
+
+  const dismissAllNotifications = useCallback(async () => {
+    const ctx = notifyCtxRef.current;
+    setNotifications([]);
+    try {
+      if (ctx.wallet) {
+        await fetch('/api/velma/dismiss', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ wallet: ctx.wallet }),
+        });
+      }
+    } catch { /* non-fatal */ }
+  }, []);
+
+  // Poll every 60 seconds when a notify context is set
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const ctx = notifyCtxRef.current;
+      if (ctx.wallet || (ctx.sessionId && ctx.token)) {
+        pollNotifications();
+      }
+    }, 60_000);
+    return () => clearInterval(interval);
+  }, [pollNotifications]);
+
+  return {
+    state,
+    pet,
+    witnessEvent,
+    addXP,
+    dismissBubble,
+    speak,
+    notifications,
+    setNotifyContext,
+    pollNotifications,
+    dismissNotification,
+    dismissAllNotifications,
+  };
 }

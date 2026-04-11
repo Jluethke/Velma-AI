@@ -6,6 +6,7 @@
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { getActiveSessions, saveSession, removeFromActiveIndex } from './_store.js';
+import { writeNotification } from '../_notifications.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
@@ -52,28 +53,51 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const hoursRemaining = Math.max(0, Math.floor(timeUntilDeadline / (1000 * 60 * 60)));
 
-    // Send notification if webhook URL is configured
+    // Write in-app Velma notifications
+    const sessionLabel = session.title ?? session.flowSlug;
+    const notifMessage = `${sessionLabel} — ${hoursRemaining}h left to submit. Don't leave the other side hanging.`;
+
+    if (missingSide === 'host' || missingSide === 'both') {
+      await writeNotification({
+        session_id: session.id,
+        side: 'host',
+        type: 'fabric_reminder',
+        title: 'Fabric session expiring soon',
+        message: notifMessage,
+        action_url: `/fabric/${session.id}?hostToken=${session.hostToken}`,
+      }).catch(() => { /* non-fatal */ });
+    }
+
+    if (missingSide === 'guest' || missingSide === 'both') {
+      for (let i = 0; i < session.guestTokens.length; i++) {
+        const guestSubmitted = session.guests[i]?.submitted ?? false;
+        if (!guestSubmitted) {
+          await writeNotification({
+            session_id: session.id,
+            side: `guest:${i}`,
+            type: 'fabric_reminder',
+            title: 'Fabric session expiring soon',
+            message: notifMessage,
+            action_url: `/fabric/${session.id}?guestToken=${session.guestTokens[i]}`,
+          }).catch(() => { /* non-fatal */ });
+        }
+      }
+    }
+
+    // Also fire webhook if configured (optional external integration)
     const webhookUrl = process.env.NOTIFICATION_WEBHOOK_URL;
     if (webhookUrl) {
-      const payload = {
-        type: 'fabric_reminder',
-        sessionId: session.id,
-        title: session.title ?? session.flowSlug,
-        flowSlug: session.flowSlug,
-        missingSide,
-        deadline: new Date(session.submissionDeadline).toISOString(),
-        hoursRemaining,
-      };
-
-      try {
-        await fetch(webhookUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        });
-      } catch {
-        // Non-fatal — continue processing
-      }
+      fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'fabric_reminder',
+          sessionId: session.id,
+          title: sessionLabel,
+          missingSide,
+          hoursRemaining,
+        }),
+      }).catch(() => { /* non-fatal */ });
     }
 
     // Mark reminded and save

@@ -10,6 +10,7 @@ import {
   getXpToNext,
   type VelmaMood,
   type VisualTier,
+  type VelmaNotification,
 } from '../hooks/useVelmaCompanion';
 
 // ── Mood colors ────────────────────────────────────────────────────────────
@@ -334,12 +335,129 @@ function StatPanel({ state, onClose }: { state: ReturnType<typeof useVelmaCompan
   );
 }
 
+// ── Notification Panel ────────────────────────────────────────────────────
+
+const NOTIF_ICONS: Record<VelmaNotification['type'], string> = {
+  fabric_reminder: '⏰',
+  session_expired: '💨',
+  synthesis_ready: '✨',
+  match_found: '🔗',
+};
+
+function NotificationPanel({
+  notifications,
+  color,
+  onDismiss,
+  onDismissAll,
+  onClose,
+}: {
+  notifications: VelmaNotification[];
+  color: string;
+  onDismiss: (id: string) => void;
+  onDismissAll: () => void;
+  onClose: () => void;
+}) {
+  return (
+    <div style={{
+      position: 'absolute', bottom: '120px', right: 0,
+      width: '260px',
+      background: 'rgba(0,10,20,0.97)',
+      border: `1px solid ${color}44`,
+      borderRadius: '12px',
+      padding: '14px',
+      boxShadow: `0 0 24px ${color}33`,
+      fontFamily: 'monospace',
+      fontSize: '12px',
+      color: '#cdd',
+      maxHeight: '360px',
+      overflowY: 'auto',
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+        <span style={{ color, fontWeight: 'bold', fontSize: '13px' }}>Notifications</span>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          {notifications.length > 1 && (
+            <button
+              onClick={onDismissAll}
+              style={{ background: 'none', border: 'none', color: '#668', cursor: 'pointer', fontSize: '10px' }}
+            >
+              clear all
+            </button>
+          )}
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#668', cursor: 'pointer', fontSize: '16px' }}>
+            ×
+          </button>
+        </div>
+      </div>
+
+      {notifications.length === 0 ? (
+        <div style={{ color: '#445', textAlign: 'center', padding: '12px 0' }}>Nothing new.</div>
+      ) : (
+        notifications.map(n => (
+          <div key={n.id} style={{
+            background: '#0a1a2a',
+            borderRadius: '8px',
+            padding: '10px',
+            marginBottom: '8px',
+            borderLeft: `3px solid ${color}66`,
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
+              <span style={{ color, fontSize: '11px', fontWeight: 'bold' }}>
+                {NOTIF_ICONS[n.type]} {n.title}
+              </span>
+              <button
+                onClick={() => onDismiss(n.id)}
+                style={{ background: 'none', border: 'none', color: '#446', cursor: 'pointer', fontSize: '14px', lineHeight: 1, padding: 0 }}
+              >
+                ×
+              </button>
+            </div>
+            <div style={{ color: '#aab', fontSize: '11px', lineHeight: 1.4, marginBottom: n.action_url ? '6px' : 0 }}>
+              {n.message}
+            </div>
+            {n.action_url && (
+              <a
+                href={n.action_url}
+                style={{ color, fontSize: '11px', textDecoration: 'none', borderBottom: `1px solid ${color}44` }}
+              >
+                View session →
+              </a>
+            )}
+          </div>
+        ))
+      )}
+    </div>
+  );
+}
+
 // ── Main Widget ────────────────────────────────────────────────────────────
 
-export default function VelmaWidget() {
-  const { state, pet, witnessEvent, dismissBubble, speak } = useVelmaCompanion();
+export default function VelmaWidget({ wallet }: { wallet?: string } = {}) {
+  const {
+    state, pet, witnessEvent, dismissBubble, speak,
+    notifications, dismissNotification, dismissAllNotifications,
+    setNotifyContext, pollNotifications,
+  } = useVelmaCompanion();
   const [showStats, setShowStats] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
   const bubbleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Auto-detect notification context from URL (Fabric session pages) or wallet prop
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const pathParts = window.location.pathname.split('/');
+    const fabricIdx = pathParts.indexOf('fabric');
+    const sessionId = fabricIdx !== -1 ? pathParts[fabricIdx + 1] : undefined;
+    const token = params.get('hostToken') ?? params.get('guestToken') ?? undefined;
+
+    if (sessionId && token) {
+      setNotifyContext({ sessionId, token });
+      pollNotifications();
+    } else if (wallet) {
+      setNotifyContext({ wallet });
+      pollNotifications();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wallet]);
 
   const tier = getVisualTier(state.level);
   const color = MOOD_COLOR[state.mood];
@@ -383,8 +501,19 @@ export default function VelmaWidget() {
       gap: '8px',
       userSelect: 'none',
     }}>
+      {/* Notification panel */}
+      {showNotifications && (
+        <NotificationPanel
+          notifications={notifications}
+          color={color}
+          onDismiss={id => dismissNotification(id)}
+          onDismissAll={dismissAllNotifications}
+          onClose={() => setShowNotifications(false)}
+        />
+      )}
+
       {/* Stat panel */}
-      {showStats && (
+      {showStats && !showNotifications && (
         <StatPanel state={state} onClose={() => setShowStats(false)} />
       )}
 
@@ -453,11 +582,48 @@ export default function VelmaWidget() {
           {state.level}
         </div>
 
+        {/* Notification badge */}
+        {notifications.length > 0 && (
+          <div
+            onClick={e => { e.stopPropagation(); setShowStats(false); setShowNotifications(s => !s); }}
+            style={{
+              position: 'absolute',
+              top: '-6px',
+              left: '-6px',
+              minWidth: '20px', height: '20px',
+              borderRadius: '10px',
+              background: '#ff4466',
+              color: '#fff',
+              fontSize: '10px',
+              fontWeight: 'bold',
+              fontFamily: 'monospace',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              padding: '0 4px',
+              zIndex: 2,
+              cursor: 'pointer',
+              boxShadow: '0 0 8px #ff446688',
+              animation: 'velma-pulse 2s ease-in-out infinite',
+            }}
+            title={`${notifications.length} notification${notifications.length > 1 ? 's' : ''}`}
+          >
+            {notifications.length}
+          </div>
+        )}
+
         {/* The sprite — click to pet, right-click for stats */}
         <div
           onClick={pet}
-          onContextMenu={e => { e.preventDefault(); setShowStats(s => !s); }}
-          title={`Velma — Level ${state.level} ${getTitle(state.level)} (click to pet, right-click for stats)`}
+          onContextMenu={e => {
+            e.preventDefault();
+            if (notifications.length > 0) {
+              setShowNotifications(s => !s);
+              setShowStats(false);
+            } else {
+              setShowStats(s => !s);
+              setShowNotifications(false);
+            }
+          }}
+          title={`Velma — Level ${state.level} ${getTitle(state.level)} (click to pet, right-click for ${notifications.length > 0 ? 'notifications' : 'stats'})`}
           style={{
             cursor: 'pointer',
             width: `${spriteSize}px`,

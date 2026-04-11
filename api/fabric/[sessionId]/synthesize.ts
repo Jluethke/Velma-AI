@@ -20,6 +20,7 @@
 
 import type { IncomingMessage, ServerResponse } from 'http';
 import { getSession, saveSession, publicView, sanitizeForPrompt, FabricSide } from '../_store.js';
+import { writeNotification } from '../../_notifications.js';
 
 const ANTHROPIC_API = 'https://api.anthropic.com/v1/messages';
 
@@ -323,6 +324,23 @@ export default async function handler(
     session.synthesis.status = 'complete';
     session.synthesis.output = output;
     await saveSession(session);
+
+    // Notify all sides that synthesis is ready
+    const label = session.title ?? session.flowSlug;
+    const notifTitle = 'Synthesis ready';
+    const notifMsg = `Your ${label} session has been synthesised. See the neutral analysis now.`;
+    const sides: string[] = ['host', ...session.guestTokens.map((_, i) => `guest:${i}`)];
+    const tokens: string[] = [session.hostToken, ...session.guestTokens];
+    await Promise.all(sides.map((side, i) =>
+      writeNotification({
+        session_id: session.id,
+        side,
+        type: 'synthesis_ready',
+        title: notifTitle,
+        message: notifMsg,
+        action_url: `/fabric/${session.id}?${i === 0 ? 'hostToken' : 'guestToken'}=${tokens[i]}`,
+      }).catch(() => { /* non-fatal */ })
+    ));
 
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify(publicView(session)));
