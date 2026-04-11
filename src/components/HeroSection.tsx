@@ -1,4 +1,3 @@
-import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useGateCheck } from '../hooks/useGateCheck';
 
@@ -19,26 +18,9 @@ const TICKER_ITEMS = [
   { flow: 'competitor-teardown', ago: '33m ago' },
 ];
 
+// CSS animation: position:absolute removes from layout flow so iOS Safari
+// can't measure the wide inner div as page scroll width.
 function LiveTicker() {
-  const [offset, setOffset] = useState(0);
-  const frameRef = useRef<number>(0);
-  const startRef = useRef<number | null>(null);
-  const speed = 35; // px/sec
-
-  useEffect(() => {
-    const totalWidth = TICKER_ITEMS.length * 220;
-
-    function step(ts: number) {
-      if (startRef.current === null) startRef.current = ts;
-      const elapsed = (ts - startRef.current) / 1000;
-      setOffset((elapsed * speed) % totalWidth);
-      frameRef.current = requestAnimationFrame(step);
-    }
-
-    frameRef.current = requestAnimationFrame(step);
-    return () => cancelAnimationFrame(frameRef.current);
-  }, []);
-
   const doubled = [...TICKER_ITEMS, ...TICKER_ITEMS];
 
   return (
@@ -46,14 +28,20 @@ function LiveTicker() {
       className="w-full"
       style={{
         overflow: 'hidden',
-        maxWidth: '100%',
+        position: 'relative',
+        height: '36px',
         maskImage: 'linear-gradient(90deg, transparent, black 8%, black 92%, transparent)',
         WebkitMaskImage: 'linear-gradient(90deg, transparent, black 8%, black 92%, transparent)',
       }}
     >
       <div
-        className="flex gap-3 w-max"
-        style={{ transform: `translateX(-${offset}px)`, willChange: 'transform' }}
+        className="flex gap-3"
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          animation: 'ticker-scroll 48s linear infinite',
+        }}
       >
         {doubled.map((item, i) => (
           <div
@@ -129,6 +117,10 @@ export default function HeroSection() {
         .word-animate {
           display: inline-block;
           animation: word-in 0.5s cubic-bezier(0.4, 0, 0.2, 1) both;
+        }
+        @keyframes ticker-scroll {
+          from { transform: translateX(0); }
+          to   { transform: translateX(-50%); }
         }
       `}</style>
 
