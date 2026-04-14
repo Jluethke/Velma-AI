@@ -20,7 +20,7 @@ export default function Footer() {
             <span>&rarr;</span>
           </Link>
           <Link
-            to="/skill/budget-builder"
+            to="/flow/budget-builder"
             className="btn-secondary inline-flex items-center gap-2 px-6 py-3 no-underline text-sm"
           >
             Try a flow free

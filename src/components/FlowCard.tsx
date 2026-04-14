@@ -2,12 +2,12 @@ import { Link } from 'react-router-dom';
 import type { Skill } from '../hooks/useSkills';
 import Badge from './Badge';
 
-interface SkillCardProps {
+interface FlowCardProps {
   skill: Skill;
   locked?: boolean;
 }
 
-export default function SkillCard({ skill, locked = false }: SkillCardProps) {
+export default function FlowCard({ skill, locked = false }: FlowCardProps) {
   const licenseVariant = skill.license === 'OPEN' ? 'open' : skill.license === 'COMMERCIAL' ? 'commercial' : 'proprietary';
 
   const inner = (
@@ -99,7 +99,7 @@ export default function SkillCard({ skill, locked = false }: SkillCardProps) {
 
   return (
     <Link
-      to={`/skill/${skill.name}`}
+      to={`/flow/${skill.name}`}
       className="group p-5 rounded-xl transition-all duration-300 flex flex-col gap-3 no-underline cursor-pointer relative"
       style={{
         background: 'var(--bg-card)',

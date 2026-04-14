@@ -331,7 +331,7 @@ export default function Portal() {
             icon={'\uD83C\uDFC6'}
           />
           <QuickLink
-            to="/skills"
+            to="/flows"
             title="Flow Library"
             description="Browse and discover 95+ AI flows"
             icon={'\uD83D\uDCDA'}

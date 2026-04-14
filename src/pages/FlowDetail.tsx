@@ -9,15 +9,6 @@ import FlowRunner from '../components/FlowRunner';
 const BUILDER_DOMAINS = new Set(['engineering', 'ai']);
 const CREATOR_DOMAINS = new Set(['legal', 'meta']);
 
-function SkeletonBlock({ className }: { className?: string }) {
-  return (
-    <div
-      className={`animate-pulse rounded-lg ${className || ''}`}
-      style={{ background: 'var(--bg-secondary)' }}
-    />
-  );
-}
-
 /** Toast banner for tier-gating messages */
 function ToastBanner({ message, onDismiss }: { message: string; onDismiss: () => void }) {
   useEffect(() => {
@@ -51,7 +42,7 @@ function ToastBanner({ message, onDismiss }: { message: string; onDismiss: () =>
   );
 }
 
-export default function SkillDetail() {
+export default function FlowDetail() {
   const { name } = useParams<{ name: string }>();
   const { data: skillData } = useSkill(name || '');
   const { data: allSkills } = useSkills();
@@ -74,7 +65,7 @@ export default function SkillDetail() {
   }, [skillMeta, allSkills]);
 
   // Error state: skill not found
-  if (!skillMeta && !skillLoading) {
+  if (!skillMeta) {
     return (
       <div className="min-h-screen pt-24 px-6 pb-20 max-w-4xl mx-auto text-center">
         <h1 className="text-2xl font-bold mt-20" style={{ color: 'var(--red)' }}>
@@ -84,7 +75,7 @@ export default function SkillDetail() {
           No flow matching "{name}" exists in the registry.
         </p>
         <Link
-          to="/skills"
+          to="/flows"
           className="btn-secondary inline-block mt-8 px-6 py-3 text-sm no-underline"
           style={{ color: 'var(--cyan)' }}
         >
@@ -112,7 +103,7 @@ export default function SkillDetail() {
 
       {/* Back link */}
       <Link
-        to="/skills"
+        to="/flows"
         className="inline-flex items-center gap-1.5 text-xs no-underline mb-8 transition-colors animate-fade-in-up"
         style={{ color: 'var(--text-secondary)' }}
         onMouseEnter={e => (e.currentTarget.style.color = 'var(--cyan)')}

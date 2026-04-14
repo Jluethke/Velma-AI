@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useSkills } from '../hooks/useSkills';
-import SkillCard from '../components/SkillCard';
+import FlowCard from '../components/FlowCard';
 import SearchBar from '../components/SearchBar';
 
 export default function Explore() {
@@ -104,7 +104,7 @@ export default function Explore() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-8">
           {filtered.map(skill => (
-            <SkillCard key={skill.name} skill={skill} locked={false} />
+            <FlowCard key={skill.name} skill={skill} locked={false} />
           ))}
         </div>
       )}

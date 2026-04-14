@@ -15,7 +15,7 @@ import GettingStarted from './pages/GettingStarted';
 // Content pages
 import Explore from './pages/Explore';
 import Chains from './pages/Chains';
-import SkillDetail from './pages/SkillDetail';
+import FlowDetail from './pages/FlowDetail';
 import ChainComposer from './pages/ChainComposer';
 import Install from './pages/Install';
 import Memory from './pages/Memory';
@@ -123,10 +123,12 @@ function App() {
             <Route path="/get-started" element={<GettingStarted />} />
 
             {/* Content */}
+            <Route path="/flows" element={<Explore />} />
             <Route path="/skills" element={<Explore />} />
             <Route path="/explore" element={<Explore />} />
             <Route path="/chains" element={<Chains />} />
-            <Route path="/skill/:name" element={<SkillDetail />} />
+            <Route path="/flow/:name" element={<FlowDetail />} />
+            <Route path="/skill/:name" element={<FlowDetail />} />
             <Route path="/compose" element={<ChainComposer />} />
             <Route path="/install" element={<Install />} />
             <Route path="/memory" element={<Memory />} />

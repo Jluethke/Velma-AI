@@ -91,7 +91,7 @@ export default function Docs() {
               Every flow is free to try. No account, no wallet, no install.
             </p>
             <ol className="space-y-2 text-sm pl-5" style={t}>
-              <li>Pick a flow from the <a href="/" style={{ color: 'var(--cyan)' }}>home page</a> (e.g., <a href="/skill/budget-builder" style={{ color: 'var(--cyan)' }}>budget-builder</a>)</li>
+              <li>Pick a flow from the <a href="/" style={{ color: 'var(--cyan)' }}>home page</a> (e.g., <a href="/flow/budget-builder" style={{ color: 'var(--cyan)' }}>budget-builder</a>)</li>
               <li>Click <strong style={{ color: '#00c8ff' }}>Run in Claude Code</strong></li>
               <li>A small launcher script downloads — double-click it</li>
               <li>Claude Code opens and executes the flow interactively</li>
