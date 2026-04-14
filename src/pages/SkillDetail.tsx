@@ -53,7 +53,7 @@ function ToastBanner({ message, onDismiss }: { message: string; onDismiss: () =>
 
 export default function SkillDetail() {
   const { name } = useParams<{ name: string }>();
-  const { data: skillData, isLoading: skillLoading } = useSkill(name || '');
+  const { data: skillData } = useSkill(name || '');
   const { data: allSkills } = useSkills();
   const { canChain, canPublish } = useGateCheck();
   const [showRunner, setShowRunner] = useState(false);
@@ -72,24 +72,6 @@ export default function SkillDetail() {
       .filter(s => s.domain === skillMeta.domain && s.name !== skillMeta.name)
       .slice(0, 3);
   }, [skillMeta, allSkills]);
-
-  // Loading state
-  if (skillLoading) {
-    return (
-      <div className="min-h-screen pt-24 px-6 pb-20 max-w-5xl mx-auto">
-        <SkeletonBlock className="h-4 w-40 mb-8" />
-        <SkeletonBlock className="h-10 w-72 mb-4" />
-        <div className="flex gap-2 mb-6">
-          <SkeletonBlock className="h-6 w-20" />
-          <SkeletonBlock className="h-6 w-24" />
-          <SkeletonBlock className="h-6 w-28" />
-        </div>
-        <SkeletonBlock className="h-24 w-full mb-8" />
-        <SkeletonBlock className="h-16 w-full mb-8" />
-        <SkeletonBlock className="h-32 w-full" />
-      </div>
-    );
-  }
 
   // Error state: skill not found
   if (!skillMeta && !skillLoading) {

@@ -39,5 +39,7 @@ export function useSkill(name: string) {
     queryKey: ['skill', name],
     queryFn: () => apiFetch(`/api/skills/${name}`),
     enabled: !!name,
+    retry: false,
+    staleTime: Infinity,
   });
 }
