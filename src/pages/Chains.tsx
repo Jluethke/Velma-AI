@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useSearchChains, useChains, type ChainMatch } from '../hooks/useChains';
+import { useChainRunner } from '../hooks/useChainRunner';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 
 // ── Constants ────────────────────────────────────────────────────────
@@ -161,6 +162,30 @@ function ChainCard({
   );
 }
 
+// ── Markdown-lite renderer ────────────────────────────────────────────
+
+function RichText({ text }: { text: string }) {
+  const html = useMemo(() => {
+    return text
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/^#### (.+)$/gm, '<h4 style="margin:10px 0 3px;font-size:0.8rem;color:var(--text-primary)">$1</h4>')
+      .replace(/^### (.+)$/gm, '<h3 style="margin:12px 0 4px;font-size:0.85rem;color:var(--cyan)">$1</h3>')
+      .replace(/^## (.+)$/gm, '<h2 style="margin:14px 0 5px;font-size:0.9rem;color:var(--cyan)">$1</h2>')
+      .replace(/\*\*(.+?)\*\*/g, '<strong style="color:var(--text-primary)">$1</strong>')
+      .replace(/\*(.+?)\*/g, '<em>$1</em>')
+      .replace(/^(\s*)[-*] (.+)$/gm, '$1<li style="margin-left:14px;list-style:disc;margin-bottom:2px">$2</li>')
+      .replace(/^(\s*)\d+\.\s+(.+)$/gm, '$1<li style="margin-left:14px;list-style:decimal;margin-bottom:2px">$2</li>')
+      .replace(/\n\n/g, '<br/><br/>').replace(/\n/g, '<br/>');
+  }, [text]);
+  return (
+    <div
+      className="text-xs leading-relaxed"
+      style={{ color: 'var(--text-secondary)', wordBreak: 'break-word' }}
+      dangerouslySetInnerHTML={{ __html: html }}
+    />
+  );
+}
+
 // ── Detail Panel ─────────────────────────────────────────────────────
 
 function ChainDetail({
@@ -172,146 +197,308 @@ function ChainDetail({
   locked: boolean;
   isConnected: boolean;
 }) {
-  const [launched, setLaunched] = useState(false);
   const color = getCategoryColor(chain.category);
+  const { state, run, stop, reset } = useChainRunner(chain.chain_name, chain.skills);
+  const [goal, setGoal] = useState('');
+  const [expandedSteps, setExpandedSteps] = useState<Set<number>>(new Set());
+  const scrollRef = useRef<HTMLDivElement>(null);
 
-  const handleRun = () => {
-    const displayName = chain.chain_name.replace(/-/g, ' ');
-    const skillList = chain.skills.join(', ');
-    const prompt = `Run the "${displayName}" pipeline via FlowFabric. It has ${chain.skills.length} flows in order: ${skillList}. Use the FlowFabric MCP tools — call run_chain or find_and_run to start. Ask me for any inputs you need.`;
-    window.open(`https://claude.ai/new?q=${encodeURIComponent(prompt)}`, '_blank');
-    setLaunched(true);
-    setTimeout(() => setLaunched(false), 4000);
-  };
+  // Auto-scroll while streaming
+  useEffect(() => {
+    if (state.stage === 'running') {
+      scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
+    }
+  }, [state.skillStreaming, state.stage]);
 
+  // Auto-expand steps as they complete
+  useEffect(() => {
+    if (state.skillResults.size > 0) {
+      setExpandedSteps(prev => {
+        const next = new Set(prev);
+        state.skillResults.forEach((_, i) => next.add(i));
+        return next;
+      });
+    }
+  }, [state.skillResults.size]);
+
+  // Reset local state when chain changes
+  useEffect(() => {
+    reset();
+    setGoal('');
+    setExpandedSteps(new Set());
+  }, [chain.chain_name]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const toggleStep = (i: number) =>
+    setExpandedSteps(prev => {
+      const next = new Set(prev);
+      if (next.has(i)) next.delete(i); else next.add(i);
+      return next;
+    });
+
+  const handleRun = () => { if (goal.trim()) run(goal.trim()); };
 
   return (
     <div
-      className="rounded-xl p-6 sticky top-24"
+      ref={scrollRef}
+      className="rounded-xl overflow-y-auto"
       style={{
         background: 'var(--bg-card)',
         border: '1px solid var(--border)',
         boxShadow: '0 0 30px rgba(0,255,200,0.04)',
+        maxHeight: 'calc(100vh - 140px)',
+        position: 'sticky',
+        top: '96px',
       }}
     >
-      {/* Header */}
-      <div className="mb-4">
-        <span
-          className="text-xs px-2 py-0.5 rounded-full uppercase tracking-wider"
-          style={{
-            background: `${color}15`,
-            color,
-            border: `1px solid ${color}30`,
-          }}
-        >
-          {chain.category}
-        </span>
+      {/* ── Header (always visible) ── */}
+      <div className="p-5" style={{ borderBottom: '1px solid var(--border)' }}>
+        <div className="flex items-center justify-between mb-2">
+          <span
+            className="text-xs px-2 py-0.5 rounded-full uppercase tracking-wider"
+            style={{ background: `${color}15`, color, border: `1px solid ${color}30` }}
+          >
+            {chain.category}
+          </span>
+          {state.stage !== 'idle' && (
+            <button
+              onClick={() => { reset(); setGoal(''); setExpandedSteps(new Set()); }}
+              style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '12px' }}
+            >
+              ← back
+            </button>
+          )}
+        </div>
+        <h2 className="text-base font-bold" style={{ color: 'var(--text-primary)' }}>
+          {chain.chain_name.replace(/-/g, ' ')}
+        </h2>
+        <p className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>
+          {chain.description}
+        </p>
       </div>
 
-      <h2 className="text-lg font-bold mb-2" style={{ color: 'var(--text-primary)' }}>
-        {chain.chain_name.replace(/-/g, ' ')}
-      </h2>
-
-      <p className="text-xs leading-relaxed mb-1" style={{ color: 'var(--text-secondary)' }}>
-        {chain.description}
-      </p>
-
-      {chain.match_reason && (
-        <p className="text-xs mb-4 italic" style={{ color: 'var(--cyan)', opacity: 0.7 }}>
-          {chain.match_reason}
-        </p>
+      {/* ── Step progress bar (running / complete) ── */}
+      {(state.stage === 'running' || state.stage === 'complete') && (
+        <div className="px-5 pt-3 pb-2 flex flex-wrap items-center gap-1"
+          style={{ borderBottom: '1px solid var(--border)' }}>
+          {chain.skills.map((skill, i) => {
+            const done = state.skillResults.has(i);
+            const active = state.currentSkillIndex === i && state.stage === 'running';
+            return (
+              <span key={i} className="flex items-center gap-1">
+                <span
+                  className={`text-[10px] px-2 py-0.5 rounded-full${active ? ' animate-pulse' : ''}`}
+                  style={{
+                    background: done ? 'rgba(0,255,136,0.12)' : active ? 'rgba(0,255,200,0.12)' : 'rgba(255,255,255,0.04)',
+                    color: done ? 'var(--green)' : active ? 'var(--cyan)' : 'var(--text-secondary)',
+                    border: `1px solid ${done ? 'rgba(0,255,136,0.2)' : active ? 'rgba(0,255,200,0.2)' : 'var(--border)'}`,
+                  }}
+                >
+                  {done ? '✓ ' : active ? '● ' : '○ '}{skill}
+                </span>
+                {i < chain.skills.length - 1 && (
+                  <span className="text-xs" style={{ color: 'var(--text-secondary)', opacity: 0.4 }}>→</span>
+                )}
+              </span>
+            );
+          })}
+        </div>
       )}
 
-      {/* Pipeline visualization */}
-      <div className="mb-6">
-        <div className="text-xs uppercase tracking-wider mb-3" style={{ color: 'var(--text-secondary)' }}>
-          Flow Pipeline
-        </div>
-        <div className="space-y-2">
-          {chain.skills.map((skill, i) => (
-            <div key={i} className="flex items-center gap-2">
-              <div
-                className="w-5 h-5 rounded-full flex items-center justify-center text-xs shrink-0"
-                style={{
-                  background: 'rgba(0,255,200,0.1)',
-                  color: 'var(--cyan)',
-                  border: '1px solid rgba(0,255,200,0.2)',
-                  fontSize: '9px',
-                }}
-              >
-                {i + 1}
-              </div>
-              <div
-                className="flex-1 text-xs px-3 py-1.5 rounded"
-                style={{
-                  background: 'rgba(0,255,200,0.04)',
-                  border: '1px solid rgba(0,255,200,0.08)',
-                  color: 'var(--text-primary)',
-                }}
-              >
-                {skill}
-              </div>
-              {i < chain.skills.length - 1 && (
-                <div className="w-5 flex justify-center">
-                  <div className="w-px h-4" style={{ background: 'rgba(0,255,200,0.2)' }} />
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Run Chain / Gate */}
-      {locked ? (
-        <div className="space-y-3">
-          {!isConnected ? (
+      <div className="p-5">
+        {/* ── LOCKED ── */}
+        {locked ? (
+          !isConnected ? (
             <div className="text-center">
               <p className="text-xs mb-3" style={{ color: 'var(--gold)' }}>
-                Connect your wallet with TRUST tokens to unlock this pipeline
+                Connect your wallet with TRUST tokens to run this pipeline
               </p>
               <ConnectButton />
             </div>
           ) : (
-            <div
-              className="rounded-lg p-4 text-center"
-              style={{ background: 'rgba(255,215,0,0.05)', border: '1px solid rgba(255,215,0,0.2)' }}
-            >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--gold)', margin: '0 auto 8px' }}>
+            <div className="rounded-lg p-4 text-center"
+              style={{ background: 'rgba(255,215,0,0.05)', border: '1px solid rgba(255,215,0,0.2)' }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+                strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--gold)', margin: '0 auto 8px' }}>
                 <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
                 <path d="M7 11V7a5 5 0 0 1 10 0v4" />
               </svg>
               <p className="text-xs font-semibold" style={{ color: 'var(--gold)' }}>TRUST tokens required</p>
               <p className="text-[10px] mt-1" style={{ color: 'var(--text-secondary)' }}>
-                Your wallet is connected but has no TRUST balance. Earn tokens by publishing flows or validating.
+                Earn tokens by publishing flows or validating.
               </p>
             </div>
-          )}
-        </div>
-      ) : (
-        <>
-          <button
-            onClick={handleRun}
-            className="w-full py-3 rounded-lg text-sm font-semibold uppercase tracking-wider cursor-pointer transition-all"
-            style={{
-              background: launched
-                ? 'rgba(0,255,136,0.15)'
-                : 'linear-gradient(135deg, rgba(0,255,200,0.15), rgba(0,255,200,0.05))',
-              border: `1px solid ${launched ? 'rgba(0,255,136,0.4)' : 'rgba(0,255,200,0.4)'}`,
-              color: launched ? 'var(--green)' : 'var(--cyan)',
-            }}
-            onMouseEnter={(e) => { if (!launched) e.currentTarget.style.boxShadow = '0 0 25px rgba(0,255,200,0.2)'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.boxShadow = 'none'; }}
-          >
-            {launched ? 'Opening Claude...' : 'Run in Claude'}
-          </button>
-          {launched && (
-            <p className="text-xs text-center mt-3" style={{ color: 'var(--text-secondary)' }}>
-              FlowFabric MCP required.{' '}
-              <a href="/getting-started" style={{ color: 'var(--cyan)' }}>Setup guide</a>
-            </p>
-          )}
-        </>
-      )}
+          )
+
+        /* ── IDLE: pipeline preview + goal input ── */
+        ) : state.stage === 'idle' ? (
+          <>
+            <div className="mb-4">
+              <div className="text-xs uppercase tracking-wider mb-2" style={{ color: 'var(--text-secondary)' }}>
+                Pipeline — {chain.skills.length} steps
+              </div>
+              <div className="space-y-1.5">
+                {chain.skills.map((skill, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <div className="w-4 h-4 rounded-full flex items-center justify-center shrink-0"
+                      style={{ background: 'rgba(0,255,200,0.1)', color: 'var(--cyan)', border: '1px solid rgba(0,255,200,0.2)', fontSize: '9px' }}>
+                      {i + 1}
+                    </div>
+                    <div className="flex-1 text-xs px-2 py-1 rounded"
+                      style={{ background: 'rgba(0,255,200,0.04)', border: '1px solid rgba(0,255,200,0.08)', color: 'var(--text-primary)' }}>
+                      {skill}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {chain.match_reason && (
+              <p className="text-xs mb-4 italic" style={{ color: 'var(--cyan)', opacity: 0.7 }}>
+                {chain.match_reason}
+              </p>
+            )}
+
+            <div className="mb-4">
+              <label className="block text-xs mb-1.5" style={{ color: 'var(--text-secondary)' }}>
+                What do you want to achieve?
+              </label>
+              <textarea
+                value={goal}
+                onChange={e => setGoal(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleRun(); }}
+                placeholder="Describe your situation or goal..."
+                rows={3}
+                className="w-full px-3 py-2 rounded-lg text-xs resize-none outline-none"
+                style={{
+                  background: 'var(--bg-primary)',
+                  border: '1px solid var(--border)',
+                  color: 'var(--text-primary)',
+                  fontFamily: 'inherit',
+                }}
+              />
+              <div className="text-[10px] mt-1" style={{ color: 'var(--text-secondary)', opacity: 0.5 }}>
+                Cmd+Enter to run
+              </div>
+            </div>
+
+            <button
+              onClick={handleRun}
+              disabled={!goal.trim()}
+              className="w-full py-2.5 rounded-lg text-sm font-semibold uppercase tracking-wider cursor-pointer transition-all"
+              style={{
+                background: goal.trim() ? 'linear-gradient(135deg, rgba(0,255,200,0.15), rgba(0,255,200,0.05))' : 'rgba(255,255,255,0.04)',
+                border: `1px solid ${goal.trim() ? 'rgba(0,255,200,0.4)' : 'var(--border)'}`,
+                color: goal.trim() ? 'var(--cyan)' : 'var(--text-secondary)',
+                opacity: goal.trim() ? 1 : 0.6,
+                fontFamily: 'inherit',
+              }}
+            >
+              Run Pipeline
+            </button>
+          </>
+
+        /* ── RUNNING: step-by-step streaming ── */
+        ) : state.stage === 'running' ? (
+          <>
+            {/* Completed steps (collapsible) */}
+            {Array.from(state.skillResults.entries()).map(([i, text]) => (
+              <div key={i} className="mb-3">
+                <button
+                  onClick={() => toggleStep(i)}
+                  className="w-full flex items-center justify-between text-xs py-2 px-3 rounded cursor-pointer"
+                  style={{ background: 'rgba(0,255,136,0.06)', border: '1px solid rgba(0,255,136,0.15)', color: 'var(--green)', fontFamily: 'inherit' }}
+                >
+                  <span>✓ Step {i + 1}: {chain.skills[i]}</span>
+                  <span style={{ opacity: 0.6 }}>{expandedSteps.has(i) ? '▲' : '▼'}</span>
+                </button>
+                {expandedSteps.has(i) && (
+                  <div className="mt-1 p-3 rounded-lg" style={{ background: 'rgba(0,255,136,0.03)', border: '1px solid rgba(0,255,136,0.08)' }}>
+                    <RichText text={text} />
+                  </div>
+                )}
+              </div>
+            ))}
+
+            {/* Active streaming step */}
+            {state.currentSkillIndex >= 0 && (
+              <div className="mb-4">
+                <div className="flex items-center gap-2 mb-2 text-xs animate-pulse" style={{ color: 'var(--cyan)' }}>
+                  <span>●</span>
+                  <span>Step {state.currentSkillIndex + 1}: {chain.skills[state.currentSkillIndex]}</span>
+                </div>
+                <div className="p-3 rounded-lg min-h-[60px]"
+                  style={{ background: 'rgba(0,255,200,0.03)', border: '1px solid rgba(0,255,200,0.1)' }}>
+                  <RichText text={state.skillStreaming.get(state.currentSkillIndex) || '…'} />
+                </div>
+              </div>
+            )}
+
+            <button
+              onClick={stop}
+              className="w-full py-2 rounded-lg text-xs cursor-pointer"
+              style={{ background: 'rgba(255,68,68,0.08)', border: '1px solid rgba(255,68,68,0.2)', color: 'var(--red)', fontFamily: 'inherit' }}
+            >
+              Stop
+            </button>
+          </>
+
+        /* ── COMPLETE ── */
+        ) : state.stage === 'complete' ? (
+          <>
+            <div className="flex items-center gap-2 mb-4 text-sm" style={{ color: 'var(--green)' }}>
+              <span>✓</span>
+              <span className="font-semibold">Pipeline complete — {chain.skills.length} steps</span>
+            </div>
+
+            {chain.skills.map((skill, i) => {
+              const text = state.skillResults.get(i) || '';
+              const open = expandedSteps.has(i);
+              return (
+                <div key={i} className="mb-3">
+                  <button
+                    onClick={() => toggleStep(i)}
+                    className="w-full flex items-center justify-between text-xs py-2 px-3 rounded cursor-pointer"
+                    style={{ background: 'rgba(0,255,136,0.06)', border: '1px solid rgba(0,255,136,0.15)', color: 'var(--green)', fontFamily: 'inherit' }}
+                  >
+                    <span>Step {i + 1}: {skill}</span>
+                    <span style={{ opacity: 0.6 }}>{open ? '▲' : '▼'}</span>
+                  </button>
+                  {open && (
+                    <div className="mt-1 p-3 rounded-lg" style={{ background: 'rgba(0,255,136,0.03)', border: '1px solid rgba(0,255,136,0.08)' }}>
+                      <RichText text={text} />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+
+            <button
+              onClick={() => { reset(); setGoal(''); setExpandedSteps(new Set()); }}
+              className="w-full mt-3 py-2.5 rounded-lg text-sm font-semibold cursor-pointer"
+              style={{ background: 'linear-gradient(135deg, rgba(0,255,200,0.12), rgba(0,255,200,0.04))', border: '1px solid rgba(0,255,200,0.3)', color: 'var(--cyan)', fontFamily: 'inherit' }}
+            >
+              Run Again
+            </button>
+          </>
+
+        /* ── ERROR ── */
+        ) : (
+          <>
+            <div className="p-4 rounded-lg mb-4"
+              style={{ background: 'rgba(255,68,68,0.08)', border: '1px solid rgba(255,68,68,0.2)' }}>
+              <div className="text-xs font-semibold mb-1" style={{ color: 'var(--red)' }}>Error</div>
+              <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>{state.error}</div>
+            </div>
+            <button
+              onClick={() => { reset(); setExpandedSteps(new Set()); }}
+              className="w-full py-2 rounded-lg text-xs cursor-pointer"
+              style={{ background: 'rgba(0,255,200,0.08)', border: '1px solid rgba(0,255,200,0.2)', color: 'var(--cyan)', fontFamily: 'inherit' }}
+            >
+              Try Again
+            </button>
+          </>
+        )}
+      </div>
     </div>
   );
 }
