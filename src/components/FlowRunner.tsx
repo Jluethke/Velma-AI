@@ -4,6 +4,7 @@
  */
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import Badge from './Badge';
+import { useVelma } from '../contexts/VelmaContext';
 
 interface FlowRunnerProps {
   skillName: string;
@@ -55,6 +56,8 @@ export default function FlowRunner({ skillName, skillDescription, domain, onClos
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const startedRef = useRef(false);
+  const completedRef = useRef(false);
+  const velma = useVelma();
 
   const systemPrompt = `You are running the "${skillName}" flow.
 
@@ -139,11 +142,18 @@ This is a conversational flow. Greet the user briefly, then immediately ask the 
       }
 
       // Commit the streamed message into history
-      setMessages(prev => [
-        ...prev,
-        { role: 'user', content: userMessage },
-        { role: 'assistant', content: fullText },
-      ]);
+      // Fire witnessFlowComplete once — on the first user-driven response (not the auto-start)
+      setMessages(prev => {
+        if (prev.length > 0 && !completedRef.current) {
+          completedRef.current = true;
+          velma.witnessFlowComplete(skillName, domain);
+        }
+        return [
+          ...prev,
+          { role: 'user', content: userMessage },
+          { role: 'assistant', content: fullText },
+        ];
+      });
       setStreamingText('');
       setStreaming(false);
     } catch (err) {
@@ -157,6 +167,7 @@ This is a conversational flow. Greet the user briefly, then immediately ask the 
   useEffect(() => {
     if (startedRef.current) return;
     startedRef.current = true;
+    velma.witnessFlowStart(skillName, domain);
     send(`Start the ${skillName.replace(/-/g, ' ')} flow now.`, []);
   }, []);
 
@@ -174,9 +185,11 @@ This is a conversational flow. Greet the user briefly, then immediately ask the 
     setInput('');
     setError('');
     startedRef.current = false;
+    completedRef.current = false;
     // Re-trigger auto-start
     setTimeout(() => {
       startedRef.current = true;
+      velma.witnessFlowStart(skillName, domain);
       send(`Start the ${skillName.replace(/-/g, ' ')} flow now.`, []);
     }, 50);
   };

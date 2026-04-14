@@ -267,14 +267,18 @@ function StatPanel({ state, onClose }: { state: VelmaState; onClose: () => void 
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginBottom: '10px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px', marginBottom: '10px' }}>
+        <div style={{ background: '#0a1a2a', borderRadius: '6px', padding: '6px', textAlign: 'center' }}>
+          <div style={{ color, fontSize: '16px', fontWeight: 'bold' }}>{state.flows_run}</div>
+          <div style={{ color: '#668', fontSize: '10px' }}>flows</div>
+        </div>
+        <div style={{ background: '#0a1a2a', borderRadius: '6px', padding: '6px', textAlign: 'center' }}>
+          <div style={{ color, fontSize: '16px', fontWeight: 'bold' }}>{state.flows_completed.length}</div>
+          <div style={{ color: '#668', fontSize: '10px' }}>unique</div>
+        </div>
         <div style={{ background: '#0a1a2a', borderRadius: '6px', padding: '6px', textAlign: 'center' }}>
           <div style={{ color, fontSize: '16px', fontWeight: 'bold' }}>{state.pats}</div>
           <div style={{ color: '#668', fontSize: '10px' }}>pats</div>
-        </div>
-        <div style={{ background: '#0a1a2a', borderRadius: '6px', padding: '6px', textAlign: 'center' }}>
-          <div style={{ color, fontSize: '16px', fontWeight: 'bold' }}>{state.total_events}</div>
-          <div style={{ color: '#668', fontSize: '10px' }}>witnessed</div>
         </div>
       </div>
 
