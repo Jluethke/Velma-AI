@@ -38,9 +38,16 @@ Do not restate prior step outputs in full; reference them only where needed.`;
   if (previousOutputs) parts.push(`## Prior Steps Output\n${previousOutputs}`);
   parts.push(`Execute step ${stepIndex + 1}: **${displaySkill}**.`);
 
+  const userKey = typeof window !== 'undefined'
+    ? localStorage.getItem('flowfabric-anthropic-key') ?? ''
+    : '';
+
   const response = await fetch('/api/chat', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      ...(userKey ? { 'X-User-API-Key': userKey } : {}),
+    },
     body: JSON.stringify({
       messages: [{ role: 'user', content: parts.join('\n\n') }],
       system: systemPrompt,
@@ -50,6 +57,7 @@ Do not restate prior step outputs in full; reference them only where needed.`;
   });
 
   if (!response.ok) {
+    if (response.status === 401) throw new Error('API_KEY_REQUIRED');
     const err = await response.json().catch(() => ({ error: 'Unknown error' }));
     throw new Error(err.error || `HTTP ${response.status}`);
   }

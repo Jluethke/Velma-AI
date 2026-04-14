@@ -189,9 +189,16 @@ Be thorough but concise. Use markdown formatting. Do NOT repeat previous phase o
       `\nNow execute Phase ${phase.number}: ${phase.name}.`,
     ].join('\n');
 
+    const userKey = typeof window !== 'undefined'
+      ? localStorage.getItem('flowfabric-anthropic-key') ?? ''
+      : '';
+
     const response = await fetch('/api/chat', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(userKey ? { 'X-User-API-Key': userKey } : {}),
+      },
       body: JSON.stringify({
         messages: [{ role: 'user', content: userMessage }],
         system: systemPrompt,
@@ -201,6 +208,7 @@ Be thorough but concise. Use markdown formatting. Do NOT repeat previous phase o
     });
 
     if (!response.ok) {
+      if (response.status === 401) throw new Error('API_KEY_REQUIRED');
       const err = await response.json().catch(() => ({ error: 'Unknown error' }));
       throw new Error(err.error || `API error ${response.status}`);
     }

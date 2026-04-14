@@ -27,11 +27,10 @@ export default async function handler(
   if (req.method !== 'GET') { json(res, 405, { error: 'Method not allowed' }); return; }
 
   const cronSecret = process.env.CRON_SECRET;
-  if (cronSecret) {
-    const authHeader = req.headers['authorization'];
-    const provided = Array.isArray(authHeader) ? authHeader[0] : authHeader;
-    if (provided !== `Bearer ${cronSecret}`) { json(res, 401, { error: 'Unauthorized' }); return; }
-  }
+  if (!cronSecret) { json(res, 401, { error: 'Unauthorized' }); return; }
+  const authHeader = req.headers['authorization'];
+  const provided = Array.isArray(authHeader) ? authHeader[0] : authHeader;
+  if (provided !== `Bearer ${cronSecret}`) { json(res, 401, { error: 'Unauthorized' }); return; }
 
   const now = Date.now();
   const windowMs = 12 * 60 * 60 * 1000; // 12 hours

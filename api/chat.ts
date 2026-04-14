@@ -28,10 +28,11 @@ export default async function handler(req: Request) {
     });
   }
 
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  // Server key takes priority; fall back to user-supplied key from browser
+  const apiKey = process.env.ANTHROPIC_API_KEY || req.headers.get('X-User-API-Key');
   if (!apiKey) {
-    return new Response(JSON.stringify({ error: 'API key not configured' }), {
-      status: 500,
+    return new Response(JSON.stringify({ error: 'API_KEY_REQUIRED' }), {
+      status: 401,
       headers: { 'Content-Type': 'application/json' },
     });
   }
@@ -56,7 +57,7 @@ export default async function handler(req: Request) {
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-6',
         max_tokens: 8192,
         stream: true,
         system: system || `You are running a FlowFabric skill called "${skill_name || 'unknown'}". Follow the skill definition precisely, executing each phase step by step. Show your work clearly. Ask for any required inputs before starting.`,

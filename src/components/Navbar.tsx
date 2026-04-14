@@ -28,15 +28,16 @@ export default function Navbar() {
   const pendingMatches = useMatchBadge();
 
   const navLinks = [
-    { to: '/start', label: 'Start a Session' },
-    { to: '/discover', label: 'Find a Match' },
-    { to: '/sessions', label: 'My Sessions' },
-    { to: '/compose', label: 'Composer' },
-    { to: '/docs', label: 'Docs' },
+    { to: '/explore', label: 'Flows' },
+    { to: '/chains', label: 'Chains' },
+    { to: '/discover', label: 'Discover' },
+    ...(isConnected ? [{ to: '/portal', label: 'Portal' }] : []),
   ];
 
   const moreLinks = [
     { to: '/pricing', label: 'Pricing' },
+    { to: '/docs', label: 'Docs' },
+    { to: '/start', label: 'Start Session' },
     { to: '/leaderboard', label: 'Leaderboard' },
     { to: '/bounties', label: 'Bounties' },
     { to: '/activity', label: 'Activity' },
@@ -197,8 +198,8 @@ export default function Navbar() {
             )}
 
             <Link
-              to="/start"
-              className="flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs no-underline font-semibold"
+              to="/explore"
+              className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs no-underline font-semibold"
               style={{
                 background: 'rgba(56, 189, 248, 0.1)',
                 border: '1px solid rgba(56, 189, 248, 0.25)',
@@ -214,7 +215,7 @@ export default function Navbar() {
                 (e.currentTarget as HTMLElement).style.boxShadow = 'none';
               }}
             >
-              + Start Session
+              Run a Flow →
             </Link>
 
             <Link

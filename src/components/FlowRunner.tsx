@@ -4,6 +4,7 @@
  * a vertical progress stepper, and streaming AI output per phase.
  */
 import { useEffect, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { useFlowRunner } from '../hooks/useFlowRunner';
 import Badge from './Badge';
 
@@ -574,6 +575,31 @@ export default function FlowRunner({
           {/* ---- ERROR STAGE ---- */}
           {state.stage === 'error' && (
             <div className="space-y-5 animate-fade-in-up">
+              {state.error === 'API_KEY_REQUIRED' ? (
+                <div className="rounded-xl p-6 text-center"
+                  style={{ background: 'rgba(251,191,36,0.06)', border: '1px solid rgba(251,191,36,0.2)' }}>
+                  <div className="text-2xl mb-3">🔑</div>
+                  <h2 className="text-sm font-semibold mb-2" style={{ color: 'var(--gold)' }}>
+                    API Key Required
+                  </h2>
+                  <p className="text-xs mb-4" style={{ color: 'var(--text-secondary)' }}>
+                    FlowFabric needs an Anthropic API key to run flows.
+                    New accounts get free credits — takes 30 seconds to set up.
+                  </p>
+                  <div className="flex gap-3 justify-center flex-wrap">
+                    <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noreferrer"
+                      className="px-4 py-2 rounded-lg text-xs font-semibold no-underline"
+                      style={{ background: 'rgba(251,191,36,0.12)', border: '1px solid rgba(251,191,36,0.3)', color: 'var(--gold)' }}>
+                      Get a free key →
+                    </a>
+                    <Link to="/settings" onClick={onClose}
+                      className="px-4 py-2 rounded-lg text-xs font-semibold no-underline"
+                      style={{ background: 'rgba(0,255,200,0.08)', border: '1px solid rgba(0,255,200,0.2)', color: 'var(--cyan)' }}>
+                      Add in Settings
+                    </Link>
+                  </div>
+                </div>
+              ) : (
               <div
                 className="rounded-xl p-5"
                 style={{
@@ -588,6 +614,7 @@ export default function FlowRunner({
                   {state.error || 'An unknown error occurred'}
                 </p>
               </div>
+              )}
 
               {/* Show any completed phase results */}
               {state.phaseResults.size > 0 && def && (

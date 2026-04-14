@@ -1,4 +1,4 @@
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { apiFetch, apiPost } from './useApi';
 
 export interface ChainSummary {
@@ -21,28 +21,6 @@ export interface ChainMatch {
   free?: boolean;
 }
 
-export interface StepResult {
-  skill_name: string;
-  alias: string;
-  status: string;
-  output: Record<string, unknown>;
-  duration_ms: number;
-  error: string;
-}
-
-export interface ChainRunResult {
-  chain: {
-    chain_name: string;
-    steps: StepResult[];
-    total_duration_ms: number;
-    success: boolean;
-    final_output: Record<string, unknown>;
-  };
-  gamification: {
-    trainer: Record<string, unknown>;
-    unlocked: { name: string; description: string; xp: number }[];
-  };
-}
 
 const fallbackChains: ChainSummary[] = [
   // ── ALL CHAINS FREE ─────────────────────────────────────────────────
@@ -82,9 +60,3 @@ export function useSearchChains(query: string) {
   });
 }
 
-export function useRunChain() {
-  return useMutation<ChainRunResult, Error, { name: string; context?: Record<string, unknown> }>({
-    mutationFn: ({ name, context }) =>
-      apiPost(`/api/chains/${name}/run`, { initial_context: context || {} }),
-  });
-}

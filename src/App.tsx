@@ -33,6 +33,7 @@ import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile';
 import Agents from './pages/Agents';
 import Portal from './pages/Portal';
+import FirstRunSetup from './components/FirstRunSetup';
 import PortalTrainer from './pages/PortalTrainer';
 import PortalAchievements from './pages/PortalAchievements';
 import PortalSkilldex from './pages/PortalSkilldex';
@@ -110,6 +111,7 @@ function App() {
   return (
     <BrowserRouter>
       <VelmaProvider>
+        <FirstRunSetup />
         <MobileBanner />
         <Navbar />
         {/* page-wrap clips horizontal overflow without touching fixed Navbar/Banner */}
