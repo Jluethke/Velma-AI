@@ -127,7 +127,7 @@ const STEPS = [
 
 export default function HeroSection() {
   return (
-    <section className="relative min-h-[95vh] flex flex-col items-center justify-center px-6 pt-24 pb-16 overflow-hidden">
+    <section className="relative min-h-[95vh] flex flex-col items-center justify-center px-4 sm:px-6 pt-24 pb-16" style={{ overflow: 'hidden', width: '100%' }}>
       <style>{`
         @keyframes hero-orb-a {
           0%   { transform: translate(0%, 0%) scale(1); }
@@ -147,16 +147,16 @@ export default function HeroSection() {
         }
       `}</style>
 
-      {/* Background orbs */}
+      {/* Background orbs — sized in vw so they never exceed the viewport */}
       <div className="absolute inset-0" style={{ pointerEvents: 'none', overflow: 'hidden' }}>
         <div style={{
-          position: 'absolute', width: '900px', height: '900px',
+          position: 'absolute', width: 'min(900px, 160vw)', height: 'min(900px, 160vw)',
           top: '-25%', left: '-20%', borderRadius: '50%',
           background: 'radial-gradient(circle, rgba(0,255,200,0.07) 0%, rgba(0,255,200,0.03) 35%, transparent 70%)',
           animation: 'hero-orb-a 22s ease-in-out infinite',
         }} />
         <div style={{
-          position: 'absolute', width: '700px', height: '700px',
+          position: 'absolute', width: 'min(700px, 120vw)', height: 'min(700px, 120vw)',
           bottom: '-15%', right: '-10%', borderRadius: '50%',
           background: 'radial-gradient(circle, rgba(167,139,250,0.08) 0%, rgba(167,139,250,0.04) 35%, transparent 70%)',
           animation: 'hero-orb-b 28s ease-in-out infinite',
@@ -168,7 +168,7 @@ export default function HeroSection() {
         }} />
       </div>
 
-      <div className="relative z-10 max-w-4xl mx-auto text-center">
+      <div className="relative z-10 w-full max-w-4xl mx-auto text-center">
 
         {/* Pill */}
         <div className="flex justify-center mb-8 animate-fade-in-up">
