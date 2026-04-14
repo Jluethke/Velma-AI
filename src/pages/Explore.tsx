@@ -57,6 +57,30 @@ export default function Explore() {
         {isLoading ? 'Loading...' : `${filtered.length} flow${filtered.length !== 1 ? 's' : ''} available`}
       </p>
 
+      {/* Claude Desktop nudge */}
+      <div
+        className="flex items-center gap-2 mb-6 px-3 py-2 rounded-lg text-xs"
+        style={{
+          background: 'rgba(0,255,200,0.04)',
+          border: '1px solid rgba(0,255,200,0.1)',
+          color: 'var(--text-secondary)',
+        }}
+      >
+        <span style={{ color: 'var(--cyan)', fontSize: '14px' }}>✦</span>
+        <span>
+          Best experience:{' '}
+          <a
+            href="https://claude.ai/download"
+            target="_blank"
+            rel="noreferrer"
+            style={{ color: 'var(--cyan)', textDecoration: 'none', borderBottom: '1px solid rgba(0,255,200,0.3)' }}
+          >
+            Claude Desktop
+          </a>{' '}
+          + SkillChain MCP gives you persistent memory, wallet integration, and offline-capable flows.
+        </span>
+      </div>
+
       <SearchBar
         query={query}
         onQueryChange={setQuery}

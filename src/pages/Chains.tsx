@@ -601,6 +601,29 @@ export default function Chains() {
           Multi-step flows that run in sequence. Describe what you need and
           let the system find the right pipeline.
         </p>
+        {/* Claude Desktop nudge */}
+        <div
+          className="inline-flex items-center gap-2 mt-4 px-3 py-2 rounded-lg text-xs"
+          style={{
+            background: 'rgba(0,255,200,0.04)',
+            border: '1px solid rgba(0,255,200,0.1)',
+            color: 'var(--text-secondary)',
+          }}
+        >
+          <span style={{ color: 'var(--cyan)', fontSize: '14px' }}>✦</span>
+          <span>
+            Best experience:{' '}
+            <a
+              href="https://claude.ai/download"
+              target="_blank"
+              rel="noreferrer"
+              style={{ color: 'var(--cyan)', textDecoration: 'none', borderBottom: '1px solid rgba(0,255,200,0.3)' }}
+            >
+              Claude Desktop
+            </a>{' '}
+            + SkillChain MCP — persistent memory, wallet integration, and richer pipeline output.
+          </span>
+        </div>
       </div>
 
       {/* Search bar */}
