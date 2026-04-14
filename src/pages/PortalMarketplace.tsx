@@ -225,6 +225,12 @@ function MarketplaceContent({ address }: { address: `0x${string}` }) {
         </span>
       </div>
 
+      {/* Demo notice */}
+      <div className="mb-4 px-4 py-2.5 rounded-lg flex items-center gap-2 text-xs" style={{ background: 'rgba(251,191,36,0.06)', border: '1px solid rgba(251,191,36,0.15)', color: 'var(--gold)' }}>
+        <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Preview</span>
+        <span style={{ opacity: 0.7 }}>Flow listings are sample data. Your balance and subscription above are live from chain.</span>
+      </div>
+
       {/* Filters */}
       <div className="flex flex-wrap gap-4 mb-6">
         <input

@@ -195,9 +195,15 @@ export default function Agents() {
       <h1 className="text-3xl md:text-4xl font-bold mb-2" style={{ color: '#ffffff' }}>
         Agent Directory
       </h1>
-      <p className="text-sm mb-8" style={{ color: 'var(--text-secondary)' }}>
+      <p className="text-sm mb-4" style={{ color: 'var(--text-secondary)' }}>
         {agents.length} agents on the network
       </p>
+
+      {/* Demo notice */}
+      <div className="mb-8 px-4 py-2.5 rounded-lg flex items-center gap-2 text-xs" style={{ background: 'rgba(251,191,36,0.06)', border: '1px solid rgba(251,191,36,0.15)', color: 'var(--gold)' }}>
+        <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Preview</span>
+        <span style={{ opacity: 0.7 }}>Agent profiles are sample data. Real agents populate as users build reputation on-chain.</span>
+      </div>
 
       {/* Recommended Matches */}
       {recommended.length > 0 && (

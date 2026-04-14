@@ -54,13 +54,13 @@ export default function Bounties() {
 
   return (
     <div className="min-h-screen pt-24 px-6 pb-20 max-w-6xl mx-auto">
-      <div className="flex items-start justify-between mb-8">
+      <div className="flex items-start justify-between mb-4">
         <div>
           <h1 className="text-3xl md:text-4xl font-bold mb-2" style={{ color: '#ffffff' }}>
             Flow Bounties
           </h1>
           <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-            {bounties.filter(b => b.status === 'open').length} open bounties --{' '}
+            {bounties.filter(b => b.status === 'open').length} open bounties &mdash;{' '}
             {bounties.reduce((sum, b) => sum + (b.status === 'open' ? b.rewardTrust : 0), 0).toLocaleString()} TRUST available
           </p>
         </div>
@@ -74,6 +74,12 @@ export default function Bounties() {
         >
           + Post a Bounty
         </button>
+      </div>
+
+      {/* Demo notice */}
+      <div className="mb-6 px-4 py-2.5 rounded-lg flex items-center gap-2 text-xs" style={{ background: 'rgba(251,191,36,0.06)', border: '1px solid rgba(251,191,36,0.15)', color: 'var(--gold)' }}>
+        <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Preview</span>
+        <span style={{ opacity: 0.7 }}>Bounties are sample data. On-chain bounty posting is coming soon.</span>
       </div>
 
       {/* Filters */}

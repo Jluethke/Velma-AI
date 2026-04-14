@@ -54,7 +54,7 @@ const tiers: Tier[] = [
     ],
     earning: 'Earn 50 TRUST/day — your subscription pays for itself',
     cta: 'Subscribe',
-    ctaLink: '/start',
+    ctaLink: '/portal/stake',
   },
   {
     name: 'Professional',
@@ -75,7 +75,7 @@ const tiers: Tier[] = [
     ],
     earning: 'Earn 200 TRUST/day — platform grows your balance',
     cta: 'Subscribe',
-    ctaLink: '/start',
+    ctaLink: '/portal/stake',
   },
   {
     name: 'Enterprise',
@@ -112,7 +112,7 @@ const faqs = [
   },
   {
     q: 'Can my earnings cover my subscription?',
-    a: 'Yes. Builder earns 50 TRUST/day. At $0.01/TRUST that covers about $15/month — nearly the full subscription. At $0.10/TRUST it covers $150/month — well above it. The more active you are and the more TRUST appreciates, the more your earnings offset your costs.',
+    a: 'Yes. Builder earns 50 TRUST/day. At $0.10/TRUST that covers $150/month — well above the subscription cost. The more active you are and the more TRUST appreciates, the more your earnings offset your costs.',
   },
   {
     q: 'Do I need a crypto wallet?',

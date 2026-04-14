@@ -61,6 +61,12 @@ function ValidatorContent({ address }: { address: `0x${string}` }) {
 
   return (
     <>
+      {/* Demo notice */}
+      <div className="mb-6 px-4 py-2.5 rounded-lg flex items-center gap-2 text-xs" style={{ background: 'rgba(251,191,36,0.06)', border: '1px solid rgba(251,191,36,0.15)', color: 'var(--gold)' }}>
+        <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Preview</span>
+        <span style={{ opacity: 0.7 }}>Validator list shows sample data. Live network data populates as validators register on-chain.</span>
+      </div>
+
       {/* Summary cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         <div className="p-4 rounded-xl" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
