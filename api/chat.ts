@@ -39,7 +39,7 @@ async function streamGemini(
   };
 
   const upstream = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:streamGenerateContent?key=${googleKey}&alt=sse`,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent?key=${googleKey}&alt=sse`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
