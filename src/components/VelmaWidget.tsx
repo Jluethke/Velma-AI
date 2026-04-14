@@ -690,7 +690,7 @@ export default function VelmaWidget({ wallet }: { wallet?: string } = {}) {
       position: 'fixed',
       bottom: '24px',
       right: '24px',
-      zIndex: 1000,
+      zIndex: 997,
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'flex-end',
