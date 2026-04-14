@@ -4,6 +4,7 @@ import { useSkill, useSkills } from '../hooks/useSkills';
 import { useGateCheck } from '../hooks/useGateCheck';
 import Badge from '../components/Badge';
 import FlowRunner from '../components/FlowRunner';
+import { formatFlowName } from '../utils/formatFlowName';
 
 // Premium domains that require TRUST to run
 const BUILDER_DOMAINS = new Set(['engineering', 'ai']);
@@ -115,7 +116,7 @@ export default function FlowDetail() {
 
       {/* Header */}
       <h1 className="text-3xl md:text-4xl font-bold mb-4 gradient-text animate-fade-in-up stagger-1">
-        {skillMeta.name}
+        {formatFlowName(skillMeta.name)}
       </h1>
 
       {/* Badges */}
@@ -269,12 +270,12 @@ export default function FlowDetail() {
               return (
                 <Link
                   key={rs.name}
-                  to={`/skill/${rs.name}`}
+                  to={`/flow/${rs.name}`}
                   className="glass-card no-underline p-5 rounded-xl block"
                 >
                   <div className="flex items-start justify-between mb-2">
                     <h3 className="text-sm font-semibold" style={{ color: 'var(--cyan)' }}>
-                      {rs.name}
+                      {formatFlowName(rs.name)}
                     </h3>
                     <span
                       className="text-xs font-bold"

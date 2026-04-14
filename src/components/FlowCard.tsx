@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import type { Skill } from '../hooks/useSkills';
 import Badge from './Badge';
+import { formatFlowName } from '../utils/formatFlowName';
 
 interface FlowCardProps {
   skill: Skill;
@@ -15,7 +16,7 @@ export default function FlowCard({ skill, locked = false }: FlowCardProps) {
       {/* Header */}
       <div className="flex items-start justify-between">
         <h3 className="text-sm font-semibold" style={{ color: locked ? 'var(--text-secondary)' : 'var(--cyan)' }}>
-          {skill.name}
+          {formatFlowName(skill.name)}
         </h3>
         <span className="text-sm font-bold" style={{ color: 'var(--green)' }}>
           FREE

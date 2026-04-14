@@ -5,6 +5,7 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import Badge from './Badge';
 import { useVelma } from '../contexts/VelmaContext';
+import { formatFlowName } from '../utils/formatFlowName';
 
 interface FlowRunnerProps {
   skillName: string;
@@ -168,7 +169,7 @@ This is a conversational flow. Greet the user briefly, then immediately ask the 
     if (startedRef.current) return;
     startedRef.current = true;
     velma.witnessFlowStart(skillName, domain);
-    send(`Start the ${skillName.replace(/-/g, ' ')} flow now.`, []);
+    send(`Start the ${formatFlowName(skillName)} flow now.`, []);
   }, []);
 
   const handleSend = () => {
@@ -190,11 +191,23 @@ This is a conversational flow. Greet the user briefly, then immediately ask the 
     setTimeout(() => {
       startedRef.current = true;
       velma.witnessFlowStart(skillName, domain);
-      send(`Start the ${skillName.replace(/-/g, ' ')} flow now.`, []);
+      send(`Start the ${formatFlowName(skillName)} flow now.`, []);
     }, 50);
   };
 
   const hasContent = messages.length > 0 || streamingText || streaming;
+
+  const [copied, setCopied] = useState(false);
+  const copyOutput = () => {
+    const assistantMessages = messages
+      .filter(m => m.role === 'assistant')
+      .map(m => m.content)
+      .join('\n\n---\n\n');
+    navigator.clipboard.writeText(assistantMessages).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
 
   return (
     <div
@@ -213,13 +226,23 @@ This is a conversational flow. Greet the user briefly, then immediately ask the 
           style={{ borderBottom: '1px solid var(--border)', background: 'linear-gradient(135deg,rgba(0,255,200,0.04),rgba(170,136,255,0.04))' }}
         >
           <div className="flex items-center gap-2 min-w-0 flex-1">
-            <span className="text-sm font-semibold gradient-text truncate">{skillName.replace(/-/g, ' ')}</span>
+            <span className="text-sm font-semibold gradient-text truncate">{formatFlowName(skillName)}</span>
             {domain && <span className="shrink-0"><Badge label={domain} variant="domain" /></span>}
             {streaming && (
               <span className="text-xs animate-pulse shrink-0" style={{ color: 'var(--cyan)' }}>...</span>
             )}
           </div>
           <div className="flex gap-1.5 shrink-0">
+            {messages.some(m => m.role === 'assistant') && !streaming && (
+              <button
+                onClick={copyOutput}
+                className="btn-secondary text-xs px-2.5 py-1.5 cursor-pointer"
+                style={{ color: copied ? 'var(--green)' : 'var(--text-secondary)' }}
+                title="Copy output"
+              >
+                {copied ? '✓' : '⎘'}
+              </button>
+            )}
             {hasContent && !streaming && (
               <button onClick={reset} className="btn-secondary text-xs px-2.5 py-1.5 cursor-pointer" style={{ color: 'var(--cyan)' }}>
                 ↺

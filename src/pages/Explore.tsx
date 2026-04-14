@@ -1,7 +1,18 @@
 import { useState, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { useSkills } from '../hooks/useSkills';
 import FlowCard from '../components/FlowCard';
 import SearchBar from '../components/SearchBar';
+import { formatFlowName } from '../utils/formatFlowName';
+
+const FEATURED = [
+  { slug: 'resume-builder',      emoji: '📄', why: 'ATS-optimized in one run' },
+  { slug: 'salary-negotiator',   emoji: '💰', why: 'Counter-offers that land' },
+  { slug: 'budget-builder',      emoji: '📊', why: 'Zero-based, actually works' },
+  { slug: 'business-in-a-box',   emoji: '🚀', why: 'Idea → launch plan, 5 phases' },
+  { slug: 'decision-analyzer',   emoji: '🧭', why: 'Big choices, clear framework' },
+  { slug: 'interview-coach',     emoji: '🎯', why: 'STAR answers for any question' },
+];
 
 export default function Explore() {
   const { data: skills = [], isLoading } = useSkills();
@@ -56,6 +67,45 @@ export default function Explore() {
       <p className="text-sm mb-8" style={{ color: 'var(--text-secondary)' }}>
         {isLoading ? 'Loading...' : `${filtered.length} flow${filtered.length !== 1 ? 's' : ''} available`}
       </p>
+
+      {/* Featured flows */}
+      {!query && !domain && (
+        <div className="mb-10">
+          <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--text-secondary)' }}>
+            Start here
+          </p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            {FEATURED.map(f => (
+              <Link
+                key={f.slug}
+                to={`/flow/${f.slug}`}
+                className="no-underline group"
+              >
+                <div
+                  className="rounded-xl p-4 flex flex-col gap-2 transition-all duration-200"
+                  style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
+                  onMouseEnter={e => {
+                    (e.currentTarget as HTMLElement).style.borderColor = 'rgba(0,255,200,0.25)';
+                    (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)';
+                  }}
+                  onMouseLeave={e => {
+                    (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)';
+                    (e.currentTarget as HTMLElement).style.transform = 'translateY(0)';
+                  }}
+                >
+                  <span style={{ fontSize: '1.5rem' }}>{f.emoji}</span>
+                  <span className="text-xs font-semibold leading-tight" style={{ color: 'var(--text-primary)' }}>
+                    {formatFlowName(f.slug)}
+                  </span>
+                  <span className="text-[10px] leading-snug" style={{ color: 'var(--text-secondary)' }}>
+                    {f.why}
+                  </span>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Claude Desktop nudge */}
       <div
