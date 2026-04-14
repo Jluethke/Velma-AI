@@ -199,30 +199,30 @@ This is a conversational flow. Greet the user briefly, then immediately ask the 
           className="flex items-center justify-between px-5 py-3.5 shrink-0"
           style={{ borderBottom: '1px solid var(--border)', background: 'linear-gradient(135deg,rgba(0,255,200,0.04),rgba(170,136,255,0.04))' }}
         >
-          <div className="flex items-center gap-3">
-            <span className="text-sm font-semibold gradient-text">{skillName.replace(/-/g, ' ')}</span>
-            {domain && <Badge label={domain} variant="domain" />}
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <span className="text-sm font-semibold gradient-text truncate">{skillName.replace(/-/g, ' ')}</span>
+            {domain && <span className="shrink-0"><Badge label={domain} variant="domain" /></span>}
             {streaming && (
-              <span className="text-xs animate-pulse" style={{ color: 'var(--cyan)' }}>thinking...</span>
+              <span className="text-xs animate-pulse shrink-0" style={{ color: 'var(--cyan)' }}>...</span>
             )}
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-1.5 shrink-0">
             {hasContent && !streaming && (
-              <button onClick={reset} className="btn-secondary text-xs px-3 py-1.5 cursor-pointer" style={{ color: 'var(--cyan)' }}>
-                Restart
+              <button onClick={reset} className="btn-secondary text-xs px-2.5 py-1.5 cursor-pointer" style={{ color: 'var(--cyan)' }}>
+                ↺
               </button>
             )}
             {streaming && (
               <button
                 onClick={() => { abortRef.current?.abort(); setStreaming(false); }}
-                className="btn-secondary text-xs px-3 py-1.5 cursor-pointer"
+                className="btn-secondary text-xs px-2.5 py-1.5 cursor-pointer"
                 style={{ color: 'var(--red)', borderColor: 'rgba(248,113,113,0.3)' }}
               >
-                Stop
+                ■
               </button>
             )}
-            <button onClick={onClose} className="btn-secondary text-xs px-3 py-1.5 cursor-pointer" style={{ color: 'var(--text-secondary)' }}>
-              Close
+            <button onClick={onClose} className="btn-secondary text-xs px-2.5 py-1.5 cursor-pointer" style={{ color: 'var(--text-secondary)' }}>
+              ✕
             </button>
           </div>
         </div>

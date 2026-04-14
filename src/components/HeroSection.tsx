@@ -24,7 +24,7 @@ const FLOW_CATEGORIES = [
 function CategoryTicker() {
   const doubled = [...FLOW_CATEGORIES, ...FLOW_CATEGORIES];
   return (
-    <div style={{ overflow: 'hidden', width: '100%', maskImage: 'linear-gradient(to right, transparent, black 10%, black 90%, transparent)' }}>
+    <div style={{ overflow: 'hidden', width: '100%', maskImage: 'linear-gradient(to right, transparent, black 10%, black 90%, transparent)', WebkitMaskImage: 'linear-gradient(to right, transparent, black 10%, black 90%, transparent)' }}>
       <div style={{ display: 'flex', gap: '10px', animation: 'ticker-scroll 30s linear infinite', width: 'max-content' }}>
         {doubled.map((cat, i) => (
           <span

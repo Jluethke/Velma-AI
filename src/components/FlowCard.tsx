@@ -29,7 +29,7 @@ export default function FlowCard({ skill, locked = false }: FlowCardProps) {
       </div>
 
       {/* Description */}
-      <p className="text-xs leading-relaxed overflow-hidden text-ellipsis whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>
+      <p className="text-xs leading-relaxed" style={{ color: 'var(--text-secondary)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
         {skill.description}
       </p>
 

@@ -240,14 +240,12 @@ function ChainDetail({
   return (
     <div
       ref={scrollRef}
-      className="rounded-xl overflow-y-auto"
+      className="rounded-xl overflow-y-auto lg:sticky lg:top-24"
       style={{
         background: 'var(--bg-card)',
         border: '1px solid var(--border)',
         boxShadow: '0 0 30px rgba(0,255,200,0.04)',
         maxHeight: 'calc(100vh - 140px)',
-        position: 'sticky',
-        top: '96px',
       }}
     >
       {/* ── Header (always visible) ── */}
