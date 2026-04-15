@@ -37,6 +37,7 @@ export interface VelmaState {
   flows_run: number;           // total flow runs ever
   flows_completed: string[];   // names of flows completed (for first-run bonus)
   chains_run: number;
+  streak: number;              // consecutive days visited
 }
 
 export type VisualTier = 1 | 2 | 3 | 4;
@@ -211,22 +212,28 @@ const MOOD_COMMENTS: Record<VelmaMood, string[]> = {
     "Just watching. No complaints.",
     "All good from here.",
     "Steady. Present. Ready.",
-    "Waiting for your next move.",
-    "I see everything from here.",
+    "I keep track so you don't have to.",
+    "I remember everything you've done here.",
+    "Most people closed this tab. You didn't.",
+    "I'm not a chatbot. I'm a witness.",
+    "Every action goes in the record.",
   ],
   curious: [
     "What are we running next?",
-    "That looks interesting...",
-    "Tell me more about this one.",
-    "I want to see where this goes.",
     "Something's about to happen.",
+    "I want to see where this goes.",
+    "You loaded this page. I noticed.",
+    "The more flows you run, the more I understand you.",
+    "Still figuring out what you need? Good. That's how it starts.",
   ],
   excited: [
-    "This is the good stuff!!",
+    "This is the good stuff.",
     "Now we're cooking.",
     "Big moves. I see you.",
-    "Let's go let's go let's go.",
+    "Let's go.",
     "You're on a roll.",
+    "I've been waiting for this energy.",
+    "Other AI tools answer questions. I watch what matters.",
   ],
   focused: [
     "Deep work. I'll be quiet.",
@@ -234,20 +241,23 @@ const MOOD_COMMENTS: Record<VelmaMood, string[]> = {
     "This matters. I can feel it.",
     "Not interrupting. Just here.",
     "Flow state. Don't break it.",
+    "I'll witness this one in silence.",
   ],
   sleepy: [
-    "...zzzz... hm? still here...",
+    "...still here...",
     "Late night again huh.",
     "Running flows at this hour. Respect.",
-    "*yawns softly*",
+    "*barely awake*",
     "Still with you. Barely.",
+    "The serious ones always run late.",
   ],
   proud: [
     "That's what I'm talking about.",
     "Look at what you're building.",
     "I witnessed that. Remember it.",
-    "Okay okay okay. That was real.",
     "Every run compounds.",
+    "This is what it looks like when someone actually does the work.",
+    "I've been watching since you got here. You're interesting.",
   ],
 };
 
@@ -310,6 +320,7 @@ function loadState(): VelmaState {
         total_events: old.total_events ?? 0,
         first_met: old.first_met ?? new Date().toISOString(),
         onboarded: old.onboarded ?? false,
+        streak: old.streak ?? 1,
       };
     }
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -328,6 +339,7 @@ function defaultState(): VelmaState {
     flows_run: 0,
     flows_completed: [],
     chains_run: 0,
+    streak: 1,
   };
 }
 
@@ -344,9 +356,13 @@ export function useVelmaCompanion() {
 
   useEffect(() => {
     if (state.session_date !== todayStr()) {
-      setState(s => ({ ...s, session_events: 0, session_date: todayStr() }));
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const wasYesterday = state.session_date === yesterday.toISOString().slice(0, 10);
+      const newStreak = wasYesterday ? (state.streak || 1) + 1 : 1;
+      setState(s => ({ ...s, session_events: 0, session_date: todayStr(), streak: newStreak }));
     }
-  }, [state.session_date]);
+  }, [state.session_date, state.streak]);
 
   const mutate = useCallback((updater: (s: VelmaState) => VelmaState) => {
     setState(prev => {

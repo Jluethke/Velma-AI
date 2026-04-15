@@ -4,7 +4,9 @@
  * Gamification: floating +XP, level-up burst, tier evolution flash, first-wake intro.
  */
 import { useState, useEffect, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import { useVelma } from '../contexts/VelmaContext';
+import { formatFlowName } from '../utils/formatFlowName';
 import {
   getTitle,
   getVisualTier,
@@ -213,97 +215,180 @@ function VelmaSprite({ tier, color, mood }: { tier: VisualTier; color: string; m
   }
 }
 
+// ── Format witnessed events into readable labels ───────────────────────────
+
+function fmtEvent(event: string): { icon: string; label: string } {
+  if (event.startsWith('flow_start:'))    return { icon: '⚡', label: `Started ${formatFlowName(event.slice(11))}` };
+  if (event.startsWith('flow_complete:')) return { icon: '✓', label: `Finished ${formatFlowName(event.slice(14))}` };
+  if (event.startsWith('chain_complete:'))return { icon: '🔗', label: `Chained ${formatFlowName(event.slice(15))}` };
+  if (event.startsWith('petted'))         return { icon: '🐾', label: event };
+  if (event === 'visited portal')         return { icon: '👁', label: 'Opened portal' };
+  if (event === 'onboarding_complete')    return { icon: '✦', label: 'Completed setup' };
+  if (event === 'wallet_connected')       return { icon: '🔑', label: 'Wallet connected' };
+  return { icon: '·', label: event.replace(/_/g, ' ') };
+}
+
 // ── Stat panel ─────────────────────────────────────────────────────────────
+
+const FLOW_MILESTONES_LIST = [1, 5, 10, 25, 50, 100];
+const TIER_LABEL: Record<number, string> = { 1: '8-bit', 2: '16-bit', 3: '32-bit', 4: 'Holographic' };
 
 function StatPanel({ state, onClose }: { state: VelmaState; onClose: () => void }) {
   const tier = getVisualTier(state.level);
   const xpToNext = getXpToNext(state.xp, state.level);
   const color = MOOD_COLOR[state.mood];
-  const xpPercent = Math.min(100, (state.xp / (state.xp + xpToNext)) * 100);
+  const xpTotal = state.xp + xpToNext;
+  const xpPercent = xpTotal > 0 ? Math.min(100, (state.xp / xpTotal) * 100) : 100;
+  const nextMilestone = FLOW_MILESTONES_LIST.find(m => m > state.flows_run);
+  const streak = state.streak ?? 1;
+
+  const recentEvents = state.witnessed
+    .slice(-10)
+    .reverse()
+    .filter(e => e !== 'visited portal')
+    .slice(0, 4);
 
   return (
     <div style={{
       position: 'absolute', bottom: '120px', right: 0,
-      width: '220px',
-      background: 'rgba(0,10,20,0.96)',
-      border: `1px solid ${color}44`,
-      borderRadius: '12px',
+      width: '250px',
+      background: 'rgba(0,8,18,0.97)',
+      border: `1px solid ${color}33`,
+      borderRadius: '14px',
       padding: '16px',
-      boxShadow: `0 0 24px ${color}33`,
+      boxShadow: `0 8px 32px rgba(0,0,0,0.6), 0 0 0 1px ${color}11`,
       fontFamily: 'monospace',
       fontSize: '12px',
-      color: '#cdd',
+      color: '#ccd',
+      animation: 'velma-bubble-in 0.2s ease',
     }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', alignItems: 'center' }}>
-        <span style={{ color, fontWeight: 'bold', fontSize: '14px' }}>Velma</span>
-        <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#668', cursor: 'pointer', fontSize: '16px' }}>×</button>
-      </div>
-
-      <div style={{ marginBottom: '6px' }}>
-        <span style={{ color: '#668' }}>Level </span>
-        <span style={{ color }}>{state.level}</span>
-        <span style={{ color: '#668' }}> — </span>
-        <span style={{ color: '#aaa' }}>{getTitle(state.level)}</span>
-      </div>
-
-      <div style={{ marginBottom: '10px' }}>
-        <span style={{ color: '#668' }}>Tier </span>
-        <span style={{ color }}>
-          {tier === 1 ? '8-bit' : tier === 2 ? '16-bit' : tier === 3 ? '32-bit' : 'Holographic'}
-        </span>
-      </div>
-
-      <div style={{ marginBottom: '10px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', color: '#668' }}>
-          <span>XP</span>
-          <span>{state.xp} / {state.xp + xpToNext}</span>
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '14px', alignItems: 'flex-start' }}>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
+            <span style={{ color, fontWeight: 'bold', fontSize: '14px' }}>Velma</span>
+            <span style={{
+              fontSize: '9px', fontWeight: 700, letterSpacing: '0.08em',
+              padding: '1px 6px', borderRadius: '8px', textTransform: 'uppercase',
+              background: `${color}18`, border: `1px solid ${color}33`, color,
+            }}>
+              {TIER_LABEL[tier]}
+            </span>
+          </div>
+          <div style={{ color: '#556', fontSize: '10px', marginTop: '2px' }}>
+            L{state.level} · {getTitle(state.level)}
+          </div>
         </div>
-        <div style={{ height: '6px', background: '#112233', borderRadius: '3px', overflow: 'hidden' }}>
+        <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#446', cursor: 'pointer', fontSize: '18px', lineHeight: 1, padding: '0 2px' }}>×</button>
+      </div>
+
+      {/* XP bar */}
+      <div style={{ marginBottom: '14px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
+          <span style={{ color: '#557', fontSize: '10px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>XP</span>
+          <span style={{ color: '#668', fontSize: '10px' }}>
+            {xpToNext > 0 ? `${xpToNext} to L${state.level + 1}` : 'MAX'}
+          </span>
+        </div>
+        <div style={{ height: '5px', background: '#0a1624', borderRadius: '3px', overflow: 'hidden' }}>
           <div style={{
             height: '100%', width: `${xpPercent}%`,
             background: `linear-gradient(90deg, ${color}, #aa44ff)`,
-            borderRadius: '3px', transition: 'width 0.4s ease',
+            borderRadius: '3px', transition: 'width 0.5s ease',
+            boxShadow: `0 0 8px ${color}66`,
           }} />
         </div>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px', marginBottom: '10px' }}>
-        <div style={{ background: '#0a1a2a', borderRadius: '6px', padding: '6px', textAlign: 'center' }}>
-          <div style={{ color, fontSize: '16px', fontWeight: 'bold' }}>{state.flows_run}</div>
-          <div style={{ color: '#668', fontSize: '10px' }}>flows</div>
-        </div>
-        <div style={{ background: '#0a1a2a', borderRadius: '6px', padding: '6px', textAlign: 'center' }}>
-          <div style={{ color, fontSize: '16px', fontWeight: 'bold' }}>{state.flows_completed.length}</div>
-          <div style={{ color: '#668', fontSize: '10px' }}>unique</div>
-        </div>
-        <div style={{ background: '#0a1a2a', borderRadius: '6px', padding: '6px', textAlign: 'center' }}>
-          <div style={{ color, fontSize: '16px', fontWeight: 'bold' }}>{state.pats}</div>
-          <div style={{ color: '#668', fontSize: '10px' }}>pats</div>
+        <div style={{ textAlign: 'right', marginTop: '3px', color: '#446', fontSize: '9px' }}>
+          {state.xp} XP total
         </div>
       </div>
 
-      <div style={{ color: '#556', fontSize: '10px', marginBottom: '4px' }}>Mood</div>
-      <div style={{
-        display: 'inline-block', padding: '2px 8px', borderRadius: '10px',
-        background: `${color}22`, border: `1px solid ${color}44`,
-        color, fontSize: '11px', marginBottom: '10px',
-      }}>
-        {state.mood}
+      {/* Stats grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px', marginBottom: '12px' }}>
+        {[
+          { value: state.flows_run, label: 'flows run' },
+          { value: state.flows_completed.length, label: 'unique' },
+          { value: `${streak}🔥`, label: 'day streak' },
+        ].map(({ value, label }) => (
+          <div key={label} style={{ background: '#060f1a', borderRadius: '8px', padding: '7px 4px', textAlign: 'center', border: '1px solid #0d1e2e' }}>
+            <div style={{ color, fontSize: '15px', fontWeight: 'bold', lineHeight: 1 }}>{value}</div>
+            <div style={{ color: '#446', fontSize: '9px', marginTop: '3px', letterSpacing: '0.03em' }}>{label}</div>
+          </div>
+        ))}
       </div>
 
-      {state.witnessed.length > 0 && (
-        <>
-          <div style={{ color: '#556', fontSize: '10px', marginBottom: '4px' }}>Recently witnessed</div>
-          {state.witnessed.slice(-3).reverse().map((e, i) => (
-            <div key={i} style={{ color: '#557', fontSize: '10px', marginBottom: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              · {e}
+      {/* Next goal */}
+      {(xpToNext > 0 || nextMilestone) && (
+        <div style={{
+          background: `${color}08`, border: `1px solid ${color}22`,
+          borderRadius: '8px', padding: '8px 10px', marginBottom: '12px',
+        }}>
+          <div style={{ color: '#446', fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '4px' }}>
+            Next unlock
+          </div>
+          {xpToNext > 0 && (
+            <div style={{ color: '#99b', fontSize: '10px', marginBottom: nextMilestone ? '3px' : 0 }}>
+              <span style={{ color }}>L{state.level + 1}</span> in {xpToNext} XP
+              {tier < getVisualTier(state.level + 1) && (
+                <span style={{ color: '#ffd700', marginLeft: '6px', fontSize: '9px' }}>
+                  → {TIER_LABEL[getVisualTier(state.level + 1) as 1|2|3|4]} evolution
+                </span>
+              )}
             </div>
-          ))}
-        </>
+          )}
+          {nextMilestone && (
+            <div style={{ color: '#99b', fontSize: '10px' }}>
+              <span style={{ color }}>{nextMilestone - state.flows_run}</span> more flows → milestone +50 XP
+            </div>
+          )}
+        </div>
       )}
 
-      <div style={{ marginTop: '10px', color: '#445', fontSize: '10px' }}>
-        First met {new Date(state.first_met).toLocaleDateString()}
+      {/* Recent activity */}
+      {recentEvents.length > 0 && (
+        <div style={{ marginBottom: '12px' }}>
+          <div style={{ color: '#334', fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '5px' }}>Recent</div>
+          {recentEvents.slice(0, 4).map((e, i) => {
+            const { icon, label } = fmtEvent(e);
+            return (
+              <div key={i} style={{ display: 'flex', gap: '6px', alignItems: 'center', marginBottom: '3px' }}>
+                <span style={{ fontSize: '11px', lineHeight: 1, width: '14px', flexShrink: 0 }}>{icon}</span>
+                <span style={{ color: '#557', fontSize: '10px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Quick links */}
+      <div style={{ display: 'flex', gap: '6px' }}>
+        <Link
+          to="/explore"
+          onClick={onClose}
+          style={{
+            flex: 1, textAlign: 'center', padding: '6px', borderRadius: '7px', fontSize: '10px',
+            fontWeight: 700, textDecoration: 'none', letterSpacing: '0.03em',
+            background: `${color}12`, border: `1px solid ${color}33`, color,
+          }}
+        >
+          Run a flow
+        </Link>
+        <Link
+          to="/leaderboard"
+          onClick={onClose}
+          style={{
+            flex: 1, textAlign: 'center', padding: '6px', borderRadius: '7px', fontSize: '10px',
+            fontWeight: 700, textDecoration: 'none', letterSpacing: '0.03em',
+            background: 'rgba(255,215,0,0.06)', border: '1px solid rgba(255,215,0,0.2)', color: '#ffd700',
+          }}
+        >
+          Leaderboard
+        </Link>
+      </div>
+
+      {/* First met */}
+      <div style={{ marginTop: '10px', color: '#334', fontSize: '9px', textAlign: 'center' }}>
+        with you since {new Date(state.first_met).toLocaleDateString()}
       </div>
     </div>
   );
@@ -664,7 +749,7 @@ export default function VelmaWidget({ wallet }: { wallet?: string } = {}) {
       if (bubbleTimer.current) clearTimeout(bubbleTimer.current);
       bubbleTimer.current = setTimeout(() => {
         dismissBubble();
-      }, 5000);
+      }, 7000);
     }
     return () => { if (bubbleTimer.current) clearTimeout(bubbleTimer.current); };
   }, [state.show_bubble, state.last_comment, dismissBubble]);
