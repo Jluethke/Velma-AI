@@ -65,7 +65,7 @@ The manifest.json must include: name (slug, lowercase-hyphens), version ("1.0.0"
 
 // ── Main component ─────────────────────────────────────────────────────────
 
-export default function FlowStudio() {
+export default function FlowStudio({ embedded }: { embedded?: boolean } = {}) {
   const [mode, setMode] = useState<Mode>('description');
   const [input, setInput] = useState('');
   const [domain, setDomain] = useState('');
@@ -162,7 +162,7 @@ export default function FlowStudio() {
   const hasParsed = skillMd.length > 0 || manifest.length > 0;
 
   return (
-    <div className="min-h-screen pt-24 pb-20 px-4" style={{ maxWidth: '860px', margin: '0 auto' }}>
+    <div className={embedded ? 'pb-16 px-4' : 'min-h-screen pt-24 pb-20 px-4'} style={{ maxWidth: '860px', margin: '0 auto' }}>
 
       {/* Header */}
       <div className="mb-8">

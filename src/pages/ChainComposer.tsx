@@ -82,7 +82,7 @@ function deleteChainFromStorage(name: string): void {
 // ChainComposer Page
 // ---------------------------------------------------------------------------
 
-export default function ChainComposer() {
+export default function ChainComposer({ embedded }: { embedded?: boolean } = {}) {
   const [skills, setSkills] = useState<PaletteSkill[]>([]);
   const { isConnected, tier, canChain, canPublish, canSchedule } = useGateCheck();
   const { address } = useAccount();
@@ -867,7 +867,10 @@ echo "  To remove: crontab -l | grep -v 'FlowFabric-${safeName}' | crontab -"
   }, []);
 
   return (
-    <div style={{ display: 'flex', height: 'calc(100vh - 60px)', marginTop: '60px', position: 'relative' }}>
+    <div style={embedded
+      ? { display: 'flex', height: '100%', position: 'relative' }
+      : { display: 'flex', height: 'calc(100vh - 60px)', marginTop: '60px', position: 'relative' }
+    }>
       {/* Left: Skill Palette — hidden on mobile */}
       <div className="hidden md:block">
         <SkillPalette skills={skills} onAddSkill={handleAddSkill} canChain={canChain} canPublish={canPublish} />
