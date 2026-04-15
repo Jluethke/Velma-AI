@@ -16,7 +16,6 @@ import GettingStarted from './pages/GettingStarted';
 import Explore from './pages/Explore';
 import Chains from './pages/Chains';
 import FlowDetail from './pages/FlowDetail';
-import ChainComposer from './pages/ChainComposer';
 import Install from './pages/Install';
 import Memory from './pages/Memory';
 import Bounties from './pages/Bounties';
@@ -131,7 +130,6 @@ function App() {
             <Route path="/chains" element={<Chains />} />
             <Route path="/flow/:name" element={<FlowDetail />} />
             <Route path="/skill/:name" element={<FlowDetail />} />
-            <Route path="/compose" element={<ChainComposer />} />
             <Route path="/studio" element={<Studio />} />
             <Route path="/install" element={<Install />} />
             <Route path="/memory" element={<Memory />} />
