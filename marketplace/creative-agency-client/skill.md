@@ -1,6 +1,6 @@
 # Creative Agency Client Engagement
 
-**One-line description:** A creative agency and a client each submit their real creative vision, budget, approval process, and timeline before the engagement begins — Claude aligns on a scope of work that produces great creative without the revision spiral that kills every deadline.
+**One-line description:** A creative agency and a client each submit their real creative vision, budget, approval process, and timeline before the engagement begins — AI aligns on a scope of work that produces great creative without the revision spiral that kills every deadline.
 
 **Execution Pattern:** Phase Pipeline
 

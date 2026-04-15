@@ -1,6 +1,6 @@
 # Oil & Gas Joint Operating Agreement
 
-**One-line description:** The operator and non-operator each submit their real working interest expectations, cost commitments, and operational concerns before the JOA is executed — Claude aligns on operating standards, cost allocation, and decision-making authority so the well gets drilled without a dispute at every AFE.
+**One-line description:** The operator and non-operator each submit their real working interest expectations, cost commitments, and operational concerns before the JOA is executed — AI aligns on operating standards, cost allocation, and decision-making authority so the well gets drilled without a dispute at every AFE.
 
 **Execution Pattern:** Phase Pipeline
 

@@ -1,6 +1,6 @@
 # Crisis Communication
 
-**One-line description:** Communications and legal each submit their real constraints before a crisis response — Claude produces messaging that is legally defensible and human enough to actually work.
+**One-line description:** Communications and legal each submit their real constraints before a crisis response — AI produces messaging that is legally defensible and human enough to actually work.
 
 **Execution Pattern:** Phase Pipeline
 

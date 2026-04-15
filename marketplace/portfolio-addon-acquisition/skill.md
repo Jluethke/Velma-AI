@@ -1,6 +1,6 @@
 # Portfolio Add-On Acquisition
 
-**One-line description:** A private equity platform company and an add-on acquisition target each submit their real strategic fit assessment, valuation expectations, and integration concerns before the deal closes — Claude aligns on an acquisition structure where the target understands what they are joining and the platform understands what they are buying.
+**One-line description:** A private equity platform company and an add-on acquisition target each submit their real strategic fit assessment, valuation expectations, and integration concerns before the deal closes — AI aligns on an acquisition structure where the target understands what they are joining and the platform understands what they are buying.
 
 **Execution Pattern:** Phase Pipeline
 

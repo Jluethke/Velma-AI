@@ -1,6 +1,6 @@
 # Product-Support Readiness
 
-**One-line description:** Product and support each submit their real launch status and readiness gaps — Claude surfaces what support needs that product has not provided and ensures support is not learning the product from confused customers on launch day.
+**One-line description:** Product and support each submit their real launch status and readiness gaps — AI surfaces what support needs that product has not provided and ensures support is not learning the product from confused customers on launch day.
 
 **Execution Pattern:** Phase Pipeline
 

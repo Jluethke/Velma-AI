@@ -85,7 +85,7 @@ PHASE 5: DISTRIBUTE    --> Format final output, generate publishing schedule
    return truncated.rstrip() + '...'
    ```
 5. Reserve ~20 chars for template overhead (emojis, hashtags)
-6. If StreamShark LLM mode: generate richer formats (blog_post, twitter_thread, linkedin_article, email_newsletter, reddit_post) via Claude
+6. If StreamShark LLM mode: generate richer formats (blog_post, twitter_thread, linkedin_article, email_newsletter, reddit_post) via LLM
 **Output:** 5 variations per platform per tone = up to 25 content pieces from 1 source.
 **Quality gate:** Each variation has text, char_count, and compliant flag. Truncation at word boundaries. Template overhead accounted for. Content multiplication formula applied: 1 source x 5 platforms x 5 variations = 25 pieces.
 

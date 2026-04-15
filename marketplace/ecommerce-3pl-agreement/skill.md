@@ -1,6 +1,6 @@
 # E-Commerce 3PL Agreement
 
-**One-line description:** An e-commerce brand and a third-party logistics provider each submit their real volume projections, service requirements, and cost expectations before signing — Claude aligns on a fulfillment partnership that ships orders on time without the hidden fees that destroy unit economics.
+**One-line description:** An e-commerce brand and a third-party logistics provider each submit their real volume projections, service requirements, and cost expectations before signing — AI aligns on a fulfillment partnership that ships orders on time without the hidden fees that destroy unit economics.
 
 **Execution Pattern:** Phase Pipeline
 

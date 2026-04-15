@@ -1,6 +1,6 @@
 # Insurance Agency Client Engagement
 
-**One-line description:** An insurance agent and a client each submit their real coverage needs, risk profile, and budget before the placement — Claude aligns on a coverage program that addresses the client's actual exposures without paying for coverage they don't need.
+**One-line description:** An insurance agent and a client each submit their real coverage needs, risk profile, and budget before the placement — AI aligns on a coverage program that addresses the client's actual exposures without paying for coverage they don't need.
 
 **Execution Pattern:** Phase Pipeline
 

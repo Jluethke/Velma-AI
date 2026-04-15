@@ -1,6 +1,6 @@
 # Immigration Attorney Client Engagement
 
-**One-line description:** An immigration attorney and a client each submit their real immigration goals, timeline pressures, and case facts before the engagement begins — Claude aligns on a legal strategy and engagement structure that navigates the actual pathway to the client's immigration objective without false hope or missed deadlines.
+**One-line description:** An immigration attorney and a client each submit their real immigration goals, timeline pressures, and case facts before the engagement begins — AI aligns on a legal strategy and engagement structure that navigates the actual pathway to the client's immigration objective without false hope or missed deadlines.
 
 **Execution Pattern:** Phase Pipeline
 

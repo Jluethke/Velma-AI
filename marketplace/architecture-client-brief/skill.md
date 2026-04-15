@@ -1,6 +1,6 @@
 # Architecture Client Brief
 
-**One-line description:** The architect and the client each submit their real vision, budget, constraints, and must-haves before design begins — Claude aligns on a brief that gives the architect a clear mandate and gives the client a realistic expectation of what their budget will actually produce.
+**One-line description:** The architect and the client each submit their real vision, budget, constraints, and must-haves before design begins — AI aligns on a brief that gives the architect a clear mandate and gives the client a realistic expectation of what their budget will actually produce.
 
 **Execution Pattern:** Phase Pipeline
 

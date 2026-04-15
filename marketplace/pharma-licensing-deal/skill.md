@@ -1,6 +1,6 @@
 # Pharma Licensing Deal
 
-**One-line description:** The licensor and licensee each submit their real asset valuation, development assumptions, and deal structure preferences — Claude aligns on deal economics, milestone structure, and risk allocation so the asset gets developed and both parties make money if it works.
+**One-line description:** The licensor and licensee each submit their real asset valuation, development assumptions, and deal structure preferences — AI aligns on deal economics, milestone structure, and risk allocation so the asset gets developed and both parties make money if it works.
 
 **Execution Pattern:** Phase Pipeline
 

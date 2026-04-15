@@ -1,6 +1,6 @@
 # Client Agency Brief
 
-**One-line description:** Client submits what they actually need; agency submits what they actually heard — Claude finds the gap between the brief that was given and the brief that was received.
+**One-line description:** Client submits what they actually need; agency submits what they actually heard — AI finds the gap between the brief that was given and the brief that was received.
 
 **Execution Pattern:** Phase Pipeline
 

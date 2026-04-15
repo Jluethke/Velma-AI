@@ -1,6 +1,6 @@
 # PR Agency Client Engagement
 
-**One-line description:** A PR agency and a client each submit their real communications goals, approval tolerance, and news agenda before the engagement — Claude aligns on a PR strategy and working relationship that generates earned media without the approval bottlenecks that kill every news cycle.
+**One-line description:** A PR agency and a client each submit their real communications goals, approval tolerance, and news agenda before the engagement — AI aligns on a PR strategy and working relationship that generates earned media without the approval bottlenecks that kill every news cycle.
 
 **Execution Pattern:** Phase Pipeline
 

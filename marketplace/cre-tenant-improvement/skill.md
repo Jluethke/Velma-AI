@@ -1,6 +1,6 @@
 # CRE Tenant Improvement
 
-**One-line description:** Landlord and tenant each submit their real TI budgets and space requirements before design begins — Claude closes the allowance gap, defines who pays for what, and produces a construction framework that prevents disputes mid-build.
+**One-line description:** Landlord and tenant each submit their real TI budgets and space requirements before design begins — AI closes the allowance gap, defines who pays for what, and produces a construction framework that prevents disputes mid-build.
 
 **Execution Pattern:** Phase Pipeline
 

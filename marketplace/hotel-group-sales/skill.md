@@ -1,6 +1,6 @@
 # Hotel Group Sales Contract
 
-**One-line description:** The hotel sales manager and the group client each submit their real event needs, budget constraints, and deal expectations — Claude designs the contract terms that fill the block, protect the hotel's revenue, and give the client a workable deal for an event that will actually run as planned.
+**One-line description:** The hotel sales manager and the group client each submit their real event needs, budget constraints, and deal expectations — AI designs the contract terms that fill the block, protect the hotel's revenue, and give the client a workable deal for an event that will actually run as planned.
 
 **Execution Pattern:** Phase Pipeline
 

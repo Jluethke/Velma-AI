@@ -1,6 +1,6 @@
 # Go-to-Market Alignment
 
-**One-line description:** Marketing and sales each submit their real ICP views and field realities before a launch — Claude surfaces the messaging gaps and ICP misalignments, and produces a joint GTM plan with an SLA both sides commit to.
+**One-line description:** Marketing and sales each submit their real ICP views and field realities before a launch — AI surfaces the messaging gaps and ICP misalignments, and produces a joint GTM plan with an SLA both sides commit to.
 
 **Execution Pattern:** Phase Pipeline
 

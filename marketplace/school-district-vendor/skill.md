@@ -1,6 +1,6 @@
 # School District Vendor Agreement
 
-**One-line description:** A school district and an educational vendor each submit their real requirements, budget constraints, and implementation expectations before signing — Claude aligns on an agreement that actually improves student outcomes rather than just purchasing software that sits unused in classrooms.
+**One-line description:** A school district and an educational vendor each submit their real requirements, budget constraints, and implementation expectations before signing — AI aligns on an agreement that actually improves student outcomes rather than just purchasing software that sits unused in classrooms.
 
 **Execution Pattern:** Phase Pipeline
 

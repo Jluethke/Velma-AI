@@ -1,6 +1,6 @@
 # Promotion Calibration
 
-**One-line description:** Manager and HR each submit their real promotion case and calibration data — Claude assesses readiness against the leveling bar, surfaces evidence gaps, and produces a calibration package for the review.
+**One-line description:** Manager and HR each submit their real promotion case and calibration data — AI assesses readiness against the leveling bar, surfaces evidence gaps, and produces a calibration package for the review.
 
 **Execution Pattern:** Phase Pipeline
 

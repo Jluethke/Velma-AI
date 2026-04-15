@@ -1,6 +1,6 @@
 # OKR Alignment
 
-**One-line description:** Manager and team lead each submit their real priorities and capacity constraints before OKR setting — Claude surfaces the conflicts between company direction and team reality, and produces a negotiated OKR set both sides can commit to.
+**One-line description:** Manager and team lead each submit their real priorities and capacity constraints before OKR setting — AI surfaces the conflicts between company direction and team reality, and produces a negotiated OKR set both sides can commit to.
 
 **Execution Pattern:** Phase Pipeline
 

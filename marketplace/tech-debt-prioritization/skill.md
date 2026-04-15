@@ -1,6 +1,6 @@
 # Tech Debt Prioritization
 
-**One-line description:** Engineering and product each submit their real debt inventory and roadmap constraints — Claude models the trade-offs and produces a prioritized plan both sides have actually agreed to fund.
+**One-line description:** Engineering and product each submit their real debt inventory and roadmap constraints — AI models the trade-offs and produces a prioritized plan both sides have actually agreed to fund.
 
 **Execution Pattern:** Phase Pipeline
 

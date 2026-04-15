@@ -1,6 +1,6 @@
 # Data Partnership Agreement
 
-**One-line description:** A data provider and a data licensee each submit their real data specifications, use case requirements, and privacy constraints before formalizing a data agreement — Claude aligns on a licensing structure that gives the licensee what they actually need while protecting the provider's data asset and compliance posture.
+**One-line description:** A data provider and a data licensee each submit their real data specifications, use case requirements, and privacy constraints before formalizing a data agreement — AI aligns on a licensing structure that gives the licensee what they actually need while protecting the provider's data asset and compliance posture.
 
 **Execution Pattern:** Phase Pipeline
 

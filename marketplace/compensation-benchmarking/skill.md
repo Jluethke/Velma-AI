@@ -1,6 +1,6 @@
 # Compensation Benchmarking
 
-**One-line description:** HR and finance each submit their real comp data, benchmark surveys, and budget constraints — Claude models the gap, prioritizes equity adjustments, and produces a plan both sides can defend to leadership.
+**One-line description:** HR and finance each submit their real comp data, benchmark surveys, and budget constraints — AI models the gap, prioritizes equity adjustments, and produces a plan both sides can defend to leadership.
 
 **Execution Pattern:** Phase Pipeline
 

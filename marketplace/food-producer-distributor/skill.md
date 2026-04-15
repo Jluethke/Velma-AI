@@ -1,6 +1,6 @@
 # Food Producer Distributor Agreement
 
-**One-line description:** A food producer and a distributor each submit their real product capabilities, market requirements, and margin expectations before signing — Claude aligns on a distribution arrangement that gets product to shelf without the margin compression and promotional demands that erode the producer's economics.
+**One-line description:** A food producer and a distributor each submit their real product capabilities, market requirements, and margin expectations before signing — AI aligns on a distribution arrangement that gets product to shelf without the margin compression and promotional demands that erode the producer's economics.
 
 **Execution Pattern:** Phase Pipeline
 

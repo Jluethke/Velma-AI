@@ -1,6 +1,6 @@
 # Regulatory Settlement Negotiation
 
-**One-line description:** A regulator and a company each submit their real enforcement position, remediation capacity, and settlement parameters before formal proceedings — Claude aligns on a settlement structure that achieves the regulator's public protection objectives and the company's ability to actually comply without litigation.
+**One-line description:** A regulator and a company each submit their real enforcement position, remediation capacity, and settlement parameters before formal proceedings — AI aligns on a settlement structure that achieves the regulator's public protection objectives and the company's ability to actually comply without litigation.
 
 **Execution Pattern:** Phase Pipeline
 

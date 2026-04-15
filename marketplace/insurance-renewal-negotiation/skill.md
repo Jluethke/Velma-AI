@@ -1,6 +1,6 @@
 # Insurance Renewal Negotiation
 
-**One-line description:** Broker and underwriter each submit their real rate position and market reality — Claude assesses rate adequacy against loss history and produces terms both sides can bind on.
+**One-line description:** Broker and underwriter each submit their real rate position and market reality — AI assesses rate adequacy against loss history and produces terms both sides can bind on.
 
 **Execution Pattern:** Phase Pipeline
 

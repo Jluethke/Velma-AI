@@ -1,6 +1,6 @@
 # Disability Service Plan
 
-**One-line description:** The case manager and the individual or family each submit their real goals, available services, and priorities — Claude produces a service plan that reflects what the person actually needs to live, work, and participate in their community, not just what the funding stream will pay for.
+**One-line description:** The case manager and the individual or family each submit their real goals, available services, and priorities — AI produces a service plan that reflects what the person actually needs to live, work, and participate in their community, not just what the funding stream will pay for.
 
 **Execution Pattern:** Phase Pipeline
 

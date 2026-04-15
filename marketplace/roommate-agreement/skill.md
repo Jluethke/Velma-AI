@@ -1,6 +1,6 @@
 # Roommate Agreement
 
-**One-line description:** Both roommates submit their real expectations about sleep, guests, cleanliness, noise, and money before moving in — Claude finds the incompatibilities before they become passive-aggressive notes on the fridge.
+**One-line description:** Both roommates submit their real expectations about sleep, guests, cleanliness, noise, and money before moving in — AI finds the incompatibilities before they become passive-aggressive notes on the fridge.
 
 **Execution Pattern:** Phase Pipeline
 

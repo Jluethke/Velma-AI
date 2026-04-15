@@ -1,6 +1,6 @@
 # Agricultural Supply Contract
 
-**One-line description:** The food processor or buyer and the grower each submit their real volume needs, production capacity, and price requirements — Claude designs the supply agreement that gives the buyer reliable supply and the grower bankable terms they can take to their lender.
+**One-line description:** The food processor or buyer and the grower each submit their real volume needs, production capacity, and price requirements — AI designs the supply agreement that gives the buyer reliable supply and the grower bankable terms they can take to their lender.
 
 **Execution Pattern:** Phase Pipeline
 

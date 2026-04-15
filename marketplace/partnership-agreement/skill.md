@@ -1,6 +1,6 @@
 # Partnership Agreement
 
-**One-line description:** Two business partners each submit their real expectations about contributions, returns, decision rights, and exit terms — Claude produces an alignment map and draft agreement before the handshake becomes a dispute.
+**One-line description:** Two business partners each submit their real expectations about contributions, returns, decision rights, and exit terms — AI produces an alignment map and draft agreement before the handshake becomes a dispute.
 
 **Execution Pattern:** Phase Pipeline
 

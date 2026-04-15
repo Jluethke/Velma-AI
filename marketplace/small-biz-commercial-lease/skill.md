@@ -1,6 +1,6 @@
 # Small Business Commercial Lease
 
-**One-line description:** The business owner and the landlord each submit their real needs, financial constraints, and non-negotiables — Claude finds where the deal works, designs the lease terms, and produces a negotiation strategy so the owner gets a location they can afford and the landlord gets a tenant who will be there in year three.
+**One-line description:** The business owner and the landlord each submit their real needs, financial constraints, and non-negotiables — AI finds where the deal works, designs the lease terms, and produces a negotiation strategy so the owner gets a location they can afford and the landlord gets a tenant who will be there in year three.
 
 **Execution Pattern:** Phase Pipeline
 

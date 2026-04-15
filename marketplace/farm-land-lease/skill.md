@@ -1,6 +1,6 @@
 # Farm Land Lease
 
-**One-line description:** The landowner and the farmer each submit their real financial requirements, land use expectations, and long-term goals — Claude designs the lease terms that give the farmer a viable operation and the landowner fair returns and a partner who takes care of the land.
+**One-line description:** The landowner and the farmer each submit their real financial requirements, land use expectations, and long-term goals — AI designs the lease terms that give the farmer a viable operation and the landowner fair returns and a partner who takes care of the land.
 
 **Execution Pattern:** Phase Pipeline
 

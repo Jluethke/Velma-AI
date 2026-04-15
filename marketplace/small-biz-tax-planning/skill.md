@@ -1,6 +1,6 @@
 # Small Business Tax Planning
 
-**One-line description:** The business owner and their accountant each submit the real financial picture and what they know is coming — Claude produces a year-end and forward tax plan that reduces the bill, eliminates surprises, and puts the owner in control of their numbers before it is too late to act.
+**One-line description:** The business owner and their accountant each submit the real financial picture and what they know is coming — AI produces a year-end and forward tax plan that reduces the bill, eliminates surprises, and puts the owner in control of their numbers before it is too late to act.
 
 **Execution Pattern:** Phase Pipeline
 

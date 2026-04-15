@@ -1,6 +1,6 @@
 # Project Kickoff
 
-**One-line description:** Project manager and key stakeholder each submit their real scope understanding, priorities, and concerns before kickoff — Claude produces a project charter both sides have actually agreed to, not one the PM wrote and the stakeholder signed without reading.
+**One-line description:** Project manager and key stakeholder each submit their real scope understanding, priorities, and concerns before kickoff — AI produces a project charter both sides have actually agreed to, not one the PM wrote and the stakeholder signed without reading.
 
 **Execution Pattern:** Phase Pipeline
 

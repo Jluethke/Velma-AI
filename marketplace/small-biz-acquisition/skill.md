@@ -1,6 +1,6 @@
 # Small Business Acquisition
 
-**One-line description:** Buyer and seller each submit their real deal expectations, financials, and concerns — Claude aligns on valuation range, deal structure, and what needs to be true for both sides to close, before either wastes time on a deal that was never going to happen.
+**One-line description:** Buyer and seller each submit their real deal expectations, financials, and concerns — AI aligns on valuation range, deal structure, and what needs to be true for both sides to close, before either wastes time on a deal that was never going to happen.
 
 **Execution Pattern:** Phase Pipeline
 

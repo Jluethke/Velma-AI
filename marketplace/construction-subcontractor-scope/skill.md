@@ -1,6 +1,6 @@
 # Construction Subcontractor Scope
 
-**One-line description:** GC and subcontractor each submit their real scope understanding and exclusions before contract — Claude closes the scope gap and produces a subcontract scope that prevents disputes about who had what covered.
+**One-line description:** GC and subcontractor each submit their real scope understanding and exclusions before contract — AI closes the scope gap and produces a subcontract scope that prevents disputes about who had what covered.
 
 **Execution Pattern:** Phase Pipeline
 

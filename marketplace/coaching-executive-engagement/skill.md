@@ -1,6 +1,6 @@
 # Executive Coaching Engagement
 
-**One-line description:** An executive coach and a client each submit their real development goals, blind spots, and engagement expectations before the coaching begins — Claude aligns on a coaching structure that develops the executive in the ways that actually matter, not just the ones that are comfortable to discuss.
+**One-line description:** An executive coach and a client each submit their real development goals, blind spots, and engagement expectations before the coaching begins — AI aligns on a coaching structure that develops the executive in the ways that actually matter, not just the ones that are comfortable to discuss.
 
 **Execution Pattern:** Phase Pipeline
 

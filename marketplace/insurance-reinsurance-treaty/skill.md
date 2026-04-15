@@ -1,6 +1,6 @@
 # Insurance Reinsurance Treaty
 
-**One-line description:** Cedent and reinsurer each submit their real portfolio exposure and pricing requirements — Claude models the economics, surfaces terms misalignment, and produces a treaty structure both sides can execute.
+**One-line description:** Cedent and reinsurer each submit their real portfolio exposure and pricing requirements — AI models the economics, surfaces terms misalignment, and produces a treaty structure both sides can execute.
 
 **Execution Pattern:** Phase Pipeline
 

@@ -1,6 +1,6 @@
 # Residential Buyer Agent Engagement
 
-**One-line description:** A buyer's agent and a homebuyer each submit their real priorities, financial constraints, and market expectations before the search begins — Claude aligns on a search strategy that finds the right home without wasting months on misaligned showings.
+**One-line description:** A buyer's agent and a homebuyer each submit their real priorities, financial constraints, and market expectations before the search begins — AI aligns on a search strategy that finds the right home without wasting months on misaligned showings.
 
 **Execution Pattern:** Phase Pipeline
 

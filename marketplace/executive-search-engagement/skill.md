@@ -1,6 +1,6 @@
 # Executive Search Engagement
 
-**One-line description:** An executive search firm and a client company each submit their real requirements for the role, candidate criteria, and search process expectations — Claude aligns on a search mandate that finds the right leader rather than the fastest placement.
+**One-line description:** An executive search firm and a client company each submit their real requirements for the role, candidate criteria, and search process expectations — AI aligns on a search mandate that finds the right leader rather than the fastest placement.
 
 **Execution Pattern:** Phase Pipeline
 

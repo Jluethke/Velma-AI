@@ -1,6 +1,6 @@
 # Board-CEO Alignment
 
-**One-line description:** CEO and board member each submit their honest assessment before a board meeting or 1:1 — Claude surfaces the confidence gaps and unspoken concerns so the performance becomes a real conversation.
+**One-line description:** CEO and board member each submit their honest assessment before a board meeting or 1:1 — AI surfaces the confidence gaps and unspoken concerns so the performance becomes a real conversation.
 
 **Execution Pattern:** Phase Pipeline
 

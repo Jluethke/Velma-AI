@@ -1,6 +1,6 @@
 # Architect Contractor Handoff
 
-**One-line description:** An architect and a general contractor each submit their real concerns about the construction documents, scope interpretation, and schedule before the project breaks ground — Claude aligns on a shared understanding of the drawings that prevents the RFIs, change orders, and disputes that inflate every project budget.
+**One-line description:** An architect and a general contractor each submit their real concerns about the construction documents, scope interpretation, and schedule before the project breaks ground — AI aligns on a shared understanding of the drawings that prevents the RFIs, change orders, and disputes that inflate every project budget.
 
 **Execution Pattern:** Phase Pipeline
 

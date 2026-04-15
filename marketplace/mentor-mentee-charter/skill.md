@@ -1,6 +1,6 @@
 # Mentor-Mentee Charter
 
-**One-line description:** Mentor and mentee each submit what they actually expect before the relationship starts — Claude surfaces the gaps that kill most mentorships and produces a charter so both people start with clarity.
+**One-line description:** Mentor and mentee each submit what they actually expect before the relationship starts — AI surfaces the gaps that kill most mentorships and produces a charter so both people start with clarity.
 
 **Execution Pattern:** Phase Pipeline
 

@@ -1,6 +1,6 @@
 # Interior Designer Client Engagement
 
-**One-line description:** An interior designer and a client each submit their real aesthetic vision, budget, and lifestyle requirements before the design begins — Claude aligns on a design engagement that produces a space the client loves without the scope creep and budget overruns that define most interior design projects.
+**One-line description:** An interior designer and a client each submit their real aesthetic vision, budget, and lifestyle requirements before the design begins — AI aligns on a design engagement that produces a space the client loves without the scope creep and budget overruns that define most interior design projects.
 
 **Execution Pattern:** Phase Pipeline
 

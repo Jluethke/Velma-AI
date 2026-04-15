@@ -1,6 +1,6 @@
 # Contract Scope Alignment
 
-**One-line description:** Client and contractor each submit what they actually expect before signing — Claude surfaces the scope, budget, and timeline divergences and produces a draft Statement of Work.
+**One-line description:** Client and contractor each submit what they actually expect before signing — AI surfaces the scope, budget, and timeline divergences and produces a draft Statement of Work.
 
 **Execution Pattern:** Phase Pipeline
 

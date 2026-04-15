@@ -1,6 +1,6 @@
 # Personal Trainer Client Engagement
 
-**One-line description:** A personal trainer and a client each submit their real fitness goals, physical history, and expectations before the engagement begins — Claude aligns on a training program that achieves the client's goals without the misaligned expectations that end most trainer relationships by month three.
+**One-line description:** A personal trainer and a client each submit their real fitness goals, physical history, and expectations before the engagement begins — AI aligns on a training program that achieves the client's goals without the misaligned expectations that end most trainer relationships by month three.
 
 **Execution Pattern:** Phase Pipeline
 

@@ -1,6 +1,6 @@
 # Insurance Claims Settlement
 
-**One-line description:** Adjuster and claimant each submit their real coverage position and damages evidence — Claude identifies the gap, surfaces documentation needs, and builds a resolution path that closes the claim fairly and efficiently.
+**One-line description:** Adjuster and claimant each submit their real coverage position and damages evidence — AI identifies the gap, surfaces documentation needs, and builds a resolution path that closes the claim fairly and efficiently.
 
 **Execution Pattern:** Phase Pipeline
 

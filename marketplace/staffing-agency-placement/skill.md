@@ -1,6 +1,6 @@
 # Staffing Agency Placement
 
-**One-line description:** The staffing agency and the client company each submit their real requirements, candidate expectations, and fill constraints — Claude aligns on role definition, compensation range, timeline, and what success looks like so the agency fills the role and the client stops rejecting candidates for reasons never stated upfront.
+**One-line description:** The staffing agency and the client company each submit their real requirements, candidate expectations, and fill constraints — AI aligns on role definition, compensation range, timeline, and what success looks like so the agency fills the role and the client stops rejecting candidates for reasons never stated upfront.
 
 **Execution Pattern:** Phase Pipeline
 

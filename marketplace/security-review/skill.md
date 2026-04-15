@@ -1,6 +1,6 @@
 # Security Review
 
-**One-line description:** Security and engineering each submit their real findings and capacity constraints — Claude prioritizes by actual risk, assesses alternative controls, and produces a remediation plan both sides can execute.
+**One-line description:** Security and engineering each submit their real findings and capacity constraints — AI prioritizes by actual risk, assesses alternative controls, and produces a remediation plan both sides can execute.
 
 **Execution Pattern:** Phase Pipeline
 

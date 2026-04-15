@@ -1,6 +1,6 @@
 # Technology Reseller Agreement
 
-**One-line description:** A software vendor (ISV) and a reseller each submit their real sales expectations, margin requirements, and support obligations before formalizing the channel arrangement — Claude aligns on a reseller program that drives revenue for both without the channel conflict and margin disputes that end most ISV-reseller relationships.
+**One-line description:** A software vendor (ISV) and a reseller each submit their real sales expectations, margin requirements, and support obligations before formalizing the channel arrangement — AI aligns on a reseller program that drives revenue for both without the channel conflict and margin disputes that end most ISV-reseller relationships.
 
 **Execution Pattern:** Phase Pipeline
 

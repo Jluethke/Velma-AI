@@ -1,6 +1,6 @@
 # Headcount Planning
 
-**One-line description:** Business unit and HR/finance each submit their real headcount needs and budget reality — Claude models the gap, assesses the business case, and produces a plan both sides can take to leadership.
+**One-line description:** Business unit and HR/finance each submit their real headcount needs and budget reality — AI models the gap, assesses the business case, and produces a plan both sides can take to leadership.
 
 **Execution Pattern:** Phase Pipeline
 

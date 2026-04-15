@@ -1,6 +1,6 @@
 # Vendor Selection
 
-**One-line description:** Buyer submits real requirements and budget; vendor submits real capabilities and constraints — Claude scores the fit, surfaces the gaps, and builds the decision meeting agenda.
+**One-line description:** Buyer submits real requirements and budget; vendor submits real capabilities and constraints — AI scores the fit, surfaces the gaps, and builds the decision meeting agenda.
 
 **Execution Pattern:** Phase Pipeline
 

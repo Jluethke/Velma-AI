@@ -1,6 +1,6 @@
 # Audit Prep
 
-**One-line description:** Finance and operations each submit their real readiness gaps before an audit — Claude produces a remediation plan with owners, a documentation checklist, and an audit response strategy.
+**One-line description:** Finance and operations each submit their real readiness gaps before an audit — AI produces a remediation plan with owners, a documentation checklist, and an audit response strategy.
 
 **Execution Pattern:** Phase Pipeline
 

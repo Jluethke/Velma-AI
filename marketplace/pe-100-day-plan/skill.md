@@ -1,6 +1,6 @@
 # PE 100-Day Plan
 
-**One-line description:** PE operating partner and portfolio CEO each submit their real priorities and concerns at close — Claude aligns on what is achievable, names the expectation gaps before they become relationship problems, and produces a 100-day plan both sides have committed to.
+**One-line description:** PE operating partner and portfolio CEO each submit their real priorities and concerns at close — AI aligns on what is achievable, names the expectation gaps before they become relationship problems, and produces a 100-day plan both sides have committed to.
 
 **Execution Pattern:** Phase Pipeline
 

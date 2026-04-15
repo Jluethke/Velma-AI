@@ -1,6 +1,6 @@
 # Nonprofit Merger Alignment
 
-**One-line description:** Two nonprofit CEOs each submit their real concerns about organizational culture, mission alignment, and post-merger leadership before the integration begins — Claude surfaces the tensions that kill nonprofit mergers and builds a structure where the combined organization serves the mission better than either could alone.
+**One-line description:** Two nonprofit CEOs each submit their real concerns about organizational culture, mission alignment, and post-merger leadership before the integration begins — AI surfaces the tensions that kill nonprofit mergers and builds a structure where the combined organization serves the mission better than either could alone.
 
 **Execution Pattern:** Phase Pipeline
 

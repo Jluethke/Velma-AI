@@ -1,6 +1,6 @@
 # Design-Engineering Handoff
 
-**One-line description:** Design and engineering each submit their real fidelity requirements and implementation constraints — Claude maps what must be exact vs. what can flex and produces a spec that gets built right without 12 rounds of QA feedback.
+**One-line description:** Design and engineering each submit their real fidelity requirements and implementation constraints — AI maps what must be exact vs. what can flex and produces a spec that gets built right without 12 rounds of QA feedback.
 
 **Execution Pattern:** Phase Pipeline
 

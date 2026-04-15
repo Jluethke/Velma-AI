@@ -1,6 +1,6 @@
 # Sports Team Player Contract
 
-**One-line description:** A sports team and a player (or their representation) each submit their real valuation, role expectations, and contract priorities before negotiating — Claude aligns on a contract structure that reflects the player's contribution and the team's roster strategy without the adversarial dynamic that poisons the relationship before it starts.
+**One-line description:** A sports team and a player (or their representation) each submit their real valuation, role expectations, and contract priorities before negotiating — AI aligns on a contract structure that reflects the player's contribution and the team's roster strategy without the adversarial dynamic that poisons the relationship before it starts.
 
 **Execution Pattern:** Phase Pipeline
 

@@ -1,6 +1,6 @@
 # Technology Partnership
 
-**One-line description:** Two technology companies each submit their real integration goals, IP boundaries, and commercial expectations before formalizing a partnership — Claude aligns on a structure that delivers customer value, protects each party's core IP, and defines who owns what when the partnership produces something new.
+**One-line description:** Two technology companies each submit their real integration goals, IP boundaries, and commercial expectations before formalizing a partnership — AI aligns on a structure that delivers customer value, protects each party's core IP, and defines who owns what when the partnership produces something new.
 
 **Execution Pattern:** Phase Pipeline
 

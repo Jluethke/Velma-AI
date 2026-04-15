@@ -1,6 +1,6 @@
 # Music Artist-Label Deal
 
-**One-line description:** The artist and the label each submit their real vision, deal expectations, and non-negotiables before signing — Claude aligns on a record deal structure that gives the artist creative control where it matters and the label the commercial rights they need to invest, without the artist signing away their career.
+**One-line description:** The artist and the label each submit their real vision, deal expectations, and non-negotiables before signing — AI aligns on a record deal structure that gives the artist creative control where it matters and the label the commercial rights they need to invest, without the artist signing away their career.
 
 **Execution Pattern:** Phase Pipeline
 

@@ -1,6 +1,6 @@
 # Workforce Outsourcing Engagement
 
-**One-line description:** An HR leader and a workforce solutions provider each submit their real staffing requirements, service expectations, and cost constraints before signing — Claude aligns on an outsourcing arrangement that fills critical workforce needs without creating misclassification risk or service quality failures.
+**One-line description:** An HR leader and a workforce solutions provider each submit their real staffing requirements, service expectations, and cost constraints before signing — AI aligns on an outsourcing arrangement that fills critical workforce needs without creating misclassification risk or service quality failures.
 
 **Execution Pattern:** Phase Pipeline
 

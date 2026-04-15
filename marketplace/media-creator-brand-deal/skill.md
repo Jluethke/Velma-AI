@@ -1,6 +1,6 @@
 # Media Creator Brand Deal
 
-**One-line description:** A content creator and a brand each submit their real audience, content expectations, and commercial requirements before the sponsorship — Claude aligns on a creator partnership that produces authentic content the audience trusts and measurable results the brand can defend to their CMO.
+**One-line description:** A content creator and a brand each submit their real audience, content expectations, and commercial requirements before the sponsorship — AI aligns on a creator partnership that produces authentic content the audience trusts and measurable results the brand can defend to their CMO.
 
 **Execution Pattern:** Phase Pipeline
 

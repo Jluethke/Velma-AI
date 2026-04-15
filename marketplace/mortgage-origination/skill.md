@@ -1,6 +1,6 @@
 # Mortgage Origination
 
-**One-line description:** A mortgage loan officer and a borrower each submit their real financial picture, loan goals, and concerns before the application — Claude aligns on the right loan structure, surfaces the full cost of borrowing, and identifies what needs to be resolved before underwriting.
+**One-line description:** A mortgage loan officer and a borrower each submit their real financial picture, loan goals, and concerns before the application — AI aligns on the right loan structure, surfaces the full cost of borrowing, and identifies what needs to be resolved before underwriting.
 
 **Execution Pattern:** Phase Pipeline
 

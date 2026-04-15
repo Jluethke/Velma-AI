@@ -1,6 +1,6 @@
 # Athlete-Agent Contract
 
-**One-line description:** The athlete and agent each submit their real career goals, representation expectations, and concerns — Claude aligns on a representation agreement, marketing strategy, and communication structure so the athlete knows what they signed and the agent knows what the athlete actually wants.
+**One-line description:** The athlete and agent each submit their real career goals, representation expectations, and concerns — AI aligns on a representation agreement, marketing strategy, and communication structure so the athlete knows what they signed and the agent knows what the athlete actually wants.
 
 **Execution Pattern:** Phase Pipeline
 

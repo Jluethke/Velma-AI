@@ -1,6 +1,6 @@
 # Wedding Vendor Couple Engagement
 
-**One-line description:** A wedding vendor and a couple each submit their real vision, budget, and expectations before signing — Claude aligns on a services arrangement that delivers the wedding the couple actually wants within the budget they actually have, without the vendor overpromising and the couple underfunding.
+**One-line description:** A wedding vendor and a couple each submit their real vision, budget, and expectations before signing — AI aligns on a services arrangement that delivers the wedding the couple actually wants within the budget they actually have, without the vendor overpromising and the couple underfunding.
 
 **Execution Pattern:** Phase Pipeline
 

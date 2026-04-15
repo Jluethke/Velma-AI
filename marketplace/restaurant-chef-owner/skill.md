@@ -1,6 +1,6 @@
 # Restaurant Chef-Owner Alignment
 
-**One-line description:** The chef and the owner each submit their real vision for the restaurant, financial constraints, and concerns — Claude finds where culinary ambition and business reality can coexist, and produces a menu and operating model both sides can commit to.
+**One-line description:** The chef and the owner each submit their real vision for the restaurant, financial constraints, and concerns — AI finds where culinary ambition and business reality can coexist, and produces a menu and operating model both sides can commit to.
 
 **Execution Pattern:** Phase Pipeline
 

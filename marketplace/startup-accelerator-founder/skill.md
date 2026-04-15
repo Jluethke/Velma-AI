@@ -1,6 +1,6 @@
 # Startup Accelerator Founder Engagement
 
-**One-line description:** An accelerator program and a founding team each submit their real program expectations, equity terms, and startup needs before the cohort begins — Claude aligns on an accelerator relationship where the founders get the help that actually moves their company, not just a demo day and a networking list.
+**One-line description:** An accelerator program and a founding team each submit their real program expectations, equity terms, and startup needs before the cohort begins — AI aligns on an accelerator relationship where the founders get the help that actually moves their company, not just a demo day and a networking list.
 
 **Execution Pattern:** Phase Pipeline
 

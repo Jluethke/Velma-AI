@@ -1,6 +1,6 @@
 # Government Grant Alignment
 
-**One-line description:** A government program officer and a grant applicant each submit their real program requirements, compliance expectations, and project design before the award — Claude aligns on a funded project that delivers against the program's objectives without the compliance failures that end government grants early.
+**One-line description:** A government program officer and a grant applicant each submit their real program requirements, compliance expectations, and project design before the award — AI aligns on a funded project that delivers against the program's objectives without the compliance failures that end government grants early.
 
 **Execution Pattern:** Phase Pipeline
 

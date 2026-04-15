@@ -1,6 +1,6 @@
 # CRE Asset Disposition
 
-**One-line description:** Owner and broker each submit their real pricing expectations and market evidence before going to market — Claude closes the expectation gap, builds the pricing strategy, and produces a disposition plan designed to actually close.
+**One-line description:** Owner and broker each submit their real pricing expectations and market evidence before going to market — AI closes the expectation gap, builds the pricing strategy, and produces a disposition plan designed to actually close.
 
 **Execution Pattern:** Phase Pipeline
 

@@ -1,6 +1,6 @@
 # Media Content Licensing
 
-**One-line description:** Content owner and licensee each submit their real deal requirements, exclusivity needs, and financial expectations — Claude designs the license structure that protects the content's value while making the deal commercially workable for the platform or distributor.
+**One-line description:** Content owner and licensee each submit their real deal requirements, exclusivity needs, and financial expectations — AI designs the license structure that protects the content's value while making the deal commercially workable for the platform or distributor.
 
 **Execution Pattern:** Phase Pipeline
 

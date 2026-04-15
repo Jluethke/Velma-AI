@@ -1,6 +1,6 @@
 # Literary Agent Author Engagement
 
-**One-line description:** A literary agent and an author each submit their real submission strategy, career goals, and creative vision before signing — Claude aligns on a representation arrangement that gets the right book to the right publisher with the right deal, not just the fastest sale.
+**One-line description:** A literary agent and an author each submit their real submission strategy, career goals, and creative vision before signing — AI aligns on a representation arrangement that gets the right book to the right publisher with the right deal, not just the fastest sale.
 
 **Execution Pattern:** Phase Pipeline
 

@@ -1,6 +1,6 @@
 # School IEP Meeting
 
-**One-line description:** The school team and the parent each submit their real observations, concerns, and goals for the student before the IEP meeting — Claude produces a plan that reflects what the student actually needs, not just what the school can offer or what the parent can demand.
+**One-line description:** The school team and the parent each submit their real observations, concerns, and goals for the student before the IEP meeting — AI produces a plan that reflects what the student actually needs, not just what the school can offer or what the parent can demand.
 
 **Execution Pattern:** Phase Pipeline
 

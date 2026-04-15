@@ -1,6 +1,6 @@
 # PE Management Incentive Plan
 
-**One-line description:** PE firm and portfolio CEO each submit their real incentive requirements and motivational needs — Claude models the economics, assesses threshold fairness, and produces an MIP that retains management through the exit.
+**One-line description:** PE firm and portfolio CEO each submit their real incentive requirements and motivational needs — AI models the economics, assesses threshold fairness, and produces an MIP that retains management through the exit.
 
 **Execution Pattern:** Phase Pipeline
 

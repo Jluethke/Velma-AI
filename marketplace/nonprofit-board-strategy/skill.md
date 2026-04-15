@@ -1,6 +1,6 @@
 # Nonprofit Board Strategy Alignment
 
-**One-line description:** The executive director and the board chair each submit their real concerns, strategic priorities, and governance expectations — Claude produces a strategic alignment that lets leadership lead and the board govern without either party undermining the other.
+**One-line description:** The executive director and the board chair each submit their real concerns, strategic priorities, and governance expectations — AI produces a strategic alignment that lets leadership lead and the board govern without either party undermining the other.
 
 **Execution Pattern:** Phase Pipeline
 

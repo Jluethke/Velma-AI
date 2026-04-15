@@ -1,6 +1,6 @@
 # Franchise Agreement Negotiation
 
-**One-line description:** The franchisor and franchisee each submit their real expectations, concerns, and financial requirements before the franchise agreement is signed — Claude aligns on territory, fees, support, and obligations so the franchisee opens with open eyes and the franchisor gets a franchisee who will not be underwater by year two.
+**One-line description:** The franchisor and franchisee each submit their real expectations, concerns, and financial requirements before the franchise agreement is signed — AI aligns on territory, fees, support, and obligations so the franchisee opens with open eyes and the franchisor gets a franchisee who will not be underwater by year two.
 
 **Execution Pattern:** Phase Pipeline
 

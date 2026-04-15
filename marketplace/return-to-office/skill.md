@@ -1,6 +1,6 @@
 # Return-to-Office Policy
 
-**One-line description:** HR and leadership each submit their real employee data and business needs before designing RTO policy — Claude models retention risk and produces a plan that does not lose the people the company cannot afford to lose.
+**One-line description:** HR and leadership each submit their real employee data and business needs before designing RTO policy — AI models retention risk and produces a plan that does not lose the people the company cannot afford to lose.
 
 **Execution Pattern:** Phase Pipeline
 

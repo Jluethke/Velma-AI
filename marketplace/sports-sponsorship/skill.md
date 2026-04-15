@@ -1,6 +1,6 @@
 # Sports Sponsorship Deal
 
-**One-line description:** The brand and the sports property each submit their real marketing objectives, asset valuations, and activation expectations — Claude designs a sponsorship structure that delivers measurable value for the brand and sustainable revenue for the property, without a deal that looks great on paper and dies in activation.
+**One-line description:** The brand and the sports property each submit their real marketing objectives, asset valuations, and activation expectations — AI designs a sponsorship structure that delivers measurable value for the brand and sustainable revenue for the property, without a deal that looks great on paper and dies in activation.
 
 **Execution Pattern:** Phase Pipeline
 

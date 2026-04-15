@@ -1,6 +1,6 @@
 # Org Design
 
-**One-line description:** Two executives each submit their real views on org structure and concerns about each other's approach — Claude finds the structural consensus, names the real tensions, and recommends a design both sides can commit to.
+**One-line description:** Two executives each submit their real views on org structure and concerns about each other's approach — AI finds the structural consensus, names the real tensions, and recommends a design both sides can commit to.
 
 **Execution Pattern:** Phase Pipeline
 

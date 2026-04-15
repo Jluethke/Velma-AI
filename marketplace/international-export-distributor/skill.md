@@ -1,6 +1,6 @@
 # International Export Distribution Agreement
 
-**One-line description:** An exporter and a foreign distributor each submit their real market expectations, regulatory requirements, and commercial terms before entering the market — Claude aligns on a distribution arrangement that opens the market without the pricing, support, and legal disputes that stall most international expansion.
+**One-line description:** An exporter and a foreign distributor each submit their real market expectations, regulatory requirements, and commercial terms before entering the market — AI aligns on a distribution arrangement that opens the market without the pricing, support, and legal disputes that stall most international expansion.
 
 **Execution Pattern:** Phase Pipeline
 

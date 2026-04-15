@@ -1,6 +1,6 @@
 # Small Business Loan Prep
 
-**One-line description:** The business owner and their lender each submit their real financial picture and lending criteria — Claude surfaces the gaps between what the owner thinks qualifies and what the bank actually needs, and produces a loan application package and Q&A that walks in ready.
+**One-line description:** The business owner and their lender each submit their real financial picture and lending criteria — AI surfaces the gaps between what the owner thinks qualifies and what the bank actually needs, and produces a loan application package and Q&A that walks in ready.
 
 **Execution Pattern:** Phase Pipeline
 

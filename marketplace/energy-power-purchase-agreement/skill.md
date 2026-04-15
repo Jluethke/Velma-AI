@@ -1,6 +1,6 @@
 # Energy Power Purchase Agreement
 
-**One-line description:** The energy generator and the offtaker each submit their real price requirements, volume commitments, and risk positions before PPA negotiations begin — Claude aligns on the contract structure that gives the generator bankable revenue and the offtaker predictable energy costs.
+**One-line description:** The energy generator and the offtaker each submit their real price requirements, volume commitments, and risk positions before PPA negotiations begin — AI aligns on the contract structure that gives the generator bankable revenue and the offtaker predictable energy costs.
 
 **Execution Pattern:** Phase Pipeline
 

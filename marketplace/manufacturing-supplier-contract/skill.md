@@ -1,6 +1,6 @@
 # Manufacturing Supplier Contract
 
-**One-line description:** Procurement and the supplier each submit their real requirements, constraints, and risks before contract negotiations begin — Claude aligns on terms that protect supply continuity without destroying the supplier relationship or creating unworkable obligations on either side.
+**One-line description:** Procurement and the supplier each submit their real requirements, constraints, and risks before contract negotiations begin — AI aligns on terms that protect supply continuity without destroying the supplier relationship or creating unworkable obligations on either side.
 
 **Execution Pattern:** Phase Pipeline
 

@@ -1,6 +1,6 @@
 # Renewal Negotiation Prep
 
-**One-line description:** CS and sales each submit their real read on account health and commercial goals — Claude produces a negotiation strategy that protects the relationship and hits the number.
+**One-line description:** CS and sales each submit their real read on account health and commercial goals — AI produces a negotiation strategy that protects the relationship and hits the number.
 
 **Execution Pattern:** Phase Pipeline
 

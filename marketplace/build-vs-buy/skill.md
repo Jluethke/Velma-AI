@@ -1,6 +1,6 @@
 # Build vs. Buy
 
-**One-line description:** Engineering and finance each submit their real constraints and preferences before a build-vs-buy decision — Claude models the true cost of each path and produces a recommendation both sides can defend.
+**One-line description:** Engineering and finance each submit their real constraints and preferences before a build-vs-buy decision — AI models the true cost of each path and produces a recommendation both sides can defend.
 
 **Execution Pattern:** Phase Pipeline
 

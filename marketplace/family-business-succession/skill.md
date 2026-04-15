@@ -1,6 +1,6 @@
 # Family Business Succession
 
-**One-line description:** Founder and successor each submit their real vision, fears, and financial expectations before the transition — Claude finds the gaps before they destroy the business or the family relationship, whichever matters more to you.
+**One-line description:** Founder and successor each submit their real vision, fears, and financial expectations before the transition — AI finds the gaps before they destroy the business or the family relationship, whichever matters more to you.
 
 **Execution Pattern:** Phase Pipeline
 

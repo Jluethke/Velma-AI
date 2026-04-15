@@ -1,6 +1,6 @@
 # Government Contract Negotiation
 
-**One-line description:** The government agency and the vendor each submit their real requirements, pricing rationale, and concerns before contract negotiations begin — Claude aligns on terms that meet compliance requirements, fit the agency's budget, and give the vendor a viable contract to perform.
+**One-line description:** The government agency and the vendor each submit their real requirements, pricing rationale, and concerns before contract negotiations begin — AI aligns on terms that meet compliance requirements, fit the agency's budget, and give the vendor a viable contract to perform.
 
 **Execution Pattern:** Phase Pipeline
 

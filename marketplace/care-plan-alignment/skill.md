@@ -1,6 +1,6 @@
 # Care Plan Alignment
 
-**One-line description:** Patient submits real symptoms and life priorities; doctor submits clinical goals and concerns — Claude produces a modified care plan that accounts for both the medical evidence and the patient's actual life.
+**One-line description:** Patient submits real symptoms and life priorities; doctor submits clinical goals and concerns — AI produces a modified care plan that accounts for both the medical evidence and the patient's actual life.
 
 **Execution Pattern:** Phase Pipeline
 

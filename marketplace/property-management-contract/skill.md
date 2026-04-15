@@ -1,6 +1,6 @@
 # Property Management Contract
 
-**One-line description:** The property owner and the property manager each submit their real expectations, management philosophy, and financial requirements — Claude aligns on a management agreement that gives the owner appropriate oversight and the manager the authority to operate the property without a phone call for every decision.
+**One-line description:** The property owner and the property manager each submit their real expectations, management philosophy, and financial requirements — AI aligns on a management agreement that gives the owner appropriate oversight and the manager the authority to operate the property without a phone call for every decision.
 
 **Execution Pattern:** Phase Pipeline
 

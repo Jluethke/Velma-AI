@@ -1,6 +1,6 @@
 # Process Design
 
-**One-line description:** Two team leads each submit their real workflow pain points, non-negotiables, and concerns about the other team before redesigning a shared process — Claude maps the conflicts, drafts the redesigned process, and defines the handoffs.
+**One-line description:** Two team leads each submit their real workflow pain points, non-negotiables, and concerns about the other team before redesigning a shared process — AI maps the conflicts, drafts the redesigned process, and defines the handoffs.
 
 **Execution Pattern:** Phase Pipeline
 

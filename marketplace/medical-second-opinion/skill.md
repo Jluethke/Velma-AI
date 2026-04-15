@@ -1,6 +1,6 @@
 # Medical Second Opinion
 
-**One-line description:** Patient submits their symptoms, concerns, and questions they were too afraid to ask — second-opinion doctor submits their clinical assessment — Claude produces a decision framework and the questions to bring back to the primary doctor.
+**One-line description:** Patient submits their symptoms, concerns, and questions they were too afraid to ask — second-opinion doctor submits their clinical assessment — AI produces a decision framework and the questions to bring back to the primary doctor.
 
 **Execution Pattern:** Phase Pipeline
 

@@ -1,6 +1,6 @@
 # Budget Alignment
 
-**One-line description:** Department head and finance each submit their real constraints before budget negotiations — Claude quantifies the gap, models the cut impact, and produces a negotiated budget draft with the justification package finance needs to approve it.
+**One-line description:** Department head and finance each submit their real constraints before budget negotiations — AI quantifies the gap, models the cut impact, and produces a negotiated budget draft with the justification package finance needs to approve it.
 
 **Execution Pattern:** Phase Pipeline
 

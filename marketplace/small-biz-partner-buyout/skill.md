@@ -1,6 +1,6 @@
 # Small Business Partner Buyout
 
-**One-line description:** Both partners submit their real valuation views, financial needs, and what they want from the business going forward — Claude finds where they can agree, surfaces where they cannot, and produces a buyout structure that closes without destroying the relationship or the business.
+**One-line description:** Both partners submit their real valuation views, financial needs, and what they want from the business going forward — AI finds where they can agree, surfaces where they cannot, and produces a buyout structure that closes without destroying the relationship or the business.
 
 **Execution Pattern:** Phase Pipeline
 

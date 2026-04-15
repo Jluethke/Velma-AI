@@ -1,6 +1,6 @@
 # Launch Readiness
 
-**One-line description:** Product and marketing each submit their real readiness status and risks before a launch decision — Claude produces a go/no-go assessment, names what is being accepted as a known risk, and builds the contingency plan before it is needed.
+**One-line description:** Product and marketing each submit their real readiness status and risks before a launch decision — AI produces a go/no-go assessment, names what is being accepted as a known risk, and builds the contingency plan before it is needed.
 
 **Execution Pattern:** Phase Pipeline
 

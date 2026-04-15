@@ -1,6 +1,6 @@
 # Audit Engagement
 
-**One-line description:** The audit partner and the CFO each submit their real concerns, risk areas, and expectations before the audit begins — Claude aligns on audit scope, timeline, and what both parties need to make this an efficient process that actually finds what matters, not just checks the boxes.
+**One-line description:** The audit partner and the CFO each submit their real concerns, risk areas, and expectations before the audit begins — AI aligns on audit scope, timeline, and what both parties need to make this an efficient process that actually finds what matters, not just checks the boxes.
 
 **Execution Pattern:** Phase Pipeline
 

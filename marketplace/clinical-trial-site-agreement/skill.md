@@ -1,6 +1,6 @@
 # Clinical Trial Site Agreement
 
-**One-line description:** A pharmaceutical sponsor and a clinical trial site each submit their real protocol requirements, site capabilities, and budget expectations before activating the site — Claude aligns on a site agreement that enrolls the right patients on time without the amendments and budget disputes that delay most trials.
+**One-line description:** A pharmaceutical sponsor and a clinical trial site each submit their real protocol requirements, site capabilities, and budget expectations before activating the site — AI aligns on a site agreement that enrolls the right patients on time without the amendments and budget disputes that delay most trials.
 
 **Execution Pattern:** Phase Pipeline
 

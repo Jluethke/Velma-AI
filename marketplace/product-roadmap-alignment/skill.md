@@ -1,6 +1,6 @@
 # Product Roadmap Alignment
 
-**One-line description:** PM and engineering lead each submit their real business commitments and technical constraints — Claude maps the conflicts between what must ship and what can realistically be built, and produces a negotiated roadmap both sides can defend.
+**One-line description:** PM and engineering lead each submit their real business commitments and technical constraints — AI maps the conflicts between what must ship and what can realistically be built, and produces a negotiated roadmap both sides can defend.
 
 **Execution Pattern:** Phase Pipeline
 

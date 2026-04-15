@@ -1,6 +1,6 @@
 # Nonprofit Major Donor Alignment
 
-**One-line description:** The executive director and the major donor each submit their real priorities, concerns, and expectations before a major gift conversation — Claude finds where the donor's interests and the organization's needs align, and produces a gift structure that both closes and lasts.
+**One-line description:** The executive director and the major donor each submit their real priorities, concerns, and expectations before a major gift conversation — AI finds where the donor's interests and the organization's needs align, and produces a gift structure that both closes and lasts.
 
 **Execution Pattern:** Phase Pipeline
 

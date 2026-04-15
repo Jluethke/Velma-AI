@@ -1,6 +1,6 @@
 # Data Governance
 
-**One-line description:** Legal and data engineering each submit their real compliance requirements and technical constraints — Claude produces a data governance policy that is actually implementable, not one that gets agreed to and ignored.
+**One-line description:** Legal and data engineering each submit their real compliance requirements and technical constraints — AI produces a data governance policy that is actually implementable, not one that gets agreed to and ignored.
 
 **Execution Pattern:** Phase Pipeline
 

@@ -1,6 +1,6 @@
 # CPA Firm Client Engagement
 
-**One-line description:** A CPA firm and a business client each submit their real tax situation, financial goals, and service expectations before the engagement begins — Claude aligns on a tax and accounting relationship that minimizes tax burden and produces reliable financial reporting without the missed deadlines and surprise bills that define bad CPA relationships.
+**One-line description:** A CPA firm and a business client each submit their real tax situation, financial goals, and service expectations before the engagement begins — AI aligns on a tax and accounting relationship that minimizes tax burden and produces reliable financial reporting without the missed deadlines and surprise bills that define bad CPA relationships.
 
 **Execution Pattern:** Phase Pipeline
 

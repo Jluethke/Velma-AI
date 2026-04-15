@@ -1,6 +1,6 @@
 # Underperformer Plan
 
-**One-line description:** Manager and HR each submit their real account of the performance situation and process requirements — Claude assesses risk, fills documentation gaps, and produces a plan that is fair to the employee and legally defensible for the company.
+**One-line description:** Manager and HR each submit their real account of the performance situation and process requirements — AI assesses risk, fills documentation gaps, and produces a plan that is fair to the employee and legally defensible for the company.
 
 **Execution Pattern:** Phase Pipeline
 

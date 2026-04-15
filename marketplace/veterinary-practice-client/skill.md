@@ -1,6 +1,6 @@
 # Veterinary Practice Client Engagement
 
-**One-line description:** A veterinary practice and a pet owner each submit their real concerns about their pet's health, care preferences, and financial constraints before a significant treatment decision — Claude aligns on a care plan that serves the animal's wellbeing within the owner's real circumstances without the guilt and miscommunication that make veterinary relationships difficult.
+**One-line description:** A veterinary practice and a pet owner each submit their real concerns about their pet's health, care preferences, and financial constraints before a significant treatment decision — AI aligns on a care plan that serves the animal's wellbeing within the owner's real circumstances without the guilt and miscommunication that make veterinary relationships difficult.
 
 **Execution Pattern:** Phase Pipeline
 

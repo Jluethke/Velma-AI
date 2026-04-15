@@ -1,6 +1,6 @@
 # Small Business Exit Planning
 
-**One-line description:** The owner and their exit advisor each submit their real goals, timeline, and the business's actual saleability — Claude produces an exit strategy that matches what the owner wants with what the market will pay, and builds the preparation roadmap to close the gap.
+**One-line description:** The owner and their exit advisor each submit their real goals, timeline, and the business's actual saleability — AI produces an exit strategy that matches what the owner wants with what the market will pay, and builds the preparation roadmap to close the gap.
 
 **Execution Pattern:** Phase Pipeline
 

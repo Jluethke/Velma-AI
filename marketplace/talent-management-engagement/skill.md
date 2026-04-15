@@ -1,6 +1,6 @@
 # Talent Management Engagement
 
-**One-line description:** A talent manager and their client each submit their real career goals, income expectations, and working relationship requirements before signing — Claude aligns on a representation arrangement that advances the talent's career without the misaligned incentives that end most management relationships.
+**One-line description:** A talent manager and their client each submit their real career goals, income expectations, and working relationship requirements before signing — AI aligns on a representation arrangement that advances the talent's career without the misaligned incentives that end most management relationships.
 
 **Execution Pattern:** Phase Pipeline
 

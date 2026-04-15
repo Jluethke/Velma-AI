@@ -1,6 +1,6 @@
 # Book Publishing Deal
 
-**One-line description:** The author and the publisher each submit their real expectations, creative requirements, and business needs before signing — Claude aligns on an advance, royalty structure, and creative process that gives the author what they need to write the book and the publisher what they need to sell it.
+**One-line description:** The author and the publisher each submit their real expectations, creative requirements, and business needs before signing — AI aligns on an advance, royalty structure, and creative process that gives the author what they need to write the book and the publisher what they need to sell it.
 
 **Execution Pattern:** Phase Pipeline
 

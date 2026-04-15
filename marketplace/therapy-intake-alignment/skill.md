@@ -1,6 +1,6 @@
 # Therapy Intake Alignment
 
-**One-line description:** A therapist and a prospective client each submit their real therapeutic goals, concerns, and fit requirements before the first session — Claude aligns on a therapeutic approach, expectations, and boundaries that give this relationship the best chance of producing meaningful progress.
+**One-line description:** A therapist and a prospective client each submit their real therapeutic goals, concerns, and fit requirements before the first session — AI aligns on a therapeutic approach, expectations, and boundaries that give this relationship the best chance of producing meaningful progress.
 
 **Execution Pattern:** Phase Pipeline
 

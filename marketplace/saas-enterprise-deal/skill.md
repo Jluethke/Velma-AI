@@ -1,6 +1,6 @@
 # SaaS Enterprise Deal
 
-**One-line description:** The SaaS account executive and the enterprise buyer each submit their real deal requirements, procurement constraints, and internal pressures — Claude aligns on a contract structure that closes on time, meets security and compliance needs, and does not set a pricing precedent that kills the next deal.
+**One-line description:** The SaaS account executive and the enterprise buyer each submit their real deal requirements, procurement constraints, and internal pressures — AI aligns on a contract structure that closes on time, meets security and compliance needs, and does not set a pricing precedent that kills the next deal.
 
 **Execution Pattern:** Phase Pipeline
 

@@ -1,6 +1,6 @@
 # Difficult Conversation
 
-**One-line description:** Both people submit what they actually think and feel before a hard conversation — Claude finds the shared ground, names the real tension, and writes the opening lines so neither person has to figure out how to start.
+**One-line description:** Both people submit what they actually think and feel before a hard conversation — AI finds the shared ground, names the real tension, and writes the opening lines so neither person has to figure out how to start.
 
 **Execution Pattern:** Phase Pipeline
 

@@ -1,6 +1,6 @@
 # Insurance Coverage Placement
 
-**One-line description:** Broker and client each submit their real risk profile and budget before designing coverage — Claude closes the exposure gap, models budget trade-offs, and produces a placement strategy so the client understands exactly what they are and are not covered for.
+**One-line description:** Broker and client each submit their real risk profile and budget before designing coverage — AI closes the exposure gap, models budget trade-offs, and produces a placement strategy so the client understands exactly what they are and are not covered for.
 
 **Execution Pattern:** Phase Pipeline
 

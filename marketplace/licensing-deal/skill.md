@@ -1,6 +1,6 @@
 # Licensing Deal
 
-**One-line description:** IP owner and licensee each submit their real expectations on royalties, usage, and exclusivity — Claude assesses feasibility, produces structure options, and drafts opening license agreement language.
+**One-line description:** IP owner and licensee each submit their real expectations on royalties, usage, and exclusivity — AI assesses feasibility, produces structure options, and drafts opening license agreement language.
 
 **Execution Pattern:** Phase Pipeline
 

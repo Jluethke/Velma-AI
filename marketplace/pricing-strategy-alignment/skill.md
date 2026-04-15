@@ -1,6 +1,6 @@
 # Pricing Strategy Alignment
 
-**One-line description:** Product and finance each submit their real pricing constraints — competitive pressure, margin requirements, customer sensitivity — Claude models the tradeoffs and produces a strategy both sides can defend to the board.
+**One-line description:** Product and finance each submit their real pricing constraints — competitive pressure, margin requirements, customer sensitivity — AI models the tradeoffs and produces a strategy both sides can defend to the board.
 
 **Execution Pattern:** Phase Pipeline
 

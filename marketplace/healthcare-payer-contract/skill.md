@@ -1,6 +1,6 @@
 # Healthcare Payer Contract
 
-**One-line description:** Health system and payer each submit their real rate requirements and contract terms — Claude models the economics, surfaces value-based alignment, and produces contract terms both sides can execute.
+**One-line description:** Health system and payer each submit their real rate requirements and contract terms — AI models the economics, surfaces value-based alignment, and produces contract terms both sides can execute.
 
 **Execution Pattern:** Phase Pipeline
 

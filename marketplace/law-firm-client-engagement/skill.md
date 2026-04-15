@@ -1,6 +1,6 @@
 # Law Firm Client Engagement
 
-**One-line description:** Client and attorney each submit their real situation, legal needs, and expectations before the engagement begins — Claude aligns on scope, fees, and strategy so the client understands what they are buying and the attorney understands what they are committing to.
+**One-line description:** Client and attorney each submit their real situation, legal needs, and expectations before the engagement begins — AI aligns on scope, fees, and strategy so the client understands what they are buying and the attorney understands what they are committing to.
 
 **Execution Pattern:** Phase Pipeline
 

@@ -1,6 +1,6 @@
 # CRE Lease Negotiation
 
-**One-line description:** Landlord and tenant each submit their real requirements and constraints before LOI negotiation — Claude maps the gap term-by-term and produces a negotiated LOI draft both sides can move forward with.
+**One-line description:** Landlord and tenant each submit their real requirements and constraints before LOI negotiation — AI maps the gap term-by-term and produces a negotiated LOI draft both sides can move forward with.
 
 **Execution Pattern:** Phase Pipeline
 

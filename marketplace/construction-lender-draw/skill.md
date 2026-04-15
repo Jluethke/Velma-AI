@@ -1,6 +1,6 @@
 # Construction Lender Draw
 
-**One-line description:** Developer and construction lender each submit their real draw position and project concerns — Claude aligns on conditions, surfaces open items, and produces a funding path that does not let administrative gaps delay construction.
+**One-line description:** Developer and construction lender each submit their real draw position and project concerns — AI aligns on conditions, surfaces open items, and produces a funding path that does not let administrative gaps delay construction.
 
 **Execution Pattern:** Phase Pipeline
 

@@ -1,6 +1,6 @@
 # Small Business Key Employee Deal
 
-**One-line description:** The owner and their most important employee each submit what they actually want from the employment relationship — Claude finds the retention package that keeps the person, fits the business's finances, and does not create equity or legal problems down the road.
+**One-line description:** The owner and their most important employee each submit what they actually want from the employment relationship — AI finds the retention package that keeps the person, fits the business's finances, and does not create equity or legal problems down the road.
 
 **Execution Pattern:** Phase Pipeline
 

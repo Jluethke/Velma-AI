@@ -1,6 +1,6 @@
 # Nonprofit Grant Alignment
 
-**One-line description:** A program director and a funder each submit their real priorities, funding criteria, and impact expectations before the grant is submitted — Claude aligns on a proposal that reflects what the funder actually funds and what the organization can actually deliver.
+**One-line description:** A program director and a funder each submit their real priorities, funding criteria, and impact expectations before the grant is submitted — AI aligns on a proposal that reflects what the funder actually funds and what the organization can actually deliver.
 
 **Execution Pattern:** Phase Pipeline
 

@@ -1,6 +1,6 @@
 # Customer Escalation
 
-**One-line description:** Customer success and product each submit the real situation and technical constraints — Claude aligns on what is and is not possible, and produces a response plan that prevents CS from over-committing to what engineering cannot deliver.
+**One-line description:** Customer success and product each submit the real situation and technical constraints — AI aligns on what is and is not possible, and produces a response plan that prevents CS from over-committing to what engineering cannot deliver.
 
 **Execution Pattern:** Phase Pipeline
 

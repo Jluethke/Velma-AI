@@ -1,6 +1,6 @@
 # Sales Deal Autopsy
 
-**One-line description:** Sales rep and buyer each submit their honest account of a deal — Claude reveals the real reason it went the way it did and the gap between what the rep thought was happening and what actually was.
+**One-line description:** Sales rep and buyer each submit their honest account of a deal — AI reveals the real reason it went the way it did and the gap between what the rep thought was happening and what actually was.
 
 **Execution Pattern:** Phase Pipeline
 

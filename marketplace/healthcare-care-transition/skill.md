@@ -1,6 +1,6 @@
 # Healthcare Care Transition
 
-**One-line description:** Discharging and receiving care teams each submit their real clinical status and capacity constraints — Claude surfaces safety gaps, aligns on care plan, and produces a handoff protocol that protects the patient.
+**One-line description:** Discharging and receiving care teams each submit their real clinical status and capacity constraints — AI surfaces safety gaps, aligns on care plan, and produces a handoff protocol that protects the patient.
 
 **Execution Pattern:** Phase Pipeline
 

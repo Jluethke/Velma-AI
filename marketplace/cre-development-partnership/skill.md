@@ -1,6 +1,6 @@
 # CRE Development Partnership
 
-**One-line description:** Developer and capital partner each submit their real return requirements and control needs before structuring a JV — Claude models the waterfall, surfaces governance conflicts, and produces a term sheet framework both sides can negotiate from.
+**One-line description:** Developer and capital partner each submit their real return requirements and control needs before structuring a JV — AI models the waterfall, surfaces governance conflicts, and produces a term sheet framework both sides can negotiate from.
 
 **Execution Pattern:** Phase Pipeline
 

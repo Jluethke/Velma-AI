@@ -1,6 +1,6 @@
 # Acquisition LOI
 
-**One-line description:** Seller and buyer each submit their real valuation expectations, deal structure preferences, and post-close plans before a letter of intent — Claude quantifies the gap and drafts opening term sheet language.
+**One-line description:** Seller and buyer each submit their real valuation expectations, deal structure preferences, and post-close plans before a letter of intent — AI quantifies the gap and drafts opening term sheet language.
 
 **Execution Pattern:** Phase Pipeline
 

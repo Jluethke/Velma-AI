@@ -1,6 +1,6 @@
 # Executive Coaching Kickoff
 
-**One-line description:** Coach and executive each submit their honest read on what the engagement is really for — Claude aligns the goals, surfaces the resistance, and produces a charter so the first session is work, not setup.
+**One-line description:** Coach and executive each submit their honest read on what the engagement is really for — AI aligns the goals, surfaces the resistance, and produces a charter so the first session is work, not setup.
 
 **Execution Pattern:** Phase Pipeline
 

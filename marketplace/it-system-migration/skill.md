@@ -1,6 +1,6 @@
 # IT System Migration
 
-**One-line description:** IT and the business unit each submit their real migration plan and operational constraints — Claude surfaces the conflict between technical timeline and business readiness and produces a go-live plan that does not bring down operations on launch day.
+**One-line description:** IT and the business unit each submit their real migration plan and operational constraints — AI surfaces the conflict between technical timeline and business readiness and produces a go-live plan that does not bring down operations on launch day.
 
 **Execution Pattern:** Phase Pipeline
 

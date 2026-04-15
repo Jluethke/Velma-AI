@@ -1,6 +1,6 @@
 # Public-Private Partnership
 
-**One-line description:** The government entity and the private partner each submit their real objectives, risk tolerances, and financial expectations before the partnership is structured — Claude designs the P3 framework that delivers public value, gives the private partner a viable return, and allocates risk to the party best able to manage it.
+**One-line description:** The government entity and the private partner each submit their real objectives, risk tolerances, and financial expectations before the partnership is structured — AI designs the P3 framework that delivers public value, gives the private partner a viable return, and allocates risk to the party best able to manage it.
 
 **Execution Pattern:** Phase Pipeline
 

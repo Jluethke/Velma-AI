@@ -1,6 +1,6 @@
 # Hiring Debrief
 
-**One-line description:** Hiring manager and candidate each submit their honest read after an interview — Claude maps the real mutual interest, surfaces the unspoken concerns, and says what it would actually take to close.
+**One-line description:** Hiring manager and candidate each submit their honest read after an interview — AI maps the real mutual interest, surfaces the unspoken concerns, and says what it would actually take to close.
 
 **Execution Pattern:** Phase Pipeline
 

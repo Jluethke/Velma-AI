@@ -1,6 +1,6 @@
 # Feature Spec Alignment
 
-**One-line description:** Product and engineering each submit their real requirements and technical constraints before a feature is specced — Claude aligns on what is buildable, surfaces architectural concerns early, and produces a spec both sides have actually agreed to.
+**One-line description:** Product and engineering each submit their real requirements and technical constraints before a feature is specced — AI aligns on what is buildable, surfaces architectural concerns early, and produces a spec both sides have actually agreed to.
 
 **Execution Pattern:** Phase Pipeline
 

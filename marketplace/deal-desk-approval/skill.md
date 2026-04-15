@@ -1,6 +1,6 @@
 # Deal Desk Approval
 
-**One-line description:** Sales and finance each submit their real deal context and approval constraints — Claude models margin impact, assesses precedent risk, and produces an approval recommendation with conditions both sides can live with.
+**One-line description:** Sales and finance each submit their real deal context and approval constraints — AI models margin impact, assesses precedent risk, and produces an approval recommendation with conditions both sides can live with.
 
 **Execution Pattern:** Phase Pipeline
 

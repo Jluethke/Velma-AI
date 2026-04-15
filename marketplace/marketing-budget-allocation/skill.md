@@ -1,6 +1,6 @@
 # Marketing Budget Allocation
 
-**One-line description:** Marketing and finance each submit their real channel data and budget constraints — Claude models ROI by channel, names the pipeline impact of cuts, and produces an allocation both sides can defend.
+**One-line description:** Marketing and finance each submit their real channel data and budget constraints — AI models ROI by channel, names the pipeline impact of cuts, and produces an allocation both sides can defend.
 
 **Execution Pattern:** Phase Pipeline
 

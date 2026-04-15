@@ -1,6 +1,6 @@
 # Strategy Offsite Prep
 
-**One-line description:** CEO and each leadership team member each submit what they really want from the offsite and what they think is being avoided — Claude builds an agenda that addresses the real issues, not the comfortable ones.
+**One-line description:** CEO and each leadership team member each submit what they really want from the offsite and what they think is being avoided — AI builds an agenda that addresses the real issues, not the comfortable ones.
 
 **Execution Pattern:** Phase Pipeline
 

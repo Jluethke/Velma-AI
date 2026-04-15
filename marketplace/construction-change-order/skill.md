@@ -1,6 +1,6 @@
 # Construction Change Order
 
-**One-line description:** GC and owner each submit their real position on a change order before negotiation — Claude assesses legitimacy, reviews pricing, and produces negotiated terms that resolve the dispute before it becomes a claim.
+**One-line description:** GC and owner each submit their real position on a change order before negotiation — AI assesses legitimacy, reviews pricing, and produces negotiated terms that resolve the dispute before it becomes a claim.
 
 **Execution Pattern:** Phase Pipeline
 

@@ -1,6 +1,6 @@
 # Venue Event Promoter Agreement
 
-**One-line description:** A venue and a promoter each submit their real financial requirements, risk tolerance, and operational expectations before signing — Claude aligns on a deal structure that fills the room, protects the venue, and gives the promoter enough upside to make it worth the risk.
+**One-line description:** A venue and a promoter each submit their real financial requirements, risk tolerance, and operational expectations before signing — AI aligns on a deal structure that fills the room, protects the venue, and gives the promoter enough upside to make it worth the risk.
 
 **Execution Pattern:** Phase Pipeline
 

@@ -1,6 +1,6 @@
 # Legal-Sales Contract Alignment
 
-**One-line description:** Sales and legal each submit their real deal context and contract positions — Claude aligns on approved fallback positions, surfaces what requires escalation, and produces a negotiation strategy that closes the deal without creating legal exposure.
+**One-line description:** Sales and legal each submit their real deal context and contract positions — AI aligns on approved fallback positions, surfaces what requires escalation, and produces a negotiation strategy that closes the deal without creating legal exposure.
 
 **Execution Pattern:** Phase Pipeline
 

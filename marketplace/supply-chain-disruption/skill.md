@@ -1,6 +1,6 @@
 # Supply Chain Disruption Response
 
-**One-line description:** An operations leader and a key supplier each submit their real disruption impact, recovery capacity, and business continuity needs when a supply chain problem emerges — Claude aligns on a recovery plan that keeps the business running while both sides manage the fallout honestly.
+**One-line description:** An operations leader and a key supplier each submit their real disruption impact, recovery capacity, and business continuity needs when a supply chain problem emerges — AI aligns on a recovery plan that keeps the business running while both sides manage the fallout honestly.
 
 **Execution Pattern:** Phase Pipeline
 

@@ -1,6 +1,6 @@
 # Law Firm Lateral Hire
 
-**One-line description:** The law firm and the lateral candidate each submit their real expectations, book of business claims, and cultural requirements — Claude aligns on a compensation structure and role definition that closes without a year-one disappointment on either side.
+**One-line description:** The law firm and the lateral candidate each submit their real expectations, book of business claims, and cultural requirements — AI aligns on a compensation structure and role definition that closes without a year-one disappointment on either side.
 
 **Execution Pattern:** Phase Pipeline
 

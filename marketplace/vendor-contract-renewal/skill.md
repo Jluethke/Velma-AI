@@ -1,6 +1,6 @@
 # Vendor Contract Renewal
 
-**One-line description:** The business owner who uses the vendor and procurement each submit their real requirements and leverage before renewal — Claude builds the negotiation strategy, identifies the BATNA, and produces a redline priority list.
+**One-line description:** The business owner who uses the vendor and procurement each submit their real requirements and leverage before renewal — AI builds the negotiation strategy, identifies the BATNA, and produces a redline priority list.
 
 **Execution Pattern:** Phase Pipeline
 

@@ -1,6 +1,6 @@
 # VC Term Sheet
 
-**One-line description:** Investor and founder each submit their real valuation views and non-negotiable terms — Claude models the economics, maps each term, and produces a term sheet draft both sides can actually close on.
+**One-line description:** Investor and founder each submit their real valuation views and non-negotiable terms — AI models the economics, maps each term, and produces a term sheet draft both sides can actually close on.
 
 **Execution Pattern:** Phase Pipeline
 

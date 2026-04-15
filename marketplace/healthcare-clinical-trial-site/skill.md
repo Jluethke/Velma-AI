@@ -1,6 +1,6 @@
 # Healthcare Clinical Trial Site Agreement
 
-**One-line description:** Sponsor and principal investigator each submit their real enrollment expectations and site constraints — Claude assesses feasibility, surfaces protocol concerns, and produces site agreement terms both can execute without surprises.
+**One-line description:** Sponsor and principal investigator each submit their real enrollment expectations and site constraints — AI assesses feasibility, surfaces protocol concerns, and produces site agreement terms both can execute without surprises.
 
 **Execution Pattern:** Phase Pipeline
 

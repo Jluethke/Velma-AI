@@ -1,6 +1,6 @@
 # Consulting SOW Alignment
 
-**One-line description:** The consulting lead and the client each submit what they actually expect from the engagement — Claude aligns on scope, deliverables, and success criteria so the consultant delivers what was bought and the client stops moving the goalposts.
+**One-line description:** The consulting lead and the client each submit what they actually expect from the engagement — AI aligns on scope, deliverables, and success criteria so the consultant delivers what was bought and the client stops moving the goalposts.
 
 **Execution Pattern:** Phase Pipeline
 

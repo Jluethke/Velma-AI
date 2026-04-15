@@ -1,6 +1,6 @@
 # Financial Planner Client Engagement
 
-**One-line description:** A financial planner and a client each submit their real financial situation, goals, and fears before the engagement begins — Claude aligns on a financial plan that addresses what the client actually needs, not a generic portfolio allocation delivered to someone who hasn't told the advisor the whole story.
+**One-line description:** A financial planner and a client each submit their real financial situation, goals, and fears before the engagement begins — AI aligns on a financial plan that addresses what the client actually needs, not a generic portfolio allocation delivered to someone who hasn't told the advisor the whole story.
 
 **Execution Pattern:** Phase Pipeline
 

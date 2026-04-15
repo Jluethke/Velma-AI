@@ -1,6 +1,6 @@
 # University Research Partnership
 
-**One-line description:** The faculty researcher and the industry partner each submit their real research goals, IP expectations, and constraints before the partnership is formalized — Claude aligns on a structure that advances the research without giving away the university's IP or locking the company into obligations it cannot meet.
+**One-line description:** The faculty researcher and the industry partner each submit their real research goals, IP expectations, and constraints before the partnership is formalized — AI aligns on a structure that advances the research without giving away the university's IP or locking the company into obligations it cannot meet.
 
 **Execution Pattern:** Phase Pipeline
 

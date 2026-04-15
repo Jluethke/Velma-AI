@@ -1,6 +1,6 @@
 # Production Budget Alignment
 
-**One-line description:** The producer and the studio or financier each submit their real creative vision and financial constraints before production begins — Claude aligns on a budget that makes the project viable, protects the creative intent, and gives both parties a realistic plan for what they are making.
+**One-line description:** The producer and the studio or financier each submit their real creative vision and financial constraints before production begins — AI aligns on a budget that makes the project viable, protects the creative intent, and gives both parties a realistic plan for what they are making.
 
 **Execution Pattern:** Phase Pipeline
 

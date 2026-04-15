@@ -1,6 +1,6 @@
 # Wealth Management Engagement
 
-**One-line description:** The financial advisor and the client each submit their real financial picture, goals, risk tolerance, and concerns — Claude produces an investment and financial plan that reflects what the client actually needs, not a generic allocation based on a questionnaire score.
+**One-line description:** The financial advisor and the client each submit their real financial picture, goals, risk tolerance, and concerns — AI produces an investment and financial plan that reflects what the client actually needs, not a generic allocation based on a questionnaire score.
 
 **Execution Pattern:** Phase Pipeline
 

@@ -183,9 +183,24 @@ export default async function handler(req: Request) {
 
     const system = buildSystem(body.skills ?? []);
 
+    const safeMessages = body.messages.map(m => {
+      if (m.role !== 'user') return m;
+      let content = m.content;
+      const patterns = [
+        /ignore\s+(all\s+)?(previous|prior|above)\s+instructions?/gi,
+        /disregard\s+(all\s+)?(previous|prior|above)/gi,
+        /you\s+are\s+now\s+(a|an)\s+/gi,
+        /pretend\s+(you\s+are|to\s+be)/gi,
+        /new\s+instructions?:/gi,
+        /\[INST\]|\[\/INST\]|<\|system\|>|<\|user\|>/gi,
+      ];
+      for (const p of patterns) content = content.replace(p, '[removed]');
+      return { ...m, content };
+    });
+
     return anthropicKey
-      ? streamAnthropic(anthropicKey, body.messages, system)
-      : streamGemini(googleKey, body.messages, system);
+      ? streamAnthropic(anthropicKey, safeMessages, system)
+      : streamGemini(googleKey, safeMessages, system);
 
   } catch (err) {
     return new Response(JSON.stringify({ error: (err as Error).message }), {

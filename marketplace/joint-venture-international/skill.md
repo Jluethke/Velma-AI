@@ -1,6 +1,6 @@
 # International Joint Venture
 
-**One-line description:** The domestic company and the foreign partner each submit their real strategic objectives, contribution expectations, and governance concerns before the JV is formed — Claude aligns on a structure that achieves both parties' market goals without creating a governance trap or an equity split that poisons the relationship.
+**One-line description:** The domestic company and the foreign partner each submit their real strategic objectives, contribution expectations, and governance concerns before the JV is formed — AI aligns on a structure that achieves both parties' market goals without creating a governance trap or an equity split that poisons the relationship.
 
 **Execution Pattern:** Phase Pipeline
 

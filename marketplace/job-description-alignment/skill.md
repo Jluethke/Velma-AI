@@ -1,6 +1,6 @@
 # Job Description Alignment
 
-**One-line description:** Hiring manager and recruiter each submit their real requirements and market constraints before writing a JD — Claude calibrates the role to what actually exists in the market and produces a JD that fills.
+**One-line description:** Hiring manager and recruiter each submit their real requirements and market constraints before writing a JD — AI calibrates the role to what actually exists in the market and produces a JD that fills.
 
 **Execution Pattern:** Phase Pipeline
 

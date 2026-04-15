@@ -1,6 +1,6 @@
 # Pharma CMO Agreement
 
-**One-line description:** A pharmaceutical sponsor and a contract manufacturing organization each submit their technical requirements, capacity constraints, and quality expectations before formalizing a manufacturing agreement — Claude aligns on a supply arrangement that delivers compliant product at scale without surprises.
+**One-line description:** A pharmaceutical sponsor and a contract manufacturing organization each submit their technical requirements, capacity constraints, and quality expectations before formalizing a manufacturing agreement — AI aligns on a supply arrangement that delivers compliant product at scale without surprises.
 
 **Execution Pattern:** Phase Pipeline
 

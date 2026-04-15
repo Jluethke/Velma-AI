@@ -1,6 +1,6 @@
 # CRE Acquisition Underwriting
 
-**One-line description:** Buyer and broker each submit their real underwriting views and market evidence — Claude stress-tests the assumptions, names the pricing gap, and produces an offer strategy grounded in what will actually close.
+**One-line description:** Buyer and broker each submit their real underwriting views and market evidence — AI stress-tests the assumptions, names the pricing gap, and produces an offer strategy grounded in what will actually close.
 
 **Execution Pattern:** Phase Pipeline
 

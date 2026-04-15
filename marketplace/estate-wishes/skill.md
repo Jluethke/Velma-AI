@@ -1,6 +1,6 @@
 # Estate Wishes
 
-**One-line description:** Parent and adult child each submit their real wishes, expectations, and fears about estate planning — Claude writes the conversation guide for the talk most families never have until it's too late.
+**One-line description:** Parent and adult child each submit their real wishes, expectations, and fears about estate planning — AI writes the conversation guide for the talk most families never have until it's too late.
 
 **Execution Pattern:** Phase Pipeline
 

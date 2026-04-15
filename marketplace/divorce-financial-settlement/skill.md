@@ -1,6 +1,6 @@
 # Divorce Financial Settlement
 
-**One-line description:** Both parties submit their real financial priorities, non-negotiables, and fears before settlement negotiations — Claude finds the zones of agreement and sticking points so the conversation with lawyers is shorter.
+**One-line description:** Both parties submit their real financial priorities, non-negotiables, and fears before settlement negotiations — AI finds the zones of agreement and sticking points so the conversation with lawyers is shorter.
 
 **Execution Pattern:** Phase Pipeline
 

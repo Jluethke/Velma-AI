@@ -1,6 +1,6 @@
 # Incident Postmortem
 
-**One-line description:** Engineering and product each submit their real account of an incident — technical cause and business impact — Claude produces a blameless root cause analysis, assigns action items, and drafts the customer communication so the postmortem actually changes something.
+**One-line description:** Engineering and product each submit their real account of an incident — technical cause and business impact — AI produces a blameless root cause analysis, assigns action items, and drafts the customer communication so the postmortem actually changes something.
 
 **Execution Pattern:** Phase Pipeline
 

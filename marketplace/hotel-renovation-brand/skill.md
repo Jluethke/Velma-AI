@@ -1,6 +1,6 @@
 # Hotel Renovation Brand Standards Alignment
 
-**One-line description:** A hotel owner and a brand/franchisor each submit their real capital constraints, brand standard requirements, and renovation timeline before the PIP is finalized — Claude aligns on a renovation scope that satisfies brand standards without the capital overspend that causes owners to exit flags.
+**One-line description:** A hotel owner and a brand/franchisor each submit their real capital constraints, brand standard requirements, and renovation timeline before the PIP is finalized — AI aligns on a renovation scope that satisfies brand standards without the capital overspend that causes owners to exit flags.
 
 **Execution Pattern:** Phase Pipeline
 

@@ -1,6 +1,6 @@
 # Quota Setting
 
-**One-line description:** Sales leadership and finance each submit their real pipeline read and revenue targets — Claude models what is actually achievable, names the gap, and produces a quota plan both sides can commit to.
+**One-line description:** Sales leadership and finance each submit their real pipeline read and revenue targets — AI models what is actually achievable, names the gap, and produces a quota plan both sides can commit to.
 
 **Execution Pattern:** Phase Pipeline
 

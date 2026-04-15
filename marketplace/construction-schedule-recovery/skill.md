@@ -1,6 +1,6 @@
 # Construction Schedule Recovery
 
-**One-line description:** GC and owner each submit their real account of the delay and recovery options — Claude assesses root cause, models recovery scenarios, and produces a revised schedule with the decisions each side needs to make.
+**One-line description:** GC and owner each submit their real account of the delay and recovery options — AI assesses root cause, models recovery scenarios, and produces a revised schedule with the decisions each side needs to make.
 
 **Execution Pattern:** Phase Pipeline
 

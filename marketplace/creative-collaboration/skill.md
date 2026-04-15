@@ -1,6 +1,6 @@
 # Creative Collaboration
 
-**One-line description:** Two creatives each submit their real vision, non-negotiables, and working style before a project — Claude finds the creative tensions, aligns the direction, and drafts the ownership structure before the collaboration ends a friendship.
+**One-line description:** Two creatives each submit their real vision, non-negotiables, and working style before a project — AI finds the creative tensions, aligns the direction, and drafts the ownership structure before the collaboration ends a friendship.
 
 **Execution Pattern:** Phase Pipeline
 

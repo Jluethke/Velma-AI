@@ -1,6 +1,6 @@
 # Recording Studio Artist Engagement
 
-**One-line description:** A recording studio and an artist each submit their real creative vision, budget, and production expectations before the session begins — Claude aligns on a production arrangement that captures the artist's sound without the cost overruns and creative conflicts that stall most recording projects.
+**One-line description:** A recording studio and an artist each submit their real creative vision, budget, and production expectations before the session begins — AI aligns on a production arrangement that captures the artist's sound without the cost overruns and creative conflicts that stall most recording projects.
 
 **Execution Pattern:** Phase Pipeline
 

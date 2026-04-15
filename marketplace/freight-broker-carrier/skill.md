@@ -1,6 +1,6 @@
 # Freight Broker-Carrier Agreement
 
-**One-line description:** The freight broker and the carrier each submit their real lane requirements, rate expectations, and service standards — Claude aligns on the carrier agreement that moves freight reliably without the carrier taking unprofitable loads or the broker losing a shipper over a service failure.
+**One-line description:** The freight broker and the carrier each submit their real lane requirements, rate expectations, and service standards — AI aligns on the carrier agreement that moves freight reliably without the carrier taking unprofitable loads or the broker losing a shipper over a service failure.
 
 **Execution Pattern:** Phase Pipeline
 

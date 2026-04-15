@@ -1,6 +1,6 @@
 # Forecast Alignment
 
-**One-line description:** Business unit and finance each submit their real forecast and the assumptions underneath it — Claude stress-tests the assumptions, models risk scenarios, and produces an agreed forecast with the confidence level explicitly stated.
+**One-line description:** Business unit and finance each submit their real forecast and the assumptions underneath it — AI stress-tests the assumptions, models risk scenarios, and produces an agreed forecast with the confidence level explicitly stated.
 
 **Execution Pattern:** Phase Pipeline
 

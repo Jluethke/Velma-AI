@@ -1,6 +1,6 @@
 # HOA Homeowner Dispute Resolution
 
-**One-line description:** An HOA board and a homeowner each submit their real position on the dispute, the underlying concerns, and what resolution looks like to them — Claude surfaces the root issue, applies the governing documents, and produces a resolution path that both parties can live with before this becomes a legal matter.
+**One-line description:** An HOA board and a homeowner each submit their real position on the dispute, the underlying concerns, and what resolution looks like to them — AI surfaces the root issue, applies the governing documents, and produces a resolution path that both parties can live with before this becomes a legal matter.
 
 **Execution Pattern:** Phase Pipeline
 

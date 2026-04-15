@@ -1,6 +1,6 @@
 # Co-Founder Alignment
 
-**One-line description:** Two co-founders each answer privately about vision, equity, roles, and working style — Claude finds the gaps and drafts a working agreement before you build anything.
+**One-line description:** Two co-founders each answer privately about vision, equity, roles, and working style — AI finds the gaps and drafts a working agreement before you build anything.
 
 **Execution Pattern:** Phase Pipeline
 

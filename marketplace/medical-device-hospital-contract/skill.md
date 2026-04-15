@@ -1,6 +1,6 @@
 # Medical Device Hospital Contract
 
-**One-line description:** A medical device company and a hospital or GPO each submit their clinical requirements, pricing constraints, and contract terms before negotiation — Claude aligns on a supply agreement that gets the right devices to patients at terms both sides can live with.
+**One-line description:** A medical device company and a hospital or GPO each submit their clinical requirements, pricing constraints, and contract terms before negotiation — AI aligns on a supply agreement that gets the right devices to patients at terms both sides can live with.
 
 **Execution Pattern:** Phase Pipeline
 

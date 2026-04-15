@@ -1,6 +1,6 @@
 # Residential Listing Agreement
 
-**One-line description:** The seller and the listing agent each submit their real pricing views, timeline needs, and expectations for the relationship — Claude aligns on a listing price, marketing plan, and agent agreement that gives the seller realistic expectations and the agent a workable engagement.
+**One-line description:** The seller and the listing agent each submit their real pricing views, timeline needs, and expectations for the relationship — AI aligns on a listing price, marketing plan, and agent agreement that gives the seller realistic expectations and the agent a workable engagement.
 
 **Execution Pattern:** Phase Pipeline
 

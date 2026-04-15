@@ -1,6 +1,6 @@
 # Healthcare Family Care Plan
 
-**One-line description:** Care team and patient family each submit their real clinical perspective and values before a treatment decision — Claude surfaces the questions not yet asked and ensures no decision is made in a vacuum of fear or incomplete information.
+**One-line description:** Care team and patient family each submit their real clinical perspective and values before a treatment decision — AI surfaces the questions not yet asked and ensures no decision is made in a vacuum of fear or incomplete information.
 
 **Execution Pattern:** Phase Pipeline
 

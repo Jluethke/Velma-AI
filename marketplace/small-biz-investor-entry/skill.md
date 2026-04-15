@@ -1,6 +1,6 @@
 # Small Business Investor Entry
 
-**One-line description:** The owner and the incoming investor each submit their real terms, expectations, and concerns before any money changes hands — Claude finds where the deal works, surfaces where the relationship will break, and produces an investment structure that does not destroy the business or the friendship.
+**One-line description:** The owner and the incoming investor each submit their real terms, expectations, and concerns before any money changes hands — AI finds where the deal works, surfaces where the relationship will break, and produces an investment structure that does not destroy the business or the friendship.
 
 **Execution Pattern:** Phase Pipeline
 

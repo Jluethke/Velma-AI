@@ -1,6 +1,6 @@
 # Developer Entitlement Alignment
 
-**One-line description:** A real estate developer and a planning department each submit their real project requirements, community concerns, and approval standards before the entitlement process begins — Claude identifies what needs to be resolved for approval and what the project must commit to for the community to support it.
+**One-line description:** A real estate developer and a planning department each submit their real project requirements, community concerns, and approval standards before the entitlement process begins — AI identifies what needs to be resolved for approval and what the project must commit to for the community to support it.
 
 **Execution Pattern:** Phase Pipeline
 

@@ -1,6 +1,6 @@
 # Investor Pitch Debrief
 
-**One-line description:** Founder and investor each submit their real read after a pitch meeting — Claude maps where the interest is genuine, what the real concerns are, and whether a deal is actually forming.
+**One-line description:** Founder and investor each submit their real read after a pitch meeting — AI maps where the interest is genuine, what the real concerns are, and whether a deal is actually forming.
 
 **Execution Pattern:** Phase Pipeline
 

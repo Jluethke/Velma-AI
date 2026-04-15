@@ -1,6 +1,6 @@
 # Performance Review Prep
 
-**One-line description:** Manager and employee each submit their honest perspective before the review — Claude finds the rating, compensation, and growth gaps so the meeting is a real conversation instead of a performance.
+**One-line description:** Manager and employee each submit their honest perspective before the review — AI finds the rating, compensation, and growth gaps so the meeting is a real conversation instead of a performance.
 
 **Execution Pattern:** Phase Pipeline
 
