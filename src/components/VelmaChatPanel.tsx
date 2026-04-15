@@ -1,9 +1,10 @@
 /**
- * VelmaChatPanel — Velma's interview mode.
- * Velma asks questions, gathers context, then suggests flows + a path.
+ * VelmaChatPanel — Velma's interview / discovery mode.
+ * Context-aware: knows what page you're on and what you've done.
+ * Quick-tap chips so you don't have to type from scratch.
  */
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useSkills } from '../hooks/useSkills';
 import { formatFlowName } from '../utils/formatFlowName';
 import type { VelmaState } from '../hooks/useVelmaCompanion';
@@ -12,8 +13,8 @@ import type { VelmaState } from '../hooks/useVelmaCompanion';
 
 interface ChatMessage {
   role: 'velma' | 'user';
-  content: string;             // the full text (may include FLOWS:/PATH: sections)
-  display: string;             // text without FLOWS:/PATH: sections
+  content: string;
+  display: string;
   suggestions?: FlowSuggestion[];
   path?: string[];
 }
@@ -29,21 +30,50 @@ const CHAT_KEY = 'flowfabric-velma-chat-v1';
 const MAX_HISTORY = 10;
 
 function saveChatHistory(messages: ChatMessage[]) {
-  try {
-    localStorage.setItem(CHAT_KEY, JSON.stringify(messages.slice(-MAX_HISTORY)));
-  } catch { /* ignore */ }
+  try { localStorage.setItem(CHAT_KEY, JSON.stringify(messages.slice(-MAX_HISTORY))); } catch { /* ignore */ }
 }
-
 function loadChatHistory(): ChatMessage[] {
-  try {
-    const raw = localStorage.getItem(CHAT_KEY);
-    if (raw) return JSON.parse(raw) as ChatMessage[];
-  } catch { /* ignore */ }
+  try { const r = localStorage.getItem(CHAT_KEY); if (r) return JSON.parse(r) as ChatMessage[]; } catch { /* ignore */ }
   return [];
 }
+function clearChatHistory() { localStorage.removeItem(CHAT_KEY); }
 
-function clearChatHistory() {
-  localStorage.removeItem(CHAT_KEY);
+/** Describe the current page in human terms */
+function describeLocation(pathname: string): string {
+  if (pathname === '/' || pathname === '') return 'the homepage';
+  if (pathname.startsWith('/flow/')) return `the "${formatFlowName(pathname.slice(6))}" flow page`;
+  if (pathname.startsWith('/explore') || pathname.startsWith('/flows')) return 'the flow library';
+  if (pathname.startsWith('/compose')) return 'the chain composer';
+  if (pathname.startsWith('/discover')) return 'Fabric Discovery';
+  if (pathname.startsWith('/fabric/')) return 'a live Fabric session';
+  if (pathname.startsWith('/portal')) return 'the portal';
+  if (pathname.startsWith('/studio')) return 'Flow Studio';
+  if (pathname.startsWith('/dashboard')) return 'your dashboard';
+  if (pathname.startsWith('/profile')) return 'your profile';
+  return 'FlowFabric';
+}
+
+/** Quick-tap chips — vary by page and user state */
+function getChips(pathname: string, state: VelmaState): string[] {
+  const isNew = state.flows_run === 0;
+
+  if (pathname.startsWith('/flow/')) {
+    const name = formatFlowName(pathname.slice(6));
+    return [`What does ${name} actually do?`, 'What should I run after this?', 'Is there a better fit for me?'];
+  }
+  if (pathname.startsWith('/explore') || pathname.startsWith('/flows')) {
+    return ['Help me find the right flow', 'What flows are best for career decisions?', 'Show me money flows', 'I want to make a big decision'];
+  }
+  if (pathname.startsWith('/discover')) {
+    return ['How does Discovery work?', 'I need help posting', 'Finding the right match'];
+  }
+  if (pathname.startsWith('/compose')) {
+    return ['How do I chain flows together?', 'Build me a career chain', 'Build me a money chain'];
+  }
+  if (isNew) {
+    return ['What can FlowFabric actually do?', 'Help with a career decision', 'I need a budget', 'I have a big decision to make', 'My situation is complicated'];
+  }
+  return ['What should I run next?', 'Help me with a decision', 'Money advice', 'Career move', 'My situation is complicated'];
 }
 
 /** Parse FLOWS: and PATH: sections out of Velma's response */
@@ -63,7 +93,6 @@ function parseResponse(raw: string): { display: string; suggestions: FlowSuggest
     ? pathMatch[1].split(/→|->/).map(s => s.trim()).filter(Boolean)
     : [];
 
-  // Strip the structured sections from display text
   const display = raw
     .replace(/\n*FLOWS:\s*\n[\s\S]*?(?=\n\nPATH:|$)/, '')
     .replace(/\n*PATH:[^\n]+/, '')
@@ -72,21 +101,20 @@ function parseResponse(raw: string): { display: string; suggestions: FlowSuggest
   return { display, suggestions, path };
 }
 
-function openingMessage(state: VelmaState): ChatMessage {
-  const lastFlow = state.witnessed
-    .slice().reverse()
-    .find(e => e.startsWith('flow_complete:'))
-    ?.replace('flow_complete:', '');
+function openingMessage(state: VelmaState, pathname: string): ChatMessage {
+  const lastFlow = state.witnessed.slice().reverse()
+    .find(e => e.startsWith('flow_complete:'))?.replace('flow_complete:', '');
+  const page = describeLocation(pathname);
 
   let text: string;
   if (state.flows_run === 0) {
-    text = "What are you trying to accomplish? Describe your situation — I'll show you exactly which flows match and how to sequence them.";
+    text = `You're on ${page}. What are you trying to figure out? I'll show you what FlowFabric can do for that.`;
   } else if (lastFlow) {
-    text = `You just finished ${formatFlowName(lastFlow)}. What's next on the list?`;
+    text = `You just finished ${formatFlowName(lastFlow)}. What's next?`;
   } else if (state.flows_run >= 10) {
-    text = "Back again. What are we solving today?";
+    text = "Back again. What are we solving?";
   } else {
-    text = "What do you need? I'll find the flows.";
+    text = `You're on ${page}. What do you need?`;
   }
   return { role: 'velma', content: text, display: text };
 }
@@ -102,8 +130,7 @@ function SuggestionCard({ slug, reason, color, onClose }: {
       onClick={onClose}
       style={{
         display: 'block', textDecoration: 'none',
-        background: `${color}08`,
-        border: `1px solid ${color}28`,
+        background: `${color}08`, border: `1px solid ${color}28`,
         borderRadius: '9px', padding: '9px 11px',
         transition: 'border-color 0.15s, background 0.15s',
       }}
@@ -153,9 +180,7 @@ function PathDisplay({ path, onClose }: { path: string[]; onClose: () => void })
             >
               {formatFlowName(slug)}
             </Link>
-            {i < path.length - 1 && (
-              <span style={{ color: '#446', fontSize: '10px' }}>→</span>
-            )}
+            {i < path.length - 1 && <span style={{ color: '#446', fontSize: '10px' }}>→</span>}
           </span>
         ))}
       </div>
@@ -179,11 +204,13 @@ export default function VelmaChatPanel({
   onSwitchToStats: () => void;
 }) {
   const { data: skills = [] } = useSkills();
+  const location = useLocation();
+  const pathname = location.pathname;
 
   const [messages, setMessages] = useState<ChatMessage[]>(() => {
     const history = loadChatHistory();
     if (history.length > 0) return history;
-    return [openingMessage(velmaState)];
+    return [openingMessage(velmaState, pathname)];
   });
   const [input, setInput] = useState('');
   const [pasteMode, setPasteMode] = useState(false);
@@ -192,25 +219,19 @@ export default function VelmaChatPanel({
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  // Scroll to bottom on new messages
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  const chips = getChips(pathname, velmaState);
 
-  // Focus input on open
-  useEffect(() => {
-    setTimeout(() => inputRef.current?.focus(), 100);
-  }, []);
+  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
+  useEffect(() => { setTimeout(() => inputRef.current?.focus(), 100); }, []);
 
-  const send = useCallback(async () => {
-    const text = input.trim();
-    if (!text || streaming) return;
+  const sendText = useCallback(async (text: string) => {
+    if (!text.trim() || streaming) return;
 
     const userContent = pasteText.trim()
       ? `Context I'm sharing:\n\n${pasteText.trim()}\n\n---\n\n${text}`
       : text;
 
-    const userMsg: ChatMessage = { role: 'user', content: userContent, display: userContent };
+    const userMsg: ChatMessage = { role: 'user', content: userContent, display: text };
     const updatedMessages = [...messages, userMsg];
 
     setMessages(updatedMessages);
@@ -219,7 +240,6 @@ export default function VelmaChatPanel({
     setPasteMode(false);
     setStreaming(true);
 
-    // Build placeholder for streaming Velma response
     const placeholder: ChatMessage = { role: 'velma', content: '', display: '' };
     setMessages(prev => [...prev, placeholder]);
 
@@ -237,6 +257,7 @@ export default function VelmaChatPanel({
             content: m.content,
           })),
           skills: skills.map(s => ({ name: s.name, domain: s.domain, description: s.description })),
+          context: { page: describeLocation(pathname) },
         }),
       });
 
@@ -272,7 +293,6 @@ export default function VelmaChatPanel({
         }
       }
 
-      // Final parse + save history
       const { display, suggestions, path } = parseResponse(full);
       const finalMessages = [
         ...updatedMessages,
@@ -282,15 +302,14 @@ export default function VelmaChatPanel({
       saveChatHistory(finalMessages);
 
     } catch (err) {
-      const errMsg = `Couldn't reach the AI right now. (${(err as Error).message})`;
-      setMessages(prev => [
-        ...prev.slice(0, -1),
-        { role: 'velma', content: errMsg, display: errMsg },
-      ]);
+      const errMsg = `Something went wrong. (${(err as Error).message})`;
+      setMessages(prev => [...prev.slice(0, -1), { role: 'velma', content: errMsg, display: errMsg }]);
     } finally {
       setStreaming(false);
     }
-  }, [input, messages, pasteText, skills, streaming]);
+  }, [messages, pasteText, skills, streaming, pathname]);
+
+  const send = useCallback(() => sendText(input.trim()), [sendText, input]);
 
   const handleKey = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
@@ -298,60 +317,55 @@ export default function VelmaChatPanel({
 
   const reset = () => {
     clearChatHistory();
-    setMessages([openingMessage(velmaState)]);
+    setMessages([openingMessage(velmaState, pathname)]);
     setInput('');
     setPasteText('');
     setPasteMode(false);
   };
 
+  const isFirstMessage = messages.length === 1;
+
   return (
     <div style={{
       position: 'absolute', bottom: '80px', right: 0,
-      width: '300px',
+      width: '310px',
       background: 'rgba(0,8,18,0.97)',
       border: `1px solid ${color}33`,
       borderRadius: '14px',
       display: 'flex', flexDirection: 'column',
-      maxHeight: '500px',
+      maxHeight: '520px',
       boxShadow: `0 8px 40px rgba(0,0,0,0.7), 0 0 0 1px ${color}11`,
       animation: 'velma-bubble-in 0.25s ease',
       overflow: 'hidden',
     }}>
+
       {/* Header */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '11px 14px',
-        borderBottom: `1px solid ${color}18`,
-        flexShrink: 0,
+        padding: '11px 14px', borderBottom: `1px solid ${color}18`, flexShrink: 0,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ color, fontWeight: 700, fontSize: '13px', fontFamily: 'monospace' }}>FlowFabric</span>
-          <span style={{
-            fontSize: '9px', color: '#446', textTransform: 'uppercase',
-            letterSpacing: '0.06em', fontFamily: 'monospace',
-          }}>
-            {streaming ? 'thinking...' : 'guide'}
+          <div style={{
+            width: '7px', height: '7px', borderRadius: '50%',
+            background: color, boxShadow: `0 0 6px ${color}`,
+            animation: streaming ? 'velma-pulse 1s ease-in-out infinite' : 'none',
+          }} />
+          <span style={{ color, fontWeight: 700, fontSize: '13px', fontFamily: 'monospace' }}>Velma</span>
+          <span style={{ fontSize: '9px', color: '#446', textTransform: 'uppercase', letterSpacing: '0.06em', fontFamily: 'monospace' }}>
+            {streaming ? 'thinking' : describeLocation(pathname).replace('the ', '')}
           </span>
         </div>
         <div style={{ display: 'flex', gap: '2px', alignItems: 'center' }}>
-          <button
-            onClick={reset}
-            title="New conversation"
-            style={{ background: 'none', border: 'none', color: '#335', cursor: 'pointer', fontSize: '12px', padding: '3px 5px', fontFamily: 'monospace' }}
-          >
+          <button onClick={reset} title="New conversation"
+            style={{ background: 'none', border: 'none', color: '#335', cursor: 'pointer', fontSize: '12px', padding: '3px 5px', fontFamily: 'monospace' }}>
             ↺
           </button>
-          <button
-            onClick={onSwitchToStats}
-            title="View stats"
-            style={{ background: 'none', border: 'none', color: '#446', cursor: 'pointer', fontSize: '11px', padding: '3px 5px', fontFamily: 'monospace' }}
-          >
+          <button onClick={onSwitchToStats} title="View stats"
+            style={{ background: 'none', border: 'none', color: '#446', cursor: 'pointer', fontSize: '11px', padding: '3px 5px', fontFamily: 'monospace' }}>
             stats
           </button>
-          <button
-            onClick={onClose}
-            style={{ background: 'none', border: 'none', color: '#446', cursor: 'pointer', fontSize: '17px', lineHeight: 1, padding: '3px 5px' }}
-          >
+          <button onClick={onClose}
+            style={{ background: 'none', border: 'none', color: '#446', cursor: 'pointer', fontSize: '17px', lineHeight: 1, padding: '3px 5px' }}>
             ×
           </button>
         </div>
@@ -364,15 +378,9 @@ export default function VelmaChatPanel({
         scrollbarWidth: 'thin', scrollbarColor: '#1a2a3a transparent',
       }}>
         {messages.map((msg, i) => (
-          <div key={i} style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: msg.role === 'velma' ? 'flex-start' : 'flex-end',
-            gap: '6px',
-          }}>
-            {/* Message bubble */}
+          <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: msg.role === 'velma' ? 'flex-start' : 'flex-end', gap: '6px' }}>
             <div style={{
-              maxWidth: '88%',
+              maxWidth: '90%',
               background: msg.role === 'velma' ? `${color}0e` : '#0d1e2e',
               border: `1px solid ${msg.role === 'velma' ? `${color}22` : '#1a2a3a'}`,
               borderRadius: msg.role === 'velma' ? '4px 10px 10px 10px' : '10px 4px 10px 10px',
@@ -381,37 +389,59 @@ export default function VelmaChatPanel({
               <p style={{
                 margin: 0, fontSize: '11.5px', lineHeight: 1.55,
                 color: msg.role === 'velma' ? '#bcd' : '#99b',
-                fontFamily: 'monospace',
-                whiteSpace: 'pre-wrap',
+                fontFamily: 'monospace', whiteSpace: 'pre-wrap',
               }}>
                 {msg.display || (streaming && i === messages.length - 1 ? '▋' : '')}
               </p>
             </div>
 
-            {/* Flow suggestions */}
             {msg.suggestions && msg.suggestions.length > 0 && (
               <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '5px' }}>
                 <div style={{ fontSize: '9px', color: '#446', textTransform: 'uppercase', letterSpacing: '0.07em', fontFamily: 'monospace', marginTop: '2px' }}>
                   Suggested flows
                 </div>
                 {msg.suggestions.map(s => (
-                  <SuggestionCard
-                    key={s.slug}
-                    slug={s.slug}
-                    reason={s.reason}
-                    color={color}
-                    onClose={onClose}
-                  />
+                  <SuggestionCard key={s.slug} slug={s.slug} reason={s.reason} color={color} onClose={onClose} />
                 ))}
               </div>
             )}
 
-            {/* Path */}
             {msg.path && msg.path.length > 1 && (
               <PathDisplay path={msg.path} onClose={onClose} />
             )}
           </div>
         ))}
+
+        {/* Quick-tap chips — only show when there's just the opening message */}
+        {isFirstMessage && !streaming && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', marginTop: '2px' }}>
+            {chips.map(chip => (
+              <button
+                key={chip}
+                onClick={() => sendText(chip)}
+                style={{
+                  background: `${color}08`, border: `1px solid ${color}22`,
+                  borderRadius: '20px', padding: '4px 10px',
+                  fontSize: '10px', color: '#99b', fontFamily: 'monospace',
+                  cursor: 'pointer', transition: 'all 0.15s', lineHeight: 1.4,
+                }}
+                onMouseEnter={e => {
+                  (e.currentTarget as HTMLElement).style.background = `${color}18`;
+                  (e.currentTarget as HTMLElement).style.borderColor = `${color}44`;
+                  (e.currentTarget as HTMLElement).style.color = '#bcd';
+                }}
+                onMouseLeave={e => {
+                  (e.currentTarget as HTMLElement).style.background = `${color}08`;
+                  (e.currentTarget as HTMLElement).style.borderColor = `${color}22`;
+                  (e.currentTarget as HTMLElement).style.color = '#99b';
+                }}
+              >
+                {chip}
+              </button>
+            ))}
+          </div>
+        )}
+
         <div ref={bottomRef} />
       </div>
 
@@ -434,12 +464,10 @@ export default function VelmaChatPanel({
         </div>
       )}
 
-      {/* Input area */}
+      {/* Input */}
       <div style={{
-        padding: '10px 12px',
-        borderTop: `1px solid ${color}18`,
-        display: 'flex', flexDirection: 'column', gap: '7px',
-        flexShrink: 0,
+        padding: '10px 12px', borderTop: `1px solid ${color}18`,
+        display: 'flex', flexDirection: 'column', gap: '7px', flexShrink: 0,
       }}>
         <div style={{ display: 'flex', gap: '6px', alignItems: 'flex-end' }}>
           <textarea
@@ -447,7 +475,7 @@ export default function VelmaChatPanel({
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={handleKey}
-            placeholder="Describe your situation…"
+            placeholder="Ask anything…"
             rows={2}
             disabled={streaming}
             style={{
@@ -476,14 +504,12 @@ export default function VelmaChatPanel({
           </button>
         </div>
 
-        {/* Paste doc toggle */}
         <button
           onClick={() => setPasteMode(v => !v)}
           style={{
             background: 'none', border: 'none', cursor: 'pointer',
             fontSize: '10px', fontFamily: 'monospace', textAlign: 'left',
-            color: pasteMode ? color : '#446', padding: 0,
-            transition: 'color 0.15s',
+            color: pasteMode ? color : '#446', padding: 0, transition: 'color 0.15s',
           }}
         >
           {pasteMode ? '✓ document attached' : '+ attach document (resume, contract, data…)'}
