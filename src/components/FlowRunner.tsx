@@ -5,6 +5,7 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import Badge from './Badge';
 import { useVelma } from '../contexts/VelmaContext';
+import { getTitle } from '../hooks/useVelmaCompanion';
 import { formatFlowName } from '../utils/formatFlowName';
 
 interface FlowRunnerProps {
@@ -46,6 +47,105 @@ function RichText({ text }: { text: string }) {
   );
 }
 
+/* ── Completion bar ─────────────────────────────────────────────── */
+function CompletionBar({
+  skillName,
+  xpGained,
+  level,
+  onSave,
+  savedToMemory,
+}: {
+  skillName: string;
+  xpGained: number;
+  level: number;
+  onSave: () => void;
+  savedToMemory: boolean;
+}) {
+  const [shareCopied, setShareCopied] = useState(false);
+
+  const handleShare = () => {
+    const url = `${window.location.origin}/flow/${skillName}`;
+    navigator.clipboard.writeText(url).then(() => {
+      setShareCopied(true);
+      setTimeout(() => setShareCopied(false), 2000);
+    });
+  };
+
+  return (
+    <div style={{
+      borderTop: '1px solid rgba(0,255,200,0.15)',
+      padding: '10px 16px',
+      background: 'linear-gradient(135deg, rgba(0,255,200,0.04), rgba(167,139,250,0.03))',
+      display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap',
+    }}>
+      {/* XP badge */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: '5px',
+        background: 'rgba(0,255,200,0.1)', border: '1px solid rgba(0,255,200,0.25)',
+        borderRadius: '7px', padding: '3px 10px',
+      }}>
+        <span style={{ color: 'var(--cyan)', fontSize: '11px', fontWeight: 700 }}>
+          +{xpGained} XP
+        </span>
+      </div>
+
+      {/* Level title */}
+      <span style={{ color: 'var(--text-secondary)', fontSize: '11px' }}>
+        {getTitle(level)} · Lvl {level}
+      </span>
+
+      {/* TRUST pending */}
+      <div
+        title="Connect your wallet on the Portal to receive TRUST rewards"
+        style={{
+          display: 'flex', alignItems: 'center', gap: '5px',
+          background: 'rgba(167,139,250,0.08)', border: '1px solid rgba(167,139,250,0.2)',
+          borderRadius: '7px', padding: '3px 10px', cursor: 'default',
+        }}
+      >
+        <span style={{ color: 'var(--purple)', fontSize: '11px', fontWeight: 700 }}>
+          +5 TRUST
+        </span>
+        <span style={{ color: 'rgba(161,161,170,0.5)', fontSize: '10px' }}>pending</span>
+      </div>
+
+      <div style={{ flex: 1 }} />
+
+      {/* Save output */}
+      <button
+        onClick={onSave}
+        disabled={savedToMemory}
+        style={{
+          background: savedToMemory ? 'rgba(74,222,128,0.1)' : 'rgba(255,255,255,0.04)',
+          border: `1px solid ${savedToMemory ? 'rgba(74,222,128,0.3)' : 'rgba(255,255,255,0.1)'}`,
+          borderRadius: '7px', padding: '4px 12px',
+          fontSize: '11px', fontWeight: 600,
+          color: savedToMemory ? 'var(--green)' : 'var(--text-secondary)',
+          cursor: savedToMemory ? 'default' : 'pointer',
+          transition: 'all 0.2s ease',
+        }}
+      >
+        {savedToMemory ? '✓ Saved' : 'Save output'}
+      </button>
+
+      {/* Share */}
+      <button
+        onClick={handleShare}
+        style={{
+          background: 'rgba(255,255,255,0.04)',
+          border: '1px solid rgba(255,255,255,0.1)',
+          borderRadius: '7px', padding: '4px 12px',
+          fontSize: '11px', fontWeight: 600,
+          color: shareCopied ? 'var(--cyan)' : 'var(--text-secondary)',
+          cursor: 'pointer', transition: 'all 0.2s ease',
+        }}
+      >
+        {shareCopied ? '✓ Copied' : 'Share flow'}
+      </button>
+    </div>
+  );
+}
+
 /* ── Main component ─────────────────────────────────────────────── */
 export default function FlowRunner({ skillName, skillDescription, domain, onClose }: FlowRunnerProps) {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -53,11 +153,16 @@ export default function FlowRunner({ skillName, skillDescription, domain, onClos
   const [input, setInput] = useState('');
   const [streaming, setStreaming] = useState(false);
   const [error, setError] = useState('');
+  const [completed, setCompleted] = useState(false);
+  const [savedToMemory, setSavedToMemory] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const startedRef = useRef(false);
   const completedRef = useRef(false);
+  const justCompletedRef = useRef(false);
+  // Capture whether this is a first run BEFORE witnessFlowComplete updates state
+  const wasFirstRunRef = useRef(false);
   const velma = useVelma();
 
   const systemPrompt = `You are running the "${skillName}" flow.
@@ -79,20 +184,17 @@ This is a conversational flow. Greet the user briefly, then immediately ask the 
     abortRef.current = abort;
 
     setStreaming(true);
-    setStreamingText('');
     setError('');
 
-    const userKey = typeof window !== 'undefined'
-      ? localStorage.getItem('flowfabric-anthropic-key') ?? ''
-      : '';
-
-    // Build messages array: history + new user message
-    const apiMessages = [
-      ...history.map(m => ({ role: m.role, content: m.content })),
-      { role: 'user' as const, content: userMessage },
-    ];
-
     try {
+      const apiMessages = userMessage
+        ? [...history.map(m => ({ role: m.role, content: m.content })), { role: 'user', content: userMessage }]
+        : [{ role: 'user', content: userMessage }];
+
+      const userKey = typeof window !== 'undefined'
+        ? (localStorage.getItem('flowfabric-api-key') || '')
+        : '';
+
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
@@ -147,6 +249,7 @@ This is a conversational flow. Greet the user briefly, then immediately ask the 
       setMessages(prev => {
         if (prev.length > 0 && !completedRef.current) {
           completedRef.current = true;
+          justCompletedRef.current = true;
           velma.witnessFlowComplete(skillName, domain);
         }
         return [
@@ -155,6 +258,13 @@ This is a conversational flow. Greet the user briefly, then immediately ask the 
           { role: 'assistant', content: fullText },
         ];
       });
+
+      // Trigger completion state after the message commit
+      if (justCompletedRef.current) {
+        justCompletedRef.current = false;
+        setCompleted(true);
+      }
+
       setStreamingText('');
       setStreaming(false);
     } catch (err) {
@@ -168,6 +278,8 @@ This is a conversational flow. Greet the user briefly, then immediately ask the 
   useEffect(() => {
     if (startedRef.current) return;
     startedRef.current = true;
+    // Capture first-run status before state is mutated by witnessFlowComplete
+    wasFirstRunRef.current = !velma.state.flows_completed.includes(skillName);
     velma.witnessFlowStart(skillName, domain);
     send(`Start the ${formatFlowName(skillName)} flow now.`, []);
   }, []);
@@ -179,17 +291,41 @@ This is a conversational flow. Greet the user briefly, then immediately ask the 
     send(text, messages);
   };
 
+  const saveToMemory = useCallback(() => {
+    const assistantContent = messages
+      .filter(m => m.role === 'assistant')
+      .map(m => m.content)
+      .join('\n\n---\n\n');
+    if (!assistantContent) return;
+    try {
+      const existing: unknown[] = JSON.parse(localStorage.getItem('flowfabric-saved-outputs') || '[]');
+      const entry = {
+        id: `${skillName}-${Date.now()}`,
+        flowSlug: skillName,
+        domain: domain || 'general',
+        content: assistantContent,
+        savedAt: new Date().toISOString(),
+      };
+      existing.unshift(entry);
+      localStorage.setItem('flowfabric-saved-outputs', JSON.stringify(existing.slice(0, 50)));
+      setSavedToMemory(true);
+    } catch { /* non-fatal */ }
+  }, [messages, skillName, domain]);
+
   const reset = () => {
     abortRef.current?.abort();
     setMessages([]);
     setStreamingText('');
     setInput('');
     setError('');
+    setCompleted(false);
+    setSavedToMemory(false);
     startedRef.current = false;
     completedRef.current = false;
     // Re-trigger auto-start
     setTimeout(() => {
       startedRef.current = true;
+      wasFirstRunRef.current = !velma.state.flows_completed.includes(skillName);
       velma.witnessFlowStart(skillName, domain);
       send(`Start the ${formatFlowName(skillName)} flow now.`, []);
     }, 50);
@@ -208,6 +344,9 @@ This is a conversational flow. Greet the user briefly, then immediately ask the 
       setTimeout(() => setCopied(false), 2000);
     });
   };
+
+  // XP this run earned (captured before state was mutated)
+  const xpGained = wasFirstRunRef.current ? 65 : 25;
 
   return (
     <div
@@ -337,6 +476,17 @@ This is a conversational flow. Greet the user briefly, then immediately ask the 
 
           <div ref={bottomRef} />
         </div>
+
+        {/* Completion bar — shown after first real output */}
+        {completed && !streaming && (
+          <CompletionBar
+            skillName={skillName}
+            xpGained={xpGained}
+            level={velma.state.level}
+            onSave={saveToMemory}
+            savedToMemory={savedToMemory}
+          />
+        )}
 
         {/* Input */}
         <div className="px-5 pb-5 pt-3 shrink-0" style={{ borderTop: '1px solid var(--border)' }}>

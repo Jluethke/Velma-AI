@@ -174,7 +174,7 @@ export default function FlowDetail() {
           </button>
 
           <Link
-            to="/compose"
+            to="/studio?tab=chain"
             className="btn-secondary px-6 py-3 text-sm font-semibold cursor-pointer no-underline text-center w-full sm:w-auto"
             style={{ color: 'var(--gold)' }}
           >
