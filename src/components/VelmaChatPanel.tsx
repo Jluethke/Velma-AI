@@ -129,7 +129,7 @@ function SuggestionCard({ slug, reason, color, onClose }: {
 
 // ── Path display ───────────────────────────────────────────────────────────
 
-function PathDisplay({ path, color, onClose }: { path: string[]; color: string; onClose: () => void }) {
+function PathDisplay({ path, onClose }: { path: string[]; onClose: () => void }) {
   return (
     <div style={{
       background: 'rgba(255,215,0,0.04)', border: '1px solid rgba(255,215,0,0.15)',
@@ -408,7 +408,7 @@ export default function VelmaChatPanel({
 
             {/* Path */}
             {msg.path && msg.path.length > 1 && (
-              <PathDisplay path={msg.path} color={color} onClose={onClose} />
+              <PathDisplay path={msg.path} onClose={onClose} />
             )}
           </div>
         ))}

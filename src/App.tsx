@@ -42,6 +42,7 @@ import PortalStake from './pages/PortalStake';
 import PortalMarketplace from './pages/PortalMarketplace';
 import PortalValidators from './pages/PortalValidators';
 import OnboardingGuide from './components/OnboardingGuide';
+import FlowStudio from './pages/FlowStudio';
 
 const BANNER_KEY = 'flowfabric-mobile-banner-dismissed';
 
@@ -163,6 +164,7 @@ function App() {
             <Route path="/portal/stake" element={<PortalStake />} />
             <Route path="/portal/marketplace" element={<PortalMarketplace />} />
             <Route path="/portal/validators" element={<PortalValidators />} />
+            <Route path="/studio" element={<FlowStudio />} />
           </Routes>
           <Footer />
         </div>

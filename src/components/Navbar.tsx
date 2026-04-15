@@ -38,6 +38,7 @@ export default function Navbar() {
     { to: '/pricing', label: 'Pricing' },
     { to: '/docs', label: 'Docs' },
     { to: '/install', label: 'Install' },
+    { to: '/studio', label: 'Flow Studio' },
     { to: '/start', label: 'Start Session' },
     { to: '/leaderboard', label: 'Leaderboard' },
     { to: '/bounties', label: 'Bounties' },
