@@ -1,20 +1,28 @@
 /**
- * VelmaChatPanel — Velma's discovery mode + inline flow runner.
+ * VelmaChatPanel — Velma's discovery mode + inline flow runner + Discovery listing creator.
  *
- * Two modes:
- *   velma  — finds the right flow for your situation (default)
- *   flow   — runs a chosen flow inline via /api/chat; user never leaves
- *
- * Transition: user clicks "Run now" on a suggestion → Velma hands off →
- * flow AI takes over in the same panel → "← Velma" exits back to discovery.
+ * Three surfaces:
+ *   velma     — finds the right flow or drafts a Discovery listing for your situation
+ *   flow      — runs a chosen flow inline via /api/chat; user never leaves
+ *   listing   — shows a pre-filled Discovery listing card with one-click post
  */
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useAccount } from 'wagmi';
 import { useSkills } from '../hooks/useSkills';
+import { useCreateListing } from '../hooks/useDiscovery';
 import { formatFlowName } from '../utils/formatFlowName';
 import type { VelmaState } from '../hooks/useVelmaCompanion';
 
 // ── Types ──────────────────────────────────────────────────────────────────
+
+interface ParsedListing {
+  title: string;
+  flow: string;
+  role: 'host' | 'guest';
+  description: string;
+  tags: string[];
+}
 
 interface ChatMessage {
   role: 'velma' | 'user';
@@ -22,7 +30,8 @@ interface ChatMessage {
   display: string;
   suggestions?: FlowSuggestion[];
   path?: string[];
-  isSystem?: boolean; // dividers / mode transitions — excluded from API history
+  listing?: ParsedListing;
+  isSystem?: boolean;
 }
 
 interface FlowSuggestion {
@@ -56,9 +65,10 @@ function describeLocation(pathname: string, search = ''): string {
     if (tab === 'chain') return 'the chain composer';
     return 'Flow Studio';
   }
-  if (pathname.startsWith('/compose')) return 'the chain composer';
+  if (pathname.startsWith('/discover/matches')) return 'your Discovery matches';
+  if (pathname.startsWith('/discover/new')) return 'the Discovery listing form';
+  if (pathname.startsWith('/discover')) return 'the Discovery board';
   if (pathname.startsWith('/chains')) return 'the chains library';
-  if (pathname.startsWith('/discover')) return 'Fabric Discovery';
   if (pathname.startsWith('/fabric/')) return 'a live Fabric session';
   if (pathname.startsWith('/portal')) return 'the portal';
   if (pathname.startsWith('/dashboard')) return 'your dashboard';
@@ -81,8 +91,11 @@ function getChips(pathname: string, search: string, state: VelmaState): string[]
   if (pathname.startsWith('/explore') || pathname.startsWith('/flows') || pathname.startsWith('/skills')) {
     return ['Help me find the right flow', 'Show me career flows', 'Show me money flows', 'I have a big decision to make'];
   }
+  if (pathname.startsWith('/discover/matches')) {
+    return ['Explain my top match', 'Should I accept this?', 'Help me compare my matches', 'Draft a response for me'];
+  }
   if (pathname.startsWith('/discover')) {
-    return ['How does Discovery work?', 'I need help posting', 'Finding the right match'];
+    return ["I need a co-founder", "I'm looking for clients", "I want to offer my skills", 'Help me write a listing'];
   }
   if (pathname.startsWith('/studio') || pathname.startsWith('/compose')) {
     if (tab === 'chain') return ['How do I chain flows together?', 'Build me a career chain', 'Build me a money chain'];
@@ -104,6 +117,9 @@ function getChips(pathname: string, search: string, state: VelmaState): string[]
 }
 
 function getFollowUpChips(msg: ChatMessage): string[] {
+  if (msg.listing) {
+    return ['Make the title stronger', 'Add more context to description', 'Change my role', 'Show flows to prepare first'];
+  }
   if (msg.suggestions && msg.suggestions.length > 0) {
     const firstName = formatFlowName(msg.suggestions[0].slug);
     const chips: string[] = [`Tell me more about ${firstName}`];
@@ -118,12 +134,37 @@ function getFollowUpChips(msg: ChatMessage): string[] {
   return ["Give me more detail", "That doesn't quite fit", "What should I do first?"];
 }
 
-// ── Parse FLOWS: / PATH: from Velma responses ──────────────────────────────
+// ── Parse Velma responses ──────────────────────────────────────────────────
 
-function parseResponse(raw: string): { display: string; suggestions: FlowSuggestion[]; path: string[] } {
+function parseListing(block: string): ParsedListing | undefined {
+  const get = (key: string) =>
+    block.match(new RegExp(`^${key}:\\s*(.+)`, 'm'))?.[1]?.trim() ?? '';
+  const title = get('title');
+  const flow = get('flow');
+  if (!title || !flow) return undefined;
+  const rawRole = get('role');
+  const role: 'host' | 'guest' = rawRole.startsWith('guest') ? 'guest' : 'host';
+  return {
+    title,
+    flow,
+    role,
+    description: get('description'),
+    tags: get('tags').split(',').map(t => t.trim()).filter(Boolean),
+  };
+}
+
+function parseResponse(raw: string): {
+  display: string;
+  suggestions: FlowSuggestion[];
+  path: string[];
+  listing?: ParsedListing;
+} {
+  // LISTING: block
+  const listingMatch = raw.match(/LISTING:\s*\n([\s\S]*?)(?=\n\nFLOWS:|\n\nPATH:|$)/);
+  const listing = listingMatch?.[1] ? parseListing(listingMatch[1]) : undefined;
+
+  // FLOWS: block
   const flowsMatch = raw.match(/FLOWS:\s*\n([\s\S]*?)(?:\n\nPATH:|$)/);
-  const pathMatch = raw.match(/PATH:\s*([^\n]+)/);
-
   const suggestions: FlowSuggestion[] = [];
   if (flowsMatch?.[1]) {
     for (const line of flowsMatch[1].split('\n')) {
@@ -132,16 +173,20 @@ function parseResponse(raw: string): { display: string; suggestions: FlowSuggest
     }
   }
 
+  // PATH: line
+  const pathMatch = raw.match(/PATH:\s*([^\n]+)/);
   const path = pathMatch?.[1]
     ? pathMatch[1].split(/→|->/).map(s => s.trim()).filter(Boolean)
     : [];
 
+  // Display: strip all structured blocks
   const display = raw
+    .replace(/\n*LISTING:\s*\n[\s\S]*?(?=\n\nFLOWS:|\n\nPATH:|$)/, '')
     .replace(/\n*FLOWS:\s*\n[\s\S]*?(?=\n\nPATH:|$)/, '')
     .replace(/\n*PATH:[^\n]+/, '')
     .trim();
 
-  return { display, suggestions, path };
+  return { display, suggestions, path, listing };
 }
 
 function openingMessage(state: VelmaState, pathname: string, search: string): ChatMessage {
@@ -150,7 +195,11 @@ function openingMessage(state: VelmaState, pathname: string, search: string): Ch
   const page = describeLocation(pathname, search);
 
   let text: string;
-  if (state.flows_run === 0) {
+  if (pathname.startsWith('/discover/matches')) {
+    text = "You're on your Discovery matches. Want me to explain a match, help you compare, or draft a response?";
+  } else if (pathname.startsWith('/discover')) {
+    text = "You're on the Discovery board. Tell me what kind of person you're looking for — I'll draft a listing.";
+  } else if (state.flows_run === 0) {
     text = `You're on ${page}. What are you trying to figure out? I'll show you what FlowFabric can do for that.`;
   } else if (lastFlow) {
     text = `You just finished ${formatFlowName(lastFlow)}. What's next?`;
@@ -162,11 +211,11 @@ function openingMessage(state: VelmaState, pathname: string, search: string): Ch
   return { role: 'velma', content: text, display: text };
 }
 
-// ── Stream helper (shared by velma + flow modes) ───────────────────────────
+// ── Stream helper ──────────────────────────────────────────────────────────
 
 async function streamResponse(
   resp: Response,
-  onDelta: (full: string, display: string, suggestions: FlowSuggestion[], path: string[]) => void,
+  onDelta: (full: string, display: string, suggestions: FlowSuggestion[], path: string[], listing?: ParsedListing) => void,
   flowMode: boolean,
 ): Promise<string> {
   const reader = resp.body!.getReader();
@@ -193,7 +242,7 @@ async function streamResponse(
             onDelta(full, full, [], []);
           } else {
             const parsed = parseResponse(full);
-            onDelta(full, parsed.display, parsed.suggestions ?? [], parsed.path ?? []);
+            onDelta(full, parsed.display, parsed.suggestions, parsed.path, parsed.listing);
           }
         }
       } catch { /* skip */ }
@@ -226,8 +275,7 @@ function SuggestionCard({ slug, reason, color, onClose, onRun }: {
   return (
     <div style={{
       background: `${color}08`, border: `1px solid ${color}28`,
-      borderRadius: '9px', overflow: 'hidden',
-      transition: 'border-color 0.15s',
+      borderRadius: '9px', overflow: 'hidden', transition: 'border-color 0.15s',
     }}
       onMouseEnter={e => (e.currentTarget as HTMLElement).style.borderColor = `${color}44`}
       onMouseLeave={e => (e.currentTarget as HTMLElement).style.borderColor = `${color}28`}
@@ -301,6 +349,118 @@ function SystemDivider({ text, color }: { text: string; color: string }) {
   );
 }
 
+// ── Discovery listing card ─────────────────────────────────────────────────
+
+function DiscoveryCard({
+  listing, walletConnected, posting, posted, postedUrl, onPost,
+}: {
+  listing: ParsedListing;
+  walletConnected: boolean;
+  posting: boolean;
+  posted: boolean;
+  postedUrl: string | null;
+  onPost: () => void;
+}) {
+  const roleColor = listing.role === 'host' ? 'var(--cyan)' : '#aa88ff';
+  const roleBg   = listing.role === 'host' ? 'rgba(56,189,248,0.08)' : 'rgba(170,136,255,0.08)';
+  const roleBorder = listing.role === 'host' ? 'rgba(56,189,248,0.2)' : 'rgba(170,136,255,0.2)';
+
+  return (
+    <div style={{
+      border: '1px solid rgba(167,139,250,0.25)',
+      borderRadius: '10px', overflow: 'hidden',
+      background: 'rgba(167,139,250,0.04)',
+    }}>
+      {/* Header label */}
+      <div style={{
+        padding: '7px 11px 5px',
+        borderBottom: '1px solid rgba(167,139,250,0.12)',
+        display: 'flex', alignItems: 'center', gap: '6px',
+      }}>
+        <span style={{ fontSize: '9px', color: '#aa88ff', textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: 'monospace', fontWeight: 700 }}>
+          Discovery listing
+        </span>
+        <span style={{ flex: 1 }} />
+        <span style={{
+          fontSize: '9px', padding: '1px 6px', borderRadius: '4px',
+          color: roleColor, background: roleBg, border: `1px solid ${roleBorder}`,
+          fontFamily: 'monospace', fontWeight: 700, textTransform: 'uppercase',
+        }}>
+          {listing.role}
+        </span>
+      </div>
+
+      {/* Content */}
+      <div style={{ padding: '9px 11px 7px' }}>
+        <div style={{ fontSize: '11px', fontWeight: 700, color: '#ccd', marginBottom: '5px', fontFamily: 'monospace', lineHeight: 1.4 }}>
+          {listing.title}
+        </div>
+        <div style={{ fontSize: '10px', color: '#778', lineHeight: 1.5, marginBottom: '6px' }}>
+          {listing.description}
+        </div>
+        <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', alignItems: 'center' }}>
+          <span style={{ fontSize: '9px', color: '#556', fontFamily: 'monospace' }}>
+            {listing.flow.replace(/-/g, ' ')}
+          </span>
+          {listing.tags.slice(0, 3).map(tag => (
+            <span key={tag} style={{
+              fontSize: '9px', color: '#445', padding: '0 5px',
+              background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)',
+              borderRadius: '4px',
+            }}>
+              {tag}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      {/* Action */}
+      {posted ? (
+        <div style={{
+          padding: '7px 11px', borderTop: '1px solid rgba(74,222,128,0.15)',
+          background: 'rgba(74,222,128,0.05)',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px',
+        }}>
+          <span style={{ fontSize: '10px', color: 'var(--green)', fontFamily: 'monospace', fontWeight: 700 }}>
+            ✓ Posted to Discovery
+          </span>
+          {postedUrl && (
+            <Link to={postedUrl} style={{ fontSize: '9px', color: 'var(--green)', textDecoration: 'none', opacity: 0.8 }}>
+              View matches →
+            </Link>
+          )}
+        </div>
+      ) : !walletConnected ? (
+        <div style={{
+          padding: '7px 11px', borderTop: '1px solid rgba(255,215,0,0.12)',
+          background: 'rgba(255,215,0,0.03)',
+          fontSize: '9px', color: 'rgba(255,215,0,0.7)', fontFamily: 'monospace',
+        }}>
+          Connect wallet (top right) to post →
+        </div>
+      ) : (
+        <button
+          onClick={onPost}
+          disabled={posting}
+          style={{
+            display: 'block', width: '100%', padding: '7px 11px',
+            borderTop: '1px solid rgba(167,139,250,0.15)',
+            background: 'rgba(167,139,250,0.08)',
+            border: 'none', cursor: posting ? 'default' : 'pointer',
+            fontSize: '10px', fontWeight: 700, fontFamily: 'monospace',
+            color: '#aa88ff', transition: 'background 0.15s',
+            textAlign: 'left',
+          }}
+          onMouseEnter={e => { if (!posting) (e.currentTarget as HTMLElement).style.background = 'rgba(167,139,250,0.15)'; }}
+          onMouseLeave={e => { if (!posting) (e.currentTarget as HTMLElement).style.background = 'rgba(167,139,250,0.08)'; }}
+        >
+          {posting ? 'Posting…' : '▶ Post to Discovery'}
+        </button>
+      )}
+    </div>
+  );
+}
+
 // ── Main component ─────────────────────────────────────────────────────────
 
 const ANTHROPIC_KEY_STORAGE = 'flowfabric-anthropic-key';
@@ -318,6 +478,10 @@ export default function VelmaChatPanel({
 }) {
   const { data: skills = [] } = useSkills();
   const location = useLocation();
+  const navigate = useNavigate();
+  const { address } = useAccount();
+  const createListing = useCreateListing();
+
   const pathname = location.pathname;
   const search = location.search;
 
@@ -331,6 +495,10 @@ export default function VelmaChatPanel({
   const [pasteText, setPasteText] = useState('');
   const [streaming, setStreaming] = useState(false);
   const [wide, setWide] = useState(false);
+
+  // Track which message indices have been posted to Discovery
+  const [postedListings, setPostedListings] = useState<Map<number, string>>(new Map()); // idx → listing url
+  const [postingIdx, setPostingIdx] = useState<number | null>(null);
 
   // Flow mode
   const [activeFlow, setActiveFlow] = useState<{ slug: string; name: string } | null>(null);
@@ -346,6 +514,47 @@ export default function VelmaChatPanel({
 
   const userKey = () => localStorage.getItem(ANTHROPIC_KEY_STORAGE)?.trim() || '';
 
+  // ── Post a Discovery listing from a chat message ─────────────────────────
+
+  const handlePostListing = useCallback(async (listing: ParsedListing, msgIdx: number) => {
+    if (!address || postingIdx !== null) return;
+    setPostingIdx(msgIdx);
+    try {
+      const result = await createListing.mutateAsync({
+        flowSlug: listing.flow,
+        role: listing.role,
+        title: listing.title,
+        description: listing.description,
+        tags: listing.tags,
+      });
+      const url = `/discover/matches?listingId=${result.id}`;
+      setPostedListings(prev => new Map(prev).set(msgIdx, url));
+
+      // Velma confirms in chat
+      const confirmMsg: ChatMessage = {
+        role: 'velma',
+        content: 'listing_posted',
+        display: `Posted. AI is scoring matches now — check your matches when ready.`,
+        isSystem: true,
+      };
+      setMessages(prev => {
+        const updated = [...prev, confirmMsg];
+        saveChatHistory(updated);
+        return updated;
+      });
+    } catch (err) {
+      const errMsg: ChatMessage = {
+        role: 'velma',
+        content: 'listing_error',
+        display: `Couldn't post the listing. (${(err as Error).message})`,
+        isSystem: true,
+      };
+      setMessages(prev => [...prev, errMsg]);
+    } finally {
+      setPostingIdx(null);
+    }
+  }, [address, postingIdx, createListing]);
+
   // ── Start a flow inline ──────────────────────────────────────────────────
 
   const startFlow = useCallback(async (slug: string, name: string) => {
@@ -358,7 +567,7 @@ export default function VelmaChatPanel({
       isSystem: true,
     };
 
-    const startIdx = messages.length + 1; // messages after the divider
+    const startIdx = messages.length + 1;
     setActiveFlow({ slug, name });
     setFlowStartIdx(startIdx);
     setStreaming(true);
@@ -404,7 +613,7 @@ export default function VelmaChatPanel({
     }
   }, [messages, streaming]);
 
-  // ── Exit flow, return to Velma ───────────────────────────────────────────
+  // ── Exit flow ────────────────────────────────────────────────────────────
 
   const exitFlow = useCallback(() => {
     const exitMsg: ChatMessage = {
@@ -447,7 +656,6 @@ export default function VelmaChatPanel({
       let resp: Response;
 
       if (activeFlow) {
-        // Build conversation from the point the flow started, excluding system dividers
         const flowHistory = updatedMessages
           .slice(flowStartIdx)
           .filter(m => !m.isSystem)
@@ -484,25 +692,28 @@ export default function VelmaChatPanel({
       const isFlowMode = activeFlow !== null;
       const full = await streamResponse(
         resp,
-        (raw, display, suggestions, path) => {
+        (raw, display, suggestions, path, listing) => {
           setMessages(prev => [
             ...prev.slice(0, -1),
-            { role: 'velma', content: raw, display, suggestions, path },
+            { role: 'velma', content: raw, display, suggestions, path, listing },
           ]);
         },
         isFlowMode,
       );
 
-      const { display, suggestions, path } = isFlowMode
-        ? { display: full, suggestions: [], path: [] }
+      const { display, suggestions, path, listing } = isFlowMode
+        ? { display: full, suggestions: [], path: [], listing: undefined }
         : parseResponse(full);
 
       const finalMessages = [
         ...updatedMessages,
-        { role: 'velma' as const, content: full, display, suggestions, path },
+        { role: 'velma' as const, content: full, display, suggestions, path, listing },
       ];
       setMessages(finalMessages);
       saveChatHistory(finalMessages);
+
+      // If Velma produced a listing and we're on the discover page, auto-widen for better view
+      if (listing && !wide) setWide(true);
 
     } catch (err) {
       const errMsg = `Something went wrong. (${(err as Error).message})`;
@@ -510,7 +721,7 @@ export default function VelmaChatPanel({
     } finally {
       setStreaming(false);
     }
-  }, [messages, pasteText, skills, streaming, pathname, search, activeFlow, flowStartIdx]);
+  }, [messages, pasteText, skills, streaming, pathname, search, activeFlow, flowStartIdx, wide]);
 
   const send = useCallback(() => sendText(input.trim()), [sendText, input]);
 
@@ -526,6 +737,7 @@ export default function VelmaChatPanel({
     setPasteMode(false);
     setActiveFlow(null);
     setFlowStartIdx(0);
+    setPostedListings(new Map());
   };
 
   const locationLabel = describeLocation(pathname, search).replace(/^the /, '');
@@ -570,7 +782,6 @@ export default function VelmaChatPanel({
               </span>
               <button
                 onClick={exitFlow}
-                title="Back to Velma"
                 style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '10px', fontFamily: 'monospace', color: '#ffd70077', padding: '0 4px', transition: 'color 0.15s' }}
                 onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = '#ffd700'}
                 onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = '#ffd70077'}
@@ -589,14 +800,14 @@ export default function VelmaChatPanel({
         </div>
         <div style={{ display: 'flex', gap: '2px', alignItems: 'center' }}>
           <button onClick={() => setWide(v => !v)} title={wide ? 'Collapse' : 'Expand'}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '13px', padding: '3px 5px', fontFamily: 'monospace', color: wide ? color : '#335', opacity: 0.8, transition: 'color 0.15s' }}>
+            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '13px', padding: '3px 5px', fontFamily: 'monospace', color: wide ? color : '#335', opacity: 0.8 }}>
             {wide ? '⟨' : '⟩'}
           </button>
           <button onClick={reset} title="New conversation"
             style={{ background: 'none', border: 'none', color: '#335', cursor: 'pointer', fontSize: '12px', padding: '3px 5px', fontFamily: 'monospace' }}>
             ↺
           </button>
-          <button onClick={onSwitchToStats} title="View stats"
+          <button onClick={onSwitchToStats}
             style={{ background: 'none', border: 'none', color: '#446', cursor: 'pointer', fontSize: '11px', padding: '3px 5px', fontFamily: 'monospace' }}>
             stats
           </button>
@@ -614,13 +825,14 @@ export default function VelmaChatPanel({
         scrollbarWidth: 'thin', scrollbarColor: '#1a2a3a transparent',
       }}>
         {messages.map((msg, i) => {
-          // System dividers (flow start/end)
           if (msg.isSystem) {
+            const isFlowStart = msg.content.startsWith('flow_start');
+            const isListing = msg.content === 'listing_posted' || msg.content === 'listing_error';
             return (
               <SystemDivider
                 key={i}
                 text={msg.display}
-                color={msg.content.startsWith('flow_start') ? '#ffd700' : color}
+                color={isFlowStart ? '#ffd700' : isListing ? '#aa88ff' : color}
               />
             );
           }
@@ -655,7 +867,21 @@ export default function VelmaChatPanel({
                 )}
               </div>
 
-              {/* Flow suggestions (Velma mode only) */}
+              {/* Discovery listing card */}
+              {!activeFlow && msg.listing && (
+                <div style={{ width: '100%' }}>
+                  <DiscoveryCard
+                    listing={msg.listing}
+                    walletConnected={!!address}
+                    posting={postingIdx === i}
+                    posted={postedListings.has(i)}
+                    postedUrl={postedListings.get(i) ?? null}
+                    onPost={() => handlePostListing(msg.listing!, i)}
+                  />
+                </div>
+              )}
+
+              {/* Flow suggestions */}
               {!activeFlow && msg.suggestions && msg.suggestions.length > 0 && (
                 <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '5px' }}>
                   <div style={{ fontSize: '9px', color: '#446', textTransform: 'uppercase', letterSpacing: '0.07em', fontFamily: 'monospace', marginTop: '2px' }}>
@@ -674,12 +900,29 @@ export default function VelmaChatPanel({
                 </div>
               )}
 
-              {/* Suggested path (Velma mode only) */}
+              {/* Path */}
               {!activeFlow && msg.path && msg.path.length > 1 && (
                 <PathDisplay path={msg.path} onClose={onClose} />
               )}
 
-              {/* Chips — contextual, shown after last velma message */}
+              {/* View matches CTA if just posted */}
+              {!activeFlow && postedListings.has(i) && (
+                <button
+                  onClick={() => { navigate(postedListings.get(i)!); onClose(); }}
+                  style={{
+                    background: 'rgba(167,139,250,0.08)', border: '1px solid rgba(167,139,250,0.2)',
+                    borderRadius: '8px', padding: '5px 12px',
+                    fontSize: '10px', fontWeight: 700, fontFamily: 'monospace',
+                    color: '#aa88ff', cursor: 'pointer', transition: 'background 0.15s',
+                  }}
+                  onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'rgba(167,139,250,0.15)'}
+                  onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'rgba(167,139,250,0.08)'}
+                >
+                  View your matches →
+                </button>
+              )}
+
+              {/* Chips */}
               {isLastVelma && !activeFlow && (
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', marginTop: '2px' }}>
                   {(i === 0 ? chips : getFollowUpChips(msg)).map(chip => (
@@ -715,7 +958,7 @@ export default function VelmaChatPanel({
         <div ref={bottomRef} />
       </div>
 
-      {/* Paste document area */}
+      {/* Paste area */}
       {pasteMode && (
         <div style={{ padding: '0 12px 8px', flexShrink: 0 }}>
           <textarea
@@ -739,7 +982,6 @@ export default function VelmaChatPanel({
         padding: '10px 12px',
         borderTop: `1px solid ${activeFlow ? '#ffd70018' : `${color}18`}`,
         display: 'flex', flexDirection: 'column', gap: '7px', flexShrink: 0,
-        transition: 'border-color 0.3s ease',
       }}>
         <div style={{ display: 'flex', gap: '6px', alignItems: 'flex-end' }}>
           <textarea
@@ -756,8 +998,7 @@ export default function VelmaChatPanel({
               border: `1px solid ${activeFlow ? 'rgba(255,215,0,0.2)' : `${color}22`}`,
               borderRadius: '8px', padding: '8px 10px',
               fontSize: '11px', color: '#bcd', fontFamily: 'monospace',
-              outline: 'none', lineHeight: 1.5,
-              opacity: streaming ? 0.5 : 1,
+              outline: 'none', lineHeight: 1.5, opacity: streaming ? 0.5 : 1,
             }}
           />
           <button
@@ -773,8 +1014,7 @@ export default function VelmaChatPanel({
                 : '#1a2a3a'}`,
               color: input.trim() && !streaming ? (activeFlow ? '#ffd700' : color) : '#334',
               cursor: input.trim() && !streaming ? 'pointer' : 'default',
-              fontSize: '14px', lineHeight: 1, flexShrink: 0,
-              transition: 'all 0.15s',
+              fontSize: '14px', lineHeight: 1, flexShrink: 0, transition: 'all 0.15s',
             }}
           >
             {streaming ? '…' : '↑'}
