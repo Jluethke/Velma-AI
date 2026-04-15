@@ -37,6 +37,7 @@ export default function Navbar() {
   const moreLinks = [
     { to: '/pricing', label: 'Pricing' },
     { to: '/docs', label: 'Docs' },
+    { to: '/install', label: 'Install' },
     { to: '/start', label: 'Start Session' },
     { to: '/leaderboard', label: 'Leaderboard' },
     { to: '/bounties', label: 'Bounties' },

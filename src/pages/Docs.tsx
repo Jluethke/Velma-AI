@@ -2,12 +2,12 @@ import { useState, useEffect } from 'react';
 import CodeBlock from '../components/CodeBlock';
 
 const guideSections = [
-  { id: 'try-skill', label: 'Try a Flow' },
+  { id: 'try-flow', label: 'Try a Flow' },
   { id: 'mobile', label: 'Mobile' },
   { id: 'composer', label: 'Composer' },
   { id: 'evolution', label: 'Flow Evolution' },
-  { id: 'skill-format', label: 'Flow Format' },
-  { id: 'chains', label: 'Flow Format' },
+  { id: 'flow-format', label: 'Flow Format' },
+  { id: 'chains', label: 'Pipeline Format' },
   { id: 'running', label: 'Running' },
   { id: 'publishing', label: 'Publishing' },
   { id: 'trust', label: 'TRUST & Royalties' },
@@ -19,7 +19,7 @@ const h = { color: 'var(--text-primary)' };
 const t = { color: 'var(--text-secondary)' };
 
 export default function Docs() {
-  const [activeSection, setActiveSection] = useState('try-skill');
+  const [activeSection, setActiveSection] = useState('try-flow');
 
   useEffect(() => {
     const handleScroll = () => {
@@ -85,7 +85,7 @@ export default function Docs() {
           </div>
 
           {/* Try a Flow */}
-          <section id="try-skill" className="mb-14">
+          <section id="try-flow" className="mb-14">
             <h2 className="text-xl font-semibold mb-4" style={h}>Try a Flow</h2>
             <p className="text-sm mb-4" style={t}>
               Every flow is free to try. No account, no wallet, no install.
@@ -177,14 +177,14 @@ export default function Docs() {
           </section>
 
           {/* Flow Format */}
-          <section id="skill-format" className="mb-14">
+          <section id="flow-format" className="mb-14">
             <h2 className="text-xl font-semibold mb-4" style={h}>Flow Format</h2>
             <p className="text-sm mb-4" style={t}>
               A flow is a directory with two files:
             </p>
             <CodeBlock
-              code={`my-skill/\n  skill.md           # What the AI does (phases, quality gates)\n  manifest.json      # How it connects (inputs, outputs, domain)`}
-              filename="skill package"
+              code={`my-flow/\n  flow.md            # What the AI does (phases, quality gates)\n  manifest.json      # How it connects (inputs, outputs, domain)`}
+              filename="flow package"
             />
 
             <h3 className="text-sm font-semibold mt-6 mb-3" style={h}>manifest.json</h3>
@@ -194,22 +194,22 @@ export default function Docs() {
               filename="manifest.json"
             />
 
-            <h3 className="text-sm font-semibold mt-6 mb-3" style={h}>skill.md — Phases & Quality Gates</h3>
+            <h3 className="text-sm font-semibold mt-6 mb-3" style={h}>flow.md — Phases & Quality Gates</h3>
             <p className="text-sm mb-3" style={t}>Each flow defines execution phases. Every phase has entry criteria, actions, outputs, and a quality gate that must pass before the next phase starts.</p>
             <CodeBlock
               code={`## Phase 1: INTAKE\n### Entry Criteria\n- User has provided income and expenses\n### Actions\n- Categorize expenses: fixed, variable, discretionary\n- Identify recurring subscriptions\n### Outputs\n- Financial data organized by category\n### Quality Gate\n- All amounts are numeric\n- Categories cover 80%+ of spending`}
-              filename="skill.md (phase example)"
+              filename="flow.md (phase example)"
             />
           </section>
 
-          {/* Chain Format */}
+          {/* Pipeline Format */}
           <section id="chains" className="mb-14">
-            <h2 className="text-xl font-semibold mb-4" style={h}>Flow Format</h2>
+            <h2 className="text-xl font-semibold mb-4" style={h}>Pipeline Format</h2>
             <p className="text-sm mb-4" style={t}>
               Chains are what the Composer produces — a DAG of flows with dependency ordering:
             </p>
             <CodeBlock
-              code={`{\n  "name": "startup-validation",\n  "description": "Validate a startup idea end-to-end",\n  "category": "business",\n  "steps": [\n    { "skill_name": "idea-validator", "alias": "validate", "depends_on": [] },\n    { "skill_name": "market-research", "alias": "research", "depends_on": ["validate"] },\n    { "skill_name": "pricing-strategy", "alias": "pricing", "depends_on": ["research"] }\n  ]\n}`}
+              code={`{\n  "name": "startup-validation",\n  "description": "Validate a startup idea end-to-end",\n  "category": "business",\n  "steps": [\n    { "flow_name": "idea-validator", "alias": "validate", "depends_on": [] },\n    { "flow_name": "market-research", "alias": "research", "depends_on": ["validate"] },\n    { "flow_name": "pricing-strategy", "alias": "pricing", "depends_on": ["research"] }\n  ]\n}`}
               filename=".chain.json"
             />
             <p className="text-sm mt-4" style={t}>

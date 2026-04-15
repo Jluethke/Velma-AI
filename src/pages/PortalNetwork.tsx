@@ -88,24 +88,18 @@ function NetworkContent() {
       {/* Contract addresses */}
       <div className="mb-8 p-5 rounded-xl" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
         <h2 className="text-sm font-semibold uppercase tracking-wider mb-4" style={{ color: 'var(--text-secondary)' }}>
-          Contract Addresses (Base Sepolia)
+          Contract Addresses
         </h2>
-        <div className="space-y-2 text-xs font-mono">
-          {Object.entries({
-            'TrustToken': '0x0000...0001',
-            'TrustOracle': '0x0000...0002',
-            'SkillRegistry': '0x0000...0003',
-            'Marketplace': '0x0000...0004',
-            'NodeRegistry': '0x0000...0005',
-            'GovernanceDAO': '0x0000...0006',
-            'Staking': '0x0000...0008',
-            'ValidationRegistry': '0x0000...0009',
-          }).map(([name, addr]) => (
-            <div key={name} className="flex items-center justify-between py-1" style={{ borderBottom: '1px solid var(--border)' }}>
-              <span style={{ color: 'var(--text-secondary)' }}>{name}</span>
-              <span style={{ color: 'var(--cyan)' }}>{addr} <span style={{ color: 'var(--gold)', fontSize: '9px' }}>NOT DEPLOYED</span></span>
-            </div>
-          ))}
+        <div className="flex items-center gap-3">
+          <span
+            className="px-3 py-1.5 rounded-full text-xs font-semibold"
+            style={{ background: 'rgba(0,255,200,0.08)', border: '1px solid rgba(0,255,200,0.2)', color: 'var(--cyan)' }}
+          >
+            Coming soon
+          </span>
+          <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+            Contract addresses will appear here once deployed to Base mainnet.
+          </span>
         </div>
       </div>
 
