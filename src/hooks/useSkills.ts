@@ -11,6 +11,8 @@ export interface Skill {
   price: string;
   license: string;
   free: boolean;
+  successRate?: number;
+  validatorCount?: number;
 }
 
 const fallbackSkills: Skill[] = STATIC_SKILLS.map(s => ({

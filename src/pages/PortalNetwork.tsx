@@ -3,6 +3,38 @@ import { useAccount, useReadContract } from 'wagmi';
 import ConnectWalletPrompt from '../components/ConnectWalletPrompt';
 import { CONTRACTS, NodeRegistryABI, SkillRegistryABI, TrustTokenABI } from '../contracts';
 
+type ContractEntry = {
+  name: string;
+  address: string;
+  pending?: boolean;
+};
+
+const CONTRACT_LIST: ContractEntry[] = [
+  { name: 'TrustToken',          address: CONTRACTS.TrustToken },
+  { name: 'TrustOracle',         address: CONTRACTS.TrustOracle },
+  { name: 'SkillRegistry',       address: CONTRACTS.SkillRegistry },
+  { name: 'Marketplace',         address: CONTRACTS.Marketplace },
+  { name: 'NodeRegistry',        address: CONTRACTS.NodeRegistry },
+  { name: 'GovernanceDAO',       address: CONTRACTS.GovernanceDAO },
+  { name: 'LifeRewards',         address: CONTRACTS.LifeRewards },
+  { name: 'Staking',             address: CONTRACTS.Staking },
+  { name: 'ValidationRegistry',  address: CONTRACTS.ValidationRegistry },
+  { name: 'OnboardingRewards',   address: CONTRACTS.OnboardingRewards },
+  { name: 'CommunityPool',       address: CONTRACTS.CommunityPool, pending: true },
+];
+
+function truncateAddress(addr: string): string {
+  return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+}
+
+function ExternalLinkIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ display: 'inline', verticalAlign: 'middle' }}>
+      <path d="M10 1H7.5M10 1V3.5M10 1L5.5 5.5M5 2H2a1 1 0 00-1 1v7a1 1 0 001 1h7a1 1 0 001-1V7" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  );
+}
+
 function NetworkStat({ label, value, change, accent = 'var(--cyan)' }: {
   label: string; value: string; change?: string; accent?: string;
 }) {
@@ -87,19 +119,68 @@ function NetworkContent() {
 
       {/* Contract addresses */}
       <div className="mb-8 p-5 rounded-xl" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
-        <h2 className="text-sm font-semibold uppercase tracking-wider mb-4" style={{ color: 'var(--text-secondary)' }}>
-          Contract Addresses
-        </h2>
-        <div className="flex items-center gap-3">
-          <span
-            className="px-3 py-1.5 rounded-full text-xs font-semibold"
-            style={{ background: 'rgba(0,255,200,0.08)', border: '1px solid rgba(0,255,200,0.2)', color: 'var(--cyan)' }}
-          >
-            Coming soon
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-sm font-semibold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>
+            Contract Addresses
+          </h2>
+          <span className="text-xs px-2 py-0.5 rounded" style={{ background: 'rgba(0,255,200,0.07)', color: 'var(--cyan)', border: '1px solid rgba(0,255,200,0.15)' }}>
+            Base Mainnet · Chain ID 8453
           </span>
-          <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-            Contract addresses will appear here once deployed to Base mainnet.
-          </span>
+        </div>
+        <div className="overflow-x-auto">
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+            <thead>
+              <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                <th className="text-left pb-2 pr-4" style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>Contract</th>
+                <th className="text-left pb-2 pr-4" style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>Address</th>
+                <th className="text-left pb-2" style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>Explorer</th>
+              </tr>
+            </thead>
+            <tbody>
+              {CONTRACT_LIST.map((c, i) => (
+                <tr
+                  key={c.name}
+                  style={{ borderBottom: i < CONTRACT_LIST.length - 1 ? '1px solid var(--border)' : 'none' }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLTableRowElement).style.background = 'rgba(0,255,200,0.02)'; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLTableRowElement).style.background = 'transparent'; }}
+                >
+                  <td className="py-2.5 pr-4" style={{ color: 'var(--text-primary)', fontWeight: 500, whiteSpace: 'nowrap' }}>
+                    {c.name}
+                    {c.pending && (
+                      <span className="ml-2 px-1.5 py-0.5 rounded text-xs" style={{ background: 'rgba(251,191,36,0.1)', color: 'var(--gold)', border: '1px solid rgba(251,191,36,0.2)', fontSize: '10px', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                        pending
+                      </span>
+                    )}
+                  </td>
+                  <td className="py-2.5 pr-4">
+                    <span
+                      title={c.address}
+                      style={{ color: 'var(--cyan)', fontFamily: 'monospace', fontSize: '12px', cursor: 'default' }}
+                    >
+                      {truncateAddress(c.address)}
+                    </span>
+                  </td>
+                  <td className="py-2.5">
+                    {c.pending ? (
+                      <span style={{ color: 'var(--text-secondary)', fontSize: '12px' }}>—</span>
+                    ) : (
+                      <a
+                        href={`https://basescan.org/address/${c.address}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ color: 'var(--cyan)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px', opacity: 0.8 }}
+                        onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.opacity = '1'; }}
+                        onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.opacity = '0.8'; }}
+                      >
+                        <span style={{ fontSize: '11px' }}>Basescan</span>
+                        <ExternalLinkIcon />
+                      </a>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
 

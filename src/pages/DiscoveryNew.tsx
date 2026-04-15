@@ -205,7 +205,8 @@ export default function DiscoveryNew() {
       const result = await inferListing.mutateAsync(quickText);
       applyInferred(result);
     } catch {
-      // stay on quick step, error shown via inferListing.error
+      // Infer failed — fall through to browse so the user isn't stuck
+      setStep('browse');
     }
   };
 
@@ -392,8 +393,8 @@ export default function DiscoveryNew() {
               onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.1)'; }}
             />
             {inferListing.error && (
-              <p style={{ color: 'var(--red)', fontSize: '12px', margin: '0 0 12px' }}>
-                Couldn't infer the flow. Try rephrasing.
+              <p style={{ color: 'var(--text-secondary)', fontSize: '12px', margin: '0 0 12px' }}>
+                Couldn't auto-detect — pick your flow below.
               </p>
             )}
             <BackBtn onClick={() => setStep('start')} />

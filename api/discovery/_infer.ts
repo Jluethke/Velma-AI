@@ -50,7 +50,6 @@ export default async function handler(
   if (!body.text?.trim()) { json(res, 400, { error: 'text is required' }); return; }
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) { json(res, 500, { error: 'API key not configured' }); return; }
 
   const prompt = `You are helping a user post a listing on Fabric Discovery — a platform where two parties align using structured AI sessions.
 
@@ -76,25 +75,47 @@ Return ONLY valid JSON, no markdown:
 }`;
 
   try {
-    const resp = await fetch(ANTHROPIC_API, {
-      method: 'POST',
-      headers: {
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 512,
-        stream: false,
-        messages: [{ role: 'user', content: prompt }],
-      }),
-    });
+    let text = '';
 
-    if (!resp.ok) throw new Error(`Anthropic ${resp.status}`);
+    if (apiKey) {
+      // Anthropic path
+      const resp = await fetch(ANTHROPIC_API, {
+        method: 'POST',
+        headers: {
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'claude-haiku-4-5-20251001',
+          max_tokens: 512,
+          stream: false,
+          messages: [{ role: 'user', content: prompt }],
+        }),
+      });
+      if (!resp.ok) throw new Error(`Anthropic ${resp.status}`);
+      const data = await resp.json() as { content: Array<{ type: string; text: string }> };
+      text = data.content.find(b => b.type === 'text')?.text ?? '{}';
+    } else {
+      // Gemini fallback
+      const googleKey = process.env.GOOGLE_API_KEY;
+      if (!googleKey) { json(res, 500, { error: 'No AI API key configured' }); return; }
+      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${googleKey}`;
+      const resp = await fetch(geminiUrl, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ role: 'user', parts: [{ text: prompt }] }],
+          generationConfig: { maxOutputTokens: 512, temperature: 0.1 },
+        }),
+      });
+      if (!resp.ok) throw new Error(`Gemini ${resp.status}`);
+      const data = await resp.json() as { candidates: Array<{ content: { parts: Array<{ text: string }> } }> };
+      text = data.candidates?.[0]?.content?.parts?.[0]?.text ?? '{}';
+    }
 
-    const data = await resp.json() as { content: Array<{ type: string; text: string }> };
-    const text = data.content.find(b => b.type === 'text')?.text ?? '{}';
+    // Strip markdown code fences if present
+    text = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '').trim();
 
     const inferred = JSON.parse(text) as {
       flowSlug: string;

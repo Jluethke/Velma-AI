@@ -11,6 +11,86 @@ function formatFlow(slug: string) {
   return slug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 }
 
+// ─── Sample listings — shown when the board is empty ─────────────────────────
+
+const SAMPLE_LISTINGS: (DiscoveryListing & { isSample: true })[] = [
+  {
+    isSample: true,
+    id: 'sample-1',
+    wallet_address: '0xsample',
+    flow_slug: 'investor-founder-term-sheet',
+    role: 'host',
+    title: 'Series B founder seeking lead investor — SaaS, $3M raise',
+    description: 'We\'re a B2B SaaS company at $1.2M ARR, growing 15% MoM. Looking for a lead investor for our Series B round. Happy to share deck. Let\'s align on terms before diving in.',
+    market: 'SaaS / B2B',
+    tags: ['series-b', 'saas', 'b2b', 'fundraising'],
+    status: 'active',
+    created_at: new Date(Date.now() - 2 * 3600000).toISOString(),
+    updated_at: new Date(Date.now() - 2 * 3600000).toISOString(),
+    expires_at: null,
+  },
+  {
+    isSample: true,
+    id: 'sample-2',
+    wallet_address: '0xsample',
+    flow_slug: 'cofounder-alignment',
+    role: 'host',
+    title: 'Technical co-founder wanted — fintech, pre-seed, equity split open',
+    description: 'I\'m a repeat founder with a fintech idea validated with 40 paying beta users. Looking for a CTO-type co-founder. Have traction, need the builder. Equity split is a conversation.',
+    market: 'Fintech',
+    tags: ['cofounder', 'technical', 'fintech', 'equity'],
+    status: 'active',
+    created_at: new Date(Date.now() - 5 * 3600000).toISOString(),
+    updated_at: new Date(Date.now() - 5 * 3600000).toISOString(),
+    expires_at: null,
+  },
+  {
+    isSample: true,
+    id: 'sample-3',
+    wallet_address: '0xsample2',
+    flow_slug: 'coaching-executive-engagement',
+    role: 'guest',
+    title: 'Executive coach available — Series A/B operators, 3 spots open',
+    description: 'I\'ve coached 60+ operators through scaling from seed to Series C. Specialties: hiring, board dynamics, burnout. Currently taking 3 new clients. Let\'s see if there\'s a fit.',
+    market: 'Executive Coaching',
+    tags: ['coaching', 'leadership', 'series-a', 'scaling'],
+    status: 'active',
+    created_at: new Date(Date.now() - 8 * 3600000).toISOString(),
+    updated_at: new Date(Date.now() - 8 * 3600000).toISOString(),
+    expires_at: null,
+  },
+  {
+    isSample: true,
+    id: 'sample-4',
+    wallet_address: '0xsample2',
+    flow_slug: 'freelancer-client',
+    role: 'guest',
+    title: 'Full-stack dev available — Next.js / Postgres, 20hr/wk',
+    description: 'Senior full-stack engineer with 8 years experience. Available 20hrs/week for product work. Strong in Next.js, TypeScript, Postgres. Looking for interesting product problems.',
+    market: 'Tech / Product',
+    tags: ['fullstack', 'nextjs', 'typescript', 'freelance'],
+    status: 'active',
+    created_at: new Date(Date.now() - 12 * 3600000).toISOString(),
+    updated_at: new Date(Date.now() - 12 * 3600000).toISOString(),
+    expires_at: null,
+  },
+  {
+    isSample: true,
+    id: 'sample-5',
+    wallet_address: '0xsample3',
+    flow_slug: 'vendor-client-sow',
+    role: 'host',
+    title: 'Startup looking for data labeling vendor — 50k items/mo',
+    description: 'We need a reliable data labeling partner for ML training data. ~50,000 items/month, structured JSON output, quality threshold 97%+. Looking to set up a proper SOW.',
+    market: 'AI / ML',
+    tags: ['data-labeling', 'ml', 'vendor', 'sow'],
+    status: 'active',
+    created_at: new Date(Date.now() - 18 * 3600000).toISOString(),
+    updated_at: new Date(Date.now() - 18 * 3600000).toISOString(),
+    expires_at: null,
+  },
+];
+
 function timeAgo(iso: string) {
   const diff = Date.now() - new Date(iso).getTime();
   const h = Math.floor(diff / 3_600_000);
@@ -721,26 +801,58 @@ export default function Discovery() {
           <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--red)', fontSize: '14px' }}>
             {String(error)}
           </div>
-        ) : board.length === 0 ? (
+        ) : board.length === 0 && (flowFilter || roleFilter) ? (
           <div style={{
             textAlign: 'center', padding: '80px 40px',
             background: 'rgba(28,28,34,0.5)', border: '1px solid var(--border)', borderRadius: '20px',
           }}>
             <p style={{ color: 'var(--text-secondary)', fontSize: '15px', margin: '0 0 20px' }}>
-              {flowFilter || roleFilter ? 'No listings match your filters.' : 'No listings yet — be the first.'}
+              No listings match your filters.
             </p>
-            <Link
-              to="/discover/new?mode=quick"
-              style={{
-                display: 'inline-flex', padding: '10px 20px',
-                background: 'rgba(167,139,250,0.1)', border: '1px solid rgba(167,139,250,0.25)',
-                borderRadius: '10px', fontSize: '13px', fontWeight: 600,
-                color: 'var(--purple)', textDecoration: 'none',
-              }}
-            >
-              Post the first listing
-            </Link>
           </div>
+        ) : board.length === 0 ? (
+          <>
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px',
+            }}>
+              <span style={{
+                fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em',
+                color: 'rgba(161,161,170,0.5)', background: 'rgba(255,255,255,0.04)',
+                border: '1px solid rgba(255,255,255,0.08)', borderRadius: '6px', padding: '3px 8px',
+              }}>
+                Example listings
+              </span>
+              <span style={{ fontSize: '12px', color: 'rgba(161,161,170,0.5)' }}>
+                Post yours to start matching
+              </span>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '14px', marginBottom: '32px' }}>
+              {SAMPLE_LISTINGS.map(listing => (
+                <ListingCard
+                  key={listing.id}
+                  listing={listing}
+                  onConnect={() => {}}
+                  onViewDetail={() => {}}
+                  isOwn={false}
+                  highlighted={false}
+                />
+              ))}
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <Link
+                to="/discover/new?mode=quick"
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: '7px', padding: '12px 24px',
+                  background: 'linear-gradient(135deg, rgba(167,139,250,0.18), rgba(167,139,250,0.08))',
+                  border: '1px solid rgba(167,139,250,0.4)',
+                  borderRadius: '12px', fontSize: '14px', fontWeight: 700,
+                  color: 'var(--purple)', textDecoration: 'none',
+                }}
+              >
+                ✦ Post the first real listing
+              </Link>
+            </div>
+          </>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '14px' }}>
             {board.map(listing => (
