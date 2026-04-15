@@ -744,8 +744,22 @@ export default function VelmaChatPanel({
 
   // ── Render ───────────────────────────────────────────────────────────────
 
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
+
   return (
-    <div style={{
+    <div style={isMobile ? {
+      position: 'fixed', inset: 0,
+      width: '100%', height: '100%',
+      maxHeight: '100dvh',
+      background: 'rgba(0,8,18,0.99)',
+      border: 'none',
+      borderRadius: 0,
+      display: 'flex', flexDirection: 'column',
+      boxShadow: 'none',
+      animation: 'velma-bubble-in 0.2s ease',
+      overflow: 'hidden',
+      zIndex: 9999,
+    } : {
       position: 'absolute', bottom: '80px', right: 0,
       width: wide ? '480px' : '340px',
       background: 'rgba(0,8,18,0.97)',

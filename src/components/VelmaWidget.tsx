@@ -537,8 +537,9 @@ export default function VelmaWidget({ wallet }: { wallet?: string } = {}) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Auto-open chat for the first 5 visits — drives adoption
+  // Auto-open chat for the first 5 visits — desktop only (mobile users need to tap intentionally)
   useEffect(() => {
+    if (window.innerWidth < 640) return;
     if (autoOpenCount < 5) {
       const t = setTimeout(() => {
         setShowChat(true);

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
@@ -44,75 +44,11 @@ import OnboardingGuide from './components/OnboardingGuide';
 import Studio from './pages/Studio';
 import FabricRecord from './pages/FabricRecord';
 
-const BANNER_KEY = 'flowfabric-mobile-banner-dismissed';
-
-function MobileBanner() {
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
-    if (window.innerWidth < 1024 && !localStorage.getItem(BANNER_KEY)) {
-      setVisible(true);
-    }
-  }, []);
-
-  if (!visible) return null;
-
-  const dismiss = () => {
-    localStorage.setItem(BANNER_KEY, '1');
-    setVisible(false);
-  };
-
-  return (
-    <div
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        zIndex: 9999,
-        background: 'var(--bg-secondary)',
-        borderBottom: '1px solid var(--border)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '6px 40px 6px 16px',
-        fontSize: '12px',
-        color: 'var(--text-secondary)',
-        textAlign: 'center',
-        lineHeight: 1.4,
-      }}
-    >
-      <span>
-        FlowFabric is best experienced on desktop. Some features are limited on mobile.
-      </span>
-      <button
-        onClick={dismiss}
-        aria-label="Dismiss"
-        style={{
-          position: 'absolute',
-          right: '10px',
-          top: '50%',
-          transform: 'translateY(-50%)',
-          background: 'transparent',
-          border: 'none',
-          color: 'var(--text-secondary)',
-          fontSize: '16px',
-          cursor: 'pointer',
-          lineHeight: 1,
-          padding: '4px 6px',
-        }}
-      >
-        &times;
-      </button>
-    </div>
-  );
-}
 
 function App() {
   return (
     <BrowserRouter>
       <VelmaProvider>
-        <MobileBanner />
         <Navbar />
         {/* page-wrap clips horizontal overflow without touching fixed Navbar/Banner */}
         <div style={{ overflowX: 'hidden', width: '100%', position: 'relative' }}>
