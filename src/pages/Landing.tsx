@@ -302,7 +302,7 @@ function ComposerPreview() {
 
       <div className="text-center mt-10">
         <Link
-          to="/compose"
+          to="/studio?tab=chain"
           className="btn-primary inline-flex items-center gap-2 px-8 py-3 text-sm font-semibold no-underline"
         >
           Open the Composer
