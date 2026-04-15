@@ -2,7 +2,10 @@
  * Convert a slug like "budget-builder" to a display name like "Budget Builder".
  * Handles edge cases like "ai" → "AI", "api" → "API", etc.
  */
-const UPPERCASE_WORDS = new Set(['ai', 'api', 'seo', 'kpi', 'pdt', 'rsi', 'ema', 'b2b', 'ci', 'cd']);
+const UPPERCASE_WORDS = new Set([
+  'ai', 'api', 'seo', 'kpi', 'pdt', 'rsi', 'ema', 'b2b', 'b2c', 'ci', 'cd',
+  'sow', 'hoa', 'cpa', 'pr', 'llm', 'crm', 'saas', 'etl', 'nda',
+]);
 
 export function formatFlowName(slug: string): string {
   return slug
