@@ -39,41 +39,79 @@ function loadChatHistory(): ChatMessage[] {
 function clearChatHistory() { localStorage.removeItem(CHAT_KEY); }
 
 /** Describe the current page in human terms */
-function describeLocation(pathname: string): string {
+function describeLocation(pathname: string, search = ''): string {
   if (pathname === '/' || pathname === '') return 'the homepage';
   if (pathname.startsWith('/flow/')) return `the "${formatFlowName(pathname.slice(6))}" flow page`;
-  if (pathname.startsWith('/explore') || pathname.startsWith('/flows')) return 'the flow library';
+  if (pathname.startsWith('/skill/')) return `the "${formatFlowName(pathname.slice(7))}" flow page`;
+  if (pathname.startsWith('/explore') || pathname.startsWith('/flows') || pathname.startsWith('/skills')) return 'the flow library';
+  if (pathname.startsWith('/studio')) {
+    const tab = new URLSearchParams(search).get('tab');
+    if (tab === 'chain') return 'the chain composer';
+    return 'Flow Studio';
+  }
   if (pathname.startsWith('/compose')) return 'the chain composer';
+  if (pathname.startsWith('/chains')) return 'the chains library';
   if (pathname.startsWith('/discover')) return 'Fabric Discovery';
   if (pathname.startsWith('/fabric/')) return 'a live Fabric session';
   if (pathname.startsWith('/portal')) return 'the portal';
-  if (pathname.startsWith('/studio')) return 'Flow Studio';
   if (pathname.startsWith('/dashboard')) return 'your dashboard';
   if (pathname.startsWith('/profile')) return 'your profile';
+  if (pathname.startsWith('/install')) return 'the install guide';
+  if (pathname.startsWith('/pricing')) return 'the pricing page';
+  if (pathname.startsWith('/get-started')) return 'the getting-started guide';
   return 'FlowFabric';
 }
 
-/** Quick-tap chips — vary by page and user state */
-function getChips(pathname: string, state: VelmaState): string[] {
+/** Opening chips — vary by page and user state */
+function getChips(pathname: string, search: string, state: VelmaState): string[] {
   const isNew = state.flows_run === 0;
+  const tab = new URLSearchParams(search).get('tab');
 
-  if (pathname.startsWith('/flow/')) {
-    const name = formatFlowName(pathname.slice(6));
+  if (pathname.startsWith('/flow/') || pathname.startsWith('/skill/')) {
+    const slug = pathname.startsWith('/flow/') ? pathname.slice(6) : pathname.slice(7);
+    const name = formatFlowName(slug);
     return [`What does ${name} actually do?`, 'What should I run after this?', 'Is there a better fit for me?'];
   }
-  if (pathname.startsWith('/explore') || pathname.startsWith('/flows')) {
-    return ['Help me find the right flow', 'What flows are best for career decisions?', 'Show me money flows', 'I want to make a big decision'];
+  if (pathname.startsWith('/explore') || pathname.startsWith('/flows') || pathname.startsWith('/skills')) {
+    return ['Help me find the right flow', 'Show me career flows', 'Show me money flows', 'I have a big decision to make'];
   }
   if (pathname.startsWith('/discover')) {
     return ['How does Discovery work?', 'I need help posting', 'Finding the right match'];
   }
-  if (pathname.startsWith('/compose')) {
-    return ['How do I chain flows together?', 'Build me a career chain', 'Build me a money chain'];
+  if (pathname.startsWith('/studio') || pathname.startsWith('/compose')) {
+    if (tab === 'chain') return ['How do I chain flows together?', 'Build me a career chain', 'Build me a money chain'];
+    return ['How do I create a new flow?', 'What makes a good flow?', 'I have a workflow to convert'];
+  }
+  if (pathname.startsWith('/chains')) {
+    return ['What chains are available?', 'How do I run a chain?', 'Build me a custom chain'];
+  }
+  if (pathname.startsWith('/portal')) {
+    return ['How do I earn more XP?', 'What are the tiers?', 'How does staking work?'];
+  }
+  if (pathname.startsWith('/dashboard')) {
+    return ['What should I run next?', 'Show my progress', 'How do I level up faster?'];
   }
   if (isNew) {
     return ['What can FlowFabric actually do?', 'Help with a career decision', 'I need a budget', 'I have a big decision to make', 'My situation is complicated'];
   }
   return ['What should I run next?', 'Help me with a decision', 'Money advice', 'Career move', 'My situation is complicated'];
+}
+
+/** Follow-up chips — shown after each Velma response, tailored to what she said */
+function getFollowUpChips(msg: ChatMessage): string[] {
+  if (msg.suggestions && msg.suggestions.length > 0) {
+    const firstName = formatFlowName(msg.suggestions[0].slug);
+    const chips: string[] = [`Tell me more about ${firstName}`];
+    if (msg.path && msg.path.length > 1) {
+      chips.push('Walk me through the path');
+    } else if (msg.suggestions.length >= 2) {
+      chips.push('Give me a suggested order');
+    }
+    chips.push('Show me different options');
+    return chips;
+  }
+  // Velma asked a question or gave general advice — offer escape hatches
+  return ["Give me more detail", "That doesn't quite fit", "What should I do first?"];
 }
 
 /** Parse FLOWS: and PATH: sections out of Velma's response */
@@ -101,10 +139,10 @@ function parseResponse(raw: string): { display: string; suggestions: FlowSuggest
   return { display, suggestions, path };
 }
 
-function openingMessage(state: VelmaState, pathname: string): ChatMessage {
+function openingMessage(state: VelmaState, pathname: string, search: string): ChatMessage {
   const lastFlow = state.witnessed.slice().reverse()
     .find(e => e.startsWith('flow_complete:'))?.replace('flow_complete:', '');
-  const page = describeLocation(pathname);
+  const page = describeLocation(pathname, search);
 
   let text: string;
   if (state.flows_run === 0) {
@@ -117,6 +155,25 @@ function openingMessage(state: VelmaState, pathname: string): ChatMessage {
     text = `You're on ${page}. What do you need?`;
   }
   return { role: 'velma', content: text, display: text };
+}
+
+// ── ThinkingDots ───────────────────────────────────────────────────────────
+
+function ThinkingDots({ color }: { color: string }) {
+  return (
+    <div style={{ display: 'flex', gap: '4px', alignItems: 'center', padding: '4px 2px' }}>
+      {[0, 1, 2].map(i => (
+        <span
+          key={i}
+          style={{
+            width: '5px', height: '5px', borderRadius: '50%',
+            background: color, opacity: 0.65, display: 'inline-block',
+            animation: `velma-dot-bounce 1.1s ease-in-out ${i * 0.18}s infinite`,
+          }}
+        />
+      ))}
+    </div>
+  );
 }
 
 // ── Flow suggestion card ───────────────────────────────────────────────────
@@ -206,20 +263,22 @@ export default function VelmaChatPanel({
   const { data: skills = [] } = useSkills();
   const location = useLocation();
   const pathname = location.pathname;
+  const search = location.search;
 
   const [messages, setMessages] = useState<ChatMessage[]>(() => {
     const history = loadChatHistory();
     if (history.length > 0) return history;
-    return [openingMessage(velmaState, pathname)];
+    return [openingMessage(velmaState, pathname, search)];
   });
   const [input, setInput] = useState('');
   const [pasteMode, setPasteMode] = useState(false);
   const [pasteText, setPasteText] = useState('');
   const [streaming, setStreaming] = useState(false);
+  const [wide, setWide] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  const chips = getChips(pathname, velmaState);
+  const chips = getChips(pathname, search, velmaState);
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
   useEffect(() => { setTimeout(() => inputRef.current?.focus(), 100); }, []);
@@ -257,7 +316,7 @@ export default function VelmaChatPanel({
             content: m.content,
           })),
           skills: skills.map(s => ({ name: s.name, domain: s.domain, description: s.description })),
-          context: { page: describeLocation(pathname) },
+          context: { page: describeLocation(pathname, search) },
         }),
       });
 
@@ -307,7 +366,7 @@ export default function VelmaChatPanel({
     } finally {
       setStreaming(false);
     }
-  }, [messages, pasteText, skills, streaming, pathname]);
+  }, [messages, pasteText, skills, streaming, pathname, search]);
 
   const send = useCallback(() => sendText(input.trim()), [sendText, input]);
 
@@ -317,26 +376,29 @@ export default function VelmaChatPanel({
 
   const reset = () => {
     clearChatHistory();
-    setMessages([openingMessage(velmaState, pathname)]);
+    setMessages([openingMessage(velmaState, pathname, search)]);
     setInput('');
     setPasteText('');
     setPasteMode(false);
   };
 
-  const isFirstMessage = messages.length === 1;
+  const locationLabel = describeLocation(pathname, search)
+    .replace(/^the /, '')
+    .replace(' (create new flows)', '');
 
   return (
     <div style={{
       position: 'absolute', bottom: '80px', right: 0,
-      width: '310px',
+      width: wide ? '480px' : '340px',
       background: 'rgba(0,8,18,0.97)',
       border: `1px solid ${color}33`,
       borderRadius: '14px',
       display: 'flex', flexDirection: 'column',
-      maxHeight: '520px',
+      maxHeight: '580px',
       boxShadow: `0 8px 40px rgba(0,0,0,0.7), 0 0 0 1px ${color}11`,
       animation: 'velma-bubble-in 0.25s ease',
       overflow: 'hidden',
+      transition: 'width 0.2s ease',
     }}>
 
       {/* Header */}
@@ -352,10 +414,17 @@ export default function VelmaChatPanel({
           }} />
           <span style={{ color, fontWeight: 700, fontSize: '13px', fontFamily: 'monospace' }}>Velma</span>
           <span style={{ fontSize: '9px', color: '#446', textTransform: 'uppercase', letterSpacing: '0.06em', fontFamily: 'monospace' }}>
-            {streaming ? 'thinking' : describeLocation(pathname).replace('the ', '')}
+            {streaming ? 'thinking' : locationLabel}
           </span>
         </div>
         <div style={{ display: 'flex', gap: '2px', alignItems: 'center' }}>
+          <button
+            onClick={() => setWide(v => !v)}
+            title={wide ? 'Collapse' : 'Expand'}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '13px', padding: '3px 5px', fontFamily: 'monospace', color: wide ? color : '#335', opacity: 0.8, transition: 'color 0.15s' }}
+          >
+            {wide ? '⟨' : '⟩'}
+          </button>
           <button onClick={reset} title="New conversation"
             style={{ background: 'none', border: 'none', color: '#335', cursor: 'pointer', fontSize: '12px', padding: '3px 5px', fontFamily: 'monospace' }}>
             ↺
@@ -379,22 +448,29 @@ export default function VelmaChatPanel({
       }}>
         {messages.map((msg, i) => (
           <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: msg.role === 'velma' ? 'flex-start' : 'flex-end', gap: '6px' }}>
+
+            {/* Message bubble */}
             <div style={{
-              maxWidth: '90%',
+              maxWidth: '95%',
               background: msg.role === 'velma' ? `${color}0e` : '#0d1e2e',
               border: `1px solid ${msg.role === 'velma' ? `${color}22` : '#1a2a3a'}`,
               borderRadius: msg.role === 'velma' ? '4px 10px 10px 10px' : '10px 4px 10px 10px',
               padding: '8px 10px',
             }}>
-              <p style={{
-                margin: 0, fontSize: '11.5px', lineHeight: 1.55,
-                color: msg.role === 'velma' ? '#bcd' : '#99b',
-                fontFamily: 'monospace', whiteSpace: 'pre-wrap',
-              }}>
-                {msg.display || (streaming && i === messages.length - 1 ? '▋' : '')}
-              </p>
+              {streaming && i === messages.length - 1 && !msg.display ? (
+                <ThinkingDots color={color} />
+              ) : (
+                <p style={{
+                  margin: 0, fontSize: '11.5px', lineHeight: 1.55,
+                  color: msg.role === 'velma' ? '#bcd' : '#99b',
+                  fontFamily: 'monospace', whiteSpace: 'pre-wrap',
+                }}>
+                  {msg.display}
+                </p>
+              )}
             </div>
 
+            {/* Flow suggestions */}
             {msg.suggestions && msg.suggestions.length > 0 && (
               <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '5px' }}>
                 <div style={{ fontSize: '9px', color: '#446', textTransform: 'uppercase', letterSpacing: '0.07em', fontFamily: 'monospace', marginTop: '2px' }}>
@@ -406,41 +482,42 @@ export default function VelmaChatPanel({
               </div>
             )}
 
+            {/* Suggested path */}
             {msg.path && msg.path.length > 1 && (
               <PathDisplay path={msg.path} onClose={onClose} />
             )}
+
+            {/* Chips — opening chips on first message, follow-up chips on all later messages */}
+            {msg.role === 'velma' && !streaming && i === messages.length - 1 && msg.display && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', marginTop: '2px' }}>
+                {(i === 0 ? chips : getFollowUpChips(msg)).map(chip => (
+                  <button
+                    key={chip}
+                    onClick={() => sendText(chip)}
+                    style={{
+                      background: `${color}08`, border: `1px solid ${color}22`,
+                      borderRadius: '20px', padding: '4px 10px',
+                      fontSize: '10px', color: '#99b', fontFamily: 'monospace',
+                      cursor: 'pointer', transition: 'all 0.15s', lineHeight: 1.4,
+                    }}
+                    onMouseEnter={e => {
+                      (e.currentTarget as HTMLElement).style.background = `${color}18`;
+                      (e.currentTarget as HTMLElement).style.borderColor = `${color}44`;
+                      (e.currentTarget as HTMLElement).style.color = '#bcd';
+                    }}
+                    onMouseLeave={e => {
+                      (e.currentTarget as HTMLElement).style.background = `${color}08`;
+                      (e.currentTarget as HTMLElement).style.borderColor = `${color}22`;
+                      (e.currentTarget as HTMLElement).style.color = '#99b';
+                    }}
+                  >
+                    {chip}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         ))}
-
-        {/* Quick-tap chips — only show when there's just the opening message */}
-        {isFirstMessage && !streaming && (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', marginTop: '2px' }}>
-            {chips.map(chip => (
-              <button
-                key={chip}
-                onClick={() => sendText(chip)}
-                style={{
-                  background: `${color}08`, border: `1px solid ${color}22`,
-                  borderRadius: '20px', padding: '4px 10px',
-                  fontSize: '10px', color: '#99b', fontFamily: 'monospace',
-                  cursor: 'pointer', transition: 'all 0.15s', lineHeight: 1.4,
-                }}
-                onMouseEnter={e => {
-                  (e.currentTarget as HTMLElement).style.background = `${color}18`;
-                  (e.currentTarget as HTMLElement).style.borderColor = `${color}44`;
-                  (e.currentTarget as HTMLElement).style.color = '#bcd';
-                }}
-                onMouseLeave={e => {
-                  (e.currentTarget as HTMLElement).style.background = `${color}08`;
-                  (e.currentTarget as HTMLElement).style.borderColor = `${color}22`;
-                  (e.currentTarget as HTMLElement).style.color = '#99b';
-                }}
-              >
-                {chip}
-              </button>
-            ))}
-          </div>
-        )}
 
         <div ref={bottomRef} />
       </div>
@@ -515,6 +592,13 @@ export default function VelmaChatPanel({
           {pasteMode ? '✓ document attached' : '+ attach document (resume, contract, data…)'}
         </button>
       </div>
+
+      <style>{`
+        @keyframes velma-dot-bounce {
+          0%, 80%, 100% { transform: translateY(0); opacity: 0.65; }
+          40% { transform: translateY(-5px); opacity: 1; }
+        }
+      `}</style>
     </div>
   );
 }

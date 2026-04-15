@@ -509,6 +509,10 @@ export default function VelmaWidget({ wallet }: { wallet?: string } = {}) {
 
   const [showStats, setShowStats] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+
+  // Auto-open chat for first 5 visits to drive adoption
+  const AUTO_OPEN_KEY = 'velma-auto-open-count';
+  const autoOpenCount = parseInt(localStorage.getItem(AUTO_OPEN_KEY) ?? '0', 10);
   const [showChat, setShowChat] = useState(false);
   const bubbleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -529,6 +533,18 @@ export default function VelmaWidget({ wallet }: { wallet?: string } = {}) {
     if (isFirstUserRef.current) {
       setFirstWake(true);
       setTimeout(() => setFirstWake(false), 2200);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Auto-open chat for the first 5 visits — drives adoption
+  useEffect(() => {
+    if (autoOpenCount < 5) {
+      const t = setTimeout(() => {
+        setShowChat(true);
+        localStorage.setItem(AUTO_OPEN_KEY, String(autoOpenCount + 1));
+      }, autoOpenCount === 0 ? 10000 : 8000); // slightly faster after first time
+      return () => clearTimeout(t);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -719,10 +735,10 @@ export default function VelmaWidget({ wallet }: { wallet?: string } = {}) {
         <StatPanel state={state} onClose={() => setShowStats(false)} />
       )}
 
-      {/* Speech bubble */}
+      {/* Speech bubble — click opens chat */}
       {state.show_bubble && (
         <div
-          onClick={dismissBubble}
+          onClick={() => { dismissBubble(); setShowChat(true); setShowStats(false); setShowNotifications(false); }}
           style={{
             position: 'relative',
             maxWidth: '200px',
