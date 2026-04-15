@@ -42,6 +42,7 @@ import PortalMarketplace from './pages/PortalMarketplace';
 import PortalValidators from './pages/PortalValidators';
 import OnboardingGuide from './components/OnboardingGuide';
 import Studio from './pages/Studio';
+import FabricRecord from './pages/FabricRecord';
 
 const BANNER_KEY = 'flowfabric-mobile-banner-dismissed';
 
@@ -142,6 +143,7 @@ function App() {
             <Route path="/sessions" element={<Sessions />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/fabric/:sessionId" element={<Fabric />} />
+            <Route path="/record/:sessionId" element={<FabricRecord />} />
 
             {/* Discovery — AI-powered counterpart matching */}
             <Route path="/discover" element={<Discovery />} />

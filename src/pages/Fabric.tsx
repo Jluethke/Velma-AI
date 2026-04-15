@@ -569,6 +569,92 @@ function WaitingCard({ hostName }: { hostName: string }) {
   );
 }
 
+// ── Shared record banner ──────────────────────────────────────────
+
+function SharedRecordBanner({ sessionId }: { sessionId: string }) {
+  const [copied, setCopied] = useState(false);
+  const recordUrl = `${window.location.origin}/record/${sessionId}`;
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(recordUrl).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    });
+  };
+
+  return (
+    <div style={{
+      animation: 'fabric-fade-up 0.6s ease 0.35s both',
+      marginTop: '16px',
+      background: 'rgba(28,28,34,0.7)',
+      border: '1px solid rgba(255,255,255,0.08)',
+      borderRadius: '16px',
+      padding: '20px 24px',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
+        <div style={{
+          width: '28px', height: '28px', borderRadius: '8px',
+          background: 'rgba(74,222,128,0.1)', border: '1px solid rgba(74,222,128,0.25)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+        }}>
+          <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+            <path d="M2 6.5l3.5 3.5 5.5-5.5" stroke="var(--green)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </div>
+        <div>
+          <p style={{ color: 'var(--text-primary)', fontWeight: 700, fontSize: '14px', margin: 0 }}>
+            Shared record created
+          </p>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '12px', margin: 0 }}>
+            Share this link — anyone with it can verify this session happened
+          </p>
+        </div>
+      </div>
+
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: '8px',
+        background: 'rgba(9,9,11,0.6)', border: '1px solid rgba(255,255,255,0.08)',
+        borderRadius: '10px', padding: '10px 14px', marginBottom: '12px',
+      }}>
+        <span style={{
+          flex: 1, fontSize: '12px', color: 'var(--text-secondary)',
+          fontFamily: '"JetBrains Mono", monospace',
+          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+        }}>
+          {recordUrl}
+        </span>
+        <button
+          onClick={handleCopy}
+          style={{
+            background: copied ? 'rgba(74,222,128,0.1)' : 'rgba(167,139,250,0.1)',
+            border: `1px solid ${copied ? 'rgba(74,222,128,0.3)' : 'rgba(167,139,250,0.3)'}`,
+            borderRadius: '7px', padding: '5px 12px',
+            fontSize: '11px', fontWeight: 700,
+            color: copied ? 'var(--green)' : 'var(--purple)',
+            cursor: 'pointer', flexShrink: 0,
+            transition: 'all 0.2s ease',
+          }}
+        >
+          {copied ? '✓ Copied' : 'Copy link'}
+        </button>
+      </div>
+
+      <Link
+        to={`/record/${sessionId}`}
+        style={{
+          display: 'inline-flex', alignItems: 'center', gap: '5px',
+          fontSize: '12px', color: 'var(--text-secondary)',
+          textDecoration: 'none', transition: 'color 0.2s ease',
+        }}
+        onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-primary)')}
+        onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-secondary)')}
+      >
+        View record →
+      </Link>
+    </div>
+  );
+}
+
 // ── Main page ─────────────────────────────────────────────────────
 
 export default function Fabric() {
@@ -1064,9 +1150,13 @@ export default function Fabric() {
 
         {/* ── Synthesis done ── */}
         {pageState === 'done' && (
-          isHost
-            ? <SynthesisCard output={synthesisOutput || 'Synthesis complete \u2014 both sides submitted.'} />
-            : <GuestDoneCard />
+          <>
+            {isHost
+              ? <SynthesisCard output={synthesisOutput || 'Synthesis complete \u2014 both sides submitted.'} />
+              : <GuestDoneCard />
+            }
+            <SharedRecordBanner sessionId={sessionId} />
+          </>
         )}
 
         {/* ── Error state ── */}
