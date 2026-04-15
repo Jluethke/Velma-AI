@@ -279,11 +279,18 @@ def create_server() -> FastMCP:
         # Gate check: premium flows require TRUST tokens
         from ..connectors.gate import get_gate, FREE_SKILLS
         gate = get_gate()
-        if not gate.is_skill_allowed(flow_name):
+        manifest = _load_manifest(flow_name)
+        domain = manifest.get("domain", "")
+        if not gate.is_skill_allowed(flow_name, domain):
             result = gate.check()
             return json.dumps({
                 "error": "premium_flow",
-                "message": f"'{flow_name}' requires TRUST tokens. Connect a wallet with TRUST balance to unlock.",
+                "message": (
+                    f"'{flow_name}' (domain: {domain or 'unknown'}) requires a higher TRUST tier. "
+                    f"Current tier: {result.tier}. "
+                    "Set SKILLCHAIN_TIER=creator (or builder) in your MCP env, "
+                    "or add trust_tier to ~/.skillchain/config.json and restart the server."
+                ),
                 "tier": result.tier,
                 "wallet": result.wallet,
                 "free_flows": sorted(list(FREE_SKILLS)),
@@ -473,11 +480,18 @@ def create_server() -> FastMCP:
         # Gate check: premium flows require TRUST tokens
         from ..connectors.gate import get_gate, FREE_CHAINS
         gate = get_gate()
-        if not gate.is_chain_allowed(chain_name):
+        manifest = _load_manifest(chain_name)
+        domain = manifest.get("domain", "")
+        if not gate.is_chain_allowed(chain_name, domain):
             result = gate.check()
             return json.dumps({
                 "error": "premium_flow",
-                "message": f"'{flow_name}' requires TRUST tokens. Connect a wallet with TRUST balance to unlock.",
+                "message": (
+                    f"'{flow_name}' (domain: {domain or 'unknown'}) requires a higher TRUST tier. "
+                    f"Current tier: {result.tier}. "
+                    "Set SKILLCHAIN_TIER=creator (or builder) in your MCP env, "
+                    "or add trust_tier to ~/.skillchain/config.json and restart the server."
+                ),
                 "tier": result.tier,
                 "wallet": result.wallet,
                 "free_flows": sorted(list(FREE_CHAINS)),

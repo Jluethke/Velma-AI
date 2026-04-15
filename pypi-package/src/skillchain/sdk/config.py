@@ -76,6 +76,14 @@ class SkillChainConfig:
     agent_platform: str = "claude"
     domain_tags: list[str] = field(default_factory=list)
 
+    # Access tier — used by gate.py to determine flow access
+    # Values: "free" | "builder" | "holder" | "creator" | "staker"
+    # Override via SKILLCHAIN_TIER env var (highest precedence)
+    trust_tier: str = "free"
+    # Wallet address (public key, not private key)
+    # Override via SKILLCHAIN_WALLET env var
+    wallet_address: str = ""
+
     # Paths (populated by resolve_paths)
     config_dir: Path = field(default_factory=lambda: Path.home() / ".skillchain")
     config_file: Path = field(default_factory=lambda: Path.home() / ".skillchain" / "config.json")
@@ -115,7 +123,7 @@ class SkillChainConfig:
                 disk = json.loads(cfg.config_file.read_text(encoding="utf-8"))
                 for key in ("rpc_url", "chain_id", "ipfs_gateway", "ipfs_api",
                             "ipfs_api_key", "explorer", "node_id", "domain_tags",
-                            "agent_platform"):
+                            "agent_platform", "trust_tier", "wallet_address"):
                     if key in disk:
                         setattr(cfg, key, disk[key])
             except Exception as exc:
@@ -137,6 +145,11 @@ class SkillChainConfig:
             cfg.pinata_api_key = pinata_key
         if pinata_secret := os.environ.get("PINATA_SECRET_KEY"):
             cfg.pinata_secret_key = pinata_secret
+        # Access tier and wallet (env vars take priority over config.json)
+        if tier := os.environ.get("SKILLCHAIN_TIER", "").strip().lower():
+            cfg.trust_tier = tier
+        if wallet := os.environ.get("SKILLCHAIN_WALLET", "").strip():
+            cfg.wallet_address = wallet
 
         return cfg
 
@@ -162,6 +175,8 @@ class SkillChainConfig:
             "node_id": self.node_id,
             "agent_platform": self.agent_platform,
             "domain_tags": self.domain_tags,
+            "trust_tier": self.trust_tier,
+            "wallet_address": self.wallet_address,
         }
         self.config_file.write_text(
             json.dumps(data, indent=2), encoding="utf-8",
@@ -226,4 +241,6 @@ class SkillChainConfig:
             "node_id": self.node_id,
             "agent_platform": self.agent_platform,
             "domain_tags": self.domain_tags,
+            "trust_tier": self.trust_tier,
+            "wallet_address": self.wallet_address,
         }
