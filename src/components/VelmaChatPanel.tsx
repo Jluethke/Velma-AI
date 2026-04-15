@@ -1,7 +1,12 @@
 /**
- * VelmaChatPanel — Velma's interview / discovery mode.
- * Context-aware: knows what page you're on and what you've done.
- * Quick-tap chips so you don't have to type from scratch.
+ * VelmaChatPanel — Velma's discovery mode + inline flow runner.
+ *
+ * Two modes:
+ *   velma  — finds the right flow for your situation (default)
+ *   flow   — runs a chosen flow inline via /api/chat; user never leaves
+ *
+ * Transition: user clicks "Run now" on a suggestion → Velma hands off →
+ * flow AI takes over in the same panel → "← Velma" exits back to discovery.
  */
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
@@ -17,6 +22,7 @@ interface ChatMessage {
   display: string;
   suggestions?: FlowSuggestion[];
   path?: string[];
+  isSystem?: boolean; // dividers / mode transitions — excluded from API history
 }
 
 interface FlowSuggestion {
@@ -24,7 +30,7 @@ interface FlowSuggestion {
   reason: string;
 }
 
-// ── Helpers ────────────────────────────────────────────────────────────────
+// ── Persistence ────────────────────────────────────────────────────────────
 
 const CHAT_KEY = 'flowfabric-velma-chat-v1';
 const MAX_HISTORY = 10;
@@ -38,7 +44,8 @@ function loadChatHistory(): ChatMessage[] {
 }
 function clearChatHistory() { localStorage.removeItem(CHAT_KEY); }
 
-/** Describe the current page in human terms */
+// ── Location helpers ───────────────────────────────────────────────────────
+
 function describeLocation(pathname: string, search = ''): string {
   if (pathname === '/' || pathname === '') return 'the homepage';
   if (pathname.startsWith('/flow/')) return `the "${formatFlowName(pathname.slice(6))}" flow page`;
@@ -62,7 +69,6 @@ function describeLocation(pathname: string, search = ''): string {
   return 'FlowFabric';
 }
 
-/** Opening chips — vary by page and user state */
 function getChips(pathname: string, search: string, state: VelmaState): string[] {
   const isNew = state.flows_run === 0;
   const tab = new URLSearchParams(search).get('tab');
@@ -97,7 +103,6 @@ function getChips(pathname: string, search: string, state: VelmaState): string[]
   return ['What should I run next?', 'Help me with a decision', 'Money advice', 'Career move', 'My situation is complicated'];
 }
 
-/** Follow-up chips — shown after each Velma response, tailored to what she said */
 function getFollowUpChips(msg: ChatMessage): string[] {
   if (msg.suggestions && msg.suggestions.length > 0) {
     const firstName = formatFlowName(msg.suggestions[0].slug);
@@ -110,11 +115,11 @@ function getFollowUpChips(msg: ChatMessage): string[] {
     chips.push('Show me different options');
     return chips;
   }
-  // Velma asked a question or gave general advice — offer escape hatches
   return ["Give me more detail", "That doesn't quite fit", "What should I do first?"];
 }
 
-/** Parse FLOWS: and PATH: sections out of Velma's response */
+// ── Parse FLOWS: / PATH: from Velma responses ──────────────────────────────
+
 function parseResponse(raw: string): { display: string; suggestions: FlowSuggestion[]; path: string[] } {
   const flowsMatch = raw.match(/FLOWS:\s*\n([\s\S]*?)(?:\n\nPATH:|$)/);
   const pathMatch = raw.match(/PATH:\s*([^\n]+)/);
@@ -157,61 +162,104 @@ function openingMessage(state: VelmaState, pathname: string, search: string): Ch
   return { role: 'velma', content: text, display: text };
 }
 
-// ── ThinkingDots ───────────────────────────────────────────────────────────
+// ── Stream helper (shared by velma + flow modes) ───────────────────────────
+
+async function streamResponse(
+  resp: Response,
+  onDelta: (full: string, display: string, suggestions: FlowSuggestion[], path: string[]) => void,
+  flowMode: boolean,
+): Promise<string> {
+  const reader = resp.body!.getReader();
+  const dec = new TextDecoder();
+  let buf = '';
+  let full = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += dec.decode(value, { stream: true });
+    const lines = buf.split('\n');
+    buf = lines.pop() ?? '';
+    for (const line of lines) {
+      if (!line.startsWith('data: ')) continue;
+      const raw = line.slice(6).trim();
+      if (!raw || raw === '[DONE]') continue;
+      try {
+        const chunk = JSON.parse(raw);
+        const delta = chunk?.delta?.text ?? '';
+        if (delta) {
+          full += delta;
+          if (flowMode) {
+            onDelta(full, full, [], []);
+          } else {
+            const parsed = parseResponse(full);
+            onDelta(full, parsed.display, parsed.suggestions ?? [], parsed.path ?? []);
+          }
+        }
+      } catch { /* skip */ }
+    }
+  }
+  return full;
+}
+
+// ── Sub-components ─────────────────────────────────────────────────────────
 
 function ThinkingDots({ color }: { color: string }) {
   return (
     <div style={{ display: 'flex', gap: '4px', alignItems: 'center', padding: '4px 2px' }}>
       {[0, 1, 2].map(i => (
-        <span
-          key={i}
-          style={{
-            width: '5px', height: '5px', borderRadius: '50%',
-            background: color, opacity: 0.65, display: 'inline-block',
-            animation: `velma-dot-bounce 1.1s ease-in-out ${i * 0.18}s infinite`,
-          }}
-        />
+        <span key={i} style={{
+          width: '5px', height: '5px', borderRadius: '50%',
+          background: color, opacity: 0.65, display: 'inline-block',
+          animation: `velma-dot-bounce 1.1s ease-in-out ${i * 0.18}s infinite`,
+        }} />
       ))}
     </div>
   );
 }
 
-// ── Flow suggestion card ───────────────────────────────────────────────────
-
-function SuggestionCard({ slug, reason, color, onClose }: {
-  slug: string; reason: string; color: string; onClose: () => void;
+function SuggestionCard({ slug, reason, color, onClose, onRun }: {
+  slug: string; reason: string; color: string;
+  onClose: () => void; onRun: (slug: string, name: string) => void;
 }) {
+  const name = formatFlowName(slug);
   return (
-    <Link
-      to={`/flow/${slug}`}
-      onClick={onClose}
-      style={{
-        display: 'block', textDecoration: 'none',
-        background: `${color}08`, border: `1px solid ${color}28`,
-        borderRadius: '9px', padding: '9px 11px',
-        transition: 'border-color 0.15s, background 0.15s',
-      }}
-      onMouseEnter={e => {
-        (e.currentTarget as HTMLElement).style.borderColor = `${color}55`;
-        (e.currentTarget as HTMLElement).style.background = `${color}12`;
-      }}
-      onMouseLeave={e => {
-        (e.currentTarget as HTMLElement).style.borderColor = `${color}28`;
-        (e.currentTarget as HTMLElement).style.background = `${color}08`;
-      }}
+    <div style={{
+      background: `${color}08`, border: `1px solid ${color}28`,
+      borderRadius: '9px', overflow: 'hidden',
+      transition: 'border-color 0.15s',
+    }}
+      onMouseEnter={e => (e.currentTarget as HTMLElement).style.borderColor = `${color}44`}
+      onMouseLeave={e => (e.currentTarget as HTMLElement).style.borderColor = `${color}28`}
     >
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '3px' }}>
-        <span style={{ fontSize: '11px', fontWeight: 700, color, fontFamily: 'monospace' }}>
-          {formatFlowName(slug)}
-        </span>
-        <span style={{ fontSize: '9px', color, opacity: 0.7, flexShrink: 0 }}>Run →</span>
+      <div style={{ padding: '9px 11px 6px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '4px' }}>
+          <span style={{ fontSize: '11px', fontWeight: 700, color, fontFamily: 'monospace' }}>{name}</span>
+          <Link to={`/flow/${slug}`} onClick={onClose}
+            style={{ fontSize: '9px', color, opacity: 0.6, flexShrink: 0, textDecoration: 'none' }}
+            title="Open flow page">
+            Open ↗
+          </Link>
+        </div>
+        <p style={{ margin: 0, fontSize: '10px', color: '#889', lineHeight: 1.4 }}>{reason}</p>
       </div>
-      <p style={{ margin: 0, fontSize: '10px', color: '#889', lineHeight: 1.4 }}>{reason}</p>
-    </Link>
+      <button
+        onClick={() => onRun(slug, name)}
+        style={{
+          display: 'block', width: '100%', padding: '6px 11px',
+          borderTop: `1px solid ${color}18`, background: `${color}0c`,
+          border: 'none', cursor: 'pointer', textAlign: 'left',
+          fontSize: '10px', fontWeight: 700, fontFamily: 'monospace',
+          color, transition: 'background 0.15s',
+        }}
+        onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = `${color}1e`}
+        onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = `${color}0c`}
+      >
+        ▶ Run now
+      </button>
+    </div>
   );
 }
-
-// ── Path display ───────────────────────────────────────────────────────────
 
 function PathDisplay({ path, onClose }: { path: string[]; onClose: () => void }) {
   return (
@@ -225,22 +273,30 @@ function PathDisplay({ path, onClose }: { path: string[]; onClose: () => void })
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', alignItems: 'center' }}>
         {path.map((slug, i) => (
           <span key={slug} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-            <Link
-              to={`/flow/${slug}`}
-              onClick={onClose}
-              style={{
-                fontSize: '10px', fontWeight: 700, fontFamily: 'monospace',
-                color: '#ffd700', textDecoration: 'none',
-                background: 'rgba(255,215,0,0.08)', border: '1px solid rgba(255,215,0,0.2)',
-                borderRadius: '6px', padding: '2px 7px',
-              }}
-            >
+            <Link to={`/flow/${slug}`} onClick={onClose} style={{
+              fontSize: '10px', fontWeight: 700, fontFamily: 'monospace',
+              color: '#ffd700', textDecoration: 'none',
+              background: 'rgba(255,215,0,0.08)', border: '1px solid rgba(255,215,0,0.2)',
+              borderRadius: '6px', padding: '2px 7px',
+            }}>
               {formatFlowName(slug)}
             </Link>
             {i < path.length - 1 && <span style={{ color: '#446', fontSize: '10px' }}>→</span>}
           </span>
         ))}
       </div>
+    </div>
+  );
+}
+
+function SystemDivider({ text, color }: { text: string; color: string }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '2px 0' }}>
+      <div style={{ flex: 1, height: '1px', background: `${color}18` }} />
+      <span style={{ fontSize: '9px', color: `${color}66`, fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.08em', whiteSpace: 'nowrap' }}>
+        {text}
+      </span>
+      <div style={{ flex: 1, height: '1px', background: `${color}18` }} />
     </div>
   );
 }
@@ -275,6 +331,11 @@ export default function VelmaChatPanel({
   const [pasteText, setPasteText] = useState('');
   const [streaming, setStreaming] = useState(false);
   const [wide, setWide] = useState(false);
+
+  // Flow mode
+  const [activeFlow, setActiveFlow] = useState<{ slug: string; name: string } | null>(null);
+  const [flowStartIdx, setFlowStartIdx] = useState(0);
+
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -282,6 +343,86 @@ export default function VelmaChatPanel({
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
   useEffect(() => { setTimeout(() => inputRef.current?.focus(), 100); }, []);
+
+  const userKey = () => localStorage.getItem(ANTHROPIC_KEY_STORAGE)?.trim() || '';
+
+  // ── Start a flow inline ──────────────────────────────────────────────────
+
+  const startFlow = useCallback(async (slug: string, name: string) => {
+    if (streaming) return;
+
+    const divMsg: ChatMessage = {
+      role: 'velma',
+      content: `flow_start:${slug}`,
+      display: `Running ${name}.`,
+      isSystem: true,
+    };
+
+    const startIdx = messages.length + 1; // messages after the divider
+    setActiveFlow({ slug, name });
+    setFlowStartIdx(startIdx);
+    setStreaming(true);
+
+    const placeholder: ChatMessage = { role: 'velma', content: '', display: '' };
+    setMessages(prev => [...prev, divMsg, placeholder]);
+
+    try {
+      const resp = await fetch('/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(userKey() ? { 'X-User-API-Key': userKey() } : {}),
+        },
+        body: JSON.stringify({
+          skill_name: slug,
+          messages: [{ role: 'user', content: 'Begin' }],
+        }),
+      });
+
+      if (!resp.ok || !resp.body) throw new Error(`API ${resp.status}`);
+
+      const full = await streamResponse(
+        resp,
+        (_, display) => {
+          setMessages(prev => [
+            ...prev.slice(0, -1),
+            { role: 'velma', content: _, display },
+          ]);
+        },
+        true,
+      );
+
+      setMessages(prev => [
+        ...prev.slice(0, -1),
+        { role: 'velma', content: full, display: full },
+      ]);
+    } catch (err) {
+      const errMsg = `Couldn't start ${name}. (${(err as Error).message})`;
+      setMessages(prev => [...prev.slice(0, -1), { role: 'velma', content: errMsg, display: errMsg }]);
+    } finally {
+      setStreaming(false);
+    }
+  }, [messages, streaming]);
+
+  // ── Exit flow, return to Velma ───────────────────────────────────────────
+
+  const exitFlow = useCallback(() => {
+    const exitMsg: ChatMessage = {
+      role: 'velma',
+      content: 'flow_end',
+      display: 'Back with Velma. What else can I help with?',
+      isSystem: true,
+    };
+    setMessages(prev => {
+      const updated = [...prev, exitMsg];
+      saveChatHistory(updated);
+      return updated;
+    });
+    setActiveFlow(null);
+    setFlowStartIdx(0);
+  }, []);
+
+  // ── Send message ─────────────────────────────────────────────────────────
 
   const sendText = useCallback(async (text: string) => {
     if (!text.trim() || streaming) return;
@@ -303,56 +444,59 @@ export default function VelmaChatPanel({
     setMessages(prev => [...prev, placeholder]);
 
     try {
-      const userKey = localStorage.getItem(ANTHROPIC_KEY_STORAGE)?.trim() || '';
-      const resp = await fetch('/api/velma', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(userKey ? { 'X-User-API-Key': userKey } : {}),
-        },
-        body: JSON.stringify({
-          messages: updatedMessages.map(m => ({
-            role: m.role === 'velma' ? 'assistant' : 'user',
-            content: m.content,
-          })),
-          skills: skills.map(s => ({ name: s.name, domain: s.domain, description: s.description })),
-          context: { page: describeLocation(pathname, search) },
-        }),
-      });
+      let resp: Response;
+
+      if (activeFlow) {
+        // Build conversation from the point the flow started, excluding system dividers
+        const flowHistory = updatedMessages
+          .slice(flowStartIdx)
+          .filter(m => !m.isSystem)
+          .map(m => ({ role: m.role === 'velma' ? 'assistant' : 'user', content: m.content }));
+
+        resp = await fetch('/api/chat', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(userKey() ? { 'X-User-API-Key': userKey() } : {}),
+          },
+          body: JSON.stringify({ skill_name: activeFlow.slug, messages: flowHistory }),
+        });
+      } else {
+        resp = await fetch('/api/velma', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(userKey() ? { 'X-User-API-Key': userKey() } : {}),
+          },
+          body: JSON.stringify({
+            messages: updatedMessages.map(m => ({
+              role: m.role === 'velma' ? 'assistant' : 'user',
+              content: m.content,
+            })),
+            skills: skills.map(s => ({ name: s.name, domain: s.domain, description: s.description })),
+            context: { page: describeLocation(pathname, search) },
+          }),
+        });
+      }
 
       if (!resp.ok || !resp.body) throw new Error(`API error ${resp.status}`);
 
-      const reader = resp.body.getReader();
-      const dec = new TextDecoder();
-      let buf = '';
-      let full = '';
+      const isFlowMode = activeFlow !== null;
+      const full = await streamResponse(
+        resp,
+        (raw, display, suggestions, path) => {
+          setMessages(prev => [
+            ...prev.slice(0, -1),
+            { role: 'velma', content: raw, display, suggestions, path },
+          ]);
+        },
+        isFlowMode,
+      );
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buf += dec.decode(value, { stream: true });
-        const lines = buf.split('\n');
-        buf = lines.pop() ?? '';
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) continue;
-          const raw = line.slice(6).trim();
-          if (!raw || raw === '[DONE]') continue;
-          try {
-            const chunk = JSON.parse(raw);
-            const delta = chunk?.delta?.text ?? '';
-            if (delta) {
-              full += delta;
-              const { display, suggestions, path } = parseResponse(full);
-              setMessages(prev => [
-                ...prev.slice(0, -1),
-                { role: 'velma', content: full, display, suggestions, path },
-              ]);
-            }
-          } catch { /* skip */ }
-        }
-      }
+      const { display, suggestions, path } = isFlowMode
+        ? { display: full, suggestions: [], path: [] }
+        : parseResponse(full);
 
-      const { display, suggestions, path } = parseResponse(full);
       const finalMessages = [
         ...updatedMessages,
         { role: 'velma' as const, content: full, display, suggestions, path },
@@ -366,7 +510,7 @@ export default function VelmaChatPanel({
     } finally {
       setStreaming(false);
     }
-  }, [messages, pasteText, skills, streaming, pathname, search]);
+  }, [messages, pasteText, skills, streaming, pathname, search, activeFlow, flowStartIdx]);
 
   const send = useCallback(() => sendText(input.trim()), [sendText, input]);
 
@@ -380,49 +524,72 @@ export default function VelmaChatPanel({
     setInput('');
     setPasteText('');
     setPasteMode(false);
+    setActiveFlow(null);
+    setFlowStartIdx(0);
   };
 
-  const locationLabel = describeLocation(pathname, search)
-    .replace(/^the /, '')
-    .replace(' (create new flows)', '');
+  const locationLabel = describeLocation(pathname, search).replace(/^the /, '');
+
+  // ── Render ───────────────────────────────────────────────────────────────
 
   return (
     <div style={{
       position: 'absolute', bottom: '80px', right: 0,
       width: wide ? '480px' : '340px',
       background: 'rgba(0,8,18,0.97)',
-      border: `1px solid ${color}33`,
+      border: `1px solid ${activeFlow ? '#ffd70033' : `${color}33`}`,
       borderRadius: '14px',
       display: 'flex', flexDirection: 'column',
       maxHeight: '580px',
-      boxShadow: `0 8px 40px rgba(0,0,0,0.7), 0 0 0 1px ${color}11`,
+      boxShadow: `0 8px 40px rgba(0,0,0,0.7), 0 0 0 1px ${activeFlow ? '#ffd70011' : `${color}11`}`,
       animation: 'velma-bubble-in 0.25s ease',
       overflow: 'hidden',
-      transition: 'width 0.2s ease',
+      transition: 'width 0.2s ease, border-color 0.3s ease',
     }}>
 
       {/* Header */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '11px 14px', borderBottom: `1px solid ${color}18`, flexShrink: 0,
+        padding: '11px 14px',
+        borderBottom: `1px solid ${activeFlow ? '#ffd70018' : `${color}18`}`,
+        flexShrink: 0,
+        background: activeFlow ? 'rgba(255,215,0,0.03)' : 'transparent',
+        transition: 'background 0.3s ease',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <div style={{
             width: '7px', height: '7px', borderRadius: '50%',
-            background: color, boxShadow: `0 0 6px ${color}`,
+            background: activeFlow ? '#ffd700' : color,
+            boxShadow: `0 0 6px ${activeFlow ? '#ffd700' : color}`,
             animation: streaming ? 'velma-pulse 1s ease-in-out infinite' : 'none',
           }} />
-          <span style={{ color, fontWeight: 700, fontSize: '13px', fontFamily: 'monospace' }}>Velma</span>
-          <span style={{ fontSize: '9px', color: '#446', textTransform: 'uppercase', letterSpacing: '0.06em', fontFamily: 'monospace' }}>
-            {streaming ? 'thinking' : locationLabel}
-          </span>
+          {activeFlow ? (
+            <>
+              <span style={{ color: '#ffd700', fontWeight: 700, fontSize: '12px', fontFamily: 'monospace' }}>
+                {activeFlow.name}
+              </span>
+              <button
+                onClick={exitFlow}
+                title="Back to Velma"
+                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '10px', fontFamily: 'monospace', color: '#ffd70077', padding: '0 4px', transition: 'color 0.15s' }}
+                onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = '#ffd700'}
+                onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = '#ffd70077'}
+              >
+                ← Velma
+              </button>
+            </>
+          ) : (
+            <>
+              <span style={{ color, fontWeight: 700, fontSize: '13px', fontFamily: 'monospace' }}>Velma</span>
+              <span style={{ fontSize: '9px', color: '#446', textTransform: 'uppercase', letterSpacing: '0.06em', fontFamily: 'monospace' }}>
+                {streaming ? 'thinking' : locationLabel}
+              </span>
+            </>
+          )}
         </div>
         <div style={{ display: 'flex', gap: '2px', alignItems: 'center' }}>
-          <button
-            onClick={() => setWide(v => !v)}
-            title={wide ? 'Collapse' : 'Expand'}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '13px', padding: '3px 5px', fontFamily: 'monospace', color: wide ? color : '#335', opacity: 0.8, transition: 'color 0.15s' }}
-          >
+          <button onClick={() => setWide(v => !v)} title={wide ? 'Collapse' : 'Expand'}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '13px', padding: '3px 5px', fontFamily: 'monospace', color: wide ? color : '#335', opacity: 0.8, transition: 'color 0.15s' }}>
             {wide ? '⟨' : '⟩'}
           </button>
           <button onClick={reset} title="New conversation"
@@ -446,78 +613,104 @@ export default function VelmaChatPanel({
         display: 'flex', flexDirection: 'column', gap: '10px',
         scrollbarWidth: 'thin', scrollbarColor: '#1a2a3a transparent',
       }}>
-        {messages.map((msg, i) => (
-          <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: msg.role === 'velma' ? 'flex-start' : 'flex-end', gap: '6px' }}>
+        {messages.map((msg, i) => {
+          // System dividers (flow start/end)
+          if (msg.isSystem) {
+            return (
+              <SystemDivider
+                key={i}
+                text={msg.display}
+                color={msg.content.startsWith('flow_start') ? '#ffd700' : color}
+              />
+            );
+          }
 
-            {/* Message bubble */}
-            <div style={{
-              maxWidth: '95%',
-              background: msg.role === 'velma' ? `${color}0e` : '#0d1e2e',
-              border: `1px solid ${msg.role === 'velma' ? `${color}22` : '#1a2a3a'}`,
-              borderRadius: msg.role === 'velma' ? '4px 10px 10px 10px' : '10px 4px 10px 10px',
-              padding: '8px 10px',
-            }}>
-              {streaming && i === messages.length - 1 && !msg.display ? (
-                <ThinkingDots color={color} />
-              ) : (
-                <p style={{
-                  margin: 0, fontSize: '11.5px', lineHeight: 1.55,
-                  color: msg.role === 'velma' ? '#bcd' : '#99b',
-                  fontFamily: 'monospace', whiteSpace: 'pre-wrap',
-                }}>
-                  {msg.display}
-                </p>
+          const isLastVelma = msg.role === 'velma' && !streaming && i === messages.length - 1 && msg.display;
+
+          return (
+            <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: msg.role === 'velma' ? 'flex-start' : 'flex-end', gap: '6px' }}>
+
+              {/* Bubble */}
+              <div style={{
+                maxWidth: '95%',
+                background: msg.role === 'velma'
+                  ? (activeFlow ? 'rgba(255,215,0,0.06)' : `${color}0e`)
+                  : '#0d1e2e',
+                border: `1px solid ${msg.role === 'velma'
+                  ? (activeFlow ? 'rgba(255,215,0,0.15)' : `${color}22`)
+                  : '#1a2a3a'}`,
+                borderRadius: msg.role === 'velma' ? '4px 10px 10px 10px' : '10px 4px 10px 10px',
+                padding: '8px 10px',
+              }}>
+                {streaming && i === messages.length - 1 && !msg.display ? (
+                  <ThinkingDots color={activeFlow ? '#ffd700' : color} />
+                ) : (
+                  <p style={{
+                    margin: 0, fontSize: '11.5px', lineHeight: 1.6,
+                    color: msg.role === 'velma' ? '#bcd' : '#99b',
+                    fontFamily: 'monospace', whiteSpace: 'pre-wrap',
+                  }}>
+                    {msg.display}
+                  </p>
+                )}
+              </div>
+
+              {/* Flow suggestions (Velma mode only) */}
+              {!activeFlow && msg.suggestions && msg.suggestions.length > 0 && (
+                <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                  <div style={{ fontSize: '9px', color: '#446', textTransform: 'uppercase', letterSpacing: '0.07em', fontFamily: 'monospace', marginTop: '2px' }}>
+                    Suggested flows
+                  </div>
+                  {msg.suggestions.map(s => (
+                    <SuggestionCard
+                      key={s.slug}
+                      slug={s.slug}
+                      reason={s.reason}
+                      color={color}
+                      onClose={onClose}
+                      onRun={startFlow}
+                    />
+                  ))}
+                </div>
+              )}
+
+              {/* Suggested path (Velma mode only) */}
+              {!activeFlow && msg.path && msg.path.length > 1 && (
+                <PathDisplay path={msg.path} onClose={onClose} />
+              )}
+
+              {/* Chips — contextual, shown after last velma message */}
+              {isLastVelma && !activeFlow && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', marginTop: '2px' }}>
+                  {(i === 0 ? chips : getFollowUpChips(msg)).map(chip => (
+                    <button
+                      key={chip}
+                      onClick={() => sendText(chip)}
+                      style={{
+                        background: `${color}08`, border: `1px solid ${color}22`,
+                        borderRadius: '20px', padding: '4px 10px',
+                        fontSize: '10px', color: '#99b', fontFamily: 'monospace',
+                        cursor: 'pointer', transition: 'all 0.15s', lineHeight: 1.4,
+                      }}
+                      onMouseEnter={e => {
+                        (e.currentTarget as HTMLElement).style.background = `${color}18`;
+                        (e.currentTarget as HTMLElement).style.borderColor = `${color}44`;
+                        (e.currentTarget as HTMLElement).style.color = '#bcd';
+                      }}
+                      onMouseLeave={e => {
+                        (e.currentTarget as HTMLElement).style.background = `${color}08`;
+                        (e.currentTarget as HTMLElement).style.borderColor = `${color}22`;
+                        (e.currentTarget as HTMLElement).style.color = '#99b';
+                      }}
+                    >
+                      {chip}
+                    </button>
+                  ))}
+                </div>
               )}
             </div>
-
-            {/* Flow suggestions */}
-            {msg.suggestions && msg.suggestions.length > 0 && (
-              <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                <div style={{ fontSize: '9px', color: '#446', textTransform: 'uppercase', letterSpacing: '0.07em', fontFamily: 'monospace', marginTop: '2px' }}>
-                  Suggested flows
-                </div>
-                {msg.suggestions.map(s => (
-                  <SuggestionCard key={s.slug} slug={s.slug} reason={s.reason} color={color} onClose={onClose} />
-                ))}
-              </div>
-            )}
-
-            {/* Suggested path */}
-            {msg.path && msg.path.length > 1 && (
-              <PathDisplay path={msg.path} onClose={onClose} />
-            )}
-
-            {/* Chips — opening chips on first message, follow-up chips on all later messages */}
-            {msg.role === 'velma' && !streaming && i === messages.length - 1 && msg.display && (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', marginTop: '2px' }}>
-                {(i === 0 ? chips : getFollowUpChips(msg)).map(chip => (
-                  <button
-                    key={chip}
-                    onClick={() => sendText(chip)}
-                    style={{
-                      background: `${color}08`, border: `1px solid ${color}22`,
-                      borderRadius: '20px', padding: '4px 10px',
-                      fontSize: '10px', color: '#99b', fontFamily: 'monospace',
-                      cursor: 'pointer', transition: 'all 0.15s', lineHeight: 1.4,
-                    }}
-                    onMouseEnter={e => {
-                      (e.currentTarget as HTMLElement).style.background = `${color}18`;
-                      (e.currentTarget as HTMLElement).style.borderColor = `${color}44`;
-                      (e.currentTarget as HTMLElement).style.color = '#bcd';
-                    }}
-                    onMouseLeave={e => {
-                      (e.currentTarget as HTMLElement).style.background = `${color}08`;
-                      (e.currentTarget as HTMLElement).style.borderColor = `${color}22`;
-                      (e.currentTarget as HTMLElement).style.color = '#99b';
-                    }}
-                  >
-                    {chip}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        ))}
+          );
+        })}
 
         <div ref={bottomRef} />
       </div>
@@ -543,8 +736,10 @@ export default function VelmaChatPanel({
 
       {/* Input */}
       <div style={{
-        padding: '10px 12px', borderTop: `1px solid ${color}18`,
+        padding: '10px 12px',
+        borderTop: `1px solid ${activeFlow ? '#ffd70018' : `${color}18`}`,
         display: 'flex', flexDirection: 'column', gap: '7px', flexShrink: 0,
+        transition: 'border-color 0.3s ease',
       }}>
         <div style={{ display: 'flex', gap: '6px', alignItems: 'flex-end' }}>
           <textarea
@@ -552,12 +747,13 @@ export default function VelmaChatPanel({
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={handleKey}
-            placeholder="Ask anything…"
+            placeholder={activeFlow ? `Reply to ${activeFlow.name}…` : 'Ask anything…'}
             rows={2}
             disabled={streaming}
             style={{
               flex: 1, resize: 'none',
-              background: '#060f1a', border: `1px solid ${color}22`,
+              background: '#060f1a',
+              border: `1px solid ${activeFlow ? 'rgba(255,215,0,0.2)' : `${color}22`}`,
               borderRadius: '8px', padding: '8px 10px',
               fontSize: '11px', color: '#bcd', fontFamily: 'monospace',
               outline: 'none', lineHeight: 1.5,
@@ -569,9 +765,13 @@ export default function VelmaChatPanel({
             disabled={!input.trim() || streaming}
             style={{
               padding: '8px 12px', borderRadius: '8px',
-              background: input.trim() && !streaming ? `${color}18` : '#0a1624',
-              border: `1px solid ${input.trim() && !streaming ? `${color}44` : '#1a2a3a'}`,
-              color: input.trim() && !streaming ? color : '#334',
+              background: input.trim() && !streaming
+                ? (activeFlow ? 'rgba(255,215,0,0.15)' : `${color}18`)
+                : '#0a1624',
+              border: `1px solid ${input.trim() && !streaming
+                ? (activeFlow ? 'rgba(255,215,0,0.4)' : `${color}44`)
+                : '#1a2a3a'}`,
+              color: input.trim() && !streaming ? (activeFlow ? '#ffd700' : color) : '#334',
               cursor: input.trim() && !streaming ? 'pointer' : 'default',
               fontSize: '14px', lineHeight: 1, flexShrink: 0,
               transition: 'all 0.15s',
@@ -581,16 +781,18 @@ export default function VelmaChatPanel({
           </button>
         </div>
 
-        <button
-          onClick={() => setPasteMode(v => !v)}
-          style={{
-            background: 'none', border: 'none', cursor: 'pointer',
-            fontSize: '10px', fontFamily: 'monospace', textAlign: 'left',
-            color: pasteMode ? color : '#446', padding: 0, transition: 'color 0.15s',
-          }}
-        >
-          {pasteMode ? '✓ document attached' : '+ attach document (resume, contract, data…)'}
-        </button>
+        {!activeFlow && (
+          <button
+            onClick={() => setPasteMode(v => !v)}
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              fontSize: '10px', fontFamily: 'monospace', textAlign: 'left',
+              color: pasteMode ? color : '#446', padding: 0, transition: 'color 0.15s',
+            }}
+          >
+            {pasteMode ? '✓ document attached' : '+ attach document (resume, contract, data…)'}
+          </button>
+        )}
       </div>
 
       <style>{`
