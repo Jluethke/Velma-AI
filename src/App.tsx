@@ -41,6 +41,7 @@ import PortalNetwork from './pages/PortalNetwork';
 import PortalStake from './pages/PortalStake';
 import PortalMarketplace from './pages/PortalMarketplace';
 import PortalValidators from './pages/PortalValidators';
+import OnboardingGuide from './components/OnboardingGuide';
 
 const BANNER_KEY = 'flowfabric-mobile-banner-dismissed';
 
@@ -165,6 +166,7 @@ function App() {
           </Routes>
           <Footer />
         </div>
+        <OnboardingGuide />
         <VelmaWidget />
       </VelmaProvider>
     </BrowserRouter>
