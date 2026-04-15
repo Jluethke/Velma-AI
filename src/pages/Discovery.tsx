@@ -102,7 +102,7 @@ function ExplainerBanner() {
   const [open, setOpen] = useState(false);
   return (
     <div style={{
-      background: 'rgba(28,28,34,0.5)', border: '1px solid var(--border)',
+      background: 'var(--bg-card)', border: '1px solid var(--border)',
       borderRadius: '12px', marginBottom: '24px', overflow: 'hidden',
     }}>
       <button
@@ -752,7 +752,7 @@ export default function Discovery() {
             onChange={e => setFlowFilter(e.target.value)}
             placeholder="Filter by flow…"
             style={{
-              flex: '1 1 200px', background: 'rgba(28,28,34,0.8)', border: '1px solid var(--border)',
+              flex: '1 1 200px', background: 'var(--bg-secondary)', border: '1px solid var(--border)',
               borderRadius: '10px', padding: '9px 14px', fontSize: '13px',
               color: 'var(--text-primary)', outline: 'none',
             }}
@@ -761,7 +761,7 @@ export default function Discovery() {
             value={roleFilter}
             onChange={e => setRoleFilter(e.target.value)}
             style={{
-              background: 'rgba(28,28,34,0.8)', border: '1px solid var(--border)',
+              background: 'var(--bg-secondary)', border: '1px solid var(--border)',
               borderRadius: '10px', padding: '9px 14px', fontSize: '13px',
               color: roleFilter ? 'var(--text-primary)' : 'var(--text-secondary)',
               outline: 'none', cursor: 'pointer',
@@ -801,7 +801,7 @@ export default function Discovery() {
         ) : board.length === 0 && (flowFilter || roleFilter) ? (
           <div style={{
             textAlign: 'center', padding: '80px 40px',
-            background: 'rgba(28,28,34,0.5)', border: '1px solid var(--border)', borderRadius: '20px',
+            background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '20px',
           }}>
             <p style={{ color: 'var(--text-secondary)', fontSize: '15px', margin: '0 0 20px' }}>
               No listings match your filters.
