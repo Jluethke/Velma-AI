@@ -7,6 +7,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useVelma } from '../contexts/VelmaContext';
 import { formatFlowName } from '../utils/formatFlowName';
+import VelmaChatPanel from './VelmaChatPanel';
 import {
   getTitle,
   getVisualTier,
@@ -664,14 +665,14 @@ function VelmaGuidePanel({
 
 export default function VelmaWidget({ wallet }: { wallet?: string } = {}) {
   const {
-    state, pet, witnessEvent, dismissBubble, speak, completeOnboarding,
+    state, witnessEvent, dismissBubble, speak,
     notifications, dismissNotification, dismissAllNotifications,
     setNotifyContext, pollNotifications,
   } = useVelma();
 
   const [showStats, setShowStats] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
-  const [showGuide, setShowGuide] = useState(false);
+  const [showChat, setShowChat] = useState(false);
   const bubbleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── Gamification state ─────────────────────────────────────────────────
@@ -855,15 +856,13 @@ export default function VelmaWidget({ wallet }: { wallet?: string } = {}) {
         </div>
       )}
 
-      {/* Onboarding guide panel */}
-      {showGuide && (
-        <VelmaGuidePanel
+      {/* Discovery chat panel */}
+      {showChat && (
+        <VelmaChatPanel
+          velmaState={state}
           color={color}
-          onClose={() => setShowGuide(false)}
-          onDone={() => {
-            setShowGuide(false);
-            completeOnboarding();
-          }}
+          onClose={() => setShowChat(false)}
+          onSwitchToStats={() => { setShowChat(false); setShowStats(true); }}
         />
       )}
 
@@ -1015,13 +1014,9 @@ export default function VelmaWidget({ wallet }: { wallet?: string } = {}) {
         {/* The sprite */}
         <div
           onClick={() => {
-            if (!state.onboarded) {
-              setShowGuide(s => !s);
-              setShowStats(false);
-              setShowNotifications(false);
-            } else {
-              pet();
-            }
+            setShowChat(s => !s);
+            setShowStats(false);
+            setShowNotifications(false);
           }}
           onContextMenu={e => {
             e.preventDefault();
@@ -1033,9 +1028,7 @@ export default function VelmaWidget({ wallet }: { wallet?: string } = {}) {
               setShowNotifications(false);
             }
           }}
-          title={state.onboarded
-            ? `Velma — Level ${state.level} ${getTitle(state.level)} (click to pat, right-click for ${notifications.length > 0 ? 'notifications' : 'stats'})`
-            : 'Velma — click to get started'}
+          title={`Velma — Level ${state.level} ${getTitle(state.level)} (click to find flows, right-click for ${notifications.length > 0 ? 'notifications' : 'stats'})`}
           style={{
             cursor: 'pointer',
             width: `${spriteSize}px`,
