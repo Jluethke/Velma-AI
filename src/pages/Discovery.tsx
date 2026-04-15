@@ -185,7 +185,7 @@ function ListingCard({
     <div
       ref={cardRef}
       style={{
-        background: highlighted ? 'rgba(167,139,250,0.06)' : 'rgba(28,28,34,0.7)',
+        background: highlighted ? 'rgba(167,139,250,0.08)' : 'var(--bg-card)',
         border: highlighted ? '1px solid rgba(167,139,250,0.4)' : '1px solid var(--border)',
         borderRadius: '16px', padding: '20px',
         display: 'flex', flexDirection: 'column', gap: '12px',
@@ -217,7 +217,7 @@ function ListingCard({
             }}>
               {listing.role}
             </span>
-            <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+            <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
               {formatFlow(listing.flow_slug)}
             </span>
             {isOwn && (

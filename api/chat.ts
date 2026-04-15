@@ -26,14 +26,14 @@ async function streamGemini(
   messages: Array<{ role: string; content: string }>,
   system: string
 ): Promise<Response> {
-  // Flatten multi-turn into a single user message (flows are always single-turn)
-  const userText = messages
-    .filter(m => m.role === 'user')
-    .map(m => m.content)
-    .join('\n\n');
+  // Map full conversation history — Gemini uses 'model' instead of 'assistant'
+  const contents = messages.map(m => ({
+    role: m.role === 'assistant' ? 'model' : 'user',
+    parts: [{ text: m.content }],
+  }));
 
   const geminiBody = {
-    contents: [{ role: 'user', parts: [{ text: userText }] }],
+    contents,
     systemInstruction: { parts: [{ text: system }] },
     generationConfig: { maxOutputTokens: 8192, temperature: 0.7 },
   };
