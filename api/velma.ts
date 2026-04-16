@@ -55,7 +55,7 @@ RULES:
 
 LISTING:
 title: [one punchy line — who they are and what they need, specific details]
-flow: [best matching slug from DISCOVERY FLOWS]
+flow: [pick the best matching flow name from DISCOVERY FLOWS below, e.g. kitchen-renovation]
 role: host (needs someone) | guest (offers a service)
 description: [2-3 sentences expanding on their situation, written as the listing body — specific, compelling, honest]
 tags: tag1, tag2, tag3
@@ -63,11 +63,12 @@ tags: tag1, tag2, tag3
 6. When the user needs to RUN A FLOW or figure something out mentally, output FLOWS/PATH as usual:
 
 FLOWS:
-- slug: one sentence why this helps their specific situation
-(3-5 flows, no more)
+- budget-builder: Helps you build a realistic monthly budget from your actual spending
+- interview-coach: Practice likely interview questions with AI-driven feedback
+(use the actual flow slug from AVAILABLE FLOWS below — 3-5 flows max, never use the word "slug")
 
-PATH: slug1 → slug2 → slug3
-(only if logical order exists — omit entirely if not)
+PATH: budget-builder → expense-optimizer → retirement-planner
+(only if a logical order exists — use actual slugs, omit PATH entirely if not needed)
 
 7. You can output BOTH a LISTING and FLOWS if relevant (listing first, then flows to prepare).
 8. Only suggest flows from AVAILABLE FLOWS. Only use flow slugs from DISCOVERY FLOWS for the listing's flow field.
