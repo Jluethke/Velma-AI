@@ -129,6 +129,10 @@ export default function Navbar() {
               <button
                 onClick={() => setMoreOpen(!moreOpen)}
                 onBlur={() => setTimeout(() => setMoreOpen(false), 150)}
+                onKeyDown={(e) => { if (e.key === 'Escape') setMoreOpen(false); }}
+                aria-haspopup="true"
+                aria-expanded={moreOpen}
+                aria-controls="more-nav-menu"
                 className="text-sm px-3 py-1.5 rounded-lg cursor-pointer"
                 style={{
                   background: 'none', border: 'none',
@@ -137,10 +141,14 @@ export default function Navbar() {
                   transition: 'color 0.2s',
                 }}
               >
-                More ▾
+                More <span aria-hidden="true">▾</span>
               </button>
               {moreOpen && (
-                <div style={{
+                <div
+                  id="more-nav-menu"
+                  role="menu"
+                  aria-label="More navigation"
+                  style={{
                   position: 'absolute', top: '110%', left: 0, zIndex: 200,
                   background: 'var(--bg-secondary)', border: '1px solid var(--border)',
                   borderRadius: '10px', padding: '6px', minWidth: '140px',
@@ -151,6 +159,7 @@ export default function Navbar() {
                       key={link.to}
                       to={link.to}
                       onClick={() => setMoreOpen(false)}
+                      role="menuitem"
                       className="no-underline block px-3 py-2 rounded-lg text-sm"
                       style={{
                         color: isActive(link.to) ? 'var(--cyan)' : 'var(--text-secondary)',
@@ -328,7 +337,14 @@ export default function Navbar() {
 
         {/* Mobile menu */}
         {mobileOpen && (
-          <div className="md:hidden mt-4 pb-4 flex flex-col gap-4 items-center" style={{ borderTop: '1px solid var(--border)' }}>
+          <div
+            className="md:hidden mt-4 pb-4 flex flex-col gap-4 items-center"
+            style={{ borderTop: '1px solid var(--border)' }}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Navigation menu"
+            onKeyDown={(e) => { if (e.key === 'Escape') setMobileOpen(false); }}
+          >
             {[...navLinks, ...moreLinks].map(link => (
               <Link
                 key={link.to}
@@ -403,27 +419,34 @@ export default function Navbar() {
           className="fixed inset-0 z-[999] flex items-center justify-center px-4"
           style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)' }}
           onClick={() => setShowSend(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="send-trust-title"
+          onKeyDown={(e) => { if (e.key === 'Escape') setShowSend(false); }}
         >
           <div
             className="glass-card p-6 max-w-sm w-full animate-fade-in-up"
             style={{ animationDuration: '0.3s' }}
             onClick={e => e.stopPropagation()}
           >
-            <h3 className="text-lg font-semibold mb-1" style={{ color: 'var(--text-primary)', marginTop: 0 }}>
+            <h3 id="send-trust-title" className="text-lg font-semibold mb-1" style={{ color: 'var(--text-primary)', marginTop: 0 }}>
               Send TRUST
             </h3>
             <p className="text-xs mb-4" style={{ color: 'var(--text-secondary)' }}>
               Balance: <span className="gradient-text-gold" style={{ fontWeight: 600 }}>{balance.display} TRUST</span>
             </p>
 
-            <label className="block text-xs mb-1" style={{ color: 'var(--text-secondary)' }}>
+            <label htmlFor="send-trust-recipient" className="block text-xs mb-1" style={{ color: 'var(--text-secondary)' }}>
               Recipient address
             </label>
             <input
+              id="send-trust-recipient"
               type="text"
               value={sendTo}
               onChange={e => setSendTo(e.target.value)}
               placeholder="0x..."
+              aria-required="true"
+              autoComplete="off"
               style={{
                 width: '100%', padding: '8px 12px', marginBottom: '12px',
                 background: 'var(--bg-secondary)', border: '1px solid var(--border)',
@@ -435,14 +458,16 @@ export default function Navbar() {
               onBlur={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'; }}
             />
 
-            <label className="block text-xs mb-1" style={{ color: 'var(--text-secondary)' }}>
+            <label htmlFor="send-trust-amount" className="block text-xs mb-1" style={{ color: 'var(--text-secondary)' }}>
               Amount
             </label>
             <input
+              id="send-trust-amount"
               type="text"
               value={sendAmount}
               onChange={e => setSendAmount(e.target.value)}
               placeholder="100"
+              aria-required="true"
               style={{
                 width: '100%', padding: '8px 12px', marginBottom: '16px',
                 background: 'var(--bg-secondary)', border: '1px solid var(--border)',

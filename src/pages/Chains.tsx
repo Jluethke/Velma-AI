@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useMeta } from '../hooks/useMeta';
 import { useSearchChains, useChains, type ChainMatch } from '../hooks/useChains';
 import { useChainRunner } from '../hooks/useChainRunner';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
@@ -567,6 +568,12 @@ function BrowseChains({
 // ── Main Page ────────────────────────────────────────────────────────
 
 export default function Chains() {
+  useMeta({
+    title: 'AI Flow Pipelines — FlowFabric',
+    description: 'Chain multiple AI flows into automated pipelines. 130+ pre-built chains for complex multi-step workflows.',
+    canonical: 'https://velma-ai.vercel.app/chains',
+  });
+
   const [query, setQuery] = useState('');
   const debouncedQuery = useDebounce(query, 300);
   const placeholder = useCyclingPlaceholder();

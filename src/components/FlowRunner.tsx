@@ -8,6 +8,7 @@ import { useVelma } from '../contexts/VelmaContext';
 import { getTitle } from '../hooks/useVelmaCompanion';
 import { formatFlowName } from '../utils/formatFlowName';
 import { useTKG } from '../hooks/useTKG';
+import { analytics } from '../hooks/useAnalytics';
 
 interface FlowRunnerProps {
   skillName: string;
@@ -254,6 +255,7 @@ This is a conversational flow. Greet the user briefly, then immediately ask the 
           justCompletedRef.current = true;
           velma.witnessFlowComplete(skillName, domain);
           observeFlowComplete(skillName, true, domain || 'general');
+          analytics.flowRunCompleted(skillName || 'unknown', 0);
         }
         return [
           ...prev,
@@ -284,6 +286,7 @@ This is a conversational flow. Greet the user briefly, then immediately ask the 
     // Capture first-run status before state is mutated by witnessFlowComplete
     wasFirstRunRef.current = !velma.state.flows_completed.includes(skillName);
     velma.witnessFlowStart(skillName, domain);
+    analytics.flowRunAttempted(skillName || 'unknown', 'free');
     send(`Start the ${formatFlowName(skillName)} flow now.`, []);
   }, []);
 

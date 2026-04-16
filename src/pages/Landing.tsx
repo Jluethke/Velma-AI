@@ -1,5 +1,6 @@
 import { useRef } from 'react';
 import { Link } from 'react-router-dom';
+import { useMeta } from '../hooks/useMeta';
 import HeroSection from '../components/HeroSection';
 import CategoryPicker from '../components/CategoryPicker';
 import SkillShowcase from '../components/SkillShowcase';
@@ -680,6 +681,12 @@ function FabricSection() {
 // ── Landing Page ──────────────────────────────────────────────────
 
 export default function Landing() {
+  useMeta({
+    title: 'FlowFabric — AI Flows for Everything',
+    description: '165+ structured AI workflows for life, career, money, business, health, and more. Free. No account needed.',
+    canonical: 'https://velma-ai.vercel.app/',
+  });
+
   return (
     <>
       <HeroSection />
@@ -692,6 +699,16 @@ export default function Landing() {
       <TrustEconomy />
       <SkillEvolution />
       <FAQ />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "FlowFabric",
+        "url": "https://velma-ai.vercel.app",
+        "description": "165+ structured AI workflows for life, career, money, business, health, and more.",
+        "applicationCategory": "ProductivityApplication",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+        "featureList": ["165+ AI workflow templates", "No account required", "Step-by-step AI guidance", "Streamed live in browser"]
+      }) }} />
     </>
   );
 }

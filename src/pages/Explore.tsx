@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
+import { useMeta } from '../hooks/useMeta';
 import { useSkills } from '../hooks/useSkills';
 import FlowCard from '../components/FlowCard';
 import SearchBar from '../components/SearchBar';
@@ -15,6 +16,12 @@ const FEATURED = [
 ];
 
 export default function Explore() {
+  useMeta({
+    title: 'Browse AI Flows — FlowFabric',
+    description: 'Explore 165+ structured AI workflows across career, money, health, business, and life. Free. No account needed.',
+    canonical: 'https://velma-ai.vercel.app/explore',
+  });
+
   const { data: skills = [], isLoading } = useSkills();
   const [query, setQuery] = useState('');
   const [domain, setDomain] = useState('');

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useMeta } from '../hooks/useMeta';
 
 type BillingCycle = 'monthly' | 'annual';
 
@@ -324,6 +325,12 @@ function FAQItem({ q, a }: { q: string; a: string }) {
 }
 
 export default function Pricing() {
+  useMeta({
+    title: 'Pricing — FlowFabric',
+    description: 'Start free with 5 AI flow runs per day. Upgrade to Builder ($5/mo), Professional ($20/mo), or Enterprise ($100/mo) for more runs and features.',
+    canonical: 'https://velma-ai.vercel.app/pricing',
+  });
+
   const [billing, setBilling] = useState<BillingCycle>('monthly');
 
   return (
