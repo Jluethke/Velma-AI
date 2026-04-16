@@ -14,44 +14,25 @@ import { useCreateListing } from '../hooks/useDiscovery';
 import { formatFlowName } from '../utils/formatFlowName';
 import type { VelmaState } from '../hooks/useVelmaCompanion';
 
-// ── Types ──────────────────────────────────────────────────────────────────
+import {
+  type ChatMessage,
+  type FlowSuggestion,
+  type ParsedListing,
+  type Conversation,
+  createConversation,
+  loadActiveConversation,
+  listConversations,
+  setActiveConversation,
+  updateConversationMessages,
+  loadConversation,
+  deleteConversation,
+  extractMemories,
+  getMemoryContext,
+  migrateLegacyChat,
+} from '../hooks/useVelmaMemory';
 
-interface ParsedListing {
-  title: string;
-  flow: string;
-  role: 'host' | 'guest';
-  description: string;
-  tags: string[];
-}
-
-interface ChatMessage {
-  role: 'velma' | 'user';
-  content: string;
-  display: string;
-  suggestions?: FlowSuggestion[];
-  path?: string[];
-  listing?: ParsedListing;
-  isSystem?: boolean;
-}
-
-interface FlowSuggestion {
-  slug: string;
-  reason: string;
-}
-
-// ── Persistence ────────────────────────────────────────────────────────────
-
-const CHAT_KEY = 'flowfabric-velma-chat-v1';
-const MAX_HISTORY = 10;
-
-function saveChatHistory(messages: ChatMessage[]) {
-  try { localStorage.setItem(CHAT_KEY, JSON.stringify(messages.slice(-MAX_HISTORY))); } catch { /* ignore */ }
-}
-function loadChatHistory(): ChatMessage[] {
-  try { const r = localStorage.getItem(CHAT_KEY); if (r) return JSON.parse(r) as ChatMessage[]; } catch { /* ignore */ }
-  return [];
-}
-function clearChatHistory() { localStorage.removeItem(CHAT_KEY); }
+// Run legacy migration once (nukes the old slug-contaminated cache)
+migrateLegacyChat();
 
 // ── Location helpers ───────────────────────────────────────────────────────
 
@@ -485,11 +466,22 @@ export default function VelmaChatPanel({
   const pathname = location.pathname;
   const search = location.search;
 
-  const [messages, setMessages] = useState<ChatMessage[]>(() => {
-    const history = loadChatHistory();
-    if (history.length > 0) return history;
-    return [openingMessage(velmaState, pathname, search)];
+  const [activeConvo, setActiveConvo] = useState<Conversation | null>(() => {
+    const existing = loadActiveConversation();
+    if (existing) return existing;
+    const opening = openingMessage(velmaState, pathname, search);
+    return createConversation(opening);
   });
+  const messages = activeConvo?.messages ?? [];
+  const setMessages = useCallback((updater: ChatMessage[] | ((prev: ChatMessage[]) => ChatMessage[])) => {
+    setActiveConvo(prev => {
+      if (!prev) return prev;
+      const newMsgs = typeof updater === 'function' ? updater(prev.messages) : updater;
+      updateConversationMessages(prev.id, newMsgs);
+      return { ...prev, messages: newMsgs, updated: new Date().toISOString() };
+    });
+  }, []);
+  const [showConvoList, setShowConvoList] = useState(false);
   const [input, setInput] = useState('');
   const [pasteMode, setPasteMode] = useState(false);
   const [pasteText, setPasteText] = useState('');
@@ -539,7 +531,6 @@ export default function VelmaChatPanel({
       };
       setMessages(prev => {
         const updated = [...prev, confirmMsg];
-        saveChatHistory(updated);
         return updated;
       });
     } catch (err) {
@@ -622,11 +613,7 @@ export default function VelmaChatPanel({
       display: 'Back with Velma. What else can I help with?',
       isSystem: true,
     };
-    setMessages(prev => {
-      const updated = [...prev, exitMsg];
-      saveChatHistory(updated);
-      return updated;
-    });
+    setMessages(prev => [...prev, exitMsg]);
     setActiveFlow(null);
     setFlowStartIdx(0);
   }, []);
@@ -683,6 +670,7 @@ export default function VelmaChatPanel({
             })),
             skills: skills.map(s => ({ name: s.name, domain: s.domain, description: s.description })),
             context: { page: describeLocation(pathname, search) },
+            memory: getMemoryContext(),
           }),
         });
       }
@@ -705,12 +693,10 @@ export default function VelmaChatPanel({
         ? { display: full, suggestions: [], path: [], listing: undefined }
         : parseResponse(full);
 
-      const finalMessages = [
+      setMessages([
         ...updatedMessages,
         { role: 'velma' as const, content: full, display, suggestions, path, listing },
-      ];
-      setMessages(finalMessages);
-      saveChatHistory(finalMessages);
+      ]);
 
       // If Velma produced a listing and we're on the discover page, auto-widen for better view
       if (listing && !wide) setWide(true);
@@ -730,14 +716,43 @@ export default function VelmaChatPanel({
   };
 
   const reset = () => {
-    clearChatHistory();
-    setMessages([openingMessage(velmaState, pathname, search)]);
+    // Extract memories from the conversation we're leaving
+    if (activeConvo && activeConvo.messages.length > 1) {
+      extractMemories(activeConvo);
+    }
+    const opening = openingMessage(velmaState, pathname, search);
+    const newConvo = createConversation(opening);
+    setActiveConvo(newConvo);
     setInput('');
     setPasteText('');
     setPasteMode(false);
     setActiveFlow(null);
     setFlowStartIdx(0);
     setPostedListings(new Map());
+    setShowConvoList(false);
+  };
+
+  const switchConversation = (id: string) => {
+    // Save memories from current before switching
+    if (activeConvo && activeConvo.messages.length > 1) {
+      extractMemories(activeConvo);
+    }
+    const convo = loadConversation(id);
+    if (convo) {
+      setActiveConvo(convo);
+      setActiveConversation(id);
+      setActiveFlow(null);
+      setFlowStartIdx(0);
+      setPostedListings(new Map());
+      setShowConvoList(false);
+    }
+  };
+
+  const handleDeleteConversation = (id: string) => {
+    deleteConversation(id);
+    if (activeConvo?.id === id) {
+      reset();
+    }
   };
 
   const locationLabel = describeLocation(pathname, search).replace(/^the /, '');
@@ -817,9 +832,13 @@ export default function VelmaChatPanel({
             style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '13px', padding: '3px 5px', fontFamily: 'monospace', color: wide ? color : '#335', opacity: 0.8 }}>
             {wide ? '⟨' : '⟩'}
           </button>
+          <button onClick={() => setShowConvoList(s => !s)} title="Conversations"
+            style={{ background: showConvoList ? `${color}18` : 'none', border: 'none', color: showConvoList ? color : '#335', cursor: 'pointer', fontSize: '11px', padding: '3px 5px', fontFamily: 'monospace', borderRadius: '4px' }}>
+            ☰
+          </button>
           <button onClick={reset} title="New conversation"
             style={{ background: 'none', border: 'none', color: '#335', cursor: 'pointer', fontSize: '12px', padding: '3px 5px', fontFamily: 'monospace' }}>
-            ↺
+            +
           </button>
           <button onClick={onSwitchToStats}
             style={{ background: 'none', border: 'none', color: '#446', cursor: 'pointer', fontSize: '11px', padding: '3px 5px', fontFamily: 'monospace' }}>
@@ -831,6 +850,57 @@ export default function VelmaChatPanel({
           </button>
         </div>
       </div>
+
+      {/* Conversation list drawer */}
+      {showConvoList && (
+        <div style={{
+          maxHeight: '200px', overflowY: 'auto', padding: '8px',
+          borderBottom: `1px solid ${color}18`,
+          background: 'rgba(0,4,12,0.6)',
+          scrollbarWidth: 'thin', scrollbarColor: '#1a2a3a transparent',
+        }}>
+          {listConversations().map(c => (
+            <div
+              key={c.id}
+              onClick={() => switchConversation(c.id)}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '6px 8px', borderRadius: '6px', cursor: 'pointer',
+                background: c.id === activeConvo?.id ? `${color}12` : 'transparent',
+                border: c.id === activeConvo?.id ? `1px solid ${color}22` : '1px solid transparent',
+                marginBottom: '2px', transition: 'background 0.15s',
+              }}
+              onMouseEnter={e => { if (c.id !== activeConvo?.id) (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.03)'; }}
+              onMouseLeave={e => { if (c.id !== activeConvo?.id) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+            >
+              <div style={{ overflow: 'hidden', flex: 1 }}>
+                <div style={{
+                  fontSize: '10px', fontFamily: 'monospace', fontWeight: 600,
+                  color: c.id === activeConvo?.id ? color : '#889',
+                  whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                }}>
+                  {c.title}
+                </div>
+                <div style={{ fontSize: '9px', color: '#445', marginTop: '1px' }}>
+                  {c.messageCount} messages · {new Date(c.updated).toLocaleDateString()}
+                </div>
+              </div>
+              <button
+                onClick={e => { e.stopPropagation(); handleDeleteConversation(c.id); }}
+                style={{ background: 'none', border: 'none', color: '#334', cursor: 'pointer', fontSize: '12px', padding: '0 4px', flexShrink: 0 }}
+                title="Delete conversation"
+              >
+                ×
+              </button>
+            </div>
+          ))}
+          {listConversations().length === 0 && (
+            <div style={{ fontSize: '10px', color: '#445', textAlign: 'center', padding: '12px 0', fontFamily: 'monospace' }}>
+              No conversations yet
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Message feed */}
       <div style={{

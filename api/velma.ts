@@ -204,6 +204,7 @@ export default async function handler(req: Request) {
       messages: Array<{ role: string; content: string }>;
       skills: Array<{ name: string; domain: string; description: string }>;
       context?: { page?: string };
+      memory?: string;
     };
 
     if (!body.messages?.length) {
@@ -212,7 +213,7 @@ export default async function handler(req: Request) {
       });
     }
 
-    const system = buildSystem(body.skills ?? [], body.context?.page);
+    const system = buildSystem(body.skills ?? [], body.context?.page) + (body.memory || '');
 
     const safeMessages = body.messages.map(m => {
       if (m.role !== 'user') return m;
