@@ -11,12 +11,11 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { readFileSync, writeFileSync, readdirSync, existsSync, mkdirSync } from "fs";
+import { existsSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 import { homedir } from "os";
 import { spawn } from "child_process";
-import { randomUUID } from "crypto";
 import {
   createWalletClient,
   createPublicClient,
@@ -81,20 +80,15 @@ async function recordFlowUsage(userAddress: string | undefined, flowName: string
   }
 }
 
-import { SkillStateStore, type SkillRun } from "./skill-state.js";
-import { ChainMatcher } from "./chain-matcher.js";
 import { GamificationEngine } from "./gamification.js";
-import { ProfileManager } from "./user-profile.js";
 import { VelmaRecommender } from "./velma-recommender.js";
 import { VelmaCompanion } from "./velma-companion.js";
 import { buildManifestIndex } from "./manifest-index.js";
 import { ChainComposer } from "./chain-composer.js";
-import { MemoryStore } from "./memory-store.js";
-import { extractFacts } from "./fact-extractor.js";
-import { KnowledgeGraph } from "./knowledge-graph.js";
 import { CommunityRegistry } from "./community-registry.js";
 import { TriggerEngine, type TriggerEvent } from "./trigger-engine.js";
 import { SkillEvolution } from "./skill-evolution.js";
+import { SkillChainService } from "./service.js";
 
 // ---------------------------------------------------------------------------
 // Safe JSON parsing (prototype pollution guard)
@@ -128,100 +122,29 @@ function findMarketplace(): string {
 }
 
 const MARKETPLACE_DIR = findMarketplace();
-const CHAINS_DIR = join(MARKETPLACE_DIR, "chains");
 
 // ---------------------------------------------------------------------------
-// Helpers
+// Service + Engine Instances
 // ---------------------------------------------------------------------------
 
-function installedSkills(): Map<string, string> {
-  const skills = new Map<string, string>(); // name -> path
-  if (existsSync(MARKETPLACE_DIR)) {
-    for (const d of readdirSync(MARKETPLACE_DIR)) {
-      const skillMd = join(MARKETPLACE_DIR, d, "skill.md");
-      if (existsSync(skillMd)) skills.set(d, skillMd);
-    }
-  }
-  return skills;
-}
+const svc = new SkillChainService({ marketplaceDir: MARKETPLACE_DIR });
+const profileMgr = svc.getProfileMgr();
+const memory = svc.getMemory();
+const kg = svc.getKg();
+const community = new CommunityRegistry(MARKETPLACE_DIR);
+const evolution = new SkillEvolution(MARKETPLACE_DIR);
 
-function loadManifest(skillName: string): Record<string, unknown> {
-  const mkt = join(MARKETPLACE_DIR, skillName, "manifest.json");
-  if (existsSync(mkt)) {
-    try { return JSON.parse(readFileSync(mkt, "utf-8")); } catch { /* */ }
-  }
-  return { name: skillName };
-}
+const triggerLog: TriggerEvent[] = [];
+const triggers = new TriggerEngine((event) => {
+  triggerLog.push(event);
+  if (triggerLog.length > 50) triggerLog.splice(0, triggerLog.length - 50);
+});
 
-function availableChains(): Array<Record<string, unknown>> {
-  if (!existsSync(CHAINS_DIR)) return [];
-  return readdirSync(CHAINS_DIR)
-    .filter(f => f.endsWith(".chain.json"))
-    .sort()
-    .map(f => {
-      try { return JSON.parse(readFileSync(join(CHAINS_DIR, f), "utf-8")); }
-      catch { return null; }
-    })
-    .filter(Boolean) as Array<Record<string, unknown>>;
-}
-
-/**
- * Returns all searchable flows: chains + standalone skills that don't already
- * have a chain wrapper. Standalone skills are represented as single-step
- * synthetic chains so ChainMatcher can rank them alongside real chains.
- */
-function allFlowsForSearch(): Array<Record<string, unknown>> {
-  const chains = availableChains();
-  const chainNames = new Set(chains.map(c => (c as Record<string, unknown>).name as string));
-  const skills = installedSkills();
-  const standaloneEntries: Array<Record<string, unknown>> = [];
-  for (const [name] of skills) {
-    if (chainNames.has(name)) continue; // already covered by a chain
-    const manifest = loadManifest(name);
-    standaloneEntries.push({
-      name,
-      description: manifest.description ?? "",
-      category: manifest.domain ?? "general",
-      tags: manifest.tags ?? [],
-      flow_type: "standalone_skill",
-      execution_pattern: manifest.execution_pattern ?? "phase_pipeline",
-      steps: [{ skill_name: name, alias: name }],
-    });
-  }
-  return [...chains, ...standaloneEntries];
-}
-
-/** Parse required and optional inputs from a skill.md ## Inputs section.
- *  Handles two formats:
- *   - field_name: type -- description
- *   - `field_name`: type -- description  (backtick variant)
- *  Optional markers: "(Optional)" or "(optional)" anywhere in the description.
- */
-function parseSkillInputs(skillMd: string): { required: Array<{name: string; desc: string}>; optional: Array<{name: string; desc: string}> } {
-  const required: Array<{name: string; desc: string}> = [];
-  const optional: Array<{name: string; desc: string}> = [];
-  const section = skillMd.match(/## Inputs\n([\s\S]*?)(?=\n## |\n---)/);
-  if (!section) return { required, optional };
-  for (const line of section[1].split("\n")) {
-    // Match: - `name`: type -- desc  OR  - name: type -- desc
-    const m = line.match(/^-\s+`?(\w[\w-]*)`?:\s+\S[\S]*\s+--\s+(.+)/);
-    if (!m) continue;
-    const [, name, desc] = m;
-    const isOptional = /\(optional\)/i.test(desc);
-    if (isOptional) {
-      optional.push({ name, desc: desc.replace(/\(optional\)\s*/i, "").trim() });
-    } else {
-      required.push({ name, desc });
-    }
-  }
-  return { required, optional };
-}
-
-// ---------------------------------------------------------------------------
-// In-memory run tracking
-// ---------------------------------------------------------------------------
-
-const activeRuns = new Map<string, SkillRun>();
+// Sync L0 identity from profile on startup
+try {
+  const profile = profileMgr.load();
+  memory.syncFromProfile(profile);
+} catch { /* profile may not exist yet */ }
 
 // ---------------------------------------------------------------------------
 // Server
@@ -232,28 +155,6 @@ const server = new McpServer({
   version: "2.2.1",
 });
 
-const store = new SkillStateStore();
-const profileMgr = new ProfileManager();
-const memory = new MemoryStore();
-const kg = new KnowledgeGraph();
-const community = new CommunityRegistry(MARKETPLACE_DIR);
-const evolution = new SkillEvolution(MARKETPLACE_DIR);
-
-// Trigger engine: log events but don't auto-execute chains
-// (chain execution requires Claude Code context)
-const triggerLog: TriggerEvent[] = [];
-const triggers = new TriggerEngine((event) => {
-  triggerLog.push(event);
-  // Keep last 50 events in memory
-  if (triggerLog.length > 50) triggerLog.splice(0, triggerLog.length - 50);
-});
-
-// Sync L0 identity from profile on startup
-try {
-  const profile = profileMgr.load();
-  memory.syncFromProfile(profile);
-} catch { /* profile may not exist yet */ }
-
 // ===================================================================
 // TOOLS
 // ===================================================================
@@ -262,17 +163,7 @@ server.tool("list_skills",
   "List all available skills in the FlowFabric marketplace.",
   {},
   async () => {
-    const skills = installedSkills();
-    const results = [...skills.keys()].sort().map(name => {
-      const manifest = loadManifest(name);
-      return {
-        name,
-        domain: manifest.domain ?? "general",
-        execution_pattern: manifest.execution_pattern ?? "",
-        description: manifest.description ?? "",
-        tags: manifest.tags ?? [],
-      };
-    });
+    const results = svc.listSkills();
     return { content: [{ type: "text" as const, text: JSON.stringify(results, null, 2) }] };
   }
 );
@@ -281,10 +172,9 @@ server.tool("get_flow",
   "Get the full content of an installed flow.",
   { flow_name: z.string().describe("Name of the flow to read") },
   async ({ flow_name }) => {
-    const skills = installedSkills();
-    const path = skills.get(flow_name);
-    if (path && existsSync(path)) {
-      return { content: [{ type: "text" as const, text: readFileSync(path, "utf-8") }] };
+    const content = svc.getSkillContent(flow_name);
+    if (content) {
+      return { content: [{ type: "text" as const, text: content }] };
     }
     return { content: [{ type: "text" as const, text: `Flow '${flow_name}' not found. Use list_flows() to see available flows.` }] };
   }
@@ -297,30 +187,8 @@ server.tool("start_flow_run",
     execution_pattern: z.string().default("orpa").describe("Execution pattern (orpa, phase_pipeline, etc.)"),
   },
   async ({ flow_name, execution_pattern }) => {
-    const run = store.startRun(flow_name, execution_pattern);
-    const runId = randomUUID().slice(0, 16);
-    activeRuns.set(runId, run);
-
-    // Auto-load L2 room context and L0+L1 context
-    let memoryContext: Record<string, unknown> = {};
-    try {
-      const ctx = memory.getContext();
-      const room = memory.getSkillRoom(flow_name);
-      memoryContext = {
-        identity_summary: ctx.identity.summary || undefined,
-        relevant_facts: ctx.facts.slice(0, 5).map(f => f.content),
-        flow_room: room.run_summaries.length > 0 ? {
-          previous_runs: room.run_summaries.length,
-          last_run: room.run_summaries[room.run_summaries.length - 1]?.date,
-          recent_insights: room.insights.slice(0, 3).map(i => i.content),
-        } : undefined,
-      };
-    } catch { /* memory not initialized yet */ }
-
-    return { content: [{ type: "text" as const, text: JSON.stringify({
-      run_id: runId, flow_name, execution_pattern, started_at: run.started_at, status: "in_progress",
-      memory_context: memoryContext,
-    }, null, 2) }] };
+    const result = svc.startRunWithMemory(flow_name, execution_pattern);
+    return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
   }
 );
 
@@ -333,13 +201,14 @@ server.tool("record_phase",
     output: z.string().default("{}").describe("JSON string of phase output data"),
   },
   async ({ run_id, phase, status, output }) => {
-    const run = activeRuns.get(run_id);
-    if (!run) return { content: [{ type: "text" as const, text: JSON.stringify({ error: `Run '${run_id}' not found.` }) }] };
     let outputData: Record<string, unknown>;
     try { outputData = safeJsonParse(output); } catch { outputData = { raw: output }; }
-    const result = store.recordPhase(run, phase, status, outputData);
+    const result = svc.recordPhase(run_id, phase, status, outputData);
+    if (!result.success) {
+      return { content: [{ type: "text" as const, text: JSON.stringify({ error: result.error }) }] };
+    }
     return { content: [{ type: "text" as const, text: JSON.stringify({
-      run_id, phase, status, timestamp: result.timestamp, total_phases: run.phases.length,
+      run_id, phase, status, timestamp: result.timestamp, total_phases: result.total_phases,
     }, null, 2) }] };
   }
 );
@@ -351,53 +220,13 @@ server.tool("complete_flow_run",
     status: z.string().default("completed").describe("Final status"),
   },
   async ({ run_id, status }) => {
-    const run = activeRuns.get(run_id);
-    if (!run) return { content: [{ type: "text" as const, text: JSON.stringify({ error: `Run '${run_id}' not found.` }) }] };
-    store.completeRun(run, status);
-    try { profileMgr.updateUsage(run.skill_name); } catch { /* */ }
-    try {
-      const gam = new GamificationEngine();
-      gam.recordSkillRun(run.skill_name);
-    } catch { /* */ }
-    try { new VelmaCompanion().witnessFlow(run.skill_name); } catch { /* */ }
-
-    // Memory: extract facts from phase outputs and store to L1/L2
-    let factsExtracted = 0;
-    try {
-      const keyOutputs: string[] = [];
-      for (const phase of run.phases) {
-        if (phase.output && Object.keys(phase.output).length > 0) {
-          const facts = extractFacts(phase.output, run.skill_name);
-          for (const fact of facts) {
-            if (fact.importance >= 0.7) {
-              memory.rememberFact(fact.content, fact.tags, run.skill_name, fact.importance);
-            } else {
-              memory.addInsight(run.skill_name, fact.content, fact.tags, fact.importance);
-            }
-            factsExtracted++;
-          }
-          // Collect key outputs for run summary
-          const outputKeys = Object.keys(phase.output).filter(
-            k => typeof phase.output[k] === "string" && (phase.output[k] as string).length > 10
-          );
-          keyOutputs.push(...outputKeys.slice(0, 2));
-        }
-      }
-      // Record run summary to L2 room
-      memory.recordRunToRoom(run.skill_name, run_id, run.phases.length, keyOutputs);
-
-      // Extract knowledge graph triples from phase outputs
-      for (const phase of run.phases) {
-        if (phase.output && Object.keys(phase.output).length > 0) {
-          try { await kg.extractFromOutput(phase.output, run.skill_name, run_id); } catch { /* */ }
-        }
-      }
-    } catch { /* memory extraction is best-effort */ }
-
-    activeRuns.delete(run_id);
+    const result = svc.completeRun(run_id, status);
+    if (!result.success) {
+      return { content: [{ type: "text" as const, text: JSON.stringify({ error: result.error }) }] };
+    }
     return { content: [{ type: "text" as const, text: JSON.stringify({
-      run_id, flow_name: run.skill_name, status, completed_at: run.completed_at,
-      phases_completed: run.phases.length, facts_extracted: factsExtracted,
+      run_id, flow_name: result.flow_name, status, completed_at: result.completed_at,
+      phases_completed: result.phases_completed, facts_extracted: result.facts_extracted,
     }, null, 2) }] };
   }
 );
@@ -410,7 +239,7 @@ server.tool("save_flow_data",
   async ({ flow_name, key, data }) => {
     let dataObj: unknown;
     try { dataObj = safeJsonParse(data); } catch { dataObj = { raw: data }; }
-    store.saveData(flow_name, key, dataObj);
+    svc.saveData(flow_name, key, dataObj);
     return { content: [{ type: "text" as const, text: JSON.stringify({ flow_name, key, saved: true }) }] };
   }
 );
@@ -419,7 +248,7 @@ server.tool("load_flow_data",
   "Load persistent data from a previous flow run.",
   { flow_name: z.string(), key: z.string() },
   async ({ flow_name, key }) => {
-    const result = store.loadData(flow_name, key);
+    const result = svc.loadData(flow_name, key);
     return { content: [{ type: "text" as const, text: JSON.stringify({
       flow_name, key, found: result !== null, data: result,
     }, null, 2) }] };
@@ -430,9 +259,9 @@ server.tool("get_flow_history",
   "Get recent execution history for a flow.",
   { flow_name: z.string(), limit: z.number().default(5) },
   async ({ flow_name, limit }) => {
-    const history = store.getRunHistory(flow_name, limit);
+    const history = svc.getRunHistory(flow_name, limit);
     return { content: [{ type: "text" as const, text: JSON.stringify({
-      flow_name, runs: history, count: history.length,
+      flow_name, runs: history, count: (history as unknown[]).length,
     }, null, 2) }] };
   }
 );
@@ -441,21 +270,7 @@ server.tool("discover_flows",
   "Search for flows in the marketplace by domain.",
   { domain: z.string().default(""), max_results: z.number().default(10) },
   async ({ domain, max_results }) => {
-    const skills = installedSkills();
-    const results: Array<Record<string, unknown>> = [];
-    for (const name of [...skills.keys()].sort()) {
-      const manifest = loadManifest(name);
-      const skillDomain = (manifest.domain as string) ?? "general";
-      if (domain) {
-        const dl = domain.toLowerCase();
-        const tags = ((manifest.tags as string[]) ?? []).map(t => t.toLowerCase());
-        if (!skillDomain.toLowerCase().includes(dl) && !name.toLowerCase().includes(dl) && !tags.some(t => t.includes(dl))) {
-          continue;
-        }
-      }
-      results.push({ name, domain: skillDomain, description: manifest.description ?? "", tags: manifest.tags ?? [], execution_pattern: manifest.execution_pattern ?? "" });
-      if (results.length >= max_results) break;
-    }
+    const results = svc.discoverFlows(domain, max_results);
     return { content: [{ type: "text" as const, text: JSON.stringify(results, null, 2) }] };
   }
 );
@@ -464,14 +279,7 @@ server.tool("list_flows",
   "List all available FlowFabric flows (multi-step pipelines).",
   {},
   async () => {
-    const chains = availableChains();
-    const summaries = chains.map(c => ({
-      name: c.name ?? "",
-      description: c.description ?? "",
-      category: c.category ?? "",
-      steps: ((c.steps as unknown[]) ?? []).length,
-      skills: ((c.steps as Array<Record<string, string>>) ?? []).map(s => s.skill_name),
-    }));
+    const summaries = svc.listChains();
     return { content: [{ type: "text" as const, text: JSON.stringify(summaries, null, 2) }] };
   }
 );
@@ -483,9 +291,7 @@ server.tool("search_flows",
     max_results: z.number().default(5),
   },
   async ({ query, max_results }) => {
-    const allFlows = allFlowsForSearch();
-    const matcher = new ChainMatcher(allFlows as Array<{ name: string; description?: string; category?: string; steps?: Array<{ skill_name: string; alias?: string }> }>);
-    const matches = matcher.match(query, max_results);
+    const matches = svc.searchFlows(query, max_results);
     return { content: [{ type: "text" as const, text: JSON.stringify(matches, null, 2) }] };
   }
 );
@@ -498,56 +304,15 @@ server.tool("find_and_run",
     initial_context: z.string().default("{}").describe("JSON context data for the chain"),
   },
   async ({ query, auto_run, initial_context }) => {
-    const allFlows = allFlowsForSearch();
-    const matcher = new ChainMatcher(allFlows as Array<{ name: string; description?: string; category?: string; steps?: Array<{ skill_name: string; alias?: string }> }>);
-    const matches = matcher.match(query, 5);
+    const resultData = await svc.handleFindAndRun({ query, auto_run, initial_context });
 
-    if (matches.length === 0) {
-      return { content: [{ type: "text" as const, text: JSON.stringify({ error: "No flows match your query.", query }) }] };
-    }
-
-    const best = matches[0];
-    const resultData: Record<string, unknown> = {
-      query,
-      best_match: best,
-      other_matches: matches.slice(1),
-    };
-
-    if (auto_run) {
-      const flowData = allFlows.find(c => (c as Record<string, unknown>).name === best.chain_name);
-      if (flowData) {
-        const steps = ((flowData as Record<string, unknown>).steps as Array<Record<string, string>>) ?? [];
-        let ctx: Record<string, unknown>;
-        try { ctx = safeJsonParse(initial_context); } catch { ctx = {}; }
-        const isStandalone = (flowData as Record<string, unknown>).flow_type === "standalone_skill";
-        resultData.execution = {
-          chain_name: best.chain_name,
-          flow_type: isStandalone ? "standalone_skill" : "chain",
-          status: "ready",
-          steps: steps.map(s => ({
-            skill_name: s.skill_name,
-            alias: s.alias ?? s.skill_name,
-          })),
-          initial_context: ctx,
-          instructions: isStandalone
-            ? "This is a standalone skill. Use start_flow_run, get_flow, record_phase, and complete_flow_run to execute it. Collect required inputs from the user first."
-            : "Execute each flow in order using start_flow_run, get_flow, record_phase, and complete_flow_run.",
-        };
-
-        // Track
-        try { profileMgr.updateChainUsage(best.chain_name); } catch { /* */ }
-        try {
-          const gam = new GamificationEngine();
-          gam.recordChainRun(best.chain_name, steps.length, 0);
-        } catch { /* */ }
-        try { new VelmaCompanion().witnessChain(best.chain_name); } catch { /* */ }
-
-        // Record on-chain usage
-        try {
-          const userAddress = profileMgr.load().wallet_address;
-          await recordFlowUsage(userAddress, best.chain_name);
-        } catch { /* */ }
-      }
+    // Record on-chain usage if auto_run produced an execution
+    if (auto_run && resultData.execution) {
+      try {
+        const best = resultData.best_match as Record<string, unknown>;
+        const userAddress = profileMgr.load().wallet_address;
+        await recordFlowUsage(userAddress, best.chain_name as string);
+      } catch { /* */ }
     }
 
     return { content: [{ type: "text" as const, text: JSON.stringify(resultData, null, 2) }] };
@@ -561,85 +326,17 @@ server.tool("run_flow",
     initial_context: z.string().default("{}").describe("JSON context data"),
   },
   async ({ flow_name, initial_context }) => {
-    const chains = availableChains();
-    const chainData = chains.find(c => (c as Record<string, unknown>).name === flow_name);
+    const result = await svc.handleRunFlow({ flow_name, initial_context });
 
-    let ctx: Record<string, unknown>;
-    try { ctx = safeJsonParse(initial_context); } catch { ctx = {}; }
-
-    // Chain flow
-    if (chainData) {
-      const steps = ((chainData as Record<string, unknown>).steps as Array<Record<string, string>>) ?? [];
-      const result = {
-        flow_name,
-        status: "ready",
-        steps: steps.map(s => ({
-          flow_step: s.skill_name,
-          alias: s.alias ?? s.skill_name,
-          depends_on: (s as Record<string, unknown>).depends_on ?? [],
-        })),
-        initial_context: ctx,
-        instructions: "Use preview_flow to show the user the plan, then run_flow_step to execute one step at a time with human approval between steps.",
-      };
-
-      try { profileMgr.updateChainUsage(flow_name); } catch { /* */ }
-      try {
-        const gam = new GamificationEngine();
-        gam.recordChainRun(flow_name, steps.length, 0);
-      } catch { /* */ }
-      try { new VelmaCompanion().witnessChain(flow_name); } catch { /* */ }
-
+    // Record on-chain usage (kept in index.ts because it uses viem)
+    if (!result.error) {
       try {
         const userAddress = profileMgr.load().wallet_address;
         await recordFlowUsage(userAddress, flow_name);
       } catch { /* */ }
-
-      return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
     }
 
-    // Standalone skill (not a chain) — e.g. business-in-a-box, phase_pipeline skills
-    const skillMap = installedSkills();
-    const skillPath = skillMap.get(flow_name);
-    if (skillPath && existsSync(skillPath)) {
-      const manifest = loadManifest(flow_name);
-      const skillContent = readFileSync(skillPath, "utf-8");
-      const { required: requiredInputs, optional: optionalInputs } = parseSkillInputs(skillContent);
-      const alreadyProvided = Object.keys(ctx);
-      const missingRequired = requiredInputs.filter(i => !alreadyProvided.includes(i.name));
-
-      const intakeBlock = missingRequired.length > 0
-        ? `COLLECT INPUTS FIRST — Ask the user for the following before executing:\n${missingRequired.map(i => `  • ${i.name}: ${i.desc}`).join("\n")}${optionalInputs.length > 0 ? `\n\nAlso ask (optional):\n${optionalInputs.map(i => `  • ${i.name}: ${i.desc}`).join("\n")}` : ""}\n\nThen execute the skill once inputs are collected.`
-        : "All inputs provided. Execute the skill using the skill_definition below.";
-
-      try { profileMgr.updateUsage(flow_name); } catch { /* */ }
-      try {
-        const gam = new GamificationEngine();
-        gam.recordSkillRun(flow_name);
-      } catch { /* */ }
-      try { new VelmaCompanion().witnessFlow(flow_name); } catch { /* */ }
-
-      try {
-        const userAddress = profileMgr.load().wallet_address;
-        await recordFlowUsage(userAddress, flow_name);
-      } catch { /* */ }
-
-      return { content: [{ type: "text" as const, text: JSON.stringify({
-        flow_name,
-        flow_type: "standalone_skill",
-        execution_pattern: manifest.execution_pattern ?? "phase_pipeline",
-        description: manifest.description ?? "",
-        required_inputs: requiredInputs,
-        optional_inputs: optionalInputs,
-        inputs_provided: ctx,
-        skill_definition: skillContent,
-        instructions: intakeBlock,
-      }, null, 2) }] };
-    }
-
-    return { content: [{ type: "text" as const, text: JSON.stringify({
-      error: `Flow '${flow_name}' not found.`,
-      tip: "Use list_flows to see all available flows, or search_flows to find by description.",
-    }) }] };
+    return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
   }
 );
 
@@ -654,49 +351,8 @@ server.tool("preview_flow",
     query: z.string().default("").describe("Natural language query to find the best flow pipeline to preview. Used when flow_name is not provided."),
   },
   async ({ flow_name, query }) => {
-    const chains = availableChains();
-    type ChainData = Record<string, unknown>;
-    type StepData = { skill_name: string; alias?: string; depends_on?: string[] };
-
-    let chainData: ChainData | undefined;
-    if (flow_name) {
-      chainData = chains.find(c => (c as ChainData).name === flow_name) as ChainData | undefined;
-    } else if (query) {
-      const matcher = new ChainMatcher(chains as Array<{ name: string; description?: string; category?: string; steps?: StepData[] }>);
-      const matches = matcher.match(query, 1);
-      if (matches.length > 0) {
-        chainData = chains.find(c => (c as ChainData).name === matches[0].chain_name) as ChainData | undefined;
-      }
-    }
-
-    if (!chainData) {
-      return { content: [{ type: "text" as const, text: JSON.stringify({
-        error: `Flow '${flow_name || query}' not found.`,
-        available: chains.slice(0, 10).map(c => (c as ChainData).name),
-      }) }] };
-    }
-
-    const steps = ((chainData.steps as StepData[]) ?? []);
-    const stepPreviews = steps.map((step, i) => {
-      const manifest = loadManifest(step.skill_name);
-      return {
-        step: i + 1,
-        flow: step.skill_name,
-        alias: step.alias ?? step.skill_name,
-        description: (manifest as Record<string, string>).description ?? "",
-        depends_on: step.depends_on ?? [],
-      };
-    });
-
-    return { content: [{ type: "text" as const, text: JSON.stringify({
-      flow_pipeline: chainData.name,
-      description: chainData.description ?? "",
-      category: chainData.category ?? "",
-      total_steps: steps.length,
-      steps: stepPreviews,
-      approval_required: true,
-      instructions: "Show this plan to the user. Ask: 'Ready to run? I'll execute each flow one at a time and show you the output before continuing.' If approved, use run_flow_step to execute step by step.",
-    }, null, 2) }] };
+    const result = svc.handlePreviewFlow({ flow_name, query });
+    return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
   }
 );
 
@@ -708,157 +364,19 @@ server.tool("run_flow_step",
     context: z.string().default("{}").describe("JSON context from previous steps"),
   },
   async ({ flow_name, step_index, context }) => {
-    const chains = availableChains();
-    type ChainData = Record<string, unknown>;
-    type StepData = { skill_name: string; alias?: string; depends_on?: string[] };
+    const result = await svc.handleRunFlowStep({ flow_name, step_index, context });
 
-    const chainData = chains.find(c => (c as ChainData).name === flow_name) as ChainData | undefined;
-    if (!chainData) {
-      return { content: [{ type: "text" as const, text: JSON.stringify({ error: `Flow '${flow_name}' not found.` }) }] };
-    }
-
-    const steps = ((chainData.steps as StepData[]) ?? []);
-    if (step_index < 0 || step_index >= steps.length) {
-      return { content: [{ type: "text" as const, text: JSON.stringify({
-        error: `step_index ${step_index} out of range (flow has ${steps.length} steps).`,
-        total_steps: steps.length,
-      }) }] };
-    }
-
-    const step = steps[step_index];
-    const skillName = step.skill_name;
-
-    let ctx: Record<string, unknown>;
-    try { ctx = safeJsonParse(context); } catch { ctx = {}; }
-
-    // Read the skill definition
-    const skillMap = installedSkills();
-    const skillPath = skillMap.get(skillName);
-    let skillContent: string | null = null;
-    if (skillPath && existsSync(skillPath)) {
-      skillContent = readFileSync(skillPath, "utf-8");
-    }
-
-    const isLast = step_index === steps.length - 1;
-    const nextStep = isLast ? null : {
-      step_index: step_index + 1,
-      skill: steps[step_index + 1].skill_name,
-      alias: steps[step_index + 1].alias ?? steps[step_index + 1].skill_name,
-    };
-
-    // Parse required/optional inputs from skill definition
-    const { required: requiredInputs, optional: optionalInputs } = skillContent
-      ? parseSkillInputs(skillContent)
-      : { required: [], optional: [] };
-
-    const alreadyProvided = Object.keys(ctx);
-    const missingRequired = requiredInputs.filter(i => !alreadyProvided.includes(i.name));
-
-    const intakeBlock = missingRequired.length > 0
-      ? `STEP 1 — COLLECT INPUTS FIRST (do not skip):\nAsk the user for the following before executing any phases:\n${missingRequired.map(i => `  • ${i.name}: ${i.desc}`).join("\n")}${optionalInputs.length > 0 ? `\n\nAlso ask (optional, but improves results):\n${optionalInputs.map(i => `  • ${i.name}: ${i.desc}`).join("\n")}` : ""}\n\nSTEP 2 — EXECUTE once inputs are collected:\n`
-      : "";
-
-    const continueMsg = isLast
-      ? "All done! Flow pipeline complete."
-      : `Step ${step_index + 1} complete. Show the full output above, then ask: 'Ready for step ${step_index + 2} (${nextStep?.skill ?? ""})?' Call run_flow_step with step_index=${step_index + 1} to continue.`;
-
-    // Track in gamification
-    try {
-      const gam = new GamificationEngine();
-      gam.recordSkillRun(skillName);
-      if (isLast) gam.recordChainRun(flow_name, steps.length, 0);
-    } catch { /* */ }
-    try {
-      const velma = new VelmaCompanion();
-      velma.witnessFlow(skillName);
-      if (isLast) velma.witnessChain(flow_name);
-    } catch { /* */ }
-
-    // Record on-chain usage when the chain completes
-    if (isLast) {
+    // Record on-chain usage when the chain completes (viem stays in index.ts)
+    if (result.is_last_step) {
       try {
         const userAddress = profileMgr.load().wallet_address;
         await recordFlowUsage(userAddress, flow_name);
       } catch { /* */ }
     }
 
-    return { content: [{ type: "text" as const, text: JSON.stringify({
-      flow_pipeline: flow_name,
-      step: step_index + 1,
-      total_steps: steps.length,
-      skill: skillName,
-      alias: step.alias ?? skillName,
-      required_inputs: requiredInputs,
-      optional_inputs: optionalInputs,
-      inputs_already_provided: alreadyProvided,
-      skill_definition: skillContent,
-      context: ctx,
-      is_last_step: isLast,
-      next_step: nextStep,
-      instructions: `${intakeBlock}Execute the '${skillName}' flow using the skill definition and collected inputs. Show the user the complete output. Then: ${continueMsg}`,
-    }, null, 2) }] };
+    return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
   }
 );
-
-// ===================================================================
-// DOCUMENT ANALYSIS TOOL
-// ===================================================================
-
-/** Text-readable file extensions */
-const TEXT_EXTENSIONS = new Set([
-  ".txt", ".md", ".markdown", ".csv", ".json", ".yaml", ".yml",
-  ".ts", ".tsx", ".js", ".jsx", ".py", ".rb", ".go", ".rs",
-  ".html", ".htm", ".xml", ".toml", ".ini", ".cfg", ".conf",
-  ".log",
-]);
-
-/** Document extensions that are readable by name/metadata but not content */
-const DOC_EXTENSIONS = new Set([
-  ".pdf", ".docx", ".doc", ".xlsx", ".xls", ".pptx", ".ppt",
-  ".odt", ".ods", ".odp", ".rtf",
-]);
-
-const DIR_STOPWORDS = new Set([
-  "the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for",
-  "of", "with", "by", "from", "is", "are", "was", "were", "be", "been",
-  "have", "has", "had", "do", "does", "did", "will", "would", "could",
-  "should", "may", "might", "can", "this", "that", "these", "those",
-  "i", "you", "we", "they", "it", "he", "she", "my", "your", "our",
-  "its", "not", "no", "so", "as", "if", "than", "then", "when", "where",
-  "what", "which", "who", "how", "all", "each", "more", "some", "any",
-  "also", "just", "very", "get", "use", "used", "using", "make", "made",
-  "new", "one", "two", "three", "first", "last", "next", "other",
-]);
-
-function scanDirectory(dir: string, depth = 0, maxDepth = 2): string[] {
-  if (depth > maxDepth || !existsSync(dir)) return [];
-  const paths: string[] = [];
-  try {
-    for (const entry of readdirSync(dir, { withFileTypes: true })) {
-      if (entry.name.startsWith(".")) continue; // skip hidden
-      const full = join(dir, entry.name);
-      if (entry.isDirectory() && depth < maxDepth) {
-        paths.push(...scanDirectory(full, depth + 1, maxDepth));
-      } else if (entry.isFile()) {
-        paths.push(full);
-      }
-    }
-  } catch { /* permission denied etc */ }
-  return paths;
-}
-
-function extractKeywords(text: string, topN = 30): string[] {
-  const freq = new Map<string, number>();
-  for (const raw of text.toLowerCase().match(/[a-z][a-z'-]{2,}/g) ?? []) {
-    const word = raw.replace(/^'+|'+$/g, "");
-    if (word.length < 3 || DIR_STOPWORDS.has(word)) continue;
-    freq.set(word, (freq.get(word) ?? 0) + 1);
-  }
-  return [...freq.entries()]
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, topN)
-    .map(([w]) => w);
-}
 
 server.tool("analyze_directory",
   "Onboarding: learn about a user by analyzing their documents and files, then recommend personalized FlowFabric flows. Say: 'To learn more about you and recommend the right flows, share a folder or files you want me to analyze.' Reads documents, detects themes (finance, career, health, business, code), and surfaces the most relevant flows. Run this at the start of a new conversation to personalize the experience.",
@@ -869,130 +387,8 @@ server.tool("analyze_directory",
     read_content: z.boolean().default(true).describe("Read text file contents for deeper analysis. False = filenames only (faster, less accurate)."),
   },
   async ({ directory, max_files, max_depth, read_content }) => {
-    type ChainData = Record<string, unknown>;
-    type StepData = { skill_name: string; alias?: string };
-
-    // Validate directory
-    if (!existsSync(directory)) {
-      return { content: [{ type: "text" as const, text: JSON.stringify({
-        error: `Directory not found: ${directory}`,
-      }) }] };
-    }
-
-    // Scan files
-    const allPaths = scanDirectory(directory, 0, max_depth).slice(0, max_files * 3);
-    const inventory: Array<{ path: string; name: string; ext: string; readable: boolean; binary: boolean }> = [];
-
-    for (const p of allPaths) {
-      const name = p.split(/[\\/]/).pop() ?? p;
-      const ext = name.includes(".") ? "." + name.split(".").pop()!.toLowerCase() : "";
-      inventory.push({
-        path: p,
-        name,
-        ext,
-        readable: TEXT_EXTENSIONS.has(ext),
-        binary: DOC_EXTENSIONS.has(ext),
-      });
-    }
-
-    // Read content from text files
-    const contentChunks: string[] = [];
-    let filesRead = 0;
-    const filesSummary: Array<{ name: string; ext: string; size_bytes: number; excerpt?: string }> = [];
-
-    for (const f of inventory) {
-      if (filesRead >= max_files) break;
-
-      if (f.readable && read_content) {
-        try {
-          const raw = readFileSync(f.path, "utf-8").slice(0, 3000);
-          contentChunks.push(f.name + " " + raw);
-          filesSummary.push({ name: f.name, ext: f.ext, size_bytes: raw.length, excerpt: raw.slice(0, 120).replace(/\n/g, " ") });
-          filesRead++;
-        } catch { /* skip unreadable */ }
-      } else {
-        // Still use filename as signal
-        contentChunks.push(f.name.replace(/[._-]/g, " "));
-        filesSummary.push({ name: f.name, ext: f.ext, size_bytes: 0 });
-        filesRead++;
-      }
-    }
-
-    // Extract keywords from all content
-    const allText = contentChunks.join(" ");
-    const keywords = extractKeywords(allText, 40);
-
-    // Detect domain signals from extensions
-    const extCounts: Record<string, number> = {};
-    for (const f of inventory) {
-      extCounts[f.ext] = (extCounts[f.ext] ?? 0) + 1;
-    }
-
-    // Build context string for ChainMatcher
-    // Augment with domain signals from file types
-    const domainSignals: string[] = [];
-    const codeExts = new Set([".ts", ".tsx", ".js", ".jsx", ".py", ".go", ".rs", ".rb"]);
-    const dataExts = new Set([".csv", ".xlsx", ".xls", ".json"]);
-    const docExts = new Set([".pdf", ".docx", ".doc"]);
-
-    if (Object.keys(extCounts).some(e => codeExts.has(e))) domainSignals.push("code programming software development");
-    if (Object.keys(extCounts).some(e => dataExts.has(e))) domainSignals.push("data analysis spreadsheet");
-    if (Object.keys(extCounts).some(e => docExts.has(e))) domainSignals.push("documents reports");
-    if (allText.match(/invoice|receipt|expense|budget|revenue|profit|loss/i)) domainSignals.push("finance budget money");
-    if (allText.match(/resume|cv|cover letter|job|hiring|candidate/i)) domainSignals.push("resume job career hiring");
-    if (allText.match(/marketing|seo|content|social media|campaign|funnel/i)) domainSignals.push("marketing content social media");
-    if (allText.match(/customer|client|crm|lead|prospect|sales/i)) domainSignals.push("customer sales crm");
-    if (allText.match(/contract|legal|agreement|terms|compliance|patent/i)) domainSignals.push("legal contract compliance");
-    if (allText.match(/health|medical|patient|clinical|symptom|medication/i)) domainSignals.push("health medical");
-    if (allText.match(/research|literature|paper|study|hypothesis|methodology/i)) domainSignals.push("research synthesis analysis");
-
-    const matchQuery = [...keywords.slice(0, 20), ...domainSignals].join(" ");
-
-    // Run chain matcher
-    const chains = availableChains();
-    const matcher = new ChainMatcher(
-      chains as Array<{ name: string; description?: string; category?: string; steps?: StepData[] }>
-    );
-    const matches = matcher.match(matchQuery, 8);
-
-    // Group by category for the response
-    const byCategory: Record<string, typeof matches> = {};
-    for (const m of matches) {
-      if (!byCategory[m.category]) byCategory[m.category] = [];
-      byCategory[m.category].push(m);
-    }
-
-    // Build reasons tied to what was found in the directory
-    const suggestions = matches.slice(0, 6).map(m => {
-      const flowDesc = (m.description + " " + m.skills.join(" ")).toLowerCase();
-      const triggerWords = keywords.filter(k => flowDesc.includes(k)).slice(0, 4);
-      return {
-        flow: m.chain_name,
-        description: m.description,
-        category: m.category,
-        score: m.score,
-        steps: m.skills,
-        why: triggerWords.length > 0
-          ? `Found in your documents: "${triggerWords.join('", "')}"`
-          : m.match_reason,
-      };
-    });
-
-    const topFlow = suggestions[0];
-    return { content: [{ type: "text" as const, text: JSON.stringify({
-      onboarding_message: "Here's what I found in your files and the flows I'd recommend based on them.",
-      directory,
-      files_found: inventory.length,
-      files_read: filesRead,
-      file_types: extCounts,
-      detected_themes: domainSignals,
-      top_keywords: keywords.slice(0, 20),
-      recommended_flows: suggestions,
-      files_analyzed: filesSummary.slice(0, 30),
-      next_step: topFlow
-        ? `I'd suggest starting with '${topFlow.flow}' — ${topFlow.description}. Call preview_flow('${topFlow.flow}') to see the plan and I'll walk you through it step by step.`
-        : "I couldn't find a strong match. Tell me more about what you're working on and I'll find the right flow.",
-    }, null, 2) }] };
+    const result = svc.handleAnalyzeDirectory({ directory, max_files, max_depth, read_content });
+    return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
   }
 );
 
@@ -1008,10 +404,7 @@ server.tool("compose_flow",
     min_confidence: z.number().default(0.4).describe("Minimum confidence threshold (0-1). Below this, falls back to curated flows."),
   },
   async ({ query, max_skills, min_confidence }) => {
-    const manifestIdx = buildManifestIndex(MARKETPLACE_DIR);
-    const composer = new ChainComposer(manifestIdx);
-    const chains = availableChains() as Array<{ name: string; description?: string; category?: string; steps?: Array<{ skill_name: string; alias?: string }> }>;
-    const result = composer.compose(query, max_skills, min_confidence, chains);
+    const result = svc.composeChain(query, max_skills, min_confidence);
 
     // Track composition in gamification
     if (result.type === "composed" && result.steps.length > 0) {
@@ -1453,13 +846,8 @@ server.tool("get_recommendations",
   "Get personalized flow recommendations based on your profile.",
   {},
   async () => {
-    const skills = [...installedSkills().keys()];
-    const skillRecs = profileMgr.suggestSkills(skills);
-    const chainRecs = profileMgr.suggestChains();
-    return { content: [{ type: "text" as const, text: JSON.stringify({
-      flow_recommendations: skillRecs.slice(0, 15),
-      chain_recommendations: chainRecs,
-    }, null, 2) }] };
+    const result = svc.getRecommendations();
+    return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
   }
 );
 
@@ -1725,109 +1113,14 @@ server.tool("check_access",
     skill_name: z.string().default("").describe("Optional skill/flow name to check access for"),
   },
   async ({ skill_name }) => {
-    const skills = installedSkills();
-    const chains = availableChains();
-
-    // Read tier from env var (injected via claude_desktop_config.json)
-    // or from ~/.skillchain/config.json as fallback
-    let tier = (process.env.SKILLCHAIN_TIER ?? "").toLowerCase().trim();
-    let wallet = (process.env.SKILLCHAIN_WALLET ?? "").trim() || null;
-    let configError: string | null = null;
-
-    if (!tier || !wallet) {
-      try {
-        const cfgPath = join(homedir(), ".skillchain", "config.json");
-        if (existsSync(cfgPath)) {
-          const cfg = JSON.parse(readFileSync(cfgPath, "utf-8"));
-          if (!tier) tier = (cfg.trust_tier ?? "").toLowerCase().trim();
-          if (!wallet) wallet = cfg.wallet_address?.trim() || null;
-        }
-      } catch { /* ignore */ }
-    }
-
-    if (!tier) tier = "free";
-    if (!wallet) {
-      configError = "No wallet configured. Add SKILLCHAIN_TIER and SKILLCHAIN_WALLET to your MCP env, or run 'skillchain init'.";
-    }
-
-    // Domain-based tier check for the requested skill
-    const BUILDER_DOMAINS = new Set(["engineering", "ai"]);
-    const CREATOR_DOMAINS = new Set(["legal", "meta"]);
-    const tierLevel = (t: string) => {
-      if (t === "creator" || t === "staker") return 2;
-      if (t === "builder" || t === "holder") return 1;
-      return 0;
-    };
-
-    let allowed = true;
-    if (skill_name) {
-      const manifest = loadManifest(skill_name);
-      const domain = (String(manifest?.domain ?? "")).toLowerCase();
-      const level = tierLevel(tier);
-      if (CREATOR_DOMAINS.has(domain)) allowed = level >= 2;
-      else if (BUILDER_DOMAINS.has(domain)) allowed = level >= 1;
-    }
-
-    return { content: [{ type: "text" as const, text: JSON.stringify({
-      status: "ok",
-      server: "flowfabric-mcp",
-      version: "0.1.0",
-      runtime: "node",
-      tier,
-      wallet,
-      allowed,
-      error: configError,
-      flows_available: skills.size,
-      chains_available: chains.length,
-      marketplace_dir: MARKETPLACE_DIR,
-      marketplace_exists: existsSync(MARKETPLACE_DIR),
-    }, null, 2) }] };
+    const result = svc.handleCheckAccess({ skill_name });
+    return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
   }
 );
 
 // ===================================================================
 // COGNITIVE FABRIC — TKG + Communication layer
 // ===================================================================
-
-const TKG_PATH = join(homedir(), ".skillchain", "fabric", "tkg.json");
-
-/** Load all active TKG assertions from disk. */
-function loadTKG(): Record<string, unknown>[] {
-  if (!existsSync(TKG_PATH)) return [];
-  try {
-    const raw = JSON.parse(readFileSync(TKG_PATH, "utf-8")) as Record<string, unknown>[];
-    return Array.isArray(raw) ? raw.filter((a: Record<string, unknown>) => a.status === "active") : [];
-  } catch { return []; }
-}
-
-/** Append or update an assertion in the TKG JSON file. */
-function writeTKGAssertion(assertion: Record<string, unknown>): void {
-  const dir = join(homedir(), ".skillchain", "fabric");
-  if (!existsSync(dir)) { mkdirSync(dir, { recursive: true }); }
-  const existing = existsSync(TKG_PATH)
-    ? JSON.parse(readFileSync(TKG_PATH, "utf-8")) as Record<string, unknown>[]
-    : [];
-
-  // Simple contradiction check: same subject+predicate → invalidate older lower-confidence entry
-  const spKey = `${assertion.subject}\x00${assertion.predicate}`;
-  let replaced = false;
-  const updated = existing.map((a: Record<string, unknown>) => {
-    if (a.status !== "active") return a;
-    const aKey = `${a.subject}\x00${a.predicate}`;
-    if (aKey === spKey && a.object !== assertion.object) {
-      const existingConf = typeof a.confidence === "number" ? a.confidence : 0;
-      const newConf = typeof assertion.confidence === "number" ? assertion.confidence : 0;
-      if (newConf >= existingConf) {
-        replaced = true;
-        return { ...a, status: "invalidated_by_contradiction", invalidated_by: assertion.id };
-      }
-    }
-    return a;
-  });
-
-  updated.push({ ...assertion, status: "active" });
-  writeFileSync(TKG_PATH, JSON.stringify(updated, null, 2));
-}
 
 server.tool("tkg_query",
   "Query the Temporal Knowledge Graph for active assertions. Returns top results scored by confidence, importance, and recency.",
@@ -1839,34 +1132,11 @@ server.tool("tkg_query",
     min_confidence: z.number().default(0).describe("Minimum confidence threshold 0-1"),
   },
   async ({ query_text, subject, predicate, top_k, min_confidence }) => {
-    try {
-      let assertions = loadTKG();
-      if (subject) assertions = assertions.filter((a: Record<string, unknown>) => a.subject === subject);
-      if (predicate) assertions = assertions.filter((a: Record<string, unknown>) => a.predicate === predicate);
-      if (min_confidence > 0) assertions = assertions.filter((a: Record<string, unknown>) => (a.confidence as number) >= min_confidence);
-
-      // Simple relevance scoring: text overlap + recency + confidence
-      const now = Date.now();
-      const scored = assertions.map((a: Record<string, unknown>) => {
-        const text = `${a.subject} ${a.predicate} ${a.object}`.toLowerCase();
-        const q = query_text.toLowerCase();
-        const qTokens = q.split(/\s+/).filter(Boolean);
-        const overlap = qTokens.length > 0
-          ? qTokens.filter(t => text.includes(t)).length / qTokens.length
-          : 1;
-        const conf = typeof a.confidence === "number" ? a.confidence : 0.5;
-        const importance = typeof a.importance === "number" ? a.importance : conf;
-        const ageSec = a.valid_from ? (now - new Date(a.valid_from as string).getTime()) / 1000 : 86400;
-        const recency = Math.exp(-ageSec / (7 * 86400));
-        const score = 0.35 * conf + 0.30 * importance + 0.20 * recency + 0.15 * overlap;
-        return { ...a, _score: Math.round(score * 1000) / 1000 };
-      });
-      scored.sort((a, b) => (b._score as number) - (a._score as number));
-
-      return { content: [{ type: "text" as const, text: JSON.stringify(scored.slice(0, top_k), null, 2) }] };
-    } catch (err) {
-      return { content: [{ type: "text" as const, text: JSON.stringify({ error: String(err) }) }] };
+    const result = svc.handleTkgQuery({ query_text, subject, predicate, top_k, min_confidence });
+    if (result.error) {
+      return { content: [{ type: "text" as const, text: JSON.stringify({ error: result.error }) }] };
     }
+    return { content: [{ type: "text" as const, text: JSON.stringify(result.results, null, 2) }] };
   }
 );
 
@@ -1880,23 +1150,8 @@ server.tool("tkg_write",
     source_agent: z.string().default("claude").describe("Asserting agent ID"),
   },
   async ({ subject, predicate, object, confidence, source_agent }) => {
-    try {
-      // randomUUID is imported at top level
-      const assertion = {
-        id: randomUUID(),
-        subject, predicate, object, confidence,
-        source_agent,
-        derivation_kind: "observed",
-        valid_from: new Date().toISOString(),
-        valid_to: null,
-        importance: confidence,
-        created_at: new Date().toISOString(),
-      };
-      writeTKGAssertion(assertion);
-      return { content: [{ type: "text" as const, text: JSON.stringify({ written: assertion.id, subject, predicate, object }) }] };
-    } catch (err) {
-      return { content: [{ type: "text" as const, text: JSON.stringify({ error: String(err) }) }] };
-    }
+    const result = svc.handleTkgWrite({ subject, predicate, object, confidence, source_agent });
+    return { content: [{ type: "text" as const, text: JSON.stringify(result) }] };
   }
 );
 
@@ -1904,21 +1159,8 @@ server.tool("tkg_stats",
   "Get Temporal Knowledge Graph statistics: counts of active, invalidated, and expired assertions.",
   {},
   async () => {
-    try {
-      const all = existsSync(TKG_PATH)
-        ? JSON.parse(readFileSync(TKG_PATH, "utf-8")) as Record<string, unknown>[]
-        : [];
-      const stats = {
-        total: all.length,
-        active: all.filter((a: Record<string, unknown>) => a.status === "active").length,
-        invalidated: all.filter((a: Record<string, unknown>) => String(a.status).startsWith("invalidated")).length,
-        expired: all.filter((a: Record<string, unknown>) => a.status === "expired").length,
-        subjects: new Set(all.map((a: Record<string, unknown>) => a.subject)).size,
-      };
-      return { content: [{ type: "text" as const, text: JSON.stringify(stats, null, 2) }] };
-    } catch (err) {
-      return { content: [{ type: "text" as const, text: JSON.stringify({ error: String(err) }) }] };
-    }
+    const result = svc.handleTkgStats();
+    return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
   }
 );
 
@@ -1933,38 +1175,8 @@ server.tool("send_agent_message",
     reply_to: z.string().default("").describe("Message ID this replies to"),
   },
   async ({ act, content_json, sender_id, receiver_id, thread_id, reply_to }) => {
-    try {
-      // randomUUID is imported at top level
-      const content = JSON.parse(content_json || "{}");
-      const msg = {
-        message_id: randomUUID(),
-        act,
-        sender_id,
-        receiver_id: receiver_id || null,
-        thread_id: thread_id || randomUUID(),
-        reply_to: reply_to || null,
-        content,
-        created_at: new Date().toISOString(),
-        protocol_version: "1.0",
-      };
-
-      // Persist dialogue thread to disk
-      const dialoguePath = join(homedir(), ".skillchain", "fabric", "dialogue.json");
-      const existing = existsSync(dialoguePath)
-        ? JSON.parse(readFileSync(dialoguePath, "utf-8")) as Record<string, unknown>
-        : {};
-      const thread = (existing[msg.thread_id] as Record<string, unknown>) || { thread_id: msg.thread_id, messages: [], participants: [] };
-      (thread.messages as unknown[]).push(msg);
-      if (!(thread.participants as string[]).includes(sender_id)) {
-        (thread.participants as string[]).push(sender_id);
-      }
-      existing[msg.thread_id] = thread;
-      writeFileSync(dialoguePath, JSON.stringify(existing, null, 2));
-
-      return { content: [{ type: "text" as const, text: JSON.stringify({ dispatched: act, message_id: msg.message_id, thread_id: msg.thread_id }) }] };
-    } catch (err) {
-      return { content: [{ type: "text" as const, text: JSON.stringify({ error: String(err) }) }] };
-    }
+    const result = svc.handleSendAgentMessage({ act, content_json, sender_id, receiver_id, thread_id, reply_to });
+    return { content: [{ type: "text" as const, text: JSON.stringify(result) }] };
   }
 );
 
