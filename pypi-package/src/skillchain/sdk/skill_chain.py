@@ -285,6 +285,7 @@ class SkillChain:
         self,
         initial_context: dict[str, Any] | None = None,
         fail_fast: bool = True,
+        fabric: Optional[Any] = None,
     ) -> ChainResult:
         """Execute the chain in topological order.
 
@@ -295,6 +296,10 @@ class SkillChain:
         fail_fast:
             If True (default), stop on the first failed step. If False,
             skip downstream dependents and continue parallel branches.
+        fabric:
+            Optional CognitiveFabric. When provided, each completed step
+            emits an Observation into the TKG and the chain result emits
+            a chain-level Inference on completion.
 
         Returns
         -------
@@ -324,6 +329,16 @@ class SkillChain:
                     error="Upstream dependency failed.",
                 ))
                 failed_aliases.add(step.alias)
+                if fabric is not None:
+                    fabric.on_step_complete(
+                        chain_name=self.name,
+                        step_alias=step.alias,
+                        skill_name=step.skill_name,
+                        status="skipped",
+                        output={},
+                        duration_ms=0.0,
+                        error="Upstream dependency failed.",
+                    )
                 continue
 
             # Merge upstream outputs into step input
@@ -342,6 +357,18 @@ class SkillChain:
             result.upstream_data_received = upstream_received
             results.append(result)
 
+            # Emit observation into CognitiveFabric if present
+            if fabric is not None:
+                fabric.on_step_complete(
+                    chain_name=self.name,
+                    step_alias=step.alias,
+                    skill_name=step.skill_name,
+                    status=result.status,
+                    output=result.output,
+                    duration_ms=result.duration_ms,
+                    error=result.error,
+                )
+
             if result.status == "failed":
                 failed_aliases.add(step.alias)
                 if fail_fast:
@@ -350,13 +377,24 @@ class SkillChain:
                 step_outputs[step.alias] = result.output
 
         elapsed = (time.perf_counter() - t0) * 1000
-        return ChainResult(
+        chain_result = ChainResult(
             chain_name=self.name,
             steps=results,
             success=all(r.status == "completed" for r in results),
             final_output=self._merge_outputs(step_outputs),
             total_duration_ms=elapsed,
         )
+
+        # Emit chain-level inference into CognitiveFabric
+        if fabric is not None:
+            fabric.on_chain_complete(
+                chain_name=self.name,
+                success=chain_result.success,
+                total_duration_ms=elapsed,
+                step_count=len(results),
+            )
+
+        return chain_result
 
     # -- Serialisation ------------------------------------------------------
 

@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { getTitle } from '../hooks/useVelmaCompanion';
+import { useTKG } from '../hooks/useTKG';
+import type { TKGAssertion } from '../hooks/useTKG';
 
 interface SavedOutput {
   id: string;
@@ -164,6 +166,99 @@ function XpBar({ xp, level }: { xp: number; level: number }) {
 
 // ── Main page ─────────────────────────────────────────────────────
 
+// ── TKG Panel ─────────────────────────────────────────────────────
+
+function TKGPanel() {
+  const { assertions, stats, query } = useTKG();
+  const [search, setSearch] = useState('');
+  const [showAll, setShowAll] = useState(false);
+
+  const results = search.trim()
+    ? query({ queryText: search, topK: 20 })
+    : assertions.slice(0, showAll ? 200 : 12);
+
+  if (stats.total === 0) return null;
+
+  const derivationColor = (kind: TKGAssertion['derivation_kind']) => {
+    if (kind === 'consensus_validated') return 'var(--cyan)';
+    if (kind === 'inferred') return 'var(--purple)';
+    return 'var(--text-secondary)';
+  };
+
+  return (
+    <div style={{ ...cardStyle, marginBottom: '24px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
+        <div>
+          <h2 style={{ color: 'var(--text-primary)', fontSize: '15px', fontWeight: 700, margin: 0 }}>Knowledge Graph</h2>
+          <p style={{ ...labelStyle, margin: '2px 0 0' }}>temporal assertions from your flows</p>
+        </div>
+        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+          <span style={tagStyle}>{stats.active} active</span>
+          <span style={{ ...tagStyle, background: 'rgba(167,139,250,0.08)', color: 'var(--purple)', border: '1px solid rgba(167,139,250,0.2)' }}>
+            {stats.subjects} subjects
+          </span>
+        </div>
+      </div>
+
+      <input
+        type="text"
+        placeholder="Search assertions..."
+        value={search}
+        onChange={e => setSearch(e.target.value)}
+        style={{
+          width: '100%', background: 'var(--bg-secondary)', border: '1px solid var(--border)',
+          borderRadius: '8px', padding: '8px 12px', color: 'var(--text-primary)',
+          fontSize: '13px', marginBottom: '12px', boxSizing: 'border-box',
+          outline: 'none',
+        }}
+      />
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+        {results.map(a => (
+          <div key={a.id} style={{
+            background: 'var(--bg-secondary)', border: '1px solid var(--border)',
+            borderRadius: '8px', padding: '10px 12px',
+            display: 'grid', gridTemplateColumns: '1fr auto', gap: '8px', alignItems: 'start',
+          }}>
+            <div>
+              <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap', marginBottom: '4px' }}>
+                <code style={{ fontSize: '11px', color: 'var(--cyan)', fontWeight: 600 }}>{a.subject}</code>
+                <span style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>·</span>
+                <code style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{a.predicate}</code>
+              </div>
+              <p style={{ fontSize: '12px', color: 'var(--text-primary)', margin: 0, lineHeight: 1.5 }}>
+                {a.object}
+              </p>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px', flexShrink: 0 }}>
+              <span style={{ fontSize: '10px', color: derivationColor(a.derivation_kind), fontWeight: 600 }}>
+                {a.derivation_kind}
+              </span>
+              <span style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>
+                {Math.round(a.confidence * 100)}%
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {!search && assertions.length > 12 && (
+        <button
+          onClick={() => setShowAll(v => !v)}
+          style={{
+            marginTop: '10px', background: 'transparent', border: 'none',
+            cursor: 'pointer', color: 'var(--cyan)', fontSize: '12px', padding: 0,
+          }}
+        >
+          {showAll ? 'Show fewer' : `Show all ${assertions.length} assertions`}
+        </button>
+      )}
+    </div>
+  );
+}
+
+// ── Main page ─────────────────────────────────────────────────────
+
 export default function Memory() {
   const [savedOutputs, setSavedOutputs] = useState<SavedOutput[]>([]);
   const [velma, setVelma] = useState<VelmaState | null>(null);
@@ -308,6 +403,9 @@ export default function Memory() {
             </div>
           </div>
         )}
+
+        {/* TKG assertions */}
+        <TKGPanel />
 
         {/* Architecture explainer */}
         <div style={{ ...cardStyle, marginBottom: '16px' }}>

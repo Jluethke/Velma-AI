@@ -11,7 +11,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { readFileSync, readdirSync, existsSync } from "fs";
+import { readFileSync, writeFileSync, readdirSync, existsSync, mkdirSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 import { homedir } from "os";
@@ -1527,6 +1527,173 @@ server.tool("check_access", "Check if FlowFabric MCP server is running and acces
                     marketplace_dir: MARKETPLACE_DIR,
                     marketplace_exists: existsSync(MARKETPLACE_DIR),
                 }, null, 2) }] };
+});
+// ===================================================================
+// COGNITIVE FABRIC — TKG + Communication layer
+// ===================================================================
+const TKG_PATH = join(homedir(), ".skillchain", "fabric", "tkg.json");
+/** Load all active TKG assertions from disk. */
+function loadTKG() {
+    if (!existsSync(TKG_PATH))
+        return [];
+    try {
+        const raw = JSON.parse(readFileSync(TKG_PATH, "utf-8"));
+        return Array.isArray(raw) ? raw.filter((a) => a.status === "active") : [];
+    }
+    catch {
+        return [];
+    }
+}
+/** Append or update an assertion in the TKG JSON file. */
+function writeTKGAssertion(assertion) {
+    const dir = join(homedir(), ".skillchain", "fabric");
+    if (!existsSync(dir)) {
+        mkdirSync(dir, { recursive: true });
+    }
+    const existing = existsSync(TKG_PATH)
+        ? JSON.parse(readFileSync(TKG_PATH, "utf-8"))
+        : [];
+    // Simple contradiction check: same subject+predicate → invalidate older lower-confidence entry
+    const spKey = `${assertion.subject}\x00${assertion.predicate}`;
+    let replaced = false;
+    const updated = existing.map((a) => {
+        if (a.status !== "active")
+            return a;
+        const aKey = `${a.subject}\x00${a.predicate}`;
+        if (aKey === spKey && a.object !== assertion.object) {
+            const existingConf = typeof a.confidence === "number" ? a.confidence : 0;
+            const newConf = typeof assertion.confidence === "number" ? assertion.confidence : 0;
+            if (newConf >= existingConf) {
+                replaced = true;
+                return { ...a, status: "invalidated_by_contradiction", invalidated_by: assertion.id };
+            }
+        }
+        return a;
+    });
+    updated.push({ ...assertion, status: "active" });
+    writeFileSync(TKG_PATH, JSON.stringify(updated, null, 2));
+}
+server.tool("tkg_query", "Query the Temporal Knowledge Graph for active assertions. Returns top results scored by confidence, importance, and recency.", {
+    query_text: z.string().default("").describe("Natural language search term"),
+    subject: z.string().default("").describe("Filter by subject ID"),
+    predicate: z.string().default("").describe("Filter by predicate"),
+    top_k: z.number().default(20).describe("Max results to return"),
+    min_confidence: z.number().default(0).describe("Minimum confidence threshold 0-1"),
+}, async ({ query_text, subject, predicate, top_k, min_confidence }) => {
+    try {
+        let assertions = loadTKG();
+        if (subject)
+            assertions = assertions.filter((a) => a.subject === subject);
+        if (predicate)
+            assertions = assertions.filter((a) => a.predicate === predicate);
+        if (min_confidence > 0)
+            assertions = assertions.filter((a) => a.confidence >= min_confidence);
+        // Simple relevance scoring: text overlap + recency + confidence
+        const now = Date.now();
+        const scored = assertions.map((a) => {
+            const text = `${a.subject} ${a.predicate} ${a.object}`.toLowerCase();
+            const q = query_text.toLowerCase();
+            const qTokens = q.split(/\s+/).filter(Boolean);
+            const overlap = qTokens.length > 0
+                ? qTokens.filter(t => text.includes(t)).length / qTokens.length
+                : 1;
+            const conf = typeof a.confidence === "number" ? a.confidence : 0.5;
+            const importance = typeof a.importance === "number" ? a.importance : conf;
+            const ageSec = a.valid_from ? (now - new Date(a.valid_from).getTime()) / 1000 : 86400;
+            const recency = Math.exp(-ageSec / (7 * 86400));
+            const score = 0.35 * conf + 0.30 * importance + 0.20 * recency + 0.15 * overlap;
+            return { ...a, _score: Math.round(score * 1000) / 1000 };
+        });
+        scored.sort((a, b) => b._score - a._score);
+        return { content: [{ type: "text", text: JSON.stringify(scored.slice(0, top_k), null, 2) }] };
+    }
+    catch (err) {
+        return { content: [{ type: "text", text: JSON.stringify({ error: String(err) }) }] };
+    }
+});
+server.tool("tkg_write", "Write an assertion to the Temporal Knowledge Graph. Runs contradiction detection automatically.", {
+    subject: z.string().describe("Entity being described"),
+    predicate: z.string().describe("Relationship type (e.g. asserts, has_state, completed)"),
+    object: z.string().describe("Value or target of the assertion"),
+    confidence: z.number().default(0.9).describe("Confidence 0-1"),
+    source_agent: z.string().default("claude").describe("Asserting agent ID"),
+}, async ({ subject, predicate, object, confidence, source_agent }) => {
+    try {
+        // randomUUID is imported at top level
+        const assertion = {
+            id: randomUUID(),
+            subject, predicate, object, confidence,
+            source_agent,
+            derivation_kind: "observed",
+            valid_from: new Date().toISOString(),
+            valid_to: null,
+            importance: confidence,
+            created_at: new Date().toISOString(),
+        };
+        writeTKGAssertion(assertion);
+        return { content: [{ type: "text", text: JSON.stringify({ written: assertion.id, subject, predicate, object }) }] };
+    }
+    catch (err) {
+        return { content: [{ type: "text", text: JSON.stringify({ error: String(err) }) }] };
+    }
+});
+server.tool("tkg_stats", "Get Temporal Knowledge Graph statistics: counts of active, invalidated, and expired assertions.", {}, async () => {
+    try {
+        const all = existsSync(TKG_PATH)
+            ? JSON.parse(readFileSync(TKG_PATH, "utf-8"))
+            : [];
+        const stats = {
+            total: all.length,
+            active: all.filter((a) => a.status === "active").length,
+            invalidated: all.filter((a) => String(a.status).startsWith("invalidated")).length,
+            expired: all.filter((a) => a.status === "expired").length,
+            subjects: new Set(all.map((a) => a.subject)).size,
+        };
+        return { content: [{ type: "text", text: JSON.stringify(stats, null, 2) }] };
+    }
+    catch (err) {
+        return { content: [{ type: "text", text: JSON.stringify({ error: String(err) }) }] };
+    }
+});
+server.tool("send_agent_message", "Send a typed agent message (propose / challenge / confirm / ask / revise). Routes through the speech act dispatcher.", {
+    act: z.enum(["ask", "answer", "propose", "challenge", "revise", "confirm", "reject", "delegate", "report", "abort"]),
+    content_json: z.string().default("{}").describe("JSON payload"),
+    sender_id: z.string().default("claude").describe("Sender agent ID"),
+    receiver_id: z.string().default("").describe("Receiver agent ID (empty = broadcast)"),
+    thread_id: z.string().default("").describe("Thread ID (empty = auto)"),
+    reply_to: z.string().default("").describe("Message ID this replies to"),
+}, async ({ act, content_json, sender_id, receiver_id, thread_id, reply_to }) => {
+    try {
+        // randomUUID is imported at top level
+        const content = JSON.parse(content_json || "{}");
+        const msg = {
+            message_id: randomUUID(),
+            act,
+            sender_id,
+            receiver_id: receiver_id || null,
+            thread_id: thread_id || randomUUID(),
+            reply_to: reply_to || null,
+            content,
+            created_at: new Date().toISOString(),
+            protocol_version: "1.0",
+        };
+        // Persist dialogue thread to disk
+        const dialoguePath = join(homedir(), ".skillchain", "fabric", "dialogue.json");
+        const existing = existsSync(dialoguePath)
+            ? JSON.parse(readFileSync(dialoguePath, "utf-8"))
+            : {};
+        const thread = existing[msg.thread_id] || { thread_id: msg.thread_id, messages: [], participants: [] };
+        thread.messages.push(msg);
+        if (!thread.participants.includes(sender_id)) {
+            thread.participants.push(sender_id);
+        }
+        existing[msg.thread_id] = thread;
+        writeFileSync(dialoguePath, JSON.stringify(existing, null, 2));
+        return { content: [{ type: "text", text: JSON.stringify({ dispatched: act, message_id: msg.message_id, thread_id: msg.thread_id }) }] };
+    }
+    catch (err) {
+        return { content: [{ type: "text", text: JSON.stringify({ error: String(err) }) }] };
+    }
 });
 // ===================================================================
 // START

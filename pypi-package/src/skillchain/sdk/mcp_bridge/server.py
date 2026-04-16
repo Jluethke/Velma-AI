@@ -1429,6 +1429,199 @@ The chain flows top-to-bottom. Each step receives outputs from its dependencies.
         result = connector.trends(metric, days)
         return json.dumps(result, indent=2, default=str)
 
+    # ===================================================================
+    # COGNITIVE FABRIC — TKG + Communication layer
+    # ===================================================================
+
+    # Lazy-init shared fabric instance (persisted to ~/.skillchain/fabric/)
+    _fabric_instance: Any = None
+
+    def _get_fabric() -> Any:
+        nonlocal _fabric_instance
+        if _fabric_instance is None:
+            from ..cognitive_fabric import CognitiveFabric
+            _fabric_instance = CognitiveFabric.create(persist=True)
+        return _fabric_instance
+
+    @server.tool()
+    def tkg_query(
+        query_text: str = "",
+        subject: str = "",
+        predicate: str = "",
+        top_k: int = 20,
+        min_confidence: float = 0.0,
+    ) -> str:
+        """Query the Temporal Knowledge Graph for active assertions.
+
+        Returns the top-k most relevant assertions scored by confidence,
+        importance (decay-adjusted), recency, and relevance to query_text.
+
+        Args:
+            query_text: Natural language search (token overlap scoring)
+            subject:    Filter by subject ID
+            predicate:  Filter by predicate (e.g. 'asserts', 'has_state')
+            top_k:      Maximum results (default 20)
+            min_confidence: Minimum confidence threshold (0.0–1.0)
+        """
+        try:
+            fabric = _get_fabric()
+            results = fabric.tkg.query(
+                subject=subject or None,
+                predicate=predicate or None,
+                query_text=query_text,
+                top_k=top_k,
+                min_confidence=min_confidence,
+            )
+            return json.dumps([{
+                "id": r.assertion.id[:12],
+                "subject": r.assertion.subject,
+                "predicate": r.assertion.predicate,
+                "object": r.assertion.object,
+                "confidence": round(r.assertion.confidence, 3),
+                "importance": round(r.assertion.importance, 3),
+                "score": round(r.score, 3),
+                "valid_from": r.assertion.valid_from.isoformat(),
+                "derivation_kind": r.assertion.derivation_kind,
+            } for r in results], indent=2)
+        except Exception as exc:
+            return json.dumps({"error": str(exc)})
+
+    @server.tool()
+    def tkg_write(
+        subject: str,
+        predicate: str,
+        object: str,
+        confidence: float = 0.9,
+        source_agent: str = "claude",
+    ) -> str:
+        """Write an assertion directly to the Temporal Knowledge Graph.
+
+        Runs contradiction detection — if a conflicting assertion exists
+        for the same subject+predicate with lower confidence, it is
+        automatically invalidated.
+
+        Args:
+            subject:      The entity being described
+            predicate:    The relationship type (e.g. 'asserts', 'has_state')
+            object:       The value or target
+            confidence:   Confidence score 0.0–1.0 (default 0.9)
+            source_agent: ID of the agent asserting this fact
+        """
+        try:
+            from ..tkg import TKGAssertion
+            from ..communication import ProvenanceNode
+            import uuid as _uuid
+            fabric = _get_fabric()
+
+            assertion = TKGAssertion(
+                subject=subject,
+                predicate=predicate,
+                object=object,
+                confidence=confidence,
+                source_agent=source_agent,
+                derivation_kind="observed",
+            )
+            pnode = ProvenanceNode(
+                object_id=assertion.id,
+                object_type="Assertion",
+                asserted_by_agent=source_agent,
+                source_message_id=f"mcp:{_uuid.uuid4().hex[:8]}",
+                derivation_kind="observed",
+            )
+            fabric.provenance.record(pnode)
+            result = fabric.tkg.write(assertion)
+            fabric.save()
+            return json.dumps({
+                "written": result["written"],
+                "contradictions_resolved": result["contradictions_resolved"],
+                "stats": fabric.tkg.stats(),
+            }, indent=2)
+        except Exception as exc:
+            return json.dumps({"error": str(exc)})
+
+    @server.tool()
+    def tkg_stats() -> str:
+        """Get Temporal Knowledge Graph statistics.
+
+        Returns counts of total, active, invalidated, and expired assertions,
+        plus fabric-level stats (commitments, assumptions, open threads).
+        """
+        try:
+            fabric = _get_fabric()
+            return json.dumps(fabric.stats(), indent=2)
+        except Exception as exc:
+            return json.dumps({"error": str(exc)})
+
+    @server.tool()
+    def send_agent_message(
+        act: str,
+        content_json: str = "{}",
+        sender_id: str = "claude",
+        receiver_id: str = "",
+        thread_id: str = "",
+        reply_to: str = "",
+    ) -> str:
+        """Send a typed agent message through the speech act dispatcher.
+
+        Supported acts: ask, answer, propose, challenge, revise, confirm,
+        reject, delegate, report, abort.
+
+        For 'propose': content_json must include {id, goal_ref, steps, constraints}.
+        For 'challenge': set reply_to to the message_id being challenged.
+        For 'revise': content_json is the updated plan; set reply_to to challenge id.
+
+        Args:
+            act:          Speech act (propose / challenge / confirm / ask / revise)
+            content_json: JSON payload for the message
+            sender_id:    Sender agent ID
+            receiver_id:  Receiver agent ID (empty = broadcast)
+            thread_id:    Thread ID (empty = auto-generated)
+            reply_to:     Message ID this responds to
+        """
+        try:
+            from ..communication import AgentMessage
+            import uuid as _uuid
+            fabric = _get_fabric()
+            content = json.loads(content_json) if content_json.strip() else {}
+            msg = AgentMessage(
+                sender_id=sender_id,
+                receiver_id=receiver_id or None,
+                act=act,  # type: ignore[arg-type]
+                thread_id=thread_id or str(_uuid.uuid4()),
+                reply_to=reply_to or None,
+                content=content,
+            )
+            result = fabric.dispatch(msg)
+            return json.dumps({"dispatched": act, "result": result, "message_id": msg.message_id}, indent=2)
+        except Exception as exc:
+            return json.dumps({"error": str(exc)})
+
+    @server.tool()
+    def get_dialogue_thread(thread_id: str) -> str:
+        """Get the full message history for a dialogue thread.
+
+        Shows all messages in order with their speech acts, content, and
+        whether the thread has open challenges or questions.
+
+        Args:
+            thread_id: The thread ID to retrieve
+        """
+        try:
+            fabric = _get_fabric()
+            thread = fabric.dialogue.get_thread(thread_id)
+            if not thread:
+                return json.dumps({"error": f"Thread {thread_id!r} not found"})
+            return json.dumps({
+                "thread_id": thread.thread_id,
+                "participants": thread.participants,
+                "status": thread.status,
+                "open_challenges": thread.open_challenges,
+                "open_questions": thread.open_questions,
+                "messages": [m.to_dict() for m in thread.messages],
+            }, indent=2, default=str)
+        except Exception as exc:
+            return json.dumps({"error": str(exc)})
+
     return server
 
 

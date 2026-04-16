@@ -7,6 +7,7 @@ import Badge from './Badge';
 import { useVelma } from '../contexts/VelmaContext';
 import { getTitle } from '../hooks/useVelmaCompanion';
 import { formatFlowName } from '../utils/formatFlowName';
+import { useTKG } from '../hooks/useTKG';
 
 interface FlowRunnerProps {
   skillName: string;
@@ -161,6 +162,7 @@ export default function FlowRunner({ skillName, skillDescription, domain, onClos
   const startedRef = useRef(false);
   const completedRef = useRef(false);
   const justCompletedRef = useRef(false);
+  const { observeFlowComplete } = useTKG();
   // Capture whether this is a first run BEFORE witnessFlowComplete updates state
   const wasFirstRunRef = useRef(false);
   const velma = useVelma();
@@ -251,6 +253,7 @@ This is a conversational flow. Greet the user briefly, then immediately ask the 
           completedRef.current = true;
           justCompletedRef.current = true;
           velma.witnessFlowComplete(skillName, domain);
+          observeFlowComplete(skillName, true, domain || 'general');
         }
         return [
           ...prev,
