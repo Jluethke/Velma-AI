@@ -31,11 +31,11 @@ export default function Navbar() {
     { to: '/explore', label: 'Flows' },
     { to: '/chains', label: 'Chains' },
     { to: '/discover', label: 'Discover' },
+    { to: '/pricing', label: 'Pricing' },
     ...(isConnected ? [{ to: '/portal', label: 'Portal' }] : []),
   ];
 
   const moreLinks = [
-    { to: '/pricing', label: 'Pricing' },
     { to: '/docs', label: 'Docs' },
     { to: '/install', label: 'Install' },
     { to: '/studio', label: 'Studio' },

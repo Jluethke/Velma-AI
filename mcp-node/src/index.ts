@@ -97,6 +97,18 @@ import { TriggerEngine, type TriggerEvent } from "./trigger-engine.js";
 import { SkillEvolution } from "./skill-evolution.js";
 
 // ---------------------------------------------------------------------------
+// Safe JSON parsing (prototype pollution guard)
+// ---------------------------------------------------------------------------
+
+function safeJsonParse(input: string): Record<string, unknown> {
+  const parsed = JSON.parse(input, (key, value) => {
+    if (key === '__proto__' || key === 'constructor' || key === 'prototype') return undefined;
+    return value;
+  });
+  return typeof parsed === 'object' && parsed !== null ? parsed : { raw: input };
+}
+
+// ---------------------------------------------------------------------------
 // Paths
 // ---------------------------------------------------------------------------
 
@@ -217,7 +229,7 @@ const activeRuns = new Map<string, SkillRun>();
 
 const server = new McpServer({
   name: "flowfabric",
-  version: "0.1.0",
+  version: "2.2.1",
 });
 
 const store = new SkillStateStore();
@@ -246,8 +258,8 @@ try {
 // TOOLS
 // ===================================================================
 
-server.tool("list_flows",
-  "List all available flows with their execution patterns and descriptions.",
+server.tool("list_skills",
+  "List all available skills in the FlowFabric marketplace.",
   {},
   async () => {
     const skills = installedSkills();
@@ -324,7 +336,7 @@ server.tool("record_phase",
     const run = activeRuns.get(run_id);
     if (!run) return { content: [{ type: "text" as const, text: JSON.stringify({ error: `Run '${run_id}' not found.` }) }] };
     let outputData: Record<string, unknown>;
-    try { outputData = JSON.parse(output); } catch { outputData = { raw: output }; }
+    try { outputData = safeJsonParse(output); } catch { outputData = { raw: output }; }
     const result = store.recordPhase(run, phase, status, outputData);
     return { content: [{ type: "text" as const, text: JSON.stringify({
       run_id, phase, status, timestamp: result.timestamp, total_phases: run.phases.length,
@@ -397,7 +409,7 @@ server.tool("save_flow_data",
   },
   async ({ flow_name, key, data }) => {
     let dataObj: unknown;
-    try { dataObj = JSON.parse(data); } catch { dataObj = { raw: data }; }
+    try { dataObj = safeJsonParse(data); } catch { dataObj = { raw: data }; }
     store.saveData(flow_name, key, dataObj);
     return { content: [{ type: "text" as const, text: JSON.stringify({ flow_name, key, saved: true }) }] };
   }
@@ -506,7 +518,7 @@ server.tool("find_and_run",
       if (flowData) {
         const steps = ((flowData as Record<string, unknown>).steps as Array<Record<string, string>>) ?? [];
         let ctx: Record<string, unknown>;
-        try { ctx = JSON.parse(initial_context); } catch { ctx = {}; }
+        try { ctx = safeJsonParse(initial_context); } catch { ctx = {}; }
         const isStandalone = (flowData as Record<string, unknown>).flow_type === "standalone_skill";
         resultData.execution = {
           chain_name: best.chain_name,
@@ -553,7 +565,7 @@ server.tool("run_flow",
     const chainData = chains.find(c => (c as Record<string, unknown>).name === flow_name);
 
     let ctx: Record<string, unknown>;
-    try { ctx = JSON.parse(initial_context); } catch { ctx = {}; }
+    try { ctx = safeJsonParse(initial_context); } catch { ctx = {}; }
 
     // Chain flow
     if (chainData) {
@@ -717,7 +729,7 @@ server.tool("run_flow_step",
     const skillName = step.skill_name;
 
     let ctx: Record<string, unknown>;
-    try { ctx = JSON.parse(context); } catch { ctx = {}; }
+    try { ctx = safeJsonParse(context); } catch { ctx = {}; }
 
     // Read the skill definition
     const skillMap = installedSkills();
@@ -797,7 +809,7 @@ const TEXT_EXTENSIONS = new Set([
   ".txt", ".md", ".markdown", ".csv", ".json", ".yaml", ".yml",
   ".ts", ".tsx", ".js", ".jsx", ".py", ".rb", ".go", ".rs",
   ".html", ".htm", ".xml", ".toml", ".ini", ".cfg", ".conf",
-  ".sh", ".bat", ".ps1", ".log", ".env",
+  ".log",
 ]);
 
 /** Document extensions that are readable by name/metadata but not content */
@@ -1238,7 +1250,7 @@ server.tool("submit_flow",
   },
   async ({ flow_name, skill_md, manifest, author, author_address }) => {
     let manifestObj: Record<string, unknown>;
-    try { manifestObj = JSON.parse(manifest); } catch { manifestObj = { name: flow_name }; }
+    try { manifestObj = safeJsonParse(manifest); } catch { manifestObj = { name: flow_name }; }
     const result = community.submitSkill(flow_name, skill_md, manifestObj, author, author_address);
     return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
   }
@@ -1288,7 +1300,7 @@ server.tool("create_trigger",
   },
   async ({ name, type, pattern, chain_name, config }) => {
     let configObj: Record<string, unknown>;
-    try { configObj = JSON.parse(config); } catch { configObj = {}; }
+    try { configObj = safeJsonParse(config); } catch { configObj = {}; }
     try {
       const trigger = triggers.createTrigger(name, type, pattern, chain_name, configObj);
       const result: Record<string, unknown> = {
@@ -1514,16 +1526,23 @@ function fabricApiUrl(): string {
  */
 async function fabricPost(path: string, body: Record<string, unknown>): Promise<Record<string, unknown>> {
   const url = `${fabricApiUrl()}${path}`;
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  const text = await res.text();
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 30000);
   try {
-    return JSON.parse(text) as Record<string, unknown>;
-  } catch {
-    return { raw: text, status: res.status };
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+    const text = await res.text();
+    try {
+      return JSON.parse(text) as Record<string, unknown>;
+    } catch {
+      return { raw: text, status: res.status };
+    }
+  } finally {
+    clearTimeout(timeout);
   }
 }
 
@@ -1532,12 +1551,18 @@ async function fabricPost(path: string, body: Record<string, unknown>): Promise<
  */
 async function fabricGet(path: string): Promise<Record<string, unknown>> {
   const url = `${fabricApiUrl()}${path}`;
-  const res = await fetch(url);
-  const text = await res.text();
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 30000);
   try {
-    return JSON.parse(text) as Record<string, unknown>;
-  } catch {
-    return { raw: text, status: res.status };
+    const res = await fetch(url, { signal: controller.signal });
+    const text = await res.text();
+    try {
+      return JSON.parse(text) as Record<string, unknown>;
+    } catch {
+      return { raw: text, status: res.status };
+    }
+  } finally {
+    clearTimeout(timeout);
   }
 }
 
@@ -1658,20 +1683,8 @@ server.tool(
 
     // Both sides ready and synthesis not yet run — trigger it automatically
     if (host_token && hostSub && allGuestsIn && synthStatus !== "complete") {
-      const apiKey = process.env.ANTHROPIC_API_KEY;
-      if (!apiKey) {
-        return { content: [{ type: "text" as const, text: JSON.stringify({
-          session_id,
-          host_submitted: hostSub,
-          guests_submitted: guestsSubmitted,
-          synthesis_status: "pending",
-          error: "ANTHROPIC_API_KEY is not set in your environment. Set it and try again, or trigger synthesis from the web UI.",
-        }, null, 2) }] };
-      }
-
       const synthResult = await fabricPost(`/api/fabric/${session_id}/synthesize`, {
         hostToken: host_token,
-        apiKey,
       });
 
       if (synthResult.error) {

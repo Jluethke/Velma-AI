@@ -1,49 +1,60 @@
-import { } from 'react';
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import VelmaWidget from './components/VelmaWidget';
 import { VelmaProvider } from './contexts/VelmaContext';
 
-// Public pages (no auth)
+// Static imports (needed on every page load)
 import Landing from './pages/Landing';
-import Docs from './pages/Docs';
-import Whitepaper from './pages/Whitepaper';
-import Pricing from './pages/Pricing';
-import GettingStarted from './pages/GettingStarted';
-
-// Content pages
-import Explore from './pages/Explore';
-import Chains from './pages/Chains';
-import FlowDetail from './pages/FlowDetail';
-import Install from './pages/Install';
-import Memory from './pages/Memory';
-import Bounties from './pages/Bounties';
-import Activity from './pages/Activity';
-import Leaderboard from './pages/Leaderboard';
-import Fabric from './pages/Fabric';
-import FabricStart from './pages/FabricStart';
-import Sessions from './pages/Sessions';
-import Settings from './pages/Settings';
-import Discovery from './pages/Discovery';
-import DiscoveryNew from './pages/DiscoveryNew';
-import DiscoveryMatches from './pages/DiscoveryMatches';
-import Dashboard from './pages/Dashboard';
-import Profile from './pages/Profile';
-import Agents from './pages/Agents';
-import Portal from './pages/Portal';
-import PortalTrainer from './pages/PortalTrainer';
-import PortalAchievements from './pages/PortalAchievements';
-import PortalSkilldex from './pages/PortalSkilldex';
-import PortalSkills from './pages/PortalSkills';
-import PortalNetwork from './pages/PortalNetwork';
-import PortalStake from './pages/PortalStake';
-import PortalMarketplace from './pages/PortalMarketplace';
-import PortalValidators from './pages/PortalValidators';
 import OnboardingGuide from './components/OnboardingGuide';
-import Studio from './pages/Studio';
-import FabricRecord from './pages/FabricRecord';
 
+// Lazy-loaded pages
+const Docs = lazy(() => import('./pages/Docs'));
+const Whitepaper = lazy(() => import('./pages/Whitepaper'));
+const Pricing = lazy(() => import('./pages/Pricing'));
+const GettingStarted = lazy(() => import('./pages/GettingStarted'));
+const Explore = lazy(() => import('./pages/Explore'));
+const Chains = lazy(() => import('./pages/Chains'));
+const FlowDetail = lazy(() => import('./pages/FlowDetail'));
+const Install = lazy(() => import('./pages/Install'));
+const Memory = lazy(() => import('./pages/Memory'));
+const Bounties = lazy(() => import('./pages/Bounties'));
+const Activity = lazy(() => import('./pages/Activity'));
+const Leaderboard = lazy(() => import('./pages/Leaderboard'));
+const Fabric = lazy(() => import('./pages/Fabric'));
+const FabricStart = lazy(() => import('./pages/FabricStart'));
+const Sessions = lazy(() => import('./pages/Sessions'));
+const Settings = lazy(() => import('./pages/Settings'));
+const Discovery = lazy(() => import('./pages/Discovery'));
+const DiscoveryNew = lazy(() => import('./pages/DiscoveryNew'));
+const DiscoveryMatches = lazy(() => import('./pages/DiscoveryMatches'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Profile = lazy(() => import('./pages/Profile'));
+const Agents = lazy(() => import('./pages/Agents'));
+const Portal = lazy(() => import('./pages/Portal'));
+const PortalTrainer = lazy(() => import('./pages/PortalTrainer'));
+const PortalAchievements = lazy(() => import('./pages/PortalAchievements'));
+const PortalSkilldex = lazy(() => import('./pages/PortalSkilldex'));
+const PortalSkills = lazy(() => import('./pages/PortalSkills'));
+const PortalNetwork = lazy(() => import('./pages/PortalNetwork'));
+const PortalStake = lazy(() => import('./pages/PortalStake'));
+const PortalMarketplace = lazy(() => import('./pages/PortalMarketplace'));
+const PortalValidators = lazy(() => import('./pages/PortalValidators'));
+const Studio = lazy(() => import('./pages/Studio'));
+const FabricRecord = lazy(() => import('./pages/FabricRecord'));
+
+
+function PageSkeleton() {
+  return (
+    <div style={{ minHeight: '100vh', background: 'var(--bg-primary)' }}>
+      <div style={{ maxWidth: '72rem', margin: '0 auto', padding: '6rem 1.5rem 0' }}>
+        <div style={{ height: '2rem', width: '16rem', background: 'var(--bg-secondary)', borderRadius: '0.5rem', marginBottom: '1rem' }} />
+        <div style={{ height: '1rem', width: '24rem', background: 'var(--bg-secondary)', borderRadius: '0.5rem' }} />
+      </div>
+    </div>
+  );
+}
 
 function App() {
   return (
@@ -52,6 +63,7 @@ function App() {
         <Navbar />
         {/* page-wrap clips horizontal overflow without touching fixed Navbar/Banner */}
         <div style={{ overflowX: 'hidden', width: '100%', position: 'relative' }}>
+          <Suspense fallback={<PageSkeleton />}>
           <Routes>
             {/* Public */}
             <Route path="/" element={<Landing />} />
@@ -102,6 +114,7 @@ function App() {
             <Route path="/portal/marketplace" element={<PortalMarketplace />} />
             <Route path="/portal/validators" element={<PortalValidators />} />
           </Routes>
+          </Suspense>
           <Footer />
         </div>
         <OnboardingGuide />

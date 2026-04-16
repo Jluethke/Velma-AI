@@ -378,6 +378,10 @@ export default function Pricing() {
 
       {/* Tier cards */}
       <section className="px-6 max-w-6xl mx-auto mb-16">
+        <p className="text-center text-sm mb-8" style={{ color: 'var(--text-secondary)' }}>
+          You don't need crypto to use FlowFabric. All paid plans accept card.{' '}
+          <span style={{ color: 'var(--cyan)' }}>TRUST tokens</span> are optional.
+        </p>
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
           {tiers.map((tier) => (
             <TierCard key={tier.name} tier={tier} billing={billing} />

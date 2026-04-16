@@ -148,7 +148,7 @@ export default function HeroSection() {
       `}</style>
 
       {/* Background orbs — sized in vw so they never exceed the viewport */}
-      <div className="absolute inset-0" style={{ pointerEvents: 'none', overflow: 'hidden' }}>
+      <div className="absolute inset-0" aria-hidden="true" style={{ pointerEvents: 'none', overflow: 'hidden' }}>
         <div style={{
           position: 'absolute', width: 'min(900px, 160vw)', height: 'min(900px, 160vw)',
           top: '-25%', left: '-20%', borderRadius: '50%',
@@ -189,23 +189,23 @@ export default function HeroSection() {
             color: 'var(--text-primary)',
           }}
         >
-          AI flows for<br />
+          AI that works through<br />
           <span className="gradient-text" style={{ filter: 'drop-shadow(0 0 24px rgba(0,255,200,0.18))' }}>
-            everything.
+            a plan, not a prompt.
           </span>
         </h1>
 
         {/* Sub */}
         <p className="text-base md:text-lg mb-10 max-w-2xl mx-auto animate-fade-in-up stagger-2 px-2"
           style={{ color: 'var(--text-secondary)', lineHeight: 1.75 }}>
-          Structured AI workflows that run step by step, streamed live in your browser.
-          Pick a flow, describe your situation, and get real, actionable output — not a wall of generic advice.
+          Step-by-step AI workflows, streamed live in your browser.
+          Pick a flow for your situation and get specific, actionable output — not a wall of generic advice.
         </p>
 
         {/* CTAs */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-10 animate-fade-in-up stagger-3">
           <Link to="/explore" className="btn-primary inline-flex items-center gap-3 px-8 py-4 no-underline text-sm md:text-base font-semibold">
-            Explore Flows
+            Run a Flow Free
             <span style={{ fontSize: 18 }}>&rarr;</span>
           </Link>
           <Link to="/chains"
@@ -214,6 +214,10 @@ export default function HeroSection() {
             Try a Pipeline &rarr;
           </Link>
         </div>
+
+        <p className="text-xs animate-fade-in-up stagger-3" style={{ color: 'var(--text-secondary)', opacity: 0.7 }}>
+          Your inputs stay in your browser. Never stored. Never used to train AI.
+        </p>
 
         {/* Category ticker */}
         <div className="mb-14 animate-fade-in-up stagger-3">
