@@ -26,7 +26,6 @@ import {
   updateConversationMessages,
   loadConversation,
   deleteConversation,
-  extractMemories,
   getMemoryContext,
   migrateLegacyChat,
 } from '../hooks/useVelmaMemory';
@@ -670,7 +669,7 @@ export default function VelmaChatPanel({
             })),
             skills: skills.map(s => ({ name: s.name, domain: s.domain, description: s.description })),
             context: { page: describeLocation(pathname, search) },
-            memory: getMemoryContext(),
+            memory: getMemoryContext(velmaState),
           }),
         });
       }
@@ -716,10 +715,6 @@ export default function VelmaChatPanel({
   };
 
   const reset = () => {
-    // Extract memories from the conversation we're leaving
-    if (activeConvo && activeConvo.messages.length > 1) {
-      extractMemories(activeConvo);
-    }
     const opening = openingMessage(velmaState, pathname, search);
     const newConvo = createConversation(opening);
     setActiveConvo(newConvo);
@@ -733,10 +728,6 @@ export default function VelmaChatPanel({
   };
 
   const switchConversation = (id: string) => {
-    // Save memories from current before switching
-    if (activeConvo && activeConvo.messages.length > 1) {
-      extractMemories(activeConvo);
-    }
     const convo = loadConversation(id);
     if (convo) {
       setActiveConvo(convo);

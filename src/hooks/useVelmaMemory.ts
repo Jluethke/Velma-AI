@@ -1,14 +1,17 @@
 /**
- * useVelmaMemory — Velma's butler memory + conversation threads.
+ * useVelmaMemory — Conversation threads + memory context from existing L0-L3/TKG.
  *
- * Two layers:
- *   1. Conversations — separate threads with titles, like ChatGPT/Claude
- *   2. Memory — persistent facts Velma remembers across all conversations
+ * Conversations: separate threads with titles (like ChatGPT/Claude).
+ * Memory: reads from VelmaState (L0 identity, behavioral history) and
+ *         the client-side TKG (knowledge assertions) — NOT a separate store.
  *
- * Conversations are stored individually by ID.
- * Memory is a separate store that grows over time and gets injected
- * into every new conversation's system context.
+ * The L0-L3 tiered memory lives in the MCP server. The TKG lives in
+ * localStorage via useTKG. VelmaState tracks behavioral data. This module
+ * reads from those existing sources to build Velma's context — no duplication.
  */
+
+import type { VelmaState } from './useVelmaCompanion';
+import { formatFlowName } from '../utils/formatFlowName';
 
 // ── Types ──────────────────────────────────────────────────────────
 
@@ -43,26 +46,20 @@ export interface Conversation {
   updated: string;
 }
 
-export interface VelmaMemoryEntry {
-  fact: string;
-  source: string;      // conversation ID where this was learned
-  learned: string;     // ISO timestamp
-  category: 'preference' | 'context' | 'goal' | 'history';
-}
+// ── Storage keys ──────────────────────────────────────────────────
+
+const INDEX_KEY = 'flowfabric-velma-convos-v2';
+const CONVO_PREFIX = 'flowfabric-velma-convo-';
+const TKG_KEY = 'flowfabric-tkg-v1';
+const OLD_CHAT_KEY = 'flowfabric-velma-chat-v1';
+const OLD_MEMORY_KEY = 'flowfabric-velma-memory-v1'; // redundant store we're removing
+
+// ── Conversation index ────────────────────────────────────────────
 
 interface ConversationIndex {
   conversations: { id: string; title: string; updated: string; messageCount: number }[];
   activeId: string | null;
 }
-
-// ── Storage keys ──────────────────────────────────────────────────
-
-const INDEX_KEY = 'flowfabric-velma-convos-v2';
-const CONVO_PREFIX = 'flowfabric-velma-convo-';
-const MEMORY_KEY = 'flowfabric-velma-memory-v1';
-const OLD_CHAT_KEY = 'flowfabric-velma-chat-v1'; // legacy — nuke on first load
-
-// ── Index operations ──────────────────────────────────────────────
 
 function loadIndex(): ConversationIndex {
   try {
@@ -93,7 +90,6 @@ export function createConversation(firstMessage: ChatMessage): Conversation {
   const index = loadIndex();
   index.conversations.unshift({ id, title: convo.title, updated: now, messageCount: 1 });
   index.activeId = id;
-  // Keep max 50 conversations
   if (index.conversations.length > 50) {
     const removed = index.conversations.splice(50);
     removed.forEach(c => localStorage.removeItem(CONVO_PREFIX + c.id));
@@ -136,7 +132,6 @@ export function updateConversationMessages(id: string, messages: ChatMessage[]) 
   convo.messages = messages;
   convo.updated = new Date().toISOString();
 
-  // Auto-title from first user message if still default
   if (convo.title === 'New conversation') {
     const firstUser = messages.find(m => m.role === 'user');
     if (firstUser) {
@@ -146,14 +141,12 @@ export function updateConversationMessages(id: string, messages: ChatMessage[]) 
 
   saveConversation(convo);
 
-  // Update index
   const index = loadIndex();
   const entry = index.conversations.find(c => c.id === id);
   if (entry) {
     entry.title = convo.title;
     entry.updated = convo.updated;
     entry.messageCount = messages.length;
-    // Move to top
     const idx = index.conversations.indexOf(entry);
     if (idx > 0) {
       index.conversations.splice(idx, 1);
@@ -173,101 +166,78 @@ export function deleteConversation(id: string) {
   saveIndex(index);
 }
 
-// ── Memory (butler) ───────────────────────────────────────────────
+// ── Memory context from EXISTING infrastructure ───────────────────
+// Reads from VelmaState (behavioral) + TKG (knowledge). No separate store.
 
-export function loadMemory(): VelmaMemoryEntry[] {
+interface TKGAssertionRaw {
+  subject: string;
+  predicate: string;
+  object: string;
+  confidence: number;
+  status: string;
+  derivation_kind: string;
+  valid_from: string;
+}
+
+function loadTKGAssertions(): TKGAssertionRaw[] {
   try {
-    const raw = localStorage.getItem(MEMORY_KEY);
+    const raw = localStorage.getItem(TKG_KEY);
     if (raw) return JSON.parse(raw);
   } catch { /* corrupt */ }
   return [];
 }
 
-export function saveMemoryEntry(entry: VelmaMemoryEntry) {
-  const mem = loadMemory();
-  // Deduplicate by fact content (fuzzy)
-  const exists = mem.some(m => m.fact.toLowerCase() === entry.fact.toLowerCase());
-  if (!exists) {
-    mem.push(entry);
-    // Keep max 100 memories
-    if (mem.length > 100) mem.shift();
-    try { localStorage.setItem(MEMORY_KEY, JSON.stringify(mem)); } catch { /* full */ }
-  }
-}
-
-export function clearMemory() {
-  localStorage.removeItem(MEMORY_KEY);
-}
-
 /**
- * Build a memory context string for injection into Velma's system prompt.
- * Returns empty string if no memories exist.
+ * Build memory context from VelmaState + TKG for injection into Velma's prompt.
+ * This reads from the EXISTING L0-L3 infrastructure — no separate memory store.
  */
-export function getMemoryContext(): string {
-  const mem = loadMemory();
-  if (mem.length === 0) return '';
-
-  const grouped: Record<string, string[]> = {
-    preference: [],
-    context: [],
-    goal: [],
-    history: [],
-  };
-  mem.forEach(m => grouped[m.category]?.push(m.fact));
-
+export function getMemoryContext(state: VelmaState): string {
   const sections: string[] = [];
-  if (grouped.preference.length) sections.push(`Preferences: ${grouped.preference.join('. ')}`);
-  if (grouped.goal.length) sections.push(`Goals: ${grouped.goal.join('. ')}`);
-  if (grouped.context.length) sections.push(`Context: ${grouped.context.join('. ')}`);
-  if (grouped.history.length) sections.push(`History: ${grouped.history.slice(-10).join('. ')}`);
 
-  return `\n\nREMEMBERED ABOUT THIS USER:\n${sections.join('\n')}`;
-}
-
-/**
- * Extract memorable facts from a completed conversation.
- * Call this when a conversation goes idle or the user starts a new one.
- */
-export function extractMemories(convo: Conversation) {
-  const userMessages = convo.messages.filter(m => m.role === 'user');
-  if (userMessages.length === 0) return;
-
-  const now = new Date().toISOString();
-
-  // Extract what flows they ran (from system messages)
-  convo.messages.forEach(msg => {
-    if (msg.isSystem && msg.content.startsWith('flow_start:')) {
-      const flowName = msg.content.replace('flow_start:', '');
-      saveMemoryEntry({
-        fact: `Ran the ${flowName.replace(/-/g, ' ')} flow`,
-        source: convo.id,
-        learned: now,
-        category: 'history',
-      });
-    }
-  });
-
-  // Extract topic from first user message as context
-  const firstUser = userMessages[0];
-  if (firstUser && firstUser.display.length > 10) {
-    saveMemoryEntry({
-      fact: `Asked about: ${firstUser.display.slice(0, 120)}`,
-      source: convo.id,
-      learned: now,
-      category: 'context',
-    });
+  // L0: Identity / behavioral profile
+  const identity: string[] = [];
+  if (state.flows_run > 0) identity.push(`Has run ${state.flows_run} flow${state.flows_run > 1 ? 's' : ''} total`);
+  if (state.flows_completed.length > 0) {
+    const recent = state.flows_completed.slice(-5).map(formatFlowName);
+    identity.push(`Recently completed: ${recent.join(', ')}`);
   }
+  if (state.chains_run > 0) identity.push(`Has run ${state.chains_run} chain${state.chains_run > 1 ? 's' : ''}`);
+  if (state.streak > 1) identity.push(`${state.streak}-day streak`);
+  if (state.level > 1) identity.push(`Level ${state.level}`);
+  if (identity.length > 0) sections.push(`User profile: ${identity.join('. ')}.`);
+
+  // L1: Recent witnessed events (behavioral facts)
+  const recentEvents = state.witnessed
+    .slice(-10)
+    .filter(e => !e.startsWith('page_visited') && e !== 'visited portal')
+    .map(e => {
+      if (e.startsWith('flow_start:')) return `Started ${formatFlowName(e.slice(11))}`;
+      if (e.startsWith('flow_complete:')) return `Finished ${formatFlowName(e.slice(14))}`;
+      if (e.startsWith('chain_complete:')) return `Completed chain ${formatFlowName(e.slice(15))}`;
+      return e.replace(/_/g, ' ');
+    });
+  if (recentEvents.length > 0) sections.push(`Recent activity: ${recentEvents.join('. ')}.`);
+
+  // L2/L3: TKG knowledge assertions (active, high-confidence)
+  const assertions = loadTKGAssertions()
+    .filter(a => a.status === 'active' && a.confidence >= 0.7)
+    .sort((a, b) => new Date(b.valid_from).getTime() - new Date(a.valid_from).getTime())
+    .slice(0, 15);
+
+  if (assertions.length > 0) {
+    const knowledge = assertions.map(a => `${a.subject} ${a.predicate} ${a.object}`);
+    sections.push(`Known facts:\n${knowledge.map(k => `- ${k}`).join('\n')}`);
+  }
+
+  if (sections.length === 0) return '';
+  return `\n\nREMEMBERED ABOUT THIS USER (from existing memory tiers):\n${sections.join('\n')}`;
 }
 
-// ── Migration from legacy ─────────────────────────────────────────
+// ── Legacy migration ──────────────────────────────────────────────
 
 export function migrateLegacyChat() {
-  const old = localStorage.getItem(OLD_CHAT_KEY);
-  if (!old) return;
-
-  // Nuke the old cache (kills the "slug" ghost and any other stale data)
+  // Nuke the old flat chat buffer (had "slug" contamination)
   localStorage.removeItem(OLD_CHAT_KEY);
-
-  // Don't migrate the old messages — start fresh with clean conversations
-  // The old format had the "slug" contamination and flat structure
+  // Nuke the redundant memory store we created by mistake
+  localStorage.removeItem(OLD_MEMORY_KEY);
 }
