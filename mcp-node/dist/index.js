@@ -1465,14 +1465,63 @@ server.tool("get_fabric_status", "Check the status of a Fabric session. When bot
 // ===================================================================
 // HEALTH / META
 // ===================================================================
-server.tool("check_access", "Check if FlowFabric MCP server is running and accessible. Returns server status and marketplace stats.", {}, async () => {
+server.tool("check_access", "Check if FlowFabric MCP server is running and accessible. Returns server status, tier, and marketplace stats.", {
+    skill_name: z.string().default("").describe("Optional skill/flow name to check access for"),
+}, async ({ skill_name }) => {
     const skills = installedSkills();
     const chains = availableChains();
+    // Read tier from env var (injected via claude_desktop_config.json)
+    // or from ~/.skillchain/config.json as fallback
+    let tier = (process.env.SKILLCHAIN_TIER ?? "").toLowerCase().trim();
+    let wallet = (process.env.SKILLCHAIN_WALLET ?? "").trim() || null;
+    let configError = null;
+    if (!tier || !wallet) {
+        try {
+            const cfgPath = join(homedir(), ".skillchain", "config.json");
+            if (existsSync(cfgPath)) {
+                const cfg = JSON.parse(readFileSync(cfgPath, "utf-8"));
+                if (!tier)
+                    tier = (cfg.trust_tier ?? "").toLowerCase().trim();
+                if (!wallet)
+                    wallet = cfg.wallet_address?.trim() || null;
+            }
+        }
+        catch { /* ignore */ }
+    }
+    if (!tier)
+        tier = "free";
+    if (!wallet) {
+        configError = "No wallet configured. Add SKILLCHAIN_TIER and SKILLCHAIN_WALLET to your MCP env, or run 'skillchain init'.";
+    }
+    // Domain-based tier check for the requested skill
+    const BUILDER_DOMAINS = new Set(["engineering", "ai"]);
+    const CREATOR_DOMAINS = new Set(["legal", "meta"]);
+    const tierLevel = (t) => {
+        if (t === "creator" || t === "staker")
+            return 2;
+        if (t === "builder" || t === "holder")
+            return 1;
+        return 0;
+    };
+    let allowed = true;
+    if (skill_name) {
+        const manifest = loadManifest(skill_name);
+        const domain = (String(manifest?.domain ?? "")).toLowerCase();
+        const level = tierLevel(tier);
+        if (CREATOR_DOMAINS.has(domain))
+            allowed = level >= 2;
+        else if (BUILDER_DOMAINS.has(domain))
+            allowed = level >= 1;
+    }
     return { content: [{ type: "text", text: JSON.stringify({
                     status: "ok",
                     server: "flowfabric-mcp",
                     version: "0.1.0",
                     runtime: "node",
+                    tier,
+                    wallet,
+                    allowed,
+                    error: configError,
                     flows_available: skills.size,
                     chains_available: chains.length,
                     marketplace_dir: MARKETPLACE_DIR,
