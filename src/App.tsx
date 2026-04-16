@@ -43,6 +43,7 @@ const PortalMarketplace = lazy(() => import('./pages/PortalMarketplace'));
 const PortalValidators = lazy(() => import('./pages/PortalValidators'));
 const Studio = lazy(() => import('./pages/Studio'));
 const FabricRecord = lazy(() => import('./pages/FabricRecord'));
+const UseCase = lazy(() => import('./pages/UseCase'));
 
 
 function PageSkeleton() {
@@ -85,6 +86,9 @@ function App() {
             <Route path="/bounties" element={<Bounties />} />
             <Route path="/activity" element={<Activity />} />
             <Route path="/leaderboard" element={<Leaderboard />} />
+
+            {/* Use-case SEO landing pages */}
+            <Route path="/use/:category" element={<UseCase />} />
 
             {/* Fabric — multiplayer flow sessions */}
             <Route path="/start" element={<FabricStart />} />
