@@ -31,37 +31,29 @@ const MOOD_COLOR: Record<VelmaMood, string> = {
 
 // ── Sprites ────────────────────────────────────────────────────────────────
 
+/* ── Abstract geometric sprites — evolve from simple node to complex lattice ── */
+
 function Sprite8bit({ color, mood }: { color: string; mood: VelmaMood }) {
-  const px = 4;
   const sleeping = mood === 'sleepy';
   const excited = mood === 'excited';
-  const pixels: [number, number, string][] = [
-    [6,2,color],[7,2,color],[8,2,color],[9,2,color],
-    [5,3,color],[6,3,color],[7,3,color],[8,3,color],[9,3,color],[10,3,color],
-    [5,4,color],[6,4,'#001a2e'],[7,4,color],[8,4,color],[9,4,'#001a2e'],[10,4,color],
-    [5,5,color],[6,5,color],[7,5,color],[8,5,color],[9,5,color],[10,5,color],
-    [7,6,color],[8,6,color],
-    [5,7,color],[6,7,color],[7,7,color],[8,7,color],[9,7,color],[10,7,color],
-    [5,8,color],[6,8,color],[7,8,color],[8,8,color],[9,8,color],[10,8,color],
-    [5,9,color],[6,9,color],[7,9,color],[8,9,color],[9,9,color],[10,9,color],
-    [3,7,color],[4,7,color],[11,7,color],[12,7,color],
-    [3,8,color],[11,8,color],
-    [6,10,color],[7,10,color],[8,10,color],[9,10,color],
-    [6,11,color],[7,11,color],[8,11,color],[9,11,color],
-    [5,12,color],[6,12,color],[8,12,color],[9,12,color],
-    ...(sleeping ? [
-      [6,4,'#aaffee'],[9,4,'#aaffee'],
-    ] as [number,number,string][] : excited ? [
-      [6,4,'#fff'],[9,4,'#fff'],
-    ] as [number,number,string][] : []),
-  ];
-
+  const pulseOpacity = sleeping ? 0.3 : excited ? 1 : 0.7;
   return (
-    <svg width="64" height="64" viewBox="0 0 64 64" style={{ imageRendering: 'pixelated' }}>
-      <rect width="64" height="64" fill="transparent" />
-      {pixels.map(([x, y, c], i) => (
-        <rect key={i} x={x * px} y={y * px} width={px} height={px} fill={c} />
-      ))}
+    <svg width="64" height="64" viewBox="0 0 64 64">
+      <defs>
+        <radialGradient id="core1" cx="50%" cy="50%">
+          <stop offset="0%" stopColor={color} stopOpacity={pulseOpacity} />
+          <stop offset="100%" stopColor={color} stopOpacity="0" />
+        </radialGradient>
+      </defs>
+      {/* Ambient field */}
+      <circle cx="32" cy="32" r="28" fill="url(#core1)" />
+      {/* Core node */}
+      <circle cx="32" cy="32" r="8" fill={color} opacity={sleeping ? 0.4 : 0.9} />
+      <circle cx="32" cy="32" r="4" fill="#001a2e" opacity="0.6" />
+      {/* Orbit ring */}
+      <circle cx="32" cy="32" r="16" fill="none" stroke={color} strokeWidth="1" opacity="0.25" />
+      {/* Orbital dot */}
+      {!sleeping && <circle cx="48" cy="32" r="2.5" fill={color} opacity="0.6" />}
     </svg>
   );
 }
@@ -71,33 +63,28 @@ function Sprite16bit({ color, mood }: { color: string; mood: VelmaMood }) {
   return (
     <svg width="80" height="80" viewBox="0 0 80 80">
       <defs>
-        <radialGradient id="body16" cx="50%" cy="50%">
-          <stop offset="0%" stopColor={color} stopOpacity="0.9" />
-          <stop offset="100%" stopColor="#001a2e" stopOpacity="1" />
+        <radialGradient id="core2" cx="50%" cy="50%">
+          <stop offset="0%" stopColor={color} stopOpacity="0.6" />
+          <stop offset="100%" stopColor={color} stopOpacity="0" />
         </radialGradient>
-        <filter id="glow16">
-          <feGaussianBlur stdDeviation="1.5" result="blur" />
+        <filter id="glow2">
+          <feGaussianBlur stdDeviation="2" result="blur" />
           <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
         </filter>
       </defs>
-      <ellipse cx="40" cy="52" rx="14" ry="18" fill="url(#body16)" filter="url(#glow16)" />
-      <ellipse cx="40" cy="26" rx="13" ry="13" fill="url(#body16)" filter="url(#glow16)" />
-      {sleeping ? (
-        <>
-          <line x1="33" y1="25" x2="37" y2="25" stroke={color} strokeWidth="2" />
-          <line x1="43" y1="25" x2="47" y2="25" stroke={color} strokeWidth="2" />
-        </>
-      ) : (
-        <>
-          <ellipse cx="35" cy="25" rx="3" ry="3.5" fill={color} />
-          <ellipse cx="45" cy="25" rx="3" ry="3.5" fill={color} />
-          <ellipse cx="35" cy="25" rx="1.5" ry="1.5" fill="#001a2e" />
-          <ellipse cx="45" cy="25" rx="1.5" ry="1.5" fill="#001a2e" />
-        </>
-      )}
-      <path d="M26 48 Q18 44 14 52" stroke={color} strokeWidth="2" fill="none" strokeDasharray="3,2" />
-      <path d="M54 48 Q62 44 66 52" stroke={color} strokeWidth="2" fill="none" strokeDasharray="3,2" />
-      <ellipse cx="40" cy="10" rx="16" ry="4" fill="none" stroke="#ffd700" strokeWidth="1.5" opacity="0.7" />
+      <circle cx="40" cy="40" r="36" fill="url(#core2)" />
+      {/* Dual orbit rings */}
+      <circle cx="40" cy="40" r="20" fill="none" stroke={color} strokeWidth="1" opacity="0.2" />
+      <circle cx="40" cy="40" r="28" fill="none" stroke={color} strokeWidth="0.5" opacity="0.15" strokeDasharray="4,6" />
+      {/* Core hexagon */}
+      <polygon points="40,28 50,34 50,46 40,52 30,46 30,34" fill={color} opacity={sleeping ? 0.3 : 0.85} filter="url(#glow2)" />
+      <polygon points="40,32 46,36 46,44 40,48 34,44 34,36" fill="#001a2e" opacity="0.5" />
+      {/* 3 orbital nodes */}
+      {!sleeping && <>
+        <circle cx="60" cy="40" r="3" fill={color} opacity="0.5" filter="url(#glow2)" />
+        <circle cx="28" cy="56" r="2.5" fill={color} opacity="0.4" filter="url(#glow2)" />
+        <circle cx="28" cy="24" r="2" fill={color} opacity="0.3" />
+      </>}
     </svg>
   );
 }
@@ -107,39 +94,38 @@ function Sprite32bit({ color, mood }: { color: string; mood: VelmaMood }) {
   return (
     <svg width="96" height="96" viewBox="0 0 96 96">
       <defs>
-        <radialGradient id="aura32" cx="50%" cy="40%">
-          <stop offset="0%" stopColor={color} stopOpacity="0.3" />
+        <radialGradient id="core3" cx="50%" cy="45%">
+          <stop offset="0%" stopColor={color} stopOpacity="0.5" />
+          <stop offset="60%" stopColor="#aa44ff" stopOpacity="0.15" />
           <stop offset="100%" stopColor="transparent" stopOpacity="0" />
         </radialGradient>
-        <radialGradient id="body32" cx="50%" cy="40%">
-          <stop offset="0%" stopColor={color} stopOpacity="0.95" />
-          <stop offset="60%" stopColor={color} stopOpacity="0.6" />
-          <stop offset="100%" stopColor="#001a2e" stopOpacity="0.9" />
-        </radialGradient>
-        <filter id="glow32">
+        <filter id="glow3">
           <feGaussianBlur stdDeviation="3" result="blur" />
           <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
         </filter>
       </defs>
-      <ellipse cx="48" cy="52" rx="36" ry="42" fill="url(#aura32)" />
-      <path d="M28 82 Q24 60 28 50 Q32 38 48 36 Q64 38 68 50 Q72 60 68 82 Z"
-        fill="url(#body32)" filter="url(#glow32)" />
-      <ellipse cx="48" cy="28" rx="16" ry="16" fill="url(#body32)" filter="url(#glow32)" />
-      <ellipse cx="41" cy="26" rx="4" ry="5" fill={color} filter="url(#glow32)" />
-      <ellipse cx="55" cy="26" rx="4" ry="5" fill={color} filter="url(#glow32)" />
-      <ellipse cx="41" cy="27" rx="2" ry="2.5" fill="#001a2e" />
-      <ellipse cx="55" cy="27" rx="2" ry="2.5" fill="#001a2e" />
-      <ellipse cx="48" cy="9" rx="20" ry="5" fill="none" stroke="#ffd700"
-        strokeWidth="2" opacity="0.9" filter="url(#glow32)" />
-      <path d="M30 58 Q14 52 10 62" stroke={color} strokeWidth="2.5" fill="none" opacity="0.8" />
-      <path d="M66 58 Q82 52 86 62" stroke={color} strokeWidth="2.5" fill="none" opacity="0.8" />
-      <path d="M32 68 Q16 70 14 78" stroke={color} strokeWidth="1.5" fill="none" opacity="0.5" />
-      <path d="M64 68 Q80 70 82 78" stroke={color} strokeWidth="1.5" fill="none" opacity="0.5" />
+      <circle cx="48" cy="48" r="44" fill="url(#core3)" />
+      {/* Triple orbit rings */}
+      <circle cx="48" cy="48" r="22" fill="none" stroke={color} strokeWidth="1" opacity="0.2" />
+      <circle cx="48" cy="48" r="32" fill="none" stroke="#aa44ff" strokeWidth="0.7" opacity="0.15" />
+      <circle cx="48" cy="48" r="40" fill="none" stroke={color} strokeWidth="0.5" opacity="0.1" strokeDasharray="3,8" />
+      {/* Core — layered diamond */}
+      <rect x="36" y="36" width="24" height="24" rx="4" fill={color} opacity="0.9" filter="url(#glow3)" transform="rotate(45 48 48)" />
+      <rect x="40" y="40" width="16" height="16" rx="2" fill="#001a2e" opacity="0.6" transform="rotate(45 48 48)" />
+      <circle cx="48" cy="48" r="4" fill={color} opacity="0.8" filter="url(#glow3)" />
+      {/* Constellation nodes + links */}
+      <circle cx="70" cy="36" r="3" fill={color} opacity="0.5" filter="url(#glow3)" />
+      <circle cx="26" cy="60" r="3" fill="#aa44ff" opacity="0.4" filter="url(#glow3)" />
+      <circle cx="60" cy="72" r="2.5" fill={color} opacity="0.4" />
+      <circle cx="36" cy="24" r="2" fill="#aa44ff" opacity="0.3" />
+      <line x1="58" y1="42" x2="70" y2="36" stroke={color} strokeWidth="0.8" opacity="0.2" />
+      <line x1="38" y1="54" x2="26" y2="60" stroke="#aa44ff" strokeWidth="0.8" opacity="0.2" />
+      <line x1="54" y1="58" x2="60" y2="72" stroke={color} strokeWidth="0.6" opacity="0.15" />
       {proud && <>
-        <circle cx="20" cy="20" r="2" fill="#ffd700" opacity="0.9" />
-        <circle cx="76" cy="18" r="2" fill="#ffd700" opacity="0.9" />
-        <circle cx="14" cy="44" r="1.5" fill={color} opacity="0.8" />
-        <circle cx="82" cy="40" r="1.5" fill={color} opacity="0.8" />
+        <circle cx="18" cy="28" r="1.5" fill="#ffd700" opacity="0.7" />
+        <circle cx="78" cy="22" r="1.5" fill="#ffd700" opacity="0.7" />
+        <circle cx="14" cy="56" r="1" fill={color} opacity="0.5" />
+        <circle cx="82" cy="62" r="1" fill={color} opacity="0.5" />
       </>}
     </svg>
   );
@@ -149,60 +135,50 @@ function SpriteHolographic({ color }: { color: string }) {
   return (
     <svg width="112" height="112" viewBox="0 0 112 112">
       <defs>
-        <radialGradient id="coreHolo" cx="50%" cy="45%">
-          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.9" />
-          <stop offset="30%" stopColor={color} stopOpacity="0.8" />
-          <stop offset="70%" stopColor="#aa44ff" stopOpacity="0.5" />
+        <radialGradient id="coreH" cx="50%" cy="45%">
+          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.6" />
+          <stop offset="20%" stopColor={color} stopOpacity="0.5" />
+          <stop offset="50%" stopColor="#aa44ff" stopOpacity="0.2" />
           <stop offset="100%" stopColor="transparent" stopOpacity="0" />
         </radialGradient>
-        <radialGradient id="bodyHolo" cx="50%" cy="40%">
-          <stop offset="0%" stopColor={color} stopOpacity="1" />
-          <stop offset="50%" stopColor="#aa44ff" stopOpacity="0.7" />
-          <stop offset="100%" stopColor="#001a2e" stopOpacity="0.4" />
-        </radialGradient>
-        <filter id="glowHolo">
+        <filter id="glowH">
           <feGaussianBlur stdDeviation="4" result="blur" />
           <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
         </filter>
-        <filter id="softGlow">
+        <filter id="softH">
           <feGaussianBlur stdDeviation="2" result="blur" />
           <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
         </filter>
       </defs>
-      <ellipse cx="56" cy="60" rx="48" ry="52" fill="url(#coreHolo)" opacity="0.4" />
-      <path d="M42 22 Q34 8 28 4 Q22 0 18 6" stroke={color} strokeWidth="2" fill="none"
-        opacity="0.7" filter="url(#softGlow)" />
-      <path d="M50 18 Q48 4 44 0" stroke="#aa44ff" strokeWidth="1.5" fill="none" opacity="0.6" />
-      <path d="M62 18 Q64 4 68 0" stroke={color} strokeWidth="1.5" fill="none" opacity="0.6" />
-      <path d="M70 22 Q78 8 84 4 Q90 0 94 6" stroke="#aa44ff" strokeWidth="2" fill="none"
-        opacity="0.7" filter="url(#softGlow)" />
-      <path d="M32 96 Q26 72 30 58 Q36 44 56 42 Q76 44 82 58 Q86 72 80 96 Z"
-        fill="url(#bodyHolo)" filter="url(#glowHolo)" opacity="0.85" />
-      <ellipse cx="56" cy="32" rx="20" ry="20" fill="url(#bodyHolo)" filter="url(#glowHolo)" />
-      <path d="M40 70 L40 76 L46 76 M52 64 L58 64 L58 70 M68 72 L68 78 L62 78"
-        stroke={color} strokeWidth="1" fill="none" opacity="0.4" />
-      <ellipse cx="47" cy="30" rx="5" ry="6" fill={color} filter="url(#glowHolo)" />
-      <ellipse cx="65" cy="30" rx="5" ry="6" fill={color} filter="url(#glowHolo)" />
-      <ellipse cx="47" cy="31" rx="2.5" ry="3" fill="#001a2e" />
-      <ellipse cx="65" cy="31" rx="2.5" ry="3" fill="#001a2e" />
-      <ellipse cx="47" cy="31" rx="1" ry="1" fill={color} opacity="0.8" />
-      <ellipse cx="65" cy="31" rx="1" ry="1" fill={color} opacity="0.8" />
-      <ellipse cx="56" cy="10" rx="24" ry="6" fill="none" stroke="#ffd700"
-        strokeWidth="2.5" opacity="1" filter="url(#glowHolo)" />
-      <ellipse cx="56" cy="10" rx="28" ry="8" fill="none" stroke="#ffd700"
-        strokeWidth="1" opacity="0.4" />
+      <circle cx="56" cy="56" r="52" fill="url(#coreH)" />
+      {/* Quad orbit rings */}
+      <circle cx="56" cy="56" r="18" fill="none" stroke={color} strokeWidth="1.2" opacity="0.25" />
+      <circle cx="56" cy="56" r="28" fill="none" stroke="#aa44ff" strokeWidth="0.8" opacity="0.2" />
+      <circle cx="56" cy="56" r="38" fill="none" stroke={color} strokeWidth="0.5" opacity="0.15" strokeDasharray="2,6" />
+      <circle cx="56" cy="56" r="48" fill="none" stroke="#aa44ff" strokeWidth="0.3" opacity="0.08" strokeDasharray="1,10" />
+      {/* Core — nested geometry */}
+      <rect x="42" y="42" width="28" height="28" rx="6" fill={color} opacity="0.8" filter="url(#glowH)" transform="rotate(45 56 56)" />
+      <rect x="46" y="46" width="20" height="20" rx="4" fill="#aa44ff" opacity="0.4" filter="url(#glowH)" transform="rotate(45 56 56)" />
+      <circle cx="56" cy="56" r="6" fill="#fff" opacity="0.9" filter="url(#glowH)" />
+      <circle cx="56" cy="56" r="3" fill={color} opacity="0.8" />
+      {/* Constellation lattice */}
       {[
-        [18,30],[16,50],[20,72],[96,34],[94,58],[98,78],
-        [36,8],[76,8],[26,88],[86,90],
-      ].map(([x,y],i) => (
-        <circle key={i} cx={x} cy={y} r="2" fill={i % 2 === 0 ? color : '#ffd700'}
-          opacity="0.7" filter="url(#softGlow)" />
+        [80, 36], [32, 76], [76, 76], [36, 36],
+        [56, 14], [56, 98], [14, 56], [98, 56],
+        [24, 24], [88, 88],
+      ].map(([x, y], i) => (
+        <circle key={i} cx={x} cy={y} r={i < 4 ? 3.5 : i < 8 ? 2.5 : 1.5}
+          fill={i % 2 === 0 ? color : '#aa44ff'} opacity={i < 4 ? 0.6 : 0.35}
+          filter={i < 4 ? 'url(#softH)' : undefined} />
       ))}
-      <path d="M34 68 Q18 62 12 72" stroke={color} strokeWidth="3" fill="none"
-        opacity="0.8" filter="url(#softGlow)" />
-      <path d="M78 68 Q94 62 100 72" stroke={color} strokeWidth="3" fill="none"
-        opacity="0.8" filter="url(#softGlow)" />
-      <path d="M50 40 Q56 44 62 40" stroke={color} strokeWidth="1.5" fill="none" opacity="0.6" />
+      {/* Lattice connections */}
+      {[
+        [66, 50, 80, 36], [46, 62, 32, 76], [66, 62, 76, 76], [46, 50, 36, 36],
+        [56, 42, 56, 14], [56, 70, 56, 98],
+      ].map(([x1, y1, x2, y2], i) => (
+        <line key={i} x1={x1} y1={y1} x2={x2} y2={y2}
+          stroke={i % 2 === 0 ? color : '#aa44ff'} strokeWidth="0.6" opacity="0.2" />
+      ))}
     </svg>
   );
 }
@@ -232,7 +208,7 @@ function fmtEvent(event: string): { icon: string; label: string } {
 // ── Stat panel ─────────────────────────────────────────────────────────────
 
 const FLOW_MILESTONES_LIST = [1, 5, 10, 25, 50, 100];
-const TIER_LABEL: Record<number, string> = { 1: '8-bit', 2: '16-bit', 3: '32-bit', 4: 'Holographic' };
+const TIER_LABEL: Record<number, string> = { 1: 'Node', 2: 'Lattice', 3: 'Constellation', 4: 'Nexus' };
 
 function StatPanel({ state, onClose }: { state: VelmaState; onClose: () => void }) {
   const tier = getVisualTier(state.level);
@@ -492,10 +468,10 @@ function NotificationPanel({
 // ── Tier name helper ───────────────────────────────────────────────────────
 
 const TIER_NAMES: Record<VisualTier, string> = {
-  1: '8-BIT',
-  2: '16-BIT',
-  3: '32-BIT',
-  4: 'HOLOGRAPHIC',
+  1: 'NODE',
+  2: 'LATTICE',
+  3: 'CONSTELLATION',
+  4: 'NEXUS',
 };
 
 // ── Main Widget ────────────────────────────────────────────────────────────
@@ -521,6 +497,7 @@ export default function VelmaWidget({ wallet }: { wallet?: string } = {}) {
   const [levelUpActive, setLevelUpActive] = useState(false);
   const [evolutionTier, setEvolutionTier] = useState<VisualTier | null>(null);
   const [firstWake, setFirstWake] = useState(false);
+  const [breathe, setBreathe] = useState(false);
 
   const prevXpRef    = useRef(state.xp);
   const prevLevelRef = useRef(state.level);
@@ -542,7 +519,8 @@ export default function VelmaWidget({ wallet }: { wallet?: string } = {}) {
     if (window.innerWidth < 640) return;
     if (autoOpenCount < 5) {
       const t = setTimeout(() => {
-        setShowChat(true);
+        setBreathe(true);
+        setTimeout(() => { setShowChat(true); setBreathe(false); }, 900);
         localStorage.setItem(AUTO_OPEN_KEY, String(autoOpenCount + 1));
       }, autoOpenCount === 0 ? 10000 : 8000); // slightly faster after first time
       return () => clearTimeout(t);
@@ -888,7 +866,8 @@ export default function VelmaWidget({ wallet }: { wallet?: string } = {}) {
             width: `${spriteSize}px`,
             height: `${spriteSize}px`,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            transition: 'transform 0.15s ease',
+            transition: breathe ? 'none' : 'transform 0.15s ease',
+            animation: breathe ? 'velma-breathe 0.9s ease-out' : 'none',
             filter: `drop-shadow(0 0 8px ${color}88)`,
           }}
           onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.08)')}
@@ -935,6 +914,15 @@ export default function VelmaWidget({ wallet }: { wallet?: string } = {}) {
           0%   { transform: scale(0.6); opacity: 0; }
           60%  { transform: scale(1.1); opacity: 1; }
           100% { transform: scale(1); opacity: 1; }
+        }
+        @keyframes velma-breathe {
+          0%   { transform: scale(1); }
+          15%  { transform: scale(1.6); }
+          30%  { transform: scale(1.4); }
+          45%  { transform: scale(1.55); }
+          65%  { transform: scale(1.1); }
+          80%  { transform: scale(1.02); }
+          100% { transform: scale(1); }
         }
       `}</style>
     </div>

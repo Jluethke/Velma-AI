@@ -129,7 +129,7 @@ export default function UseCase() {
           <li aria-hidden="true">/</li>
           <li><Link to="/explore" className="no-underline" style={{ color: 'var(--text-secondary)' }}>Flows</Link></li>
           <li aria-hidden="true">/</li>
-          <li style={{ color: 'var(--cyan)' }}>{data.slug}</li>
+          <li style={{ color: 'var(--cyan)' }}>{data.slug.charAt(0).toUpperCase() + data.slug.slice(1)}</li>
         </ol>
       </nav>
 
