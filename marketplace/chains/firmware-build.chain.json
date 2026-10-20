@@ -1,0 +1,135 @@
+{
+  "name": "firmware-build",
+  "description": "Derive the pin map from the netlist, scaffold, implement and host-test firmware, then build for target with a flash procedure.",
+  "steps": [
+    {
+      "id": "s01_fw_pin_map",
+      "skill_name": "fw-pin-map",
+      "inputs": {
+        "netlist": "from_user_input",
+        "bom": "from_user_input",
+        "review_verdict": "from_user_input"
+      },
+      "outputs": {
+        "pin_map": "pin_map",
+        "schematic_defects": "schematic_defects"
+      },
+      "condition": "product_scope.has_firmware == true",
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_fw_project_scaffold",
+      "skill_name": "fw-project-scaffold",
+      "inputs": {
+        "pin_map": "s01_fw_pin_map.pin_map",
+        "board_spec": "from_user_input",
+        "critical_circuits": "from_user_input",
+        "project_dir": "from_user_input",
+        "firmware_framework": "from_user_input_optional"
+      },
+      "outputs": {
+        "firmware_source": "firmware_source"
+      },
+      "condition": "product_scope.has_firmware == true",
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_fw_drivers_logic",
+      "skill_name": "fw-drivers-logic",
+      "inputs": {
+        "firmware_source": "s02_fw_project_scaffold.firmware_source",
+        "board_spec": "from_user_input",
+        "critical_circuits": "from_user_input"
+      },
+      "outputs": {
+        "firmware_tests": "firmware_tests"
+      },
+      "condition": "product_scope.has_firmware == true",
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_fw_target_build",
+      "skill_name": "fw-target-build",
+      "inputs": {
+        "firmware_source": "s02_fw_project_scaffold.firmware_source",
+        "firmware_tests": "s03_fw_drivers_logic.firmware_tests",
+        "bom": "from_user_input"
+      },
+      "outputs": {
+        "firmware_build": "firmware_build",
+        "flash_procedure": "flash_procedure"
+      },
+      "condition": "product_scope.has_firmware == true",
+      "parallel_group": 4
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_fw_pin_map",
+      "to_step": "s02_fw_project_scaffold",
+      "data_type": "fw-pin-map",
+      "field_mapping": {
+        "pin_map": "pin_map"
+      }
+    },
+    {
+      "from_step": "s02_fw_project_scaffold",
+      "to_step": "s03_fw_drivers_logic",
+      "data_type": "fw-project-scaffold",
+      "field_mapping": {
+        "firmware_source": "firmware_source"
+      }
+    },
+    {
+      "from_step": "s02_fw_project_scaffold",
+      "to_step": "s04_fw_target_build",
+      "data_type": "fw-project-scaffold",
+      "field_mapping": {
+        "firmware_source": "firmware_source"
+      }
+    },
+    {
+      "from_step": "s03_fw_drivers_logic",
+      "to_step": "s04_fw_target_build",
+      "data_type": "fw-drivers-logic",
+      "field_mapping": {
+        "firmware_tests": "firmware_tests"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "netlist",
+    "bom",
+    "review_verdict",
+    "board_spec",
+    "critical_circuits",
+    "project_dir",
+    "firmware_framework"
+  ],
+  "terminal_outputs": [
+    "schematic_defects",
+    "firmware_build",
+    "flash_procedure"
+  ],
+  "parallel_groups": [
+    [
+      "s01_fw_pin_map"
+    ],
+    [
+      "s02_fw_project_scaffold"
+    ],
+    [
+      "s03_fw_drivers_logic"
+    ],
+    [
+      "s04_fw_target_build"
+    ]
+  ],
+  "estimated_cost": 4,
+  "critical_path": [
+    "s01_fw_pin_map",
+    "s02_fw_project_scaffold",
+    "s03_fw_drivers_logic",
+    "s04_fw_target_build"
+  ]
+}

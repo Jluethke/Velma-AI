@@ -1,0 +1,141 @@
+{
+  "name": "pcb-schematic",
+  "description": "Verify the open toolchain, select datasheet-verified in-stock parts, capture the schematic as SKiDL code, and produce a zero-error netlist.",
+  "steps": [
+    {
+      "id": "s01_eda_toolchain_check",
+      "skill_name": "eda-toolchain-check",
+      "inputs": {
+        "product_scope": "from_user_input",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "toolchain_versions": "toolchain_versions",
+        "install_steps": "install_steps"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_pcb_part_selection",
+      "skill_name": "pcb-part-selection",
+      "inputs": {
+        "board_spec": "from_user_input",
+        "critical_circuits": "from_user_input",
+        "selected_architecture": "from_user_input",
+        "review_changes": "from_user_input_optional"
+      },
+      "outputs": {
+        "part_candidates": "part_candidates"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s03_pcb_stock_sourcing",
+      "skill_name": "pcb-stock-sourcing",
+      "inputs": {
+        "part_candidates": "s02_pcb_part_selection.part_candidates",
+        "board_spec": "from_user_input"
+      },
+      "outputs": {
+        "bom": "bom"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_pcb_skidl_capture",
+      "skill_name": "pcb-skidl-capture",
+      "inputs": {
+        "bom": "s03_pcb_stock_sourcing.bom",
+        "board_spec": "from_user_input",
+        "critical_circuits": "from_user_input",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "skidl_source": "skidl_source"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s05_pcb_erc_netlist",
+      "skill_name": "pcb-erc-netlist",
+      "inputs": {
+        "skidl_source": "s04_pcb_skidl_capture.skidl_source",
+        "bom": "s03_pcb_stock_sourcing.bom"
+      },
+      "outputs": {
+        "netlist": "netlist",
+        "erc_report": "erc_report"
+      },
+      "parallel_group": 4
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s02_pcb_part_selection",
+      "to_step": "s03_pcb_stock_sourcing",
+      "data_type": "pcb-part-selection",
+      "field_mapping": {
+        "part_candidates": "part_candidates"
+      }
+    },
+    {
+      "from_step": "s03_pcb_stock_sourcing",
+      "to_step": "s04_pcb_skidl_capture",
+      "data_type": "pcb-stock-sourcing",
+      "field_mapping": {
+        "bom": "bom"
+      }
+    },
+    {
+      "from_step": "s04_pcb_skidl_capture",
+      "to_step": "s05_pcb_erc_netlist",
+      "data_type": "pcb-skidl-capture",
+      "field_mapping": {
+        "skidl_source": "skidl_source"
+      }
+    },
+    {
+      "from_step": "s03_pcb_stock_sourcing",
+      "to_step": "s05_pcb_erc_netlist",
+      "data_type": "pcb-stock-sourcing",
+      "field_mapping": {
+        "bom": "bom"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "product_scope",
+    "project_dir",
+    "board_spec",
+    "critical_circuits",
+    "selected_architecture"
+  ],
+  "terminal_outputs": [
+    "toolchain_versions",
+    "install_steps",
+    "netlist",
+    "erc_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_eda_toolchain_check",
+      "s02_pcb_part_selection"
+    ],
+    [
+      "s03_pcb_stock_sourcing"
+    ],
+    [
+      "s04_pcb_skidl_capture"
+    ],
+    [
+      "s05_pcb_erc_netlist"
+    ]
+  ],
+  "estimated_cost": 5,
+  "critical_path": [
+    "s02_pcb_part_selection",
+    "s03_pcb_stock_sourcing",
+    "s04_pcb_skidl_capture",
+    "s05_pcb_erc_netlist"
+  ]
+}

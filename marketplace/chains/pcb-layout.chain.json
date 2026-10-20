@@ -1,0 +1,221 @@
+{
+  "name": "pcb-layout",
+  "description": "Set up the board, place, route critical nets, autoroute the rest with Freerouting, and close headless DRC at zero violations.",
+  "steps": [
+    {
+      "id": "s01_pcb_board_setup",
+      "skill_name": "pcb-board-setup",
+      "inputs": {
+        "skidl_source": "from_user_input",
+        "netlist": "from_user_input",
+        "bom": "from_user_input",
+        "board_spec": "from_user_input",
+        "creepage_constraints": "from_user_input",
+        "review_verdict": "from_user_input",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "setup_board": "setup_board",
+        "net_classes": "net_classes"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_pcb_placement_candidates",
+      "skill_name": "pcb-placement-candidates",
+      "inputs": {
+        "setup_board": "s01_pcb_board_setup.setup_board",
+        "board_spec": "from_user_input",
+        "critical_circuits": "from_user_input"
+      },
+      "outputs": {
+        "placement_candidates": "placement_candidates"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_pcb_placement_scoring",
+      "skill_name": "pcb-placement-scoring",
+      "inputs": {
+        "placement_candidates": "s02_pcb_placement_candidates.placement_candidates",
+        "board_spec": "from_user_input"
+      },
+      "outputs": {
+        "placed_board": "placed_board",
+        "placement_scorecard": "placement_scorecard",
+        "layout_notes": "layout_notes"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_pcb_critical_routing",
+      "skill_name": "pcb-critical-routing",
+      "inputs": {
+        "placed_board": "s03_pcb_placement_scoring.placed_board",
+        "net_classes": "s01_pcb_board_setup.net_classes",
+        "critical_circuits": "from_user_input"
+      },
+      "outputs": {
+        "critical_routed_board": "critical_routed_board",
+        "locked_nets": "locked_nets"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s05_pcb_autoroute",
+      "skill_name": "pcb-autoroute",
+      "inputs": {
+        "critical_routed_board": "s04_pcb_critical_routing.critical_routed_board",
+        "locked_nets": "s04_pcb_critical_routing.locked_nets"
+      },
+      "outputs": {
+        "routed_board": "routed_board",
+        "route_log": "route_log"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s06_pcb_drc_closure",
+      "skill_name": "pcb-drc-closure",
+      "inputs": {
+        "routed_board": "s05_pcb_autoroute.routed_board",
+        "board_spec": "from_user_input"
+      },
+      "outputs": {
+        "kicad_pcb": "kicad_pcb",
+        "drc_report": "drc_report"
+      },
+      "parallel_group": 6
+    },
+    {
+      "id": "s07_pcb_layout_metrics",
+      "skill_name": "pcb-layout-metrics",
+      "inputs": {
+        "kicad_pcb": "s06_pcb_drc_closure.kicad_pcb",
+        "placement_scorecard": "s03_pcb_placement_scoring.placement_scorecard",
+        "baseline_metrics": "from_user_input"
+      },
+      "outputs": {
+        "layout_scorecard": "layout_scorecard"
+      },
+      "parallel_group": 7
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_pcb_board_setup",
+      "to_step": "s02_pcb_placement_candidates",
+      "data_type": "pcb-board-setup",
+      "field_mapping": {
+        "setup_board": "setup_board"
+      }
+    },
+    {
+      "from_step": "s02_pcb_placement_candidates",
+      "to_step": "s03_pcb_placement_scoring",
+      "data_type": "pcb-placement-candidates",
+      "field_mapping": {
+        "placement_candidates": "placement_candidates"
+      }
+    },
+    {
+      "from_step": "s03_pcb_placement_scoring",
+      "to_step": "s04_pcb_critical_routing",
+      "data_type": "pcb-placement-scoring",
+      "field_mapping": {
+        "placed_board": "placed_board"
+      }
+    },
+    {
+      "from_step": "s01_pcb_board_setup",
+      "to_step": "s04_pcb_critical_routing",
+      "data_type": "pcb-board-setup",
+      "field_mapping": {
+        "net_classes": "net_classes"
+      }
+    },
+    {
+      "from_step": "s04_pcb_critical_routing",
+      "to_step": "s05_pcb_autoroute",
+      "data_type": "pcb-critical-routing",
+      "field_mapping": {
+        "critical_routed_board": "critical_routed_board",
+        "locked_nets": "locked_nets"
+      }
+    },
+    {
+      "from_step": "s05_pcb_autoroute",
+      "to_step": "s06_pcb_drc_closure",
+      "data_type": "pcb-autoroute",
+      "field_mapping": {
+        "routed_board": "routed_board"
+      }
+    },
+    {
+      "from_step": "s06_pcb_drc_closure",
+      "to_step": "s07_pcb_layout_metrics",
+      "data_type": "pcb-drc-closure",
+      "field_mapping": {
+        "kicad_pcb": "kicad_pcb"
+      }
+    },
+    {
+      "from_step": "s03_pcb_placement_scoring",
+      "to_step": "s07_pcb_layout_metrics",
+      "data_type": "pcb-placement-scoring",
+      "field_mapping": {
+        "placement_scorecard": "placement_scorecard"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "skidl_source",
+    "netlist",
+    "bom",
+    "board_spec",
+    "creepage_constraints",
+    "review_verdict",
+    "project_dir",
+    "critical_circuits",
+    "baseline_metrics"
+  ],
+  "terminal_outputs": [
+    "layout_notes",
+    "route_log",
+    "drc_report",
+    "layout_scorecard"
+  ],
+  "parallel_groups": [
+    [
+      "s01_pcb_board_setup"
+    ],
+    [
+      "s02_pcb_placement_candidates"
+    ],
+    [
+      "s03_pcb_placement_scoring"
+    ],
+    [
+      "s04_pcb_critical_routing"
+    ],
+    [
+      "s05_pcb_autoroute"
+    ],
+    [
+      "s06_pcb_drc_closure"
+    ],
+    [
+      "s07_pcb_layout_metrics"
+    ]
+  ],
+  "estimated_cost": 7,
+  "critical_path": [
+    "s01_pcb_board_setup",
+    "s02_pcb_placement_candidates",
+    "s03_pcb_placement_scoring",
+    "s04_pcb_critical_routing",
+    "s05_pcb_autoroute",
+    "s06_pcb_drc_closure",
+    "s07_pcb_layout_metrics"
+  ]
+}

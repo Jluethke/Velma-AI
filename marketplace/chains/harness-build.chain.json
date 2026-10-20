@@ -1,0 +1,127 @@
+{
+  "name": "harness-build",
+  "description": "Select mating connectors for both ends, define the pin-to-pin wiring, generate the WireViz diagram and BOM, and plan continuity tests.",
+  "steps": [
+    {
+      "id": "s01_harness_connector_selection",
+      "skill_name": "harness-connector-selection",
+      "inputs": {
+        "board_spec": "from_user_input",
+        "bom": "from_user_input",
+        "review_verdict": "from_user_input"
+      },
+      "outputs": {
+        "harness_connectors": "harness_connectors"
+      },
+      "condition": "product_scope.needs_harness == true",
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_harness_pinout_wiring",
+      "skill_name": "harness-pinout-wiring",
+      "inputs": {
+        "harness_connectors": "s01_harness_connector_selection.harness_connectors",
+        "board_spec": "from_user_input",
+        "netlist": "from_user_input"
+      },
+      "outputs": {
+        "wiring_table": "wiring_table"
+      },
+      "condition": "product_scope.needs_harness == true",
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_harness_diagram_bom",
+      "skill_name": "harness-diagram-bom",
+      "inputs": {
+        "wiring_table": "s02_harness_pinout_wiring.wiring_table",
+        "harness_connectors": "s01_harness_connector_selection.harness_connectors",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "harness_yaml": "harness_yaml",
+        "harness_diagram": "harness_diagram",
+        "harness_bom": "harness_bom"
+      },
+      "condition": "product_scope.needs_harness == true",
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_harness_continuity_test_plan",
+      "skill_name": "harness-continuity-test-plan",
+      "inputs": {
+        "wiring_table": "s02_harness_pinout_wiring.wiring_table"
+      },
+      "outputs": {
+        "continuity_test_plan": "continuity_test_plan"
+      },
+      "condition": "product_scope.needs_harness == true",
+      "parallel_group": 3
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_harness_connector_selection",
+      "to_step": "s02_harness_pinout_wiring",
+      "data_type": "harness-connector-selection",
+      "field_mapping": {
+        "harness_connectors": "harness_connectors"
+      }
+    },
+    {
+      "from_step": "s02_harness_pinout_wiring",
+      "to_step": "s03_harness_diagram_bom",
+      "data_type": "harness-pinout-wiring",
+      "field_mapping": {
+        "wiring_table": "wiring_table"
+      }
+    },
+    {
+      "from_step": "s01_harness_connector_selection",
+      "to_step": "s03_harness_diagram_bom",
+      "data_type": "harness-connector-selection",
+      "field_mapping": {
+        "harness_connectors": "harness_connectors"
+      }
+    },
+    {
+      "from_step": "s02_harness_pinout_wiring",
+      "to_step": "s04_harness_continuity_test_plan",
+      "data_type": "harness-pinout-wiring",
+      "field_mapping": {
+        "wiring_table": "wiring_table"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "board_spec",
+    "bom",
+    "review_verdict",
+    "netlist",
+    "project_dir"
+  ],
+  "terminal_outputs": [
+    "harness_yaml",
+    "harness_diagram",
+    "harness_bom",
+    "continuity_test_plan"
+  ],
+  "parallel_groups": [
+    [
+      "s01_harness_connector_selection"
+    ],
+    [
+      "s02_harness_pinout_wiring"
+    ],
+    [
+      "s03_harness_diagram_bom",
+      "s04_harness_continuity_test_plan"
+    ]
+  ],
+  "estimated_cost": 4,
+  "critical_path": [
+    "s01_harness_connector_selection",
+    "s02_harness_pinout_wiring",
+    "s04_harness_continuity_test_plan"
+  ]
+}

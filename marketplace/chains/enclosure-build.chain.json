@@ -1,0 +1,140 @@
+{
+  "name": "enclosure-build",
+  "description": "Export the board in 3D, model a parametric enclosure as code, check fit and connector access, and export manufacturing files.",
+  "steps": [
+    {
+      "id": "s01_enc_board_3d_export",
+      "skill_name": "enc-board-3d-export",
+      "inputs": {
+        "kicad_pcb": "from_user_input",
+        "bom": "from_user_input",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "board_step": "board_step",
+        "board_envelope": "board_envelope"
+      },
+      "condition": "product_scope.needs_enclosure == true",
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_enc_parametric_model",
+      "skill_name": "enc-parametric-model",
+      "inputs": {
+        "board_envelope": "s01_enc_board_3d_export.board_envelope",
+        "board_spec": "from_user_input",
+        "enclosure_process": "from_user_input_optional",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "enclosure_source": "enclosure_source"
+      },
+      "condition": "product_scope.needs_enclosure == true",
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_enc_fit_check",
+      "skill_name": "enc-fit-check",
+      "inputs": {
+        "enclosure_source": "s02_enc_parametric_model.enclosure_source",
+        "board_step": "s01_enc_board_3d_export.board_step",
+        "board_envelope": "s01_enc_board_3d_export.board_envelope"
+      },
+      "outputs": {
+        "fit_report": "fit_report"
+      },
+      "condition": "product_scope.needs_enclosure == true",
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_enc_manufacturing_export",
+      "skill_name": "enc-manufacturing-export",
+      "inputs": {
+        "enclosure_source": "s02_enc_parametric_model.enclosure_source",
+        "fit_report": "s03_enc_fit_check.fit_report",
+        "enclosure_process": "from_user_input_optional"
+      },
+      "outputs": {
+        "enclosure_files": "enclosure_files",
+        "enclosure_hardware_bom": "enclosure_hardware_bom"
+      },
+      "condition": "product_scope.needs_enclosure == true",
+      "parallel_group": 4
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_enc_board_3d_export",
+      "to_step": "s02_enc_parametric_model",
+      "data_type": "enc-board-3d-export",
+      "field_mapping": {
+        "board_envelope": "board_envelope"
+      }
+    },
+    {
+      "from_step": "s02_enc_parametric_model",
+      "to_step": "s03_enc_fit_check",
+      "data_type": "enc-parametric-model",
+      "field_mapping": {
+        "enclosure_source": "enclosure_source"
+      }
+    },
+    {
+      "from_step": "s01_enc_board_3d_export",
+      "to_step": "s03_enc_fit_check",
+      "data_type": "enc-board-3d-export",
+      "field_mapping": {
+        "board_step": "board_step",
+        "board_envelope": "board_envelope"
+      }
+    },
+    {
+      "from_step": "s02_enc_parametric_model",
+      "to_step": "s04_enc_manufacturing_export",
+      "data_type": "enc-parametric-model",
+      "field_mapping": {
+        "enclosure_source": "enclosure_source"
+      }
+    },
+    {
+      "from_step": "s03_enc_fit_check",
+      "to_step": "s04_enc_manufacturing_export",
+      "data_type": "enc-fit-check",
+      "field_mapping": {
+        "fit_report": "fit_report"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "kicad_pcb",
+    "bom",
+    "project_dir",
+    "board_spec",
+    "enclosure_process"
+  ],
+  "terminal_outputs": [
+    "enclosure_files",
+    "enclosure_hardware_bom"
+  ],
+  "parallel_groups": [
+    [
+      "s01_enc_board_3d_export"
+    ],
+    [
+      "s02_enc_parametric_model"
+    ],
+    [
+      "s03_enc_fit_check"
+    ],
+    [
+      "s04_enc_manufacturing_export"
+    ]
+  ],
+  "estimated_cost": 4,
+  "critical_path": [
+    "s01_enc_board_3d_export",
+    "s02_enc_parametric_model",
+    "s03_enc_fit_check",
+    "s04_enc_manufacturing_export"
+  ]
+}

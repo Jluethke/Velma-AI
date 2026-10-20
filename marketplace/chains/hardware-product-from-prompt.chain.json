@@ -1,0 +1,1688 @@
+{
+  "name": "hardware-product-from-prompt",
+  "description": "Design a complete hardware product from a plain-language ask on an open toolchain: requirements, architecture exploration scored against a conventional baseline, datasheet-verified schematic as code, worst-case review of protection, isolation and emergency stops, optimized layout with zero-violation DRC, fab package, firmware, enclosure, wire harness, measured bring-up, system acceptance, and a predicted-versus-measured report of every gain over baseline.",
+  "steps": [
+    {
+      "id": "s01_hw_interface_spec",
+      "skill_name": "hw-interface-spec",
+      "inputs": {
+        "board_ask": "from_user_input",
+        "environment": "from_user_input_optional",
+        "host_platform": "from_user_input_optional"
+      },
+      "outputs": {
+        "interface_table": "interface_table",
+        "environment_profile": "environment_profile"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_hw_power_tree",
+      "skill_name": "hw-power-tree",
+      "inputs": {
+        "board_ask": "from_user_input",
+        "interface_table": "s01_hw_interface_spec.interface_table",
+        "environment_profile": "s01_hw_interface_spec.environment_profile"
+      },
+      "outputs": {
+        "power_tree": "power_tree"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_hw_critical_circuit_flagging",
+      "skill_name": "hw-critical-circuit-flagging",
+      "inputs": {
+        "board_ask": "from_user_input",
+        "interface_table": "s01_hw_interface_spec.interface_table",
+        "power_tree": "s02_hw_power_tree.power_tree"
+      },
+      "outputs": {
+        "critical_circuits": "critical_circuits"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_hw_mechanical_fab_constraints",
+      "skill_name": "hw-mechanical-fab-constraints",
+      "inputs": {
+        "interface_table": "s01_hw_interface_spec.interface_table",
+        "power_tree": "s02_hw_power_tree.power_tree",
+        "mechanical_limits": "from_user_input_optional",
+        "fab_target": "from_user_input_optional"
+      },
+      "outputs": {
+        "mechanical_envelope": "mechanical_envelope",
+        "fab_rules": "fab_rules",
+        "layer_count": "layer_count"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s05_hw_spec_consolidate",
+      "skill_name": "hw-spec-consolidate",
+      "inputs": {
+        "interface_table": "s01_hw_interface_spec.interface_table",
+        "environment_profile": "s01_hw_interface_spec.environment_profile",
+        "power_tree": "s02_hw_power_tree.power_tree",
+        "critical_circuits": "s03_hw_critical_circuit_flagging.critical_circuits",
+        "mechanical_envelope": "s04_hw_mechanical_fab_constraints.mechanical_envelope",
+        "fab_rules": "s04_hw_mechanical_fab_constraints.fab_rules",
+        "layer_count": "s04_hw_mechanical_fab_constraints.layer_count"
+      },
+      "outputs": {
+        "board_spec": "board_spec",
+        "product_scope": "product_scope",
+        "open_questions": "open_questions"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s06_hw_baseline_architecture",
+      "skill_name": "hw-baseline-architecture",
+      "inputs": {
+        "board_spec": "s05_hw_spec_consolidate.board_spec",
+        "critical_circuits": "s03_hw_critical_circuit_flagging.critical_circuits"
+      },
+      "outputs": {
+        "baseline_architecture": "baseline_architecture",
+        "baseline_metrics": "baseline_metrics"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s07_hw_architecture_candidates",
+      "skill_name": "hw-architecture-candidates",
+      "inputs": {
+        "board_spec": "s05_hw_spec_consolidate.board_spec",
+        "critical_circuits": "s03_hw_critical_circuit_flagging.critical_circuits",
+        "baseline_architecture": "s06_hw_baseline_architecture.baseline_architecture"
+      },
+      "outputs": {
+        "architecture_candidates": "architecture_candidates"
+      },
+      "parallel_group": 6
+    },
+    {
+      "id": "s08_hw_architecture_scoring",
+      "skill_name": "hw-architecture-scoring",
+      "inputs": {
+        "architecture_candidates": "s07_hw_architecture_candidates.architecture_candidates",
+        "baseline_architecture": "s06_hw_baseline_architecture.baseline_architecture",
+        "baseline_metrics": "s06_hw_baseline_architecture.baseline_metrics",
+        "critical_circuits": "s03_hw_critical_circuit_flagging.critical_circuits"
+      },
+      "outputs": {
+        "selected_architecture": "selected_architecture",
+        "architecture_scorecard": "architecture_scorecard",
+        "design_deltas": "design_deltas"
+      },
+      "parallel_group": 7
+    },
+    {
+      "id": "s09_eda_toolchain_check",
+      "skill_name": "eda-toolchain-check",
+      "inputs": {
+        "product_scope": "s05_hw_spec_consolidate.product_scope",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "toolchain_versions": "toolchain_versions",
+        "install_steps": "install_steps"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s10_pcb_part_selection",
+      "skill_name": "pcb-part-selection",
+      "inputs": {
+        "board_spec": "s05_hw_spec_consolidate.board_spec",
+        "critical_circuits": "s03_hw_critical_circuit_flagging.critical_circuits",
+        "selected_architecture": "s08_hw_architecture_scoring.selected_architecture",
+        "review_changes": "s17_pcb_review_verdict.review_changes"
+      },
+      "outputs": {
+        "part_candidates": "part_candidates"
+      },
+      "parallel_group": 8
+    },
+    {
+      "id": "s11_pcb_stock_sourcing",
+      "skill_name": "pcb-stock-sourcing",
+      "inputs": {
+        "part_candidates": "s10_pcb_part_selection.part_candidates",
+        "board_spec": "s05_hw_spec_consolidate.board_spec"
+      },
+      "outputs": {
+        "bom": "bom"
+      },
+      "parallel_group": 9
+    },
+    {
+      "id": "s12_pcb_skidl_capture",
+      "skill_name": "pcb-skidl-capture",
+      "inputs": {
+        "bom": "s11_pcb_stock_sourcing.bom",
+        "board_spec": "s05_hw_spec_consolidate.board_spec",
+        "critical_circuits": "s03_hw_critical_circuit_flagging.critical_circuits",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "skidl_source": "skidl_source"
+      },
+      "parallel_group": 10
+    },
+    {
+      "id": "s13_pcb_erc_netlist",
+      "skill_name": "pcb-erc-netlist",
+      "inputs": {
+        "skidl_source": "s12_pcb_skidl_capture.skidl_source",
+        "bom": "s11_pcb_stock_sourcing.bom"
+      },
+      "outputs": {
+        "netlist": "netlist",
+        "erc_report": "erc_report"
+      },
+      "parallel_group": 11
+    },
+    {
+      "id": "s14_pcb_power_input_review",
+      "skill_name": "pcb-power-input-review",
+      "inputs": {
+        "skidl_source": "s12_pcb_skidl_capture.skidl_source",
+        "bom": "s11_pcb_stock_sourcing.bom",
+        "board_spec": "s05_hw_spec_consolidate.board_spec",
+        "critical_circuits": "s03_hw_critical_circuit_flagging.critical_circuits"
+      },
+      "outputs": {
+        "power_input_findings": "power_input_findings"
+      },
+      "parallel_group": 11
+    },
+    {
+      "id": "s15_pcb_isolation_review",
+      "skill_name": "pcb-isolation-review",
+      "inputs": {
+        "skidl_source": "s12_pcb_skidl_capture.skidl_source",
+        "bom": "s11_pcb_stock_sourcing.bom",
+        "board_spec": "s05_hw_spec_consolidate.board_spec",
+        "critical_circuits": "s03_hw_critical_circuit_flagging.critical_circuits"
+      },
+      "outputs": {
+        "isolation_findings": "isolation_findings",
+        "creepage_constraints": "creepage_constraints"
+      },
+      "parallel_group": 11
+    },
+    {
+      "id": "s16_pcb_interlock_fault_review",
+      "skill_name": "pcb-interlock-fault-review",
+      "inputs": {
+        "skidl_source": "s12_pcb_skidl_capture.skidl_source",
+        "bom": "s11_pcb_stock_sourcing.bom",
+        "critical_circuits": "s03_hw_critical_circuit_flagging.critical_circuits"
+      },
+      "outputs": {
+        "interlock_findings": "interlock_findings"
+      },
+      "parallel_group": 11
+    },
+    {
+      "id": "s17_pcb_review_verdict",
+      "skill_name": "pcb-review-verdict",
+      "inputs": {
+        "power_input_findings": "s14_pcb_power_input_review.power_input_findings",
+        "isolation_findings": "s15_pcb_isolation_review.isolation_findings",
+        "interlock_findings": "s16_pcb_interlock_fault_review.interlock_findings",
+        "creepage_constraints": "s15_pcb_isolation_review.creepage_constraints"
+      },
+      "outputs": {
+        "review_report": "review_report",
+        "review_changes": "review_changes",
+        "review_verdict": "review_verdict"
+      },
+      "parallel_group": 12
+    },
+    {
+      "id": "s18_pcb_board_setup",
+      "skill_name": "pcb-board-setup",
+      "inputs": {
+        "skidl_source": "s12_pcb_skidl_capture.skidl_source",
+        "netlist": "s13_pcb_erc_netlist.netlist",
+        "bom": "s11_pcb_stock_sourcing.bom",
+        "board_spec": "s05_hw_spec_consolidate.board_spec",
+        "creepage_constraints": "s15_pcb_isolation_review.creepage_constraints",
+        "review_verdict": "s17_pcb_review_verdict.review_verdict",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "setup_board": "setup_board",
+        "net_classes": "net_classes"
+      },
+      "parallel_group": 13
+    },
+    {
+      "id": "s19_pcb_placement_candidates",
+      "skill_name": "pcb-placement-candidates",
+      "inputs": {
+        "setup_board": "s18_pcb_board_setup.setup_board",
+        "board_spec": "s05_hw_spec_consolidate.board_spec",
+        "critical_circuits": "s03_hw_critical_circuit_flagging.critical_circuits"
+      },
+      "outputs": {
+        "placement_candidates": "placement_candidates"
+      },
+      "parallel_group": 14
+    },
+    {
+      "id": "s20_pcb_placement_scoring",
+      "skill_name": "pcb-placement-scoring",
+      "inputs": {
+        "placement_candidates": "s19_pcb_placement_candidates.placement_candidates",
+        "board_spec": "s05_hw_spec_consolidate.board_spec"
+      },
+      "outputs": {
+        "placed_board": "placed_board",
+        "placement_scorecard": "placement_scorecard",
+        "layout_notes": "layout_notes"
+      },
+      "parallel_group": 15
+    },
+    {
+      "id": "s21_pcb_critical_routing",
+      "skill_name": "pcb-critical-routing",
+      "inputs": {
+        "placed_board": "s20_pcb_placement_scoring.placed_board",
+        "net_classes": "s18_pcb_board_setup.net_classes",
+        "critical_circuits": "s03_hw_critical_circuit_flagging.critical_circuits"
+      },
+      "outputs": {
+        "critical_routed_board": "critical_routed_board",
+        "locked_nets": "locked_nets"
+      },
+      "parallel_group": 16
+    },
+    {
+      "id": "s22_pcb_autoroute",
+      "skill_name": "pcb-autoroute",
+      "inputs": {
+        "critical_routed_board": "s21_pcb_critical_routing.critical_routed_board",
+        "locked_nets": "s21_pcb_critical_routing.locked_nets"
+      },
+      "outputs": {
+        "routed_board": "routed_board",
+        "route_log": "route_log"
+      },
+      "parallel_group": 17
+    },
+    {
+      "id": "s23_pcb_drc_closure",
+      "skill_name": "pcb-drc-closure",
+      "inputs": {
+        "routed_board": "s22_pcb_autoroute.routed_board",
+        "board_spec": "s05_hw_spec_consolidate.board_spec"
+      },
+      "outputs": {
+        "kicad_pcb": "kicad_pcb",
+        "drc_report": "drc_report"
+      },
+      "parallel_group": 18
+    },
+    {
+      "id": "s24_pcb_layout_metrics",
+      "skill_name": "pcb-layout-metrics",
+      "inputs": {
+        "kicad_pcb": "s23_pcb_drc_closure.kicad_pcb",
+        "placement_scorecard": "s20_pcb_placement_scoring.placement_scorecard",
+        "baseline_metrics": "s06_hw_baseline_architecture.baseline_metrics"
+      },
+      "outputs": {
+        "layout_scorecard": "layout_scorecard"
+      },
+      "parallel_group": 19
+    },
+    {
+      "id": "s25_pcb_gerber_export",
+      "skill_name": "pcb-gerber-export",
+      "inputs": {
+        "kicad_pcb": "s23_pcb_drc_closure.kicad_pcb",
+        "drc_report": "s23_pcb_drc_closure.drc_report",
+        "board_spec": "s05_hw_spec_consolidate.board_spec"
+      },
+      "outputs": {
+        "fab_package": "fab_package",
+        "board_renders": "board_renders"
+      },
+      "parallel_group": 19
+    },
+    {
+      "id": "s26_pcb_assembly_files",
+      "skill_name": "pcb-assembly-files",
+      "inputs": {
+        "kicad_pcb": "s23_pcb_drc_closure.kicad_pcb",
+        "bom": "s11_pcb_stock_sourcing.bom",
+        "board_spec": "s05_hw_spec_consolidate.board_spec"
+      },
+      "outputs": {
+        "assembly_files": "assembly_files"
+      },
+      "parallel_group": 19
+    },
+    {
+      "id": "s27_fw_pin_map",
+      "skill_name": "fw-pin-map",
+      "inputs": {
+        "netlist": "s13_pcb_erc_netlist.netlist",
+        "bom": "s11_pcb_stock_sourcing.bom",
+        "review_verdict": "s17_pcb_review_verdict.review_verdict"
+      },
+      "outputs": {
+        "pin_map": "pin_map",
+        "schematic_defects": "schematic_defects"
+      },
+      "condition": "product_scope.has_firmware == true",
+      "parallel_group": 13
+    },
+    {
+      "id": "s28_fw_project_scaffold",
+      "skill_name": "fw-project-scaffold",
+      "inputs": {
+        "pin_map": "s27_fw_pin_map.pin_map",
+        "board_spec": "s05_hw_spec_consolidate.board_spec",
+        "critical_circuits": "s03_hw_critical_circuit_flagging.critical_circuits",
+        "project_dir": "from_user_input",
+        "firmware_framework": "from_user_input_optional"
+      },
+      "outputs": {
+        "firmware_source": "firmware_source"
+      },
+      "condition": "product_scope.has_firmware == true",
+      "parallel_group": 14
+    },
+    {
+      "id": "s29_fw_drivers_logic",
+      "skill_name": "fw-drivers-logic",
+      "inputs": {
+        "firmware_source": "s28_fw_project_scaffold.firmware_source",
+        "board_spec": "s05_hw_spec_consolidate.board_spec",
+        "critical_circuits": "s03_hw_critical_circuit_flagging.critical_circuits"
+      },
+      "outputs": {
+        "firmware_tests": "firmware_tests"
+      },
+      "condition": "product_scope.has_firmware == true",
+      "parallel_group": 15
+    },
+    {
+      "id": "s30_fw_target_build",
+      "skill_name": "fw-target-build",
+      "inputs": {
+        "firmware_source": "s28_fw_project_scaffold.firmware_source",
+        "firmware_tests": "s29_fw_drivers_logic.firmware_tests",
+        "bom": "s11_pcb_stock_sourcing.bom"
+      },
+      "outputs": {
+        "firmware_build": "firmware_build",
+        "flash_procedure": "flash_procedure"
+      },
+      "condition": "product_scope.has_firmware == true",
+      "parallel_group": 16
+    },
+    {
+      "id": "s31_enc_board_3d_export",
+      "skill_name": "enc-board-3d-export",
+      "inputs": {
+        "kicad_pcb": "s23_pcb_drc_closure.kicad_pcb",
+        "bom": "s11_pcb_stock_sourcing.bom",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "board_step": "board_step",
+        "board_envelope": "board_envelope"
+      },
+      "condition": "product_scope.needs_enclosure == true",
+      "parallel_group": 19
+    },
+    {
+      "id": "s32_enc_parametric_model",
+      "skill_name": "enc-parametric-model",
+      "inputs": {
+        "board_envelope": "s31_enc_board_3d_export.board_envelope",
+        "board_spec": "s05_hw_spec_consolidate.board_spec",
+        "enclosure_process": "from_user_input_optional",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "enclosure_source": "enclosure_source"
+      },
+      "condition": "product_scope.needs_enclosure == true",
+      "parallel_group": 20
+    },
+    {
+      "id": "s33_enc_fit_check",
+      "skill_name": "enc-fit-check",
+      "inputs": {
+        "enclosure_source": "s32_enc_parametric_model.enclosure_source",
+        "board_step": "s31_enc_board_3d_export.board_step",
+        "board_envelope": "s31_enc_board_3d_export.board_envelope"
+      },
+      "outputs": {
+        "fit_report": "fit_report"
+      },
+      "condition": "product_scope.needs_enclosure == true",
+      "parallel_group": 21
+    },
+    {
+      "id": "s34_enc_manufacturing_export",
+      "skill_name": "enc-manufacturing-export",
+      "inputs": {
+        "enclosure_source": "s32_enc_parametric_model.enclosure_source",
+        "fit_report": "s33_enc_fit_check.fit_report",
+        "enclosure_process": "from_user_input_optional"
+      },
+      "outputs": {
+        "enclosure_files": "enclosure_files",
+        "enclosure_hardware_bom": "enclosure_hardware_bom"
+      },
+      "condition": "product_scope.needs_enclosure == true",
+      "parallel_group": 22
+    },
+    {
+      "id": "s35_harness_connector_selection",
+      "skill_name": "harness-connector-selection",
+      "inputs": {
+        "board_spec": "s05_hw_spec_consolidate.board_spec",
+        "bom": "s11_pcb_stock_sourcing.bom",
+        "review_verdict": "s17_pcb_review_verdict.review_verdict"
+      },
+      "outputs": {
+        "harness_connectors": "harness_connectors"
+      },
+      "condition": "product_scope.needs_harness == true",
+      "parallel_group": 13
+    },
+    {
+      "id": "s36_harness_pinout_wiring",
+      "skill_name": "harness-pinout-wiring",
+      "inputs": {
+        "harness_connectors": "s35_harness_connector_selection.harness_connectors",
+        "board_spec": "s05_hw_spec_consolidate.board_spec",
+        "netlist": "s13_pcb_erc_netlist.netlist"
+      },
+      "outputs": {
+        "wiring_table": "wiring_table"
+      },
+      "condition": "product_scope.needs_harness == true",
+      "parallel_group": 14
+    },
+    {
+      "id": "s37_harness_diagram_bom",
+      "skill_name": "harness-diagram-bom",
+      "inputs": {
+        "wiring_table": "s36_harness_pinout_wiring.wiring_table",
+        "harness_connectors": "s35_harness_connector_selection.harness_connectors",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "harness_yaml": "harness_yaml",
+        "harness_diagram": "harness_diagram",
+        "harness_bom": "harness_bom"
+      },
+      "condition": "product_scope.needs_harness == true",
+      "parallel_group": 15
+    },
+    {
+      "id": "s38_harness_continuity_test_plan",
+      "skill_name": "harness-continuity-test-plan",
+      "inputs": {
+        "wiring_table": "s36_harness_pinout_wiring.wiring_table"
+      },
+      "outputs": {
+        "continuity_test_plan": "continuity_test_plan"
+      },
+      "condition": "product_scope.needs_harness == true",
+      "parallel_group": 15
+    },
+    {
+      "id": "s39_hw_bringup_plan",
+      "skill_name": "hw-bringup-plan",
+      "inputs": {
+        "board_spec": "s05_hw_spec_consolidate.board_spec",
+        "critical_circuits": "s03_hw_critical_circuit_flagging.critical_circuits",
+        "review_report": "s17_pcb_review_verdict.review_report",
+        "layout_notes": "s20_pcb_placement_scoring.layout_notes"
+      },
+      "outputs": {
+        "bringup_plan": "bringup_plan"
+      },
+      "parallel_group": 16
+    },
+    {
+      "id": "s40_hw_bench_bringup_log",
+      "skill_name": "hw-bench-bringup-log",
+      "inputs": {
+        "bringup_plan": "s39_hw_bringup_plan.bringup_plan"
+      },
+      "outputs": {
+        "bringup_log": "bringup_log"
+      },
+      "parallel_group": 17
+    },
+    {
+      "id": "s41_fw_flash_verify",
+      "skill_name": "fw-flash-verify",
+      "inputs": {
+        "firmware_build": "s30_fw_target_build.firmware_build",
+        "flash_procedure": "s30_fw_target_build.flash_procedure",
+        "bringup_log": "s40_hw_bench_bringup_log.bringup_log",
+        "pin_map": "s27_fw_pin_map.pin_map"
+      },
+      "outputs": {
+        "flash_log": "flash_log"
+      },
+      "parallel_group": 18
+    },
+    {
+      "id": "s42_hw_system_acceptance",
+      "skill_name": "hw-system-acceptance",
+      "inputs": {
+        "bringup_log": "s40_hw_bench_bringup_log.bringup_log",
+        "flash_log": "s41_fw_flash_verify.flash_log",
+        "fit_report": "s33_enc_fit_check.fit_report",
+        "continuity_test_plan": "s38_harness_continuity_test_plan.continuity_test_plan",
+        "board_spec": "s05_hw_spec_consolidate.board_spec"
+      },
+      "outputs": {
+        "acceptance_report": "acceptance_report",
+        "acceptance_verdict": "acceptance_verdict"
+      },
+      "parallel_group": 22
+    },
+    {
+      "id": "s43_hw_design_delta_report",
+      "skill_name": "hw-design-delta-report",
+      "inputs": {
+        "design_deltas": "s08_hw_architecture_scoring.design_deltas",
+        "architecture_scorecard": "s08_hw_architecture_scoring.architecture_scorecard",
+        "layout_scorecard": "s24_pcb_layout_metrics.layout_scorecard",
+        "bringup_log": "s40_hw_bench_bringup_log.bringup_log",
+        "baseline_metrics": "s06_hw_baseline_architecture.baseline_metrics"
+      },
+      "outputs": {
+        "delta_report": "delta_report"
+      },
+      "parallel_group": 20
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_hw_interface_spec",
+      "to_step": "s02_hw_power_tree",
+      "data_type": "hw-interface-spec",
+      "field_mapping": {
+        "interface_table": "interface_table",
+        "environment_profile": "environment_profile"
+      }
+    },
+    {
+      "from_step": "s01_hw_interface_spec",
+      "to_step": "s03_hw_critical_circuit_flagging",
+      "data_type": "hw-interface-spec",
+      "field_mapping": {
+        "interface_table": "interface_table"
+      }
+    },
+    {
+      "from_step": "s02_hw_power_tree",
+      "to_step": "s03_hw_critical_circuit_flagging",
+      "data_type": "hw-power-tree",
+      "field_mapping": {
+        "power_tree": "power_tree"
+      }
+    },
+    {
+      "from_step": "s01_hw_interface_spec",
+      "to_step": "s04_hw_mechanical_fab_constraints",
+      "data_type": "hw-interface-spec",
+      "field_mapping": {
+        "interface_table": "interface_table"
+      }
+    },
+    {
+      "from_step": "s02_hw_power_tree",
+      "to_step": "s04_hw_mechanical_fab_constraints",
+      "data_type": "hw-power-tree",
+      "field_mapping": {
+        "power_tree": "power_tree"
+      }
+    },
+    {
+      "from_step": "s01_hw_interface_spec",
+      "to_step": "s05_hw_spec_consolidate",
+      "data_type": "hw-interface-spec",
+      "field_mapping": {
+        "interface_table": "interface_table",
+        "environment_profile": "environment_profile"
+      }
+    },
+    {
+      "from_step": "s02_hw_power_tree",
+      "to_step": "s05_hw_spec_consolidate",
+      "data_type": "hw-power-tree",
+      "field_mapping": {
+        "power_tree": "power_tree"
+      }
+    },
+    {
+      "from_step": "s03_hw_critical_circuit_flagging",
+      "to_step": "s05_hw_spec_consolidate",
+      "data_type": "hw-critical-circuit-flagging",
+      "field_mapping": {
+        "critical_circuits": "critical_circuits"
+      }
+    },
+    {
+      "from_step": "s04_hw_mechanical_fab_constraints",
+      "to_step": "s05_hw_spec_consolidate",
+      "data_type": "hw-mechanical-fab-constraints",
+      "field_mapping": {
+        "mechanical_envelope": "mechanical_envelope",
+        "fab_rules": "fab_rules",
+        "layer_count": "layer_count"
+      }
+    },
+    {
+      "from_step": "s05_hw_spec_consolidate",
+      "to_step": "s06_hw_baseline_architecture",
+      "data_type": "hw-spec-consolidate",
+      "field_mapping": {
+        "board_spec": "board_spec"
+      }
+    },
+    {
+      "from_step": "s03_hw_critical_circuit_flagging",
+      "to_step": "s06_hw_baseline_architecture",
+      "data_type": "hw-critical-circuit-flagging",
+      "field_mapping": {
+        "critical_circuits": "critical_circuits"
+      }
+    },
+    {
+      "from_step": "s05_hw_spec_consolidate",
+      "to_step": "s07_hw_architecture_candidates",
+      "data_type": "hw-spec-consolidate",
+      "field_mapping": {
+        "board_spec": "board_spec"
+      }
+    },
+    {
+      "from_step": "s03_hw_critical_circuit_flagging",
+      "to_step": "s07_hw_architecture_candidates",
+      "data_type": "hw-critical-circuit-flagging",
+      "field_mapping": {
+        "critical_circuits": "critical_circuits"
+      }
+    },
+    {
+      "from_step": "s06_hw_baseline_architecture",
+      "to_step": "s07_hw_architecture_candidates",
+      "data_type": "hw-baseline-architecture",
+      "field_mapping": {
+        "baseline_architecture": "baseline_architecture"
+      }
+    },
+    {
+      "from_step": "s07_hw_architecture_candidates",
+      "to_step": "s08_hw_architecture_scoring",
+      "data_type": "hw-architecture-candidates",
+      "field_mapping": {
+        "architecture_candidates": "architecture_candidates"
+      }
+    },
+    {
+      "from_step": "s06_hw_baseline_architecture",
+      "to_step": "s08_hw_architecture_scoring",
+      "data_type": "hw-baseline-architecture",
+      "field_mapping": {
+        "baseline_architecture": "baseline_architecture",
+        "baseline_metrics": "baseline_metrics"
+      }
+    },
+    {
+      "from_step": "s03_hw_critical_circuit_flagging",
+      "to_step": "s08_hw_architecture_scoring",
+      "data_type": "hw-critical-circuit-flagging",
+      "field_mapping": {
+        "critical_circuits": "critical_circuits"
+      }
+    },
+    {
+      "from_step": "s05_hw_spec_consolidate",
+      "to_step": "s09_eda_toolchain_check",
+      "data_type": "hw-spec-consolidate",
+      "field_mapping": {
+        "product_scope": "product_scope"
+      }
+    },
+    {
+      "from_step": "s05_hw_spec_consolidate",
+      "to_step": "s10_pcb_part_selection",
+      "data_type": "hw-spec-consolidate",
+      "field_mapping": {
+        "board_spec": "board_spec"
+      }
+    },
+    {
+      "from_step": "s03_hw_critical_circuit_flagging",
+      "to_step": "s10_pcb_part_selection",
+      "data_type": "hw-critical-circuit-flagging",
+      "field_mapping": {
+        "critical_circuits": "critical_circuits"
+      }
+    },
+    {
+      "from_step": "s08_hw_architecture_scoring",
+      "to_step": "s10_pcb_part_selection",
+      "data_type": "hw-architecture-scoring",
+      "field_mapping": {
+        "selected_architecture": "selected_architecture"
+      }
+    },
+    {
+      "from_step": "s17_pcb_review_verdict",
+      "to_step": "s10_pcb_part_selection",
+      "data_type": "pcb-review-verdict",
+      "field_mapping": {
+        "review_changes": "review_changes"
+      },
+      "condition": "review_verdict == 'CHANGES_REQUIRED'",
+      "max_loops": 3
+    },
+    {
+      "from_step": "s10_pcb_part_selection",
+      "to_step": "s11_pcb_stock_sourcing",
+      "data_type": "pcb-part-selection",
+      "field_mapping": {
+        "part_candidates": "part_candidates"
+      }
+    },
+    {
+      "from_step": "s05_hw_spec_consolidate",
+      "to_step": "s11_pcb_stock_sourcing",
+      "data_type": "hw-spec-consolidate",
+      "field_mapping": {
+        "board_spec": "board_spec"
+      }
+    },
+    {
+      "from_step": "s11_pcb_stock_sourcing",
+      "to_step": "s12_pcb_skidl_capture",
+      "data_type": "pcb-stock-sourcing",
+      "field_mapping": {
+        "bom": "bom"
+      }
+    },
+    {
+      "from_step": "s05_hw_spec_consolidate",
+      "to_step": "s12_pcb_skidl_capture",
+      "data_type": "hw-spec-consolidate",
+      "field_mapping": {
+        "board_spec": "board_spec"
+      }
+    },
+    {
+      "from_step": "s03_hw_critical_circuit_flagging",
+      "to_step": "s12_pcb_skidl_capture",
+      "data_type": "hw-critical-circuit-flagging",
+      "field_mapping": {
+        "critical_circuits": "critical_circuits"
+      }
+    },
+    {
+      "from_step": "s12_pcb_skidl_capture",
+      "to_step": "s13_pcb_erc_netlist",
+      "data_type": "pcb-skidl-capture",
+      "field_mapping": {
+        "skidl_source": "skidl_source"
+      }
+    },
+    {
+      "from_step": "s11_pcb_stock_sourcing",
+      "to_step": "s13_pcb_erc_netlist",
+      "data_type": "pcb-stock-sourcing",
+      "field_mapping": {
+        "bom": "bom"
+      }
+    },
+    {
+      "from_step": "s12_pcb_skidl_capture",
+      "to_step": "s14_pcb_power_input_review",
+      "data_type": "pcb-skidl-capture",
+      "field_mapping": {
+        "skidl_source": "skidl_source"
+      }
+    },
+    {
+      "from_step": "s11_pcb_stock_sourcing",
+      "to_step": "s14_pcb_power_input_review",
+      "data_type": "pcb-stock-sourcing",
+      "field_mapping": {
+        "bom": "bom"
+      }
+    },
+    {
+      "from_step": "s05_hw_spec_consolidate",
+      "to_step": "s14_pcb_power_input_review",
+      "data_type": "hw-spec-consolidate",
+      "field_mapping": {
+        "board_spec": "board_spec"
+      }
+    },
+    {
+      "from_step": "s03_hw_critical_circuit_flagging",
+      "to_step": "s14_pcb_power_input_review",
+      "data_type": "hw-critical-circuit-flagging",
+      "field_mapping": {
+        "critical_circuits": "critical_circuits"
+      }
+    },
+    {
+      "from_step": "s12_pcb_skidl_capture",
+      "to_step": "s15_pcb_isolation_review",
+      "data_type": "pcb-skidl-capture",
+      "field_mapping": {
+        "skidl_source": "skidl_source"
+      }
+    },
+    {
+      "from_step": "s11_pcb_stock_sourcing",
+      "to_step": "s15_pcb_isolation_review",
+      "data_type": "pcb-stock-sourcing",
+      "field_mapping": {
+        "bom": "bom"
+      }
+    },
+    {
+      "from_step": "s05_hw_spec_consolidate",
+      "to_step": "s15_pcb_isolation_review",
+      "data_type": "hw-spec-consolidate",
+      "field_mapping": {
+        "board_spec": "board_spec"
+      }
+    },
+    {
+      "from_step": "s03_hw_critical_circuit_flagging",
+      "to_step": "s15_pcb_isolation_review",
+      "data_type": "hw-critical-circuit-flagging",
+      "field_mapping": {
+        "critical_circuits": "critical_circuits"
+      }
+    },
+    {
+      "from_step": "s12_pcb_skidl_capture",
+      "to_step": "s16_pcb_interlock_fault_review",
+      "data_type": "pcb-skidl-capture",
+      "field_mapping": {
+        "skidl_source": "skidl_source"
+      }
+    },
+    {
+      "from_step": "s11_pcb_stock_sourcing",
+      "to_step": "s16_pcb_interlock_fault_review",
+      "data_type": "pcb-stock-sourcing",
+      "field_mapping": {
+        "bom": "bom"
+      }
+    },
+    {
+      "from_step": "s03_hw_critical_circuit_flagging",
+      "to_step": "s16_pcb_interlock_fault_review",
+      "data_type": "hw-critical-circuit-flagging",
+      "field_mapping": {
+        "critical_circuits": "critical_circuits"
+      }
+    },
+    {
+      "from_step": "s14_pcb_power_input_review",
+      "to_step": "s17_pcb_review_verdict",
+      "data_type": "pcb-power-input-review",
+      "field_mapping": {
+        "power_input_findings": "power_input_findings"
+      }
+    },
+    {
+      "from_step": "s15_pcb_isolation_review",
+      "to_step": "s17_pcb_review_verdict",
+      "data_type": "pcb-isolation-review",
+      "field_mapping": {
+        "isolation_findings": "isolation_findings",
+        "creepage_constraints": "creepage_constraints"
+      }
+    },
+    {
+      "from_step": "s16_pcb_interlock_fault_review",
+      "to_step": "s17_pcb_review_verdict",
+      "data_type": "pcb-interlock-fault-review",
+      "field_mapping": {
+        "interlock_findings": "interlock_findings"
+      }
+    },
+    {
+      "from_step": "s12_pcb_skidl_capture",
+      "to_step": "s18_pcb_board_setup",
+      "data_type": "pcb-skidl-capture",
+      "field_mapping": {
+        "skidl_source": "skidl_source"
+      }
+    },
+    {
+      "from_step": "s13_pcb_erc_netlist",
+      "to_step": "s18_pcb_board_setup",
+      "data_type": "pcb-erc-netlist",
+      "field_mapping": {
+        "netlist": "netlist"
+      }
+    },
+    {
+      "from_step": "s11_pcb_stock_sourcing",
+      "to_step": "s18_pcb_board_setup",
+      "data_type": "pcb-stock-sourcing",
+      "field_mapping": {
+        "bom": "bom"
+      }
+    },
+    {
+      "from_step": "s05_hw_spec_consolidate",
+      "to_step": "s18_pcb_board_setup",
+      "data_type": "hw-spec-consolidate",
+      "field_mapping": {
+        "board_spec": "board_spec"
+      }
+    },
+    {
+      "from_step": "s15_pcb_isolation_review",
+      "to_step": "s18_pcb_board_setup",
+      "data_type": "pcb-isolation-review",
+      "field_mapping": {
+        "creepage_constraints": "creepage_constraints"
+      }
+    },
+    {
+      "from_step": "s17_pcb_review_verdict",
+      "to_step": "s18_pcb_board_setup",
+      "data_type": "pcb-review-verdict",
+      "field_mapping": {
+        "review_verdict": "review_verdict"
+      },
+      "condition": "review_verdict == 'PASS'"
+    },
+    {
+      "from_step": "s18_pcb_board_setup",
+      "to_step": "s19_pcb_placement_candidates",
+      "data_type": "pcb-board-setup",
+      "field_mapping": {
+        "setup_board": "setup_board"
+      }
+    },
+    {
+      "from_step": "s05_hw_spec_consolidate",
+      "to_step": "s19_pcb_placement_candidates",
+      "data_type": "hw-spec-consolidate",
+      "field_mapping": {
+        "board_spec": "board_spec"
+      }
+    },
+    {
+      "from_step": "s03_hw_critical_circuit_flagging",
+      "to_step": "s19_pcb_placement_candidates",
+      "data_type": "hw-critical-circuit-flagging",
+      "field_mapping": {
+        "critical_circuits": "critical_circuits"
+      }
+    },
+    {
+      "from_step": "s19_pcb_placement_candidates",
+      "to_step": "s20_pcb_placement_scoring",
+      "data_type": "pcb-placement-candidates",
+      "field_mapping": {
+        "placement_candidates": "placement_candidates"
+      }
+    },
+    {
+      "from_step": "s05_hw_spec_consolidate",
+      "to_step": "s20_pcb_placement_scoring",
+      "data_type": "hw-spec-consolidate",
+      "field_mapping": {
+        "board_spec": "board_spec"
+      }
+    },
+    {
+      "from_step": "s20_pcb_placement_scoring",
+      "to_step": "s21_pcb_critical_routing",
+      "data_type": "pcb-placement-scoring",
+      "field_mapping": {
+        "placed_board": "placed_board"
+      }
+    },
+    {
+      "from_step": "s18_pcb_board_setup",
+      "to_step": "s21_pcb_critical_routing",
+      "data_type": "pcb-board-setup",
+      "field_mapping": {
+        "net_classes": "net_classes"
+      }
+    },
+    {
+      "from_step": "s03_hw_critical_circuit_flagging",
+      "to_step": "s21_pcb_critical_routing",
+      "data_type": "hw-critical-circuit-flagging",
+      "field_mapping": {
+        "critical_circuits": "critical_circuits"
+      }
+    },
+    {
+      "from_step": "s21_pcb_critical_routing",
+      "to_step": "s22_pcb_autoroute",
+      "data_type": "pcb-critical-routing",
+      "field_mapping": {
+        "critical_routed_board": "critical_routed_board",
+        "locked_nets": "locked_nets"
+      }
+    },
+    {
+      "from_step": "s22_pcb_autoroute",
+      "to_step": "s23_pcb_drc_closure",
+      "data_type": "pcb-autoroute",
+      "field_mapping": {
+        "routed_board": "routed_board"
+      }
+    },
+    {
+      "from_step": "s05_hw_spec_consolidate",
+      "to_step": "s23_pcb_drc_closure",
+      "data_type": "hw-spec-consolidate",
+      "field_mapping": {
+        "board_spec": "board_spec"
+      }
+    },
+    {
+      "from_step": "s23_pcb_drc_closure",
+      "to_step": "s24_pcb_layout_metrics",
+      "data_type": "pcb-drc-closure",
+      "field_mapping": {
+        "kicad_pcb": "kicad_pcb"
+      }
+    },
+    {
+      "from_step": "s20_pcb_placement_scoring",
+      "to_step": "s24_pcb_layout_metrics",
+      "data_type": "pcb-placement-scoring",
+      "field_mapping": {
+        "placement_scorecard": "placement_scorecard"
+      }
+    },
+    {
+      "from_step": "s06_hw_baseline_architecture",
+      "to_step": "s24_pcb_layout_metrics",
+      "data_type": "hw-baseline-architecture",
+      "field_mapping": {
+        "baseline_metrics": "baseline_metrics"
+      }
+    },
+    {
+      "from_step": "s23_pcb_drc_closure",
+      "to_step": "s25_pcb_gerber_export",
+      "data_type": "pcb-drc-closure",
+      "field_mapping": {
+        "kicad_pcb": "kicad_pcb",
+        "drc_report": "drc_report"
+      }
+    },
+    {
+      "from_step": "s05_hw_spec_consolidate",
+      "to_step": "s25_pcb_gerber_export",
+      "data_type": "hw-spec-consolidate",
+      "field_mapping": {
+        "board_spec": "board_spec"
+      }
+    },
+    {
+      "from_step": "s23_pcb_drc_closure",
+      "to_step": "s26_pcb_assembly_files",
+      "data_type": "pcb-drc-closure",
+      "field_mapping": {
+        "kicad_pcb": "kicad_pcb"
+      }
+    },
+    {
+      "from_step": "s11_pcb_stock_sourcing",
+      "to_step": "s26_pcb_assembly_files",
+      "data_type": "pcb-stock-sourcing",
+      "field_mapping": {
+        "bom": "bom"
+      }
+    },
+    {
+      "from_step": "s05_hw_spec_consolidate",
+      "to_step": "s26_pcb_assembly_files",
+      "data_type": "hw-spec-consolidate",
+      "field_mapping": {
+        "board_spec": "board_spec"
+      }
+    },
+    {
+      "from_step": "s13_pcb_erc_netlist",
+      "to_step": "s27_fw_pin_map",
+      "data_type": "pcb-erc-netlist",
+      "field_mapping": {
+        "netlist": "netlist"
+      }
+    },
+    {
+      "from_step": "s11_pcb_stock_sourcing",
+      "to_step": "s27_fw_pin_map",
+      "data_type": "pcb-stock-sourcing",
+      "field_mapping": {
+        "bom": "bom"
+      }
+    },
+    {
+      "from_step": "s17_pcb_review_verdict",
+      "to_step": "s27_fw_pin_map",
+      "data_type": "pcb-review-verdict",
+      "field_mapping": {
+        "review_verdict": "review_verdict"
+      }
+    },
+    {
+      "from_step": "s27_fw_pin_map",
+      "to_step": "s28_fw_project_scaffold",
+      "data_type": "fw-pin-map",
+      "field_mapping": {
+        "pin_map": "pin_map"
+      }
+    },
+    {
+      "from_step": "s05_hw_spec_consolidate",
+      "to_step": "s28_fw_project_scaffold",
+      "data_type": "hw-spec-consolidate",
+      "field_mapping": {
+        "board_spec": "board_spec"
+      }
+    },
+    {
+      "from_step": "s03_hw_critical_circuit_flagging",
+      "to_step": "s28_fw_project_scaffold",
+      "data_type": "hw-critical-circuit-flagging",
+      "field_mapping": {
+        "critical_circuits": "critical_circuits"
+      }
+    },
+    {
+      "from_step": "s28_fw_project_scaffold",
+      "to_step": "s29_fw_drivers_logic",
+      "data_type": "fw-project-scaffold",
+      "field_mapping": {
+        "firmware_source": "firmware_source"
+      }
+    },
+    {
+      "from_step": "s05_hw_spec_consolidate",
+      "to_step": "s29_fw_drivers_logic",
+      "data_type": "hw-spec-consolidate",
+      "field_mapping": {
+        "board_spec": "board_spec"
+      }
+    },
+    {
+      "from_step": "s03_hw_critical_circuit_flagging",
+      "to_step": "s29_fw_drivers_logic",
+      "data_type": "hw-critical-circuit-flagging",
+      "field_mapping": {
+        "critical_circuits": "critical_circuits"
+      }
+    },
+    {
+      "from_step": "s28_fw_project_scaffold",
+      "to_step": "s30_fw_target_build",
+      "data_type": "fw-project-scaffold",
+      "field_mapping": {
+        "firmware_source": "firmware_source"
+      }
+    },
+    {
+      "from_step": "s29_fw_drivers_logic",
+      "to_step": "s30_fw_target_build",
+      "data_type": "fw-drivers-logic",
+      "field_mapping": {
+        "firmware_tests": "firmware_tests"
+      }
+    },
+    {
+      "from_step": "s11_pcb_stock_sourcing",
+      "to_step": "s30_fw_target_build",
+      "data_type": "pcb-stock-sourcing",
+      "field_mapping": {
+        "bom": "bom"
+      }
+    },
+    {
+      "from_step": "s23_pcb_drc_closure",
+      "to_step": "s31_enc_board_3d_export",
+      "data_type": "pcb-drc-closure",
+      "field_mapping": {
+        "kicad_pcb": "kicad_pcb"
+      }
+    },
+    {
+      "from_step": "s11_pcb_stock_sourcing",
+      "to_step": "s31_enc_board_3d_export",
+      "data_type": "pcb-stock-sourcing",
+      "field_mapping": {
+        "bom": "bom"
+      }
+    },
+    {
+      "from_step": "s31_enc_board_3d_export",
+      "to_step": "s32_enc_parametric_model",
+      "data_type": "enc-board-3d-export",
+      "field_mapping": {
+        "board_envelope": "board_envelope"
+      }
+    },
+    {
+      "from_step": "s05_hw_spec_consolidate",
+      "to_step": "s32_enc_parametric_model",
+      "data_type": "hw-spec-consolidate",
+      "field_mapping": {
+        "board_spec": "board_spec"
+      }
+    },
+    {
+      "from_step": "s32_enc_parametric_model",
+      "to_step": "s33_enc_fit_check",
+      "data_type": "enc-parametric-model",
+      "field_mapping": {
+        "enclosure_source": "enclosure_source"
+      }
+    },
+    {
+      "from_step": "s31_enc_board_3d_export",
+      "to_step": "s33_enc_fit_check",
+      "data_type": "enc-board-3d-export",
+      "field_mapping": {
+        "board_step": "board_step",
+        "board_envelope": "board_envelope"
+      }
+    },
+    {
+      "from_step": "s32_enc_parametric_model",
+      "to_step": "s34_enc_manufacturing_export",
+      "data_type": "enc-parametric-model",
+      "field_mapping": {
+        "enclosure_source": "enclosure_source"
+      }
+    },
+    {
+      "from_step": "s33_enc_fit_check",
+      "to_step": "s34_enc_manufacturing_export",
+      "data_type": "enc-fit-check",
+      "field_mapping": {
+        "fit_report": "fit_report"
+      }
+    },
+    {
+      "from_step": "s05_hw_spec_consolidate",
+      "to_step": "s35_harness_connector_selection",
+      "data_type": "hw-spec-consolidate",
+      "field_mapping": {
+        "board_spec": "board_spec"
+      }
+    },
+    {
+      "from_step": "s11_pcb_stock_sourcing",
+      "to_step": "s35_harness_connector_selection",
+      "data_type": "pcb-stock-sourcing",
+      "field_mapping": {
+        "bom": "bom"
+      }
+    },
+    {
+      "from_step": "s17_pcb_review_verdict",
+      "to_step": "s35_harness_connector_selection",
+      "data_type": "pcb-review-verdict",
+      "field_mapping": {
+        "review_verdict": "review_verdict"
+      }
+    },
+    {
+      "from_step": "s35_harness_connector_selection",
+      "to_step": "s36_harness_pinout_wiring",
+      "data_type": "harness-connector-selection",
+      "field_mapping": {
+        "harness_connectors": "harness_connectors"
+      }
+    },
+    {
+      "from_step": "s05_hw_spec_consolidate",
+      "to_step": "s36_harness_pinout_wiring",
+      "data_type": "hw-spec-consolidate",
+      "field_mapping": {
+        "board_spec": "board_spec"
+      }
+    },
+    {
+      "from_step": "s13_pcb_erc_netlist",
+      "to_step": "s36_harness_pinout_wiring",
+      "data_type": "pcb-erc-netlist",
+      "field_mapping": {
+        "netlist": "netlist"
+      }
+    },
+    {
+      "from_step": "s36_harness_pinout_wiring",
+      "to_step": "s37_harness_diagram_bom",
+      "data_type": "harness-pinout-wiring",
+      "field_mapping": {
+        "wiring_table": "wiring_table"
+      }
+    },
+    {
+      "from_step": "s35_harness_connector_selection",
+      "to_step": "s37_harness_diagram_bom",
+      "data_type": "harness-connector-selection",
+      "field_mapping": {
+        "harness_connectors": "harness_connectors"
+      }
+    },
+    {
+      "from_step": "s36_harness_pinout_wiring",
+      "to_step": "s38_harness_continuity_test_plan",
+      "data_type": "harness-pinout-wiring",
+      "field_mapping": {
+        "wiring_table": "wiring_table"
+      }
+    },
+    {
+      "from_step": "s05_hw_spec_consolidate",
+      "to_step": "s39_hw_bringup_plan",
+      "data_type": "hw-spec-consolidate",
+      "field_mapping": {
+        "board_spec": "board_spec"
+      }
+    },
+    {
+      "from_step": "s03_hw_critical_circuit_flagging",
+      "to_step": "s39_hw_bringup_plan",
+      "data_type": "hw-critical-circuit-flagging",
+      "field_mapping": {
+        "critical_circuits": "critical_circuits"
+      }
+    },
+    {
+      "from_step": "s17_pcb_review_verdict",
+      "to_step": "s39_hw_bringup_plan",
+      "data_type": "pcb-review-verdict",
+      "field_mapping": {
+        "review_report": "review_report"
+      }
+    },
+    {
+      "from_step": "s20_pcb_placement_scoring",
+      "to_step": "s39_hw_bringup_plan",
+      "data_type": "pcb-placement-scoring",
+      "field_mapping": {
+        "layout_notes": "layout_notes"
+      }
+    },
+    {
+      "from_step": "s39_hw_bringup_plan",
+      "to_step": "s40_hw_bench_bringup_log",
+      "data_type": "hw-bringup-plan",
+      "field_mapping": {
+        "bringup_plan": "bringup_plan"
+      }
+    },
+    {
+      "from_step": "s30_fw_target_build",
+      "to_step": "s41_fw_flash_verify",
+      "data_type": "fw-target-build",
+      "field_mapping": {
+        "firmware_build": "firmware_build",
+        "flash_procedure": "flash_procedure"
+      }
+    },
+    {
+      "from_step": "s40_hw_bench_bringup_log",
+      "to_step": "s41_fw_flash_verify",
+      "data_type": "hw-bench-bringup-log",
+      "field_mapping": {
+        "bringup_log": "bringup_log"
+      }
+    },
+    {
+      "from_step": "s27_fw_pin_map",
+      "to_step": "s41_fw_flash_verify",
+      "data_type": "fw-pin-map",
+      "field_mapping": {
+        "pin_map": "pin_map"
+      }
+    },
+    {
+      "from_step": "s40_hw_bench_bringup_log",
+      "to_step": "s42_hw_system_acceptance",
+      "data_type": "hw-bench-bringup-log",
+      "field_mapping": {
+        "bringup_log": "bringup_log"
+      }
+    },
+    {
+      "from_step": "s41_fw_flash_verify",
+      "to_step": "s42_hw_system_acceptance",
+      "data_type": "fw-flash-verify",
+      "field_mapping": {
+        "flash_log": "flash_log"
+      }
+    },
+    {
+      "from_step": "s33_enc_fit_check",
+      "to_step": "s42_hw_system_acceptance",
+      "data_type": "enc-fit-check",
+      "field_mapping": {
+        "fit_report": "fit_report"
+      }
+    },
+    {
+      "from_step": "s38_harness_continuity_test_plan",
+      "to_step": "s42_hw_system_acceptance",
+      "data_type": "harness-continuity-test-plan",
+      "field_mapping": {
+        "continuity_test_plan": "continuity_test_plan"
+      }
+    },
+    {
+      "from_step": "s05_hw_spec_consolidate",
+      "to_step": "s42_hw_system_acceptance",
+      "data_type": "hw-spec-consolidate",
+      "field_mapping": {
+        "board_spec": "board_spec"
+      }
+    },
+    {
+      "from_step": "s08_hw_architecture_scoring",
+      "to_step": "s43_hw_design_delta_report",
+      "data_type": "hw-architecture-scoring",
+      "field_mapping": {
+        "design_deltas": "design_deltas",
+        "architecture_scorecard": "architecture_scorecard"
+      }
+    },
+    {
+      "from_step": "s24_pcb_layout_metrics",
+      "to_step": "s43_hw_design_delta_report",
+      "data_type": "pcb-layout-metrics",
+      "field_mapping": {
+        "layout_scorecard": "layout_scorecard"
+      }
+    },
+    {
+      "from_step": "s40_hw_bench_bringup_log",
+      "to_step": "s43_hw_design_delta_report",
+      "data_type": "hw-bench-bringup-log",
+      "field_mapping": {
+        "bringup_log": "bringup_log"
+      }
+    },
+    {
+      "from_step": "s06_hw_baseline_architecture",
+      "to_step": "s43_hw_design_delta_report",
+      "data_type": "hw-baseline-architecture",
+      "field_mapping": {
+        "baseline_metrics": "baseline_metrics"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "board_ask",
+    "environment",
+    "host_platform",
+    "mechanical_limits",
+    "fab_target",
+    "project_dir",
+    "firmware_framework",
+    "enclosure_process"
+  ],
+  "terminal_outputs": [
+    "open_questions",
+    "toolchain_versions",
+    "install_steps",
+    "erc_report",
+    "route_log",
+    "fab_package",
+    "board_renders",
+    "assembly_files",
+    "schematic_defects",
+    "enclosure_files",
+    "enclosure_hardware_bom",
+    "harness_yaml",
+    "harness_diagram",
+    "harness_bom",
+    "acceptance_report",
+    "acceptance_verdict",
+    "delta_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_hw_interface_spec"
+    ],
+    [
+      "s02_hw_power_tree"
+    ],
+    [
+      "s03_hw_critical_circuit_flagging",
+      "s04_hw_mechanical_fab_constraints"
+    ],
+    [
+      "s05_hw_spec_consolidate"
+    ],
+    [
+      "s06_hw_baseline_architecture",
+      "s09_eda_toolchain_check"
+    ],
+    [
+      "s07_hw_architecture_candidates"
+    ],
+    [
+      "s08_hw_architecture_scoring"
+    ],
+    [
+      "s10_pcb_part_selection"
+    ],
+    [
+      "s11_pcb_stock_sourcing"
+    ],
+    [
+      "s12_pcb_skidl_capture"
+    ],
+    [
+      "s13_pcb_erc_netlist",
+      "s14_pcb_power_input_review",
+      "s15_pcb_isolation_review",
+      "s16_pcb_interlock_fault_review"
+    ],
+    [
+      "s17_pcb_review_verdict"
+    ],
+    [
+      "s18_pcb_board_setup",
+      "s27_fw_pin_map",
+      "s35_harness_connector_selection"
+    ],
+    [
+      "s19_pcb_placement_candidates",
+      "s28_fw_project_scaffold",
+      "s36_harness_pinout_wiring"
+    ],
+    [
+      "s20_pcb_placement_scoring",
+      "s29_fw_drivers_logic",
+      "s37_harness_diagram_bom",
+      "s38_harness_continuity_test_plan"
+    ],
+    [
+      "s21_pcb_critical_routing",
+      "s30_fw_target_build",
+      "s39_hw_bringup_plan"
+    ],
+    [
+      "s22_pcb_autoroute",
+      "s40_hw_bench_bringup_log"
+    ],
+    [
+      "s23_pcb_drc_closure",
+      "s41_fw_flash_verify"
+    ],
+    [
+      "s24_pcb_layout_metrics",
+      "s25_pcb_gerber_export",
+      "s26_pcb_assembly_files",
+      "s31_enc_board_3d_export"
+    ],
+    [
+      "s32_enc_parametric_model",
+      "s43_hw_design_delta_report"
+    ],
+    [
+      "s33_enc_fit_check"
+    ],
+    [
+      "s34_enc_manufacturing_export",
+      "s42_hw_system_acceptance"
+    ]
+  ],
+  "estimated_cost": 43,
+  "critical_path": [
+    "s01_hw_interface_spec",
+    "s02_hw_power_tree",
+    "s04_hw_mechanical_fab_constraints",
+    "s05_hw_spec_consolidate",
+    "s06_hw_baseline_architecture",
+    "s07_hw_architecture_candidates",
+    "s08_hw_architecture_scoring",
+    "s10_pcb_part_selection",
+    "s11_pcb_stock_sourcing",
+    "s12_pcb_skidl_capture",
+    "s14_pcb_power_input_review",
+    "s17_pcb_review_verdict",
+    "s18_pcb_board_setup",
+    "s19_pcb_placement_candidates",
+    "s20_pcb_placement_scoring",
+    "s21_pcb_critical_routing",
+    "s22_pcb_autoroute",
+    "s23_pcb_drc_closure",
+    "s31_enc_board_3d_export",
+    "s32_enc_parametric_model",
+    "s33_enc_fit_check",
+    "s42_hw_system_acceptance"
+  ]
+}
