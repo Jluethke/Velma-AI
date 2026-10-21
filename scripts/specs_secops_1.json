@@ -1,0 +1,1243 @@
+[
+  {
+    "chain_name": "soc-alert-triage",
+    "description": "Triage a security alert in a SOC from initial receipt through context gathering, classification, and disposition.",
+    "domain": "security",
+    "tags": ["security", "operations", "soc", "triage"],
+    "steps": [
+      {
+        "flow_name": "alert-receiver-classifier",
+        "description": "Receive and categorize an incoming security alert by source, type, and initial severity.",
+        "inputs": [
+          {"name": "alert-data", "desc": "Raw alert from SIEM, EDR, or other detection source"},
+          {"name": "alert-source", "desc": "Name of the system that generated the alert"}
+        ],
+        "outputs": [
+          {"name": "classified-alert", "desc": "Alert with category, type, and initial severity assigned"},
+          {"name": "alert-timeline", "desc": "Timestamp sequence of alert-related events"}
+        ],
+        "process": [
+          "Parse the alert payload and extract key fields (source IP, destination, user, process, rule name)",
+          "Categorize by type: malware, intrusion, policy violation, anomaly, or data loss",
+          "Assign initial severity based on the detection rule's priority and asset criticality"
+        ],
+        "tags": ["security", "operations", "soc"]
+      },
+      {
+        "flow_name": "alert-context-gatherer",
+        "description": "Gather contextual information about the assets, users, and threat intelligence related to the alert.",
+        "inputs": [
+          {"name": "classified-alert", "desc": "Alert with category and initial severity"},
+          {"name": "alert-timeline", "desc": "Timestamp sequence of alert-related events"}
+        ],
+        "outputs": [
+          {"name": "enriched-alert", "desc": "Alert enriched with asset, user, and threat intel context"},
+          {"name": "related-alerts", "desc": "List of correlated alerts from the same timeframe or assets"}
+        ],
+        "process": [
+          "Query the asset inventory for the affected system's owner, criticality, and network zone",
+          "Look up user activity in the identity provider and recent authentication logs",
+          "Check threat intelligence feeds for indicators mentioned in the alert",
+          "Search for related alerts on the same asset or user within the past 24 hours"
+        ],
+        "tags": ["security", "operations", "enrichment"]
+      },
+      {
+        "flow_name": "true-false-positive-determiner",
+        "description": "Determine whether the alert is a true positive, false positive, or requires further investigation.",
+        "inputs": [
+          {"name": "enriched-alert", "desc": "Alert with full context from asset, user, and threat intel lookups"},
+          {"name": "related-alerts", "desc": "Correlated alerts from the same timeframe or assets"}
+        ],
+        "outputs": [
+          {"name": "tp-fp-determination", "desc": "Classification as true positive, false positive, or needs investigation"},
+          {"name": "determination-evidence", "desc": "Evidence supporting the true/false positive classification"}
+        ],
+        "process": [
+          "Compare the alert indicators against known benign activity baselines for the asset",
+          "Check if the activity matches a known attack pattern or technique",
+          "Evaluate whether the context (user behavior, time of day, business process) explains the activity",
+          "Classify as true positive, false positive, or indeterminate requiring deeper investigation"
+        ],
+        "tags": ["security", "operations", "analysis"]
+      },
+      {
+        "flow_name": "alert-severity-scope-assessor",
+        "description": "Assess the severity and scope of a confirmed true positive alert.",
+        "inputs": [
+          {"name": "tp-fp-determination", "desc": "Classification of the alert as true positive"},
+          {"name": "determination-evidence", "desc": "Evidence supporting the classification"}
+        ],
+        "outputs": [
+          {"name": "severity-assessment", "desc": "Final severity rating with justification"},
+          {"name": "scope-assessment", "desc": "Number of affected systems, users, and data types"}
+        ],
+        "process": [
+          "Determine the number of affected systems by searching for the same indicators across the environment",
+          "Assess data exposure risk based on the type of system and data classification",
+          "Rate final severity (critical, high, medium, low) factoring in asset criticality, data sensitivity, and blast radius"
+        ],
+        "tags": ["security", "operations", "assessment"]
+      },
+      {
+        "flow_name": "alert-escalation-router",
+        "description": "Route the alert to the appropriate team for escalation or close it with documentation.",
+        "inputs": [
+          {"name": "severity-assessment", "desc": "Final severity rating with justification"},
+          {"name": "scope-assessment", "desc": "Affected systems, users, and data types"}
+        ],
+        "outputs": [
+          {"name": "escalation-decision", "desc": "Decision to escalate, contain, or close with routing details"},
+          {"name": "notification-list", "desc": "List of teams and individuals to notify"}
+        ],
+        "process": [
+          "Apply the escalation matrix to determine the required response level",
+          "Identify the responsible team (tier 2 analyst, incident response, management) based on severity and type",
+          "Prepare the notification with a summary of findings, severity, and recommended next steps"
+        ],
+        "tags": ["security", "operations", "escalation"]
+      },
+      {
+        "flow_name": "triage-record-writer",
+        "description": "Produce the triage decision record documenting the alert, analysis, and disposition.",
+        "inputs": [
+          {"name": "escalation-decision", "desc": "Decision to escalate, contain, or close"},
+          {"name": "notification-list", "desc": "Teams and individuals notified"}
+        ],
+        "outputs": [
+          {"name": "triage-record", "desc": "Complete triage decision record with timeline, evidence, and disposition"},
+          {"name": "metrics-data", "desc": "Triage timing and outcome data for SOC metrics"}
+        ],
+        "process": [
+          "Compile the full timeline from alert receipt through disposition",
+          "Document the evidence chain: what was checked, what was found, what was concluded",
+          "Record the disposition (escalated, closed as false positive, closed as handled) with rationale",
+          "Calculate triage time for SOC performance metrics"
+        ],
+        "tags": ["security", "operations", "documentation"]
+      }
+    ]
+  },
+  {
+    "chain_name": "threat-hunting-campaign",
+    "description": "Plan and execute a proactive threat hunting campaign from hypothesis through detection rule creation.",
+    "domain": "security",
+    "tags": ["security", "operations", "threat-hunting"],
+    "steps": [
+      {
+        "flow_name": "hunt-hypothesis-selector",
+        "description": "Select a threat hunting hypothesis based on threat intelligence, detection gaps, or emerging attack techniques.",
+        "inputs": [
+          {"name": "threat-landscape", "desc": "Current threat intelligence reports and advisories"},
+          {"name": "detection-coverage-map", "desc": "Map of MITRE ATT&CK techniques with current detection status"}
+        ],
+        "outputs": [
+          {"name": "hunt-hypothesis", "desc": "Specific hypothesis to test, including the expected attacker behavior"},
+          {"name": "attack-technique-profile", "desc": "Detailed description of the technique including data sources and artifacts"}
+        ],
+        "process": [
+          "Review recent threat intelligence for techniques targeting your industry or technology stack",
+          "Identify gaps in the ATT&CK coverage map where no detection exists",
+          "Select the hypothesis that balances likelihood of occurrence with potential impact",
+          "Document the expected attacker behavior, artifacts, and data sources"
+        ],
+        "tags": ["security", "operations", "threat-hunting"]
+      },
+      {
+        "flow_name": "hunt-data-source-planner",
+        "description": "Define the data sources, queries, and tools needed to test the hunting hypothesis.",
+        "inputs": [
+          {"name": "hunt-hypothesis", "desc": "The hypothesis to test"},
+          {"name": "attack-technique-profile", "desc": "Expected artifacts and data sources for the technique"}
+        ],
+        "outputs": [
+          {"name": "hunt-plan", "desc": "Detailed plan with data sources, queries, and analysis procedures"},
+          {"name": "query-library", "desc": "Collection of queries for each data source to execute during the hunt"}
+        ],
+        "process": [
+          "Map the technique artifacts to available log sources (endpoint, network, identity, cloud)",
+          "Write queries for each data source to surface the expected behavior patterns",
+          "Define the analysis workflow: what to look for in query results and how to pivot"
+        ],
+        "tags": ["security", "operations", "planning"]
+      },
+      {
+        "flow_name": "hunt-execution-runner",
+        "description": "Execute the hunt queries across the environment and collect results.",
+        "inputs": [
+          {"name": "hunt-plan", "desc": "Plan with data sources and analysis procedures"},
+          {"name": "query-library", "desc": "Queries to execute against each data source"}
+        ],
+        "outputs": [
+          {"name": "raw-hunt-results", "desc": "Query results from all data sources"},
+          {"name": "execution-log", "desc": "Log of queries run, time ranges covered, and data volumes processed"}
+        ],
+        "process": [
+          "Execute each query against the specified data sources and time ranges",
+          "Record the results with timestamps, affected systems, and users",
+          "Note any data gaps (missing log sources, retention issues) that limit the hunt"
+        ],
+        "tags": ["security", "operations", "execution"]
+      },
+      {
+        "flow_name": "hunt-anomaly-analyzer",
+        "description": "Analyze the hunt results to identify anomalies, suspicious patterns, and potential threats.",
+        "inputs": [
+          {"name": "raw-hunt-results", "desc": "Query results from all data sources"},
+          {"name": "execution-log", "desc": "Log of queries and data coverage"}
+        ],
+        "outputs": [
+          {"name": "findings-list", "desc": "List of anomalies and suspicious patterns with supporting evidence"},
+          {"name": "false-positive-notes", "desc": "Benign explanations identified during analysis for future reference"}
+        ],
+        "process": [
+          "Filter results to remove known benign activity and approved exceptions",
+          "Group remaining results by pattern: same technique, same actor, or same target",
+          "Investigate each group to determine if it represents a real threat or a benign anomaly",
+          "Document false positive patterns for future hunt refinement"
+        ],
+        "tags": ["security", "operations", "analysis"]
+      },
+      {
+        "flow_name": "hunt-detection-creator",
+        "description": "Create detection rules from confirmed findings and validated patterns.",
+        "inputs": [
+          {"name": "findings-list", "desc": "Confirmed anomalies and suspicious patterns"},
+          {"name": "false-positive-notes", "desc": "Known benign patterns to exclude in detection rules"}
+        ],
+        "outputs": [
+          {"name": "new-detection-rules", "desc": "Detection rules (Sigma, YARA, or SIEM-native) created from hunt findings"},
+          {"name": "coverage-update", "desc": "Updated ATT&CK coverage map reflecting new detections"}
+        ],
+        "process": [
+          "For each confirmed finding, write a detection rule that captures the malicious pattern",
+          "Add exclusions for the documented false positive patterns",
+          "Test the rule against historical data to validate detection rate and false positive rate",
+          "Update the ATT&CK coverage map with the new detections"
+        ],
+        "tags": ["security", "operations", "detection"]
+      },
+      {
+        "flow_name": "hunt-report-writer",
+        "description": "Produce the hunt campaign report documenting hypothesis, methods, findings, and new detections.",
+        "inputs": [
+          {"name": "new-detection-rules", "desc": "Detection rules created from the hunt"},
+          {"name": "coverage-update", "desc": "Updated ATT&CK coverage map"}
+        ],
+        "outputs": [
+          {"name": "hunt-report", "desc": "Complete threat hunting report with findings, detections, and recommendations"},
+          {"name": "hunt-metrics", "desc": "Campaign metrics: time spent, data analyzed, findings count, detections created"}
+        ],
+        "process": [
+          "Summarize the hypothesis, the data sources searched, and the time ranges covered",
+          "Document each finding with evidence, severity assessment, and remediation action taken",
+          "List new detection rules with their expected coverage and false positive baselines",
+          "Calculate campaign metrics for the threat hunting program"
+        ],
+        "tags": ["security", "operations", "reporting"]
+      }
+    ]
+  },
+  {
+    "chain_name": "yara-rule-development",
+    "description": "Develop and validate YARA rules for malware detection from sample analysis through production deployment.",
+    "domain": "security",
+    "tags": ["security", "operations", "yara", "malware"],
+    "steps": [
+      {
+        "flow_name": "malware-sample-analyzer",
+        "description": "Analyze malware samples to identify unique byte patterns, strings, and structural features.",
+        "inputs": [
+          {"name": "malware-samples", "desc": "Collection of malware samples to build detection for"},
+          {"name": "malware-family-info", "desc": "Known information about the malware family and variants"}
+        ],
+        "outputs": [
+          {"name": "unique-indicators", "desc": "List of unique strings, byte patterns, and structural features"},
+          {"name": "sample-analysis-notes", "desc": "Analysis notes on packing, obfuscation, and variant differences"}
+        ],
+        "process": [
+          "Extract strings, imports, and section headers from each sample",
+          "Identify byte patterns that appear across all samples in the family but are rare in benign software",
+          "Note any packing or obfuscation that may affect pattern stability across variants",
+          "Rank indicators by uniqueness and stability"
+        ],
+        "tags": ["security", "operations", "malware-analysis"]
+      },
+      {
+        "flow_name": "yara-pattern-selector",
+        "description": "Select the best patterns and conditions for the YARA rule based on uniqueness and stability.",
+        "inputs": [
+          {"name": "unique-indicators", "desc": "Candidate strings, byte patterns, and structural features"},
+          {"name": "sample-analysis-notes", "desc": "Notes on packing, obfuscation, and variants"}
+        ],
+        "outputs": [
+          {"name": "selected-patterns", "desc": "Final set of patterns chosen for the rule"},
+          {"name": "condition-logic", "desc": "Boolean condition combining the patterns"}
+        ],
+        "process": [
+          "Select patterns that are present in all known samples and absent from a reference benign corpus",
+          "Choose a mix of string and byte patterns for resilience against minor variants",
+          "Design the condition logic: require N of M patterns to balance detection rate and specificity"
+        ],
+        "tags": ["security", "operations", "pattern-selection"]
+      },
+      {
+        "flow_name": "yara-rule-writer",
+        "description": "Write the YARA rule with proper metadata, strings section, and condition.",
+        "inputs": [
+          {"name": "selected-patterns", "desc": "Patterns chosen for the rule"},
+          {"name": "condition-logic", "desc": "Boolean condition logic"}
+        ],
+        "outputs": [
+          {"name": "draft-yara-rule", "desc": "Complete YARA rule with metadata, strings, and condition"},
+          {"name": "rule-documentation", "desc": "Documentation of what the rule detects and known limitations"}
+        ],
+        "process": [
+          "Write the rule metadata (author, description, date, reference, severity)",
+          "Define the strings section with hex patterns, text strings, and regex where needed",
+          "Write the condition combining patterns with file size, header, or section constraints",
+          "Document the rule's intended target, known limitations, and expected false positive rate"
+        ],
+        "tags": ["security", "operations", "rule-writing"]
+      },
+      {
+        "flow_name": "yara-false-positive-tester",
+        "description": "Test the YARA rule against a known-good corpus to measure the false positive rate.",
+        "inputs": [
+          {"name": "draft-yara-rule", "desc": "The YARA rule to test"},
+          {"name": "rule-documentation", "desc": "Documentation of the rule's intended target"}
+        ],
+        "outputs": [
+          {"name": "fp-test-results", "desc": "False positive count and list of matching benign files"},
+          {"name": "fp-analysis", "desc": "Analysis of why each false positive matched and how to fix it"}
+        ],
+        "process": [
+          "Scan the known-good corpus (system files, common applications, documents) with the rule",
+          "Record every match and inspect why the benign file triggered the rule",
+          "Classify each false positive by cause: coincidental string match, common library code, or rule too broad"
+        ],
+        "tags": ["security", "operations", "testing"]
+      },
+      {
+        "flow_name": "yara-detection-rate-tester",
+        "description": "Test the YARA rule against a malware corpus to measure the true positive detection rate.",
+        "inputs": [
+          {"name": "draft-yara-rule", "desc": "The YARA rule to test"},
+          {"name": "fp-test-results", "desc": "False positive test results"}
+        ],
+        "outputs": [
+          {"name": "detection-rate", "desc": "Percentage of target malware samples detected"},
+          {"name": "missed-samples", "desc": "List of malware samples not detected with analysis of why"}
+        ],
+        "process": [
+          "Scan the full malware corpus (target family plus related variants) with the rule",
+          "Calculate the detection rate: matches divided by total target samples",
+          "Analyze missed samples to determine if they are heavily packed, newer variants, or outliers"
+        ],
+        "tags": ["security", "operations", "testing"]
+      },
+      {
+        "flow_name": "yara-rule-optimizer",
+        "description": "Optimize the YARA rule to reduce false positives and improve detection rate.",
+        "inputs": [
+          {"name": "fp-analysis", "desc": "False positive analysis with causes"},
+          {"name": "missed-samples", "desc": "Missed malware samples with analysis"}
+        ],
+        "outputs": [
+          {"name": "optimized-yara-rule", "desc": "Refined YARA rule with improved precision and recall"},
+          {"name": "optimization-changelog", "desc": "Record of changes made and their impact on detection metrics"}
+        ],
+        "process": [
+          "Tighten patterns that caused false positives by adding context or constraints",
+          "Add alternative patterns to catch missed variants without broadening too much",
+          "Re-test against both corpora to verify improvement",
+          "Document every change and its effect on detection rate and false positive rate"
+        ],
+        "tags": ["security", "operations", "optimization"]
+      },
+      {
+        "flow_name": "yara-validation-report-writer",
+        "description": "Produce the validated YARA rule package with documentation and test results.",
+        "inputs": [
+          {"name": "optimized-yara-rule", "desc": "Final optimized YARA rule"},
+          {"name": "optimization-changelog", "desc": "Record of changes and metric impacts"}
+        ],
+        "outputs": [
+          {"name": "validated-rule-package", "desc": "Production-ready YARA rule with metadata and documentation"},
+          {"name": "validation-report", "desc": "Full report with detection rate, false positive rate, and test methodology"}
+        ],
+        "process": [
+          "Package the final rule with complete metadata fields",
+          "Write the validation report: test methodology, corpus sizes, detection rate, false positive rate",
+          "Include deployment guidance: which scanning platforms, recommended scan frequency, alert priority"
+        ],
+        "tags": ["security", "operations", "documentation"]
+      }
+    ]
+  },
+  {
+    "chain_name": "sigma-rule-development",
+    "description": "Develop and validate Sigma detection rules from technique identification through SIEM deployment.",
+    "domain": "security",
+    "tags": ["security", "operations", "sigma", "detection"],
+    "steps": [
+      {
+        "flow_name": "attack-technique-researcher",
+        "description": "Research the attack technique to detect, including log artifacts and observable behaviors.",
+        "inputs": [
+          {"name": "technique-id", "desc": "MITRE ATT&CK technique ID or description of the behavior to detect"},
+          {"name": "environment-context", "desc": "Technology stack and log sources available in the environment"}
+        ],
+        "outputs": [
+          {"name": "technique-profile", "desc": "Detailed profile of the technique including tools, procedures, and artifacts"},
+          {"name": "log-source-mapping", "desc": "Map of which log sources capture which artifacts of the technique"}
+        ],
+        "process": [
+          "Research the technique in ATT&CK, threat reports, and red team documentation",
+          "Identify the specific log events and fields that capture the technique's artifacts",
+          "Determine which log sources in the environment can observe these events",
+          "Note variations in how different tools and procedures execute the same technique"
+        ],
+        "tags": ["security", "operations", "research"]
+      },
+      {
+        "flow_name": "sigma-rule-author",
+        "description": "Write the Sigma rule with proper taxonomy, log source definition, and detection logic.",
+        "inputs": [
+          {"name": "technique-profile", "desc": "Technique details including artifacts and procedures"},
+          {"name": "log-source-mapping", "desc": "Available log sources and their relevant fields"}
+        ],
+        "outputs": [
+          {"name": "draft-sigma-rule", "desc": "Sigma rule in YAML format with title, description, logsource, detection, and level"},
+          {"name": "rule-metadata", "desc": "ATT&CK mapping, references, and author information"}
+        ],
+        "process": [
+          "Define the logsource category, product, and service fields per Sigma taxonomy",
+          "Write the detection section with selection criteria and filter conditions",
+          "Set the level (informational, low, medium, high, critical) based on technique severity and confidence",
+          "Add ATT&CK tags, references, and false positive documentation"
+        ],
+        "tags": ["security", "operations", "rule-writing"]
+      },
+      {
+        "flow_name": "sigma-siem-converter",
+        "description": "Convert the Sigma rule to the target SIEM query language for testing.",
+        "inputs": [
+          {"name": "draft-sigma-rule", "desc": "Sigma rule in YAML format"},
+          {"name": "rule-metadata", "desc": "ATT&CK mapping and references"}
+        ],
+        "outputs": [
+          {"name": "siem-query", "desc": "Rule converted to the target SIEM format (Splunk SPL, Elastic KQL, etc.)"},
+          {"name": "conversion-notes", "desc": "Notes on any field mappings or adjustments needed for the target SIEM"}
+        ],
+        "process": [
+          "Run the Sigma rule through the converter for the target SIEM platform",
+          "Review the converted query for correctness, especially field name mappings",
+          "Adjust for any platform-specific syntax or field naming conventions"
+        ],
+        "tags": ["security", "operations", "conversion"]
+      },
+      {
+        "flow_name": "sigma-labeled-data-tester",
+        "description": "Test the rule against labeled datasets containing both attack and benign activity.",
+        "inputs": [
+          {"name": "siem-query", "desc": "Rule in target SIEM format"},
+          {"name": "conversion-notes", "desc": "Platform-specific adjustments"}
+        ],
+        "outputs": [
+          {"name": "test-results", "desc": "Detection rate on attack data and false positive rate on benign data"},
+          {"name": "sample-matches", "desc": "Example matches from both attack and benign datasets"}
+        ],
+        "process": [
+          "Run the query against a dataset of known attack activity to measure detection rate",
+          "Run the query against a dataset of normal business activity to measure false positive rate",
+          "Inspect sample matches to verify the rule triggers on the expected events"
+        ],
+        "tags": ["security", "operations", "testing"]
+      },
+      {
+        "flow_name": "sigma-rule-tuner",
+        "description": "Tune the rule to reduce false positives while maintaining detection coverage.",
+        "inputs": [
+          {"name": "test-results", "desc": "Detection rate and false positive rate"},
+          {"name": "sample-matches", "desc": "Example matches from testing"}
+        ],
+        "outputs": [
+          {"name": "tuned-sigma-rule", "desc": "Refined Sigma rule with improved precision"},
+          {"name": "tuning-changelog", "desc": "Record of filter additions and their impact on metrics"}
+        ],
+        "process": [
+          "Analyze false positive matches to identify common benign patterns",
+          "Add filter conditions to exclude the identified benign patterns",
+          "Re-test to verify false positives decreased without reducing true positive detection",
+          "Document each filter addition and its impact"
+        ],
+        "tags": ["security", "operations", "tuning"]
+      },
+      {
+        "flow_name": "sigma-validation-report-writer",
+        "description": "Produce the validated Sigma rule with test results and deployment documentation.",
+        "inputs": [
+          {"name": "tuned-sigma-rule", "desc": "Final tuned Sigma rule"},
+          {"name": "tuning-changelog", "desc": "Record of changes and metric impacts"}
+        ],
+        "outputs": [
+          {"name": "validated-sigma-rule", "desc": "Production-ready Sigma rule with complete metadata"},
+          {"name": "sigma-validation-report", "desc": "Test results, tuning history, and deployment guidance"}
+        ],
+        "process": [
+          "Finalize the rule with complete metadata, references, and false positive documentation",
+          "Write the validation report: test methodology, dataset sizes, final detection and FP rates",
+          "Include deployment guidance: recommended SIEM configuration, alert routing, and response procedure"
+        ],
+        "tags": ["security", "operations", "documentation"]
+      }
+    ]
+  },
+  {
+    "chain_name": "detection-engineering-pipeline",
+    "description": "Build a security detection from coverage gap identification through production deployment and monitoring.",
+    "domain": "security",
+    "tags": ["security", "operations", "detection-engineering"],
+    "steps": [
+      {
+        "flow_name": "coverage-gap-identifier",
+        "description": "Identify gaps in detection coverage by mapping existing detections to the MITRE ATT&CK framework.",
+        "inputs": [
+          {"name": "current-detection-inventory", "desc": "List of all active detection rules with their ATT&CK mappings"},
+          {"name": "threat-priority-list", "desc": "Prioritized list of threat actors and techniques relevant to the environment"}
+        ],
+        "outputs": [
+          {"name": "coverage-gaps", "desc": "List of ATT&CK techniques with no detection or weak detection"},
+          {"name": "gap-priority-ranking", "desc": "Gaps ranked by threat relevance and exploitability"}
+        ],
+        "process": [
+          "Map each existing detection rule to ATT&CK technique IDs",
+          "Overlay the threat priority list to identify high-risk techniques with no coverage",
+          "Rank gaps by the product of threat likelihood and detection difficulty",
+          "Select the top gap to build a detection for"
+        ],
+        "tags": ["security", "operations", "gap-analysis"]
+      },
+      {
+        "flow_name": "detection-data-researcher",
+        "description": "Research the data requirements for detecting the target technique.",
+        "inputs": [
+          {"name": "coverage-gaps", "desc": "Technique to build detection for"},
+          {"name": "gap-priority-ranking", "desc": "Priority context for the selected technique"}
+        ],
+        "outputs": [
+          {"name": "data-requirements", "desc": "Required log sources, fields, and retention for the detection"},
+          {"name": "data-availability-assessment", "desc": "Assessment of which required data is available and any gaps"}
+        ],
+        "process": [
+          "Identify every log source that can observe the technique's artifacts",
+          "Check which of those sources are currently collected and at what retention",
+          "Document any data gaps that would need to be filled before the detection can work"
+        ],
+        "tags": ["security", "operations", "research"]
+      },
+      {
+        "flow_name": "detection-logic-prototyper",
+        "description": "Prototype the detection logic and test it against historical data.",
+        "inputs": [
+          {"name": "data-requirements", "desc": "Required log sources and fields"},
+          {"name": "data-availability-assessment", "desc": "Available vs missing data sources"}
+        ],
+        "outputs": [
+          {"name": "prototype-detection", "desc": "Draft detection rule or query"},
+          {"name": "historical-test-results", "desc": "Results from running the prototype against historical log data"}
+        ],
+        "process": [
+          "Write the initial detection logic targeting the technique's observable artifacts",
+          "Run the prototype against historical data covering the last 30 to 90 days",
+          "Review matches to separate true positives from false positives",
+          "Iterate on the logic to reduce noise"
+        ],
+        "tags": ["security", "operations", "prototyping"]
+      },
+      {
+        "flow_name": "detection-metrics-measurer",
+        "description": "Measure the detection's true positive rate, false positive rate, and performance impact.",
+        "inputs": [
+          {"name": "prototype-detection", "desc": "Detection rule or query to measure"},
+          {"name": "historical-test-results", "desc": "Initial test results"}
+        ],
+        "outputs": [
+          {"name": "detection-metrics", "desc": "True positive rate, false positive rate, and query performance"},
+          {"name": "threshold-recommendations", "desc": "Recommended thresholds and tuning parameters"}
+        ],
+        "process": [
+          "Calculate true positive rate against labeled attack data or red team exercises",
+          "Calculate false positive rate against normal business activity",
+          "Measure query execution time and resource consumption",
+          "Determine acceptable thresholds for production deployment"
+        ],
+        "tags": ["security", "operations", "measurement"]
+      },
+      {
+        "flow_name": "detection-production-deployer",
+        "description": "Deploy the detection to production with proper monitoring and alert routing.",
+        "inputs": [
+          {"name": "detection-metrics", "desc": "Validated metrics for the detection"},
+          {"name": "threshold-recommendations", "desc": "Recommended thresholds for production"}
+        ],
+        "outputs": [
+          {"name": "deployed-detection", "desc": "Detection rule deployed to the production SIEM"},
+          {"name": "alert-routing-config", "desc": "Configuration for how alerts from this detection are routed and prioritized"}
+        ],
+        "process": [
+          "Configure the detection rule in the production SIEM with the validated thresholds",
+          "Set up alert routing to the appropriate SOC tier based on severity",
+          "Create the analyst runbook for investigating alerts from this detection",
+          "Enable monitoring of the detection's performance metrics"
+        ],
+        "tags": ["security", "operations", "deployment"]
+      },
+      {
+        "flow_name": "detection-engineering-report-writer",
+        "description": "Produce the detection engineering report documenting the full lifecycle.",
+        "inputs": [
+          {"name": "deployed-detection", "desc": "The deployed detection rule"},
+          {"name": "alert-routing-config", "desc": "Alert routing and prioritization configuration"}
+        ],
+        "outputs": [
+          {"name": "detection-report", "desc": "Full report covering gap analysis, design, testing, and deployment"},
+          {"name": "coverage-map-update", "desc": "Updated ATT&CK coverage map reflecting the new detection"}
+        ],
+        "process": [
+          "Document the coverage gap that motivated the detection",
+          "Record the detection logic, data sources, thresholds, and known limitations",
+          "Include test results and the analyst runbook for reference",
+          "Update the ATT&CK coverage map"
+        ],
+        "tags": ["security", "operations", "documentation"]
+      }
+    ]
+  },
+  {
+    "chain_name": "threat-intelligence-lifecycle",
+    "description": "Process threat intelligence from raw collection through analysis, production, and dissemination to stakeholders.",
+    "domain": "security",
+    "tags": ["security", "operations", "threat-intelligence"],
+    "steps": [
+      {
+        "flow_name": "threat-intel-collector",
+        "description": "Collect threat intelligence from feeds, reports, sharing communities, and internal sources.",
+        "inputs": [
+          {"name": "intel-sources", "desc": "List of subscribed feeds, sharing groups, and report providers"},
+          {"name": "collection-requirements", "desc": "Priority intelligence requirements from stakeholders"}
+        ],
+        "outputs": [
+          {"name": "raw-intel-collection", "desc": "Collected indicators, reports, and advisories in raw form"},
+          {"name": "source-reliability-scores", "desc": "Reliability rating for each source based on historical accuracy"}
+        ],
+        "process": [
+          "Pull indicators and reports from STIX/TAXII feeds and commercial providers",
+          "Collect human intelligence from sharing communities (ISACs, trusted groups)",
+          "Gather internal intelligence from incident investigations and threat hunts",
+          "Tag each item with source and collection timestamp"
+        ],
+        "tags": ["security", "operations", "collection"]
+      },
+      {
+        "flow_name": "threat-intel-normalizer",
+        "description": "Normalize collected intelligence into a standard format with consistent taxonomy.",
+        "inputs": [
+          {"name": "raw-intel-collection", "desc": "Raw indicators and reports from multiple sources"},
+          {"name": "source-reliability-scores", "desc": "Source reliability ratings"}
+        ],
+        "outputs": [
+          {"name": "normalized-intel", "desc": "Intelligence in standard format (STIX objects) with consistent naming"},
+          {"name": "dedup-report", "desc": "Report of duplicate indicators merged and conflicting data resolved"}
+        ],
+        "process": [
+          "Convert all indicators to a standard format (STIX 2.1 objects)",
+          "Apply consistent taxonomy for threat actors, malware families, and techniques",
+          "Deduplicate indicators from multiple sources and resolve conflicting metadata",
+          "Apply source reliability weighting"
+        ],
+        "tags": ["security", "operations", "normalization"]
+      },
+      {
+        "flow_name": "threat-intel-enricher",
+        "description": "Enrich normalized intelligence with internal context and additional external data.",
+        "inputs": [
+          {"name": "normalized-intel", "desc": "Standardized intelligence objects"},
+          {"name": "dedup-report", "desc": "Deduplication results"}
+        ],
+        "outputs": [
+          {"name": "enriched-intel", "desc": "Intelligence enriched with sighting data, asset context, and related indicators"},
+          {"name": "internal-sightings", "desc": "Matches found in internal logs and historical incident data"}
+        ],
+        "process": [
+          "Check indicators against internal logs for historical sightings",
+          "Enrich IP addresses and domains with WHOIS, geolocation, and reputation data",
+          "Link indicators to known campaigns, threat actors, and ATT&CK techniques",
+          "Flag any indicators that match assets or users in the environment"
+        ],
+        "tags": ["security", "operations", "enrichment"]
+      },
+      {
+        "flow_name": "threat-intel-relevance-analyzer",
+        "description": "Analyze enriched intelligence for relevance to the organization's specific risk profile.",
+        "inputs": [
+          {"name": "enriched-intel", "desc": "Intelligence with internal context and enrichment"},
+          {"name": "internal-sightings", "desc": "Matches found in internal systems"}
+        ],
+        "outputs": [
+          {"name": "relevance-assessment", "desc": "Each intelligence item rated for relevance to the organization"},
+          {"name": "priority-intel-items", "desc": "High-relevance items requiring immediate action or attention"}
+        ],
+        "process": [
+          "Score each item by relevance: does it target our industry, technology, geography, or known partners",
+          "Weight by confidence: source reliability, corroboration from multiple sources, recency",
+          "Identify items requiring immediate action (active campaigns targeting our sector)",
+          "Deprioritize items with low relevance or confidence"
+        ],
+        "tags": ["security", "operations", "analysis"]
+      },
+      {
+        "flow_name": "finished-intel-producer",
+        "description": "Produce finished intelligence products tailored to different stakeholder audiences.",
+        "inputs": [
+          {"name": "relevance-assessment", "desc": "Relevance-scored intelligence items"},
+          {"name": "priority-intel-items", "desc": "Items requiring immediate action"}
+        ],
+        "outputs": [
+          {"name": "intel-products", "desc": "Finished reports, bulletins, and indicator lists for stakeholders"},
+          {"name": "detection-indicators", "desc": "Machine-readable indicators formatted for ingestion into security tools"}
+        ],
+        "process": [
+          "Write executive summaries for leadership highlighting strategic threats",
+          "Produce tactical bulletins for the SOC with indicators and detection guidance",
+          "Format machine-readable indicator lists for SIEM and EDR ingestion",
+          "Create technical deep-dives for incident responders on priority threats"
+        ],
+        "tags": ["security", "operations", "production"]
+      },
+      {
+        "flow_name": "threat-intel-disseminator",
+        "description": "Disseminate finished intelligence to stakeholders and feed indicators into detection systems.",
+        "inputs": [
+          {"name": "intel-products", "desc": "Finished reports and bulletins"},
+          {"name": "detection-indicators", "desc": "Machine-readable indicators for tools"}
+        ],
+        "outputs": [
+          {"name": "dissemination-record", "desc": "Log of what was sent to whom and when"},
+          {"name": "feedback-requests", "desc": "Requests for feedback on intelligence usefulness from recipients"}
+        ],
+        "process": [
+          "Distribute reports to the appropriate stakeholder groups based on classification and relevance",
+          "Ingest indicators into the SIEM, EDR, and firewall block lists",
+          "Share relevant intelligence with trusted partners and ISACs per sharing agreements",
+          "Request feedback from recipients to improve future intelligence products"
+        ],
+        "tags": ["security", "operations", "dissemination"]
+      }
+    ]
+  },
+  {
+    "chain_name": "incident-investigation-playbook",
+    "description": "Investigate a confirmed security incident from scoping through root cause analysis and remediation recommendations.",
+    "domain": "security",
+    "tags": ["security", "operations", "incident-response"],
+    "steps": [
+      {
+        "flow_name": "incident-scoper",
+        "description": "Scope the incident to determine affected systems, data, users, and timeframe.",
+        "inputs": [
+          {"name": "incident-trigger", "desc": "Initial alert or report that triggered the investigation"},
+          {"name": "initial-indicators", "desc": "Known indicators of compromise from the triggering event"}
+        ],
+        "outputs": [
+          {"name": "incident-scope", "desc": "Defined scope: affected systems, users, data types, and time window"},
+          {"name": "investigation-plan", "desc": "Plan for evidence collection and analysis priorities"}
+        ],
+        "process": [
+          "Identify all systems that communicated with known malicious indicators",
+          "Determine which user accounts were involved or potentially compromised",
+          "Classify the data types at risk on affected systems",
+          "Define the investigation time window from earliest indicator to present"
+        ],
+        "tags": ["security", "operations", "scoping"]
+      },
+      {
+        "flow_name": "evidence-collector-preserver",
+        "description": "Collect and preserve digital evidence from affected systems following forensic standards.",
+        "inputs": [
+          {"name": "incident-scope", "desc": "Systems, users, and timeframe to investigate"},
+          {"name": "investigation-plan", "desc": "Priorities for evidence collection"}
+        ],
+        "outputs": [
+          {"name": "evidence-inventory", "desc": "Catalog of all collected evidence with chain of custody records"},
+          {"name": "preserved-artifacts", "desc": "Forensic images, log exports, and memory captures"}
+        ],
+        "process": [
+          "Capture volatile evidence first: memory dumps, network connections, running processes",
+          "Export relevant logs from SIEM, EDR, authentication systems, and cloud audit trails",
+          "Create forensic disk images of affected systems where needed",
+          "Document the chain of custody for all collected evidence"
+        ],
+        "tags": ["security", "operations", "forensics"]
+      },
+      {
+        "flow_name": "attack-chain-analyzer",
+        "description": "Analyze the collected evidence to reconstruct the full attack chain.",
+        "inputs": [
+          {"name": "evidence-inventory", "desc": "Catalog of collected evidence"},
+          {"name": "preserved-artifacts", "desc": "Forensic images, logs, and captures"}
+        ],
+        "outputs": [
+          {"name": "attack-chain-timeline", "desc": "Chronological reconstruction of the attacker's actions"},
+          {"name": "attacker-ttps", "desc": "Techniques, tactics, and procedures used, mapped to ATT&CK"}
+        ],
+        "process": [
+          "Build a timeline of events across all evidence sources",
+          "Identify the initial access vector and first compromise timestamp",
+          "Trace lateral movement, privilege escalation, and persistence mechanisms",
+          "Map each attacker action to the MITRE ATT&CK framework"
+        ],
+        "tags": ["security", "operations", "analysis"]
+      },
+      {
+        "flow_name": "root-cause-identifier",
+        "description": "Identify the root cause and contributing factors that enabled the incident.",
+        "inputs": [
+          {"name": "attack-chain-timeline", "desc": "Chronological reconstruction of the attack"},
+          {"name": "attacker-ttps", "desc": "Techniques used by the attacker"}
+        ],
+        "outputs": [
+          {"name": "root-cause-analysis", "desc": "Root cause and contributing factors with evidence"},
+          {"name": "control-failures", "desc": "Security controls that failed or were absent"}
+        ],
+        "process": [
+          "Identify the vulnerability or weakness exploited for initial access",
+          "Determine why existing controls did not prevent or detect each stage",
+          "Distinguish between root cause (the exploited weakness) and contributing factors (detection gaps, delayed response)"
+        ],
+        "tags": ["security", "operations", "root-cause"]
+      },
+      {
+        "flow_name": "compromise-extent-assessor",
+        "description": "Determine the full extent of the compromise including data access, exfiltration, and persistence.",
+        "inputs": [
+          {"name": "root-cause-analysis", "desc": "Root cause and contributing factors"},
+          {"name": "control-failures", "desc": "Controls that failed"}
+        ],
+        "outputs": [
+          {"name": "compromise-extent", "desc": "Full accounting of what was accessed, modified, or exfiltrated"},
+          {"name": "persistence-inventory", "desc": "All persistence mechanisms installed by the attacker"}
+        ],
+        "process": [
+          "Catalog all data the attacker accessed based on log evidence",
+          "Determine if data was exfiltrated by analyzing network traffic and data transfer logs",
+          "Identify all persistence mechanisms (backdoors, scheduled tasks, modified accounts)",
+          "Assess whether the attacker retains any access"
+        ],
+        "tags": ["security", "operations", "assessment"]
+      },
+      {
+        "flow_name": "containment-remediation-recommender",
+        "description": "Recommend containment actions and long-term remediation based on investigation findings.",
+        "inputs": [
+          {"name": "compromise-extent", "desc": "What was accessed, modified, or exfiltrated"},
+          {"name": "persistence-inventory", "desc": "Attacker persistence mechanisms found"}
+        ],
+        "outputs": [
+          {"name": "containment-actions", "desc": "Immediate actions to stop the attack and prevent further damage"},
+          {"name": "remediation-plan", "desc": "Long-term fixes addressing root cause and control failures"}
+        ],
+        "process": [
+          "Define immediate containment: isolate systems, reset credentials, block indicators",
+          "Plan eradication: remove all persistence, rebuild compromised systems",
+          "Recommend long-term remediation: patch the root cause, improve failed controls",
+          "Prioritize actions by urgency and impact"
+        ],
+        "tags": ["security", "operations", "remediation"]
+      },
+      {
+        "flow_name": "investigation-report-writer",
+        "description": "Produce the investigation report documenting the incident from detection through remediation.",
+        "inputs": [
+          {"name": "containment-actions", "desc": "Immediate containment actions taken"},
+          {"name": "remediation-plan", "desc": "Long-term remediation recommendations"}
+        ],
+        "outputs": [
+          {"name": "investigation-report", "desc": "Complete incident investigation report"},
+          {"name": "lessons-learned", "desc": "Lessons learned and improvements for future incident prevention and response"}
+        ],
+        "process": [
+          "Write the executive summary: what happened, when, what was affected, and current status",
+          "Document the full technical analysis with timeline, TTPs, and evidence references",
+          "Include containment actions taken and remediation plan with owners and timelines",
+          "Capture lessons learned for process improvement"
+        ],
+        "tags": ["security", "operations", "reporting"]
+      }
+    ]
+  },
+  {
+    "chain_name": "security-metrics-dashboard",
+    "description": "Build a security operations metrics program from metric definition through dashboard creation and reporting cadence.",
+    "domain": "security",
+    "tags": ["security", "operations", "metrics"],
+    "steps": [
+      {
+        "flow_name": "security-metric-definer",
+        "description": "Define the key security operations metrics aligned with program objectives.",
+        "inputs": [
+          {"name": "program-objectives", "desc": "Security program goals and stakeholder reporting requirements"},
+          {"name": "available-data-sources", "desc": "Inventory of security tools, logs, and ticketing systems with available data"}
+        ],
+        "outputs": [
+          {"name": "metric-definitions", "desc": "Each metric with name, formula, data source, and collection frequency"},
+          {"name": "metric-priority-list", "desc": "Metrics ranked by importance for the initial dashboard"}
+        ],
+        "process": [
+          "Define operational metrics: MTTD, MTTR, alert volume, false positive rate, escalation rate",
+          "Define coverage metrics: detection coverage by ATT&CK technique, vulnerability scan coverage, patch compliance",
+          "Define program metrics: risk reduction over time, incident trend, training completion",
+          "Rank by stakeholder need and data availability"
+        ],
+        "tags": ["security", "operations", "metrics"]
+      },
+      {
+        "flow_name": "metric-data-source-mapper",
+        "description": "Map each metric to its data source and define the collection pipeline.",
+        "inputs": [
+          {"name": "metric-definitions", "desc": "Metrics with formulas and data sources"},
+          {"name": "metric-priority-list", "desc": "Prioritized metrics for implementation"}
+        ],
+        "outputs": [
+          {"name": "data-pipeline-design", "desc": "Collection pipeline for each metric including source, extraction, and storage"},
+          {"name": "data-gap-list", "desc": "Metrics that cannot be collected with current tooling"}
+        ],
+        "process": [
+          "For each metric, identify the exact API, log query, or database table that provides the raw data",
+          "Design the extraction and transformation logic for each data source",
+          "Identify metrics that require data not currently collected and note the gap"
+        ],
+        "tags": ["security", "operations", "data-engineering"]
+      },
+      {
+        "flow_name": "metric-collection-builder",
+        "description": "Build the automated collection pipeline that gathers metric data on schedule.",
+        "inputs": [
+          {"name": "data-pipeline-design", "desc": "Collection pipeline specifications"},
+          {"name": "data-gap-list", "desc": "Gaps requiring new data collection"}
+        ],
+        "outputs": [
+          {"name": "collection-pipeline", "desc": "Operational pipeline collecting metrics on the defined schedule"},
+          {"name": "pipeline-test-results", "desc": "Validation that each metric collects correctly"}
+        ],
+        "process": [
+          "Configure the data extraction for each source (API calls, log queries, ticketing exports)",
+          "Set up the transformation and storage layer",
+          "Test each metric's collection against known values",
+          "Set the collection schedule (hourly, daily, weekly depending on the metric)"
+        ],
+        "tags": ["security", "operations", "automation"]
+      },
+      {
+        "flow_name": "dashboard-visualization-creator",
+        "description": "Create the dashboard visualizations for each metric with appropriate chart types.",
+        "inputs": [
+          {"name": "collection-pipeline", "desc": "Operational metric collection pipeline"},
+          {"name": "pipeline-test-results", "desc": "Validated metric data"}
+        ],
+        "outputs": [
+          {"name": "dashboard-layout", "desc": "Dashboard with visualizations for each metric"},
+          {"name": "drill-down-views", "desc": "Detailed views for investigating metric anomalies"}
+        ],
+        "process": [
+          "Select the appropriate chart type for each metric (time series, gauge, bar, table)",
+          "Arrange the dashboard with the highest priority metrics in the primary view",
+          "Create drill-down views for each metric that allow investigation of anomalies",
+          "Apply consistent color coding for status (red, yellow, green thresholds)"
+        ],
+        "tags": ["security", "operations", "visualization"]
+      },
+      {
+        "flow_name": "metric-baseline-setter",
+        "description": "Establish baselines and targets for each metric based on initial data.",
+        "inputs": [
+          {"name": "dashboard-layout", "desc": "Dashboard with initial metric data"},
+          {"name": "drill-down-views", "desc": "Detailed metric views"}
+        ],
+        "outputs": [
+          {"name": "metric-baselines", "desc": "Baseline values for each metric established from initial collection period"},
+          {"name": "metric-targets", "desc": "Target values and improvement timelines for each metric"}
+        ],
+        "process": [
+          "Collect at least 30 days of data to establish statistical baselines",
+          "Set normal ranges and anomaly thresholds for each metric",
+          "Define improvement targets based on industry benchmarks and program goals"
+        ],
+        "tags": ["security", "operations", "baselining"]
+      },
+      {
+        "flow_name": "metrics-reporting-cadence-planner",
+        "description": "Establish the reporting cadence and distribution for security metrics.",
+        "inputs": [
+          {"name": "metric-baselines", "desc": "Established baselines and normal ranges"},
+          {"name": "metric-targets", "desc": "Target values and improvement timelines"}
+        ],
+        "outputs": [
+          {"name": "reporting-schedule", "desc": "Weekly, monthly, and quarterly reporting schedule with stakeholder distribution"},
+          {"name": "metrics-program-document", "desc": "Complete documentation of the metrics program"}
+        ],
+        "process": [
+          "Define the weekly operational review cadence for the SOC team",
+          "Set the monthly management report schedule with trend analysis",
+          "Plan quarterly executive reviews with strategic metrics and improvement progress",
+          "Document the full metrics program: definitions, baselines, targets, and reporting schedule"
+        ],
+        "tags": ["security", "operations", "reporting"]
+      }
+    ]
+  },
+  {
+    "chain_name": "vulnerability-management-cycle",
+    "description": "Run a vulnerability management cycle from scanning through remediation tracking and risk reduction reporting.",
+    "domain": "security",
+    "tags": ["security", "operations", "vulnerability-management"],
+    "steps": [
+      {
+        "flow_name": "vulnerability-scanner-runner",
+        "description": "Scan the environment for vulnerabilities across network, application, and container assets.",
+        "inputs": [
+          {"name": "scan-scope", "desc": "IP ranges, applications, and container registries to scan"},
+          {"name": "scan-credentials", "desc": "Authenticated scan credentials for each target type"}
+        ],
+        "outputs": [
+          {"name": "raw-scan-results", "desc": "Vulnerability findings from all scanners"},
+          {"name": "scan-coverage-report", "desc": "Percentage of assets successfully scanned with any gaps noted"}
+        ],
+        "process": [
+          "Run network vulnerability scans against the defined IP ranges",
+          "Run application scans (DAST) against web applications in the scope",
+          "Scan container images in registries for known CVEs",
+          "Record coverage: which assets were scanned, which failed, and why"
+        ],
+        "tags": ["security", "operations", "scanning"]
+      },
+      {
+        "flow_name": "vulnerability-prioritizer",
+        "description": "Prioritize vulnerabilities by exploitability, asset criticality, and business context.",
+        "inputs": [
+          {"name": "raw-scan-results", "desc": "Findings from all vulnerability scanners"},
+          {"name": "scan-coverage-report", "desc": "Scan coverage and gaps"}
+        ],
+        "outputs": [
+          {"name": "prioritized-vulns", "desc": "Vulnerabilities ranked by risk: exploitability, asset criticality, exposure"},
+          {"name": "priority-methodology", "desc": "Documentation of the prioritization criteria and weights used"}
+        ],
+        "process": [
+          "Score each vulnerability using CVSS base score, EPSS exploitability probability, and known exploit availability",
+          "Weight by asset criticality (crown jewels, internet-facing, internal, development)",
+          "Factor in network exposure: internet-facing assets receive higher priority than segmented internal systems",
+          "Produce the ranked list with risk justification for each item"
+        ],
+        "tags": ["security", "operations", "prioritization"]
+      },
+      {
+        "flow_name": "remediation-owner-assigner",
+        "description": "Assign remediation owners and deadlines for prioritized vulnerabilities.",
+        "inputs": [
+          {"name": "prioritized-vulns", "desc": "Ranked vulnerability list with risk scores"},
+          {"name": "priority-methodology", "desc": "Prioritization criteria"}
+        ],
+        "outputs": [
+          {"name": "remediation-assignments", "desc": "Each vulnerability assigned to an owner with a deadline based on severity"},
+          {"name": "remediation-tickets", "desc": "Tickets created in the tracking system for each assignment"}
+        ],
+        "process": [
+          "Map each vulnerability to the responsible team based on asset ownership",
+          "Set remediation deadlines by severity: critical 7 days, high 30 days, medium 90 days, low 180 days",
+          "Create tracking tickets with vulnerability details, remediation guidance, and deadline"
+        ],
+        "tags": ["security", "operations", "assignment"]
+      },
+      {
+        "flow_name": "remediation-progress-tracker",
+        "description": "Track remediation progress and follow up on overdue items.",
+        "inputs": [
+          {"name": "remediation-assignments", "desc": "Assigned vulnerabilities with owners and deadlines"},
+          {"name": "remediation-tickets", "desc": "Tracking tickets in the system"}
+        ],
+        "outputs": [
+          {"name": "progress-report", "desc": "Status of all remediation efforts: completed, in progress, overdue"},
+          {"name": "escalation-list", "desc": "Overdue items requiring management escalation"}
+        ],
+        "process": [
+          "Query the ticketing system for remediation status updates",
+          "Calculate on-time vs overdue rates by team and severity",
+          "Generate the escalation list for items past their deadline with no progress",
+          "Send reminders and escalation notifications"
+        ],
+        "tags": ["security", "operations", "tracking"]
+      },
+      {
+        "flow_name": "remediation-verification-scanner",
+        "description": "Verify that remediated vulnerabilities are actually fixed by rescanning.",
+        "inputs": [
+          {"name": "progress-report", "desc": "Remediation items marked as completed"},
+          {"name": "escalation-list", "desc": "Overdue items for awareness"}
+        ],
+        "outputs": [
+          {"name": "verification-results", "desc": "Rescan results confirming fix or identifying regression"},
+          {"name": "reopen-list", "desc": "Items that failed verification and need to be reopened"}
+        ],
+        "process": [
+          "Rescan assets where vulnerabilities were reported as fixed",
+          "Compare new scan results against the original findings",
+          "Confirm each fix or identify regressions and incomplete remediations",
+          "Reopen tickets for failed verifications"
+        ],
+        "tags": ["security", "operations", "verification"]
+      },
+      {
+        "flow_name": "risk-reduction-reporter",
+        "description": "Report on overall risk reduction from the vulnerability management cycle.",
+        "inputs": [
+          {"name": "verification-results", "desc": "Verified fix and regression data"},
+          {"name": "reopen-list", "desc": "Items that failed verification"}
+        ],
+        "outputs": [
+          {"name": "vuln-management-report", "desc": "Full cycle report with findings, remediation rates, and risk reduction"},
+          {"name": "risk-trend-data", "desc": "Trend data showing risk reduction over time across scan cycles"}
+        ],
+        "process": [
+          "Calculate the overall remediation rate and average time to remediate by severity",
+          "Compute risk reduction: total risk score at scan vs total remaining risk",
+          "Compare against previous cycles to show trend",
+          "Highlight persistent risks and recommend process improvements"
+        ],
+        "tags": ["security", "operations", "reporting"]
+      }
+    ]
+  },
+  {
+    "chain_name": "security-orchestration-playbook",
+    "description": "Build a SOAR playbook for automated security response from use case selection through deployment and measurement.",
+    "domain": "security",
+    "tags": ["security", "operations", "soar", "automation"],
+    "steps": [
+      {
+        "flow_name": "soar-use-case-selector",
+        "description": "Select the use case for automation based on alert volume, response time, and analyst effort.",
+        "inputs": [
+          {"name": "alert-statistics", "desc": "Alert volume, response time, and analyst hours per alert type"},
+          {"name": "existing-playbooks", "desc": "List of already automated use cases to avoid duplication"}
+        ],
+        "outputs": [
+          {"name": "selected-use-case", "desc": "The use case to automate with justification based on volume and effort"},
+          {"name": "manual-workflow-doc", "desc": "Current manual investigation steps for this alert type"}
+        ],
+        "process": [
+          "Rank alert types by the product of volume and average analyst time per alert",
+          "Exclude use cases already automated or requiring complex judgment",
+          "Select the highest-value candidate that can be meaningfully automated",
+          "Document the current manual workflow step by step"
+        ],
+        "tags": ["security", "operations", "selection"]
+      },
+      {
+        "flow_name": "soar-workflow-designer",
+        "description": "Design the automated workflow including enrichment, decision logic, and response actions.",
+        "inputs": [
+          {"name": "selected-use-case", "desc": "Use case to automate"},
+          {"name": "manual-workflow-doc", "desc": "Current manual investigation steps"}
+        ],
+        "outputs": [
+          {"name": "workflow-design", "desc": "Automated workflow diagram with enrichment, decision, and action steps"},
+          {"name": "integration-requirements", "desc": "APIs and tools the playbook needs to connect to"}
+        ],
+        "process": [
+          "Map each manual step to an automated equivalent (API call, lookup, comparison)",
+          "Define decision points: what conditions trigger automated containment vs analyst review",
+          "Identify all tool integrations needed (SIEM, EDR, firewall, ticketing, email)",
+          "Design the notification and escalation paths for cases requiring human judgment"
+        ],
+        "tags": ["security", "operations", "design"]
+      },
+      {
+        "flow_name": "soar-playbook-implementer",
+        "description": "Implement the playbook in the SOAR platform with all integrations and logic.",
+        "inputs": [
+          {"name": "workflow-design", "desc": "Automated workflow specification"},
+          {"name": "integration-requirements", "desc": "Required API connections and tools"}
+        ],
+        "outputs": [
+          {"name": "implemented-playbook", "desc": "Working playbook in the SOAR platform"},
+          {"name": "integration-test-results", "desc": "Results of testing each integration point"}
+        ],
+        "process": [
+          "Configure each integration with the required API credentials and permissions",
+          "Build the workflow steps: trigger, enrichment queries, decision logic, actions",
+          "Test each integration point individually to verify connectivity and data flow",
+          "Set error handling: what happens when an integration fails or returns unexpected data"
+        ],
+        "tags": ["security", "operations", "implementation"]
+      },
+      {
+        "flow_name": "soar-simulation-tester",
+        "description": "Test the playbook with simulated alerts to verify correct behavior.",
+        "inputs": [
+          {"name": "implemented-playbook", "desc": "Working playbook in the SOAR platform"},
+          {"name": "integration-test-results", "desc": "Individual integration test results"}
+        ],
+        "outputs": [
+          {"name": "simulation-results", "desc": "Results of running simulated true positive and false positive alerts"},
+          {"name": "edge-case-notes", "desc": "Edge cases discovered during testing and how they were handled"}
+        ],
+        "process": [
+          "Run simulated true positive alerts through the playbook and verify correct containment",
+          "Run simulated false positive alerts and verify no incorrect actions taken",
+          "Test edge cases: missing data, slow API responses, ambiguous indicators",
+          "Verify analyst notifications and escalations work correctly"
+        ],
+        "tags": ["security", "operations", "testing"]
+      },
+      {
+        "flow_name": "soar-time-savings-measurer",
+        "description": "Measure the time and effort savings from automation compared to the manual process.",
+        "inputs": [
+          {"name": "simulation-results", "desc": "Test results from simulated alerts"},
+          {"name": "edge-case-notes", "desc": "Edge cases and handling decisions"}
+        ],
+        "outputs": [
+          {"name": "time-savings-analysis", "desc": "Comparison of manual vs automated response time and analyst effort"},
+          {"name": "roi-calculation", "desc": "Return on investment in analyst hours saved per month"}
+        ],
+        "process": [
+          "Compare automated response time against the historical manual average",
+          "Calculate analyst hours saved per alert and project monthly savings based on volume",
+          "Identify remaining manual steps and their time cost",
+          "Compute the ROI: analyst hours saved minus the time spent building and maintaining the playbook"
+        ],
+        "tags": ["security", "operations", "measurement"]
+      },
+      {
+        "flow_name": "soar-playbook-documenter",
+        "description": "Produce the playbook documentation including workflow, integrations, and maintenance procedures.",
+        "inputs": [
+          {"name": "time-savings-analysis", "desc": "Time and effort savings data"},
+          {"name": "roi-calculation", "desc": "Return on investment calculation"}
+        ],
+        "outputs": [
+          {"name": "playbook-documentation", "desc": "Complete documentation: workflow diagram, integrations, decision logic, maintenance"},
+          {"name": "maintenance-schedule", "desc": "Schedule for reviewing and updating the playbook"}
+        ],
+        "process": [
+          "Document the workflow with decision logic, integrations, and error handling",
+          "Write the analyst guide for handling escalated cases from this playbook",
+          "Define the maintenance schedule: quarterly review, integration health checks, metric review",
+          "Record the ROI and time savings for program reporting"
+        ],
+        "tags": ["security", "operations", "documentation"]
+      }
+    ]
+  }
+]

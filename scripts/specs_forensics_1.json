@@ -1,0 +1,1330 @@
+[
+  {
+    "chain_name": "disk-image-forensics",
+    "description": "Forensic analysis of a disk image from acquisition through artifact extraction to reporting.",
+    "domain": "security",
+    "tags": ["security", "forensics", "disk-imaging"],
+    "steps": [
+      {
+        "flow_name": "disk-image-acquirer",
+        "description": "Acquire a forensic disk image using write-blocking hardware or software.",
+        "inputs": [
+          {"name": "source-device", "desc": "The storage device to image"},
+          {"name": "acquisition-method", "desc": "Write-blocking method and imaging tool to use"}
+        ],
+        "outputs": [
+          {"name": "disk-image", "desc": "The forensic image file (E01, dd, or AFF)"},
+          {"name": "acquisition-log", "desc": "Log of the acquisition process with timestamps"}
+        ],
+        "process": [
+          "Connect the source device through a write-blocker",
+          "Select the imaging format and destination",
+          "Run the acquisition and record start and end times",
+          "Log the acquisition parameters and any errors"
+        ],
+        "tags": ["security", "forensics", "acquisition"]
+      },
+      {
+        "flow_name": "disk-hash-verifier",
+        "description": "Verify the integrity of a disk image by computing and comparing cryptographic hashes.",
+        "inputs": [
+          {"name": "disk-image", "desc": "The forensic image file to verify"},
+          {"name": "acquisition-log", "desc": "Log containing the original hash values"}
+        ],
+        "outputs": [
+          {"name": "verified-image", "desc": "The image confirmed as matching the original hash"},
+          {"name": "hash-report", "desc": "Report of all hash computations and comparison results"}
+        ],
+        "process": [
+          "Compute MD5 and SHA-256 hashes of the image",
+          "Compare against the hashes recorded during acquisition",
+          "Document any mismatches or verification failures",
+          "Record the verification timestamp and tool versions"
+        ],
+        "tags": ["security", "forensics", "integrity"]
+      },
+      {
+        "flow_name": "forensic-image-mounter",
+        "description": "Mount a verified forensic image in read-only mode for analysis.",
+        "inputs": [
+          {"name": "verified-image", "desc": "The hash-verified forensic image"},
+          {"name": "mount-config", "desc": "Mount options including read-only flags and filesystem type"}
+        ],
+        "outputs": [
+          {"name": "mounted-filesystem", "desc": "The accessible read-only filesystem"},
+          {"name": "mount-log", "desc": "Log of the mount operation and parameters"}
+        ],
+        "process": [
+          "Identify the filesystem type and partition layout",
+          "Mount with read-only and noexec flags",
+          "Verify the mount is non-writable",
+          "Log all mount parameters"
+        ],
+        "tags": ["security", "forensics", "mounting"]
+      },
+      {
+        "flow_name": "deleted-file-recoverer",
+        "description": "Recover deleted files from a mounted forensic image using carving and metadata analysis.",
+        "inputs": [
+          {"name": "mounted-filesystem", "desc": "The read-only mounted filesystem"},
+          {"name": "recovery-config", "desc": "File types to target and carving parameters"}
+        ],
+        "outputs": [
+          {"name": "recovered-files", "desc": "Collection of recovered deleted files"},
+          {"name": "recovery-log", "desc": "Log of recovery operations and file metadata"}
+        ],
+        "process": [
+          "Scan the unallocated space for file signatures",
+          "Carve files using header and footer matching",
+          "Recover files from orphaned MFT or inode entries",
+          "Catalog each recovered file with metadata"
+        ],
+        "tags": ["security", "forensics", "recovery"]
+      },
+      {
+        "flow_name": "filesystem-metadata-analyzer",
+        "description": "Analyze filesystem metadata and timestamps for evidence of user and system activity.",
+        "inputs": [
+          {"name": "mounted-filesystem", "desc": "The read-only mounted filesystem"},
+          {"name": "recovered-files", "desc": "Previously recovered deleted files for context"}
+        ],
+        "outputs": [
+          {"name": "metadata-analysis", "desc": "Analysis of file creation, modification, and access patterns"},
+          {"name": "timeline-entries", "desc": "Timestamped entries for the forensic timeline"}
+        ],
+        "process": [
+          "Extract MACB timestamps from all files and directories",
+          "Identify timestamp anomalies indicating anti-forensics",
+          "Analyze file ownership and permission changes",
+          "Build a chronological activity sequence"
+        ],
+        "tags": ["security", "forensics", "metadata"]
+      },
+      {
+        "flow_name": "system-artifact-searcher",
+        "description": "Search for system artifacts including browser history, registry hives, and event logs.",
+        "inputs": [
+          {"name": "mounted-filesystem", "desc": "The read-only mounted filesystem"},
+          {"name": "timeline-entries", "desc": "Timestamp data for correlation"}
+        ],
+        "outputs": [
+          {"name": "artifact-collection", "desc": "Extracted browser history, registry entries, and event log data"},
+          {"name": "artifact-summary", "desc": "Summary of findings organized by artifact type"}
+        ],
+        "process": [
+          "Parse browser databases (Chrome, Firefox, Edge) for history, downloads, and cookies",
+          "Extract and analyze Windows registry hives or Linux config files",
+          "Parse system and application event logs",
+          "Correlate artifacts with the filesystem timeline"
+        ],
+        "tags": ["security", "forensics", "artifacts"]
+      },
+      {
+        "flow_name": "disk-forensics-report-writer",
+        "description": "Produce the disk forensics report with findings, evidence references, and chain of custody.",
+        "inputs": [
+          {"name": "artifact-collection", "desc": "All extracted artifacts and evidence"},
+          {"name": "hash-report", "desc": "Image integrity verification records"},
+          {"name": "metadata-analysis", "desc": "Filesystem metadata analysis results"}
+        ],
+        "outputs": [
+          {"name": "forensics-report", "desc": "The complete disk forensics report"},
+          {"name": "evidence-index", "desc": "Index of all evidence items with hash values"}
+        ],
+        "process": [
+          "Organize findings by category and chronological order",
+          "Write the analysis narrative with evidence references",
+          "Include hash verification and chain of custody records",
+          "Compile the evidence index with file paths and checksums"
+        ],
+        "tags": ["security", "forensics", "reporting"]
+      }
+    ]
+  },
+  {
+    "chain_name": "memory-forensics-analysis",
+    "description": "Analyze a memory dump to identify running processes, injected code, and rootkit indicators.",
+    "domain": "security",
+    "tags": ["security", "forensics", "memory"],
+    "steps": [
+      {
+        "flow_name": "memory-image-acquirer",
+        "description": "Acquire a memory image from a live or hibernated system.",
+        "inputs": [
+          {"name": "target-system", "desc": "The system to capture memory from"},
+          {"name": "capture-tool", "desc": "The memory acquisition tool and method"}
+        ],
+        "outputs": [
+          {"name": "memory-image", "desc": "The raw memory dump file"},
+          {"name": "capture-metadata", "desc": "Metadata about the capture including timestamp and system info"}
+        ],
+        "process": [
+          "Select the acquisition method (live dump, crash dump, hibernation file)",
+          "Run the capture tool with minimal system impact",
+          "Record the capture timestamp, OS version, and RAM size",
+          "Hash the resulting image for integrity"
+        ],
+        "tags": ["security", "forensics", "memory"]
+      },
+      {
+        "flow_name": "memory-profile-identifier",
+        "description": "Identify the operating system profile of a memory image for correct parsing.",
+        "inputs": [
+          {"name": "memory-image", "desc": "The raw memory dump"},
+          {"name": "capture-metadata", "desc": "Known information about the target system"}
+        ],
+        "outputs": [
+          {"name": "profiled-image", "desc": "The memory image with identified OS profile"},
+          {"name": "profile-info", "desc": "OS version, kernel build, and symbol table match"}
+        ],
+        "process": [
+          "Scan for known OS signatures and kernel structures",
+          "Match against available Volatility or Rekall profiles",
+          "Verify the profile by parsing a known structure",
+          "Document the profile selection and confidence"
+        ],
+        "tags": ["security", "forensics", "profiling"]
+      },
+      {
+        "flow_name": "process-network-enumerator",
+        "description": "List all running processes, their parent relationships, and active network connections.",
+        "inputs": [
+          {"name": "profiled-image", "desc": "The memory image with identified profile"},
+          {"name": "profile-info", "desc": "OS profile for correct structure parsing"}
+        ],
+        "outputs": [
+          {"name": "process-list", "desc": "All processes with PIDs, parent PIDs, paths, and command lines"},
+          {"name": "network-connections", "desc": "All active and recently closed network connections"}
+        ],
+        "process": [
+          "Walk the process list structures (EPROCESS, task_struct)",
+          "Extract command lines, loaded DLLs, and creation timestamps",
+          "Parse network connection structures for TCP and UDP endpoints",
+          "Flag processes with unusual parents or hidden from user-mode listing"
+        ],
+        "tags": ["security", "forensics", "enumeration"]
+      },
+      {
+        "flow_name": "injected-code-detector",
+        "description": "Detect injected code, hollowed processes, and suspicious loaded modules.",
+        "inputs": [
+          {"name": "process-list", "desc": "Enumerated processes and their modules"},
+          {"name": "profiled-image", "desc": "The memory image for deep inspection"}
+        ],
+        "outputs": [
+          {"name": "injection-findings", "desc": "Detected code injection, hollowing, and suspicious modules"},
+          {"name": "extracted-samples", "desc": "Dumped suspicious code regions for further analysis"}
+        ],
+        "process": [
+          "Compare in-memory code sections against on-disk originals",
+          "Detect VAD regions with execute permissions not backed by files",
+          "Identify process hollowing by checking PEB versus actual memory contents",
+          "Dump suspicious regions for offline analysis"
+        ],
+        "tags": ["security", "forensics", "injection"]
+      },
+      {
+        "flow_name": "credential-key-extractor",
+        "description": "Recover encryption keys, cached credentials, and authentication tokens from memory.",
+        "inputs": [
+          {"name": "profiled-image", "desc": "The memory image for credential extraction"},
+          {"name": "process-list", "desc": "Processes to target for credential structures"}
+        ],
+        "outputs": [
+          {"name": "extracted-credentials", "desc": "Recovered passwords, hashes, tokens, and encryption keys"},
+          {"name": "credential-context", "desc": "Which processes held each credential and when"}
+        ],
+        "process": [
+          "Parse LSASS memory for NTLM hashes and Kerberos tickets",
+          "Search for plaintext passwords in process heaps",
+          "Extract encryption keys from crypto provider structures",
+          "Document the context and process for each recovered credential"
+        ],
+        "tags": ["security", "forensics", "credentials"]
+      },
+      {
+        "flow_name": "kernel-rootkit-analyzer",
+        "description": "Analyze kernel structures for rootkit indicators and hook modifications.",
+        "inputs": [
+          {"name": "profiled-image", "desc": "The memory image for kernel analysis"},
+          {"name": "injection-findings", "desc": "User-mode injection results for correlation"}
+        ],
+        "outputs": [
+          {"name": "rootkit-analysis", "desc": "Findings on kernel hooks, hidden objects, and DKOM"},
+          {"name": "integrity-status", "desc": "Integrity assessment of kernel code and data structures"}
+        ],
+        "process": [
+          "Check the SSDT and IDT for hooked entries",
+          "Scan for hidden processes using cross-reference of multiple listing methods",
+          "Detect Direct Kernel Object Manipulation (DKOM)",
+          "Verify kernel module integrity against known-good hashes"
+        ],
+        "tags": ["security", "forensics", "rootkit"]
+      },
+      {
+        "flow_name": "memory-forensics-report-writer",
+        "description": "Produce the memory forensics report with all findings and extracted evidence.",
+        "inputs": [
+          {"name": "rootkit-analysis", "desc": "Kernel integrity and rootkit findings"},
+          {"name": "injection-findings", "desc": "Code injection and process hollowing findings"},
+          {"name": "extracted-credentials", "desc": "Recovered credentials and keys"}
+        ],
+        "outputs": [
+          {"name": "memory-forensics-report", "desc": "The complete memory forensics report"},
+          {"name": "ioc-list", "desc": "Indicators of compromise extracted from memory"}
+        ],
+        "process": [
+          "Compile all findings into a structured narrative",
+          "Cross-reference process, network, and injection evidence",
+          "Extract indicators of compromise (IPs, domains, hashes, mutexes)",
+          "Write the executive summary and technical details"
+        ],
+        "tags": ["security", "forensics", "reporting"]
+      }
+    ]
+  },
+  {
+    "chain_name": "log-forensics-investigation",
+    "description": "Investigate security events through systematic log collection, normalization, and correlation.",
+    "domain": "security",
+    "tags": ["security", "forensics", "logs"],
+    "steps": [
+      {
+        "flow_name": "log-source-collector",
+        "description": "Collect logs from all relevant sources for the investigation scope.",
+        "inputs": [
+          {"name": "investigation-scope", "desc": "Time range, systems, and event types to collect"},
+          {"name": "source-inventory", "desc": "List of available log sources and their locations"}
+        ],
+        "outputs": [
+          {"name": "raw-log-archive", "desc": "Collected logs from all sources, preserved with hashes"},
+          {"name": "collection-manifest", "desc": "Manifest of what was collected from where and when"}
+        ],
+        "process": [
+          "Identify all relevant log sources within the scope",
+          "Collect system, application, network, and authentication logs",
+          "Preserve originals with cryptographic hashes",
+          "Document gaps where logs are missing or unavailable"
+        ],
+        "tags": ["security", "forensics", "collection"]
+      },
+      {
+        "flow_name": "log-normalizer",
+        "description": "Normalize log formats and timestamps to a common schema for correlation.",
+        "inputs": [
+          {"name": "raw-log-archive", "desc": "The collected raw logs in various formats"},
+          {"name": "collection-manifest", "desc": "Manifest describing each log source and format"}
+        ],
+        "outputs": [
+          {"name": "normalized-logs", "desc": "All logs in a common format with unified timestamps"},
+          {"name": "normalization-report", "desc": "Report of format conversions and any data loss"}
+        ],
+        "process": [
+          "Parse each log format (syslog, JSON, CSV, Windows Event XML)",
+          "Convert all timestamps to UTC with millisecond precision",
+          "Map fields to a common schema (source, event type, actor, target, outcome)",
+          "Flag entries that could not be fully parsed"
+        ],
+        "tags": ["security", "forensics", "normalization"]
+      },
+      {
+        "flow_name": "cross-source-correlator",
+        "description": "Correlate events across multiple log sources to identify related activity.",
+        "inputs": [
+          {"name": "normalized-logs", "desc": "Logs in common format ready for correlation"},
+          {"name": "investigation-scope", "desc": "The investigation parameters to focus correlation"}
+        ],
+        "outputs": [
+          {"name": "correlated-events", "desc": "Groups of related events linked across sources"},
+          {"name": "correlation-gaps", "desc": "Time periods or systems where coverage is missing"}
+        ],
+        "process": [
+          "Link events by shared identifiers (IP, user, session ID, hostname)",
+          "Identify temporal clusters of activity within sliding windows",
+          "Flag events that appear in one source but not a corroborating source",
+          "Document coverage gaps that limit the investigation"
+        ],
+        "tags": ["security", "forensics", "correlation"]
+      },
+      {
+        "flow_name": "attack-timeline-builder",
+        "description": "Build the attack timeline from correlated events showing the sequence of attacker actions.",
+        "inputs": [
+          {"name": "correlated-events", "desc": "Cross-source correlated event groups"},
+          {"name": "normalized-logs", "desc": "Full normalized log set for gap filling"}
+        ],
+        "outputs": [
+          {"name": "attack-timeline", "desc": "Chronological sequence of attacker actions with evidence"},
+          {"name": "timeline-confidence", "desc": "Confidence rating for each timeline entry"}
+        ],
+        "process": [
+          "Order correlated events into a chronological sequence",
+          "Identify the probable initial access point",
+          "Trace lateral movement and privilege escalation steps",
+          "Assign confidence levels based on evidence strength"
+        ],
+        "tags": ["security", "forensics", "timeline"]
+      },
+      {
+        "flow_name": "initial-compromise-identifier",
+        "description": "Identify the initial compromise vector and the first signs of unauthorized access.",
+        "inputs": [
+          {"name": "attack-timeline", "desc": "The reconstructed attack timeline"},
+          {"name": "correlated-events", "desc": "Full correlated event data for deep analysis"}
+        ],
+        "outputs": [
+          {"name": "compromise-assessment", "desc": "Analysis of the initial access method and evidence"},
+          {"name": "lateral-movement-map", "desc": "Map of how the attacker moved through the environment"}
+        ],
+        "process": [
+          "Examine the earliest suspicious events in the timeline",
+          "Test hypotheses for initial access (phishing, exploit, credential abuse)",
+          "Trace the path from initial access to each compromised system",
+          "Document the evidence supporting each conclusion"
+        ],
+        "tags": ["security", "forensics", "initial-access"]
+      },
+      {
+        "flow_name": "log-forensics-report-writer",
+        "description": "Produce the log forensics report with the attack narrative and supporting evidence.",
+        "inputs": [
+          {"name": "attack-timeline", "desc": "The attack timeline with confidence ratings"},
+          {"name": "compromise-assessment", "desc": "Initial compromise and lateral movement analysis"},
+          {"name": "correlation-gaps", "desc": "Documented gaps in log coverage"}
+        ],
+        "outputs": [
+          {"name": "log-forensics-report", "desc": "The complete log forensics investigation report"},
+          {"name": "detection-recommendations", "desc": "Recommendations for improved logging and detection"}
+        ],
+        "process": [
+          "Write the attack narrative from initial access through impact",
+          "Include evidence references for each claim",
+          "Document limitations from log gaps",
+          "Recommend logging and detection improvements"
+        ],
+        "tags": ["security", "forensics", "reporting"]
+      }
+    ]
+  },
+  {
+    "chain_name": "mobile-device-forensics",
+    "description": "Forensic examination of a mobile device from documentation through data extraction to reporting.",
+    "domain": "security",
+    "tags": ["security", "forensics", "mobile"],
+    "steps": [
+      {
+        "flow_name": "mobile-device-documenter",
+        "description": "Document the device state, chain of custody, and initial observations.",
+        "inputs": [
+          {"name": "device-info", "desc": "Device make, model, OS, and physical condition"},
+          {"name": "case-context", "desc": "The investigation context and what evidence is sought"}
+        ],
+        "outputs": [
+          {"name": "device-documentation", "desc": "Photographs, serial numbers, and state observations"},
+          {"name": "custody-record", "desc": "Chain of custody form with initial custodian and timestamp"}
+        ],
+        "process": [
+          "Photograph the device from all angles showing condition and screen state",
+          "Record make, model, IMEI/MEID, serial number, and OS version",
+          "Note the power state, network connections, and any displayed notifications",
+          "Complete the chain of custody form"
+        ],
+        "tags": ["security", "forensics", "documentation"]
+      },
+      {
+        "flow_name": "mobile-data-extractor",
+        "description": "Extract data from the mobile device using logical or physical acquisition.",
+        "inputs": [
+          {"name": "device-documentation", "desc": "Documented device information and access details"},
+          {"name": "extraction-method", "desc": "Logical, filesystem, or physical extraction method to use"}
+        ],
+        "outputs": [
+          {"name": "extracted-data", "desc": "The complete device data extraction"},
+          {"name": "extraction-log", "desc": "Log of extraction process including tool and method used"}
+        ],
+        "process": [
+          "Place the device in airplane mode to prevent remote wipe",
+          "Connect via the selected extraction method and tool",
+          "Perform the acquisition and verify data integrity",
+          "Hash the extraction output and log the process"
+        ],
+        "tags": ["security", "forensics", "extraction"]
+      },
+      {
+        "flow_name": "call-message-analyzer",
+        "description": "Analyze call logs, SMS/MMS messages, and messaging application data.",
+        "inputs": [
+          {"name": "extracted-data", "desc": "The device data extraction"},
+          {"name": "case-context", "desc": "Investigation focus for targeted analysis"}
+        ],
+        "outputs": [
+          {"name": "communication-analysis", "desc": "Analysis of calls, messages, and messaging app conversations"},
+          {"name": "contact-network", "desc": "Map of communication patterns and key contacts"}
+        ],
+        "process": [
+          "Parse call logs for numbers, durations, and timestamps",
+          "Extract SMS/MMS content and metadata",
+          "Analyze messaging app databases (WhatsApp, Signal, Telegram)",
+          "Build the contact communication network"
+        ],
+        "tags": ["security", "forensics", "communications"]
+      },
+      {
+        "flow_name": "mobile-app-data-examiner",
+        "description": "Examine application data, databases, and cached content on the device.",
+        "inputs": [
+          {"name": "extracted-data", "desc": "The device data extraction"},
+          {"name": "communication-analysis", "desc": "Communication findings for context"}
+        ],
+        "outputs": [
+          {"name": "app-analysis", "desc": "Analysis of application data, databases, and cached files"},
+          {"name": "app-artifacts", "desc": "Extracted artifacts from applications (photos, documents, tokens)"}
+        ],
+        "process": [
+          "Inventory installed applications and their data directories",
+          "Parse SQLite databases for each application of interest",
+          "Extract cached files, images, and documents",
+          "Analyze application tokens and authentication data"
+        ],
+        "tags": ["security", "forensics", "applications"]
+      },
+      {
+        "flow_name": "deleted-content-recoverer",
+        "description": "Recover deleted content from the device including messages, photos, and files.",
+        "inputs": [
+          {"name": "extracted-data", "desc": "The device data extraction including unallocated space"},
+          {"name": "app-analysis", "desc": "Application analysis identifying potential deleted items"}
+        ],
+        "outputs": [
+          {"name": "recovered-content", "desc": "Recovered deleted messages, photos, files, and app data"},
+          {"name": "recovery-metadata", "desc": "Metadata about recovered items including deletion timestamps"}
+        ],
+        "process": [
+          "Search SQLite WAL and journal files for deleted records",
+          "Carve unallocated space for known file signatures",
+          "Recover deleted photos from thumbnail caches",
+          "Document each recovered item with its source and confidence"
+        ],
+        "tags": ["security", "forensics", "recovery"]
+      },
+      {
+        "flow_name": "location-history-extractor",
+        "description": "Extract and analyze location history from GPS, Wi-Fi, and cell tower data.",
+        "inputs": [
+          {"name": "extracted-data", "desc": "The device data extraction"},
+          {"name": "app-artifacts", "desc": "Application artifacts that may contain location data"}
+        ],
+        "outputs": [
+          {"name": "location-history", "desc": "Chronological location data with sources and accuracy"},
+          {"name": "location-map", "desc": "Visual map of device locations over time"}
+        ],
+        "process": [
+          "Extract GPS coordinates from system location databases",
+          "Parse Wi-Fi connection logs for approximate locations",
+          "Analyze cell tower records for movement patterns",
+          "Correlate location data from map and photo applications"
+        ],
+        "tags": ["security", "forensics", "location"]
+      },
+      {
+        "flow_name": "mobile-forensics-report-writer",
+        "description": "Produce the mobile forensics report with all findings and evidence references.",
+        "inputs": [
+          {"name": "communication-analysis", "desc": "Call and message analysis findings"},
+          {"name": "app-analysis", "desc": "Application data analysis findings"},
+          {"name": "location-history", "desc": "Location history and movement analysis"}
+        ],
+        "outputs": [
+          {"name": "mobile-forensics-report", "desc": "The complete mobile device forensics report"},
+          {"name": "evidence-catalog", "desc": "Catalog of all evidence items with hash values"}
+        ],
+        "process": [
+          "Organize findings by evidence type and chronological order",
+          "Write the analysis narrative answering the investigation questions",
+          "Reference specific evidence items for each conclusion",
+          "Compile the evidence catalog with integrity hashes"
+        ],
+        "tags": ["security", "forensics", "reporting"]
+      }
+    ]
+  },
+  {
+    "chain_name": "cloud-forensics-investigation",
+    "description": "Investigate a security incident in a cloud environment by preserving and analyzing cloud-native evidence.",
+    "domain": "security",
+    "tags": ["security", "forensics", "cloud"],
+    "steps": [
+      {
+        "flow_name": "cloud-evidence-preserver",
+        "description": "Preserve cloud logs and snapshots before auto-deletion or rotation.",
+        "inputs": [
+          {"name": "cloud-account", "desc": "The cloud account and region to preserve evidence from"},
+          {"name": "incident-scope", "desc": "Time range and resources involved in the incident"}
+        ],
+        "outputs": [
+          {"name": "preserved-evidence", "desc": "Snapshots, log exports, and configuration backups"},
+          {"name": "preservation-log", "desc": "Record of what was preserved and when"}
+        ],
+        "process": [
+          "Snapshot affected VM instances and storage volumes",
+          "Export CloudTrail, Activity Log, or Audit Log to a locked bucket",
+          "Capture current IAM policies and resource configurations",
+          "Set legal hold on relevant storage objects"
+        ],
+        "tags": ["security", "forensics", "preservation"]
+      },
+      {
+        "flow_name": "api-audit-trail-collector",
+        "description": "Collect and parse API audit trails for the investigation time window.",
+        "inputs": [
+          {"name": "preserved-evidence", "desc": "The preserved cloud evidence"},
+          {"name": "incident-scope", "desc": "Time range and actors to focus on"}
+        ],
+        "outputs": [
+          {"name": "api-events", "desc": "Parsed API call events with caller identity and parameters"},
+          {"name": "api-anomalies", "desc": "Unusual API calls or patterns flagged for investigation"}
+        ],
+        "process": [
+          "Parse CloudTrail, Azure Activity Log, or GCP Audit Log records",
+          "Filter to the investigation time window and affected resources",
+          "Identify the caller identity for each action (IAM user, role, service)",
+          "Flag unusual actions: first-time API calls, privilege changes, data access"
+        ],
+        "tags": ["security", "forensics", "api-audit"]
+      },
+      {
+        "flow_name": "cloud-network-flow-analyzer",
+        "description": "Analyze network flow logs to trace attacker communication patterns.",
+        "inputs": [
+          {"name": "preserved-evidence", "desc": "Preserved network flow logs"},
+          {"name": "api-anomalies", "desc": "Flagged API events for correlation with network activity"}
+        ],
+        "outputs": [
+          {"name": "flow-analysis", "desc": "Analysis of network flows including suspicious connections"},
+          {"name": "external-endpoints", "desc": "External IPs and domains involved in the incident"}
+        ],
+        "process": [
+          "Parse VPC Flow Logs, NSG Flow Logs, or VPC Flow Records",
+          "Identify connections to known malicious IPs or unusual destinations",
+          "Quantify data transfer volumes to detect exfiltration",
+          "Correlate network flows with API events by timestamp and source"
+        ],
+        "tags": ["security", "forensics", "network-flows"]
+      },
+      {
+        "flow_name": "container-serverless-log-examiner",
+        "description": "Examine container and serverless function logs for evidence of compromise.",
+        "inputs": [
+          {"name": "preserved-evidence", "desc": "Container and function execution logs"},
+          {"name": "incident-scope", "desc": "Services and time range to examine"}
+        ],
+        "outputs": [
+          {"name": "workload-findings", "desc": "Evidence of compromise in container or function workloads"},
+          {"name": "workload-timeline", "desc": "Timeline of workload events during the incident"}
+        ],
+        "process": [
+          "Parse container runtime logs (Docker, Kubernetes audit log)",
+          "Analyze serverless invocation logs for unusual triggers or payloads",
+          "Check for privilege escalation within container contexts",
+          "Identify lateral movement between workloads"
+        ],
+        "tags": ["security", "forensics", "containers"]
+      },
+      {
+        "flow_name": "cloud-attack-reconstructor",
+        "description": "Reconstruct the attacker's actions by combining API, network, and workload evidence.",
+        "inputs": [
+          {"name": "api-events", "desc": "Parsed and filtered API audit events"},
+          {"name": "flow-analysis", "desc": "Network flow analysis results"},
+          {"name": "workload-findings", "desc": "Container and serverless evidence"}
+        ],
+        "outputs": [
+          {"name": "attack-reconstruction", "desc": "Step-by-step reconstruction of attacker actions"},
+          {"name": "impact-assessment", "desc": "Assessment of what data or resources were compromised"}
+        ],
+        "process": [
+          "Merge evidence from API, network, and workload sources into one timeline",
+          "Identify the initial access method (compromised credentials, exposed service, SSRF)",
+          "Trace each action from initial access through persistence, escalation, and impact",
+          "Assess what data was accessed, modified, or exfiltrated"
+        ],
+        "tags": ["security", "forensics", "reconstruction"]
+      },
+      {
+        "flow_name": "cloud-forensics-report-writer",
+        "description": "Produce the cloud forensics report with the attack reconstruction and remediation steps.",
+        "inputs": [
+          {"name": "attack-reconstruction", "desc": "The step-by-step attack reconstruction"},
+          {"name": "impact-assessment", "desc": "Assessment of the incident impact"},
+          {"name": "preservation-log", "desc": "Record of evidence preservation actions"}
+        ],
+        "outputs": [
+          {"name": "cloud-forensics-report", "desc": "The complete cloud forensics investigation report"},
+          {"name": "remediation-actions", "desc": "Specific actions to contain and remediate the incident"}
+        ],
+        "process": [
+          "Write the attack narrative with evidence citations",
+          "Detail the impact in terms of data, access, and business operations",
+          "List remediation actions: credential rotation, policy fixes, patches",
+          "Document the evidence chain and preservation methods"
+        ],
+        "tags": ["security", "forensics", "reporting"]
+      }
+    ]
+  },
+  {
+    "chain_name": "chain-of-custody-management",
+    "description": "Manage digital evidence chain of custody from collection through legal proceedings.",
+    "domain": "security",
+    "tags": ["security", "forensics", "custody"],
+    "steps": [
+      {
+        "flow_name": "evidence-collection-documenter",
+        "description": "Document evidence collection with timestamps, hashes, and collector identity.",
+        "inputs": [
+          {"name": "evidence-items", "desc": "List of digital evidence to be collected"},
+          {"name": "case-identifier", "desc": "Case number and investigation reference"}
+        ],
+        "outputs": [
+          {"name": "collection-records", "desc": "Documented collection records for each evidence item"},
+          {"name": "initial-hashes", "desc": "Cryptographic hashes computed at time of collection"}
+        ],
+        "process": [
+          "Assign a unique identifier to each evidence item",
+          "Compute MD5 and SHA-256 hashes at the point of collection",
+          "Photograph physical media and record serial numbers",
+          "Document the collector, date, time, location, and method"
+        ],
+        "tags": ["security", "forensics", "collection"]
+      },
+      {
+        "flow_name": "custody-transfer-logger",
+        "description": "Log every transfer of evidence between custodians with signatures and timestamps.",
+        "inputs": [
+          {"name": "collection-records", "desc": "The initial collection documentation"},
+          {"name": "transfer-details", "desc": "Who is transferring to whom and why"}
+        ],
+        "outputs": [
+          {"name": "transfer-log", "desc": "Signed log of all custody transfers"},
+          {"name": "current-custodian", "desc": "Current custodian and storage location for each item"}
+        ],
+        "process": [
+          "Record the releasing and receiving custodian for each transfer",
+          "Capture the date, time, and reason for the transfer",
+          "Both parties verify the evidence identifiers and condition",
+          "Obtain signatures from both releasing and receiving custodians"
+        ],
+        "tags": ["security", "forensics", "custody"]
+      },
+      {
+        "flow_name": "evidence-integrity-verifier",
+        "description": "Verify evidence integrity at each custody checkpoint by recomputing hashes.",
+        "inputs": [
+          {"name": "transfer-log", "desc": "Current transfer log with pending verification"},
+          {"name": "initial-hashes", "desc": "Original hash values from collection"}
+        ],
+        "outputs": [
+          {"name": "verification-results", "desc": "Hash comparison results for each verification event"},
+          {"name": "integrity-status", "desc": "Current integrity status of all evidence items"}
+        ],
+        "process": [
+          "Recompute hashes of each evidence item",
+          "Compare against the initial collection hashes",
+          "Document any discrepancies with investigation notes",
+          "Update the integrity status for each item"
+        ],
+        "tags": ["security", "forensics", "integrity"]
+      },
+      {
+        "flow_name": "tamper-evident-storage-manager",
+        "description": "Store evidence in tamper-evident containers with access logging.",
+        "inputs": [
+          {"name": "current-custodian", "desc": "Current custodian and storage requirements"},
+          {"name": "integrity-status", "desc": "Current integrity status of evidence items"}
+        ],
+        "outputs": [
+          {"name": "storage-records", "desc": "Records of evidence storage locations and access controls"},
+          {"name": "access-log", "desc": "Log of all access to stored evidence"}
+        ],
+        "process": [
+          "Store digital media in sealed, tamper-evident evidence bags",
+          "Place in a locked evidence room with access logging",
+          "For digital-only evidence, store in write-once media or sealed archives",
+          "Enable access logging for all storage locations"
+        ],
+        "tags": ["security", "forensics", "storage"]
+      },
+      {
+        "flow_name": "legal-custody-documenter",
+        "description": "Prepare chain of custody documentation suitable for legal proceedings.",
+        "inputs": [
+          {"name": "collection-records", "desc": "All collection documentation"},
+          {"name": "transfer-log", "desc": "Complete transfer history"},
+          {"name": "verification-results", "desc": "All integrity verification results"}
+        ],
+        "outputs": [
+          {"name": "custody-documentation", "desc": "Court-ready chain of custody documentation"},
+          {"name": "witness-list", "desc": "List of custodians who may need to testify"}
+        ],
+        "process": [
+          "Compile the complete custody chain for each evidence item",
+          "Format documentation to meet jurisdictional requirements",
+          "Verify there are no gaps in the custody timeline",
+          "Identify all custodians who may need to provide testimony"
+        ],
+        "tags": ["security", "forensics", "legal"]
+      },
+      {
+        "flow_name": "custody-log-finalizer",
+        "description": "Produce the final chain of custody log with complete history and integrity verification.",
+        "inputs": [
+          {"name": "custody-documentation", "desc": "Court-ready custody documentation"},
+          {"name": "storage-records", "desc": "Storage and access records"},
+          {"name": "access-log", "desc": "Evidence access log"}
+        ],
+        "outputs": [
+          {"name": "final-custody-log", "desc": "The complete chain of custody log for all evidence"},
+          {"name": "custody-summary", "desc": "Summary of custody status for each evidence item"}
+        ],
+        "process": [
+          "Merge collection, transfer, verification, and access records",
+          "Verify completeness with no gaps in the chain",
+          "Produce the summary showing current status of each item",
+          "Archive the final log with its own integrity hash"
+        ],
+        "tags": ["security", "forensics", "reporting"]
+      }
+    ]
+  },
+  {
+    "chain_name": "forensic-timeline-reconstruction",
+    "description": "Reconstruct an incident timeline from multiple evidence sources into a unified chronology.",
+    "domain": "security",
+    "tags": ["security", "forensics", "timeline"],
+    "steps": [
+      {
+        "flow_name": "multi-source-evidence-ingester",
+        "description": "Ingest evidence from filesystem timestamps, logs, network captures, and memory artifacts.",
+        "inputs": [
+          {"name": "evidence-sources", "desc": "List of evidence sources with their types and locations"},
+          {"name": "investigation-window", "desc": "The time range to focus on"}
+        ],
+        "outputs": [
+          {"name": "raw-events", "desc": "All extracted events in their native formats"},
+          {"name": "source-catalog", "desc": "Catalog of evidence sources and their time ranges"}
+        ],
+        "process": [
+          "Extract filesystem MACB timestamps using plaso or similar",
+          "Parse log entries from system, application, and security logs",
+          "Extract packet timestamps and session data from network captures",
+          "Pull process and connection timestamps from memory analysis"
+        ],
+        "tags": ["security", "forensics", "ingestion"]
+      },
+      {
+        "flow_name": "timezone-normalizer",
+        "description": "Normalize all timestamps to a common timezone and handle clock skew.",
+        "inputs": [
+          {"name": "raw-events", "desc": "Events in their native time formats and zones"},
+          {"name": "source-catalog", "desc": "Information about each source's timezone and clock accuracy"}
+        ],
+        "outputs": [
+          {"name": "normalized-events", "desc": "All events with timestamps converted to UTC"},
+          {"name": "skew-corrections", "desc": "Documented clock skew corrections applied to each source"}
+        ],
+        "process": [
+          "Identify the timezone of each evidence source",
+          "Convert all timestamps to UTC with sub-second precision where available",
+          "Detect and correct clock skew by aligning known correlated events",
+          "Document all timezone and skew corrections applied"
+        ],
+        "tags": ["security", "forensics", "normalization"]
+      },
+      {
+        "flow_name": "timeline-merger",
+        "description": "Merge events from all sources into a single unified timeline.",
+        "inputs": [
+          {"name": "normalized-events", "desc": "UTC-normalized events from all sources"},
+          {"name": "skew-corrections", "desc": "Applied corrections for reference"}
+        ],
+        "outputs": [
+          {"name": "unified-timeline", "desc": "Single chronological timeline of all events"},
+          {"name": "merge-statistics", "desc": "Statistics on event counts by source and time period"}
+        ],
+        "process": [
+          "Sort all events by normalized timestamp",
+          "Tag each event with its original source for traceability",
+          "Remove exact duplicates appearing in multiple sources",
+          "Compute event density statistics across the timeline"
+        ],
+        "tags": ["security", "forensics", "merging"]
+      },
+      {
+        "flow_name": "timeline-gap-detector",
+        "description": "Identify gaps and anomalies in the timeline that may indicate anti-forensics or missing evidence.",
+        "inputs": [
+          {"name": "unified-timeline", "desc": "The merged timeline"},
+          {"name": "merge-statistics", "desc": "Event density statistics"}
+        ],
+        "outputs": [
+          {"name": "gap-analysis", "desc": "Identified gaps, anomalies, and their possible explanations"},
+          {"name": "annotated-timeline", "desc": "Timeline annotated with gap and anomaly markers"}
+        ],
+        "process": [
+          "Detect periods with significantly fewer events than baseline",
+          "Identify timestamp sequences that are out of order (timestomping)",
+          "Check for log truncation or clearing events",
+          "Assess whether gaps align with known system downtime or evidence gaps"
+        ],
+        "tags": ["security", "forensics", "gap-analysis"]
+      },
+      {
+        "flow_name": "ttp-correlator",
+        "description": "Correlate timeline events with known attacker tactics, techniques, and procedures.",
+        "inputs": [
+          {"name": "annotated-timeline", "desc": "Gap-annotated unified timeline"},
+          {"name": "investigation-window", "desc": "Investigation context and threat intelligence"}
+        ],
+        "outputs": [
+          {"name": "ttp-mapped-timeline", "desc": "Timeline with events mapped to MITRE ATT&CK techniques"},
+          {"name": "attack-phases", "desc": "Identified phases of the attack (recon, access, movement, exfil)"}
+        ],
+        "process": [
+          "Match event patterns against known ATT&CK technique indicators",
+          "Group events into attack phases (initial access, execution, persistence, etc.)",
+          "Identify the transition points between attack phases",
+          "Link to threat intelligence if the TTP pattern matches a known actor"
+        ],
+        "tags": ["security", "forensics", "ttp"]
+      },
+      {
+        "flow_name": "master-timeline-producer",
+        "description": "Produce the master timeline document with evidence references and confidence ratings.",
+        "inputs": [
+          {"name": "ttp-mapped-timeline", "desc": "TTP-annotated timeline"},
+          {"name": "gap-analysis", "desc": "Gap and anomaly analysis"},
+          {"name": "attack-phases", "desc": "Identified attack phases"}
+        ],
+        "outputs": [
+          {"name": "master-timeline", "desc": "The final master timeline with all annotations"},
+          {"name": "timeline-summary", "desc": "Executive summary of the incident timeline"}
+        ],
+        "process": [
+          "Format the timeline with source references for each entry",
+          "Assign confidence ratings based on corroboration across sources",
+          "Write the executive summary of the attack sequence",
+          "Include the gap analysis and its implications"
+        ],
+        "tags": ["security", "forensics", "reporting"]
+      }
+    ]
+  },
+  {
+    "chain_name": "email-forensics-analysis",
+    "description": "Forensically analyze email evidence including headers, content, and authentication indicators.",
+    "domain": "security",
+    "tags": ["security", "forensics", "email"],
+    "steps": [
+      {
+        "flow_name": "email-store-preserver",
+        "description": "Preserve the email store in a forensically sound manner with integrity hashes.",
+        "inputs": [
+          {"name": "email-source", "desc": "The email store to preserve (PST, mbox, IMAP, EML files)"},
+          {"name": "preservation-scope", "desc": "Mailboxes, date range, and search terms to preserve"}
+        ],
+        "outputs": [
+          {"name": "preserved-emails", "desc": "Forensic copy of the email data with integrity hashes"},
+          {"name": "preservation-record", "desc": "Record of the preservation process and completeness"}
+        ],
+        "process": [
+          "Export the email data using forensic tools to avoid modification",
+          "Compute cryptographic hashes of the preserved data",
+          "Document the number of messages and storage format",
+          "Verify the export completeness against the source count"
+        ],
+        "tags": ["security", "forensics", "preservation"]
+      },
+      {
+        "flow_name": "email-header-analyzer",
+        "description": "Extract and analyze email headers for routing, authentication, and origin information.",
+        "inputs": [
+          {"name": "preserved-emails", "desc": "The preserved email data"},
+          {"name": "target-messages", "desc": "Specific messages to analyze in detail"}
+        ],
+        "outputs": [
+          {"name": "header-analysis", "desc": "Parsed headers showing routing path and authentication results"},
+          {"name": "origin-assessment", "desc": "Assessment of the true origin of each message"}
+        ],
+        "process": [
+          "Parse the Received headers to trace the routing path",
+          "Extract the originating IP address and sending MTA",
+          "Analyze the Message-ID for sending system clues",
+          "Check for header inconsistencies indicating manipulation"
+        ],
+        "tags": ["security", "forensics", "headers"]
+      },
+      {
+        "flow_name": "email-attachment-examiner",
+        "description": "Analyze email attachments for metadata, embedded content, and malicious indicators.",
+        "inputs": [
+          {"name": "preserved-emails", "desc": "The preserved email data with attachments"},
+          {"name": "header-analysis", "desc": "Header analysis for context on suspicious messages"}
+        ],
+        "outputs": [
+          {"name": "attachment-analysis", "desc": "Metadata and content analysis of all attachments"},
+          {"name": "malicious-indicators", "desc": "Identified malicious indicators in attachments"}
+        ],
+        "process": [
+          "Extract all attachments and compute their hashes",
+          "Analyze document metadata (author, creation date, modification history)",
+          "Check executables and macros for malicious behavior",
+          "Submit hashes to threat intelligence databases"
+        ],
+        "tags": ["security", "forensics", "attachments"]
+      },
+      {
+        "flow_name": "email-spoofing-checker",
+        "description": "Check emails for spoofing indicators using SPF, DKIM, and DMARC results.",
+        "inputs": [
+          {"name": "header-analysis", "desc": "Parsed email headers"},
+          {"name": "origin-assessment", "desc": "Preliminary origin assessment"}
+        ],
+        "outputs": [
+          {"name": "authentication-results", "desc": "SPF, DKIM, and DMARC verification results"},
+          {"name": "spoofing-assessment", "desc": "Assessment of whether messages were spoofed"}
+        ],
+        "process": [
+          "Verify SPF alignment between envelope sender and sending IP",
+          "Validate DKIM signatures against the signing domain's public key",
+          "Check DMARC alignment and policy for the From domain",
+          "Assess overall spoofing likelihood for each message"
+        ],
+        "tags": ["security", "forensics", "authentication"]
+      },
+      {
+        "flow_name": "email-server-log-correlator",
+        "description": "Correlate email evidence with server-side logs for delivery and access records.",
+        "inputs": [
+          {"name": "preserved-emails", "desc": "The email evidence"},
+          {"name": "authentication-results", "desc": "Authentication verification results"}
+        ],
+        "outputs": [
+          {"name": "server-correlation", "desc": "Correlated server log entries for each message"},
+          {"name": "access-records", "desc": "Records of mailbox access (login, forwarding, delegation)"}
+        ],
+        "process": [
+          "Match messages to mail server transport logs by Message-ID",
+          "Check for forwarding rules or delegates that may have accessed messages",
+          "Identify mailbox login events and their source IPs",
+          "Detect any message deletion or modification events in server logs"
+        ],
+        "tags": ["security", "forensics", "server-logs"]
+      },
+      {
+        "flow_name": "email-forensics-report-writer",
+        "description": "Produce the email forensics report with authentication analysis and evidence references.",
+        "inputs": [
+          {"name": "spoofing-assessment", "desc": "Spoofing analysis results"},
+          {"name": "attachment-analysis", "desc": "Attachment examination findings"},
+          {"name": "server-correlation", "desc": "Server log correlation results"}
+        ],
+        "outputs": [
+          {"name": "email-forensics-report", "desc": "The complete email forensics report"},
+          {"name": "email-evidence-index", "desc": "Index of all email evidence with hashes and references"}
+        ],
+        "process": [
+          "Write the analysis narrative addressing the investigation questions",
+          "Include authentication verification results for each key message",
+          "Document attachment findings and malicious indicators",
+          "Compile the evidence index with message hashes and server log references"
+        ],
+        "tags": ["security", "forensics", "reporting"]
+      }
+    ]
+  },
+  {
+    "chain_name": "network-forensics-capture",
+    "description": "Analyze captured network traffic for forensic evidence of attacker activity.",
+    "domain": "security",
+    "tags": ["security", "forensics", "network"],
+    "steps": [
+      {
+        "flow_name": "pcap-processor",
+        "description": "Process PCAP files for forensic analysis including validation and indexing.",
+        "inputs": [
+          {"name": "capture-files", "desc": "PCAP or PCAPNG files to analyze"},
+          {"name": "analysis-scope", "desc": "Time range, IPs, and protocols of interest"}
+        ],
+        "outputs": [
+          {"name": "indexed-capture", "desc": "Indexed and validated capture data"},
+          {"name": "capture-statistics", "desc": "Statistics on packet counts, protocols, and time range"}
+        ],
+        "process": [
+          "Validate capture file integrity and check for truncation",
+          "Index packets by timestamp, source, destination, and protocol",
+          "Compute overall statistics (packet count, unique IPs, protocol distribution)",
+          "Identify the capture duration and any time gaps"
+        ],
+        "tags": ["security", "forensics", "pcap"]
+      },
+      {
+        "flow_name": "tcp-session-reconstructor",
+        "description": "Reconstruct TCP sessions from packet captures to recover full conversations.",
+        "inputs": [
+          {"name": "indexed-capture", "desc": "The indexed capture data"},
+          {"name": "analysis-scope", "desc": "Scope parameters for session reconstruction"}
+        ],
+        "outputs": [
+          {"name": "reconstructed-sessions", "desc": "Rebuilt TCP sessions with full payload data"},
+          {"name": "session-index", "desc": "Index of sessions by endpoints, protocol, and time"}
+        ],
+        "process": [
+          "Reassemble TCP streams from individual packets",
+          "Handle retransmissions and out-of-order delivery",
+          "Decode application-layer protocols (HTTP, SMTP, FTP, DNS)",
+          "Index sessions for efficient searching and filtering"
+        ],
+        "tags": ["security", "forensics", "reconstruction"]
+      },
+      {
+        "flow_name": "transferred-file-extractor",
+        "description": "Extract files and credentials transferred over the network.",
+        "inputs": [
+          {"name": "reconstructed-sessions", "desc": "Rebuilt TCP sessions"},
+          {"name": "session-index", "desc": "Session index for targeted extraction"}
+        ],
+        "outputs": [
+          {"name": "extracted-files", "desc": "Files transferred over the network with metadata"},
+          {"name": "captured-credentials", "desc": "Credentials observed in cleartext or weak protocols"}
+        ],
+        "process": [
+          "Carve files from HTTP, FTP, SMB, and email sessions",
+          "Extract credentials from cleartext protocols (FTP, Telnet, HTTP Basic)",
+          "Recover file metadata (names, sizes, transfer timestamps)",
+          "Hash all extracted files for identification"
+        ],
+        "tags": ["security", "forensics", "extraction"]
+      },
+      {
+        "flow_name": "c2-traffic-identifier",
+        "description": "Identify command and control communication patterns in the network traffic.",
+        "inputs": [
+          {"name": "reconstructed-sessions", "desc": "Rebuilt sessions for pattern analysis"},
+          {"name": "capture-statistics", "desc": "Overall traffic statistics for baseline comparison"}
+        ],
+        "outputs": [
+          {"name": "c2-candidates", "desc": "Sessions identified as potential C2 communication"},
+          {"name": "beacon-analysis", "desc": "Analysis of periodic beaconing patterns"}
+        ],
+        "process": [
+          "Detect periodic beaconing by analyzing inter-arrival times",
+          "Identify sessions with encoded or encrypted payloads to non-standard ports",
+          "Check for DNS tunneling patterns (high query rates, long subdomain labels)",
+          "Compare against known C2 framework traffic signatures"
+        ],
+        "tags": ["security", "forensics", "c2"]
+      },
+      {
+        "flow_name": "exfiltration-detector",
+        "description": "Detect data exfiltration by analyzing outbound data volumes and patterns.",
+        "inputs": [
+          {"name": "reconstructed-sessions", "desc": "Rebuilt sessions for volume analysis"},
+          {"name": "c2-candidates", "desc": "Identified C2 channels that may carry exfiltrated data"}
+        ],
+        "outputs": [
+          {"name": "exfiltration-findings", "desc": "Identified data exfiltration events and volumes"},
+          {"name": "data-loss-estimate", "desc": "Estimate of the volume and type of data exfiltrated"}
+        ],
+        "process": [
+          "Compute outbound data volumes by destination",
+          "Identify sessions with unusually large uploads",
+          "Analyze C2 channels for embedded data transfer",
+          "Estimate total data loss based on observed transfers"
+        ],
+        "tags": ["security", "forensics", "exfiltration"]
+      },
+      {
+        "flow_name": "network-activity-mapper",
+        "description": "Map the attacker's network activity across the captured traffic.",
+        "inputs": [
+          {"name": "c2-candidates", "desc": "Identified C2 communications"},
+          {"name": "exfiltration-findings", "desc": "Data exfiltration analysis"},
+          {"name": "captured-credentials", "desc": "Credentials captured in transit"}
+        ],
+        "outputs": [
+          {"name": "activity-map", "desc": "Visual map of attacker network movement and communications"},
+          {"name": "network-iocs", "desc": "Network indicators of compromise (IPs, domains, ports, patterns)"}
+        ],
+        "process": [
+          "Plot all attacker-attributed connections on a network diagram",
+          "Trace the sequence of lateral movement through the network",
+          "Catalog all external endpoints used by the attacker",
+          "Extract network indicators of compromise for detection"
+        ],
+        "tags": ["security", "forensics", "mapping"]
+      },
+      {
+        "flow_name": "network-forensics-report-writer",
+        "description": "Produce the network forensics report with traffic analysis findings.",
+        "inputs": [
+          {"name": "activity-map", "desc": "Attacker network activity map"},
+          {"name": "exfiltration-findings", "desc": "Data exfiltration analysis"},
+          {"name": "network-iocs", "desc": "Extracted network indicators of compromise"}
+        ],
+        "outputs": [
+          {"name": "network-forensics-report", "desc": "The complete network forensics report"},
+          {"name": "ioc-feed", "desc": "Machine-readable IOC feed for detection systems"}
+        ],
+        "process": [
+          "Write the network activity narrative with packet-level evidence",
+          "Document data exfiltration findings and volume estimates",
+          "Include the network IOC list in both human and machine-readable formats",
+          "Provide recommendations for network monitoring improvements"
+        ],
+        "tags": ["security", "forensics", "reporting"]
+      }
+    ]
+  },
+  {
+    "chain_name": "malware-forensics-triage",
+    "description": "Triage a potentially compromised system for malware indicators and persistence mechanisms.",
+    "domain": "security",
+    "tags": ["security", "forensics", "malware"],
+    "steps": [
+      {
+        "flow_name": "volatile-data-collector",
+        "description": "Collect volatile data from a live system before it is lost to shutdown or reboot.",
+        "inputs": [
+          {"name": "target-system", "desc": "The system to collect volatile data from"},
+          {"name": "collection-toolkit", "desc": "Forensic collection tools to deploy"}
+        ],
+        "outputs": [
+          {"name": "volatile-data", "desc": "Running processes, network connections, loaded drivers, and open handles"},
+          {"name": "collection-timestamp", "desc": "Timestamp and system uptime at time of collection"}
+        ],
+        "process": [
+          "List all running processes with full command lines and parent PIDs",
+          "Capture all active network connections and listening ports",
+          "Enumerate loaded kernel modules and drivers",
+          "Record open file handles and named pipes"
+        ],
+        "tags": ["security", "forensics", "volatile"]
+      },
+      {
+        "flow_name": "multi-engine-scanner",
+        "description": "Scan the system with multiple detection engines for known malware signatures.",
+        "inputs": [
+          {"name": "target-system", "desc": "The system to scan"},
+          {"name": "volatile-data", "desc": "Running process data to guide targeted scanning"}
+        ],
+        "outputs": [
+          {"name": "scan-results", "desc": "Detection results from each scanning engine"},
+          {"name": "flagged-files", "desc": "Files flagged by one or more engines with detection names"}
+        ],
+        "process": [
+          "Run at least two independent antimalware engines on the full filesystem",
+          "Scan running process memory for in-memory-only malware",
+          "Submit hashes of suspicious files to multi-engine services",
+          "Compile results noting which engines detected which files"
+        ],
+        "tags": ["security", "forensics", "scanning"]
+      },
+      {
+        "flow_name": "autostart-location-analyzer",
+        "description": "Analyze all autostart locations for unauthorized or suspicious entries.",
+        "inputs": [
+          {"name": "target-system", "desc": "The system to examine"},
+          {"name": "flagged-files", "desc": "Files already flagged for correlation"}
+        ],
+        "outputs": [
+          {"name": "autostart-findings", "desc": "All autostart entries with suspicious ones highlighted"},
+          {"name": "persistence-candidates", "desc": "Entries likely used for malware persistence"}
+        ],
+        "process": [
+          "Enumerate registry Run/RunOnce keys and their values",
+          "Check startup folders, logon scripts, and Group Policy scripts",
+          "Analyze WMI event subscriptions and COM object hijacks",
+          "On Linux: check systemd units, cron, init scripts, and LD_PRELOAD"
+        ],
+        "tags": ["security", "forensics", "autostart"]
+      },
+      {
+        "flow_name": "persistence-mechanism-checker",
+        "description": "Check for advanced persistence mechanisms beyond standard autostart locations.",
+        "inputs": [
+          {"name": "autostart-findings", "desc": "Standard autostart analysis results"},
+          {"name": "volatile-data", "desc": "Running process and driver data for correlation"}
+        ],
+        "outputs": [
+          {"name": "persistence-analysis", "desc": "Analysis of all identified persistence mechanisms"},
+          {"name": "hidden-persistence", "desc": "Persistence mechanisms found outside standard locations"}
+        ],
+        "process": [
+          "Check for DLL search order hijacking in system and application paths",
+          "Analyze Windows services for unauthorized entries",
+          "Check for bootkit indicators in the boot configuration",
+          "Examine browser extensions and scheduled tasks for malicious entries"
+        ],
+        "tags": ["security", "forensics", "persistence"]
+      },
+      {
+        "flow_name": "scheduled-task-service-examiner",
+        "description": "Examine scheduled tasks and services for malicious or unauthorized entries.",
+        "inputs": [
+          {"name": "persistence-analysis", "desc": "Persistence mechanism analysis for context"},
+          {"name": "flagged-files", "desc": "Known suspicious files for correlation"}
+        ],
+        "outputs": [
+          {"name": "task-service-findings", "desc": "Analysis of scheduled tasks and services"},
+          {"name": "suspicious-entries", "desc": "Tasks and services identified as likely malicious"}
+        ],
+        "process": [
+          "Export all scheduled tasks and examine their actions and triggers",
+          "List all services and compare against a known-good baseline",
+          "Check for tasks or services running as SYSTEM with unusual binaries",
+          "Correlate task and service binaries with flagged files"
+        ],
+        "tags": ["security", "forensics", "tasks"]
+      },
+      {
+        "flow_name": "suspicious-file-submitter",
+        "description": "Hash and submit suspicious files for deeper analysis and threat intelligence lookup.",
+        "inputs": [
+          {"name": "flagged-files", "desc": "Files flagged by scanners"},
+          {"name": "suspicious-entries", "desc": "Files associated with suspicious persistence"}
+        ],
+        "outputs": [
+          {"name": "submission-results", "desc": "Threat intelligence lookup results for each file"},
+          {"name": "sample-archive", "desc": "Archived copies of suspicious files with hashes"}
+        ],
+        "process": [
+          "Compute MD5, SHA-1, and SHA-256 hashes for each suspicious file",
+          "Look up hashes in threat intelligence databases",
+          "Archive copies of confirmed malicious files in a password-protected container",
+          "Record file metadata (path, size, timestamps, digital signature status)"
+        ],
+        "tags": ["security", "forensics", "submission"]
+      },
+      {
+        "flow_name": "malware-triage-report-writer",
+        "description": "Produce the malware triage report with findings and recommended next steps.",
+        "inputs": [
+          {"name": "persistence-analysis", "desc": "All persistence mechanism findings"},
+          {"name": "submission-results", "desc": "Threat intelligence lookup results"},
+          {"name": "scan-results", "desc": "Multi-engine scan results"}
+        ],
+        "outputs": [
+          {"name": "triage-report", "desc": "The complete malware triage report"},
+          {"name": "containment-actions", "desc": "Recommended immediate containment actions"}
+        ],
+        "process": [
+          "Summarize all confirmed and suspected malware findings",
+          "Map findings to the infection timeline",
+          "List immediate containment actions (network isolation, credential reset)",
+          "Recommend further analysis steps (full forensics, memory analysis, sandboxing)"
+        ],
+        "tags": ["security", "forensics", "reporting"]
+      }
+    ]
+  }
+]
