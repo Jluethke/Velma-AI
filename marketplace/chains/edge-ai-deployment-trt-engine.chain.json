@@ -1,0 +1,206 @@
+{
+  "name": "edge-ai-deployment-trt-engine",
+  "description": "Turn a model into a validated TensorRT engine on the target device: ONNX export, optional INT8 calibration, trtexec build, per-device cache key, accuracy check and benchmark.",
+  "steps": [
+    {
+      "id": "s01_edge_onnx_export_validate",
+      "skill_name": "edge-onnx-export-validate",
+      "inputs": {
+        "model_path": "from_user_input",
+        "input_shapes": "from_user_input",
+        "opset_version": "from_user_input_optional"
+      },
+      "outputs": {
+        "onnx_model": "onnx_model"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_edge_int8_calibration_cache",
+      "skill_name": "edge-int8-calibration-cache",
+      "inputs": {
+        "onnx_model": "s01_edge_onnx_export_validate.onnx_model",
+        "calibration_data": "from_user_input",
+        "precision": "from_user_input"
+      },
+      "outputs": {
+        "calibration_cache": "calibration_cache"
+      },
+      "condition": "precision == 'int8'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_edge_trtexec_engine_build",
+      "skill_name": "edge-trtexec-engine-build",
+      "inputs": {
+        "device_host": "from_user_input",
+        "onnx_model": "s01_edge_onnx_export_validate.onnx_model",
+        "input_shapes": "from_user_input",
+        "precision": "from_user_input",
+        "memory_budget": "from_user_input",
+        "calibration_cache": "s02_edge_int8_calibration_cache.calibration_cache",
+        "dla_core": "from_user_input_optional"
+      },
+      "outputs": {
+        "engine_file": "engine_file",
+        "build_log": "build_log"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_edge_trt_engine_cache_key",
+      "skill_name": "edge-trt-engine-cache-key",
+      "inputs": {
+        "engine_file": "s03_edge_trtexec_engine_build.engine_file",
+        "onnx_model": "s01_edge_onnx_export_validate.onnx_model",
+        "platform_report": "from_user_input",
+        "cuda_stack_report": "from_user_input",
+        "precision": "from_user_input",
+        "input_shapes": "from_user_input"
+      },
+      "outputs": {
+        "engine_cache_key": "engine_cache_key"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s05_edge_quantization_accuracy_check",
+      "skill_name": "edge-quantization-accuracy-check",
+      "inputs": {
+        "onnx_model": "s01_edge_onnx_export_validate.onnx_model",
+        "engine_file": "s03_edge_trtexec_engine_build.engine_file",
+        "eval_data": "from_user_input",
+        "accuracy_tolerance": "from_user_input",
+        "precision": "from_user_input"
+      },
+      "outputs": {
+        "accuracy_report": "accuracy_report"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s06_edge_latency_throughput_benchmark",
+      "skill_name": "edge-latency-throughput-benchmark",
+      "inputs": {
+        "device_host": "from_user_input",
+        "engine_file": "s03_edge_trtexec_engine_build.engine_file",
+        "clock_state": "from_user_input",
+        "input_shapes": "from_user_input"
+      },
+      "outputs": {
+        "benchmark_report": "benchmark_report"
+      },
+      "parallel_group": 4
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_edge_onnx_export_validate",
+      "to_step": "s02_edge_int8_calibration_cache",
+      "data_type": "edge-onnx-export-validate",
+      "field_mapping": {
+        "onnx_model": "onnx_model"
+      }
+    },
+    {
+      "from_step": "s01_edge_onnx_export_validate",
+      "to_step": "s03_edge_trtexec_engine_build",
+      "data_type": "edge-onnx-export-validate",
+      "field_mapping": {
+        "onnx_model": "onnx_model"
+      }
+    },
+    {
+      "from_step": "s02_edge_int8_calibration_cache",
+      "to_step": "s03_edge_trtexec_engine_build",
+      "data_type": "edge-int8-calibration-cache",
+      "field_mapping": {
+        "calibration_cache": "calibration_cache"
+      }
+    },
+    {
+      "from_step": "s03_edge_trtexec_engine_build",
+      "to_step": "s04_edge_trt_engine_cache_key",
+      "data_type": "edge-trtexec-engine-build",
+      "field_mapping": {
+        "engine_file": "engine_file"
+      }
+    },
+    {
+      "from_step": "s01_edge_onnx_export_validate",
+      "to_step": "s04_edge_trt_engine_cache_key",
+      "data_type": "edge-onnx-export-validate",
+      "field_mapping": {
+        "onnx_model": "onnx_model"
+      }
+    },
+    {
+      "from_step": "s01_edge_onnx_export_validate",
+      "to_step": "s05_edge_quantization_accuracy_check",
+      "data_type": "edge-onnx-export-validate",
+      "field_mapping": {
+        "onnx_model": "onnx_model"
+      }
+    },
+    {
+      "from_step": "s03_edge_trtexec_engine_build",
+      "to_step": "s05_edge_quantization_accuracy_check",
+      "data_type": "edge-trtexec-engine-build",
+      "field_mapping": {
+        "engine_file": "engine_file"
+      }
+    },
+    {
+      "from_step": "s03_edge_trtexec_engine_build",
+      "to_step": "s06_edge_latency_throughput_benchmark",
+      "data_type": "edge-trtexec-engine-build",
+      "field_mapping": {
+        "engine_file": "engine_file"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "model_path",
+    "input_shapes",
+    "opset_version",
+    "calibration_data",
+    "precision",
+    "device_host",
+    "memory_budget",
+    "dla_core",
+    "platform_report",
+    "cuda_stack_report",
+    "eval_data",
+    "accuracy_tolerance",
+    "clock_state"
+  ],
+  "terminal_outputs": [
+    "build_log",
+    "engine_cache_key",
+    "accuracy_report",
+    "benchmark_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_edge_onnx_export_validate"
+    ],
+    [
+      "s02_edge_int8_calibration_cache"
+    ],
+    [
+      "s03_edge_trtexec_engine_build"
+    ],
+    [
+      "s04_edge_trt_engine_cache_key",
+      "s05_edge_quantization_accuracy_check",
+      "s06_edge_latency_throughput_benchmark"
+    ]
+  ],
+  "estimated_cost": 6,
+  "critical_path": [
+    "s01_edge_onnx_export_validate",
+    "s02_edge_int8_calibration_cache",
+    "s03_edge_trtexec_engine_build",
+    "s06_edge_latency_throughput_benchmark"
+  ]
+}

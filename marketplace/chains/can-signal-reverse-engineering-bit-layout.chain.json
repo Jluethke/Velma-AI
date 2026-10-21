@@ -1,0 +1,146 @@
+{
+  "name": "can-signal-reverse-engineering-bit-layout",
+  "description": "From normalized captures to typed bit fields: baseline inventory, change counts, counter and checksum detection, bit boundary search, and endianness and signedness tests.",
+  "steps": [
+    {
+      "id": "s01_sigre_baseline_idle_inventory",
+      "skill_name": "sigre-baseline-idle-inventory",
+      "inputs": {
+        "capture_logs": "from_user_input"
+      },
+      "outputs": {
+        "id_inventory": "id_inventory"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_sigre_byte_change_count_diff",
+      "skill_name": "sigre-byte-change-count-diff",
+      "inputs": {
+        "capture_logs": "from_user_input",
+        "capture_plan": "from_user_input",
+        "id_inventory": "s01_sigre_baseline_idle_inventory.id_inventory",
+        "cansniffer_candidates": "from_user_input_optional",
+        "savvycan_candidates": "from_user_input_optional"
+      },
+      "outputs": {
+        "candidate_bytes": "candidate_bytes"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_sigre_counter_checksum_detect",
+      "skill_name": "sigre-counter-checksum-detect",
+      "inputs": {
+        "capture_logs": "from_user_input",
+        "candidate_bytes": "s02_sigre_byte_change_count_diff.candidate_bytes"
+      },
+      "outputs": {
+        "counter_checksum_map": "counter_checksum_map"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_sigre_bit_boundary_search",
+      "skill_name": "sigre-bit-boundary-search",
+      "inputs": {
+        "capture_logs": "from_user_input",
+        "candidate_bytes": "s02_sigre_byte_change_count_diff.candidate_bytes",
+        "counter_checksum_map": "s03_sigre_counter_checksum_detect.counter_checksum_map"
+      },
+      "outputs": {
+        "bit_fields": "bit_fields"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s05_sigre_endianness_signedness_test",
+      "skill_name": "sigre-endianness-signedness-test",
+      "inputs": {
+        "capture_logs": "from_user_input",
+        "bit_fields": "s04_sigre_bit_boundary_search.bit_fields",
+        "capture_plan": "from_user_input"
+      },
+      "outputs": {
+        "typed_fields": "typed_fields"
+      },
+      "parallel_group": 5
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_sigre_baseline_idle_inventory",
+      "to_step": "s02_sigre_byte_change_count_diff",
+      "data_type": "sigre-baseline-idle-inventory",
+      "field_mapping": {
+        "id_inventory": "id_inventory"
+      }
+    },
+    {
+      "from_step": "s02_sigre_byte_change_count_diff",
+      "to_step": "s03_sigre_counter_checksum_detect",
+      "data_type": "sigre-byte-change-count-diff",
+      "field_mapping": {
+        "candidate_bytes": "candidate_bytes"
+      }
+    },
+    {
+      "from_step": "s02_sigre_byte_change_count_diff",
+      "to_step": "s04_sigre_bit_boundary_search",
+      "data_type": "sigre-byte-change-count-diff",
+      "field_mapping": {
+        "candidate_bytes": "candidate_bytes"
+      }
+    },
+    {
+      "from_step": "s03_sigre_counter_checksum_detect",
+      "to_step": "s04_sigre_bit_boundary_search",
+      "data_type": "sigre-counter-checksum-detect",
+      "field_mapping": {
+        "counter_checksum_map": "counter_checksum_map"
+      }
+    },
+    {
+      "from_step": "s04_sigre_bit_boundary_search",
+      "to_step": "s05_sigre_endianness_signedness_test",
+      "data_type": "sigre-bit-boundary-search",
+      "field_mapping": {
+        "bit_fields": "bit_fields"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "capture_logs",
+    "capture_plan",
+    "cansniffer_candidates",
+    "savvycan_candidates"
+  ],
+  "terminal_outputs": [
+    "typed_fields"
+  ],
+  "parallel_groups": [
+    [
+      "s01_sigre_baseline_idle_inventory"
+    ],
+    [
+      "s02_sigre_byte_change_count_diff"
+    ],
+    [
+      "s03_sigre_counter_checksum_detect"
+    ],
+    [
+      "s04_sigre_bit_boundary_search"
+    ],
+    [
+      "s05_sigre_endianness_signedness_test"
+    ]
+  ],
+  "estimated_cost": 5,
+  "critical_path": [
+    "s01_sigre_baseline_idle_inventory",
+    "s02_sigre_byte_change_count_diff",
+    "s03_sigre_counter_checksum_detect",
+    "s04_sigre_bit_boundary_search",
+    "s05_sigre_endianness_signedness_test"
+  ]
+}

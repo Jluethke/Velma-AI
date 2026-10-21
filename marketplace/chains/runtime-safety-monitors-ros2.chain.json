@@ -1,0 +1,193 @@
+{
+  "name": "runtime-safety-monitors-ros2",
+  "description": "Add ROS 2 staleness monitoring: scope, envelope, Deadline and Liveliness QoS monitor node, rosbag2 recording, independence analysis, fault plan and netem timing faults.",
+  "steps": [
+    {
+      "id": "s01_rmon_scope_supervised_component",
+      "skill_name": "rmon-scope-supervised-component",
+      "inputs": {
+        "system_description": "from_user_input",
+        "hazard_list": "from_user_input",
+        "stack": "from_user_input",
+        "middleware": "from_user_input"
+      },
+      "outputs": {
+        "monitor_scope": "monitor_scope"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_rmon_envelope_from_requirements",
+      "skill_name": "rmon-envelope-from-requirements",
+      "inputs": {
+        "monitor_scope": "s01_rmon_scope_supervised_component.monitor_scope",
+        "requirements_doc": "from_user_input"
+      },
+      "outputs": {
+        "operating_envelope": "operating_envelope",
+        "envelope_open_questions": "envelope_open_questions"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_rmon_ros2_qos_deadline_liveliness",
+      "skill_name": "rmon-ros2-qos-deadline-liveliness",
+      "inputs": {
+        "operating_envelope": "s02_rmon_envelope_from_requirements.operating_envelope",
+        "repo_dir": "from_user_input"
+      },
+      "outputs": {
+        "ros2_qos_monitor": "ros2_qos_monitor"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_rmon_ros2_bag_monitor_record",
+      "skill_name": "rmon-ros2-bag-monitor-record",
+      "inputs": {
+        "ros2_qos_monitor": "s03_rmon_ros2_qos_deadline_liveliness.ros2_qos_monitor",
+        "log_dir": "from_user_input"
+      },
+      "outputs": {
+        "ros2_bag_record": "ros2_bag_record"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s05_rmon_independence_analysis",
+      "skill_name": "rmon-independence-analysis",
+      "inputs": {
+        "simplex_design": "from_user_input",
+        "monitor_scope": "s01_rmon_scope_supervised_component.monitor_scope"
+      },
+      "outputs": {
+        "independence_plan": "independence_plan"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s06_rmon_fault_injection_plan",
+      "skill_name": "rmon-fault-injection-plan",
+      "inputs": {
+        "operating_envelope": "s02_rmon_envelope_from_requirements.operating_envelope",
+        "independence_plan": "s05_rmon_independence_analysis.independence_plan",
+        "temporal_properties": "from_user_input"
+      },
+      "outputs": {
+        "fault_injection_plan": "fault_injection_plan"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s07_rmon_linux_netem_stress_timing",
+      "skill_name": "rmon-linux-netem-stress-timing",
+      "inputs": {
+        "fault_injection_plan": "s06_rmon_fault_injection_plan.fault_injection_plan",
+        "test_interface": "from_user_input"
+      },
+      "outputs": {
+        "timing_fault_results": "timing_fault_results"
+      },
+      "parallel_group": 4
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_rmon_scope_supervised_component",
+      "to_step": "s02_rmon_envelope_from_requirements",
+      "data_type": "rmon-scope-supervised-component",
+      "field_mapping": {
+        "monitor_scope": "monitor_scope"
+      }
+    },
+    {
+      "from_step": "s02_rmon_envelope_from_requirements",
+      "to_step": "s03_rmon_ros2_qos_deadline_liveliness",
+      "data_type": "rmon-envelope-from-requirements",
+      "field_mapping": {
+        "operating_envelope": "operating_envelope"
+      }
+    },
+    {
+      "from_step": "s03_rmon_ros2_qos_deadline_liveliness",
+      "to_step": "s04_rmon_ros2_bag_monitor_record",
+      "data_type": "rmon-ros2-qos-deadline-liveliness",
+      "field_mapping": {
+        "ros2_qos_monitor": "ros2_qos_monitor"
+      }
+    },
+    {
+      "from_step": "s01_rmon_scope_supervised_component",
+      "to_step": "s05_rmon_independence_analysis",
+      "data_type": "rmon-scope-supervised-component",
+      "field_mapping": {
+        "monitor_scope": "monitor_scope"
+      }
+    },
+    {
+      "from_step": "s02_rmon_envelope_from_requirements",
+      "to_step": "s06_rmon_fault_injection_plan",
+      "data_type": "rmon-envelope-from-requirements",
+      "field_mapping": {
+        "operating_envelope": "operating_envelope"
+      }
+    },
+    {
+      "from_step": "s05_rmon_independence_analysis",
+      "to_step": "s06_rmon_fault_injection_plan",
+      "data_type": "rmon-independence-analysis",
+      "field_mapping": {
+        "independence_plan": "independence_plan"
+      }
+    },
+    {
+      "from_step": "s06_rmon_fault_injection_plan",
+      "to_step": "s07_rmon_linux_netem_stress_timing",
+      "data_type": "rmon-fault-injection-plan",
+      "field_mapping": {
+        "fault_injection_plan": "fault_injection_plan"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "system_description",
+    "hazard_list",
+    "stack",
+    "middleware",
+    "requirements_doc",
+    "repo_dir",
+    "log_dir",
+    "simplex_design",
+    "temporal_properties",
+    "test_interface"
+  ],
+  "terminal_outputs": [
+    "envelope_open_questions",
+    "ros2_bag_record",
+    "timing_fault_results"
+  ],
+  "parallel_groups": [
+    [
+      "s01_rmon_scope_supervised_component"
+    ],
+    [
+      "s02_rmon_envelope_from_requirements",
+      "s05_rmon_independence_analysis"
+    ],
+    [
+      "s03_rmon_ros2_qos_deadline_liveliness",
+      "s06_rmon_fault_injection_plan"
+    ],
+    [
+      "s04_rmon_ros2_bag_monitor_record",
+      "s07_rmon_linux_netem_stress_timing"
+    ]
+  ],
+  "estimated_cost": 7,
+  "critical_path": [
+    "s01_rmon_scope_supervised_component",
+    "s05_rmon_independence_analysis",
+    "s06_rmon_fault_injection_plan",
+    "s07_rmon_linux_netem_stress_timing"
+  ]
+}

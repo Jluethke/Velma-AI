@@ -1,0 +1,117 @@
+{
+  "name": "cross-implementation-parity-differential",
+  "description": "Bind the port into Python, run Hypothesis differential tests against the reference, and sweep the port with sanitizers.",
+  "steps": [
+    {
+      "id": "s01_parity_fp_flag_baseline",
+      "skill_name": "parity-fp-flag-baseline",
+      "inputs": {
+        "port_repo": "from_user_input",
+        "compiler": "from_user_input",
+        "target_arch": "from_user_input"
+      },
+      "outputs": {
+        "fp_flags": "fp_flags"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_parity_pybind11_binding",
+      "skill_name": "parity-pybind11-binding",
+      "inputs": {
+        "port_repo": "from_user_input",
+        "parity_contract": "from_user_input",
+        "fp_flags": "s01_parity_fp_flag_baseline.fp_flags"
+      },
+      "outputs": {
+        "py_binding": "py_binding"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_parity_hypothesis_differential",
+      "skill_name": "parity-hypothesis-differential",
+      "inputs": {
+        "reference_repo": "from_user_input",
+        "py_binding": "s02_parity_pybind11_binding.py_binding",
+        "comparison_policy": "from_user_input"
+      },
+      "outputs": {
+        "differential_failures": "differential_failures"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_parity_cpp_sanitizer_sweep",
+      "skill_name": "parity-cpp-sanitizer-sweep",
+      "inputs": {
+        "port_repo": "from_user_input",
+        "golden_manifest": "from_user_input",
+        "compiler": "from_user_input",
+        "fp_flags": "s01_parity_fp_flag_baseline.fp_flags"
+      },
+      "outputs": {
+        "sanitizer_findings": "sanitizer_findings"
+      },
+      "condition": "compiler != 'msvc'",
+      "parallel_group": 2
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_parity_fp_flag_baseline",
+      "to_step": "s02_parity_pybind11_binding",
+      "data_type": "parity-fp-flag-baseline",
+      "field_mapping": {
+        "fp_flags": "fp_flags"
+      }
+    },
+    {
+      "from_step": "s02_parity_pybind11_binding",
+      "to_step": "s03_parity_hypothesis_differential",
+      "data_type": "parity-pybind11-binding",
+      "field_mapping": {
+        "py_binding": "py_binding"
+      }
+    },
+    {
+      "from_step": "s01_parity_fp_flag_baseline",
+      "to_step": "s04_parity_cpp_sanitizer_sweep",
+      "data_type": "parity-fp-flag-baseline",
+      "field_mapping": {
+        "fp_flags": "fp_flags"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "port_repo",
+    "compiler",
+    "target_arch",
+    "parity_contract",
+    "reference_repo",
+    "comparison_policy",
+    "golden_manifest"
+  ],
+  "terminal_outputs": [
+    "differential_failures",
+    "sanitizer_findings"
+  ],
+  "parallel_groups": [
+    [
+      "s01_parity_fp_flag_baseline"
+    ],
+    [
+      "s02_parity_pybind11_binding",
+      "s04_parity_cpp_sanitizer_sweep"
+    ],
+    [
+      "s03_parity_hypothesis_differential"
+    ]
+  ],
+  "estimated_cost": 4,
+  "critical_path": [
+    "s01_parity_fp_flag_baseline",
+    "s02_parity_pybind11_binding",
+    "s03_parity_hypothesis_differential"
+  ]
+}

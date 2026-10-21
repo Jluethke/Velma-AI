@@ -1,0 +1,829 @@
+{
+  "name": "cross-implementation-parity",
+  "description": "Prove a C++ port matches its Python reference: contract, canonical encoding, golden vectors, floating-point determinism checks per compiler, libm and reduction-order alignment, derived tolerance policy, comparison, differential and sanitizer testing, compiler and aarch64 matrix, triage, report, and CI gate.",
+  "steps": [
+    {
+      "id": "s01_parity_contract_scope",
+      "skill_name": "parity-contract-scope",
+      "inputs": {
+        "reference_repo": "from_user_input",
+        "port_repo": "from_user_input",
+        "entry_points": "from_user_input"
+      },
+      "outputs": {
+        "parity_contract": "parity_contract"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_parity_canonical_serialization",
+      "skill_name": "parity-canonical-serialization",
+      "inputs": {
+        "parity_contract": "s01_parity_contract_scope.parity_contract"
+      },
+      "outputs": {
+        "serialization_spec": "serialization_spec"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_parity_py_golden_vectors",
+      "skill_name": "parity-py-golden-vectors",
+      "inputs": {
+        "reference_repo": "from_user_input",
+        "parity_contract": "s01_parity_contract_scope.parity_contract",
+        "serialization_spec": "s02_parity_canonical_serialization.serialization_spec",
+        "seed": "from_user_input_optional"
+      },
+      "outputs": {
+        "golden_vectors": "golden_vectors"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_parity_golden_manifest_lock",
+      "skill_name": "parity-golden-manifest-lock",
+      "inputs": {
+        "golden_vectors": "s03_parity_py_golden_vectors.golden_vectors",
+        "serialization_spec": "s02_parity_canonical_serialization.serialization_spec"
+      },
+      "outputs": {
+        "golden_manifest": "golden_manifest"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s05_parity_env_fingerprint",
+      "skill_name": "parity-env-fingerprint",
+      "inputs": {
+        "port_repo": "from_user_input",
+        "compiler": "from_user_input",
+        "target_arch": "from_user_input"
+      },
+      "outputs": {
+        "env_fingerprint": "env_fingerprint"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s06_parity_fp_flag_baseline",
+      "skill_name": "parity-fp-flag-baseline",
+      "inputs": {
+        "port_repo": "from_user_input",
+        "compiler": "from_user_input",
+        "target_arch": "from_user_input"
+      },
+      "outputs": {
+        "fp_flags": "fp_flags"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s07_parity_fast_math_audit",
+      "skill_name": "parity-fast-math-audit",
+      "inputs": {
+        "port_repo": "from_user_input",
+        "fp_flags": "s06_parity_fp_flag_baseline.fp_flags"
+      },
+      "outputs": {
+        "fast_math_findings": "fast_math_findings"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s08_parity_gcc_fp_contract",
+      "skill_name": "parity-gcc-fp-contract",
+      "inputs": {
+        "port_repo": "from_user_input",
+        "fp_flags": "s06_parity_fp_flag_baseline.fp_flags"
+      },
+      "outputs": {
+        "contraction_findings": "contraction_findings"
+      },
+      "condition": "compiler == 'gcc'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s09_parity_clang_fp_contract",
+      "skill_name": "parity-clang-fp-contract",
+      "inputs": {
+        "port_repo": "from_user_input",
+        "fp_flags": "s06_parity_fp_flag_baseline.fp_flags"
+      },
+      "outputs": {
+        "contraction_findings": "contraction_findings"
+      },
+      "condition": "compiler == 'clang'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s10_parity_msvc_fp_model",
+      "skill_name": "parity-msvc-fp-model",
+      "inputs": {
+        "port_repo": "from_user_input",
+        "fp_flags": "s06_parity_fp_flag_baseline.fp_flags"
+      },
+      "outputs": {
+        "contraction_findings": "contraction_findings"
+      },
+      "condition": "compiler == 'msvc'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s11_parity_x87_excess_precision",
+      "skill_name": "parity-x87-excess-precision",
+      "inputs": {
+        "port_repo": "from_user_input",
+        "fp_flags": "s06_parity_fp_flag_baseline.fp_flags"
+      },
+      "outputs": {
+        "excess_precision_findings": "excess_precision_findings"
+      },
+      "condition": "target_arch == 'i686'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s12_parity_denormal_ftz_daz",
+      "skill_name": "parity-denormal-ftz-daz",
+      "inputs": {
+        "port_repo": "from_user_input",
+        "reference_repo": "from_user_input",
+        "fp_flags": "s06_parity_fp_flag_baseline.fp_flags"
+      },
+      "outputs": {
+        "denormal_findings": "denormal_findings"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s13_parity_cpp_vector_harness",
+      "skill_name": "parity-cpp-vector-harness",
+      "inputs": {
+        "port_repo": "from_user_input",
+        "serialization_spec": "s02_parity_canonical_serialization.serialization_spec",
+        "golden_manifest": "s04_parity_golden_manifest_lock.golden_manifest",
+        "fp_flags": "s06_parity_fp_flag_baseline.fp_flags"
+      },
+      "outputs": {
+        "harness_binary": "harness_binary"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s14_parity_pybind11_binding",
+      "skill_name": "parity-pybind11-binding",
+      "inputs": {
+        "port_repo": "from_user_input",
+        "parity_contract": "s01_parity_contract_scope.parity_contract",
+        "fp_flags": "s06_parity_fp_flag_baseline.fp_flags"
+      },
+      "outputs": {
+        "py_binding": "py_binding"
+      },
+      "condition": "harness_mode == 'pybind11'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s15_parity_libm_divergence",
+      "skill_name": "parity-libm-divergence",
+      "inputs": {
+        "parity_contract": "s01_parity_contract_scope.parity_contract",
+        "env_fingerprint": "s05_parity_env_fingerprint.env_fingerprint"
+      },
+      "outputs": {
+        "libm_findings": "libm_findings"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s16_parity_reduction_order",
+      "skill_name": "parity-reduction-order",
+      "inputs": {
+        "reference_repo": "from_user_input",
+        "port_repo": "from_user_input",
+        "parity_contract": "s01_parity_contract_scope.parity_contract"
+      },
+      "outputs": {
+        "reduction_findings": "reduction_findings"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s17_parity_int_fixed_point_semantics",
+      "skill_name": "parity-int-fixed-point-semantics",
+      "inputs": {
+        "reference_repo": "from_user_input",
+        "port_repo": "from_user_input",
+        "parity_contract": "s01_parity_contract_scope.parity_contract"
+      },
+      "outputs": {
+        "integer_findings": "integer_findings"
+      },
+      "condition": "has_integer_math == true",
+      "parallel_group": 2
+    },
+    {
+      "id": "s18_parity_ulp_tolerance_policy",
+      "skill_name": "parity-ulp-tolerance-policy",
+      "inputs": {
+        "parity_contract": "s01_parity_contract_scope.parity_contract",
+        "libm_findings": "s15_parity_libm_divergence.libm_findings",
+        "reduction_findings": "s16_parity_reduction_order.reduction_findings"
+      },
+      "outputs": {
+        "comparison_policy": "comparison_policy"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s19_parity_ulp_compare",
+      "skill_name": "parity-ulp-compare",
+      "inputs": {
+        "golden_manifest": "s04_parity_golden_manifest_lock.golden_manifest",
+        "harness_binary": "s13_parity_cpp_vector_harness.harness_binary",
+        "comparison_policy": "s18_parity_ulp_tolerance_policy.comparison_policy",
+        "serialization_spec": "s02_parity_canonical_serialization.serialization_spec"
+      },
+      "outputs": {
+        "comparison_results": "comparison_results"
+      },
+      "parallel_group": 6
+    },
+    {
+      "id": "s20_parity_hypothesis_differential",
+      "skill_name": "parity-hypothesis-differential",
+      "inputs": {
+        "reference_repo": "from_user_input",
+        "py_binding": "s14_parity_pybind11_binding.py_binding",
+        "comparison_policy": "s18_parity_ulp_tolerance_policy.comparison_policy"
+      },
+      "outputs": {
+        "differential_failures": "differential_failures"
+      },
+      "condition": "harness_mode == 'pybind11'",
+      "parallel_group": 4
+    },
+    {
+      "id": "s21_parity_cpp_sanitizer_sweep",
+      "skill_name": "parity-cpp-sanitizer-sweep",
+      "inputs": {
+        "port_repo": "from_user_input",
+        "golden_manifest": "s04_parity_golden_manifest_lock.golden_manifest",
+        "compiler": "from_user_input",
+        "fp_flags": "s06_parity_fp_flag_baseline.fp_flags"
+      },
+      "outputs": {
+        "sanitizer_findings": "sanitizer_findings"
+      },
+      "condition": "compiler != 'msvc'",
+      "parallel_group": 5
+    },
+    {
+      "id": "s22_parity_compiler_flag_matrix",
+      "skill_name": "parity-compiler-flag-matrix",
+      "inputs": {
+        "port_repo": "from_user_input",
+        "fp_flags": "s06_parity_fp_flag_baseline.fp_flags",
+        "golden_manifest": "s04_parity_golden_manifest_lock.golden_manifest",
+        "comparison_policy": "s18_parity_ulp_tolerance_policy.comparison_policy"
+      },
+      "outputs": {
+        "matrix_results": "matrix_results"
+      },
+      "condition": "compiler != 'msvc'",
+      "parallel_group": 5
+    },
+    {
+      "id": "s23_parity_cross_arch_aarch64",
+      "skill_name": "parity-cross-arch-aarch64",
+      "inputs": {
+        "port_repo": "from_user_input",
+        "fp_flags": "s06_parity_fp_flag_baseline.fp_flags",
+        "golden_manifest": "s04_parity_golden_manifest_lock.golden_manifest",
+        "comparison_policy": "s18_parity_ulp_tolerance_policy.comparison_policy"
+      },
+      "outputs": {
+        "cross_arch_results": "cross_arch_results"
+      },
+      "condition": "run_aarch64 == true",
+      "parallel_group": 5
+    },
+    {
+      "id": "s24_parity_divergence_triage",
+      "skill_name": "parity-divergence-triage",
+      "inputs": {
+        "comparison_results": "s19_parity_ulp_compare.comparison_results",
+        "reference_repo": "from_user_input",
+        "port_repo": "from_user_input",
+        "env_fingerprint": "s05_parity_env_fingerprint.env_fingerprint"
+      },
+      "outputs": {
+        "triage_findings": "triage_findings"
+      },
+      "parallel_group": 7
+    },
+    {
+      "id": "s25_parity_report",
+      "skill_name": "parity-report",
+      "inputs": {
+        "comparison_results": "s19_parity_ulp_compare.comparison_results",
+        "triage_findings": "s24_parity_divergence_triage.triage_findings",
+        "env_fingerprint": "s05_parity_env_fingerprint.env_fingerprint",
+        "golden_manifest": "s04_parity_golden_manifest_lock.golden_manifest",
+        "matrix_results": "s22_parity_compiler_flag_matrix.matrix_results",
+        "cross_arch_results": "s23_parity_cross_arch_aarch64.cross_arch_results"
+      },
+      "outputs": {
+        "parity_report": "parity_report"
+      },
+      "parallel_group": 8
+    },
+    {
+      "id": "s26_parity_ci_gate_github",
+      "skill_name": "parity-ci-gate-github",
+      "inputs": {
+        "parity_report": "s25_parity_report.parity_report",
+        "comparison_policy": "s18_parity_ulp_tolerance_policy.comparison_policy",
+        "golden_manifest": "s04_parity_golden_manifest_lock.golden_manifest",
+        "port_repo": "from_user_input"
+      },
+      "outputs": {
+        "ci_workflow": "ci_workflow"
+      },
+      "condition": "ci == 'github'",
+      "parallel_group": 9
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_parity_contract_scope",
+      "to_step": "s02_parity_canonical_serialization",
+      "data_type": "parity-contract-scope",
+      "field_mapping": {
+        "parity_contract": "parity_contract"
+      }
+    },
+    {
+      "from_step": "s01_parity_contract_scope",
+      "to_step": "s03_parity_py_golden_vectors",
+      "data_type": "parity-contract-scope",
+      "field_mapping": {
+        "parity_contract": "parity_contract"
+      }
+    },
+    {
+      "from_step": "s02_parity_canonical_serialization",
+      "to_step": "s03_parity_py_golden_vectors",
+      "data_type": "parity-canonical-serialization",
+      "field_mapping": {
+        "serialization_spec": "serialization_spec"
+      }
+    },
+    {
+      "from_step": "s03_parity_py_golden_vectors",
+      "to_step": "s04_parity_golden_manifest_lock",
+      "data_type": "parity-py-golden-vectors",
+      "field_mapping": {
+        "golden_vectors": "golden_vectors"
+      }
+    },
+    {
+      "from_step": "s02_parity_canonical_serialization",
+      "to_step": "s04_parity_golden_manifest_lock",
+      "data_type": "parity-canonical-serialization",
+      "field_mapping": {
+        "serialization_spec": "serialization_spec"
+      }
+    },
+    {
+      "from_step": "s06_parity_fp_flag_baseline",
+      "to_step": "s07_parity_fast_math_audit",
+      "data_type": "parity-fp-flag-baseline",
+      "field_mapping": {
+        "fp_flags": "fp_flags"
+      }
+    },
+    {
+      "from_step": "s06_parity_fp_flag_baseline",
+      "to_step": "s08_parity_gcc_fp_contract",
+      "data_type": "parity-fp-flag-baseline",
+      "field_mapping": {
+        "fp_flags": "fp_flags"
+      }
+    },
+    {
+      "from_step": "s06_parity_fp_flag_baseline",
+      "to_step": "s09_parity_clang_fp_contract",
+      "data_type": "parity-fp-flag-baseline",
+      "field_mapping": {
+        "fp_flags": "fp_flags"
+      }
+    },
+    {
+      "from_step": "s06_parity_fp_flag_baseline",
+      "to_step": "s10_parity_msvc_fp_model",
+      "data_type": "parity-fp-flag-baseline",
+      "field_mapping": {
+        "fp_flags": "fp_flags"
+      }
+    },
+    {
+      "from_step": "s06_parity_fp_flag_baseline",
+      "to_step": "s11_parity_x87_excess_precision",
+      "data_type": "parity-fp-flag-baseline",
+      "field_mapping": {
+        "fp_flags": "fp_flags"
+      }
+    },
+    {
+      "from_step": "s06_parity_fp_flag_baseline",
+      "to_step": "s12_parity_denormal_ftz_daz",
+      "data_type": "parity-fp-flag-baseline",
+      "field_mapping": {
+        "fp_flags": "fp_flags"
+      }
+    },
+    {
+      "from_step": "s02_parity_canonical_serialization",
+      "to_step": "s13_parity_cpp_vector_harness",
+      "data_type": "parity-canonical-serialization",
+      "field_mapping": {
+        "serialization_spec": "serialization_spec"
+      }
+    },
+    {
+      "from_step": "s04_parity_golden_manifest_lock",
+      "to_step": "s13_parity_cpp_vector_harness",
+      "data_type": "parity-golden-manifest-lock",
+      "field_mapping": {
+        "golden_manifest": "golden_manifest"
+      }
+    },
+    {
+      "from_step": "s06_parity_fp_flag_baseline",
+      "to_step": "s13_parity_cpp_vector_harness",
+      "data_type": "parity-fp-flag-baseline",
+      "field_mapping": {
+        "fp_flags": "fp_flags"
+      }
+    },
+    {
+      "from_step": "s01_parity_contract_scope",
+      "to_step": "s14_parity_pybind11_binding",
+      "data_type": "parity-contract-scope",
+      "field_mapping": {
+        "parity_contract": "parity_contract"
+      }
+    },
+    {
+      "from_step": "s06_parity_fp_flag_baseline",
+      "to_step": "s14_parity_pybind11_binding",
+      "data_type": "parity-fp-flag-baseline",
+      "field_mapping": {
+        "fp_flags": "fp_flags"
+      }
+    },
+    {
+      "from_step": "s01_parity_contract_scope",
+      "to_step": "s15_parity_libm_divergence",
+      "data_type": "parity-contract-scope",
+      "field_mapping": {
+        "parity_contract": "parity_contract"
+      }
+    },
+    {
+      "from_step": "s05_parity_env_fingerprint",
+      "to_step": "s15_parity_libm_divergence",
+      "data_type": "parity-env-fingerprint",
+      "field_mapping": {
+        "env_fingerprint": "env_fingerprint"
+      }
+    },
+    {
+      "from_step": "s01_parity_contract_scope",
+      "to_step": "s16_parity_reduction_order",
+      "data_type": "parity-contract-scope",
+      "field_mapping": {
+        "parity_contract": "parity_contract"
+      }
+    },
+    {
+      "from_step": "s01_parity_contract_scope",
+      "to_step": "s17_parity_int_fixed_point_semantics",
+      "data_type": "parity-contract-scope",
+      "field_mapping": {
+        "parity_contract": "parity_contract"
+      }
+    },
+    {
+      "from_step": "s01_parity_contract_scope",
+      "to_step": "s18_parity_ulp_tolerance_policy",
+      "data_type": "parity-contract-scope",
+      "field_mapping": {
+        "parity_contract": "parity_contract"
+      }
+    },
+    {
+      "from_step": "s15_parity_libm_divergence",
+      "to_step": "s18_parity_ulp_tolerance_policy",
+      "data_type": "parity-libm-divergence",
+      "field_mapping": {
+        "libm_findings": "libm_findings"
+      }
+    },
+    {
+      "from_step": "s16_parity_reduction_order",
+      "to_step": "s18_parity_ulp_tolerance_policy",
+      "data_type": "parity-reduction-order",
+      "field_mapping": {
+        "reduction_findings": "reduction_findings"
+      }
+    },
+    {
+      "from_step": "s04_parity_golden_manifest_lock",
+      "to_step": "s19_parity_ulp_compare",
+      "data_type": "parity-golden-manifest-lock",
+      "field_mapping": {
+        "golden_manifest": "golden_manifest"
+      }
+    },
+    {
+      "from_step": "s13_parity_cpp_vector_harness",
+      "to_step": "s19_parity_ulp_compare",
+      "data_type": "parity-cpp-vector-harness",
+      "field_mapping": {
+        "harness_binary": "harness_binary"
+      }
+    },
+    {
+      "from_step": "s18_parity_ulp_tolerance_policy",
+      "to_step": "s19_parity_ulp_compare",
+      "data_type": "parity-ulp-tolerance-policy",
+      "field_mapping": {
+        "comparison_policy": "comparison_policy"
+      }
+    },
+    {
+      "from_step": "s02_parity_canonical_serialization",
+      "to_step": "s19_parity_ulp_compare",
+      "data_type": "parity-canonical-serialization",
+      "field_mapping": {
+        "serialization_spec": "serialization_spec"
+      }
+    },
+    {
+      "from_step": "s14_parity_pybind11_binding",
+      "to_step": "s20_parity_hypothesis_differential",
+      "data_type": "parity-pybind11-binding",
+      "field_mapping": {
+        "py_binding": "py_binding"
+      }
+    },
+    {
+      "from_step": "s18_parity_ulp_tolerance_policy",
+      "to_step": "s20_parity_hypothesis_differential",
+      "data_type": "parity-ulp-tolerance-policy",
+      "field_mapping": {
+        "comparison_policy": "comparison_policy"
+      }
+    },
+    {
+      "from_step": "s04_parity_golden_manifest_lock",
+      "to_step": "s21_parity_cpp_sanitizer_sweep",
+      "data_type": "parity-golden-manifest-lock",
+      "field_mapping": {
+        "golden_manifest": "golden_manifest"
+      }
+    },
+    {
+      "from_step": "s06_parity_fp_flag_baseline",
+      "to_step": "s21_parity_cpp_sanitizer_sweep",
+      "data_type": "parity-fp-flag-baseline",
+      "field_mapping": {
+        "fp_flags": "fp_flags"
+      }
+    },
+    {
+      "from_step": "s06_parity_fp_flag_baseline",
+      "to_step": "s22_parity_compiler_flag_matrix",
+      "data_type": "parity-fp-flag-baseline",
+      "field_mapping": {
+        "fp_flags": "fp_flags"
+      }
+    },
+    {
+      "from_step": "s04_parity_golden_manifest_lock",
+      "to_step": "s22_parity_compiler_flag_matrix",
+      "data_type": "parity-golden-manifest-lock",
+      "field_mapping": {
+        "golden_manifest": "golden_manifest"
+      }
+    },
+    {
+      "from_step": "s18_parity_ulp_tolerance_policy",
+      "to_step": "s22_parity_compiler_flag_matrix",
+      "data_type": "parity-ulp-tolerance-policy",
+      "field_mapping": {
+        "comparison_policy": "comparison_policy"
+      }
+    },
+    {
+      "from_step": "s06_parity_fp_flag_baseline",
+      "to_step": "s23_parity_cross_arch_aarch64",
+      "data_type": "parity-fp-flag-baseline",
+      "field_mapping": {
+        "fp_flags": "fp_flags"
+      }
+    },
+    {
+      "from_step": "s04_parity_golden_manifest_lock",
+      "to_step": "s23_parity_cross_arch_aarch64",
+      "data_type": "parity-golden-manifest-lock",
+      "field_mapping": {
+        "golden_manifest": "golden_manifest"
+      }
+    },
+    {
+      "from_step": "s18_parity_ulp_tolerance_policy",
+      "to_step": "s23_parity_cross_arch_aarch64",
+      "data_type": "parity-ulp-tolerance-policy",
+      "field_mapping": {
+        "comparison_policy": "comparison_policy"
+      }
+    },
+    {
+      "from_step": "s19_parity_ulp_compare",
+      "to_step": "s24_parity_divergence_triage",
+      "data_type": "parity-ulp-compare",
+      "field_mapping": {
+        "comparison_results": "comparison_results"
+      }
+    },
+    {
+      "from_step": "s05_parity_env_fingerprint",
+      "to_step": "s24_parity_divergence_triage",
+      "data_type": "parity-env-fingerprint",
+      "field_mapping": {
+        "env_fingerprint": "env_fingerprint"
+      }
+    },
+    {
+      "from_step": "s19_parity_ulp_compare",
+      "to_step": "s25_parity_report",
+      "data_type": "parity-ulp-compare",
+      "field_mapping": {
+        "comparison_results": "comparison_results"
+      }
+    },
+    {
+      "from_step": "s24_parity_divergence_triage",
+      "to_step": "s25_parity_report",
+      "data_type": "parity-divergence-triage",
+      "field_mapping": {
+        "triage_findings": "triage_findings"
+      }
+    },
+    {
+      "from_step": "s05_parity_env_fingerprint",
+      "to_step": "s25_parity_report",
+      "data_type": "parity-env-fingerprint",
+      "field_mapping": {
+        "env_fingerprint": "env_fingerprint"
+      }
+    },
+    {
+      "from_step": "s04_parity_golden_manifest_lock",
+      "to_step": "s25_parity_report",
+      "data_type": "parity-golden-manifest-lock",
+      "field_mapping": {
+        "golden_manifest": "golden_manifest"
+      }
+    },
+    {
+      "from_step": "s22_parity_compiler_flag_matrix",
+      "to_step": "s25_parity_report",
+      "data_type": "parity-compiler-flag-matrix",
+      "field_mapping": {
+        "matrix_results": "matrix_results"
+      }
+    },
+    {
+      "from_step": "s23_parity_cross_arch_aarch64",
+      "to_step": "s25_parity_report",
+      "data_type": "parity-cross-arch-aarch64",
+      "field_mapping": {
+        "cross_arch_results": "cross_arch_results"
+      }
+    },
+    {
+      "from_step": "s25_parity_report",
+      "to_step": "s26_parity_ci_gate_github",
+      "data_type": "parity-report",
+      "field_mapping": {
+        "parity_report": "parity_report"
+      }
+    },
+    {
+      "from_step": "s18_parity_ulp_tolerance_policy",
+      "to_step": "s26_parity_ci_gate_github",
+      "data_type": "parity-ulp-tolerance-policy",
+      "field_mapping": {
+        "comparison_policy": "comparison_policy"
+      }
+    },
+    {
+      "from_step": "s04_parity_golden_manifest_lock",
+      "to_step": "s26_parity_ci_gate_github",
+      "data_type": "parity-golden-manifest-lock",
+      "field_mapping": {
+        "golden_manifest": "golden_manifest"
+      }
+    },
+    {
+      "from_step": "s24_parity_divergence_triage",
+      "to_step": "s19_parity_ulp_compare",
+      "data_type": "parity-divergence-triage",
+      "field_mapping": {
+        "triage_findings": "triage_findings"
+      },
+      "condition": "triage_findings has a fix applied and mismatches remain",
+      "max_loops": 3
+    }
+  ],
+  "entry_inputs": [
+    "reference_repo",
+    "port_repo",
+    "entry_points",
+    "seed",
+    "compiler",
+    "target_arch"
+  ],
+  "terminal_outputs": [
+    "fast_math_findings",
+    "contraction_findings",
+    "excess_precision_findings",
+    "denormal_findings",
+    "integer_findings",
+    "differential_failures",
+    "sanitizer_findings",
+    "ci_workflow"
+  ],
+  "parallel_groups": [
+    [
+      "s01_parity_contract_scope",
+      "s05_parity_env_fingerprint",
+      "s06_parity_fp_flag_baseline"
+    ],
+    [
+      "s02_parity_canonical_serialization",
+      "s07_parity_fast_math_audit",
+      "s08_parity_gcc_fp_contract",
+      "s09_parity_clang_fp_contract",
+      "s10_parity_msvc_fp_model",
+      "s11_parity_x87_excess_precision",
+      "s12_parity_denormal_ftz_daz",
+      "s14_parity_pybind11_binding",
+      "s15_parity_libm_divergence",
+      "s16_parity_reduction_order",
+      "s17_parity_int_fixed_point_semantics"
+    ],
+    [
+      "s03_parity_py_golden_vectors",
+      "s18_parity_ulp_tolerance_policy"
+    ],
+    [
+      "s04_parity_golden_manifest_lock",
+      "s20_parity_hypothesis_differential"
+    ],
+    [
+      "s13_parity_cpp_vector_harness",
+      "s21_parity_cpp_sanitizer_sweep",
+      "s22_parity_compiler_flag_matrix",
+      "s23_parity_cross_arch_aarch64"
+    ],
+    [
+      "s19_parity_ulp_compare"
+    ],
+    [
+      "s24_parity_divergence_triage"
+    ],
+    [
+      "s25_parity_report"
+    ],
+    [
+      "s26_parity_ci_gate_github"
+    ]
+  ],
+  "estimated_cost": 26,
+  "critical_path": [
+    "s01_parity_contract_scope",
+    "s02_parity_canonical_serialization",
+    "s03_parity_py_golden_vectors",
+    "s04_parity_golden_manifest_lock",
+    "s13_parity_cpp_vector_harness",
+    "s19_parity_ulp_compare",
+    "s24_parity_divergence_triage",
+    "s25_parity_report",
+    "s26_parity_ci_gate_github"
+  ]
+}

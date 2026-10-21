@@ -1,0 +1,735 @@
+{
+  "name": "payments-integration",
+  "description": "Full payments engineering pipeline: choose the surface, reduce PCI scope, fix money units, set up test mode and idempotency, build intents and verified webhooks per stack, deduplicate and replay events, handle SCA, refunds, disputes, multi-currency, payout reconciliation, PayPal and Adyen branches, and issue a release verdict.",
+  "steps": [
+    {
+      "id": "s01_pay_stripe_integration_choice",
+      "skill_name": "pay-stripe-integration-choice",
+      "inputs": {
+        "product_requirements": "from_user_input",
+        "provider": "from_user_input",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "integration_plan": "integration_plan"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_pay_pci_scope_saq",
+      "skill_name": "pay-pci-scope-saq",
+      "inputs": {
+        "integration_plan": "s01_pay_stripe_integration_choice.integration_plan",
+        "page_hosting": "from_user_input"
+      },
+      "outputs": {
+        "pci_scope_report": "pci_scope_report"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_pay_money_minor_units",
+      "skill_name": "pay-money-minor-units",
+      "inputs": {
+        "project_dir": "from_user_input",
+        "currencies": "from_user_input"
+      },
+      "outputs": {
+        "money_audit": "money_audit",
+        "currency_exponents": "currency_exponents"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s04_pay_test_mode_setup",
+      "skill_name": "pay-test-mode-setup",
+      "inputs": {
+        "project_dir": "from_user_input",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "test_env": "test_env"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s05_pay_stripe_cli_local_webhooks",
+      "skill_name": "pay-stripe-cli-local-webhooks",
+      "inputs": {
+        "test_env": "s04_pay_test_mode_setup.test_env",
+        "webhook_path": "from_user_input",
+        "local_port": "from_user_input"
+      },
+      "outputs": {
+        "webhook_secret_local": "webhook_secret_local",
+        "cli_trigger_log": "cli_trigger_log"
+      },
+      "condition": "provider == 'stripe'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s06_pay_idempotency_keys",
+      "skill_name": "pay-idempotency-keys",
+      "inputs": {
+        "project_dir": "from_user_input",
+        "stack": "from_user_input",
+        "provider": "from_user_input"
+      },
+      "outputs": {
+        "idempotency_audit": "idempotency_audit"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s07_pay_py_payment_intent",
+      "skill_name": "pay-py-payment-intent",
+      "inputs": {
+        "project_dir": "from_user_input",
+        "test_env": "s04_pay_test_mode_setup.test_env",
+        "currency_exponents": "s03_pay_money_minor_units.currency_exponents",
+        "idempotency_audit": "s06_pay_idempotency_keys.idempotency_audit"
+      },
+      "outputs": {
+        "payment_intent_endpoint": "payment_intent_endpoint"
+      },
+      "condition": "provider == 'stripe' and stack == 'python' and s01_pay_stripe_integration_choice.integration_plan.surface == 'elements'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s08_pay_node_payment_intent",
+      "skill_name": "pay-node-payment-intent",
+      "inputs": {
+        "project_dir": "from_user_input",
+        "test_env": "s04_pay_test_mode_setup.test_env",
+        "currency_exponents": "s03_pay_money_minor_units.currency_exponents",
+        "idempotency_audit": "s06_pay_idempotency_keys.idempotency_audit"
+      },
+      "outputs": {
+        "payment_intent_endpoint": "payment_intent_endpoint"
+      },
+      "condition": "provider == 'stripe' and stack == 'node' and s01_pay_stripe_integration_choice.integration_plan.surface == 'elements'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s09_pay_go_payment_intent",
+      "skill_name": "pay-go-payment-intent",
+      "inputs": {
+        "project_dir": "from_user_input",
+        "test_env": "s04_pay_test_mode_setup.test_env",
+        "currency_exponents": "s03_pay_money_minor_units.currency_exponents",
+        "idempotency_audit": "s06_pay_idempotency_keys.idempotency_audit"
+      },
+      "outputs": {
+        "payment_intent_endpoint": "payment_intent_endpoint"
+      },
+      "condition": "provider == 'stripe' and stack == 'go' and s01_pay_stripe_integration_choice.integration_plan.surface == 'elements'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s10_pay_checkout_session",
+      "skill_name": "pay-checkout-session",
+      "inputs": {
+        "project_dir": "from_user_input",
+        "stack": "from_user_input",
+        "test_env": "s04_pay_test_mode_setup.test_env",
+        "currency_exponents": "s03_pay_money_minor_units.currency_exponents"
+      },
+      "outputs": {
+        "checkout_session_endpoint": "checkout_session_endpoint"
+      },
+      "condition": "provider == 'stripe' and s01_pay_stripe_integration_choice.integration_plan.surface == 'checkout'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s11_pay_payment_element_client",
+      "skill_name": "pay-payment-element-client",
+      "inputs": {
+        "integration_plan": "s01_pay_stripe_integration_choice.integration_plan",
+        "test_env": "s04_pay_test_mode_setup.test_env",
+        "server_endpoint_path": "from_user_input",
+        "return_url": "from_user_input"
+      },
+      "outputs": {
+        "client_confirm_flow": "client_confirm_flow"
+      },
+      "condition": "provider == 'stripe' and s01_pay_stripe_integration_choice.integration_plan.surface == 'elements'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s12_pay_setup_intent_saved_cards",
+      "skill_name": "pay-setup-intent-saved-cards",
+      "inputs": {
+        "project_dir": "from_user_input",
+        "stack": "from_user_input",
+        "test_env": "s04_pay_test_mode_setup.test_env",
+        "idempotency_audit": "s06_pay_idempotency_keys.idempotency_audit"
+      },
+      "outputs": {
+        "setup_intent_flow": "setup_intent_flow",
+        "off_session_charge_procedure": "off_session_charge_procedure"
+      },
+      "condition": "provider == 'stripe' and s01_pay_stripe_integration_choice.integration_plan.saves_cards == true",
+      "parallel_group": 2
+    },
+    {
+      "id": "s13_pay_sca_3ds_handling",
+      "skill_name": "pay-sca-3ds-handling",
+      "inputs": {
+        "client_confirm_flow": "s11_pay_payment_element_client.client_confirm_flow",
+        "test_env": "s04_pay_test_mode_setup.test_env"
+      },
+      "outputs": {
+        "sca_test_results": "sca_test_results"
+      },
+      "condition": "provider == 'stripe' and s01_pay_stripe_integration_choice.integration_plan.surface == 'elements'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s14_pay_py_webhook_verify",
+      "skill_name": "pay-py-webhook-verify",
+      "inputs": {
+        "project_dir": "from_user_input",
+        "python_framework": "from_user_input",
+        "webhook_secret_local": "s05_pay_stripe_cli_local_webhooks.webhook_secret_local"
+      },
+      "outputs": {
+        "webhook_handler": "webhook_handler"
+      },
+      "condition": "provider == 'stripe' and stack == 'python'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s15_pay_node_webhook_verify",
+      "skill_name": "pay-node-webhook-verify",
+      "inputs": {
+        "project_dir": "from_user_input",
+        "node_framework": "from_user_input",
+        "webhook_secret_local": "s05_pay_stripe_cli_local_webhooks.webhook_secret_local"
+      },
+      "outputs": {
+        "webhook_handler": "webhook_handler"
+      },
+      "condition": "provider == 'stripe' and stack == 'node'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s16_pay_go_webhook_verify",
+      "skill_name": "pay-go-webhook-verify",
+      "inputs": {
+        "project_dir": "from_user_input",
+        "webhook_secret_local": "s05_pay_stripe_cli_local_webhooks.webhook_secret_local"
+      },
+      "outputs": {
+        "webhook_handler": "webhook_handler"
+      },
+      "condition": "provider == 'stripe' and stack == 'go'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s17_pay_webhook_dedup_ordering",
+      "skill_name": "pay-webhook-dedup-ordering",
+      "inputs": {
+        "project_dir": "from_user_input",
+        "database": "from_user_input",
+        "webhook_handler_file": "from_user_input"
+      },
+      "outputs": {
+        "event_store_schema": "event_store_schema",
+        "dedup_test_results": "dedup_test_results"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s18_pay_webhook_retry_replay",
+      "skill_name": "pay-webhook-retry-replay",
+      "inputs": {
+        "event_store_schema": "s17_pay_webhook_dedup_ordering.event_store_schema",
+        "test_env": "s04_pay_test_mode_setup.test_env"
+      },
+      "outputs": {
+        "replay_runbook": "replay_runbook"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s19_pay_refunds_partial",
+      "skill_name": "pay-refunds-partial",
+      "inputs": {
+        "project_dir": "from_user_input",
+        "stack": "from_user_input",
+        "idempotency_audit": "s06_pay_idempotency_keys.idempotency_audit",
+        "currency_exponents": "s03_pay_money_minor_units.currency_exponents"
+      },
+      "outputs": {
+        "refund_procedure": "refund_procedure"
+      },
+      "condition": "provider == 'stripe'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s20_pay_disputes_evidence",
+      "skill_name": "pay-disputes-evidence",
+      "inputs": {
+        "event_store_schema": "s17_pay_webhook_dedup_ordering.event_store_schema",
+        "test_env": "s04_pay_test_mode_setup.test_env"
+      },
+      "outputs": {
+        "dispute_runbook": "dispute_runbook"
+      },
+      "condition": "provider == 'stripe'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s21_pay_multi_currency",
+      "skill_name": "pay-multi-currency",
+      "inputs": {
+        "currencies": "from_user_input",
+        "currency_exponents": "s03_pay_money_minor_units.currency_exponents",
+        "integration_plan": "s01_pay_stripe_integration_choice.integration_plan"
+      },
+      "outputs": {
+        "currency_config": "currency_config"
+      },
+      "condition": "provider == 'stripe'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s22_pay_payout_reconciliation",
+      "skill_name": "pay-payout-reconciliation",
+      "inputs": {
+        "test_env": "s04_pay_test_mode_setup.test_env",
+        "database": "from_user_input",
+        "currency_exponents": "s03_pay_money_minor_units.currency_exponents"
+      },
+      "outputs": {
+        "reconciliation_report": "reconciliation_report"
+      },
+      "condition": "provider == 'stripe'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s23_pay_paypal_orders_v2",
+      "skill_name": "pay-paypal-orders-v2",
+      "inputs": {
+        "project_dir": "from_user_input",
+        "stack": "from_user_input",
+        "currency_exponents": "s03_pay_money_minor_units.currency_exponents"
+      },
+      "outputs": {
+        "paypal_integration": "paypal_integration"
+      },
+      "condition": "provider == 'paypal'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s24_pay_adyen_checkout_sessions",
+      "skill_name": "pay-adyen-checkout-sessions",
+      "inputs": {
+        "project_dir": "from_user_input",
+        "stack": "from_user_input",
+        "currency_exponents": "s03_pay_money_minor_units.currency_exponents"
+      },
+      "outputs": {
+        "adyen_integration": "adyen_integration"
+      },
+      "condition": "provider == 'adyen'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s25_pay_integration_test_matrix",
+      "skill_name": "pay-integration-test-matrix",
+      "inputs": {
+        "sca_test_results": "s13_pay_sca_3ds_handling.sca_test_results",
+        "dedup_test_results": "s17_pay_webhook_dedup_ordering.dedup_test_results",
+        "refund_procedure": "s19_pay_refunds_partial.refund_procedure",
+        "pci_scope_report": "s02_pay_pci_scope_saq.pci_scope_report"
+      },
+      "outputs": {
+        "test_matrix_report": "test_matrix_report",
+        "release_verdict": "release_verdict"
+      },
+      "parallel_group": 4
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_pay_stripe_integration_choice",
+      "to_step": "s02_pay_pci_scope_saq",
+      "data_type": "pay-stripe-integration-choice",
+      "field_mapping": {
+        "integration_plan": "integration_plan"
+      }
+    },
+    {
+      "from_step": "s04_pay_test_mode_setup",
+      "to_step": "s05_pay_stripe_cli_local_webhooks",
+      "data_type": "pay-test-mode-setup",
+      "field_mapping": {
+        "test_env": "test_env"
+      }
+    },
+    {
+      "from_step": "s04_pay_test_mode_setup",
+      "to_step": "s07_pay_py_payment_intent",
+      "data_type": "pay-test-mode-setup",
+      "field_mapping": {
+        "test_env": "test_env"
+      }
+    },
+    {
+      "from_step": "s03_pay_money_minor_units",
+      "to_step": "s07_pay_py_payment_intent",
+      "data_type": "pay-money-minor-units",
+      "field_mapping": {
+        "currency_exponents": "currency_exponents"
+      }
+    },
+    {
+      "from_step": "s06_pay_idempotency_keys",
+      "to_step": "s07_pay_py_payment_intent",
+      "data_type": "pay-idempotency-keys",
+      "field_mapping": {
+        "idempotency_audit": "idempotency_audit"
+      }
+    },
+    {
+      "from_step": "s04_pay_test_mode_setup",
+      "to_step": "s08_pay_node_payment_intent",
+      "data_type": "pay-test-mode-setup",
+      "field_mapping": {
+        "test_env": "test_env"
+      }
+    },
+    {
+      "from_step": "s03_pay_money_minor_units",
+      "to_step": "s08_pay_node_payment_intent",
+      "data_type": "pay-money-minor-units",
+      "field_mapping": {
+        "currency_exponents": "currency_exponents"
+      }
+    },
+    {
+      "from_step": "s06_pay_idempotency_keys",
+      "to_step": "s08_pay_node_payment_intent",
+      "data_type": "pay-idempotency-keys",
+      "field_mapping": {
+        "idempotency_audit": "idempotency_audit"
+      }
+    },
+    {
+      "from_step": "s04_pay_test_mode_setup",
+      "to_step": "s09_pay_go_payment_intent",
+      "data_type": "pay-test-mode-setup",
+      "field_mapping": {
+        "test_env": "test_env"
+      }
+    },
+    {
+      "from_step": "s03_pay_money_minor_units",
+      "to_step": "s09_pay_go_payment_intent",
+      "data_type": "pay-money-minor-units",
+      "field_mapping": {
+        "currency_exponents": "currency_exponents"
+      }
+    },
+    {
+      "from_step": "s06_pay_idempotency_keys",
+      "to_step": "s09_pay_go_payment_intent",
+      "data_type": "pay-idempotency-keys",
+      "field_mapping": {
+        "idempotency_audit": "idempotency_audit"
+      }
+    },
+    {
+      "from_step": "s04_pay_test_mode_setup",
+      "to_step": "s10_pay_checkout_session",
+      "data_type": "pay-test-mode-setup",
+      "field_mapping": {
+        "test_env": "test_env"
+      }
+    },
+    {
+      "from_step": "s03_pay_money_minor_units",
+      "to_step": "s10_pay_checkout_session",
+      "data_type": "pay-money-minor-units",
+      "field_mapping": {
+        "currency_exponents": "currency_exponents"
+      }
+    },
+    {
+      "from_step": "s01_pay_stripe_integration_choice",
+      "to_step": "s11_pay_payment_element_client",
+      "data_type": "pay-stripe-integration-choice",
+      "field_mapping": {
+        "integration_plan": "integration_plan"
+      }
+    },
+    {
+      "from_step": "s04_pay_test_mode_setup",
+      "to_step": "s11_pay_payment_element_client",
+      "data_type": "pay-test-mode-setup",
+      "field_mapping": {
+        "test_env": "test_env"
+      }
+    },
+    {
+      "from_step": "s04_pay_test_mode_setup",
+      "to_step": "s12_pay_setup_intent_saved_cards",
+      "data_type": "pay-test-mode-setup",
+      "field_mapping": {
+        "test_env": "test_env"
+      }
+    },
+    {
+      "from_step": "s06_pay_idempotency_keys",
+      "to_step": "s12_pay_setup_intent_saved_cards",
+      "data_type": "pay-idempotency-keys",
+      "field_mapping": {
+        "idempotency_audit": "idempotency_audit"
+      }
+    },
+    {
+      "from_step": "s11_pay_payment_element_client",
+      "to_step": "s13_pay_sca_3ds_handling",
+      "data_type": "pay-payment-element-client",
+      "field_mapping": {
+        "client_confirm_flow": "client_confirm_flow"
+      }
+    },
+    {
+      "from_step": "s04_pay_test_mode_setup",
+      "to_step": "s13_pay_sca_3ds_handling",
+      "data_type": "pay-test-mode-setup",
+      "field_mapping": {
+        "test_env": "test_env"
+      }
+    },
+    {
+      "from_step": "s05_pay_stripe_cli_local_webhooks",
+      "to_step": "s14_pay_py_webhook_verify",
+      "data_type": "pay-stripe-cli-local-webhooks",
+      "field_mapping": {
+        "webhook_secret_local": "webhook_secret_local"
+      }
+    },
+    {
+      "from_step": "s05_pay_stripe_cli_local_webhooks",
+      "to_step": "s15_pay_node_webhook_verify",
+      "data_type": "pay-stripe-cli-local-webhooks",
+      "field_mapping": {
+        "webhook_secret_local": "webhook_secret_local"
+      }
+    },
+    {
+      "from_step": "s05_pay_stripe_cli_local_webhooks",
+      "to_step": "s16_pay_go_webhook_verify",
+      "data_type": "pay-stripe-cli-local-webhooks",
+      "field_mapping": {
+        "webhook_secret_local": "webhook_secret_local"
+      }
+    },
+    {
+      "from_step": "s17_pay_webhook_dedup_ordering",
+      "to_step": "s18_pay_webhook_retry_replay",
+      "data_type": "pay-webhook-dedup-ordering",
+      "field_mapping": {
+        "event_store_schema": "event_store_schema"
+      }
+    },
+    {
+      "from_step": "s04_pay_test_mode_setup",
+      "to_step": "s18_pay_webhook_retry_replay",
+      "data_type": "pay-test-mode-setup",
+      "field_mapping": {
+        "test_env": "test_env"
+      }
+    },
+    {
+      "from_step": "s06_pay_idempotency_keys",
+      "to_step": "s19_pay_refunds_partial",
+      "data_type": "pay-idempotency-keys",
+      "field_mapping": {
+        "idempotency_audit": "idempotency_audit"
+      }
+    },
+    {
+      "from_step": "s03_pay_money_minor_units",
+      "to_step": "s19_pay_refunds_partial",
+      "data_type": "pay-money-minor-units",
+      "field_mapping": {
+        "currency_exponents": "currency_exponents"
+      }
+    },
+    {
+      "from_step": "s17_pay_webhook_dedup_ordering",
+      "to_step": "s20_pay_disputes_evidence",
+      "data_type": "pay-webhook-dedup-ordering",
+      "field_mapping": {
+        "event_store_schema": "event_store_schema"
+      }
+    },
+    {
+      "from_step": "s04_pay_test_mode_setup",
+      "to_step": "s20_pay_disputes_evidence",
+      "data_type": "pay-test-mode-setup",
+      "field_mapping": {
+        "test_env": "test_env"
+      }
+    },
+    {
+      "from_step": "s03_pay_money_minor_units",
+      "to_step": "s21_pay_multi_currency",
+      "data_type": "pay-money-minor-units",
+      "field_mapping": {
+        "currency_exponents": "currency_exponents"
+      }
+    },
+    {
+      "from_step": "s01_pay_stripe_integration_choice",
+      "to_step": "s21_pay_multi_currency",
+      "data_type": "pay-stripe-integration-choice",
+      "field_mapping": {
+        "integration_plan": "integration_plan"
+      }
+    },
+    {
+      "from_step": "s04_pay_test_mode_setup",
+      "to_step": "s22_pay_payout_reconciliation",
+      "data_type": "pay-test-mode-setup",
+      "field_mapping": {
+        "test_env": "test_env"
+      }
+    },
+    {
+      "from_step": "s03_pay_money_minor_units",
+      "to_step": "s22_pay_payout_reconciliation",
+      "data_type": "pay-money-minor-units",
+      "field_mapping": {
+        "currency_exponents": "currency_exponents"
+      }
+    },
+    {
+      "from_step": "s03_pay_money_minor_units",
+      "to_step": "s23_pay_paypal_orders_v2",
+      "data_type": "pay-money-minor-units",
+      "field_mapping": {
+        "currency_exponents": "currency_exponents"
+      }
+    },
+    {
+      "from_step": "s03_pay_money_minor_units",
+      "to_step": "s24_pay_adyen_checkout_sessions",
+      "data_type": "pay-money-minor-units",
+      "field_mapping": {
+        "currency_exponents": "currency_exponents"
+      }
+    },
+    {
+      "from_step": "s13_pay_sca_3ds_handling",
+      "to_step": "s25_pay_integration_test_matrix",
+      "data_type": "pay-sca-3ds-handling",
+      "field_mapping": {
+        "sca_test_results": "sca_test_results"
+      }
+    },
+    {
+      "from_step": "s17_pay_webhook_dedup_ordering",
+      "to_step": "s25_pay_integration_test_matrix",
+      "data_type": "pay-webhook-dedup-ordering",
+      "field_mapping": {
+        "dedup_test_results": "dedup_test_results"
+      }
+    },
+    {
+      "from_step": "s19_pay_refunds_partial",
+      "to_step": "s25_pay_integration_test_matrix",
+      "data_type": "pay-refunds-partial",
+      "field_mapping": {
+        "refund_procedure": "refund_procedure"
+      }
+    },
+    {
+      "from_step": "s02_pay_pci_scope_saq",
+      "to_step": "s25_pay_integration_test_matrix",
+      "data_type": "pay-pci-scope-saq",
+      "field_mapping": {
+        "pci_scope_report": "pci_scope_report"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "product_requirements",
+    "provider",
+    "stack",
+    "page_hosting",
+    "project_dir",
+    "currencies",
+    "webhook_path",
+    "local_port",
+    "server_endpoint_path",
+    "return_url",
+    "python_framework",
+    "node_framework",
+    "database",
+    "webhook_handler_file"
+  ],
+  "terminal_outputs": [
+    "money_audit",
+    "cli_trigger_log",
+    "payment_intent_endpoint",
+    "checkout_session_endpoint",
+    "setup_intent_flow",
+    "off_session_charge_procedure",
+    "webhook_handler",
+    "replay_runbook",
+    "dispute_runbook",
+    "currency_config",
+    "reconciliation_report",
+    "paypal_integration",
+    "adyen_integration",
+    "test_matrix_report",
+    "release_verdict"
+  ],
+  "parallel_groups": [
+    [
+      "s01_pay_stripe_integration_choice",
+      "s03_pay_money_minor_units",
+      "s04_pay_test_mode_setup",
+      "s06_pay_idempotency_keys",
+      "s17_pay_webhook_dedup_ordering"
+    ],
+    [
+      "s02_pay_pci_scope_saq",
+      "s05_pay_stripe_cli_local_webhooks",
+      "s07_pay_py_payment_intent",
+      "s08_pay_node_payment_intent",
+      "s09_pay_go_payment_intent",
+      "s10_pay_checkout_session",
+      "s11_pay_payment_element_client",
+      "s12_pay_setup_intent_saved_cards",
+      "s18_pay_webhook_retry_replay",
+      "s19_pay_refunds_partial",
+      "s20_pay_disputes_evidence",
+      "s21_pay_multi_currency",
+      "s22_pay_payout_reconciliation",
+      "s23_pay_paypal_orders_v2",
+      "s24_pay_adyen_checkout_sessions"
+    ],
+    [
+      "s13_pay_sca_3ds_handling",
+      "s14_pay_py_webhook_verify",
+      "s15_pay_node_webhook_verify",
+      "s16_pay_go_webhook_verify"
+    ],
+    [
+      "s25_pay_integration_test_matrix"
+    ]
+  ],
+  "estimated_cost": 25,
+  "critical_path": [
+    "s01_pay_stripe_integration_choice",
+    "s11_pay_payment_element_client",
+    "s13_pay_sca_3ds_handling",
+    "s25_pay_integration_test_matrix"
+  ]
+}

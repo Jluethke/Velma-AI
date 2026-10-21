@@ -1,0 +1,612 @@
+{
+  "name": "drive-data-logging",
+  "description": "Vehicle and robot data logging end to end: choose formats, measure rates and disk, budget storage, sync clocks, record, audit drops, validate, manifest, hash, offload, index, export, anonymize camera data, extract test cases and replay deterministically.",
+  "steps": [
+    {
+      "id": "s01_dlog_format_select",
+      "skill_name": "dlog-format-select",
+      "inputs": {
+        "data_sources": "from_user_input",
+        "stack": "from_user_input",
+        "replay_target": "from_user_input_optional"
+      },
+      "outputs": {
+        "log_format_decision": "log_format_decision"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_dlog_sensor_rate_inventory",
+      "skill_name": "dlog-sensor-rate-inventory",
+      "inputs": {
+        "data_sources": "from_user_input",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "measured_rates": "measured_rates"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s03_dlog_disk_throughput_measure",
+      "skill_name": "dlog-disk-throughput-measure",
+      "inputs": {
+        "log_volume_path": "from_user_input",
+        "measured_rates": "s02_dlog_sensor_rate_inventory.measured_rates"
+      },
+      "outputs": {
+        "disk_throughput": "disk_throughput"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_dlog_storage_budget",
+      "skill_name": "dlog-storage-budget",
+      "inputs": {
+        "measured_rates": "s02_dlog_sensor_rate_inventory.measured_rates",
+        "disk_throughput": "s03_dlog_disk_throughput_measure.disk_throughput",
+        "storage_capacity_bytes": "from_user_input",
+        "retention_policy": "from_user_input_optional"
+      },
+      "outputs": {
+        "storage_budget": "storage_budget"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s05_dlog_clock_domain_map",
+      "skill_name": "dlog-clock-domain-map",
+      "inputs": {
+        "data_sources": "from_user_input"
+      },
+      "outputs": {
+        "clock_domain_map": "clock_domain_map"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s06_dlog_ptp_linuxptp_sync",
+      "skill_name": "dlog-ptp-linuxptp-sync",
+      "inputs": {
+        "clock_domain_map": "s05_dlog_clock_domain_map.clock_domain_map",
+        "network_interface": "from_user_input"
+      },
+      "outputs": {
+        "ptp_sync_report": "ptp_sync_report"
+      },
+      "condition": "time_sync == 'ptp'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s07_dlog_chrony_gnss_pps",
+      "skill_name": "dlog-chrony-gnss-pps",
+      "inputs": {
+        "clock_domain_map": "s05_dlog_clock_domain_map.clock_domain_map",
+        "gnss_device": "from_user_input_optional"
+      },
+      "outputs": {
+        "gnss_time_report": "gnss_time_report"
+      },
+      "condition": "time_sync == 'gnss'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s08_dlog_ros2_bag_record",
+      "skill_name": "dlog-ros2-bag-record",
+      "inputs": {
+        "log_format_decision": "s01_dlog_format_select.log_format_decision",
+        "storage_budget": "s04_dlog_storage_budget.storage_budget",
+        "topic_list": "from_user_input_optional"
+      },
+      "outputs": {
+        "record_command": "record_command"
+      },
+      "condition": "stack == 'ros2'",
+      "parallel_group": 4
+    },
+    {
+      "id": "s09_dlog_py_mcap_writer",
+      "skill_name": "dlog-py-mcap-writer",
+      "inputs": {
+        "log_format_decision": "s01_dlog_format_select.log_format_decision",
+        "storage_budget": "s04_dlog_storage_budget.storage_budget"
+      },
+      "outputs": {
+        "writer_config": "writer_config"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 4
+    },
+    {
+      "id": "s10_dlog_cpp_mcap_writer",
+      "skill_name": "dlog-cpp-mcap-writer",
+      "inputs": {
+        "log_format_decision": "s01_dlog_format_select.log_format_decision",
+        "storage_budget": "s04_dlog_storage_budget.storage_budget"
+      },
+      "outputs": {
+        "writer_config": "writer_config"
+      },
+      "condition": "stack == 'cpp'",
+      "parallel_group": 4
+    },
+    {
+      "id": "s11_dlog_can_blf_capture",
+      "skill_name": "dlog-can-blf-capture",
+      "inputs": {
+        "can_interface": "from_user_input",
+        "can_bitrate": "from_user_input",
+        "storage_budget": "s04_dlog_storage_budget.storage_budget"
+      },
+      "outputs": {
+        "can_capture_command": "can_capture_command"
+      },
+      "condition": "has_can == true",
+      "parallel_group": 4
+    },
+    {
+      "id": "s12_dlog_drop_audit",
+      "skill_name": "dlog-drop-audit",
+      "inputs": {
+        "log_dir": "from_user_input",
+        "measured_rates": "s02_dlog_sensor_rate_inventory.measured_rates"
+      },
+      "outputs": {
+        "drop_report": "drop_report"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s13_dlog_log_validate_recover",
+      "skill_name": "dlog-log-validate-recover",
+      "inputs": {
+        "log_dir": "from_user_input",
+        "log_format_decision": "s01_dlog_format_select.log_format_decision"
+      },
+      "outputs": {
+        "validation_report": "validation_report"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s14_dlog_sensor_sync_check",
+      "skill_name": "dlog-sensor-sync-check",
+      "inputs": {
+        "log_dir": "from_user_input",
+        "clock_domain_map": "s05_dlog_clock_domain_map.clock_domain_map"
+      },
+      "outputs": {
+        "sync_report": "sync_report"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s15_dlog_run_manifest",
+      "skill_name": "dlog-run-manifest",
+      "inputs": {
+        "log_dir": "from_user_input",
+        "run_context": "from_user_input"
+      },
+      "outputs": {
+        "run_manifest": "run_manifest"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s16_dlog_file_integrity_hashes",
+      "skill_name": "dlog-file-integrity-hashes",
+      "inputs": {
+        "log_dir": "from_user_input",
+        "run_manifest": "s15_dlog_run_manifest.run_manifest"
+      },
+      "outputs": {
+        "hash_manifest": "hash_manifest"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s17_dlog_offload_verify",
+      "skill_name": "dlog-offload-verify",
+      "inputs": {
+        "log_dir": "from_user_input",
+        "hash_manifest": "s16_dlog_file_integrity_hashes.hash_manifest",
+        "archive_path": "from_user_input"
+      },
+      "outputs": {
+        "offload_report": "offload_report"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s18_dlog_drive_index_sqlite",
+      "skill_name": "dlog-drive-index-sqlite",
+      "inputs": {
+        "archive_path": "from_user_input",
+        "run_manifest": "s15_dlog_run_manifest.run_manifest",
+        "hash_manifest": "s16_dlog_file_integrity_hashes.hash_manifest"
+      },
+      "outputs": {
+        "drive_index": "drive_index"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s19_dlog_parquet_export",
+      "skill_name": "dlog-parquet-export",
+      "inputs": {
+        "archive_path": "from_user_input",
+        "drive_index": "s18_dlog_drive_index_sqlite.drive_index",
+        "export_topics": "from_user_input_optional"
+      },
+      "outputs": {
+        "parquet_dataset": "parquet_dataset"
+      },
+      "condition": "export_parquet == true",
+      "parallel_group": 4
+    },
+    {
+      "id": "s20_dlog_camera_privacy_anonymize",
+      "skill_name": "dlog-camera-privacy-anonymize",
+      "inputs": {
+        "archive_path": "from_user_input",
+        "privacy_policy": "from_user_input",
+        "drive_index": "s18_dlog_drive_index_sqlite.drive_index"
+      },
+      "outputs": {
+        "anonymized_log": "anonymized_log",
+        "privacy_audit": "privacy_audit"
+      },
+      "condition": "has_camera == true",
+      "parallel_group": 4
+    },
+    {
+      "id": "s21_dlog_test_case_extract",
+      "skill_name": "dlog-test-case-extract",
+      "inputs": {
+        "drive_index": "s18_dlog_drive_index_sqlite.drive_index",
+        "event_definition": "from_user_input",
+        "archive_path": "from_user_input"
+      },
+      "outputs": {
+        "test_cases": "test_cases"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s22_dlog_ros2_bag_replay",
+      "skill_name": "dlog-ros2-bag-replay",
+      "inputs": {
+        "archive_path": "from_user_input",
+        "drive_index": "s18_dlog_drive_index_sqlite.drive_index",
+        "entry_point": "from_user_input"
+      },
+      "outputs": {
+        "replay_procedure": "replay_procedure"
+      },
+      "condition": "stack == 'ros2'",
+      "parallel_group": 4
+    },
+    {
+      "id": "s23_dlog_py_replay_harness",
+      "skill_name": "dlog-py-replay-harness",
+      "inputs": {
+        "archive_path": "from_user_input",
+        "drive_index": "s18_dlog_drive_index_sqlite.drive_index",
+        "entry_point": "from_user_input"
+      },
+      "outputs": {
+        "replay_procedure": "replay_procedure"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 4
+    },
+    {
+      "id": "s24_dlog_cpp_replay_harness",
+      "skill_name": "dlog-cpp-replay-harness",
+      "inputs": {
+        "archive_path": "from_user_input",
+        "drive_index": "s18_dlog_drive_index_sqlite.drive_index",
+        "entry_point": "from_user_input"
+      },
+      "outputs": {
+        "replay_procedure": "replay_procedure"
+      },
+      "condition": "stack == 'cpp'",
+      "parallel_group": 4
+    },
+    {
+      "id": "s25_dlog_replay_determinism_check",
+      "skill_name": "dlog-replay-determinism-check",
+      "inputs": {
+        "replay_output_dirs": "from_user_input",
+        "entry_point": "from_user_input"
+      },
+      "outputs": {
+        "determinism_report": "determinism_report"
+      },
+      "parallel_group": 1
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s02_dlog_sensor_rate_inventory",
+      "to_step": "s03_dlog_disk_throughput_measure",
+      "data_type": "dlog-sensor-rate-inventory",
+      "field_mapping": {
+        "measured_rates": "measured_rates"
+      }
+    },
+    {
+      "from_step": "s02_dlog_sensor_rate_inventory",
+      "to_step": "s04_dlog_storage_budget",
+      "data_type": "dlog-sensor-rate-inventory",
+      "field_mapping": {
+        "measured_rates": "measured_rates"
+      }
+    },
+    {
+      "from_step": "s03_dlog_disk_throughput_measure",
+      "to_step": "s04_dlog_storage_budget",
+      "data_type": "dlog-disk-throughput-measure",
+      "field_mapping": {
+        "disk_throughput": "disk_throughput"
+      }
+    },
+    {
+      "from_step": "s05_dlog_clock_domain_map",
+      "to_step": "s06_dlog_ptp_linuxptp_sync",
+      "data_type": "dlog-clock-domain-map",
+      "field_mapping": {
+        "clock_domain_map": "clock_domain_map"
+      }
+    },
+    {
+      "from_step": "s05_dlog_clock_domain_map",
+      "to_step": "s07_dlog_chrony_gnss_pps",
+      "data_type": "dlog-clock-domain-map",
+      "field_mapping": {
+        "clock_domain_map": "clock_domain_map"
+      }
+    },
+    {
+      "from_step": "s01_dlog_format_select",
+      "to_step": "s08_dlog_ros2_bag_record",
+      "data_type": "dlog-format-select",
+      "field_mapping": {
+        "log_format_decision": "log_format_decision"
+      }
+    },
+    {
+      "from_step": "s04_dlog_storage_budget",
+      "to_step": "s08_dlog_ros2_bag_record",
+      "data_type": "dlog-storage-budget",
+      "field_mapping": {
+        "storage_budget": "storage_budget"
+      }
+    },
+    {
+      "from_step": "s01_dlog_format_select",
+      "to_step": "s09_dlog_py_mcap_writer",
+      "data_type": "dlog-format-select",
+      "field_mapping": {
+        "log_format_decision": "log_format_decision"
+      }
+    },
+    {
+      "from_step": "s04_dlog_storage_budget",
+      "to_step": "s09_dlog_py_mcap_writer",
+      "data_type": "dlog-storage-budget",
+      "field_mapping": {
+        "storage_budget": "storage_budget"
+      }
+    },
+    {
+      "from_step": "s01_dlog_format_select",
+      "to_step": "s10_dlog_cpp_mcap_writer",
+      "data_type": "dlog-format-select",
+      "field_mapping": {
+        "log_format_decision": "log_format_decision"
+      }
+    },
+    {
+      "from_step": "s04_dlog_storage_budget",
+      "to_step": "s10_dlog_cpp_mcap_writer",
+      "data_type": "dlog-storage-budget",
+      "field_mapping": {
+        "storage_budget": "storage_budget"
+      }
+    },
+    {
+      "from_step": "s04_dlog_storage_budget",
+      "to_step": "s11_dlog_can_blf_capture",
+      "data_type": "dlog-storage-budget",
+      "field_mapping": {
+        "storage_budget": "storage_budget"
+      }
+    },
+    {
+      "from_step": "s02_dlog_sensor_rate_inventory",
+      "to_step": "s12_dlog_drop_audit",
+      "data_type": "dlog-sensor-rate-inventory",
+      "field_mapping": {
+        "measured_rates": "measured_rates"
+      }
+    },
+    {
+      "from_step": "s01_dlog_format_select",
+      "to_step": "s13_dlog_log_validate_recover",
+      "data_type": "dlog-format-select",
+      "field_mapping": {
+        "log_format_decision": "log_format_decision"
+      }
+    },
+    {
+      "from_step": "s05_dlog_clock_domain_map",
+      "to_step": "s14_dlog_sensor_sync_check",
+      "data_type": "dlog-clock-domain-map",
+      "field_mapping": {
+        "clock_domain_map": "clock_domain_map"
+      }
+    },
+    {
+      "from_step": "s15_dlog_run_manifest",
+      "to_step": "s16_dlog_file_integrity_hashes",
+      "data_type": "dlog-run-manifest",
+      "field_mapping": {
+        "run_manifest": "run_manifest"
+      }
+    },
+    {
+      "from_step": "s16_dlog_file_integrity_hashes",
+      "to_step": "s17_dlog_offload_verify",
+      "data_type": "dlog-file-integrity-hashes",
+      "field_mapping": {
+        "hash_manifest": "hash_manifest"
+      }
+    },
+    {
+      "from_step": "s15_dlog_run_manifest",
+      "to_step": "s18_dlog_drive_index_sqlite",
+      "data_type": "dlog-run-manifest",
+      "field_mapping": {
+        "run_manifest": "run_manifest"
+      }
+    },
+    {
+      "from_step": "s16_dlog_file_integrity_hashes",
+      "to_step": "s18_dlog_drive_index_sqlite",
+      "data_type": "dlog-file-integrity-hashes",
+      "field_mapping": {
+        "hash_manifest": "hash_manifest"
+      }
+    },
+    {
+      "from_step": "s18_dlog_drive_index_sqlite",
+      "to_step": "s19_dlog_parquet_export",
+      "data_type": "dlog-drive-index-sqlite",
+      "field_mapping": {
+        "drive_index": "drive_index"
+      }
+    },
+    {
+      "from_step": "s18_dlog_drive_index_sqlite",
+      "to_step": "s20_dlog_camera_privacy_anonymize",
+      "data_type": "dlog-drive-index-sqlite",
+      "field_mapping": {
+        "drive_index": "drive_index"
+      }
+    },
+    {
+      "from_step": "s18_dlog_drive_index_sqlite",
+      "to_step": "s21_dlog_test_case_extract",
+      "data_type": "dlog-drive-index-sqlite",
+      "field_mapping": {
+        "drive_index": "drive_index"
+      }
+    },
+    {
+      "from_step": "s18_dlog_drive_index_sqlite",
+      "to_step": "s22_dlog_ros2_bag_replay",
+      "data_type": "dlog-drive-index-sqlite",
+      "field_mapping": {
+        "drive_index": "drive_index"
+      }
+    },
+    {
+      "from_step": "s18_dlog_drive_index_sqlite",
+      "to_step": "s23_dlog_py_replay_harness",
+      "data_type": "dlog-drive-index-sqlite",
+      "field_mapping": {
+        "drive_index": "drive_index"
+      }
+    },
+    {
+      "from_step": "s18_dlog_drive_index_sqlite",
+      "to_step": "s24_dlog_cpp_replay_harness",
+      "data_type": "dlog-drive-index-sqlite",
+      "field_mapping": {
+        "drive_index": "drive_index"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "data_sources",
+    "stack",
+    "replay_target",
+    "log_volume_path",
+    "storage_capacity_bytes",
+    "retention_policy",
+    "network_interface",
+    "gnss_device",
+    "topic_list",
+    "can_interface",
+    "can_bitrate",
+    "log_dir",
+    "run_context",
+    "archive_path",
+    "export_topics",
+    "privacy_policy",
+    "event_definition",
+    "entry_point",
+    "replay_output_dirs"
+  ],
+  "terminal_outputs": [
+    "ptp_sync_report",
+    "gnss_time_report",
+    "record_command",
+    "writer_config",
+    "can_capture_command",
+    "drop_report",
+    "validation_report",
+    "sync_report",
+    "offload_report",
+    "parquet_dataset",
+    "anonymized_log",
+    "privacy_audit",
+    "test_cases",
+    "replay_procedure",
+    "determinism_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_dlog_format_select",
+      "s02_dlog_sensor_rate_inventory",
+      "s05_dlog_clock_domain_map",
+      "s15_dlog_run_manifest",
+      "s25_dlog_replay_determinism_check"
+    ],
+    [
+      "s03_dlog_disk_throughput_measure",
+      "s06_dlog_ptp_linuxptp_sync",
+      "s07_dlog_chrony_gnss_pps",
+      "s12_dlog_drop_audit",
+      "s13_dlog_log_validate_recover",
+      "s14_dlog_sensor_sync_check",
+      "s16_dlog_file_integrity_hashes"
+    ],
+    [
+      "s04_dlog_storage_budget",
+      "s17_dlog_offload_verify",
+      "s18_dlog_drive_index_sqlite"
+    ],
+    [
+      "s08_dlog_ros2_bag_record",
+      "s09_dlog_py_mcap_writer",
+      "s10_dlog_cpp_mcap_writer",
+      "s11_dlog_can_blf_capture",
+      "s19_dlog_parquet_export",
+      "s20_dlog_camera_privacy_anonymize",
+      "s21_dlog_test_case_extract",
+      "s22_dlog_ros2_bag_replay",
+      "s23_dlog_py_replay_harness",
+      "s24_dlog_cpp_replay_harness"
+    ]
+  ],
+  "estimated_cost": 25,
+  "critical_path": [
+    "s02_dlog_sensor_rate_inventory",
+    "s03_dlog_disk_throughput_measure",
+    "s04_dlog_storage_budget",
+    "s08_dlog_ros2_bag_record"
+  ]
+}

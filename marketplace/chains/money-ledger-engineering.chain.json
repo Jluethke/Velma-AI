@@ -1,0 +1,632 @@
+{
+  "name": "money-ledger-engineering",
+  "description": "Correct money handling and an internal double-entry ledger end to end: find float money, choose representations and rounding, build an append-only idempotent PostgreSQL ledger with locking and snapshots, convert currencies, reconcile against Stripe and bank exports, audit, sync to QuickBooks Online or Xero, and prove balance invariants with property tests in the chosen stack.",
+  "steps": [
+    {
+      "id": "s01_ledg_float_money_audit",
+      "skill_name": "ledg-float-money-audit",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "float_money_findings": "float_money_findings"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_ledg_money_representation_decision",
+      "skill_name": "ledg-money-representation-decision",
+      "inputs": {
+        "stack": "from_user_input",
+        "currencies": "from_user_input",
+        "float_money_findings": "s01_ledg_float_money_audit.float_money_findings"
+      },
+      "outputs": {
+        "money_representation_spec": "money_representation_spec"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_ledg_py_decimal_money",
+      "skill_name": "ledg-py-decimal-money",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "money_representation_spec": "s02_ledg_money_representation_decision.money_representation_spec"
+      },
+      "outputs": {
+        "py_money_module": "py_money_module"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_ledg_java_bigdecimal_money",
+      "skill_name": "ledg-java-bigdecimal-money",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "money_representation_spec": "s02_ledg_money_representation_decision.money_representation_spec"
+      },
+      "outputs": {
+        "java_money_module": "java_money_module"
+      },
+      "condition": "stack == 'java'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s05_ledg_node_integer_cents_money",
+      "skill_name": "ledg-node-integer-cents-money",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "money_representation_spec": "s02_ledg_money_representation_decision.money_representation_spec"
+      },
+      "outputs": {
+        "node_money_module": "node_money_module"
+      },
+      "condition": "stack == 'node'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s06_ledg_go_integer_cents_money",
+      "skill_name": "ledg-go-integer-cents-money",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "money_representation_spec": "s02_ledg_money_representation_decision.money_representation_spec"
+      },
+      "outputs": {
+        "go_money_module": "go_money_module"
+      },
+      "condition": "stack == 'go'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s07_ledg_rounding_policy",
+      "skill_name": "ledg-rounding-policy",
+      "inputs": {
+        "money_representation_spec": "s02_ledg_money_representation_decision.money_representation_spec",
+        "rounding_requirements": "from_user_input_optional"
+      },
+      "outputs": {
+        "rounding_policy": "rounding_policy"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s08_ledg_allocate_remainder",
+      "skill_name": "ledg-allocate-remainder",
+      "inputs": {
+        "rounding_policy": "s07_ledg_rounding_policy.rounding_policy",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "allocation_function": "allocation_function"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s09_ledg_pg_double_entry_schema",
+      "skill_name": "ledg-pg-double-entry-schema",
+      "inputs": {
+        "database_url": "from_user_input",
+        "money_representation_spec": "s02_ledg_money_representation_decision.money_representation_spec"
+      },
+      "outputs": {
+        "ledger_schema": "ledger_schema"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s10_ledg_pg_immutable_reversals",
+      "skill_name": "ledg-pg-immutable-reversals",
+      "inputs": {
+        "ledger_schema": "s09_ledg_pg_double_entry_schema.ledger_schema"
+      },
+      "outputs": {
+        "reversal_procedure": "reversal_procedure"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s11_ledg_pg_idempotent_posting",
+      "skill_name": "ledg-pg-idempotent-posting",
+      "inputs": {
+        "ledger_schema": "s09_ledg_pg_double_entry_schema.ledger_schema",
+        "reversal_procedure": "s10_ledg_pg_immutable_reversals.reversal_procedure"
+      },
+      "outputs": {
+        "posting_service": "posting_service"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s12_ledg_pg_balance_locking",
+      "skill_name": "ledg-pg-balance-locking",
+      "inputs": {
+        "ledger_schema": "s09_ledg_pg_double_entry_schema.ledger_schema",
+        "posting_service": "s11_ledg_pg_idempotent_posting.posting_service"
+      },
+      "outputs": {
+        "locking_strategy": "locking_strategy"
+      },
+      "parallel_group": 6
+    },
+    {
+      "id": "s13_ledg_pg_balance_snapshots",
+      "skill_name": "ledg-pg-balance-snapshots",
+      "inputs": {
+        "ledger_schema": "s09_ledg_pg_double_entry_schema.ledger_schema",
+        "locking_strategy": "s12_ledg_pg_balance_locking.locking_strategy"
+      },
+      "outputs": {
+        "balance_queries": "balance_queries"
+      },
+      "parallel_group": 7
+    },
+    {
+      "id": "s14_ledg_fx_rate_conversion",
+      "skill_name": "ledg-fx-rate-conversion",
+      "inputs": {
+        "ledger_schema": "s09_ledg_pg_double_entry_schema.ledger_schema",
+        "rounding_policy": "s07_ledg_rounding_policy.rounding_policy",
+        "rate_source": "from_user_input"
+      },
+      "outputs": {
+        "fx_conversion_spec": "fx_conversion_spec"
+      },
+      "condition": "multi_currency == true",
+      "parallel_group": 4
+    },
+    {
+      "id": "s15_ledg_stripe_payout_reconciliation",
+      "skill_name": "ledg-stripe-payout-reconciliation",
+      "inputs": {
+        "ledger_schema": "s09_ledg_pg_double_entry_schema.ledger_schema",
+        "processor_export": "from_user_input"
+      },
+      "outputs": {
+        "processor_recon_report": "processor_recon_report"
+      },
+      "condition": "processor == 'stripe'",
+      "parallel_group": 4
+    },
+    {
+      "id": "s16_ledg_bank_statement_reconciliation",
+      "skill_name": "ledg-bank-statement-reconciliation",
+      "inputs": {
+        "ledger_schema": "s09_ledg_pg_double_entry_schema.ledger_schema",
+        "bank_export": "from_user_input",
+        "match_date_window_days": "from_user_input"
+      },
+      "outputs": {
+        "bank_recon_report": "bank_recon_report"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s17_ledg_pg_audit_queries",
+      "skill_name": "ledg-pg-audit-queries",
+      "inputs": {
+        "ledger_schema": "s09_ledg_pg_double_entry_schema.ledger_schema",
+        "balance_queries": "s13_ledg_pg_balance_snapshots.balance_queries"
+      },
+      "outputs": {
+        "audit_query_pack": "audit_query_pack"
+      },
+      "parallel_group": 8
+    },
+    {
+      "id": "s18_ledg_qbo_journal_sync",
+      "skill_name": "ledg-qbo-journal-sync",
+      "inputs": {
+        "audit_query_pack": "s17_ledg_pg_audit_queries.audit_query_pack",
+        "account_mapping": "from_user_input",
+        "qbo_realm_id": "from_user_input"
+      },
+      "outputs": {
+        "qbo_sync_job": "qbo_sync_job"
+      },
+      "condition": "accounting_system == 'quickbooks_online'",
+      "parallel_group": 9
+    },
+    {
+      "id": "s19_ledg_xero_manual_journal_sync",
+      "skill_name": "ledg-xero-manual-journal-sync",
+      "inputs": {
+        "audit_query_pack": "s17_ledg_pg_audit_queries.audit_query_pack",
+        "account_mapping": "from_user_input",
+        "xero_tenant_id": "from_user_input"
+      },
+      "outputs": {
+        "xero_sync_job": "xero_sync_job"
+      },
+      "condition": "accounting_system == 'xero'",
+      "parallel_group": 9
+    },
+    {
+      "id": "s20_ledg_py_hypothesis_ledger_tests",
+      "skill_name": "ledg-py-hypothesis-ledger-tests",
+      "inputs": {
+        "posting_service": "s11_ledg_pg_idempotent_posting.posting_service",
+        "allocation_function": "s08_ledg_allocate_remainder.allocation_function"
+      },
+      "outputs": {
+        "py_property_tests": "py_property_tests"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 6
+    },
+    {
+      "id": "s21_ledg_java_jqwik_ledger_tests",
+      "skill_name": "ledg-java-jqwik-ledger-tests",
+      "inputs": {
+        "posting_service": "s11_ledg_pg_idempotent_posting.posting_service",
+        "allocation_function": "s08_ledg_allocate_remainder.allocation_function"
+      },
+      "outputs": {
+        "java_property_tests": "java_property_tests"
+      },
+      "condition": "stack == 'java'",
+      "parallel_group": 6
+    },
+    {
+      "id": "s22_ledg_node_fast_check_ledger_tests",
+      "skill_name": "ledg-node-fast-check-ledger-tests",
+      "inputs": {
+        "posting_service": "s11_ledg_pg_idempotent_posting.posting_service",
+        "allocation_function": "s08_ledg_allocate_remainder.allocation_function"
+      },
+      "outputs": {
+        "node_property_tests": "node_property_tests"
+      },
+      "condition": "stack == 'node'",
+      "parallel_group": 6
+    },
+    {
+      "id": "s23_ledg_go_rapid_ledger_tests",
+      "skill_name": "ledg-go-rapid-ledger-tests",
+      "inputs": {
+        "posting_service": "s11_ledg_pg_idempotent_posting.posting_service",
+        "allocation_function": "s08_ledg_allocate_remainder.allocation_function"
+      },
+      "outputs": {
+        "go_property_tests": "go_property_tests"
+      },
+      "condition": "stack == 'go'",
+      "parallel_group": 6
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_ledg_float_money_audit",
+      "to_step": "s02_ledg_money_representation_decision",
+      "data_type": "ledg-float-money-audit",
+      "field_mapping": {
+        "float_money_findings": "float_money_findings"
+      }
+    },
+    {
+      "from_step": "s02_ledg_money_representation_decision",
+      "to_step": "s03_ledg_py_decimal_money",
+      "data_type": "ledg-money-representation-decision",
+      "field_mapping": {
+        "money_representation_spec": "money_representation_spec"
+      }
+    },
+    {
+      "from_step": "s02_ledg_money_representation_decision",
+      "to_step": "s04_ledg_java_bigdecimal_money",
+      "data_type": "ledg-money-representation-decision",
+      "field_mapping": {
+        "money_representation_spec": "money_representation_spec"
+      }
+    },
+    {
+      "from_step": "s02_ledg_money_representation_decision",
+      "to_step": "s05_ledg_node_integer_cents_money",
+      "data_type": "ledg-money-representation-decision",
+      "field_mapping": {
+        "money_representation_spec": "money_representation_spec"
+      }
+    },
+    {
+      "from_step": "s02_ledg_money_representation_decision",
+      "to_step": "s06_ledg_go_integer_cents_money",
+      "data_type": "ledg-money-representation-decision",
+      "field_mapping": {
+        "money_representation_spec": "money_representation_spec"
+      }
+    },
+    {
+      "from_step": "s02_ledg_money_representation_decision",
+      "to_step": "s07_ledg_rounding_policy",
+      "data_type": "ledg-money-representation-decision",
+      "field_mapping": {
+        "money_representation_spec": "money_representation_spec"
+      }
+    },
+    {
+      "from_step": "s07_ledg_rounding_policy",
+      "to_step": "s08_ledg_allocate_remainder",
+      "data_type": "ledg-rounding-policy",
+      "field_mapping": {
+        "rounding_policy": "rounding_policy"
+      }
+    },
+    {
+      "from_step": "s02_ledg_money_representation_decision",
+      "to_step": "s09_ledg_pg_double_entry_schema",
+      "data_type": "ledg-money-representation-decision",
+      "field_mapping": {
+        "money_representation_spec": "money_representation_spec"
+      }
+    },
+    {
+      "from_step": "s09_ledg_pg_double_entry_schema",
+      "to_step": "s10_ledg_pg_immutable_reversals",
+      "data_type": "ledg-pg-double-entry-schema",
+      "field_mapping": {
+        "ledger_schema": "ledger_schema"
+      }
+    },
+    {
+      "from_step": "s09_ledg_pg_double_entry_schema",
+      "to_step": "s11_ledg_pg_idempotent_posting",
+      "data_type": "ledg-pg-double-entry-schema",
+      "field_mapping": {
+        "ledger_schema": "ledger_schema"
+      }
+    },
+    {
+      "from_step": "s10_ledg_pg_immutable_reversals",
+      "to_step": "s11_ledg_pg_idempotent_posting",
+      "data_type": "ledg-pg-immutable-reversals",
+      "field_mapping": {
+        "reversal_procedure": "reversal_procedure"
+      }
+    },
+    {
+      "from_step": "s09_ledg_pg_double_entry_schema",
+      "to_step": "s12_ledg_pg_balance_locking",
+      "data_type": "ledg-pg-double-entry-schema",
+      "field_mapping": {
+        "ledger_schema": "ledger_schema"
+      }
+    },
+    {
+      "from_step": "s11_ledg_pg_idempotent_posting",
+      "to_step": "s12_ledg_pg_balance_locking",
+      "data_type": "ledg-pg-idempotent-posting",
+      "field_mapping": {
+        "posting_service": "posting_service"
+      }
+    },
+    {
+      "from_step": "s09_ledg_pg_double_entry_schema",
+      "to_step": "s13_ledg_pg_balance_snapshots",
+      "data_type": "ledg-pg-double-entry-schema",
+      "field_mapping": {
+        "ledger_schema": "ledger_schema"
+      }
+    },
+    {
+      "from_step": "s12_ledg_pg_balance_locking",
+      "to_step": "s13_ledg_pg_balance_snapshots",
+      "data_type": "ledg-pg-balance-locking",
+      "field_mapping": {
+        "locking_strategy": "locking_strategy"
+      }
+    },
+    {
+      "from_step": "s09_ledg_pg_double_entry_schema",
+      "to_step": "s14_ledg_fx_rate_conversion",
+      "data_type": "ledg-pg-double-entry-schema",
+      "field_mapping": {
+        "ledger_schema": "ledger_schema"
+      }
+    },
+    {
+      "from_step": "s07_ledg_rounding_policy",
+      "to_step": "s14_ledg_fx_rate_conversion",
+      "data_type": "ledg-rounding-policy",
+      "field_mapping": {
+        "rounding_policy": "rounding_policy"
+      }
+    },
+    {
+      "from_step": "s09_ledg_pg_double_entry_schema",
+      "to_step": "s15_ledg_stripe_payout_reconciliation",
+      "data_type": "ledg-pg-double-entry-schema",
+      "field_mapping": {
+        "ledger_schema": "ledger_schema"
+      }
+    },
+    {
+      "from_step": "s09_ledg_pg_double_entry_schema",
+      "to_step": "s16_ledg_bank_statement_reconciliation",
+      "data_type": "ledg-pg-double-entry-schema",
+      "field_mapping": {
+        "ledger_schema": "ledger_schema"
+      }
+    },
+    {
+      "from_step": "s09_ledg_pg_double_entry_schema",
+      "to_step": "s17_ledg_pg_audit_queries",
+      "data_type": "ledg-pg-double-entry-schema",
+      "field_mapping": {
+        "ledger_schema": "ledger_schema"
+      }
+    },
+    {
+      "from_step": "s13_ledg_pg_balance_snapshots",
+      "to_step": "s17_ledg_pg_audit_queries",
+      "data_type": "ledg-pg-balance-snapshots",
+      "field_mapping": {
+        "balance_queries": "balance_queries"
+      }
+    },
+    {
+      "from_step": "s17_ledg_pg_audit_queries",
+      "to_step": "s18_ledg_qbo_journal_sync",
+      "data_type": "ledg-pg-audit-queries",
+      "field_mapping": {
+        "audit_query_pack": "audit_query_pack"
+      }
+    },
+    {
+      "from_step": "s17_ledg_pg_audit_queries",
+      "to_step": "s19_ledg_xero_manual_journal_sync",
+      "data_type": "ledg-pg-audit-queries",
+      "field_mapping": {
+        "audit_query_pack": "audit_query_pack"
+      }
+    },
+    {
+      "from_step": "s11_ledg_pg_idempotent_posting",
+      "to_step": "s20_ledg_py_hypothesis_ledger_tests",
+      "data_type": "ledg-pg-idempotent-posting",
+      "field_mapping": {
+        "posting_service": "posting_service"
+      }
+    },
+    {
+      "from_step": "s08_ledg_allocate_remainder",
+      "to_step": "s20_ledg_py_hypothesis_ledger_tests",
+      "data_type": "ledg-allocate-remainder",
+      "field_mapping": {
+        "allocation_function": "allocation_function"
+      }
+    },
+    {
+      "from_step": "s11_ledg_pg_idempotent_posting",
+      "to_step": "s21_ledg_java_jqwik_ledger_tests",
+      "data_type": "ledg-pg-idempotent-posting",
+      "field_mapping": {
+        "posting_service": "posting_service"
+      }
+    },
+    {
+      "from_step": "s08_ledg_allocate_remainder",
+      "to_step": "s21_ledg_java_jqwik_ledger_tests",
+      "data_type": "ledg-allocate-remainder",
+      "field_mapping": {
+        "allocation_function": "allocation_function"
+      }
+    },
+    {
+      "from_step": "s11_ledg_pg_idempotent_posting",
+      "to_step": "s22_ledg_node_fast_check_ledger_tests",
+      "data_type": "ledg-pg-idempotent-posting",
+      "field_mapping": {
+        "posting_service": "posting_service"
+      }
+    },
+    {
+      "from_step": "s08_ledg_allocate_remainder",
+      "to_step": "s22_ledg_node_fast_check_ledger_tests",
+      "data_type": "ledg-allocate-remainder",
+      "field_mapping": {
+        "allocation_function": "allocation_function"
+      }
+    },
+    {
+      "from_step": "s11_ledg_pg_idempotent_posting",
+      "to_step": "s23_ledg_go_rapid_ledger_tests",
+      "data_type": "ledg-pg-idempotent-posting",
+      "field_mapping": {
+        "posting_service": "posting_service"
+      }
+    },
+    {
+      "from_step": "s08_ledg_allocate_remainder",
+      "to_step": "s23_ledg_go_rapid_ledger_tests",
+      "data_type": "ledg-allocate-remainder",
+      "field_mapping": {
+        "allocation_function": "allocation_function"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "repo_path",
+    "stack",
+    "currencies",
+    "rounding_requirements",
+    "database_url",
+    "rate_source",
+    "processor_export",
+    "bank_export",
+    "match_date_window_days",
+    "account_mapping",
+    "qbo_realm_id",
+    "xero_tenant_id"
+  ],
+  "terminal_outputs": [
+    "py_money_module",
+    "java_money_module",
+    "node_money_module",
+    "go_money_module",
+    "fx_conversion_spec",
+    "processor_recon_report",
+    "bank_recon_report",
+    "qbo_sync_job",
+    "xero_sync_job",
+    "py_property_tests",
+    "java_property_tests",
+    "node_property_tests",
+    "go_property_tests"
+  ],
+  "parallel_groups": [
+    [
+      "s01_ledg_float_money_audit"
+    ],
+    [
+      "s02_ledg_money_representation_decision"
+    ],
+    [
+      "s03_ledg_py_decimal_money",
+      "s04_ledg_java_bigdecimal_money",
+      "s05_ledg_node_integer_cents_money",
+      "s06_ledg_go_integer_cents_money",
+      "s07_ledg_rounding_policy",
+      "s09_ledg_pg_double_entry_schema"
+    ],
+    [
+      "s08_ledg_allocate_remainder",
+      "s10_ledg_pg_immutable_reversals",
+      "s14_ledg_fx_rate_conversion",
+      "s15_ledg_stripe_payout_reconciliation",
+      "s16_ledg_bank_statement_reconciliation"
+    ],
+    [
+      "s11_ledg_pg_idempotent_posting"
+    ],
+    [
+      "s12_ledg_pg_balance_locking",
+      "s20_ledg_py_hypothesis_ledger_tests",
+      "s21_ledg_java_jqwik_ledger_tests",
+      "s22_ledg_node_fast_check_ledger_tests",
+      "s23_ledg_go_rapid_ledger_tests"
+    ],
+    [
+      "s13_ledg_pg_balance_snapshots"
+    ],
+    [
+      "s17_ledg_pg_audit_queries"
+    ],
+    [
+      "s18_ledg_qbo_journal_sync",
+      "s19_ledg_xero_manual_journal_sync"
+    ]
+  ],
+  "estimated_cost": 23,
+  "critical_path": [
+    "s01_ledg_float_money_audit",
+    "s02_ledg_money_representation_decision",
+    "s09_ledg_pg_double_entry_schema",
+    "s10_ledg_pg_immutable_reversals",
+    "s11_ledg_pg_idempotent_posting",
+    "s12_ledg_pg_balance_locking",
+    "s13_ledg_pg_balance_snapshots",
+    "s17_ledg_pg_audit_queries",
+    "s18_ledg_qbo_journal_sync"
+  ]
+}

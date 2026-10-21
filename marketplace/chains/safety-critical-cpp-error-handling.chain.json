@@ -1,0 +1,135 @@
+{
+  "name": "safety-critical-cpp-error-handling",
+  "description": "Classify asserts and defensive checks, move C and C++ error handling to checked status or result types without exceptions, and review the release machine code of critical functions.",
+  "steps": [
+    {
+      "id": "s01_sccpp_cmake_build_profiles",
+      "skill_name": "sccpp-cmake-build-profiles",
+      "inputs": {
+        "codebase_dir": "from_user_input",
+        "stack": "from_user_input",
+        "language": "from_user_input",
+        "toolchain_file": "from_user_input_optional"
+      },
+      "outputs": {
+        "build_profiles": "build_profiles"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_sccpp_defensive_vs_assert",
+      "skill_name": "sccpp-defensive-vs-assert",
+      "inputs": {
+        "codebase_dir": "from_user_input",
+        "requirements": "from_user_input"
+      },
+      "outputs": {
+        "check_classification": "check_classification"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s03_sccpp_c_error_status",
+      "skill_name": "sccpp-c-error-status",
+      "inputs": {
+        "codebase_dir": "from_user_input",
+        "check_classification": "s02_sccpp_defensive_vs_assert.check_classification"
+      },
+      "outputs": {
+        "c_error_report": "c_error_report"
+      },
+      "condition": "language == 'c'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_sccpp_cpp_no_exceptions",
+      "skill_name": "sccpp-cpp-no-exceptions",
+      "inputs": {
+        "codebase_dir": "from_user_input",
+        "build_profiles": "s01_sccpp_cmake_build_profiles.build_profiles",
+        "check_classification": "s02_sccpp_defensive_vs_assert.check_classification"
+      },
+      "outputs": {
+        "cpp_error_report": "cpp_error_report"
+      },
+      "condition": "language == 'cpp'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s05_sccpp_compiler_output_review",
+      "skill_name": "sccpp-compiler-output-review",
+      "inputs": {
+        "build_profiles": "s01_sccpp_cmake_build_profiles.build_profiles",
+        "critical_functions": "from_user_input",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "asm_review": "asm_review"
+      },
+      "parallel_group": 2
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s02_sccpp_defensive_vs_assert",
+      "to_step": "s03_sccpp_c_error_status",
+      "data_type": "sccpp-defensive-vs-assert",
+      "field_mapping": {
+        "check_classification": "check_classification"
+      }
+    },
+    {
+      "from_step": "s01_sccpp_cmake_build_profiles",
+      "to_step": "s04_sccpp_cpp_no_exceptions",
+      "data_type": "sccpp-cmake-build-profiles",
+      "field_mapping": {
+        "build_profiles": "build_profiles"
+      }
+    },
+    {
+      "from_step": "s02_sccpp_defensive_vs_assert",
+      "to_step": "s04_sccpp_cpp_no_exceptions",
+      "data_type": "sccpp-defensive-vs-assert",
+      "field_mapping": {
+        "check_classification": "check_classification"
+      }
+    },
+    {
+      "from_step": "s01_sccpp_cmake_build_profiles",
+      "to_step": "s05_sccpp_compiler_output_review",
+      "data_type": "sccpp-cmake-build-profiles",
+      "field_mapping": {
+        "build_profiles": "build_profiles"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "codebase_dir",
+    "stack",
+    "language",
+    "toolchain_file",
+    "requirements",
+    "critical_functions"
+  ],
+  "terminal_outputs": [
+    "c_error_report",
+    "cpp_error_report",
+    "asm_review"
+  ],
+  "parallel_groups": [
+    [
+      "s01_sccpp_cmake_build_profiles",
+      "s02_sccpp_defensive_vs_assert"
+    ],
+    [
+      "s03_sccpp_c_error_status",
+      "s04_sccpp_cpp_no_exceptions",
+      "s05_sccpp_compiler_output_review"
+    ]
+  ],
+  "estimated_cost": 5,
+  "critical_path": [
+    "s02_sccpp_defensive_vs_assert",
+    "s03_sccpp_c_error_status"
+  ]
+}

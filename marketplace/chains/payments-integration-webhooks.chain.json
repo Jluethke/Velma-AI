@@ -1,0 +1,186 @@
+{
+  "name": "payments-integration-webhooks",
+  "description": "Stripe webhook reliability: test mode, local forwarding with the Stripe CLI, raw-body signature verification for the chosen stack, event deduplication and ordering, then retry and replay of missed events.",
+  "steps": [
+    {
+      "id": "s01_pay_test_mode_setup",
+      "skill_name": "pay-test-mode-setup",
+      "inputs": {
+        "project_dir": "from_user_input",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "test_env": "test_env"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_pay_stripe_cli_local_webhooks",
+      "skill_name": "pay-stripe-cli-local-webhooks",
+      "inputs": {
+        "test_env": "s01_pay_test_mode_setup.test_env",
+        "webhook_path": "from_user_input",
+        "local_port": "from_user_input"
+      },
+      "outputs": {
+        "webhook_secret_local": "webhook_secret_local",
+        "cli_trigger_log": "cli_trigger_log"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_pay_py_webhook_verify",
+      "skill_name": "pay-py-webhook-verify",
+      "inputs": {
+        "project_dir": "from_user_input",
+        "python_framework": "from_user_input",
+        "webhook_secret_local": "s02_pay_stripe_cli_local_webhooks.webhook_secret_local"
+      },
+      "outputs": {
+        "webhook_handler": "webhook_handler"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_pay_node_webhook_verify",
+      "skill_name": "pay-node-webhook-verify",
+      "inputs": {
+        "project_dir": "from_user_input",
+        "node_framework": "from_user_input",
+        "webhook_secret_local": "s02_pay_stripe_cli_local_webhooks.webhook_secret_local"
+      },
+      "outputs": {
+        "webhook_handler": "webhook_handler"
+      },
+      "condition": "stack == 'node'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s05_pay_go_webhook_verify",
+      "skill_name": "pay-go-webhook-verify",
+      "inputs": {
+        "project_dir": "from_user_input",
+        "webhook_secret_local": "s02_pay_stripe_cli_local_webhooks.webhook_secret_local"
+      },
+      "outputs": {
+        "webhook_handler": "webhook_handler"
+      },
+      "condition": "stack == 'go'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s06_pay_webhook_dedup_ordering",
+      "skill_name": "pay-webhook-dedup-ordering",
+      "inputs": {
+        "project_dir": "from_user_input",
+        "database": "from_user_input",
+        "webhook_handler_file": "from_user_input"
+      },
+      "outputs": {
+        "event_store_schema": "event_store_schema",
+        "dedup_test_results": "dedup_test_results"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s07_pay_webhook_retry_replay",
+      "skill_name": "pay-webhook-retry-replay",
+      "inputs": {
+        "event_store_schema": "s06_pay_webhook_dedup_ordering.event_store_schema",
+        "test_env": "s01_pay_test_mode_setup.test_env"
+      },
+      "outputs": {
+        "replay_runbook": "replay_runbook"
+      },
+      "parallel_group": 2
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_pay_test_mode_setup",
+      "to_step": "s02_pay_stripe_cli_local_webhooks",
+      "data_type": "pay-test-mode-setup",
+      "field_mapping": {
+        "test_env": "test_env"
+      }
+    },
+    {
+      "from_step": "s02_pay_stripe_cli_local_webhooks",
+      "to_step": "s03_pay_py_webhook_verify",
+      "data_type": "pay-stripe-cli-local-webhooks",
+      "field_mapping": {
+        "webhook_secret_local": "webhook_secret_local"
+      }
+    },
+    {
+      "from_step": "s02_pay_stripe_cli_local_webhooks",
+      "to_step": "s04_pay_node_webhook_verify",
+      "data_type": "pay-stripe-cli-local-webhooks",
+      "field_mapping": {
+        "webhook_secret_local": "webhook_secret_local"
+      }
+    },
+    {
+      "from_step": "s02_pay_stripe_cli_local_webhooks",
+      "to_step": "s05_pay_go_webhook_verify",
+      "data_type": "pay-stripe-cli-local-webhooks",
+      "field_mapping": {
+        "webhook_secret_local": "webhook_secret_local"
+      }
+    },
+    {
+      "from_step": "s06_pay_webhook_dedup_ordering",
+      "to_step": "s07_pay_webhook_retry_replay",
+      "data_type": "pay-webhook-dedup-ordering",
+      "field_mapping": {
+        "event_store_schema": "event_store_schema"
+      }
+    },
+    {
+      "from_step": "s01_pay_test_mode_setup",
+      "to_step": "s07_pay_webhook_retry_replay",
+      "data_type": "pay-test-mode-setup",
+      "field_mapping": {
+        "test_env": "test_env"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "project_dir",
+    "stack",
+    "webhook_path",
+    "local_port",
+    "python_framework",
+    "node_framework",
+    "database",
+    "webhook_handler_file"
+  ],
+  "terminal_outputs": [
+    "cli_trigger_log",
+    "webhook_handler",
+    "dedup_test_results",
+    "replay_runbook"
+  ],
+  "parallel_groups": [
+    [
+      "s01_pay_test_mode_setup",
+      "s06_pay_webhook_dedup_ordering"
+    ],
+    [
+      "s02_pay_stripe_cli_local_webhooks",
+      "s07_pay_webhook_retry_replay"
+    ],
+    [
+      "s03_pay_py_webhook_verify",
+      "s04_pay_node_webhook_verify",
+      "s05_pay_go_webhook_verify"
+    ]
+  ],
+  "estimated_cost": 7,
+  "critical_path": [
+    "s01_pay_test_mode_setup",
+    "s02_pay_stripe_cli_local_webhooks",
+    "s05_pay_go_webhook_verify"
+  ]
+}

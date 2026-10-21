@@ -1,0 +1,491 @@
+{
+  "name": "cross-compile-aarch64",
+  "description": "Cross-compile and deploy to aarch64 Linux: select the triple and toolchain, build a sysroot and pkg-config environment, build per stack (cmake, meson, autotools, rust, go, conan, python wheels, docker buildx), emulate and test under qemu, verify the ELF, diagnose glibc mismatches, check reproducibility, deploy and remote-debug, and set up multi-arch CI.",
+  "steps": [
+    {
+      "id": "s01_xarch_target_triple_select",
+      "skill_name": "xarch-target-triple-select",
+      "inputs": {
+        "stack": "from_user_input",
+        "target_libc": "from_user_input",
+        "target_cpu": "from_user_input_optional"
+      },
+      "outputs": {
+        "target_triple": "target_triple",
+        "triple_report": "triple_report"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_xarch_gcc_toolchain_select",
+      "skill_name": "xarch-gcc-toolchain-select",
+      "inputs": {
+        "host_distro": "from_user_input",
+        "target_triple": "s01_xarch_target_triple_select.target_triple"
+      },
+      "outputs": {
+        "toolchain_prefix": "toolchain_prefix",
+        "toolchain_report": "toolchain_report"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_xarch_sysroot_from_image",
+      "skill_name": "xarch-sysroot-from-image",
+      "inputs": {
+        "image_source": "from_user_input",
+        "sysroot_dir": "from_user_input"
+      },
+      "outputs": {
+        "sysroot": "sysroot",
+        "sysroot_report": "sysroot_report"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s04_xarch_clang_target_setup",
+      "skill_name": "xarch-clang-target-setup",
+      "inputs": {
+        "compiler": "from_user_input",
+        "target_triple": "s01_xarch_target_triple_select.target_triple",
+        "sysroot": "s03_xarch_sysroot_from_image.sysroot",
+        "gcc_toolchain_path": "from_user_input_optional"
+      },
+      "outputs": {
+        "clang_flags": "clang_flags",
+        "clang_report": "clang_report"
+      },
+      "condition": "compiler == 'clang'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s05_xarch_pkgconfig_cross",
+      "skill_name": "xarch-pkgconfig-cross",
+      "inputs": {
+        "sysroot": "s03_xarch_sysroot_from_image.sysroot",
+        "target_triple": "s01_xarch_target_triple_select.target_triple"
+      },
+      "outputs": {
+        "pkgconfig_env": "pkgconfig_env",
+        "pkgconfig_report": "pkgconfig_report"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s06_xarch_ldd_shared_deps_audit",
+      "skill_name": "xarch-ldd-shared-deps-audit",
+      "inputs": {
+        "binary_path": "from_user_input",
+        "sysroot": "s03_xarch_sysroot_from_image.sysroot",
+        "toolchain_prefix": "s02_xarch_gcc_toolchain_select.toolchain_prefix"
+      },
+      "outputs": {
+        "deps_report": "deps_report",
+        "missing_libs": "missing_libs"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s07_xarch_cmake_toolchain_file",
+      "skill_name": "xarch-cmake-toolchain-file",
+      "inputs": {
+        "target_triple": "s01_xarch_target_triple_select.target_triple",
+        "toolchain_prefix": "s02_xarch_gcc_toolchain_select.toolchain_prefix",
+        "sysroot": "s03_xarch_sysroot_from_image.sysroot"
+      },
+      "outputs": {
+        "cmake_toolchain_file": "cmake_toolchain_file",
+        "toolchain_file_report": "toolchain_file_report"
+      },
+      "condition": "stack == 'cmake'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s08_xarch_cmake_configure_build",
+      "skill_name": "xarch-cmake-configure-build",
+      "inputs": {
+        "cmake_toolchain_file": "s07_xarch_cmake_toolchain_file.cmake_toolchain_file",
+        "project_dir": "from_user_input",
+        "pkgconfig_env": "s05_xarch_pkgconfig_cross.pkgconfig_env"
+      },
+      "outputs": {
+        "cmake_build": "cmake_build",
+        "cmake_build_report": "cmake_build_report"
+      },
+      "condition": "stack == 'cmake'",
+      "parallel_group": 4
+    },
+    {
+      "id": "s09_xarch_meson_cross_file",
+      "skill_name": "xarch-meson-cross-file",
+      "inputs": {
+        "target_triple": "s01_xarch_target_triple_select.target_triple",
+        "toolchain_prefix": "s02_xarch_gcc_toolchain_select.toolchain_prefix",
+        "sysroot": "s03_xarch_sysroot_from_image.sysroot",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "meson_cross_file": "meson_cross_file",
+        "meson_report": "meson_report"
+      },
+      "condition": "stack == 'meson'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s10_xarch_autotools_cross",
+      "skill_name": "xarch-autotools-cross",
+      "inputs": {
+        "target_triple": "s01_xarch_target_triple_select.target_triple",
+        "toolchain_prefix": "s02_xarch_gcc_toolchain_select.toolchain_prefix",
+        "sysroot": "s03_xarch_sysroot_from_image.sysroot",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "autotools_build": "autotools_build",
+        "autotools_report": "autotools_report"
+      },
+      "condition": "stack == 'autotools'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s11_xarch_rust_cross_target",
+      "skill_name": "xarch-rust-cross-target",
+      "inputs": {
+        "target_triple": "s01_xarch_target_triple_select.target_triple",
+        "toolchain_prefix": "s02_xarch_gcc_toolchain_select.toolchain_prefix",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "cargo_config": "cargo_config",
+        "rust_report": "rust_report"
+      },
+      "condition": "stack == 'rust'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s12_xarch_go_cross_build",
+      "skill_name": "xarch-go-cross-build",
+      "inputs": {
+        "target_triple": "s01_xarch_target_triple_select.target_triple",
+        "toolchain_prefix": "s02_xarch_gcc_toolchain_select.toolchain_prefix",
+        "project_dir": "from_user_input",
+        "cgo_enabled": "from_user_input_optional"
+      },
+      "outputs": {
+        "go_binary": "go_binary",
+        "go_report": "go_report"
+      },
+      "condition": "stack == 'go'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s13_xarch_conan_cross_profile",
+      "skill_name": "xarch-conan-cross-profile",
+      "inputs": {
+        "target_triple": "s01_xarch_target_triple_select.target_triple",
+        "toolchain_prefix": "s02_xarch_gcc_toolchain_select.toolchain_prefix",
+        "sysroot": "s03_xarch_sysroot_from_image.sysroot",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "conan_profile": "conan_profile",
+        "conan_report": "conan_report"
+      },
+      "condition": "stack == 'conan'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s14_xarch_musl_static_link",
+      "skill_name": "xarch-musl-static-link",
+      "inputs": {
+        "link_mode": "from_user_input",
+        "target_triple": "s01_xarch_target_triple_select.target_triple",
+        "project_dir": "from_user_input",
+        "missing_libs": "s06_xarch_ldd_shared_deps_audit.missing_libs"
+      },
+      "outputs": {
+        "static_binary": "static_binary",
+        "static_report": "static_report"
+      },
+      "condition": "link_mode == 'static-musl'",
+      "parallel_group": 4
+    },
+    {
+      "id": "s15_xarch_qemu_binfmt_register",
+      "skill_name": "xarch-qemu-binfmt-register",
+      "inputs": {
+        "qemu_mode": "from_user_input_optional"
+      },
+      "outputs": {
+        "binfmt_state": "binfmt_state",
+        "binfmt_report": "binfmt_report"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s16_xarch_python_manylinux_wheel",
+      "skill_name": "xarch-python-manylinux-wheel",
+      "inputs": {
+        "project_dir": "from_user_input",
+        "manylinux_tag": "from_user_input_optional",
+        "binfmt_state": "s15_xarch_qemu_binfmt_register.binfmt_state"
+      },
+      "outputs": {
+        "manylinux_wheel": "manylinux_wheel",
+        "manylinux_report": "manylinux_report"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s17_xarch_python_cibuildwheel",
+      "skill_name": "xarch-python-cibuildwheel",
+      "inputs": {
+        "project_dir": "from_user_input",
+        "cibw_build": "from_user_input_optional",
+        "binfmt_state": "s15_xarch_qemu_binfmt_register.binfmt_state"
+      },
+      "outputs": {
+        "cibw_wheels": "cibw_wheels",
+        "cibw_report": "cibw_report"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s18_xarch_docker_buildx_multiarch",
+      "skill_name": "xarch-docker-buildx-multiarch",
+      "inputs": {
+        "project_dir": "from_user_input",
+        "image_ref": "from_user_input",
+        "binfmt_state": "s15_xarch_qemu_binfmt_register.binfmt_state"
+      },
+      "outputs": {
+        "image_digest": "image_digest",
+        "buildx_report": "buildx_report"
+      },
+      "condition": "image_ref != null",
+      "parallel_group": 2
+    },
+    {
+      "id": "s19_xarch_qemu_user_run_tests",
+      "skill_name": "xarch-qemu-user-run-tests",
+      "inputs": {
+        "binary_path": "from_user_input",
+        "sysroot": "s03_xarch_sysroot_from_image.sysroot",
+        "binfmt_state": "s15_xarch_qemu_binfmt_register.binfmt_state"
+      },
+      "outputs": {
+        "qemu_test_report": "qemu_test_report",
+        "qemu_failures": "qemu_failures"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s20_xarch_elf_arch_verify",
+      "skill_name": "xarch-elf-arch-verify",
+      "inputs": {
+        "binary_path": "from_user_input"
+      },
+      "outputs": {
+        "arch_verdict": "arch_verdict",
+        "elf_report": "elf_report"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s21_xarch_glibc_version_diagnose",
+      "skill_name": "xarch-glibc-version-diagnose",
+      "inputs": {
+        "binary_path": "from_user_input",
+        "sysroot": "s03_xarch_sysroot_from_image.sysroot"
+      },
+      "outputs": {
+        "glibc_report": "glibc_report",
+        "required_versions": "required_versions"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s22_xarch_reproducible_build_check",
+      "skill_name": "xarch-reproducible-build-check",
+      "inputs": {
+        "project_dir": "from_user_input",
+        "build_command": "from_user_input"
+      },
+      "outputs": {
+        "repro_verdict": "repro_verdict",
+        "repro_report": "repro_report"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s23_xarch_remote_deploy_rsync",
+      "skill_name": "xarch-remote-deploy-rsync",
+      "inputs": {
+        "binary_path": "from_user_input",
+        "deploy_host": "from_user_input",
+        "remote_dir": "from_user_input",
+        "deps_report": "s06_xarch_ldd_shared_deps_audit.deps_report"
+      },
+      "outputs": {
+        "deploy_report": "deploy_report",
+        "remote_paths": "remote_paths"
+      },
+      "condition": "deploy_host != null",
+      "parallel_group": 4
+    },
+    {
+      "id": "s24_xarch_gdbserver_remote_debug",
+      "skill_name": "xarch-gdbserver-remote-debug",
+      "inputs": {
+        "binary_path": "from_user_input",
+        "deploy_host": "from_user_input",
+        "sysroot": "s03_xarch_sysroot_from_image.sysroot",
+        "toolchain_prefix": "s02_xarch_gcc_toolchain_select.toolchain_prefix"
+      },
+      "outputs": {
+        "debug_session": "debug_session",
+        "debug_report": "debug_report"
+      },
+      "condition": "deploy_host != null",
+      "parallel_group": 3
+    },
+    {
+      "id": "s25_xarch_ci_matrix_multiarch",
+      "skill_name": "xarch-ci-matrix-multiarch",
+      "inputs": {
+        "project_dir": "from_user_input",
+        "arch_list": "from_user_input",
+        "ci_system": "from_user_input_optional"
+      },
+      "outputs": {
+        "ci_workflow": "ci_workflow",
+        "ci_report": "ci_report"
+      },
+      "parallel_group": 1
+    }
+  ],
+  "edges": [
+    { "from_step": "s01_xarch_target_triple_select", "to_step": "s02_xarch_gcc_toolchain_select", "data_type": "xarch-target-triple-select", "field_mapping": { "target_triple": "target_triple" } },
+    { "from_step": "s01_xarch_target_triple_select", "to_step": "s04_xarch_clang_target_setup", "data_type": "xarch-target-triple-select", "field_mapping": { "target_triple": "target_triple" } },
+    { "from_step": "s03_xarch_sysroot_from_image", "to_step": "s04_xarch_clang_target_setup", "data_type": "xarch-sysroot-from-image", "field_mapping": { "sysroot": "sysroot" } },
+    { "from_step": "s03_xarch_sysroot_from_image", "to_step": "s05_xarch_pkgconfig_cross", "data_type": "xarch-sysroot-from-image", "field_mapping": { "sysroot": "sysroot" } },
+    { "from_step": "s01_xarch_target_triple_select", "to_step": "s05_xarch_pkgconfig_cross", "data_type": "xarch-target-triple-select", "field_mapping": { "target_triple": "target_triple" } },
+    { "from_step": "s03_xarch_sysroot_from_image", "to_step": "s06_xarch_ldd_shared_deps_audit", "data_type": "xarch-sysroot-from-image", "field_mapping": { "sysroot": "sysroot" } },
+    { "from_step": "s02_xarch_gcc_toolchain_select", "to_step": "s06_xarch_ldd_shared_deps_audit", "data_type": "xarch-gcc-toolchain-select", "field_mapping": { "toolchain_prefix": "toolchain_prefix" } },
+    { "from_step": "s01_xarch_target_triple_select", "to_step": "s07_xarch_cmake_toolchain_file", "data_type": "xarch-target-triple-select", "field_mapping": { "target_triple": "target_triple" } },
+    { "from_step": "s02_xarch_gcc_toolchain_select", "to_step": "s07_xarch_cmake_toolchain_file", "data_type": "xarch-gcc-toolchain-select", "field_mapping": { "toolchain_prefix": "toolchain_prefix" } },
+    { "from_step": "s03_xarch_sysroot_from_image", "to_step": "s07_xarch_cmake_toolchain_file", "data_type": "xarch-sysroot-from-image", "field_mapping": { "sysroot": "sysroot" } },
+    { "from_step": "s07_xarch_cmake_toolchain_file", "to_step": "s08_xarch_cmake_configure_build", "data_type": "xarch-cmake-toolchain-file", "field_mapping": { "cmake_toolchain_file": "cmake_toolchain_file" } },
+    { "from_step": "s05_xarch_pkgconfig_cross", "to_step": "s08_xarch_cmake_configure_build", "data_type": "xarch-pkgconfig-cross", "field_mapping": { "pkgconfig_env": "pkgconfig_env" } },
+    { "from_step": "s01_xarch_target_triple_select", "to_step": "s09_xarch_meson_cross_file", "data_type": "xarch-target-triple-select", "field_mapping": { "target_triple": "target_triple" } },
+    { "from_step": "s02_xarch_gcc_toolchain_select", "to_step": "s09_xarch_meson_cross_file", "data_type": "xarch-gcc-toolchain-select", "field_mapping": { "toolchain_prefix": "toolchain_prefix" } },
+    { "from_step": "s03_xarch_sysroot_from_image", "to_step": "s09_xarch_meson_cross_file", "data_type": "xarch-sysroot-from-image", "field_mapping": { "sysroot": "sysroot" } },
+    { "from_step": "s01_xarch_target_triple_select", "to_step": "s10_xarch_autotools_cross", "data_type": "xarch-target-triple-select", "field_mapping": { "target_triple": "target_triple" } },
+    { "from_step": "s02_xarch_gcc_toolchain_select", "to_step": "s10_xarch_autotools_cross", "data_type": "xarch-gcc-toolchain-select", "field_mapping": { "toolchain_prefix": "toolchain_prefix" } },
+    { "from_step": "s03_xarch_sysroot_from_image", "to_step": "s10_xarch_autotools_cross", "data_type": "xarch-sysroot-from-image", "field_mapping": { "sysroot": "sysroot" } },
+    { "from_step": "s01_xarch_target_triple_select", "to_step": "s11_xarch_rust_cross_target", "data_type": "xarch-target-triple-select", "field_mapping": { "target_triple": "target_triple" } },
+    { "from_step": "s02_xarch_gcc_toolchain_select", "to_step": "s11_xarch_rust_cross_target", "data_type": "xarch-gcc-toolchain-select", "field_mapping": { "toolchain_prefix": "toolchain_prefix" } },
+    { "from_step": "s01_xarch_target_triple_select", "to_step": "s12_xarch_go_cross_build", "data_type": "xarch-target-triple-select", "field_mapping": { "target_triple": "target_triple" } },
+    { "from_step": "s02_xarch_gcc_toolchain_select", "to_step": "s12_xarch_go_cross_build", "data_type": "xarch-gcc-toolchain-select", "field_mapping": { "toolchain_prefix": "toolchain_prefix" } },
+    { "from_step": "s01_xarch_target_triple_select", "to_step": "s13_xarch_conan_cross_profile", "data_type": "xarch-target-triple-select", "field_mapping": { "target_triple": "target_triple" } },
+    { "from_step": "s02_xarch_gcc_toolchain_select", "to_step": "s13_xarch_conan_cross_profile", "data_type": "xarch-gcc-toolchain-select", "field_mapping": { "toolchain_prefix": "toolchain_prefix" } },
+    { "from_step": "s03_xarch_sysroot_from_image", "to_step": "s13_xarch_conan_cross_profile", "data_type": "xarch-sysroot-from-image", "field_mapping": { "sysroot": "sysroot" } },
+    { "from_step": "s01_xarch_target_triple_select", "to_step": "s14_xarch_musl_static_link", "data_type": "xarch-target-triple-select", "field_mapping": { "target_triple": "target_triple" } },
+    { "from_step": "s06_xarch_ldd_shared_deps_audit", "to_step": "s14_xarch_musl_static_link", "data_type": "xarch-ldd-shared-deps-audit", "field_mapping": { "missing_libs": "missing_libs" } },
+    { "from_step": "s15_xarch_qemu_binfmt_register", "to_step": "s16_xarch_python_manylinux_wheel", "data_type": "xarch-qemu-binfmt-register", "field_mapping": { "binfmt_state": "binfmt_state" } },
+    { "from_step": "s15_xarch_qemu_binfmt_register", "to_step": "s17_xarch_python_cibuildwheel", "data_type": "xarch-qemu-binfmt-register", "field_mapping": { "binfmt_state": "binfmt_state" } },
+    { "from_step": "s15_xarch_qemu_binfmt_register", "to_step": "s18_xarch_docker_buildx_multiarch", "data_type": "xarch-qemu-binfmt-register", "field_mapping": { "binfmt_state": "binfmt_state" } },
+    { "from_step": "s03_xarch_sysroot_from_image", "to_step": "s19_xarch_qemu_user_run_tests", "data_type": "xarch-sysroot-from-image", "field_mapping": { "sysroot": "sysroot" } },
+    { "from_step": "s15_xarch_qemu_binfmt_register", "to_step": "s19_xarch_qemu_user_run_tests", "data_type": "xarch-qemu-binfmt-register", "field_mapping": { "binfmt_state": "binfmt_state" } },
+    { "from_step": "s03_xarch_sysroot_from_image", "to_step": "s21_xarch_glibc_version_diagnose", "data_type": "xarch-sysroot-from-image", "field_mapping": { "sysroot": "sysroot" } },
+    { "from_step": "s06_xarch_ldd_shared_deps_audit", "to_step": "s23_xarch_remote_deploy_rsync", "data_type": "xarch-ldd-shared-deps-audit", "field_mapping": { "deps_report": "deps_report" } },
+    { "from_step": "s03_xarch_sysroot_from_image", "to_step": "s24_xarch_gdbserver_remote_debug", "data_type": "xarch-sysroot-from-image", "field_mapping": { "sysroot": "sysroot" } },
+    { "from_step": "s02_xarch_gcc_toolchain_select", "to_step": "s24_xarch_gdbserver_remote_debug", "data_type": "xarch-gcc-toolchain-select", "field_mapping": { "toolchain_prefix": "toolchain_prefix" } }
+  ],
+  "entry_inputs": [
+    "stack",
+    "target_libc",
+    "target_cpu",
+    "host_distro",
+    "image_source",
+    "sysroot_dir",
+    "compiler",
+    "gcc_toolchain_path",
+    "binary_path",
+    "project_dir",
+    "cgo_enabled",
+    "link_mode",
+    "qemu_mode",
+    "manylinux_tag",
+    "cibw_build",
+    "image_ref",
+    "build_command",
+    "deploy_host",
+    "remote_dir",
+    "arch_list",
+    "ci_system"
+  ],
+  "terminal_outputs": [
+    "cmake_build",
+    "meson_report",
+    "autotools_build",
+    "rust_report",
+    "go_binary",
+    "conan_profile",
+    "static_binary",
+    "manylinux_wheel",
+    "cibw_wheels",
+    "image_digest",
+    "qemu_test_report",
+    "arch_verdict",
+    "glibc_report",
+    "repro_verdict",
+    "deploy_report",
+    "debug_report",
+    "ci_workflow"
+  ],
+  "parallel_groups": [
+    [
+      "s01_xarch_target_triple_select",
+      "s03_xarch_sysroot_from_image",
+      "s15_xarch_qemu_binfmt_register",
+      "s20_xarch_elf_arch_verify",
+      "s22_xarch_reproducible_build_check",
+      "s25_xarch_ci_matrix_multiarch"
+    ],
+    [
+      "s02_xarch_gcc_toolchain_select",
+      "s04_xarch_clang_target_setup",
+      "s05_xarch_pkgconfig_cross",
+      "s16_xarch_python_manylinux_wheel",
+      "s17_xarch_python_cibuildwheel",
+      "s18_xarch_docker_buildx_multiarch",
+      "s19_xarch_qemu_user_run_tests",
+      "s21_xarch_glibc_version_diagnose"
+    ],
+    [
+      "s06_xarch_ldd_shared_deps_audit",
+      "s07_xarch_cmake_toolchain_file",
+      "s09_xarch_meson_cross_file",
+      "s10_xarch_autotools_cross",
+      "s11_xarch_rust_cross_target",
+      "s12_xarch_go_cross_build",
+      "s13_xarch_conan_cross_profile",
+      "s24_xarch_gdbserver_remote_debug"
+    ],
+    [
+      "s08_xarch_cmake_configure_build",
+      "s14_xarch_musl_static_link",
+      "s23_xarch_remote_deploy_rsync"
+    ]
+  ],
+  "estimated_cost": 25,
+  "critical_path": [
+    "s01_xarch_target_triple_select",
+    "s02_xarch_gcc_toolchain_select",
+    "s07_xarch_cmake_toolchain_file",
+    "s08_xarch_cmake_configure_build"
+  ]
+}

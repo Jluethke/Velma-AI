@@ -1,0 +1,178 @@
+{
+  "name": "safety-critical-cpp-coverage",
+  "description": "Write requirements-based unit tests, measure structural coverage with gcov or llvm-cov, and close MC/DC gaps against the project coverage target.",
+  "steps": [
+    {
+      "id": "s01_sccpp_cmake_build_profiles",
+      "skill_name": "sccpp-cmake-build-profiles",
+      "inputs": {
+        "codebase_dir": "from_user_input",
+        "stack": "from_user_input",
+        "language": "from_user_input",
+        "toolchain_file": "from_user_input_optional"
+      },
+      "outputs": {
+        "build_profiles": "build_profiles"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_sccpp_c_unity_req_tests",
+      "skill_name": "sccpp-c-unity-req-tests",
+      "inputs": {
+        "requirements": "from_user_input",
+        "codebase_dir": "from_user_input",
+        "build_profiles": "s01_sccpp_cmake_build_profiles.build_profiles"
+      },
+      "outputs": {
+        "c_unit_tests": "c_unit_tests",
+        "c_trace_matrix": "c_trace_matrix"
+      },
+      "condition": "language == 'c'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_sccpp_cpp_gtest_req_tests",
+      "skill_name": "sccpp-cpp-gtest-req-tests",
+      "inputs": {
+        "requirements": "from_user_input",
+        "codebase_dir": "from_user_input",
+        "build_profiles": "s01_sccpp_cmake_build_profiles.build_profiles"
+      },
+      "outputs": {
+        "cpp_unit_tests": "cpp_unit_tests",
+        "cpp_trace_matrix": "cpp_trace_matrix"
+      },
+      "condition": "language == 'cpp'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_sccpp_gcc_gcov_coverage",
+      "skill_name": "sccpp-gcc-gcov-coverage",
+      "inputs": {
+        "build_profiles": "s01_sccpp_cmake_build_profiles.build_profiles",
+        "test_command": "from_user_input"
+      },
+      "outputs": {
+        "gcov_coverage": "gcov_coverage"
+      },
+      "condition": "stack == 'gcc'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s05_sccpp_llvm_cov_coverage",
+      "skill_name": "sccpp-llvm-cov-coverage",
+      "inputs": {
+        "build_profiles": "s01_sccpp_cmake_build_profiles.build_profiles",
+        "test_command": "from_user_input"
+      },
+      "outputs": {
+        "llvm_coverage": "llvm_coverage"
+      },
+      "condition": "stack == 'clang'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s06_sccpp_mcdc_gap_closure",
+      "skill_name": "sccpp-mcdc-gap-closure",
+      "inputs": {
+        "requirements": "from_user_input",
+        "gcov_coverage": "s04_sccpp_gcc_gcov_coverage.gcov_coverage",
+        "llvm_coverage": "s05_sccpp_llvm_cov_coverage.llvm_coverage",
+        "coverage_target": "from_user_input"
+      },
+      "outputs": {
+        "mcdc_test_cases": "mcdc_test_cases",
+        "coverage_gaps": "coverage_gaps"
+      },
+      "parallel_group": 3
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_sccpp_cmake_build_profiles",
+      "to_step": "s02_sccpp_c_unity_req_tests",
+      "data_type": "sccpp-cmake-build-profiles",
+      "field_mapping": {
+        "build_profiles": "build_profiles"
+      }
+    },
+    {
+      "from_step": "s01_sccpp_cmake_build_profiles",
+      "to_step": "s03_sccpp_cpp_gtest_req_tests",
+      "data_type": "sccpp-cmake-build-profiles",
+      "field_mapping": {
+        "build_profiles": "build_profiles"
+      }
+    },
+    {
+      "from_step": "s01_sccpp_cmake_build_profiles",
+      "to_step": "s04_sccpp_gcc_gcov_coverage",
+      "data_type": "sccpp-cmake-build-profiles",
+      "field_mapping": {
+        "build_profiles": "build_profiles"
+      }
+    },
+    {
+      "from_step": "s01_sccpp_cmake_build_profiles",
+      "to_step": "s05_sccpp_llvm_cov_coverage",
+      "data_type": "sccpp-cmake-build-profiles",
+      "field_mapping": {
+        "build_profiles": "build_profiles"
+      }
+    },
+    {
+      "from_step": "s04_sccpp_gcc_gcov_coverage",
+      "to_step": "s06_sccpp_mcdc_gap_closure",
+      "data_type": "sccpp-gcc-gcov-coverage",
+      "field_mapping": {
+        "gcov_coverage": "gcov_coverage"
+      }
+    },
+    {
+      "from_step": "s05_sccpp_llvm_cov_coverage",
+      "to_step": "s06_sccpp_mcdc_gap_closure",
+      "data_type": "sccpp-llvm-cov-coverage",
+      "field_mapping": {
+        "llvm_coverage": "llvm_coverage"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "codebase_dir",
+    "stack",
+    "language",
+    "toolchain_file",
+    "requirements",
+    "test_command",
+    "coverage_target"
+  ],
+  "terminal_outputs": [
+    "c_unit_tests",
+    "c_trace_matrix",
+    "cpp_unit_tests",
+    "cpp_trace_matrix",
+    "mcdc_test_cases",
+    "coverage_gaps"
+  ],
+  "parallel_groups": [
+    [
+      "s01_sccpp_cmake_build_profiles"
+    ],
+    [
+      "s02_sccpp_c_unity_req_tests",
+      "s03_sccpp_cpp_gtest_req_tests",
+      "s04_sccpp_gcc_gcov_coverage",
+      "s05_sccpp_llvm_cov_coverage"
+    ],
+    [
+      "s06_sccpp_mcdc_gap_closure"
+    ]
+  ],
+  "estimated_cost": 6,
+  "critical_path": [
+    "s01_sccpp_cmake_build_profiles",
+    "s04_sccpp_gcc_gcov_coverage",
+    "s06_sccpp_mcdc_gap_closure"
+  ]
+}

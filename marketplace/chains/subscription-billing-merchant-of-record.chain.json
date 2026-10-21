@@ -1,0 +1,168 @@
+{
+  "name": "subscription-billing-merchant-of-record",
+  "description": "Decide whether a merchant of record fits, encode pricing, set up Paddle or Lemon Squeezy with verified webhooks, map entitlements and compute revenue metrics.",
+  "steps": [
+    {
+      "id": "s01_bill_provider_select",
+      "skill_name": "bill-provider-select",
+      "inputs": {
+        "product_profile": "from_user_input",
+        "seller_jurisdictions": "from_user_input",
+        "sell_to_consumers": "from_user_input_optional"
+      },
+      "outputs": {
+        "billing_provider": "billing_provider",
+        "provider_rationale": "provider_rationale"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_bill_pricing_model_spec",
+      "skill_name": "bill-pricing-model-spec",
+      "inputs": {
+        "pricing_sheet": "from_user_input",
+        "billing_provider": "s01_bill_provider_select.billing_provider"
+      },
+      "outputs": {
+        "pricing_spec": "pricing_spec",
+        "pricing_open_questions": "pricing_open_questions"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_bill_mor_paddle",
+      "skill_name": "bill-mor-paddle",
+      "inputs": {
+        "pricing_spec": "s02_bill_pricing_model_spec.pricing_spec",
+        "paddle_environment": "from_user_input"
+      },
+      "outputs": {
+        "paddle_catalog": "paddle_catalog",
+        "paddle_webhook_code": "paddle_webhook_code"
+      },
+      "condition": "s01_bill_provider_select.billing_provider == 'paddle'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_bill_mor_lemonsqueezy",
+      "skill_name": "bill-mor-lemonsqueezy",
+      "inputs": {
+        "pricing_spec": "s02_bill_pricing_model_spec.pricing_spec",
+        "lemonsqueezy_store_id": "from_user_input"
+      },
+      "outputs": {
+        "ls_variant_map": "ls_variant_map",
+        "ls_webhook_code": "ls_webhook_code"
+      },
+      "condition": "s01_bill_provider_select.billing_provider == 'lemonsqueezy'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s05_bill_entitlements_model",
+      "skill_name": "bill-entitlements-model",
+      "inputs": {
+        "pricing_spec": "s02_bill_pricing_model_spec.pricing_spec",
+        "price_catalog": "from_user_input",
+        "webhook_handler": "from_user_input"
+      },
+      "outputs": {
+        "entitlement_map": "entitlement_map",
+        "entitlement_table_schema": "entitlement_table_schema"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s06_bill_revenue_metrics",
+      "skill_name": "bill-revenue-metrics",
+      "inputs": {
+        "billing_data_source": "from_user_input",
+        "metrics_period": "from_user_input",
+        "mrr_conventions": "from_user_input_optional"
+      },
+      "outputs": {
+        "mrr_report": "mrr_report",
+        "churn_report": "churn_report"
+      },
+      "parallel_group": 1
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_bill_provider_select",
+      "to_step": "s02_bill_pricing_model_spec",
+      "data_type": "bill-provider-select",
+      "field_mapping": {
+        "billing_provider": "billing_provider"
+      }
+    },
+    {
+      "from_step": "s02_bill_pricing_model_spec",
+      "to_step": "s03_bill_mor_paddle",
+      "data_type": "bill-pricing-model-spec",
+      "field_mapping": {
+        "pricing_spec": "pricing_spec"
+      }
+    },
+    {
+      "from_step": "s02_bill_pricing_model_spec",
+      "to_step": "s04_bill_mor_lemonsqueezy",
+      "data_type": "bill-pricing-model-spec",
+      "field_mapping": {
+        "pricing_spec": "pricing_spec"
+      }
+    },
+    {
+      "from_step": "s02_bill_pricing_model_spec",
+      "to_step": "s05_bill_entitlements_model",
+      "data_type": "bill-pricing-model-spec",
+      "field_mapping": {
+        "pricing_spec": "pricing_spec"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "product_profile",
+    "seller_jurisdictions",
+    "sell_to_consumers",
+    "pricing_sheet",
+    "paddle_environment",
+    "lemonsqueezy_store_id",
+    "price_catalog",
+    "webhook_handler",
+    "billing_data_source",
+    "metrics_period",
+    "mrr_conventions"
+  ],
+  "terminal_outputs": [
+    "provider_rationale",
+    "pricing_open_questions",
+    "paddle_catalog",
+    "paddle_webhook_code",
+    "ls_variant_map",
+    "ls_webhook_code",
+    "entitlement_map",
+    "entitlement_table_schema",
+    "mrr_report",
+    "churn_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_bill_provider_select",
+      "s06_bill_revenue_metrics"
+    ],
+    [
+      "s02_bill_pricing_model_spec"
+    ],
+    [
+      "s03_bill_mor_paddle",
+      "s04_bill_mor_lemonsqueezy",
+      "s05_bill_entitlements_model"
+    ]
+  ],
+  "estimated_cost": 6,
+  "critical_path": [
+    "s01_bill_provider_select",
+    "s02_bill_pricing_model_spec",
+    "s03_bill_mor_paddle"
+  ]
+}

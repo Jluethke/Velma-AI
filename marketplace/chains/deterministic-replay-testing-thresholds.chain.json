@@ -1,0 +1,111 @@
+{
+  "name": "deterministic-replay-testing-thresholds",
+  "description": "Derive at, below and above boundary cases for every decision limit and turn them into exact threshold tests and monotonic property tests for Python or C++.",
+  "steps": [
+    {
+      "id": "s01_detd_threshold_boundary_cases",
+      "skill_name": "detd-threshold-boundary-cases",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "limit_spec": "from_user_input"
+      },
+      "outputs": {
+        "boundary_cases": "boundary_cases"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_detd_py_pytest_threshold_tests",
+      "skill_name": "detd-py-pytest-threshold-tests",
+      "inputs": {
+        "boundary_cases": "s01_detd_threshold_boundary_cases.boundary_cases"
+      },
+      "outputs": {
+        "boundary_test_file": "boundary_test_file"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_detd_cpp_gtest_threshold_tests",
+      "skill_name": "detd-cpp-gtest-threshold-tests",
+      "inputs": {
+        "boundary_cases": "s01_detd_threshold_boundary_cases.boundary_cases"
+      },
+      "outputs": {
+        "boundary_test_file": "boundary_test_file"
+      },
+      "condition": "stack == 'cpp'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_detd_py_hypothesis_monotonic",
+      "skill_name": "detd-py-hypothesis-monotonic",
+      "inputs": {
+        "limit_spec": "from_user_input",
+        "decision_entrypoint": "from_user_input"
+      },
+      "outputs": {
+        "property_tests": "property_tests"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 1
+    },
+    {
+      "id": "s05_detd_cpp_rapidcheck_monotonic",
+      "skill_name": "detd-cpp-rapidcheck-monotonic",
+      "inputs": {
+        "limit_spec": "from_user_input",
+        "decision_entrypoint": "from_user_input"
+      },
+      "outputs": {
+        "property_tests": "property_tests"
+      },
+      "condition": "stack == 'cpp'",
+      "parallel_group": 1
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_detd_threshold_boundary_cases",
+      "to_step": "s02_detd_py_pytest_threshold_tests",
+      "data_type": "detd-threshold-boundary-cases",
+      "field_mapping": {
+        "boundary_cases": "boundary_cases"
+      }
+    },
+    {
+      "from_step": "s01_detd_threshold_boundary_cases",
+      "to_step": "s03_detd_cpp_gtest_threshold_tests",
+      "data_type": "detd-threshold-boundary-cases",
+      "field_mapping": {
+        "boundary_cases": "boundary_cases"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "repo_path",
+    "limit_spec",
+    "decision_entrypoint"
+  ],
+  "terminal_outputs": [
+    "boundary_test_file",
+    "property_tests"
+  ],
+  "parallel_groups": [
+    [
+      "s01_detd_threshold_boundary_cases",
+      "s04_detd_py_hypothesis_monotonic",
+      "s05_detd_cpp_rapidcheck_monotonic"
+    ],
+    [
+      "s02_detd_py_pytest_threshold_tests",
+      "s03_detd_cpp_gtest_threshold_tests"
+    ]
+  ],
+  "estimated_cost": 5,
+  "critical_path": [
+    "s01_detd_threshold_boundary_cases",
+    "s03_detd_cpp_gtest_threshold_tests"
+  ]
+}

@@ -1,0 +1,132 @@
+{
+  "name": "drive-data-logging-archive-integrity",
+  "description": "Take a finished drive from the vehicle to a searchable archive: validate and recover files, write the run manifest, hash every file, offload with destination verification and index it.",
+  "steps": [
+    {
+      "id": "s01_dlog_log_validate_recover",
+      "skill_name": "dlog-log-validate-recover",
+      "inputs": {
+        "log_dir": "from_user_input",
+        "log_format_decision": "from_user_input"
+      },
+      "outputs": {
+        "validation_report": "validation_report"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_dlog_run_manifest",
+      "skill_name": "dlog-run-manifest",
+      "inputs": {
+        "log_dir": "from_user_input",
+        "run_context": "from_user_input"
+      },
+      "outputs": {
+        "run_manifest": "run_manifest"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s03_dlog_file_integrity_hashes",
+      "skill_name": "dlog-file-integrity-hashes",
+      "inputs": {
+        "log_dir": "from_user_input",
+        "run_manifest": "s02_dlog_run_manifest.run_manifest"
+      },
+      "outputs": {
+        "hash_manifest": "hash_manifest"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_dlog_offload_verify",
+      "skill_name": "dlog-offload-verify",
+      "inputs": {
+        "log_dir": "from_user_input",
+        "hash_manifest": "s03_dlog_file_integrity_hashes.hash_manifest",
+        "archive_path": "from_user_input"
+      },
+      "outputs": {
+        "offload_report": "offload_report"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s05_dlog_drive_index_sqlite",
+      "skill_name": "dlog-drive-index-sqlite",
+      "inputs": {
+        "archive_path": "from_user_input",
+        "run_manifest": "s02_dlog_run_manifest.run_manifest",
+        "hash_manifest": "s03_dlog_file_integrity_hashes.hash_manifest"
+      },
+      "outputs": {
+        "drive_index": "drive_index"
+      },
+      "parallel_group": 3
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s02_dlog_run_manifest",
+      "to_step": "s03_dlog_file_integrity_hashes",
+      "data_type": "dlog-run-manifest",
+      "field_mapping": {
+        "run_manifest": "run_manifest"
+      }
+    },
+    {
+      "from_step": "s03_dlog_file_integrity_hashes",
+      "to_step": "s04_dlog_offload_verify",
+      "data_type": "dlog-file-integrity-hashes",
+      "field_mapping": {
+        "hash_manifest": "hash_manifest"
+      }
+    },
+    {
+      "from_step": "s02_dlog_run_manifest",
+      "to_step": "s05_dlog_drive_index_sqlite",
+      "data_type": "dlog-run-manifest",
+      "field_mapping": {
+        "run_manifest": "run_manifest"
+      }
+    },
+    {
+      "from_step": "s03_dlog_file_integrity_hashes",
+      "to_step": "s05_dlog_drive_index_sqlite",
+      "data_type": "dlog-file-integrity-hashes",
+      "field_mapping": {
+        "hash_manifest": "hash_manifest"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "log_dir",
+    "log_format_decision",
+    "run_context",
+    "archive_path"
+  ],
+  "terminal_outputs": [
+    "validation_report",
+    "offload_report",
+    "drive_index"
+  ],
+  "parallel_groups": [
+    [
+      "s01_dlog_log_validate_recover",
+      "s02_dlog_run_manifest"
+    ],
+    [
+      "s03_dlog_file_integrity_hashes"
+    ],
+    [
+      "s04_dlog_offload_verify",
+      "s05_dlog_drive_index_sqlite"
+    ]
+  ],
+  "estimated_cost": 5,
+  "critical_path": [
+    "s02_dlog_run_manifest",
+    "s03_dlog_file_integrity_hashes",
+    "s04_dlog_offload_verify"
+  ]
+}

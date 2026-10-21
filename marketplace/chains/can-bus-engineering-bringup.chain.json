@@ -1,0 +1,303 @@
+{
+  "name": "can-bus-engineering-bringup",
+  "description": "Bring a CAN or CAN FD interface up on Linux: transmit scope, USB adapter, termination, bit timing, ip link setup, capture, error diagnosis, bus-off recovery and bus load.",
+  "steps": [
+    {
+      "id": "s01_canb_tx_scope_check",
+      "skill_name": "canb-tx-scope-check",
+      "inputs": {
+        "target_kind": "from_user_input",
+        "vehicle_owned": "from_user_input",
+        "estop_confirmed": "from_user_input_optional",
+        "planned_tx_ids": "from_user_input_optional"
+      },
+      "outputs": {
+        "tx_permission": "tx_permission",
+        "scope_record": "scope_record"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_canb_usb_adapter_bringup",
+      "skill_name": "canb-usb-adapter-bringup",
+      "inputs": {
+        "adapter_type": "from_user_input",
+        "usb_device_hint": "from_user_input_optional"
+      },
+      "outputs": {
+        "can_netdev": "can_netdev",
+        "adapter_report": "adapter_report"
+      },
+      "condition": "target_kind != 'virtual'",
+      "parallel_group": 1
+    },
+    {
+      "id": "s03_canb_termination_check",
+      "skill_name": "canb-termination-check",
+      "inputs": {
+        "target_kind": "from_user_input",
+        "bus_topology": "from_user_input_optional"
+      },
+      "outputs": {
+        "termination_report": "termination_report"
+      },
+      "condition": "target_kind != 'virtual'",
+      "parallel_group": 1
+    },
+    {
+      "id": "s04_canb_bit_timing_calc",
+      "skill_name": "canb-bit-timing-calc",
+      "inputs": {
+        "can_netdev": "s02_canb_usb_adapter_bringup.can_netdev",
+        "bitrate": "from_user_input",
+        "data_bitrate": "from_user_input_optional",
+        "sample_point": "from_user_input_optional",
+        "adapter_report": "s02_canb_usb_adapter_bringup.adapter_report"
+      },
+      "outputs": {
+        "bit_timing": "bit_timing"
+      },
+      "condition": "target_kind != 'virtual'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s05_canb_socketcan_link_up",
+      "skill_name": "canb-socketcan-link-up",
+      "inputs": {
+        "can_netdev": "s02_canb_usb_adapter_bringup.can_netdev",
+        "bit_timing": "s04_canb_bit_timing_calc.bit_timing",
+        "tx_permission": "s01_canb_tx_scope_check.tx_permission",
+        "restart_ms": "from_user_input_optional"
+      },
+      "outputs": {
+        "link_state": "link_state"
+      },
+      "condition": "target_kind != 'virtual'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s06_canb_candump_capture",
+      "skill_name": "canb-candump-capture",
+      "inputs": {
+        "can_netdev": "s02_canb_usb_adapter_bringup.can_netdev",
+        "link_state": "s05_canb_socketcan_link_up.link_state",
+        "capture_filters": "from_user_input_optional",
+        "capture_seconds": "from_user_input"
+      },
+      "outputs": {
+        "candump_log": "candump_log"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s07_canb_error_frame_diagnosis",
+      "skill_name": "canb-error-frame-diagnosis",
+      "inputs": {
+        "can_netdev": "s02_canb_usb_adapter_bringup.can_netdev",
+        "link_state": "s05_canb_socketcan_link_up.link_state",
+        "candump_log": "s06_canb_candump_capture.candump_log"
+      },
+      "outputs": {
+        "error_report": "error_report"
+      },
+      "condition": "target_kind != 'virtual'",
+      "parallel_group": 5
+    },
+    {
+      "id": "s08_canb_busoff_recovery",
+      "skill_name": "canb-busoff-recovery",
+      "inputs": {
+        "can_netdev": "s02_canb_usb_adapter_bringup.can_netdev",
+        "error_report": "s07_canb_error_frame_diagnosis.error_report",
+        "restart_ms": "from_user_input_optional"
+      },
+      "outputs": {
+        "recovery_plan": "recovery_plan"
+      },
+      "condition": "error_report.dominant_class == 'CAN_ERR_BUSOFF'",
+      "parallel_group": 6
+    },
+    {
+      "id": "s09_canb_canbusload_measure",
+      "skill_name": "canb-canbusload-measure",
+      "inputs": {
+        "can_netdev": "s02_canb_usb_adapter_bringup.can_netdev",
+        "bit_timing": "s04_canb_bit_timing_calc.bit_timing",
+        "candump_log": "s06_canb_candump_capture.candump_log"
+      },
+      "outputs": {
+        "busload_report": "busload_report"
+      },
+      "condition": "target_kind != 'virtual'",
+      "parallel_group": 5
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s02_canb_usb_adapter_bringup",
+      "to_step": "s04_canb_bit_timing_calc",
+      "data_type": "canb-usb-adapter-bringup",
+      "field_mapping": {
+        "can_netdev": "can_netdev",
+        "adapter_report": "adapter_report"
+      }
+    },
+    {
+      "from_step": "s02_canb_usb_adapter_bringup",
+      "to_step": "s05_canb_socketcan_link_up",
+      "data_type": "canb-usb-adapter-bringup",
+      "field_mapping": {
+        "can_netdev": "can_netdev"
+      }
+    },
+    {
+      "from_step": "s04_canb_bit_timing_calc",
+      "to_step": "s05_canb_socketcan_link_up",
+      "data_type": "canb-bit-timing-calc",
+      "field_mapping": {
+        "bit_timing": "bit_timing"
+      }
+    },
+    {
+      "from_step": "s01_canb_tx_scope_check",
+      "to_step": "s05_canb_socketcan_link_up",
+      "data_type": "canb-tx-scope-check",
+      "field_mapping": {
+        "tx_permission": "tx_permission"
+      }
+    },
+    {
+      "from_step": "s02_canb_usb_adapter_bringup",
+      "to_step": "s06_canb_candump_capture",
+      "data_type": "canb-usb-adapter-bringup",
+      "field_mapping": {
+        "can_netdev": "can_netdev"
+      }
+    },
+    {
+      "from_step": "s05_canb_socketcan_link_up",
+      "to_step": "s06_canb_candump_capture",
+      "data_type": "canb-socketcan-link-up",
+      "field_mapping": {
+        "link_state": "link_state"
+      }
+    },
+    {
+      "from_step": "s02_canb_usb_adapter_bringup",
+      "to_step": "s07_canb_error_frame_diagnosis",
+      "data_type": "canb-usb-adapter-bringup",
+      "field_mapping": {
+        "can_netdev": "can_netdev"
+      }
+    },
+    {
+      "from_step": "s05_canb_socketcan_link_up",
+      "to_step": "s07_canb_error_frame_diagnosis",
+      "data_type": "canb-socketcan-link-up",
+      "field_mapping": {
+        "link_state": "link_state"
+      }
+    },
+    {
+      "from_step": "s06_canb_candump_capture",
+      "to_step": "s07_canb_error_frame_diagnosis",
+      "data_type": "canb-candump-capture",
+      "field_mapping": {
+        "candump_log": "candump_log"
+      }
+    },
+    {
+      "from_step": "s02_canb_usb_adapter_bringup",
+      "to_step": "s08_canb_busoff_recovery",
+      "data_type": "canb-usb-adapter-bringup",
+      "field_mapping": {
+        "can_netdev": "can_netdev"
+      }
+    },
+    {
+      "from_step": "s07_canb_error_frame_diagnosis",
+      "to_step": "s08_canb_busoff_recovery",
+      "data_type": "canb-error-frame-diagnosis",
+      "field_mapping": {
+        "error_report": "error_report"
+      }
+    },
+    {
+      "from_step": "s02_canb_usb_adapter_bringup",
+      "to_step": "s09_canb_canbusload_measure",
+      "data_type": "canb-usb-adapter-bringup",
+      "field_mapping": {
+        "can_netdev": "can_netdev"
+      }
+    },
+    {
+      "from_step": "s04_canb_bit_timing_calc",
+      "to_step": "s09_canb_canbusload_measure",
+      "data_type": "canb-bit-timing-calc",
+      "field_mapping": {
+        "bit_timing": "bit_timing"
+      }
+    },
+    {
+      "from_step": "s06_canb_candump_capture",
+      "to_step": "s09_canb_canbusload_measure",
+      "data_type": "canb-candump-capture",
+      "field_mapping": {
+        "candump_log": "candump_log"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "target_kind",
+    "vehicle_owned",
+    "estop_confirmed",
+    "planned_tx_ids",
+    "adapter_type",
+    "usb_device_hint",
+    "bus_topology",
+    "bitrate",
+    "data_bitrate",
+    "sample_point",
+    "restart_ms",
+    "capture_filters",
+    "capture_seconds"
+  ],
+  "terminal_outputs": [
+    "scope_record",
+    "termination_report",
+    "recovery_plan",
+    "busload_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_canb_tx_scope_check",
+      "s02_canb_usb_adapter_bringup",
+      "s03_canb_termination_check"
+    ],
+    [
+      "s04_canb_bit_timing_calc"
+    ],
+    [
+      "s05_canb_socketcan_link_up"
+    ],
+    [
+      "s06_canb_candump_capture"
+    ],
+    [
+      "s07_canb_error_frame_diagnosis",
+      "s09_canb_canbusload_measure"
+    ],
+    [
+      "s08_canb_busoff_recovery"
+    ]
+  ],
+  "estimated_cost": 9,
+  "critical_path": [
+    "s02_canb_usb_adapter_bringup",
+    "s04_canb_bit_timing_calc",
+    "s05_canb_socketcan_link_up",
+    "s06_canb_candump_capture",
+    "s07_canb_error_frame_diagnosis",
+    "s08_canb_busoff_recovery"
+  ]
+}

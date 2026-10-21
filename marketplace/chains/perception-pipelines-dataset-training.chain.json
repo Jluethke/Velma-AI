@@ -1,0 +1,162 @@
+{
+  "name": "perception-pipelines-dataset-training",
+  "description": "Audit COCO or KITTI labels, convert to COCO, split train, validation and holdout by sequence, decide between pretrained, fine-tune or scratch, and fine-tune with Ultralytics.",
+  "steps": [
+    {
+      "id": "s01_perc_label_format_audit",
+      "skill_name": "perc-label-format-audit",
+      "inputs": {
+        "dataset_dir": "from_user_input",
+        "label_format": "from_user_input",
+        "class_list": "from_user_input"
+      },
+      "outputs": {
+        "dataset_index": "dataset_index",
+        "label_audit_report": "label_audit_report"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_perc_kitti_to_coco_convert",
+      "skill_name": "perc-kitti-to-coco-convert",
+      "inputs": {
+        "dataset_index": "s01_perc_label_format_audit.dataset_index",
+        "label_format": "from_user_input",
+        "class_list": "from_user_input"
+      },
+      "outputs": {
+        "coco_annotations": "coco_annotations"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_perc_holdout_split_by_sequence",
+      "skill_name": "perc-holdout-split-by-sequence",
+      "inputs": {
+        "coco_annotations": "s02_perc_kitti_to_coco_convert.coco_annotations",
+        "sequence_key": "from_user_input_optional",
+        "holdout_fraction": "from_user_input"
+      },
+      "outputs": {
+        "train_annotations": "train_annotations",
+        "val_annotations": "val_annotations",
+        "holdout_annotations": "holdout_annotations",
+        "split_report": "split_report"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_perc_train_vs_finetune_decision",
+      "skill_name": "perc-train-vs-finetune-decision",
+      "inputs": {
+        "split_report": "s03_perc_holdout_split_by_sequence.split_report",
+        "class_list": "from_user_input",
+        "pretrained_candidates": "from_user_input",
+        "accuracy_target": "from_user_input"
+      },
+      "outputs": {
+        "training_plan": "training_plan"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s05_perc_py_ultralytics_finetune",
+      "skill_name": "perc-py-ultralytics-finetune",
+      "inputs": {
+        "training_plan": "s04_perc_train_vs_finetune_decision.training_plan",
+        "train_annotations": "s03_perc_holdout_split_by_sequence.train_annotations",
+        "val_annotations": "s03_perc_holdout_split_by_sequence.val_annotations",
+        "dataset_dir": "from_user_input"
+      },
+      "outputs": {
+        "trained_checkpoint": "trained_checkpoint",
+        "training_log": "training_log"
+      },
+      "condition": "training_plan.path != 'use_as_is'",
+      "parallel_group": 5
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_perc_label_format_audit",
+      "to_step": "s02_perc_kitti_to_coco_convert",
+      "data_type": "perc-label-format-audit",
+      "field_mapping": {
+        "dataset_index": "dataset_index"
+      }
+    },
+    {
+      "from_step": "s02_perc_kitti_to_coco_convert",
+      "to_step": "s03_perc_holdout_split_by_sequence",
+      "data_type": "perc-kitti-to-coco-convert",
+      "field_mapping": {
+        "coco_annotations": "coco_annotations"
+      }
+    },
+    {
+      "from_step": "s03_perc_holdout_split_by_sequence",
+      "to_step": "s04_perc_train_vs_finetune_decision",
+      "data_type": "perc-holdout-split-by-sequence",
+      "field_mapping": {
+        "split_report": "split_report"
+      }
+    },
+    {
+      "from_step": "s04_perc_train_vs_finetune_decision",
+      "to_step": "s05_perc_py_ultralytics_finetune",
+      "data_type": "perc-train-vs-finetune-decision",
+      "field_mapping": {
+        "training_plan": "training_plan"
+      }
+    },
+    {
+      "from_step": "s03_perc_holdout_split_by_sequence",
+      "to_step": "s05_perc_py_ultralytics_finetune",
+      "data_type": "perc-holdout-split-by-sequence",
+      "field_mapping": {
+        "train_annotations": "train_annotations",
+        "val_annotations": "val_annotations"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "dataset_dir",
+    "label_format",
+    "class_list",
+    "sequence_key",
+    "holdout_fraction",
+    "pretrained_candidates",
+    "accuracy_target"
+  ],
+  "terminal_outputs": [
+    "label_audit_report",
+    "holdout_annotations",
+    "trained_checkpoint",
+    "training_log"
+  ],
+  "parallel_groups": [
+    [
+      "s01_perc_label_format_audit"
+    ],
+    [
+      "s02_perc_kitti_to_coco_convert"
+    ],
+    [
+      "s03_perc_holdout_split_by_sequence"
+    ],
+    [
+      "s04_perc_train_vs_finetune_decision"
+    ],
+    [
+      "s05_perc_py_ultralytics_finetune"
+    ]
+  ],
+  "estimated_cost": 5,
+  "critical_path": [
+    "s01_perc_label_format_audit",
+    "s02_perc_kitti_to_coco_convert",
+    "s03_perc_holdout_split_by_sequence",
+    "s04_perc_train_vs_finetune_decision",
+    "s05_perc_py_ultralytics_finetune"
+  ]
+}

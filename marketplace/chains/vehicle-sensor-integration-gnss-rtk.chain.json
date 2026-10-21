@@ -1,0 +1,140 @@
+{
+  "name": "vehicle-sensor-integration-gnss-rtk",
+  "description": "Check a GNSS receiver's NMEA stream, configure a u-blox receiver over UBX, add NTRIP RTK corrections, and discipline the host clock from PPS.",
+  "steps": [
+    {
+      "id": "s01_vsens_sensor_inventory",
+      "skill_name": "vsens-sensor-inventory",
+      "inputs": {
+        "platform_description": "from_user_input",
+        "sensor_list": "from_user_input"
+      },
+      "outputs": {
+        "sensor_inventory": "sensor_inventory",
+        "timing_requirements": "timing_requirements"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_vsens_gnss_nmea_gpsd",
+      "skill_name": "vsens-gnss-nmea-gpsd",
+      "inputs": {
+        "sensor_inventory": "s01_vsens_sensor_inventory.sensor_inventory",
+        "gnss_device": "from_user_input"
+      },
+      "outputs": {
+        "gnss_stream_report": "gnss_stream_report"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_vsens_gnss_ubx_config",
+      "skill_name": "vsens-gnss-ubx-config",
+      "inputs": {
+        "gnss_stream_report": "s02_vsens_gnss_nmea_gpsd.gnss_stream_report",
+        "measurement_rate_hz": "from_user_input"
+      },
+      "outputs": {
+        "ubx_config": "ubx_config"
+      },
+      "condition": "gnss_vendor == 'u-blox'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_vsens_gnss_ntrip_rtk",
+      "skill_name": "vsens-gnss-ntrip-rtk",
+      "inputs": {
+        "ubx_config": "s03_vsens_gnss_ubx_config.ubx_config",
+        "ntrip_caster": "from_user_input"
+      },
+      "outputs": {
+        "rtk_status_report": "rtk_status_report"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s05_vsens_pps_chrony",
+      "skill_name": "vsens-pps-chrony",
+      "inputs": {
+        "gnss_stream_report": "s02_vsens_gnss_nmea_gpsd.gnss_stream_report",
+        "pps_device": "from_user_input",
+        "ptp_sync_report": "from_user_input_optional"
+      },
+      "outputs": {
+        "clock_discipline_report": "clock_discipline_report"
+      },
+      "condition": "has_pps == true",
+      "parallel_group": 3
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_vsens_sensor_inventory",
+      "to_step": "s02_vsens_gnss_nmea_gpsd",
+      "data_type": "vsens-sensor-inventory",
+      "field_mapping": {
+        "sensor_inventory": "sensor_inventory"
+      }
+    },
+    {
+      "from_step": "s02_vsens_gnss_nmea_gpsd",
+      "to_step": "s03_vsens_gnss_ubx_config",
+      "data_type": "vsens-gnss-nmea-gpsd",
+      "field_mapping": {
+        "gnss_stream_report": "gnss_stream_report"
+      }
+    },
+    {
+      "from_step": "s03_vsens_gnss_ubx_config",
+      "to_step": "s04_vsens_gnss_ntrip_rtk",
+      "data_type": "vsens-gnss-ubx-config",
+      "field_mapping": {
+        "ubx_config": "ubx_config"
+      }
+    },
+    {
+      "from_step": "s02_vsens_gnss_nmea_gpsd",
+      "to_step": "s05_vsens_pps_chrony",
+      "data_type": "vsens-gnss-nmea-gpsd",
+      "field_mapping": {
+        "gnss_stream_report": "gnss_stream_report"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "platform_description",
+    "sensor_list",
+    "gnss_device",
+    "measurement_rate_hz",
+    "ntrip_caster",
+    "pps_device",
+    "ptp_sync_report"
+  ],
+  "terminal_outputs": [
+    "timing_requirements",
+    "rtk_status_report",
+    "clock_discipline_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_vsens_sensor_inventory"
+    ],
+    [
+      "s02_vsens_gnss_nmea_gpsd"
+    ],
+    [
+      "s03_vsens_gnss_ubx_config",
+      "s05_vsens_pps_chrony"
+    ],
+    [
+      "s04_vsens_gnss_ntrip_rtk"
+    ]
+  ],
+  "estimated_cost": 5,
+  "critical_path": [
+    "s01_vsens_sensor_inventory",
+    "s02_vsens_gnss_nmea_gpsd",
+    "s03_vsens_gnss_ubx_config",
+    "s04_vsens_gnss_ntrip_rtk"
+  ]
+}

@@ -1,0 +1,651 @@
+{
+  "name": "can-signal-reverse-engineering-python-stack",
+  "description": "End-to-end python-can and cantools path: listen-only bus configuration, capture, analysis, reference fit, DBC, validation and virtual-bus replay, with no hardware transmit at any step.",
+  "steps": [
+    {
+      "id": "s01_sigre_scope_owned_vehicle_readonly",
+      "skill_name": "sigre-scope-owned-vehicle-readonly",
+      "inputs": {
+        "vehicle_description": "from_user_input",
+        "ownership_confirmed": "from_user_input",
+        "stack": "from_user_input",
+        "adapter_model": "from_user_input_optional"
+      },
+      "outputs": {
+        "capture_scope": "capture_scope"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_sigre_capture_plan_labeled_actions",
+      "skill_name": "sigre-capture-plan-labeled-actions",
+      "inputs": {
+        "capture_scope": "s01_sigre_scope_owned_vehicle_readonly.capture_scope",
+        "target_signals": "from_user_input",
+        "reference_source": "from_user_input",
+        "repetitions": "from_user_input",
+        "baseline_seconds": "from_user_input"
+      },
+      "outputs": {
+        "capture_plan": "capture_plan"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_sigre_py_python_can_listen_setup",
+      "skill_name": "sigre-py-python-can-listen-setup",
+      "inputs": {
+        "capture_scope": "s01_sigre_scope_owned_vehicle_readonly.capture_scope",
+        "python_can_interface": "from_user_input",
+        "python_can_channel": "from_user_input"
+      },
+      "outputs": {
+        "python_can_config": "python_can_config"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_sigre_py_python_can_capture",
+      "skill_name": "sigre-py-python-can-capture",
+      "inputs": {
+        "python_can_config": "s03_sigre_py_python_can_listen_setup.python_can_config",
+        "capture_plan": "s02_sigre_capture_plan_labeled_actions.capture_plan"
+      },
+      "outputs": {
+        "python_can_logs": "python_can_logs"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s05_sigre_log_normalize_convert",
+      "skill_name": "sigre-log-normalize-convert",
+      "inputs": {
+        "capture_plan": "s02_sigre_capture_plan_labeled_actions.capture_plan",
+        "candump_logs": "from_user_input_optional",
+        "python_can_logs": "s04_sigre_py_python_can_capture.python_can_logs",
+        "savvycan_logs": "from_user_input_optional"
+      },
+      "outputs": {
+        "capture_logs": "capture_logs"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s06_sigre_baseline_idle_inventory",
+      "skill_name": "sigre-baseline-idle-inventory",
+      "inputs": {
+        "capture_logs": "s05_sigre_log_normalize_convert.capture_logs"
+      },
+      "outputs": {
+        "id_inventory": "id_inventory"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s07_sigre_byte_change_count_diff",
+      "skill_name": "sigre-byte-change-count-diff",
+      "inputs": {
+        "capture_logs": "s05_sigre_log_normalize_convert.capture_logs",
+        "capture_plan": "s02_sigre_capture_plan_labeled_actions.capture_plan",
+        "id_inventory": "s06_sigre_baseline_idle_inventory.id_inventory",
+        "cansniffer_candidates": "from_user_input_optional",
+        "savvycan_candidates": "from_user_input_optional"
+      },
+      "outputs": {
+        "candidate_bytes": "candidate_bytes"
+      },
+      "parallel_group": 6
+    },
+    {
+      "id": "s08_sigre_counter_checksum_detect",
+      "skill_name": "sigre-counter-checksum-detect",
+      "inputs": {
+        "capture_logs": "s05_sigre_log_normalize_convert.capture_logs",
+        "candidate_bytes": "s07_sigre_byte_change_count_diff.candidate_bytes"
+      },
+      "outputs": {
+        "counter_checksum_map": "counter_checksum_map"
+      },
+      "parallel_group": 7
+    },
+    {
+      "id": "s09_sigre_bit_boundary_search",
+      "skill_name": "sigre-bit-boundary-search",
+      "inputs": {
+        "capture_logs": "s05_sigre_log_normalize_convert.capture_logs",
+        "candidate_bytes": "s07_sigre_byte_change_count_diff.candidate_bytes",
+        "counter_checksum_map": "s08_sigre_counter_checksum_detect.counter_checksum_map"
+      },
+      "outputs": {
+        "bit_fields": "bit_fields"
+      },
+      "parallel_group": 8
+    },
+    {
+      "id": "s10_sigre_endianness_signedness_test",
+      "skill_name": "sigre-endianness-signedness-test",
+      "inputs": {
+        "capture_logs": "s05_sigre_log_normalize_convert.capture_logs",
+        "bit_fields": "s09_sigre_bit_boundary_search.bit_fields",
+        "capture_plan": "s02_sigre_capture_plan_labeled_actions.capture_plan"
+      },
+      "outputs": {
+        "typed_fields": "typed_fields"
+      },
+      "parallel_group": 9
+    },
+    {
+      "id": "s11_sigre_gps_speed_reference_log",
+      "skill_name": "sigre-gps-speed-reference-log",
+      "inputs": {
+        "capture_scope": "s01_sigre_scope_owned_vehicle_readonly.capture_scope",
+        "capture_plan": "s02_sigre_capture_plan_labeled_actions.capture_plan"
+      },
+      "outputs": {
+        "gps_reference": "gps_reference"
+      },
+      "condition": "reference_source == 'gps'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s12_sigre_obd2_passive_pid_reference",
+      "skill_name": "sigre-obd2-passive-pid-reference",
+      "inputs": {
+        "capture_logs": "s05_sigre_log_normalize_convert.capture_logs"
+      },
+      "outputs": {
+        "obd2_reference": "obd2_reference"
+      },
+      "condition": "reference_source == 'obd2'",
+      "parallel_group": 5
+    },
+    {
+      "id": "s13_sigre_reference_time_align",
+      "skill_name": "sigre-reference-time-align",
+      "inputs": {
+        "typed_fields": "s10_sigre_endianness_signedness_test.typed_fields",
+        "capture_logs": "s05_sigre_log_normalize_convert.capture_logs",
+        "gps_reference": "s11_sigre_gps_speed_reference_log.gps_reference",
+        "obd2_reference": "s12_sigre_obd2_passive_pid_reference.obd2_reference",
+        "manual_reference": "from_user_input_optional"
+      },
+      "outputs": {
+        "aligned_pairs": "aligned_pairs"
+      },
+      "parallel_group": 10
+    },
+    {
+      "id": "s14_sigre_scale_offset_regression",
+      "skill_name": "sigre-scale-offset-regression",
+      "inputs": {
+        "aligned_pairs": "s13_sigre_reference_time_align.aligned_pairs",
+        "typed_fields": "s10_sigre_endianness_signedness_test.typed_fields",
+        "fit_r2_min": "from_user_input"
+      },
+      "outputs": {
+        "scaled_signals": "scaled_signals"
+      },
+      "parallel_group": 11
+    },
+    {
+      "id": "s15_sigre_dbc_entry_write",
+      "skill_name": "sigre-dbc-entry-write",
+      "inputs": {
+        "scaled_signals": "s14_sigre_scale_offset_regression.scaled_signals",
+        "typed_fields": "s10_sigre_endianness_signedness_test.typed_fields",
+        "counter_checksum_map": "s08_sigre_counter_checksum_detect.counter_checksum_map",
+        "existing_dbc": "from_user_input_optional"
+      },
+      "outputs": {
+        "dbc_draft": "dbc_draft"
+      },
+      "parallel_group": 12
+    },
+    {
+      "id": "s16_sigre_cantools_dbc_validate",
+      "skill_name": "sigre-cantools-dbc-validate",
+      "inputs": {
+        "dbc_draft": "s15_sigre_dbc_entry_write.dbc_draft",
+        "capture_logs": "s05_sigre_log_normalize_convert.capture_logs",
+        "scaled_signals": "s14_sigre_scale_offset_regression.scaled_signals",
+        "holdout_logs": "from_user_input_optional"
+      },
+      "outputs": {
+        "dbc_validation": "dbc_validation"
+      },
+      "parallel_group": 13
+    },
+    {
+      "id": "s17_sigre_py_offline_replay_decode",
+      "skill_name": "sigre-py-offline-replay-decode",
+      "inputs": {
+        "capture_logs": "s05_sigre_log_normalize_convert.capture_logs",
+        "dbc_draft": "s15_sigre_dbc_entry_write.dbc_draft"
+      },
+      "outputs": {
+        "python_replay_report": "python_replay_report"
+      },
+      "parallel_group": 13
+    },
+    {
+      "id": "s18_sigre_signal_confidence_report",
+      "skill_name": "sigre-signal-confidence-report",
+      "inputs": {
+        "dbc_validation": "s16_sigre_cantools_dbc_validate.dbc_validation",
+        "scaled_signals": "s14_sigre_scale_offset_regression.scaled_signals",
+        "counter_checksum_map": "s08_sigre_counter_checksum_detect.counter_checksum_map",
+        "canplayer_replay_report": "from_user_input_optional",
+        "python_replay_report": "s17_sigre_py_offline_replay_decode.python_replay_report",
+        "savvycan_replay_report": "from_user_input_optional"
+      },
+      "outputs": {
+        "signal_confidence_report": "signal_confidence_report"
+      },
+      "parallel_group": 14
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_sigre_scope_owned_vehicle_readonly",
+      "to_step": "s02_sigre_capture_plan_labeled_actions",
+      "data_type": "sigre-scope-owned-vehicle-readonly",
+      "field_mapping": {
+        "capture_scope": "capture_scope"
+      }
+    },
+    {
+      "from_step": "s01_sigre_scope_owned_vehicle_readonly",
+      "to_step": "s03_sigre_py_python_can_listen_setup",
+      "data_type": "sigre-scope-owned-vehicle-readonly",
+      "field_mapping": {
+        "capture_scope": "capture_scope"
+      }
+    },
+    {
+      "from_step": "s03_sigre_py_python_can_listen_setup",
+      "to_step": "s04_sigre_py_python_can_capture",
+      "data_type": "sigre-py-python-can-listen-setup",
+      "field_mapping": {
+        "python_can_config": "python_can_config"
+      }
+    },
+    {
+      "from_step": "s02_sigre_capture_plan_labeled_actions",
+      "to_step": "s04_sigre_py_python_can_capture",
+      "data_type": "sigre-capture-plan-labeled-actions",
+      "field_mapping": {
+        "capture_plan": "capture_plan"
+      }
+    },
+    {
+      "from_step": "s02_sigre_capture_plan_labeled_actions",
+      "to_step": "s05_sigre_log_normalize_convert",
+      "data_type": "sigre-capture-plan-labeled-actions",
+      "field_mapping": {
+        "capture_plan": "capture_plan"
+      }
+    },
+    {
+      "from_step": "s04_sigre_py_python_can_capture",
+      "to_step": "s05_sigre_log_normalize_convert",
+      "data_type": "sigre-py-python-can-capture",
+      "field_mapping": {
+        "python_can_logs": "python_can_logs"
+      }
+    },
+    {
+      "from_step": "s05_sigre_log_normalize_convert",
+      "to_step": "s06_sigre_baseline_idle_inventory",
+      "data_type": "sigre-log-normalize-convert",
+      "field_mapping": {
+        "capture_logs": "capture_logs"
+      }
+    },
+    {
+      "from_step": "s05_sigre_log_normalize_convert",
+      "to_step": "s07_sigre_byte_change_count_diff",
+      "data_type": "sigre-log-normalize-convert",
+      "field_mapping": {
+        "capture_logs": "capture_logs"
+      }
+    },
+    {
+      "from_step": "s02_sigre_capture_plan_labeled_actions",
+      "to_step": "s07_sigre_byte_change_count_diff",
+      "data_type": "sigre-capture-plan-labeled-actions",
+      "field_mapping": {
+        "capture_plan": "capture_plan"
+      }
+    },
+    {
+      "from_step": "s06_sigre_baseline_idle_inventory",
+      "to_step": "s07_sigre_byte_change_count_diff",
+      "data_type": "sigre-baseline-idle-inventory",
+      "field_mapping": {
+        "id_inventory": "id_inventory"
+      }
+    },
+    {
+      "from_step": "s05_sigre_log_normalize_convert",
+      "to_step": "s08_sigre_counter_checksum_detect",
+      "data_type": "sigre-log-normalize-convert",
+      "field_mapping": {
+        "capture_logs": "capture_logs"
+      }
+    },
+    {
+      "from_step": "s07_sigre_byte_change_count_diff",
+      "to_step": "s08_sigre_counter_checksum_detect",
+      "data_type": "sigre-byte-change-count-diff",
+      "field_mapping": {
+        "candidate_bytes": "candidate_bytes"
+      }
+    },
+    {
+      "from_step": "s05_sigre_log_normalize_convert",
+      "to_step": "s09_sigre_bit_boundary_search",
+      "data_type": "sigre-log-normalize-convert",
+      "field_mapping": {
+        "capture_logs": "capture_logs"
+      }
+    },
+    {
+      "from_step": "s07_sigre_byte_change_count_diff",
+      "to_step": "s09_sigre_bit_boundary_search",
+      "data_type": "sigre-byte-change-count-diff",
+      "field_mapping": {
+        "candidate_bytes": "candidate_bytes"
+      }
+    },
+    {
+      "from_step": "s08_sigre_counter_checksum_detect",
+      "to_step": "s09_sigre_bit_boundary_search",
+      "data_type": "sigre-counter-checksum-detect",
+      "field_mapping": {
+        "counter_checksum_map": "counter_checksum_map"
+      }
+    },
+    {
+      "from_step": "s05_sigre_log_normalize_convert",
+      "to_step": "s10_sigre_endianness_signedness_test",
+      "data_type": "sigre-log-normalize-convert",
+      "field_mapping": {
+        "capture_logs": "capture_logs"
+      }
+    },
+    {
+      "from_step": "s09_sigre_bit_boundary_search",
+      "to_step": "s10_sigre_endianness_signedness_test",
+      "data_type": "sigre-bit-boundary-search",
+      "field_mapping": {
+        "bit_fields": "bit_fields"
+      }
+    },
+    {
+      "from_step": "s02_sigre_capture_plan_labeled_actions",
+      "to_step": "s10_sigre_endianness_signedness_test",
+      "data_type": "sigre-capture-plan-labeled-actions",
+      "field_mapping": {
+        "capture_plan": "capture_plan"
+      }
+    },
+    {
+      "from_step": "s01_sigre_scope_owned_vehicle_readonly",
+      "to_step": "s11_sigre_gps_speed_reference_log",
+      "data_type": "sigre-scope-owned-vehicle-readonly",
+      "field_mapping": {
+        "capture_scope": "capture_scope"
+      }
+    },
+    {
+      "from_step": "s02_sigre_capture_plan_labeled_actions",
+      "to_step": "s11_sigre_gps_speed_reference_log",
+      "data_type": "sigre-capture-plan-labeled-actions",
+      "field_mapping": {
+        "capture_plan": "capture_plan"
+      }
+    },
+    {
+      "from_step": "s05_sigre_log_normalize_convert",
+      "to_step": "s12_sigre_obd2_passive_pid_reference",
+      "data_type": "sigre-log-normalize-convert",
+      "field_mapping": {
+        "capture_logs": "capture_logs"
+      }
+    },
+    {
+      "from_step": "s10_sigre_endianness_signedness_test",
+      "to_step": "s13_sigre_reference_time_align",
+      "data_type": "sigre-endianness-signedness-test",
+      "field_mapping": {
+        "typed_fields": "typed_fields"
+      }
+    },
+    {
+      "from_step": "s05_sigre_log_normalize_convert",
+      "to_step": "s13_sigre_reference_time_align",
+      "data_type": "sigre-log-normalize-convert",
+      "field_mapping": {
+        "capture_logs": "capture_logs"
+      }
+    },
+    {
+      "from_step": "s11_sigre_gps_speed_reference_log",
+      "to_step": "s13_sigre_reference_time_align",
+      "data_type": "sigre-gps-speed-reference-log",
+      "field_mapping": {
+        "gps_reference": "gps_reference"
+      }
+    },
+    {
+      "from_step": "s12_sigre_obd2_passive_pid_reference",
+      "to_step": "s13_sigre_reference_time_align",
+      "data_type": "sigre-obd2-passive-pid-reference",
+      "field_mapping": {
+        "obd2_reference": "obd2_reference"
+      }
+    },
+    {
+      "from_step": "s13_sigre_reference_time_align",
+      "to_step": "s14_sigre_scale_offset_regression",
+      "data_type": "sigre-reference-time-align",
+      "field_mapping": {
+        "aligned_pairs": "aligned_pairs"
+      }
+    },
+    {
+      "from_step": "s10_sigre_endianness_signedness_test",
+      "to_step": "s14_sigre_scale_offset_regression",
+      "data_type": "sigre-endianness-signedness-test",
+      "field_mapping": {
+        "typed_fields": "typed_fields"
+      }
+    },
+    {
+      "from_step": "s14_sigre_scale_offset_regression",
+      "to_step": "s15_sigre_dbc_entry_write",
+      "data_type": "sigre-scale-offset-regression",
+      "field_mapping": {
+        "scaled_signals": "scaled_signals"
+      }
+    },
+    {
+      "from_step": "s10_sigre_endianness_signedness_test",
+      "to_step": "s15_sigre_dbc_entry_write",
+      "data_type": "sigre-endianness-signedness-test",
+      "field_mapping": {
+        "typed_fields": "typed_fields"
+      }
+    },
+    {
+      "from_step": "s08_sigre_counter_checksum_detect",
+      "to_step": "s15_sigre_dbc_entry_write",
+      "data_type": "sigre-counter-checksum-detect",
+      "field_mapping": {
+        "counter_checksum_map": "counter_checksum_map"
+      }
+    },
+    {
+      "from_step": "s15_sigre_dbc_entry_write",
+      "to_step": "s16_sigre_cantools_dbc_validate",
+      "data_type": "sigre-dbc-entry-write",
+      "field_mapping": {
+        "dbc_draft": "dbc_draft"
+      }
+    },
+    {
+      "from_step": "s05_sigre_log_normalize_convert",
+      "to_step": "s16_sigre_cantools_dbc_validate",
+      "data_type": "sigre-log-normalize-convert",
+      "field_mapping": {
+        "capture_logs": "capture_logs"
+      }
+    },
+    {
+      "from_step": "s14_sigre_scale_offset_regression",
+      "to_step": "s16_sigre_cantools_dbc_validate",
+      "data_type": "sigre-scale-offset-regression",
+      "field_mapping": {
+        "scaled_signals": "scaled_signals"
+      }
+    },
+    {
+      "from_step": "s05_sigre_log_normalize_convert",
+      "to_step": "s17_sigre_py_offline_replay_decode",
+      "data_type": "sigre-log-normalize-convert",
+      "field_mapping": {
+        "capture_logs": "capture_logs"
+      }
+    },
+    {
+      "from_step": "s15_sigre_dbc_entry_write",
+      "to_step": "s17_sigre_py_offline_replay_decode",
+      "data_type": "sigre-dbc-entry-write",
+      "field_mapping": {
+        "dbc_draft": "dbc_draft"
+      }
+    },
+    {
+      "from_step": "s16_sigre_cantools_dbc_validate",
+      "to_step": "s18_sigre_signal_confidence_report",
+      "data_type": "sigre-cantools-dbc-validate",
+      "field_mapping": {
+        "dbc_validation": "dbc_validation"
+      }
+    },
+    {
+      "from_step": "s14_sigre_scale_offset_regression",
+      "to_step": "s18_sigre_signal_confidence_report",
+      "data_type": "sigre-scale-offset-regression",
+      "field_mapping": {
+        "scaled_signals": "scaled_signals"
+      }
+    },
+    {
+      "from_step": "s08_sigre_counter_checksum_detect",
+      "to_step": "s18_sigre_signal_confidence_report",
+      "data_type": "sigre-counter-checksum-detect",
+      "field_mapping": {
+        "counter_checksum_map": "counter_checksum_map"
+      }
+    },
+    {
+      "from_step": "s17_sigre_py_offline_replay_decode",
+      "to_step": "s18_sigre_signal_confidence_report",
+      "data_type": "sigre-py-offline-replay-decode",
+      "field_mapping": {
+        "python_replay_report": "python_replay_report"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "vehicle_description",
+    "ownership_confirmed",
+    "stack",
+    "adapter_model",
+    "target_signals",
+    "reference_source",
+    "repetitions",
+    "baseline_seconds",
+    "python_can_interface",
+    "python_can_channel",
+    "candump_logs",
+    "savvycan_logs",
+    "cansniffer_candidates",
+    "savvycan_candidates",
+    "manual_reference",
+    "fit_r2_min",
+    "existing_dbc",
+    "holdout_logs",
+    "canplayer_replay_report",
+    "savvycan_replay_report"
+  ],
+  "terminal_outputs": [
+    "signal_confidence_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_sigre_scope_owned_vehicle_readonly"
+    ],
+    [
+      "s02_sigre_capture_plan_labeled_actions",
+      "s03_sigre_py_python_can_listen_setup"
+    ],
+    [
+      "s04_sigre_py_python_can_capture",
+      "s11_sigre_gps_speed_reference_log"
+    ],
+    [
+      "s05_sigre_log_normalize_convert"
+    ],
+    [
+      "s06_sigre_baseline_idle_inventory",
+      "s12_sigre_obd2_passive_pid_reference"
+    ],
+    [
+      "s07_sigre_byte_change_count_diff"
+    ],
+    [
+      "s08_sigre_counter_checksum_detect"
+    ],
+    [
+      "s09_sigre_bit_boundary_search"
+    ],
+    [
+      "s10_sigre_endianness_signedness_test"
+    ],
+    [
+      "s13_sigre_reference_time_align"
+    ],
+    [
+      "s14_sigre_scale_offset_regression"
+    ],
+    [
+      "s15_sigre_dbc_entry_write"
+    ],
+    [
+      "s16_sigre_cantools_dbc_validate",
+      "s17_sigre_py_offline_replay_decode"
+    ],
+    [
+      "s18_sigre_signal_confidence_report"
+    ]
+  ],
+  "estimated_cost": 18,
+  "critical_path": [
+    "s01_sigre_scope_owned_vehicle_readonly",
+    "s03_sigre_py_python_can_listen_setup",
+    "s04_sigre_py_python_can_capture",
+    "s05_sigre_log_normalize_convert",
+    "s06_sigre_baseline_idle_inventory",
+    "s07_sigre_byte_change_count_diff",
+    "s08_sigre_counter_checksum_detect",
+    "s09_sigre_bit_boundary_search",
+    "s10_sigre_endianness_signedness_test",
+    "s13_sigre_reference_time_align",
+    "s14_sigre_scale_offset_regression",
+    "s15_sigre_dbc_entry_write",
+    "s17_sigre_py_offline_replay_decode",
+    "s18_sigre_signal_confidence_report"
+  ]
+}

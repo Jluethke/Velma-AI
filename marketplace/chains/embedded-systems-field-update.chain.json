@@ -1,0 +1,117 @@
+{
+  "name": "embedded-systems-field-update",
+  "description": "Prepare firmware for field updates: host unit tests, memory map sizing, watchdog proof, then signed two-slot update with trial boot and automatic rollback.",
+  "steps": [
+    {
+      "id": "s01_emb_ceedling_host_unit_test",
+      "skill_name": "emb-ceedling-host-unit-test",
+      "inputs": {
+        "project_dir": "from_user_input",
+        "module_under_test": "from_user_input"
+      },
+      "outputs": {
+        "test_report": "test_report"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_emb_linker_map_audit",
+      "skill_name": "emb-linker-map-audit",
+      "inputs": {
+        "elf_path": "from_user_input",
+        "map_path": "from_user_input",
+        "linker_script": "from_user_input"
+      },
+      "outputs": {
+        "memory_usage_report": "memory_usage_report",
+        "placement_defects": "placement_defects"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s03_emb_independent_watchdog",
+      "skill_name": "emb-independent-watchdog",
+      "inputs": {
+        "elf_path": "from_user_input",
+        "reference_manual": "from_user_input",
+        "max_loop_period_ms": "from_user_input"
+      },
+      "outputs": {
+        "watchdog_record": "watchdog_record"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s04_emb_bootloader_rollback_update",
+      "skill_name": "emb-bootloader-rollback-update",
+      "inputs": {
+        "project_dir": "from_user_input",
+        "stack": "from_user_input",
+        "memory_usage_report": "s02_emb_linker_map_audit.memory_usage_report",
+        "watchdog_record": "s03_emb_independent_watchdog.watchdog_record",
+        "test_report": "s01_emb_ceedling_host_unit_test.test_report",
+        "signing_key_path": "from_user_input"
+      },
+      "outputs": {
+        "update_test_record": "update_test_record"
+      },
+      "parallel_group": 2
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s02_emb_linker_map_audit",
+      "to_step": "s04_emb_bootloader_rollback_update",
+      "data_type": "emb-linker-map-audit",
+      "field_mapping": {
+        "memory_usage_report": "memory_usage_report"
+      }
+    },
+    {
+      "from_step": "s03_emb_independent_watchdog",
+      "to_step": "s04_emb_bootloader_rollback_update",
+      "data_type": "emb-independent-watchdog",
+      "field_mapping": {
+        "watchdog_record": "watchdog_record"
+      }
+    },
+    {
+      "from_step": "s01_emb_ceedling_host_unit_test",
+      "to_step": "s04_emb_bootloader_rollback_update",
+      "data_type": "emb-ceedling-host-unit-test",
+      "field_mapping": {
+        "test_report": "test_report"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "project_dir",
+    "module_under_test",
+    "elf_path",
+    "map_path",
+    "linker_script",
+    "reference_manual",
+    "max_loop_period_ms",
+    "stack",
+    "signing_key_path"
+  ],
+  "terminal_outputs": [
+    "placement_defects",
+    "update_test_record"
+  ],
+  "parallel_groups": [
+    [
+      "s01_emb_ceedling_host_unit_test",
+      "s02_emb_linker_map_audit",
+      "s03_emb_independent_watchdog"
+    ],
+    [
+      "s04_emb_bootloader_rollback_update"
+    ]
+  ],
+  "estimated_cost": 4,
+  "critical_path": [
+    "s02_emb_linker_map_audit",
+    "s04_emb_bootloader_rollback_update"
+  ]
+}

@@ -1,0 +1,147 @@
+{
+  "name": "tamper-evident-logs-merkle-transparency",
+  "description": "Add a transparency layer over an existing chain: build a Merkle tree, generate inclusion and consistency proofs, sign checkpoints of the tree head, and anchor each head to an independent external witness.",
+  "steps": [
+    {
+      "id": "s01_alog_hash_algorithm_select",
+      "skill_name": "alog-hash-algorithm-select",
+      "inputs": {
+        "log_requirements": "from_user_input",
+        "platform_constraints": "from_user_input_optional"
+      },
+      "outputs": {
+        "hash_algorithm_spec": "hash_algorithm_spec"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_alog_merkle_tree_build",
+      "skill_name": "alog-merkle-tree-build",
+      "inputs": {
+        "record_schema": "from_user_input",
+        "hash_algorithm_spec": "s01_alog_hash_algorithm_select.hash_algorithm_spec",
+        "repo_path": "from_user_input"
+      },
+      "outputs": {
+        "merkle_tree_spec": "merkle_tree_spec"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_alog_merkle_inclusion_proof",
+      "skill_name": "alog-merkle-inclusion-proof",
+      "inputs": {
+        "merkle_tree_spec": "s02_alog_merkle_tree_build.merkle_tree_spec"
+      },
+      "outputs": {
+        "inclusion_proof_procedure": "inclusion_proof_procedure"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_alog_merkle_consistency_proof",
+      "skill_name": "alog-merkle-consistency-proof",
+      "inputs": {
+        "merkle_tree_spec": "s02_alog_merkle_tree_build.merkle_tree_spec"
+      },
+      "outputs": {
+        "consistency_proof_procedure": "consistency_proof_procedure"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s05_alog_checkpoint_signing",
+      "skill_name": "alog-checkpoint-signing",
+      "inputs": {
+        "chain_link_spec": "from_user_input",
+        "signing_keypair": "from_user_input",
+        "checkpoint_interval": "from_user_input_optional"
+      },
+      "outputs": {
+        "checkpoint_spec": "checkpoint_spec"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s06_alog_external_anchoring",
+      "skill_name": "alog-external-anchoring",
+      "inputs": {
+        "checkpoint_spec": "s05_alog_checkpoint_signing.checkpoint_spec",
+        "anchoring_target": "from_user_input"
+      },
+      "outputs": {
+        "anchoring_procedure": "anchoring_procedure"
+      },
+      "parallel_group": 2
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_alog_hash_algorithm_select",
+      "to_step": "s02_alog_merkle_tree_build",
+      "data_type": "alog-hash-algorithm-select",
+      "field_mapping": {
+        "hash_algorithm_spec": "hash_algorithm_spec"
+      }
+    },
+    {
+      "from_step": "s02_alog_merkle_tree_build",
+      "to_step": "s03_alog_merkle_inclusion_proof",
+      "data_type": "alog-merkle-tree-build",
+      "field_mapping": {
+        "merkle_tree_spec": "merkle_tree_spec"
+      }
+    },
+    {
+      "from_step": "s02_alog_merkle_tree_build",
+      "to_step": "s04_alog_merkle_consistency_proof",
+      "data_type": "alog-merkle-tree-build",
+      "field_mapping": {
+        "merkle_tree_spec": "merkle_tree_spec"
+      }
+    },
+    {
+      "from_step": "s05_alog_checkpoint_signing",
+      "to_step": "s06_alog_external_anchoring",
+      "data_type": "alog-checkpoint-signing",
+      "field_mapping": {
+        "checkpoint_spec": "checkpoint_spec"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "log_requirements",
+    "platform_constraints",
+    "record_schema",
+    "repo_path",
+    "chain_link_spec",
+    "signing_keypair",
+    "checkpoint_interval",
+    "anchoring_target"
+  ],
+  "terminal_outputs": [
+    "inclusion_proof_procedure",
+    "consistency_proof_procedure",
+    "anchoring_procedure"
+  ],
+  "parallel_groups": [
+    [
+      "s01_alog_hash_algorithm_select",
+      "s05_alog_checkpoint_signing"
+    ],
+    [
+      "s02_alog_merkle_tree_build",
+      "s06_alog_external_anchoring"
+    ],
+    [
+      "s03_alog_merkle_inclusion_proof",
+      "s04_alog_merkle_consistency_proof"
+    ]
+  ],
+  "estimated_cost": 6,
+  "critical_path": [
+    "s01_alog_hash_algorithm_select",
+    "s02_alog_merkle_tree_build",
+    "s04_alog_merkle_consistency_proof"
+  ]
+}

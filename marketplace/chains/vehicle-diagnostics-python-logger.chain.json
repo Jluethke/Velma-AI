@@ -1,0 +1,351 @@
+{
+  "name": "vehicle-diagnostics-python-logger",
+  "description": "Build a read-only Python diagnostic logger on python-can, can-isotp and udsoncan, polling tested OBD-II PIDs and UDS DIDs behind the request guard.",
+  "steps": [
+    {
+      "id": "s01_uds_diag_scope_readonly",
+      "skill_name": "uds-diag-scope-readonly",
+      "inputs": {
+        "vehicle_description": "from_user_input",
+        "ownership_confirmed": "from_user_input",
+        "diag_interface": "from_user_input"
+      },
+      "outputs": {
+        "diag_scope": "diag_scope",
+        "allowed_services": "allowed_services"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_uds_socketcan_link_setup",
+      "skill_name": "uds-socketcan-link-setup",
+      "inputs": {
+        "diag_scope": "s01_uds_diag_scope_readonly.diag_scope",
+        "can_interface": "from_user_input",
+        "can_bitrate": "from_user_input"
+      },
+      "outputs": {
+        "can_link_status": "can_link_status"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_uds_candump_passive_log",
+      "skill_name": "uds-candump-passive-log",
+      "inputs": {
+        "can_link_status": "s02_uds_socketcan_link_setup.can_link_status",
+        "can_interface": "from_user_input",
+        "capture_seconds": "from_user_input_optional"
+      },
+      "outputs": {
+        "candump_log": "candump_log"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_uds_kernel_can_isotp_module",
+      "skill_name": "uds-kernel-can-isotp-module",
+      "inputs": {
+        "can_link_status": "s02_uds_socketcan_link_setup.can_link_status",
+        "can_interface": "from_user_input",
+        "tx_id": "from_user_input",
+        "rx_id": "from_user_input"
+      },
+      "outputs": {
+        "isotp_link_check": "isotp_link_check"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s05_uds_isotp_frame_decode",
+      "skill_name": "uds-isotp-frame-decode",
+      "inputs": {
+        "candump_log": "s03_uds_candump_passive_log.candump_log",
+        "tx_id": "from_user_input",
+        "rx_id": "from_user_input"
+      },
+      "outputs": {
+        "isotp_messages": "isotp_messages",
+        "isotp_errors": "isotp_errors"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s06_uds_isotp_flow_control_params",
+      "skill_name": "uds-isotp-flow-control-params",
+      "inputs": {
+        "isotp_messages": "s05_uds_isotp_frame_decode.isotp_messages",
+        "isotp_link_check": "s04_uds_kernel_can_isotp_module.isotp_link_check"
+      },
+      "outputs": {
+        "isotp_params": "isotp_params"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s07_uds_py_isotp_library",
+      "skill_name": "uds-py-isotp-library",
+      "inputs": {
+        "isotp_params": "s06_uds_isotp_flow_control_params.isotp_params",
+        "can_interface": "from_user_input",
+        "tx_id": "from_user_input",
+        "rx_id": "from_user_input"
+      },
+      "outputs": {
+        "py_isotp_stack": "py_isotp_stack"
+      },
+      "parallel_group": 6
+    },
+    {
+      "id": "s08_uds_readonly_request_guard",
+      "skill_name": "uds-readonly-request-guard",
+      "inputs": {
+        "diag_scope": "s01_uds_diag_scope_readonly.diag_scope",
+        "allowed_services": "s01_uds_diag_scope_readonly.allowed_services"
+      },
+      "outputs": {
+        "request_guard": "request_guard",
+        "guard_test_report": "guard_test_report"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s09_uds_obd2_supported_pids",
+      "skill_name": "uds-obd2-supported-pids",
+      "inputs": {
+        "isotp_link_check": "s04_uds_kernel_can_isotp_module.isotp_link_check",
+        "can_interface": "from_user_input"
+      },
+      "outputs": {
+        "supported_pids": "supported_pids",
+        "raw_pid_responses": "raw_pid_responses"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s10_uds_obd2_pid_scaling",
+      "skill_name": "uds-obd2-pid-scaling",
+      "inputs": {
+        "supported_pids": "s09_uds_obd2_supported_pids.supported_pids",
+        "raw_pid_responses": "s09_uds_obd2_supported_pids.raw_pid_responses"
+      },
+      "outputs": {
+        "decoded_pids": "decoded_pids"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s11_uds_py_udsoncan_client",
+      "skill_name": "uds-py-udsoncan-client",
+      "inputs": {
+        "py_isotp_stack": "s07_uds_py_isotp_library.py_isotp_stack",
+        "request_guard": "s08_uds_readonly_request_guard.request_guard",
+        "did_list": "from_user_input"
+      },
+      "outputs": {
+        "udsoncan_client": "udsoncan_client"
+      },
+      "parallel_group": 7
+    },
+    {
+      "id": "s12_uds_py_diag_logger",
+      "skill_name": "uds-py-diag-logger",
+      "inputs": {
+        "request_guard": "s08_uds_readonly_request_guard.request_guard",
+        "udsoncan_client": "s11_uds_py_udsoncan_client.udsoncan_client",
+        "decoded_pids": "s10_uds_obd2_pid_scaling.decoded_pids",
+        "decoded_dtcs": "from_user_input_optional",
+        "poll_interval_ms": "from_user_input"
+      },
+      "outputs": {
+        "diag_logger": "diag_logger",
+        "logger_test_report": "logger_test_report"
+      },
+      "parallel_group": 8
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_uds_diag_scope_readonly",
+      "to_step": "s02_uds_socketcan_link_setup",
+      "data_type": "uds-diag-scope-readonly",
+      "field_mapping": {
+        "diag_scope": "diag_scope"
+      }
+    },
+    {
+      "from_step": "s02_uds_socketcan_link_setup",
+      "to_step": "s03_uds_candump_passive_log",
+      "data_type": "uds-socketcan-link-setup",
+      "field_mapping": {
+        "can_link_status": "can_link_status"
+      }
+    },
+    {
+      "from_step": "s02_uds_socketcan_link_setup",
+      "to_step": "s04_uds_kernel_can_isotp_module",
+      "data_type": "uds-socketcan-link-setup",
+      "field_mapping": {
+        "can_link_status": "can_link_status"
+      }
+    },
+    {
+      "from_step": "s03_uds_candump_passive_log",
+      "to_step": "s05_uds_isotp_frame_decode",
+      "data_type": "uds-candump-passive-log",
+      "field_mapping": {
+        "candump_log": "candump_log"
+      }
+    },
+    {
+      "from_step": "s05_uds_isotp_frame_decode",
+      "to_step": "s06_uds_isotp_flow_control_params",
+      "data_type": "uds-isotp-frame-decode",
+      "field_mapping": {
+        "isotp_messages": "isotp_messages"
+      }
+    },
+    {
+      "from_step": "s04_uds_kernel_can_isotp_module",
+      "to_step": "s06_uds_isotp_flow_control_params",
+      "data_type": "uds-kernel-can-isotp-module",
+      "field_mapping": {
+        "isotp_link_check": "isotp_link_check"
+      }
+    },
+    {
+      "from_step": "s06_uds_isotp_flow_control_params",
+      "to_step": "s07_uds_py_isotp_library",
+      "data_type": "uds-isotp-flow-control-params",
+      "field_mapping": {
+        "isotp_params": "isotp_params"
+      }
+    },
+    {
+      "from_step": "s01_uds_diag_scope_readonly",
+      "to_step": "s08_uds_readonly_request_guard",
+      "data_type": "uds-diag-scope-readonly",
+      "field_mapping": {
+        "diag_scope": "diag_scope",
+        "allowed_services": "allowed_services"
+      }
+    },
+    {
+      "from_step": "s04_uds_kernel_can_isotp_module",
+      "to_step": "s09_uds_obd2_supported_pids",
+      "data_type": "uds-kernel-can-isotp-module",
+      "field_mapping": {
+        "isotp_link_check": "isotp_link_check"
+      }
+    },
+    {
+      "from_step": "s09_uds_obd2_supported_pids",
+      "to_step": "s10_uds_obd2_pid_scaling",
+      "data_type": "uds-obd2-supported-pids",
+      "field_mapping": {
+        "supported_pids": "supported_pids",
+        "raw_pid_responses": "raw_pid_responses"
+      }
+    },
+    {
+      "from_step": "s07_uds_py_isotp_library",
+      "to_step": "s11_uds_py_udsoncan_client",
+      "data_type": "uds-py-isotp-library",
+      "field_mapping": {
+        "py_isotp_stack": "py_isotp_stack"
+      }
+    },
+    {
+      "from_step": "s08_uds_readonly_request_guard",
+      "to_step": "s11_uds_py_udsoncan_client",
+      "data_type": "uds-readonly-request-guard",
+      "field_mapping": {
+        "request_guard": "request_guard"
+      }
+    },
+    {
+      "from_step": "s08_uds_readonly_request_guard",
+      "to_step": "s12_uds_py_diag_logger",
+      "data_type": "uds-readonly-request-guard",
+      "field_mapping": {
+        "request_guard": "request_guard"
+      }
+    },
+    {
+      "from_step": "s11_uds_py_udsoncan_client",
+      "to_step": "s12_uds_py_diag_logger",
+      "data_type": "uds-py-udsoncan-client",
+      "field_mapping": {
+        "udsoncan_client": "udsoncan_client"
+      }
+    },
+    {
+      "from_step": "s10_uds_obd2_pid_scaling",
+      "to_step": "s12_uds_py_diag_logger",
+      "data_type": "uds-obd2-pid-scaling",
+      "field_mapping": {
+        "decoded_pids": "decoded_pids"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "vehicle_description",
+    "ownership_confirmed",
+    "diag_interface",
+    "can_interface",
+    "can_bitrate",
+    "capture_seconds",
+    "tx_id",
+    "rx_id",
+    "did_list",
+    "decoded_dtcs",
+    "poll_interval_ms"
+  ],
+  "terminal_outputs": [
+    "isotp_errors",
+    "guard_test_report",
+    "diag_logger",
+    "logger_test_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_uds_diag_scope_readonly"
+    ],
+    [
+      "s02_uds_socketcan_link_setup",
+      "s08_uds_readonly_request_guard"
+    ],
+    [
+      "s03_uds_candump_passive_log",
+      "s04_uds_kernel_can_isotp_module"
+    ],
+    [
+      "s05_uds_isotp_frame_decode",
+      "s09_uds_obd2_supported_pids"
+    ],
+    [
+      "s06_uds_isotp_flow_control_params",
+      "s10_uds_obd2_pid_scaling"
+    ],
+    [
+      "s07_uds_py_isotp_library"
+    ],
+    [
+      "s11_uds_py_udsoncan_client"
+    ],
+    [
+      "s12_uds_py_diag_logger"
+    ]
+  ],
+  "estimated_cost": 12,
+  "critical_path": [
+    "s01_uds_diag_scope_readonly",
+    "s02_uds_socketcan_link_setup",
+    "s03_uds_candump_passive_log",
+    "s05_uds_isotp_frame_decode",
+    "s06_uds_isotp_flow_control_params",
+    "s07_uds_py_isotp_library",
+    "s11_uds_py_udsoncan_client",
+    "s12_uds_py_diag_logger"
+  ]
+}

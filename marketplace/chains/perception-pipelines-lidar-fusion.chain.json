@@ -1,0 +1,167 @@
+{
+  "name": "perception-pipelines-lidar-fusion",
+  "description": "Lidar ground removal and clustering in Python with Open3D or C++ with PCL, camera-lidar calibration and sync check, then late fusion of clusters with camera tracks.",
+  "steps": [
+    {
+      "id": "s01_perc_py_open3d_ground_removal",
+      "skill_name": "perc-py-open3d-ground-removal",
+      "inputs": {
+        "point_cloud_dir": "from_user_input",
+        "lidar_mount": "from_user_input"
+      },
+      "outputs": {
+        "py_nonground_clouds": "py_nonground_clouds",
+        "py_ground_report": "py_ground_report"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_perc_cpp_pcl_ground_removal",
+      "skill_name": "perc-cpp-pcl-ground-removal",
+      "inputs": {
+        "point_cloud_dir": "from_user_input",
+        "lidar_mount": "from_user_input"
+      },
+      "outputs": {
+        "cpp_nonground_clouds": "cpp_nonground_clouds",
+        "cpp_ground_report": "cpp_ground_report"
+      },
+      "condition": "stack == 'cpp'",
+      "parallel_group": 1
+    },
+    {
+      "id": "s03_perc_py_open3d_dbscan_cluster",
+      "skill_name": "perc-py-open3d-dbscan-cluster",
+      "inputs": {
+        "py_nonground_clouds": "s01_perc_py_open3d_ground_removal.py_nonground_clouds",
+        "cluster_params": "from_user_input"
+      },
+      "outputs": {
+        "py_lidar_clusters": "py_lidar_clusters"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_perc_cpp_pcl_euclidean_cluster",
+      "skill_name": "perc-cpp-pcl-euclidean-cluster",
+      "inputs": {
+        "cpp_nonground_clouds": "s02_perc_cpp_pcl_ground_removal.cpp_nonground_clouds",
+        "cluster_params": "from_user_input"
+      },
+      "outputs": {
+        "cpp_lidar_clusters": "cpp_lidar_clusters"
+      },
+      "condition": "stack == 'cpp'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s05_perc_camera_lidar_calib_check",
+      "skill_name": "perc-camera-lidar-calib-check",
+      "inputs": {
+        "camera_calib": "from_user_input",
+        "point_cloud_dir": "from_user_input",
+        "image_dir": "from_user_input"
+      },
+      "outputs": {
+        "calib_check_report": "calib_check_report"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s06_perc_camera_lidar_late_fusion",
+      "skill_name": "perc-camera-lidar-late-fusion",
+      "inputs": {
+        "calib_check_report": "s05_perc_camera_lidar_calib_check.calib_check_report",
+        "camera_calib": "from_user_input",
+        "py_lidar_clusters": "s03_perc_py_open3d_dbscan_cluster.py_lidar_clusters",
+        "cpp_lidar_clusters": "s04_perc_cpp_pcl_euclidean_cluster.cpp_lidar_clusters",
+        "track_outputs": "from_user_input",
+        "max_sync_skew_ms": "from_user_input"
+      },
+      "outputs": {
+        "fused_objects": "fused_objects",
+        "fusion_report": "fusion_report"
+      },
+      "parallel_group": 3
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_perc_py_open3d_ground_removal",
+      "to_step": "s03_perc_py_open3d_dbscan_cluster",
+      "data_type": "perc-py-open3d-ground-removal",
+      "field_mapping": {
+        "py_nonground_clouds": "py_nonground_clouds"
+      }
+    },
+    {
+      "from_step": "s02_perc_cpp_pcl_ground_removal",
+      "to_step": "s04_perc_cpp_pcl_euclidean_cluster",
+      "data_type": "perc-cpp-pcl-ground-removal",
+      "field_mapping": {
+        "cpp_nonground_clouds": "cpp_nonground_clouds"
+      }
+    },
+    {
+      "from_step": "s05_perc_camera_lidar_calib_check",
+      "to_step": "s06_perc_camera_lidar_late_fusion",
+      "data_type": "perc-camera-lidar-calib-check",
+      "field_mapping": {
+        "calib_check_report": "calib_check_report"
+      }
+    },
+    {
+      "from_step": "s03_perc_py_open3d_dbscan_cluster",
+      "to_step": "s06_perc_camera_lidar_late_fusion",
+      "data_type": "perc-py-open3d-dbscan-cluster",
+      "field_mapping": {
+        "py_lidar_clusters": "py_lidar_clusters"
+      }
+    },
+    {
+      "from_step": "s04_perc_cpp_pcl_euclidean_cluster",
+      "to_step": "s06_perc_camera_lidar_late_fusion",
+      "data_type": "perc-cpp-pcl-euclidean-cluster",
+      "field_mapping": {
+        "cpp_lidar_clusters": "cpp_lidar_clusters"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "point_cloud_dir",
+    "lidar_mount",
+    "cluster_params",
+    "camera_calib",
+    "image_dir",
+    "track_outputs",
+    "max_sync_skew_ms"
+  ],
+  "terminal_outputs": [
+    "py_ground_report",
+    "cpp_ground_report",
+    "fused_objects",
+    "fusion_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_perc_py_open3d_ground_removal",
+      "s02_perc_cpp_pcl_ground_removal",
+      "s05_perc_camera_lidar_calib_check"
+    ],
+    [
+      "s03_perc_py_open3d_dbscan_cluster",
+      "s04_perc_cpp_pcl_euclidean_cluster"
+    ],
+    [
+      "s06_perc_camera_lidar_late_fusion"
+    ]
+  ],
+  "estimated_cost": 6,
+  "critical_path": [
+    "s02_perc_cpp_pcl_ground_removal",
+    "s04_perc_cpp_pcl_euclidean_cluster",
+    "s06_perc_camera_lidar_late_fusion"
+  ]
+}

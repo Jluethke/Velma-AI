@@ -1,0 +1,170 @@
+{
+  "name": "can-signal-reverse-engineering-scale-and-dbc",
+  "description": "From typed fields and a reference series to a validated DBC: time alignment, scale and offset regression, DBC entry writing, cantools validation and the confidence report.",
+  "steps": [
+    {
+      "id": "s01_sigre_reference_time_align",
+      "skill_name": "sigre-reference-time-align",
+      "inputs": {
+        "typed_fields": "from_user_input",
+        "capture_logs": "from_user_input",
+        "gps_reference": "from_user_input_optional",
+        "obd2_reference": "from_user_input_optional",
+        "manual_reference": "from_user_input_optional"
+      },
+      "outputs": {
+        "aligned_pairs": "aligned_pairs"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_sigre_scale_offset_regression",
+      "skill_name": "sigre-scale-offset-regression",
+      "inputs": {
+        "aligned_pairs": "s01_sigre_reference_time_align.aligned_pairs",
+        "typed_fields": "from_user_input",
+        "fit_r2_min": "from_user_input"
+      },
+      "outputs": {
+        "scaled_signals": "scaled_signals"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_sigre_dbc_entry_write",
+      "skill_name": "sigre-dbc-entry-write",
+      "inputs": {
+        "scaled_signals": "s02_sigre_scale_offset_regression.scaled_signals",
+        "typed_fields": "from_user_input",
+        "counter_checksum_map": "from_user_input",
+        "existing_dbc": "from_user_input_optional"
+      },
+      "outputs": {
+        "dbc_draft": "dbc_draft"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_sigre_cantools_dbc_validate",
+      "skill_name": "sigre-cantools-dbc-validate",
+      "inputs": {
+        "dbc_draft": "s03_sigre_dbc_entry_write.dbc_draft",
+        "capture_logs": "from_user_input",
+        "scaled_signals": "s02_sigre_scale_offset_regression.scaled_signals",
+        "holdout_logs": "from_user_input_optional"
+      },
+      "outputs": {
+        "dbc_validation": "dbc_validation"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s05_sigre_signal_confidence_report",
+      "skill_name": "sigre-signal-confidence-report",
+      "inputs": {
+        "dbc_validation": "s04_sigre_cantools_dbc_validate.dbc_validation",
+        "scaled_signals": "s02_sigre_scale_offset_regression.scaled_signals",
+        "counter_checksum_map": "from_user_input",
+        "canplayer_replay_report": "from_user_input_optional",
+        "python_replay_report": "from_user_input_optional",
+        "savvycan_replay_report": "from_user_input_optional"
+      },
+      "outputs": {
+        "signal_confidence_report": "signal_confidence_report"
+      },
+      "parallel_group": 5
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_sigre_reference_time_align",
+      "to_step": "s02_sigre_scale_offset_regression",
+      "data_type": "sigre-reference-time-align",
+      "field_mapping": {
+        "aligned_pairs": "aligned_pairs"
+      }
+    },
+    {
+      "from_step": "s02_sigre_scale_offset_regression",
+      "to_step": "s03_sigre_dbc_entry_write",
+      "data_type": "sigre-scale-offset-regression",
+      "field_mapping": {
+        "scaled_signals": "scaled_signals"
+      }
+    },
+    {
+      "from_step": "s03_sigre_dbc_entry_write",
+      "to_step": "s04_sigre_cantools_dbc_validate",
+      "data_type": "sigre-dbc-entry-write",
+      "field_mapping": {
+        "dbc_draft": "dbc_draft"
+      }
+    },
+    {
+      "from_step": "s02_sigre_scale_offset_regression",
+      "to_step": "s04_sigre_cantools_dbc_validate",
+      "data_type": "sigre-scale-offset-regression",
+      "field_mapping": {
+        "scaled_signals": "scaled_signals"
+      }
+    },
+    {
+      "from_step": "s04_sigre_cantools_dbc_validate",
+      "to_step": "s05_sigre_signal_confidence_report",
+      "data_type": "sigre-cantools-dbc-validate",
+      "field_mapping": {
+        "dbc_validation": "dbc_validation"
+      }
+    },
+    {
+      "from_step": "s02_sigre_scale_offset_regression",
+      "to_step": "s05_sigre_signal_confidence_report",
+      "data_type": "sigre-scale-offset-regression",
+      "field_mapping": {
+        "scaled_signals": "scaled_signals"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "typed_fields",
+    "capture_logs",
+    "gps_reference",
+    "obd2_reference",
+    "manual_reference",
+    "fit_r2_min",
+    "counter_checksum_map",
+    "existing_dbc",
+    "holdout_logs",
+    "canplayer_replay_report",
+    "python_replay_report",
+    "savvycan_replay_report"
+  ],
+  "terminal_outputs": [
+    "signal_confidence_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_sigre_reference_time_align"
+    ],
+    [
+      "s02_sigre_scale_offset_regression"
+    ],
+    [
+      "s03_sigre_dbc_entry_write"
+    ],
+    [
+      "s04_sigre_cantools_dbc_validate"
+    ],
+    [
+      "s05_sigre_signal_confidence_report"
+    ]
+  ],
+  "estimated_cost": 5,
+  "critical_path": [
+    "s01_sigre_reference_time_align",
+    "s02_sigre_scale_offset_regression",
+    "s03_sigre_dbc_entry_write",
+    "s04_sigre_cantools_dbc_validate",
+    "s05_sigre_signal_confidence_report"
+  ]
+}

@@ -1,0 +1,177 @@
+{
+  "name": "vehicle-simulation-scenario-regression",
+  "description": "Scenario regression path: author and check OpenSCENARIO files, build a seeded fault library, compute KPIs, and gate every scenario in GitHub Actions or GitLab CI.",
+  "steps": [
+    {
+      "id": "s01_vsim_openscenario_author",
+      "skill_name": "vsim-openscenario-author",
+      "inputs": {
+        "scenario_description": "from_user_input",
+        "opendrive_file": "from_user_input"
+      },
+      "outputs": {
+        "xosc_file": "xosc_file"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_vsim_esmini_scenario_check",
+      "skill_name": "vsim-esmini-scenario-check",
+      "inputs": {
+        "xosc_file": "s01_vsim_openscenario_author.xosc_file"
+      },
+      "outputs": {
+        "scenario_check_report": "scenario_check_report"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_vsim_fault_scenario_library",
+      "skill_name": "vsim-fault-scenario-library",
+      "inputs": {
+        "xosc_file": "s01_vsim_openscenario_author.xosc_file",
+        "scenario_check_report": "s02_vsim_esmini_scenario_check.scenario_check_report",
+        "odd_description": "from_user_input"
+      },
+      "outputs": {
+        "scenario_library": "scenario_library"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_vsim_scenario_kpis",
+      "skill_name": "vsim-scenario-kpis",
+      "inputs": {
+        "run_logs": "from_user_input",
+        "stack": "from_user_input",
+        "kpi_thresholds": "from_user_input"
+      },
+      "outputs": {
+        "kpi_report": "kpi_report"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s05_vsim_ci_github_regression",
+      "skill_name": "vsim-ci-github-regression",
+      "inputs": {
+        "scenario_library": "s03_vsim_fault_scenario_library.scenario_library",
+        "kpi_report": "s04_vsim_scenario_kpis.kpi_report",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "ci_workflow_file": "ci_workflow_file"
+      },
+      "condition": "ci_platform == 'github'",
+      "parallel_group": 4
+    },
+    {
+      "id": "s06_vsim_ci_gitlab_regression",
+      "skill_name": "vsim-ci-gitlab-regression",
+      "inputs": {
+        "scenario_library": "s03_vsim_fault_scenario_library.scenario_library",
+        "kpi_report": "s04_vsim_scenario_kpis.kpi_report",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "ci_workflow_file": "ci_workflow_file"
+      },
+      "condition": "ci_platform == 'gitlab'",
+      "parallel_group": 4
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_vsim_openscenario_author",
+      "to_step": "s02_vsim_esmini_scenario_check",
+      "data_type": "vsim-openscenario-author",
+      "field_mapping": {
+        "xosc_file": "xosc_file"
+      }
+    },
+    {
+      "from_step": "s01_vsim_openscenario_author",
+      "to_step": "s03_vsim_fault_scenario_library",
+      "data_type": "vsim-openscenario-author",
+      "field_mapping": {
+        "xosc_file": "xosc_file"
+      }
+    },
+    {
+      "from_step": "s02_vsim_esmini_scenario_check",
+      "to_step": "s03_vsim_fault_scenario_library",
+      "data_type": "vsim-esmini-scenario-check",
+      "field_mapping": {
+        "scenario_check_report": "scenario_check_report"
+      }
+    },
+    {
+      "from_step": "s03_vsim_fault_scenario_library",
+      "to_step": "s05_vsim_ci_github_regression",
+      "data_type": "vsim-fault-scenario-library",
+      "field_mapping": {
+        "scenario_library": "scenario_library"
+      }
+    },
+    {
+      "from_step": "s04_vsim_scenario_kpis",
+      "to_step": "s05_vsim_ci_github_regression",
+      "data_type": "vsim-scenario-kpis",
+      "field_mapping": {
+        "kpi_report": "kpi_report"
+      }
+    },
+    {
+      "from_step": "s03_vsim_fault_scenario_library",
+      "to_step": "s06_vsim_ci_gitlab_regression",
+      "data_type": "vsim-fault-scenario-library",
+      "field_mapping": {
+        "scenario_library": "scenario_library"
+      }
+    },
+    {
+      "from_step": "s04_vsim_scenario_kpis",
+      "to_step": "s06_vsim_ci_gitlab_regression",
+      "data_type": "vsim-scenario-kpis",
+      "field_mapping": {
+        "kpi_report": "kpi_report"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "scenario_description",
+    "opendrive_file",
+    "odd_description",
+    "run_logs",
+    "stack",
+    "kpi_thresholds"
+  ],
+  "terminal_outputs": [
+    "scenario_library",
+    "kpi_report",
+    "ci_workflow_file"
+  ],
+  "parallel_groups": [
+    [
+      "s01_vsim_openscenario_author",
+      "s04_vsim_scenario_kpis"
+    ],
+    [
+      "s02_vsim_esmini_scenario_check"
+    ],
+    [
+      "s03_vsim_fault_scenario_library"
+    ],
+    [
+      "s05_vsim_ci_github_regression",
+      "s06_vsim_ci_gitlab_regression"
+    ]
+  ],
+  "estimated_cost": 6,
+  "critical_path": [
+    "s01_vsim_openscenario_author",
+    "s02_vsim_esmini_scenario_check",
+    "s03_vsim_fault_scenario_library",
+    "s05_vsim_ci_github_regression"
+  ]
+}

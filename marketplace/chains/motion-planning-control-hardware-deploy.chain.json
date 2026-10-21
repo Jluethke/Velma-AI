@@ -1,0 +1,275 @@
+{
+  "name": "motion-planning-control-hardware-deploy",
+  "description": "From a passing simulation to hardware: Python or C++ runtime with golden parity, loop timing and jitter, bench actuation test and closed-course speed ladder behind an independent hardware emergency stop.",
+  "steps": [
+    {
+      "id": "s01_ctrl_spec_intake",
+      "skill_name": "ctrl-spec-intake",
+      "inputs": {
+        "vehicle_params": "from_user_input",
+        "motion_limits": "from_user_input",
+        "test_site": "from_user_input",
+        "estop_description": "from_user_input",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "control_spec": "control_spec",
+        "open_questions": "open_questions"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_ctrl_impl_py",
+      "skill_name": "ctrl-impl-py",
+      "inputs": {
+        "sim_verdict": "from_user_input",
+        "sim_log": "from_user_input",
+        "longitudinal_controller": "from_user_input",
+        "pid_gains": "from_user_input",
+        "actuator_limiter": "from_user_input",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "py_controller_build": "py_controller_build"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 1
+    },
+    {
+      "id": "s03_ctrl_impl_cpp",
+      "skill_name": "ctrl-impl-cpp",
+      "inputs": {
+        "sim_verdict": "from_user_input",
+        "sim_log": "from_user_input",
+        "longitudinal_controller": "from_user_input",
+        "pid_gains": "from_user_input",
+        "actuator_limiter": "from_user_input",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "cpp_controller_build": "cpp_controller_build"
+      },
+      "condition": "stack == 'cpp'",
+      "parallel_group": 1
+    },
+    {
+      "id": "s04_ctrl_loop_timing_py",
+      "skill_name": "ctrl-loop-timing-py",
+      "inputs": {
+        "py_controller_build": "s02_ctrl_impl_py.py_controller_build",
+        "control_spec": "s01_ctrl_spec_intake.control_spec"
+      },
+      "outputs": {
+        "py_timing_report": "py_timing_report"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s05_ctrl_loop_timing_cpp",
+      "skill_name": "ctrl-loop-timing-cpp",
+      "inputs": {
+        "cpp_controller_build": "s03_ctrl_impl_cpp.cpp_controller_build",
+        "control_spec": "s01_ctrl_spec_intake.control_spec"
+      },
+      "outputs": {
+        "cpp_timing_report": "cpp_timing_report"
+      },
+      "condition": "stack == 'cpp'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s06_ctrl_bench_actuation_test",
+      "skill_name": "ctrl-bench-actuation-test",
+      "inputs": {
+        "control_spec": "s01_ctrl_spec_intake.control_spec",
+        "stability_report": "from_user_input",
+        "py_controller_build": "s02_ctrl_impl_py.py_controller_build",
+        "cpp_controller_build": "s03_ctrl_impl_cpp.cpp_controller_build",
+        "py_timing_report": "s04_ctrl_loop_timing_py.py_timing_report",
+        "cpp_timing_report": "s05_ctrl_loop_timing_cpp.cpp_timing_report"
+      },
+      "outputs": {
+        "bench_log": "bench_log",
+        "bench_verdict": "bench_verdict"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s07_ctrl_closed_course_run",
+      "skill_name": "ctrl-closed-course-run",
+      "inputs": {
+        "bench_verdict": "s06_ctrl_bench_actuation_test.bench_verdict",
+        "reference_trajectory": "from_user_input",
+        "control_spec": "s01_ctrl_spec_intake.control_spec"
+      },
+      "outputs": {
+        "course_log": "course_log"
+      },
+      "condition": "bench_verdict == 'PASS'",
+      "parallel_group": 4
+    },
+    {
+      "id": "s08_ctrl_tracking_metrics",
+      "skill_name": "ctrl-tracking-metrics",
+      "inputs": {
+        "run_log": "s07_ctrl_closed_course_run.course_log",
+        "reference_trajectory": "from_user_input",
+        "tracking_tolerances": "from_user_input"
+      },
+      "outputs": {
+        "tracking_metrics": "tracking_metrics"
+      },
+      "parallel_group": 5
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s02_ctrl_impl_py",
+      "to_step": "s04_ctrl_loop_timing_py",
+      "data_type": "ctrl-impl-py",
+      "field_mapping": {
+        "py_controller_build": "py_controller_build"
+      }
+    },
+    {
+      "from_step": "s01_ctrl_spec_intake",
+      "to_step": "s04_ctrl_loop_timing_py",
+      "data_type": "ctrl-spec-intake",
+      "field_mapping": {
+        "control_spec": "control_spec"
+      }
+    },
+    {
+      "from_step": "s03_ctrl_impl_cpp",
+      "to_step": "s05_ctrl_loop_timing_cpp",
+      "data_type": "ctrl-impl-cpp",
+      "field_mapping": {
+        "cpp_controller_build": "cpp_controller_build"
+      }
+    },
+    {
+      "from_step": "s01_ctrl_spec_intake",
+      "to_step": "s05_ctrl_loop_timing_cpp",
+      "data_type": "ctrl-spec-intake",
+      "field_mapping": {
+        "control_spec": "control_spec"
+      }
+    },
+    {
+      "from_step": "s01_ctrl_spec_intake",
+      "to_step": "s06_ctrl_bench_actuation_test",
+      "data_type": "ctrl-spec-intake",
+      "field_mapping": {
+        "control_spec": "control_spec"
+      }
+    },
+    {
+      "from_step": "s02_ctrl_impl_py",
+      "to_step": "s06_ctrl_bench_actuation_test",
+      "data_type": "ctrl-impl-py",
+      "field_mapping": {
+        "py_controller_build": "py_controller_build"
+      }
+    },
+    {
+      "from_step": "s03_ctrl_impl_cpp",
+      "to_step": "s06_ctrl_bench_actuation_test",
+      "data_type": "ctrl-impl-cpp",
+      "field_mapping": {
+        "cpp_controller_build": "cpp_controller_build"
+      }
+    },
+    {
+      "from_step": "s04_ctrl_loop_timing_py",
+      "to_step": "s06_ctrl_bench_actuation_test",
+      "data_type": "ctrl-loop-timing-py",
+      "field_mapping": {
+        "py_timing_report": "py_timing_report"
+      }
+    },
+    {
+      "from_step": "s05_ctrl_loop_timing_cpp",
+      "to_step": "s06_ctrl_bench_actuation_test",
+      "data_type": "ctrl-loop-timing-cpp",
+      "field_mapping": {
+        "cpp_timing_report": "cpp_timing_report"
+      }
+    },
+    {
+      "from_step": "s06_ctrl_bench_actuation_test",
+      "to_step": "s07_ctrl_closed_course_run",
+      "data_type": "ctrl-bench-actuation-test",
+      "field_mapping": {
+        "bench_verdict": "bench_verdict"
+      }
+    },
+    {
+      "from_step": "s01_ctrl_spec_intake",
+      "to_step": "s07_ctrl_closed_course_run",
+      "data_type": "ctrl-spec-intake",
+      "field_mapping": {
+        "control_spec": "control_spec"
+      }
+    },
+    {
+      "from_step": "s07_ctrl_closed_course_run",
+      "to_step": "s08_ctrl_tracking_metrics",
+      "data_type": "ctrl-closed-course-run",
+      "field_mapping": {
+        "course_log": "run_log"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "vehicle_params",
+    "motion_limits",
+    "test_site",
+    "estop_description",
+    "stack",
+    "sim_verdict",
+    "sim_log",
+    "longitudinal_controller",
+    "pid_gains",
+    "actuator_limiter",
+    "project_dir",
+    "stability_report",
+    "reference_trajectory",
+    "tracking_tolerances"
+  ],
+  "terminal_outputs": [
+    "open_questions",
+    "bench_log",
+    "bench_verdict",
+    "course_log",
+    "tracking_metrics"
+  ],
+  "parallel_groups": [
+    [
+      "s01_ctrl_spec_intake",
+      "s02_ctrl_impl_py",
+      "s03_ctrl_impl_cpp"
+    ],
+    [
+      "s04_ctrl_loop_timing_py",
+      "s05_ctrl_loop_timing_cpp"
+    ],
+    [
+      "s06_ctrl_bench_actuation_test"
+    ],
+    [
+      "s07_ctrl_closed_course_run"
+    ],
+    [
+      "s08_ctrl_tracking_metrics"
+    ]
+  ],
+  "estimated_cost": 8,
+  "critical_path": [
+    "s03_ctrl_impl_cpp",
+    "s05_ctrl_loop_timing_cpp",
+    "s06_ctrl_bench_actuation_test",
+    "s07_ctrl_closed_course_run",
+    "s08_ctrl_tracking_metrics"
+  ]
+}

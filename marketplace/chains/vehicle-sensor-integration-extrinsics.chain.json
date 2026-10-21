@@ -1,0 +1,167 @@
+{
+  "name": "vehicle-sensor-integration-extrinsics",
+  "description": "Characterize IMU noise with Allan deviation, calibrate camera-IMU extrinsics and time offset with Kalibr, bring up the lidar, and calibrate camera-lidar extrinsics.",
+  "steps": [
+    {
+      "id": "s01_vsens_sensor_inventory",
+      "skill_name": "vsens-sensor-inventory",
+      "inputs": {
+        "platform_description": "from_user_input",
+        "sensor_list": "from_user_input"
+      },
+      "outputs": {
+        "sensor_inventory": "sensor_inventory",
+        "timing_requirements": "timing_requirements"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_vsens_imu_driver_bringup",
+      "skill_name": "vsens-imu-driver-bringup",
+      "inputs": {
+        "sensor_inventory": "s01_vsens_sensor_inventory.sensor_inventory",
+        "imu_device": "from_user_input"
+      },
+      "outputs": {
+        "imu_stream_report": "imu_stream_report"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_vsens_imu_allan_variance",
+      "skill_name": "vsens-imu-allan-variance",
+      "inputs": {
+        "imu_stream_report": "s02_vsens_imu_driver_bringup.imu_stream_report",
+        "static_log_path": "from_user_input"
+      },
+      "outputs": {
+        "imu_noise_params": "imu_noise_params"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_vsens_kalibr_camera_imu",
+      "skill_name": "vsens-kalibr-camera-imu",
+      "inputs": {
+        "camera_intrinsics": "from_user_input",
+        "imu_noise_params": "s03_vsens_imu_allan_variance.imu_noise_params",
+        "calibration_bag": "from_user_input",
+        "aprilgrid_spec": "from_user_input"
+      },
+      "outputs": {
+        "camera_imu_extrinsics": "camera_imu_extrinsics",
+        "camera_imu_time_offset": "camera_imu_time_offset"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s05_vsens_lidar_driver_pointcloud",
+      "skill_name": "vsens-lidar-driver-pointcloud",
+      "inputs": {
+        "sensor_inventory": "s01_vsens_sensor_inventory.sensor_inventory",
+        "lidar_model": "from_user_input"
+      },
+      "outputs": {
+        "lidar_stream_report": "lidar_stream_report"
+      },
+      "condition": "has_lidar == true",
+      "parallel_group": 2
+    },
+    {
+      "id": "s06_vsens_camera_lidar_extrinsics",
+      "skill_name": "vsens-camera-lidar-extrinsics",
+      "inputs": {
+        "camera_intrinsics": "from_user_input",
+        "lidar_stream_report": "s05_vsens_lidar_driver_pointcloud.lidar_stream_report",
+        "static_board_bag": "from_user_input"
+      },
+      "outputs": {
+        "camera_lidar_extrinsics": "camera_lidar_extrinsics"
+      },
+      "condition": "has_lidar == true",
+      "parallel_group": 3
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_vsens_sensor_inventory",
+      "to_step": "s02_vsens_imu_driver_bringup",
+      "data_type": "vsens-sensor-inventory",
+      "field_mapping": {
+        "sensor_inventory": "sensor_inventory"
+      }
+    },
+    {
+      "from_step": "s02_vsens_imu_driver_bringup",
+      "to_step": "s03_vsens_imu_allan_variance",
+      "data_type": "vsens-imu-driver-bringup",
+      "field_mapping": {
+        "imu_stream_report": "imu_stream_report"
+      }
+    },
+    {
+      "from_step": "s03_vsens_imu_allan_variance",
+      "to_step": "s04_vsens_kalibr_camera_imu",
+      "data_type": "vsens-imu-allan-variance",
+      "field_mapping": {
+        "imu_noise_params": "imu_noise_params"
+      }
+    },
+    {
+      "from_step": "s01_vsens_sensor_inventory",
+      "to_step": "s05_vsens_lidar_driver_pointcloud",
+      "data_type": "vsens-sensor-inventory",
+      "field_mapping": {
+        "sensor_inventory": "sensor_inventory"
+      }
+    },
+    {
+      "from_step": "s05_vsens_lidar_driver_pointcloud",
+      "to_step": "s06_vsens_camera_lidar_extrinsics",
+      "data_type": "vsens-lidar-driver-pointcloud",
+      "field_mapping": {
+        "lidar_stream_report": "lidar_stream_report"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "platform_description",
+    "sensor_list",
+    "imu_device",
+    "static_log_path",
+    "camera_intrinsics",
+    "calibration_bag",
+    "aprilgrid_spec",
+    "lidar_model",
+    "static_board_bag"
+  ],
+  "terminal_outputs": [
+    "timing_requirements",
+    "camera_imu_extrinsics",
+    "camera_imu_time_offset",
+    "camera_lidar_extrinsics"
+  ],
+  "parallel_groups": [
+    [
+      "s01_vsens_sensor_inventory"
+    ],
+    [
+      "s02_vsens_imu_driver_bringup",
+      "s05_vsens_lidar_driver_pointcloud"
+    ],
+    [
+      "s03_vsens_imu_allan_variance",
+      "s06_vsens_camera_lidar_extrinsics"
+    ],
+    [
+      "s04_vsens_kalibr_camera_imu"
+    ]
+  ],
+  "estimated_cost": 6,
+  "critical_path": [
+    "s01_vsens_sensor_inventory",
+    "s02_vsens_imu_driver_bringup",
+    "s03_vsens_imu_allan_variance",
+    "s04_vsens_kalibr_camera_imu"
+  ]
+}

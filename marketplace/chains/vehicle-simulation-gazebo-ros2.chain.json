@@ -1,0 +1,162 @@
+{
+  "name": "vehicle-simulation-gazebo-ros2",
+  "description": "Gazebo and ROS 2 path: Ackermann vehicle model, datasheet-derived sensor noise, ROS 2 bridge on sim time, seed determinism, bag replay SIL and a sim-to-real gap check.",
+  "steps": [
+    {
+      "id": "s01_vsim_gz_vehicle_model",
+      "skill_name": "vsim-gz-vehicle-model",
+      "inputs": {
+        "gz_version": "from_user_input",
+        "vehicle_params": "from_user_input"
+      },
+      "outputs": {
+        "vehicle_sdf": "vehicle_sdf",
+        "world_file": "world_file"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_vsim_gz_sensor_noise",
+      "skill_name": "vsim-gz-sensor-noise",
+      "inputs": {
+        "vehicle_sdf": "s01_vsim_gz_vehicle_model.vehicle_sdf",
+        "sensor_spec": "from_user_input",
+        "noise_params": "from_user_input_optional"
+      },
+      "outputs": {
+        "noisy_vehicle_sdf": "noisy_vehicle_sdf"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_vsim_gz_ros2_bridge",
+      "skill_name": "vsim-gz-ros2-bridge",
+      "inputs": {
+        "world_file": "s01_vsim_gz_vehicle_model.world_file",
+        "noisy_vehicle_sdf": "s02_vsim_gz_sensor_noise.noisy_vehicle_sdf",
+        "ros_distro": "from_user_input",
+        "gz_version": "from_user_input"
+      },
+      "outputs": {
+        "bridge_config": "bridge_config",
+        "sim_launch_file": "sim_launch_file"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_vsim_gz_seed_determinism",
+      "skill_name": "vsim-gz-seed-determinism",
+      "inputs": {
+        "sim_launch_file": "s03_vsim_gz_ros2_bridge.sim_launch_file",
+        "sim_seed": "from_user_input"
+      },
+      "outputs": {
+        "determinism_report": "determinism_report"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s05_vsim_ros2_bag_replay_sil",
+      "skill_name": "vsim-ros2-bag-replay-sil",
+      "inputs": {
+        "bag_path": "from_user_input",
+        "sut_launch_file": "from_user_input",
+        "baseline_bag": "from_user_input_optional"
+      },
+      "outputs": {
+        "sil_output_bag": "sil_output_bag",
+        "sil_diff_report": "sil_diff_report"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s06_vsim_sim2real_gap_check",
+      "skill_name": "vsim-sim2real-gap-check",
+      "inputs": {
+        "sim_log": "from_user_input",
+        "real_log": "from_user_input",
+        "signal_list": "from_user_input"
+      },
+      "outputs": {
+        "gap_report": "gap_report"
+      },
+      "parallel_group": 1
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_vsim_gz_vehicle_model",
+      "to_step": "s02_vsim_gz_sensor_noise",
+      "data_type": "vsim-gz-vehicle-model",
+      "field_mapping": {
+        "vehicle_sdf": "vehicle_sdf"
+      }
+    },
+    {
+      "from_step": "s01_vsim_gz_vehicle_model",
+      "to_step": "s03_vsim_gz_ros2_bridge",
+      "data_type": "vsim-gz-vehicle-model",
+      "field_mapping": {
+        "world_file": "world_file"
+      }
+    },
+    {
+      "from_step": "s02_vsim_gz_sensor_noise",
+      "to_step": "s03_vsim_gz_ros2_bridge",
+      "data_type": "vsim-gz-sensor-noise",
+      "field_mapping": {
+        "noisy_vehicle_sdf": "noisy_vehicle_sdf"
+      }
+    },
+    {
+      "from_step": "s03_vsim_gz_ros2_bridge",
+      "to_step": "s04_vsim_gz_seed_determinism",
+      "data_type": "vsim-gz-ros2-bridge",
+      "field_mapping": {
+        "sim_launch_file": "sim_launch_file"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "gz_version",
+    "vehicle_params",
+    "sensor_spec",
+    "noise_params",
+    "ros_distro",
+    "sim_seed",
+    "bag_path",
+    "sut_launch_file",
+    "baseline_bag",
+    "sim_log",
+    "real_log",
+    "signal_list"
+  ],
+  "terminal_outputs": [
+    "determinism_report",
+    "sil_diff_report",
+    "gap_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_vsim_gz_vehicle_model",
+      "s05_vsim_ros2_bag_replay_sil",
+      "s06_vsim_sim2real_gap_check"
+    ],
+    [
+      "s02_vsim_gz_sensor_noise"
+    ],
+    [
+      "s03_vsim_gz_ros2_bridge"
+    ],
+    [
+      "s04_vsim_gz_seed_determinism"
+    ]
+  ],
+  "estimated_cost": 6,
+  "critical_path": [
+    "s01_vsim_gz_vehicle_model",
+    "s02_vsim_gz_sensor_noise",
+    "s03_vsim_gz_ros2_bridge",
+    "s04_vsim_gz_seed_determinism"
+  ]
+}

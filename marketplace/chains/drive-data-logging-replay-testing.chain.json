@@ -1,0 +1,177 @@
+{
+  "name": "drive-data-logging-replay-testing",
+  "description": "Turn archived drives into regression tests: index the archive, anonymize camera data, extract event test cases, replay them offline in the chosen stack and check determinism.",
+  "steps": [
+    {
+      "id": "s01_dlog_drive_index_sqlite",
+      "skill_name": "dlog-drive-index-sqlite",
+      "inputs": {
+        "archive_path": "from_user_input",
+        "run_manifest": "from_user_input",
+        "hash_manifest": "from_user_input"
+      },
+      "outputs": {
+        "drive_index": "drive_index"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_dlog_camera_privacy_anonymize",
+      "skill_name": "dlog-camera-privacy-anonymize",
+      "inputs": {
+        "archive_path": "from_user_input",
+        "privacy_policy": "from_user_input",
+        "drive_index": "s01_dlog_drive_index_sqlite.drive_index"
+      },
+      "outputs": {
+        "anonymized_log": "anonymized_log",
+        "privacy_audit": "privacy_audit"
+      },
+      "condition": "has_camera == true",
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_dlog_test_case_extract",
+      "skill_name": "dlog-test-case-extract",
+      "inputs": {
+        "drive_index": "s01_dlog_drive_index_sqlite.drive_index",
+        "event_definition": "from_user_input",
+        "archive_path": "from_user_input"
+      },
+      "outputs": {
+        "test_cases": "test_cases"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_dlog_ros2_bag_replay",
+      "skill_name": "dlog-ros2-bag-replay",
+      "inputs": {
+        "archive_path": "from_user_input",
+        "drive_index": "s01_dlog_drive_index_sqlite.drive_index",
+        "entry_point": "from_user_input"
+      },
+      "outputs": {
+        "replay_procedure": "replay_procedure"
+      },
+      "condition": "stack == 'ros2'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s05_dlog_py_replay_harness",
+      "skill_name": "dlog-py-replay-harness",
+      "inputs": {
+        "archive_path": "from_user_input",
+        "drive_index": "s01_dlog_drive_index_sqlite.drive_index",
+        "entry_point": "from_user_input"
+      },
+      "outputs": {
+        "replay_procedure": "replay_procedure"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s06_dlog_cpp_replay_harness",
+      "skill_name": "dlog-cpp-replay-harness",
+      "inputs": {
+        "archive_path": "from_user_input",
+        "drive_index": "s01_dlog_drive_index_sqlite.drive_index",
+        "entry_point": "from_user_input"
+      },
+      "outputs": {
+        "replay_procedure": "replay_procedure"
+      },
+      "condition": "stack == 'cpp'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s07_dlog_replay_determinism_check",
+      "skill_name": "dlog-replay-determinism-check",
+      "inputs": {
+        "replay_output_dirs": "from_user_input",
+        "entry_point": "from_user_input"
+      },
+      "outputs": {
+        "determinism_report": "determinism_report"
+      },
+      "parallel_group": 1
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_dlog_drive_index_sqlite",
+      "to_step": "s02_dlog_camera_privacy_anonymize",
+      "data_type": "dlog-drive-index-sqlite",
+      "field_mapping": {
+        "drive_index": "drive_index"
+      }
+    },
+    {
+      "from_step": "s01_dlog_drive_index_sqlite",
+      "to_step": "s03_dlog_test_case_extract",
+      "data_type": "dlog-drive-index-sqlite",
+      "field_mapping": {
+        "drive_index": "drive_index"
+      }
+    },
+    {
+      "from_step": "s01_dlog_drive_index_sqlite",
+      "to_step": "s04_dlog_ros2_bag_replay",
+      "data_type": "dlog-drive-index-sqlite",
+      "field_mapping": {
+        "drive_index": "drive_index"
+      }
+    },
+    {
+      "from_step": "s01_dlog_drive_index_sqlite",
+      "to_step": "s05_dlog_py_replay_harness",
+      "data_type": "dlog-drive-index-sqlite",
+      "field_mapping": {
+        "drive_index": "drive_index"
+      }
+    },
+    {
+      "from_step": "s01_dlog_drive_index_sqlite",
+      "to_step": "s06_dlog_cpp_replay_harness",
+      "data_type": "dlog-drive-index-sqlite",
+      "field_mapping": {
+        "drive_index": "drive_index"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "archive_path",
+    "run_manifest",
+    "hash_manifest",
+    "privacy_policy",
+    "event_definition",
+    "entry_point",
+    "replay_output_dirs"
+  ],
+  "terminal_outputs": [
+    "anonymized_log",
+    "privacy_audit",
+    "test_cases",
+    "replay_procedure",
+    "determinism_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_dlog_drive_index_sqlite",
+      "s07_dlog_replay_determinism_check"
+    ],
+    [
+      "s02_dlog_camera_privacy_anonymize",
+      "s03_dlog_test_case_extract",
+      "s04_dlog_ros2_bag_replay",
+      "s05_dlog_py_replay_harness",
+      "s06_dlog_cpp_replay_harness"
+    ]
+  ],
+  "estimated_cost": 7,
+  "critical_path": [
+    "s01_dlog_drive_index_sqlite",
+    "s02_dlog_camera_privacy_anonymize"
+  ]
+}

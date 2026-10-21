@@ -1,0 +1,163 @@
+{
+  "name": "subscription-billing-usage-metering",
+  "description": "Create Stripe meters, capture usage in a transactional outbox, report it idempotently from a Python or Node.js worker, and reconcile totals against Stripe.",
+  "steps": [
+    {
+      "id": "s01_bill_stripe_meter_create",
+      "skill_name": "bill-stripe-meter-create",
+      "inputs": {
+        "pricing_spec": "from_user_input",
+        "price_catalog": "from_user_input"
+      },
+      "outputs": {
+        "meter_config": "meter_config"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_bill_usage_event_capture",
+      "skill_name": "bill-usage-event-capture",
+      "inputs": {
+        "meter_config": "s01_bill_stripe_meter_create.meter_config",
+        "database_url": "from_user_input"
+      },
+      "outputs": {
+        "usage_outbox_schema": "usage_outbox_schema",
+        "capture_code": "capture_code"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_bill_py_usage_reporter",
+      "skill_name": "bill-py-usage-reporter",
+      "inputs": {
+        "usage_outbox_schema": "s02_bill_usage_event_capture.usage_outbox_schema",
+        "meter_config": "s01_bill_stripe_meter_create.meter_config"
+      },
+      "outputs": {
+        "usage_reporter": "usage_reporter",
+        "report_run_log": "report_run_log"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_bill_node_usage_reporter",
+      "skill_name": "bill-node-usage-reporter",
+      "inputs": {
+        "usage_outbox_schema": "s02_bill_usage_event_capture.usage_outbox_schema",
+        "meter_config": "s01_bill_stripe_meter_create.meter_config"
+      },
+      "outputs": {
+        "usage_reporter": "usage_reporter",
+        "report_run_log": "report_run_log"
+      },
+      "condition": "stack == 'node'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s05_bill_usage_reconcile",
+      "skill_name": "bill-usage-reconcile",
+      "inputs": {
+        "meter_config": "s01_bill_stripe_meter_create.meter_config",
+        "usage_outbox_schema": "s02_bill_usage_event_capture.usage_outbox_schema",
+        "reconcile_window": "from_user_input_optional"
+      },
+      "outputs": {
+        "reconcile_report": "reconcile_report",
+        "meter_adjustments": "meter_adjustments"
+      },
+      "parallel_group": 3
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_bill_stripe_meter_create",
+      "to_step": "s02_bill_usage_event_capture",
+      "data_type": "bill-stripe-meter-create",
+      "field_mapping": {
+        "meter_config": "meter_config"
+      }
+    },
+    {
+      "from_step": "s02_bill_usage_event_capture",
+      "to_step": "s03_bill_py_usage_reporter",
+      "data_type": "bill-usage-event-capture",
+      "field_mapping": {
+        "usage_outbox_schema": "usage_outbox_schema"
+      }
+    },
+    {
+      "from_step": "s01_bill_stripe_meter_create",
+      "to_step": "s03_bill_py_usage_reporter",
+      "data_type": "bill-stripe-meter-create",
+      "field_mapping": {
+        "meter_config": "meter_config"
+      }
+    },
+    {
+      "from_step": "s02_bill_usage_event_capture",
+      "to_step": "s04_bill_node_usage_reporter",
+      "data_type": "bill-usage-event-capture",
+      "field_mapping": {
+        "usage_outbox_schema": "usage_outbox_schema"
+      }
+    },
+    {
+      "from_step": "s01_bill_stripe_meter_create",
+      "to_step": "s04_bill_node_usage_reporter",
+      "data_type": "bill-stripe-meter-create",
+      "field_mapping": {
+        "meter_config": "meter_config"
+      }
+    },
+    {
+      "from_step": "s01_bill_stripe_meter_create",
+      "to_step": "s05_bill_usage_reconcile",
+      "data_type": "bill-stripe-meter-create",
+      "field_mapping": {
+        "meter_config": "meter_config"
+      }
+    },
+    {
+      "from_step": "s02_bill_usage_event_capture",
+      "to_step": "s05_bill_usage_reconcile",
+      "data_type": "bill-usage-event-capture",
+      "field_mapping": {
+        "usage_outbox_schema": "usage_outbox_schema"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "pricing_spec",
+    "price_catalog",
+    "database_url",
+    "reconcile_window"
+  ],
+  "terminal_outputs": [
+    "capture_code",
+    "usage_reporter",
+    "report_run_log",
+    "reconcile_report",
+    "meter_adjustments"
+  ],
+  "parallel_groups": [
+    [
+      "s01_bill_stripe_meter_create"
+    ],
+    [
+      "s02_bill_usage_event_capture"
+    ],
+    [
+      "s03_bill_py_usage_reporter",
+      "s04_bill_node_usage_reporter",
+      "s05_bill_usage_reconcile"
+    ]
+  ],
+  "estimated_cost": 5,
+  "critical_path": [
+    "s01_bill_stripe_meter_create",
+    "s02_bill_usage_event_capture",
+    "s03_bill_py_usage_reporter"
+  ]
+}

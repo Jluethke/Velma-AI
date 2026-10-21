@@ -1,0 +1,453 @@
+{
+  "name": "localization-fusion-python-filter",
+  "description": "Custom Python filter path: geodetic conversions, IMU and GNSS noise models, filter design, Q and R derivation, NumPy EKF, replay and consistency check.",
+  "steps": [
+    {
+      "id": "s01_loc_frame_convention_audit",
+      "skill_name": "loc-frame-convention-audit",
+      "inputs": {
+        "vehicle_spec": "from_user_input",
+        "sensor_list": "from_user_input"
+      },
+      "outputs": {
+        "frame_spec": "frame_spec"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_loc_rosbag2_drive_logging",
+      "skill_name": "loc-rosbag2-drive-logging",
+      "inputs": {
+        "frame_spec": "s01_loc_frame_convention_audit.frame_spec",
+        "sensor_topics": "from_user_input",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "sensor_bag": "sensor_bag",
+        "replay_procedure": "replay_procedure"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_loc_py_geodetic_conversions",
+      "skill_name": "loc-py-geodetic-conversions",
+      "inputs": {
+        "frame_spec": "s01_loc_frame_convention_audit.frame_spec",
+        "datum_origin": "from_user_input_optional",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "conversion_module": "conversion_module",
+        "conversion_test_report": "conversion_test_report"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_loc_imu_allan_variance",
+      "skill_name": "loc-imu-allan-variance",
+      "inputs": {
+        "sensor_bag": "s02_loc_rosbag2_drive_logging.sensor_bag",
+        "imu_topic": "from_user_input",
+        "sensor_datasheets": "from_user_input"
+      },
+      "outputs": {
+        "imu_noise_params": "imu_noise_params"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s05_loc_can_wheel_odometry",
+      "skill_name": "loc-can-wheel-odometry",
+      "inputs": {
+        "dbc_file": "from_user_input",
+        "sensor_bag": "s02_loc_rosbag2_drive_logging.sensor_bag",
+        "vehicle_spec": "from_user_input"
+      },
+      "outputs": {
+        "wheel_odom_signals": "wheel_odom_signals",
+        "wheel_odom_model": "wheel_odom_model"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s06_loc_wheel_odom_calibration",
+      "skill_name": "loc-wheel-odom-calibration",
+      "inputs": {
+        "wheel_odom_model": "s05_loc_can_wheel_odometry.wheel_odom_model",
+        "sensor_bag": "s02_loc_rosbag2_drive_logging.sensor_bag",
+        "vehicle_spec": "from_user_input"
+      },
+      "outputs": {
+        "odom_calibration": "odom_calibration",
+        "wheel_odom_noise": "wheel_odom_noise"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s07_loc_gnss_fix_quality_model",
+      "skill_name": "loc-gnss-fix-quality-model",
+      "inputs": {
+        "sensor_bag": "s02_loc_rosbag2_drive_logging.sensor_bag",
+        "sensor_datasheets": "from_user_input"
+      },
+      "outputs": {
+        "gnss_noise_model": "gnss_noise_model"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s08_loc_sensor_time_sync_check",
+      "skill_name": "loc-sensor-time-sync-check",
+      "inputs": {
+        "sensor_bag": "s02_loc_rosbag2_drive_logging.sensor_bag",
+        "frame_spec": "s01_loc_frame_convention_audit.frame_spec",
+        "wheel_odom_signals": "s05_loc_can_wheel_odometry.wheel_odom_signals"
+      },
+      "outputs": {
+        "time_offsets": "time_offsets"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s09_loc_ekf_model_design",
+      "skill_name": "loc-ekf-model-design",
+      "inputs": {
+        "frame_spec": "s01_loc_frame_convention_audit.frame_spec",
+        "sensor_list": "from_user_input",
+        "time_offsets": "s08_loc_sensor_time_sync_check.time_offsets",
+        "filter_type": "from_user_input_optional"
+      },
+      "outputs": {
+        "filter_design": "filter_design"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s10_loc_q_r_derivation",
+      "skill_name": "loc-q-r-derivation",
+      "inputs": {
+        "filter_design": "s09_loc_ekf_model_design.filter_design",
+        "imu_noise_params": "s04_loc_imu_allan_variance.imu_noise_params",
+        "wheel_odom_noise": "s06_loc_wheel_odom_calibration.wheel_odom_noise",
+        "gnss_noise_model": "s07_loc_gnss_fix_quality_model.gnss_noise_model"
+      },
+      "outputs": {
+        "noise_covariances": "noise_covariances"
+      },
+      "parallel_group": 6
+    },
+    {
+      "id": "s11_loc_py_ekf_implementation",
+      "skill_name": "loc-py-ekf-implementation",
+      "inputs": {
+        "filter_design": "s09_loc_ekf_model_design.filter_design",
+        "noise_covariances": "s10_loc_q_r_derivation.noise_covariances",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "filter_impl": "filter_impl",
+        "filter_unit_tests": "filter_unit_tests"
+      },
+      "parallel_group": 7
+    },
+    {
+      "id": "s12_loc_filter_bag_replay",
+      "skill_name": "loc-filter-bag-replay",
+      "inputs": {
+        "filter_entrypoint": "from_user_input",
+        "sensor_bag": "s02_loc_rosbag2_drive_logging.sensor_bag",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "estimate_log": "estimate_log"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s13_loc_ground_truth_prep",
+      "skill_name": "loc-ground-truth-prep",
+      "inputs": {
+        "ground_truth_source": "from_user_input",
+        "sensor_bag": "s02_loc_rosbag2_drive_logging.sensor_bag",
+        "frame_spec": "s01_loc_frame_convention_audit.frame_spec"
+      },
+      "outputs": {
+        "ground_truth_traj": "ground_truth_traj"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s14_loc_nees_nis_consistency",
+      "skill_name": "loc-nees-nis-consistency",
+      "inputs": {
+        "estimate_log": "s12_loc_filter_bag_replay.estimate_log",
+        "ground_truth_traj": "s13_loc_ground_truth_prep.ground_truth_traj",
+        "gate_probability": "from_user_input"
+      },
+      "outputs": {
+        "consistency_report": "consistency_report"
+      },
+      "parallel_group": 4
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_loc_frame_convention_audit",
+      "to_step": "s02_loc_rosbag2_drive_logging",
+      "data_type": "loc-frame-convention-audit",
+      "field_mapping": {
+        "frame_spec": "frame_spec"
+      }
+    },
+    {
+      "from_step": "s01_loc_frame_convention_audit",
+      "to_step": "s03_loc_py_geodetic_conversions",
+      "data_type": "loc-frame-convention-audit",
+      "field_mapping": {
+        "frame_spec": "frame_spec"
+      }
+    },
+    {
+      "from_step": "s02_loc_rosbag2_drive_logging",
+      "to_step": "s04_loc_imu_allan_variance",
+      "data_type": "loc-rosbag2-drive-logging",
+      "field_mapping": {
+        "sensor_bag": "sensor_bag"
+      }
+    },
+    {
+      "from_step": "s02_loc_rosbag2_drive_logging",
+      "to_step": "s05_loc_can_wheel_odometry",
+      "data_type": "loc-rosbag2-drive-logging",
+      "field_mapping": {
+        "sensor_bag": "sensor_bag"
+      }
+    },
+    {
+      "from_step": "s05_loc_can_wheel_odometry",
+      "to_step": "s06_loc_wheel_odom_calibration",
+      "data_type": "loc-can-wheel-odometry",
+      "field_mapping": {
+        "wheel_odom_model": "wheel_odom_model"
+      }
+    },
+    {
+      "from_step": "s02_loc_rosbag2_drive_logging",
+      "to_step": "s06_loc_wheel_odom_calibration",
+      "data_type": "loc-rosbag2-drive-logging",
+      "field_mapping": {
+        "sensor_bag": "sensor_bag"
+      }
+    },
+    {
+      "from_step": "s02_loc_rosbag2_drive_logging",
+      "to_step": "s07_loc_gnss_fix_quality_model",
+      "data_type": "loc-rosbag2-drive-logging",
+      "field_mapping": {
+        "sensor_bag": "sensor_bag"
+      }
+    },
+    {
+      "from_step": "s02_loc_rosbag2_drive_logging",
+      "to_step": "s08_loc_sensor_time_sync_check",
+      "data_type": "loc-rosbag2-drive-logging",
+      "field_mapping": {
+        "sensor_bag": "sensor_bag"
+      }
+    },
+    {
+      "from_step": "s01_loc_frame_convention_audit",
+      "to_step": "s08_loc_sensor_time_sync_check",
+      "data_type": "loc-frame-convention-audit",
+      "field_mapping": {
+        "frame_spec": "frame_spec"
+      }
+    },
+    {
+      "from_step": "s05_loc_can_wheel_odometry",
+      "to_step": "s08_loc_sensor_time_sync_check",
+      "data_type": "loc-can-wheel-odometry",
+      "field_mapping": {
+        "wheel_odom_signals": "wheel_odom_signals"
+      }
+    },
+    {
+      "from_step": "s01_loc_frame_convention_audit",
+      "to_step": "s09_loc_ekf_model_design",
+      "data_type": "loc-frame-convention-audit",
+      "field_mapping": {
+        "frame_spec": "frame_spec"
+      }
+    },
+    {
+      "from_step": "s08_loc_sensor_time_sync_check",
+      "to_step": "s09_loc_ekf_model_design",
+      "data_type": "loc-sensor-time-sync-check",
+      "field_mapping": {
+        "time_offsets": "time_offsets"
+      }
+    },
+    {
+      "from_step": "s09_loc_ekf_model_design",
+      "to_step": "s10_loc_q_r_derivation",
+      "data_type": "loc-ekf-model-design",
+      "field_mapping": {
+        "filter_design": "filter_design"
+      }
+    },
+    {
+      "from_step": "s04_loc_imu_allan_variance",
+      "to_step": "s10_loc_q_r_derivation",
+      "data_type": "loc-imu-allan-variance",
+      "field_mapping": {
+        "imu_noise_params": "imu_noise_params"
+      }
+    },
+    {
+      "from_step": "s06_loc_wheel_odom_calibration",
+      "to_step": "s10_loc_q_r_derivation",
+      "data_type": "loc-wheel-odom-calibration",
+      "field_mapping": {
+        "wheel_odom_noise": "wheel_odom_noise"
+      }
+    },
+    {
+      "from_step": "s07_loc_gnss_fix_quality_model",
+      "to_step": "s10_loc_q_r_derivation",
+      "data_type": "loc-gnss-fix-quality-model",
+      "field_mapping": {
+        "gnss_noise_model": "gnss_noise_model"
+      }
+    },
+    {
+      "from_step": "s09_loc_ekf_model_design",
+      "to_step": "s11_loc_py_ekf_implementation",
+      "data_type": "loc-ekf-model-design",
+      "field_mapping": {
+        "filter_design": "filter_design"
+      }
+    },
+    {
+      "from_step": "s10_loc_q_r_derivation",
+      "to_step": "s11_loc_py_ekf_implementation",
+      "data_type": "loc-q-r-derivation",
+      "field_mapping": {
+        "noise_covariances": "noise_covariances"
+      }
+    },
+    {
+      "from_step": "s02_loc_rosbag2_drive_logging",
+      "to_step": "s12_loc_filter_bag_replay",
+      "data_type": "loc-rosbag2-drive-logging",
+      "field_mapping": {
+        "sensor_bag": "sensor_bag"
+      }
+    },
+    {
+      "from_step": "s02_loc_rosbag2_drive_logging",
+      "to_step": "s13_loc_ground_truth_prep",
+      "data_type": "loc-rosbag2-drive-logging",
+      "field_mapping": {
+        "sensor_bag": "sensor_bag"
+      }
+    },
+    {
+      "from_step": "s01_loc_frame_convention_audit",
+      "to_step": "s13_loc_ground_truth_prep",
+      "data_type": "loc-frame-convention-audit",
+      "field_mapping": {
+        "frame_spec": "frame_spec"
+      }
+    },
+    {
+      "from_step": "s12_loc_filter_bag_replay",
+      "to_step": "s14_loc_nees_nis_consistency",
+      "data_type": "loc-filter-bag-replay",
+      "field_mapping": {
+        "estimate_log": "estimate_log"
+      }
+    },
+    {
+      "from_step": "s13_loc_ground_truth_prep",
+      "to_step": "s14_loc_nees_nis_consistency",
+      "data_type": "loc-ground-truth-prep",
+      "field_mapping": {
+        "ground_truth_traj": "ground_truth_traj"
+      }
+    },
+    {
+      "from_step": "s14_loc_nees_nis_consistency",
+      "to_step": "s10_loc_q_r_derivation",
+      "data_type": "loc-nees-nis-consistency",
+      "field_mapping": {
+        "consistency_report": "consistency_report"
+      },
+      "condition": "consistency_report.verdict != 'CONSISTENT'",
+      "max_loops": 3
+    }
+  ],
+  "entry_inputs": [
+    "vehicle_spec",
+    "sensor_list",
+    "sensor_topics",
+    "project_dir",
+    "datum_origin",
+    "imu_topic",
+    "sensor_datasheets",
+    "dbc_file",
+    "filter_type",
+    "filter_entrypoint",
+    "stack",
+    "ground_truth_source",
+    "gate_probability"
+  ],
+  "terminal_outputs": [
+    "replay_procedure",
+    "conversion_module",
+    "conversion_test_report",
+    "odom_calibration",
+    "filter_impl",
+    "filter_unit_tests",
+    "consistency_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_loc_frame_convention_audit"
+    ],
+    [
+      "s02_loc_rosbag2_drive_logging",
+      "s03_loc_py_geodetic_conversions"
+    ],
+    [
+      "s04_loc_imu_allan_variance",
+      "s05_loc_can_wheel_odometry",
+      "s07_loc_gnss_fix_quality_model",
+      "s12_loc_filter_bag_replay",
+      "s13_loc_ground_truth_prep"
+    ],
+    [
+      "s06_loc_wheel_odom_calibration",
+      "s08_loc_sensor_time_sync_check",
+      "s14_loc_nees_nis_consistency"
+    ],
+    [
+      "s09_loc_ekf_model_design"
+    ],
+    [
+      "s10_loc_q_r_derivation"
+    ],
+    [
+      "s11_loc_py_ekf_implementation"
+    ]
+  ],
+  "estimated_cost": 14,
+  "critical_path": [
+    "s01_loc_frame_convention_audit",
+    "s02_loc_rosbag2_drive_logging",
+    "s05_loc_can_wheel_odometry",
+    "s08_loc_sensor_time_sync_check",
+    "s09_loc_ekf_model_design",
+    "s10_loc_q_r_derivation",
+    "s11_loc_py_ekf_implementation"
+  ]
+}

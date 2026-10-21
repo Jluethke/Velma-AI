@@ -1,0 +1,171 @@
+{
+  "name": "vehicle-sensor-integration-time-sync",
+  "description": "Synchronize sensor clocks with PTP and GNSS PPS through linuxptp and chrony, then measure ROS 2 stamp latency and camera event-to-timestamp offset.",
+  "steps": [
+    {
+      "id": "s01_vsens_sensor_inventory",
+      "skill_name": "vsens-sensor-inventory",
+      "inputs": {
+        "platform_description": "from_user_input",
+        "sensor_list": "from_user_input"
+      },
+      "outputs": {
+        "sensor_inventory": "sensor_inventory",
+        "timing_requirements": "timing_requirements"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_vsens_gnss_nmea_gpsd",
+      "skill_name": "vsens-gnss-nmea-gpsd",
+      "inputs": {
+        "sensor_inventory": "s01_vsens_sensor_inventory.sensor_inventory",
+        "gnss_device": "from_user_input"
+      },
+      "outputs": {
+        "gnss_stream_report": "gnss_stream_report"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_vsens_ptp_linuxptp",
+      "skill_name": "vsens-ptp-linuxptp",
+      "inputs": {
+        "timing_requirements": "s01_vsens_sensor_inventory.timing_requirements",
+        "ptp_interface": "from_user_input"
+      },
+      "outputs": {
+        "ptp_sync_report": "ptp_sync_report"
+      },
+      "condition": "has_ptp_sensor == true",
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_vsens_pps_chrony",
+      "skill_name": "vsens-pps-chrony",
+      "inputs": {
+        "gnss_stream_report": "s02_vsens_gnss_nmea_gpsd.gnss_stream_report",
+        "pps_device": "from_user_input",
+        "ptp_sync_report": "s03_vsens_ptp_linuxptp.ptp_sync_report"
+      },
+      "outputs": {
+        "clock_discipline_report": "clock_discipline_report"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s05_vsens_ros2_stamp_latency",
+      "skill_name": "vsens-ros2-stamp-latency",
+      "inputs": {
+        "clock_discipline_report": "s04_vsens_pps_chrony.clock_discipline_report",
+        "topic_list": "from_user_input"
+      },
+      "outputs": {
+        "stamp_latency_report": "stamp_latency_report"
+      },
+      "condition": "stack == 'ros2'",
+      "parallel_group": 4
+    },
+    {
+      "id": "s06_vsens_camera_led_latency",
+      "skill_name": "vsens-camera-led-latency",
+      "inputs": {
+        "clock_discipline_report": "s04_vsens_pps_chrony.clock_discipline_report",
+        "camera_control_settings": "from_user_input",
+        "led_gpio": "from_user_input"
+      },
+      "outputs": {
+        "optical_latency_report": "optical_latency_report"
+      },
+      "condition": "has_camera == true",
+      "parallel_group": 4
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_vsens_sensor_inventory",
+      "to_step": "s02_vsens_gnss_nmea_gpsd",
+      "data_type": "vsens-sensor-inventory",
+      "field_mapping": {
+        "sensor_inventory": "sensor_inventory"
+      }
+    },
+    {
+      "from_step": "s01_vsens_sensor_inventory",
+      "to_step": "s03_vsens_ptp_linuxptp",
+      "data_type": "vsens-sensor-inventory",
+      "field_mapping": {
+        "timing_requirements": "timing_requirements"
+      }
+    },
+    {
+      "from_step": "s02_vsens_gnss_nmea_gpsd",
+      "to_step": "s04_vsens_pps_chrony",
+      "data_type": "vsens-gnss-nmea-gpsd",
+      "field_mapping": {
+        "gnss_stream_report": "gnss_stream_report"
+      }
+    },
+    {
+      "from_step": "s03_vsens_ptp_linuxptp",
+      "to_step": "s04_vsens_pps_chrony",
+      "data_type": "vsens-ptp-linuxptp",
+      "field_mapping": {
+        "ptp_sync_report": "ptp_sync_report"
+      }
+    },
+    {
+      "from_step": "s04_vsens_pps_chrony",
+      "to_step": "s05_vsens_ros2_stamp_latency",
+      "data_type": "vsens-pps-chrony",
+      "field_mapping": {
+        "clock_discipline_report": "clock_discipline_report"
+      }
+    },
+    {
+      "from_step": "s04_vsens_pps_chrony",
+      "to_step": "s06_vsens_camera_led_latency",
+      "data_type": "vsens-pps-chrony",
+      "field_mapping": {
+        "clock_discipline_report": "clock_discipline_report"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "platform_description",
+    "sensor_list",
+    "gnss_device",
+    "ptp_interface",
+    "pps_device",
+    "topic_list",
+    "camera_control_settings",
+    "led_gpio"
+  ],
+  "terminal_outputs": [
+    "stamp_latency_report",
+    "optical_latency_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_vsens_sensor_inventory"
+    ],
+    [
+      "s02_vsens_gnss_nmea_gpsd",
+      "s03_vsens_ptp_linuxptp"
+    ],
+    [
+      "s04_vsens_pps_chrony"
+    ],
+    [
+      "s05_vsens_ros2_stamp_latency",
+      "s06_vsens_camera_led_latency"
+    ]
+  ],
+  "estimated_cost": 6,
+  "critical_path": [
+    "s01_vsens_sensor_inventory",
+    "s03_vsens_ptp_linuxptp",
+    "s04_vsens_pps_chrony",
+    "s06_vsens_camera_led_latency"
+  ]
+}

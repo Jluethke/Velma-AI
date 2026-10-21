@@ -1,0 +1,152 @@
+{
+  "name": "cross-compile-aarch64-cmake",
+  "description": "Cross-compile a CMake project for aarch64 end to end: select the triple, install the GCC toolchain, build a sysroot, configure cross pkg-config, write the CMake toolchain file, configure and build, and verify the artifact is an AArch64 ELF.",
+  "steps": [
+    {
+      "id": "cs01_xarch_target_triple_select",
+      "skill_name": "xarch-target-triple-select",
+      "inputs": {
+        "stack": "from_user_input",
+        "target_libc": "from_user_input",
+        "target_cpu": "from_user_input_optional"
+      },
+      "outputs": {
+        "target_triple": "target_triple",
+        "triple_report": "triple_report"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "cs02_xarch_gcc_toolchain_select",
+      "skill_name": "xarch-gcc-toolchain-select",
+      "inputs": {
+        "host_distro": "from_user_input",
+        "target_triple": "cs01_xarch_target_triple_select.target_triple"
+      },
+      "outputs": {
+        "toolchain_prefix": "toolchain_prefix",
+        "toolchain_report": "toolchain_report"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "cs03_xarch_sysroot_from_image",
+      "skill_name": "xarch-sysroot-from-image",
+      "inputs": {
+        "image_source": "from_user_input",
+        "sysroot_dir": "from_user_input"
+      },
+      "outputs": {
+        "sysroot": "sysroot",
+        "sysroot_report": "sysroot_report"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "cs04_xarch_pkgconfig_cross",
+      "skill_name": "xarch-pkgconfig-cross",
+      "inputs": {
+        "sysroot": "cs03_xarch_sysroot_from_image.sysroot",
+        "target_triple": "cs01_xarch_target_triple_select.target_triple"
+      },
+      "outputs": {
+        "pkgconfig_env": "pkgconfig_env",
+        "pkgconfig_report": "pkgconfig_report"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "cs05_xarch_cmake_toolchain_file",
+      "skill_name": "xarch-cmake-toolchain-file",
+      "inputs": {
+        "target_triple": "cs01_xarch_target_triple_select.target_triple",
+        "toolchain_prefix": "cs02_xarch_gcc_toolchain_select.toolchain_prefix",
+        "sysroot": "cs03_xarch_sysroot_from_image.sysroot"
+      },
+      "outputs": {
+        "cmake_toolchain_file": "cmake_toolchain_file",
+        "toolchain_file_report": "toolchain_file_report"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "cs06_xarch_cmake_configure_build",
+      "skill_name": "xarch-cmake-configure-build",
+      "inputs": {
+        "cmake_toolchain_file": "cs05_xarch_cmake_toolchain_file.cmake_toolchain_file",
+        "project_dir": "from_user_input",
+        "pkgconfig_env": "cs04_xarch_pkgconfig_cross.pkgconfig_env"
+      },
+      "outputs": {
+        "cmake_build": "cmake_build",
+        "cmake_build_report": "cmake_build_report"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "cs07_xarch_elf_arch_verify",
+      "skill_name": "xarch-elf-arch-verify",
+      "inputs": {
+        "binary_path": "cs06_xarch_cmake_configure_build.cmake_build"
+      },
+      "outputs": {
+        "arch_verdict": "arch_verdict",
+        "elf_report": "elf_report"
+      },
+      "parallel_group": 5
+    }
+  ],
+  "edges": [
+    { "from_step": "cs01_xarch_target_triple_select", "to_step": "cs02_xarch_gcc_toolchain_select", "data_type": "xarch-target-triple-select", "field_mapping": { "target_triple": "target_triple" } },
+    { "from_step": "cs01_xarch_target_triple_select", "to_step": "cs04_xarch_pkgconfig_cross", "data_type": "xarch-target-triple-select", "field_mapping": { "target_triple": "target_triple" } },
+    { "from_step": "cs03_xarch_sysroot_from_image", "to_step": "cs04_xarch_pkgconfig_cross", "data_type": "xarch-sysroot-from-image", "field_mapping": { "sysroot": "sysroot" } },
+    { "from_step": "cs01_xarch_target_triple_select", "to_step": "cs05_xarch_cmake_toolchain_file", "data_type": "xarch-target-triple-select", "field_mapping": { "target_triple": "target_triple" } },
+    { "from_step": "cs02_xarch_gcc_toolchain_select", "to_step": "cs05_xarch_cmake_toolchain_file", "data_type": "xarch-gcc-toolchain-select", "field_mapping": { "toolchain_prefix": "toolchain_prefix" } },
+    { "from_step": "cs03_xarch_sysroot_from_image", "to_step": "cs05_xarch_cmake_toolchain_file", "data_type": "xarch-sysroot-from-image", "field_mapping": { "sysroot": "sysroot" } },
+    { "from_step": "cs05_xarch_cmake_toolchain_file", "to_step": "cs06_xarch_cmake_configure_build", "data_type": "xarch-cmake-toolchain-file", "field_mapping": { "cmake_toolchain_file": "cmake_toolchain_file" } },
+    { "from_step": "cs04_xarch_pkgconfig_cross", "to_step": "cs06_xarch_cmake_configure_build", "data_type": "xarch-pkgconfig-cross", "field_mapping": { "pkgconfig_env": "pkgconfig_env" } },
+    { "from_step": "cs06_xarch_cmake_configure_build", "to_step": "cs07_xarch_elf_arch_verify", "data_type": "xarch-cmake-configure-build", "field_mapping": { "cmake_build": "binary_path" } }
+  ],
+  "entry_inputs": [
+    "stack",
+    "target_libc",
+    "target_cpu",
+    "host_distro",
+    "image_source",
+    "sysroot_dir",
+    "project_dir"
+  ],
+  "terminal_outputs": [
+    "cmake_build",
+    "cmake_build_report",
+    "arch_verdict",
+    "elf_report"
+  ],
+  "parallel_groups": [
+    [
+      "cs01_xarch_target_triple_select",
+      "cs03_xarch_sysroot_from_image"
+    ],
+    [
+      "cs02_xarch_gcc_toolchain_select",
+      "cs04_xarch_pkgconfig_cross"
+    ],
+    [
+      "cs05_xarch_cmake_toolchain_file"
+    ],
+    [
+      "cs06_xarch_cmake_configure_build"
+    ],
+    [
+      "cs07_xarch_elf_arch_verify"
+    ]
+  ],
+  "estimated_cost": 7,
+  "critical_path": [
+    "cs01_xarch_target_triple_select",
+    "cs02_xarch_gcc_toolchain_select",
+    "cs05_xarch_cmake_toolchain_file",
+    "cs06_xarch_cmake_configure_build",
+    "cs07_xarch_elf_arch_verify"
+  ]
+}

@@ -1,0 +1,731 @@
+{
+  "name": "safety-critical-cpp",
+  "description": "Full safety-relevant C and C++ verification pipeline: coding standard plan, build profiles, warnings and static analysis, triage and deviations, memory, loop, stack, type and overflow rules, error handling, requirements-based tests, sanitizers, structural coverage with MC/DC, compiler output review and an evidence summary.",
+  "steps": [
+    {
+      "id": "s01_sccpp_standard_select",
+      "skill_name": "sccpp-standard-select",
+      "inputs": {
+        "language": "from_user_input",
+        "codebase_dir": "from_user_input",
+        "integrity_level": "from_user_input_optional"
+      },
+      "outputs": {
+        "guideline_plan": "guideline_plan"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_sccpp_cmake_build_profiles",
+      "skill_name": "sccpp-cmake-build-profiles",
+      "inputs": {
+        "codebase_dir": "from_user_input",
+        "stack": "from_user_input",
+        "language": "from_user_input",
+        "toolchain_file": "from_user_input_optional"
+      },
+      "outputs": {
+        "build_profiles": "build_profiles"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s03_sccpp_gcc_warning_set",
+      "skill_name": "sccpp-gcc-warning-set",
+      "inputs": {
+        "codebase_dir": "from_user_input",
+        "build_profiles": "s02_sccpp_cmake_build_profiles.build_profiles",
+        "language": "from_user_input"
+      },
+      "outputs": {
+        "gcc_warning_report": "gcc_warning_report"
+      },
+      "condition": "stack == 'gcc'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_sccpp_clang_warning_set",
+      "skill_name": "sccpp-clang-warning-set",
+      "inputs": {
+        "codebase_dir": "from_user_input",
+        "build_profiles": "s02_sccpp_cmake_build_profiles.build_profiles",
+        "language": "from_user_input"
+      },
+      "outputs": {
+        "clang_warning_report": "clang_warning_report"
+      },
+      "condition": "stack == 'clang'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s05_sccpp_clang_tidy_config",
+      "skill_name": "sccpp-clang-tidy-config",
+      "inputs": {
+        "codebase_dir": "from_user_input",
+        "build_profiles": "s02_sccpp_cmake_build_profiles.build_profiles",
+        "guideline_plan": "s01_sccpp_standard_select.guideline_plan"
+      },
+      "outputs": {
+        "clang_tidy_findings": "clang_tidy_findings"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s06_sccpp_cppcheck_misra_c",
+      "skill_name": "sccpp-cppcheck-misra-c",
+      "inputs": {
+        "codebase_dir": "from_user_input",
+        "build_profiles": "s02_sccpp_cmake_build_profiles.build_profiles",
+        "misra_rule_texts": "from_user_input_optional"
+      },
+      "outputs": {
+        "cppcheck_findings": "cppcheck_findings"
+      },
+      "condition": "language == 'c'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s07_sccpp_findings_triage",
+      "skill_name": "sccpp-findings-triage",
+      "inputs": {
+        "guideline_plan": "s01_sccpp_standard_select.guideline_plan",
+        "gcc_warning_report": "s03_sccpp_gcc_warning_set.gcc_warning_report",
+        "clang_warning_report": "s04_sccpp_clang_warning_set.clang_warning_report",
+        "clang_tidy_findings": "s05_sccpp_clang_tidy_config.clang_tidy_findings",
+        "cppcheck_findings": "s06_sccpp_cppcheck_misra_c.cppcheck_findings"
+      },
+      "outputs": {
+        "triaged_findings": "triaged_findings",
+        "deviation_candidates": "deviation_candidates"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s08_sccpp_deviation_record",
+      "skill_name": "sccpp-deviation-record",
+      "inputs": {
+        "deviation_candidates": "s07_sccpp_findings_triage.deviation_candidates",
+        "guideline_plan": "s01_sccpp_standard_select.guideline_plan"
+      },
+      "outputs": {
+        "deviation_records": "deviation_records"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s09_sccpp_c_static_memory",
+      "skill_name": "sccpp-c-static-memory",
+      "inputs": {
+        "codebase_dir": "from_user_input",
+        "build_profiles": "s02_sccpp_cmake_build_profiles.build_profiles"
+      },
+      "outputs": {
+        "c_heap_audit": "c_heap_audit"
+      },
+      "condition": "language == 'c'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s10_sccpp_cpp_no_heap_after_init",
+      "skill_name": "sccpp-cpp-no-heap-after-init",
+      "inputs": {
+        "codebase_dir": "from_user_input",
+        "build_profiles": "s02_sccpp_cmake_build_profiles.build_profiles"
+      },
+      "outputs": {
+        "cpp_heap_audit": "cpp_heap_audit"
+      },
+      "condition": "language == 'cpp'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s11_sccpp_loop_bounds_recursion",
+      "skill_name": "sccpp-loop-bounds-recursion",
+      "inputs": {
+        "codebase_dir": "from_user_input",
+        "build_profiles": "s02_sccpp_cmake_build_profiles.build_profiles"
+      },
+      "outputs": {
+        "loop_recursion_report": "loop_recursion_report"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s12_sccpp_gcc_stack_usage",
+      "skill_name": "sccpp-gcc-stack-usage",
+      "inputs": {
+        "build_profiles": "s02_sccpp_cmake_build_profiles.build_profiles",
+        "loop_recursion_report": "s11_sccpp_loop_bounds_recursion.loop_recursion_report",
+        "stack_budget_bytes": "from_user_input"
+      },
+      "outputs": {
+        "stack_usage_report": "stack_usage_report"
+      },
+      "condition": "stack == 'gcc'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s13_sccpp_fixed_width_types",
+      "skill_name": "sccpp-fixed-width-types",
+      "inputs": {
+        "codebase_dir": "from_user_input",
+        "build_profiles": "s02_sccpp_cmake_build_profiles.build_profiles",
+        "language": "from_user_input"
+      },
+      "outputs": {
+        "type_audit": "type_audit"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s14_sccpp_c_overflow_checks",
+      "skill_name": "sccpp-c-overflow-checks",
+      "inputs": {
+        "codebase_dir": "from_user_input",
+        "type_audit": "s13_sccpp_fixed_width_types.type_audit"
+      },
+      "outputs": {
+        "c_overflow_fixes": "c_overflow_fixes"
+      },
+      "condition": "language == 'c'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s15_sccpp_cpp_overflow_checks",
+      "skill_name": "sccpp-cpp-overflow-checks",
+      "inputs": {
+        "codebase_dir": "from_user_input",
+        "type_audit": "s13_sccpp_fixed_width_types.type_audit"
+      },
+      "outputs": {
+        "cpp_overflow_fixes": "cpp_overflow_fixes"
+      },
+      "condition": "language == 'cpp'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s16_sccpp_defensive_vs_assert",
+      "skill_name": "sccpp-defensive-vs-assert",
+      "inputs": {
+        "codebase_dir": "from_user_input",
+        "requirements": "from_user_input"
+      },
+      "outputs": {
+        "check_classification": "check_classification"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s17_sccpp_c_error_status",
+      "skill_name": "sccpp-c-error-status",
+      "inputs": {
+        "codebase_dir": "from_user_input",
+        "check_classification": "s16_sccpp_defensive_vs_assert.check_classification"
+      },
+      "outputs": {
+        "c_error_report": "c_error_report"
+      },
+      "condition": "language == 'c'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s18_sccpp_cpp_no_exceptions",
+      "skill_name": "sccpp-cpp-no-exceptions",
+      "inputs": {
+        "codebase_dir": "from_user_input",
+        "build_profiles": "s02_sccpp_cmake_build_profiles.build_profiles",
+        "check_classification": "s16_sccpp_defensive_vs_assert.check_classification"
+      },
+      "outputs": {
+        "cpp_error_report": "cpp_error_report"
+      },
+      "condition": "language == 'cpp'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s19_sccpp_c_unity_req_tests",
+      "skill_name": "sccpp-c-unity-req-tests",
+      "inputs": {
+        "requirements": "from_user_input",
+        "codebase_dir": "from_user_input",
+        "build_profiles": "s02_sccpp_cmake_build_profiles.build_profiles"
+      },
+      "outputs": {
+        "c_unit_tests": "c_unit_tests",
+        "c_trace_matrix": "c_trace_matrix"
+      },
+      "condition": "language == 'c'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s20_sccpp_cpp_gtest_req_tests",
+      "skill_name": "sccpp-cpp-gtest-req-tests",
+      "inputs": {
+        "requirements": "from_user_input",
+        "codebase_dir": "from_user_input",
+        "build_profiles": "s02_sccpp_cmake_build_profiles.build_profiles"
+      },
+      "outputs": {
+        "cpp_unit_tests": "cpp_unit_tests",
+        "cpp_trace_matrix": "cpp_trace_matrix"
+      },
+      "condition": "language == 'cpp'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s21_sccpp_sanitizer_test_build",
+      "skill_name": "sccpp-sanitizer-test-build",
+      "inputs": {
+        "build_profiles": "s02_sccpp_cmake_build_profiles.build_profiles",
+        "test_command": "from_user_input",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "sanitizer_report": "sanitizer_report"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s22_sccpp_gcc_gcov_coverage",
+      "skill_name": "sccpp-gcc-gcov-coverage",
+      "inputs": {
+        "build_profiles": "s02_sccpp_cmake_build_profiles.build_profiles",
+        "test_command": "from_user_input"
+      },
+      "outputs": {
+        "gcov_coverage": "gcov_coverage"
+      },
+      "condition": "stack == 'gcc'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s23_sccpp_llvm_cov_coverage",
+      "skill_name": "sccpp-llvm-cov-coverage",
+      "inputs": {
+        "build_profiles": "s02_sccpp_cmake_build_profiles.build_profiles",
+        "test_command": "from_user_input"
+      },
+      "outputs": {
+        "llvm_coverage": "llvm_coverage"
+      },
+      "condition": "stack == 'clang'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s24_sccpp_mcdc_gap_closure",
+      "skill_name": "sccpp-mcdc-gap-closure",
+      "inputs": {
+        "requirements": "from_user_input",
+        "gcov_coverage": "s22_sccpp_gcc_gcov_coverage.gcov_coverage",
+        "llvm_coverage": "s23_sccpp_llvm_cov_coverage.llvm_coverage",
+        "coverage_target": "from_user_input"
+      },
+      "outputs": {
+        "mcdc_test_cases": "mcdc_test_cases",
+        "coverage_gaps": "coverage_gaps"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s25_sccpp_compiler_output_review",
+      "skill_name": "sccpp-compiler-output-review",
+      "inputs": {
+        "build_profiles": "s02_sccpp_cmake_build_profiles.build_profiles",
+        "critical_functions": "from_user_input",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "asm_review": "asm_review"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s26_sccpp_evidence_summary",
+      "skill_name": "sccpp-evidence-summary",
+      "inputs": {
+        "guideline_plan": "s01_sccpp_standard_select.guideline_plan",
+        "triaged_findings": "s07_sccpp_findings_triage.triaged_findings",
+        "deviation_records": "s08_sccpp_deviation_record.deviation_records",
+        "sanitizer_report": "s21_sccpp_sanitizer_test_build.sanitizer_report",
+        "coverage_gaps": "s24_sccpp_mcdc_gap_closure.coverage_gaps",
+        "asm_review": "s25_sccpp_compiler_output_review.asm_review"
+      },
+      "outputs": {
+        "evidence_summary": "evidence_summary"
+      },
+      "parallel_group": 5
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s02_sccpp_cmake_build_profiles",
+      "to_step": "s03_sccpp_gcc_warning_set",
+      "data_type": "sccpp-cmake-build-profiles",
+      "field_mapping": {
+        "build_profiles": "build_profiles"
+      }
+    },
+    {
+      "from_step": "s02_sccpp_cmake_build_profiles",
+      "to_step": "s04_sccpp_clang_warning_set",
+      "data_type": "sccpp-cmake-build-profiles",
+      "field_mapping": {
+        "build_profiles": "build_profiles"
+      }
+    },
+    {
+      "from_step": "s02_sccpp_cmake_build_profiles",
+      "to_step": "s05_sccpp_clang_tidy_config",
+      "data_type": "sccpp-cmake-build-profiles",
+      "field_mapping": {
+        "build_profiles": "build_profiles"
+      }
+    },
+    {
+      "from_step": "s01_sccpp_standard_select",
+      "to_step": "s05_sccpp_clang_tidy_config",
+      "data_type": "sccpp-standard-select",
+      "field_mapping": {
+        "guideline_plan": "guideline_plan"
+      }
+    },
+    {
+      "from_step": "s02_sccpp_cmake_build_profiles",
+      "to_step": "s06_sccpp_cppcheck_misra_c",
+      "data_type": "sccpp-cmake-build-profiles",
+      "field_mapping": {
+        "build_profiles": "build_profiles"
+      }
+    },
+    {
+      "from_step": "s01_sccpp_standard_select",
+      "to_step": "s07_sccpp_findings_triage",
+      "data_type": "sccpp-standard-select",
+      "field_mapping": {
+        "guideline_plan": "guideline_plan"
+      }
+    },
+    {
+      "from_step": "s03_sccpp_gcc_warning_set",
+      "to_step": "s07_sccpp_findings_triage",
+      "data_type": "sccpp-gcc-warning-set",
+      "field_mapping": {
+        "gcc_warning_report": "gcc_warning_report"
+      }
+    },
+    {
+      "from_step": "s04_sccpp_clang_warning_set",
+      "to_step": "s07_sccpp_findings_triage",
+      "data_type": "sccpp-clang-warning-set",
+      "field_mapping": {
+        "clang_warning_report": "clang_warning_report"
+      }
+    },
+    {
+      "from_step": "s05_sccpp_clang_tidy_config",
+      "to_step": "s07_sccpp_findings_triage",
+      "data_type": "sccpp-clang-tidy-config",
+      "field_mapping": {
+        "clang_tidy_findings": "clang_tidy_findings"
+      }
+    },
+    {
+      "from_step": "s06_sccpp_cppcheck_misra_c",
+      "to_step": "s07_sccpp_findings_triage",
+      "data_type": "sccpp-cppcheck-misra-c",
+      "field_mapping": {
+        "cppcheck_findings": "cppcheck_findings"
+      }
+    },
+    {
+      "from_step": "s07_sccpp_findings_triage",
+      "to_step": "s08_sccpp_deviation_record",
+      "data_type": "sccpp-findings-triage",
+      "field_mapping": {
+        "deviation_candidates": "deviation_candidates"
+      }
+    },
+    {
+      "from_step": "s01_sccpp_standard_select",
+      "to_step": "s08_sccpp_deviation_record",
+      "data_type": "sccpp-standard-select",
+      "field_mapping": {
+        "guideline_plan": "guideline_plan"
+      }
+    },
+    {
+      "from_step": "s02_sccpp_cmake_build_profiles",
+      "to_step": "s09_sccpp_c_static_memory",
+      "data_type": "sccpp-cmake-build-profiles",
+      "field_mapping": {
+        "build_profiles": "build_profiles"
+      }
+    },
+    {
+      "from_step": "s02_sccpp_cmake_build_profiles",
+      "to_step": "s10_sccpp_cpp_no_heap_after_init",
+      "data_type": "sccpp-cmake-build-profiles",
+      "field_mapping": {
+        "build_profiles": "build_profiles"
+      }
+    },
+    {
+      "from_step": "s02_sccpp_cmake_build_profiles",
+      "to_step": "s11_sccpp_loop_bounds_recursion",
+      "data_type": "sccpp-cmake-build-profiles",
+      "field_mapping": {
+        "build_profiles": "build_profiles"
+      }
+    },
+    {
+      "from_step": "s02_sccpp_cmake_build_profiles",
+      "to_step": "s12_sccpp_gcc_stack_usage",
+      "data_type": "sccpp-cmake-build-profiles",
+      "field_mapping": {
+        "build_profiles": "build_profiles"
+      }
+    },
+    {
+      "from_step": "s11_sccpp_loop_bounds_recursion",
+      "to_step": "s12_sccpp_gcc_stack_usage",
+      "data_type": "sccpp-loop-bounds-recursion",
+      "field_mapping": {
+        "loop_recursion_report": "loop_recursion_report"
+      }
+    },
+    {
+      "from_step": "s02_sccpp_cmake_build_profiles",
+      "to_step": "s13_sccpp_fixed_width_types",
+      "data_type": "sccpp-cmake-build-profiles",
+      "field_mapping": {
+        "build_profiles": "build_profiles"
+      }
+    },
+    {
+      "from_step": "s13_sccpp_fixed_width_types",
+      "to_step": "s14_sccpp_c_overflow_checks",
+      "data_type": "sccpp-fixed-width-types",
+      "field_mapping": {
+        "type_audit": "type_audit"
+      }
+    },
+    {
+      "from_step": "s13_sccpp_fixed_width_types",
+      "to_step": "s15_sccpp_cpp_overflow_checks",
+      "data_type": "sccpp-fixed-width-types",
+      "field_mapping": {
+        "type_audit": "type_audit"
+      }
+    },
+    {
+      "from_step": "s16_sccpp_defensive_vs_assert",
+      "to_step": "s17_sccpp_c_error_status",
+      "data_type": "sccpp-defensive-vs-assert",
+      "field_mapping": {
+        "check_classification": "check_classification"
+      }
+    },
+    {
+      "from_step": "s02_sccpp_cmake_build_profiles",
+      "to_step": "s18_sccpp_cpp_no_exceptions",
+      "data_type": "sccpp-cmake-build-profiles",
+      "field_mapping": {
+        "build_profiles": "build_profiles"
+      }
+    },
+    {
+      "from_step": "s16_sccpp_defensive_vs_assert",
+      "to_step": "s18_sccpp_cpp_no_exceptions",
+      "data_type": "sccpp-defensive-vs-assert",
+      "field_mapping": {
+        "check_classification": "check_classification"
+      }
+    },
+    {
+      "from_step": "s02_sccpp_cmake_build_profiles",
+      "to_step": "s19_sccpp_c_unity_req_tests",
+      "data_type": "sccpp-cmake-build-profiles",
+      "field_mapping": {
+        "build_profiles": "build_profiles"
+      }
+    },
+    {
+      "from_step": "s02_sccpp_cmake_build_profiles",
+      "to_step": "s20_sccpp_cpp_gtest_req_tests",
+      "data_type": "sccpp-cmake-build-profiles",
+      "field_mapping": {
+        "build_profiles": "build_profiles"
+      }
+    },
+    {
+      "from_step": "s02_sccpp_cmake_build_profiles",
+      "to_step": "s21_sccpp_sanitizer_test_build",
+      "data_type": "sccpp-cmake-build-profiles",
+      "field_mapping": {
+        "build_profiles": "build_profiles"
+      }
+    },
+    {
+      "from_step": "s02_sccpp_cmake_build_profiles",
+      "to_step": "s22_sccpp_gcc_gcov_coverage",
+      "data_type": "sccpp-cmake-build-profiles",
+      "field_mapping": {
+        "build_profiles": "build_profiles"
+      }
+    },
+    {
+      "from_step": "s02_sccpp_cmake_build_profiles",
+      "to_step": "s23_sccpp_llvm_cov_coverage",
+      "data_type": "sccpp-cmake-build-profiles",
+      "field_mapping": {
+        "build_profiles": "build_profiles"
+      }
+    },
+    {
+      "from_step": "s22_sccpp_gcc_gcov_coverage",
+      "to_step": "s24_sccpp_mcdc_gap_closure",
+      "data_type": "sccpp-gcc-gcov-coverage",
+      "field_mapping": {
+        "gcov_coverage": "gcov_coverage"
+      }
+    },
+    {
+      "from_step": "s23_sccpp_llvm_cov_coverage",
+      "to_step": "s24_sccpp_mcdc_gap_closure",
+      "data_type": "sccpp-llvm-cov-coverage",
+      "field_mapping": {
+        "llvm_coverage": "llvm_coverage"
+      }
+    },
+    {
+      "from_step": "s02_sccpp_cmake_build_profiles",
+      "to_step": "s25_sccpp_compiler_output_review",
+      "data_type": "sccpp-cmake-build-profiles",
+      "field_mapping": {
+        "build_profiles": "build_profiles"
+      }
+    },
+    {
+      "from_step": "s01_sccpp_standard_select",
+      "to_step": "s26_sccpp_evidence_summary",
+      "data_type": "sccpp-standard-select",
+      "field_mapping": {
+        "guideline_plan": "guideline_plan"
+      }
+    },
+    {
+      "from_step": "s07_sccpp_findings_triage",
+      "to_step": "s26_sccpp_evidence_summary",
+      "data_type": "sccpp-findings-triage",
+      "field_mapping": {
+        "triaged_findings": "triaged_findings"
+      }
+    },
+    {
+      "from_step": "s08_sccpp_deviation_record",
+      "to_step": "s26_sccpp_evidence_summary",
+      "data_type": "sccpp-deviation-record",
+      "field_mapping": {
+        "deviation_records": "deviation_records"
+      }
+    },
+    {
+      "from_step": "s21_sccpp_sanitizer_test_build",
+      "to_step": "s26_sccpp_evidence_summary",
+      "data_type": "sccpp-sanitizer-test-build",
+      "field_mapping": {
+        "sanitizer_report": "sanitizer_report"
+      }
+    },
+    {
+      "from_step": "s24_sccpp_mcdc_gap_closure",
+      "to_step": "s26_sccpp_evidence_summary",
+      "data_type": "sccpp-mcdc-gap-closure",
+      "field_mapping": {
+        "coverage_gaps": "coverage_gaps"
+      }
+    },
+    {
+      "from_step": "s25_sccpp_compiler_output_review",
+      "to_step": "s26_sccpp_evidence_summary",
+      "data_type": "sccpp-compiler-output-review",
+      "field_mapping": {
+        "asm_review": "asm_review"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "language",
+    "codebase_dir",
+    "integrity_level",
+    "stack",
+    "toolchain_file",
+    "misra_rule_texts",
+    "stack_budget_bytes",
+    "requirements",
+    "test_command",
+    "coverage_target",
+    "critical_functions"
+  ],
+  "terminal_outputs": [
+    "c_heap_audit",
+    "cpp_heap_audit",
+    "stack_usage_report",
+    "c_overflow_fixes",
+    "cpp_overflow_fixes",
+    "c_error_report",
+    "cpp_error_report",
+    "c_unit_tests",
+    "c_trace_matrix",
+    "cpp_unit_tests",
+    "cpp_trace_matrix",
+    "mcdc_test_cases",
+    "evidence_summary"
+  ],
+  "parallel_groups": [
+    [
+      "s01_sccpp_standard_select",
+      "s02_sccpp_cmake_build_profiles",
+      "s16_sccpp_defensive_vs_assert"
+    ],
+    [
+      "s03_sccpp_gcc_warning_set",
+      "s04_sccpp_clang_warning_set",
+      "s05_sccpp_clang_tidy_config",
+      "s06_sccpp_cppcheck_misra_c",
+      "s09_sccpp_c_static_memory",
+      "s10_sccpp_cpp_no_heap_after_init",
+      "s11_sccpp_loop_bounds_recursion",
+      "s13_sccpp_fixed_width_types",
+      "s17_sccpp_c_error_status",
+      "s18_sccpp_cpp_no_exceptions",
+      "s19_sccpp_c_unity_req_tests",
+      "s20_sccpp_cpp_gtest_req_tests",
+      "s21_sccpp_sanitizer_test_build",
+      "s22_sccpp_gcc_gcov_coverage",
+      "s23_sccpp_llvm_cov_coverage",
+      "s25_sccpp_compiler_output_review"
+    ],
+    [
+      "s07_sccpp_findings_triage",
+      "s12_sccpp_gcc_stack_usage",
+      "s14_sccpp_c_overflow_checks",
+      "s15_sccpp_cpp_overflow_checks",
+      "s24_sccpp_mcdc_gap_closure"
+    ],
+    [
+      "s08_sccpp_deviation_record"
+    ],
+    [
+      "s26_sccpp_evidence_summary"
+    ]
+  ],
+  "estimated_cost": 26,
+  "critical_path": [
+    "s02_sccpp_cmake_build_profiles",
+    "s04_sccpp_clang_warning_set",
+    "s07_sccpp_findings_triage",
+    "s08_sccpp_deviation_record",
+    "s26_sccpp_evidence_summary"
+  ]
+}

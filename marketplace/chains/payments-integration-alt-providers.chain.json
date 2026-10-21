@@ -1,0 +1,176 @@
+{
+  "name": "payments-integration-alt-providers",
+  "description": "PayPal and Adyen branches: choose the surface, fix minor units, set up test credentials and idempotency, build the provider integration, deduplicate webhooks and check PCI scope.",
+  "steps": [
+    {
+      "id": "s01_pay_stripe_integration_choice",
+      "skill_name": "pay-stripe-integration-choice",
+      "inputs": {
+        "product_requirements": "from_user_input",
+        "provider": "from_user_input",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "integration_plan": "integration_plan"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_pay_money_minor_units",
+      "skill_name": "pay-money-minor-units",
+      "inputs": {
+        "project_dir": "from_user_input",
+        "currencies": "from_user_input"
+      },
+      "outputs": {
+        "money_audit": "money_audit",
+        "currency_exponents": "currency_exponents"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s03_pay_test_mode_setup",
+      "skill_name": "pay-test-mode-setup",
+      "inputs": {
+        "project_dir": "from_user_input",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "test_env": "test_env"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s04_pay_idempotency_keys",
+      "skill_name": "pay-idempotency-keys",
+      "inputs": {
+        "project_dir": "from_user_input",
+        "stack": "from_user_input",
+        "provider": "from_user_input"
+      },
+      "outputs": {
+        "idempotency_audit": "idempotency_audit"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s05_pay_paypal_orders_v2",
+      "skill_name": "pay-paypal-orders-v2",
+      "inputs": {
+        "project_dir": "from_user_input",
+        "stack": "from_user_input",
+        "currency_exponents": "s02_pay_money_minor_units.currency_exponents"
+      },
+      "outputs": {
+        "paypal_integration": "paypal_integration"
+      },
+      "condition": "provider == 'paypal'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s06_pay_adyen_checkout_sessions",
+      "skill_name": "pay-adyen-checkout-sessions",
+      "inputs": {
+        "project_dir": "from_user_input",
+        "stack": "from_user_input",
+        "currency_exponents": "s02_pay_money_minor_units.currency_exponents"
+      },
+      "outputs": {
+        "adyen_integration": "adyen_integration"
+      },
+      "condition": "provider == 'adyen'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s07_pay_webhook_dedup_ordering",
+      "skill_name": "pay-webhook-dedup-ordering",
+      "inputs": {
+        "project_dir": "from_user_input",
+        "database": "from_user_input",
+        "webhook_handler_file": "from_user_input"
+      },
+      "outputs": {
+        "event_store_schema": "event_store_schema",
+        "dedup_test_results": "dedup_test_results"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s08_pay_pci_scope_saq",
+      "skill_name": "pay-pci-scope-saq",
+      "inputs": {
+        "integration_plan": "s01_pay_stripe_integration_choice.integration_plan",
+        "page_hosting": "from_user_input"
+      },
+      "outputs": {
+        "pci_scope_report": "pci_scope_report"
+      },
+      "parallel_group": 2
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s02_pay_money_minor_units",
+      "to_step": "s05_pay_paypal_orders_v2",
+      "data_type": "pay-money-minor-units",
+      "field_mapping": {
+        "currency_exponents": "currency_exponents"
+      }
+    },
+    {
+      "from_step": "s02_pay_money_minor_units",
+      "to_step": "s06_pay_adyen_checkout_sessions",
+      "data_type": "pay-money-minor-units",
+      "field_mapping": {
+        "currency_exponents": "currency_exponents"
+      }
+    },
+    {
+      "from_step": "s01_pay_stripe_integration_choice",
+      "to_step": "s08_pay_pci_scope_saq",
+      "data_type": "pay-stripe-integration-choice",
+      "field_mapping": {
+        "integration_plan": "integration_plan"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "product_requirements",
+    "provider",
+    "stack",
+    "project_dir",
+    "currencies",
+    "database",
+    "webhook_handler_file",
+    "page_hosting"
+  ],
+  "terminal_outputs": [
+    "money_audit",
+    "test_env",
+    "idempotency_audit",
+    "paypal_integration",
+    "adyen_integration",
+    "event_store_schema",
+    "dedup_test_results",
+    "pci_scope_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_pay_stripe_integration_choice",
+      "s02_pay_money_minor_units",
+      "s03_pay_test_mode_setup",
+      "s04_pay_idempotency_keys",
+      "s07_pay_webhook_dedup_ordering"
+    ],
+    [
+      "s05_pay_paypal_orders_v2",
+      "s06_pay_adyen_checkout_sessions",
+      "s08_pay_pci_scope_saq"
+    ]
+  ],
+  "estimated_cost": 8,
+  "critical_path": [
+    "s01_pay_stripe_integration_choice",
+    "s08_pay_pci_scope_saq"
+  ]
+}

@@ -1,0 +1,187 @@
+{
+  "name": "money-ledger-engineering-ledger-core",
+  "description": "PostgreSQL double-entry ledger core: balanced schema, append-only rows with reversals, idempotent posting, balance locking, period snapshots, and the audit query pack.",
+  "steps": [
+    {
+      "id": "s01_ledg_pg_double_entry_schema",
+      "skill_name": "ledg-pg-double-entry-schema",
+      "inputs": {
+        "database_url": "from_user_input",
+        "money_representation_spec": "from_user_input"
+      },
+      "outputs": {
+        "ledger_schema": "ledger_schema"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_ledg_pg_immutable_reversals",
+      "skill_name": "ledg-pg-immutable-reversals",
+      "inputs": {
+        "ledger_schema": "s01_ledg_pg_double_entry_schema.ledger_schema"
+      },
+      "outputs": {
+        "reversal_procedure": "reversal_procedure"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_ledg_pg_idempotent_posting",
+      "skill_name": "ledg-pg-idempotent-posting",
+      "inputs": {
+        "ledger_schema": "s01_ledg_pg_double_entry_schema.ledger_schema",
+        "reversal_procedure": "s02_ledg_pg_immutable_reversals.reversal_procedure"
+      },
+      "outputs": {
+        "posting_service": "posting_service"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_ledg_pg_balance_locking",
+      "skill_name": "ledg-pg-balance-locking",
+      "inputs": {
+        "ledger_schema": "s01_ledg_pg_double_entry_schema.ledger_schema",
+        "posting_service": "s03_ledg_pg_idempotent_posting.posting_service"
+      },
+      "outputs": {
+        "locking_strategy": "locking_strategy"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s05_ledg_pg_balance_snapshots",
+      "skill_name": "ledg-pg-balance-snapshots",
+      "inputs": {
+        "ledger_schema": "s01_ledg_pg_double_entry_schema.ledger_schema",
+        "locking_strategy": "s04_ledg_pg_balance_locking.locking_strategy"
+      },
+      "outputs": {
+        "balance_queries": "balance_queries"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s06_ledg_pg_audit_queries",
+      "skill_name": "ledg-pg-audit-queries",
+      "inputs": {
+        "ledger_schema": "s01_ledg_pg_double_entry_schema.ledger_schema",
+        "balance_queries": "s05_ledg_pg_balance_snapshots.balance_queries"
+      },
+      "outputs": {
+        "audit_query_pack": "audit_query_pack"
+      },
+      "parallel_group": 6
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_ledg_pg_double_entry_schema",
+      "to_step": "s02_ledg_pg_immutable_reversals",
+      "data_type": "ledg-pg-double-entry-schema",
+      "field_mapping": {
+        "ledger_schema": "ledger_schema"
+      }
+    },
+    {
+      "from_step": "s01_ledg_pg_double_entry_schema",
+      "to_step": "s03_ledg_pg_idempotent_posting",
+      "data_type": "ledg-pg-double-entry-schema",
+      "field_mapping": {
+        "ledger_schema": "ledger_schema"
+      }
+    },
+    {
+      "from_step": "s02_ledg_pg_immutable_reversals",
+      "to_step": "s03_ledg_pg_idempotent_posting",
+      "data_type": "ledg-pg-immutable-reversals",
+      "field_mapping": {
+        "reversal_procedure": "reversal_procedure"
+      }
+    },
+    {
+      "from_step": "s01_ledg_pg_double_entry_schema",
+      "to_step": "s04_ledg_pg_balance_locking",
+      "data_type": "ledg-pg-double-entry-schema",
+      "field_mapping": {
+        "ledger_schema": "ledger_schema"
+      }
+    },
+    {
+      "from_step": "s03_ledg_pg_idempotent_posting",
+      "to_step": "s04_ledg_pg_balance_locking",
+      "data_type": "ledg-pg-idempotent-posting",
+      "field_mapping": {
+        "posting_service": "posting_service"
+      }
+    },
+    {
+      "from_step": "s01_ledg_pg_double_entry_schema",
+      "to_step": "s05_ledg_pg_balance_snapshots",
+      "data_type": "ledg-pg-double-entry-schema",
+      "field_mapping": {
+        "ledger_schema": "ledger_schema"
+      }
+    },
+    {
+      "from_step": "s04_ledg_pg_balance_locking",
+      "to_step": "s05_ledg_pg_balance_snapshots",
+      "data_type": "ledg-pg-balance-locking",
+      "field_mapping": {
+        "locking_strategy": "locking_strategy"
+      }
+    },
+    {
+      "from_step": "s01_ledg_pg_double_entry_schema",
+      "to_step": "s06_ledg_pg_audit_queries",
+      "data_type": "ledg-pg-double-entry-schema",
+      "field_mapping": {
+        "ledger_schema": "ledger_schema"
+      }
+    },
+    {
+      "from_step": "s05_ledg_pg_balance_snapshots",
+      "to_step": "s06_ledg_pg_audit_queries",
+      "data_type": "ledg-pg-balance-snapshots",
+      "field_mapping": {
+        "balance_queries": "balance_queries"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "database_url",
+    "money_representation_spec"
+  ],
+  "terminal_outputs": [
+    "audit_query_pack"
+  ],
+  "parallel_groups": [
+    [
+      "s01_ledg_pg_double_entry_schema"
+    ],
+    [
+      "s02_ledg_pg_immutable_reversals"
+    ],
+    [
+      "s03_ledg_pg_idempotent_posting"
+    ],
+    [
+      "s04_ledg_pg_balance_locking"
+    ],
+    [
+      "s05_ledg_pg_balance_snapshots"
+    ],
+    [
+      "s06_ledg_pg_audit_queries"
+    ]
+  ],
+  "estimated_cost": 6,
+  "critical_path": [
+    "s01_ledg_pg_double_entry_schema",
+    "s02_ledg_pg_immutable_reversals",
+    "s03_ledg_pg_idempotent_posting",
+    "s04_ledg_pg_balance_locking",
+    "s05_ledg_pg_balance_snapshots",
+    "s06_ledg_pg_audit_queries"
+  ]
+}

@@ -1,0 +1,808 @@
+{
+  "name": "vehicle-sensor-integration",
+  "description": "Integrate vehicle and robot sensors end to end: inventory, camera bring-up and exposure, intrinsic calibration per stack, IMU noise and camera-IMU calibration, lidar and radar drivers, camera-lidar extrinsics, GNSS with RTK, PTP and PPS time sync, latency measurement, dropout monitoring, and an evidence-backed acceptance report.",
+  "steps": [
+    {
+      "id": "s01_vsens_sensor_inventory",
+      "skill_name": "vsens-sensor-inventory",
+      "inputs": {
+        "platform_description": "from_user_input",
+        "sensor_list": "from_user_input"
+      },
+      "outputs": {
+        "sensor_inventory": "sensor_inventory",
+        "timing_requirements": "timing_requirements"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_vsens_gmsl_csi_bringup",
+      "skill_name": "vsens-gmsl-csi-bringup",
+      "inputs": {
+        "sensor_inventory": "s01_vsens_sensor_inventory.sensor_inventory",
+        "board_bsp": "from_user_input"
+      },
+      "outputs": {
+        "csi_link_report": "csi_link_report"
+      },
+      "condition": "camera_interface in ['csi', 'gmsl']",
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_vsens_v4l2_camera_probe",
+      "skill_name": "vsens-v4l2-camera-probe",
+      "inputs": {
+        "sensor_inventory": "s01_vsens_sensor_inventory.sensor_inventory",
+        "camera_device": "from_user_input",
+        "csi_link_report": "s02_vsens_gmsl_csi_bringup.csi_link_report"
+      },
+      "outputs": {
+        "camera_device_report": "camera_device_report"
+      },
+      "condition": "has_camera == true",
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_vsens_v4l2_exposure_framerate",
+      "skill_name": "vsens-v4l2-exposure-framerate",
+      "inputs": {
+        "camera_device_report": "s03_vsens_v4l2_camera_probe.camera_device_report",
+        "target_frame_rate": "from_user_input",
+        "max_exposure_us": "from_user_input_optional"
+      },
+      "outputs": {
+        "camera_control_settings": "camera_control_settings"
+      },
+      "condition": "has_camera == true",
+      "parallel_group": 4
+    },
+    {
+      "id": "s05_vsens_gstreamer_capture_pipeline",
+      "skill_name": "vsens-gstreamer-capture-pipeline",
+      "inputs": {
+        "camera_device_report": "s03_vsens_v4l2_camera_probe.camera_device_report",
+        "camera_control_settings": "s04_vsens_v4l2_exposure_framerate.camera_control_settings"
+      },
+      "outputs": {
+        "gst_pipeline": "gst_pipeline",
+        "capture_rate_report": "capture_rate_report"
+      },
+      "condition": "has_camera == true and capture_stack == 'gstreamer'",
+      "parallel_group": 5
+    },
+    {
+      "id": "s06_vsens_cpp_v4l2_mmap_capture",
+      "skill_name": "vsens-cpp-v4l2-mmap-capture",
+      "inputs": {
+        "camera_control_settings": "s04_vsens_v4l2_exposure_framerate.camera_control_settings",
+        "camera_device_report": "s03_vsens_v4l2_camera_probe.camera_device_report"
+      },
+      "outputs": {
+        "v4l2_capture_log": "v4l2_capture_log"
+      },
+      "condition": "has_camera == true and stack == 'cpp'",
+      "parallel_group": 5
+    },
+    {
+      "id": "s07_vsens_py_opencv_intrinsics",
+      "skill_name": "vsens-py-opencv-intrinsics",
+      "inputs": {
+        "calibration_images": "from_user_input",
+        "target_spec": "from_user_input",
+        "camera_device_report": "s03_vsens_v4l2_camera_probe.camera_device_report"
+      },
+      "outputs": {
+        "intrinsics_py": "intrinsics_py"
+      },
+      "condition": "has_camera == true and stack == 'python'",
+      "parallel_group": 4
+    },
+    {
+      "id": "s08_vsens_cpp_opencv_intrinsics",
+      "skill_name": "vsens-cpp-opencv-intrinsics",
+      "inputs": {
+        "calibration_images": "from_user_input",
+        "target_spec": "from_user_input",
+        "camera_device_report": "s03_vsens_v4l2_camera_probe.camera_device_report"
+      },
+      "outputs": {
+        "intrinsics_cpp": "intrinsics_cpp"
+      },
+      "condition": "has_camera == true and stack == 'cpp'",
+      "parallel_group": 4
+    },
+    {
+      "id": "s09_vsens_ros2_camera_calibrator",
+      "skill_name": "vsens-ros2-camera-calibrator",
+      "inputs": {
+        "camera_topic": "from_user_input",
+        "target_spec": "from_user_input"
+      },
+      "outputs": {
+        "intrinsics_ros": "intrinsics_ros"
+      },
+      "condition": "has_camera == true and stack == 'ros2'",
+      "parallel_group": 1
+    },
+    {
+      "id": "s10_vsens_intrinsics_acceptance",
+      "skill_name": "vsens-intrinsics-acceptance",
+      "inputs": {
+        "intrinsics_py": "s07_vsens_py_opencv_intrinsics.intrinsics_py",
+        "intrinsics_cpp": "s08_vsens_cpp_opencv_intrinsics.intrinsics_cpp",
+        "intrinsics_ros": "s09_vsens_ros2_camera_calibrator.intrinsics_ros",
+        "holdout_images": "from_user_input",
+        "target_spec": "from_user_input"
+      },
+      "outputs": {
+        "camera_intrinsics": "camera_intrinsics",
+        "intrinsics_verdict": "intrinsics_verdict"
+      },
+      "condition": "has_camera == true",
+      "parallel_group": 5
+    },
+    {
+      "id": "s11_vsens_imu_driver_bringup",
+      "skill_name": "vsens-imu-driver-bringup",
+      "inputs": {
+        "sensor_inventory": "s01_vsens_sensor_inventory.sensor_inventory",
+        "imu_device": "from_user_input"
+      },
+      "outputs": {
+        "imu_stream_report": "imu_stream_report"
+      },
+      "condition": "has_imu == true",
+      "parallel_group": 2
+    },
+    {
+      "id": "s12_vsens_imu_allan_variance",
+      "skill_name": "vsens-imu-allan-variance",
+      "inputs": {
+        "imu_stream_report": "s11_vsens_imu_driver_bringup.imu_stream_report",
+        "static_log_path": "from_user_input"
+      },
+      "outputs": {
+        "imu_noise_params": "imu_noise_params"
+      },
+      "condition": "has_imu == true",
+      "parallel_group": 3
+    },
+    {
+      "id": "s13_vsens_kalibr_camera_imu",
+      "skill_name": "vsens-kalibr-camera-imu",
+      "inputs": {
+        "camera_intrinsics": "s10_vsens_intrinsics_acceptance.camera_intrinsics",
+        "imu_noise_params": "s12_vsens_imu_allan_variance.imu_noise_params",
+        "calibration_bag": "from_user_input",
+        "aprilgrid_spec": "from_user_input"
+      },
+      "outputs": {
+        "camera_imu_extrinsics": "camera_imu_extrinsics",
+        "camera_imu_time_offset": "camera_imu_time_offset"
+      },
+      "condition": "has_camera == true and has_imu == true",
+      "parallel_group": 6
+    },
+    {
+      "id": "s14_vsens_lidar_driver_pointcloud",
+      "skill_name": "vsens-lidar-driver-pointcloud",
+      "inputs": {
+        "sensor_inventory": "s01_vsens_sensor_inventory.sensor_inventory",
+        "lidar_model": "from_user_input"
+      },
+      "outputs": {
+        "lidar_stream_report": "lidar_stream_report"
+      },
+      "condition": "has_lidar == true",
+      "parallel_group": 2
+    },
+    {
+      "id": "s15_vsens_camera_lidar_extrinsics",
+      "skill_name": "vsens-camera-lidar-extrinsics",
+      "inputs": {
+        "camera_intrinsics": "s10_vsens_intrinsics_acceptance.camera_intrinsics",
+        "lidar_stream_report": "s14_vsens_lidar_driver_pointcloud.lidar_stream_report",
+        "static_board_bag": "from_user_input"
+      },
+      "outputs": {
+        "camera_lidar_extrinsics": "camera_lidar_extrinsics"
+      },
+      "condition": "has_camera == true and has_lidar == true",
+      "parallel_group": 6
+    },
+    {
+      "id": "s16_vsens_radar_can_decode",
+      "skill_name": "vsens-radar-can-decode",
+      "inputs": {
+        "sensor_inventory": "s01_vsens_sensor_inventory.sensor_inventory",
+        "can_interface": "from_user_input",
+        "radar_dbc": "from_user_input"
+      },
+      "outputs": {
+        "radar_stream_report": "radar_stream_report"
+      },
+      "condition": "has_radar == true",
+      "parallel_group": 2
+    },
+    {
+      "id": "s17_vsens_gnss_nmea_gpsd",
+      "skill_name": "vsens-gnss-nmea-gpsd",
+      "inputs": {
+        "sensor_inventory": "s01_vsens_sensor_inventory.sensor_inventory",
+        "gnss_device": "from_user_input"
+      },
+      "outputs": {
+        "gnss_stream_report": "gnss_stream_report"
+      },
+      "condition": "has_gnss == true",
+      "parallel_group": 2
+    },
+    {
+      "id": "s18_vsens_gnss_ubx_config",
+      "skill_name": "vsens-gnss-ubx-config",
+      "inputs": {
+        "gnss_stream_report": "s17_vsens_gnss_nmea_gpsd.gnss_stream_report",
+        "measurement_rate_hz": "from_user_input"
+      },
+      "outputs": {
+        "ubx_config": "ubx_config"
+      },
+      "condition": "has_gnss == true and gnss_vendor == 'u-blox'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s19_vsens_gnss_ntrip_rtk",
+      "skill_name": "vsens-gnss-ntrip-rtk",
+      "inputs": {
+        "ubx_config": "s18_vsens_gnss_ubx_config.ubx_config",
+        "ntrip_caster": "from_user_input"
+      },
+      "outputs": {
+        "rtk_status_report": "rtk_status_report"
+      },
+      "condition": "has_gnss == true and use_rtk == true",
+      "parallel_group": 4
+    },
+    {
+      "id": "s20_vsens_ptp_linuxptp",
+      "skill_name": "vsens-ptp-linuxptp",
+      "inputs": {
+        "timing_requirements": "s01_vsens_sensor_inventory.timing_requirements",
+        "ptp_interface": "from_user_input"
+      },
+      "outputs": {
+        "ptp_sync_report": "ptp_sync_report"
+      },
+      "condition": "has_ptp_sensor == true",
+      "parallel_group": 2
+    },
+    {
+      "id": "s21_vsens_pps_chrony",
+      "skill_name": "vsens-pps-chrony",
+      "inputs": {
+        "gnss_stream_report": "s17_vsens_gnss_nmea_gpsd.gnss_stream_report",
+        "pps_device": "from_user_input",
+        "ptp_sync_report": "s20_vsens_ptp_linuxptp.ptp_sync_report"
+      },
+      "outputs": {
+        "clock_discipline_report": "clock_discipline_report"
+      },
+      "condition": "has_gnss == true and has_pps == true",
+      "parallel_group": 3
+    },
+    {
+      "id": "s22_vsens_ros2_stamp_latency",
+      "skill_name": "vsens-ros2-stamp-latency",
+      "inputs": {
+        "clock_discipline_report": "s21_vsens_pps_chrony.clock_discipline_report",
+        "topic_list": "from_user_input"
+      },
+      "outputs": {
+        "stamp_latency_report": "stamp_latency_report"
+      },
+      "condition": "stack == 'ros2'",
+      "parallel_group": 4
+    },
+    {
+      "id": "s23_vsens_camera_led_latency",
+      "skill_name": "vsens-camera-led-latency",
+      "inputs": {
+        "clock_discipline_report": "s21_vsens_pps_chrony.clock_discipline_report",
+        "camera_control_settings": "s04_vsens_v4l2_exposure_framerate.camera_control_settings",
+        "led_gpio": "from_user_input"
+      },
+      "outputs": {
+        "optical_latency_report": "optical_latency_report"
+      },
+      "condition": "has_camera == true and measure_optical_latency == true",
+      "parallel_group": 5
+    },
+    {
+      "id": "s24_vsens_ros2_diagnostics_health",
+      "skill_name": "vsens-ros2-diagnostics-health",
+      "inputs": {
+        "timing_requirements": "s01_vsens_sensor_inventory.timing_requirements",
+        "topic_list": "from_user_input"
+      },
+      "outputs": {
+        "health_monitor_config": "health_monitor_config"
+      },
+      "condition": "stack == 'ros2'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s25_vsens_py_dropout_detector",
+      "skill_name": "vsens-py-dropout-detector",
+      "inputs": {
+        "timing_requirements": "s01_vsens_sensor_inventory.timing_requirements",
+        "stream_log_path": "from_user_input"
+      },
+      "outputs": {
+        "dropout_report": "dropout_report"
+      },
+      "condition": "stack != 'ros2'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s26_vsens_integration_acceptance",
+      "skill_name": "vsens-integration-acceptance",
+      "inputs": {
+        "sensor_inventory": "s01_vsens_sensor_inventory.sensor_inventory",
+        "camera_intrinsics": "s10_vsens_intrinsics_acceptance.camera_intrinsics",
+        "intrinsics_verdict": "s10_vsens_intrinsics_acceptance.intrinsics_verdict",
+        "camera_imu_extrinsics": "s13_vsens_kalibr_camera_imu.camera_imu_extrinsics",
+        "camera_lidar_extrinsics": "s15_vsens_camera_lidar_extrinsics.camera_lidar_extrinsics",
+        "rtk_status_report": "s19_vsens_gnss_ntrip_rtk.rtk_status_report",
+        "radar_stream_report": "s16_vsens_radar_can_decode.radar_stream_report",
+        "ptp_sync_report": "s20_vsens_ptp_linuxptp.ptp_sync_report",
+        "clock_discipline_report": "s21_vsens_pps_chrony.clock_discipline_report",
+        "stamp_latency_report": "s22_vsens_ros2_stamp_latency.stamp_latency_report",
+        "optical_latency_report": "s23_vsens_camera_led_latency.optical_latency_report",
+        "health_monitor_config": "s24_vsens_ros2_diagnostics_health.health_monitor_config",
+        "dropout_report": "s25_vsens_py_dropout_detector.dropout_report"
+      },
+      "outputs": {
+        "integration_report": "integration_report"
+      },
+      "parallel_group": 7
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_vsens_sensor_inventory",
+      "to_step": "s02_vsens_gmsl_csi_bringup",
+      "data_type": "vsens-sensor-inventory",
+      "field_mapping": {
+        "sensor_inventory": "sensor_inventory"
+      }
+    },
+    {
+      "from_step": "s01_vsens_sensor_inventory",
+      "to_step": "s03_vsens_v4l2_camera_probe",
+      "data_type": "vsens-sensor-inventory",
+      "field_mapping": {
+        "sensor_inventory": "sensor_inventory"
+      }
+    },
+    {
+      "from_step": "s02_vsens_gmsl_csi_bringup",
+      "to_step": "s03_vsens_v4l2_camera_probe",
+      "data_type": "vsens-gmsl-csi-bringup",
+      "field_mapping": {
+        "csi_link_report": "csi_link_report"
+      }
+    },
+    {
+      "from_step": "s03_vsens_v4l2_camera_probe",
+      "to_step": "s04_vsens_v4l2_exposure_framerate",
+      "data_type": "vsens-v4l2-camera-probe",
+      "field_mapping": {
+        "camera_device_report": "camera_device_report"
+      }
+    },
+    {
+      "from_step": "s03_vsens_v4l2_camera_probe",
+      "to_step": "s05_vsens_gstreamer_capture_pipeline",
+      "data_type": "vsens-v4l2-camera-probe",
+      "field_mapping": {
+        "camera_device_report": "camera_device_report"
+      }
+    },
+    {
+      "from_step": "s04_vsens_v4l2_exposure_framerate",
+      "to_step": "s05_vsens_gstreamer_capture_pipeline",
+      "data_type": "vsens-v4l2-exposure-framerate",
+      "field_mapping": {
+        "camera_control_settings": "camera_control_settings"
+      }
+    },
+    {
+      "from_step": "s04_vsens_v4l2_exposure_framerate",
+      "to_step": "s06_vsens_cpp_v4l2_mmap_capture",
+      "data_type": "vsens-v4l2-exposure-framerate",
+      "field_mapping": {
+        "camera_control_settings": "camera_control_settings"
+      }
+    },
+    {
+      "from_step": "s03_vsens_v4l2_camera_probe",
+      "to_step": "s06_vsens_cpp_v4l2_mmap_capture",
+      "data_type": "vsens-v4l2-camera-probe",
+      "field_mapping": {
+        "camera_device_report": "camera_device_report"
+      }
+    },
+    {
+      "from_step": "s03_vsens_v4l2_camera_probe",
+      "to_step": "s07_vsens_py_opencv_intrinsics",
+      "data_type": "vsens-v4l2-camera-probe",
+      "field_mapping": {
+        "camera_device_report": "camera_device_report"
+      }
+    },
+    {
+      "from_step": "s03_vsens_v4l2_camera_probe",
+      "to_step": "s08_vsens_cpp_opencv_intrinsics",
+      "data_type": "vsens-v4l2-camera-probe",
+      "field_mapping": {
+        "camera_device_report": "camera_device_report"
+      }
+    },
+    {
+      "from_step": "s07_vsens_py_opencv_intrinsics",
+      "to_step": "s10_vsens_intrinsics_acceptance",
+      "data_type": "vsens-py-opencv-intrinsics",
+      "field_mapping": {
+        "intrinsics_py": "intrinsics_py"
+      }
+    },
+    {
+      "from_step": "s08_vsens_cpp_opencv_intrinsics",
+      "to_step": "s10_vsens_intrinsics_acceptance",
+      "data_type": "vsens-cpp-opencv-intrinsics",
+      "field_mapping": {
+        "intrinsics_cpp": "intrinsics_cpp"
+      }
+    },
+    {
+      "from_step": "s09_vsens_ros2_camera_calibrator",
+      "to_step": "s10_vsens_intrinsics_acceptance",
+      "data_type": "vsens-ros2-camera-calibrator",
+      "field_mapping": {
+        "intrinsics_ros": "intrinsics_ros"
+      }
+    },
+    {
+      "from_step": "s01_vsens_sensor_inventory",
+      "to_step": "s11_vsens_imu_driver_bringup",
+      "data_type": "vsens-sensor-inventory",
+      "field_mapping": {
+        "sensor_inventory": "sensor_inventory"
+      }
+    },
+    {
+      "from_step": "s11_vsens_imu_driver_bringup",
+      "to_step": "s12_vsens_imu_allan_variance",
+      "data_type": "vsens-imu-driver-bringup",
+      "field_mapping": {
+        "imu_stream_report": "imu_stream_report"
+      }
+    },
+    {
+      "from_step": "s10_vsens_intrinsics_acceptance",
+      "to_step": "s13_vsens_kalibr_camera_imu",
+      "data_type": "vsens-intrinsics-acceptance",
+      "field_mapping": {
+        "camera_intrinsics": "camera_intrinsics"
+      }
+    },
+    {
+      "from_step": "s12_vsens_imu_allan_variance",
+      "to_step": "s13_vsens_kalibr_camera_imu",
+      "data_type": "vsens-imu-allan-variance",
+      "field_mapping": {
+        "imu_noise_params": "imu_noise_params"
+      }
+    },
+    {
+      "from_step": "s01_vsens_sensor_inventory",
+      "to_step": "s14_vsens_lidar_driver_pointcloud",
+      "data_type": "vsens-sensor-inventory",
+      "field_mapping": {
+        "sensor_inventory": "sensor_inventory"
+      }
+    },
+    {
+      "from_step": "s10_vsens_intrinsics_acceptance",
+      "to_step": "s15_vsens_camera_lidar_extrinsics",
+      "data_type": "vsens-intrinsics-acceptance",
+      "field_mapping": {
+        "camera_intrinsics": "camera_intrinsics"
+      }
+    },
+    {
+      "from_step": "s14_vsens_lidar_driver_pointcloud",
+      "to_step": "s15_vsens_camera_lidar_extrinsics",
+      "data_type": "vsens-lidar-driver-pointcloud",
+      "field_mapping": {
+        "lidar_stream_report": "lidar_stream_report"
+      }
+    },
+    {
+      "from_step": "s01_vsens_sensor_inventory",
+      "to_step": "s16_vsens_radar_can_decode",
+      "data_type": "vsens-sensor-inventory",
+      "field_mapping": {
+        "sensor_inventory": "sensor_inventory"
+      }
+    },
+    {
+      "from_step": "s01_vsens_sensor_inventory",
+      "to_step": "s17_vsens_gnss_nmea_gpsd",
+      "data_type": "vsens-sensor-inventory",
+      "field_mapping": {
+        "sensor_inventory": "sensor_inventory"
+      }
+    },
+    {
+      "from_step": "s17_vsens_gnss_nmea_gpsd",
+      "to_step": "s18_vsens_gnss_ubx_config",
+      "data_type": "vsens-gnss-nmea-gpsd",
+      "field_mapping": {
+        "gnss_stream_report": "gnss_stream_report"
+      }
+    },
+    {
+      "from_step": "s18_vsens_gnss_ubx_config",
+      "to_step": "s19_vsens_gnss_ntrip_rtk",
+      "data_type": "vsens-gnss-ubx-config",
+      "field_mapping": {
+        "ubx_config": "ubx_config"
+      }
+    },
+    {
+      "from_step": "s01_vsens_sensor_inventory",
+      "to_step": "s20_vsens_ptp_linuxptp",
+      "data_type": "vsens-sensor-inventory",
+      "field_mapping": {
+        "timing_requirements": "timing_requirements"
+      }
+    },
+    {
+      "from_step": "s17_vsens_gnss_nmea_gpsd",
+      "to_step": "s21_vsens_pps_chrony",
+      "data_type": "vsens-gnss-nmea-gpsd",
+      "field_mapping": {
+        "gnss_stream_report": "gnss_stream_report"
+      }
+    },
+    {
+      "from_step": "s20_vsens_ptp_linuxptp",
+      "to_step": "s21_vsens_pps_chrony",
+      "data_type": "vsens-ptp-linuxptp",
+      "field_mapping": {
+        "ptp_sync_report": "ptp_sync_report"
+      }
+    },
+    {
+      "from_step": "s21_vsens_pps_chrony",
+      "to_step": "s22_vsens_ros2_stamp_latency",
+      "data_type": "vsens-pps-chrony",
+      "field_mapping": {
+        "clock_discipline_report": "clock_discipline_report"
+      }
+    },
+    {
+      "from_step": "s21_vsens_pps_chrony",
+      "to_step": "s23_vsens_camera_led_latency",
+      "data_type": "vsens-pps-chrony",
+      "field_mapping": {
+        "clock_discipline_report": "clock_discipline_report"
+      }
+    },
+    {
+      "from_step": "s04_vsens_v4l2_exposure_framerate",
+      "to_step": "s23_vsens_camera_led_latency",
+      "data_type": "vsens-v4l2-exposure-framerate",
+      "field_mapping": {
+        "camera_control_settings": "camera_control_settings"
+      }
+    },
+    {
+      "from_step": "s01_vsens_sensor_inventory",
+      "to_step": "s24_vsens_ros2_diagnostics_health",
+      "data_type": "vsens-sensor-inventory",
+      "field_mapping": {
+        "timing_requirements": "timing_requirements"
+      }
+    },
+    {
+      "from_step": "s01_vsens_sensor_inventory",
+      "to_step": "s25_vsens_py_dropout_detector",
+      "data_type": "vsens-sensor-inventory",
+      "field_mapping": {
+        "timing_requirements": "timing_requirements"
+      }
+    },
+    {
+      "from_step": "s01_vsens_sensor_inventory",
+      "to_step": "s26_vsens_integration_acceptance",
+      "data_type": "vsens-sensor-inventory",
+      "field_mapping": {
+        "sensor_inventory": "sensor_inventory"
+      }
+    },
+    {
+      "from_step": "s10_vsens_intrinsics_acceptance",
+      "to_step": "s26_vsens_integration_acceptance",
+      "data_type": "vsens-intrinsics-acceptance",
+      "field_mapping": {
+        "camera_intrinsics": "camera_intrinsics",
+        "intrinsics_verdict": "intrinsics_verdict"
+      }
+    },
+    {
+      "from_step": "s13_vsens_kalibr_camera_imu",
+      "to_step": "s26_vsens_integration_acceptance",
+      "data_type": "vsens-kalibr-camera-imu",
+      "field_mapping": {
+        "camera_imu_extrinsics": "camera_imu_extrinsics"
+      }
+    },
+    {
+      "from_step": "s15_vsens_camera_lidar_extrinsics",
+      "to_step": "s26_vsens_integration_acceptance",
+      "data_type": "vsens-camera-lidar-extrinsics",
+      "field_mapping": {
+        "camera_lidar_extrinsics": "camera_lidar_extrinsics"
+      }
+    },
+    {
+      "from_step": "s19_vsens_gnss_ntrip_rtk",
+      "to_step": "s26_vsens_integration_acceptance",
+      "data_type": "vsens-gnss-ntrip-rtk",
+      "field_mapping": {
+        "rtk_status_report": "rtk_status_report"
+      }
+    },
+    {
+      "from_step": "s16_vsens_radar_can_decode",
+      "to_step": "s26_vsens_integration_acceptance",
+      "data_type": "vsens-radar-can-decode",
+      "field_mapping": {
+        "radar_stream_report": "radar_stream_report"
+      }
+    },
+    {
+      "from_step": "s20_vsens_ptp_linuxptp",
+      "to_step": "s26_vsens_integration_acceptance",
+      "data_type": "vsens-ptp-linuxptp",
+      "field_mapping": {
+        "ptp_sync_report": "ptp_sync_report"
+      }
+    },
+    {
+      "from_step": "s21_vsens_pps_chrony",
+      "to_step": "s26_vsens_integration_acceptance",
+      "data_type": "vsens-pps-chrony",
+      "field_mapping": {
+        "clock_discipline_report": "clock_discipline_report"
+      }
+    },
+    {
+      "from_step": "s22_vsens_ros2_stamp_latency",
+      "to_step": "s26_vsens_integration_acceptance",
+      "data_type": "vsens-ros2-stamp-latency",
+      "field_mapping": {
+        "stamp_latency_report": "stamp_latency_report"
+      }
+    },
+    {
+      "from_step": "s23_vsens_camera_led_latency",
+      "to_step": "s26_vsens_integration_acceptance",
+      "data_type": "vsens-camera-led-latency",
+      "field_mapping": {
+        "optical_latency_report": "optical_latency_report"
+      }
+    },
+    {
+      "from_step": "s24_vsens_ros2_diagnostics_health",
+      "to_step": "s26_vsens_integration_acceptance",
+      "data_type": "vsens-ros2-diagnostics-health",
+      "field_mapping": {
+        "health_monitor_config": "health_monitor_config"
+      }
+    },
+    {
+      "from_step": "s25_vsens_py_dropout_detector",
+      "to_step": "s26_vsens_integration_acceptance",
+      "data_type": "vsens-py-dropout-detector",
+      "field_mapping": {
+        "dropout_report": "dropout_report"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "platform_description",
+    "sensor_list",
+    "board_bsp",
+    "camera_device",
+    "target_frame_rate",
+    "max_exposure_us",
+    "calibration_images",
+    "target_spec",
+    "camera_topic",
+    "holdout_images",
+    "imu_device",
+    "static_log_path",
+    "calibration_bag",
+    "aprilgrid_spec",
+    "lidar_model",
+    "static_board_bag",
+    "can_interface",
+    "radar_dbc",
+    "gnss_device",
+    "measurement_rate_hz",
+    "ntrip_caster",
+    "ptp_interface",
+    "pps_device",
+    "topic_list",
+    "led_gpio",
+    "stream_log_path"
+  ],
+  "terminal_outputs": [
+    "integration_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_vsens_sensor_inventory",
+      "s09_vsens_ros2_camera_calibrator"
+    ],
+    [
+      "s02_vsens_gmsl_csi_bringup",
+      "s11_vsens_imu_driver_bringup",
+      "s14_vsens_lidar_driver_pointcloud",
+      "s16_vsens_radar_can_decode",
+      "s17_vsens_gnss_nmea_gpsd",
+      "s20_vsens_ptp_linuxptp",
+      "s24_vsens_ros2_diagnostics_health",
+      "s25_vsens_py_dropout_detector"
+    ],
+    [
+      "s03_vsens_v4l2_camera_probe",
+      "s12_vsens_imu_allan_variance",
+      "s18_vsens_gnss_ubx_config",
+      "s21_vsens_pps_chrony"
+    ],
+    [
+      "s04_vsens_v4l2_exposure_framerate",
+      "s07_vsens_py_opencv_intrinsics",
+      "s08_vsens_cpp_opencv_intrinsics",
+      "s19_vsens_gnss_ntrip_rtk",
+      "s22_vsens_ros2_stamp_latency"
+    ],
+    [
+      "s05_vsens_gstreamer_capture_pipeline",
+      "s06_vsens_cpp_v4l2_mmap_capture",
+      "s10_vsens_intrinsics_acceptance",
+      "s23_vsens_camera_led_latency"
+    ],
+    [
+      "s13_vsens_kalibr_camera_imu",
+      "s15_vsens_camera_lidar_extrinsics"
+    ],
+    [
+      "s26_vsens_integration_acceptance"
+    ]
+  ],
+  "estimated_cost": 26,
+  "critical_path": [
+    "s01_vsens_sensor_inventory",
+    "s02_vsens_gmsl_csi_bringup",
+    "s03_vsens_v4l2_camera_probe",
+    "s08_vsens_cpp_opencv_intrinsics",
+    "s10_vsens_intrinsics_acceptance",
+    "s15_vsens_camera_lidar_extrinsics",
+    "s26_vsens_integration_acceptance"
+  ]
+}

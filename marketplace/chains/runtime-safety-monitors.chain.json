@@ -1,0 +1,821 @@
+{
+  "name": "runtime-safety-monitors",
+  "description": "Scope a runtime monitor for an autonomous decision component, derive its envelope and temporal properties, design the Simplex switch, fallback and independence, implement checkers per stack, inject faults, and measure trip rates and latency before closed-course validation.",
+  "steps": [
+    {
+      "id": "s01_rmon_scope_supervised_component",
+      "skill_name": "rmon-scope-supervised-component",
+      "inputs": {
+        "system_description": "from_user_input",
+        "hazard_list": "from_user_input",
+        "stack": "from_user_input",
+        "middleware": "from_user_input_optional"
+      },
+      "outputs": {
+        "monitor_scope": "monitor_scope"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_rmon_envelope_from_requirements",
+      "skill_name": "rmon-envelope-from-requirements",
+      "inputs": {
+        "monitor_scope": "s01_rmon_scope_supervised_component.monitor_scope",
+        "requirements_doc": "from_user_input"
+      },
+      "outputs": {
+        "operating_envelope": "operating_envelope",
+        "envelope_open_questions": "envelope_open_questions"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_rmon_simplex_architecture_design",
+      "skill_name": "rmon-simplex-architecture-design",
+      "inputs": {
+        "monitor_scope": "s01_rmon_scope_supervised_component.monitor_scope",
+        "operating_envelope": "s02_rmon_envelope_from_requirements.operating_envelope"
+      },
+      "outputs": {
+        "simplex_design": "simplex_design"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_rmon_fallback_mode_selection",
+      "skill_name": "rmon-fallback-mode-selection",
+      "inputs": {
+        "monitor_scope": "s01_rmon_scope_supervised_component.monitor_scope",
+        "simplex_design": "s03_rmon_simplex_architecture_design.simplex_design",
+        "ftti_ms": "from_user_input"
+      },
+      "outputs": {
+        "fallback_strategy": "fallback_strategy"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s05_rmon_independence_analysis",
+      "skill_name": "rmon-independence-analysis",
+      "inputs": {
+        "simplex_design": "s03_rmon_simplex_architecture_design.simplex_design",
+        "monitor_scope": "s01_rmon_scope_supervised_component.monitor_scope"
+      },
+      "outputs": {
+        "independence_plan": "independence_plan"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s06_rmon_temporal_property_spec",
+      "skill_name": "rmon-temporal-property-spec",
+      "inputs": {
+        "operating_envelope": "s02_rmon_envelope_from_requirements.operating_envelope",
+        "fallback_strategy": "s04_rmon_fallback_mode_selection.fallback_strategy"
+      },
+      "outputs": {
+        "temporal_properties": "temporal_properties"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s07_rmon_simplex_switch_logic",
+      "skill_name": "rmon-simplex-switch-logic",
+      "inputs": {
+        "simplex_design": "s03_rmon_simplex_architecture_design.simplex_design",
+        "fallback_strategy": "s04_rmon_fallback_mode_selection.fallback_strategy",
+        "temporal_properties": "s06_rmon_temporal_property_spec.temporal_properties"
+      },
+      "outputs": {
+        "switch_state_machine": "switch_state_machine",
+        "switch_test_vectors": "switch_test_vectors"
+      },
+      "parallel_group": 6
+    },
+    {
+      "id": "s08_rmon_monitor_log_schema",
+      "skill_name": "rmon-monitor-log-schema",
+      "inputs": {
+        "operating_envelope": "s02_rmon_envelope_from_requirements.operating_envelope",
+        "temporal_properties": "s06_rmon_temporal_property_spec.temporal_properties"
+      },
+      "outputs": {
+        "monitor_log_schema": "monitor_log_schema"
+      },
+      "parallel_group": 6
+    },
+    {
+      "id": "s09_rmon_py_rate_range_check",
+      "skill_name": "rmon-py-rate-range-check",
+      "inputs": {
+        "operating_envelope": "s02_rmon_envelope_from_requirements.operating_envelope",
+        "repo_dir": "from_user_input"
+      },
+      "outputs": {
+        "py_range_rate_checker": "py_range_rate_checker"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s10_rmon_py_staleness_timeout",
+      "skill_name": "rmon-py-staleness-timeout",
+      "inputs": {
+        "operating_envelope": "s02_rmon_envelope_from_requirements.operating_envelope",
+        "repo_dir": "from_user_input"
+      },
+      "outputs": {
+        "py_staleness_checker": "py_staleness_checker"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s11_rmon_py_rtamt_stl_monitor",
+      "skill_name": "rmon-py-rtamt-stl-monitor",
+      "inputs": {
+        "temporal_properties": "s06_rmon_temporal_property_spec.temporal_properties",
+        "repo_dir": "from_user_input"
+      },
+      "outputs": {
+        "py_stl_monitor": "py_stl_monitor"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 6
+    },
+    {
+      "id": "s12_rmon_py_jsonl_event_logger",
+      "skill_name": "rmon-py-jsonl-event-logger",
+      "inputs": {
+        "monitor_log_schema": "s08_rmon_monitor_log_schema.monitor_log_schema",
+        "repo_dir": "from_user_input"
+      },
+      "outputs": {
+        "py_event_logger": "py_event_logger"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 7
+    },
+    {
+      "id": "s13_rmon_cpp_rate_range_check",
+      "skill_name": "rmon-cpp-rate-range-check",
+      "inputs": {
+        "operating_envelope": "s02_rmon_envelope_from_requirements.operating_envelope",
+        "repo_dir": "from_user_input"
+      },
+      "outputs": {
+        "cpp_range_rate_checker": "cpp_range_rate_checker"
+      },
+      "condition": "stack == 'cpp'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s14_rmon_cpp_staleness_timeout",
+      "skill_name": "rmon-cpp-staleness-timeout",
+      "inputs": {
+        "operating_envelope": "s02_rmon_envelope_from_requirements.operating_envelope",
+        "repo_dir": "from_user_input"
+      },
+      "outputs": {
+        "cpp_staleness_checker": "cpp_staleness_checker"
+      },
+      "condition": "stack == 'cpp'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s15_rmon_cpp_spdlog_event_logger",
+      "skill_name": "rmon-cpp-spdlog-event-logger",
+      "inputs": {
+        "monitor_log_schema": "s08_rmon_monitor_log_schema.monitor_log_schema",
+        "repo_dir": "from_user_input"
+      },
+      "outputs": {
+        "cpp_event_logger": "cpp_event_logger"
+      },
+      "condition": "stack == 'cpp'",
+      "parallel_group": 7
+    },
+    {
+      "id": "s16_rmon_ros2_qos_deadline_liveliness",
+      "skill_name": "rmon-ros2-qos-deadline-liveliness",
+      "inputs": {
+        "operating_envelope": "s02_rmon_envelope_from_requirements.operating_envelope",
+        "repo_dir": "from_user_input"
+      },
+      "outputs": {
+        "ros2_qos_monitor": "ros2_qos_monitor"
+      },
+      "condition": "middleware == 'ros2'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s17_rmon_ros2_bag_monitor_record",
+      "skill_name": "rmon-ros2-bag-monitor-record",
+      "inputs": {
+        "ros2_qos_monitor": "s16_rmon_ros2_qos_deadline_liveliness.ros2_qos_monitor",
+        "log_dir": "from_user_input"
+      },
+      "outputs": {
+        "ros2_bag_record": "ros2_bag_record"
+      },
+      "condition": "middleware == 'ros2'",
+      "parallel_group": 4
+    },
+    {
+      "id": "s18_rmon_linux_systemd_isolation",
+      "skill_name": "rmon-linux-systemd-isolation",
+      "inputs": {
+        "independence_plan": "s05_rmon_independence_analysis.independence_plan",
+        "monitor_command": "from_user_input"
+      },
+      "outputs": {
+        "systemd_unit": "systemd_unit"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s19_rmon_linux_hw_watchdog",
+      "skill_name": "rmon-linux-hw-watchdog",
+      "inputs": {
+        "independence_plan": "s05_rmon_independence_analysis.independence_plan",
+        "fallback_strategy": "s04_rmon_fallback_mode_selection.fallback_strategy"
+      },
+      "outputs": {
+        "watchdog_config": "watchdog_config"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s20_rmon_fault_injection_plan",
+      "skill_name": "rmon-fault-injection-plan",
+      "inputs": {
+        "operating_envelope": "s02_rmon_envelope_from_requirements.operating_envelope",
+        "independence_plan": "s05_rmon_independence_analysis.independence_plan",
+        "temporal_properties": "s06_rmon_temporal_property_spec.temporal_properties"
+      },
+      "outputs": {
+        "fault_injection_plan": "fault_injection_plan"
+      },
+      "parallel_group": 6
+    },
+    {
+      "id": "s21_rmon_py_pytest_fault_injection",
+      "skill_name": "rmon-py-pytest-fault-injection",
+      "inputs": {
+        "fault_injection_plan": "s20_rmon_fault_injection_plan.fault_injection_plan",
+        "py_range_rate_checker": "s09_rmon_py_rate_range_check.py_range_rate_checker",
+        "py_staleness_checker": "s10_rmon_py_staleness_timeout.py_staleness_checker",
+        "repo_dir": "from_user_input"
+      },
+      "outputs": {
+        "py_fault_results": "py_fault_results"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 7
+    },
+    {
+      "id": "s22_rmon_cpp_gtest_fault_injection",
+      "skill_name": "rmon-cpp-gtest-fault-injection",
+      "inputs": {
+        "fault_injection_plan": "s20_rmon_fault_injection_plan.fault_injection_plan",
+        "cpp_range_rate_checker": "s13_rmon_cpp_rate_range_check.cpp_range_rate_checker",
+        "cpp_staleness_checker": "s14_rmon_cpp_staleness_timeout.cpp_staleness_checker",
+        "repo_dir": "from_user_input"
+      },
+      "outputs": {
+        "cpp_fault_results": "cpp_fault_results"
+      },
+      "condition": "stack == 'cpp'",
+      "parallel_group": 7
+    },
+    {
+      "id": "s23_rmon_linux_netem_stress_timing",
+      "skill_name": "rmon-linux-netem-stress-timing",
+      "inputs": {
+        "fault_injection_plan": "s20_rmon_fault_injection_plan.fault_injection_plan",
+        "test_interface": "from_user_input"
+      },
+      "outputs": {
+        "timing_fault_results": "timing_fault_results"
+      },
+      "condition": "monitor_uses_network == true",
+      "parallel_group": 7
+    },
+    {
+      "id": "s24_rmon_can_vcan_replay_test",
+      "skill_name": "rmon-can-vcan-replay-test",
+      "inputs": {
+        "fault_injection_plan": "s20_rmon_fault_injection_plan.fault_injection_plan",
+        "can_log": "from_user_input",
+        "dbc_file": "from_user_input_optional"
+      },
+      "outputs": {
+        "can_replay_results": "can_replay_results"
+      },
+      "condition": "has_can_bus == true",
+      "parallel_group": 7
+    },
+    {
+      "id": "s25_rmon_trip_rate_measurement",
+      "skill_name": "rmon-trip-rate-measurement",
+      "inputs": {
+        "py_fault_results": "s21_rmon_py_pytest_fault_injection.py_fault_results",
+        "cpp_fault_results": "s22_rmon_cpp_gtest_fault_injection.cpp_fault_results",
+        "nominal_run_log": "from_user_input",
+        "timing_fault_results": "s23_rmon_linux_netem_stress_timing.timing_fault_results",
+        "can_replay_results": "s24_rmon_can_vcan_replay_test.can_replay_results"
+      },
+      "outputs": {
+        "trip_rate_report": "trip_rate_report"
+      },
+      "parallel_group": 8
+    },
+    {
+      "id": "s26_rmon_detection_latency_measurement",
+      "skill_name": "rmon-detection-latency-measurement",
+      "inputs": {
+        "py_fault_results": "s21_rmon_py_pytest_fault_injection.py_fault_results",
+        "cpp_fault_results": "s22_rmon_cpp_gtest_fault_injection.cpp_fault_results",
+        "ftti_ms": "from_user_input",
+        "monitor_log_schema": "s08_rmon_monitor_log_schema.monitor_log_schema"
+      },
+      "outputs": {
+        "latency_report": "latency_report"
+      },
+      "parallel_group": 8
+    },
+    {
+      "id": "s27_rmon_closed_course_trip_validation",
+      "skill_name": "rmon-closed-course-trip-validation",
+      "inputs": {
+        "trip_rate_report": "s25_rmon_trip_rate_measurement.trip_rate_report",
+        "latency_report": "s26_rmon_detection_latency_measurement.latency_report",
+        "estop_test_record": "from_user_input",
+        "test_site_plan": "from_user_input"
+      },
+      "outputs": {
+        "course_validation_record": "course_validation_record"
+      },
+      "condition": "physical_system == true",
+      "parallel_group": 9
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_rmon_scope_supervised_component",
+      "to_step": "s02_rmon_envelope_from_requirements",
+      "data_type": "rmon-scope-supervised-component",
+      "field_mapping": {
+        "monitor_scope": "monitor_scope"
+      }
+    },
+    {
+      "from_step": "s01_rmon_scope_supervised_component",
+      "to_step": "s03_rmon_simplex_architecture_design",
+      "data_type": "rmon-scope-supervised-component",
+      "field_mapping": {
+        "monitor_scope": "monitor_scope"
+      }
+    },
+    {
+      "from_step": "s02_rmon_envelope_from_requirements",
+      "to_step": "s03_rmon_simplex_architecture_design",
+      "data_type": "rmon-envelope-from-requirements",
+      "field_mapping": {
+        "operating_envelope": "operating_envelope"
+      }
+    },
+    {
+      "from_step": "s01_rmon_scope_supervised_component",
+      "to_step": "s04_rmon_fallback_mode_selection",
+      "data_type": "rmon-scope-supervised-component",
+      "field_mapping": {
+        "monitor_scope": "monitor_scope"
+      }
+    },
+    {
+      "from_step": "s03_rmon_simplex_architecture_design",
+      "to_step": "s04_rmon_fallback_mode_selection",
+      "data_type": "rmon-simplex-architecture-design",
+      "field_mapping": {
+        "simplex_design": "simplex_design"
+      }
+    },
+    {
+      "from_step": "s03_rmon_simplex_architecture_design",
+      "to_step": "s05_rmon_independence_analysis",
+      "data_type": "rmon-simplex-architecture-design",
+      "field_mapping": {
+        "simplex_design": "simplex_design"
+      }
+    },
+    {
+      "from_step": "s01_rmon_scope_supervised_component",
+      "to_step": "s05_rmon_independence_analysis",
+      "data_type": "rmon-scope-supervised-component",
+      "field_mapping": {
+        "monitor_scope": "monitor_scope"
+      }
+    },
+    {
+      "from_step": "s02_rmon_envelope_from_requirements",
+      "to_step": "s06_rmon_temporal_property_spec",
+      "data_type": "rmon-envelope-from-requirements",
+      "field_mapping": {
+        "operating_envelope": "operating_envelope"
+      }
+    },
+    {
+      "from_step": "s04_rmon_fallback_mode_selection",
+      "to_step": "s06_rmon_temporal_property_spec",
+      "data_type": "rmon-fallback-mode-selection",
+      "field_mapping": {
+        "fallback_strategy": "fallback_strategy"
+      }
+    },
+    {
+      "from_step": "s03_rmon_simplex_architecture_design",
+      "to_step": "s07_rmon_simplex_switch_logic",
+      "data_type": "rmon-simplex-architecture-design",
+      "field_mapping": {
+        "simplex_design": "simplex_design"
+      }
+    },
+    {
+      "from_step": "s04_rmon_fallback_mode_selection",
+      "to_step": "s07_rmon_simplex_switch_logic",
+      "data_type": "rmon-fallback-mode-selection",
+      "field_mapping": {
+        "fallback_strategy": "fallback_strategy"
+      }
+    },
+    {
+      "from_step": "s06_rmon_temporal_property_spec",
+      "to_step": "s07_rmon_simplex_switch_logic",
+      "data_type": "rmon-temporal-property-spec",
+      "field_mapping": {
+        "temporal_properties": "temporal_properties"
+      }
+    },
+    {
+      "from_step": "s02_rmon_envelope_from_requirements",
+      "to_step": "s08_rmon_monitor_log_schema",
+      "data_type": "rmon-envelope-from-requirements",
+      "field_mapping": {
+        "operating_envelope": "operating_envelope"
+      }
+    },
+    {
+      "from_step": "s06_rmon_temporal_property_spec",
+      "to_step": "s08_rmon_monitor_log_schema",
+      "data_type": "rmon-temporal-property-spec",
+      "field_mapping": {
+        "temporal_properties": "temporal_properties"
+      }
+    },
+    {
+      "from_step": "s02_rmon_envelope_from_requirements",
+      "to_step": "s09_rmon_py_rate_range_check",
+      "data_type": "rmon-envelope-from-requirements",
+      "field_mapping": {
+        "operating_envelope": "operating_envelope"
+      }
+    },
+    {
+      "from_step": "s02_rmon_envelope_from_requirements",
+      "to_step": "s10_rmon_py_staleness_timeout",
+      "data_type": "rmon-envelope-from-requirements",
+      "field_mapping": {
+        "operating_envelope": "operating_envelope"
+      }
+    },
+    {
+      "from_step": "s06_rmon_temporal_property_spec",
+      "to_step": "s11_rmon_py_rtamt_stl_monitor",
+      "data_type": "rmon-temporal-property-spec",
+      "field_mapping": {
+        "temporal_properties": "temporal_properties"
+      }
+    },
+    {
+      "from_step": "s08_rmon_monitor_log_schema",
+      "to_step": "s12_rmon_py_jsonl_event_logger",
+      "data_type": "rmon-monitor-log-schema",
+      "field_mapping": {
+        "monitor_log_schema": "monitor_log_schema"
+      }
+    },
+    {
+      "from_step": "s02_rmon_envelope_from_requirements",
+      "to_step": "s13_rmon_cpp_rate_range_check",
+      "data_type": "rmon-envelope-from-requirements",
+      "field_mapping": {
+        "operating_envelope": "operating_envelope"
+      }
+    },
+    {
+      "from_step": "s02_rmon_envelope_from_requirements",
+      "to_step": "s14_rmon_cpp_staleness_timeout",
+      "data_type": "rmon-envelope-from-requirements",
+      "field_mapping": {
+        "operating_envelope": "operating_envelope"
+      }
+    },
+    {
+      "from_step": "s08_rmon_monitor_log_schema",
+      "to_step": "s15_rmon_cpp_spdlog_event_logger",
+      "data_type": "rmon-monitor-log-schema",
+      "field_mapping": {
+        "monitor_log_schema": "monitor_log_schema"
+      }
+    },
+    {
+      "from_step": "s02_rmon_envelope_from_requirements",
+      "to_step": "s16_rmon_ros2_qos_deadline_liveliness",
+      "data_type": "rmon-envelope-from-requirements",
+      "field_mapping": {
+        "operating_envelope": "operating_envelope"
+      }
+    },
+    {
+      "from_step": "s16_rmon_ros2_qos_deadline_liveliness",
+      "to_step": "s17_rmon_ros2_bag_monitor_record",
+      "data_type": "rmon-ros2-qos-deadline-liveliness",
+      "field_mapping": {
+        "ros2_qos_monitor": "ros2_qos_monitor"
+      }
+    },
+    {
+      "from_step": "s05_rmon_independence_analysis",
+      "to_step": "s18_rmon_linux_systemd_isolation",
+      "data_type": "rmon-independence-analysis",
+      "field_mapping": {
+        "independence_plan": "independence_plan"
+      }
+    },
+    {
+      "from_step": "s05_rmon_independence_analysis",
+      "to_step": "s19_rmon_linux_hw_watchdog",
+      "data_type": "rmon-independence-analysis",
+      "field_mapping": {
+        "independence_plan": "independence_plan"
+      }
+    },
+    {
+      "from_step": "s04_rmon_fallback_mode_selection",
+      "to_step": "s19_rmon_linux_hw_watchdog",
+      "data_type": "rmon-fallback-mode-selection",
+      "field_mapping": {
+        "fallback_strategy": "fallback_strategy"
+      }
+    },
+    {
+      "from_step": "s02_rmon_envelope_from_requirements",
+      "to_step": "s20_rmon_fault_injection_plan",
+      "data_type": "rmon-envelope-from-requirements",
+      "field_mapping": {
+        "operating_envelope": "operating_envelope"
+      }
+    },
+    {
+      "from_step": "s05_rmon_independence_analysis",
+      "to_step": "s20_rmon_fault_injection_plan",
+      "data_type": "rmon-independence-analysis",
+      "field_mapping": {
+        "independence_plan": "independence_plan"
+      }
+    },
+    {
+      "from_step": "s06_rmon_temporal_property_spec",
+      "to_step": "s20_rmon_fault_injection_plan",
+      "data_type": "rmon-temporal-property-spec",
+      "field_mapping": {
+        "temporal_properties": "temporal_properties"
+      }
+    },
+    {
+      "from_step": "s20_rmon_fault_injection_plan",
+      "to_step": "s21_rmon_py_pytest_fault_injection",
+      "data_type": "rmon-fault-injection-plan",
+      "field_mapping": {
+        "fault_injection_plan": "fault_injection_plan"
+      }
+    },
+    {
+      "from_step": "s09_rmon_py_rate_range_check",
+      "to_step": "s21_rmon_py_pytest_fault_injection",
+      "data_type": "rmon-py-rate-range-check",
+      "field_mapping": {
+        "py_range_rate_checker": "py_range_rate_checker"
+      }
+    },
+    {
+      "from_step": "s10_rmon_py_staleness_timeout",
+      "to_step": "s21_rmon_py_pytest_fault_injection",
+      "data_type": "rmon-py-staleness-timeout",
+      "field_mapping": {
+        "py_staleness_checker": "py_staleness_checker"
+      }
+    },
+    {
+      "from_step": "s20_rmon_fault_injection_plan",
+      "to_step": "s22_rmon_cpp_gtest_fault_injection",
+      "data_type": "rmon-fault-injection-plan",
+      "field_mapping": {
+        "fault_injection_plan": "fault_injection_plan"
+      }
+    },
+    {
+      "from_step": "s13_rmon_cpp_rate_range_check",
+      "to_step": "s22_rmon_cpp_gtest_fault_injection",
+      "data_type": "rmon-cpp-rate-range-check",
+      "field_mapping": {
+        "cpp_range_rate_checker": "cpp_range_rate_checker"
+      }
+    },
+    {
+      "from_step": "s14_rmon_cpp_staleness_timeout",
+      "to_step": "s22_rmon_cpp_gtest_fault_injection",
+      "data_type": "rmon-cpp-staleness-timeout",
+      "field_mapping": {
+        "cpp_staleness_checker": "cpp_staleness_checker"
+      }
+    },
+    {
+      "from_step": "s20_rmon_fault_injection_plan",
+      "to_step": "s23_rmon_linux_netem_stress_timing",
+      "data_type": "rmon-fault-injection-plan",
+      "field_mapping": {
+        "fault_injection_plan": "fault_injection_plan"
+      }
+    },
+    {
+      "from_step": "s20_rmon_fault_injection_plan",
+      "to_step": "s24_rmon_can_vcan_replay_test",
+      "data_type": "rmon-fault-injection-plan",
+      "field_mapping": {
+        "fault_injection_plan": "fault_injection_plan"
+      }
+    },
+    {
+      "from_step": "s21_rmon_py_pytest_fault_injection",
+      "to_step": "s25_rmon_trip_rate_measurement",
+      "data_type": "rmon-py-pytest-fault-injection",
+      "field_mapping": {
+        "py_fault_results": "py_fault_results"
+      }
+    },
+    {
+      "from_step": "s22_rmon_cpp_gtest_fault_injection",
+      "to_step": "s25_rmon_trip_rate_measurement",
+      "data_type": "rmon-cpp-gtest-fault-injection",
+      "field_mapping": {
+        "cpp_fault_results": "cpp_fault_results"
+      }
+    },
+    {
+      "from_step": "s23_rmon_linux_netem_stress_timing",
+      "to_step": "s25_rmon_trip_rate_measurement",
+      "data_type": "rmon-linux-netem-stress-timing",
+      "field_mapping": {
+        "timing_fault_results": "timing_fault_results"
+      }
+    },
+    {
+      "from_step": "s24_rmon_can_vcan_replay_test",
+      "to_step": "s25_rmon_trip_rate_measurement",
+      "data_type": "rmon-can-vcan-replay-test",
+      "field_mapping": {
+        "can_replay_results": "can_replay_results"
+      }
+    },
+    {
+      "from_step": "s21_rmon_py_pytest_fault_injection",
+      "to_step": "s26_rmon_detection_latency_measurement",
+      "data_type": "rmon-py-pytest-fault-injection",
+      "field_mapping": {
+        "py_fault_results": "py_fault_results"
+      }
+    },
+    {
+      "from_step": "s22_rmon_cpp_gtest_fault_injection",
+      "to_step": "s26_rmon_detection_latency_measurement",
+      "data_type": "rmon-cpp-gtest-fault-injection",
+      "field_mapping": {
+        "cpp_fault_results": "cpp_fault_results"
+      }
+    },
+    {
+      "from_step": "s08_rmon_monitor_log_schema",
+      "to_step": "s26_rmon_detection_latency_measurement",
+      "data_type": "rmon-monitor-log-schema",
+      "field_mapping": {
+        "monitor_log_schema": "monitor_log_schema"
+      }
+    },
+    {
+      "from_step": "s25_rmon_trip_rate_measurement",
+      "to_step": "s27_rmon_closed_course_trip_validation",
+      "data_type": "rmon-trip-rate-measurement",
+      "field_mapping": {
+        "trip_rate_report": "trip_rate_report"
+      }
+    },
+    {
+      "from_step": "s26_rmon_detection_latency_measurement",
+      "to_step": "s27_rmon_closed_course_trip_validation",
+      "data_type": "rmon-detection-latency-measurement",
+      "field_mapping": {
+        "latency_report": "latency_report"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "system_description",
+    "hazard_list",
+    "stack",
+    "middleware",
+    "requirements_doc",
+    "ftti_ms",
+    "repo_dir",
+    "log_dir",
+    "monitor_command",
+    "test_interface",
+    "can_log",
+    "dbc_file",
+    "nominal_run_log",
+    "estop_test_record",
+    "test_site_plan"
+  ],
+  "terminal_outputs": [
+    "envelope_open_questions",
+    "switch_state_machine",
+    "switch_test_vectors",
+    "py_stl_monitor",
+    "py_event_logger",
+    "cpp_event_logger",
+    "ros2_bag_record",
+    "systemd_unit",
+    "watchdog_config",
+    "course_validation_record"
+  ],
+  "parallel_groups": [
+    [
+      "s01_rmon_scope_supervised_component"
+    ],
+    [
+      "s02_rmon_envelope_from_requirements"
+    ],
+    [
+      "s03_rmon_simplex_architecture_design",
+      "s09_rmon_py_rate_range_check",
+      "s10_rmon_py_staleness_timeout",
+      "s13_rmon_cpp_rate_range_check",
+      "s14_rmon_cpp_staleness_timeout",
+      "s16_rmon_ros2_qos_deadline_liveliness"
+    ],
+    [
+      "s04_rmon_fallback_mode_selection",
+      "s05_rmon_independence_analysis",
+      "s17_rmon_ros2_bag_monitor_record"
+    ],
+    [
+      "s06_rmon_temporal_property_spec",
+      "s18_rmon_linux_systemd_isolation",
+      "s19_rmon_linux_hw_watchdog"
+    ],
+    [
+      "s07_rmon_simplex_switch_logic",
+      "s08_rmon_monitor_log_schema",
+      "s11_rmon_py_rtamt_stl_monitor",
+      "s20_rmon_fault_injection_plan"
+    ],
+    [
+      "s12_rmon_py_jsonl_event_logger",
+      "s15_rmon_cpp_spdlog_event_logger",
+      "s21_rmon_py_pytest_fault_injection",
+      "s22_rmon_cpp_gtest_fault_injection",
+      "s23_rmon_linux_netem_stress_timing",
+      "s24_rmon_can_vcan_replay_test"
+    ],
+    [
+      "s25_rmon_trip_rate_measurement",
+      "s26_rmon_detection_latency_measurement"
+    ],
+    [
+      "s27_rmon_closed_course_trip_validation"
+    ]
+  ],
+  "estimated_cost": 27,
+  "critical_path": [
+    "s01_rmon_scope_supervised_component",
+    "s02_rmon_envelope_from_requirements",
+    "s03_rmon_simplex_architecture_design",
+    "s04_rmon_fallback_mode_selection",
+    "s06_rmon_temporal_property_spec",
+    "s20_rmon_fault_injection_plan",
+    "s22_rmon_cpp_gtest_fault_injection",
+    "s26_rmon_detection_latency_measurement",
+    "s27_rmon_closed_course_trip_validation"
+  ]
+}

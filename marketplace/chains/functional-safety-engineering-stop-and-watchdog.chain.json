@@ -1,0 +1,147 @@
+{
+  "name": "functional-safety-engineering-stop-and-watchdog",
+  "description": "Design and bench-verify an independent hardware emergency stop chain, then add the watchdog and heartbeat monitoring that matches the software stack, with every reaction routed to the hardware stop path.",
+  "steps": [
+    {
+      "id": "s01_fusa_estop_chain_design",
+      "skill_name": "fusa-estop-chain-design",
+      "inputs": {
+        "item_definition": "from_user_input",
+        "actuator_list": "from_user_input",
+        "stop_category": "from_user_input_optional"
+      },
+      "outputs": {
+        "estop_design": "estop_design"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_fusa_estop_bench_verification",
+      "skill_name": "fusa-estop-bench-verification",
+      "inputs": {
+        "estop_design": "s01_fusa_estop_chain_design.estop_design",
+        "bench_setup": "from_user_input"
+      },
+      "outputs": {
+        "estop_test_record": "estop_test_record"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_fusa_watchdog_mcu_independent",
+      "skill_name": "fusa-watchdog-mcu-independent",
+      "inputs": {
+        "safety_requirements": "from_user_input",
+        "mcu_part": "from_user_input",
+        "firmware_dir": "from_user_input"
+      },
+      "outputs": {
+        "watchdog_config": "watchdog_config"
+      },
+      "condition": "stack == 'embedded-c'",
+      "parallel_group": 1
+    },
+    {
+      "id": "s04_fusa_watchdog_systemd_c",
+      "skill_name": "fusa-watchdog-systemd-c",
+      "inputs": {
+        "safety_requirements": "from_user_input",
+        "service_name": "from_user_input",
+        "repo_dir": "from_user_input"
+      },
+      "outputs": {
+        "watchdog_config": "watchdog_config"
+      },
+      "condition": "stack == 'linux-c'",
+      "parallel_group": 1
+    },
+    {
+      "id": "s05_fusa_watchdog_systemd_py",
+      "skill_name": "fusa-watchdog-systemd-py",
+      "inputs": {
+        "safety_requirements": "from_user_input",
+        "service_name": "from_user_input",
+        "repo_dir": "from_user_input"
+      },
+      "outputs": {
+        "watchdog_config": "watchdog_config"
+      },
+      "condition": "stack == 'linux-python'",
+      "parallel_group": 1
+    },
+    {
+      "id": "s06_fusa_heartbeat_ros2_qos",
+      "skill_name": "fusa-heartbeat-ros2-qos",
+      "inputs": {
+        "safety_requirements": "from_user_input",
+        "ros_workspace": "from_user_input"
+      },
+      "outputs": {
+        "heartbeat_monitor": "heartbeat_monitor"
+      },
+      "condition": "stack == 'ros2'",
+      "parallel_group": 1
+    },
+    {
+      "id": "s07_fusa_heartbeat_can_alive_counter",
+      "skill_name": "fusa-heartbeat-can-alive-counter",
+      "inputs": {
+        "safety_requirements": "from_user_input",
+        "can_interface": "from_user_input",
+        "dbc_file": "from_user_input_optional"
+      },
+      "outputs": {
+        "heartbeat_monitor": "heartbeat_monitor"
+      },
+      "condition": "bus == 'can'",
+      "parallel_group": 1
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_fusa_estop_chain_design",
+      "to_step": "s02_fusa_estop_bench_verification",
+      "data_type": "fusa-estop-chain-design",
+      "field_mapping": {
+        "estop_design": "estop_design"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "item_definition",
+    "actuator_list",
+    "stop_category",
+    "bench_setup",
+    "safety_requirements",
+    "mcu_part",
+    "firmware_dir",
+    "service_name",
+    "repo_dir",
+    "ros_workspace",
+    "can_interface",
+    "dbc_file"
+  ],
+  "terminal_outputs": [
+    "estop_test_record",
+    "watchdog_config",
+    "heartbeat_monitor"
+  ],
+  "parallel_groups": [
+    [
+      "s01_fusa_estop_chain_design",
+      "s03_fusa_watchdog_mcu_independent",
+      "s04_fusa_watchdog_systemd_c",
+      "s05_fusa_watchdog_systemd_py",
+      "s06_fusa_heartbeat_ros2_qos",
+      "s07_fusa_heartbeat_can_alive_counter"
+    ],
+    [
+      "s02_fusa_estop_bench_verification"
+    ]
+  ],
+  "estimated_cost": 7,
+  "critical_path": [
+    "s01_fusa_estop_chain_design",
+    "s02_fusa_estop_bench_verification"
+  ]
+}

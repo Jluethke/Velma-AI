@@ -1,0 +1,169 @@
+{
+  "name": "subscription-billing-payment-recovery",
+  "description": "Configure invoice collection and dunning, handle failed payments with an access policy, gate features by status, and prove recovery with test clocks.",
+  "steps": [
+    {
+      "id": "s01_bill_invoice_lifecycle",
+      "skill_name": "bill-invoice-lifecycle",
+      "inputs": {
+        "price_catalog": "from_user_input",
+        "collection_method": "from_user_input"
+      },
+      "outputs": {
+        "invoice_settings": "invoice_settings",
+        "invoice_event_map": "invoice_event_map"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_bill_dunning_config",
+      "skill_name": "bill-dunning-config",
+      "inputs": {
+        "invoice_settings": "s01_bill_invoice_lifecycle.invoice_settings",
+        "grace_period_days": "from_user_input"
+      },
+      "outputs": {
+        "dunning_settings": "dunning_settings",
+        "access_policy": "access_policy"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_bill_payment_failure_handler",
+      "skill_name": "bill-payment-failure-handler",
+      "inputs": {
+        "dunning_settings": "s02_bill_dunning_config.dunning_settings",
+        "access_policy": "s02_bill_dunning_config.access_policy",
+        "webhook_handler": "from_user_input"
+      },
+      "outputs": {
+        "failure_handler_code": "failure_handler_code",
+        "failure_test_results": "failure_test_results"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_bill_py_feature_gate",
+      "skill_name": "bill-py-feature-gate",
+      "inputs": {
+        "entitlement_map": "from_user_input",
+        "entitlement_table_schema": "from_user_input",
+        "access_policy": "s02_bill_dunning_config.access_policy"
+      },
+      "outputs": {
+        "gate_code": "gate_code",
+        "gate_tests": "gate_tests"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s05_bill_node_feature_gate",
+      "skill_name": "bill-node-feature-gate",
+      "inputs": {
+        "entitlement_map": "from_user_input",
+        "entitlement_table_schema": "from_user_input",
+        "access_policy": "s02_bill_dunning_config.access_policy"
+      },
+      "outputs": {
+        "gate_code": "gate_code",
+        "gate_tests": "gate_tests"
+      },
+      "condition": "stack == 'node'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s06_bill_test_clock_e2e",
+      "skill_name": "bill-test-clock-e2e",
+      "inputs": {
+        "price_catalog": "from_user_input",
+        "trial_policy": "from_user_input",
+        "dunning_settings": "s02_bill_dunning_config.dunning_settings"
+      },
+      "outputs": {
+        "test_clock_report": "test_clock_report"
+      },
+      "parallel_group": 3
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_bill_invoice_lifecycle",
+      "to_step": "s02_bill_dunning_config",
+      "data_type": "bill-invoice-lifecycle",
+      "field_mapping": {
+        "invoice_settings": "invoice_settings"
+      }
+    },
+    {
+      "from_step": "s02_bill_dunning_config",
+      "to_step": "s03_bill_payment_failure_handler",
+      "data_type": "bill-dunning-config",
+      "field_mapping": {
+        "dunning_settings": "dunning_settings",
+        "access_policy": "access_policy"
+      }
+    },
+    {
+      "from_step": "s02_bill_dunning_config",
+      "to_step": "s04_bill_py_feature_gate",
+      "data_type": "bill-dunning-config",
+      "field_mapping": {
+        "access_policy": "access_policy"
+      }
+    },
+    {
+      "from_step": "s02_bill_dunning_config",
+      "to_step": "s05_bill_node_feature_gate",
+      "data_type": "bill-dunning-config",
+      "field_mapping": {
+        "access_policy": "access_policy"
+      }
+    },
+    {
+      "from_step": "s02_bill_dunning_config",
+      "to_step": "s06_bill_test_clock_e2e",
+      "data_type": "bill-dunning-config",
+      "field_mapping": {
+        "dunning_settings": "dunning_settings"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "price_catalog",
+    "collection_method",
+    "grace_period_days",
+    "webhook_handler",
+    "entitlement_map",
+    "entitlement_table_schema",
+    "trial_policy"
+  ],
+  "terminal_outputs": [
+    "invoice_event_map",
+    "failure_handler_code",
+    "failure_test_results",
+    "gate_code",
+    "gate_tests",
+    "test_clock_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_bill_invoice_lifecycle"
+    ],
+    [
+      "s02_bill_dunning_config"
+    ],
+    [
+      "s03_bill_payment_failure_handler",
+      "s04_bill_py_feature_gate",
+      "s05_bill_node_feature_gate",
+      "s06_bill_test_clock_e2e"
+    ]
+  ],
+  "estimated_cost": 6,
+  "critical_path": [
+    "s01_bill_invoice_lifecycle",
+    "s02_bill_dunning_config",
+    "s03_bill_payment_failure_handler"
+  ]
+}

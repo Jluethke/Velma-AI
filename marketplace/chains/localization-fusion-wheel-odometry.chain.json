@@ -1,0 +1,166 @@
+{
+  "name": "localization-fusion-wheel-odometry",
+  "description": "Read-only CAN wheel odometry: decode speed and steering, build and calibrate the odometry model, and measure its latency.",
+  "steps": [
+    {
+      "id": "s01_loc_frame_convention_audit",
+      "skill_name": "loc-frame-convention-audit",
+      "inputs": {
+        "vehicle_spec": "from_user_input",
+        "sensor_list": "from_user_input"
+      },
+      "outputs": {
+        "frame_spec": "frame_spec"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_loc_rosbag2_drive_logging",
+      "skill_name": "loc-rosbag2-drive-logging",
+      "inputs": {
+        "frame_spec": "s01_loc_frame_convention_audit.frame_spec",
+        "sensor_topics": "from_user_input",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "sensor_bag": "sensor_bag",
+        "replay_procedure": "replay_procedure"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_loc_can_wheel_odometry",
+      "skill_name": "loc-can-wheel-odometry",
+      "inputs": {
+        "dbc_file": "from_user_input",
+        "sensor_bag": "s02_loc_rosbag2_drive_logging.sensor_bag",
+        "vehicle_spec": "from_user_input"
+      },
+      "outputs": {
+        "wheel_odom_signals": "wheel_odom_signals",
+        "wheel_odom_model": "wheel_odom_model"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_loc_wheel_odom_calibration",
+      "skill_name": "loc-wheel-odom-calibration",
+      "inputs": {
+        "wheel_odom_model": "s03_loc_can_wheel_odometry.wheel_odom_model",
+        "sensor_bag": "s02_loc_rosbag2_drive_logging.sensor_bag",
+        "vehicle_spec": "from_user_input"
+      },
+      "outputs": {
+        "odom_calibration": "odom_calibration",
+        "wheel_odom_noise": "wheel_odom_noise"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s05_loc_sensor_time_sync_check",
+      "skill_name": "loc-sensor-time-sync-check",
+      "inputs": {
+        "sensor_bag": "s02_loc_rosbag2_drive_logging.sensor_bag",
+        "frame_spec": "s01_loc_frame_convention_audit.frame_spec",
+        "wheel_odom_signals": "s03_loc_can_wheel_odometry.wheel_odom_signals"
+      },
+      "outputs": {
+        "time_offsets": "time_offsets"
+      },
+      "parallel_group": 4
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_loc_frame_convention_audit",
+      "to_step": "s02_loc_rosbag2_drive_logging",
+      "data_type": "loc-frame-convention-audit",
+      "field_mapping": {
+        "frame_spec": "frame_spec"
+      }
+    },
+    {
+      "from_step": "s02_loc_rosbag2_drive_logging",
+      "to_step": "s03_loc_can_wheel_odometry",
+      "data_type": "loc-rosbag2-drive-logging",
+      "field_mapping": {
+        "sensor_bag": "sensor_bag"
+      }
+    },
+    {
+      "from_step": "s03_loc_can_wheel_odometry",
+      "to_step": "s04_loc_wheel_odom_calibration",
+      "data_type": "loc-can-wheel-odometry",
+      "field_mapping": {
+        "wheel_odom_model": "wheel_odom_model"
+      }
+    },
+    {
+      "from_step": "s02_loc_rosbag2_drive_logging",
+      "to_step": "s04_loc_wheel_odom_calibration",
+      "data_type": "loc-rosbag2-drive-logging",
+      "field_mapping": {
+        "sensor_bag": "sensor_bag"
+      }
+    },
+    {
+      "from_step": "s02_loc_rosbag2_drive_logging",
+      "to_step": "s05_loc_sensor_time_sync_check",
+      "data_type": "loc-rosbag2-drive-logging",
+      "field_mapping": {
+        "sensor_bag": "sensor_bag"
+      }
+    },
+    {
+      "from_step": "s01_loc_frame_convention_audit",
+      "to_step": "s05_loc_sensor_time_sync_check",
+      "data_type": "loc-frame-convention-audit",
+      "field_mapping": {
+        "frame_spec": "frame_spec"
+      }
+    },
+    {
+      "from_step": "s03_loc_can_wheel_odometry",
+      "to_step": "s05_loc_sensor_time_sync_check",
+      "data_type": "loc-can-wheel-odometry",
+      "field_mapping": {
+        "wheel_odom_signals": "wheel_odom_signals"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "vehicle_spec",
+    "sensor_list",
+    "sensor_topics",
+    "project_dir",
+    "dbc_file"
+  ],
+  "terminal_outputs": [
+    "replay_procedure",
+    "odom_calibration",
+    "wheel_odom_noise",
+    "time_offsets"
+  ],
+  "parallel_groups": [
+    [
+      "s01_loc_frame_convention_audit"
+    ],
+    [
+      "s02_loc_rosbag2_drive_logging"
+    ],
+    [
+      "s03_loc_can_wheel_odometry"
+    ],
+    [
+      "s04_loc_wheel_odom_calibration",
+      "s05_loc_sensor_time_sync_check"
+    ]
+  ],
+  "estimated_cost": 5,
+  "critical_path": [
+    "s01_loc_frame_convention_audit",
+    "s02_loc_rosbag2_drive_logging",
+    "s03_loc_can_wheel_odometry",
+    "s05_loc_sensor_time_sync_check"
+  ]
+}

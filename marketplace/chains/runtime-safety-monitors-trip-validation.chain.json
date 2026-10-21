@@ -1,0 +1,181 @@
+{
+  "name": "runtime-safety-monitors-trip-validation",
+  "description": "Validate an existing monitor: fault injection plan, timing and CAN replay faults, false-trip and missed-trip rates, detection latency against the FTTI, and closed-course validation behind a hardware emergency stop.",
+  "steps": [
+    {
+      "id": "s01_rmon_fault_injection_plan",
+      "skill_name": "rmon-fault-injection-plan",
+      "inputs": {
+        "operating_envelope": "from_user_input",
+        "independence_plan": "from_user_input",
+        "temporal_properties": "from_user_input"
+      },
+      "outputs": {
+        "fault_injection_plan": "fault_injection_plan"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_rmon_linux_netem_stress_timing",
+      "skill_name": "rmon-linux-netem-stress-timing",
+      "inputs": {
+        "fault_injection_plan": "s01_rmon_fault_injection_plan.fault_injection_plan",
+        "test_interface": "from_user_input"
+      },
+      "outputs": {
+        "timing_fault_results": "timing_fault_results"
+      },
+      "condition": "monitor_uses_network == true",
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_rmon_can_vcan_replay_test",
+      "skill_name": "rmon-can-vcan-replay-test",
+      "inputs": {
+        "fault_injection_plan": "s01_rmon_fault_injection_plan.fault_injection_plan",
+        "can_log": "from_user_input",
+        "dbc_file": "from_user_input_optional"
+      },
+      "outputs": {
+        "can_replay_results": "can_replay_results"
+      },
+      "condition": "has_can_bus == true",
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_rmon_trip_rate_measurement",
+      "skill_name": "rmon-trip-rate-measurement",
+      "inputs": {
+        "py_fault_results": "from_user_input_optional",
+        "cpp_fault_results": "from_user_input_optional",
+        "nominal_run_log": "from_user_input",
+        "timing_fault_results": "s02_rmon_linux_netem_stress_timing.timing_fault_results",
+        "can_replay_results": "s03_rmon_can_vcan_replay_test.can_replay_results"
+      },
+      "outputs": {
+        "trip_rate_report": "trip_rate_report"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s05_rmon_detection_latency_measurement",
+      "skill_name": "rmon-detection-latency-measurement",
+      "inputs": {
+        "py_fault_results": "from_user_input_optional",
+        "cpp_fault_results": "from_user_input_optional",
+        "ftti_ms": "from_user_input",
+        "monitor_log_schema": "from_user_input"
+      },
+      "outputs": {
+        "latency_report": "latency_report"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s06_rmon_closed_course_trip_validation",
+      "skill_name": "rmon-closed-course-trip-validation",
+      "inputs": {
+        "trip_rate_report": "s04_rmon_trip_rate_measurement.trip_rate_report",
+        "latency_report": "s05_rmon_detection_latency_measurement.latency_report",
+        "estop_test_record": "from_user_input",
+        "test_site_plan": "from_user_input"
+      },
+      "outputs": {
+        "course_validation_record": "course_validation_record"
+      },
+      "condition": "physical_system == true",
+      "parallel_group": 4
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_rmon_fault_injection_plan",
+      "to_step": "s02_rmon_linux_netem_stress_timing",
+      "data_type": "rmon-fault-injection-plan",
+      "field_mapping": {
+        "fault_injection_plan": "fault_injection_plan"
+      }
+    },
+    {
+      "from_step": "s01_rmon_fault_injection_plan",
+      "to_step": "s03_rmon_can_vcan_replay_test",
+      "data_type": "rmon-fault-injection-plan",
+      "field_mapping": {
+        "fault_injection_plan": "fault_injection_plan"
+      }
+    },
+    {
+      "from_step": "s02_rmon_linux_netem_stress_timing",
+      "to_step": "s04_rmon_trip_rate_measurement",
+      "data_type": "rmon-linux-netem-stress-timing",
+      "field_mapping": {
+        "timing_fault_results": "timing_fault_results"
+      }
+    },
+    {
+      "from_step": "s03_rmon_can_vcan_replay_test",
+      "to_step": "s04_rmon_trip_rate_measurement",
+      "data_type": "rmon-can-vcan-replay-test",
+      "field_mapping": {
+        "can_replay_results": "can_replay_results"
+      }
+    },
+    {
+      "from_step": "s04_rmon_trip_rate_measurement",
+      "to_step": "s06_rmon_closed_course_trip_validation",
+      "data_type": "rmon-trip-rate-measurement",
+      "field_mapping": {
+        "trip_rate_report": "trip_rate_report"
+      }
+    },
+    {
+      "from_step": "s05_rmon_detection_latency_measurement",
+      "to_step": "s06_rmon_closed_course_trip_validation",
+      "data_type": "rmon-detection-latency-measurement",
+      "field_mapping": {
+        "latency_report": "latency_report"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "operating_envelope",
+    "independence_plan",
+    "temporal_properties",
+    "test_interface",
+    "can_log",
+    "dbc_file",
+    "py_fault_results",
+    "cpp_fault_results",
+    "nominal_run_log",
+    "ftti_ms",
+    "monitor_log_schema",
+    "estop_test_record",
+    "test_site_plan"
+  ],
+  "terminal_outputs": [
+    "course_validation_record"
+  ],
+  "parallel_groups": [
+    [
+      "s01_rmon_fault_injection_plan",
+      "s05_rmon_detection_latency_measurement"
+    ],
+    [
+      "s02_rmon_linux_netem_stress_timing",
+      "s03_rmon_can_vcan_replay_test"
+    ],
+    [
+      "s04_rmon_trip_rate_measurement"
+    ],
+    [
+      "s06_rmon_closed_course_trip_validation"
+    ]
+  ],
+  "estimated_cost": 6,
+  "critical_path": [
+    "s01_rmon_fault_injection_plan",
+    "s03_rmon_can_vcan_replay_test",
+    "s04_rmon_trip_rate_measurement",
+    "s06_rmon_closed_course_trip_validation"
+  ]
+}

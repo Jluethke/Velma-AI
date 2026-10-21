@@ -1,0 +1,279 @@
+{
+  "name": "motion-planning-control-longitudinal",
+  "description": "Speed control only: spec intake, optional read-only log and model fit, limiter, road load feedforward, anti-windup PID and SIMC tuning with logged step responses.",
+  "steps": [
+    {
+      "id": "s01_ctrl_spec_intake",
+      "skill_name": "ctrl-spec-intake",
+      "inputs": {
+        "vehicle_params": "from_user_input",
+        "motion_limits": "from_user_input",
+        "test_site": "from_user_input",
+        "estop_description": "from_user_input",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "control_spec": "control_spec",
+        "open_questions": "open_questions"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_ctrl_can_readonly_log",
+      "skill_name": "ctrl-can-readonly-log",
+      "inputs": {
+        "control_spec": "s01_ctrl_spec_intake.control_spec",
+        "can_interface": "from_user_input",
+        "dbc_file": "from_user_input"
+      },
+      "outputs": {
+        "drive_log": "drive_log"
+      },
+      "condition": "collect_vehicle_logs == true",
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_ctrl_bicycle_model_py",
+      "skill_name": "ctrl-bicycle-model-py",
+      "inputs": {
+        "control_spec": "s01_ctrl_spec_intake.control_spec",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "plant_model": "plant_model"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_ctrl_model_fit_from_logs",
+      "skill_name": "ctrl-model-fit-from-logs",
+      "inputs": {
+        "plant_model": "s03_ctrl_bicycle_model_py.plant_model",
+        "drive_log": "s02_ctrl_can_readonly_log.drive_log"
+      },
+      "outputs": {
+        "model_fit_report": "model_fit_report"
+      },
+      "condition": "collect_vehicle_logs == true",
+      "parallel_group": 3
+    },
+    {
+      "id": "s05_ctrl_actuator_rate_saturation",
+      "skill_name": "ctrl-actuator-rate-saturation",
+      "inputs": {
+        "control_spec": "s01_ctrl_spec_intake.control_spec",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "actuator_limiter": "actuator_limiter"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s06_ctrl_longitudinal_feedforward",
+      "skill_name": "ctrl-longitudinal-feedforward",
+      "inputs": {
+        "plant_model": "s03_ctrl_bicycle_model_py.plant_model",
+        "control_spec": "s01_ctrl_spec_intake.control_spec",
+        "drive_log": "s02_ctrl_can_readonly_log.drive_log"
+      },
+      "outputs": {
+        "feedforward_model": "feedforward_model"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s07_ctrl_pid_antiwindup",
+      "skill_name": "ctrl-pid-antiwindup",
+      "inputs": {
+        "feedforward_model": "s06_ctrl_longitudinal_feedforward.feedforward_model",
+        "actuator_limiter": "s05_ctrl_actuator_rate_saturation.actuator_limiter",
+        "control_spec": "s01_ctrl_spec_intake.control_spec"
+      },
+      "outputs": {
+        "longitudinal_controller": "longitudinal_controller"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s08_ctrl_pid_step_tuning",
+      "skill_name": "ctrl-pid-step-tuning",
+      "inputs": {
+        "longitudinal_controller": "s07_ctrl_pid_antiwindup.longitudinal_controller",
+        "plant_model": "s03_ctrl_bicycle_model_py.plant_model",
+        "control_spec": "s01_ctrl_spec_intake.control_spec",
+        "model_fit_report": "s04_ctrl_model_fit_from_logs.model_fit_report"
+      },
+      "outputs": {
+        "pid_gains": "pid_gains",
+        "step_response_log": "step_response_log"
+      },
+      "parallel_group": 5
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_ctrl_spec_intake",
+      "to_step": "s02_ctrl_can_readonly_log",
+      "data_type": "ctrl-spec-intake",
+      "field_mapping": {
+        "control_spec": "control_spec"
+      }
+    },
+    {
+      "from_step": "s01_ctrl_spec_intake",
+      "to_step": "s03_ctrl_bicycle_model_py",
+      "data_type": "ctrl-spec-intake",
+      "field_mapping": {
+        "control_spec": "control_spec"
+      }
+    },
+    {
+      "from_step": "s03_ctrl_bicycle_model_py",
+      "to_step": "s04_ctrl_model_fit_from_logs",
+      "data_type": "ctrl-bicycle-model-py",
+      "field_mapping": {
+        "plant_model": "plant_model"
+      }
+    },
+    {
+      "from_step": "s02_ctrl_can_readonly_log",
+      "to_step": "s04_ctrl_model_fit_from_logs",
+      "data_type": "ctrl-can-readonly-log",
+      "field_mapping": {
+        "drive_log": "drive_log"
+      }
+    },
+    {
+      "from_step": "s01_ctrl_spec_intake",
+      "to_step": "s05_ctrl_actuator_rate_saturation",
+      "data_type": "ctrl-spec-intake",
+      "field_mapping": {
+        "control_spec": "control_spec"
+      }
+    },
+    {
+      "from_step": "s03_ctrl_bicycle_model_py",
+      "to_step": "s06_ctrl_longitudinal_feedforward",
+      "data_type": "ctrl-bicycle-model-py",
+      "field_mapping": {
+        "plant_model": "plant_model"
+      }
+    },
+    {
+      "from_step": "s01_ctrl_spec_intake",
+      "to_step": "s06_ctrl_longitudinal_feedforward",
+      "data_type": "ctrl-spec-intake",
+      "field_mapping": {
+        "control_spec": "control_spec"
+      }
+    },
+    {
+      "from_step": "s02_ctrl_can_readonly_log",
+      "to_step": "s06_ctrl_longitudinal_feedforward",
+      "data_type": "ctrl-can-readonly-log",
+      "field_mapping": {
+        "drive_log": "drive_log"
+      }
+    },
+    {
+      "from_step": "s06_ctrl_longitudinal_feedforward",
+      "to_step": "s07_ctrl_pid_antiwindup",
+      "data_type": "ctrl-longitudinal-feedforward",
+      "field_mapping": {
+        "feedforward_model": "feedforward_model"
+      }
+    },
+    {
+      "from_step": "s05_ctrl_actuator_rate_saturation",
+      "to_step": "s07_ctrl_pid_antiwindup",
+      "data_type": "ctrl-actuator-rate-saturation",
+      "field_mapping": {
+        "actuator_limiter": "actuator_limiter"
+      }
+    },
+    {
+      "from_step": "s01_ctrl_spec_intake",
+      "to_step": "s07_ctrl_pid_antiwindup",
+      "data_type": "ctrl-spec-intake",
+      "field_mapping": {
+        "control_spec": "control_spec"
+      }
+    },
+    {
+      "from_step": "s07_ctrl_pid_antiwindup",
+      "to_step": "s08_ctrl_pid_step_tuning",
+      "data_type": "ctrl-pid-antiwindup",
+      "field_mapping": {
+        "longitudinal_controller": "longitudinal_controller"
+      }
+    },
+    {
+      "from_step": "s03_ctrl_bicycle_model_py",
+      "to_step": "s08_ctrl_pid_step_tuning",
+      "data_type": "ctrl-bicycle-model-py",
+      "field_mapping": {
+        "plant_model": "plant_model"
+      }
+    },
+    {
+      "from_step": "s01_ctrl_spec_intake",
+      "to_step": "s08_ctrl_pid_step_tuning",
+      "data_type": "ctrl-spec-intake",
+      "field_mapping": {
+        "control_spec": "control_spec"
+      }
+    },
+    {
+      "from_step": "s04_ctrl_model_fit_from_logs",
+      "to_step": "s08_ctrl_pid_step_tuning",
+      "data_type": "ctrl-model-fit-from-logs",
+      "field_mapping": {
+        "model_fit_report": "model_fit_report"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "vehicle_params",
+    "motion_limits",
+    "test_site",
+    "estop_description",
+    "stack",
+    "can_interface",
+    "dbc_file",
+    "project_dir"
+  ],
+  "terminal_outputs": [
+    "open_questions",
+    "pid_gains",
+    "step_response_log"
+  ],
+  "parallel_groups": [
+    [
+      "s01_ctrl_spec_intake"
+    ],
+    [
+      "s02_ctrl_can_readonly_log",
+      "s03_ctrl_bicycle_model_py",
+      "s05_ctrl_actuator_rate_saturation"
+    ],
+    [
+      "s04_ctrl_model_fit_from_logs",
+      "s06_ctrl_longitudinal_feedforward"
+    ],
+    [
+      "s07_ctrl_pid_antiwindup"
+    ],
+    [
+      "s08_ctrl_pid_step_tuning"
+    ]
+  ],
+  "estimated_cost": 8,
+  "critical_path": [
+    "s01_ctrl_spec_intake",
+    "s03_ctrl_bicycle_model_py",
+    "s06_ctrl_longitudinal_feedforward",
+    "s07_ctrl_pid_antiwindup",
+    "s08_ctrl_pid_step_tuning"
+  ]
+}

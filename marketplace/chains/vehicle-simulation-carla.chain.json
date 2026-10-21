@@ -1,0 +1,276 @@
+{
+  "name": "vehicle-simulation-carla",
+  "description": "CARLA path: server and client setup, synchronous mode, sensor rig, seed determinism, scenario authoring and library, scenario_runner execution, recorder replay and KPIs.",
+  "steps": [
+    {
+      "id": "s01_vsim_carla_server_setup",
+      "skill_name": "vsim-carla-server-setup",
+      "inputs": {
+        "carla_version": "from_user_input",
+        "host_os": "from_user_input",
+        "gpu_model": "from_user_input"
+      },
+      "outputs": {
+        "carla_server_cmd": "carla_server_cmd",
+        "carla_client_env": "carla_client_env"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_vsim_carla_sync_mode",
+      "skill_name": "vsim-carla-sync-mode",
+      "inputs": {
+        "carla_client_env": "s01_vsim_carla_server_setup.carla_client_env",
+        "fixed_delta_seconds": "from_user_input"
+      },
+      "outputs": {
+        "sync_loop_script": "sync_loop_script"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_vsim_carla_sensor_rig",
+      "skill_name": "vsim-carla-sensor-rig",
+      "inputs": {
+        "sync_loop_script": "s02_vsim_carla_sync_mode.sync_loop_script",
+        "sensor_spec": "from_user_input"
+      },
+      "outputs": {
+        "sensor_rig_script": "sensor_rig_script",
+        "sensor_frame_log": "sensor_frame_log"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_vsim_carla_seed_determinism",
+      "skill_name": "vsim-carla-seed-determinism",
+      "inputs": {
+        "sensor_rig_script": "s03_vsim_carla_sensor_rig.sensor_rig_script",
+        "sim_seed": "from_user_input"
+      },
+      "outputs": {
+        "determinism_report": "determinism_report"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s05_vsim_openscenario_author",
+      "skill_name": "vsim-openscenario-author",
+      "inputs": {
+        "scenario_description": "from_user_input",
+        "opendrive_file": "from_user_input"
+      },
+      "outputs": {
+        "xosc_file": "xosc_file"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s06_vsim_esmini_scenario_check",
+      "skill_name": "vsim-esmini-scenario-check",
+      "inputs": {
+        "xosc_file": "s05_vsim_openscenario_author.xosc_file"
+      },
+      "outputs": {
+        "scenario_check_report": "scenario_check_report"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s07_vsim_fault_scenario_library",
+      "skill_name": "vsim-fault-scenario-library",
+      "inputs": {
+        "xosc_file": "s05_vsim_openscenario_author.xosc_file",
+        "scenario_check_report": "s06_vsim_esmini_scenario_check.scenario_check_report",
+        "odd_description": "from_user_input"
+      },
+      "outputs": {
+        "scenario_library": "scenario_library"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s08_vsim_scenario_runner_exec",
+      "skill_name": "vsim-scenario-runner-exec",
+      "inputs": {
+        "scenario_library": "s07_vsim_fault_scenario_library.scenario_library",
+        "carla_server_cmd": "s01_vsim_carla_server_setup.carla_server_cmd",
+        "sim_seed": "from_user_input",
+        "determinism_report": "s04_vsim_carla_seed_determinism.determinism_report"
+      },
+      "outputs": {
+        "scenario_results": "scenario_results",
+        "recorder_files": "recorder_files"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s09_vsim_carla_recorder_replay",
+      "skill_name": "vsim-carla-recorder-replay",
+      "inputs": {
+        "carla_client_env": "s01_vsim_carla_server_setup.carla_client_env",
+        "recorder_files": "s08_vsim_scenario_runner_exec.recorder_files"
+      },
+      "outputs": {
+        "replay_report": "replay_report"
+      },
+      "parallel_group": 6
+    },
+    {
+      "id": "s10_vsim_scenario_kpis",
+      "skill_name": "vsim-scenario-kpis",
+      "inputs": {
+        "run_logs": "from_user_input",
+        "stack": "from_user_input",
+        "kpi_thresholds": "from_user_input"
+      },
+      "outputs": {
+        "kpi_report": "kpi_report"
+      },
+      "parallel_group": 1
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_vsim_carla_server_setup",
+      "to_step": "s02_vsim_carla_sync_mode",
+      "data_type": "vsim-carla-server-setup",
+      "field_mapping": {
+        "carla_client_env": "carla_client_env"
+      }
+    },
+    {
+      "from_step": "s02_vsim_carla_sync_mode",
+      "to_step": "s03_vsim_carla_sensor_rig",
+      "data_type": "vsim-carla-sync-mode",
+      "field_mapping": {
+        "sync_loop_script": "sync_loop_script"
+      }
+    },
+    {
+      "from_step": "s03_vsim_carla_sensor_rig",
+      "to_step": "s04_vsim_carla_seed_determinism",
+      "data_type": "vsim-carla-sensor-rig",
+      "field_mapping": {
+        "sensor_rig_script": "sensor_rig_script"
+      }
+    },
+    {
+      "from_step": "s05_vsim_openscenario_author",
+      "to_step": "s06_vsim_esmini_scenario_check",
+      "data_type": "vsim-openscenario-author",
+      "field_mapping": {
+        "xosc_file": "xosc_file"
+      }
+    },
+    {
+      "from_step": "s05_vsim_openscenario_author",
+      "to_step": "s07_vsim_fault_scenario_library",
+      "data_type": "vsim-openscenario-author",
+      "field_mapping": {
+        "xosc_file": "xosc_file"
+      }
+    },
+    {
+      "from_step": "s06_vsim_esmini_scenario_check",
+      "to_step": "s07_vsim_fault_scenario_library",
+      "data_type": "vsim-esmini-scenario-check",
+      "field_mapping": {
+        "scenario_check_report": "scenario_check_report"
+      }
+    },
+    {
+      "from_step": "s07_vsim_fault_scenario_library",
+      "to_step": "s08_vsim_scenario_runner_exec",
+      "data_type": "vsim-fault-scenario-library",
+      "field_mapping": {
+        "scenario_library": "scenario_library"
+      }
+    },
+    {
+      "from_step": "s01_vsim_carla_server_setup",
+      "to_step": "s08_vsim_scenario_runner_exec",
+      "data_type": "vsim-carla-server-setup",
+      "field_mapping": {
+        "carla_server_cmd": "carla_server_cmd"
+      }
+    },
+    {
+      "from_step": "s04_vsim_carla_seed_determinism",
+      "to_step": "s08_vsim_scenario_runner_exec",
+      "data_type": "vsim-carla-seed-determinism",
+      "field_mapping": {
+        "determinism_report": "determinism_report"
+      }
+    },
+    {
+      "from_step": "s01_vsim_carla_server_setup",
+      "to_step": "s09_vsim_carla_recorder_replay",
+      "data_type": "vsim-carla-server-setup",
+      "field_mapping": {
+        "carla_client_env": "carla_client_env"
+      }
+    },
+    {
+      "from_step": "s08_vsim_scenario_runner_exec",
+      "to_step": "s09_vsim_carla_recorder_replay",
+      "data_type": "vsim-scenario-runner-exec",
+      "field_mapping": {
+        "recorder_files": "recorder_files"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "carla_version",
+    "host_os",
+    "gpu_model",
+    "fixed_delta_seconds",
+    "sensor_spec",
+    "sim_seed",
+    "scenario_description",
+    "opendrive_file",
+    "odd_description",
+    "run_logs",
+    "stack",
+    "kpi_thresholds"
+  ],
+  "terminal_outputs": [
+    "determinism_report",
+    "scenario_results",
+    "replay_report",
+    "kpi_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_vsim_carla_server_setup",
+      "s05_vsim_openscenario_author",
+      "s10_vsim_scenario_kpis"
+    ],
+    [
+      "s02_vsim_carla_sync_mode",
+      "s06_vsim_esmini_scenario_check"
+    ],
+    [
+      "s03_vsim_carla_sensor_rig",
+      "s07_vsim_fault_scenario_library"
+    ],
+    [
+      "s04_vsim_carla_seed_determinism"
+    ],
+    [
+      "s08_vsim_scenario_runner_exec"
+    ],
+    [
+      "s09_vsim_carla_recorder_replay"
+    ]
+  ],
+  "estimated_cost": 10,
+  "critical_path": [
+    "s01_vsim_carla_server_setup",
+    "s02_vsim_carla_sync_mode",
+    "s03_vsim_carla_sensor_rig",
+    "s04_vsim_carla_seed_determinism",
+    "s08_vsim_scenario_runner_exec",
+    "s09_vsim_carla_recorder_replay"
+  ]
+}

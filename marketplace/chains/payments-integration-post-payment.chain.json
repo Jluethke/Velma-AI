@@ -1,0 +1,226 @@
+{
+  "name": "payments-integration-post-payment",
+  "description": "Money after the charge on Stripe: test mode, minor units, idempotency, webhook deduplication, refunds, disputes with evidence, multi-currency settlement and payout reconciliation.",
+  "steps": [
+    {
+      "id": "s01_pay_stripe_integration_choice",
+      "skill_name": "pay-stripe-integration-choice",
+      "inputs": {
+        "product_requirements": "from_user_input",
+        "provider": "from_user_input",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "integration_plan": "integration_plan"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_pay_test_mode_setup",
+      "skill_name": "pay-test-mode-setup",
+      "inputs": {
+        "project_dir": "from_user_input",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "test_env": "test_env"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s03_pay_money_minor_units",
+      "skill_name": "pay-money-minor-units",
+      "inputs": {
+        "project_dir": "from_user_input",
+        "currencies": "from_user_input"
+      },
+      "outputs": {
+        "money_audit": "money_audit",
+        "currency_exponents": "currency_exponents"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s04_pay_idempotency_keys",
+      "skill_name": "pay-idempotency-keys",
+      "inputs": {
+        "project_dir": "from_user_input",
+        "stack": "from_user_input",
+        "provider": "from_user_input"
+      },
+      "outputs": {
+        "idempotency_audit": "idempotency_audit"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s05_pay_webhook_dedup_ordering",
+      "skill_name": "pay-webhook-dedup-ordering",
+      "inputs": {
+        "project_dir": "from_user_input",
+        "database": "from_user_input",
+        "webhook_handler_file": "from_user_input"
+      },
+      "outputs": {
+        "event_store_schema": "event_store_schema",
+        "dedup_test_results": "dedup_test_results"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s06_pay_refunds_partial",
+      "skill_name": "pay-refunds-partial",
+      "inputs": {
+        "project_dir": "from_user_input",
+        "stack": "from_user_input",
+        "idempotency_audit": "s04_pay_idempotency_keys.idempotency_audit",
+        "currency_exponents": "s03_pay_money_minor_units.currency_exponents"
+      },
+      "outputs": {
+        "refund_procedure": "refund_procedure"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s07_pay_disputes_evidence",
+      "skill_name": "pay-disputes-evidence",
+      "inputs": {
+        "event_store_schema": "s05_pay_webhook_dedup_ordering.event_store_schema",
+        "test_env": "s02_pay_test_mode_setup.test_env"
+      },
+      "outputs": {
+        "dispute_runbook": "dispute_runbook"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s08_pay_multi_currency",
+      "skill_name": "pay-multi-currency",
+      "inputs": {
+        "currencies": "from_user_input",
+        "currency_exponents": "s03_pay_money_minor_units.currency_exponents",
+        "integration_plan": "s01_pay_stripe_integration_choice.integration_plan"
+      },
+      "outputs": {
+        "currency_config": "currency_config"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s09_pay_payout_reconciliation",
+      "skill_name": "pay-payout-reconciliation",
+      "inputs": {
+        "test_env": "s02_pay_test_mode_setup.test_env",
+        "database": "from_user_input",
+        "currency_exponents": "s03_pay_money_minor_units.currency_exponents"
+      },
+      "outputs": {
+        "reconciliation_report": "reconciliation_report"
+      },
+      "parallel_group": 2
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s04_pay_idempotency_keys",
+      "to_step": "s06_pay_refunds_partial",
+      "data_type": "pay-idempotency-keys",
+      "field_mapping": {
+        "idempotency_audit": "idempotency_audit"
+      }
+    },
+    {
+      "from_step": "s03_pay_money_minor_units",
+      "to_step": "s06_pay_refunds_partial",
+      "data_type": "pay-money-minor-units",
+      "field_mapping": {
+        "currency_exponents": "currency_exponents"
+      }
+    },
+    {
+      "from_step": "s05_pay_webhook_dedup_ordering",
+      "to_step": "s07_pay_disputes_evidence",
+      "data_type": "pay-webhook-dedup-ordering",
+      "field_mapping": {
+        "event_store_schema": "event_store_schema"
+      }
+    },
+    {
+      "from_step": "s02_pay_test_mode_setup",
+      "to_step": "s07_pay_disputes_evidence",
+      "data_type": "pay-test-mode-setup",
+      "field_mapping": {
+        "test_env": "test_env"
+      }
+    },
+    {
+      "from_step": "s03_pay_money_minor_units",
+      "to_step": "s08_pay_multi_currency",
+      "data_type": "pay-money-minor-units",
+      "field_mapping": {
+        "currency_exponents": "currency_exponents"
+      }
+    },
+    {
+      "from_step": "s01_pay_stripe_integration_choice",
+      "to_step": "s08_pay_multi_currency",
+      "data_type": "pay-stripe-integration-choice",
+      "field_mapping": {
+        "integration_plan": "integration_plan"
+      }
+    },
+    {
+      "from_step": "s02_pay_test_mode_setup",
+      "to_step": "s09_pay_payout_reconciliation",
+      "data_type": "pay-test-mode-setup",
+      "field_mapping": {
+        "test_env": "test_env"
+      }
+    },
+    {
+      "from_step": "s03_pay_money_minor_units",
+      "to_step": "s09_pay_payout_reconciliation",
+      "data_type": "pay-money-minor-units",
+      "field_mapping": {
+        "currency_exponents": "currency_exponents"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "product_requirements",
+    "provider",
+    "stack",
+    "project_dir",
+    "currencies",
+    "database",
+    "webhook_handler_file"
+  ],
+  "terminal_outputs": [
+    "money_audit",
+    "dedup_test_results",
+    "refund_procedure",
+    "dispute_runbook",
+    "currency_config",
+    "reconciliation_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_pay_stripe_integration_choice",
+      "s02_pay_test_mode_setup",
+      "s03_pay_money_minor_units",
+      "s04_pay_idempotency_keys",
+      "s05_pay_webhook_dedup_ordering"
+    ],
+    [
+      "s06_pay_refunds_partial",
+      "s07_pay_disputes_evidence",
+      "s08_pay_multi_currency",
+      "s09_pay_payout_reconciliation"
+    ]
+  ],
+  "estimated_cost": 9,
+  "critical_path": [
+    "s02_pay_test_mode_setup",
+    "s09_pay_payout_reconciliation"
+  ]
+}

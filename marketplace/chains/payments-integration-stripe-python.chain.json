@@ -1,0 +1,213 @@
+{
+  "name": "payments-integration-stripe-python",
+  "description": "Stripe on a Python server end to end: test mode, minor units, idempotency keys, PaymentIntent endpoint, local webhooks with verified signatures, deduplication and refunds.",
+  "steps": [
+    {
+      "id": "s01_pay_test_mode_setup",
+      "skill_name": "pay-test-mode-setup",
+      "inputs": {
+        "project_dir": "from_user_input",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "test_env": "test_env"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_pay_money_minor_units",
+      "skill_name": "pay-money-minor-units",
+      "inputs": {
+        "project_dir": "from_user_input",
+        "currencies": "from_user_input"
+      },
+      "outputs": {
+        "money_audit": "money_audit",
+        "currency_exponents": "currency_exponents"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s03_pay_idempotency_keys",
+      "skill_name": "pay-idempotency-keys",
+      "inputs": {
+        "project_dir": "from_user_input",
+        "stack": "from_user_input",
+        "provider": "from_user_input"
+      },
+      "outputs": {
+        "idempotency_audit": "idempotency_audit"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s04_pay_py_payment_intent",
+      "skill_name": "pay-py-payment-intent",
+      "inputs": {
+        "project_dir": "from_user_input",
+        "test_env": "s01_pay_test_mode_setup.test_env",
+        "currency_exponents": "s02_pay_money_minor_units.currency_exponents",
+        "idempotency_audit": "s03_pay_idempotency_keys.idempotency_audit"
+      },
+      "outputs": {
+        "payment_intent_endpoint": "payment_intent_endpoint"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s05_pay_stripe_cli_local_webhooks",
+      "skill_name": "pay-stripe-cli-local-webhooks",
+      "inputs": {
+        "test_env": "s01_pay_test_mode_setup.test_env",
+        "webhook_path": "from_user_input",
+        "local_port": "from_user_input"
+      },
+      "outputs": {
+        "webhook_secret_local": "webhook_secret_local",
+        "cli_trigger_log": "cli_trigger_log"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s06_pay_py_webhook_verify",
+      "skill_name": "pay-py-webhook-verify",
+      "inputs": {
+        "project_dir": "from_user_input",
+        "python_framework": "from_user_input",
+        "webhook_secret_local": "s05_pay_stripe_cli_local_webhooks.webhook_secret_local"
+      },
+      "outputs": {
+        "webhook_handler": "webhook_handler"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s07_pay_webhook_dedup_ordering",
+      "skill_name": "pay-webhook-dedup-ordering",
+      "inputs": {
+        "project_dir": "from_user_input",
+        "database": "from_user_input",
+        "webhook_handler_file": "from_user_input"
+      },
+      "outputs": {
+        "event_store_schema": "event_store_schema",
+        "dedup_test_results": "dedup_test_results"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s08_pay_refunds_partial",
+      "skill_name": "pay-refunds-partial",
+      "inputs": {
+        "project_dir": "from_user_input",
+        "stack": "from_user_input",
+        "idempotency_audit": "s03_pay_idempotency_keys.idempotency_audit",
+        "currency_exponents": "s02_pay_money_minor_units.currency_exponents"
+      },
+      "outputs": {
+        "refund_procedure": "refund_procedure"
+      },
+      "parallel_group": 2
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_pay_test_mode_setup",
+      "to_step": "s04_pay_py_payment_intent",
+      "data_type": "pay-test-mode-setup",
+      "field_mapping": {
+        "test_env": "test_env"
+      }
+    },
+    {
+      "from_step": "s02_pay_money_minor_units",
+      "to_step": "s04_pay_py_payment_intent",
+      "data_type": "pay-money-minor-units",
+      "field_mapping": {
+        "currency_exponents": "currency_exponents"
+      }
+    },
+    {
+      "from_step": "s03_pay_idempotency_keys",
+      "to_step": "s04_pay_py_payment_intent",
+      "data_type": "pay-idempotency-keys",
+      "field_mapping": {
+        "idempotency_audit": "idempotency_audit"
+      }
+    },
+    {
+      "from_step": "s01_pay_test_mode_setup",
+      "to_step": "s05_pay_stripe_cli_local_webhooks",
+      "data_type": "pay-test-mode-setup",
+      "field_mapping": {
+        "test_env": "test_env"
+      }
+    },
+    {
+      "from_step": "s05_pay_stripe_cli_local_webhooks",
+      "to_step": "s06_pay_py_webhook_verify",
+      "data_type": "pay-stripe-cli-local-webhooks",
+      "field_mapping": {
+        "webhook_secret_local": "webhook_secret_local"
+      }
+    },
+    {
+      "from_step": "s03_pay_idempotency_keys",
+      "to_step": "s08_pay_refunds_partial",
+      "data_type": "pay-idempotency-keys",
+      "field_mapping": {
+        "idempotency_audit": "idempotency_audit"
+      }
+    },
+    {
+      "from_step": "s02_pay_money_minor_units",
+      "to_step": "s08_pay_refunds_partial",
+      "data_type": "pay-money-minor-units",
+      "field_mapping": {
+        "currency_exponents": "currency_exponents"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "project_dir",
+    "stack",
+    "currencies",
+    "provider",
+    "webhook_path",
+    "local_port",
+    "python_framework",
+    "database",
+    "webhook_handler_file"
+  ],
+  "terminal_outputs": [
+    "money_audit",
+    "payment_intent_endpoint",
+    "cli_trigger_log",
+    "webhook_handler",
+    "event_store_schema",
+    "dedup_test_results",
+    "refund_procedure"
+  ],
+  "parallel_groups": [
+    [
+      "s01_pay_test_mode_setup",
+      "s02_pay_money_minor_units",
+      "s03_pay_idempotency_keys",
+      "s07_pay_webhook_dedup_ordering"
+    ],
+    [
+      "s04_pay_py_payment_intent",
+      "s05_pay_stripe_cli_local_webhooks",
+      "s08_pay_refunds_partial"
+    ],
+    [
+      "s06_pay_py_webhook_verify"
+    ]
+  ],
+  "estimated_cost": 8,
+  "critical_path": [
+    "s01_pay_test_mode_setup",
+    "s05_pay_stripe_cli_local_webhooks",
+    "s06_pay_py_webhook_verify"
+  ]
+}

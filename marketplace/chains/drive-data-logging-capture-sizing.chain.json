@@ -1,0 +1,136 @@
+{
+  "name": "drive-data-logging-capture-sizing",
+  "description": "Size a logger from measurements: pick formats, measure sensor rates and sustained disk throughput, compute the storage budget, then audit a test drive for drops.",
+  "steps": [
+    {
+      "id": "s01_dlog_format_select",
+      "skill_name": "dlog-format-select",
+      "inputs": {
+        "data_sources": "from_user_input",
+        "stack": "from_user_input",
+        "replay_target": "from_user_input_optional"
+      },
+      "outputs": {
+        "log_format_decision": "log_format_decision"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_dlog_sensor_rate_inventory",
+      "skill_name": "dlog-sensor-rate-inventory",
+      "inputs": {
+        "data_sources": "from_user_input",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "measured_rates": "measured_rates"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s03_dlog_disk_throughput_measure",
+      "skill_name": "dlog-disk-throughput-measure",
+      "inputs": {
+        "log_volume_path": "from_user_input",
+        "measured_rates": "s02_dlog_sensor_rate_inventory.measured_rates"
+      },
+      "outputs": {
+        "disk_throughput": "disk_throughput"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_dlog_storage_budget",
+      "skill_name": "dlog-storage-budget",
+      "inputs": {
+        "measured_rates": "s02_dlog_sensor_rate_inventory.measured_rates",
+        "disk_throughput": "s03_dlog_disk_throughput_measure.disk_throughput",
+        "storage_capacity_bytes": "from_user_input",
+        "retention_policy": "from_user_input_optional"
+      },
+      "outputs": {
+        "storage_budget": "storage_budget"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s05_dlog_drop_audit",
+      "skill_name": "dlog-drop-audit",
+      "inputs": {
+        "log_dir": "from_user_input",
+        "measured_rates": "s02_dlog_sensor_rate_inventory.measured_rates"
+      },
+      "outputs": {
+        "drop_report": "drop_report"
+      },
+      "parallel_group": 2
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s02_dlog_sensor_rate_inventory",
+      "to_step": "s03_dlog_disk_throughput_measure",
+      "data_type": "dlog-sensor-rate-inventory",
+      "field_mapping": {
+        "measured_rates": "measured_rates"
+      }
+    },
+    {
+      "from_step": "s02_dlog_sensor_rate_inventory",
+      "to_step": "s04_dlog_storage_budget",
+      "data_type": "dlog-sensor-rate-inventory",
+      "field_mapping": {
+        "measured_rates": "measured_rates"
+      }
+    },
+    {
+      "from_step": "s03_dlog_disk_throughput_measure",
+      "to_step": "s04_dlog_storage_budget",
+      "data_type": "dlog-disk-throughput-measure",
+      "field_mapping": {
+        "disk_throughput": "disk_throughput"
+      }
+    },
+    {
+      "from_step": "s02_dlog_sensor_rate_inventory",
+      "to_step": "s05_dlog_drop_audit",
+      "data_type": "dlog-sensor-rate-inventory",
+      "field_mapping": {
+        "measured_rates": "measured_rates"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "data_sources",
+    "stack",
+    "replay_target",
+    "log_volume_path",
+    "storage_capacity_bytes",
+    "retention_policy",
+    "log_dir"
+  ],
+  "terminal_outputs": [
+    "log_format_decision",
+    "storage_budget",
+    "drop_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_dlog_format_select",
+      "s02_dlog_sensor_rate_inventory"
+    ],
+    [
+      "s03_dlog_disk_throughput_measure",
+      "s05_dlog_drop_audit"
+    ],
+    [
+      "s04_dlog_storage_budget"
+    ]
+  ],
+  "estimated_cost": 5,
+  "critical_path": [
+    "s02_dlog_sensor_rate_inventory",
+    "s03_dlog_disk_throughput_measure",
+    "s04_dlog_storage_budget"
+  ]
+}

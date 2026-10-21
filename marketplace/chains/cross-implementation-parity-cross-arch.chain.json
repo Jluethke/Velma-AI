@@ -1,0 +1,127 @@
+{
+  "name": "cross-implementation-parity-cross-arch",
+  "description": "Fingerprint environments, fix flags, measure libm differences, and run the port across the compiler matrix and on aarch64.",
+  "steps": [
+    {
+      "id": "s01_parity_env_fingerprint",
+      "skill_name": "parity-env-fingerprint",
+      "inputs": {
+        "port_repo": "from_user_input",
+        "compiler": "from_user_input",
+        "target_arch": "from_user_input"
+      },
+      "outputs": {
+        "env_fingerprint": "env_fingerprint"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_parity_fp_flag_baseline",
+      "skill_name": "parity-fp-flag-baseline",
+      "inputs": {
+        "port_repo": "from_user_input",
+        "compiler": "from_user_input",
+        "target_arch": "from_user_input"
+      },
+      "outputs": {
+        "fp_flags": "fp_flags"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s03_parity_libm_divergence",
+      "skill_name": "parity-libm-divergence",
+      "inputs": {
+        "parity_contract": "from_user_input",
+        "env_fingerprint": "s01_parity_env_fingerprint.env_fingerprint"
+      },
+      "outputs": {
+        "libm_findings": "libm_findings"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_parity_compiler_flag_matrix",
+      "skill_name": "parity-compiler-flag-matrix",
+      "inputs": {
+        "port_repo": "from_user_input",
+        "fp_flags": "s02_parity_fp_flag_baseline.fp_flags",
+        "golden_manifest": "from_user_input",
+        "comparison_policy": "from_user_input"
+      },
+      "outputs": {
+        "matrix_results": "matrix_results"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s05_parity_cross_arch_aarch64",
+      "skill_name": "parity-cross-arch-aarch64",
+      "inputs": {
+        "port_repo": "from_user_input",
+        "fp_flags": "s02_parity_fp_flag_baseline.fp_flags",
+        "golden_manifest": "from_user_input",
+        "comparison_policy": "from_user_input"
+      },
+      "outputs": {
+        "cross_arch_results": "cross_arch_results"
+      },
+      "parallel_group": 2
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_parity_env_fingerprint",
+      "to_step": "s03_parity_libm_divergence",
+      "data_type": "parity-env-fingerprint",
+      "field_mapping": {
+        "env_fingerprint": "env_fingerprint"
+      }
+    },
+    {
+      "from_step": "s02_parity_fp_flag_baseline",
+      "to_step": "s04_parity_compiler_flag_matrix",
+      "data_type": "parity-fp-flag-baseline",
+      "field_mapping": {
+        "fp_flags": "fp_flags"
+      }
+    },
+    {
+      "from_step": "s02_parity_fp_flag_baseline",
+      "to_step": "s05_parity_cross_arch_aarch64",
+      "data_type": "parity-fp-flag-baseline",
+      "field_mapping": {
+        "fp_flags": "fp_flags"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "port_repo",
+    "compiler",
+    "target_arch",
+    "parity_contract",
+    "golden_manifest",
+    "comparison_policy"
+  ],
+  "terminal_outputs": [
+    "libm_findings",
+    "matrix_results",
+    "cross_arch_results"
+  ],
+  "parallel_groups": [
+    [
+      "s01_parity_env_fingerprint",
+      "s02_parity_fp_flag_baseline"
+    ],
+    [
+      "s03_parity_libm_divergence",
+      "s04_parity_compiler_flag_matrix",
+      "s05_parity_cross_arch_aarch64"
+    ]
+  ],
+  "estimated_cost": 5,
+  "critical_path": [
+    "s02_parity_fp_flag_baseline",
+    "s05_parity_cross_arch_aarch64"
+  ]
+}

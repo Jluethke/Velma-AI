@@ -1,0 +1,927 @@
+{
+  "name": "perception-pipelines",
+  "description": "Camera and lidar perception end to end: audit and convert labels, split holdout by sequence, decide and run fine-tuning, export to ONNX and TensorRT FP16 or INT8, GPU pre and post-processing per stack, holdout mAP, model selection, tracking and MOTA, segmentation and lane evaluation, lidar ground removal and clustering, camera-lidar fusion, profiling and the end-to-end latency budget.",
+  "steps": [
+    {
+      "id": "s01_perc_label_format_audit",
+      "skill_name": "perc-label-format-audit",
+      "inputs": {
+        "dataset_dir": "from_user_input",
+        "label_format": "from_user_input",
+        "class_list": "from_user_input"
+      },
+      "outputs": {
+        "dataset_index": "dataset_index",
+        "label_audit_report": "label_audit_report"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_perc_kitti_to_coco_convert",
+      "skill_name": "perc-kitti-to-coco-convert",
+      "inputs": {
+        "dataset_index": "s01_perc_label_format_audit.dataset_index",
+        "label_format": "from_user_input",
+        "class_list": "from_user_input"
+      },
+      "outputs": {
+        "coco_annotations": "coco_annotations"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_perc_holdout_split_by_sequence",
+      "skill_name": "perc-holdout-split-by-sequence",
+      "inputs": {
+        "coco_annotations": "s02_perc_kitti_to_coco_convert.coco_annotations",
+        "sequence_key": "from_user_input_optional",
+        "holdout_fraction": "from_user_input"
+      },
+      "outputs": {
+        "train_annotations": "train_annotations",
+        "val_annotations": "val_annotations",
+        "holdout_annotations": "holdout_annotations",
+        "split_report": "split_report"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_perc_train_vs_finetune_decision",
+      "skill_name": "perc-train-vs-finetune-decision",
+      "inputs": {
+        "split_report": "s03_perc_holdout_split_by_sequence.split_report",
+        "class_list": "from_user_input",
+        "pretrained_candidates": "from_user_input",
+        "accuracy_target": "from_user_input"
+      },
+      "outputs": {
+        "training_plan": "training_plan"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s05_perc_py_ultralytics_finetune",
+      "skill_name": "perc-py-ultralytics-finetune",
+      "inputs": {
+        "training_plan": "s04_perc_train_vs_finetune_decision.training_plan",
+        "train_annotations": "s03_perc_holdout_split_by_sequence.train_annotations",
+        "val_annotations": "s03_perc_holdout_split_by_sequence.val_annotations",
+        "dataset_dir": "from_user_input"
+      },
+      "outputs": {
+        "trained_checkpoint": "trained_checkpoint",
+        "training_log": "training_log"
+      },
+      "condition": "training_plan.path != 'use_as_is'",
+      "parallel_group": 5
+    },
+    {
+      "id": "s06_perc_onnx_export_verify",
+      "skill_name": "perc-onnx-export-verify",
+      "inputs": {
+        "trained_checkpoint": "s05_perc_py_ultralytics_finetune.trained_checkpoint",
+        "input_shape": "from_user_input",
+        "holdout_annotations": "s03_perc_holdout_split_by_sequence.holdout_annotations"
+      },
+      "outputs": {
+        "onnx_model": "onnx_model",
+        "onnx_parity_report": "onnx_parity_report"
+      },
+      "parallel_group": 6
+    },
+    {
+      "id": "s07_perc_preprocess_spec_extract",
+      "skill_name": "perc-preprocess-spec-extract",
+      "inputs": {
+        "trained_checkpoint": "s05_perc_py_ultralytics_finetune.trained_checkpoint",
+        "training_log": "s05_perc_py_ultralytics_finetune.training_log",
+        "onnx_model": "s06_perc_onnx_export_verify.onnx_model"
+      },
+      "outputs": {
+        "preprocess_spec": "preprocess_spec"
+      },
+      "parallel_group": 7
+    },
+    {
+      "id": "s08_perc_py_gpu_preprocess",
+      "skill_name": "perc-py-gpu-preprocess",
+      "inputs": {
+        "preprocess_spec": "s07_perc_preprocess_spec_extract.preprocess_spec",
+        "holdout_annotations": "s03_perc_holdout_split_by_sequence.holdout_annotations"
+      },
+      "outputs": {
+        "py_preprocess_impl": "py_preprocess_impl"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 8
+    },
+    {
+      "id": "s09_perc_cpp_cuda_preprocess",
+      "skill_name": "perc-cpp-cuda-preprocess",
+      "inputs": {
+        "preprocess_spec": "s07_perc_preprocess_spec_extract.preprocess_spec",
+        "holdout_annotations": "s03_perc_holdout_split_by_sequence.holdout_annotations"
+      },
+      "outputs": {
+        "cpp_preprocess_impl": "cpp_preprocess_impl"
+      },
+      "condition": "stack == 'cpp'",
+      "parallel_group": 8
+    },
+    {
+      "id": "s10_perc_trtexec_fp16_engine",
+      "skill_name": "perc-trtexec-fp16-engine",
+      "inputs": {
+        "onnx_model": "s06_perc_onnx_export_verify.onnx_model",
+        "input_shape": "from_user_input",
+        "gpu_target": "from_user_input"
+      },
+      "outputs": {
+        "fp16_engine": "fp16_engine",
+        "trtexec_report": "trtexec_report"
+      },
+      "parallel_group": 7
+    },
+    {
+      "id": "s11_perc_int8_calibration_trt",
+      "skill_name": "perc-int8-calibration-trt",
+      "inputs": {
+        "onnx_model": "s06_perc_onnx_export_verify.onnx_model",
+        "preprocess_spec": "s07_perc_preprocess_spec_extract.preprocess_spec",
+        "calibration_dir": "from_user_input",
+        "input_shape": "from_user_input",
+        "gpu_target": "from_user_input"
+      },
+      "outputs": {
+        "int8_engine": "int8_engine",
+        "calibration_cache": "calibration_cache",
+        "int8_build_report": "int8_build_report"
+      },
+      "condition": "precision == 'int8'",
+      "parallel_group": 8
+    },
+    {
+      "id": "s12_perc_py_trt_runtime",
+      "skill_name": "perc-py-trt-runtime",
+      "inputs": {
+        "fp16_engine": "s10_perc_trtexec_fp16_engine.fp16_engine",
+        "int8_engine": "s11_perc_int8_calibration_trt.int8_engine",
+        "py_preprocess_impl": "s08_perc_py_gpu_preprocess.py_preprocess_impl"
+      },
+      "outputs": {
+        "py_inference_impl": "py_inference_impl"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 9
+    },
+    {
+      "id": "s13_perc_cpp_trt_runtime",
+      "skill_name": "perc-cpp-trt-runtime",
+      "inputs": {
+        "fp16_engine": "s10_perc_trtexec_fp16_engine.fp16_engine",
+        "int8_engine": "s11_perc_int8_calibration_trt.int8_engine",
+        "cpp_preprocess_impl": "s09_perc_cpp_cuda_preprocess.cpp_preprocess_impl"
+      },
+      "outputs": {
+        "cpp_inference_impl": "cpp_inference_impl"
+      },
+      "condition": "stack == 'cpp'",
+      "parallel_group": 9
+    },
+    {
+      "id": "s14_perc_py_nms_decode",
+      "skill_name": "perc-py-nms-decode",
+      "inputs": {
+        "onnx_model": "s06_perc_onnx_export_verify.onnx_model",
+        "py_inference_impl": "s12_perc_py_trt_runtime.py_inference_impl",
+        "preprocess_spec": "s07_perc_preprocess_spec_extract.preprocess_spec",
+        "nms_iou_threshold": "from_user_input",
+        "score_threshold": "from_user_input"
+      },
+      "outputs": {
+        "py_postprocess_impl": "py_postprocess_impl"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 10
+    },
+    {
+      "id": "s15_perc_cpp_efficientnms_plugin",
+      "skill_name": "perc-cpp-efficientnms-plugin",
+      "inputs": {
+        "onnx_model": "s06_perc_onnx_export_verify.onnx_model",
+        "cpp_inference_impl": "s13_perc_cpp_trt_runtime.cpp_inference_impl",
+        "preprocess_spec": "s07_perc_preprocess_spec_extract.preprocess_spec",
+        "nms_iou_threshold": "from_user_input",
+        "score_threshold": "from_user_input"
+      },
+      "outputs": {
+        "cpp_postprocess_impl": "cpp_postprocess_impl"
+      },
+      "condition": "stack == 'cpp'",
+      "parallel_group": 10
+    },
+    {
+      "id": "s16_perc_detection_map_eval",
+      "skill_name": "perc-detection-map-eval",
+      "inputs": {
+        "holdout_annotations": "s03_perc_holdout_split_by_sequence.holdout_annotations",
+        "py_postprocess_impl": "s14_perc_py_nms_decode.py_postprocess_impl",
+        "cpp_postprocess_impl": "s15_perc_cpp_efficientnms_plugin.cpp_postprocess_impl",
+        "label_format": "from_user_input"
+      },
+      "outputs": {
+        "detection_eval_report": "detection_eval_report"
+      },
+      "parallel_group": 11
+    },
+    {
+      "id": "s17_perc_model_select_pareto",
+      "skill_name": "perc-model-select-pareto",
+      "inputs": {
+        "detection_eval_report": "s16_perc_detection_map_eval.detection_eval_report",
+        "trtexec_report": "s10_perc_trtexec_fp16_engine.trtexec_report",
+        "int8_build_report": "s11_perc_int8_calibration_trt.int8_build_report",
+        "candidate_results": "from_user_input_optional",
+        "latency_budget_ms": "from_user_input",
+        "accuracy_target": "from_user_input"
+      },
+      "outputs": {
+        "model_selection": "model_selection"
+      },
+      "parallel_group": 12
+    },
+    {
+      "id": "s18_perc_mot_bytetrack_sort",
+      "skill_name": "perc-mot-bytetrack-sort",
+      "inputs": {
+        "py_postprocess_impl": "s14_perc_py_nms_decode.py_postprocess_impl",
+        "cpp_postprocess_impl": "s15_perc_cpp_efficientnms_plugin.cpp_postprocess_impl",
+        "tracker_type": "from_user_input",
+        "frame_rate": "from_user_input"
+      },
+      "outputs": {
+        "tracker_impl": "tracker_impl",
+        "track_outputs": "track_outputs"
+      },
+      "parallel_group": 11
+    },
+    {
+      "id": "s19_perc_mot_eval_trackeval",
+      "skill_name": "perc-mot-eval-trackeval",
+      "inputs": {
+        "track_outputs": "s18_perc_mot_bytetrack_sort.track_outputs",
+        "tracking_gt": "from_user_input"
+      },
+      "outputs": {
+        "tracking_eval_report": "tracking_eval_report"
+      },
+      "parallel_group": 12
+    },
+    {
+      "id": "s20_perc_drivable_area_seg_eval",
+      "skill_name": "perc-drivable-area-seg-eval",
+      "inputs": {
+        "seg_model": "from_user_input",
+        "seg_holdout_dir": "from_user_input",
+        "seg_label_spec": "from_user_input"
+      },
+      "outputs": {
+        "seg_eval_report": "seg_eval_report"
+      },
+      "condition": "run_segmentation == true",
+      "parallel_group": 1
+    },
+    {
+      "id": "s21_perc_lane_fit_eval",
+      "skill_name": "perc-lane-fit-eval",
+      "inputs": {
+        "seg_model": "from_user_input",
+        "seg_holdout_dir": "from_user_input",
+        "lane_benchmark": "from_user_input",
+        "lane_poly_degree": "from_user_input"
+      },
+      "outputs": {
+        "lane_fit_impl": "lane_fit_impl",
+        "lane_eval_report": "lane_eval_report"
+      },
+      "condition": "run_segmentation == true",
+      "parallel_group": 1
+    },
+    {
+      "id": "s22_perc_py_open3d_ground_removal",
+      "skill_name": "perc-py-open3d-ground-removal",
+      "inputs": {
+        "point_cloud_dir": "from_user_input",
+        "lidar_mount": "from_user_input"
+      },
+      "outputs": {
+        "py_nonground_clouds": "py_nonground_clouds",
+        "py_ground_report": "py_ground_report"
+      },
+      "condition": "stack == 'python' and has_lidar == true",
+      "parallel_group": 1
+    },
+    {
+      "id": "s23_perc_cpp_pcl_ground_removal",
+      "skill_name": "perc-cpp-pcl-ground-removal",
+      "inputs": {
+        "point_cloud_dir": "from_user_input",
+        "lidar_mount": "from_user_input"
+      },
+      "outputs": {
+        "cpp_nonground_clouds": "cpp_nonground_clouds",
+        "cpp_ground_report": "cpp_ground_report"
+      },
+      "condition": "stack == 'cpp' and has_lidar == true",
+      "parallel_group": 1
+    },
+    {
+      "id": "s24_perc_py_open3d_dbscan_cluster",
+      "skill_name": "perc-py-open3d-dbscan-cluster",
+      "inputs": {
+        "py_nonground_clouds": "s22_perc_py_open3d_ground_removal.py_nonground_clouds",
+        "cluster_params": "from_user_input"
+      },
+      "outputs": {
+        "py_lidar_clusters": "py_lidar_clusters"
+      },
+      "condition": "stack == 'python' and has_lidar == true",
+      "parallel_group": 2
+    },
+    {
+      "id": "s25_perc_cpp_pcl_euclidean_cluster",
+      "skill_name": "perc-cpp-pcl-euclidean-cluster",
+      "inputs": {
+        "cpp_nonground_clouds": "s23_perc_cpp_pcl_ground_removal.cpp_nonground_clouds",
+        "cluster_params": "from_user_input"
+      },
+      "outputs": {
+        "cpp_lidar_clusters": "cpp_lidar_clusters"
+      },
+      "condition": "stack == 'cpp' and has_lidar == true",
+      "parallel_group": 2
+    },
+    {
+      "id": "s26_perc_camera_lidar_calib_check",
+      "skill_name": "perc-camera-lidar-calib-check",
+      "inputs": {
+        "camera_calib": "from_user_input",
+        "point_cloud_dir": "from_user_input",
+        "image_dir": "from_user_input"
+      },
+      "outputs": {
+        "calib_check_report": "calib_check_report"
+      },
+      "condition": "has_lidar == true",
+      "parallel_group": 1
+    },
+    {
+      "id": "s27_perc_camera_lidar_late_fusion",
+      "skill_name": "perc-camera-lidar-late-fusion",
+      "inputs": {
+        "calib_check_report": "s26_perc_camera_lidar_calib_check.calib_check_report",
+        "camera_calib": "from_user_input",
+        "py_lidar_clusters": "s24_perc_py_open3d_dbscan_cluster.py_lidar_clusters",
+        "cpp_lidar_clusters": "s25_perc_cpp_pcl_euclidean_cluster.cpp_lidar_clusters",
+        "track_outputs": "s18_perc_mot_bytetrack_sort.track_outputs",
+        "max_sync_skew_ms": "from_user_input"
+      },
+      "outputs": {
+        "fused_objects": "fused_objects",
+        "fusion_report": "fusion_report"
+      },
+      "condition": "has_lidar == true",
+      "parallel_group": 12
+    },
+    {
+      "id": "s28_perc_nsys_profile_pipeline",
+      "skill_name": "perc-nsys-profile-pipeline",
+      "inputs": {
+        "pipeline_entrypoint": "from_user_input",
+        "stack": "from_user_input",
+        "py_inference_impl": "s12_perc_py_trt_runtime.py_inference_impl",
+        "cpp_inference_impl": "s13_perc_cpp_trt_runtime.cpp_inference_impl"
+      },
+      "outputs": {
+        "nsys_report": "nsys_report"
+      },
+      "parallel_group": 10
+    },
+    {
+      "id": "s29_perc_e2e_latency_budget",
+      "skill_name": "perc-e2e-latency-budget",
+      "inputs": {
+        "pipeline_entrypoint": "from_user_input",
+        "nsys_report": "s28_perc_nsys_profile_pipeline.nsys_report",
+        "trtexec_report": "s10_perc_trtexec_fp16_engine.trtexec_report",
+        "latency_budget_ms": "from_user_input",
+        "sample_count": "from_user_input"
+      },
+      "outputs": {
+        "latency_report": "latency_report",
+        "budget_verdict": "budget_verdict"
+      },
+      "parallel_group": 11
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_perc_label_format_audit",
+      "to_step": "s02_perc_kitti_to_coco_convert",
+      "data_type": "perc-label-format-audit",
+      "field_mapping": {
+        "dataset_index": "dataset_index"
+      }
+    },
+    {
+      "from_step": "s02_perc_kitti_to_coco_convert",
+      "to_step": "s03_perc_holdout_split_by_sequence",
+      "data_type": "perc-kitti-to-coco-convert",
+      "field_mapping": {
+        "coco_annotations": "coco_annotations"
+      }
+    },
+    {
+      "from_step": "s03_perc_holdout_split_by_sequence",
+      "to_step": "s04_perc_train_vs_finetune_decision",
+      "data_type": "perc-holdout-split-by-sequence",
+      "field_mapping": {
+        "split_report": "split_report"
+      }
+    },
+    {
+      "from_step": "s04_perc_train_vs_finetune_decision",
+      "to_step": "s05_perc_py_ultralytics_finetune",
+      "data_type": "perc-train-vs-finetune-decision",
+      "field_mapping": {
+        "training_plan": "training_plan"
+      }
+    },
+    {
+      "from_step": "s03_perc_holdout_split_by_sequence",
+      "to_step": "s05_perc_py_ultralytics_finetune",
+      "data_type": "perc-holdout-split-by-sequence",
+      "field_mapping": {
+        "train_annotations": "train_annotations",
+        "val_annotations": "val_annotations"
+      }
+    },
+    {
+      "from_step": "s05_perc_py_ultralytics_finetune",
+      "to_step": "s06_perc_onnx_export_verify",
+      "data_type": "perc-py-ultralytics-finetune",
+      "field_mapping": {
+        "trained_checkpoint": "trained_checkpoint"
+      }
+    },
+    {
+      "from_step": "s03_perc_holdout_split_by_sequence",
+      "to_step": "s06_perc_onnx_export_verify",
+      "data_type": "perc-holdout-split-by-sequence",
+      "field_mapping": {
+        "holdout_annotations": "holdout_annotations"
+      }
+    },
+    {
+      "from_step": "s05_perc_py_ultralytics_finetune",
+      "to_step": "s07_perc_preprocess_spec_extract",
+      "data_type": "perc-py-ultralytics-finetune",
+      "field_mapping": {
+        "trained_checkpoint": "trained_checkpoint",
+        "training_log": "training_log"
+      }
+    },
+    {
+      "from_step": "s06_perc_onnx_export_verify",
+      "to_step": "s07_perc_preprocess_spec_extract",
+      "data_type": "perc-onnx-export-verify",
+      "field_mapping": {
+        "onnx_model": "onnx_model"
+      }
+    },
+    {
+      "from_step": "s07_perc_preprocess_spec_extract",
+      "to_step": "s08_perc_py_gpu_preprocess",
+      "data_type": "perc-preprocess-spec-extract",
+      "field_mapping": {
+        "preprocess_spec": "preprocess_spec"
+      }
+    },
+    {
+      "from_step": "s03_perc_holdout_split_by_sequence",
+      "to_step": "s08_perc_py_gpu_preprocess",
+      "data_type": "perc-holdout-split-by-sequence",
+      "field_mapping": {
+        "holdout_annotations": "holdout_annotations"
+      }
+    },
+    {
+      "from_step": "s07_perc_preprocess_spec_extract",
+      "to_step": "s09_perc_cpp_cuda_preprocess",
+      "data_type": "perc-preprocess-spec-extract",
+      "field_mapping": {
+        "preprocess_spec": "preprocess_spec"
+      }
+    },
+    {
+      "from_step": "s03_perc_holdout_split_by_sequence",
+      "to_step": "s09_perc_cpp_cuda_preprocess",
+      "data_type": "perc-holdout-split-by-sequence",
+      "field_mapping": {
+        "holdout_annotations": "holdout_annotations"
+      }
+    },
+    {
+      "from_step": "s06_perc_onnx_export_verify",
+      "to_step": "s10_perc_trtexec_fp16_engine",
+      "data_type": "perc-onnx-export-verify",
+      "field_mapping": {
+        "onnx_model": "onnx_model"
+      }
+    },
+    {
+      "from_step": "s06_perc_onnx_export_verify",
+      "to_step": "s11_perc_int8_calibration_trt",
+      "data_type": "perc-onnx-export-verify",
+      "field_mapping": {
+        "onnx_model": "onnx_model"
+      }
+    },
+    {
+      "from_step": "s07_perc_preprocess_spec_extract",
+      "to_step": "s11_perc_int8_calibration_trt",
+      "data_type": "perc-preprocess-spec-extract",
+      "field_mapping": {
+        "preprocess_spec": "preprocess_spec"
+      }
+    },
+    {
+      "from_step": "s10_perc_trtexec_fp16_engine",
+      "to_step": "s12_perc_py_trt_runtime",
+      "data_type": "perc-trtexec-fp16-engine",
+      "field_mapping": {
+        "fp16_engine": "fp16_engine"
+      }
+    },
+    {
+      "from_step": "s11_perc_int8_calibration_trt",
+      "to_step": "s12_perc_py_trt_runtime",
+      "data_type": "perc-int8-calibration-trt",
+      "field_mapping": {
+        "int8_engine": "int8_engine"
+      }
+    },
+    {
+      "from_step": "s08_perc_py_gpu_preprocess",
+      "to_step": "s12_perc_py_trt_runtime",
+      "data_type": "perc-py-gpu-preprocess",
+      "field_mapping": {
+        "py_preprocess_impl": "py_preprocess_impl"
+      }
+    },
+    {
+      "from_step": "s10_perc_trtexec_fp16_engine",
+      "to_step": "s13_perc_cpp_trt_runtime",
+      "data_type": "perc-trtexec-fp16-engine",
+      "field_mapping": {
+        "fp16_engine": "fp16_engine"
+      }
+    },
+    {
+      "from_step": "s11_perc_int8_calibration_trt",
+      "to_step": "s13_perc_cpp_trt_runtime",
+      "data_type": "perc-int8-calibration-trt",
+      "field_mapping": {
+        "int8_engine": "int8_engine"
+      }
+    },
+    {
+      "from_step": "s09_perc_cpp_cuda_preprocess",
+      "to_step": "s13_perc_cpp_trt_runtime",
+      "data_type": "perc-cpp-cuda-preprocess",
+      "field_mapping": {
+        "cpp_preprocess_impl": "cpp_preprocess_impl"
+      }
+    },
+    {
+      "from_step": "s06_perc_onnx_export_verify",
+      "to_step": "s14_perc_py_nms_decode",
+      "data_type": "perc-onnx-export-verify",
+      "field_mapping": {
+        "onnx_model": "onnx_model"
+      }
+    },
+    {
+      "from_step": "s12_perc_py_trt_runtime",
+      "to_step": "s14_perc_py_nms_decode",
+      "data_type": "perc-py-trt-runtime",
+      "field_mapping": {
+        "py_inference_impl": "py_inference_impl"
+      }
+    },
+    {
+      "from_step": "s07_perc_preprocess_spec_extract",
+      "to_step": "s14_perc_py_nms_decode",
+      "data_type": "perc-preprocess-spec-extract",
+      "field_mapping": {
+        "preprocess_spec": "preprocess_spec"
+      }
+    },
+    {
+      "from_step": "s06_perc_onnx_export_verify",
+      "to_step": "s15_perc_cpp_efficientnms_plugin",
+      "data_type": "perc-onnx-export-verify",
+      "field_mapping": {
+        "onnx_model": "onnx_model"
+      }
+    },
+    {
+      "from_step": "s13_perc_cpp_trt_runtime",
+      "to_step": "s15_perc_cpp_efficientnms_plugin",
+      "data_type": "perc-cpp-trt-runtime",
+      "field_mapping": {
+        "cpp_inference_impl": "cpp_inference_impl"
+      }
+    },
+    {
+      "from_step": "s07_perc_preprocess_spec_extract",
+      "to_step": "s15_perc_cpp_efficientnms_plugin",
+      "data_type": "perc-preprocess-spec-extract",
+      "field_mapping": {
+        "preprocess_spec": "preprocess_spec"
+      }
+    },
+    {
+      "from_step": "s03_perc_holdout_split_by_sequence",
+      "to_step": "s16_perc_detection_map_eval",
+      "data_type": "perc-holdout-split-by-sequence",
+      "field_mapping": {
+        "holdout_annotations": "holdout_annotations"
+      }
+    },
+    {
+      "from_step": "s14_perc_py_nms_decode",
+      "to_step": "s16_perc_detection_map_eval",
+      "data_type": "perc-py-nms-decode",
+      "field_mapping": {
+        "py_postprocess_impl": "py_postprocess_impl"
+      }
+    },
+    {
+      "from_step": "s15_perc_cpp_efficientnms_plugin",
+      "to_step": "s16_perc_detection_map_eval",
+      "data_type": "perc-cpp-efficientnms-plugin",
+      "field_mapping": {
+        "cpp_postprocess_impl": "cpp_postprocess_impl"
+      }
+    },
+    {
+      "from_step": "s16_perc_detection_map_eval",
+      "to_step": "s17_perc_model_select_pareto",
+      "data_type": "perc-detection-map-eval",
+      "field_mapping": {
+        "detection_eval_report": "detection_eval_report"
+      }
+    },
+    {
+      "from_step": "s10_perc_trtexec_fp16_engine",
+      "to_step": "s17_perc_model_select_pareto",
+      "data_type": "perc-trtexec-fp16-engine",
+      "field_mapping": {
+        "trtexec_report": "trtexec_report"
+      }
+    },
+    {
+      "from_step": "s11_perc_int8_calibration_trt",
+      "to_step": "s17_perc_model_select_pareto",
+      "data_type": "perc-int8-calibration-trt",
+      "field_mapping": {
+        "int8_build_report": "int8_build_report"
+      }
+    },
+    {
+      "from_step": "s14_perc_py_nms_decode",
+      "to_step": "s18_perc_mot_bytetrack_sort",
+      "data_type": "perc-py-nms-decode",
+      "field_mapping": {
+        "py_postprocess_impl": "py_postprocess_impl"
+      }
+    },
+    {
+      "from_step": "s15_perc_cpp_efficientnms_plugin",
+      "to_step": "s18_perc_mot_bytetrack_sort",
+      "data_type": "perc-cpp-efficientnms-plugin",
+      "field_mapping": {
+        "cpp_postprocess_impl": "cpp_postprocess_impl"
+      }
+    },
+    {
+      "from_step": "s18_perc_mot_bytetrack_sort",
+      "to_step": "s19_perc_mot_eval_trackeval",
+      "data_type": "perc-mot-bytetrack-sort",
+      "field_mapping": {
+        "track_outputs": "track_outputs"
+      }
+    },
+    {
+      "from_step": "s22_perc_py_open3d_ground_removal",
+      "to_step": "s24_perc_py_open3d_dbscan_cluster",
+      "data_type": "perc-py-open3d-ground-removal",
+      "field_mapping": {
+        "py_nonground_clouds": "py_nonground_clouds"
+      }
+    },
+    {
+      "from_step": "s23_perc_cpp_pcl_ground_removal",
+      "to_step": "s25_perc_cpp_pcl_euclidean_cluster",
+      "data_type": "perc-cpp-pcl-ground-removal",
+      "field_mapping": {
+        "cpp_nonground_clouds": "cpp_nonground_clouds"
+      }
+    },
+    {
+      "from_step": "s26_perc_camera_lidar_calib_check",
+      "to_step": "s27_perc_camera_lidar_late_fusion",
+      "data_type": "perc-camera-lidar-calib-check",
+      "field_mapping": {
+        "calib_check_report": "calib_check_report"
+      }
+    },
+    {
+      "from_step": "s24_perc_py_open3d_dbscan_cluster",
+      "to_step": "s27_perc_camera_lidar_late_fusion",
+      "data_type": "perc-py-open3d-dbscan-cluster",
+      "field_mapping": {
+        "py_lidar_clusters": "py_lidar_clusters"
+      }
+    },
+    {
+      "from_step": "s25_perc_cpp_pcl_euclidean_cluster",
+      "to_step": "s27_perc_camera_lidar_late_fusion",
+      "data_type": "perc-cpp-pcl-euclidean-cluster",
+      "field_mapping": {
+        "cpp_lidar_clusters": "cpp_lidar_clusters"
+      }
+    },
+    {
+      "from_step": "s18_perc_mot_bytetrack_sort",
+      "to_step": "s27_perc_camera_lidar_late_fusion",
+      "data_type": "perc-mot-bytetrack-sort",
+      "field_mapping": {
+        "track_outputs": "track_outputs"
+      }
+    },
+    {
+      "from_step": "s12_perc_py_trt_runtime",
+      "to_step": "s28_perc_nsys_profile_pipeline",
+      "data_type": "perc-py-trt-runtime",
+      "field_mapping": {
+        "py_inference_impl": "py_inference_impl"
+      }
+    },
+    {
+      "from_step": "s13_perc_cpp_trt_runtime",
+      "to_step": "s28_perc_nsys_profile_pipeline",
+      "data_type": "perc-cpp-trt-runtime",
+      "field_mapping": {
+        "cpp_inference_impl": "cpp_inference_impl"
+      }
+    },
+    {
+      "from_step": "s28_perc_nsys_profile_pipeline",
+      "to_step": "s29_perc_e2e_latency_budget",
+      "data_type": "perc-nsys-profile-pipeline",
+      "field_mapping": {
+        "nsys_report": "nsys_report"
+      }
+    },
+    {
+      "from_step": "s10_perc_trtexec_fp16_engine",
+      "to_step": "s29_perc_e2e_latency_budget",
+      "data_type": "perc-trtexec-fp16-engine",
+      "field_mapping": {
+        "trtexec_report": "trtexec_report"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "dataset_dir",
+    "label_format",
+    "class_list",
+    "sequence_key",
+    "holdout_fraction",
+    "pretrained_candidates",
+    "accuracy_target",
+    "input_shape",
+    "gpu_target",
+    "calibration_dir",
+    "nms_iou_threshold",
+    "score_threshold",
+    "candidate_results",
+    "latency_budget_ms",
+    "tracker_type",
+    "frame_rate",
+    "tracking_gt",
+    "seg_model",
+    "seg_holdout_dir",
+    "seg_label_spec",
+    "lane_benchmark",
+    "lane_poly_degree",
+    "point_cloud_dir",
+    "lidar_mount",
+    "cluster_params",
+    "camera_calib",
+    "image_dir",
+    "max_sync_skew_ms",
+    "pipeline_entrypoint",
+    "stack",
+    "sample_count"
+  ],
+  "terminal_outputs": [
+    "label_audit_report",
+    "onnx_parity_report",
+    "calibration_cache",
+    "model_selection",
+    "tracker_impl",
+    "tracking_eval_report",
+    "seg_eval_report",
+    "lane_fit_impl",
+    "lane_eval_report",
+    "py_ground_report",
+    "cpp_ground_report",
+    "fused_objects",
+    "fusion_report",
+    "latency_report",
+    "budget_verdict"
+  ],
+  "parallel_groups": [
+    [
+      "s01_perc_label_format_audit",
+      "s20_perc_drivable_area_seg_eval",
+      "s21_perc_lane_fit_eval",
+      "s22_perc_py_open3d_ground_removal",
+      "s23_perc_cpp_pcl_ground_removal",
+      "s26_perc_camera_lidar_calib_check"
+    ],
+    [
+      "s02_perc_kitti_to_coco_convert",
+      "s24_perc_py_open3d_dbscan_cluster",
+      "s25_perc_cpp_pcl_euclidean_cluster"
+    ],
+    [
+      "s03_perc_holdout_split_by_sequence"
+    ],
+    [
+      "s04_perc_train_vs_finetune_decision"
+    ],
+    [
+      "s05_perc_py_ultralytics_finetune"
+    ],
+    [
+      "s06_perc_onnx_export_verify"
+    ],
+    [
+      "s07_perc_preprocess_spec_extract",
+      "s10_perc_trtexec_fp16_engine"
+    ],
+    [
+      "s08_perc_py_gpu_preprocess",
+      "s09_perc_cpp_cuda_preprocess",
+      "s11_perc_int8_calibration_trt"
+    ],
+    [
+      "s12_perc_py_trt_runtime",
+      "s13_perc_cpp_trt_runtime"
+    ],
+    [
+      "s14_perc_py_nms_decode",
+      "s15_perc_cpp_efficientnms_plugin",
+      "s28_perc_nsys_profile_pipeline"
+    ],
+    [
+      "s16_perc_detection_map_eval",
+      "s18_perc_mot_bytetrack_sort",
+      "s29_perc_e2e_latency_budget"
+    ],
+    [
+      "s17_perc_model_select_pareto",
+      "s19_perc_mot_eval_trackeval",
+      "s27_perc_camera_lidar_late_fusion"
+    ]
+  ],
+  "estimated_cost": 29,
+  "critical_path": [
+    "s01_perc_label_format_audit",
+    "s02_perc_kitti_to_coco_convert",
+    "s03_perc_holdout_split_by_sequence",
+    "s04_perc_train_vs_finetune_decision",
+    "s05_perc_py_ultralytics_finetune",
+    "s06_perc_onnx_export_verify",
+    "s07_perc_preprocess_spec_extract",
+    "s11_perc_int8_calibration_trt",
+    "s13_perc_cpp_trt_runtime",
+    "s15_perc_cpp_efficientnms_plugin",
+    "s18_perc_mot_bytetrack_sort",
+    "s27_perc_camera_lidar_late_fusion"
+  ]
+}

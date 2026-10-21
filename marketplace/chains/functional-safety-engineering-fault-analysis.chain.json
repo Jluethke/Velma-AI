@@ -1,0 +1,201 @@
+{
+  "name": "functional-safety-engineering-fault-analysis",
+  "description": "Find and test failure paths: design FMEA, software interface FMEA, fault tree cut sets, dependent failure analysis, a traced fault injection plan and bench execution on the matching stack.",
+  "steps": [
+    {
+      "id": "s01_fusa_dfmea_worksheet",
+      "skill_name": "fusa-dfmea-worksheet",
+      "inputs": {
+        "item_definition": "from_user_input",
+        "architecture_description": "from_user_input",
+        "fmea_rating_tables": "from_user_input_optional"
+      },
+      "outputs": {
+        "dfmea_worksheet": "dfmea_worksheet"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_fusa_sw_fmea_interface_guidewords",
+      "skill_name": "fusa-sw-fmea-interface-guidewords",
+      "inputs": {
+        "architecture_description": "from_user_input",
+        "safety_requirements": "from_user_input",
+        "source_dir": "from_user_input"
+      },
+      "outputs": {
+        "sw_fmea_rows": "sw_fmea_rows"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s03_fusa_fta_scram_cut_sets",
+      "skill_name": "fusa-fta-scram-cut-sets",
+      "inputs": {
+        "safety_goals": "from_user_input",
+        "dfmea_worksheet": "s01_fusa_dfmea_worksheet.dfmea_worksheet",
+        "failure_probabilities": "from_user_input_optional"
+      },
+      "outputs": {
+        "fault_tree_xml": "fault_tree_xml",
+        "cut_set_report": "cut_set_report"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_fusa_dependent_failure_analysis",
+      "skill_name": "fusa-dependent-failure-analysis",
+      "inputs": {
+        "cut_set_report": "s03_fusa_fta_scram_cut_sets.cut_set_report",
+        "safety_requirements": "from_user_input",
+        "architecture_description": "from_user_input"
+      },
+      "outputs": {
+        "dfa_report": "dfa_report"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s05_fusa_fault_injection_campaign_plan",
+      "skill_name": "fusa-fault-injection-campaign-plan",
+      "inputs": {
+        "dfmea_worksheet": "s01_fusa_dfmea_worksheet.dfmea_worksheet",
+        "sw_fmea_rows": "s02_fusa_sw_fmea_interface_guidewords.sw_fmea_rows",
+        "cut_set_report": "s03_fusa_fta_scram_cut_sets.cut_set_report",
+        "safety_requirements": "from_user_input"
+      },
+      "outputs": {
+        "fault_injection_plan": "fault_injection_plan"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s06_fusa_fault_injection_mcu_gdb",
+      "skill_name": "fusa-fault-injection-mcu-gdb",
+      "inputs": {
+        "fault_injection_plan": "s05_fusa_fault_injection_campaign_plan.fault_injection_plan",
+        "firmware_dir": "from_user_input",
+        "debug_probe": "from_user_input"
+      },
+      "outputs": {
+        "fault_injection_results": "fault_injection_results"
+      },
+      "condition": "stack == 'embedded-c'",
+      "parallel_group": 4
+    },
+    {
+      "id": "s07_fusa_fault_injection_linux",
+      "skill_name": "fusa-fault-injection-linux",
+      "inputs": {
+        "fault_injection_plan": "s05_fusa_fault_injection_campaign_plan.fault_injection_plan",
+        "service_name": "from_user_input",
+        "bench_interfaces": "from_user_input_optional"
+      },
+      "outputs": {
+        "fault_injection_results": "fault_injection_results"
+      },
+      "condition": "stack in ['linux-c', 'linux-python', 'ros2']",
+      "parallel_group": 4
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_fusa_dfmea_worksheet",
+      "to_step": "s03_fusa_fta_scram_cut_sets",
+      "data_type": "fusa-dfmea-worksheet",
+      "field_mapping": {
+        "dfmea_worksheet": "dfmea_worksheet"
+      }
+    },
+    {
+      "from_step": "s03_fusa_fta_scram_cut_sets",
+      "to_step": "s04_fusa_dependent_failure_analysis",
+      "data_type": "fusa-fta-scram-cut-sets",
+      "field_mapping": {
+        "cut_set_report": "cut_set_report"
+      }
+    },
+    {
+      "from_step": "s01_fusa_dfmea_worksheet",
+      "to_step": "s05_fusa_fault_injection_campaign_plan",
+      "data_type": "fusa-dfmea-worksheet",
+      "field_mapping": {
+        "dfmea_worksheet": "dfmea_worksheet"
+      }
+    },
+    {
+      "from_step": "s02_fusa_sw_fmea_interface_guidewords",
+      "to_step": "s05_fusa_fault_injection_campaign_plan",
+      "data_type": "fusa-sw-fmea-interface-guidewords",
+      "field_mapping": {
+        "sw_fmea_rows": "sw_fmea_rows"
+      }
+    },
+    {
+      "from_step": "s03_fusa_fta_scram_cut_sets",
+      "to_step": "s05_fusa_fault_injection_campaign_plan",
+      "data_type": "fusa-fta-scram-cut-sets",
+      "field_mapping": {
+        "cut_set_report": "cut_set_report"
+      }
+    },
+    {
+      "from_step": "s05_fusa_fault_injection_campaign_plan",
+      "to_step": "s06_fusa_fault_injection_mcu_gdb",
+      "data_type": "fusa-fault-injection-campaign-plan",
+      "field_mapping": {
+        "fault_injection_plan": "fault_injection_plan"
+      }
+    },
+    {
+      "from_step": "s05_fusa_fault_injection_campaign_plan",
+      "to_step": "s07_fusa_fault_injection_linux",
+      "data_type": "fusa-fault-injection-campaign-plan",
+      "field_mapping": {
+        "fault_injection_plan": "fault_injection_plan"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "item_definition",
+    "architecture_description",
+    "fmea_rating_tables",
+    "safety_requirements",
+    "source_dir",
+    "safety_goals",
+    "failure_probabilities",
+    "firmware_dir",
+    "debug_probe",
+    "service_name",
+    "bench_interfaces"
+  ],
+  "terminal_outputs": [
+    "fault_tree_xml",
+    "dfa_report",
+    "fault_injection_results"
+  ],
+  "parallel_groups": [
+    [
+      "s01_fusa_dfmea_worksheet",
+      "s02_fusa_sw_fmea_interface_guidewords"
+    ],
+    [
+      "s03_fusa_fta_scram_cut_sets"
+    ],
+    [
+      "s04_fusa_dependent_failure_analysis",
+      "s05_fusa_fault_injection_campaign_plan"
+    ],
+    [
+      "s06_fusa_fault_injection_mcu_gdb",
+      "s07_fusa_fault_injection_linux"
+    ]
+  ],
+  "estimated_cost": 7,
+  "critical_path": [
+    "s01_fusa_dfmea_worksheet",
+    "s03_fusa_fta_scram_cut_sets",
+    "s05_fusa_fault_injection_campaign_plan",
+    "s07_fusa_fault_injection_linux"
+  ]
+}

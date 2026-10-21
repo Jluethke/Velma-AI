@@ -1,0 +1,560 @@
+{
+  "name": "realtime-linux",
+  "description": "Bring a Linux machine to a measured real-time state for control software: PREEMPT_RT kernel, latency baseline, hardware noise, power, CPU and IRQ isolation, loaded latency, tracing, stack-specific application changes, and a measured control loop jitter verdict.",
+  "steps": [
+    {
+      "id": "s01_rtl_kernel_rt_check",
+      "skill_name": "rtl-kernel-rt-check",
+      "inputs": {
+        "target_host": "from_user_input"
+      },
+      "outputs": {
+        "kernel_report": "kernel_report"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_rtl_kernel_rt_install",
+      "skill_name": "rtl-kernel-rt-install",
+      "inputs": {
+        "kernel_report": "s01_rtl_kernel_rt_check.kernel_report",
+        "distro": "from_user_input"
+      },
+      "outputs": {
+        "rt_kernel_status": "rt_kernel_status"
+      },
+      "condition": "kernel_report.preempt_rt == false",
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_rtl_cyclictest_baseline",
+      "skill_name": "rtl-cyclictest-baseline",
+      "inputs": {
+        "kernel_report": "s01_rtl_kernel_rt_check.kernel_report",
+        "test_duration": "from_user_input",
+        "rt_priority": "from_user_input"
+      },
+      "outputs": {
+        "baseline_histogram": "baseline_histogram",
+        "baseline_summary": "baseline_summary"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_rtl_hw_noise_check",
+      "skill_name": "rtl-hw-noise-check",
+      "inputs": {
+        "kernel_report": "s01_rtl_kernel_rt_check.kernel_report",
+        "test_duration": "from_user_input"
+      },
+      "outputs": {
+        "hw_noise_report": "hw_noise_report"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s05_rtl_power_cstate_tuning",
+      "skill_name": "rtl-power-cstate-tuning",
+      "inputs": {
+        "hw_noise_report": "s04_rtl_hw_noise_check.hw_noise_report",
+        "rt_cpus": "from_user_input"
+      },
+      "outputs": {
+        "power_config": "power_config"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s06_rtl_cpu_isolation_bootargs",
+      "skill_name": "rtl-cpu-isolation-bootargs",
+      "inputs": {
+        "kernel_report": "s01_rtl_kernel_rt_check.kernel_report",
+        "rt_cpus": "from_user_input",
+        "housekeeping_cpus": "from_user_input"
+      },
+      "outputs": {
+        "isolation_config": "isolation_config"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s07_rtl_cpuset_partition",
+      "skill_name": "rtl-cpuset-partition",
+      "inputs": {
+        "isolation_config": "s06_rtl_cpu_isolation_bootargs.isolation_config",
+        "rt_cpus": "from_user_input",
+        "housekeeping_cpus": "from_user_input"
+      },
+      "outputs": {
+        "cpuset_config": "cpuset_config"
+      },
+      "condition": "use_cpuset_partition == true",
+      "parallel_group": 3
+    },
+    {
+      "id": "s08_rtl_irq_affinity",
+      "skill_name": "rtl-irq-affinity",
+      "inputs": {
+        "isolation_config": "s06_rtl_cpu_isolation_bootargs.isolation_config",
+        "housekeeping_cpus": "from_user_input",
+        "rt_device_irqs": "from_user_input_optional"
+      },
+      "outputs": {
+        "irq_affinity_map": "irq_affinity_map"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s09_rtl_threaded_irq_priority",
+      "skill_name": "rtl-threaded-irq-priority",
+      "inputs": {
+        "irq_affinity_map": "s08_rtl_irq_affinity.irq_affinity_map",
+        "rt_priority": "from_user_input",
+        "rt_device_irqs": "from_user_input_optional"
+      },
+      "outputs": {
+        "irq_thread_priorities": "irq_thread_priorities"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s10_rtl_cyclictest_under_load",
+      "skill_name": "rtl-cyclictest-under-load",
+      "inputs": {
+        "baseline_summary": "s03_rtl_cyclictest_baseline.baseline_summary",
+        "isolation_config": "s06_rtl_cpu_isolation_bootargs.isolation_config",
+        "power_config": "s05_rtl_power_cstate_tuning.power_config",
+        "irq_thread_priorities": "s09_rtl_threaded_irq_priority.irq_thread_priorities",
+        "test_duration": "from_user_input",
+        "rt_priority": "from_user_input",
+        "rt_cpus": "from_user_input"
+      },
+      "outputs": {
+        "loaded_histogram": "loaded_histogram",
+        "loaded_summary": "loaded_summary"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s11_rtl_cyclictest_histogram_read",
+      "skill_name": "rtl-cyclictest-histogram-read",
+      "inputs": {
+        "cyclictest_histogram": "s10_rtl_cyclictest_under_load.loaded_histogram",
+        "jitter_budget_us": "from_user_input"
+      },
+      "outputs": {
+        "latency_findings": "latency_findings"
+      },
+      "parallel_group": 6
+    },
+    {
+      "id": "s12_rtl_rtla_timerlat",
+      "skill_name": "rtl-rtla-timerlat",
+      "inputs": {
+        "latency_findings": "s11_rtl_cyclictest_histogram_read.latency_findings",
+        "rt_cpus": "from_user_input",
+        "jitter_budget_us": "from_user_input"
+      },
+      "outputs": {
+        "timerlat_report": "timerlat_report"
+      },
+      "parallel_group": 7
+    },
+    {
+      "id": "s13_rtl_ftrace_latency_trace",
+      "skill_name": "rtl-ftrace-latency-trace",
+      "inputs": {
+        "latency_findings": "s11_rtl_cyclictest_histogram_read.latency_findings",
+        "rt_cpus": "from_user_input",
+        "jitter_budget_us": "from_user_input"
+      },
+      "outputs": {
+        "trace_findings": "trace_findings"
+      },
+      "condition": "latency_findings.exceeds_budget == true",
+      "parallel_group": 7
+    },
+    {
+      "id": "s14_rtl_sched_fifo_chrt",
+      "skill_name": "rtl-sched-fifo-chrt",
+      "inputs": {
+        "app_command": "from_user_input",
+        "rt_priority": "from_user_input",
+        "rt_cpus": "from_user_input",
+        "isolation_config": "s06_rtl_cpu_isolation_bootargs.isolation_config"
+      },
+      "outputs": {
+        "sched_config": "sched_config"
+      },
+      "condition": "scheduler == 'fifo'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s15_rtl_sched_deadline",
+      "skill_name": "rtl-sched-deadline",
+      "inputs": {
+        "app_command": "from_user_input",
+        "loop_period_us": "from_user_input",
+        "runtime_us": "from_user_input_optional",
+        "isolation_config": "s06_rtl_cpu_isolation_bootargs.isolation_config"
+      },
+      "outputs": {
+        "deadline_config": "deadline_config"
+      },
+      "condition": "scheduler == 'deadline'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s16_rtl_c_mlockall_prefault",
+      "skill_name": "rtl-c-mlockall-prefault",
+      "inputs": {
+        "app_source_dir": "from_user_input",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "memory_lock_patch": "memory_lock_patch"
+      },
+      "condition": "stack == 'c' || stack == 'cpp'",
+      "parallel_group": 1
+    },
+    {
+      "id": "s17_rtl_cpp_alloc_free_loop",
+      "skill_name": "rtl-cpp-alloc-free-loop",
+      "inputs": {
+        "app_source_dir": "from_user_input",
+        "memory_lock_patch": "s16_rtl_c_mlockall_prefault.memory_lock_patch"
+      },
+      "outputs": {
+        "alloc_audit": "alloc_audit"
+      },
+      "condition": "stack == 'cpp'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s18_rtl_c_abs_deadline_loop",
+      "skill_name": "rtl-c-abs-deadline-loop",
+      "inputs": {
+        "app_source_dir": "from_user_input",
+        "loop_period_us": "from_user_input"
+      },
+      "outputs": {
+        "loop_patch": "loop_patch"
+      },
+      "condition": "stack == 'c' || stack == 'cpp'",
+      "parallel_group": 1
+    },
+    {
+      "id": "s19_rtl_c_pi_mutex",
+      "skill_name": "rtl-c-pi-mutex",
+      "inputs": {
+        "app_source_dir": "from_user_input"
+      },
+      "outputs": {
+        "pi_mutex_report": "pi_mutex_report"
+      },
+      "condition": "stack == 'c' || stack == 'cpp'",
+      "parallel_group": 1
+    },
+    {
+      "id": "s20_rtl_rust_rt_loop",
+      "skill_name": "rtl-rust-rt-loop",
+      "inputs": {
+        "app_source_dir": "from_user_input",
+        "loop_period_us": "from_user_input",
+        "rt_priority": "from_user_input"
+      },
+      "outputs": {
+        "rust_rt_patch": "rust_rt_patch"
+      },
+      "condition": "stack == 'rust'",
+      "parallel_group": 1
+    },
+    {
+      "id": "s21_rtl_py_rt_loop",
+      "skill_name": "rtl-py-rt-loop",
+      "inputs": {
+        "app_source_dir": "from_user_input",
+        "loop_period_us": "from_user_input",
+        "rt_priority": "from_user_input"
+      },
+      "outputs": {
+        "py_rt_patch": "py_rt_patch"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 1
+    },
+    {
+      "id": "s22_rtl_timer_slack",
+      "skill_name": "rtl-timer-slack",
+      "inputs": {
+        "app_command": "from_user_input"
+      },
+      "outputs": {
+        "timer_slack_report": "timer_slack_report"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s23_rtl_control_loop_jitter",
+      "skill_name": "rtl-control-loop-jitter",
+      "inputs": {
+        "app_command": "from_user_input",
+        "loop_period_us": "from_user_input",
+        "jitter_budget_us": "from_user_input",
+        "test_duration": "from_user_input",
+        "latency_findings": "s11_rtl_cyclictest_histogram_read.latency_findings"
+      },
+      "outputs": {
+        "jitter_report": "jitter_report",
+        "jitter_verdict": "jitter_verdict"
+      },
+      "parallel_group": 7
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_rtl_kernel_rt_check",
+      "to_step": "s02_rtl_kernel_rt_install",
+      "data_type": "rtl-kernel-rt-check",
+      "field_mapping": {
+        "kernel_report": "kernel_report"
+      }
+    },
+    {
+      "from_step": "s01_rtl_kernel_rt_check",
+      "to_step": "s03_rtl_cyclictest_baseline",
+      "data_type": "rtl-kernel-rt-check",
+      "field_mapping": {
+        "kernel_report": "kernel_report"
+      }
+    },
+    {
+      "from_step": "s01_rtl_kernel_rt_check",
+      "to_step": "s04_rtl_hw_noise_check",
+      "data_type": "rtl-kernel-rt-check",
+      "field_mapping": {
+        "kernel_report": "kernel_report"
+      }
+    },
+    {
+      "from_step": "s04_rtl_hw_noise_check",
+      "to_step": "s05_rtl_power_cstate_tuning",
+      "data_type": "rtl-hw-noise-check",
+      "field_mapping": {
+        "hw_noise_report": "hw_noise_report"
+      }
+    },
+    {
+      "from_step": "s01_rtl_kernel_rt_check",
+      "to_step": "s06_rtl_cpu_isolation_bootargs",
+      "data_type": "rtl-kernel-rt-check",
+      "field_mapping": {
+        "kernel_report": "kernel_report"
+      }
+    },
+    {
+      "from_step": "s06_rtl_cpu_isolation_bootargs",
+      "to_step": "s07_rtl_cpuset_partition",
+      "data_type": "rtl-cpu-isolation-bootargs",
+      "field_mapping": {
+        "isolation_config": "isolation_config"
+      }
+    },
+    {
+      "from_step": "s06_rtl_cpu_isolation_bootargs",
+      "to_step": "s08_rtl_irq_affinity",
+      "data_type": "rtl-cpu-isolation-bootargs",
+      "field_mapping": {
+        "isolation_config": "isolation_config"
+      }
+    },
+    {
+      "from_step": "s08_rtl_irq_affinity",
+      "to_step": "s09_rtl_threaded_irq_priority",
+      "data_type": "rtl-irq-affinity",
+      "field_mapping": {
+        "irq_affinity_map": "irq_affinity_map"
+      }
+    },
+    {
+      "from_step": "s03_rtl_cyclictest_baseline",
+      "to_step": "s10_rtl_cyclictest_under_load",
+      "data_type": "rtl-cyclictest-baseline",
+      "field_mapping": {
+        "baseline_summary": "baseline_summary"
+      }
+    },
+    {
+      "from_step": "s06_rtl_cpu_isolation_bootargs",
+      "to_step": "s10_rtl_cyclictest_under_load",
+      "data_type": "rtl-cpu-isolation-bootargs",
+      "field_mapping": {
+        "isolation_config": "isolation_config"
+      }
+    },
+    {
+      "from_step": "s05_rtl_power_cstate_tuning",
+      "to_step": "s10_rtl_cyclictest_under_load",
+      "data_type": "rtl-power-cstate-tuning",
+      "field_mapping": {
+        "power_config": "power_config"
+      }
+    },
+    {
+      "from_step": "s09_rtl_threaded_irq_priority",
+      "to_step": "s10_rtl_cyclictest_under_load",
+      "data_type": "rtl-threaded-irq-priority",
+      "field_mapping": {
+        "irq_thread_priorities": "irq_thread_priorities"
+      }
+    },
+    {
+      "from_step": "s10_rtl_cyclictest_under_load",
+      "to_step": "s11_rtl_cyclictest_histogram_read",
+      "data_type": "rtl-cyclictest-under-load",
+      "field_mapping": {
+        "loaded_histogram": "cyclictest_histogram"
+      }
+    },
+    {
+      "from_step": "s11_rtl_cyclictest_histogram_read",
+      "to_step": "s12_rtl_rtla_timerlat",
+      "data_type": "rtl-cyclictest-histogram-read",
+      "field_mapping": {
+        "latency_findings": "latency_findings"
+      }
+    },
+    {
+      "from_step": "s11_rtl_cyclictest_histogram_read",
+      "to_step": "s13_rtl_ftrace_latency_trace",
+      "data_type": "rtl-cyclictest-histogram-read",
+      "field_mapping": {
+        "latency_findings": "latency_findings"
+      }
+    },
+    {
+      "from_step": "s06_rtl_cpu_isolation_bootargs",
+      "to_step": "s14_rtl_sched_fifo_chrt",
+      "data_type": "rtl-cpu-isolation-bootargs",
+      "field_mapping": {
+        "isolation_config": "isolation_config"
+      }
+    },
+    {
+      "from_step": "s06_rtl_cpu_isolation_bootargs",
+      "to_step": "s15_rtl_sched_deadline",
+      "data_type": "rtl-cpu-isolation-bootargs",
+      "field_mapping": {
+        "isolation_config": "isolation_config"
+      }
+    },
+    {
+      "from_step": "s16_rtl_c_mlockall_prefault",
+      "to_step": "s17_rtl_cpp_alloc_free_loop",
+      "data_type": "rtl-c-mlockall-prefault",
+      "field_mapping": {
+        "memory_lock_patch": "memory_lock_patch"
+      }
+    },
+    {
+      "from_step": "s11_rtl_cyclictest_histogram_read",
+      "to_step": "s23_rtl_control_loop_jitter",
+      "data_type": "rtl-cyclictest-histogram-read",
+      "field_mapping": {
+        "latency_findings": "latency_findings"
+      }
+    },
+    {
+      "from_step": "s23_rtl_control_loop_jitter",
+      "to_step": "s12_rtl_rtla_timerlat",
+      "data_type": "rtl-control-loop-jitter",
+      "field_mapping": {
+        "jitter_report": "latency_findings"
+      },
+      "condition": "jitter_verdict == 'FAIL'",
+      "max_loops": 3
+    }
+  ],
+  "entry_inputs": [
+    "target_host",
+    "distro",
+    "test_duration",
+    "rt_priority",
+    "rt_cpus",
+    "housekeeping_cpus",
+    "rt_device_irqs",
+    "jitter_budget_us",
+    "app_command",
+    "loop_period_us",
+    "runtime_us",
+    "app_source_dir",
+    "stack"
+  ],
+  "terminal_outputs": [
+    "rt_kernel_status",
+    "baseline_histogram",
+    "cpuset_config",
+    "loaded_summary",
+    "timerlat_report",
+    "trace_findings",
+    "sched_config",
+    "deadline_config",
+    "alloc_audit",
+    "loop_patch",
+    "pi_mutex_report",
+    "rust_rt_patch",
+    "py_rt_patch",
+    "timer_slack_report",
+    "jitter_report",
+    "jitter_verdict"
+  ],
+  "parallel_groups": [
+    [
+      "s01_rtl_kernel_rt_check",
+      "s16_rtl_c_mlockall_prefault",
+      "s18_rtl_c_abs_deadline_loop",
+      "s19_rtl_c_pi_mutex",
+      "s20_rtl_rust_rt_loop",
+      "s21_rtl_py_rt_loop",
+      "s22_rtl_timer_slack"
+    ],
+    [
+      "s02_rtl_kernel_rt_install",
+      "s03_rtl_cyclictest_baseline",
+      "s04_rtl_hw_noise_check",
+      "s06_rtl_cpu_isolation_bootargs",
+      "s17_rtl_cpp_alloc_free_loop"
+    ],
+    [
+      "s05_rtl_power_cstate_tuning",
+      "s07_rtl_cpuset_partition",
+      "s08_rtl_irq_affinity",
+      "s14_rtl_sched_fifo_chrt",
+      "s15_rtl_sched_deadline"
+    ],
+    [
+      "s09_rtl_threaded_irq_priority"
+    ],
+    [
+      "s10_rtl_cyclictest_under_load"
+    ],
+    [
+      "s11_rtl_cyclictest_histogram_read"
+    ],
+    [
+      "s12_rtl_rtla_timerlat",
+      "s13_rtl_ftrace_latency_trace",
+      "s23_rtl_control_loop_jitter"
+    ]
+  ],
+  "estimated_cost": 23,
+  "critical_path": [
+    "s01_rtl_kernel_rt_check",
+    "s06_rtl_cpu_isolation_bootargs",
+    "s08_rtl_irq_affinity",
+    "s09_rtl_threaded_irq_priority",
+    "s10_rtl_cyclictest_under_load",
+    "s11_rtl_cyclictest_histogram_read",
+    "s23_rtl_control_loop_jitter"
+  ]
+}

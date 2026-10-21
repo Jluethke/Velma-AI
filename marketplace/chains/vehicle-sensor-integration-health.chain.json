@@ -1,0 +1,104 @@
+{
+  "name": "vehicle-sensor-integration-health",
+  "description": "Measure sensor stamp latency and monitor sensor rate, stamp age and dropouts with ROS 2 diagnostics or a Python watchdog, proven by unplug tests.",
+  "steps": [
+    {
+      "id": "s01_vsens_sensor_inventory",
+      "skill_name": "vsens-sensor-inventory",
+      "inputs": {
+        "platform_description": "from_user_input",
+        "sensor_list": "from_user_input"
+      },
+      "outputs": {
+        "sensor_inventory": "sensor_inventory",
+        "timing_requirements": "timing_requirements"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_vsens_ros2_stamp_latency",
+      "skill_name": "vsens-ros2-stamp-latency",
+      "inputs": {
+        "clock_discipline_report": "from_user_input",
+        "topic_list": "from_user_input"
+      },
+      "outputs": {
+        "stamp_latency_report": "stamp_latency_report"
+      },
+      "condition": "stack == 'ros2'",
+      "parallel_group": 1
+    },
+    {
+      "id": "s03_vsens_ros2_diagnostics_health",
+      "skill_name": "vsens-ros2-diagnostics-health",
+      "inputs": {
+        "timing_requirements": "s01_vsens_sensor_inventory.timing_requirements",
+        "topic_list": "from_user_input"
+      },
+      "outputs": {
+        "health_monitor_config": "health_monitor_config"
+      },
+      "condition": "stack == 'ros2'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_vsens_py_dropout_detector",
+      "skill_name": "vsens-py-dropout-detector",
+      "inputs": {
+        "timing_requirements": "s01_vsens_sensor_inventory.timing_requirements",
+        "stream_log_path": "from_user_input"
+      },
+      "outputs": {
+        "dropout_report": "dropout_report"
+      },
+      "condition": "stack != 'ros2'",
+      "parallel_group": 2
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_vsens_sensor_inventory",
+      "to_step": "s03_vsens_ros2_diagnostics_health",
+      "data_type": "vsens-sensor-inventory",
+      "field_mapping": {
+        "timing_requirements": "timing_requirements"
+      }
+    },
+    {
+      "from_step": "s01_vsens_sensor_inventory",
+      "to_step": "s04_vsens_py_dropout_detector",
+      "data_type": "vsens-sensor-inventory",
+      "field_mapping": {
+        "timing_requirements": "timing_requirements"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "platform_description",
+    "sensor_list",
+    "clock_discipline_report",
+    "topic_list",
+    "stream_log_path"
+  ],
+  "terminal_outputs": [
+    "sensor_inventory",
+    "stamp_latency_report",
+    "health_monitor_config",
+    "dropout_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_vsens_sensor_inventory",
+      "s02_vsens_ros2_stamp_latency"
+    ],
+    [
+      "s03_vsens_ros2_diagnostics_health",
+      "s04_vsens_py_dropout_detector"
+    ]
+  ],
+  "estimated_cost": 4,
+  "critical_path": [
+    "s01_vsens_sensor_inventory",
+    "s04_vsens_py_dropout_detector"
+  ]
+}

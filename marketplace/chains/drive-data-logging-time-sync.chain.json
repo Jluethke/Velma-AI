@@ -1,0 +1,107 @@
+{
+  "name": "drive-data-logging-time-sync",
+  "description": "Map clock domains, discipline the logger with PTP or GNSS PPS, and measure cross-sensor time offsets in a recorded drive.",
+  "steps": [
+    {
+      "id": "s01_dlog_clock_domain_map",
+      "skill_name": "dlog-clock-domain-map",
+      "inputs": {
+        "data_sources": "from_user_input"
+      },
+      "outputs": {
+        "clock_domain_map": "clock_domain_map"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_dlog_ptp_linuxptp_sync",
+      "skill_name": "dlog-ptp-linuxptp-sync",
+      "inputs": {
+        "clock_domain_map": "s01_dlog_clock_domain_map.clock_domain_map",
+        "network_interface": "from_user_input"
+      },
+      "outputs": {
+        "ptp_sync_report": "ptp_sync_report"
+      },
+      "condition": "time_sync == 'ptp'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_dlog_chrony_gnss_pps",
+      "skill_name": "dlog-chrony-gnss-pps",
+      "inputs": {
+        "clock_domain_map": "s01_dlog_clock_domain_map.clock_domain_map",
+        "gnss_device": "from_user_input_optional"
+      },
+      "outputs": {
+        "gnss_time_report": "gnss_time_report"
+      },
+      "condition": "time_sync == 'gnss'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_dlog_sensor_sync_check",
+      "skill_name": "dlog-sensor-sync-check",
+      "inputs": {
+        "log_dir": "from_user_input",
+        "clock_domain_map": "s01_dlog_clock_domain_map.clock_domain_map"
+      },
+      "outputs": {
+        "sync_report": "sync_report"
+      },
+      "parallel_group": 2
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_dlog_clock_domain_map",
+      "to_step": "s02_dlog_ptp_linuxptp_sync",
+      "data_type": "dlog-clock-domain-map",
+      "field_mapping": {
+        "clock_domain_map": "clock_domain_map"
+      }
+    },
+    {
+      "from_step": "s01_dlog_clock_domain_map",
+      "to_step": "s03_dlog_chrony_gnss_pps",
+      "data_type": "dlog-clock-domain-map",
+      "field_mapping": {
+        "clock_domain_map": "clock_domain_map"
+      }
+    },
+    {
+      "from_step": "s01_dlog_clock_domain_map",
+      "to_step": "s04_dlog_sensor_sync_check",
+      "data_type": "dlog-clock-domain-map",
+      "field_mapping": {
+        "clock_domain_map": "clock_domain_map"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "data_sources",
+    "network_interface",
+    "gnss_device",
+    "log_dir"
+  ],
+  "terminal_outputs": [
+    "ptp_sync_report",
+    "gnss_time_report",
+    "sync_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_dlog_clock_domain_map"
+    ],
+    [
+      "s02_dlog_ptp_linuxptp_sync",
+      "s03_dlog_chrony_gnss_pps",
+      "s04_dlog_sensor_sync_check"
+    ]
+  ],
+  "estimated_cost": 4,
+  "critical_path": [
+    "s01_dlog_clock_domain_map",
+    "s02_dlog_ptp_linuxptp_sync"
+  ]
+}

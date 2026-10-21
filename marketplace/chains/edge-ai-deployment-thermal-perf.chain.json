@@ -1,0 +1,150 @@
+{
+  "name": "edge-ai-deployment-thermal-perf",
+  "description": "Measure sustained performance: set power mode, lock clocks, log thermals, benchmark latency and throughput, and run a thermal soak.",
+  "steps": [
+    {
+      "id": "s01_edge_nvpmodel_power_mode",
+      "skill_name": "edge-nvpmodel-power-mode",
+      "inputs": {
+        "device_host": "from_user_input",
+        "platform_report": "from_user_input",
+        "power_mode_target": "from_user_input_optional"
+      },
+      "outputs": {
+        "power_mode_record": "power_mode_record"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_edge_jetson_clocks_lock",
+      "skill_name": "edge-jetson-clocks-lock",
+      "inputs": {
+        "device_host": "from_user_input",
+        "power_mode_record": "s01_edge_nvpmodel_power_mode.power_mode_record"
+      },
+      "outputs": {
+        "clock_state": "clock_state"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_edge_tegrastats_thermal_log",
+      "skill_name": "edge-tegrastats-thermal-log",
+      "inputs": {
+        "device_host": "from_user_input",
+        "clock_state": "s02_edge_jetson_clocks_lock.clock_state",
+        "log_duration_s": "from_user_input"
+      },
+      "outputs": {
+        "thermal_log": "thermal_log"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_edge_latency_throughput_benchmark",
+      "skill_name": "edge-latency-throughput-benchmark",
+      "inputs": {
+        "device_host": "from_user_input",
+        "engine_file": "from_user_input",
+        "clock_state": "s02_edge_jetson_clocks_lock.clock_state",
+        "input_shapes": "from_user_input"
+      },
+      "outputs": {
+        "benchmark_report": "benchmark_report"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s05_edge_thermal_soak_test",
+      "skill_name": "edge-thermal-soak-test",
+      "inputs": {
+        "device_host": "from_user_input",
+        "engine_file": "from_user_input",
+        "power_mode_record": "s01_edge_nvpmodel_power_mode.power_mode_record",
+        "thermal_log": "s03_edge_tegrastats_thermal_log.thermal_log",
+        "soak_duration_s": "from_user_input"
+      },
+      "outputs": {
+        "soak_report": "soak_report"
+      },
+      "parallel_group": 4
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_edge_nvpmodel_power_mode",
+      "to_step": "s02_edge_jetson_clocks_lock",
+      "data_type": "edge-nvpmodel-power-mode",
+      "field_mapping": {
+        "power_mode_record": "power_mode_record"
+      }
+    },
+    {
+      "from_step": "s02_edge_jetson_clocks_lock",
+      "to_step": "s03_edge_tegrastats_thermal_log",
+      "data_type": "edge-jetson-clocks-lock",
+      "field_mapping": {
+        "clock_state": "clock_state"
+      }
+    },
+    {
+      "from_step": "s02_edge_jetson_clocks_lock",
+      "to_step": "s04_edge_latency_throughput_benchmark",
+      "data_type": "edge-jetson-clocks-lock",
+      "field_mapping": {
+        "clock_state": "clock_state"
+      }
+    },
+    {
+      "from_step": "s01_edge_nvpmodel_power_mode",
+      "to_step": "s05_edge_thermal_soak_test",
+      "data_type": "edge-nvpmodel-power-mode",
+      "field_mapping": {
+        "power_mode_record": "power_mode_record"
+      }
+    },
+    {
+      "from_step": "s03_edge_tegrastats_thermal_log",
+      "to_step": "s05_edge_thermal_soak_test",
+      "data_type": "edge-tegrastats-thermal-log",
+      "field_mapping": {
+        "thermal_log": "thermal_log"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "device_host",
+    "platform_report",
+    "power_mode_target",
+    "log_duration_s",
+    "engine_file",
+    "input_shapes",
+    "soak_duration_s"
+  ],
+  "terminal_outputs": [
+    "benchmark_report",
+    "soak_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_edge_nvpmodel_power_mode"
+    ],
+    [
+      "s02_edge_jetson_clocks_lock"
+    ],
+    [
+      "s03_edge_tegrastats_thermal_log",
+      "s04_edge_latency_throughput_benchmark"
+    ],
+    [
+      "s05_edge_thermal_soak_test"
+    ]
+  ],
+  "estimated_cost": 5,
+  "critical_path": [
+    "s01_edge_nvpmodel_power_mode",
+    "s02_edge_jetson_clocks_lock",
+    "s03_edge_tegrastats_thermal_log",
+    "s05_edge_thermal_soak_test"
+  ]
+}

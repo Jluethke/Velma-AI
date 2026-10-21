@@ -1,0 +1,213 @@
+{
+  "name": "vehicle-diagnostics-obd2-readout",
+  "description": "Read OBD-II live data, VIN and emissions DTCs over SocketCAN and ISO-TP, scaled per SAE J1979 and decoded per SAE J2012.",
+  "steps": [
+    {
+      "id": "s01_uds_diag_scope_readonly",
+      "skill_name": "uds-diag-scope-readonly",
+      "inputs": {
+        "vehicle_description": "from_user_input",
+        "ownership_confirmed": "from_user_input",
+        "diag_interface": "from_user_input"
+      },
+      "outputs": {
+        "diag_scope": "diag_scope",
+        "allowed_services": "allowed_services"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_uds_socketcan_link_setup",
+      "skill_name": "uds-socketcan-link-setup",
+      "inputs": {
+        "diag_scope": "s01_uds_diag_scope_readonly.diag_scope",
+        "can_interface": "from_user_input",
+        "can_bitrate": "from_user_input"
+      },
+      "outputs": {
+        "can_link_status": "can_link_status"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_uds_kernel_can_isotp_module",
+      "skill_name": "uds-kernel-can-isotp-module",
+      "inputs": {
+        "can_link_status": "s02_uds_socketcan_link_setup.can_link_status",
+        "can_interface": "from_user_input",
+        "tx_id": "from_user_input",
+        "rx_id": "from_user_input"
+      },
+      "outputs": {
+        "isotp_link_check": "isotp_link_check"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_uds_obd2_supported_pids",
+      "skill_name": "uds-obd2-supported-pids",
+      "inputs": {
+        "isotp_link_check": "s03_uds_kernel_can_isotp_module.isotp_link_check",
+        "can_interface": "from_user_input"
+      },
+      "outputs": {
+        "supported_pids": "supported_pids",
+        "raw_pid_responses": "raw_pid_responses"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s05_uds_obd2_pid_scaling",
+      "skill_name": "uds-obd2-pid-scaling",
+      "inputs": {
+        "supported_pids": "s04_uds_obd2_supported_pids.supported_pids",
+        "raw_pid_responses": "s04_uds_obd2_supported_pids.raw_pid_responses"
+      },
+      "outputs": {
+        "decoded_pids": "decoded_pids"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s06_uds_obd2_mode03_dtcs",
+      "skill_name": "uds-obd2-mode03-dtcs",
+      "inputs": {
+        "isotp_link_check": "s03_uds_kernel_can_isotp_module.isotp_link_check",
+        "can_interface": "from_user_input"
+      },
+      "outputs": {
+        "obd_dtcs": "obd_dtcs",
+        "mil_status": "mil_status"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s07_uds_obd2_mode09_vehicle_info",
+      "skill_name": "uds-obd2-mode09-vehicle-info",
+      "inputs": {
+        "isotp_link_check": "s03_uds_kernel_can_isotp_module.isotp_link_check",
+        "can_interface": "from_user_input"
+      },
+      "outputs": {
+        "vehicle_info": "vehicle_info"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s08_uds_dtc_status_decode",
+      "skill_name": "uds-dtc-status-decode",
+      "inputs": {
+        "raw_dtc_records": "from_user_input_optional",
+        "obd_dtcs": "s06_uds_obd2_mode03_dtcs.obd_dtcs"
+      },
+      "outputs": {
+        "decoded_dtcs": "decoded_dtcs"
+      },
+      "parallel_group": 5
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_uds_diag_scope_readonly",
+      "to_step": "s02_uds_socketcan_link_setup",
+      "data_type": "uds-diag-scope-readonly",
+      "field_mapping": {
+        "diag_scope": "diag_scope"
+      }
+    },
+    {
+      "from_step": "s02_uds_socketcan_link_setup",
+      "to_step": "s03_uds_kernel_can_isotp_module",
+      "data_type": "uds-socketcan-link-setup",
+      "field_mapping": {
+        "can_link_status": "can_link_status"
+      }
+    },
+    {
+      "from_step": "s03_uds_kernel_can_isotp_module",
+      "to_step": "s04_uds_obd2_supported_pids",
+      "data_type": "uds-kernel-can-isotp-module",
+      "field_mapping": {
+        "isotp_link_check": "isotp_link_check"
+      }
+    },
+    {
+      "from_step": "s04_uds_obd2_supported_pids",
+      "to_step": "s05_uds_obd2_pid_scaling",
+      "data_type": "uds-obd2-supported-pids",
+      "field_mapping": {
+        "supported_pids": "supported_pids",
+        "raw_pid_responses": "raw_pid_responses"
+      }
+    },
+    {
+      "from_step": "s03_uds_kernel_can_isotp_module",
+      "to_step": "s06_uds_obd2_mode03_dtcs",
+      "data_type": "uds-kernel-can-isotp-module",
+      "field_mapping": {
+        "isotp_link_check": "isotp_link_check"
+      }
+    },
+    {
+      "from_step": "s03_uds_kernel_can_isotp_module",
+      "to_step": "s07_uds_obd2_mode09_vehicle_info",
+      "data_type": "uds-kernel-can-isotp-module",
+      "field_mapping": {
+        "isotp_link_check": "isotp_link_check"
+      }
+    },
+    {
+      "from_step": "s06_uds_obd2_mode03_dtcs",
+      "to_step": "s08_uds_dtc_status_decode",
+      "data_type": "uds-obd2-mode03-dtcs",
+      "field_mapping": {
+        "obd_dtcs": "obd_dtcs"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "vehicle_description",
+    "ownership_confirmed",
+    "diag_interface",
+    "can_interface",
+    "can_bitrate",
+    "tx_id",
+    "rx_id",
+    "raw_dtc_records"
+  ],
+  "terminal_outputs": [
+    "allowed_services",
+    "decoded_pids",
+    "mil_status",
+    "vehicle_info",
+    "decoded_dtcs"
+  ],
+  "parallel_groups": [
+    [
+      "s01_uds_diag_scope_readonly"
+    ],
+    [
+      "s02_uds_socketcan_link_setup"
+    ],
+    [
+      "s03_uds_kernel_can_isotp_module"
+    ],
+    [
+      "s04_uds_obd2_supported_pids",
+      "s06_uds_obd2_mode03_dtcs",
+      "s07_uds_obd2_mode09_vehicle_info"
+    ],
+    [
+      "s05_uds_obd2_pid_scaling",
+      "s08_uds_dtc_status_decode"
+    ]
+  ],
+  "estimated_cost": 8,
+  "critical_path": [
+    "s01_uds_diag_scope_readonly",
+    "s02_uds_socketcan_link_setup",
+    "s03_uds_kernel_can_isotp_module",
+    "s06_uds_obd2_mode03_dtcs",
+    "s08_uds_dtc_status_decode"
+  ]
+}

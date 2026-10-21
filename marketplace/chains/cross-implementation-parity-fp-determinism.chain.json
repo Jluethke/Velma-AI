@@ -1,0 +1,176 @@
+{
+  "name": "cross-implementation-parity-fp-determinism",
+  "description": "Set strict floating-point flags for the port compiler and prove there is no fast-math, contraction, x87 excess precision, or subnormal flushing difference.",
+  "steps": [
+    {
+      "id": "s01_parity_fp_flag_baseline",
+      "skill_name": "parity-fp-flag-baseline",
+      "inputs": {
+        "port_repo": "from_user_input",
+        "compiler": "from_user_input",
+        "target_arch": "from_user_input"
+      },
+      "outputs": {
+        "fp_flags": "fp_flags"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_parity_fast_math_audit",
+      "skill_name": "parity-fast-math-audit",
+      "inputs": {
+        "port_repo": "from_user_input",
+        "fp_flags": "s01_parity_fp_flag_baseline.fp_flags"
+      },
+      "outputs": {
+        "fast_math_findings": "fast_math_findings"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_parity_gcc_fp_contract",
+      "skill_name": "parity-gcc-fp-contract",
+      "inputs": {
+        "port_repo": "from_user_input",
+        "fp_flags": "s01_parity_fp_flag_baseline.fp_flags"
+      },
+      "outputs": {
+        "contraction_findings": "contraction_findings"
+      },
+      "condition": "compiler == 'gcc'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_parity_clang_fp_contract",
+      "skill_name": "parity-clang-fp-contract",
+      "inputs": {
+        "port_repo": "from_user_input",
+        "fp_flags": "s01_parity_fp_flag_baseline.fp_flags"
+      },
+      "outputs": {
+        "contraction_findings": "contraction_findings"
+      },
+      "condition": "compiler == 'clang'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s05_parity_msvc_fp_model",
+      "skill_name": "parity-msvc-fp-model",
+      "inputs": {
+        "port_repo": "from_user_input",
+        "fp_flags": "s01_parity_fp_flag_baseline.fp_flags"
+      },
+      "outputs": {
+        "contraction_findings": "contraction_findings"
+      },
+      "condition": "compiler == 'msvc'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s06_parity_x87_excess_precision",
+      "skill_name": "parity-x87-excess-precision",
+      "inputs": {
+        "port_repo": "from_user_input",
+        "fp_flags": "s01_parity_fp_flag_baseline.fp_flags"
+      },
+      "outputs": {
+        "excess_precision_findings": "excess_precision_findings"
+      },
+      "condition": "target_arch == 'i686'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s07_parity_denormal_ftz_daz",
+      "skill_name": "parity-denormal-ftz-daz",
+      "inputs": {
+        "port_repo": "from_user_input",
+        "reference_repo": "from_user_input",
+        "fp_flags": "s01_parity_fp_flag_baseline.fp_flags"
+      },
+      "outputs": {
+        "denormal_findings": "denormal_findings"
+      },
+      "parallel_group": 2
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_parity_fp_flag_baseline",
+      "to_step": "s02_parity_fast_math_audit",
+      "data_type": "parity-fp-flag-baseline",
+      "field_mapping": {
+        "fp_flags": "fp_flags"
+      }
+    },
+    {
+      "from_step": "s01_parity_fp_flag_baseline",
+      "to_step": "s03_parity_gcc_fp_contract",
+      "data_type": "parity-fp-flag-baseline",
+      "field_mapping": {
+        "fp_flags": "fp_flags"
+      }
+    },
+    {
+      "from_step": "s01_parity_fp_flag_baseline",
+      "to_step": "s04_parity_clang_fp_contract",
+      "data_type": "parity-fp-flag-baseline",
+      "field_mapping": {
+        "fp_flags": "fp_flags"
+      }
+    },
+    {
+      "from_step": "s01_parity_fp_flag_baseline",
+      "to_step": "s05_parity_msvc_fp_model",
+      "data_type": "parity-fp-flag-baseline",
+      "field_mapping": {
+        "fp_flags": "fp_flags"
+      }
+    },
+    {
+      "from_step": "s01_parity_fp_flag_baseline",
+      "to_step": "s06_parity_x87_excess_precision",
+      "data_type": "parity-fp-flag-baseline",
+      "field_mapping": {
+        "fp_flags": "fp_flags"
+      }
+    },
+    {
+      "from_step": "s01_parity_fp_flag_baseline",
+      "to_step": "s07_parity_denormal_ftz_daz",
+      "data_type": "parity-fp-flag-baseline",
+      "field_mapping": {
+        "fp_flags": "fp_flags"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "port_repo",
+    "compiler",
+    "target_arch",
+    "reference_repo"
+  ],
+  "terminal_outputs": [
+    "fast_math_findings",
+    "contraction_findings",
+    "excess_precision_findings",
+    "denormal_findings"
+  ],
+  "parallel_groups": [
+    [
+      "s01_parity_fp_flag_baseline"
+    ],
+    [
+      "s02_parity_fast_math_audit",
+      "s03_parity_gcc_fp_contract",
+      "s04_parity_clang_fp_contract",
+      "s05_parity_msvc_fp_model",
+      "s06_parity_x87_excess_precision",
+      "s07_parity_denormal_ftz_daz"
+    ]
+  ],
+  "estimated_cost": 7,
+  "critical_path": [
+    "s01_parity_fp_flag_baseline",
+    "s07_parity_denormal_ftz_daz"
+  ]
+}

@@ -1,0 +1,199 @@
+{
+  "name": "embedded-systems-board-bringup",
+  "description": "Bring up a new Cortex-M board with arm-none-eabi-gcc and CMake: build, audit the memory map and vector table, connect OpenOCD and GDB, then bring up UART, SPI or I2C, and CAN in loopback, bench and listen-only stages.",
+  "steps": [
+    {
+      "id": "s01_emb_arm_gcc_cmake_toolchain",
+      "skill_name": "emb-arm-gcc-cmake-toolchain",
+      "inputs": {
+        "project_dir": "from_user_input",
+        "target_mcu": "from_user_input"
+      },
+      "outputs": {
+        "build_command": "build_command",
+        "elf_path": "elf_path",
+        "map_path": "map_path"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_emb_linker_map_audit",
+      "skill_name": "emb-linker-map-audit",
+      "inputs": {
+        "elf_path": "s01_emb_arm_gcc_cmake_toolchain.elf_path",
+        "map_path": "s01_emb_arm_gcc_cmake_toolchain.map_path",
+        "linker_script": "from_user_input"
+      },
+      "outputs": {
+        "memory_usage_report": "memory_usage_report",
+        "placement_defects": "placement_defects"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_emb_startup_vector_table_check",
+      "skill_name": "emb-startup-vector-table-check",
+      "inputs": {
+        "elf_path": "s01_emb_arm_gcc_cmake_toolchain.elf_path",
+        "startup_file": "from_user_input",
+        "reference_manual": "from_user_input"
+      },
+      "outputs": {
+        "vector_table_report": "vector_table_report",
+        "startup_defects": "startup_defects"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_emb_openocd_gdb_session",
+      "skill_name": "emb-openocd-gdb-session",
+      "inputs": {
+        "elf_path": "s01_emb_arm_gcc_cmake_toolchain.elf_path",
+        "target_mcu": "from_user_input",
+        "debug_probe": "from_user_input"
+      },
+      "outputs": {
+        "debug_session_record": "debug_session_record"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s05_emb_gpio_uart_bringup",
+      "skill_name": "emb-gpio-uart-bringup",
+      "inputs": {
+        "elf_path": "s01_emb_arm_gcc_cmake_toolchain.elf_path",
+        "pin_map": "from_user_input",
+        "reference_manual": "from_user_input",
+        "logic_analyzer": "from_user_input"
+      },
+      "outputs": {
+        "uart_bringup_record": "uart_bringup_record"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s06_emb_spi_i2c_bringup",
+      "skill_name": "emb-spi-i2c-bringup",
+      "inputs": {
+        "elf_path": "s01_emb_arm_gcc_cmake_toolchain.elf_path",
+        "pin_map": "from_user_input",
+        "device_datasheet": "from_user_input",
+        "logic_analyzer": "from_user_input"
+      },
+      "outputs": {
+        "bus_bringup_record": "bus_bringup_record"
+      },
+      "condition": "has_spi_i2c_device == true",
+      "parallel_group": 2
+    },
+    {
+      "id": "s07_emb_can_controller_bringup",
+      "skill_name": "emb-can-controller-bringup",
+      "inputs": {
+        "elf_path": "s01_emb_arm_gcc_cmake_toolchain.elf_path",
+        "pin_map": "from_user_input",
+        "reference_manual": "from_user_input",
+        "can_bitrate": "from_user_input",
+        "network_owner_confirmed": "from_user_input"
+      },
+      "outputs": {
+        "can_bringup_record": "can_bringup_record"
+      },
+      "condition": "has_can == true",
+      "parallel_group": 2
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_emb_arm_gcc_cmake_toolchain",
+      "to_step": "s02_emb_linker_map_audit",
+      "data_type": "emb-arm-gcc-cmake-toolchain",
+      "field_mapping": {
+        "elf_path": "elf_path",
+        "map_path": "map_path"
+      }
+    },
+    {
+      "from_step": "s01_emb_arm_gcc_cmake_toolchain",
+      "to_step": "s03_emb_startup_vector_table_check",
+      "data_type": "emb-arm-gcc-cmake-toolchain",
+      "field_mapping": {
+        "elf_path": "elf_path"
+      }
+    },
+    {
+      "from_step": "s01_emb_arm_gcc_cmake_toolchain",
+      "to_step": "s04_emb_openocd_gdb_session",
+      "data_type": "emb-arm-gcc-cmake-toolchain",
+      "field_mapping": {
+        "elf_path": "elf_path"
+      }
+    },
+    {
+      "from_step": "s01_emb_arm_gcc_cmake_toolchain",
+      "to_step": "s05_emb_gpio_uart_bringup",
+      "data_type": "emb-arm-gcc-cmake-toolchain",
+      "field_mapping": {
+        "elf_path": "elf_path"
+      }
+    },
+    {
+      "from_step": "s01_emb_arm_gcc_cmake_toolchain",
+      "to_step": "s06_emb_spi_i2c_bringup",
+      "data_type": "emb-arm-gcc-cmake-toolchain",
+      "field_mapping": {
+        "elf_path": "elf_path"
+      }
+    },
+    {
+      "from_step": "s01_emb_arm_gcc_cmake_toolchain",
+      "to_step": "s07_emb_can_controller_bringup",
+      "data_type": "emb-arm-gcc-cmake-toolchain",
+      "field_mapping": {
+        "elf_path": "elf_path"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "project_dir",
+    "target_mcu",
+    "linker_script",
+    "startup_file",
+    "reference_manual",
+    "debug_probe",
+    "pin_map",
+    "logic_analyzer",
+    "device_datasheet",
+    "can_bitrate",
+    "network_owner_confirmed"
+  ],
+  "terminal_outputs": [
+    "build_command",
+    "memory_usage_report",
+    "placement_defects",
+    "vector_table_report",
+    "startup_defects",
+    "debug_session_record",
+    "uart_bringup_record",
+    "bus_bringup_record",
+    "can_bringup_record"
+  ],
+  "parallel_groups": [
+    [
+      "s01_emb_arm_gcc_cmake_toolchain"
+    ],
+    [
+      "s02_emb_linker_map_audit",
+      "s03_emb_startup_vector_table_check",
+      "s04_emb_openocd_gdb_session",
+      "s05_emb_gpio_uart_bringup",
+      "s06_emb_spi_i2c_bringup",
+      "s07_emb_can_controller_bringup"
+    ]
+  ],
+  "estimated_cost": 7,
+  "critical_path": [
+    "s01_emb_arm_gcc_cmake_toolchain",
+    "s02_emb_linker_map_audit"
+  ]
+}

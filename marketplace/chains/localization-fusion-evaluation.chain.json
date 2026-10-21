@@ -1,0 +1,148 @@
+{
+  "name": "localization-fusion-evaluation",
+  "description": "Evaluate an existing localization filter on a recorded bag: replay, ground truth preparation, gating review, NEES and NIS consistency, and ATE and RPE.",
+  "steps": [
+    {
+      "id": "s01_loc_filter_bag_replay",
+      "skill_name": "loc-filter-bag-replay",
+      "inputs": {
+        "filter_entrypoint": "from_user_input",
+        "sensor_bag": "from_user_input",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "estimate_log": "estimate_log"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_loc_ground_truth_prep",
+      "skill_name": "loc-ground-truth-prep",
+      "inputs": {
+        "ground_truth_source": "from_user_input",
+        "sensor_bag": "from_user_input",
+        "frame_spec": "from_user_input"
+      },
+      "outputs": {
+        "ground_truth_traj": "ground_truth_traj"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s03_loc_mahalanobis_gating",
+      "skill_name": "loc-mahalanobis-gating",
+      "inputs": {
+        "estimate_log": "s01_loc_filter_bag_replay.estimate_log",
+        "filter_design": "from_user_input",
+        "gate_probability": "from_user_input",
+        "reject_streak_limit": "from_user_input_optional"
+      },
+      "outputs": {
+        "gating_config": "gating_config",
+        "rejected_measurements": "rejected_measurements"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_loc_nees_nis_consistency",
+      "skill_name": "loc-nees-nis-consistency",
+      "inputs": {
+        "estimate_log": "s01_loc_filter_bag_replay.estimate_log",
+        "ground_truth_traj": "s02_loc_ground_truth_prep.ground_truth_traj",
+        "gate_probability": "from_user_input"
+      },
+      "outputs": {
+        "consistency_report": "consistency_report"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s05_loc_evo_ate_rpe",
+      "skill_name": "loc-evo-ate-rpe",
+      "inputs": {
+        "estimate_log": "s01_loc_filter_bag_replay.estimate_log",
+        "ground_truth_traj": "s02_loc_ground_truth_prep.ground_truth_traj",
+        "rpe_delta": "from_user_input"
+      },
+      "outputs": {
+        "ate_rpe_report": "ate_rpe_report"
+      },
+      "parallel_group": 2
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_loc_filter_bag_replay",
+      "to_step": "s03_loc_mahalanobis_gating",
+      "data_type": "loc-filter-bag-replay",
+      "field_mapping": {
+        "estimate_log": "estimate_log"
+      }
+    },
+    {
+      "from_step": "s01_loc_filter_bag_replay",
+      "to_step": "s04_loc_nees_nis_consistency",
+      "data_type": "loc-filter-bag-replay",
+      "field_mapping": {
+        "estimate_log": "estimate_log"
+      }
+    },
+    {
+      "from_step": "s02_loc_ground_truth_prep",
+      "to_step": "s04_loc_nees_nis_consistency",
+      "data_type": "loc-ground-truth-prep",
+      "field_mapping": {
+        "ground_truth_traj": "ground_truth_traj"
+      }
+    },
+    {
+      "from_step": "s01_loc_filter_bag_replay",
+      "to_step": "s05_loc_evo_ate_rpe",
+      "data_type": "loc-filter-bag-replay",
+      "field_mapping": {
+        "estimate_log": "estimate_log"
+      }
+    },
+    {
+      "from_step": "s02_loc_ground_truth_prep",
+      "to_step": "s05_loc_evo_ate_rpe",
+      "data_type": "loc-ground-truth-prep",
+      "field_mapping": {
+        "ground_truth_traj": "ground_truth_traj"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "filter_entrypoint",
+    "sensor_bag",
+    "stack",
+    "ground_truth_source",
+    "frame_spec",
+    "filter_design",
+    "gate_probability",
+    "reject_streak_limit",
+    "rpe_delta"
+  ],
+  "terminal_outputs": [
+    "gating_config",
+    "rejected_measurements",
+    "consistency_report",
+    "ate_rpe_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_loc_filter_bag_replay",
+      "s02_loc_ground_truth_prep"
+    ],
+    [
+      "s03_loc_mahalanobis_gating",
+      "s04_loc_nees_nis_consistency",
+      "s05_loc_evo_ate_rpe"
+    ]
+  ],
+  "estimated_cost": 5,
+  "critical_path": [
+    "s01_loc_filter_bag_replay",
+    "s05_loc_evo_ate_rpe"
+  ]
+}

@@ -1,0 +1,133 @@
+{
+  "name": "cross-implementation-parity-ci-gate",
+  "description": "Compare port outputs to goldens, triage mismatches, write the parity report, and gate merges on GitHub Actions.",
+  "steps": [
+    {
+      "id": "s01_parity_ulp_compare",
+      "skill_name": "parity-ulp-compare",
+      "inputs": {
+        "golden_manifest": "from_user_input",
+        "harness_binary": "from_user_input",
+        "comparison_policy": "from_user_input",
+        "serialization_spec": "from_user_input"
+      },
+      "outputs": {
+        "comparison_results": "comparison_results"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_parity_divergence_triage",
+      "skill_name": "parity-divergence-triage",
+      "inputs": {
+        "comparison_results": "s01_parity_ulp_compare.comparison_results",
+        "reference_repo": "from_user_input",
+        "port_repo": "from_user_input",
+        "env_fingerprint": "from_user_input"
+      },
+      "outputs": {
+        "triage_findings": "triage_findings"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_parity_report",
+      "skill_name": "parity-report",
+      "inputs": {
+        "comparison_results": "s01_parity_ulp_compare.comparison_results",
+        "triage_findings": "s02_parity_divergence_triage.triage_findings",
+        "env_fingerprint": "from_user_input",
+        "golden_manifest": "from_user_input",
+        "matrix_results": "from_user_input_optional",
+        "cross_arch_results": "from_user_input_optional"
+      },
+      "outputs": {
+        "parity_report": "parity_report"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_parity_ci_gate_github",
+      "skill_name": "parity-ci-gate-github",
+      "inputs": {
+        "parity_report": "s03_parity_report.parity_report",
+        "comparison_policy": "from_user_input",
+        "golden_manifest": "from_user_input",
+        "port_repo": "from_user_input"
+      },
+      "outputs": {
+        "ci_workflow": "ci_workflow"
+      },
+      "parallel_group": 4
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_parity_ulp_compare",
+      "to_step": "s02_parity_divergence_triage",
+      "data_type": "parity-ulp-compare",
+      "field_mapping": {
+        "comparison_results": "comparison_results"
+      }
+    },
+    {
+      "from_step": "s01_parity_ulp_compare",
+      "to_step": "s03_parity_report",
+      "data_type": "parity-ulp-compare",
+      "field_mapping": {
+        "comparison_results": "comparison_results"
+      }
+    },
+    {
+      "from_step": "s02_parity_divergence_triage",
+      "to_step": "s03_parity_report",
+      "data_type": "parity-divergence-triage",
+      "field_mapping": {
+        "triage_findings": "triage_findings"
+      }
+    },
+    {
+      "from_step": "s03_parity_report",
+      "to_step": "s04_parity_ci_gate_github",
+      "data_type": "parity-report",
+      "field_mapping": {
+        "parity_report": "parity_report"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "golden_manifest",
+    "harness_binary",
+    "comparison_policy",
+    "serialization_spec",
+    "reference_repo",
+    "port_repo",
+    "env_fingerprint",
+    "matrix_results",
+    "cross_arch_results"
+  ],
+  "terminal_outputs": [
+    "ci_workflow"
+  ],
+  "parallel_groups": [
+    [
+      "s01_parity_ulp_compare"
+    ],
+    [
+      "s02_parity_divergence_triage"
+    ],
+    [
+      "s03_parity_report"
+    ],
+    [
+      "s04_parity_ci_gate_github"
+    ]
+  ],
+  "estimated_cost": 4,
+  "critical_path": [
+    "s01_parity_ulp_compare",
+    "s02_parity_divergence_triage",
+    "s03_parity_report",
+    "s04_parity_ci_gate_github"
+  ]
+}

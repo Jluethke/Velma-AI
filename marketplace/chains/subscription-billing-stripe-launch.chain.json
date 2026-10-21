@@ -1,0 +1,234 @@
+{
+  "name": "subscription-billing-stripe-launch",
+  "description": "Launch Stripe subscriptions: pricing spec, catalog, verified webhooks, trials, plan changes with proration, tax and the customer portal.",
+  "steps": [
+    {
+      "id": "s01_bill_pricing_model_spec",
+      "skill_name": "bill-pricing-model-spec",
+      "inputs": {
+        "pricing_sheet": "from_user_input",
+        "billing_provider": "from_user_input"
+      },
+      "outputs": {
+        "pricing_spec": "pricing_spec",
+        "pricing_open_questions": "pricing_open_questions"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_bill_stripe_catalog_setup",
+      "skill_name": "bill-stripe-catalog-setup",
+      "inputs": {
+        "pricing_spec": "s01_bill_pricing_model_spec.pricing_spec",
+        "stripe_api_version": "from_user_input_optional"
+      },
+      "outputs": {
+        "price_catalog": "price_catalog"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_bill_py_webhook_endpoint",
+      "skill_name": "bill-py-webhook-endpoint",
+      "inputs": {
+        "stripe_api_version": "from_user_input_optional",
+        "app_framework": "from_user_input",
+        "database_url": "from_user_input"
+      },
+      "outputs": {
+        "webhook_handler": "webhook_handler",
+        "processed_events_table": "processed_events_table"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 1
+    },
+    {
+      "id": "s04_bill_node_webhook_endpoint",
+      "skill_name": "bill-node-webhook-endpoint",
+      "inputs": {
+        "stripe_api_version": "from_user_input_optional",
+        "app_framework": "from_user_input",
+        "database_url": "from_user_input"
+      },
+      "outputs": {
+        "webhook_handler": "webhook_handler",
+        "processed_events_table": "processed_events_table"
+      },
+      "condition": "stack == 'node'",
+      "parallel_group": 1
+    },
+    {
+      "id": "s05_bill_subscription_trial",
+      "skill_name": "bill-subscription-trial",
+      "inputs": {
+        "price_catalog": "s02_bill_stripe_catalog_setup.price_catalog",
+        "trial_policy": "from_user_input",
+        "webhook_handler": "from_user_input"
+      },
+      "outputs": {
+        "trial_code": "trial_code",
+        "trial_test_results": "trial_test_results"
+      },
+      "condition": "has_trial == true",
+      "parallel_group": 3
+    },
+    {
+      "id": "s06_bill_plan_change_proration",
+      "skill_name": "bill-plan-change-proration",
+      "inputs": {
+        "price_catalog": "s02_bill_stripe_catalog_setup.price_catalog",
+        "plan_change_policy": "from_user_input",
+        "webhook_handler": "from_user_input"
+      },
+      "outputs": {
+        "plan_change_code": "plan_change_code",
+        "proration_previews": "proration_previews"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s07_bill_stripe_tax_setup",
+      "skill_name": "bill-stripe-tax-setup",
+      "inputs": {
+        "price_catalog": "s02_bill_stripe_catalog_setup.price_catalog",
+        "tax_registrations": "from_user_input"
+      },
+      "outputs": {
+        "tax_config": "tax_config",
+        "tax_test_results": "tax_test_results"
+      },
+      "condition": "tax_engine == 'stripe_tax'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s08_bill_tax_avatax_branch",
+      "skill_name": "bill-tax-avatax-branch",
+      "inputs": {
+        "price_catalog": "s02_bill_stripe_catalog_setup.price_catalog",
+        "tax_registrations": "from_user_input",
+        "avatax_company_code": "from_user_input"
+      },
+      "outputs": {
+        "tax_integration_code": "tax_integration_code",
+        "tax_test_results": "tax_test_results"
+      },
+      "condition": "tax_engine == 'avatax'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s09_bill_customer_portal",
+      "skill_name": "bill-customer-portal",
+      "inputs": {
+        "price_catalog": "s02_bill_stripe_catalog_setup.price_catalog",
+        "refund_policy": "from_user_input",
+        "return_url": "from_user_input"
+      },
+      "outputs": {
+        "portal_configuration_id": "portal_configuration_id",
+        "portal_session_code": "portal_session_code"
+      },
+      "parallel_group": 3
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_bill_pricing_model_spec",
+      "to_step": "s02_bill_stripe_catalog_setup",
+      "data_type": "bill-pricing-model-spec",
+      "field_mapping": {
+        "pricing_spec": "pricing_spec"
+      }
+    },
+    {
+      "from_step": "s02_bill_stripe_catalog_setup",
+      "to_step": "s05_bill_subscription_trial",
+      "data_type": "bill-stripe-catalog-setup",
+      "field_mapping": {
+        "price_catalog": "price_catalog"
+      }
+    },
+    {
+      "from_step": "s02_bill_stripe_catalog_setup",
+      "to_step": "s06_bill_plan_change_proration",
+      "data_type": "bill-stripe-catalog-setup",
+      "field_mapping": {
+        "price_catalog": "price_catalog"
+      }
+    },
+    {
+      "from_step": "s02_bill_stripe_catalog_setup",
+      "to_step": "s07_bill_stripe_tax_setup",
+      "data_type": "bill-stripe-catalog-setup",
+      "field_mapping": {
+        "price_catalog": "price_catalog"
+      }
+    },
+    {
+      "from_step": "s02_bill_stripe_catalog_setup",
+      "to_step": "s08_bill_tax_avatax_branch",
+      "data_type": "bill-stripe-catalog-setup",
+      "field_mapping": {
+        "price_catalog": "price_catalog"
+      }
+    },
+    {
+      "from_step": "s02_bill_stripe_catalog_setup",
+      "to_step": "s09_bill_customer_portal",
+      "data_type": "bill-stripe-catalog-setup",
+      "field_mapping": {
+        "price_catalog": "price_catalog"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "pricing_sheet",
+    "billing_provider",
+    "stripe_api_version",
+    "app_framework",
+    "database_url",
+    "trial_policy",
+    "webhook_handler",
+    "plan_change_policy",
+    "tax_registrations",
+    "avatax_company_code",
+    "refund_policy",
+    "return_url"
+  ],
+  "terminal_outputs": [
+    "pricing_open_questions",
+    "webhook_handler",
+    "processed_events_table",
+    "trial_code",
+    "trial_test_results",
+    "plan_change_code",
+    "proration_previews",
+    "tax_config",
+    "tax_test_results",
+    "tax_integration_code",
+    "portal_configuration_id",
+    "portal_session_code"
+  ],
+  "parallel_groups": [
+    [
+      "s01_bill_pricing_model_spec",
+      "s03_bill_py_webhook_endpoint",
+      "s04_bill_node_webhook_endpoint"
+    ],
+    [
+      "s02_bill_stripe_catalog_setup"
+    ],
+    [
+      "s05_bill_subscription_trial",
+      "s06_bill_plan_change_proration",
+      "s07_bill_stripe_tax_setup",
+      "s08_bill_tax_avatax_branch",
+      "s09_bill_customer_portal"
+    ]
+  ],
+  "estimated_cost": 9,
+  "critical_path": [
+    "s01_bill_pricing_model_spec",
+    "s02_bill_stripe_catalog_setup",
+    "s05_bill_subscription_trial"
+  ]
+}

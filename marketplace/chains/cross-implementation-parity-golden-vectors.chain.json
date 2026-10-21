@@ -1,0 +1,206 @@
+{
+  "name": "cross-implementation-parity-golden-vectors",
+  "description": "Pin the contract, define the canonical encoding, generate and lock Python golden vectors, build the C++ harness, and compare under a given policy.",
+  "steps": [
+    {
+      "id": "s01_parity_contract_scope",
+      "skill_name": "parity-contract-scope",
+      "inputs": {
+        "reference_repo": "from_user_input",
+        "port_repo": "from_user_input",
+        "entry_points": "from_user_input"
+      },
+      "outputs": {
+        "parity_contract": "parity_contract"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_parity_canonical_serialization",
+      "skill_name": "parity-canonical-serialization",
+      "inputs": {
+        "parity_contract": "s01_parity_contract_scope.parity_contract"
+      },
+      "outputs": {
+        "serialization_spec": "serialization_spec"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_parity_py_golden_vectors",
+      "skill_name": "parity-py-golden-vectors",
+      "inputs": {
+        "reference_repo": "from_user_input",
+        "parity_contract": "s01_parity_contract_scope.parity_contract",
+        "serialization_spec": "s02_parity_canonical_serialization.serialization_spec",
+        "seed": "from_user_input_optional"
+      },
+      "outputs": {
+        "golden_vectors": "golden_vectors"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_parity_golden_manifest_lock",
+      "skill_name": "parity-golden-manifest-lock",
+      "inputs": {
+        "golden_vectors": "s03_parity_py_golden_vectors.golden_vectors",
+        "serialization_spec": "s02_parity_canonical_serialization.serialization_spec"
+      },
+      "outputs": {
+        "golden_manifest": "golden_manifest"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s05_parity_cpp_vector_harness",
+      "skill_name": "parity-cpp-vector-harness",
+      "inputs": {
+        "port_repo": "from_user_input",
+        "serialization_spec": "s02_parity_canonical_serialization.serialization_spec",
+        "golden_manifest": "s04_parity_golden_manifest_lock.golden_manifest",
+        "fp_flags": "from_user_input"
+      },
+      "outputs": {
+        "harness_binary": "harness_binary"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s06_parity_ulp_compare",
+      "skill_name": "parity-ulp-compare",
+      "inputs": {
+        "golden_manifest": "s04_parity_golden_manifest_lock.golden_manifest",
+        "harness_binary": "s05_parity_cpp_vector_harness.harness_binary",
+        "comparison_policy": "from_user_input",
+        "serialization_spec": "s02_parity_canonical_serialization.serialization_spec"
+      },
+      "outputs": {
+        "comparison_results": "comparison_results"
+      },
+      "parallel_group": 6
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_parity_contract_scope",
+      "to_step": "s02_parity_canonical_serialization",
+      "data_type": "parity-contract-scope",
+      "field_mapping": {
+        "parity_contract": "parity_contract"
+      }
+    },
+    {
+      "from_step": "s01_parity_contract_scope",
+      "to_step": "s03_parity_py_golden_vectors",
+      "data_type": "parity-contract-scope",
+      "field_mapping": {
+        "parity_contract": "parity_contract"
+      }
+    },
+    {
+      "from_step": "s02_parity_canonical_serialization",
+      "to_step": "s03_parity_py_golden_vectors",
+      "data_type": "parity-canonical-serialization",
+      "field_mapping": {
+        "serialization_spec": "serialization_spec"
+      }
+    },
+    {
+      "from_step": "s03_parity_py_golden_vectors",
+      "to_step": "s04_parity_golden_manifest_lock",
+      "data_type": "parity-py-golden-vectors",
+      "field_mapping": {
+        "golden_vectors": "golden_vectors"
+      }
+    },
+    {
+      "from_step": "s02_parity_canonical_serialization",
+      "to_step": "s04_parity_golden_manifest_lock",
+      "data_type": "parity-canonical-serialization",
+      "field_mapping": {
+        "serialization_spec": "serialization_spec"
+      }
+    },
+    {
+      "from_step": "s02_parity_canonical_serialization",
+      "to_step": "s05_parity_cpp_vector_harness",
+      "data_type": "parity-canonical-serialization",
+      "field_mapping": {
+        "serialization_spec": "serialization_spec"
+      }
+    },
+    {
+      "from_step": "s04_parity_golden_manifest_lock",
+      "to_step": "s05_parity_cpp_vector_harness",
+      "data_type": "parity-golden-manifest-lock",
+      "field_mapping": {
+        "golden_manifest": "golden_manifest"
+      }
+    },
+    {
+      "from_step": "s04_parity_golden_manifest_lock",
+      "to_step": "s06_parity_ulp_compare",
+      "data_type": "parity-golden-manifest-lock",
+      "field_mapping": {
+        "golden_manifest": "golden_manifest"
+      }
+    },
+    {
+      "from_step": "s05_parity_cpp_vector_harness",
+      "to_step": "s06_parity_ulp_compare",
+      "data_type": "parity-cpp-vector-harness",
+      "field_mapping": {
+        "harness_binary": "harness_binary"
+      }
+    },
+    {
+      "from_step": "s02_parity_canonical_serialization",
+      "to_step": "s06_parity_ulp_compare",
+      "data_type": "parity-canonical-serialization",
+      "field_mapping": {
+        "serialization_spec": "serialization_spec"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "reference_repo",
+    "port_repo",
+    "entry_points",
+    "seed",
+    "fp_flags",
+    "comparison_policy"
+  ],
+  "terminal_outputs": [
+    "comparison_results"
+  ],
+  "parallel_groups": [
+    [
+      "s01_parity_contract_scope"
+    ],
+    [
+      "s02_parity_canonical_serialization"
+    ],
+    [
+      "s03_parity_py_golden_vectors"
+    ],
+    [
+      "s04_parity_golden_manifest_lock"
+    ],
+    [
+      "s05_parity_cpp_vector_harness"
+    ],
+    [
+      "s06_parity_ulp_compare"
+    ]
+  ],
+  "estimated_cost": 6,
+  "critical_path": [
+    "s01_parity_contract_scope",
+    "s02_parity_canonical_serialization",
+    "s03_parity_py_golden_vectors",
+    "s04_parity_golden_manifest_lock",
+    "s05_parity_cpp_vector_harness",
+    "s06_parity_ulp_compare"
+  ]
+}

@@ -1,0 +1,145 @@
+{
+  "name": "realtime-linux-latency-debug",
+  "description": "Find the cause of a latency spike: read the histogram, measure hardware noise, split timer latency with rtla, capture an ftrace around the spike, and fix power state exits.",
+  "steps": [
+    {
+      "id": "s01_rtl_kernel_rt_check",
+      "skill_name": "rtl-kernel-rt-check",
+      "inputs": {
+        "target_host": "from_user_input"
+      },
+      "outputs": {
+        "kernel_report": "kernel_report"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_rtl_cyclictest_histogram_read",
+      "skill_name": "rtl-cyclictest-histogram-read",
+      "inputs": {
+        "cyclictest_histogram": "from_user_input",
+        "jitter_budget_us": "from_user_input"
+      },
+      "outputs": {
+        "latency_findings": "latency_findings"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s03_rtl_hw_noise_check",
+      "skill_name": "rtl-hw-noise-check",
+      "inputs": {
+        "kernel_report": "s01_rtl_kernel_rt_check.kernel_report",
+        "test_duration": "from_user_input"
+      },
+      "outputs": {
+        "hw_noise_report": "hw_noise_report"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_rtl_rtla_timerlat",
+      "skill_name": "rtl-rtla-timerlat",
+      "inputs": {
+        "latency_findings": "s02_rtl_cyclictest_histogram_read.latency_findings",
+        "rt_cpus": "from_user_input",
+        "jitter_budget_us": "from_user_input"
+      },
+      "outputs": {
+        "timerlat_report": "timerlat_report"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s05_rtl_ftrace_latency_trace",
+      "skill_name": "rtl-ftrace-latency-trace",
+      "inputs": {
+        "latency_findings": "s02_rtl_cyclictest_histogram_read.latency_findings",
+        "rt_cpus": "from_user_input",
+        "jitter_budget_us": "from_user_input"
+      },
+      "outputs": {
+        "trace_findings": "trace_findings"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s06_rtl_power_cstate_tuning",
+      "skill_name": "rtl-power-cstate-tuning",
+      "inputs": {
+        "hw_noise_report": "s03_rtl_hw_noise_check.hw_noise_report",
+        "rt_cpus": "from_user_input"
+      },
+      "outputs": {
+        "power_config": "power_config"
+      },
+      "parallel_group": 3
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_rtl_kernel_rt_check",
+      "to_step": "s03_rtl_hw_noise_check",
+      "data_type": "rtl-kernel-rt-check",
+      "field_mapping": {
+        "kernel_report": "kernel_report"
+      }
+    },
+    {
+      "from_step": "s02_rtl_cyclictest_histogram_read",
+      "to_step": "s04_rtl_rtla_timerlat",
+      "data_type": "rtl-cyclictest-histogram-read",
+      "field_mapping": {
+        "latency_findings": "latency_findings"
+      }
+    },
+    {
+      "from_step": "s02_rtl_cyclictest_histogram_read",
+      "to_step": "s05_rtl_ftrace_latency_trace",
+      "data_type": "rtl-cyclictest-histogram-read",
+      "field_mapping": {
+        "latency_findings": "latency_findings"
+      }
+    },
+    {
+      "from_step": "s03_rtl_hw_noise_check",
+      "to_step": "s06_rtl_power_cstate_tuning",
+      "data_type": "rtl-hw-noise-check",
+      "field_mapping": {
+        "hw_noise_report": "hw_noise_report"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "target_host",
+    "cyclictest_histogram",
+    "jitter_budget_us",
+    "test_duration",
+    "rt_cpus"
+  ],
+  "terminal_outputs": [
+    "timerlat_report",
+    "trace_findings",
+    "power_config"
+  ],
+  "parallel_groups": [
+    [
+      "s01_rtl_kernel_rt_check",
+      "s02_rtl_cyclictest_histogram_read"
+    ],
+    [
+      "s03_rtl_hw_noise_check",
+      "s04_rtl_rtla_timerlat",
+      "s05_rtl_ftrace_latency_trace"
+    ],
+    [
+      "s06_rtl_power_cstate_tuning"
+    ]
+  ],
+  "estimated_cost": 6,
+  "critical_path": [
+    "s01_rtl_kernel_rt_check",
+    "s03_rtl_hw_noise_check",
+    "s06_rtl_power_cstate_tuning"
+  ]
+}

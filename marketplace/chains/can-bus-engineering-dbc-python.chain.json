@@ -1,0 +1,153 @@
+{
+  "name": "can-bus-engineering-dbc-python",
+  "description": "Work a DBC file in Python with cantools: strict load and lint, byte order, multiplexing and value tables, log decode, counters and checksums, and log format conversion.",
+  "steps": [
+    {
+      "id": "s01_canb_dbc_lint_load",
+      "skill_name": "canb-dbc-lint-load",
+      "inputs": {
+        "dbc_file": "from_user_input"
+      },
+      "outputs": {
+        "dbc_report": "dbc_report"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_canb_dbc_byte_order",
+      "skill_name": "canb-dbc-byte-order",
+      "inputs": {
+        "dbc_file": "from_user_input",
+        "dbc_report": "s01_canb_dbc_lint_load.dbc_report",
+        "reference_frames": "from_user_input_optional"
+      },
+      "outputs": {
+        "byte_order_table": "byte_order_table"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_canb_dbc_mux_valuetables",
+      "skill_name": "canb-dbc-mux-valuetables",
+      "inputs": {
+        "dbc_file": "from_user_input",
+        "dbc_report": "s01_canb_dbc_lint_load.dbc_report",
+        "candump_log": "from_user_input"
+      },
+      "outputs": {
+        "mux_report": "mux_report"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_canb_cantools_decode_log",
+      "skill_name": "canb-cantools-decode-log",
+      "inputs": {
+        "dbc_file": "from_user_input",
+        "candump_log": "from_user_input",
+        "byte_order_table": "s02_canb_dbc_byte_order.byte_order_table"
+      },
+      "outputs": {
+        "decoded_signals": "decoded_signals"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s05_canb_counter_checksum_verify",
+      "skill_name": "canb-counter-checksum-verify",
+      "inputs": {
+        "decoded_signals": "s04_canb_cantools_decode_log.decoded_signals",
+        "dbc_file": "from_user_input",
+        "checksum_spec": "from_user_input_optional"
+      },
+      "outputs": {
+        "integrity_report": "integrity_report"
+      },
+      "condition": "checksum_spec != null",
+      "parallel_group": 4
+    },
+    {
+      "id": "s06_canb_py_log_formats",
+      "skill_name": "canb-py-log-formats",
+      "inputs": {
+        "candump_log": "from_user_input",
+        "log_format": "from_user_input_optional",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "converted_log": "converted_log"
+      },
+      "parallel_group": 1
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_canb_dbc_lint_load",
+      "to_step": "s02_canb_dbc_byte_order",
+      "data_type": "canb-dbc-lint-load",
+      "field_mapping": {
+        "dbc_report": "dbc_report"
+      }
+    },
+    {
+      "from_step": "s01_canb_dbc_lint_load",
+      "to_step": "s03_canb_dbc_mux_valuetables",
+      "data_type": "canb-dbc-lint-load",
+      "field_mapping": {
+        "dbc_report": "dbc_report"
+      }
+    },
+    {
+      "from_step": "s02_canb_dbc_byte_order",
+      "to_step": "s04_canb_cantools_decode_log",
+      "data_type": "canb-dbc-byte-order",
+      "field_mapping": {
+        "byte_order_table": "byte_order_table"
+      }
+    },
+    {
+      "from_step": "s04_canb_cantools_decode_log",
+      "to_step": "s05_canb_counter_checksum_verify",
+      "data_type": "canb-cantools-decode-log",
+      "field_mapping": {
+        "decoded_signals": "decoded_signals"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "dbc_file",
+    "reference_frames",
+    "candump_log",
+    "checksum_spec",
+    "log_format",
+    "project_dir"
+  ],
+  "terminal_outputs": [
+    "mux_report",
+    "integrity_report",
+    "converted_log"
+  ],
+  "parallel_groups": [
+    [
+      "s01_canb_dbc_lint_load",
+      "s06_canb_py_log_formats"
+    ],
+    [
+      "s02_canb_dbc_byte_order",
+      "s03_canb_dbc_mux_valuetables"
+    ],
+    [
+      "s04_canb_cantools_decode_log"
+    ],
+    [
+      "s05_canb_counter_checksum_verify"
+    ]
+  ],
+  "estimated_cost": 6,
+  "critical_path": [
+    "s01_canb_dbc_lint_load",
+    "s02_canb_dbc_byte_order",
+    "s04_canb_cantools_decode_log",
+    "s05_canb_counter_checksum_verify"
+  ]
+}

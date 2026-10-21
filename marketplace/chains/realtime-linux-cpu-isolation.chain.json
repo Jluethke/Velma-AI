@@ -1,0 +1,283 @@
+{
+  "name": "realtime-linux-cpu-isolation",
+  "description": "Partition CPUs for a control loop: baseline, hardware noise, power states, boot-time isolation, cpusets, IRQ affinity and IRQ thread priorities, then a loaded cyclictest compared with the baseline.",
+  "steps": [
+    {
+      "id": "s01_rtl_kernel_rt_check",
+      "skill_name": "rtl-kernel-rt-check",
+      "inputs": {
+        "target_host": "from_user_input"
+      },
+      "outputs": {
+        "kernel_report": "kernel_report"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_rtl_cyclictest_baseline",
+      "skill_name": "rtl-cyclictest-baseline",
+      "inputs": {
+        "kernel_report": "s01_rtl_kernel_rt_check.kernel_report",
+        "test_duration": "from_user_input",
+        "rt_priority": "from_user_input"
+      },
+      "outputs": {
+        "baseline_histogram": "baseline_histogram",
+        "baseline_summary": "baseline_summary"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_rtl_hw_noise_check",
+      "skill_name": "rtl-hw-noise-check",
+      "inputs": {
+        "kernel_report": "s01_rtl_kernel_rt_check.kernel_report",
+        "test_duration": "from_user_input"
+      },
+      "outputs": {
+        "hw_noise_report": "hw_noise_report"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_rtl_power_cstate_tuning",
+      "skill_name": "rtl-power-cstate-tuning",
+      "inputs": {
+        "hw_noise_report": "s03_rtl_hw_noise_check.hw_noise_report",
+        "rt_cpus": "from_user_input"
+      },
+      "outputs": {
+        "power_config": "power_config"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s05_rtl_cpu_isolation_bootargs",
+      "skill_name": "rtl-cpu-isolation-bootargs",
+      "inputs": {
+        "kernel_report": "s01_rtl_kernel_rt_check.kernel_report",
+        "rt_cpus": "from_user_input",
+        "housekeeping_cpus": "from_user_input"
+      },
+      "outputs": {
+        "isolation_config": "isolation_config"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s06_rtl_cpuset_partition",
+      "skill_name": "rtl-cpuset-partition",
+      "inputs": {
+        "isolation_config": "s05_rtl_cpu_isolation_bootargs.isolation_config",
+        "rt_cpus": "from_user_input",
+        "housekeeping_cpus": "from_user_input"
+      },
+      "outputs": {
+        "cpuset_config": "cpuset_config"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s07_rtl_irq_affinity",
+      "skill_name": "rtl-irq-affinity",
+      "inputs": {
+        "isolation_config": "s05_rtl_cpu_isolation_bootargs.isolation_config",
+        "housekeeping_cpus": "from_user_input",
+        "rt_device_irqs": "from_user_input_optional"
+      },
+      "outputs": {
+        "irq_affinity_map": "irq_affinity_map"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s08_rtl_threaded_irq_priority",
+      "skill_name": "rtl-threaded-irq-priority",
+      "inputs": {
+        "irq_affinity_map": "s07_rtl_irq_affinity.irq_affinity_map",
+        "rt_priority": "from_user_input",
+        "rt_device_irqs": "from_user_input_optional"
+      },
+      "outputs": {
+        "irq_thread_priorities": "irq_thread_priorities"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s09_rtl_cyclictest_under_load",
+      "skill_name": "rtl-cyclictest-under-load",
+      "inputs": {
+        "baseline_summary": "s02_rtl_cyclictest_baseline.baseline_summary",
+        "isolation_config": "s05_rtl_cpu_isolation_bootargs.isolation_config",
+        "power_config": "s04_rtl_power_cstate_tuning.power_config",
+        "irq_thread_priorities": "s08_rtl_threaded_irq_priority.irq_thread_priorities",
+        "test_duration": "from_user_input",
+        "rt_priority": "from_user_input",
+        "rt_cpus": "from_user_input"
+      },
+      "outputs": {
+        "loaded_histogram": "loaded_histogram",
+        "loaded_summary": "loaded_summary"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s10_rtl_cyclictest_histogram_read",
+      "skill_name": "rtl-cyclictest-histogram-read",
+      "inputs": {
+        "cyclictest_histogram": "s09_rtl_cyclictest_under_load.loaded_histogram",
+        "jitter_budget_us": "from_user_input"
+      },
+      "outputs": {
+        "latency_findings": "latency_findings"
+      },
+      "parallel_group": 6
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_rtl_kernel_rt_check",
+      "to_step": "s02_rtl_cyclictest_baseline",
+      "data_type": "rtl-kernel-rt-check",
+      "field_mapping": {
+        "kernel_report": "kernel_report"
+      }
+    },
+    {
+      "from_step": "s01_rtl_kernel_rt_check",
+      "to_step": "s03_rtl_hw_noise_check",
+      "data_type": "rtl-kernel-rt-check",
+      "field_mapping": {
+        "kernel_report": "kernel_report"
+      }
+    },
+    {
+      "from_step": "s03_rtl_hw_noise_check",
+      "to_step": "s04_rtl_power_cstate_tuning",
+      "data_type": "rtl-hw-noise-check",
+      "field_mapping": {
+        "hw_noise_report": "hw_noise_report"
+      }
+    },
+    {
+      "from_step": "s01_rtl_kernel_rt_check",
+      "to_step": "s05_rtl_cpu_isolation_bootargs",
+      "data_type": "rtl-kernel-rt-check",
+      "field_mapping": {
+        "kernel_report": "kernel_report"
+      }
+    },
+    {
+      "from_step": "s05_rtl_cpu_isolation_bootargs",
+      "to_step": "s06_rtl_cpuset_partition",
+      "data_type": "rtl-cpu-isolation-bootargs",
+      "field_mapping": {
+        "isolation_config": "isolation_config"
+      }
+    },
+    {
+      "from_step": "s05_rtl_cpu_isolation_bootargs",
+      "to_step": "s07_rtl_irq_affinity",
+      "data_type": "rtl-cpu-isolation-bootargs",
+      "field_mapping": {
+        "isolation_config": "isolation_config"
+      }
+    },
+    {
+      "from_step": "s07_rtl_irq_affinity",
+      "to_step": "s08_rtl_threaded_irq_priority",
+      "data_type": "rtl-irq-affinity",
+      "field_mapping": {
+        "irq_affinity_map": "irq_affinity_map"
+      }
+    },
+    {
+      "from_step": "s02_rtl_cyclictest_baseline",
+      "to_step": "s09_rtl_cyclictest_under_load",
+      "data_type": "rtl-cyclictest-baseline",
+      "field_mapping": {
+        "baseline_summary": "baseline_summary"
+      }
+    },
+    {
+      "from_step": "s05_rtl_cpu_isolation_bootargs",
+      "to_step": "s09_rtl_cyclictest_under_load",
+      "data_type": "rtl-cpu-isolation-bootargs",
+      "field_mapping": {
+        "isolation_config": "isolation_config"
+      }
+    },
+    {
+      "from_step": "s04_rtl_power_cstate_tuning",
+      "to_step": "s09_rtl_cyclictest_under_load",
+      "data_type": "rtl-power-cstate-tuning",
+      "field_mapping": {
+        "power_config": "power_config"
+      }
+    },
+    {
+      "from_step": "s08_rtl_threaded_irq_priority",
+      "to_step": "s09_rtl_cyclictest_under_load",
+      "data_type": "rtl-threaded-irq-priority",
+      "field_mapping": {
+        "irq_thread_priorities": "irq_thread_priorities"
+      }
+    },
+    {
+      "from_step": "s09_rtl_cyclictest_under_load",
+      "to_step": "s10_rtl_cyclictest_histogram_read",
+      "data_type": "rtl-cyclictest-under-load",
+      "field_mapping": {
+        "loaded_histogram": "cyclictest_histogram"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "target_host",
+    "test_duration",
+    "rt_priority",
+    "rt_cpus",
+    "housekeeping_cpus",
+    "rt_device_irqs",
+    "jitter_budget_us"
+  ],
+  "terminal_outputs": [
+    "baseline_histogram",
+    "cpuset_config",
+    "loaded_summary",
+    "latency_findings"
+  ],
+  "parallel_groups": [
+    [
+      "s01_rtl_kernel_rt_check"
+    ],
+    [
+      "s02_rtl_cyclictest_baseline",
+      "s03_rtl_hw_noise_check",
+      "s05_rtl_cpu_isolation_bootargs"
+    ],
+    [
+      "s04_rtl_power_cstate_tuning",
+      "s06_rtl_cpuset_partition",
+      "s07_rtl_irq_affinity"
+    ],
+    [
+      "s08_rtl_threaded_irq_priority"
+    ],
+    [
+      "s09_rtl_cyclictest_under_load"
+    ],
+    [
+      "s10_rtl_cyclictest_histogram_read"
+    ]
+  ],
+  "estimated_cost": 10,
+  "critical_path": [
+    "s01_rtl_kernel_rt_check",
+    "s05_rtl_cpu_isolation_bootargs",
+    "s07_rtl_irq_affinity",
+    "s08_rtl_threaded_irq_priority",
+    "s09_rtl_cyclictest_under_load",
+    "s10_rtl_cyclictest_histogram_read"
+  ]
+}

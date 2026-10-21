@@ -1,0 +1,544 @@
+{
+  "name": "vehicle-simulation",
+  "description": "Set up CARLA or Gazebo with ROS 2, pin seeds and prove determinism, author and check OpenSCENARIO scenarios, build a fault library, run it, compute KPIs, replay logs in SIL, run a HIL CAN bench plant loop, gate regressions in CI, and measure the sim-to-real gap.",
+  "steps": [
+    {
+      "id": "s01_vsim_carla_server_setup",
+      "skill_name": "vsim-carla-server-setup",
+      "inputs": {
+        "carla_version": "from_user_input",
+        "host_os": "from_user_input",
+        "gpu_model": "from_user_input"
+      },
+      "outputs": {
+        "carla_server_cmd": "carla_server_cmd",
+        "carla_client_env": "carla_client_env"
+      },
+      "condition": "stack == 'carla'",
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_vsim_carla_sync_mode",
+      "skill_name": "vsim-carla-sync-mode",
+      "inputs": {
+        "carla_client_env": "s01_vsim_carla_server_setup.carla_client_env",
+        "fixed_delta_seconds": "from_user_input"
+      },
+      "outputs": {
+        "sync_loop_script": "sync_loop_script"
+      },
+      "condition": "stack == 'carla'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_vsim_carla_sensor_rig",
+      "skill_name": "vsim-carla-sensor-rig",
+      "inputs": {
+        "sync_loop_script": "s02_vsim_carla_sync_mode.sync_loop_script",
+        "sensor_spec": "from_user_input"
+      },
+      "outputs": {
+        "sensor_rig_script": "sensor_rig_script",
+        "sensor_frame_log": "sensor_frame_log"
+      },
+      "condition": "stack == 'carla'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_vsim_carla_seed_determinism",
+      "skill_name": "vsim-carla-seed-determinism",
+      "inputs": {
+        "sensor_rig_script": "s03_vsim_carla_sensor_rig.sensor_rig_script",
+        "sim_seed": "from_user_input"
+      },
+      "outputs": {
+        "determinism_report": "determinism_report"
+      },
+      "condition": "stack == 'carla'",
+      "parallel_group": 4
+    },
+    {
+      "id": "s05_vsim_gz_vehicle_model",
+      "skill_name": "vsim-gz-vehicle-model",
+      "inputs": {
+        "gz_version": "from_user_input",
+        "vehicle_params": "from_user_input"
+      },
+      "outputs": {
+        "vehicle_sdf": "vehicle_sdf",
+        "world_file": "world_file"
+      },
+      "condition": "stack == 'gazebo'",
+      "parallel_group": 1
+    },
+    {
+      "id": "s06_vsim_gz_sensor_noise",
+      "skill_name": "vsim-gz-sensor-noise",
+      "inputs": {
+        "vehicle_sdf": "s05_vsim_gz_vehicle_model.vehicle_sdf",
+        "sensor_spec": "from_user_input",
+        "noise_params": "from_user_input_optional"
+      },
+      "outputs": {
+        "noisy_vehicle_sdf": "noisy_vehicle_sdf"
+      },
+      "condition": "stack == 'gazebo'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s07_vsim_gz_ros2_bridge",
+      "skill_name": "vsim-gz-ros2-bridge",
+      "inputs": {
+        "world_file": "s05_vsim_gz_vehicle_model.world_file",
+        "noisy_vehicle_sdf": "s06_vsim_gz_sensor_noise.noisy_vehicle_sdf",
+        "ros_distro": "from_user_input",
+        "gz_version": "from_user_input"
+      },
+      "outputs": {
+        "bridge_config": "bridge_config",
+        "sim_launch_file": "sim_launch_file"
+      },
+      "condition": "stack == 'gazebo'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s08_vsim_gz_seed_determinism",
+      "skill_name": "vsim-gz-seed-determinism",
+      "inputs": {
+        "sim_launch_file": "s07_vsim_gz_ros2_bridge.sim_launch_file",
+        "sim_seed": "from_user_input"
+      },
+      "outputs": {
+        "determinism_report": "determinism_report"
+      },
+      "condition": "stack == 'gazebo'",
+      "parallel_group": 4
+    },
+    {
+      "id": "s09_vsim_openscenario_author",
+      "skill_name": "vsim-openscenario-author",
+      "inputs": {
+        "scenario_description": "from_user_input",
+        "opendrive_file": "from_user_input"
+      },
+      "outputs": {
+        "xosc_file": "xosc_file"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s10_vsim_esmini_scenario_check",
+      "skill_name": "vsim-esmini-scenario-check",
+      "inputs": {
+        "xosc_file": "s09_vsim_openscenario_author.xosc_file"
+      },
+      "outputs": {
+        "scenario_check_report": "scenario_check_report"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s11_vsim_fault_scenario_library",
+      "skill_name": "vsim-fault-scenario-library",
+      "inputs": {
+        "xosc_file": "s09_vsim_openscenario_author.xosc_file",
+        "scenario_check_report": "s10_vsim_esmini_scenario_check.scenario_check_report",
+        "odd_description": "from_user_input"
+      },
+      "outputs": {
+        "scenario_library": "scenario_library"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s12_vsim_scenario_runner_exec",
+      "skill_name": "vsim-scenario-runner-exec",
+      "inputs": {
+        "scenario_library": "s11_vsim_fault_scenario_library.scenario_library",
+        "carla_server_cmd": "s01_vsim_carla_server_setup.carla_server_cmd",
+        "sim_seed": "from_user_input",
+        "determinism_report": "s04_vsim_carla_seed_determinism.determinism_report"
+      },
+      "outputs": {
+        "scenario_results": "scenario_results",
+        "recorder_files": "recorder_files"
+      },
+      "condition": "stack == 'carla'",
+      "parallel_group": 5
+    },
+    {
+      "id": "s13_vsim_carla_recorder_replay",
+      "skill_name": "vsim-carla-recorder-replay",
+      "inputs": {
+        "carla_client_env": "s01_vsim_carla_server_setup.carla_client_env",
+        "recorder_files": "s12_vsim_scenario_runner_exec.recorder_files"
+      },
+      "outputs": {
+        "replay_report": "replay_report"
+      },
+      "condition": "stack == 'carla'",
+      "parallel_group": 6
+    },
+    {
+      "id": "s14_vsim_ros2_bag_replay_sil",
+      "skill_name": "vsim-ros2-bag-replay-sil",
+      "inputs": {
+        "bag_path": "from_user_input",
+        "sut_launch_file": "from_user_input",
+        "baseline_bag": "from_user_input_optional"
+      },
+      "outputs": {
+        "sil_output_bag": "sil_output_bag",
+        "sil_diff_report": "sil_diff_report"
+      },
+      "condition": "replay_source == 'ros2_bag'",
+      "parallel_group": 1
+    },
+    {
+      "id": "s15_vsim_py_can_log_replay_sil",
+      "skill_name": "vsim-py-can-log-replay-sil",
+      "inputs": {
+        "can_log_file": "from_user_input",
+        "dbc_file": "from_user_input",
+        "sut_entrypoint": "from_user_input"
+      },
+      "outputs": {
+        "can_replay_report": "can_replay_report"
+      },
+      "condition": "replay_source == 'can_log'",
+      "parallel_group": 1
+    },
+    {
+      "id": "s16_vsim_scenario_kpis",
+      "skill_name": "vsim-scenario-kpis",
+      "inputs": {
+        "run_logs": "from_user_input",
+        "stack": "from_user_input",
+        "kpi_thresholds": "from_user_input"
+      },
+      "outputs": {
+        "kpi_report": "kpi_report"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s17_vsim_hil_can_bench_setup",
+      "skill_name": "vsim-hil-can-bench-setup",
+      "inputs": {
+        "can_interface_hw": "from_user_input",
+        "can_bitrate": "from_user_input",
+        "dbc_file": "from_user_input"
+      },
+      "outputs": {
+        "bench_can_config": "bench_can_config"
+      },
+      "condition": "hil_bench == true",
+      "parallel_group": 1
+    },
+    {
+      "id": "s18_vsim_hil_plant_loop",
+      "skill_name": "vsim-hil-plant-loop",
+      "inputs": {
+        "bench_can_config": "s17_vsim_hil_can_bench_setup.bench_can_config",
+        "dbc_file": "from_user_input",
+        "plant_model_spec": "from_user_input",
+        "estop_verified": "from_user_input"
+      },
+      "outputs": {
+        "hil_loop_script": "hil_loop_script",
+        "hil_timing_report": "hil_timing_report"
+      },
+      "condition": "hil_bench == true",
+      "parallel_group": 2
+    },
+    {
+      "id": "s19_vsim_ci_github_regression",
+      "skill_name": "vsim-ci-github-regression",
+      "inputs": {
+        "scenario_library": "s11_vsim_fault_scenario_library.scenario_library",
+        "kpi_report": "s16_vsim_scenario_kpis.kpi_report",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "ci_workflow_file": "ci_workflow_file"
+      },
+      "condition": "ci_platform == 'github'",
+      "parallel_group": 4
+    },
+    {
+      "id": "s20_vsim_ci_gitlab_regression",
+      "skill_name": "vsim-ci-gitlab-regression",
+      "inputs": {
+        "scenario_library": "s11_vsim_fault_scenario_library.scenario_library",
+        "kpi_report": "s16_vsim_scenario_kpis.kpi_report",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "ci_workflow_file": "ci_workflow_file"
+      },
+      "condition": "ci_platform == 'gitlab'",
+      "parallel_group": 4
+    },
+    {
+      "id": "s21_vsim_sim2real_gap_check",
+      "skill_name": "vsim-sim2real-gap-check",
+      "inputs": {
+        "sim_log": "from_user_input",
+        "real_log": "from_user_input",
+        "signal_list": "from_user_input"
+      },
+      "outputs": {
+        "gap_report": "gap_report"
+      },
+      "condition": "real_log_available == true",
+      "parallel_group": 1
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_vsim_carla_server_setup",
+      "to_step": "s02_vsim_carla_sync_mode",
+      "data_type": "vsim-carla-server-setup",
+      "field_mapping": {
+        "carla_client_env": "carla_client_env"
+      }
+    },
+    {
+      "from_step": "s02_vsim_carla_sync_mode",
+      "to_step": "s03_vsim_carla_sensor_rig",
+      "data_type": "vsim-carla-sync-mode",
+      "field_mapping": {
+        "sync_loop_script": "sync_loop_script"
+      }
+    },
+    {
+      "from_step": "s03_vsim_carla_sensor_rig",
+      "to_step": "s04_vsim_carla_seed_determinism",
+      "data_type": "vsim-carla-sensor-rig",
+      "field_mapping": {
+        "sensor_rig_script": "sensor_rig_script"
+      }
+    },
+    {
+      "from_step": "s05_vsim_gz_vehicle_model",
+      "to_step": "s06_vsim_gz_sensor_noise",
+      "data_type": "vsim-gz-vehicle-model",
+      "field_mapping": {
+        "vehicle_sdf": "vehicle_sdf"
+      }
+    },
+    {
+      "from_step": "s05_vsim_gz_vehicle_model",
+      "to_step": "s07_vsim_gz_ros2_bridge",
+      "data_type": "vsim-gz-vehicle-model",
+      "field_mapping": {
+        "world_file": "world_file"
+      }
+    },
+    {
+      "from_step": "s06_vsim_gz_sensor_noise",
+      "to_step": "s07_vsim_gz_ros2_bridge",
+      "data_type": "vsim-gz-sensor-noise",
+      "field_mapping": {
+        "noisy_vehicle_sdf": "noisy_vehicle_sdf"
+      }
+    },
+    {
+      "from_step": "s07_vsim_gz_ros2_bridge",
+      "to_step": "s08_vsim_gz_seed_determinism",
+      "data_type": "vsim-gz-ros2-bridge",
+      "field_mapping": {
+        "sim_launch_file": "sim_launch_file"
+      }
+    },
+    {
+      "from_step": "s09_vsim_openscenario_author",
+      "to_step": "s10_vsim_esmini_scenario_check",
+      "data_type": "vsim-openscenario-author",
+      "field_mapping": {
+        "xosc_file": "xosc_file"
+      }
+    },
+    {
+      "from_step": "s09_vsim_openscenario_author",
+      "to_step": "s11_vsim_fault_scenario_library",
+      "data_type": "vsim-openscenario-author",
+      "field_mapping": {
+        "xosc_file": "xosc_file"
+      }
+    },
+    {
+      "from_step": "s10_vsim_esmini_scenario_check",
+      "to_step": "s11_vsim_fault_scenario_library",
+      "data_type": "vsim-esmini-scenario-check",
+      "field_mapping": {
+        "scenario_check_report": "scenario_check_report"
+      }
+    },
+    {
+      "from_step": "s11_vsim_fault_scenario_library",
+      "to_step": "s12_vsim_scenario_runner_exec",
+      "data_type": "vsim-fault-scenario-library",
+      "field_mapping": {
+        "scenario_library": "scenario_library"
+      }
+    },
+    {
+      "from_step": "s01_vsim_carla_server_setup",
+      "to_step": "s12_vsim_scenario_runner_exec",
+      "data_type": "vsim-carla-server-setup",
+      "field_mapping": {
+        "carla_server_cmd": "carla_server_cmd"
+      }
+    },
+    {
+      "from_step": "s04_vsim_carla_seed_determinism",
+      "to_step": "s12_vsim_scenario_runner_exec",
+      "data_type": "vsim-carla-seed-determinism",
+      "field_mapping": {
+        "determinism_report": "determinism_report"
+      }
+    },
+    {
+      "from_step": "s01_vsim_carla_server_setup",
+      "to_step": "s13_vsim_carla_recorder_replay",
+      "data_type": "vsim-carla-server-setup",
+      "field_mapping": {
+        "carla_client_env": "carla_client_env"
+      }
+    },
+    {
+      "from_step": "s12_vsim_scenario_runner_exec",
+      "to_step": "s13_vsim_carla_recorder_replay",
+      "data_type": "vsim-scenario-runner-exec",
+      "field_mapping": {
+        "recorder_files": "recorder_files"
+      }
+    },
+    {
+      "from_step": "s17_vsim_hil_can_bench_setup",
+      "to_step": "s18_vsim_hil_plant_loop",
+      "data_type": "vsim-hil-can-bench-setup",
+      "field_mapping": {
+        "bench_can_config": "bench_can_config"
+      }
+    },
+    {
+      "from_step": "s11_vsim_fault_scenario_library",
+      "to_step": "s19_vsim_ci_github_regression",
+      "data_type": "vsim-fault-scenario-library",
+      "field_mapping": {
+        "scenario_library": "scenario_library"
+      }
+    },
+    {
+      "from_step": "s16_vsim_scenario_kpis",
+      "to_step": "s19_vsim_ci_github_regression",
+      "data_type": "vsim-scenario-kpis",
+      "field_mapping": {
+        "kpi_report": "kpi_report"
+      }
+    },
+    {
+      "from_step": "s11_vsim_fault_scenario_library",
+      "to_step": "s20_vsim_ci_gitlab_regression",
+      "data_type": "vsim-fault-scenario-library",
+      "field_mapping": {
+        "scenario_library": "scenario_library"
+      }
+    },
+    {
+      "from_step": "s16_vsim_scenario_kpis",
+      "to_step": "s20_vsim_ci_gitlab_regression",
+      "data_type": "vsim-scenario-kpis",
+      "field_mapping": {
+        "kpi_report": "kpi_report"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "carla_version",
+    "host_os",
+    "gpu_model",
+    "fixed_delta_seconds",
+    "sensor_spec",
+    "sim_seed",
+    "gz_version",
+    "vehicle_params",
+    "noise_params",
+    "ros_distro",
+    "scenario_description",
+    "opendrive_file",
+    "odd_description",
+    "bag_path",
+    "sut_launch_file",
+    "baseline_bag",
+    "can_log_file",
+    "dbc_file",
+    "sut_entrypoint",
+    "run_logs",
+    "stack",
+    "kpi_thresholds",
+    "can_interface_hw",
+    "can_bitrate",
+    "plant_model_spec",
+    "estop_verified",
+    "sim_log",
+    "real_log",
+    "signal_list"
+  ],
+  "terminal_outputs": [
+    "determinism_report",
+    "replay_report",
+    "sil_diff_report",
+    "can_replay_report",
+    "hil_timing_report",
+    "ci_workflow_file",
+    "gap_report",
+    "kpi_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_vsim_carla_server_setup",
+      "s05_vsim_gz_vehicle_model",
+      "s09_vsim_openscenario_author",
+      "s14_vsim_ros2_bag_replay_sil",
+      "s15_vsim_py_can_log_replay_sil",
+      "s16_vsim_scenario_kpis",
+      "s17_vsim_hil_can_bench_setup",
+      "s21_vsim_sim2real_gap_check"
+    ],
+    [
+      "s02_vsim_carla_sync_mode",
+      "s06_vsim_gz_sensor_noise",
+      "s10_vsim_esmini_scenario_check",
+      "s18_vsim_hil_plant_loop"
+    ],
+    [
+      "s03_vsim_carla_sensor_rig",
+      "s07_vsim_gz_ros2_bridge",
+      "s11_vsim_fault_scenario_library"
+    ],
+    [
+      "s04_vsim_carla_seed_determinism",
+      "s08_vsim_gz_seed_determinism",
+      "s19_vsim_ci_github_regression",
+      "s20_vsim_ci_gitlab_regression"
+    ],
+    [
+      "s12_vsim_scenario_runner_exec"
+    ],
+    [
+      "s13_vsim_carla_recorder_replay"
+    ]
+  ],
+  "estimated_cost": 21,
+  "critical_path": [
+    "s01_vsim_carla_server_setup",
+    "s02_vsim_carla_sync_mode",
+    "s03_vsim_carla_sensor_rig",
+    "s04_vsim_carla_seed_determinism",
+    "s12_vsim_scenario_runner_exec",
+    "s13_vsim_carla_recorder_replay"
+  ]
+}

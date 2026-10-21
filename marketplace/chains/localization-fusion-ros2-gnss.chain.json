@@ -1,0 +1,354 @@
+{
+  "name": "localization-fusion-ros2-gnss",
+  "description": "ROS 2 robot_localization GNSS, IMU and wheel odometry fusion with dual EKF and navsat_transform, gated and replay-verified.",
+  "steps": [
+    {
+      "id": "s01_loc_frame_convention_audit",
+      "skill_name": "loc-frame-convention-audit",
+      "inputs": {
+        "vehicle_spec": "from_user_input",
+        "sensor_list": "from_user_input"
+      },
+      "outputs": {
+        "frame_spec": "frame_spec"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_loc_ros2_static_extrinsics",
+      "skill_name": "loc-ros2-static-extrinsics",
+      "inputs": {
+        "frame_spec": "s01_loc_frame_convention_audit.frame_spec",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "extrinsics_launch": "extrinsics_launch",
+        "tf_tree_report": "tf_tree_report"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_loc_rosbag2_drive_logging",
+      "skill_name": "loc-rosbag2-drive-logging",
+      "inputs": {
+        "frame_spec": "s01_loc_frame_convention_audit.frame_spec",
+        "sensor_topics": "from_user_input",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "sensor_bag": "sensor_bag",
+        "replay_procedure": "replay_procedure"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_loc_imu_allan_variance",
+      "skill_name": "loc-imu-allan-variance",
+      "inputs": {
+        "sensor_bag": "s03_loc_rosbag2_drive_logging.sensor_bag",
+        "imu_topic": "from_user_input",
+        "sensor_datasheets": "from_user_input"
+      },
+      "outputs": {
+        "imu_noise_params": "imu_noise_params"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s05_loc_gnss_fix_quality_model",
+      "skill_name": "loc-gnss-fix-quality-model",
+      "inputs": {
+        "sensor_bag": "s03_loc_rosbag2_drive_logging.sensor_bag",
+        "sensor_datasheets": "from_user_input"
+      },
+      "outputs": {
+        "gnss_noise_model": "gnss_noise_model"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s06_loc_ekf_model_design",
+      "skill_name": "loc-ekf-model-design",
+      "inputs": {
+        "frame_spec": "s01_loc_frame_convention_audit.frame_spec",
+        "sensor_list": "from_user_input",
+        "time_offsets": "from_user_input",
+        "filter_type": "from_user_input_optional"
+      },
+      "outputs": {
+        "filter_design": "filter_design"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s07_loc_q_r_derivation",
+      "skill_name": "loc-q-r-derivation",
+      "inputs": {
+        "filter_design": "s06_loc_ekf_model_design.filter_design",
+        "imu_noise_params": "s04_loc_imu_allan_variance.imu_noise_params",
+        "wheel_odom_noise": "from_user_input",
+        "gnss_noise_model": "s05_loc_gnss_fix_quality_model.gnss_noise_model"
+      },
+      "outputs": {
+        "noise_covariances": "noise_covariances"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s08_loc_ros2_robot_localization_ekf",
+      "skill_name": "loc-ros2-robot-localization-ekf",
+      "inputs": {
+        "filter_design": "s06_loc_ekf_model_design.filter_design",
+        "noise_covariances": "s07_loc_q_r_derivation.noise_covariances",
+        "frame_spec": "s01_loc_frame_convention_audit.frame_spec",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "ekf_config": "ekf_config",
+        "ekf_launch": "ekf_launch"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s09_loc_ros2_navsat_transform",
+      "skill_name": "loc-ros2-navsat-transform",
+      "inputs": {
+        "ekf_config": "s08_loc_ros2_robot_localization_ekf.ekf_config",
+        "frame_spec": "s01_loc_frame_convention_audit.frame_spec",
+        "gnss_noise_model": "s05_loc_gnss_fix_quality_model.gnss_noise_model",
+        "datum_origin": "from_user_input_optional"
+      },
+      "outputs": {
+        "navsat_config": "navsat_config",
+        "dual_ekf_launch": "dual_ekf_launch"
+      },
+      "parallel_group": 6
+    },
+    {
+      "id": "s10_loc_filter_bag_replay",
+      "skill_name": "loc-filter-bag-replay",
+      "inputs": {
+        "filter_entrypoint": "from_user_input",
+        "sensor_bag": "s03_loc_rosbag2_drive_logging.sensor_bag",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "estimate_log": "estimate_log"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s11_loc_mahalanobis_gating",
+      "skill_name": "loc-mahalanobis-gating",
+      "inputs": {
+        "estimate_log": "s10_loc_filter_bag_replay.estimate_log",
+        "filter_design": "s06_loc_ekf_model_design.filter_design",
+        "gate_probability": "from_user_input",
+        "reject_streak_limit": "from_user_input_optional"
+      },
+      "outputs": {
+        "gating_config": "gating_config",
+        "rejected_measurements": "rejected_measurements"
+      },
+      "parallel_group": 4
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_loc_frame_convention_audit",
+      "to_step": "s02_loc_ros2_static_extrinsics",
+      "data_type": "loc-frame-convention-audit",
+      "field_mapping": {
+        "frame_spec": "frame_spec"
+      }
+    },
+    {
+      "from_step": "s01_loc_frame_convention_audit",
+      "to_step": "s03_loc_rosbag2_drive_logging",
+      "data_type": "loc-frame-convention-audit",
+      "field_mapping": {
+        "frame_spec": "frame_spec"
+      }
+    },
+    {
+      "from_step": "s03_loc_rosbag2_drive_logging",
+      "to_step": "s04_loc_imu_allan_variance",
+      "data_type": "loc-rosbag2-drive-logging",
+      "field_mapping": {
+        "sensor_bag": "sensor_bag"
+      }
+    },
+    {
+      "from_step": "s03_loc_rosbag2_drive_logging",
+      "to_step": "s05_loc_gnss_fix_quality_model",
+      "data_type": "loc-rosbag2-drive-logging",
+      "field_mapping": {
+        "sensor_bag": "sensor_bag"
+      }
+    },
+    {
+      "from_step": "s01_loc_frame_convention_audit",
+      "to_step": "s06_loc_ekf_model_design",
+      "data_type": "loc-frame-convention-audit",
+      "field_mapping": {
+        "frame_spec": "frame_spec"
+      }
+    },
+    {
+      "from_step": "s06_loc_ekf_model_design",
+      "to_step": "s07_loc_q_r_derivation",
+      "data_type": "loc-ekf-model-design",
+      "field_mapping": {
+        "filter_design": "filter_design"
+      }
+    },
+    {
+      "from_step": "s04_loc_imu_allan_variance",
+      "to_step": "s07_loc_q_r_derivation",
+      "data_type": "loc-imu-allan-variance",
+      "field_mapping": {
+        "imu_noise_params": "imu_noise_params"
+      }
+    },
+    {
+      "from_step": "s05_loc_gnss_fix_quality_model",
+      "to_step": "s07_loc_q_r_derivation",
+      "data_type": "loc-gnss-fix-quality-model",
+      "field_mapping": {
+        "gnss_noise_model": "gnss_noise_model"
+      }
+    },
+    {
+      "from_step": "s06_loc_ekf_model_design",
+      "to_step": "s08_loc_ros2_robot_localization_ekf",
+      "data_type": "loc-ekf-model-design",
+      "field_mapping": {
+        "filter_design": "filter_design"
+      }
+    },
+    {
+      "from_step": "s07_loc_q_r_derivation",
+      "to_step": "s08_loc_ros2_robot_localization_ekf",
+      "data_type": "loc-q-r-derivation",
+      "field_mapping": {
+        "noise_covariances": "noise_covariances"
+      }
+    },
+    {
+      "from_step": "s01_loc_frame_convention_audit",
+      "to_step": "s08_loc_ros2_robot_localization_ekf",
+      "data_type": "loc-frame-convention-audit",
+      "field_mapping": {
+        "frame_spec": "frame_spec"
+      }
+    },
+    {
+      "from_step": "s08_loc_ros2_robot_localization_ekf",
+      "to_step": "s09_loc_ros2_navsat_transform",
+      "data_type": "loc-ros2-robot-localization-ekf",
+      "field_mapping": {
+        "ekf_config": "ekf_config"
+      }
+    },
+    {
+      "from_step": "s01_loc_frame_convention_audit",
+      "to_step": "s09_loc_ros2_navsat_transform",
+      "data_type": "loc-frame-convention-audit",
+      "field_mapping": {
+        "frame_spec": "frame_spec"
+      }
+    },
+    {
+      "from_step": "s05_loc_gnss_fix_quality_model",
+      "to_step": "s09_loc_ros2_navsat_transform",
+      "data_type": "loc-gnss-fix-quality-model",
+      "field_mapping": {
+        "gnss_noise_model": "gnss_noise_model"
+      }
+    },
+    {
+      "from_step": "s03_loc_rosbag2_drive_logging",
+      "to_step": "s10_loc_filter_bag_replay",
+      "data_type": "loc-rosbag2-drive-logging",
+      "field_mapping": {
+        "sensor_bag": "sensor_bag"
+      }
+    },
+    {
+      "from_step": "s10_loc_filter_bag_replay",
+      "to_step": "s11_loc_mahalanobis_gating",
+      "data_type": "loc-filter-bag-replay",
+      "field_mapping": {
+        "estimate_log": "estimate_log"
+      }
+    },
+    {
+      "from_step": "s06_loc_ekf_model_design",
+      "to_step": "s11_loc_mahalanobis_gating",
+      "data_type": "loc-ekf-model-design",
+      "field_mapping": {
+        "filter_design": "filter_design"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "vehicle_spec",
+    "sensor_list",
+    "project_dir",
+    "sensor_topics",
+    "imu_topic",
+    "sensor_datasheets",
+    "time_offsets",
+    "filter_type",
+    "wheel_odom_noise",
+    "datum_origin",
+    "filter_entrypoint",
+    "stack",
+    "gate_probability",
+    "reject_streak_limit"
+  ],
+  "terminal_outputs": [
+    "extrinsics_launch",
+    "tf_tree_report",
+    "replay_procedure",
+    "ekf_launch",
+    "navsat_config",
+    "dual_ekf_launch",
+    "gating_config",
+    "rejected_measurements"
+  ],
+  "parallel_groups": [
+    [
+      "s01_loc_frame_convention_audit"
+    ],
+    [
+      "s02_loc_ros2_static_extrinsics",
+      "s03_loc_rosbag2_drive_logging",
+      "s06_loc_ekf_model_design"
+    ],
+    [
+      "s04_loc_imu_allan_variance",
+      "s05_loc_gnss_fix_quality_model",
+      "s10_loc_filter_bag_replay"
+    ],
+    [
+      "s07_loc_q_r_derivation",
+      "s11_loc_mahalanobis_gating"
+    ],
+    [
+      "s08_loc_ros2_robot_localization_ekf"
+    ],
+    [
+      "s09_loc_ros2_navsat_transform"
+    ]
+  ],
+  "estimated_cost": 11,
+  "critical_path": [
+    "s01_loc_frame_convention_audit",
+    "s03_loc_rosbag2_drive_logging",
+    "s04_loc_imu_allan_variance",
+    "s07_loc_q_r_derivation",
+    "s08_loc_ros2_robot_localization_ekf",
+    "s09_loc_ros2_navsat_transform"
+  ]
+}

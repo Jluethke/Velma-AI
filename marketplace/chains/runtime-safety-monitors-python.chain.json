@@ -1,0 +1,348 @@
+{
+  "name": "runtime-safety-monitors-python",
+  "description": "Build and fault-test a Python runtime monitor: envelope, past-time STL properties, range, rate and staleness checkers, RTAMT monitor, JSON Lines logging, pytest fault injection, trip rates and latency.",
+  "steps": [
+    {
+      "id": "s01_rmon_scope_supervised_component",
+      "skill_name": "rmon-scope-supervised-component",
+      "inputs": {
+        "system_description": "from_user_input",
+        "hazard_list": "from_user_input",
+        "stack": "from_user_input",
+        "middleware": "from_user_input_optional"
+      },
+      "outputs": {
+        "monitor_scope": "monitor_scope"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_rmon_envelope_from_requirements",
+      "skill_name": "rmon-envelope-from-requirements",
+      "inputs": {
+        "monitor_scope": "s01_rmon_scope_supervised_component.monitor_scope",
+        "requirements_doc": "from_user_input"
+      },
+      "outputs": {
+        "operating_envelope": "operating_envelope",
+        "envelope_open_questions": "envelope_open_questions"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_rmon_temporal_property_spec",
+      "skill_name": "rmon-temporal-property-spec",
+      "inputs": {
+        "operating_envelope": "s02_rmon_envelope_from_requirements.operating_envelope",
+        "fallback_strategy": "from_user_input"
+      },
+      "outputs": {
+        "temporal_properties": "temporal_properties"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_rmon_monitor_log_schema",
+      "skill_name": "rmon-monitor-log-schema",
+      "inputs": {
+        "operating_envelope": "s02_rmon_envelope_from_requirements.operating_envelope",
+        "temporal_properties": "s03_rmon_temporal_property_spec.temporal_properties"
+      },
+      "outputs": {
+        "monitor_log_schema": "monitor_log_schema"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s05_rmon_py_rate_range_check",
+      "skill_name": "rmon-py-rate-range-check",
+      "inputs": {
+        "operating_envelope": "s02_rmon_envelope_from_requirements.operating_envelope",
+        "repo_dir": "from_user_input"
+      },
+      "outputs": {
+        "py_range_rate_checker": "py_range_rate_checker"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s06_rmon_py_staleness_timeout",
+      "skill_name": "rmon-py-staleness-timeout",
+      "inputs": {
+        "operating_envelope": "s02_rmon_envelope_from_requirements.operating_envelope",
+        "repo_dir": "from_user_input"
+      },
+      "outputs": {
+        "py_staleness_checker": "py_staleness_checker"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s07_rmon_py_rtamt_stl_monitor",
+      "skill_name": "rmon-py-rtamt-stl-monitor",
+      "inputs": {
+        "temporal_properties": "s03_rmon_temporal_property_spec.temporal_properties",
+        "repo_dir": "from_user_input"
+      },
+      "outputs": {
+        "py_stl_monitor": "py_stl_monitor"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s08_rmon_py_jsonl_event_logger",
+      "skill_name": "rmon-py-jsonl-event-logger",
+      "inputs": {
+        "monitor_log_schema": "s04_rmon_monitor_log_schema.monitor_log_schema",
+        "repo_dir": "from_user_input"
+      },
+      "outputs": {
+        "py_event_logger": "py_event_logger"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s09_rmon_fault_injection_plan",
+      "skill_name": "rmon-fault-injection-plan",
+      "inputs": {
+        "operating_envelope": "s02_rmon_envelope_from_requirements.operating_envelope",
+        "independence_plan": "from_user_input",
+        "temporal_properties": "s03_rmon_temporal_property_spec.temporal_properties"
+      },
+      "outputs": {
+        "fault_injection_plan": "fault_injection_plan"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s10_rmon_py_pytest_fault_injection",
+      "skill_name": "rmon-py-pytest-fault-injection",
+      "inputs": {
+        "fault_injection_plan": "s09_rmon_fault_injection_plan.fault_injection_plan",
+        "py_range_rate_checker": "s05_rmon_py_rate_range_check.py_range_rate_checker",
+        "py_staleness_checker": "s06_rmon_py_staleness_timeout.py_staleness_checker",
+        "repo_dir": "from_user_input"
+      },
+      "outputs": {
+        "py_fault_results": "py_fault_results"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s11_rmon_trip_rate_measurement",
+      "skill_name": "rmon-trip-rate-measurement",
+      "inputs": {
+        "py_fault_results": "s10_rmon_py_pytest_fault_injection.py_fault_results",
+        "cpp_fault_results": "from_user_input_optional",
+        "nominal_run_log": "from_user_input",
+        "timing_fault_results": "from_user_input_optional",
+        "can_replay_results": "from_user_input_optional"
+      },
+      "outputs": {
+        "trip_rate_report": "trip_rate_report"
+      },
+      "parallel_group": 6
+    },
+    {
+      "id": "s12_rmon_detection_latency_measurement",
+      "skill_name": "rmon-detection-latency-measurement",
+      "inputs": {
+        "py_fault_results": "s10_rmon_py_pytest_fault_injection.py_fault_results",
+        "cpp_fault_results": "from_user_input_optional",
+        "ftti_ms": "from_user_input",
+        "monitor_log_schema": "s04_rmon_monitor_log_schema.monitor_log_schema"
+      },
+      "outputs": {
+        "latency_report": "latency_report"
+      },
+      "parallel_group": 6
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_rmon_scope_supervised_component",
+      "to_step": "s02_rmon_envelope_from_requirements",
+      "data_type": "rmon-scope-supervised-component",
+      "field_mapping": {
+        "monitor_scope": "monitor_scope"
+      }
+    },
+    {
+      "from_step": "s02_rmon_envelope_from_requirements",
+      "to_step": "s03_rmon_temporal_property_spec",
+      "data_type": "rmon-envelope-from-requirements",
+      "field_mapping": {
+        "operating_envelope": "operating_envelope"
+      }
+    },
+    {
+      "from_step": "s02_rmon_envelope_from_requirements",
+      "to_step": "s04_rmon_monitor_log_schema",
+      "data_type": "rmon-envelope-from-requirements",
+      "field_mapping": {
+        "operating_envelope": "operating_envelope"
+      }
+    },
+    {
+      "from_step": "s03_rmon_temporal_property_spec",
+      "to_step": "s04_rmon_monitor_log_schema",
+      "data_type": "rmon-temporal-property-spec",
+      "field_mapping": {
+        "temporal_properties": "temporal_properties"
+      }
+    },
+    {
+      "from_step": "s02_rmon_envelope_from_requirements",
+      "to_step": "s05_rmon_py_rate_range_check",
+      "data_type": "rmon-envelope-from-requirements",
+      "field_mapping": {
+        "operating_envelope": "operating_envelope"
+      }
+    },
+    {
+      "from_step": "s02_rmon_envelope_from_requirements",
+      "to_step": "s06_rmon_py_staleness_timeout",
+      "data_type": "rmon-envelope-from-requirements",
+      "field_mapping": {
+        "operating_envelope": "operating_envelope"
+      }
+    },
+    {
+      "from_step": "s03_rmon_temporal_property_spec",
+      "to_step": "s07_rmon_py_rtamt_stl_monitor",
+      "data_type": "rmon-temporal-property-spec",
+      "field_mapping": {
+        "temporal_properties": "temporal_properties"
+      }
+    },
+    {
+      "from_step": "s04_rmon_monitor_log_schema",
+      "to_step": "s08_rmon_py_jsonl_event_logger",
+      "data_type": "rmon-monitor-log-schema",
+      "field_mapping": {
+        "monitor_log_schema": "monitor_log_schema"
+      }
+    },
+    {
+      "from_step": "s02_rmon_envelope_from_requirements",
+      "to_step": "s09_rmon_fault_injection_plan",
+      "data_type": "rmon-envelope-from-requirements",
+      "field_mapping": {
+        "operating_envelope": "operating_envelope"
+      }
+    },
+    {
+      "from_step": "s03_rmon_temporal_property_spec",
+      "to_step": "s09_rmon_fault_injection_plan",
+      "data_type": "rmon-temporal-property-spec",
+      "field_mapping": {
+        "temporal_properties": "temporal_properties"
+      }
+    },
+    {
+      "from_step": "s09_rmon_fault_injection_plan",
+      "to_step": "s10_rmon_py_pytest_fault_injection",
+      "data_type": "rmon-fault-injection-plan",
+      "field_mapping": {
+        "fault_injection_plan": "fault_injection_plan"
+      }
+    },
+    {
+      "from_step": "s05_rmon_py_rate_range_check",
+      "to_step": "s10_rmon_py_pytest_fault_injection",
+      "data_type": "rmon-py-rate-range-check",
+      "field_mapping": {
+        "py_range_rate_checker": "py_range_rate_checker"
+      }
+    },
+    {
+      "from_step": "s06_rmon_py_staleness_timeout",
+      "to_step": "s10_rmon_py_pytest_fault_injection",
+      "data_type": "rmon-py-staleness-timeout",
+      "field_mapping": {
+        "py_staleness_checker": "py_staleness_checker"
+      }
+    },
+    {
+      "from_step": "s10_rmon_py_pytest_fault_injection",
+      "to_step": "s11_rmon_trip_rate_measurement",
+      "data_type": "rmon-py-pytest-fault-injection",
+      "field_mapping": {
+        "py_fault_results": "py_fault_results"
+      }
+    },
+    {
+      "from_step": "s10_rmon_py_pytest_fault_injection",
+      "to_step": "s12_rmon_detection_latency_measurement",
+      "data_type": "rmon-py-pytest-fault-injection",
+      "field_mapping": {
+        "py_fault_results": "py_fault_results"
+      }
+    },
+    {
+      "from_step": "s04_rmon_monitor_log_schema",
+      "to_step": "s12_rmon_detection_latency_measurement",
+      "data_type": "rmon-monitor-log-schema",
+      "field_mapping": {
+        "monitor_log_schema": "monitor_log_schema"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "system_description",
+    "hazard_list",
+    "stack",
+    "middleware",
+    "requirements_doc",
+    "fallback_strategy",
+    "repo_dir",
+    "independence_plan",
+    "cpp_fault_results",
+    "nominal_run_log",
+    "timing_fault_results",
+    "can_replay_results",
+    "ftti_ms"
+  ],
+  "terminal_outputs": [
+    "envelope_open_questions",
+    "py_stl_monitor",
+    "py_event_logger",
+    "trip_rate_report",
+    "latency_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_rmon_scope_supervised_component"
+    ],
+    [
+      "s02_rmon_envelope_from_requirements"
+    ],
+    [
+      "s03_rmon_temporal_property_spec",
+      "s05_rmon_py_rate_range_check",
+      "s06_rmon_py_staleness_timeout"
+    ],
+    [
+      "s04_rmon_monitor_log_schema",
+      "s07_rmon_py_rtamt_stl_monitor",
+      "s09_rmon_fault_injection_plan"
+    ],
+    [
+      "s08_rmon_py_jsonl_event_logger",
+      "s10_rmon_py_pytest_fault_injection"
+    ],
+    [
+      "s11_rmon_trip_rate_measurement",
+      "s12_rmon_detection_latency_measurement"
+    ]
+  ],
+  "estimated_cost": 12,
+  "critical_path": [
+    "s01_rmon_scope_supervised_component",
+    "s02_rmon_envelope_from_requirements",
+    "s03_rmon_temporal_property_spec",
+    "s09_rmon_fault_injection_plan",
+    "s10_rmon_py_pytest_fault_injection",
+    "s12_rmon_detection_latency_measurement"
+  ]
+}

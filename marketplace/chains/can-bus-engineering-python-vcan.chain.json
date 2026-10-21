@@ -1,0 +1,209 @@
+{
+  "name": "can-bus-engineering-python-vcan",
+  "description": "Build and test Python CAN code on virtual interfaces: scope check, vcan, python-can receiver, bench transmission, encoding, cyclic transmission and pytest.",
+  "steps": [
+    {
+      "id": "s01_canb_tx_scope_check",
+      "skill_name": "canb-tx-scope-check",
+      "inputs": {
+        "target_kind": "from_user_input",
+        "vehicle_owned": "from_user_input",
+        "estop_confirmed": "from_user_input_optional",
+        "planned_tx_ids": "from_user_input_optional"
+      },
+      "outputs": {
+        "tx_permission": "tx_permission",
+        "scope_record": "scope_record"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_canb_vcan_setup",
+      "skill_name": "canb-vcan-setup",
+      "inputs": {
+        "vcan_name": "from_user_input_optional",
+        "fd_enabled": "from_user_input_optional",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "vcan_setup": "vcan_setup"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s03_canb_py_bus_notifier",
+      "skill_name": "canb-py-bus-notifier",
+      "inputs": {
+        "can_netdev": "from_user_input",
+        "capture_filters": "from_user_input_optional",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "py_receiver": "py_receiver"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s04_canb_cansend_cangen_bench",
+      "skill_name": "canb-cansend-cangen-bench",
+      "inputs": {
+        "can_netdev": "from_user_input",
+        "tx_permission": "s01_canb_tx_scope_check.tx_permission",
+        "test_frames": "from_user_input_optional"
+      },
+      "outputs": {
+        "tx_log": "tx_log"
+      },
+      "condition": "tx_permission != 'none' and test_frames != null",
+      "parallel_group": 2
+    },
+    {
+      "id": "s05_canb_dbc_lint_load",
+      "skill_name": "canb-dbc-lint-load",
+      "inputs": {
+        "dbc_file": "from_user_input"
+      },
+      "outputs": {
+        "dbc_report": "dbc_report"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s06_canb_cantools_encode_frame",
+      "skill_name": "canb-cantools-encode-frame",
+      "inputs": {
+        "dbc_file": "from_user_input",
+        "signal_values": "from_user_input_optional",
+        "tx_permission": "s01_canb_tx_scope_check.tx_permission"
+      },
+      "outputs": {
+        "encoded_frames": "encoded_frames"
+      },
+      "condition": "signal_values != null",
+      "parallel_group": 2
+    },
+    {
+      "id": "s07_canb_py_cyclic_tx",
+      "skill_name": "canb-py-cyclic-tx",
+      "inputs": {
+        "can_netdev": "from_user_input",
+        "encoded_frames": "s06_canb_cantools_encode_frame.encoded_frames",
+        "cycle_times": "from_user_input",
+        "tx_permission": "s01_canb_tx_scope_check.tx_permission"
+      },
+      "outputs": {
+        "cyclic_tx_task": "cyclic_tx_task"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s08_canb_py_vcan_pytest",
+      "skill_name": "canb-py-vcan-pytest",
+      "inputs": {
+        "project_dir": "from_user_input",
+        "py_receiver": "s03_canb_py_bus_notifier.py_receiver",
+        "vcan_setup": "s02_canb_vcan_setup.vcan_setup",
+        "dbc_file": "from_user_input"
+      },
+      "outputs": {
+        "py_test_report": "py_test_report"
+      },
+      "parallel_group": 2
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_canb_tx_scope_check",
+      "to_step": "s04_canb_cansend_cangen_bench",
+      "data_type": "canb-tx-scope-check",
+      "field_mapping": {
+        "tx_permission": "tx_permission"
+      }
+    },
+    {
+      "from_step": "s01_canb_tx_scope_check",
+      "to_step": "s06_canb_cantools_encode_frame",
+      "data_type": "canb-tx-scope-check",
+      "field_mapping": {
+        "tx_permission": "tx_permission"
+      }
+    },
+    {
+      "from_step": "s06_canb_cantools_encode_frame",
+      "to_step": "s07_canb_py_cyclic_tx",
+      "data_type": "canb-cantools-encode-frame",
+      "field_mapping": {
+        "encoded_frames": "encoded_frames"
+      }
+    },
+    {
+      "from_step": "s01_canb_tx_scope_check",
+      "to_step": "s07_canb_py_cyclic_tx",
+      "data_type": "canb-tx-scope-check",
+      "field_mapping": {
+        "tx_permission": "tx_permission"
+      }
+    },
+    {
+      "from_step": "s03_canb_py_bus_notifier",
+      "to_step": "s08_canb_py_vcan_pytest",
+      "data_type": "canb-py-bus-notifier",
+      "field_mapping": {
+        "py_receiver": "py_receiver"
+      }
+    },
+    {
+      "from_step": "s02_canb_vcan_setup",
+      "to_step": "s08_canb_py_vcan_pytest",
+      "data_type": "canb-vcan-setup",
+      "field_mapping": {
+        "vcan_setup": "vcan_setup"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "target_kind",
+    "vehicle_owned",
+    "estop_confirmed",
+    "planned_tx_ids",
+    "vcan_name",
+    "fd_enabled",
+    "stack",
+    "can_netdev",
+    "capture_filters",
+    "project_dir",
+    "test_frames",
+    "dbc_file",
+    "signal_values",
+    "cycle_times"
+  ],
+  "terminal_outputs": [
+    "scope_record",
+    "tx_log",
+    "dbc_report",
+    "cyclic_tx_task",
+    "py_test_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_canb_tx_scope_check",
+      "s02_canb_vcan_setup",
+      "s03_canb_py_bus_notifier",
+      "s05_canb_dbc_lint_load"
+    ],
+    [
+      "s04_canb_cansend_cangen_bench",
+      "s06_canb_cantools_encode_frame",
+      "s08_canb_py_vcan_pytest"
+    ],
+    [
+      "s07_canb_py_cyclic_tx"
+    ]
+  ],
+  "estimated_cost": 8,
+  "critical_path": [
+    "s01_canb_tx_scope_check",
+    "s06_canb_cantools_encode_frame",
+    "s07_canb_py_cyclic_tx"
+  ]
+}

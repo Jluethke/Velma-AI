@@ -1,0 +1,117 @@
+{
+  "name": "ros2-robotics-tf-bag-debug",
+  "description": "Frames and data debugging: build and verify the REP 105 tf2 tree, fix lookup errors, record MCAP bags, replay them on sim time in isolation, and introspect the graph.",
+  "steps": [
+    {
+      "id": "s01_ros2_tf2_static_frames",
+      "skill_name": "ros2-tf2-static-frames",
+      "inputs": {
+        "frame_spec": "from_user_input",
+        "workspace_dir": "from_user_input"
+      },
+      "outputs": {
+        "frame_tree": "frame_tree",
+        "tf_check": "tf_check"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_ros2_tf2_lookup_debug",
+      "skill_name": "ros2-tf2-lookup-debug",
+      "inputs": {
+        "frame_tree": "s01_ros2_tf2_static_frames.frame_tree"
+      },
+      "outputs": {
+        "tf_fix_report": "tf_fix_report"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_ros2_rosbag2_mcap_record",
+      "skill_name": "ros2-rosbag2-mcap-record",
+      "inputs": {
+        "topic_list": "from_user_input",
+        "bag_dir": "from_user_input",
+        "ros_distro": "from_user_input"
+      },
+      "outputs": {
+        "bag_path": "bag_path",
+        "bag_info": "bag_info"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s04_ros2_rosbag2_replay_test",
+      "skill_name": "ros2-rosbag2-replay-test",
+      "inputs": {
+        "bag_path": "s03_ros2_rosbag2_mcap_record.bag_path",
+        "bag_info": "s03_ros2_rosbag2_mcap_record.bag_info"
+      },
+      "outputs": {
+        "replay_report": "replay_report"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s05_ros2_doctor_introspection",
+      "skill_name": "ros2-doctor-introspection",
+      "inputs": {
+        "topic_list": "from_user_input",
+        "node_spec": "from_user_input"
+      },
+      "outputs": {
+        "introspection_report": "introspection_report"
+      },
+      "parallel_group": 1
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_ros2_tf2_static_frames",
+      "to_step": "s02_ros2_tf2_lookup_debug",
+      "data_type": "ros2-tf2-static-frames",
+      "field_mapping": {
+        "frame_tree": "frame_tree"
+      }
+    },
+    {
+      "from_step": "s03_ros2_rosbag2_mcap_record",
+      "to_step": "s04_ros2_rosbag2_replay_test",
+      "data_type": "ros2-rosbag2-mcap-record",
+      "field_mapping": {
+        "bag_path": "bag_path",
+        "bag_info": "bag_info"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "frame_spec",
+    "workspace_dir",
+    "topic_list",
+    "bag_dir",
+    "ros_distro",
+    "node_spec"
+  ],
+  "terminal_outputs": [
+    "tf_check",
+    "tf_fix_report",
+    "replay_report",
+    "introspection_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_ros2_tf2_static_frames",
+      "s03_ros2_rosbag2_mcap_record",
+      "s05_ros2_doctor_introspection"
+    ],
+    [
+      "s02_ros2_tf2_lookup_debug",
+      "s04_ros2_rosbag2_replay_test"
+    ]
+  ],
+  "estimated_cost": 5,
+  "critical_path": [
+    "s03_ros2_rosbag2_mcap_record",
+    "s04_ros2_rosbag2_replay_test"
+  ]
+}

@@ -1,0 +1,251 @@
+{
+  "name": "safety-critical-cpp-static-analysis",
+  "description": "Choose the coding standard, apply compiler warning sets, clang-tidy and Cppcheck MISRA checks, triage the findings and write deviation records.",
+  "steps": [
+    {
+      "id": "s01_sccpp_standard_select",
+      "skill_name": "sccpp-standard-select",
+      "inputs": {
+        "language": "from_user_input",
+        "codebase_dir": "from_user_input",
+        "integrity_level": "from_user_input_optional"
+      },
+      "outputs": {
+        "guideline_plan": "guideline_plan"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_sccpp_cmake_build_profiles",
+      "skill_name": "sccpp-cmake-build-profiles",
+      "inputs": {
+        "codebase_dir": "from_user_input",
+        "stack": "from_user_input",
+        "language": "from_user_input",
+        "toolchain_file": "from_user_input_optional"
+      },
+      "outputs": {
+        "build_profiles": "build_profiles"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s03_sccpp_gcc_warning_set",
+      "skill_name": "sccpp-gcc-warning-set",
+      "inputs": {
+        "codebase_dir": "from_user_input",
+        "build_profiles": "s02_sccpp_cmake_build_profiles.build_profiles",
+        "language": "from_user_input"
+      },
+      "outputs": {
+        "gcc_warning_report": "gcc_warning_report"
+      },
+      "condition": "stack == 'gcc'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_sccpp_clang_warning_set",
+      "skill_name": "sccpp-clang-warning-set",
+      "inputs": {
+        "codebase_dir": "from_user_input",
+        "build_profiles": "s02_sccpp_cmake_build_profiles.build_profiles",
+        "language": "from_user_input"
+      },
+      "outputs": {
+        "clang_warning_report": "clang_warning_report"
+      },
+      "condition": "stack == 'clang'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s05_sccpp_clang_tidy_config",
+      "skill_name": "sccpp-clang-tidy-config",
+      "inputs": {
+        "codebase_dir": "from_user_input",
+        "build_profiles": "s02_sccpp_cmake_build_profiles.build_profiles",
+        "guideline_plan": "s01_sccpp_standard_select.guideline_plan"
+      },
+      "outputs": {
+        "clang_tidy_findings": "clang_tidy_findings"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s06_sccpp_cppcheck_misra_c",
+      "skill_name": "sccpp-cppcheck-misra-c",
+      "inputs": {
+        "codebase_dir": "from_user_input",
+        "build_profiles": "s02_sccpp_cmake_build_profiles.build_profiles",
+        "misra_rule_texts": "from_user_input_optional"
+      },
+      "outputs": {
+        "cppcheck_findings": "cppcheck_findings"
+      },
+      "condition": "language == 'c'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s07_sccpp_findings_triage",
+      "skill_name": "sccpp-findings-triage",
+      "inputs": {
+        "guideline_plan": "s01_sccpp_standard_select.guideline_plan",
+        "gcc_warning_report": "s03_sccpp_gcc_warning_set.gcc_warning_report",
+        "clang_warning_report": "s04_sccpp_clang_warning_set.clang_warning_report",
+        "clang_tidy_findings": "s05_sccpp_clang_tidy_config.clang_tidy_findings",
+        "cppcheck_findings": "s06_sccpp_cppcheck_misra_c.cppcheck_findings"
+      },
+      "outputs": {
+        "triaged_findings": "triaged_findings",
+        "deviation_candidates": "deviation_candidates"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s08_sccpp_deviation_record",
+      "skill_name": "sccpp-deviation-record",
+      "inputs": {
+        "deviation_candidates": "s07_sccpp_findings_triage.deviation_candidates",
+        "guideline_plan": "s01_sccpp_standard_select.guideline_plan"
+      },
+      "outputs": {
+        "deviation_records": "deviation_records"
+      },
+      "parallel_group": 4
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s02_sccpp_cmake_build_profiles",
+      "to_step": "s03_sccpp_gcc_warning_set",
+      "data_type": "sccpp-cmake-build-profiles",
+      "field_mapping": {
+        "build_profiles": "build_profiles"
+      }
+    },
+    {
+      "from_step": "s02_sccpp_cmake_build_profiles",
+      "to_step": "s04_sccpp_clang_warning_set",
+      "data_type": "sccpp-cmake-build-profiles",
+      "field_mapping": {
+        "build_profiles": "build_profiles"
+      }
+    },
+    {
+      "from_step": "s02_sccpp_cmake_build_profiles",
+      "to_step": "s05_sccpp_clang_tidy_config",
+      "data_type": "sccpp-cmake-build-profiles",
+      "field_mapping": {
+        "build_profiles": "build_profiles"
+      }
+    },
+    {
+      "from_step": "s01_sccpp_standard_select",
+      "to_step": "s05_sccpp_clang_tidy_config",
+      "data_type": "sccpp-standard-select",
+      "field_mapping": {
+        "guideline_plan": "guideline_plan"
+      }
+    },
+    {
+      "from_step": "s02_sccpp_cmake_build_profiles",
+      "to_step": "s06_sccpp_cppcheck_misra_c",
+      "data_type": "sccpp-cmake-build-profiles",
+      "field_mapping": {
+        "build_profiles": "build_profiles"
+      }
+    },
+    {
+      "from_step": "s01_sccpp_standard_select",
+      "to_step": "s07_sccpp_findings_triage",
+      "data_type": "sccpp-standard-select",
+      "field_mapping": {
+        "guideline_plan": "guideline_plan"
+      }
+    },
+    {
+      "from_step": "s03_sccpp_gcc_warning_set",
+      "to_step": "s07_sccpp_findings_triage",
+      "data_type": "sccpp-gcc-warning-set",
+      "field_mapping": {
+        "gcc_warning_report": "gcc_warning_report"
+      }
+    },
+    {
+      "from_step": "s04_sccpp_clang_warning_set",
+      "to_step": "s07_sccpp_findings_triage",
+      "data_type": "sccpp-clang-warning-set",
+      "field_mapping": {
+        "clang_warning_report": "clang_warning_report"
+      }
+    },
+    {
+      "from_step": "s05_sccpp_clang_tidy_config",
+      "to_step": "s07_sccpp_findings_triage",
+      "data_type": "sccpp-clang-tidy-config",
+      "field_mapping": {
+        "clang_tidy_findings": "clang_tidy_findings"
+      }
+    },
+    {
+      "from_step": "s06_sccpp_cppcheck_misra_c",
+      "to_step": "s07_sccpp_findings_triage",
+      "data_type": "sccpp-cppcheck-misra-c",
+      "field_mapping": {
+        "cppcheck_findings": "cppcheck_findings"
+      }
+    },
+    {
+      "from_step": "s07_sccpp_findings_triage",
+      "to_step": "s08_sccpp_deviation_record",
+      "data_type": "sccpp-findings-triage",
+      "field_mapping": {
+        "deviation_candidates": "deviation_candidates"
+      }
+    },
+    {
+      "from_step": "s01_sccpp_standard_select",
+      "to_step": "s08_sccpp_deviation_record",
+      "data_type": "sccpp-standard-select",
+      "field_mapping": {
+        "guideline_plan": "guideline_plan"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "language",
+    "codebase_dir",
+    "integrity_level",
+    "stack",
+    "toolchain_file",
+    "misra_rule_texts"
+  ],
+  "terminal_outputs": [
+    "triaged_findings",
+    "deviation_records"
+  ],
+  "parallel_groups": [
+    [
+      "s01_sccpp_standard_select",
+      "s02_sccpp_cmake_build_profiles"
+    ],
+    [
+      "s03_sccpp_gcc_warning_set",
+      "s04_sccpp_clang_warning_set",
+      "s05_sccpp_clang_tidy_config",
+      "s06_sccpp_cppcheck_misra_c"
+    ],
+    [
+      "s07_sccpp_findings_triage"
+    ],
+    [
+      "s08_sccpp_deviation_record"
+    ]
+  ],
+  "estimated_cost": 8,
+  "critical_path": [
+    "s02_sccpp_cmake_build_profiles",
+    "s04_sccpp_clang_warning_set",
+    "s07_sccpp_findings_triage",
+    "s08_sccpp_deviation_record"
+  ]
+}

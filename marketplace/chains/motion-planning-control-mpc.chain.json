@@ -1,0 +1,367 @@
+{
+  "name": "motion-planning-control-mpc",
+  "description": "MPC lateral and longitudinal tracking in simulation: path and speed profile, sparse QP formulation, OSQP or acados solver selected by mpc_solver, closed-loop simulation and tracking metrics.",
+  "steps": [
+    {
+      "id": "s01_ctrl_spec_intake",
+      "skill_name": "ctrl-spec-intake",
+      "inputs": {
+        "vehicle_params": "from_user_input",
+        "motion_limits": "from_user_input",
+        "test_site": "from_user_input",
+        "estop_description": "from_user_input",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "control_spec": "control_spec",
+        "open_questions": "open_questions"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_ctrl_bicycle_model_py",
+      "skill_name": "ctrl-bicycle-model-py",
+      "inputs": {
+        "control_spec": "s01_ctrl_spec_intake.control_spec",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "plant_model": "plant_model"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_ctrl_path_spline_smoothing",
+      "skill_name": "ctrl-path-spline-smoothing",
+      "inputs": {
+        "waypoints": "from_user_input",
+        "control_spec": "s01_ctrl_spec_intake.control_spec"
+      },
+      "outputs": {
+        "reference_path": "reference_path"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_ctrl_speed_profile_jerk_limited",
+      "skill_name": "ctrl-speed-profile-jerk-limited",
+      "inputs": {
+        "reference_path": "s03_ctrl_path_spline_smoothing.reference_path",
+        "control_spec": "s01_ctrl_spec_intake.control_spec"
+      },
+      "outputs": {
+        "reference_trajectory": "reference_trajectory"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s05_ctrl_actuator_rate_saturation",
+      "skill_name": "ctrl-actuator-rate-saturation",
+      "inputs": {
+        "control_spec": "s01_ctrl_spec_intake.control_spec",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "actuator_limiter": "actuator_limiter"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s06_ctrl_mpc_qp_formulation",
+      "skill_name": "ctrl-mpc-qp-formulation",
+      "inputs": {
+        "plant_model": "s02_ctrl_bicycle_model_py.plant_model",
+        "reference_trajectory": "s04_ctrl_speed_profile_jerk_limited.reference_trajectory",
+        "control_spec": "s01_ctrl_spec_intake.control_spec"
+      },
+      "outputs": {
+        "mpc_problem": "mpc_problem"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s07_ctrl_mpc_osqp_py",
+      "skill_name": "ctrl-mpc-osqp-py",
+      "inputs": {
+        "mpc_problem": "s06_ctrl_mpc_qp_formulation.mpc_problem",
+        "actuator_limiter": "s05_ctrl_actuator_rate_saturation.actuator_limiter"
+      },
+      "outputs": {
+        "mpc_controller": "mpc_controller"
+      },
+      "condition": "mpc_solver == 'osqp'",
+      "parallel_group": 5
+    },
+    {
+      "id": "s08_ctrl_mpc_acados",
+      "skill_name": "ctrl-mpc-acados",
+      "inputs": {
+        "mpc_problem": "s06_ctrl_mpc_qp_formulation.mpc_problem",
+        "plant_model": "s02_ctrl_bicycle_model_py.plant_model",
+        "actuator_limiter": "s05_ctrl_actuator_rate_saturation.actuator_limiter"
+      },
+      "outputs": {
+        "acados_controller": "acados_controller"
+      },
+      "condition": "mpc_solver == 'acados'",
+      "parallel_group": 5
+    },
+    {
+      "id": "s09_ctrl_closed_loop_sim_py",
+      "skill_name": "ctrl-closed-loop-sim-py",
+      "inputs": {
+        "plant_model": "s02_ctrl_bicycle_model_py.plant_model",
+        "reference_trajectory": "s04_ctrl_speed_profile_jerk_limited.reference_trajectory",
+        "longitudinal_controller": "from_user_input",
+        "pid_gains": "from_user_input",
+        "actuator_limiter": "s05_ctrl_actuator_rate_saturation.actuator_limiter",
+        "lateral_method": "from_user_input",
+        "pure_pursuit_controller": "from_user_input_optional",
+        "stanley_controller": "from_user_input_optional",
+        "lqr_controller": "from_user_input_optional",
+        "mpc_controller": "s07_ctrl_mpc_osqp_py.mpc_controller",
+        "acados_controller": "s08_ctrl_mpc_acados.acados_controller",
+        "model_fit_report": "from_user_input_optional"
+      },
+      "outputs": {
+        "sim_log": "sim_log",
+        "sim_verdict": "sim_verdict"
+      },
+      "parallel_group": 6
+    },
+    {
+      "id": "s10_ctrl_tracking_metrics",
+      "skill_name": "ctrl-tracking-metrics",
+      "inputs": {
+        "run_log": "s09_ctrl_closed_loop_sim_py.sim_log",
+        "reference_trajectory": "s04_ctrl_speed_profile_jerk_limited.reference_trajectory",
+        "tracking_tolerances": "from_user_input"
+      },
+      "outputs": {
+        "tracking_metrics": "tracking_metrics"
+      },
+      "parallel_group": 7
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_ctrl_spec_intake",
+      "to_step": "s02_ctrl_bicycle_model_py",
+      "data_type": "ctrl-spec-intake",
+      "field_mapping": {
+        "control_spec": "control_spec"
+      }
+    },
+    {
+      "from_step": "s01_ctrl_spec_intake",
+      "to_step": "s03_ctrl_path_spline_smoothing",
+      "data_type": "ctrl-spec-intake",
+      "field_mapping": {
+        "control_spec": "control_spec"
+      }
+    },
+    {
+      "from_step": "s03_ctrl_path_spline_smoothing",
+      "to_step": "s04_ctrl_speed_profile_jerk_limited",
+      "data_type": "ctrl-path-spline-smoothing",
+      "field_mapping": {
+        "reference_path": "reference_path"
+      }
+    },
+    {
+      "from_step": "s01_ctrl_spec_intake",
+      "to_step": "s04_ctrl_speed_profile_jerk_limited",
+      "data_type": "ctrl-spec-intake",
+      "field_mapping": {
+        "control_spec": "control_spec"
+      }
+    },
+    {
+      "from_step": "s01_ctrl_spec_intake",
+      "to_step": "s05_ctrl_actuator_rate_saturation",
+      "data_type": "ctrl-spec-intake",
+      "field_mapping": {
+        "control_spec": "control_spec"
+      }
+    },
+    {
+      "from_step": "s02_ctrl_bicycle_model_py",
+      "to_step": "s06_ctrl_mpc_qp_formulation",
+      "data_type": "ctrl-bicycle-model-py",
+      "field_mapping": {
+        "plant_model": "plant_model"
+      }
+    },
+    {
+      "from_step": "s04_ctrl_speed_profile_jerk_limited",
+      "to_step": "s06_ctrl_mpc_qp_formulation",
+      "data_type": "ctrl-speed-profile-jerk-limited",
+      "field_mapping": {
+        "reference_trajectory": "reference_trajectory"
+      }
+    },
+    {
+      "from_step": "s01_ctrl_spec_intake",
+      "to_step": "s06_ctrl_mpc_qp_formulation",
+      "data_type": "ctrl-spec-intake",
+      "field_mapping": {
+        "control_spec": "control_spec"
+      }
+    },
+    {
+      "from_step": "s06_ctrl_mpc_qp_formulation",
+      "to_step": "s07_ctrl_mpc_osqp_py",
+      "data_type": "ctrl-mpc-qp-formulation",
+      "field_mapping": {
+        "mpc_problem": "mpc_problem"
+      }
+    },
+    {
+      "from_step": "s05_ctrl_actuator_rate_saturation",
+      "to_step": "s07_ctrl_mpc_osqp_py",
+      "data_type": "ctrl-actuator-rate-saturation",
+      "field_mapping": {
+        "actuator_limiter": "actuator_limiter"
+      }
+    },
+    {
+      "from_step": "s06_ctrl_mpc_qp_formulation",
+      "to_step": "s08_ctrl_mpc_acados",
+      "data_type": "ctrl-mpc-qp-formulation",
+      "field_mapping": {
+        "mpc_problem": "mpc_problem"
+      }
+    },
+    {
+      "from_step": "s02_ctrl_bicycle_model_py",
+      "to_step": "s08_ctrl_mpc_acados",
+      "data_type": "ctrl-bicycle-model-py",
+      "field_mapping": {
+        "plant_model": "plant_model"
+      }
+    },
+    {
+      "from_step": "s05_ctrl_actuator_rate_saturation",
+      "to_step": "s08_ctrl_mpc_acados",
+      "data_type": "ctrl-actuator-rate-saturation",
+      "field_mapping": {
+        "actuator_limiter": "actuator_limiter"
+      }
+    },
+    {
+      "from_step": "s02_ctrl_bicycle_model_py",
+      "to_step": "s09_ctrl_closed_loop_sim_py",
+      "data_type": "ctrl-bicycle-model-py",
+      "field_mapping": {
+        "plant_model": "plant_model"
+      }
+    },
+    {
+      "from_step": "s04_ctrl_speed_profile_jerk_limited",
+      "to_step": "s09_ctrl_closed_loop_sim_py",
+      "data_type": "ctrl-speed-profile-jerk-limited",
+      "field_mapping": {
+        "reference_trajectory": "reference_trajectory"
+      }
+    },
+    {
+      "from_step": "s05_ctrl_actuator_rate_saturation",
+      "to_step": "s09_ctrl_closed_loop_sim_py",
+      "data_type": "ctrl-actuator-rate-saturation",
+      "field_mapping": {
+        "actuator_limiter": "actuator_limiter"
+      }
+    },
+    {
+      "from_step": "s07_ctrl_mpc_osqp_py",
+      "to_step": "s09_ctrl_closed_loop_sim_py",
+      "data_type": "ctrl-mpc-osqp-py",
+      "field_mapping": {
+        "mpc_controller": "mpc_controller"
+      }
+    },
+    {
+      "from_step": "s08_ctrl_mpc_acados",
+      "to_step": "s09_ctrl_closed_loop_sim_py",
+      "data_type": "ctrl-mpc-acados",
+      "field_mapping": {
+        "acados_controller": "acados_controller"
+      }
+    },
+    {
+      "from_step": "s09_ctrl_closed_loop_sim_py",
+      "to_step": "s10_ctrl_tracking_metrics",
+      "data_type": "ctrl-closed-loop-sim-py",
+      "field_mapping": {
+        "sim_log": "run_log"
+      }
+    },
+    {
+      "from_step": "s04_ctrl_speed_profile_jerk_limited",
+      "to_step": "s10_ctrl_tracking_metrics",
+      "data_type": "ctrl-speed-profile-jerk-limited",
+      "field_mapping": {
+        "reference_trajectory": "reference_trajectory"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "vehicle_params",
+    "motion_limits",
+    "test_site",
+    "estop_description",
+    "stack",
+    "project_dir",
+    "waypoints",
+    "longitudinal_controller",
+    "pid_gains",
+    "lateral_method",
+    "pure_pursuit_controller",
+    "stanley_controller",
+    "lqr_controller",
+    "model_fit_report",
+    "tracking_tolerances"
+  ],
+  "terminal_outputs": [
+    "open_questions",
+    "mpc_problem",
+    "sim_verdict",
+    "tracking_metrics"
+  ],
+  "parallel_groups": [
+    [
+      "s01_ctrl_spec_intake"
+    ],
+    [
+      "s02_ctrl_bicycle_model_py",
+      "s03_ctrl_path_spline_smoothing",
+      "s05_ctrl_actuator_rate_saturation"
+    ],
+    [
+      "s04_ctrl_speed_profile_jerk_limited"
+    ],
+    [
+      "s06_ctrl_mpc_qp_formulation"
+    ],
+    [
+      "s07_ctrl_mpc_osqp_py",
+      "s08_ctrl_mpc_acados"
+    ],
+    [
+      "s09_ctrl_closed_loop_sim_py"
+    ],
+    [
+      "s10_ctrl_tracking_metrics"
+    ]
+  ],
+  "estimated_cost": 10,
+  "critical_path": [
+    "s01_ctrl_spec_intake",
+    "s03_ctrl_path_spline_smoothing",
+    "s04_ctrl_speed_profile_jerk_limited",
+    "s06_ctrl_mpc_qp_formulation",
+    "s08_ctrl_mpc_acados",
+    "s09_ctrl_closed_loop_sim_py",
+    "s10_ctrl_tracking_metrics"
+  ]
+}

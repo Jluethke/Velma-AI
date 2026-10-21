@@ -1,0 +1,298 @@
+{
+  "name": "vehicle-sensor-integration-camera",
+  "description": "Bring up a V4L2, CSI or GMSL camera, lock exposure and frame rate, capture with GStreamer or C++, calibrate intrinsics in Python, C++ or ROS 2, and accept the result on held-out views.",
+  "steps": [
+    {
+      "id": "s01_vsens_sensor_inventory",
+      "skill_name": "vsens-sensor-inventory",
+      "inputs": {
+        "platform_description": "from_user_input",
+        "sensor_list": "from_user_input"
+      },
+      "outputs": {
+        "sensor_inventory": "sensor_inventory",
+        "timing_requirements": "timing_requirements"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_vsens_gmsl_csi_bringup",
+      "skill_name": "vsens-gmsl-csi-bringup",
+      "inputs": {
+        "sensor_inventory": "s01_vsens_sensor_inventory.sensor_inventory",
+        "board_bsp": "from_user_input"
+      },
+      "outputs": {
+        "csi_link_report": "csi_link_report"
+      },
+      "condition": "camera_interface in ['csi', 'gmsl']",
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_vsens_v4l2_camera_probe",
+      "skill_name": "vsens-v4l2-camera-probe",
+      "inputs": {
+        "sensor_inventory": "s01_vsens_sensor_inventory.sensor_inventory",
+        "camera_device": "from_user_input",
+        "csi_link_report": "s02_vsens_gmsl_csi_bringup.csi_link_report"
+      },
+      "outputs": {
+        "camera_device_report": "camera_device_report"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_vsens_v4l2_exposure_framerate",
+      "skill_name": "vsens-v4l2-exposure-framerate",
+      "inputs": {
+        "camera_device_report": "s03_vsens_v4l2_camera_probe.camera_device_report",
+        "target_frame_rate": "from_user_input",
+        "max_exposure_us": "from_user_input_optional"
+      },
+      "outputs": {
+        "camera_control_settings": "camera_control_settings"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s05_vsens_gstreamer_capture_pipeline",
+      "skill_name": "vsens-gstreamer-capture-pipeline",
+      "inputs": {
+        "camera_device_report": "s03_vsens_v4l2_camera_probe.camera_device_report",
+        "camera_control_settings": "s04_vsens_v4l2_exposure_framerate.camera_control_settings"
+      },
+      "outputs": {
+        "gst_pipeline": "gst_pipeline",
+        "capture_rate_report": "capture_rate_report"
+      },
+      "condition": "capture_stack == 'gstreamer'",
+      "parallel_group": 5
+    },
+    {
+      "id": "s06_vsens_cpp_v4l2_mmap_capture",
+      "skill_name": "vsens-cpp-v4l2-mmap-capture",
+      "inputs": {
+        "camera_control_settings": "s04_vsens_v4l2_exposure_framerate.camera_control_settings",
+        "camera_device_report": "s03_vsens_v4l2_camera_probe.camera_device_report"
+      },
+      "outputs": {
+        "v4l2_capture_log": "v4l2_capture_log"
+      },
+      "condition": "stack == 'cpp'",
+      "parallel_group": 5
+    },
+    {
+      "id": "s07_vsens_py_opencv_intrinsics",
+      "skill_name": "vsens-py-opencv-intrinsics",
+      "inputs": {
+        "calibration_images": "from_user_input",
+        "target_spec": "from_user_input",
+        "camera_device_report": "s03_vsens_v4l2_camera_probe.camera_device_report"
+      },
+      "outputs": {
+        "intrinsics_py": "intrinsics_py"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 4
+    },
+    {
+      "id": "s08_vsens_cpp_opencv_intrinsics",
+      "skill_name": "vsens-cpp-opencv-intrinsics",
+      "inputs": {
+        "calibration_images": "from_user_input",
+        "target_spec": "from_user_input",
+        "camera_device_report": "s03_vsens_v4l2_camera_probe.camera_device_report"
+      },
+      "outputs": {
+        "intrinsics_cpp": "intrinsics_cpp"
+      },
+      "condition": "stack == 'cpp'",
+      "parallel_group": 4
+    },
+    {
+      "id": "s09_vsens_ros2_camera_calibrator",
+      "skill_name": "vsens-ros2-camera-calibrator",
+      "inputs": {
+        "camera_topic": "from_user_input",
+        "target_spec": "from_user_input"
+      },
+      "outputs": {
+        "intrinsics_ros": "intrinsics_ros"
+      },
+      "condition": "stack == 'ros2'",
+      "parallel_group": 1
+    },
+    {
+      "id": "s10_vsens_intrinsics_acceptance",
+      "skill_name": "vsens-intrinsics-acceptance",
+      "inputs": {
+        "intrinsics_py": "s07_vsens_py_opencv_intrinsics.intrinsics_py",
+        "intrinsics_cpp": "s08_vsens_cpp_opencv_intrinsics.intrinsics_cpp",
+        "intrinsics_ros": "s09_vsens_ros2_camera_calibrator.intrinsics_ros",
+        "holdout_images": "from_user_input",
+        "target_spec": "from_user_input"
+      },
+      "outputs": {
+        "camera_intrinsics": "camera_intrinsics",
+        "intrinsics_verdict": "intrinsics_verdict"
+      },
+      "parallel_group": 5
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_vsens_sensor_inventory",
+      "to_step": "s02_vsens_gmsl_csi_bringup",
+      "data_type": "vsens-sensor-inventory",
+      "field_mapping": {
+        "sensor_inventory": "sensor_inventory"
+      }
+    },
+    {
+      "from_step": "s01_vsens_sensor_inventory",
+      "to_step": "s03_vsens_v4l2_camera_probe",
+      "data_type": "vsens-sensor-inventory",
+      "field_mapping": {
+        "sensor_inventory": "sensor_inventory"
+      }
+    },
+    {
+      "from_step": "s02_vsens_gmsl_csi_bringup",
+      "to_step": "s03_vsens_v4l2_camera_probe",
+      "data_type": "vsens-gmsl-csi-bringup",
+      "field_mapping": {
+        "csi_link_report": "csi_link_report"
+      }
+    },
+    {
+      "from_step": "s03_vsens_v4l2_camera_probe",
+      "to_step": "s04_vsens_v4l2_exposure_framerate",
+      "data_type": "vsens-v4l2-camera-probe",
+      "field_mapping": {
+        "camera_device_report": "camera_device_report"
+      }
+    },
+    {
+      "from_step": "s03_vsens_v4l2_camera_probe",
+      "to_step": "s05_vsens_gstreamer_capture_pipeline",
+      "data_type": "vsens-v4l2-camera-probe",
+      "field_mapping": {
+        "camera_device_report": "camera_device_report"
+      }
+    },
+    {
+      "from_step": "s04_vsens_v4l2_exposure_framerate",
+      "to_step": "s05_vsens_gstreamer_capture_pipeline",
+      "data_type": "vsens-v4l2-exposure-framerate",
+      "field_mapping": {
+        "camera_control_settings": "camera_control_settings"
+      }
+    },
+    {
+      "from_step": "s04_vsens_v4l2_exposure_framerate",
+      "to_step": "s06_vsens_cpp_v4l2_mmap_capture",
+      "data_type": "vsens-v4l2-exposure-framerate",
+      "field_mapping": {
+        "camera_control_settings": "camera_control_settings"
+      }
+    },
+    {
+      "from_step": "s03_vsens_v4l2_camera_probe",
+      "to_step": "s06_vsens_cpp_v4l2_mmap_capture",
+      "data_type": "vsens-v4l2-camera-probe",
+      "field_mapping": {
+        "camera_device_report": "camera_device_report"
+      }
+    },
+    {
+      "from_step": "s03_vsens_v4l2_camera_probe",
+      "to_step": "s07_vsens_py_opencv_intrinsics",
+      "data_type": "vsens-v4l2-camera-probe",
+      "field_mapping": {
+        "camera_device_report": "camera_device_report"
+      }
+    },
+    {
+      "from_step": "s03_vsens_v4l2_camera_probe",
+      "to_step": "s08_vsens_cpp_opencv_intrinsics",
+      "data_type": "vsens-v4l2-camera-probe",
+      "field_mapping": {
+        "camera_device_report": "camera_device_report"
+      }
+    },
+    {
+      "from_step": "s07_vsens_py_opencv_intrinsics",
+      "to_step": "s10_vsens_intrinsics_acceptance",
+      "data_type": "vsens-py-opencv-intrinsics",
+      "field_mapping": {
+        "intrinsics_py": "intrinsics_py"
+      }
+    },
+    {
+      "from_step": "s08_vsens_cpp_opencv_intrinsics",
+      "to_step": "s10_vsens_intrinsics_acceptance",
+      "data_type": "vsens-cpp-opencv-intrinsics",
+      "field_mapping": {
+        "intrinsics_cpp": "intrinsics_cpp"
+      }
+    },
+    {
+      "from_step": "s09_vsens_ros2_camera_calibrator",
+      "to_step": "s10_vsens_intrinsics_acceptance",
+      "data_type": "vsens-ros2-camera-calibrator",
+      "field_mapping": {
+        "intrinsics_ros": "intrinsics_ros"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "platform_description",
+    "sensor_list",
+    "board_bsp",
+    "camera_device",
+    "target_frame_rate",
+    "max_exposure_us",
+    "calibration_images",
+    "target_spec",
+    "camera_topic",
+    "holdout_images"
+  ],
+  "terminal_outputs": [
+    "timing_requirements",
+    "gst_pipeline",
+    "capture_rate_report",
+    "v4l2_capture_log",
+    "camera_intrinsics",
+    "intrinsics_verdict"
+  ],
+  "parallel_groups": [
+    [
+      "s01_vsens_sensor_inventory",
+      "s09_vsens_ros2_camera_calibrator"
+    ],
+    [
+      "s02_vsens_gmsl_csi_bringup"
+    ],
+    [
+      "s03_vsens_v4l2_camera_probe"
+    ],
+    [
+      "s04_vsens_v4l2_exposure_framerate",
+      "s07_vsens_py_opencv_intrinsics",
+      "s08_vsens_cpp_opencv_intrinsics"
+    ],
+    [
+      "s05_vsens_gstreamer_capture_pipeline",
+      "s06_vsens_cpp_v4l2_mmap_capture",
+      "s10_vsens_intrinsics_acceptance"
+    ]
+  ],
+  "estimated_cost": 10,
+  "critical_path": [
+    "s01_vsens_sensor_inventory",
+    "s02_vsens_gmsl_csi_bringup",
+    "s03_vsens_v4l2_camera_probe",
+    "s08_vsens_cpp_opencv_intrinsics",
+    "s10_vsens_intrinsics_acceptance"
+  ]
+}

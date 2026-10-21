@@ -1,0 +1,134 @@
+{
+  "name": "edge-ai-deployment-ota-rollback",
+  "description": "Ship a model update safely: signed package, A/B slot swap with health-checked rollback, systemd watchdog service and health reporting.",
+  "steps": [
+    {
+      "id": "s01_edge_ota_model_package",
+      "skill_name": "edge-ota-model-package",
+      "inputs": {
+        "engine_file": "from_user_input",
+        "onnx_model": "from_user_input",
+        "engine_cache_key": "from_user_input",
+        "accuracy_report": "from_user_input",
+        "benchmark_report": "from_user_input",
+        "model_version": "from_user_input"
+      },
+      "outputs": {
+        "model_package": "model_package"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_edge_ota_ab_swap_rollback",
+      "skill_name": "edge-ota-ab-swap-rollback",
+      "inputs": {
+        "device_host": "from_user_input",
+        "model_package": "s01_edge_ota_model_package.model_package",
+        "health_check_cmd": "from_user_input"
+      },
+      "outputs": {
+        "deploy_record": "deploy_record"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_edge_systemd_watchdog_service",
+      "skill_name": "edge-systemd-watchdog-service",
+      "inputs": {
+        "device_host": "from_user_input",
+        "app_command": "from_user_input",
+        "deploy_record": "s02_edge_ota_ab_swap_rollback.deploy_record",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "service_unit": "service_unit"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_edge_health_report",
+      "skill_name": "edge-health-report",
+      "inputs": {
+        "device_host": "from_user_input",
+        "service_unit": "s03_edge_systemd_watchdog_service.service_unit",
+        "deploy_record": "s02_edge_ota_ab_swap_rollback.deploy_record",
+        "clock_state": "from_user_input"
+      },
+      "outputs": {
+        "health_report": "health_report"
+      },
+      "parallel_group": 4
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_edge_ota_model_package",
+      "to_step": "s02_edge_ota_ab_swap_rollback",
+      "data_type": "edge-ota-model-package",
+      "field_mapping": {
+        "model_package": "model_package"
+      }
+    },
+    {
+      "from_step": "s02_edge_ota_ab_swap_rollback",
+      "to_step": "s03_edge_systemd_watchdog_service",
+      "data_type": "edge-ota-ab-swap-rollback",
+      "field_mapping": {
+        "deploy_record": "deploy_record"
+      }
+    },
+    {
+      "from_step": "s03_edge_systemd_watchdog_service",
+      "to_step": "s04_edge_health_report",
+      "data_type": "edge-systemd-watchdog-service",
+      "field_mapping": {
+        "service_unit": "service_unit"
+      }
+    },
+    {
+      "from_step": "s02_edge_ota_ab_swap_rollback",
+      "to_step": "s04_edge_health_report",
+      "data_type": "edge-ota-ab-swap-rollback",
+      "field_mapping": {
+        "deploy_record": "deploy_record"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "engine_file",
+    "onnx_model",
+    "engine_cache_key",
+    "accuracy_report",
+    "benchmark_report",
+    "model_version",
+    "device_host",
+    "health_check_cmd",
+    "app_command",
+    "stack",
+    "clock_state"
+  ],
+  "terminal_outputs": [
+    "health_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_edge_ota_model_package"
+    ],
+    [
+      "s02_edge_ota_ab_swap_rollback"
+    ],
+    [
+      "s03_edge_systemd_watchdog_service"
+    ],
+    [
+      "s04_edge_health_report"
+    ]
+  ],
+  "estimated_cost": 4,
+  "critical_path": [
+    "s01_edge_ota_model_package",
+    "s02_edge_ota_ab_swap_rollback",
+    "s03_edge_systemd_watchdog_service",
+    "s04_edge_health_report"
+  ]
+}

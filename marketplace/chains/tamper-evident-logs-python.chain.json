@@ -1,0 +1,244 @@
+{
+  "name": "tamper-evident-logs-python",
+  "description": "Build a tamper-evident log on the Python stack: design the record and canonical form, implement the rfc8785 plus hashlib content hasher, a crash-safe append writer, Ed25519 sign and verify, and a verifier CLI.",
+  "steps": [
+    {
+      "id": "s01_alog_record_schema_design",
+      "skill_name": "alog-record-schema-design",
+      "inputs": {
+        "log_requirements": "from_user_input",
+        "hash_algorithm_spec": "from_user_input",
+        "event_fields": "from_user_input"
+      },
+      "outputs": {
+        "record_schema": "record_schema"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_alog_canonical_serialization_jcs",
+      "skill_name": "alog-canonical-serialization-jcs",
+      "inputs": {
+        "record_schema": "s01_alog_record_schema_design.record_schema"
+      },
+      "outputs": {
+        "canonicalization_spec": "canonicalization_spec"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_alog_py_canonical_hash",
+      "skill_name": "alog-py-canonical-hash",
+      "inputs": {
+        "canonicalization_spec": "s02_alog_canonical_serialization_jcs.canonicalization_spec",
+        "hash_algorithm_spec": "from_user_input",
+        "repo_path": "from_user_input"
+      },
+      "outputs": {
+        "py_canonical_hasher": "py_canonical_hasher"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_alog_hash_chain_link_design",
+      "skill_name": "alog-hash-chain-link-design",
+      "inputs": {
+        "record_schema": "s01_alog_record_schema_design.record_schema",
+        "hash_algorithm_spec": "from_user_input"
+      },
+      "outputs": {
+        "chain_link_spec": "chain_link_spec"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s05_alog_py_crash_safe_append",
+      "skill_name": "alog-py-crash-safe-append",
+      "inputs": {
+        "chain_link_spec": "s04_alog_hash_chain_link_design.chain_link_spec",
+        "py_canonical_hasher": "s03_alog_py_canonical_hash.py_canonical_hasher",
+        "repo_path": "from_user_input"
+      },
+      "outputs": {
+        "py_append_writer": "py_append_writer"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s06_alog_py_ed25519_sign_verify",
+      "skill_name": "alog-py-ed25519-sign-verify",
+      "inputs": {
+        "signing_keypair": "from_user_input",
+        "chain_link_spec": "s04_alog_hash_chain_link_design.chain_link_spec",
+        "repo_path": "from_user_input"
+      },
+      "outputs": {
+        "py_signer": "py_signer"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s07_alog_verifier_tool_spec",
+      "skill_name": "alog-verifier-tool-spec",
+      "inputs": {
+        "record_schema": "s01_alog_record_schema_design.record_schema",
+        "chain_link_spec": "s04_alog_hash_chain_link_design.chain_link_spec",
+        "canonicalization_spec": "s02_alog_canonical_serialization_jcs.canonicalization_spec",
+        "checkpoint_spec": "from_user_input"
+      },
+      "outputs": {
+        "verifier_spec": "verifier_spec"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s08_alog_py_verifier_cli",
+      "skill_name": "alog-py-verifier-cli",
+      "inputs": {
+        "verifier_spec": "s07_alog_verifier_tool_spec.verifier_spec",
+        "py_canonical_hasher": "s03_alog_py_canonical_hash.py_canonical_hasher",
+        "py_signer": "s06_alog_py_ed25519_sign_verify.py_signer",
+        "repo_path": "from_user_input"
+      },
+      "outputs": {
+        "py_verifier": "py_verifier"
+      },
+      "parallel_group": 4
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_alog_record_schema_design",
+      "to_step": "s02_alog_canonical_serialization_jcs",
+      "data_type": "alog-record-schema-design",
+      "field_mapping": {
+        "record_schema": "record_schema"
+      }
+    },
+    {
+      "from_step": "s02_alog_canonical_serialization_jcs",
+      "to_step": "s03_alog_py_canonical_hash",
+      "data_type": "alog-canonical-serialization-jcs",
+      "field_mapping": {
+        "canonicalization_spec": "canonicalization_spec"
+      }
+    },
+    {
+      "from_step": "s01_alog_record_schema_design",
+      "to_step": "s04_alog_hash_chain_link_design",
+      "data_type": "alog-record-schema-design",
+      "field_mapping": {
+        "record_schema": "record_schema"
+      }
+    },
+    {
+      "from_step": "s04_alog_hash_chain_link_design",
+      "to_step": "s05_alog_py_crash_safe_append",
+      "data_type": "alog-hash-chain-link-design",
+      "field_mapping": {
+        "chain_link_spec": "chain_link_spec"
+      }
+    },
+    {
+      "from_step": "s03_alog_py_canonical_hash",
+      "to_step": "s05_alog_py_crash_safe_append",
+      "data_type": "alog-py-canonical-hash",
+      "field_mapping": {
+        "py_canonical_hasher": "py_canonical_hasher"
+      }
+    },
+    {
+      "from_step": "s04_alog_hash_chain_link_design",
+      "to_step": "s06_alog_py_ed25519_sign_verify",
+      "data_type": "alog-hash-chain-link-design",
+      "field_mapping": {
+        "chain_link_spec": "chain_link_spec"
+      }
+    },
+    {
+      "from_step": "s01_alog_record_schema_design",
+      "to_step": "s07_alog_verifier_tool_spec",
+      "data_type": "alog-record-schema-design",
+      "field_mapping": {
+        "record_schema": "record_schema"
+      }
+    },
+    {
+      "from_step": "s04_alog_hash_chain_link_design",
+      "to_step": "s07_alog_verifier_tool_spec",
+      "data_type": "alog-hash-chain-link-design",
+      "field_mapping": {
+        "chain_link_spec": "chain_link_spec"
+      }
+    },
+    {
+      "from_step": "s02_alog_canonical_serialization_jcs",
+      "to_step": "s07_alog_verifier_tool_spec",
+      "data_type": "alog-canonical-serialization-jcs",
+      "field_mapping": {
+        "canonicalization_spec": "canonicalization_spec"
+      }
+    },
+    {
+      "from_step": "s07_alog_verifier_tool_spec",
+      "to_step": "s08_alog_py_verifier_cli",
+      "data_type": "alog-verifier-tool-spec",
+      "field_mapping": {
+        "verifier_spec": "verifier_spec"
+      }
+    },
+    {
+      "from_step": "s03_alog_py_canonical_hash",
+      "to_step": "s08_alog_py_verifier_cli",
+      "data_type": "alog-py-canonical-hash",
+      "field_mapping": {
+        "py_canonical_hasher": "py_canonical_hasher"
+      }
+    },
+    {
+      "from_step": "s06_alog_py_ed25519_sign_verify",
+      "to_step": "s08_alog_py_verifier_cli",
+      "data_type": "alog-py-ed25519-sign-verify",
+      "field_mapping": {
+        "py_signer": "py_signer"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "log_requirements",
+    "hash_algorithm_spec",
+    "event_fields",
+    "repo_path",
+    "signing_keypair",
+    "checkpoint_spec"
+  ],
+  "terminal_outputs": [
+    "py_append_writer",
+    "py_verifier"
+  ],
+  "parallel_groups": [
+    [
+      "s01_alog_record_schema_design"
+    ],
+    [
+      "s02_alog_canonical_serialization_jcs",
+      "s04_alog_hash_chain_link_design"
+    ],
+    [
+      "s03_alog_py_canonical_hash",
+      "s06_alog_py_ed25519_sign_verify",
+      "s07_alog_verifier_tool_spec"
+    ],
+    [
+      "s05_alog_py_crash_safe_append",
+      "s08_alog_py_verifier_cli"
+    ]
+  ],
+  "estimated_cost": 8,
+  "critical_path": [
+    "s01_alog_record_schema_design",
+    "s02_alog_canonical_serialization_jcs",
+    "s03_alog_py_canonical_hash",
+    "s08_alog_py_verifier_cli"
+  ]
+}

@@ -1,0 +1,186 @@
+{
+  "name": "edge-ai-deployment-device-bringup",
+  "description": "Bring up a Jetson-class device for AI deployment: versions, CUDA and cuDNN check, power mode, clocks, thermal baseline, NVIDIA container runtime and memory budget.",
+  "steps": [
+    {
+      "id": "s01_edge_jetpack_l4t_version_check",
+      "skill_name": "edge-jetpack-l4t-version-check",
+      "inputs": {
+        "device_host": "from_user_input"
+      },
+      "outputs": {
+        "platform_report": "platform_report"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_edge_cuda_cudnn_aarch64_verify",
+      "skill_name": "edge-cuda-cudnn-aarch64-verify",
+      "inputs": {
+        "device_host": "from_user_input",
+        "platform_report": "s01_edge_jetpack_l4t_version_check.platform_report"
+      },
+      "outputs": {
+        "cuda_stack_report": "cuda_stack_report"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_edge_nvpmodel_power_mode",
+      "skill_name": "edge-nvpmodel-power-mode",
+      "inputs": {
+        "device_host": "from_user_input",
+        "platform_report": "s01_edge_jetpack_l4t_version_check.platform_report",
+        "power_mode_target": "from_user_input_optional"
+      },
+      "outputs": {
+        "power_mode_record": "power_mode_record"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_edge_jetson_clocks_lock",
+      "skill_name": "edge-jetson-clocks-lock",
+      "inputs": {
+        "device_host": "from_user_input",
+        "power_mode_record": "s03_edge_nvpmodel_power_mode.power_mode_record"
+      },
+      "outputs": {
+        "clock_state": "clock_state"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s05_edge_tegrastats_thermal_log",
+      "skill_name": "edge-tegrastats-thermal-log",
+      "inputs": {
+        "device_host": "from_user_input",
+        "clock_state": "s04_edge_jetson_clocks_lock.clock_state",
+        "log_duration_s": "from_user_input"
+      },
+      "outputs": {
+        "thermal_log": "thermal_log"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s06_edge_container_nvidia_runtime",
+      "skill_name": "edge-container-nvidia-runtime",
+      "inputs": {
+        "device_host": "from_user_input",
+        "platform_report": "s01_edge_jetpack_l4t_version_check.platform_report",
+        "container_image": "from_user_input"
+      },
+      "outputs": {
+        "container_run_spec": "container_run_spec"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s07_edge_unified_memory_budget",
+      "skill_name": "edge-unified-memory-budget",
+      "inputs": {
+        "device_host": "from_user_input",
+        "platform_report": "s01_edge_jetpack_l4t_version_check.platform_report",
+        "container_run_spec": "s06_edge_container_nvidia_runtime.container_run_spec"
+      },
+      "outputs": {
+        "memory_budget": "memory_budget"
+      },
+      "parallel_group": 3
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_edge_jetpack_l4t_version_check",
+      "to_step": "s02_edge_cuda_cudnn_aarch64_verify",
+      "data_type": "edge-jetpack-l4t-version-check",
+      "field_mapping": {
+        "platform_report": "platform_report"
+      }
+    },
+    {
+      "from_step": "s01_edge_jetpack_l4t_version_check",
+      "to_step": "s03_edge_nvpmodel_power_mode",
+      "data_type": "edge-jetpack-l4t-version-check",
+      "field_mapping": {
+        "platform_report": "platform_report"
+      }
+    },
+    {
+      "from_step": "s03_edge_nvpmodel_power_mode",
+      "to_step": "s04_edge_jetson_clocks_lock",
+      "data_type": "edge-nvpmodel-power-mode",
+      "field_mapping": {
+        "power_mode_record": "power_mode_record"
+      }
+    },
+    {
+      "from_step": "s04_edge_jetson_clocks_lock",
+      "to_step": "s05_edge_tegrastats_thermal_log",
+      "data_type": "edge-jetson-clocks-lock",
+      "field_mapping": {
+        "clock_state": "clock_state"
+      }
+    },
+    {
+      "from_step": "s01_edge_jetpack_l4t_version_check",
+      "to_step": "s06_edge_container_nvidia_runtime",
+      "data_type": "edge-jetpack-l4t-version-check",
+      "field_mapping": {
+        "platform_report": "platform_report"
+      }
+    },
+    {
+      "from_step": "s01_edge_jetpack_l4t_version_check",
+      "to_step": "s07_edge_unified_memory_budget",
+      "data_type": "edge-jetpack-l4t-version-check",
+      "field_mapping": {
+        "platform_report": "platform_report"
+      }
+    },
+    {
+      "from_step": "s06_edge_container_nvidia_runtime",
+      "to_step": "s07_edge_unified_memory_budget",
+      "data_type": "edge-container-nvidia-runtime",
+      "field_mapping": {
+        "container_run_spec": "container_run_spec"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "device_host",
+    "power_mode_target",
+    "log_duration_s",
+    "container_image"
+  ],
+  "terminal_outputs": [
+    "cuda_stack_report",
+    "thermal_log",
+    "memory_budget"
+  ],
+  "parallel_groups": [
+    [
+      "s01_edge_jetpack_l4t_version_check"
+    ],
+    [
+      "s02_edge_cuda_cudnn_aarch64_verify",
+      "s03_edge_nvpmodel_power_mode",
+      "s06_edge_container_nvidia_runtime"
+    ],
+    [
+      "s04_edge_jetson_clocks_lock",
+      "s07_edge_unified_memory_budget"
+    ],
+    [
+      "s05_edge_tegrastats_thermal_log"
+    ]
+  ],
+  "estimated_cost": 7,
+  "critical_path": [
+    "s01_edge_jetpack_l4t_version_check",
+    "s03_edge_nvpmodel_power_mode",
+    "s04_edge_jetson_clocks_lock",
+    "s05_edge_tegrastats_thermal_log"
+  ]
+}

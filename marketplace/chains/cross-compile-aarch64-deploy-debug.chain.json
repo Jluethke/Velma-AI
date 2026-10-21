@@ -1,0 +1,94 @@
+{
+  "name": "cross-compile-aarch64-deploy-debug",
+  "description": "Deploy and debug a cross-built aarch64 binary on the target: verify the ELF arch, audit its shared dependencies against the sysroot, deploy over rsync and confirm it starts, then remote-debug it with gdbserver and the cross gdb.",
+  "steps": [
+    {
+      "id": "es01_xarch_elf_arch_verify",
+      "skill_name": "xarch-elf-arch-verify",
+      "inputs": {
+        "binary_path": "from_user_input"
+      },
+      "outputs": {
+        "arch_verdict": "arch_verdict",
+        "elf_report": "elf_report"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "es02_xarch_ldd_shared_deps_audit",
+      "skill_name": "xarch-ldd-shared-deps-audit",
+      "inputs": {
+        "binary_path": "from_user_input",
+        "sysroot": "from_user_input",
+        "toolchain_prefix": "from_user_input"
+      },
+      "outputs": {
+        "deps_report": "deps_report",
+        "missing_libs": "missing_libs"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "es03_xarch_remote_deploy_rsync",
+      "skill_name": "xarch-remote-deploy-rsync",
+      "inputs": {
+        "binary_path": "from_user_input",
+        "deploy_host": "from_user_input",
+        "remote_dir": "from_user_input",
+        "deps_report": "es02_xarch_ldd_shared_deps_audit.deps_report"
+      },
+      "outputs": {
+        "deploy_report": "deploy_report",
+        "remote_paths": "remote_paths"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "es04_xarch_gdbserver_remote_debug",
+      "skill_name": "xarch-gdbserver-remote-debug",
+      "inputs": {
+        "binary_path": "from_user_input",
+        "deploy_host": "from_user_input",
+        "sysroot": "from_user_input",
+        "toolchain_prefix": "from_user_input"
+      },
+      "outputs": {
+        "debug_session": "debug_session",
+        "debug_report": "debug_report"
+      },
+      "parallel_group": 1
+    }
+  ],
+  "edges": [
+    { "from_step": "es02_xarch_ldd_shared_deps_audit", "to_step": "es03_xarch_remote_deploy_rsync", "data_type": "xarch-ldd-shared-deps-audit", "field_mapping": { "deps_report": "deps_report" } }
+  ],
+  "entry_inputs": [
+    "binary_path",
+    "sysroot",
+    "toolchain_prefix",
+    "deploy_host",
+    "remote_dir"
+  ],
+  "terminal_outputs": [
+    "arch_verdict",
+    "deps_report",
+    "deploy_report",
+    "remote_paths",
+    "debug_session"
+  ],
+  "parallel_groups": [
+    [
+      "es01_xarch_elf_arch_verify",
+      "es02_xarch_ldd_shared_deps_audit",
+      "es04_xarch_gdbserver_remote_debug"
+    ],
+    [
+      "es03_xarch_remote_deploy_rsync"
+    ]
+  ],
+  "estimated_cost": 4,
+  "critical_path": [
+    "es02_xarch_ldd_shared_deps_audit",
+    "es03_xarch_remote_deploy_rsync"
+  ]
+}

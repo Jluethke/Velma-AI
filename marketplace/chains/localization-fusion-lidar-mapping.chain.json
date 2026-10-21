@@ -1,0 +1,213 @@
+{
+  "name": "localization-fusion-lidar-mapping",
+  "description": "Lidar mapping and relocalization in ROS 2: package selection, KISS-ICP odometry baseline, slam_toolbox map building and relocalization tests.",
+  "steps": [
+    {
+      "id": "s01_loc_frame_convention_audit",
+      "skill_name": "loc-frame-convention-audit",
+      "inputs": {
+        "vehicle_spec": "from_user_input",
+        "sensor_list": "from_user_input"
+      },
+      "outputs": {
+        "frame_spec": "frame_spec"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_loc_ros2_static_extrinsics",
+      "skill_name": "loc-ros2-static-extrinsics",
+      "inputs": {
+        "frame_spec": "s01_loc_frame_convention_audit.frame_spec",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "extrinsics_launch": "extrinsics_launch",
+        "tf_tree_report": "tf_tree_report"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_loc_rosbag2_drive_logging",
+      "skill_name": "loc-rosbag2-drive-logging",
+      "inputs": {
+        "frame_spec": "s01_loc_frame_convention_audit.frame_spec",
+        "sensor_topics": "from_user_input",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "sensor_bag": "sensor_bag",
+        "replay_procedure": "replay_procedure"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_loc_lidar_slam_selection",
+      "skill_name": "loc-lidar-slam-selection",
+      "inputs": {
+        "sensor_list": "from_user_input",
+        "operating_area": "from_user_input",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "lidar_slam_choice": "lidar_slam_choice"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s05_loc_kiss_icp_lidar_odometry",
+      "skill_name": "loc-kiss-icp-lidar-odometry",
+      "inputs": {
+        "sensor_bag": "s03_loc_rosbag2_drive_logging.sensor_bag",
+        "frame_spec": "s01_loc_frame_convention_audit.frame_spec"
+      },
+      "outputs": {
+        "lidar_odom_traj": "lidar_odom_traj"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s06_loc_ros2_slam_toolbox_mapping",
+      "skill_name": "loc-ros2-slam-toolbox-mapping",
+      "inputs": {
+        "lidar_slam_choice": "s04_loc_lidar_slam_selection.lidar_slam_choice",
+        "sensor_bag": "s03_loc_rosbag2_drive_logging.sensor_bag",
+        "frame_spec": "s01_loc_frame_convention_audit.frame_spec",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "map_files": "map_files"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s07_loc_ros2_map_relocalization",
+      "skill_name": "loc-ros2-map-relocalization",
+      "inputs": {
+        "map_files": "s06_loc_ros2_slam_toolbox_mapping.map_files",
+        "ekf_config": "from_user_input",
+        "frame_spec": "s01_loc_frame_convention_audit.frame_spec"
+      },
+      "outputs": {
+        "relocalization_config": "relocalization_config",
+        "relocalization_test_report": "relocalization_test_report"
+      },
+      "parallel_group": 4
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_loc_frame_convention_audit",
+      "to_step": "s02_loc_ros2_static_extrinsics",
+      "data_type": "loc-frame-convention-audit",
+      "field_mapping": {
+        "frame_spec": "frame_spec"
+      }
+    },
+    {
+      "from_step": "s01_loc_frame_convention_audit",
+      "to_step": "s03_loc_rosbag2_drive_logging",
+      "data_type": "loc-frame-convention-audit",
+      "field_mapping": {
+        "frame_spec": "frame_spec"
+      }
+    },
+    {
+      "from_step": "s03_loc_rosbag2_drive_logging",
+      "to_step": "s05_loc_kiss_icp_lidar_odometry",
+      "data_type": "loc-rosbag2-drive-logging",
+      "field_mapping": {
+        "sensor_bag": "sensor_bag"
+      }
+    },
+    {
+      "from_step": "s01_loc_frame_convention_audit",
+      "to_step": "s05_loc_kiss_icp_lidar_odometry",
+      "data_type": "loc-frame-convention-audit",
+      "field_mapping": {
+        "frame_spec": "frame_spec"
+      }
+    },
+    {
+      "from_step": "s04_loc_lidar_slam_selection",
+      "to_step": "s06_loc_ros2_slam_toolbox_mapping",
+      "data_type": "loc-lidar-slam-selection",
+      "field_mapping": {
+        "lidar_slam_choice": "lidar_slam_choice"
+      }
+    },
+    {
+      "from_step": "s03_loc_rosbag2_drive_logging",
+      "to_step": "s06_loc_ros2_slam_toolbox_mapping",
+      "data_type": "loc-rosbag2-drive-logging",
+      "field_mapping": {
+        "sensor_bag": "sensor_bag"
+      }
+    },
+    {
+      "from_step": "s01_loc_frame_convention_audit",
+      "to_step": "s06_loc_ros2_slam_toolbox_mapping",
+      "data_type": "loc-frame-convention-audit",
+      "field_mapping": {
+        "frame_spec": "frame_spec"
+      }
+    },
+    {
+      "from_step": "s06_loc_ros2_slam_toolbox_mapping",
+      "to_step": "s07_loc_ros2_map_relocalization",
+      "data_type": "loc-ros2-slam-toolbox-mapping",
+      "field_mapping": {
+        "map_files": "map_files"
+      }
+    },
+    {
+      "from_step": "s01_loc_frame_convention_audit",
+      "to_step": "s07_loc_ros2_map_relocalization",
+      "data_type": "loc-frame-convention-audit",
+      "field_mapping": {
+        "frame_spec": "frame_spec"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "vehicle_spec",
+    "sensor_list",
+    "project_dir",
+    "sensor_topics",
+    "operating_area",
+    "stack",
+    "ekf_config"
+  ],
+  "terminal_outputs": [
+    "extrinsics_launch",
+    "tf_tree_report",
+    "replay_procedure",
+    "lidar_odom_traj",
+    "relocalization_config",
+    "relocalization_test_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_loc_frame_convention_audit",
+      "s04_loc_lidar_slam_selection"
+    ],
+    [
+      "s02_loc_ros2_static_extrinsics",
+      "s03_loc_rosbag2_drive_logging"
+    ],
+    [
+      "s05_loc_kiss_icp_lidar_odometry",
+      "s06_loc_ros2_slam_toolbox_mapping"
+    ],
+    [
+      "s07_loc_ros2_map_relocalization"
+    ]
+  ],
+  "estimated_cost": 7,
+  "critical_path": [
+    "s01_loc_frame_convention_audit",
+    "s03_loc_rosbag2_drive_logging",
+    "s06_loc_ros2_slam_toolbox_mapping",
+    "s07_loc_ros2_map_relocalization"
+  ]
+}

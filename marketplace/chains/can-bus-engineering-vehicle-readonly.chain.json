@@ -1,0 +1,364 @@
+{
+  "name": "can-bus-engineering-vehicle-readonly",
+  "description": "Read-only work on a vehicle the user owns: listen-only bring-up, capture, signal discovery, ISO-TP capture, DBC decode and cycle timing, with no transmission.",
+  "steps": [
+    {
+      "id": "s01_canb_tx_scope_check",
+      "skill_name": "canb-tx-scope-check",
+      "inputs": {
+        "target_kind": "from_user_input",
+        "vehicle_owned": "from_user_input",
+        "estop_confirmed": "from_user_input_optional",
+        "planned_tx_ids": "from_user_input_optional"
+      },
+      "outputs": {
+        "tx_permission": "tx_permission",
+        "scope_record": "scope_record"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_canb_usb_adapter_bringup",
+      "skill_name": "canb-usb-adapter-bringup",
+      "inputs": {
+        "adapter_type": "from_user_input",
+        "usb_device_hint": "from_user_input_optional"
+      },
+      "outputs": {
+        "can_netdev": "can_netdev",
+        "adapter_report": "adapter_report"
+      },
+      "condition": "target_kind != 'virtual'",
+      "parallel_group": 1
+    },
+    {
+      "id": "s03_canb_termination_check",
+      "skill_name": "canb-termination-check",
+      "inputs": {
+        "target_kind": "from_user_input",
+        "bus_topology": "from_user_input_optional"
+      },
+      "outputs": {
+        "termination_report": "termination_report"
+      },
+      "condition": "target_kind != 'virtual'",
+      "parallel_group": 1
+    },
+    {
+      "id": "s04_canb_bit_timing_calc",
+      "skill_name": "canb-bit-timing-calc",
+      "inputs": {
+        "can_netdev": "s02_canb_usb_adapter_bringup.can_netdev",
+        "bitrate": "from_user_input",
+        "data_bitrate": "from_user_input_optional",
+        "sample_point": "from_user_input_optional",
+        "adapter_report": "s02_canb_usb_adapter_bringup.adapter_report"
+      },
+      "outputs": {
+        "bit_timing": "bit_timing"
+      },
+      "condition": "target_kind != 'virtual'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s05_canb_socketcan_link_up",
+      "skill_name": "canb-socketcan-link-up",
+      "inputs": {
+        "can_netdev": "s02_canb_usb_adapter_bringup.can_netdev",
+        "bit_timing": "s04_canb_bit_timing_calc.bit_timing",
+        "tx_permission": "s01_canb_tx_scope_check.tx_permission",
+        "restart_ms": "from_user_input_optional"
+      },
+      "outputs": {
+        "link_state": "link_state"
+      },
+      "condition": "target_kind != 'virtual'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s06_canb_candump_capture",
+      "skill_name": "canb-candump-capture",
+      "inputs": {
+        "can_netdev": "s02_canb_usb_adapter_bringup.can_netdev",
+        "link_state": "s05_canb_socketcan_link_up.link_state",
+        "capture_filters": "from_user_input_optional",
+        "capture_seconds": "from_user_input"
+      },
+      "outputs": {
+        "candump_log": "candump_log"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s07_canb_cansniffer_signal_hunt",
+      "skill_name": "canb-cansniffer-signal-hunt",
+      "inputs": {
+        "can_netdev": "s02_canb_usb_adapter_bringup.can_netdev",
+        "candump_log": "s06_canb_candump_capture.candump_log",
+        "tx_permission": "s01_canb_tx_scope_check.tx_permission"
+      },
+      "outputs": {
+        "candidate_signals": "candidate_signals"
+      },
+      "condition": "target_kind != 'virtual'",
+      "parallel_group": 5
+    },
+    {
+      "id": "s08_canb_isotp_capture",
+      "skill_name": "canb-isotp-capture",
+      "inputs": {
+        "can_netdev": "s02_canb_usb_adapter_bringup.can_netdev",
+        "isotp_ids": "from_user_input_optional",
+        "candump_log": "s06_canb_candump_capture.candump_log"
+      },
+      "outputs": {
+        "isotp_transcript": "isotp_transcript"
+      },
+      "condition": "isotp_ids != null",
+      "parallel_group": 5
+    },
+    {
+      "id": "s09_canb_dbc_lint_load",
+      "skill_name": "canb-dbc-lint-load",
+      "inputs": {
+        "dbc_file": "from_user_input"
+      },
+      "outputs": {
+        "dbc_report": "dbc_report"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s10_canb_dbc_byte_order",
+      "skill_name": "canb-dbc-byte-order",
+      "inputs": {
+        "dbc_file": "from_user_input",
+        "dbc_report": "s09_canb_dbc_lint_load.dbc_report",
+        "reference_frames": "from_user_input_optional"
+      },
+      "outputs": {
+        "byte_order_table": "byte_order_table"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s11_canb_cantools_decode_log",
+      "skill_name": "canb-cantools-decode-log",
+      "inputs": {
+        "dbc_file": "from_user_input",
+        "candump_log": "s06_canb_candump_capture.candump_log",
+        "byte_order_table": "s10_canb_dbc_byte_order.byte_order_table"
+      },
+      "outputs": {
+        "decoded_signals": "decoded_signals"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s12_canb_tx_jitter_measure",
+      "skill_name": "canb-tx-jitter-measure",
+      "inputs": {
+        "can_netdev": "s02_canb_usb_adapter_bringup.can_netdev",
+        "cycle_times": "from_user_input",
+        "link_state": "s05_canb_socketcan_link_up.link_state",
+        "jitter_tolerance": "from_user_input_optional"
+      },
+      "outputs": {
+        "jitter_report": "jitter_report"
+      },
+      "condition": "target_kind != 'virtual'",
+      "parallel_group": 4
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s02_canb_usb_adapter_bringup",
+      "to_step": "s04_canb_bit_timing_calc",
+      "data_type": "canb-usb-adapter-bringup",
+      "field_mapping": {
+        "can_netdev": "can_netdev",
+        "adapter_report": "adapter_report"
+      }
+    },
+    {
+      "from_step": "s02_canb_usb_adapter_bringup",
+      "to_step": "s05_canb_socketcan_link_up",
+      "data_type": "canb-usb-adapter-bringup",
+      "field_mapping": {
+        "can_netdev": "can_netdev"
+      }
+    },
+    {
+      "from_step": "s04_canb_bit_timing_calc",
+      "to_step": "s05_canb_socketcan_link_up",
+      "data_type": "canb-bit-timing-calc",
+      "field_mapping": {
+        "bit_timing": "bit_timing"
+      }
+    },
+    {
+      "from_step": "s01_canb_tx_scope_check",
+      "to_step": "s05_canb_socketcan_link_up",
+      "data_type": "canb-tx-scope-check",
+      "field_mapping": {
+        "tx_permission": "tx_permission"
+      }
+    },
+    {
+      "from_step": "s02_canb_usb_adapter_bringup",
+      "to_step": "s06_canb_candump_capture",
+      "data_type": "canb-usb-adapter-bringup",
+      "field_mapping": {
+        "can_netdev": "can_netdev"
+      }
+    },
+    {
+      "from_step": "s05_canb_socketcan_link_up",
+      "to_step": "s06_canb_candump_capture",
+      "data_type": "canb-socketcan-link-up",
+      "field_mapping": {
+        "link_state": "link_state"
+      }
+    },
+    {
+      "from_step": "s02_canb_usb_adapter_bringup",
+      "to_step": "s07_canb_cansniffer_signal_hunt",
+      "data_type": "canb-usb-adapter-bringup",
+      "field_mapping": {
+        "can_netdev": "can_netdev"
+      }
+    },
+    {
+      "from_step": "s06_canb_candump_capture",
+      "to_step": "s07_canb_cansniffer_signal_hunt",
+      "data_type": "canb-candump-capture",
+      "field_mapping": {
+        "candump_log": "candump_log"
+      }
+    },
+    {
+      "from_step": "s01_canb_tx_scope_check",
+      "to_step": "s07_canb_cansniffer_signal_hunt",
+      "data_type": "canb-tx-scope-check",
+      "field_mapping": {
+        "tx_permission": "tx_permission"
+      }
+    },
+    {
+      "from_step": "s02_canb_usb_adapter_bringup",
+      "to_step": "s08_canb_isotp_capture",
+      "data_type": "canb-usb-adapter-bringup",
+      "field_mapping": {
+        "can_netdev": "can_netdev"
+      }
+    },
+    {
+      "from_step": "s06_canb_candump_capture",
+      "to_step": "s08_canb_isotp_capture",
+      "data_type": "canb-candump-capture",
+      "field_mapping": {
+        "candump_log": "candump_log"
+      }
+    },
+    {
+      "from_step": "s09_canb_dbc_lint_load",
+      "to_step": "s10_canb_dbc_byte_order",
+      "data_type": "canb-dbc-lint-load",
+      "field_mapping": {
+        "dbc_report": "dbc_report"
+      }
+    },
+    {
+      "from_step": "s06_canb_candump_capture",
+      "to_step": "s11_canb_cantools_decode_log",
+      "data_type": "canb-candump-capture",
+      "field_mapping": {
+        "candump_log": "candump_log"
+      }
+    },
+    {
+      "from_step": "s10_canb_dbc_byte_order",
+      "to_step": "s11_canb_cantools_decode_log",
+      "data_type": "canb-dbc-byte-order",
+      "field_mapping": {
+        "byte_order_table": "byte_order_table"
+      }
+    },
+    {
+      "from_step": "s02_canb_usb_adapter_bringup",
+      "to_step": "s12_canb_tx_jitter_measure",
+      "data_type": "canb-usb-adapter-bringup",
+      "field_mapping": {
+        "can_netdev": "can_netdev"
+      }
+    },
+    {
+      "from_step": "s05_canb_socketcan_link_up",
+      "to_step": "s12_canb_tx_jitter_measure",
+      "data_type": "canb-socketcan-link-up",
+      "field_mapping": {
+        "link_state": "link_state"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "target_kind",
+    "vehicle_owned",
+    "estop_confirmed",
+    "planned_tx_ids",
+    "adapter_type",
+    "usb_device_hint",
+    "bus_topology",
+    "bitrate",
+    "data_bitrate",
+    "sample_point",
+    "restart_ms",
+    "capture_filters",
+    "capture_seconds",
+    "isotp_ids",
+    "dbc_file",
+    "reference_frames",
+    "cycle_times",
+    "jitter_tolerance"
+  ],
+  "terminal_outputs": [
+    "scope_record",
+    "termination_report",
+    "candidate_signals",
+    "isotp_transcript",
+    "decoded_signals",
+    "jitter_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_canb_tx_scope_check",
+      "s02_canb_usb_adapter_bringup",
+      "s03_canb_termination_check",
+      "s09_canb_dbc_lint_load"
+    ],
+    [
+      "s04_canb_bit_timing_calc",
+      "s10_canb_dbc_byte_order"
+    ],
+    [
+      "s05_canb_socketcan_link_up"
+    ],
+    [
+      "s06_canb_candump_capture",
+      "s12_canb_tx_jitter_measure"
+    ],
+    [
+      "s07_canb_cansniffer_signal_hunt",
+      "s08_canb_isotp_capture",
+      "s11_canb_cantools_decode_log"
+    ]
+  ],
+  "estimated_cost": 12,
+  "critical_path": [
+    "s02_canb_usb_adapter_bringup",
+    "s04_canb_bit_timing_calc",
+    "s05_canb_socketcan_link_up",
+    "s06_canb_candump_capture",
+    "s07_canb_cansniffer_signal_hunt"
+  ]
+}

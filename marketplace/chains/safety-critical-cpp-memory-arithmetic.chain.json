@@ -1,0 +1,237 @@
+{
+  "name": "safety-critical-cpp-memory-arithmetic",
+  "description": "Remove run-time heap use and recursion, bound loops, compute worst-case stack, fix integer types and overflow, and prove it under sanitizers.",
+  "steps": [
+    {
+      "id": "s01_sccpp_cmake_build_profiles",
+      "skill_name": "sccpp-cmake-build-profiles",
+      "inputs": {
+        "codebase_dir": "from_user_input",
+        "stack": "from_user_input",
+        "language": "from_user_input",
+        "toolchain_file": "from_user_input_optional"
+      },
+      "outputs": {
+        "build_profiles": "build_profiles"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_sccpp_c_static_memory",
+      "skill_name": "sccpp-c-static-memory",
+      "inputs": {
+        "codebase_dir": "from_user_input",
+        "build_profiles": "s01_sccpp_cmake_build_profiles.build_profiles"
+      },
+      "outputs": {
+        "c_heap_audit": "c_heap_audit"
+      },
+      "condition": "language == 'c'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_sccpp_cpp_no_heap_after_init",
+      "skill_name": "sccpp-cpp-no-heap-after-init",
+      "inputs": {
+        "codebase_dir": "from_user_input",
+        "build_profiles": "s01_sccpp_cmake_build_profiles.build_profiles"
+      },
+      "outputs": {
+        "cpp_heap_audit": "cpp_heap_audit"
+      },
+      "condition": "language == 'cpp'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_sccpp_loop_bounds_recursion",
+      "skill_name": "sccpp-loop-bounds-recursion",
+      "inputs": {
+        "codebase_dir": "from_user_input",
+        "build_profiles": "s01_sccpp_cmake_build_profiles.build_profiles"
+      },
+      "outputs": {
+        "loop_recursion_report": "loop_recursion_report"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s05_sccpp_gcc_stack_usage",
+      "skill_name": "sccpp-gcc-stack-usage",
+      "inputs": {
+        "build_profiles": "s01_sccpp_cmake_build_profiles.build_profiles",
+        "loop_recursion_report": "s04_sccpp_loop_bounds_recursion.loop_recursion_report",
+        "stack_budget_bytes": "from_user_input"
+      },
+      "outputs": {
+        "stack_usage_report": "stack_usage_report"
+      },
+      "condition": "stack == 'gcc'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s06_sccpp_fixed_width_types",
+      "skill_name": "sccpp-fixed-width-types",
+      "inputs": {
+        "codebase_dir": "from_user_input",
+        "build_profiles": "s01_sccpp_cmake_build_profiles.build_profiles",
+        "language": "from_user_input"
+      },
+      "outputs": {
+        "type_audit": "type_audit"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s07_sccpp_c_overflow_checks",
+      "skill_name": "sccpp-c-overflow-checks",
+      "inputs": {
+        "codebase_dir": "from_user_input",
+        "type_audit": "s06_sccpp_fixed_width_types.type_audit"
+      },
+      "outputs": {
+        "c_overflow_fixes": "c_overflow_fixes"
+      },
+      "condition": "language == 'c'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s08_sccpp_cpp_overflow_checks",
+      "skill_name": "sccpp-cpp-overflow-checks",
+      "inputs": {
+        "codebase_dir": "from_user_input",
+        "type_audit": "s06_sccpp_fixed_width_types.type_audit"
+      },
+      "outputs": {
+        "cpp_overflow_fixes": "cpp_overflow_fixes"
+      },
+      "condition": "language == 'cpp'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s09_sccpp_sanitizer_test_build",
+      "skill_name": "sccpp-sanitizer-test-build",
+      "inputs": {
+        "build_profiles": "s01_sccpp_cmake_build_profiles.build_profiles",
+        "test_command": "from_user_input",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "sanitizer_report": "sanitizer_report"
+      },
+      "parallel_group": 2
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_sccpp_cmake_build_profiles",
+      "to_step": "s02_sccpp_c_static_memory",
+      "data_type": "sccpp-cmake-build-profiles",
+      "field_mapping": {
+        "build_profiles": "build_profiles"
+      }
+    },
+    {
+      "from_step": "s01_sccpp_cmake_build_profiles",
+      "to_step": "s03_sccpp_cpp_no_heap_after_init",
+      "data_type": "sccpp-cmake-build-profiles",
+      "field_mapping": {
+        "build_profiles": "build_profiles"
+      }
+    },
+    {
+      "from_step": "s01_sccpp_cmake_build_profiles",
+      "to_step": "s04_sccpp_loop_bounds_recursion",
+      "data_type": "sccpp-cmake-build-profiles",
+      "field_mapping": {
+        "build_profiles": "build_profiles"
+      }
+    },
+    {
+      "from_step": "s01_sccpp_cmake_build_profiles",
+      "to_step": "s05_sccpp_gcc_stack_usage",
+      "data_type": "sccpp-cmake-build-profiles",
+      "field_mapping": {
+        "build_profiles": "build_profiles"
+      }
+    },
+    {
+      "from_step": "s04_sccpp_loop_bounds_recursion",
+      "to_step": "s05_sccpp_gcc_stack_usage",
+      "data_type": "sccpp-loop-bounds-recursion",
+      "field_mapping": {
+        "loop_recursion_report": "loop_recursion_report"
+      }
+    },
+    {
+      "from_step": "s01_sccpp_cmake_build_profiles",
+      "to_step": "s06_sccpp_fixed_width_types",
+      "data_type": "sccpp-cmake-build-profiles",
+      "field_mapping": {
+        "build_profiles": "build_profiles"
+      }
+    },
+    {
+      "from_step": "s06_sccpp_fixed_width_types",
+      "to_step": "s07_sccpp_c_overflow_checks",
+      "data_type": "sccpp-fixed-width-types",
+      "field_mapping": {
+        "type_audit": "type_audit"
+      }
+    },
+    {
+      "from_step": "s06_sccpp_fixed_width_types",
+      "to_step": "s08_sccpp_cpp_overflow_checks",
+      "data_type": "sccpp-fixed-width-types",
+      "field_mapping": {
+        "type_audit": "type_audit"
+      }
+    },
+    {
+      "from_step": "s01_sccpp_cmake_build_profiles",
+      "to_step": "s09_sccpp_sanitizer_test_build",
+      "data_type": "sccpp-cmake-build-profiles",
+      "field_mapping": {
+        "build_profiles": "build_profiles"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "codebase_dir",
+    "stack",
+    "language",
+    "toolchain_file",
+    "stack_budget_bytes",
+    "test_command"
+  ],
+  "terminal_outputs": [
+    "c_heap_audit",
+    "cpp_heap_audit",
+    "stack_usage_report",
+    "c_overflow_fixes",
+    "cpp_overflow_fixes",
+    "sanitizer_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_sccpp_cmake_build_profiles"
+    ],
+    [
+      "s02_sccpp_c_static_memory",
+      "s03_sccpp_cpp_no_heap_after_init",
+      "s04_sccpp_loop_bounds_recursion",
+      "s06_sccpp_fixed_width_types",
+      "s09_sccpp_sanitizer_test_build"
+    ],
+    [
+      "s05_sccpp_gcc_stack_usage",
+      "s07_sccpp_c_overflow_checks",
+      "s08_sccpp_cpp_overflow_checks"
+    ]
+  ],
+  "estimated_cost": 9,
+  "critical_path": [
+    "s01_sccpp_cmake_build_profiles",
+    "s04_sccpp_loop_bounds_recursion",
+    "s05_sccpp_gcc_stack_usage"
+  ]
+}

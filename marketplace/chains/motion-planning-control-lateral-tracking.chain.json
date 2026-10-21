@@ -1,0 +1,412 @@
+{
+  "name": "motion-planning-control-lateral-tracking",
+  "description": "Geometric and LQR lateral tracking in simulation: path smoothing, jerk-limited speed profile, pure pursuit, Stanley or LQR, closed-loop simulation, tracking metrics and stability margins.",
+  "steps": [
+    {
+      "id": "s01_ctrl_spec_intake",
+      "skill_name": "ctrl-spec-intake",
+      "inputs": {
+        "vehicle_params": "from_user_input",
+        "motion_limits": "from_user_input",
+        "test_site": "from_user_input",
+        "estop_description": "from_user_input",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "control_spec": "control_spec",
+        "open_questions": "open_questions"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_ctrl_bicycle_model_py",
+      "skill_name": "ctrl-bicycle-model-py",
+      "inputs": {
+        "control_spec": "s01_ctrl_spec_intake.control_spec",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "plant_model": "plant_model"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_ctrl_path_spline_smoothing",
+      "skill_name": "ctrl-path-spline-smoothing",
+      "inputs": {
+        "waypoints": "from_user_input",
+        "control_spec": "s01_ctrl_spec_intake.control_spec"
+      },
+      "outputs": {
+        "reference_path": "reference_path"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_ctrl_speed_profile_jerk_limited",
+      "skill_name": "ctrl-speed-profile-jerk-limited",
+      "inputs": {
+        "reference_path": "s03_ctrl_path_spline_smoothing.reference_path",
+        "control_spec": "s01_ctrl_spec_intake.control_spec"
+      },
+      "outputs": {
+        "reference_trajectory": "reference_trajectory"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s05_ctrl_actuator_rate_saturation",
+      "skill_name": "ctrl-actuator-rate-saturation",
+      "inputs": {
+        "control_spec": "s01_ctrl_spec_intake.control_spec",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "actuator_limiter": "actuator_limiter"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s06_ctrl_pure_pursuit",
+      "skill_name": "ctrl-pure-pursuit",
+      "inputs": {
+        "reference_trajectory": "s04_ctrl_speed_profile_jerk_limited.reference_trajectory",
+        "plant_model": "s02_ctrl_bicycle_model_py.plant_model",
+        "control_spec": "s01_ctrl_spec_intake.control_spec"
+      },
+      "outputs": {
+        "pure_pursuit_controller": "pure_pursuit_controller"
+      },
+      "condition": "lateral_method == 'pure_pursuit'",
+      "parallel_group": 4
+    },
+    {
+      "id": "s07_ctrl_stanley",
+      "skill_name": "ctrl-stanley",
+      "inputs": {
+        "reference_trajectory": "s04_ctrl_speed_profile_jerk_limited.reference_trajectory",
+        "plant_model": "s02_ctrl_bicycle_model_py.plant_model",
+        "control_spec": "s01_ctrl_spec_intake.control_spec"
+      },
+      "outputs": {
+        "stanley_controller": "stanley_controller"
+      },
+      "condition": "lateral_method == 'stanley'",
+      "parallel_group": 4
+    },
+    {
+      "id": "s08_ctrl_lqr_lateral",
+      "skill_name": "ctrl-lqr-lateral",
+      "inputs": {
+        "reference_trajectory": "s04_ctrl_speed_profile_jerk_limited.reference_trajectory",
+        "plant_model": "s02_ctrl_bicycle_model_py.plant_model",
+        "control_spec": "s01_ctrl_spec_intake.control_spec"
+      },
+      "outputs": {
+        "lqr_controller": "lqr_controller"
+      },
+      "condition": "lateral_method == 'lqr'",
+      "parallel_group": 4
+    },
+    {
+      "id": "s09_ctrl_closed_loop_sim_py",
+      "skill_name": "ctrl-closed-loop-sim-py",
+      "inputs": {
+        "plant_model": "s02_ctrl_bicycle_model_py.plant_model",
+        "reference_trajectory": "s04_ctrl_speed_profile_jerk_limited.reference_trajectory",
+        "longitudinal_controller": "from_user_input",
+        "pid_gains": "from_user_input",
+        "actuator_limiter": "s05_ctrl_actuator_rate_saturation.actuator_limiter",
+        "lateral_method": "from_user_input",
+        "pure_pursuit_controller": "s06_ctrl_pure_pursuit.pure_pursuit_controller",
+        "stanley_controller": "s07_ctrl_stanley.stanley_controller",
+        "lqr_controller": "s08_ctrl_lqr_lateral.lqr_controller",
+        "mpc_controller": "from_user_input_optional",
+        "acados_controller": "from_user_input_optional",
+        "model_fit_report": "from_user_input_optional"
+      },
+      "outputs": {
+        "sim_log": "sim_log",
+        "sim_verdict": "sim_verdict"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s10_ctrl_tracking_metrics",
+      "skill_name": "ctrl-tracking-metrics",
+      "inputs": {
+        "run_log": "s09_ctrl_closed_loop_sim_py.sim_log",
+        "reference_trajectory": "s04_ctrl_speed_profile_jerk_limited.reference_trajectory",
+        "tracking_tolerances": "from_user_input"
+      },
+      "outputs": {
+        "tracking_metrics": "tracking_metrics"
+      },
+      "parallel_group": 6
+    },
+    {
+      "id": "s11_ctrl_stability_margins",
+      "skill_name": "ctrl-stability-margins",
+      "inputs": {
+        "plant_model": "s02_ctrl_bicycle_model_py.plant_model",
+        "pid_gains": "from_user_input",
+        "sim_log": "s09_ctrl_closed_loop_sim_py.sim_log",
+        "model_fit_report": "from_user_input_optional"
+      },
+      "outputs": {
+        "stability_report": "stability_report"
+      },
+      "parallel_group": 6
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_ctrl_spec_intake",
+      "to_step": "s02_ctrl_bicycle_model_py",
+      "data_type": "ctrl-spec-intake",
+      "field_mapping": {
+        "control_spec": "control_spec"
+      }
+    },
+    {
+      "from_step": "s01_ctrl_spec_intake",
+      "to_step": "s03_ctrl_path_spline_smoothing",
+      "data_type": "ctrl-spec-intake",
+      "field_mapping": {
+        "control_spec": "control_spec"
+      }
+    },
+    {
+      "from_step": "s03_ctrl_path_spline_smoothing",
+      "to_step": "s04_ctrl_speed_profile_jerk_limited",
+      "data_type": "ctrl-path-spline-smoothing",
+      "field_mapping": {
+        "reference_path": "reference_path"
+      }
+    },
+    {
+      "from_step": "s01_ctrl_spec_intake",
+      "to_step": "s04_ctrl_speed_profile_jerk_limited",
+      "data_type": "ctrl-spec-intake",
+      "field_mapping": {
+        "control_spec": "control_spec"
+      }
+    },
+    {
+      "from_step": "s01_ctrl_spec_intake",
+      "to_step": "s05_ctrl_actuator_rate_saturation",
+      "data_type": "ctrl-spec-intake",
+      "field_mapping": {
+        "control_spec": "control_spec"
+      }
+    },
+    {
+      "from_step": "s04_ctrl_speed_profile_jerk_limited",
+      "to_step": "s06_ctrl_pure_pursuit",
+      "data_type": "ctrl-speed-profile-jerk-limited",
+      "field_mapping": {
+        "reference_trajectory": "reference_trajectory"
+      }
+    },
+    {
+      "from_step": "s02_ctrl_bicycle_model_py",
+      "to_step": "s06_ctrl_pure_pursuit",
+      "data_type": "ctrl-bicycle-model-py",
+      "field_mapping": {
+        "plant_model": "plant_model"
+      }
+    },
+    {
+      "from_step": "s01_ctrl_spec_intake",
+      "to_step": "s06_ctrl_pure_pursuit",
+      "data_type": "ctrl-spec-intake",
+      "field_mapping": {
+        "control_spec": "control_spec"
+      }
+    },
+    {
+      "from_step": "s04_ctrl_speed_profile_jerk_limited",
+      "to_step": "s07_ctrl_stanley",
+      "data_type": "ctrl-speed-profile-jerk-limited",
+      "field_mapping": {
+        "reference_trajectory": "reference_trajectory"
+      }
+    },
+    {
+      "from_step": "s02_ctrl_bicycle_model_py",
+      "to_step": "s07_ctrl_stanley",
+      "data_type": "ctrl-bicycle-model-py",
+      "field_mapping": {
+        "plant_model": "plant_model"
+      }
+    },
+    {
+      "from_step": "s01_ctrl_spec_intake",
+      "to_step": "s07_ctrl_stanley",
+      "data_type": "ctrl-spec-intake",
+      "field_mapping": {
+        "control_spec": "control_spec"
+      }
+    },
+    {
+      "from_step": "s04_ctrl_speed_profile_jerk_limited",
+      "to_step": "s08_ctrl_lqr_lateral",
+      "data_type": "ctrl-speed-profile-jerk-limited",
+      "field_mapping": {
+        "reference_trajectory": "reference_trajectory"
+      }
+    },
+    {
+      "from_step": "s02_ctrl_bicycle_model_py",
+      "to_step": "s08_ctrl_lqr_lateral",
+      "data_type": "ctrl-bicycle-model-py",
+      "field_mapping": {
+        "plant_model": "plant_model"
+      }
+    },
+    {
+      "from_step": "s01_ctrl_spec_intake",
+      "to_step": "s08_ctrl_lqr_lateral",
+      "data_type": "ctrl-spec-intake",
+      "field_mapping": {
+        "control_spec": "control_spec"
+      }
+    },
+    {
+      "from_step": "s02_ctrl_bicycle_model_py",
+      "to_step": "s09_ctrl_closed_loop_sim_py",
+      "data_type": "ctrl-bicycle-model-py",
+      "field_mapping": {
+        "plant_model": "plant_model"
+      }
+    },
+    {
+      "from_step": "s04_ctrl_speed_profile_jerk_limited",
+      "to_step": "s09_ctrl_closed_loop_sim_py",
+      "data_type": "ctrl-speed-profile-jerk-limited",
+      "field_mapping": {
+        "reference_trajectory": "reference_trajectory"
+      }
+    },
+    {
+      "from_step": "s05_ctrl_actuator_rate_saturation",
+      "to_step": "s09_ctrl_closed_loop_sim_py",
+      "data_type": "ctrl-actuator-rate-saturation",
+      "field_mapping": {
+        "actuator_limiter": "actuator_limiter"
+      }
+    },
+    {
+      "from_step": "s06_ctrl_pure_pursuit",
+      "to_step": "s09_ctrl_closed_loop_sim_py",
+      "data_type": "ctrl-pure-pursuit",
+      "field_mapping": {
+        "pure_pursuit_controller": "pure_pursuit_controller"
+      }
+    },
+    {
+      "from_step": "s07_ctrl_stanley",
+      "to_step": "s09_ctrl_closed_loop_sim_py",
+      "data_type": "ctrl-stanley",
+      "field_mapping": {
+        "stanley_controller": "stanley_controller"
+      }
+    },
+    {
+      "from_step": "s08_ctrl_lqr_lateral",
+      "to_step": "s09_ctrl_closed_loop_sim_py",
+      "data_type": "ctrl-lqr-lateral",
+      "field_mapping": {
+        "lqr_controller": "lqr_controller"
+      }
+    },
+    {
+      "from_step": "s09_ctrl_closed_loop_sim_py",
+      "to_step": "s10_ctrl_tracking_metrics",
+      "data_type": "ctrl-closed-loop-sim-py",
+      "field_mapping": {
+        "sim_log": "run_log"
+      }
+    },
+    {
+      "from_step": "s04_ctrl_speed_profile_jerk_limited",
+      "to_step": "s10_ctrl_tracking_metrics",
+      "data_type": "ctrl-speed-profile-jerk-limited",
+      "field_mapping": {
+        "reference_trajectory": "reference_trajectory"
+      }
+    },
+    {
+      "from_step": "s02_ctrl_bicycle_model_py",
+      "to_step": "s11_ctrl_stability_margins",
+      "data_type": "ctrl-bicycle-model-py",
+      "field_mapping": {
+        "plant_model": "plant_model"
+      }
+    },
+    {
+      "from_step": "s09_ctrl_closed_loop_sim_py",
+      "to_step": "s11_ctrl_stability_margins",
+      "data_type": "ctrl-closed-loop-sim-py",
+      "field_mapping": {
+        "sim_log": "sim_log"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "vehicle_params",
+    "motion_limits",
+    "test_site",
+    "estop_description",
+    "stack",
+    "project_dir",
+    "waypoints",
+    "longitudinal_controller",
+    "pid_gains",
+    "lateral_method",
+    "mpc_controller",
+    "acados_controller",
+    "model_fit_report",
+    "tracking_tolerances"
+  ],
+  "terminal_outputs": [
+    "open_questions",
+    "sim_verdict",
+    "tracking_metrics",
+    "stability_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_ctrl_spec_intake"
+    ],
+    [
+      "s02_ctrl_bicycle_model_py",
+      "s03_ctrl_path_spline_smoothing",
+      "s05_ctrl_actuator_rate_saturation"
+    ],
+    [
+      "s04_ctrl_speed_profile_jerk_limited"
+    ],
+    [
+      "s06_ctrl_pure_pursuit",
+      "s07_ctrl_stanley",
+      "s08_ctrl_lqr_lateral"
+    ],
+    [
+      "s09_ctrl_closed_loop_sim_py"
+    ],
+    [
+      "s10_ctrl_tracking_metrics",
+      "s11_ctrl_stability_margins"
+    ]
+  ],
+  "estimated_cost": 11,
+  "critical_path": [
+    "s01_ctrl_spec_intake",
+    "s03_ctrl_path_spline_smoothing",
+    "s04_ctrl_speed_profile_jerk_limited",
+    "s08_ctrl_lqr_lateral",
+    "s09_ctrl_closed_loop_sim_py",
+    "s11_ctrl_stability_margins"
+  ]
+}

@@ -1,0 +1,221 @@
+{
+  "name": "vehicle-diagnostics-isotp-transport",
+  "description": "Bring up and verify the ISO 15765-2 transport: SocketCAN link, passive capture, vcan replay bench, kernel can-isotp, frame decoding, flow-control parameters and a Python or C client.",
+  "steps": [
+    {
+      "id": "s01_uds_socketcan_link_setup",
+      "skill_name": "uds-socketcan-link-setup",
+      "inputs": {
+        "diag_scope": "from_user_input",
+        "can_interface": "from_user_input",
+        "can_bitrate": "from_user_input"
+      },
+      "outputs": {
+        "can_link_status": "can_link_status"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_uds_candump_passive_log",
+      "skill_name": "uds-candump-passive-log",
+      "inputs": {
+        "can_link_status": "s01_uds_socketcan_link_setup.can_link_status",
+        "can_interface": "from_user_input",
+        "capture_seconds": "from_user_input_optional"
+      },
+      "outputs": {
+        "candump_log": "candump_log"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_uds_vcan_bench_replay",
+      "skill_name": "uds-vcan-bench-replay",
+      "inputs": {
+        "candump_log": "s02_uds_candump_passive_log.candump_log"
+      },
+      "outputs": {
+        "vcan_bench": "vcan_bench"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_uds_kernel_can_isotp_module",
+      "skill_name": "uds-kernel-can-isotp-module",
+      "inputs": {
+        "can_link_status": "s01_uds_socketcan_link_setup.can_link_status",
+        "can_interface": "from_user_input",
+        "tx_id": "from_user_input",
+        "rx_id": "from_user_input"
+      },
+      "outputs": {
+        "isotp_link_check": "isotp_link_check"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s05_uds_isotp_frame_decode",
+      "skill_name": "uds-isotp-frame-decode",
+      "inputs": {
+        "candump_log": "s02_uds_candump_passive_log.candump_log",
+        "tx_id": "from_user_input",
+        "rx_id": "from_user_input"
+      },
+      "outputs": {
+        "isotp_messages": "isotp_messages",
+        "isotp_errors": "isotp_errors"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s06_uds_isotp_flow_control_params",
+      "skill_name": "uds-isotp-flow-control-params",
+      "inputs": {
+        "isotp_messages": "s05_uds_isotp_frame_decode.isotp_messages",
+        "isotp_link_check": "s04_uds_kernel_can_isotp_module.isotp_link_check"
+      },
+      "outputs": {
+        "isotp_params": "isotp_params"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s07_uds_py_isotp_library",
+      "skill_name": "uds-py-isotp-library",
+      "inputs": {
+        "isotp_params": "s06_uds_isotp_flow_control_params.isotp_params",
+        "can_interface": "from_user_input",
+        "tx_id": "from_user_input",
+        "rx_id": "from_user_input"
+      },
+      "outputs": {
+        "py_isotp_stack": "py_isotp_stack"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 5
+    },
+    {
+      "id": "s08_uds_c_isotp_socket",
+      "skill_name": "uds-c-isotp-socket",
+      "inputs": {
+        "isotp_params": "s06_uds_isotp_flow_control_params.isotp_params",
+        "can_interface": "from_user_input",
+        "tx_id": "from_user_input",
+        "rx_id": "from_user_input"
+      },
+      "outputs": {
+        "c_isotp_program": "c_isotp_program"
+      },
+      "condition": "stack == 'c'",
+      "parallel_group": 5
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_uds_socketcan_link_setup",
+      "to_step": "s02_uds_candump_passive_log",
+      "data_type": "uds-socketcan-link-setup",
+      "field_mapping": {
+        "can_link_status": "can_link_status"
+      }
+    },
+    {
+      "from_step": "s02_uds_candump_passive_log",
+      "to_step": "s03_uds_vcan_bench_replay",
+      "data_type": "uds-candump-passive-log",
+      "field_mapping": {
+        "candump_log": "candump_log"
+      }
+    },
+    {
+      "from_step": "s01_uds_socketcan_link_setup",
+      "to_step": "s04_uds_kernel_can_isotp_module",
+      "data_type": "uds-socketcan-link-setup",
+      "field_mapping": {
+        "can_link_status": "can_link_status"
+      }
+    },
+    {
+      "from_step": "s02_uds_candump_passive_log",
+      "to_step": "s05_uds_isotp_frame_decode",
+      "data_type": "uds-candump-passive-log",
+      "field_mapping": {
+        "candump_log": "candump_log"
+      }
+    },
+    {
+      "from_step": "s05_uds_isotp_frame_decode",
+      "to_step": "s06_uds_isotp_flow_control_params",
+      "data_type": "uds-isotp-frame-decode",
+      "field_mapping": {
+        "isotp_messages": "isotp_messages"
+      }
+    },
+    {
+      "from_step": "s04_uds_kernel_can_isotp_module",
+      "to_step": "s06_uds_isotp_flow_control_params",
+      "data_type": "uds-kernel-can-isotp-module",
+      "field_mapping": {
+        "isotp_link_check": "isotp_link_check"
+      }
+    },
+    {
+      "from_step": "s06_uds_isotp_flow_control_params",
+      "to_step": "s07_uds_py_isotp_library",
+      "data_type": "uds-isotp-flow-control-params",
+      "field_mapping": {
+        "isotp_params": "isotp_params"
+      }
+    },
+    {
+      "from_step": "s06_uds_isotp_flow_control_params",
+      "to_step": "s08_uds_c_isotp_socket",
+      "data_type": "uds-isotp-flow-control-params",
+      "field_mapping": {
+        "isotp_params": "isotp_params"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "diag_scope",
+    "can_interface",
+    "can_bitrate",
+    "capture_seconds",
+    "tx_id",
+    "rx_id"
+  ],
+  "terminal_outputs": [
+    "vcan_bench",
+    "isotp_errors",
+    "py_isotp_stack",
+    "c_isotp_program"
+  ],
+  "parallel_groups": [
+    [
+      "s01_uds_socketcan_link_setup"
+    ],
+    [
+      "s02_uds_candump_passive_log",
+      "s04_uds_kernel_can_isotp_module"
+    ],
+    [
+      "s03_uds_vcan_bench_replay",
+      "s05_uds_isotp_frame_decode"
+    ],
+    [
+      "s06_uds_isotp_flow_control_params"
+    ],
+    [
+      "s07_uds_py_isotp_library",
+      "s08_uds_c_isotp_socket"
+    ]
+  ],
+  "estimated_cost": 8,
+  "critical_path": [
+    "s01_uds_socketcan_link_setup",
+    "s02_uds_candump_passive_log",
+    "s05_uds_isotp_frame_decode",
+    "s06_uds_isotp_flow_control_params",
+    "s08_uds_c_isotp_socket"
+  ]
+}

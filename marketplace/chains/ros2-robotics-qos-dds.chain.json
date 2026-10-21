@@ -1,0 +1,143 @@
+{
+  "name": "ros2-robotics-qos-dds",
+  "description": "Diagnose and fix ROS 2 communication: introspect the graph, select QoS by decision table, fix incompatible endpoints, choose one RMW, and tune Fast DDS or Cyclone DDS with measured proof.",
+  "steps": [
+    {
+      "id": "s01_ros2_doctor_introspection",
+      "skill_name": "ros2-doctor-introspection",
+      "inputs": {
+        "topic_list": "from_user_input",
+        "node_spec": "from_user_input"
+      },
+      "outputs": {
+        "introspection_report": "introspection_report"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_ros2_qos_profile_selection",
+      "skill_name": "ros2-qos-profile-selection",
+      "inputs": {
+        "topic_list": "from_user_input",
+        "node_spec": "from_user_input"
+      },
+      "outputs": {
+        "qos_table": "qos_table",
+        "qos_mismatches": "qos_mismatches"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s03_ros2_qos_incompatibility_debug",
+      "skill_name": "ros2-qos-incompatibility-debug",
+      "inputs": {
+        "qos_table": "s02_ros2_qos_profile_selection.qos_table",
+        "qos_mismatches": "s02_ros2_qos_profile_selection.qos_mismatches"
+      },
+      "outputs": {
+        "qos_fix_report": "qos_fix_report"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_ros2_dds_rmw_selection",
+      "skill_name": "ros2-dds-rmw-selection",
+      "inputs": {
+        "ros_distro": "from_user_input",
+        "network_topology": "from_user_input"
+      },
+      "outputs": {
+        "rmw_choice": "rmw_choice",
+        "rmw_env": "rmw_env"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s05_ros2_fastdds_xml_tuning",
+      "skill_name": "ros2-fastdds-xml-tuning",
+      "inputs": {
+        "rmw_env": "s04_ros2_dds_rmw_selection.rmw_env",
+        "network_topology": "from_user_input"
+      },
+      "outputs": {
+        "fastdds_profile": "fastdds_profile",
+        "fastdds_check": "fastdds_check"
+      },
+      "condition": "rmw_choice == 'rmw_fastrtps_cpp'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s06_ros2_cyclonedds_xml_tuning",
+      "skill_name": "ros2-cyclonedds-xml-tuning",
+      "inputs": {
+        "rmw_env": "s04_ros2_dds_rmw_selection.rmw_env",
+        "network_topology": "from_user_input"
+      },
+      "outputs": {
+        "cyclonedds_config": "cyclonedds_config",
+        "cyclonedds_check": "cyclonedds_check"
+      },
+      "condition": "rmw_choice == 'rmw_cyclonedds_cpp'",
+      "parallel_group": 2
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s02_ros2_qos_profile_selection",
+      "to_step": "s03_ros2_qos_incompatibility_debug",
+      "data_type": "ros2-qos-profile-selection",
+      "field_mapping": {
+        "qos_table": "qos_table",
+        "qos_mismatches": "qos_mismatches"
+      }
+    },
+    {
+      "from_step": "s04_ros2_dds_rmw_selection",
+      "to_step": "s05_ros2_fastdds_xml_tuning",
+      "data_type": "ros2-dds-rmw-selection",
+      "field_mapping": {
+        "rmw_env": "rmw_env"
+      }
+    },
+    {
+      "from_step": "s04_ros2_dds_rmw_selection",
+      "to_step": "s06_ros2_cyclonedds_xml_tuning",
+      "data_type": "ros2-dds-rmw-selection",
+      "field_mapping": {
+        "rmw_env": "rmw_env"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "topic_list",
+    "node_spec",
+    "ros_distro",
+    "network_topology"
+  ],
+  "terminal_outputs": [
+    "introspection_report",
+    "qos_fix_report",
+    "rmw_choice",
+    "fastdds_profile",
+    "fastdds_check",
+    "cyclonedds_config",
+    "cyclonedds_check"
+  ],
+  "parallel_groups": [
+    [
+      "s01_ros2_doctor_introspection",
+      "s02_ros2_qos_profile_selection",
+      "s04_ros2_dds_rmw_selection"
+    ],
+    [
+      "s03_ros2_qos_incompatibility_debug",
+      "s05_ros2_fastdds_xml_tuning",
+      "s06_ros2_cyclonedds_xml_tuning"
+    ]
+  ],
+  "estimated_cost": 6,
+  "critical_path": [
+    "s04_ros2_dds_rmw_selection",
+    "s06_ros2_cyclonedds_xml_tuning"
+  ]
+}

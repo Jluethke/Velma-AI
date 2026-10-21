@@ -1,0 +1,101 @@
+{
+  "name": "ros2-robotics-vehicle-bench",
+  "description": "Vehicle bench work on a user-owned platform: read-only listen-only CAN capture into ROS 2, MCAP recording and isolated replay, and a velocity command bench test behind an independent hardware emergency stop.",
+  "steps": [
+    {
+      "id": "s01_ros2_socketcan_readonly_bridge",
+      "skill_name": "ros2-socketcan-readonly-bridge",
+      "inputs": {
+        "can_interface": "from_user_input",
+        "can_bitrate": "from_user_input"
+      },
+      "outputs": {
+        "can_topic": "can_topic",
+        "can_capture_check": "can_capture_check"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_ros2_rosbag2_mcap_record",
+      "skill_name": "ros2-rosbag2-mcap-record",
+      "inputs": {
+        "topic_list": "from_user_input",
+        "bag_dir": "from_user_input",
+        "ros_distro": "from_user_input"
+      },
+      "outputs": {
+        "bag_path": "bag_path",
+        "bag_info": "bag_info"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s03_ros2_rosbag2_replay_test",
+      "skill_name": "ros2-rosbag2-replay-test",
+      "inputs": {
+        "bag_path": "s02_ros2_rosbag2_mcap_record.bag_path",
+        "bag_info": "s02_ros2_rosbag2_mcap_record.bag_info"
+      },
+      "outputs": {
+        "replay_report": "replay_report"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_ros2_cmd_vel_bench_test",
+      "skill_name": "ros2-cmd-vel-bench-test",
+      "inputs": {
+        "estop_verified": "from_user_input",
+        "launch_file": "from_user_input",
+        "command_timeout_s": "from_user_input"
+      },
+      "outputs": {
+        "bench_test_log": "bench_test_log"
+      },
+      "condition": "estop_verified == true",
+      "parallel_group": 1
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s02_ros2_rosbag2_mcap_record",
+      "to_step": "s03_ros2_rosbag2_replay_test",
+      "data_type": "ros2-rosbag2-mcap-record",
+      "field_mapping": {
+        "bag_path": "bag_path",
+        "bag_info": "bag_info"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "can_interface",
+    "can_bitrate",
+    "topic_list",
+    "bag_dir",
+    "ros_distro",
+    "estop_verified",
+    "launch_file",
+    "command_timeout_s"
+  ],
+  "terminal_outputs": [
+    "can_topic",
+    "can_capture_check",
+    "replay_report",
+    "bench_test_log"
+  ],
+  "parallel_groups": [
+    [
+      "s01_ros2_socketcan_readonly_bridge",
+      "s02_ros2_rosbag2_mcap_record",
+      "s04_ros2_cmd_vel_bench_test"
+    ],
+    [
+      "s03_ros2_rosbag2_replay_test"
+    ]
+  ],
+  "estimated_cost": 4,
+  "critical_path": [
+    "s02_ros2_rosbag2_mcap_record",
+    "s03_ros2_rosbag2_replay_test"
+  ]
+}

@@ -1,0 +1,730 @@
+{
+  "name": "subscription-billing",
+  "description": "Choose a billing provider, encode pricing, build the Stripe or merchant-of-record catalog, webhooks, trials, proration, usage metering, entitlements, tax, invoicing, dunning, cancellations, portal, end-to-end test clocks and revenue metrics.",
+  "steps": [
+    {
+      "id": "s01_bill_provider_select",
+      "skill_name": "bill-provider-select",
+      "inputs": {
+        "product_profile": "from_user_input",
+        "seller_jurisdictions": "from_user_input",
+        "sell_to_consumers": "from_user_input_optional"
+      },
+      "outputs": {
+        "billing_provider": "billing_provider",
+        "provider_rationale": "provider_rationale"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_bill_pricing_model_spec",
+      "skill_name": "bill-pricing-model-spec",
+      "inputs": {
+        "pricing_sheet": "from_user_input",
+        "billing_provider": "s01_bill_provider_select.billing_provider"
+      },
+      "outputs": {
+        "pricing_spec": "pricing_spec",
+        "pricing_open_questions": "pricing_open_questions"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_bill_mor_paddle",
+      "skill_name": "bill-mor-paddle",
+      "inputs": {
+        "pricing_spec": "s02_bill_pricing_model_spec.pricing_spec",
+        "paddle_environment": "from_user_input"
+      },
+      "outputs": {
+        "paddle_catalog": "paddle_catalog",
+        "paddle_webhook_code": "paddle_webhook_code"
+      },
+      "condition": "s01_bill_provider_select.billing_provider == 'paddle'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_bill_mor_lemonsqueezy",
+      "skill_name": "bill-mor-lemonsqueezy",
+      "inputs": {
+        "pricing_spec": "s02_bill_pricing_model_spec.pricing_spec",
+        "lemonsqueezy_store_id": "from_user_input"
+      },
+      "outputs": {
+        "ls_variant_map": "ls_variant_map",
+        "ls_webhook_code": "ls_webhook_code"
+      },
+      "condition": "s01_bill_provider_select.billing_provider == 'lemonsqueezy'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s05_bill_stripe_catalog_setup",
+      "skill_name": "bill-stripe-catalog-setup",
+      "inputs": {
+        "pricing_spec": "s02_bill_pricing_model_spec.pricing_spec",
+        "stripe_api_version": "from_user_input_optional"
+      },
+      "outputs": {
+        "price_catalog": "price_catalog"
+      },
+      "condition": "s01_bill_provider_select.billing_provider == 'stripe'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s06_bill_stripe_meter_create",
+      "skill_name": "bill-stripe-meter-create",
+      "inputs": {
+        "pricing_spec": "s02_bill_pricing_model_spec.pricing_spec",
+        "price_catalog": "s05_bill_stripe_catalog_setup.price_catalog"
+      },
+      "outputs": {
+        "meter_config": "meter_config"
+      },
+      "condition": "s01_bill_provider_select.billing_provider == 'stripe' and has_usage_pricing == true",
+      "parallel_group": 4
+    },
+    {
+      "id": "s07_bill_py_webhook_endpoint",
+      "skill_name": "bill-py-webhook-endpoint",
+      "inputs": {
+        "stripe_api_version": "from_user_input_optional",
+        "app_framework": "from_user_input",
+        "database_url": "from_user_input"
+      },
+      "outputs": {
+        "webhook_handler": "webhook_handler",
+        "processed_events_table": "processed_events_table"
+      },
+      "condition": "s01_bill_provider_select.billing_provider == 'stripe' and stack == 'python'",
+      "parallel_group": 1
+    },
+    {
+      "id": "s08_bill_node_webhook_endpoint",
+      "skill_name": "bill-node-webhook-endpoint",
+      "inputs": {
+        "stripe_api_version": "from_user_input_optional",
+        "app_framework": "from_user_input",
+        "database_url": "from_user_input"
+      },
+      "outputs": {
+        "webhook_handler": "webhook_handler",
+        "processed_events_table": "processed_events_table"
+      },
+      "condition": "s01_bill_provider_select.billing_provider == 'stripe' and stack == 'node'",
+      "parallel_group": 1
+    },
+    {
+      "id": "s09_bill_subscription_trial",
+      "skill_name": "bill-subscription-trial",
+      "inputs": {
+        "price_catalog": "s05_bill_stripe_catalog_setup.price_catalog",
+        "trial_policy": "from_user_input",
+        "webhook_handler": "from_user_input"
+      },
+      "outputs": {
+        "trial_code": "trial_code",
+        "trial_test_results": "trial_test_results"
+      },
+      "condition": "s01_bill_provider_select.billing_provider == 'stripe' and has_trial == true",
+      "parallel_group": 4
+    },
+    {
+      "id": "s10_bill_plan_change_proration",
+      "skill_name": "bill-plan-change-proration",
+      "inputs": {
+        "price_catalog": "s05_bill_stripe_catalog_setup.price_catalog",
+        "plan_change_policy": "from_user_input",
+        "webhook_handler": "from_user_input"
+      },
+      "outputs": {
+        "plan_change_code": "plan_change_code",
+        "proration_previews": "proration_previews"
+      },
+      "condition": "s01_bill_provider_select.billing_provider == 'stripe'",
+      "parallel_group": 4
+    },
+    {
+      "id": "s11_bill_usage_event_capture",
+      "skill_name": "bill-usage-event-capture",
+      "inputs": {
+        "meter_config": "s06_bill_stripe_meter_create.meter_config",
+        "database_url": "from_user_input"
+      },
+      "outputs": {
+        "usage_outbox_schema": "usage_outbox_schema",
+        "capture_code": "capture_code"
+      },
+      "condition": "has_usage_pricing == true",
+      "parallel_group": 5
+    },
+    {
+      "id": "s12_bill_py_usage_reporter",
+      "skill_name": "bill-py-usage-reporter",
+      "inputs": {
+        "usage_outbox_schema": "s11_bill_usage_event_capture.usage_outbox_schema",
+        "meter_config": "s06_bill_stripe_meter_create.meter_config"
+      },
+      "outputs": {
+        "usage_reporter": "usage_reporter",
+        "report_run_log": "report_run_log"
+      },
+      "condition": "s01_bill_provider_select.billing_provider == 'stripe' and has_usage_pricing == true and stack == 'python'",
+      "parallel_group": 6
+    },
+    {
+      "id": "s13_bill_node_usage_reporter",
+      "skill_name": "bill-node-usage-reporter",
+      "inputs": {
+        "usage_outbox_schema": "s11_bill_usage_event_capture.usage_outbox_schema",
+        "meter_config": "s06_bill_stripe_meter_create.meter_config"
+      },
+      "outputs": {
+        "usage_reporter": "usage_reporter",
+        "report_run_log": "report_run_log"
+      },
+      "condition": "s01_bill_provider_select.billing_provider == 'stripe' and has_usage_pricing == true and stack == 'node'",
+      "parallel_group": 6
+    },
+    {
+      "id": "s14_bill_usage_reconcile",
+      "skill_name": "bill-usage-reconcile",
+      "inputs": {
+        "meter_config": "s06_bill_stripe_meter_create.meter_config",
+        "usage_outbox_schema": "s11_bill_usage_event_capture.usage_outbox_schema",
+        "reconcile_window": "from_user_input_optional"
+      },
+      "outputs": {
+        "reconcile_report": "reconcile_report",
+        "meter_adjustments": "meter_adjustments"
+      },
+      "condition": "s01_bill_provider_select.billing_provider == 'stripe' and has_usage_pricing == true",
+      "parallel_group": 6
+    },
+    {
+      "id": "s15_bill_entitlements_model",
+      "skill_name": "bill-entitlements-model",
+      "inputs": {
+        "pricing_spec": "s02_bill_pricing_model_spec.pricing_spec",
+        "price_catalog": "s05_bill_stripe_catalog_setup.price_catalog",
+        "webhook_handler": "from_user_input"
+      },
+      "outputs": {
+        "entitlement_map": "entitlement_map",
+        "entitlement_table_schema": "entitlement_table_schema"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s16_bill_stripe_tax_setup",
+      "skill_name": "bill-stripe-tax-setup",
+      "inputs": {
+        "price_catalog": "s05_bill_stripe_catalog_setup.price_catalog",
+        "tax_registrations": "from_user_input"
+      },
+      "outputs": {
+        "tax_config": "tax_config",
+        "tax_test_results": "tax_test_results"
+      },
+      "condition": "s01_bill_provider_select.billing_provider == 'stripe' and tax_engine == 'stripe_tax'",
+      "parallel_group": 4
+    },
+    {
+      "id": "s17_bill_tax_avatax_branch",
+      "skill_name": "bill-tax-avatax-branch",
+      "inputs": {
+        "price_catalog": "s05_bill_stripe_catalog_setup.price_catalog",
+        "tax_registrations": "from_user_input",
+        "avatax_company_code": "from_user_input"
+      },
+      "outputs": {
+        "tax_integration_code": "tax_integration_code",
+        "tax_test_results": "tax_test_results"
+      },
+      "condition": "s01_bill_provider_select.billing_provider == 'stripe' and tax_engine == 'avatax'",
+      "parallel_group": 4
+    },
+    {
+      "id": "s18_bill_invoice_lifecycle",
+      "skill_name": "bill-invoice-lifecycle",
+      "inputs": {
+        "price_catalog": "s05_bill_stripe_catalog_setup.price_catalog",
+        "collection_method": "from_user_input"
+      },
+      "outputs": {
+        "invoice_settings": "invoice_settings",
+        "invoice_event_map": "invoice_event_map"
+      },
+      "condition": "s01_bill_provider_select.billing_provider == 'stripe'",
+      "parallel_group": 4
+    },
+    {
+      "id": "s19_bill_dunning_config",
+      "skill_name": "bill-dunning-config",
+      "inputs": {
+        "invoice_settings": "s18_bill_invoice_lifecycle.invoice_settings",
+        "grace_period_days": "from_user_input"
+      },
+      "outputs": {
+        "dunning_settings": "dunning_settings",
+        "access_policy": "access_policy"
+      },
+      "condition": "s01_bill_provider_select.billing_provider == 'stripe'",
+      "parallel_group": 5
+    },
+    {
+      "id": "s20_bill_payment_failure_handler",
+      "skill_name": "bill-payment-failure-handler",
+      "inputs": {
+        "dunning_settings": "s19_bill_dunning_config.dunning_settings",
+        "access_policy": "s19_bill_dunning_config.access_policy",
+        "webhook_handler": "from_user_input"
+      },
+      "outputs": {
+        "failure_handler_code": "failure_handler_code",
+        "failure_test_results": "failure_test_results"
+      },
+      "condition": "s01_bill_provider_select.billing_provider == 'stripe'",
+      "parallel_group": 6
+    },
+    {
+      "id": "s21_bill_py_feature_gate",
+      "skill_name": "bill-py-feature-gate",
+      "inputs": {
+        "entitlement_map": "s15_bill_entitlements_model.entitlement_map",
+        "entitlement_table_schema": "s15_bill_entitlements_model.entitlement_table_schema",
+        "access_policy": "s19_bill_dunning_config.access_policy"
+      },
+      "outputs": {
+        "gate_code": "gate_code",
+        "gate_tests": "gate_tests"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 6
+    },
+    {
+      "id": "s22_bill_node_feature_gate",
+      "skill_name": "bill-node-feature-gate",
+      "inputs": {
+        "entitlement_map": "s15_bill_entitlements_model.entitlement_map",
+        "entitlement_table_schema": "s15_bill_entitlements_model.entitlement_table_schema",
+        "access_policy": "s19_bill_dunning_config.access_policy"
+      },
+      "outputs": {
+        "gate_code": "gate_code",
+        "gate_tests": "gate_tests"
+      },
+      "condition": "stack == 'node'",
+      "parallel_group": 6
+    },
+    {
+      "id": "s23_bill_cancel_refund_policy",
+      "skill_name": "bill-cancel-refund-policy",
+      "inputs": {
+        "refund_policy": "from_user_input",
+        "price_catalog": "s05_bill_stripe_catalog_setup.price_catalog",
+        "webhook_handler": "from_user_input"
+      },
+      "outputs": {
+        "cancel_refund_code": "cancel_refund_code",
+        "policy_test_results": "policy_test_results"
+      },
+      "condition": "s01_bill_provider_select.billing_provider == 'stripe'",
+      "parallel_group": 4
+    },
+    {
+      "id": "s24_bill_customer_portal",
+      "skill_name": "bill-customer-portal",
+      "inputs": {
+        "price_catalog": "s05_bill_stripe_catalog_setup.price_catalog",
+        "refund_policy": "from_user_input",
+        "return_url": "from_user_input"
+      },
+      "outputs": {
+        "portal_configuration_id": "portal_configuration_id",
+        "portal_session_code": "portal_session_code"
+      },
+      "condition": "s01_bill_provider_select.billing_provider == 'stripe'",
+      "parallel_group": 4
+    },
+    {
+      "id": "s25_bill_test_clock_e2e",
+      "skill_name": "bill-test-clock-e2e",
+      "inputs": {
+        "price_catalog": "s05_bill_stripe_catalog_setup.price_catalog",
+        "trial_policy": "from_user_input",
+        "dunning_settings": "s19_bill_dunning_config.dunning_settings"
+      },
+      "outputs": {
+        "test_clock_report": "test_clock_report"
+      },
+      "condition": "s01_bill_provider_select.billing_provider == 'stripe'",
+      "parallel_group": 6
+    },
+    {
+      "id": "s26_bill_revenue_metrics",
+      "skill_name": "bill-revenue-metrics",
+      "inputs": {
+        "billing_data_source": "from_user_input",
+        "metrics_period": "from_user_input",
+        "mrr_conventions": "from_user_input_optional"
+      },
+      "outputs": {
+        "mrr_report": "mrr_report",
+        "churn_report": "churn_report"
+      },
+      "parallel_group": 1
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_bill_provider_select",
+      "to_step": "s02_bill_pricing_model_spec",
+      "data_type": "bill-provider-select",
+      "field_mapping": {
+        "billing_provider": "billing_provider"
+      }
+    },
+    {
+      "from_step": "s02_bill_pricing_model_spec",
+      "to_step": "s03_bill_mor_paddle",
+      "data_type": "bill-pricing-model-spec",
+      "field_mapping": {
+        "pricing_spec": "pricing_spec"
+      }
+    },
+    {
+      "from_step": "s02_bill_pricing_model_spec",
+      "to_step": "s04_bill_mor_lemonsqueezy",
+      "data_type": "bill-pricing-model-spec",
+      "field_mapping": {
+        "pricing_spec": "pricing_spec"
+      }
+    },
+    {
+      "from_step": "s02_bill_pricing_model_spec",
+      "to_step": "s05_bill_stripe_catalog_setup",
+      "data_type": "bill-pricing-model-spec",
+      "field_mapping": {
+        "pricing_spec": "pricing_spec"
+      }
+    },
+    {
+      "from_step": "s02_bill_pricing_model_spec",
+      "to_step": "s06_bill_stripe_meter_create",
+      "data_type": "bill-pricing-model-spec",
+      "field_mapping": {
+        "pricing_spec": "pricing_spec"
+      }
+    },
+    {
+      "from_step": "s05_bill_stripe_catalog_setup",
+      "to_step": "s06_bill_stripe_meter_create",
+      "data_type": "bill-stripe-catalog-setup",
+      "field_mapping": {
+        "price_catalog": "price_catalog"
+      }
+    },
+    {
+      "from_step": "s05_bill_stripe_catalog_setup",
+      "to_step": "s09_bill_subscription_trial",
+      "data_type": "bill-stripe-catalog-setup",
+      "field_mapping": {
+        "price_catalog": "price_catalog"
+      }
+    },
+    {
+      "from_step": "s05_bill_stripe_catalog_setup",
+      "to_step": "s10_bill_plan_change_proration",
+      "data_type": "bill-stripe-catalog-setup",
+      "field_mapping": {
+        "price_catalog": "price_catalog"
+      }
+    },
+    {
+      "from_step": "s06_bill_stripe_meter_create",
+      "to_step": "s11_bill_usage_event_capture",
+      "data_type": "bill-stripe-meter-create",
+      "field_mapping": {
+        "meter_config": "meter_config"
+      }
+    },
+    {
+      "from_step": "s11_bill_usage_event_capture",
+      "to_step": "s12_bill_py_usage_reporter",
+      "data_type": "bill-usage-event-capture",
+      "field_mapping": {
+        "usage_outbox_schema": "usage_outbox_schema"
+      }
+    },
+    {
+      "from_step": "s06_bill_stripe_meter_create",
+      "to_step": "s12_bill_py_usage_reporter",
+      "data_type": "bill-stripe-meter-create",
+      "field_mapping": {
+        "meter_config": "meter_config"
+      }
+    },
+    {
+      "from_step": "s11_bill_usage_event_capture",
+      "to_step": "s13_bill_node_usage_reporter",
+      "data_type": "bill-usage-event-capture",
+      "field_mapping": {
+        "usage_outbox_schema": "usage_outbox_schema"
+      }
+    },
+    {
+      "from_step": "s06_bill_stripe_meter_create",
+      "to_step": "s13_bill_node_usage_reporter",
+      "data_type": "bill-stripe-meter-create",
+      "field_mapping": {
+        "meter_config": "meter_config"
+      }
+    },
+    {
+      "from_step": "s06_bill_stripe_meter_create",
+      "to_step": "s14_bill_usage_reconcile",
+      "data_type": "bill-stripe-meter-create",
+      "field_mapping": {
+        "meter_config": "meter_config"
+      }
+    },
+    {
+      "from_step": "s11_bill_usage_event_capture",
+      "to_step": "s14_bill_usage_reconcile",
+      "data_type": "bill-usage-event-capture",
+      "field_mapping": {
+        "usage_outbox_schema": "usage_outbox_schema"
+      }
+    },
+    {
+      "from_step": "s02_bill_pricing_model_spec",
+      "to_step": "s15_bill_entitlements_model",
+      "data_type": "bill-pricing-model-spec",
+      "field_mapping": {
+        "pricing_spec": "pricing_spec"
+      }
+    },
+    {
+      "from_step": "s05_bill_stripe_catalog_setup",
+      "to_step": "s15_bill_entitlements_model",
+      "data_type": "bill-stripe-catalog-setup",
+      "field_mapping": {
+        "price_catalog": "price_catalog"
+      }
+    },
+    {
+      "from_step": "s05_bill_stripe_catalog_setup",
+      "to_step": "s16_bill_stripe_tax_setup",
+      "data_type": "bill-stripe-catalog-setup",
+      "field_mapping": {
+        "price_catalog": "price_catalog"
+      }
+    },
+    {
+      "from_step": "s05_bill_stripe_catalog_setup",
+      "to_step": "s17_bill_tax_avatax_branch",
+      "data_type": "bill-stripe-catalog-setup",
+      "field_mapping": {
+        "price_catalog": "price_catalog"
+      }
+    },
+    {
+      "from_step": "s05_bill_stripe_catalog_setup",
+      "to_step": "s18_bill_invoice_lifecycle",
+      "data_type": "bill-stripe-catalog-setup",
+      "field_mapping": {
+        "price_catalog": "price_catalog"
+      }
+    },
+    {
+      "from_step": "s18_bill_invoice_lifecycle",
+      "to_step": "s19_bill_dunning_config",
+      "data_type": "bill-invoice-lifecycle",
+      "field_mapping": {
+        "invoice_settings": "invoice_settings"
+      }
+    },
+    {
+      "from_step": "s19_bill_dunning_config",
+      "to_step": "s20_bill_payment_failure_handler",
+      "data_type": "bill-dunning-config",
+      "field_mapping": {
+        "dunning_settings": "dunning_settings",
+        "access_policy": "access_policy"
+      }
+    },
+    {
+      "from_step": "s15_bill_entitlements_model",
+      "to_step": "s21_bill_py_feature_gate",
+      "data_type": "bill-entitlements-model",
+      "field_mapping": {
+        "entitlement_map": "entitlement_map",
+        "entitlement_table_schema": "entitlement_table_schema"
+      }
+    },
+    {
+      "from_step": "s19_bill_dunning_config",
+      "to_step": "s21_bill_py_feature_gate",
+      "data_type": "bill-dunning-config",
+      "field_mapping": {
+        "access_policy": "access_policy"
+      }
+    },
+    {
+      "from_step": "s15_bill_entitlements_model",
+      "to_step": "s22_bill_node_feature_gate",
+      "data_type": "bill-entitlements-model",
+      "field_mapping": {
+        "entitlement_map": "entitlement_map",
+        "entitlement_table_schema": "entitlement_table_schema"
+      }
+    },
+    {
+      "from_step": "s19_bill_dunning_config",
+      "to_step": "s22_bill_node_feature_gate",
+      "data_type": "bill-dunning-config",
+      "field_mapping": {
+        "access_policy": "access_policy"
+      }
+    },
+    {
+      "from_step": "s05_bill_stripe_catalog_setup",
+      "to_step": "s23_bill_cancel_refund_policy",
+      "data_type": "bill-stripe-catalog-setup",
+      "field_mapping": {
+        "price_catalog": "price_catalog"
+      }
+    },
+    {
+      "from_step": "s05_bill_stripe_catalog_setup",
+      "to_step": "s24_bill_customer_portal",
+      "data_type": "bill-stripe-catalog-setup",
+      "field_mapping": {
+        "price_catalog": "price_catalog"
+      }
+    },
+    {
+      "from_step": "s05_bill_stripe_catalog_setup",
+      "to_step": "s25_bill_test_clock_e2e",
+      "data_type": "bill-stripe-catalog-setup",
+      "field_mapping": {
+        "price_catalog": "price_catalog"
+      }
+    },
+    {
+      "from_step": "s19_bill_dunning_config",
+      "to_step": "s25_bill_test_clock_e2e",
+      "data_type": "bill-dunning-config",
+      "field_mapping": {
+        "dunning_settings": "dunning_settings"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "product_profile",
+    "seller_jurisdictions",
+    "sell_to_consumers",
+    "pricing_sheet",
+    "paddle_environment",
+    "lemonsqueezy_store_id",
+    "stripe_api_version",
+    "app_framework",
+    "database_url",
+    "trial_policy",
+    "webhook_handler",
+    "plan_change_policy",
+    "reconcile_window",
+    "tax_registrations",
+    "avatax_company_code",
+    "collection_method",
+    "grace_period_days",
+    "refund_policy",
+    "return_url",
+    "billing_data_source",
+    "metrics_period",
+    "mrr_conventions"
+  ],
+  "terminal_outputs": [
+    "provider_rationale",
+    "pricing_open_questions",
+    "paddle_catalog",
+    "paddle_webhook_code",
+    "ls_variant_map",
+    "ls_webhook_code",
+    "webhook_handler",
+    "processed_events_table",
+    "trial_code",
+    "trial_test_results",
+    "plan_change_code",
+    "proration_previews",
+    "capture_code",
+    "usage_reporter",
+    "report_run_log",
+    "reconcile_report",
+    "meter_adjustments",
+    "tax_config",
+    "tax_test_results",
+    "tax_integration_code",
+    "invoice_event_map",
+    "failure_handler_code",
+    "failure_test_results",
+    "gate_code",
+    "gate_tests",
+    "cancel_refund_code",
+    "policy_test_results",
+    "portal_configuration_id",
+    "portal_session_code",
+    "test_clock_report",
+    "mrr_report",
+    "churn_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_bill_provider_select",
+      "s07_bill_py_webhook_endpoint",
+      "s08_bill_node_webhook_endpoint",
+      "s26_bill_revenue_metrics"
+    ],
+    [
+      "s02_bill_pricing_model_spec"
+    ],
+    [
+      "s03_bill_mor_paddle",
+      "s04_bill_mor_lemonsqueezy",
+      "s05_bill_stripe_catalog_setup"
+    ],
+    [
+      "s06_bill_stripe_meter_create",
+      "s09_bill_subscription_trial",
+      "s10_bill_plan_change_proration",
+      "s15_bill_entitlements_model",
+      "s16_bill_stripe_tax_setup",
+      "s17_bill_tax_avatax_branch",
+      "s18_bill_invoice_lifecycle",
+      "s23_bill_cancel_refund_policy",
+      "s24_bill_customer_portal"
+    ],
+    [
+      "s11_bill_usage_event_capture",
+      "s19_bill_dunning_config"
+    ],
+    [
+      "s12_bill_py_usage_reporter",
+      "s13_bill_node_usage_reporter",
+      "s14_bill_usage_reconcile",
+      "s20_bill_payment_failure_handler",
+      "s21_bill_py_feature_gate",
+      "s22_bill_node_feature_gate",
+      "s25_bill_test_clock_e2e"
+    ]
+  ],
+  "estimated_cost": 26,
+  "critical_path": [
+    "s01_bill_provider_select",
+    "s02_bill_pricing_model_spec",
+    "s05_bill_stripe_catalog_setup",
+    "s06_bill_stripe_meter_create",
+    "s11_bill_usage_event_capture",
+    "s12_bill_py_usage_reporter"
+  ]
+}

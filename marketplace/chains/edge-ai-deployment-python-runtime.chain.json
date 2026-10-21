@@ -1,0 +1,174 @@
+{
+  "name": "edge-ai-deployment-python-runtime",
+  "description": "Python stack path: platform check, CUDA-enabled PyTorch, ONNX export, engine build, accuracy check and a verified Python TensorRT inference loop.",
+  "steps": [
+    {
+      "id": "s01_edge_jetpack_l4t_version_check",
+      "skill_name": "edge-jetpack-l4t-version-check",
+      "inputs": {
+        "device_host": "from_user_input"
+      },
+      "outputs": {
+        "platform_report": "platform_report"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_edge_py_pytorch_aarch64_wheel",
+      "skill_name": "edge-py-pytorch-aarch64-wheel",
+      "inputs": {
+        "device_host": "from_user_input",
+        "platform_report": "s01_edge_jetpack_l4t_version_check.platform_report"
+      },
+      "outputs": {
+        "python_env_report": "python_env_report"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_edge_onnx_export_validate",
+      "skill_name": "edge-onnx-export-validate",
+      "inputs": {
+        "model_path": "from_user_input",
+        "input_shapes": "from_user_input",
+        "opset_version": "from_user_input_optional"
+      },
+      "outputs": {
+        "onnx_model": "onnx_model"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s04_edge_trtexec_engine_build",
+      "skill_name": "edge-trtexec-engine-build",
+      "inputs": {
+        "device_host": "from_user_input",
+        "onnx_model": "s03_edge_onnx_export_validate.onnx_model",
+        "input_shapes": "from_user_input",
+        "precision": "from_user_input",
+        "memory_budget": "from_user_input",
+        "calibration_cache": "from_user_input_optional",
+        "dla_core": "from_user_input_optional"
+      },
+      "outputs": {
+        "engine_file": "engine_file",
+        "build_log": "build_log"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s05_edge_quantization_accuracy_check",
+      "skill_name": "edge-quantization-accuracy-check",
+      "inputs": {
+        "onnx_model": "s03_edge_onnx_export_validate.onnx_model",
+        "engine_file": "s04_edge_trtexec_engine_build.engine_file",
+        "eval_data": "from_user_input",
+        "accuracy_tolerance": "from_user_input",
+        "precision": "from_user_input"
+      },
+      "outputs": {
+        "accuracy_report": "accuracy_report"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s06_edge_py_trt_inference_runtime",
+      "skill_name": "edge-py-trt-inference-runtime",
+      "inputs": {
+        "engine_file": "s04_edge_trtexec_engine_build.engine_file",
+        "python_env_report": "s02_edge_py_pytorch_aarch64_wheel.python_env_report"
+      },
+      "outputs": {
+        "inference_app": "inference_app"
+      },
+      "parallel_group": 3
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_edge_jetpack_l4t_version_check",
+      "to_step": "s02_edge_py_pytorch_aarch64_wheel",
+      "data_type": "edge-jetpack-l4t-version-check",
+      "field_mapping": {
+        "platform_report": "platform_report"
+      }
+    },
+    {
+      "from_step": "s03_edge_onnx_export_validate",
+      "to_step": "s04_edge_trtexec_engine_build",
+      "data_type": "edge-onnx-export-validate",
+      "field_mapping": {
+        "onnx_model": "onnx_model"
+      }
+    },
+    {
+      "from_step": "s03_edge_onnx_export_validate",
+      "to_step": "s05_edge_quantization_accuracy_check",
+      "data_type": "edge-onnx-export-validate",
+      "field_mapping": {
+        "onnx_model": "onnx_model"
+      }
+    },
+    {
+      "from_step": "s04_edge_trtexec_engine_build",
+      "to_step": "s05_edge_quantization_accuracy_check",
+      "data_type": "edge-trtexec-engine-build",
+      "field_mapping": {
+        "engine_file": "engine_file"
+      }
+    },
+    {
+      "from_step": "s04_edge_trtexec_engine_build",
+      "to_step": "s06_edge_py_trt_inference_runtime",
+      "data_type": "edge-trtexec-engine-build",
+      "field_mapping": {
+        "engine_file": "engine_file"
+      }
+    },
+    {
+      "from_step": "s02_edge_py_pytorch_aarch64_wheel",
+      "to_step": "s06_edge_py_trt_inference_runtime",
+      "data_type": "edge-py-pytorch-aarch64-wheel",
+      "field_mapping": {
+        "python_env_report": "python_env_report"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "device_host",
+    "model_path",
+    "input_shapes",
+    "opset_version",
+    "precision",
+    "memory_budget",
+    "calibration_cache",
+    "dla_core",
+    "eval_data",
+    "accuracy_tolerance"
+  ],
+  "terminal_outputs": [
+    "build_log",
+    "accuracy_report",
+    "inference_app"
+  ],
+  "parallel_groups": [
+    [
+      "s01_edge_jetpack_l4t_version_check",
+      "s03_edge_onnx_export_validate"
+    ],
+    [
+      "s02_edge_py_pytorch_aarch64_wheel",
+      "s04_edge_trtexec_engine_build"
+    ],
+    [
+      "s05_edge_quantization_accuracy_check",
+      "s06_edge_py_trt_inference_runtime"
+    ]
+  ],
+  "estimated_cost": 6,
+  "critical_path": [
+    "s03_edge_onnx_export_validate",
+    "s04_edge_trtexec_engine_build",
+    "s06_edge_py_trt_inference_runtime"
+  ]
+}

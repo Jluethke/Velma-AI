@@ -1,0 +1,90 @@
+{
+  "name": "cross-compile-aarch64-docker",
+  "description": "Build a multi-arch Docker image for arm64: register the QEMU binfmt handler, build and push the linux/arm64 image with buildx, run the packaged tests under qemu-user, and verify an aarch64 ELF from the image.",
+  "steps": [
+    {
+      "id": "ds01_xarch_qemu_binfmt_register",
+      "skill_name": "xarch-qemu-binfmt-register",
+      "inputs": {
+        "qemu_mode": "from_user_input_optional"
+      },
+      "outputs": {
+        "binfmt_state": "binfmt_state",
+        "binfmt_report": "binfmt_report"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "ds02_xarch_docker_buildx_multiarch",
+      "skill_name": "xarch-docker-buildx-multiarch",
+      "inputs": {
+        "project_dir": "from_user_input",
+        "image_ref": "from_user_input",
+        "binfmt_state": "ds01_xarch_qemu_binfmt_register.binfmt_state"
+      },
+      "outputs": {
+        "image_digest": "image_digest",
+        "buildx_report": "buildx_report"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "ds03_xarch_qemu_user_run_tests",
+      "skill_name": "xarch-qemu-user-run-tests",
+      "inputs": {
+        "binary_path": "from_user_input",
+        "sysroot": "from_user_input",
+        "binfmt_state": "ds01_xarch_qemu_binfmt_register.binfmt_state"
+      },
+      "outputs": {
+        "qemu_test_report": "qemu_test_report",
+        "qemu_failures": "qemu_failures"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "ds04_xarch_elf_arch_verify",
+      "skill_name": "xarch-elf-arch-verify",
+      "inputs": {
+        "binary_path": "from_user_input"
+      },
+      "outputs": {
+        "arch_verdict": "arch_verdict",
+        "elf_report": "elf_report"
+      },
+      "parallel_group": 1
+    }
+  ],
+  "edges": [
+    { "from_step": "ds01_xarch_qemu_binfmt_register", "to_step": "ds02_xarch_docker_buildx_multiarch", "data_type": "xarch-qemu-binfmt-register", "field_mapping": { "binfmt_state": "binfmt_state" } },
+    { "from_step": "ds01_xarch_qemu_binfmt_register", "to_step": "ds03_xarch_qemu_user_run_tests", "data_type": "xarch-qemu-binfmt-register", "field_mapping": { "binfmt_state": "binfmt_state" } }
+  ],
+  "entry_inputs": [
+    "qemu_mode",
+    "project_dir",
+    "image_ref",
+    "binary_path",
+    "sysroot"
+  ],
+  "terminal_outputs": [
+    "image_digest",
+    "buildx_report",
+    "qemu_test_report",
+    "arch_verdict"
+  ],
+  "parallel_groups": [
+    [
+      "ds01_xarch_qemu_binfmt_register",
+      "ds04_xarch_elf_arch_verify"
+    ],
+    [
+      "ds02_xarch_docker_buildx_multiarch",
+      "ds03_xarch_qemu_user_run_tests"
+    ]
+  ],
+  "estimated_cost": 4,
+  "critical_path": [
+    "ds01_xarch_qemu_binfmt_register",
+    "ds02_xarch_docker_buildx_multiarch"
+  ]
+}

@@ -1,0 +1,214 @@
+{
+  "name": "can-bus-engineering-c-codegen",
+  "description": "Build and test C CAN code: scope check, vcan, DBC to C generation, raw socket receiver, encoding, BCM cyclic transmission and vcan tests.",
+  "steps": [
+    {
+      "id": "s01_canb_tx_scope_check",
+      "skill_name": "canb-tx-scope-check",
+      "inputs": {
+        "target_kind": "from_user_input",
+        "vehicle_owned": "from_user_input",
+        "estop_confirmed": "from_user_input_optional",
+        "planned_tx_ids": "from_user_input_optional"
+      },
+      "outputs": {
+        "tx_permission": "tx_permission",
+        "scope_record": "scope_record"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_canb_vcan_setup",
+      "skill_name": "canb-vcan-setup",
+      "inputs": {
+        "vcan_name": "from_user_input_optional",
+        "fd_enabled": "from_user_input_optional",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "vcan_setup": "vcan_setup"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s03_canb_dbc_lint_load",
+      "skill_name": "canb-dbc-lint-load",
+      "inputs": {
+        "dbc_file": "from_user_input"
+      },
+      "outputs": {
+        "dbc_report": "dbc_report"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s04_canb_dbc_c_codegen",
+      "skill_name": "canb-dbc-c-codegen",
+      "inputs": {
+        "dbc_file": "from_user_input",
+        "dbc_report": "s03_canb_dbc_lint_load.dbc_report",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "c_codec": "c_codec"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s05_canb_c_raw_socket_filters",
+      "skill_name": "canb-c-raw-socket-filters",
+      "inputs": {
+        "can_netdev": "from_user_input",
+        "capture_filters": "from_user_input_optional",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "c_receiver": "c_receiver"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s06_canb_cantools_encode_frame",
+      "skill_name": "canb-cantools-encode-frame",
+      "inputs": {
+        "dbc_file": "from_user_input",
+        "signal_values": "from_user_input_optional",
+        "tx_permission": "s01_canb_tx_scope_check.tx_permission"
+      },
+      "outputs": {
+        "encoded_frames": "encoded_frames"
+      },
+      "condition": "signal_values != null",
+      "parallel_group": 2
+    },
+    {
+      "id": "s07_canb_c_bcm_cyclic_tx",
+      "skill_name": "canb-c-bcm-cyclic-tx",
+      "inputs": {
+        "can_netdev": "from_user_input",
+        "encoded_frames": "s06_canb_cantools_encode_frame.encoded_frames",
+        "cycle_times": "from_user_input",
+        "tx_permission": "s01_canb_tx_scope_check.tx_permission",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "cyclic_tx_task": "cyclic_tx_task"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s08_canb_c_vcan_test",
+      "skill_name": "canb-c-vcan-test",
+      "inputs": {
+        "project_dir": "from_user_input",
+        "c_codec": "s04_canb_dbc_c_codegen.c_codec",
+        "c_receiver": "s05_canb_c_raw_socket_filters.c_receiver",
+        "vcan_setup": "s02_canb_vcan_setup.vcan_setup"
+      },
+      "outputs": {
+        "c_test_report": "c_test_report"
+      },
+      "parallel_group": 3
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s03_canb_dbc_lint_load",
+      "to_step": "s04_canb_dbc_c_codegen",
+      "data_type": "canb-dbc-lint-load",
+      "field_mapping": {
+        "dbc_report": "dbc_report"
+      }
+    },
+    {
+      "from_step": "s01_canb_tx_scope_check",
+      "to_step": "s06_canb_cantools_encode_frame",
+      "data_type": "canb-tx-scope-check",
+      "field_mapping": {
+        "tx_permission": "tx_permission"
+      }
+    },
+    {
+      "from_step": "s06_canb_cantools_encode_frame",
+      "to_step": "s07_canb_c_bcm_cyclic_tx",
+      "data_type": "canb-cantools-encode-frame",
+      "field_mapping": {
+        "encoded_frames": "encoded_frames"
+      }
+    },
+    {
+      "from_step": "s01_canb_tx_scope_check",
+      "to_step": "s07_canb_c_bcm_cyclic_tx",
+      "data_type": "canb-tx-scope-check",
+      "field_mapping": {
+        "tx_permission": "tx_permission"
+      }
+    },
+    {
+      "from_step": "s04_canb_dbc_c_codegen",
+      "to_step": "s08_canb_c_vcan_test",
+      "data_type": "canb-dbc-c-codegen",
+      "field_mapping": {
+        "c_codec": "c_codec"
+      }
+    },
+    {
+      "from_step": "s05_canb_c_raw_socket_filters",
+      "to_step": "s08_canb_c_vcan_test",
+      "data_type": "canb-c-raw-socket-filters",
+      "field_mapping": {
+        "c_receiver": "c_receiver"
+      }
+    },
+    {
+      "from_step": "s02_canb_vcan_setup",
+      "to_step": "s08_canb_c_vcan_test",
+      "data_type": "canb-vcan-setup",
+      "field_mapping": {
+        "vcan_setup": "vcan_setup"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "target_kind",
+    "vehicle_owned",
+    "estop_confirmed",
+    "planned_tx_ids",
+    "vcan_name",
+    "fd_enabled",
+    "stack",
+    "dbc_file",
+    "project_dir",
+    "can_netdev",
+    "capture_filters",
+    "signal_values",
+    "cycle_times"
+  ],
+  "terminal_outputs": [
+    "scope_record",
+    "cyclic_tx_task",
+    "c_test_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_canb_tx_scope_check",
+      "s02_canb_vcan_setup",
+      "s03_canb_dbc_lint_load",
+      "s05_canb_c_raw_socket_filters"
+    ],
+    [
+      "s04_canb_dbc_c_codegen",
+      "s06_canb_cantools_encode_frame"
+    ],
+    [
+      "s07_canb_c_bcm_cyclic_tx",
+      "s08_canb_c_vcan_test"
+    ]
+  ],
+  "estimated_cost": 8,
+  "critical_path": [
+    "s01_canb_tx_scope_check",
+    "s06_canb_cantools_encode_frame",
+    "s07_canb_c_bcm_cyclic_tx"
+  ]
+}

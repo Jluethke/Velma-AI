@@ -1,0 +1,158 @@
+{
+  "name": "perception-pipelines-tracking",
+  "description": "Detection postprocessing per stack, holdout mAP, ByteTrack or SORT tracking, and TrackEval HOTA, MOTA and IDF1 evaluation.",
+  "steps": [
+    {
+      "id": "s01_perc_py_nms_decode",
+      "skill_name": "perc-py-nms-decode",
+      "inputs": {
+        "onnx_model": "from_user_input",
+        "py_inference_impl": "from_user_input_optional",
+        "preprocess_spec": "from_user_input",
+        "nms_iou_threshold": "from_user_input",
+        "score_threshold": "from_user_input"
+      },
+      "outputs": {
+        "py_postprocess_impl": "py_postprocess_impl"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_perc_cpp_efficientnms_plugin",
+      "skill_name": "perc-cpp-efficientnms-plugin",
+      "inputs": {
+        "onnx_model": "from_user_input",
+        "cpp_inference_impl": "from_user_input_optional",
+        "preprocess_spec": "from_user_input",
+        "nms_iou_threshold": "from_user_input",
+        "score_threshold": "from_user_input"
+      },
+      "outputs": {
+        "cpp_postprocess_impl": "cpp_postprocess_impl"
+      },
+      "condition": "stack == 'cpp'",
+      "parallel_group": 1
+    },
+    {
+      "id": "s03_perc_detection_map_eval",
+      "skill_name": "perc-detection-map-eval",
+      "inputs": {
+        "holdout_annotations": "from_user_input",
+        "py_postprocess_impl": "s01_perc_py_nms_decode.py_postprocess_impl",
+        "cpp_postprocess_impl": "s02_perc_cpp_efficientnms_plugin.cpp_postprocess_impl",
+        "label_format": "from_user_input"
+      },
+      "outputs": {
+        "detection_eval_report": "detection_eval_report"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_perc_mot_bytetrack_sort",
+      "skill_name": "perc-mot-bytetrack-sort",
+      "inputs": {
+        "py_postprocess_impl": "s01_perc_py_nms_decode.py_postprocess_impl",
+        "cpp_postprocess_impl": "s02_perc_cpp_efficientnms_plugin.cpp_postprocess_impl",
+        "tracker_type": "from_user_input",
+        "frame_rate": "from_user_input"
+      },
+      "outputs": {
+        "tracker_impl": "tracker_impl",
+        "track_outputs": "track_outputs"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s05_perc_mot_eval_trackeval",
+      "skill_name": "perc-mot-eval-trackeval",
+      "inputs": {
+        "track_outputs": "s04_perc_mot_bytetrack_sort.track_outputs",
+        "tracking_gt": "from_user_input"
+      },
+      "outputs": {
+        "tracking_eval_report": "tracking_eval_report"
+      },
+      "parallel_group": 3
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_perc_py_nms_decode",
+      "to_step": "s03_perc_detection_map_eval",
+      "data_type": "perc-py-nms-decode",
+      "field_mapping": {
+        "py_postprocess_impl": "py_postprocess_impl"
+      }
+    },
+    {
+      "from_step": "s02_perc_cpp_efficientnms_plugin",
+      "to_step": "s03_perc_detection_map_eval",
+      "data_type": "perc-cpp-efficientnms-plugin",
+      "field_mapping": {
+        "cpp_postprocess_impl": "cpp_postprocess_impl"
+      }
+    },
+    {
+      "from_step": "s01_perc_py_nms_decode",
+      "to_step": "s04_perc_mot_bytetrack_sort",
+      "data_type": "perc-py-nms-decode",
+      "field_mapping": {
+        "py_postprocess_impl": "py_postprocess_impl"
+      }
+    },
+    {
+      "from_step": "s02_perc_cpp_efficientnms_plugin",
+      "to_step": "s04_perc_mot_bytetrack_sort",
+      "data_type": "perc-cpp-efficientnms-plugin",
+      "field_mapping": {
+        "cpp_postprocess_impl": "cpp_postprocess_impl"
+      }
+    },
+    {
+      "from_step": "s04_perc_mot_bytetrack_sort",
+      "to_step": "s05_perc_mot_eval_trackeval",
+      "data_type": "perc-mot-bytetrack-sort",
+      "field_mapping": {
+        "track_outputs": "track_outputs"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "onnx_model",
+    "py_inference_impl",
+    "preprocess_spec",
+    "nms_iou_threshold",
+    "score_threshold",
+    "cpp_inference_impl",
+    "holdout_annotations",
+    "label_format",
+    "tracker_type",
+    "frame_rate",
+    "tracking_gt"
+  ],
+  "terminal_outputs": [
+    "detection_eval_report",
+    "tracker_impl",
+    "tracking_eval_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_perc_py_nms_decode",
+      "s02_perc_cpp_efficientnms_plugin"
+    ],
+    [
+      "s03_perc_detection_map_eval",
+      "s04_perc_mot_bytetrack_sort"
+    ],
+    [
+      "s05_perc_mot_eval_trackeval"
+    ]
+  ],
+  "estimated_cost": 5,
+  "critical_path": [
+    "s02_perc_cpp_efficientnms_plugin",
+    "s04_perc_mot_bytetrack_sort",
+    "s05_perc_mot_eval_trackeval"
+  ]
+}

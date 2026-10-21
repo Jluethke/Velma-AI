@@ -1,0 +1,307 @@
+{
+  "name": "deterministic-replay-testing-python",
+  "description": "Make a Python decision service deterministic and replayable: inventory, injection, float policy, ordering, recording, bit-exact harness, snapshots, golden outputs, threshold and property tests.",
+  "steps": [
+    {
+      "id": "s01_detd_nondeterminism_inventory",
+      "skill_name": "detd-nondeterminism-inventory",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "decision_entrypoint": "from_user_input",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "nondeterminism_sources": "nondeterminism_sources"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_detd_double_run_check",
+      "skill_name": "detd-double-run-check",
+      "inputs": {
+        "run_command": "from_user_input",
+        "sample_input": "from_user_input",
+        "nondeterminism_sources": "s01_detd_nondeterminism_inventory.nondeterminism_sources"
+      },
+      "outputs": {
+        "double_run_report": "double_run_report"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_detd_py_clock_rng_injection",
+      "skill_name": "detd-py-clock-rng-injection",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "nondeterminism_sources": "s01_detd_nondeterminism_inventory.nondeterminism_sources"
+      },
+      "outputs": {
+        "injection_patch": "injection_patch",
+        "seam_tests": "seam_tests"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_detd_py_numpy_float_determinism",
+      "skill_name": "detd-py-numpy-float-determinism",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "target_platforms": "from_user_input_optional"
+      },
+      "outputs": {
+        "float_policy": "float_policy",
+        "cross_platform_diff_report": "cross_platform_diff_report"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 1
+    },
+    {
+      "id": "s05_detd_input_ordering_contract",
+      "skill_name": "detd-input-ordering-contract",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "nondeterminism_sources": "s01_detd_nondeterminism_inventory.nondeterminism_sources"
+      },
+      "outputs": {
+        "ordering_contract": "ordering_contract"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s06_detd_boundary_record_schema",
+      "skill_name": "detd-boundary-record-schema",
+      "inputs": {
+        "decision_entrypoint": "from_user_input",
+        "ordering_contract": "s05_detd_input_ordering_contract.ordering_contract"
+      },
+      "outputs": {
+        "record_schema": "record_schema"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s07_detd_py_boundary_recorder",
+      "skill_name": "detd-py-boundary-recorder",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "record_schema": "s06_detd_boundary_record_schema.record_schema"
+      },
+      "outputs": {
+        "recorder_patch": "recorder_patch",
+        "sample_recording": "sample_recording"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 4
+    },
+    {
+      "id": "s08_detd_replay_harness_bitexact",
+      "skill_name": "detd-replay-harness-bitexact",
+      "inputs": {
+        "record_schema": "s06_detd_boundary_record_schema.record_schema",
+        "recording_path": "from_user_input",
+        "run_command": "from_user_input"
+      },
+      "outputs": {
+        "replay_harness": "replay_harness",
+        "divergence_report": "divergence_report"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s09_detd_state_snapshot_restore",
+      "skill_name": "detd-state-snapshot-restore",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "replay_harness": "s08_detd_replay_harness_bitexact.replay_harness"
+      },
+      "outputs": {
+        "snapshot_format": "snapshot_format",
+        "snapshot_tests": "snapshot_tests"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s10_detd_py_syrupy_golden_outputs",
+      "skill_name": "detd-py-syrupy-golden-outputs",
+      "inputs": {
+        "replay_harness": "s08_detd_replay_harness_bitexact.replay_harness",
+        "recording_path": "from_user_input"
+      },
+      "outputs": {
+        "golden_tests": "golden_tests"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 5
+    },
+    {
+      "id": "s11_detd_threshold_boundary_cases",
+      "skill_name": "detd-threshold-boundary-cases",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "limit_spec": "from_user_input"
+      },
+      "outputs": {
+        "boundary_cases": "boundary_cases"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s12_detd_py_pytest_threshold_tests",
+      "skill_name": "detd-py-pytest-threshold-tests",
+      "inputs": {
+        "boundary_cases": "s11_detd_threshold_boundary_cases.boundary_cases"
+      },
+      "outputs": {
+        "boundary_test_file": "boundary_test_file"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s13_detd_py_hypothesis_monotonic",
+      "skill_name": "detd-py-hypothesis-monotonic",
+      "inputs": {
+        "limit_spec": "from_user_input",
+        "decision_entrypoint": "from_user_input"
+      },
+      "outputs": {
+        "property_tests": "property_tests"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 1
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_detd_nondeterminism_inventory",
+      "to_step": "s02_detd_double_run_check",
+      "data_type": "detd-nondeterminism-inventory",
+      "field_mapping": {
+        "nondeterminism_sources": "nondeterminism_sources"
+      }
+    },
+    {
+      "from_step": "s01_detd_nondeterminism_inventory",
+      "to_step": "s03_detd_py_clock_rng_injection",
+      "data_type": "detd-nondeterminism-inventory",
+      "field_mapping": {
+        "nondeterminism_sources": "nondeterminism_sources"
+      }
+    },
+    {
+      "from_step": "s01_detd_nondeterminism_inventory",
+      "to_step": "s05_detd_input_ordering_contract",
+      "data_type": "detd-nondeterminism-inventory",
+      "field_mapping": {
+        "nondeterminism_sources": "nondeterminism_sources"
+      }
+    },
+    {
+      "from_step": "s05_detd_input_ordering_contract",
+      "to_step": "s06_detd_boundary_record_schema",
+      "data_type": "detd-input-ordering-contract",
+      "field_mapping": {
+        "ordering_contract": "ordering_contract"
+      }
+    },
+    {
+      "from_step": "s06_detd_boundary_record_schema",
+      "to_step": "s07_detd_py_boundary_recorder",
+      "data_type": "detd-boundary-record-schema",
+      "field_mapping": {
+        "record_schema": "record_schema"
+      }
+    },
+    {
+      "from_step": "s06_detd_boundary_record_schema",
+      "to_step": "s08_detd_replay_harness_bitexact",
+      "data_type": "detd-boundary-record-schema",
+      "field_mapping": {
+        "record_schema": "record_schema"
+      }
+    },
+    {
+      "from_step": "s08_detd_replay_harness_bitexact",
+      "to_step": "s09_detd_state_snapshot_restore",
+      "data_type": "detd-replay-harness-bitexact",
+      "field_mapping": {
+        "replay_harness": "replay_harness"
+      }
+    },
+    {
+      "from_step": "s08_detd_replay_harness_bitexact",
+      "to_step": "s10_detd_py_syrupy_golden_outputs",
+      "data_type": "detd-replay-harness-bitexact",
+      "field_mapping": {
+        "replay_harness": "replay_harness"
+      }
+    },
+    {
+      "from_step": "s11_detd_threshold_boundary_cases",
+      "to_step": "s12_detd_py_pytest_threshold_tests",
+      "data_type": "detd-threshold-boundary-cases",
+      "field_mapping": {
+        "boundary_cases": "boundary_cases"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "repo_path",
+    "decision_entrypoint",
+    "stack",
+    "run_command",
+    "sample_input",
+    "target_platforms",
+    "recording_path",
+    "limit_spec"
+  ],
+  "terminal_outputs": [
+    "double_run_report",
+    "injection_patch",
+    "seam_tests",
+    "float_policy",
+    "cross_platform_diff_report",
+    "recorder_patch",
+    "sample_recording",
+    "divergence_report",
+    "snapshot_format",
+    "snapshot_tests",
+    "golden_tests",
+    "boundary_test_file",
+    "property_tests"
+  ],
+  "parallel_groups": [
+    [
+      "s01_detd_nondeterminism_inventory",
+      "s04_detd_py_numpy_float_determinism",
+      "s11_detd_threshold_boundary_cases",
+      "s13_detd_py_hypothesis_monotonic"
+    ],
+    [
+      "s02_detd_double_run_check",
+      "s03_detd_py_clock_rng_injection",
+      "s05_detd_input_ordering_contract",
+      "s12_detd_py_pytest_threshold_tests"
+    ],
+    [
+      "s06_detd_boundary_record_schema"
+    ],
+    [
+      "s07_detd_py_boundary_recorder",
+      "s08_detd_replay_harness_bitexact"
+    ],
+    [
+      "s09_detd_state_snapshot_restore",
+      "s10_detd_py_syrupy_golden_outputs"
+    ]
+  ],
+  "estimated_cost": 13,
+  "critical_path": [
+    "s01_detd_nondeterminism_inventory",
+    "s05_detd_input_ordering_contract",
+    "s06_detd_boundary_record_schema",
+    "s08_detd_replay_harness_bitexact",
+    "s10_detd_py_syrupy_golden_outputs"
+  ]
+}

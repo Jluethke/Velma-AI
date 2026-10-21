@@ -1,0 +1,283 @@
+{
+  "name": "vehicle-diagnostics-uds-dtc-workflow",
+  "description": "Read, decode and optionally clear UDS DTCs: guarded session control, keep-alive, 0x19 reads, status decoding, NRC handling and a confirmed 0x14 clear.",
+  "steps": [
+    {
+      "id": "s01_uds_diag_scope_readonly",
+      "skill_name": "uds-diag-scope-readonly",
+      "inputs": {
+        "vehicle_description": "from_user_input",
+        "ownership_confirmed": "from_user_input",
+        "diag_interface": "from_user_input"
+      },
+      "outputs": {
+        "diag_scope": "diag_scope",
+        "allowed_services": "allowed_services"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_uds_socketcan_link_setup",
+      "skill_name": "uds-socketcan-link-setup",
+      "inputs": {
+        "diag_scope": "s01_uds_diag_scope_readonly.diag_scope",
+        "can_interface": "from_user_input",
+        "can_bitrate": "from_user_input"
+      },
+      "outputs": {
+        "can_link_status": "can_link_status"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_uds_kernel_can_isotp_module",
+      "skill_name": "uds-kernel-can-isotp-module",
+      "inputs": {
+        "can_link_status": "s02_uds_socketcan_link_setup.can_link_status",
+        "can_interface": "from_user_input",
+        "tx_id": "from_user_input",
+        "rx_id": "from_user_input"
+      },
+      "outputs": {
+        "isotp_link_check": "isotp_link_check"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_uds_readonly_request_guard",
+      "skill_name": "uds-readonly-request-guard",
+      "inputs": {
+        "diag_scope": "s01_uds_diag_scope_readonly.diag_scope",
+        "allowed_services": "s01_uds_diag_scope_readonly.allowed_services"
+      },
+      "outputs": {
+        "request_guard": "request_guard",
+        "guard_test_report": "guard_test_report"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s05_uds_session_control_0x10",
+      "skill_name": "uds-session-control-0x10",
+      "inputs": {
+        "request_guard": "s04_uds_readonly_request_guard.request_guard",
+        "can_interface": "from_user_input",
+        "tx_id": "from_user_input",
+        "rx_id": "from_user_input"
+      },
+      "outputs": {
+        "session_state": "session_state",
+        "p2_timing": "p2_timing"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s06_uds_tester_present_0x3e",
+      "skill_name": "uds-tester-present-0x3e",
+      "inputs": {
+        "session_state": "s05_uds_session_control_0x10.session_state",
+        "p2_timing": "s05_uds_session_control_0x10.p2_timing"
+      },
+      "outputs": {
+        "keepalive_plan": "keepalive_plan"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s07_uds_read_dtc_0x19",
+      "skill_name": "uds-read-dtc-0x19",
+      "inputs": {
+        "session_state": "s05_uds_session_control_0x10.session_state",
+        "status_mask": "from_user_input_optional"
+      },
+      "outputs": {
+        "raw_dtc_records": "raw_dtc_records"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s08_uds_dtc_status_decode",
+      "skill_name": "uds-dtc-status-decode",
+      "inputs": {
+        "raw_dtc_records": "s07_uds_read_dtc_0x19.raw_dtc_records",
+        "obd_dtcs": "from_user_input_optional"
+      },
+      "outputs": {
+        "decoded_dtcs": "decoded_dtcs"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s09_uds_nrc_decode",
+      "skill_name": "uds-nrc-decode",
+      "inputs": {
+        "session_state": "s05_uds_session_control_0x10.session_state",
+        "did_values": "from_user_input_optional",
+        "raw_dtc_records": "s07_uds_read_dtc_0x19.raw_dtc_records"
+      },
+      "outputs": {
+        "nrc_report": "nrc_report"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s10_uds_clear_dtc_0x14",
+      "skill_name": "uds-clear-dtc-0x14",
+      "inputs": {
+        "decoded_dtcs": "s08_uds_dtc_status_decode.decoded_dtcs",
+        "request_guard": "s04_uds_readonly_request_guard.request_guard",
+        "clear_confirmed": "from_user_input"
+      },
+      "outputs": {
+        "clear_result": "clear_result"
+      },
+      "condition": "clear_confirmed == true",
+      "parallel_group": 6
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_uds_diag_scope_readonly",
+      "to_step": "s02_uds_socketcan_link_setup",
+      "data_type": "uds-diag-scope-readonly",
+      "field_mapping": {
+        "diag_scope": "diag_scope"
+      }
+    },
+    {
+      "from_step": "s02_uds_socketcan_link_setup",
+      "to_step": "s03_uds_kernel_can_isotp_module",
+      "data_type": "uds-socketcan-link-setup",
+      "field_mapping": {
+        "can_link_status": "can_link_status"
+      }
+    },
+    {
+      "from_step": "s01_uds_diag_scope_readonly",
+      "to_step": "s04_uds_readonly_request_guard",
+      "data_type": "uds-diag-scope-readonly",
+      "field_mapping": {
+        "diag_scope": "diag_scope",
+        "allowed_services": "allowed_services"
+      }
+    },
+    {
+      "from_step": "s04_uds_readonly_request_guard",
+      "to_step": "s05_uds_session_control_0x10",
+      "data_type": "uds-readonly-request-guard",
+      "field_mapping": {
+        "request_guard": "request_guard"
+      }
+    },
+    {
+      "from_step": "s05_uds_session_control_0x10",
+      "to_step": "s06_uds_tester_present_0x3e",
+      "data_type": "uds-session-control-0x10",
+      "field_mapping": {
+        "session_state": "session_state",
+        "p2_timing": "p2_timing"
+      }
+    },
+    {
+      "from_step": "s05_uds_session_control_0x10",
+      "to_step": "s07_uds_read_dtc_0x19",
+      "data_type": "uds-session-control-0x10",
+      "field_mapping": {
+        "session_state": "session_state"
+      }
+    },
+    {
+      "from_step": "s07_uds_read_dtc_0x19",
+      "to_step": "s08_uds_dtc_status_decode",
+      "data_type": "uds-read-dtc-0x19",
+      "field_mapping": {
+        "raw_dtc_records": "raw_dtc_records"
+      }
+    },
+    {
+      "from_step": "s05_uds_session_control_0x10",
+      "to_step": "s09_uds_nrc_decode",
+      "data_type": "uds-session-control-0x10",
+      "field_mapping": {
+        "session_state": "session_state"
+      }
+    },
+    {
+      "from_step": "s07_uds_read_dtc_0x19",
+      "to_step": "s09_uds_nrc_decode",
+      "data_type": "uds-read-dtc-0x19",
+      "field_mapping": {
+        "raw_dtc_records": "raw_dtc_records"
+      }
+    },
+    {
+      "from_step": "s08_uds_dtc_status_decode",
+      "to_step": "s10_uds_clear_dtc_0x14",
+      "data_type": "uds-dtc-status-decode",
+      "field_mapping": {
+        "decoded_dtcs": "decoded_dtcs"
+      }
+    },
+    {
+      "from_step": "s04_uds_readonly_request_guard",
+      "to_step": "s10_uds_clear_dtc_0x14",
+      "data_type": "uds-readonly-request-guard",
+      "field_mapping": {
+        "request_guard": "request_guard"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "vehicle_description",
+    "ownership_confirmed",
+    "diag_interface",
+    "can_interface",
+    "can_bitrate",
+    "tx_id",
+    "rx_id",
+    "status_mask",
+    "obd_dtcs",
+    "did_values",
+    "clear_confirmed"
+  ],
+  "terminal_outputs": [
+    "isotp_link_check",
+    "guard_test_report",
+    "keepalive_plan",
+    "nrc_report",
+    "clear_result"
+  ],
+  "parallel_groups": [
+    [
+      "s01_uds_diag_scope_readonly"
+    ],
+    [
+      "s02_uds_socketcan_link_setup",
+      "s04_uds_readonly_request_guard"
+    ],
+    [
+      "s03_uds_kernel_can_isotp_module",
+      "s05_uds_session_control_0x10"
+    ],
+    [
+      "s06_uds_tester_present_0x3e",
+      "s07_uds_read_dtc_0x19"
+    ],
+    [
+      "s08_uds_dtc_status_decode",
+      "s09_uds_nrc_decode"
+    ],
+    [
+      "s10_uds_clear_dtc_0x14"
+    ]
+  ],
+  "estimated_cost": 10,
+  "critical_path": [
+    "s01_uds_diag_scope_readonly",
+    "s04_uds_readonly_request_guard",
+    "s05_uds_session_control_0x10",
+    "s07_uds_read_dtc_0x19",
+    "s08_uds_dtc_status_decode",
+    "s10_uds_clear_dtc_0x14"
+  ]
+}

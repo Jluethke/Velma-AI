@@ -1,0 +1,102 @@
+{
+  "name": "vehicle-simulation-hil-bench",
+  "description": "Bench path: CAN log replay on a virtual bus, HIL CAN interface bring-up, a fixed-period simulated plant loop with timing measurement, and a sim-to-real gap check.",
+  "steps": [
+    {
+      "id": "s01_vsim_py_can_log_replay_sil",
+      "skill_name": "vsim-py-can-log-replay-sil",
+      "inputs": {
+        "can_log_file": "from_user_input",
+        "dbc_file": "from_user_input",
+        "sut_entrypoint": "from_user_input"
+      },
+      "outputs": {
+        "can_replay_report": "can_replay_report"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_vsim_hil_can_bench_setup",
+      "skill_name": "vsim-hil-can-bench-setup",
+      "inputs": {
+        "can_interface_hw": "from_user_input",
+        "can_bitrate": "from_user_input",
+        "dbc_file": "from_user_input"
+      },
+      "outputs": {
+        "bench_can_config": "bench_can_config"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s03_vsim_hil_plant_loop",
+      "skill_name": "vsim-hil-plant-loop",
+      "inputs": {
+        "bench_can_config": "s02_vsim_hil_can_bench_setup.bench_can_config",
+        "dbc_file": "from_user_input",
+        "plant_model_spec": "from_user_input",
+        "estop_verified": "from_user_input"
+      },
+      "outputs": {
+        "hil_loop_script": "hil_loop_script",
+        "hil_timing_report": "hil_timing_report"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_vsim_sim2real_gap_check",
+      "skill_name": "vsim-sim2real-gap-check",
+      "inputs": {
+        "sim_log": "from_user_input",
+        "real_log": "from_user_input",
+        "signal_list": "from_user_input"
+      },
+      "outputs": {
+        "gap_report": "gap_report"
+      },
+      "parallel_group": 1
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s02_vsim_hil_can_bench_setup",
+      "to_step": "s03_vsim_hil_plant_loop",
+      "data_type": "vsim-hil-can-bench-setup",
+      "field_mapping": {
+        "bench_can_config": "bench_can_config"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "can_log_file",
+    "dbc_file",
+    "sut_entrypoint",
+    "can_interface_hw",
+    "can_bitrate",
+    "plant_model_spec",
+    "estop_verified",
+    "sim_log",
+    "real_log",
+    "signal_list"
+  ],
+  "terminal_outputs": [
+    "can_replay_report",
+    "hil_timing_report",
+    "gap_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_vsim_py_can_log_replay_sil",
+      "s02_vsim_hil_can_bench_setup",
+      "s04_vsim_sim2real_gap_check"
+    ],
+    [
+      "s03_vsim_hil_plant_loop"
+    ]
+  ],
+  "estimated_cost": 4,
+  "critical_path": [
+    "s02_vsim_hil_can_bench_setup",
+    "s03_vsim_hil_plant_loop"
+  ]
+}

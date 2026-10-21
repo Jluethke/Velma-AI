@@ -1,0 +1,214 @@
+{
+  "name": "can-signal-reverse-engineering-linux-capture",
+  "description": "Linux SocketCAN path from scope to candidate IDs: listen-only setup, candump capture of labeled segments, normalization, baseline inventory and cansniffer isolation on a virtual bus.",
+  "steps": [
+    {
+      "id": "s01_sigre_scope_owned_vehicle_readonly",
+      "skill_name": "sigre-scope-owned-vehicle-readonly",
+      "inputs": {
+        "vehicle_description": "from_user_input",
+        "ownership_confirmed": "from_user_input",
+        "stack": "from_user_input",
+        "adapter_model": "from_user_input_optional"
+      },
+      "outputs": {
+        "capture_scope": "capture_scope"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_sigre_capture_plan_labeled_actions",
+      "skill_name": "sigre-capture-plan-labeled-actions",
+      "inputs": {
+        "capture_scope": "s01_sigre_scope_owned_vehicle_readonly.capture_scope",
+        "target_signals": "from_user_input",
+        "reference_source": "from_user_input",
+        "repetitions": "from_user_input",
+        "baseline_seconds": "from_user_input"
+      },
+      "outputs": {
+        "capture_plan": "capture_plan"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_sigre_linux_socketcan_listen_only_setup",
+      "skill_name": "sigre-linux-socketcan-listen-only-setup",
+      "inputs": {
+        "capture_scope": "s01_sigre_scope_owned_vehicle_readonly.capture_scope",
+        "can_ifname": "from_user_input_optional"
+      },
+      "outputs": {
+        "socketcan_interface": "socketcan_interface"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_sigre_linux_candump_capture",
+      "skill_name": "sigre-linux-candump-capture",
+      "inputs": {
+        "socketcan_interface": "s03_sigre_linux_socketcan_listen_only_setup.socketcan_interface",
+        "capture_plan": "s02_sigre_capture_plan_labeled_actions.capture_plan"
+      },
+      "outputs": {
+        "candump_logs": "candump_logs"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s05_sigre_log_normalize_convert",
+      "skill_name": "sigre-log-normalize-convert",
+      "inputs": {
+        "capture_plan": "s02_sigre_capture_plan_labeled_actions.capture_plan",
+        "candump_logs": "s04_sigre_linux_candump_capture.candump_logs",
+        "python_can_logs": "from_user_input_optional",
+        "savvycan_logs": "from_user_input_optional"
+      },
+      "outputs": {
+        "capture_logs": "capture_logs"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s06_sigre_baseline_idle_inventory",
+      "skill_name": "sigre-baseline-idle-inventory",
+      "inputs": {
+        "capture_logs": "s05_sigre_log_normalize_convert.capture_logs"
+      },
+      "outputs": {
+        "id_inventory": "id_inventory"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s07_sigre_linux_cansniffer_isolate",
+      "skill_name": "sigre-linux-cansniffer-isolate",
+      "inputs": {
+        "capture_logs": "s05_sigre_log_normalize_convert.capture_logs",
+        "capture_plan": "s02_sigre_capture_plan_labeled_actions.capture_plan"
+      },
+      "outputs": {
+        "cansniffer_candidates": "cansniffer_candidates"
+      },
+      "parallel_group": 5
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_sigre_scope_owned_vehicle_readonly",
+      "to_step": "s02_sigre_capture_plan_labeled_actions",
+      "data_type": "sigre-scope-owned-vehicle-readonly",
+      "field_mapping": {
+        "capture_scope": "capture_scope"
+      }
+    },
+    {
+      "from_step": "s01_sigre_scope_owned_vehicle_readonly",
+      "to_step": "s03_sigre_linux_socketcan_listen_only_setup",
+      "data_type": "sigre-scope-owned-vehicle-readonly",
+      "field_mapping": {
+        "capture_scope": "capture_scope"
+      }
+    },
+    {
+      "from_step": "s03_sigre_linux_socketcan_listen_only_setup",
+      "to_step": "s04_sigre_linux_candump_capture",
+      "data_type": "sigre-linux-socketcan-listen-only-setup",
+      "field_mapping": {
+        "socketcan_interface": "socketcan_interface"
+      }
+    },
+    {
+      "from_step": "s02_sigre_capture_plan_labeled_actions",
+      "to_step": "s04_sigre_linux_candump_capture",
+      "data_type": "sigre-capture-plan-labeled-actions",
+      "field_mapping": {
+        "capture_plan": "capture_plan"
+      }
+    },
+    {
+      "from_step": "s02_sigre_capture_plan_labeled_actions",
+      "to_step": "s05_sigre_log_normalize_convert",
+      "data_type": "sigre-capture-plan-labeled-actions",
+      "field_mapping": {
+        "capture_plan": "capture_plan"
+      }
+    },
+    {
+      "from_step": "s04_sigre_linux_candump_capture",
+      "to_step": "s05_sigre_log_normalize_convert",
+      "data_type": "sigre-linux-candump-capture",
+      "field_mapping": {
+        "candump_logs": "candump_logs"
+      }
+    },
+    {
+      "from_step": "s05_sigre_log_normalize_convert",
+      "to_step": "s06_sigre_baseline_idle_inventory",
+      "data_type": "sigre-log-normalize-convert",
+      "field_mapping": {
+        "capture_logs": "capture_logs"
+      }
+    },
+    {
+      "from_step": "s05_sigre_log_normalize_convert",
+      "to_step": "s07_sigre_linux_cansniffer_isolate",
+      "data_type": "sigre-log-normalize-convert",
+      "field_mapping": {
+        "capture_logs": "capture_logs"
+      }
+    },
+    {
+      "from_step": "s02_sigre_capture_plan_labeled_actions",
+      "to_step": "s07_sigre_linux_cansniffer_isolate",
+      "data_type": "sigre-capture-plan-labeled-actions",
+      "field_mapping": {
+        "capture_plan": "capture_plan"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "vehicle_description",
+    "ownership_confirmed",
+    "stack",
+    "adapter_model",
+    "target_signals",
+    "reference_source",
+    "repetitions",
+    "baseline_seconds",
+    "can_ifname",
+    "python_can_logs",
+    "savvycan_logs"
+  ],
+  "terminal_outputs": [
+    "id_inventory",
+    "cansniffer_candidates"
+  ],
+  "parallel_groups": [
+    [
+      "s01_sigre_scope_owned_vehicle_readonly"
+    ],
+    [
+      "s02_sigre_capture_plan_labeled_actions",
+      "s03_sigre_linux_socketcan_listen_only_setup"
+    ],
+    [
+      "s04_sigre_linux_candump_capture"
+    ],
+    [
+      "s05_sigre_log_normalize_convert"
+    ],
+    [
+      "s06_sigre_baseline_idle_inventory",
+      "s07_sigre_linux_cansniffer_isolate"
+    ]
+  ],
+  "estimated_cost": 7,
+  "critical_path": [
+    "s01_sigre_scope_owned_vehicle_readonly",
+    "s03_sigre_linux_socketcan_listen_only_setup",
+    "s04_sigre_linux_candump_capture",
+    "s05_sigre_log_normalize_convert",
+    "s07_sigre_linux_cansniffer_isolate"
+  ]
+}

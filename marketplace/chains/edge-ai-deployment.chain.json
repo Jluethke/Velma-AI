@@ -1,0 +1,786 @@
+{
+  "name": "edge-ai-deployment",
+  "description": "Deploy an AI model on a Jetson-class device end to end: platform checks, power and clocks, containers, memory budget, ONNX and TensorRT engine build, accuracy, stack-specific runtime, benchmarks, thermal soak, signed OTA with rollback, watchdog, health reporting and a read-only vehicle boundary.",
+  "steps": [
+    {
+      "id": "s01_edge_jetpack_l4t_version_check",
+      "skill_name": "edge-jetpack-l4t-version-check",
+      "inputs": {
+        "device_host": "from_user_input"
+      },
+      "outputs": {
+        "platform_report": "platform_report"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_edge_cuda_cudnn_aarch64_verify",
+      "skill_name": "edge-cuda-cudnn-aarch64-verify",
+      "inputs": {
+        "device_host": "from_user_input",
+        "platform_report": "s01_edge_jetpack_l4t_version_check.platform_report"
+      },
+      "outputs": {
+        "cuda_stack_report": "cuda_stack_report"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_edge_py_pytorch_aarch64_wheel",
+      "skill_name": "edge-py-pytorch-aarch64-wheel",
+      "inputs": {
+        "device_host": "from_user_input",
+        "platform_report": "s01_edge_jetpack_l4t_version_check.platform_report"
+      },
+      "outputs": {
+        "python_env_report": "python_env_report"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_edge_cpp_cmake_cuda_arch_build",
+      "skill_name": "edge-cpp-cmake-cuda-arch-build",
+      "inputs": {
+        "project_dir": "from_user_input",
+        "cuda_stack_report": "s02_edge_cuda_cudnn_aarch64_verify.cuda_stack_report"
+      },
+      "outputs": {
+        "cmake_build_report": "cmake_build_report"
+      },
+      "condition": "stack == 'cpp'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s05_edge_nvpmodel_power_mode",
+      "skill_name": "edge-nvpmodel-power-mode",
+      "inputs": {
+        "device_host": "from_user_input",
+        "platform_report": "s01_edge_jetpack_l4t_version_check.platform_report",
+        "power_mode_target": "from_user_input_optional"
+      },
+      "outputs": {
+        "power_mode_record": "power_mode_record"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s06_edge_jetson_clocks_lock",
+      "skill_name": "edge-jetson-clocks-lock",
+      "inputs": {
+        "device_host": "from_user_input",
+        "power_mode_record": "s05_edge_nvpmodel_power_mode.power_mode_record"
+      },
+      "outputs": {
+        "clock_state": "clock_state"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s07_edge_tegrastats_thermal_log",
+      "skill_name": "edge-tegrastats-thermal-log",
+      "inputs": {
+        "device_host": "from_user_input",
+        "clock_state": "s06_edge_jetson_clocks_lock.clock_state",
+        "log_duration_s": "from_user_input"
+      },
+      "outputs": {
+        "thermal_log": "thermal_log"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s08_edge_container_nvidia_runtime",
+      "skill_name": "edge-container-nvidia-runtime",
+      "inputs": {
+        "device_host": "from_user_input",
+        "platform_report": "s01_edge_jetpack_l4t_version_check.platform_report",
+        "container_image": "from_user_input"
+      },
+      "outputs": {
+        "container_run_spec": "container_run_spec"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s09_edge_unified_memory_budget",
+      "skill_name": "edge-unified-memory-budget",
+      "inputs": {
+        "device_host": "from_user_input",
+        "platform_report": "s01_edge_jetpack_l4t_version_check.platform_report",
+        "container_run_spec": "s08_edge_container_nvidia_runtime.container_run_spec"
+      },
+      "outputs": {
+        "memory_budget": "memory_budget"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s10_edge_onnx_export_validate",
+      "skill_name": "edge-onnx-export-validate",
+      "inputs": {
+        "model_path": "from_user_input",
+        "input_shapes": "from_user_input",
+        "opset_version": "from_user_input_optional"
+      },
+      "outputs": {
+        "onnx_model": "onnx_model"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s11_edge_int8_calibration_cache",
+      "skill_name": "edge-int8-calibration-cache",
+      "inputs": {
+        "onnx_model": "s10_edge_onnx_export_validate.onnx_model",
+        "calibration_data": "from_user_input",
+        "precision": "from_user_input"
+      },
+      "outputs": {
+        "calibration_cache": "calibration_cache"
+      },
+      "condition": "precision == 'int8'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s12_edge_trtexec_engine_build",
+      "skill_name": "edge-trtexec-engine-build",
+      "inputs": {
+        "device_host": "from_user_input",
+        "onnx_model": "s10_edge_onnx_export_validate.onnx_model",
+        "input_shapes": "from_user_input",
+        "precision": "from_user_input",
+        "memory_budget": "s09_edge_unified_memory_budget.memory_budget",
+        "calibration_cache": "s11_edge_int8_calibration_cache.calibration_cache",
+        "dla_core": "from_user_input_optional"
+      },
+      "outputs": {
+        "engine_file": "engine_file",
+        "build_log": "build_log"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s13_edge_dla_layer_fallback_check",
+      "skill_name": "edge-dla-layer-fallback-check",
+      "inputs": {
+        "device_host": "from_user_input",
+        "onnx_model": "s10_edge_onnx_export_validate.onnx_model",
+        "dla_core": "from_user_input_optional"
+      },
+      "outputs": {
+        "dla_layer_report": "dla_layer_report"
+      },
+      "condition": "use_dla == true",
+      "parallel_group": 2
+    },
+    {
+      "id": "s14_edge_trt_engine_cache_key",
+      "skill_name": "edge-trt-engine-cache-key",
+      "inputs": {
+        "engine_file": "s12_edge_trtexec_engine_build.engine_file",
+        "onnx_model": "s10_edge_onnx_export_validate.onnx_model",
+        "platform_report": "s01_edge_jetpack_l4t_version_check.platform_report",
+        "cuda_stack_report": "s02_edge_cuda_cudnn_aarch64_verify.cuda_stack_report",
+        "precision": "from_user_input",
+        "input_shapes": "from_user_input"
+      },
+      "outputs": {
+        "engine_cache_key": "engine_cache_key"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s15_edge_quantization_accuracy_check",
+      "skill_name": "edge-quantization-accuracy-check",
+      "inputs": {
+        "onnx_model": "s10_edge_onnx_export_validate.onnx_model",
+        "engine_file": "s12_edge_trtexec_engine_build.engine_file",
+        "eval_data": "from_user_input",
+        "accuracy_tolerance": "from_user_input",
+        "precision": "from_user_input"
+      },
+      "outputs": {
+        "accuracy_report": "accuracy_report"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s16_edge_py_trt_inference_runtime",
+      "skill_name": "edge-py-trt-inference-runtime",
+      "inputs": {
+        "engine_file": "s12_edge_trtexec_engine_build.engine_file",
+        "python_env_report": "s03_edge_py_pytorch_aarch64_wheel.python_env_report"
+      },
+      "outputs": {
+        "inference_app": "inference_app"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 5
+    },
+    {
+      "id": "s17_edge_cpp_trt_inference_runtime",
+      "skill_name": "edge-cpp-trt-inference-runtime",
+      "inputs": {
+        "engine_file": "s12_edge_trtexec_engine_build.engine_file",
+        "cmake_build_report": "s04_edge_cpp_cmake_cuda_arch_build.cmake_build_report"
+      },
+      "outputs": {
+        "inference_app": "inference_app"
+      },
+      "condition": "stack == 'cpp'",
+      "parallel_group": 5
+    },
+    {
+      "id": "s18_edge_deepstream_nvinfer_pipeline",
+      "skill_name": "edge-deepstream-nvinfer-pipeline",
+      "inputs": {
+        "engine_file": "s12_edge_trtexec_engine_build.engine_file",
+        "onnx_model": "s10_edge_onnx_export_validate.onnx_model",
+        "container_run_spec": "s08_edge_container_nvidia_runtime.container_run_spec",
+        "precision": "from_user_input"
+      },
+      "outputs": {
+        "deepstream_config": "deepstream_config"
+      },
+      "condition": "stack == 'deepstream'",
+      "parallel_group": 5
+    },
+    {
+      "id": "s19_edge_latency_throughput_benchmark",
+      "skill_name": "edge-latency-throughput-benchmark",
+      "inputs": {
+        "device_host": "from_user_input",
+        "engine_file": "s12_edge_trtexec_engine_build.engine_file",
+        "clock_state": "s06_edge_jetson_clocks_lock.clock_state",
+        "input_shapes": "from_user_input"
+      },
+      "outputs": {
+        "benchmark_report": "benchmark_report"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s20_edge_thermal_soak_test",
+      "skill_name": "edge-thermal-soak-test",
+      "inputs": {
+        "device_host": "from_user_input",
+        "engine_file": "s12_edge_trtexec_engine_build.engine_file",
+        "power_mode_record": "s05_edge_nvpmodel_power_mode.power_mode_record",
+        "thermal_log": "s07_edge_tegrastats_thermal_log.thermal_log",
+        "soak_duration_s": "from_user_input"
+      },
+      "outputs": {
+        "soak_report": "soak_report"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s21_edge_ota_model_package",
+      "skill_name": "edge-ota-model-package",
+      "inputs": {
+        "engine_file": "s12_edge_trtexec_engine_build.engine_file",
+        "onnx_model": "s10_edge_onnx_export_validate.onnx_model",
+        "engine_cache_key": "s14_edge_trt_engine_cache_key.engine_cache_key",
+        "accuracy_report": "s15_edge_quantization_accuracy_check.accuracy_report",
+        "benchmark_report": "s19_edge_latency_throughput_benchmark.benchmark_report",
+        "model_version": "from_user_input"
+      },
+      "outputs": {
+        "model_package": "model_package"
+      },
+      "parallel_group": 6
+    },
+    {
+      "id": "s22_edge_ota_ab_swap_rollback",
+      "skill_name": "edge-ota-ab-swap-rollback",
+      "inputs": {
+        "device_host": "from_user_input",
+        "model_package": "s21_edge_ota_model_package.model_package",
+        "health_check_cmd": "from_user_input"
+      },
+      "outputs": {
+        "deploy_record": "deploy_record"
+      },
+      "parallel_group": 7
+    },
+    {
+      "id": "s23_edge_systemd_watchdog_service",
+      "skill_name": "edge-systemd-watchdog-service",
+      "inputs": {
+        "device_host": "from_user_input",
+        "app_command": "from_user_input",
+        "deploy_record": "s22_edge_ota_ab_swap_rollback.deploy_record",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "service_unit": "service_unit"
+      },
+      "parallel_group": 8
+    },
+    {
+      "id": "s24_edge_health_report",
+      "skill_name": "edge-health-report",
+      "inputs": {
+        "device_host": "from_user_input",
+        "service_unit": "s23_edge_systemd_watchdog_service.service_unit",
+        "deploy_record": "s22_edge_ota_ab_swap_rollback.deploy_record",
+        "clock_state": "s06_edge_jetson_clocks_lock.clock_state"
+      },
+      "outputs": {
+        "health_report": "health_report"
+      },
+      "parallel_group": 9
+    },
+    {
+      "id": "s25_edge_vehicle_integration_boundary",
+      "skill_name": "edge-vehicle-integration-boundary",
+      "inputs": {
+        "health_report": "s24_edge_health_report.health_report",
+        "vehicle_interface": "from_user_input",
+        "test_site": "from_user_input"
+      },
+      "outputs": {
+        "integration_record": "integration_record"
+      },
+      "condition": "vehicle_integration == true",
+      "parallel_group": 10
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_edge_jetpack_l4t_version_check",
+      "to_step": "s02_edge_cuda_cudnn_aarch64_verify",
+      "data_type": "edge-jetpack-l4t-version-check",
+      "field_mapping": {
+        "platform_report": "platform_report"
+      }
+    },
+    {
+      "from_step": "s01_edge_jetpack_l4t_version_check",
+      "to_step": "s03_edge_py_pytorch_aarch64_wheel",
+      "data_type": "edge-jetpack-l4t-version-check",
+      "field_mapping": {
+        "platform_report": "platform_report"
+      }
+    },
+    {
+      "from_step": "s02_edge_cuda_cudnn_aarch64_verify",
+      "to_step": "s04_edge_cpp_cmake_cuda_arch_build",
+      "data_type": "edge-cuda-cudnn-aarch64-verify",
+      "field_mapping": {
+        "cuda_stack_report": "cuda_stack_report"
+      }
+    },
+    {
+      "from_step": "s01_edge_jetpack_l4t_version_check",
+      "to_step": "s05_edge_nvpmodel_power_mode",
+      "data_type": "edge-jetpack-l4t-version-check",
+      "field_mapping": {
+        "platform_report": "platform_report"
+      }
+    },
+    {
+      "from_step": "s05_edge_nvpmodel_power_mode",
+      "to_step": "s06_edge_jetson_clocks_lock",
+      "data_type": "edge-nvpmodel-power-mode",
+      "field_mapping": {
+        "power_mode_record": "power_mode_record"
+      }
+    },
+    {
+      "from_step": "s06_edge_jetson_clocks_lock",
+      "to_step": "s07_edge_tegrastats_thermal_log",
+      "data_type": "edge-jetson-clocks-lock",
+      "field_mapping": {
+        "clock_state": "clock_state"
+      }
+    },
+    {
+      "from_step": "s01_edge_jetpack_l4t_version_check",
+      "to_step": "s08_edge_container_nvidia_runtime",
+      "data_type": "edge-jetpack-l4t-version-check",
+      "field_mapping": {
+        "platform_report": "platform_report"
+      }
+    },
+    {
+      "from_step": "s01_edge_jetpack_l4t_version_check",
+      "to_step": "s09_edge_unified_memory_budget",
+      "data_type": "edge-jetpack-l4t-version-check",
+      "field_mapping": {
+        "platform_report": "platform_report"
+      }
+    },
+    {
+      "from_step": "s08_edge_container_nvidia_runtime",
+      "to_step": "s09_edge_unified_memory_budget",
+      "data_type": "edge-container-nvidia-runtime",
+      "field_mapping": {
+        "container_run_spec": "container_run_spec"
+      }
+    },
+    {
+      "from_step": "s10_edge_onnx_export_validate",
+      "to_step": "s11_edge_int8_calibration_cache",
+      "data_type": "edge-onnx-export-validate",
+      "field_mapping": {
+        "onnx_model": "onnx_model"
+      }
+    },
+    {
+      "from_step": "s10_edge_onnx_export_validate",
+      "to_step": "s12_edge_trtexec_engine_build",
+      "data_type": "edge-onnx-export-validate",
+      "field_mapping": {
+        "onnx_model": "onnx_model"
+      }
+    },
+    {
+      "from_step": "s09_edge_unified_memory_budget",
+      "to_step": "s12_edge_trtexec_engine_build",
+      "data_type": "edge-unified-memory-budget",
+      "field_mapping": {
+        "memory_budget": "memory_budget"
+      }
+    },
+    {
+      "from_step": "s11_edge_int8_calibration_cache",
+      "to_step": "s12_edge_trtexec_engine_build",
+      "data_type": "edge-int8-calibration-cache",
+      "field_mapping": {
+        "calibration_cache": "calibration_cache"
+      }
+    },
+    {
+      "from_step": "s10_edge_onnx_export_validate",
+      "to_step": "s13_edge_dla_layer_fallback_check",
+      "data_type": "edge-onnx-export-validate",
+      "field_mapping": {
+        "onnx_model": "onnx_model"
+      }
+    },
+    {
+      "from_step": "s12_edge_trtexec_engine_build",
+      "to_step": "s14_edge_trt_engine_cache_key",
+      "data_type": "edge-trtexec-engine-build",
+      "field_mapping": {
+        "engine_file": "engine_file"
+      }
+    },
+    {
+      "from_step": "s10_edge_onnx_export_validate",
+      "to_step": "s14_edge_trt_engine_cache_key",
+      "data_type": "edge-onnx-export-validate",
+      "field_mapping": {
+        "onnx_model": "onnx_model"
+      }
+    },
+    {
+      "from_step": "s01_edge_jetpack_l4t_version_check",
+      "to_step": "s14_edge_trt_engine_cache_key",
+      "data_type": "edge-jetpack-l4t-version-check",
+      "field_mapping": {
+        "platform_report": "platform_report"
+      }
+    },
+    {
+      "from_step": "s02_edge_cuda_cudnn_aarch64_verify",
+      "to_step": "s14_edge_trt_engine_cache_key",
+      "data_type": "edge-cuda-cudnn-aarch64-verify",
+      "field_mapping": {
+        "cuda_stack_report": "cuda_stack_report"
+      }
+    },
+    {
+      "from_step": "s10_edge_onnx_export_validate",
+      "to_step": "s15_edge_quantization_accuracy_check",
+      "data_type": "edge-onnx-export-validate",
+      "field_mapping": {
+        "onnx_model": "onnx_model"
+      }
+    },
+    {
+      "from_step": "s12_edge_trtexec_engine_build",
+      "to_step": "s15_edge_quantization_accuracy_check",
+      "data_type": "edge-trtexec-engine-build",
+      "field_mapping": {
+        "engine_file": "engine_file"
+      }
+    },
+    {
+      "from_step": "s12_edge_trtexec_engine_build",
+      "to_step": "s16_edge_py_trt_inference_runtime",
+      "data_type": "edge-trtexec-engine-build",
+      "field_mapping": {
+        "engine_file": "engine_file"
+      }
+    },
+    {
+      "from_step": "s03_edge_py_pytorch_aarch64_wheel",
+      "to_step": "s16_edge_py_trt_inference_runtime",
+      "data_type": "edge-py-pytorch-aarch64-wheel",
+      "field_mapping": {
+        "python_env_report": "python_env_report"
+      }
+    },
+    {
+      "from_step": "s12_edge_trtexec_engine_build",
+      "to_step": "s17_edge_cpp_trt_inference_runtime",
+      "data_type": "edge-trtexec-engine-build",
+      "field_mapping": {
+        "engine_file": "engine_file"
+      }
+    },
+    {
+      "from_step": "s04_edge_cpp_cmake_cuda_arch_build",
+      "to_step": "s17_edge_cpp_trt_inference_runtime",
+      "data_type": "edge-cpp-cmake-cuda-arch-build",
+      "field_mapping": {
+        "cmake_build_report": "cmake_build_report"
+      }
+    },
+    {
+      "from_step": "s12_edge_trtexec_engine_build",
+      "to_step": "s18_edge_deepstream_nvinfer_pipeline",
+      "data_type": "edge-trtexec-engine-build",
+      "field_mapping": {
+        "engine_file": "engine_file"
+      }
+    },
+    {
+      "from_step": "s10_edge_onnx_export_validate",
+      "to_step": "s18_edge_deepstream_nvinfer_pipeline",
+      "data_type": "edge-onnx-export-validate",
+      "field_mapping": {
+        "onnx_model": "onnx_model"
+      }
+    },
+    {
+      "from_step": "s08_edge_container_nvidia_runtime",
+      "to_step": "s18_edge_deepstream_nvinfer_pipeline",
+      "data_type": "edge-container-nvidia-runtime",
+      "field_mapping": {
+        "container_run_spec": "container_run_spec"
+      }
+    },
+    {
+      "from_step": "s12_edge_trtexec_engine_build",
+      "to_step": "s19_edge_latency_throughput_benchmark",
+      "data_type": "edge-trtexec-engine-build",
+      "field_mapping": {
+        "engine_file": "engine_file"
+      }
+    },
+    {
+      "from_step": "s06_edge_jetson_clocks_lock",
+      "to_step": "s19_edge_latency_throughput_benchmark",
+      "data_type": "edge-jetson-clocks-lock",
+      "field_mapping": {
+        "clock_state": "clock_state"
+      }
+    },
+    {
+      "from_step": "s12_edge_trtexec_engine_build",
+      "to_step": "s20_edge_thermal_soak_test",
+      "data_type": "edge-trtexec-engine-build",
+      "field_mapping": {
+        "engine_file": "engine_file"
+      }
+    },
+    {
+      "from_step": "s05_edge_nvpmodel_power_mode",
+      "to_step": "s20_edge_thermal_soak_test",
+      "data_type": "edge-nvpmodel-power-mode",
+      "field_mapping": {
+        "power_mode_record": "power_mode_record"
+      }
+    },
+    {
+      "from_step": "s07_edge_tegrastats_thermal_log",
+      "to_step": "s20_edge_thermal_soak_test",
+      "data_type": "edge-tegrastats-thermal-log",
+      "field_mapping": {
+        "thermal_log": "thermal_log"
+      }
+    },
+    {
+      "from_step": "s12_edge_trtexec_engine_build",
+      "to_step": "s21_edge_ota_model_package",
+      "data_type": "edge-trtexec-engine-build",
+      "field_mapping": {
+        "engine_file": "engine_file"
+      }
+    },
+    {
+      "from_step": "s10_edge_onnx_export_validate",
+      "to_step": "s21_edge_ota_model_package",
+      "data_type": "edge-onnx-export-validate",
+      "field_mapping": {
+        "onnx_model": "onnx_model"
+      }
+    },
+    {
+      "from_step": "s14_edge_trt_engine_cache_key",
+      "to_step": "s21_edge_ota_model_package",
+      "data_type": "edge-trt-engine-cache-key",
+      "field_mapping": {
+        "engine_cache_key": "engine_cache_key"
+      }
+    },
+    {
+      "from_step": "s15_edge_quantization_accuracy_check",
+      "to_step": "s21_edge_ota_model_package",
+      "data_type": "edge-quantization-accuracy-check",
+      "field_mapping": {
+        "accuracy_report": "accuracy_report"
+      }
+    },
+    {
+      "from_step": "s19_edge_latency_throughput_benchmark",
+      "to_step": "s21_edge_ota_model_package",
+      "data_type": "edge-latency-throughput-benchmark",
+      "field_mapping": {
+        "benchmark_report": "benchmark_report"
+      }
+    },
+    {
+      "from_step": "s21_edge_ota_model_package",
+      "to_step": "s22_edge_ota_ab_swap_rollback",
+      "data_type": "edge-ota-model-package",
+      "field_mapping": {
+        "model_package": "model_package"
+      }
+    },
+    {
+      "from_step": "s22_edge_ota_ab_swap_rollback",
+      "to_step": "s23_edge_systemd_watchdog_service",
+      "data_type": "edge-ota-ab-swap-rollback",
+      "field_mapping": {
+        "deploy_record": "deploy_record"
+      }
+    },
+    {
+      "from_step": "s23_edge_systemd_watchdog_service",
+      "to_step": "s24_edge_health_report",
+      "data_type": "edge-systemd-watchdog-service",
+      "field_mapping": {
+        "service_unit": "service_unit"
+      }
+    },
+    {
+      "from_step": "s22_edge_ota_ab_swap_rollback",
+      "to_step": "s24_edge_health_report",
+      "data_type": "edge-ota-ab-swap-rollback",
+      "field_mapping": {
+        "deploy_record": "deploy_record"
+      }
+    },
+    {
+      "from_step": "s06_edge_jetson_clocks_lock",
+      "to_step": "s24_edge_health_report",
+      "data_type": "edge-jetson-clocks-lock",
+      "field_mapping": {
+        "clock_state": "clock_state"
+      }
+    },
+    {
+      "from_step": "s24_edge_health_report",
+      "to_step": "s25_edge_vehicle_integration_boundary",
+      "data_type": "edge-health-report",
+      "field_mapping": {
+        "health_report": "health_report"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "device_host",
+    "project_dir",
+    "power_mode_target",
+    "log_duration_s",
+    "container_image",
+    "model_path",
+    "input_shapes",
+    "opset_version",
+    "calibration_data",
+    "precision",
+    "dla_core",
+    "eval_data",
+    "accuracy_tolerance",
+    "soak_duration_s",
+    "model_version",
+    "health_check_cmd",
+    "app_command",
+    "stack",
+    "vehicle_interface",
+    "test_site"
+  ],
+  "terminal_outputs": [
+    "build_log",
+    "dla_layer_report",
+    "inference_app",
+    "deepstream_config",
+    "soak_report",
+    "integration_record"
+  ],
+  "parallel_groups": [
+    [
+      "s01_edge_jetpack_l4t_version_check",
+      "s10_edge_onnx_export_validate"
+    ],
+    [
+      "s02_edge_cuda_cudnn_aarch64_verify",
+      "s03_edge_py_pytorch_aarch64_wheel",
+      "s05_edge_nvpmodel_power_mode",
+      "s08_edge_container_nvidia_runtime",
+      "s11_edge_int8_calibration_cache",
+      "s13_edge_dla_layer_fallback_check"
+    ],
+    [
+      "s04_edge_cpp_cmake_cuda_arch_build",
+      "s06_edge_jetson_clocks_lock",
+      "s09_edge_unified_memory_budget"
+    ],
+    [
+      "s07_edge_tegrastats_thermal_log",
+      "s12_edge_trtexec_engine_build"
+    ],
+    [
+      "s14_edge_trt_engine_cache_key",
+      "s15_edge_quantization_accuracy_check",
+      "s16_edge_py_trt_inference_runtime",
+      "s17_edge_cpp_trt_inference_runtime",
+      "s18_edge_deepstream_nvinfer_pipeline",
+      "s19_edge_latency_throughput_benchmark",
+      "s20_edge_thermal_soak_test"
+    ],
+    [
+      "s21_edge_ota_model_package"
+    ],
+    [
+      "s22_edge_ota_ab_swap_rollback"
+    ],
+    [
+      "s23_edge_systemd_watchdog_service"
+    ],
+    [
+      "s24_edge_health_report"
+    ],
+    [
+      "s25_edge_vehicle_integration_boundary"
+    ]
+  ],
+  "estimated_cost": 25,
+  "critical_path": [
+    "s01_edge_jetpack_l4t_version_check",
+    "s08_edge_container_nvidia_runtime",
+    "s09_edge_unified_memory_budget",
+    "s12_edge_trtexec_engine_build",
+    "s15_edge_quantization_accuracy_check",
+    "s21_edge_ota_model_package",
+    "s22_edge_ota_ab_swap_rollback",
+    "s23_edge_systemd_watchdog_service",
+    "s24_edge_health_report",
+    "s25_edge_vehicle_integration_boundary"
+  ]
+}

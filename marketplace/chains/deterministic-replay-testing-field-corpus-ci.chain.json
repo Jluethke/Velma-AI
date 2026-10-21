@@ -1,0 +1,273 @@
+{
+  "name": "deterministic-replay-testing-field-corpus-ci",
+  "description": "Turn read-only vehicle CAN logs or ROS 2 bags into a regression corpus, minimize failures, gate pull requests on bit-exact replay, and replay on a safe bench.",
+  "steps": [
+    {
+      "id": "s01_detd_boundary_record_schema",
+      "skill_name": "detd-boundary-record-schema",
+      "inputs": {
+        "decision_entrypoint": "from_user_input",
+        "ordering_contract": "from_user_input"
+      },
+      "outputs": {
+        "record_schema": "record_schema"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_detd_can_log_capture",
+      "skill_name": "detd-can-log-capture",
+      "inputs": {
+        "can_interface": "from_user_input",
+        "record_schema": "s01_detd_boundary_record_schema.record_schema"
+      },
+      "outputs": {
+        "can_log_procedure": "can_log_procedure",
+        "sample_recording": "sample_recording"
+      },
+      "condition": "has_can_log == true",
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_detd_ros2_bag_record_replay",
+      "skill_name": "detd-ros2-bag-record-replay",
+      "inputs": {
+        "ros_graph_nodes": "from_user_input",
+        "record_schema": "s01_detd_boundary_record_schema.record_schema"
+      },
+      "outputs": {
+        "bag_procedure": "bag_procedure",
+        "sample_recording": "sample_recording"
+      },
+      "condition": "uses_ros2 == true",
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_detd_replay_harness_bitexact",
+      "skill_name": "detd-replay-harness-bitexact",
+      "inputs": {
+        "record_schema": "s01_detd_boundary_record_schema.record_schema",
+        "recording_path": "from_user_input",
+        "run_command": "from_user_input"
+      },
+      "outputs": {
+        "replay_harness": "replay_harness",
+        "divergence_report": "divergence_report"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s05_detd_state_snapshot_restore",
+      "skill_name": "detd-state-snapshot-restore",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "replay_harness": "s04_detd_replay_harness_bitexact.replay_harness"
+      },
+      "outputs": {
+        "snapshot_format": "snapshot_format",
+        "snapshot_tests": "snapshot_tests"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s06_detd_field_log_corpus",
+      "skill_name": "detd-field-log-corpus",
+      "inputs": {
+        "field_logs_dir": "from_user_input",
+        "record_schema": "s01_detd_boundary_record_schema.record_schema",
+        "replay_harness": "s04_detd_replay_harness_bitexact.replay_harness"
+      },
+      "outputs": {
+        "regression_corpus": "regression_corpus",
+        "corpus_manifest": "corpus_manifest"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s07_detd_failing_log_minimize",
+      "skill_name": "detd-failing-log-minimize",
+      "inputs": {
+        "regression_corpus": "s06_detd_field_log_corpus.regression_corpus",
+        "replay_harness": "s04_detd_replay_harness_bitexact.replay_harness"
+      },
+      "outputs": {
+        "minimized_cases": "minimized_cases"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s08_detd_ci_replay_gate_github",
+      "skill_name": "detd-ci-replay-gate-github",
+      "inputs": {
+        "replay_harness": "s04_detd_replay_harness_bitexact.replay_harness",
+        "corpus_manifest": "s06_detd_field_log_corpus.corpus_manifest",
+        "target_platforms": "from_user_input_optional"
+      },
+      "outputs": {
+        "ci_workflow": "ci_workflow"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s09_detd_bench_hil_replay",
+      "skill_name": "detd-bench-hil-replay",
+      "inputs": {
+        "replay_harness": "s04_detd_replay_harness_bitexact.replay_harness",
+        "corpus_manifest": "s06_detd_field_log_corpus.corpus_manifest",
+        "bench_setup": "from_user_input"
+      },
+      "outputs": {
+        "hil_replay_report": "hil_replay_report"
+      },
+      "condition": "has_bench == true",
+      "parallel_group": 4
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_detd_boundary_record_schema",
+      "to_step": "s02_detd_can_log_capture",
+      "data_type": "detd-boundary-record-schema",
+      "field_mapping": {
+        "record_schema": "record_schema"
+      }
+    },
+    {
+      "from_step": "s01_detd_boundary_record_schema",
+      "to_step": "s03_detd_ros2_bag_record_replay",
+      "data_type": "detd-boundary-record-schema",
+      "field_mapping": {
+        "record_schema": "record_schema"
+      }
+    },
+    {
+      "from_step": "s01_detd_boundary_record_schema",
+      "to_step": "s04_detd_replay_harness_bitexact",
+      "data_type": "detd-boundary-record-schema",
+      "field_mapping": {
+        "record_schema": "record_schema"
+      }
+    },
+    {
+      "from_step": "s04_detd_replay_harness_bitexact",
+      "to_step": "s05_detd_state_snapshot_restore",
+      "data_type": "detd-replay-harness-bitexact",
+      "field_mapping": {
+        "replay_harness": "replay_harness"
+      }
+    },
+    {
+      "from_step": "s01_detd_boundary_record_schema",
+      "to_step": "s06_detd_field_log_corpus",
+      "data_type": "detd-boundary-record-schema",
+      "field_mapping": {
+        "record_schema": "record_schema"
+      }
+    },
+    {
+      "from_step": "s04_detd_replay_harness_bitexact",
+      "to_step": "s06_detd_field_log_corpus",
+      "data_type": "detd-replay-harness-bitexact",
+      "field_mapping": {
+        "replay_harness": "replay_harness"
+      }
+    },
+    {
+      "from_step": "s06_detd_field_log_corpus",
+      "to_step": "s07_detd_failing_log_minimize",
+      "data_type": "detd-field-log-corpus",
+      "field_mapping": {
+        "regression_corpus": "regression_corpus"
+      }
+    },
+    {
+      "from_step": "s04_detd_replay_harness_bitexact",
+      "to_step": "s07_detd_failing_log_minimize",
+      "data_type": "detd-replay-harness-bitexact",
+      "field_mapping": {
+        "replay_harness": "replay_harness"
+      }
+    },
+    {
+      "from_step": "s04_detd_replay_harness_bitexact",
+      "to_step": "s08_detd_ci_replay_gate_github",
+      "data_type": "detd-replay-harness-bitexact",
+      "field_mapping": {
+        "replay_harness": "replay_harness"
+      }
+    },
+    {
+      "from_step": "s06_detd_field_log_corpus",
+      "to_step": "s08_detd_ci_replay_gate_github",
+      "data_type": "detd-field-log-corpus",
+      "field_mapping": {
+        "corpus_manifest": "corpus_manifest"
+      }
+    },
+    {
+      "from_step": "s04_detd_replay_harness_bitexact",
+      "to_step": "s09_detd_bench_hil_replay",
+      "data_type": "detd-replay-harness-bitexact",
+      "field_mapping": {
+        "replay_harness": "replay_harness"
+      }
+    },
+    {
+      "from_step": "s06_detd_field_log_corpus",
+      "to_step": "s09_detd_bench_hil_replay",
+      "data_type": "detd-field-log-corpus",
+      "field_mapping": {
+        "corpus_manifest": "corpus_manifest"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "decision_entrypoint",
+    "ordering_contract",
+    "can_interface",
+    "ros_graph_nodes",
+    "recording_path",
+    "run_command",
+    "repo_path",
+    "field_logs_dir",
+    "target_platforms",
+    "bench_setup"
+  ],
+  "terminal_outputs": [
+    "can_log_procedure",
+    "sample_recording",
+    "bag_procedure",
+    "divergence_report",
+    "snapshot_format",
+    "snapshot_tests",
+    "minimized_cases",
+    "ci_workflow",
+    "hil_replay_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_detd_boundary_record_schema"
+    ],
+    [
+      "s02_detd_can_log_capture",
+      "s03_detd_ros2_bag_record_replay",
+      "s04_detd_replay_harness_bitexact"
+    ],
+    [
+      "s05_detd_state_snapshot_restore",
+      "s06_detd_field_log_corpus"
+    ],
+    [
+      "s07_detd_failing_log_minimize",
+      "s08_detd_ci_replay_gate_github",
+      "s09_detd_bench_hil_replay"
+    ]
+  ],
+  "estimated_cost": 9,
+  "critical_path": [
+    "s01_detd_boundary_record_schema",
+    "s04_detd_replay_harness_bitexact",
+    "s06_detd_field_log_corpus",
+    "s09_detd_bench_hil_replay"
+  ]
+}

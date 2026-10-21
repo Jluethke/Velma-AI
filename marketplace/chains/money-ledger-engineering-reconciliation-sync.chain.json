@@ -1,0 +1,146 @@
+{
+  "name": "money-ledger-engineering-reconciliation-sync",
+  "description": "Period-end work on an existing ledger: snapshots and audit, Stripe payout and bank statement reconciliation, then sync to QuickBooks Online or Xero.",
+  "steps": [
+    {
+      "id": "s01_ledg_pg_balance_snapshots",
+      "skill_name": "ledg-pg-balance-snapshots",
+      "inputs": {
+        "ledger_schema": "from_user_input",
+        "locking_strategy": "from_user_input"
+      },
+      "outputs": {
+        "balance_queries": "balance_queries"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_ledg_pg_audit_queries",
+      "skill_name": "ledg-pg-audit-queries",
+      "inputs": {
+        "ledger_schema": "from_user_input",
+        "balance_queries": "s01_ledg_pg_balance_snapshots.balance_queries"
+      },
+      "outputs": {
+        "audit_query_pack": "audit_query_pack"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_ledg_stripe_payout_reconciliation",
+      "skill_name": "ledg-stripe-payout-reconciliation",
+      "inputs": {
+        "ledger_schema": "from_user_input",
+        "processor_export": "from_user_input"
+      },
+      "outputs": {
+        "processor_recon_report": "processor_recon_report"
+      },
+      "condition": "processor == 'stripe'",
+      "parallel_group": 1
+    },
+    {
+      "id": "s04_ledg_bank_statement_reconciliation",
+      "skill_name": "ledg-bank-statement-reconciliation",
+      "inputs": {
+        "ledger_schema": "from_user_input",
+        "bank_export": "from_user_input",
+        "match_date_window_days": "from_user_input"
+      },
+      "outputs": {
+        "bank_recon_report": "bank_recon_report"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s05_ledg_qbo_journal_sync",
+      "skill_name": "ledg-qbo-journal-sync",
+      "inputs": {
+        "audit_query_pack": "s02_ledg_pg_audit_queries.audit_query_pack",
+        "account_mapping": "from_user_input",
+        "qbo_realm_id": "from_user_input"
+      },
+      "outputs": {
+        "qbo_sync_job": "qbo_sync_job"
+      },
+      "condition": "accounting_system == 'quickbooks_online'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s06_ledg_xero_manual_journal_sync",
+      "skill_name": "ledg-xero-manual-journal-sync",
+      "inputs": {
+        "audit_query_pack": "s02_ledg_pg_audit_queries.audit_query_pack",
+        "account_mapping": "from_user_input",
+        "xero_tenant_id": "from_user_input"
+      },
+      "outputs": {
+        "xero_sync_job": "xero_sync_job"
+      },
+      "condition": "accounting_system == 'xero'",
+      "parallel_group": 3
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_ledg_pg_balance_snapshots",
+      "to_step": "s02_ledg_pg_audit_queries",
+      "data_type": "ledg-pg-balance-snapshots",
+      "field_mapping": {
+        "balance_queries": "balance_queries"
+      }
+    },
+    {
+      "from_step": "s02_ledg_pg_audit_queries",
+      "to_step": "s05_ledg_qbo_journal_sync",
+      "data_type": "ledg-pg-audit-queries",
+      "field_mapping": {
+        "audit_query_pack": "audit_query_pack"
+      }
+    },
+    {
+      "from_step": "s02_ledg_pg_audit_queries",
+      "to_step": "s06_ledg_xero_manual_journal_sync",
+      "data_type": "ledg-pg-audit-queries",
+      "field_mapping": {
+        "audit_query_pack": "audit_query_pack"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "ledger_schema",
+    "locking_strategy",
+    "processor_export",
+    "bank_export",
+    "match_date_window_days",
+    "account_mapping",
+    "qbo_realm_id",
+    "xero_tenant_id"
+  ],
+  "terminal_outputs": [
+    "processor_recon_report",
+    "bank_recon_report",
+    "qbo_sync_job",
+    "xero_sync_job"
+  ],
+  "parallel_groups": [
+    [
+      "s01_ledg_pg_balance_snapshots",
+      "s03_ledg_stripe_payout_reconciliation",
+      "s04_ledg_bank_statement_reconciliation"
+    ],
+    [
+      "s02_ledg_pg_audit_queries"
+    ],
+    [
+      "s05_ledg_qbo_journal_sync",
+      "s06_ledg_xero_manual_journal_sync"
+    ]
+  ],
+  "estimated_cost": 6,
+  "critical_path": [
+    "s01_ledg_pg_balance_snapshots",
+    "s02_ledg_pg_audit_queries",
+    "s05_ledg_qbo_journal_sync"
+  ]
+}

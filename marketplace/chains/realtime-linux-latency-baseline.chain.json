@@ -1,0 +1,136 @@
+{
+  "name": "realtime-linux-latency-baseline",
+  "description": "Check for a PREEMPT_RT kernel, record untuned cyclictest and hardware noise baselines, read the histogram against the budget, and split latency with rtla timerlat.",
+  "steps": [
+    {
+      "id": "s01_rtl_kernel_rt_check",
+      "skill_name": "rtl-kernel-rt-check",
+      "inputs": {
+        "target_host": "from_user_input"
+      },
+      "outputs": {
+        "kernel_report": "kernel_report"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_rtl_cyclictest_baseline",
+      "skill_name": "rtl-cyclictest-baseline",
+      "inputs": {
+        "kernel_report": "s01_rtl_kernel_rt_check.kernel_report",
+        "test_duration": "from_user_input",
+        "rt_priority": "from_user_input"
+      },
+      "outputs": {
+        "baseline_histogram": "baseline_histogram",
+        "baseline_summary": "baseline_summary"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_rtl_hw_noise_check",
+      "skill_name": "rtl-hw-noise-check",
+      "inputs": {
+        "kernel_report": "s01_rtl_kernel_rt_check.kernel_report",
+        "test_duration": "from_user_input"
+      },
+      "outputs": {
+        "hw_noise_report": "hw_noise_report"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_rtl_cyclictest_histogram_read",
+      "skill_name": "rtl-cyclictest-histogram-read",
+      "inputs": {
+        "cyclictest_histogram": "s02_rtl_cyclictest_baseline.baseline_histogram",
+        "jitter_budget_us": "from_user_input"
+      },
+      "outputs": {
+        "latency_findings": "latency_findings"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s05_rtl_rtla_timerlat",
+      "skill_name": "rtl-rtla-timerlat",
+      "inputs": {
+        "latency_findings": "s04_rtl_cyclictest_histogram_read.latency_findings",
+        "rt_cpus": "from_user_input",
+        "jitter_budget_us": "from_user_input"
+      },
+      "outputs": {
+        "timerlat_report": "timerlat_report"
+      },
+      "parallel_group": 4
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_rtl_kernel_rt_check",
+      "to_step": "s02_rtl_cyclictest_baseline",
+      "data_type": "rtl-kernel-rt-check",
+      "field_mapping": {
+        "kernel_report": "kernel_report"
+      }
+    },
+    {
+      "from_step": "s01_rtl_kernel_rt_check",
+      "to_step": "s03_rtl_hw_noise_check",
+      "data_type": "rtl-kernel-rt-check",
+      "field_mapping": {
+        "kernel_report": "kernel_report"
+      }
+    },
+    {
+      "from_step": "s02_rtl_cyclictest_baseline",
+      "to_step": "s04_rtl_cyclictest_histogram_read",
+      "data_type": "rtl-cyclictest-baseline",
+      "field_mapping": {
+        "baseline_histogram": "cyclictest_histogram"
+      }
+    },
+    {
+      "from_step": "s04_rtl_cyclictest_histogram_read",
+      "to_step": "s05_rtl_rtla_timerlat",
+      "data_type": "rtl-cyclictest-histogram-read",
+      "field_mapping": {
+        "latency_findings": "latency_findings"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "target_host",
+    "test_duration",
+    "rt_priority",
+    "jitter_budget_us",
+    "rt_cpus"
+  ],
+  "terminal_outputs": [
+    "baseline_summary",
+    "hw_noise_report",
+    "timerlat_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_rtl_kernel_rt_check"
+    ],
+    [
+      "s02_rtl_cyclictest_baseline",
+      "s03_rtl_hw_noise_check"
+    ],
+    [
+      "s04_rtl_cyclictest_histogram_read"
+    ],
+    [
+      "s05_rtl_rtla_timerlat"
+    ]
+  ],
+  "estimated_cost": 5,
+  "critical_path": [
+    "s01_rtl_kernel_rt_check",
+    "s02_rtl_cyclictest_baseline",
+    "s04_rtl_cyclictest_histogram_read",
+    "s05_rtl_rtla_timerlat"
+  ]
+}
