@@ -81,7 +81,7 @@ Page-level rows in `keyboard_issues`.
 - Page-level pass done.
 
 ### Actions
-1. For each component in `component_inventory`, open a page in its `used_on` list and test the APG key map for its `aria_pattern`:
+1. For each component in `component_inventory`, open a page in its `used_on` list and test the governance engine key map for its `aria_pattern`:
 
    | Pattern | Keys that must work |
    |---|---|
@@ -99,7 +99,7 @@ Page-level rows in `keyboard_issues`.
    | Carousel | a pause or stop control is reachable; slide controls are buttons |
    | Tooltip | appears on focus as well as hover; Escape dismisses it |
 
-2. If the component is "custom" (no APG match), check that every action available by mouse is available by keyboard; that is the 2.1.1 requirement.
+2. If the component is "custom" (no governance engine match), check that every action available by mouse is available by keyboard; that is the 2.1.1 requirement.
 3. Mark `blocks_task` = true when the failing control is on a page with `process` not null, or the control is the only way to reach a function (for example the only "Add to cart").
 4. Do not fix anything in this flow. Recording and fixing in one pass hides which change caused which result.
 
@@ -146,7 +146,7 @@ DONE when every inventory page has a full Tab and Shift+Tab log and every compon
 | Phase 1 | Tab skips links on macOS | **Adjust**: turn on the two macOS and Safari settings in Phase 1 step 2 and restart the pass. |
 | Phase 2 | Focus disappears (log shows `BODY` mid-page) | **Adjust**: record it as an `a11y-focus-order-visibility-check` item (lost focus) and continue from the next visible stop. |
 | Phase 2 | Trapped in an iframe from a third party | **Adjust**: record 2.1.2 with the iframe `src`; press Ctrl+L or F6 to leave and continue. |
-| Phase 3 | Unsure which APG pattern applies | **Return**: ask `a11y-scope-inventory` owner to set `aria_pattern`, or test as "custom". |
+| Phase 3 | Unsure which governance engine pattern applies | **Return**: ask `a11y-scope-inventory` owner to set `aria_pattern`, or test as "custom". |
 
 **Do not:** use the mouse during the pass; record an issue without the key sequence; change code in this flow.
 

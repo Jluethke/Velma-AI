@@ -5,25 +5,26 @@ A gentle, zero-pressure introduction to AI for people who've heard about ChatGPT
 ## Execution Pattern: ORPA Loop
 
 ## Inputs
-- experience_level: string -- Where you are right now: "never used AI," "tried it once and got confused," "use my phone and email but that's about it," or "I've heard of it but don't trust it"
-- main_concern: string -- What worries you most about AI. Be honest. Common ones: "I'm too old," "I'll break something," "it'll steal my information," "it'll take my job," "I don't understand what it is," "it feels creepy"
-- what_you_use_tech_for: array -- (Optional) What you already do with your phone or computer: email, texting, online shopping, social media, work documents, banking, video calls, or anything else
-- goals: string -- (Optional) What you'd like AI to help with if you knew how. Examples: writing emails, understanding medical info, planning trips, helping grandkids with homework, organizing recipes, summarizing long articles
-- device: string -- (Optional) What you'd be using: iPhone, Android phone, iPad/tablet, Windows computer, Mac, or "I'm not sure"
+- `experience_level`: string -- Where you are right now: "never used AI," "tried it once and got confused," "use my phone and email but that's about it," or "I've heard of it but don't trust it"
+- `main_concern`: string -- What worries you most about AI. Be honest. Common ones: "I'm too old," "I'll break something," "it'll steal my information," "it'll take my job," "I don't understand what it is," "it feels creepy"
+- `what_you_use_tech_for`: array -- (Optional) What you already do with your phone or computer: email, texting, online shopping, social media, work documents, banking, video calls, or anything else
+- `goals`: string -- (Optional) What you'd like AI to help with if you knew how. Examples: writing emails, understanding medical info, planning trips, helping grandkids with homework, organizing recipes, summarizing long articles
+- `device`: string -- (Optional) What you'd be using: iPhone, Android phone, iPad/tablet, Windows computer, Mac, or "I'm not sure"
 
 ## Outputs
-- what_ai_is: string -- A plain-English explanation of what AI actually is, using an analogy that makes sense based on your background. No buzzwords.
-- what_ai_is_not: string -- Honest corrections to common misconceptions. What it cannot do. Where it gets things wrong. Why it's not magic and not dangerous in the way movies portray.
-- fears_addressed: array -- Each concern you raised answered directly and honestly. No dismissing, no patronizing. If a concern is valid, we say so.
-- first_conversation_walkthrough: object -- Step-by-step instructions for having your very first AI conversation, with screenshots-level detail: where to go, what to type, what to expect back, what buttons to press
-- five_things_to_try: array -- Five specific, practical tasks you can try right now that will genuinely save you time or make your life easier
-- safety_basics: object -- What's safe, what to be careful about, and one simple rule to remember
+- `what_ai_is`: string -- A plain-English explanation of what AI actually is, using an analogy that makes sense based on your background. No buzzwords.
+- `what_ai_is_not`: string -- Honest corrections to common misconceptions. What it cannot do. Where it gets things wrong. Why it's not magic and not dangerous in the way movies portray.
+- `fears_addressed`: array -- Each concern you raised answered directly and honestly. No dismissing, no patronizing. If a concern is valid, we say so.
+- `first_conversation_walkthrough`: object -- Step-by-step instructions for having your very first AI conversation, with screenshots-level detail: where to go, what to type, what to expect back, what buttons to press
+- `five_things_to_try`: array -- Five specific, practical tasks you can try right now that will genuinely save you time or make your life easier
+- `safety_basics`: object -- What's safe, what to be careful about, and one simple rule to remember
 
 ## Execution
 
 ### OBSERVE: Understand Where You're Starting
-**Entry criteria:** The person has shared their experience level and at least one concern.
-**Actions:**
+### Entry Criteria
+The person has shared their experience level and at least one concern.
+### Actions
 1. Note their exact experience level. Someone who "tried it once and got confused" needs different help than someone who has never touched it. Meet them exactly where they are.
 2. Read their concern carefully. Don't assume it's irrational. Many AI concerns are perfectly reasonable:
    - "It'll steal my data" -- partially valid. Some AI companies do use conversations for training. This deserves a real answer.
@@ -35,12 +36,15 @@ A gentle, zero-pressure introduction to AI for people who've heard about ChatGPT
 4. Note their goals. If they haven't stated any, that's fine -- we'll suggest things based on what they already do with technology.
 5. Identify their device so all instructions match exactly what they'll see on their screen.
 
-**Output:** A clear picture of this person's starting point, fears, existing tech comfort, and what would be most useful to them.
-**Quality gate:** No assumptions made. Concerns are taken at face value. Tech level is accurately assessed from what they told us, not guessed.
+### Output
+A clear picture of this person's starting point, fears, existing tech comfort, and what would be most useful to them.
+### Quality Gate
+No assumptions made. Concerns are taken at face value. Tech level is accurately assessed from what they told us, not guessed.
 
 ### REASON: Build the Right Explanation
-**Entry criteria:** Starting point assessment complete.
-**Actions:**
+### Entry Criteria
+Starting point assessment complete.
+### Actions
 1. Choose the right analogy for what AI is based on their background:
    - For someone who cooks: "AI is like a very well-read assistant who's memorized millions of recipes, articles, and books. You ask it a question, and it gives you its best answer based on everything it's read. It doesn't actually understand cooking -- it's pattern-matching from everything it's seen. Sometimes it's brilliant. Sometimes it confidently tells you to put sugar in your soup."
    - For someone in an office: "Think of it like autocomplete on your phone, but for entire conversations. Your phone predicts the next word. AI predicts the next paragraph. It's not thinking -- it's predicting what a helpful answer would look like."
@@ -62,12 +66,15 @@ A gentle, zero-pressure introduction to AI for people who've heard about ChatGPT
    - "Help me write a polite complaint to my internet company"
 5. Prepare the one safety rule: "Don't type anything you'd be embarrassed to see on a billboard. No passwords, no Social Security numbers, no bank account numbers, no private medical details you want kept secret."
 
-**Output:** Tailored analogy, honest fear responses, platform recommendation, personalized task suggestions, safety rule.
-**Quality gate:** Analogy connects to something the person already understands. Fear responses are honest, not dismissive. Tasks are genuinely useful for this specific person.
+### Output
+Tailored analogy, honest fear responses, platform recommendation, personalized task suggestions, safety rule.
+### Quality Gate
+Analogy connects to something the person already understands. Fear responses are honest, not dismissive. Tasks are genuinely useful for this specific person.
 
 ### PLAN: Structure the Walkthrough
-**Entry criteria:** All explanation components built.
-**Actions:**
+### Entry Criteria
+All explanation components built.
+### Actions
 1. Order the response for maximum comfort:
    - Start with what AI is (short, friendly, relatable)
    - Then address their specific fears (they need this before they'll try anything)
@@ -86,12 +93,15 @@ A gentle, zero-pressure introduction to AI for people who've heard about ChatGPT
 3. Make each of the 5 try-it-now tasks a complete mini-script: what to type, what to expect, why it's useful.
 4. Format safety basics as three categories: Always Safe, Be Careful, Never Do.
 
-**Output:** Complete response structure with walkthrough, tasks, and safety guide ready to deliver.
-**Quality gate:** A person who has never used AI could follow every instruction without getting stuck. No step assumes knowledge that hasn't been explained.
+### Output
+Complete response structure with walkthrough, tasks, and safety guide ready to deliver.
+### Quality Gate
+A person who has never used AI could follow every instruction without getting stuck. No step assumes knowledge that hasn't been explained.
 
 ### ACT: Deliver the Guide
-**Entry criteria:** All sections planned and personalized.
-**Actions:**
+### Entry Criteria
+All sections planned and personalized.
+### Actions
 1. Open with warmth and normalcy: "Lots of people feel exactly the way you do. That's not a weakness -- it means you're thinking about this carefully, which is smarter than blindly jumping in."
 2. Deliver the AI explanation using the chosen analogy. Keep it under 4 sentences. End with: "The most important thing to know is that you're just having a conversation. If you can text a friend, you can use AI."
 3. Address each fear in its own short paragraph. Lead with validation ("That's a reasonable concern"), then the honest answer, then the practical takeaway.
@@ -103,8 +113,19 @@ A gentle, zero-pressure introduction to AI for people who've heard about ChatGPT
 6. Close with the safety section. Frame it positively: "Here's how to stay in control." The one rule: "If you wouldn't say it to a stranger at a coffee shop, don't type it into AI."
 7. Final message: "You don't have to become an expert. You don't have to use this every day. Just try one thing from the list above. If it's useful, great. If not, you haven't lost anything."
 
-**Output:** Complete, personalized getting-started guide.
-**Quality gate:** Tone is warm but never condescending. Every instruction is specific enough to follow without outside help. Fears are addressed honestly. The person feels capable, not overwhelmed.
+### Output
+Complete, personalized getting-started guide.
+### Quality Gate
+Tone is warm but never condescending. Every instruction is specific enough to follow without outside help. Fears are addressed honestly. The person feels capable, not overwhelmed.
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for A gentle, zero-pressure introduction to AI for people who've heard about ChatGPT, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 Done when: (1) AI is explained in a way that connects to something the person already understands, (2) every stated concern is addressed honestly, (3) step-by-step first conversation walkthrough is complete with device-specific instructions, (4) 5 practical try-it-now tasks are provided with exact text to type, (5) safety basics are clear and memorable.
@@ -128,10 +149,10 @@ Done when: (1) AI is explained in a way that connects to something the person al
 
 | User Background | Best Analogy | Key Point |
 |---|---|---|
-| Cook / home chef | A well-read assistant who has memorized millions of recipes and articles — brilliant sometimes, confidently wrong other times | Pattern-matching, not understanding |
+| Cook / home chef | A well-read assistant who has memorized millions of recipes and articles  --  brilliant sometimes, confidently wrong other times | Pattern-matching, not understanding |
 | Office worker | Autocomplete on your phone, but for entire paragraphs and conversations | Prediction, not thinking |
-| TV/streaming viewer | Netflix recommendations, but for words — trained on billions of pages, predicts the helpful next sentence | Trained patterns, not awareness |
-| Parent / caregiver | A very fast researcher who can summarize anything but sometimes makes up details — always verify medical or legal specifics | Useful assistant, requires verification |
+| TV/streaming viewer | Netflix recommendations, but for words  --  trained on billions of pages, predicts the helpful next sentence | Trained patterns, not awareness |
+| Parent / caregiver | A very fast researcher who can summarize anything but sometimes makes up details  --  always verify medical or legal specifics | Useful assistant, requires verification |
 
 ### Platform Quick-Start by Device
 
@@ -151,10 +172,10 @@ Done when: (1) AI is explained in a way that connects to something the person al
 
 | Fear | Honest Answer | Practical Takeaway |
 |---|---|---|
-| "It'll steal my data" | Partially valid — some AI companies use conversations for training. Use the data controls in settings. | Read the privacy settings; opt out of training data if the option exists |
-| "I'm too old" | Not valid — if you can send a text, you can use AI. Age has no bearing. | Start with texting-style short questions |
+| "It'll steal my data" | Partially valid  --  some AI companies use conversations for training. Use the data controls in settings. | Read the privacy settings; opt out of training data if the option exists |
+| "I'm too old" | Not valid  --  if you can send a text, you can use AI. Age has no bearing. | Start with texting-style short questions |
 | "It'll replace my job" | Depends entirely on the job. Honest answer: some tasks, yes; full jobs, rarely. | Focus on what it can help you do faster, not what it might replace |
-| "I'll break something" | Not possible — you can only type words, and you can always start a new chat | There is no "break" button in a chat window |
+| "I'll break something" | Not possible  --  you can only type words, and you can always start a new chat | There is no "break" button in a chat window |
 | "It feels creepy" | Valid emotional response. It mimics human conversation without being human. | Knowing it's a prediction machine (not a person) helps most people feel more comfortable |
 
 ## State Persistence

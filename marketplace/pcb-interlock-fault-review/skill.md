@@ -59,6 +59,15 @@ Fault entries in `interlock_findings`.
 
 ---
 
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Trace every single fault on each interlock and emergency stop to confirm it ends, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
+
 ## Exit Criteria
 
 DONE when every interlock passes all structural checks and every single fault ends safe or latched. This review applies ISO 13849-1 single-fault reasoning and does not certify a performance level.

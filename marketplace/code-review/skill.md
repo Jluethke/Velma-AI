@@ -32,9 +32,10 @@ ACT     --> Write review comments, make approve/request-changes decision
 
 ### OBSERVE: Read the Diff
 
-**Entry criteria:** A diff or set of changed files is provided.
+### Entry Criteria
+A diff or set of changed files is provided.
 
-**Actions:**
+### Actions
 1. Read the PR description: what does the author say this PR does?
 2. Read the full diff file by file, noting:
    - What files were added, modified, or deleted
@@ -49,18 +50,20 @@ ACT     --> Write review comments, make approve/request-changes decision
 6. Note any test files changed or added
 7. Check for unrelated changes mixed into the PR
 
-**Output:** A structured summary of what changed: files affected, scope, size assessment, and any red flags (mixed concerns, missing tests, oversized PR).
+### Output
+A structured summary of what changed: files affected, scope, size assessment, and any red flags (mixed concerns, missing tests, oversized PR).
 
-**Quality gate:** Every changed file has been read. PR scope is identified. Size is assessed.
+### Quality Gate
+Every changed file has been read. PR scope is identified. Size is assessed.
 
 ---
 
 ### REASON: Evaluate Against Review Checklist
 
-**Entry criteria:** Diff summary is complete.
+### Entry Criteria
+Diff summary is complete.
 
-**Actions:**
-
+### Actions
 Evaluate the changes against each priority level, stopping at the first BLOCKING issue found (see Reference: The Review Checklist):
 
 1. **Priority 1 -- CORRECTNESS** (see Reference: Bug Patterns by Language):
@@ -104,17 +107,20 @@ Evaluate the changes against each priority level, stopping at the first BLOCKING
    - Are tests deterministic?
    - Are tests isolated?
 
-**Output:** A list of findings, each with: priority level, category, file location, description, and severity (blocking/suggestion/nit).
+### Output
+A list of findings, each with: priority level, category, file location, description, and severity (blocking/suggestion/nit).
 
-**Quality gate:** All 6 priority levels have been evaluated. Every finding has a specific location (file + line range). No findings are vague ("code could be better").
+### Quality Gate
+All 6 priority levels have been evaluated. Every finding has a specific location (file + line range). No findings are vague ("code could be better").
 
 ---
 
 ### PLAN: Prioritize Feedback
 
-**Entry criteria:** Findings list is complete.
+### Entry Criteria
+Findings list is complete.
 
-**Actions:**
+### Actions
 1. Sort findings by severity:
    - **[blocking]**: Security, correctness, data loss risk -- must fix before merge
    - **[suggestion]**: Performance, readability, maintainability -- should fix
@@ -129,17 +135,20 @@ Evaluate the changes against each priority level, stopping at the first BLOCKING
 4. Draft the review summary: 1-2 sentences on overall assessment
 5. For each comment, structure as: Observation -> Impact -> Suggestion (see Reference: How to Give Feedback)
 
-**Output:** Ordered list of review comments ready to post, plus approval decision and summary.
+### Output
+Ordered list of review comments ready to post, plus approval decision and summary.
 
-**Quality gate:** Comments are ordered by severity (blocking first). Each blocking comment explains the impact. Tone follows the "DO" guidelines (constructive, not dismissive).
+### Quality Gate
+Comments are ordered by severity (blocking first). Each blocking comment explains the impact. Tone follows the "DO" guidelines (constructive, not dismissive).
 
 ---
 
 ### ACT: Write Review Comments and Decision
 
-**Entry criteria:** Prioritized comments and approval decision are ready.
+### Entry Criteria
+Prioritized comments and approval decision are ready.
 
-**Actions:**
+### Actions
 1. Write each review comment following the Observation -> Impact -> Suggestion pattern:
    ```
    [blocking] This query interpolates user input directly (observation),
@@ -153,9 +162,11 @@ Evaluate the changes against each priority level, stopping at the first BLOCKING
 5. Write the summary paragraph
 6. Check tone: every comment should pass the "would I want to receive this?" test (see Reference: Tone Rules)
 
-**Output:** Complete review with all comments, approval decision, and summary.
+### Output
+Complete review with all comments, approval decision, and summary.
 
-**Quality gate:** Every blocking comment has a code suggestion or clear fix path. Tone is constructive throughout. Approval decision matches the findings (no approving with unaddressed blocking issues).
+### Quality Gate
+Every blocking comment has a code suggestion or clear fix path. Tone is constructive throughout. Approval decision matches the findings (no approving with unaddressed blocking issues).
 
 ---
 
@@ -596,3 +607,7 @@ CI integration:   Run all of the above on every PR automatically
 ```
 
 Tools catch syntax and patterns. Humans catch design and intent.
+
+---
+
+Copyright 2024-present The Wayfinder Trust. All rights reserved.

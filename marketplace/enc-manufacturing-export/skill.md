@@ -60,6 +60,15 @@
 
 ---
 
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Export a fit-checked enclosure as STEP and STL per part with process notes, and , the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
+
 ## Exit Criteria
 
 DONE when every part has manufacturable files with process notes and every piece of hardware the model calls for is in the BOM with a real part number.

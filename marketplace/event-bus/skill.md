@@ -18,18 +18,23 @@ PHASE 5: VALIDATE      --> Test event delivery, handler failures, correlation de
 - **subscriber_map**: dict[string, list[callable]] (optional) -- Pre-registered type-to-handler mappings
 - **correlation_rules**: list[object] (optional) -- Temporal patterns to detect across event types
 - **window_seconds**: float (optional) -- Sliding window for correlation detection (default: 30s)
+- `task_description`: (from manifest)
 
 ## Outputs
 
 - **event_bus**: object -- Configured bus with type subscriptions, wildcard listeners, and error isolation
 - **correlator**: object -- EventCorrelator with registered rules and sliding window buffer
 - **statistics**: object -- Events emitted, delivered, handler errors, correlation matches
+- `guidance`: (from manifest)
+- `code_patterns`: (from manifest)
+- `implementation_example`: (from manifest)
 
 ## Execution
 
 ### Phase 1: EVENTS -- Define Event Types
-**Entry criteria:** System has identified at least one state change that needs to be communicated between decoupled subsystems.
-**Actions:**
+### Entry Criteria
+System has identified at least one state change that needs to be communicated between decoupled subsystems.
+### Actions
 1. Define event types as frozen dataclasses:
    - Each event carries: event_id, timestamp, source, domain, importance, payload
    - Payload is a tuple of key-value pairs (immutable)
@@ -44,12 +49,15 @@ PHASE 5: VALIDATE      --> Test event delivery, handler failures, correlation de
    - (Add domain-specific event types as needed)
 3. Define event importance levels for filtering
 4. Establish the contract: `Intent -> Runtime -> Store (write) -> CognitiveEvent emitted`
-**Output:** Event type catalog with dataclass definitions, field types, and importance levels.
-**Quality gate:** All event types are frozen dataclasses. Payloads are immutable (tuples, not dicts). Event IDs are unique. Every event has a source field.
+### Output
+Event type catalog with dataclass definitions, field types, and importance levels.
+### Quality Gate
+All event types are frozen dataclasses. Payloads are immutable (tuples, not dicts). Event IDs are unique. Every event has a source field.
 
 ### Phase 2: SUBSCRIBERS -- Register Handlers
-**Entry criteria:** Event types defined with clear semantics.
-**Actions:**
+### Entry Criteria
+Event types defined with clear semantics.
+### Actions
 1. Register type-specific subscribers:
    - `subscribe(event_type, handler)` -- handler receives only matching events
    - Multiple handlers per event type allowed
@@ -62,12 +70,15 @@ PHASE 5: VALIDATE      --> Test event delivery, handler failures, correlation de
    - Handlers must not raise unhandled exceptions to the caller
    - Handlers must not modify the event (frozen dataclass enforces this)
 4. Plan handler ordering (registration order = execution order)
-**Output:** Subscriber registry with type-specific and wildcard handlers registered.
-**Quality gate:** At least one handler registered for each event type that needs processing. Wildcard subscriber registered for audit logging. No circular handler dependencies.
+### Output
+Subscriber registry with type-specific and wildcard handlers registered.
+### Quality Gate
+At least one handler registered for each event type that needs processing. Wildcard subscriber registered for audit logging. No circular handler dependencies.
 
 ### Phase 3: CORRELATION -- Define Temporal Patterns
-**Entry criteria:** Subscribers registered, event types cataloged.
-**Actions:**
+### Entry Criteria
+Subscribers registered, event types cataloged.
+### Actions
 1. Define correlation rules:
    - Each rule specifies a set of required event types
    - Each rule specifies `min_events` threshold
@@ -83,12 +94,15 @@ PHASE 5: VALIDATE      --> Test event delivery, handler failures, correlation de
    - Multiple task failures in window -> system degradation alert
    - Task completed + goal evolved -> learning breakthrough
    - Specialist spawned + specialist completed in rapid succession -> specialist efficiency metric
-**Output:** Correlation rules with required event types, thresholds, and handlers.
-**Quality gate:** All rules have finite min_events thresholds. Window size is reasonable (not so large it buffers thousands of events). Rule handlers are defined.
+### Output
+Correlation rules with required event types, thresholds, and handlers.
+### Quality Gate
+All rules have finite min_events thresholds. Window size is reasonable (not so large it buffers thousands of events). Rule handlers are defined.
 
 ### Phase 4: IMPLEMENT -- Build the Bus
-**Entry criteria:** Event types, subscribers, and correlation rules all defined.
-**Actions:**
+### Entry Criteria
+Event types, subscribers, and correlation rules all defined.
+### Actions
 1. Implement synchronous dispatch:
    - `emit(event)` blocks until all handlers complete
    - No queues, no async -- pure callback delivery
@@ -108,12 +122,15 @@ PHASE 5: VALIDATE      --> Test event delivery, handler failures, correlation de
    - Checks rules on every event
    - Fires rule handlers when patterns match
 5. Implement `subscribe()`, `subscribe_all()`, `emit()`, `get_statistics()`
-**Output:** Working event bus with error isolation, statistics, and correlation detection.
-**Quality gate:** emit() delivers to all handlers even if one throws. Statistics are accurate. Correlator fires on matching patterns. No memory leak in event buffer (pruned to window).
+### Output
+Working event bus with error isolation, statistics, and correlation detection.
+### Quality Gate
+emit() delivers to all handlers even if one throws. Statistics are accurate. Correlator fires on matching patterns. No memory leak in event buffer (pruned to window).
 
 ### Phase 5: VALIDATE -- Test Everything
-**Entry criteria:** Event bus implemented with all features.
-**Actions:**
+### Entry Criteria
+Event bus implemented with all features.
+### Actions
 1. Test event delivery:
    - Type-specific subscriber receives only matching events
    - Wildcard subscriber receives all events
@@ -133,8 +150,19 @@ PHASE 5: VALIDATE      --> Test event delivery, handler failures, correlation de
 5. Test buffer management:
    - Buffer does not grow unbounded
    - Old events are pruned when outside the window
-**Output:** Test results confirming delivery, isolation, correlation, and statistics.
-**Quality gate:** All delivery tests pass. Error isolation verified. Correlation fires correctly. No memory leaks. Statistics accurate.
+### Output
+Test results confirming delivery, isolation, correlation, and statistics.
+### Quality Gate
+All delivery tests pass. Error isolation verified. Correlation fires correctly. No memory leaks. Statistics accurate.
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Synchronous typed pub-sub event bus with frozen dataclass events, wildcard subsc, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 
@@ -194,3 +222,7 @@ Subscribers observe events, not state.
 - **Tick Engine**: The tick engine's observers can emit events onto the bus. The tick is the clock; the bus is the nervous system.
 - **Task Decomposition**: Task completion/failure emits events that trigger learning loops and parent-completion checks.
 - **Reward Signals**: TASK_COMPLETED and TASK_FAILED events carry the outcome data needed for reward computation.
+
+---
+
+Copyright 2024-present The Wayfinder Trust. All rights reserved.

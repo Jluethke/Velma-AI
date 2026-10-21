@@ -4,14 +4,14 @@
   "steps": [
     {
       "id": "step_1_schema_connect",
-      "skill_name": "Database Connection Validator",
+      "skill_name": "database-connection-validator",
       "inputs": {
-        "host": "database_connection.host",
-        "port": "database_connection.port",
-        "database_name": "database_connection.database_name",
-        "username": "database_connection.username",
-        "password": "database_connection.password",
-        "connection_type": "database_connection.connection_type"
+        "connection_type": "from_context.connection_type",
+        "database_name": "from_context.database_name",
+        "host": "from_context.host",
+        "password": "from_context.password",
+        "port": "from_context.port",
+        "username": "from_context.username"
       },
       "outputs": {
         "connection_status": "connection_verified",
@@ -21,11 +21,11 @@
     },
     {
       "id": "step_2_metadata_extract",
-      "skill_name": "Schema Metadata Extractor",
+      "skill_name": "schema-metadata-extractor",
       "inputs": {
-        "raw_schema_metadata": "step_1_schema_connect.raw_schema_metadata",
-        "schema_filter": "schema_filter",
-        "table_filter": "table_filter"
+        "raw_schema_metadata": "step_1_schema_connect.connection_status",
+        "schema_filter": "from_context.schema_filter",
+        "table_filter": "from_context.table_filter"
       },
       "outputs": {
         "column_metadata": "structured_column_metadata",
@@ -35,58 +35,58 @@
     },
     {
       "id": "step_3_relationship_mapper",
-      "skill_name": "Relationship Graph Builder",
+      "skill_name": "relationship-graph-builder",
       "inputs": {
-        "column_metadata": "step_2_metadata_extract.structured_column_metadata",
-        "constraint_mappings": "step_2_metadata_extract.pk_fk_constraints"
+        "column_metadata": "step_2_metadata_extract.column_metadata",
+        "constraint_mappings": "step_2_metadata_extract.column_metadata"
       },
       "outputs": {
-        "relationships_array": "documented_relationships",
-        "cardinality_map": "relationship_cardinalities"
+        "cardinality_map": "relationship_cardinalities",
+        "relationships_array": "documented_relationships"
       },
       "parallel_group": 1
     },
     {
       "id": "step_4_sample_collector",
-      "skill_name": "Data Sampler with PII Detection",
+      "skill_name": "data-sampler-with-pii-detection",
       "inputs": {
-        "connection_status": "step_1_schema_connect.connection_verified",
-        "column_metadata": "step_2_metadata_extract.structured_column_metadata",
-        "sampling_config": "sampling_config"
+        "column_metadata": "step_2_metadata_extract.column_metadata",
+        "connection_status": "step_1_schema_connect.connection_status",
+        "sampling_config": "from_context.sampling_config"
       },
       "outputs": {
-        "sample_values": "collected_samples",
+        "data_quality_notes": "quality_observations",
         "pii_flags": "pii_detection_results",
-        "data_quality_notes": "quality_observations"
+        "sample_values": "collected_samples"
       },
       "parallel_group": 2
     },
     {
       "id": "step_5_business_context",
-      "skill_name": "Business Context Enricher",
+      "skill_name": "business-context-enricher",
       "inputs": {
-        "column_metadata": "step_2_metadata_extract.structured_column_metadata",
-        "business_context_source": "business_context_source"
+        "business_context_source": "from_context.business_context_source",
+        "column_metadata": "step_2_metadata_extract.column_metadata"
       },
       "outputs": {
         "business_descriptions": "enriched_descriptions",
-        "valid_values": "enumerated_values",
-        "missing_descriptions": "gaps_identified"
+        "missing_descriptions": "gaps_identified",
+        "valid_values": "enumerated_values"
       },
       "parallel_group": 2
     },
     {
       "id": "step_6_dictionary_compile",
-      "skill_name": "Data Dictionary Compiler",
+      "skill_name": "data-dictionary-compiler",
       "inputs": {
-        "column_metadata": "step_2_metadata_extract.structured_column_metadata",
-        "relationships_array": "step_3_relationship_mapper.documented_relationships",
-        "sample_values": "step_4_sample_collector.collected_samples",
-        "pii_flags": "step_4_sample_collector.pii_detection_results",
-        "data_quality_notes": "step_4_sample_collector.quality_observations",
-        "business_descriptions": "step_5_business_context.enriched_descriptions",
-        "valid_values": "step_5_business_context.enumerated_values",
-        "output_format": "output_format"
+        "business_descriptions": "step_5_business_context.business_descriptions",
+        "column_metadata": "step_2_metadata_extract.column_metadata",
+        "data_quality_notes": "step_4_sample_collector.data_quality_notes",
+        "output_format": "from_context.output_format",
+        "pii_flags": "step_4_sample_collector.data_quality_notes",
+        "relationships_array": "step_3_relationship_mapper.cardinality_map",
+        "sample_values": "step_4_sample_collector.data_quality_notes",
+        "valid_values": "step_5_business_context.business_descriptions"
       },
       "outputs": {
         "data_dictionary": "compiled_dictionary",
@@ -96,15 +96,15 @@
     },
     {
       "id": "step_7_validation_report",
-      "skill_name": "Dictionary Validator",
+      "skill_name": "dictionary-validator",
       "inputs": {
-        "data_dictionary": "step_6_dictionary_compile.compiled_dictionary",
-        "missing_descriptions": "step_5_business_context.gaps_identified",
-        "pii_flags": "step_4_sample_collector.pii_detection_results"
+        "data_dictionary": "step_6_dictionary_compile.data_dictionary",
+        "missing_descriptions": "step_5_business_context.business_descriptions",
+        "pii_flags": "step_4_sample_collector.data_quality_notes"
       },
       "outputs": {
-        "validation_report": "comprehensive_validation",
-        "final_dictionary": "validated_dictionary"
+        "final_dictionary": "validated_dictionary",
+        "validation_report": "comprehensive_validation"
       },
       "parallel_group": 4
     }
@@ -291,5 +291,23 @@
     "step_2_metadata_extract",
     "step_6_dictionary_compile",
     "step_7_validation_report"
-  ]
+  ],
+  "chain_links": {
+    "prerequisites": [],
+    "next_chains": [],
+    "related_chains": [
+      {
+        "chain_name": "database-schema-design",
+        "relationship": "complement"
+      },
+      {
+        "chain_name": "schema-migrator-chain",
+        "relationship": "complement"
+      },
+      {
+        "chain_name": "sql-database-tuning",
+        "relationship": "complement"
+      }
+    ]
+  }
 }

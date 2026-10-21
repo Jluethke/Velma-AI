@@ -62,6 +62,15 @@
 
 ---
 
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Assemble the conventional board design from cited vendor reference designs and c, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
+
 ## Exit Criteria
 
 DONE when the conventional design is fully cited and all six baseline metrics are computed from datasheet and distributor data.

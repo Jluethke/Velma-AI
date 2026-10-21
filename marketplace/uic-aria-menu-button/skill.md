@@ -1,6 +1,6 @@
-# Menu Button: APG Menu Button and Menu Conformance
+# Menu Button: governance engine Menu Button and Menu Conformance
 
-**One-line description:** Builds or corrects an actions menu to the WAI-ARIA APG Menu Button and Menu patterns: a `<button>` with `aria-haspopup` and `aria-expanded`, a `role="menu"` list of `menuitem`/`menuitemcheckbox`/`menuitemradio` items with roving focus, open keys that pick first or last item, Escape and Tab close rules, type-ahead, outside-click close, and focus return, after first confirming the content is actions and not navigation.
+**One-line description:** Builds or corrects an actions menu to the WAI-ARIA governance engine Menu Button and Menu patterns: a `<button>` with `aria-haspopup` and `aria-expanded`, a `role="menu"` list of `menuitem`/`menuitemcheckbox`/`menuitemradio` items with roving focus, open keys that pick first or last item, Escape and Tab close rules, type-ahead, outside-click close, and focus return, after first confirming the content is actions and not navigation.
 
 **Execution Pattern:** Phase Pipeline
 
@@ -16,7 +16,7 @@
 
 ## Outputs
 
-- `menu_conformance` (object): Checklist of APG Menu Button and Menu requirements with pass/fail and evidence (attribute snapshots, `document.activeElement` after each key, accessibility tree values).
+- `menu_conformance` (object): Checklist of governance engine Menu Button and Menu requirements with pass/fail and evidence (attribute snapshots, `document.activeElement` after each key, accessibility tree values).
 
 ---
 
@@ -33,7 +33,7 @@
    | Runs a command in the app (Rename, Duplicate, Delete) | `menuitem` |
    | Toggles an on/off option | `menuitemcheckbox` with `aria-checked` |
    | Picks one of a group | `menuitemradio` with `aria-checked`, items grouped by `role="group"` |
-   | Goes to another page or URL | Not a menu. Use the APG Disclosure pattern with a list of links. |
+   | Goes to another page or URL | Not a menu. Use the governance engine Disclosure pattern with a list of links. |
 
 2. If every item navigates, stop and return to `uic-aria-pattern-select` with "Disclosure".
 3. If items mix actions and links, keep the menu and make link items `role="menuitem"` on an `<a href>` only if the contract requires it; record the decision.
@@ -63,11 +63,11 @@ Item classification.
    </ul>
    ```
    `aria-haspopup="menu"` and `aria-haspopup="true"` are equivalent in WAI-ARIA 1.2. `aria-expanded` is `"true"` only while open.
-2. Open keys on the button (APG): Enter, Space and ArrowDown open and focus the first item; ArrowUp opens and focuses the last item. Enter and Space arrive as native button `click`; distinguish keyboard opening by tracking the last key in `keydown`, or always focus the first item on click-open (record choice).
-3. Keys inside the menu (roving focus, every item `tabindex="-1"`, focused one receives `.focus()`): ArrowDown next item, ArrowUp previous (wrap is optional in APG; record choice), Home first, End last, Enter activates and closes, Space activates checkbox/radio items (and closes or stays open per contract), Escape closes and focuses the button, Tab closes the menu and lets focus move on naturally (do not `preventDefault`).
+2. Open keys on the button (governance engine): Enter, Space and ArrowDown open and focus the first item; ArrowUp opens and focuses the last item. Enter and Space arrive as native button `click`; distinguish keyboard opening by tracking the last key in `keydown`, or always focus the first item on click-open (record choice).
+3. Keys inside the menu (roving focus, every item `tabindex="-1"`, focused one receives `.focus()`): ArrowDown next item, ArrowUp previous (wrap is optional in governance engine; record choice), Home first, End last, Enter activates and closes, Space activates checkbox/radio items (and closes or stays open per contract), Escape closes and focuses the button, Tab closes the menu and lets focus move on naturally (do not `preventDefault`).
 4. Type-ahead: printable character moves to the next item starting with that character. Reuse the buffer approach from `uic-keyboard-handler-implement`.
 5. Pointer dismissal: a `pointerdown` listener on `document` while open closes the menu when the target is outside both button and menu; remove the listener on close and unmount.
-6. Disabled items stay focusable with `aria-disabled="true"` (APG allows this so users can discover them) and do nothing on activation.
+6. Disabled items stay focusable with `aria-disabled="true"` (governance engine allows this so users can discover them) and do nothing on activation.
 7. Positioning: if you use a positioning library (Floating UI is common), read its docs for cleanup (`autoUpdate` returns a cleanup function); call it on close.
 
 ### Output
@@ -112,7 +112,7 @@ Illustrative. Svelte `RowActions.svelte` with Rename, Duplicate, Delete.
 
 ## Exit Criteria
 
-DONE when content is confirmed as actions, roles and attributes match APG, open, navigation, type-ahead, Escape, Tab and outside-click behaviors are observed, and focus returns to the button on Escape and activation.
+DONE when content is confirmed as actions, roles and attributes match governance engine, open, navigation, type-ahead, Escape, Tab and outside-click behaviors are observed, and focus returns to the button on Escape and activation.
 
 ---
 

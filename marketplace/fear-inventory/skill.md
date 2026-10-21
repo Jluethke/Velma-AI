@@ -34,8 +34,7 @@ ACT     --> You pick one fear to face this week and one to stop feeding.
 
 ### OBSERVE: Name the Fears
 
-**Actions:**
-
+### Actions
 1. **Open the door.** Ask: "What's the area of life where fear is running the show? Not just 'I'm a little nervous' -- where is fear actually making decisions for you? Where are you NOT doing something because you're afraid?" The distinction matters. Everyone has fears. The question is where fear has become the decision-maker.
 
 2. **Dump them all.** Ask: "Let's get every fear on the table. Don't filter, don't judge, don't rank. Just list them. What are you afraid will happen? What are you afraid people will think? What are you afraid you'll find out about yourself?" Three categories of fear to probe:
@@ -47,14 +46,14 @@ ACT     --> You pick one fear to face this week and one to stop feeding.
 
 4. **Name the avoidance.** Ask: "What specific actions are you not taking because of these fears? What conversations, applications, launches, emails, phone calls are sitting undone?" The avoidance behavior is the real cost of fear. Fear itself is free -- it's the avoidance that charges you.
 
-**Quality gate:** At least 5 fears named. At least one from each category (external, internal, phantom). At least one hidden/behind-the-fear layer explored. Avoidance behaviors identified.
+### Quality Gate
+At least 5 fears named. At least one from each category (external, internal, phantom). At least one hidden/behind-the-fear layer explored. Avoidance behaviors identified.
 
 ---
 
 ### REASON: Do the Math
 
-**Actions:**
-
+### Actions
 1. **The probability question.** For each fear, ask: "What's the actual probability this happens? Not the feeling of probability -- the actual likelihood. Has it happened to anyone you know? How often does this actually occur in reality?" Most fears live at emotional 90% probability but actual 10% probability. Putting a number on it -- even a rough one -- breaks the spell.
 
 2. **The realistic worst case.** For each fear, ask: "If this fear came true -- the realistic version, not the disaster movie version -- what ACTUALLY happens next? Describe the Tuesday after the worst case. You wake up. What's your day like?" The movie version of fear is dramatic and final. The realistic version usually involves a bad week, some discomfort, and then life continuing. Walk them through the specific next day.
@@ -71,14 +70,14 @@ ACT     --> You pick one fear to face this week and one to stop feeding.
    - **Recovery time:** Quick (weeks), Moderate (months), Long (years)
    - **Cost of avoidance:** Low, Medium, High
 
-**Quality gate:** Every fear has probability, impact, recovery, and avoidance cost scores. At least one fear has been revealed as lower-probability than it felt. The cost of inaction is quantified.
+### Quality Gate
+Every fear has probability, impact, recovery, and avoidance cost scores. At least one fear has been revealed as lower-probability than it felt. The cost of inaction is quantified.
 
 ---
 
 ### PLAN: Sort the Fears
 
-**Actions:**
-
+### Actions
 1. **Classify each fear into three buckets.**
    - **Protective fears (keep):** High probability AND high impact AND low recoverability. These fears are doing their job. They're protecting you from genuinely dangerous situations. Listen to them. Examples: "Don't invest money you can't afford to lose," "Don't ignore health symptoms."
    - **Limiting fears (override):** Low-to-medium probability, medium impact, reasonable recoverability, HIGH cost of avoidance. These fears are holding you back from things that would improve your life. The risk is real but manageable, and the cost of not acting is higher than the cost of acting. Examples: "Asking for a raise," "Starting the business," "Having the hard conversation."
@@ -90,15 +89,15 @@ ACT     --> You pick one fear to face this week and one to stop feeding.
 
 4. **For phantom fears:** Ask: "Where did this fear come from? Who taught you to be afraid of this? Is their experience relevant to your actual situation?" Phantom fears often dissolve when you trace them to their source and realize the source doesn't apply to you.
 
-**Quality gate:** Every fear is classified as protective, limiting, or phantom. At least one limiting fear has a specific next action. At least one phantom fear has been traced to its origin.
+### Quality Gate
+Every fear is classified as protective, limiting, or phantom. At least one limiting fear has a specific next action. At least one phantom fear has been traced to its origin.
 
 ---
 
 ### ACT: Face One, Starve One
 
-**Actions:**
-
-1. **Face one.** Ask: "Which limiting fear are you going to take one small step into this week? Not conquer -- just step into. What's the smallest action that makes the fear slightly less powerful?" Define the specific action, the specific day, and the specific first physical move ("open the laptop and type the first sentence," "pick up the phone and dial").
+### Actions
+1. **Face one.** Ask: "Which limiting fear are you going to take one small step into this week? Not conquer -- just step into. What's the smallest action that makes the fear slightly less capable?" Define the specific action, the specific day, and the specific first physical move ("open the laptop and type the first sentence," "pick up the phone and dial").
 
 2. **Starve one.** Ask: "Which phantom fear are you going to stop feeding? What are you going to stop doing that feeds this fear -- the googling, the catastrophizing, the asking for reassurance, the avoidance ritual?" Fears are like organisms. They eat attention. Starve them and they shrink.
 
@@ -106,7 +105,17 @@ ACT     --> You pick one fear to face this week and one to stop feeding.
 
 4. **The re-inventory.** Say: "In a month, do this again. Your fear landscape will have shifted. Some fears will have dissolved from exposure. Some new ones will have appeared. Some protective fears will have been revealed as phantom, and vice versa. The inventory is alive."
 
-**Output:** Classified fear inventory with scores, one fear to face (with specific action and date), one fear to starve (with specific behavior to stop), evidence journal prompt, 30-day re-inventory date.
+### Output
+Classified fear inventory with scores, one fear to face (with specific action and date), one fear to starve (with specific behavior to stop), evidence journal prompt, 30-day re-inventory date.
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Name your fears so they stop running your decisions. Identify, score, and classi, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 

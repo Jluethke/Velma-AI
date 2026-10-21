@@ -32,9 +32,10 @@ ACT     --> Generate plain-English narrative: "Revenue is up 12% because..."
 
 ### OBSERVE: Read Dashboard Data
 
-**Entry criteria:** Dashboard data with at least 3 metrics and comparison values is provided.
+### Entry Criteria
+Dashboard data with at least 3 metrics and comparison values is provided.
 
-**Actions:**
+### Actions
 1. Parse all metrics: extract current value, prior value, delta (absolute and %), target, and status (above/below/at target)
 2. Categorize each metric movement:
    - **Big movers:** >10% change (or >3 percentage points for rate metrics)
@@ -51,18 +52,20 @@ ACT     --> Generate plain-English narrative: "Revenue is up 12% because..."
    - What's the trajectory toward target?
 5. Note any missing or stale metrics (data gaps)
 
-**Output:** Structured summary of all metric movements, categorized by magnitude, with relationships mapped and historical context noted.
+### Output
+Structured summary of all metric movements, categorized by magnitude, with relationships mapped and historical context noted.
 
-**Quality gate:** Every metric has been categorized. Relationships between at least 2 metric pairs are identified. Missing data is flagged.
+### Quality Gate
+Every metric has been categorized. Relationships between at least 2 metric pairs are identified. Missing data is flagged.
 
 ---
 
 ### REASON: Extract Insights
 
-**Entry criteria:** Metric movement summary is complete.
+### Entry Criteria
+Metric movement summary is complete.
 
-**Actions:**
-
+### Actions
 1. **Identify causal chains:**
    - If multiple metrics moved in the same direction, are they connected?
    - Example: signups up + activation down + ARPU down = quality dilution
@@ -91,18 +94,20 @@ ACT     --> Generate plain-English narrative: "Revenue is up 12% because..."
    - Metrics that should have moved but didn't
    - External factors (market, competition, seasonality) not captured in the dashboard
 
-**Output:** Ranked list of insights, each with: observation, explanation (why), business impact (so what), and confidence level.
+### Output
+Ranked list of insights, each with: observation, explanation (why), business impact (so what), and confidence level.
 
-**Quality gate:** At least 2 insights have a causal explanation (not just "X went up"). Every insight passes the "so what?" test. Insights are ranked by business impact, not just magnitude of change.
+### Quality Gate
+At least 2 insights have a causal explanation (not just "X went up"). Every insight passes the "so what?" test. Insights are ranked by business impact, not just magnitude of change.
 
 ---
 
 ### PLAN: Structure the Narrative
 
-**Entry criteria:** Ranked insights are available.
+### Entry Criteria
+Ranked insights are available.
 
-**Actions:**
-
+### Actions
 1. **Select the headline insight:**
    - The single most important thing the audience needs to know
    - Format: "[Metric] is [direction] because [cause], which means [impact]"
@@ -129,18 +134,20 @@ ACT     --> Generate plain-English narrative: "Revenue is up 12% because..."
    - Each action: what to do, who should do it, by when, expected impact
    - Actions must connect to insights (no generic advice)
 
-**Output:** Structured narrative draft with headline, body, and actions, tailored to the specified audience.
+### Output
+Structured narrative draft with headline, body, and actions, tailored to the specified audience.
 
-**Quality gate:** Headline captures the most important insight. Every paragraph connects to a specific data point. Actions are specific and time-bound. Word count is within audience target range.
+### Quality Gate
+Headline captures the most important insight. Every paragraph connects to a specific data point. Actions are specific and time-bound. Word count is within audience target range.
 
 ---
 
 ### ACT: Deliver the Narrative
 
-**Entry criteria:** Narrative draft is complete.
+### Entry Criteria
+Narrative draft is complete.
 
-**Actions:**
-
+### Actions
 1. **Polish the narrative:**
    - Replace jargon with plain language ("user acquisition cost" -> "how much we spend to get each new user")
    - Bold key numbers for scannability
@@ -161,9 +168,11 @@ ACT     --> Generate plain-English narrative: "Revenue is up 12% because..."
    - Note any new patterns detected (for future "this has been happening for N weeks" context)
    - Flag metrics that need deeper investigation beyond this summary
 
-**Output:** Final narrative report, key insights list, and recommended actions.
+### Output
+Final narrative report, key insights list, and recommended actions.
 
-**Quality gate:** A non-technical executive can understand the entire narrative without asking clarifying questions. Every number in the narrative matches the source data. Actions are actionable (not "improve metrics").
+### Quality Gate
+A non-technical executive can understand the entire narrative without asking clarifying questions. Every number in the narrative matches the source data. Actions are actionable (not "improve metrics").
 
 ---
 

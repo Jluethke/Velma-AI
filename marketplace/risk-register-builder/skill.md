@@ -1,6 +1,6 @@
 # Risk Register Builder
 
-**One-line description:** Transform a project scope document into a comprehensive risk register with probability, impact, mitigation strategies, and early warning indicators.
+**One-line description:** Transform a project scope document into a full risk register with probability, impact, mitigation strategies, and early warning indicators.
 
 **Execution Pattern:** Phase Pipeline
 
@@ -61,27 +61,30 @@
 - `register_markdown` (string): Human-readable markdown table with columns: Risk ID | Description | Category | Probability | Impact | Priority | Mitigation | Owner | EWI | Status.
 
 ---
+- `risk_heatmap`: (from manifest)
+- `mitigation_plan`: (from manifest)
+- `early_warning_indicators`: (from manifest)
 
 ## Execution Phases
 
 ### Phase 1: Extract and Analyze Project Scope
 
-**Entry Criteria:**
+### Entry Criteria
 - Scope document is provided and readable (plain text, markdown, or structured format).
 - Project type is specified.
 
-**Actions:**
+### Actions
 1. Parse the scope document to extract and document: project objectives (what success looks like), key deliverables (what will be produced), constraints (technical, budget, timeline, resource), stakeholders (who is affected), and success criteria (how to measure success).
 2. Identify the project timeline: start date, key milestones (with dates), end date, and critical path dependencies.
 3. Identify the budget envelope: total budget, allocation by phase or component, and contingency reserve (if any).
 4. Note any dependencies on external parties, assumptions about availability or behavior, or known constraints that may influence risk.
 5. Flag any ambiguities or missing information in the scope. Create a list of clarification questions if critical elements are missing.
 
-**Output:**
+### Output
 - Structured scope summary with: objectives, deliverables, constraints (technical, budget, timeline, resource), stakeholders, success criteria, timeline with milestones, budget envelope.
 - List of clarification questions (if any).
 
-**Quality Gate:**
+### Quality Gate
 - Scope summary includes all seven elements: objectives, deliverables, constraints, stakeholders, success criteria, timeline with dates, budget with amounts.
 - Timeline is quantified (start date, milestone dates, end date) or clearly bounded (e.g., "Q3 2024").
 - Budget is quantified (total amount) or clearly bounded (e.g., "<$500K").
@@ -91,11 +94,11 @@
 
 ### Phase 2: Identify Risk Categories and Brainstorm Risks
 
-**Entry Criteria:**
+### Entry Criteria
 - Scope analysis is complete (all seven elements documented).
 - Project type is known.
 
-**Actions:**
+### Actions
 1. Select applicable risk categories based on project type. Use this standard list:
    - **Technical:** Technology choices, integration complexity, skill gaps, unproven approaches, performance, security, compliance.
    - **Schedule:** Timeline pressure, dependency delays, resource availability, estimation errors, scope creep.
@@ -115,11 +118,11 @@
 4. Remove exact duplicates and consolidate overlapping risks (e.g., "team skill gap" and "lack of expertise" are the same risk).
 5. Verify that at least 2 risks are identified per category; if fewer, prompt for deeper brainstorming.
 
-**Output:**
+### Output
 - Unfiltered list of identified risks (target: 20-50 for medium projects), each with: risk ID (temp), category, description, trigger, outcome, affected objective.
 - Count of risks by category.
 
-**Quality Gate:**
+### Quality Gate
 - Each risk is specific and actionable (not vague like "technical risk"; must include trigger and outcome).
 - Risks span all applicable categories (minimum 2 risks per category).
 - All scope constraints are mapped to at least one risk.
@@ -130,11 +133,11 @@
 
 ### Phase 3: Assess Probability and Impact
 
-**Entry Criteria:**
+### Entry Criteria
 - Risk list is complete and specific (all quality gate criteria met).
 - Assessment scale is defined (Low/Medium/High or 1-5).
 
-**Actions:**
+### Actions
 1. For each risk, assess **probability** (likelihood of occurrence):
    - If historical_data is provided, use historical frequency as primary basis (e.g., "similar projects experienced this 40% of the time" = Medium or 3/5).
    - Apply expert judgment based on project context (e.g., "new technology" increases probability; "proven approach" decreases probability).
@@ -149,10 +152,10 @@
 3. Risks with Low probability AND Low impact across all four dimensions may be moved to a "watch list" (monitored but not actively mitigated).
 4. Verify consistency: Similar risks (same category, similar trigger) should have similar probability and impact ratings. If ratings differ, document the reason.
 
-**Output:**
+### Output
 - Risk list with: probability rating, probability basis, impact ratings (schedule, budget, quality, scope), overall impact, consistency notes.
 
-**Quality Gate:**
+### Quality Gate
 - Every probability rating has documented basis (historical data, expert judgment, or assumption).
 - Every impact rating is justified (e.g., "schedule impact: 3 weeks based on critical path analysis").
 - Similar risks have consistent ratings (within 1 level of each other); differences are documented.
@@ -163,10 +166,10 @@
 
 ### Phase 4: Calculate Priority and Rank Risks
 
-**Entry Criteria:**
+### Entry Criteria
 - Probability and impact assessments are complete and justified.
 
-**Actions:**
+### Actions
 1. Calculate priority score for each risk:
    - If using Low/Medium/High scale: Convert to numeric (Low=1, Medium=2, High=3) and multiply: Priority Score = Probability × Impact. Range: 1-9.
    - If using 1-5 scale: Priority Score = Probability × Impact. Range: 1-25.
@@ -180,13 +183,13 @@
 6. Create a risk heat map (optional): Plot risks on a 2D grid (Probability vs. Impact) for visualization.
 7. Count risks by priority level.
 
-**Output:**
+### Output
 - Ranked risk list with: risk ID, priority score, priority rank (High/Medium/Low).
 - Count of high/medium/low priority risks.
 - High-priority threshold value (documented for audit trail).
 - Risk heat map (if applicable).
 
-**Quality Gate:**
+### Quality Gate
 - High-priority risks are clearly separated from medium/low (no ambiguity in classification).
 - Risk ranking is defensible (priority scores are calculated consistently).
 - At least 1 and at most 15 risks are classified as High priority (if >15, consider consolidation; if 0, consider risk appetite or assessment bias).
@@ -196,11 +199,11 @@
 
 ### Phase 5: Develop Mitigation Strategies
 
-**Entry Criteria:**
+### Entry Criteria
 - Risks are ranked by priority.
 - High-priority risks are identified.
 
-**Actions:**
+### Actions
 1. For each high-priority risk (and medium-priority risks if resources allow), develop a mitigation strategy:
    - **Avoid:** Eliminate the risk by changing project approach. Example: "Use proven technology instead of experimental."
    - **Reduce:** Lower probability or impact through controls, training, or process improvements. Example: "Hire API specialist to reduce skill gap; add integration testing to reduce quality risk."
@@ -218,12 +221,12 @@
    - Owner must have authority and incentive to execute (not a generic "team").
 4. For risks that cannot be mitigated (infeasible or too costly), document the acceptance decision and contingency plan.
 
-**Output:**
+### Output
 - Mitigation strategy for each high-priority risk: strategy type (avoid/reduce/transfer/accept), action, owner, timeline, cost/effort, success criteria.
 - Contingency plans for accepted risks.
 - Feasibility assessment (cost, timeline, authority).
 
-**Quality Gate:**
+### Quality Gate
 - Every high-priority risk has a mitigation strategy or explicit acceptance with documented contingency.
 - Every mitigation strategy has: specific action (not vague), named owner (not "team"), timeline (start and end dates), cost/effort estimate, and success criteria.
 - Mitigation timelines do not conflict with project critical path.
@@ -234,11 +237,11 @@
 
 ### Phase 6: Define Early Warning Indicators
 
-**Entry Criteria:**
+### Entry Criteria
 - Mitigation strategies are defined.
 - High-priority risks are identified.
 
-**Actions:**
+### Actions
 1. For each risk (especially high-priority), define **early warning indicators (EWIs)**:
    - An EWI is an observable, measurable signal that a risk is beginning to materialize.
    - EWI must appear **before** the risk fully occurs, allowing time for response (lead time: minimum 1 week for schedule risks, 2 weeks for budget risks, 1 month for resource risks).
@@ -256,12 +259,12 @@
    - **Feasible:** Can be monitored with available tools and effort (<X hours/week, where X is acceptable overhead).
 4. Consolidate EWIs: If multiple risks share the same indicator, monitor once and apply to all risks.
 
-**Output:**
+### Output
 - Early warning indicator for each risk: indicator (measurable), threshold, monitoring frequency, monitoring method, response trigger, lead time.
 - Monitoring plan: who monitors, how often, how to escalate, tools/data sources.
 - Consolidated EWI list (if multiple risks share indicators).
 
-**Quality Gate:**
+### Quality Gate
 - Every high-priority risk has at least one EWI.
 - Every EWI is specific and measurable (not subjective).
 - Every EWI has documented lead time (minimum 1 week).
@@ -273,10 +276,10 @@
 
 ### Phase 7: Compile and Validate Risk Register
 
-**Entry Criteria:**
+### Entry Criteria
 - All risks are assessed, prioritized, mitigated, and have EWIs.
 
-**Actions:**
+### Actions
 1. Compile all risk data into a structured risk register:
    - Create a table or JSON object with columns: Risk ID, Description, Category, Probability, Impact (schedule/budget/quality/scope), Priority Score, Priority Rank, Mitigation Strategy, Mitigation Action, Owner, Timeline, Cost/Effort, EWI, Monitoring Frequency, Status.
    - Ensure consistent formatting: probability/impact use same scale throughout, dates are ISO 8601, costs are in same currency.
@@ -301,13 +304,13 @@
    - Mitigation strategies flagged as infeasible and requiring revision.
    - Stakeholder concerns not yet addressed.
 
-**Output:**
+### Output
 - Structured risk register (JSON/table format) with all required fields.
 - Summary statistics (total risks, count by priority, count with mitigation, next review date).
 - Markdown version for documentation and stakeholder communication.
 - List of gaps and refinements (if any).
 
-**Quality Gate:**
+### Quality Gate
 - Risk register is complete: every risk has all required fields (risk ID, description, category, probability, impact, priority, mitigation, owner, timeline, EWI, status).
 - Risk register is internally consistent: probability/impact scales are uniform, dates are valid, owners are named individuals or roles.
 - All high-priority risks have mitigation strategy or explicit acceptance with contingency plan.
@@ -318,6 +321,15 @@
 - Register is ready for stakeholder review and project execution.
 
 ---
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Transform a project scope document into a full risk register with probability, i, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 
@@ -476,3 +488,7 @@ For high-risk projects, create a risk dependency matrix: rows and columns are ri
 **Version:** 2.0  
 **Last Updated:** 2024  
 **License:** Free to use (price: 0 TRUST). Royalties apply to published derivatives.
+
+---
+
+Copyright 2024-present The Wayfinder Trust. All rights reserved.

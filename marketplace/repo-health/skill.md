@@ -18,18 +18,23 @@ ACT     --> Generate health report, cleanup commands, maintenance schedule
 - **repo_path**: string -- Path to the git repository to analyze
 - **scan_scope**: string (optional) -- Which dimensions to scan: "git", "filesystem", "cron", "symlinks", "all" (default: "all")
 - **governance_integration**: boolean (optional) -- Whether to map health score to governance phases
+- `task_description`: (from manifest)
 
 ## Outputs
 
 - **health_report**: object -- Overall score (0-1), per-dimension scores, threshold classification (HEALTHY/NEEDS_ATTENTION/CRITICAL)
 - **issues**: list[object] -- Identified issues with severity, description, and remediation commands
 - **maintenance_schedule**: object -- Recommended cleanup cadence and priority order
+- `guidance`: (from manifest)
+- `code_patterns`: (from manifest)
+- `implementation_example`: (from manifest)
 
 ## Execution
 
 ### OBSERVE: Scan Repository
-**Entry criteria:** A valid git repository path exists and is accessible.
-**Actions:**
+### Entry Criteria
+A valid git repository path exists and is accessible.
+### Actions
 1. Run git status checks:
    - `git rev-parse --abbrev-ref HEAD` -- detect detached HEAD (CRITICAL)
    - `git status --porcelain` -- find modified, deleted, and untracked files
@@ -42,12 +47,15 @@ ACT     --> Generate health report, cleanup commands, maintenance schedule
    - Detect created, deleted, and modified files against baseline
 3. Run cron health checks (if scope includes cron):
    - Detect overdue jobs, conflicts, and timeline scoring
-**Output:** Raw scan data: git state, branch list with ages, file change list, filesystem anomalies, cron status.
-**Quality gate:** All requested scan commands executed without errors. Git repo confirmed valid.
+### Output
+Raw scan data: git state, branch list with ages, file change list, filesystem anomalies, cron status.
+### Quality Gate
+All requested scan commands executed without errors. Git repo confirmed valid.
 
 ### REASON: Score Health
-**Entry criteria:** Raw scan data collected from all requested dimensions.
-**Actions:**
+### Entry Criteria
+Raw scan data collected from all requested dimensions.
+### Actions
 1. Compute health score using the deduction formula:
    ```
    Base Score = 1.0
@@ -70,12 +78,15 @@ ACT     --> Generate health report, cleanup commands, maintenance schedule
    - score < 0.65 = FROZEN
    - score < 0.80 = CONSTRAINED
    - score >= 0.80 = NOMINAL
-**Output:** Scored health assessment with per-dimension breakdowns and issue severity classifications.
-**Quality gate:** Score is between 0.0 and 1.0. All issues have a severity classification. Governance phase mapped if requested.
+### Output
+Scored health assessment with per-dimension breakdowns and issue severity classifications.
+### Quality Gate
+Score is between 0.0 and 1.0. All issues have a severity classification. Governance phase mapped if requested.
 
 ### PLAN: Prioritize Fixes
-**Entry criteria:** Health score computed, issues classified by severity.
-**Actions:**
+### Entry Criteria
+Health score computed, issues classified by severity.
+### Actions
 1. Sort issues by severity: CRITICAL first, then HIGH, MEDIUM, LOW
 2. For each issue, determine the appropriate remediation:
    - Detached HEAD: checkout a named branch or create one
@@ -87,12 +98,15 @@ ACT     --> Generate health report, cleanup commands, maintenance schedule
    - Overdue crons: reschedule or disable
 3. Generate specific cleanup commands for each remediation
 4. Create a maintenance schedule based on issue frequency
-**Output:** Prioritized fix list with remediation commands and a maintenance schedule.
-**Quality gate:** Every identified issue has a remediation action. Commands are executable (valid git/shell syntax).
+### Output
+Prioritized fix list with remediation commands and a maintenance schedule.
+### Quality Gate
+Every identified issue has a remediation action. Commands are executable (valid git/shell syntax).
 
 ### ACT: Generate Report
-**Entry criteria:** Prioritized fix list and maintenance schedule ready.
-**Actions:**
+### Entry Criteria
+Prioritized fix list and maintenance schedule ready.
+### Actions
 1. Compile the health report with:
    - Overall score and classification
    - Per-dimension breakdown (git, filesystem, cron, symlinks)
@@ -102,8 +116,10 @@ ACT     --> Generate health report, cleanup commands, maintenance schedule
 3. Output maintenance schedule with recommended cadence
 4. If CRITICAL issues found, flag for immediate action
 5. If new issues surfaced during report generation, loop back to OBSERVE
-**Output:** Complete health report ready for consumption.
-**Quality gate:** Report includes all dimensions scanned. No CRITICAL issues left without immediate remediation recommendations.
+### Output
+Complete health report ready for consumption.
+### Quality Gate
+Report includes all dimensions scanned. No CRITICAL issues left without immediate remediation recommendations.
 
 ## Exit Criteria
 
@@ -189,3 +205,7 @@ else:
 - **Symlink Integrity Checking**: Health score based on valid/total symlinks with auto-remediation
 - **Cron Job Health Monitoring**: Overdue detection, conflict analysis, and timeline scoring
 - **Daily Git Changelog**: Parse 24h of commits for task types, domain distribution, and author activity
+
+---
+
+Copyright 2024-present The Wayfinder Trust. All rights reserved.

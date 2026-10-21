@@ -13,36 +13,40 @@ PHASE 5: GUARDRAILS --> Set up simple rules and checkpoints so you actually stic
 ```
 
 ## Inputs
-- income: object -- Take-home pay (after taxes), frequency (weekly/biweekly/monthly), any side income or irregular income (freelance, tips, bonuses)
-- fixed_expenses: array -- Bills that are the same every month: rent/mortgage, car payment, insurance, loan payments, subscriptions, phone, internet
-- variable_spending: object -- Rough estimates or bank statement data for: groceries, dining out, gas/transport, entertainment, shopping, personal care, kids, pets
-- financial_situation: object -- (Optional) Current savings, debt balances and interest rates, credit score range, any upcoming big expenses (car repair, medical, holiday)
-- goals: object -- (Optional) What you want from budgeting: stop living paycheck to paycheck, pay off debt, save for something specific, just stop the bleeding
+- `income`: object -- Take-home pay (after taxes), frequency (weekly/biweekly/monthly), any side income or irregular income (freelance, tips, bonuses)
+- `fixed_expenses`: array -- Bills that are the same every month: rent/mortgage, car payment, insurance, loan payments, subscriptions, phone, internet
+- `variable_spending`: object -- Rough estimates or bank statement data for: groceries, dining out, gas/transport, entertainment, shopping, personal care, kids, pets
+- `financial_situation`: object -- (Optional) Current savings, debt balances and interest rates, credit score range, any upcoming big expenses (car repair, medical, holiday)
+- `goals`: object -- (Optional) What you want from budgeting: stop living paycheck to paycheck, pay off debt, save for something specific, just stop the bleeding
 
 ## Outputs
-- spending_snapshot: object -- Where every dollar currently goes, categorized and totaled, with percentage breakdowns
-- monthly_budget: object -- Realistic spending plan organized by category with specific dollar amounts
-- bleed_points: array -- The 3-5 biggest areas where money is disappearing, ranked by dollar amount
-- action_plan: array -- Specific, low-pain changes ranked by impact (dollars saved per month vs. lifestyle disruption)
-- monthly_checkup: object -- Simple weekly and monthly check-in template to stay on track
+- `spending_snapshot`: object -- Where every dollar currently goes, categorized and totaled, with percentage breakdowns
+- `monthly_budget`: object -- Realistic spending plan organized by category with specific dollar amounts
+- `bleed_points`: array -- The 3-5 biggest areas where money is disappearing, ranked by dollar amount
+- `action_plan`: array -- Specific, low-pain changes ranked by impact (dollars saved per month vs. lifestyle disruption)
+- `monthly_checkup`: object -- Simple weekly and monthly check-in template to stay on track
 
 ## Execution
 
 ### Phase 1: INTAKE
-**Entry criteria:** At least take-home income and a rough idea of monthly bills provided.
-**Actions:**
+### Entry Criteria
+At least take-home income and a rough idea of monthly bills provided.
+### Actions
 1. Establish monthly take-home income. If paid biweekly, multiply by 26 and divide by 12 (not by 2 -- this is a common mistake that loses people 2 paychecks a year). If irregular income, use the average of the last 3 worst months as the baseline.
 2. List every fixed expense with exact amounts and due dates. Include the ones people forget: subscriptions (Netflix, Spotify, gym, apps, cloud storage), insurance premiums, minimum debt payments, HOA/condo fees, child support, tithing.
 3. Estimate variable spending. If bank/credit card statements are available, use real numbers. If not, use honest estimates -- then add 20% (people universally underestimate spending on food, Amazon, and "small stuff").
 4. Calculate current monthly surplus or deficit: income minus all spending. If the number is negative, flag immediately -- this is an emergency budget situation.
 5. Note any financial context: high-interest debt (anything above 10% APR), upcoming expenses, whether there's any savings cushion at all.
 
-**Output:** Complete financial snapshot showing income, fixed costs, variable spending, and current monthly surplus/deficit.
-**Quality gate:** Income is verified as after-tax. All subscriptions are accounted for. Variable spending includes the 20% honesty buffer if estimates were used.
+### Output
+Complete financial snapshot showing income, fixed costs, variable spending, and current monthly surplus/deficit.
+### Quality Gate
+Income is verified as after-tax. All subscriptions are accounted for. Variable spending includes the 20% honesty buffer if estimates were used.
 
 ### Phase 2: FORENSICS
-**Entry criteria:** Financial snapshot is complete.
-**Actions:**
+### Entry Criteria
+Financial snapshot is complete.
+### Actions
 1. Categorize all spending into buckets:
    - **Non-negotiable:** Rent/mortgage, utilities, insurance, minimum debt payments, groceries (not dining out), transportation to work, medication
    - **Important but flexible:** Phone plan, internet, groceries (the premium stuff), gas beyond commute, basic clothing
@@ -58,12 +62,15 @@ PHASE 5: GUARDRAILS --> Set up simple rules and checkpoints so you actually stic
 4. Flag subscription stacking: count total subscription spend. Average American household spends $219/month on subscriptions and thinks they spend $86.
 5. Detect payment timing problems: bills clustered on the same dates causing cash crunches, even when monthly income covers everything.
 
-**Output:** Categorized spending breakdown with percentages, identified leaks, subscription audit, and cash flow timing analysis.
-**Quality gate:** Every dollar of spending is categorized. Invisible leaks are quantified. The gap between "what people think they spend" and "what they actually spend" is explicitly shown.
+### Output
+Categorized spending breakdown with percentages, identified leaks, subscription audit, and cash flow timing analysis.
+### Quality Gate
+Every dollar of spending is categorized. Invisible leaks are quantified. The gap between "what people think they spend" and "what they actually spend" is explicitly shown.
 
 ### Phase 3: BLUEPRINT
-**Entry criteria:** Forensics complete.
-**Actions:**
+### Entry Criteria
+Forensics complete.
+### Actions
 1. Set the budget foundation using a modified needs/wants/future framework:
    - **Needs (50-60%):** Non-negotiable bills, groceries, transportation, minimum debt payments, insurance
    - **Wants (20-30%):** Everything that makes life worth living -- dining out, entertainment, hobbies, subscriptions you actually use, personal care
@@ -74,12 +81,15 @@ PHASE 5: GUARDRAILS --> Set up simple rules and checkpoints so you actually stic
 4. Handle irregular expenses: annual subscriptions, quarterly insurance, holiday spending, back-to-school. Divide annual cost by 12 and set aside monthly.
 5. If the budget won't balance (spending exceeds income even after cuts), be direct about it: list what has to change, starting with the highest-impact options that don't require moving or changing jobs.
 
-**Output:** Monthly budget with specific dollar amounts per category, "life happens" buffer included, irregular expenses smoothed to monthly amounts.
-**Quality gate:** Budget totals exactly equal take-home income (every dollar has a job). Buffer is included. No category is set to $0 unless genuinely inapplicable.
+### Output
+Monthly budget with specific dollar amounts per category, "life happens" buffer included, irregular expenses smoothed to monthly amounts.
+### Quality Gate
+Budget totals exactly equal take-home income (every dollar has a job). Buffer is included. No category is set to $0 unless genuinely inapplicable.
 
 ### Phase 4: LEVERS
-**Entry criteria:** Budget blueprint complete.
-**Actions:**
+### Entry Criteria
+Budget blueprint complete.
+### Actions
 1. Rank all potential changes by the "Impact-to-Pain Ratio" (IPR):
    - **High impact, low pain:** Canceling subscriptions you forgot about, switching to annual billing, negotiating insurance rates, dropping premium services to standard (phone plan, streaming tier), refinancing high-interest debt
    - **High impact, medium pain:** Meal prepping 3 days a week instead of buying lunch, switching grocery stores, carpooling or adjusting commute, negotiating rent at renewal
@@ -90,12 +100,15 @@ PHASE 5: GUARDRAILS --> Set up simple rules and checkpoints so you actually stic
 4. If debt exists, recommend a payoff order: avalanche (highest interest first, mathematically optimal) or snowball (smallest balance first, psychologically easier). Pick based on personality, not textbook answers.
 5. Identify "found money" opportunities: employer 401k match not being captured (literally free money being left on the table), FSA/HSA pre-tax savings, tax withholding adjustments if getting large refunds.
 
-**Output:** Prioritized list of 3-5 specific changes with dollar impact, effort level, and honest lifestyle cost. Debt payoff recommendation if applicable. Found money opportunities.
-**Quality gate:** Each recommendation has a specific dollar amount attached. Total savings from recommendations is enough to meet the stated goal. No recommendations that require willpower alone.
+### Output
+Prioritized list of 3-5 specific changes with dollar impact, effort level, and honest lifestyle cost. Debt payoff recommendation if applicable. Found money opportunities.
+### Quality Gate
+Each recommendation has a specific dollar amount attached. Total savings from recommendations is enough to meet the stated goal. No recommendations that require willpower alone.
 
 ### Phase 5: GUARDRAILS
-**Entry criteria:** Lever recommendations selected.
-**Actions:**
+### Entry Criteria
+Lever recommendations selected.
+### Actions
 1. Set up a weekly 5-minute check-in template:
    - How much have I spent this week vs. weekly budget (monthly budget / 4.33)?
    - Any surprise expenses? Pull from buffer or adjust?
@@ -112,8 +125,19 @@ PHASE 5: GUARDRAILS --> Set up simple rules and checkpoints so you actually stic
 4. Create a "wins" tracker: every month, calculate total debt paid off, savings added, and subscriptions cancelled. Seeing progress prevents quitting.
 5. Plan for budget-breaking months: holidays (November-December), back to school (August), tax season, summer vacations. Set aside small amounts in advance rather than blowing the budget.
 
-**Output:** Weekly check-in template, monthly review template, circuit breaker rules, wins tracker, seasonal adjustment calendar.
-**Quality gate:** Check-in takes under 5 minutes. Rules are specific (not "be careful with spending"). Failure recovery is built in.
+### Output
+Weekly check-in template, monthly review template, circuit breaker rules, wins tracker, seasonal adjustment calendar.
+### Quality Gate
+Check-in takes under 5 minutes. Rules are specific (not "be careful with spending"). Failure recovery is built in.
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Takes your income, bills, and spending habits and builds a realistic monthly bud, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 Done when: (1) complete spending snapshot shows where every dollar goes, (2) monthly budget assigns every dollar of income to a category, (3) top 3-5 highest-impact changes are identified with specific dollar amounts, (4) weekly and monthly check-in templates are provided, (5) budget accounts for irregular expenses and has a "life happens" buffer.
@@ -161,13 +185,13 @@ Is the savings ≥ $50/month?
 │   └── No → Medium IPR: Recommend with caveat about sustainability
 └── No → Is it a "set and forget" action (cancel subscription, refinance)?
     ├── Yes → Low-medium IPR: Worth doing, low effort
-    └── No → Low IPR: Skip — mental energy cost exceeds benefit
+    └── No → Low IPR: Skip  --  mental energy cost exceeds benefit
 ```
 
 ### Biweekly Income Conversion
 
 Biweekly (26 pays/year): Monthly income = (gross annual / 12) OR (paycheck × 26 / 12)
-NOT paycheck × 2 — this loses 2 paychecks per year and causes a recurring deficit.
+NOT paycheck × 2  --  this loses 2 paychecks per year and causes a recurring deficit.
 
 ### Debt Payoff Methods
 

@@ -64,17 +64,22 @@
   - `dry_run_summary` (object, optional): If dry_run_mode=true, projected portfolio state without executing trades
 
 ---
+- `deviation_analysis`: (from manifest)
+- `rebalancing_recommendations`: (from manifest)
+- `tax_impact_report`: (from manifest)
+- `trade_list`: (from manifest)
+- `projected_allocation`: (from manifest)
 
 ## Execution Phases
 
 ### Phase 1: Collect and Validate Portfolio Data
 
-**Entry Criteria:**
+### Entry Criteria
 - `portfolio_holdings` is provided and non-empty
 - `client_profile` is provided with required fields (risk_tolerance, time_horizon_years, tax_bracket)
 - `target_allocation` is provided
 
-**Actions:**
+### Actions
 1. Parse and validate all portfolio holdings; confirm total value matches sum of positions (tolerance: within 0.01% due to rounding)
 2. Validate client profile fields; confirm risk_tolerance is one of ["conservative", "moderate", "aggressive"], time_horizon_years is a positive number, tax_bracket is between 0.0 and 0.37
 3. Validate target allocation; confirm asset classes sum to 100% (tolerance: within 0.1%), and that all asset classes in target allocation are present in portfolio (or add with 0 value)
@@ -82,12 +87,12 @@
 5. For optional fields in constraints, apply defaults: max_transaction_cost_percent=0.1, avoid_wash_sales=true, minimum_holding_period_days=0, liquidity_preference="standard", dry_run_mode=false
 6. Flag any missing or invalid data; document assumptions in data quality report
 
-**Output:**
+### Output
 - Validated portfolio snapshot with current allocation percentages (verified to sum to 100% within 0.1%)
 - Validated client profile and target allocation
 - Data quality report listing any warnings, assumptions, or defaults applied
 
-**Quality Gate:**
+### Quality Gate
 - Portfolio total value > 0, verified by: sum(asset_value for each asset) = portfolio_holdings.total_value ± 0.01%
 - All asset classes in target allocation are present in portfolio (or explicitly added with 0 value)
 - Client profile is complete: risk_tolerance ∈ {"conservative", "moderate", "aggressive"}, time_horizon_years > 0, tax_bracket ∈ [0.0, 0.37]
@@ -98,12 +103,12 @@
 
 ### Phase 2: Assess Allocation Deviations
 
-**Entry Criteria:**
+### Entry Criteria
 - Portfolio snapshot and current allocation percentages are available from Phase 1
 - Target allocation is validated
 - Rebalance threshold is defined (default 5%, or from target_allocation.rebalance_threshold_percent)
 
-**Actions:**
+### Actions
 1. For each asset class, calculate deviation = current_percent - target_percent
 2. Identify overweight positions: deviation > rebalance_threshold_percent
 3. Identify underweight positions: deviation < -rebalance_threshold_percent
@@ -112,13 +117,13 @@
 6. Determine rebalancing necessity: set rebalancing_needed = true if (any single deviation exceeds threshold) OR (total portfolio deviation > 10%); otherwise rebalancing_needed = false
 7. Document the decision logic and threshold values used
 
-**Output:**
+### Output
 - Deviation report with columns: asset_class, current_percent, target_percent, deviation_percent, action ("reduce"/"increase"/"hold")
 - Boolean flag: `rebalancing_needed` with explicit decision rationale
 - Total portfolio deviation metric (numeric value)
 - Threshold values used (rebalance_threshold_percent, total_deviation_threshold=10%)
 
-**Quality Gate:**
+### Quality Gate
 - Deviations sum to zero ± 0.1% (verified by: sum(deviation for all asset classes) ≈ 0)
 - Threshold is applied consistently: each asset class is classified as overweight, underweight, or at-target using the same threshold
 - Rebalancing decision is explicit and testable: rebalancing_needed is a boolean with documented decision rule
@@ -128,14 +133,14 @@
 
 ### Phase 3: Calculate Tax Implications
 
-**Entry Criteria:**
+### Entry Criteria
 - Deviation report is complete from Phase 2
 - If rebalancing_needed = false, skip this phase and output "No rebalancing needed; tax analysis not required"
 - Portfolio holdings include cost_basis_per_share for all assets
 - Client tax_bracket is known
 - Account type is specified (taxable vs. tax-deferred)
 
-**Actions:**
+### Actions
 1. If account_type is not "taxable" (e.g., 401k, IRA), skip tax calculations and note "Tax-deferred account; no capital gains tax applies"
 2. For each overweight position identified in Phase 2, calculate unrealized gain/loss per share = current_price - cost_basis_per_share
 3. Calculate total unrealized gain/loss = unrealized_gain_per_share × quantity
@@ -147,7 +152,7 @@
 9. If avoid_wash_sales = true, flag wash-sale risks: for each sale, check if a substantially identical asset was purchased within 30 days before or after the sale date
 10. Document all tax assumptions and edge cases (missing holding periods, missing cost basis, etc.)
 
-**Output:**
+### Output
 - Tax impact analysis per proposed trade with fields: symbol, action, unrealized_gain_loss, holding_period_classification, tax_rate_applied, tax_liability, wash_sale_flag
 - Total capital gains (sum of positive unrealized gains from proposed sales)
 - Total capital losses (sum of negative unrealized gains from proposed sales)
@@ -156,7 +161,7 @@
 - Wash-sale warnings (if applicable): list of trades flagged for wash-sale risk with dates and asset pairs
 - Tax assumptions documented: holding period classification method, tax rates used, edge cases handled
 
-**Quality Gate:**
+### Quality Gate
 - Tax calculations are consistent with client tax_bracket: short-term rates = tax_bracket, long-term rates = 15% or 20%
 - Holding periods are correctly classified: short-term < 365 days, long-term ≥ 365 days
 - All overweight positions have a tax impact calculated (or flagged as "unknown cost basis")
@@ -168,21 +173,21 @@
 
 ### Phase 4: Generate Rebalancing Recommendations
 
-**Entry Criteria:**
+### Entry Criteria
 - Deviation report is complete from Phase 2
 - Tax impact analysis is complete from Phase 3 (or skipped if rebalancing_needed = false or tax-deferred account)
 - Transaction costs and constraints are defined from Phase 1
 
-**Actions:**
+### Actions
 1. If rebalancing_needed = false, output a "hold" recommendation with explanation: "Current allocation is within [threshold]% of target. No rebalancing recommended at this time. Portfolio will be reviewed in [3-6 months]."; skip remaining actions
 2. For each underweight position, calculate target_value = target_percent × total_portfolio_value; calculate shares_to_buy = (target_value - current_value) / current_price
 3. For each overweight position, calculate shares_to_sell = (current_value - target_value) / current_price
 4. Rank sell trades by priority using this order:
-   a. Positions with unrealized losses (tax-loss harvesting candidates) — sorted by loss magnitude (largest first)
-   b. Positions with smallest tax liability (tax-efficient sells) — sorted by tax_liability (smallest first)
-   c. Positions with highest deviation from target — sorted by |deviation| (largest first)
+   a. Positions with unrealized losses (tax-loss harvesting candidates)  --  sorted by loss magnitude (largest first)
+   b. Positions with smallest tax liability (tax-efficient sells)  --  sorted by tax_liability (smallest first)
+   c. Positions with highest deviation from target  --  sorted by |deviation| (largest first)
 5. Rank buy trades by priority using this order:
-   a. Most underweight positions — sorted by |deviation| (largest first)
+   a. Most underweight positions  --  sorted by |deviation| (largest first)
    b. Positions that reduce overall portfolio deviation fastest
 6. Pair sells and buys to minimize cash drag: if portfolio has available cash, suggest buy-first; otherwise suggest sell-first
 7. For each trade, calculate transaction cost using: transaction_cost = trade_value × cost_rate, where cost_rate = 0.05% for equities, 0.01% for bonds, 0% for cash, 0.5% for load mutual funds
@@ -191,13 +196,13 @@
 10. Generate rationale for each trade: "[Action] [Quantity] shares of [Symbol] ([Asset_Class]). Current: [Current%]%, Target: [Target%]%, Deviation: [Deviation%]. Tax impact: $[Tax]. Transaction cost: $[Cost]. Rationale: [Reason based on ranking]."
 11. Calculate expected portfolio allocation after all trades: for each asset class, new_percent = (current_value ± trade_value) / total_portfolio_value
 
-**Output:**
+### Output
 - Ordered list of recommended trades with fields: priority, action, symbol, quantity, estimated_value, rationale, tax_impact, transaction_cost, holding_period_classification
 - Implementation sequence: "Execute trades in priority order (1 first, then 2, etc.). Sell trades should be executed before buy trades to minimize cash drag."
 - Summary of expected portfolio state after rebalancing: "After rebalancing, portfolio allocation will be: [Asset_Class]: [Expected%] (Target: [Target%], Deviation: [Expected_Deviation%])."
 - Total transaction costs and total tax impact across all trades
 
-**Quality Gate:**
+### Quality Gate
 - All trades have a clear, specific rationale (not generic "rebalance" statements)
 - Trades are ordered by priority (1, 2, 3, ... with no gaps)
 - Transaction costs are estimated and documented; all trades with cost > max_transaction_cost_percent are filtered out
@@ -208,11 +213,11 @@
 
 ### Phase 5: Validate Against Constraints and Compliance
 
-**Entry Criteria:**
+### Entry Criteria
 - Recommended trades are generated from Phase 4
 - Constraints are defined from Phase 1 (or defaults applied)
 
-**Actions:**
+### Actions
 1. For each trade, check holding period requirement: if minimum_holding_period_days > 0, verify that (current_date - purchase_date) ≥ minimum_holding_period_days; if not met, mark trade as "conditional" with required execution date
 2. For each sell trade, check wash-sale violations if avoid_wash_sales = true: query purchase history for 30 days before and after proposed sale date; if substantially identical asset was purchased, flag as "wash-sale risk" and suggest deferring sale or harvesting a substitute asset
 3. For each trade, verify account type allows the transaction:
@@ -227,13 +232,13 @@
 7. Reorder trades to prioritize unblocked/approved trades first, then conditional trades, then blocked trades (for documentation)
 8. Generate compliance notes for each blocked or conditional trade: "[Trade] is [status] because [reason]. [Recovery action if applicable]."
 
-**Output:**
+### Output
 - Validated trade list with fields: priority, action, symbol, quantity, compliance_status ("approved"/"conditional"/"blocked"), compliance_notes
 - Compliance notes explaining any blocks or conditions (e.g., "Sell XYZ is blocked due to wash-sale rule; recommend deferring until [date] or harvesting substitute asset ABC instead.")
 - Revised implementation sequence: "Execute approved trades first (priority order). Conditional trades may be executed on [dates]. Blocked trades cannot be executed; see compliance notes for alternatives."
 - Summary of removed trades (if any): "[N] trades were removed due to transaction cost constraints. Removed trades: [List]. Remaining trades achieve [Residual_Deviation%] allocation deviation."
 
-**Quality Gate:**
+### Quality Gate
 - All blocked trades have a documented reason (not vague "constraint violation")
 - Conditional trades have explicit conditions for execution (specific dates, market conditions, etc.)
 - Remaining approved trades are compliant with all constraints (holding period, wash-sale, account type, liquidity)
@@ -244,12 +249,12 @@
 
 ### Phase 6: Perform Cost-Benefit Analysis
 
-**Entry Criteria:**
+### Entry Criteria
 - Validated trade list is complete from Phase 5
 - Tax analysis is complete from Phase 3
 - Deviation report is complete from Phase 2
 
-**Actions:**
+### Actions
 1. Calculate total rebalancing cost: sum(transaction_costs) + net_tax_liability
 2. Estimate risk reduction value from rebalancing: calculate portfolio risk (standard deviation of returns) before and after rebalancing; estimate value of risk reduction in basis points of portfolio value
    - If portfolio is significantly overweight equities (> 5% above target), risk reduction ≈ 10-20 basis points
@@ -263,7 +268,7 @@
    - If ratio < 0.5: "defer" (cost exceeds benefit; rebalance only if deviations worsen significantly)
 5. Document all assumptions: risk reduction estimates, cost calculations, time horizon for reassessment
 
-**Output:**
+### Output
 - Cost-benefit analysis object with fields:
   - `total_rebalancing_cost` (number): sum of transaction costs and net tax liability
   - `risk_reduction_value` (number): estimated value in basis points of portfolio value
@@ -272,7 +277,7 @@
   - `rationale` (string): explanation of recommendation based on cost-benefit ratio and portfolio context
   - `reassessment_date` (string): date to revisit rebalancing decision (3-6 months from now)
 
-**Quality Gate:**
+### Quality Gate
 - Cost-benefit ratio is calculated and documented
 - Recommendation is explicit and tied to ratio thresholds
 - Rationale explains the recommendation in plain language
@@ -282,13 +287,13 @@
 
 ### Phase 7: Document and Summarize
 
-**Entry Criteria:**
+### Entry Criteria
 - Validated trade list is complete from Phase 5
 - Tax analysis is complete from Phase 3
 - Cost-benefit analysis is complete from Phase 6
 - All prior phases have produced outputs
 
-**Actions:**
+### Actions
 1. Compile executive summary (2-3 sentences): portfolio status (current allocation vs. target), key deviations, rebalancing recommendation, expected tax impact, and cost-benefit recommendation
 2. Create current vs. target allocation comparison: table with columns [Asset_Class, Current%, Target%, Deviation%, Action]
 3. List all recommended trades with full details: priority, action, symbol, quantity, value, tax impact, transaction cost, rationale, compliance status
@@ -299,7 +304,7 @@
 8. If dry_run_mode = true, generate dry_run_summary: projected portfolio state, projected tax liability, projected transaction costs, without executing any trades
 9. Assemble all sections into `rebalancing_report` object
 
-**Output:**
+### Output
 - Complete `rebalancing_report` object with all required fields:
   - executive_summary (string)
   - current_allocation (object)
@@ -313,7 +318,7 @@
   - expected_outcome (string)
   - dry_run_summary (object, optional)
 
-**Quality Gate:**
+### Quality Gate
 - Report is complete and internally consistent: all sections are populated, no contradictions between sections
 - All recommendations are traceable to analysis in prior phases: each trade has a rationale that references deviation, tax impact, or cost-benefit analysis
 - Executive summary is clear and actionable: a financial advisor could present this to a client without additional context
@@ -321,6 +326,15 @@
 - If dry_run_mode = true, dry_run_summary is present and shows projected outcomes without committing trades
 
 ---
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Analyze a portfolio allocation against targets, calculate tax and cost implicati, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 
@@ -427,3 +441,7 @@ Store in a `rebalancing_history` object with timestamps, trade details, actual c
 - Identify patterns in client behavior (e.g., frequent contributions that cause drift)
 - Optimize rebalancing strategy over time (e.g., batch trades to reduce costs)
 - Provide accountability and transparency to clients
+
+---
+
+Copyright 2024-present The Wayfinder Trust. All rights reserved.

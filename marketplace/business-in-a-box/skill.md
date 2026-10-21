@@ -5,24 +5,25 @@ Takes a business idea from concept to launch plan in five structured phases: val
 ## Execution Pattern: Phase Pipeline
 
 ## Inputs
-- business_idea: string -- What the business does, who it serves, what problem it solves
-- target_audience: object -- Who the customers are: demographics, psychographics, pain points, current solutions, willingness to pay
-- budget: object -- Available capital for launch (development, marketing, operations), funding source (bootstrapped, funded, side project)
-- timeline: object -- Target launch date, milestones, time commitment (full-time, part-time, nights-and-weekends)
-- founder_skills: array -- What the founder(s) can build themselves vs. what needs to be hired/contracted (technical, sales, marketing, design, domain expertise)
+- `business_idea`: string -- What the business does, who it serves, what problem it solves
+- `target_audience`: object -- Who the customers are: demographics, psychographics, pain points, current solutions, willingness to pay
+- `budget`: object -- Available capital for launch (development, marketing, operations), funding source (bootstrapped, funded, side project)
+- `timeline`: object -- Target launch date, milestones, time commitment (full-time, part-time, nights-and-weekends)
+- `founder_skills`: array -- What the founder(s) can build themselves vs. what needs to be hired/contracted (technical, sales, marketing, design, domain expertise)
 
 ## Outputs
-- idea_validation: object -- Problem-solution fit assessment with evidence, risk factors, and go/no-go recommendation
-- market_research: object -- TAM/SAM/SOM sizing, competitor matrix, positioning strategy, unfair advantages
-- mvp_definition: object -- Feature list (must-have / nice-to-have / post-launch), tech stack recommendation, timeline, budget estimate
-- financial_model: object -- Revenue model, pricing strategy, unit economics (LTV, CAC, margins), 12-month projection
-- launch_plan: object -- Go-to-market channels, messaging framework, first 100 customers strategy, launch timeline
+- `idea_validation`: object -- Problem-solution fit assessment with evidence, risk factors, and go/no-go recommendation
+- `market_research`: object -- TAM/SAM/SOM sizing, competitor matrix, positioning strategy, unfair advantages
+- `mvp_definition`: object -- Feature list (must-have / nice-to-have / post-launch), tech stack recommendation, timeline, budget estimate
+- `financial_model`: object -- Revenue model, pricing strategy, unit economics (LTV, CAC, margins), 12-month projection
+- `launch_plan`: object -- Go-to-market channels, messaging framework, first 100 customers strategy, launch timeline
 
 ## Execution
 
 ### Phase 1: IDEA -- Validate Problem-Solution Fit
-**Entry criteria:** Business idea and target audience described.
-**Actions:**
+### Entry Criteria
+Business idea and target audience described.
+### Actions
 1. Deconstruct the idea into three testable components:
    - **Problem:** Is this a real problem that enough people have? How do they solve it today? How painful is the current solution?
    - **Solution:** Does the proposed solution actually solve the problem better than alternatives? What's the core value proposition?
@@ -42,12 +43,15 @@ Takes a business idea from concept to launch plan in five structured phases: val
    - **PIVOT:** Problem is real but solution needs adjustment (different approach, different audience, different pricing).
    - **NO-GO:** Problem is not real, market too small, competition unbeatable, or risks unmanageable.
 
-**Output:** Problem-solution fit assessment with evidence for each component, risk matrix, go/pivot/no-go recommendation with rationale.
-**Quality gate:** All three components (problem, solution, willingness to pay) are evaluated with specific evidence (not just opinions). Risk factors are rated. Recommendation is justified by evidence.
+### Output
+Problem-solution fit assessment with evidence for each component, risk matrix, go/pivot/no-go recommendation with rationale.
+### Quality Gate
+All three components (problem, solution, willingness to pay) are evaluated with specific evidence (not just opinions). Risk factors are rated. Recommendation is justified by evidence.
 
 ### Phase 2: RESEARCH -- Market Sizing and Competitive Landscape
-**Entry criteria:** Idea validated (GO or PIVOT with adjustments).
-**Actions:**
+### Entry Criteria
+Idea validated (GO or PIVOT with adjustments).
+### Actions
 1. Calculate market size using both top-down and bottom-up methods:
    - **TAM (Total Addressable Market):** If every possible customer bought the product. Usually from industry reports or census data. "There are 60 million freelancers in the US."
    - **SAM (Serviceable Addressable Market):** The segment you can realistically serve with your solution. Filtered by geography, language, platform, niche. "5 million US freelancers who invoice clients regularly and use digital tools."
@@ -66,12 +70,15 @@ Takes a business idea from concept to launch plan in five structured phases: val
    - Proprietary technology, network effects, domain expertise, existing audience, partnerships, cost structure advantages, regulatory advantages.
    - Be honest: most startups have 0-1 real unfair advantages. That's okay. But know what they are (or aren't).
 
-**Output:** Market sizing (TAM/SAM/SOM with methodology), competitor matrix, positioning statement, unfair advantages assessment.
-**Quality gate:** TAM/SAM/SOM are calculated with stated methodology (top-down, bottom-up, or both). At least 3 competitors analyzed. Positioning identifies a specific gap or differentiator. Market size is expressed in both users and revenue.
+### Output
+Market sizing (TAM/SAM/SOM with methodology), competitor matrix, positioning statement, unfair advantages assessment.
+### Quality Gate
+TAM/SAM/SOM are calculated with stated methodology (top-down, bottom-up, or both). At least 3 competitors analyzed. Positioning identifies a specific gap or differentiator. Market size is expressed in both users and revenue.
 
 ### Phase 3: MVP -- Define Minimum Viable Product
-**Entry criteria:** Market research complete, positioning defined.
-**Actions:**
+### Entry Criteria
+Market research complete, positioning defined.
+### Actions
 1. Define the core user journey -- the one workflow that delivers the primary value:
    - Map: User has [problem] -> User discovers product -> User does [core action] -> User gets [value] -> User is willing to pay/return.
    - The MVP must enable this entire journey. Nothing more.
@@ -92,12 +99,15 @@ Takes a business idea from concept to launch plan in five structured phases: val
    - Budget: development cost + hosting ($50-200/mo to start) + tools/services + initial marketing ($500-2000 for launch)
 5. Define the "launch line" -- the exact set of features and quality level that constitutes "ready to launch." Draw it explicitly so scope doesn't creep.
 
-**Output:** Feature categorization (must/should/nice/won't), tech stack recommendation, milestone-based timeline, budget estimate, launch line definition.
-**Quality gate:** Must-have features are genuinely minimal (challenge every item: "Would a user still get value without this?"). Timeline includes 40% buffer. Budget covers all categories (dev, hosting, tools, marketing). Tech stack matches founder skills.
+### Output
+Feature categorization (must/should/nice/won't), tech stack recommendation, milestone-based timeline, budget estimate, launch line definition.
+### Quality Gate
+Must-have features are genuinely minimal (challenge every item: "Would a user still get value without this?"). Timeline includes 40% buffer. Budget covers all categories (dev, hosting, tools, marketing). Tech stack matches founder skills.
 
 ### Phase 4: BUSINESS -- Revenue Model and Financial Projection
-**Entry criteria:** MVP defined with pricing context from market research.
-**Actions:**
+### Entry Criteria
+MVP defined with pricing context from market research.
+### Actions
 1. Select revenue model:
    - **Subscription (SaaS):** Monthly/annual recurring revenue. Best for ongoing-value products. Churn is the key metric.
    - **Transaction fee:** Take a cut of each transaction. Best for marketplaces. GMV and take rate are key metrics.
@@ -122,15 +132,18 @@ Takes a business idea from concept to launch plan in five structured phases: val
    - Month 4-6: Early traction. Growing MRR, refining channels.
    - Month 7-12: Growth phase. Scaling what works, cutting what doesn't.
    - Include: revenue, COGS, gross profit, marketing spend, operational costs, net profit/loss, cash balance.
-   - Model three scenarios: conservative, baseline, optimistic.
+   - Model three scenarios: conservative, baseline, optimiztic.
    - Identify the "default alive" date: when does the business generate enough revenue to cover all costs? (Paul Graham)
 
-**Output:** Revenue model selection with rationale, pricing tiers, unit economics (COGS, margin, CAC, LTV, LTV:CAC, payback), 12-month projection (3 scenarios), default alive date.
-**Quality gate:** Unit economics are internally consistent (LTV > CAC, margins are positive, payback period is reasonable). 12-month projection covers all major cost and revenue categories. Three scenarios are meaningfully different (not just "multiply by 0.8/1.0/1.2"). Default alive date is calculated.
+### Output
+Revenue model selection with rationale, pricing tiers, unit economics (COGS, margin, CAC, LTV, LTV:CAC, payback), 12-month projection (3 scenarios), default alive date.
+### Quality Gate
+Unit economics are internally consistent (LTV > CAC, margins are positive, payback period is reasonable). 12-month projection covers all major cost and revenue categories. Three scenarios are meaningfully different (not just "multiply by 0.8/1.0/1.2"). Default alive date is calculated.
 
 ### Phase 5: LAUNCH -- Go-to-Market Plan
-**Entry criteria:** Financial model and pricing set.
-**Actions:**
+### Entry Criteria
+Financial model and pricing set.
+### Actions
 1. Identify go-to-market channels ranked by fit:
    - **Content marketing:** Blog, SEO, social media content. Best for long-term organic growth. Slow to start (3-6 months for SEO).
    - **Community-driven:** Product Hunt launch, Reddit, niche forums, Slack/Discord communities. Best for developer tools, creator tools. Fast, free, short-lived spike.
@@ -156,8 +169,19 @@ Takes a business idea from concept to launch plan in five structured phases: val
    - T-0: Launch day. Multi-channel announcement. Monitor everything. Respond to every comment/question.
    - T+1 to T+4 weeks: First 100 customers sprint. Iterate rapidly based on feedback.
 
-**Output:** Ranked channel strategy, messaging framework, first 100 customers playbook, launch timeline.
-**Quality gate:** At least 3 channels are identified with fit rationale and budget requirements. Messaging has all 5 components (headline, pain, solution, proof, CTA). First 100 strategy has three phases (1-10, 11-50, 51-100) with specific tactics. Launch timeline has specific dates and actions.
+### Output
+Ranked channel strategy, messaging framework, first 100 customers playbook, launch timeline.
+### Quality Gate
+At least 3 channels are identified with fit rationale and budget requirements. Messaging has all 5 components (headline, pain, solution, proof, CTA). First 100 strategy has three phases (1-10, 11-50, 51-100) with specific tactics. Launch timeline has specific dates and actions.
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for End-to-end business launch framework: validates the idea against willingness-to-, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 The pipeline is complete when all five outputs are delivered: idea validation, market research, MVP definition, financial model, and launch plan. Each output builds on the previous. The business owner has enough information to make a go/no-go decision and, if go, to begin execution immediately.
@@ -232,3 +256,7 @@ The skill persists:
 - Customer acquisition data for comparing actual vs projected
 - Pivot history (what changed and why)
 - Competitor landscape updates
+
+---
+
+Copyright 2024-present The Wayfinder Trust. All rights reserved.

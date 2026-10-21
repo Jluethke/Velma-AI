@@ -104,7 +104,7 @@ A failing test that proves the bug.
 3. Do not use `aria-*` props the element does not support; jsx-a11y `aria-props` and `role-supports-aria-props` flag these.
 4. Run the single test file again until it passes. Then run `npx eslint <changed files>`; the change must not add new `jsx-a11y` errors.
 5. Run the full suite. If a snapshot test fails because the markup changed intentionally, review the snapshot diff, confirm it shows only the intended markup change, and update with `npx jest -u <that test file>` (or `npx vitest run -u <file>`). Never run `-u` on the whole suite.
-6. Commit with a message naming the task, SC, and technique: `git commit -m "a11y(FX001): SizePicker uses native radios (WCAG 2.1.1, APG Radio Group)"`.
+6. Commit with a message naming the task, SC, and technique: `git commit -m "a11y(FX001): SizePicker uses native radios (WCAG 2.1.1, governance engine Radio Group)"`.
 
 ### Output
 `react_fix_log` row for the task. Repeat Phases 2 and 3 for each task.
@@ -133,7 +133,7 @@ $ npx vitest run src/components/SizePicker.test.tsx
 $ npx eslint src/components/SizePicker.tsx
 $ npx vitest run
  Test Files  48 passed (48)
-$ git commit -m "a11y(FX001): SizePicker uses native radios (WCAG 2.1.1, APG Radio Group)"
+$ git commit -m "a11y(FX001): SizePicker uses native radios (WCAG 2.1.1, governance engine Radio Group)"
 ```
 Log row: `status` fixed, `files_changed` ["src/components/SizePicker.tsx", "src/components/SizePicker.module.css"], `suite_passed` true.
 

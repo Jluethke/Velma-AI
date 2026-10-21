@@ -1,6 +1,6 @@
 # Food Producer Distributor Agreement
 
-**One-line description:** A food producer and a distributor each submit their real product capabilities, market requirements, and margin expectations before signing — AI aligns on a distribution arrangement that gets product to shelf without the margin compression and promotional demands that erode the producer's economics.
+**One-line description:** A food producer and a distributor each submit their real product capabilities, market requirements, and margin expectations before signing  --  AI aligns on a distribution arrangement that gets product to shelf without the margin compression and promotional demands that erode the producer's economics.
 
 **Execution Pattern:** Phase Pipeline
 
@@ -41,46 +41,84 @@
 ## Execution Phases
 
 ### Phase 0: Pre-Flight Check
-**Entry Criteria:** Both submissions received.
-**Actions:** Confirm producer's economics and distributor's margin requirements and market access both present.
-**Output:** Readiness confirmation.
-**Quality Gate:** Producer's pricing structure and distributor's margin requirements and market access both present.
+### Entry Criteria
+Both submissions received.
+### Actions
+Confirm producer's economics and distributor's margin requirements and market access both present.
+### Output
+Readiness confirmation.
+### Quality Gate
+Producer's pricing structure and distributor's margin requirements and market access both present.
 
 ---
 
 ### Phase 1: Assess Economics and Market Fit
-**Entry Criteria:** Both submissions confirmed.
-**Actions:** 1. Build the margin stack — does this work economically for both parties? 2. Evaluate distributor's market access against producer's target accounts. 3. Assess operational compatibility — lead times, minimums, shelf life. 4. Identify promotional funding gap.
-**Output:** Margin stack analysis, market access assessment, operational fit, promotional gap.
-**Quality Gate:** Margin stack is specific — producer cost, producer-to-distributor price, distributor-to-retail price, retail margin, consumer price.
+### Entry Criteria
+Both submissions confirmed.
+### Actions
+1. Build the margin stack  --  does this work economically for both parties? 2. Evaluate distributor's market access against producer's target accounts. 3. Assess operational compatibility  --  lead times, minimums, shelf life. 4. Identify promotional funding gap.
+### Output
+Margin stack analysis, market access assessment, operational fit, promotional gap.
+### Quality Gate
+Margin stack is specific  --  producer cost, producer-to-distributor price, distributor-to-retail price, retail margin, consumer price.
 
 ---
 
 ### Phase 2: Structure the Distribution Arrangement
-**Entry Criteria:** Assessment complete.
-**Actions:** 1. Define the territory and channel — what the distributor covers exclusively or non-exclusively. 2. Build the pricing and margin structure. 3. Define promotional and sales support obligations. 4. Establish volume expectations and milestones.
-**Output:** Territory definition, pricing structure, promotional plan, volume milestones.
-**Quality Gate:** Territory definition is specific — named accounts or geographic boundaries, not category descriptions.
+### Entry Criteria
+Assessment complete.
+### Actions
+1. Define the territory and channel  --  what the distributor covers exclusively or non-exclusively. 2. Build the pricing and margin structure. 3. Define promotional and sales support obligations. 4. Establish volume expectations and milestones.
+### Output
+Territory definition, pricing structure, promotional plan, volume milestones.
+### Quality Gate
+Territory definition is specific  --  named accounts or geographic boundaries, not category descriptions.
 
 ---
 
 ### Phase 3: Define Operations and Performance
-**Entry Criteria:** Structure built.
-**Actions:** 1. Define operational terms — order minimums, lead times, delivery, returns. 2. Build the performance review process — what triggers territory review or termination for non-performance. 3. Define deduction and payment dispute resolution. 4. Assemble the agreement framework.
-**Output:** Operational terms, performance review process, dispute resolution, agreement framework.
-**Quality Gate:** Performance triggers are specific sales levels by timeframe — not "adequate performance."
+### Entry Criteria
+Structure built.
+### Actions
+1. Define operational terms  --  order minimums, lead times, delivery, returns. 2. Build the performance review process  --  what triggers territory review or termination for non-performance. 3. Define deduction and payment dispute resolution. 4. Assemble the agreement framework.
+### Output
+Operational terms, performance review process, dispute resolution, agreement framework.
+### Quality Gate
+Performance triggers are specific sales levels by timeframe  --  not "adequate performance."
 
 ---
 
 ### Phase 4: Deliver the Synthesis
-**Entry Criteria:** Agreement built.
-**Output:** Full synthesis — channel strategy, margin stack, operational terms, promotional plan, performance milestones, agreement framework.
-**Quality Gate:** Producer knows what their product will cost at shelf and what the distributor commits to deliver. Distributor knows the margin and what support they receive.
+### Entry Criteria
+Agreement built.
+### Output
+Full synthesis  --  channel strategy, margin stack, operational terms, promotional plan, performance milestones, agreement framework.
+### Quality Gate
+Producer knows what their product will cost at shelf and what the distributor commits to deliver. Distributor knows the margin and what support they receive.
 
 ---
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for A food producer and a distributor each submit their real product capabilities, m, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 Done when: (1) territory is defined, (2) full margin stack is modeled, (3) promotional obligations are assigned, (4) operational terms are specific, (5) performance milestones are defined.
 
 ---
+
+---
+
+## Error Handling
+
+| Phase | Failure Mode | Response |
+|---|---|---|
+| Any | Missing required input | **Stop**: report which input is missing and what it should contain. |
+| Any | Upstream phase output incomplete | **Return**: re-run the upstream phase with the gap identified. |
+
 Copyright 2024-present The Wayfinder Trust. All rights reserved.

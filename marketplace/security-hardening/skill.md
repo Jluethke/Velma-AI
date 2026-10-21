@@ -32,9 +32,10 @@ PHASE 5: VERIFY        --> Checklist verification, residual risk assessment
 
 ### Phase 1: SCAN -- Inventory Attack Surface
 
-**Entry criteria:** Codebase or application description is accessible.
+### Entry Criteria
+Codebase or application description is accessible.
 
-**Actions:**
+### Actions
 1. Identify all external inputs: HTTP endpoints, form fields, URL parameters, file uploads, WebSocket messages, CLI arguments
 2. Identify authentication mechanisms: JWT, session cookies, API keys, OAuth flows
 3. Identify authorization checks: RBAC roles, ABAC policies, endpoint-level guards
@@ -44,17 +45,20 @@ PHASE 5: VERIFY        --> Checklist verification, residual risk assessment
 7. Check TLS configuration and certificate management
 8. Identify server-side request capabilities (URLs fetched from user input)
 
-**Output:** A complete attack surface inventory listing every entry point, dependency, secret location, and security configuration.
+### Output
+A complete attack surface inventory listing every entry point, dependency, secret location, and security configuration.
 
-**Quality gate:** Every HTTP endpoint is listed. Dependency audit has been run. Secret scan has been performed. No entry points are marked "unknown."
+### Quality Gate
+Every HTTP endpoint is listed. Dependency audit has been run. Secret scan has been performed. No entry points are marked "unknown."
 
 ---
 
 ### Phase 2: ASSESS -- Check Each OWASP Top 10 Category
 
-**Entry criteria:** Attack surface inventory is complete.
+### Entry Criteria
+Attack surface inventory is complete.
 
-**Actions:**
+### Actions
 1. **A01 Broken Access Control**: Check for IDOR vulnerabilities, missing ownership checks, admin endpoints without server-side auth (see Reference: Authorization Patterns, Broken Access Control Patterns)
 2. **A02 Cryptographic Failures**: Verify TLS 1.2+, check password hashing algorithm (must be Argon2id or bcrypt 12+), check for MD5/SHA-1 usage, verify data classification (see Reference: Authentication Best Practices)
 3. **A03 Injection**: Check all database queries for parameterization, check HTML output for XSS, check shell command construction, check file path handling (see Reference: Input Validation, Common Vulnerability Prevention)
@@ -66,17 +70,20 @@ PHASE 5: VERIFY        --> Checklist verification, residual risk assessment
 9. **A09 Logging Failures**: Check for auth event logging, access control failure logging, input validation failure logging
 10. **A10 SSRF**: Check all server-side URL fetching for input validation, internal network blocking, redirect handling (see Reference: SSRF Prevention)
 
-**Output:** A vulnerability report with each finding categorized by OWASP category, including evidence (code location, specific issue) and severity assessment.
+### Output
+A vulnerability report with each finding categorized by OWASP category, including evidence (code location, specific issue) and severity assessment.
 
-**Quality gate:** All 10 OWASP categories have been checked. Every finding has a specific code location or configuration reference. No categories are marked "not checked."
+### Quality Gate
+All 10 OWASP categories have been checked. Every finding has a specific code location or configuration reference. No categories are marked "not checked."
 
 ---
 
 ### Phase 3: PRIORITIZE -- Rank by Severity x Exploitability
 
-**Entry criteria:** Vulnerability report is complete with all OWASP categories assessed.
+### Entry Criteria
+Vulnerability report is complete with all OWASP categories assessed.
 
-**Actions:**
+### Actions
 1. Score each vulnerability on severity (1-5): impact if exploited (data breach = 5, info disclosure = 2)
 2. Score each vulnerability on exploitability (1-5): how easy to exploit (unauthenticated remote = 5, requires admin access = 2)
 3. Compute priority = severity x exploitability
@@ -87,17 +94,20 @@ PHASE 5: VERIFY        --> Checklist verification, residual risk assessment
    - **Low (1-5)**: Track, fix when convenient
 5. Order within tiers by effort (quick fixes first)
 
-**Output:** Prioritized vulnerability list with severity scores, exploitability scores, and priority tiers.
+### Output
+Prioritized vulnerability list with severity scores, exploitability scores, and priority tiers.
 
-**Quality gate:** Every vulnerability has both scores. No critical or high items are missing effort estimates. The ordering is defensible.
+### Quality Gate
+Every vulnerability has both scores. No critical or high items are missing effort estimates. The ordering is defensible.
 
 ---
 
 ### Phase 4: REMEDIATE -- Generate Fixes
 
-**Entry criteria:** Prioritized list is reviewed and accepted.
+### Entry Criteria
+Prioritized list is reviewed and accepted.
 
-**Actions:**
+### Actions
 1. For each vulnerability, generate a specific fix with code examples:
    - **Injection**: Replace string interpolation with parameterized queries (see Reference: Parameterized Queries)
    - **XSS**: Apply output escaping, use framework auto-escaping, add DOMPurify for user HTML (see Reference: XSS Prevention)
@@ -112,17 +122,20 @@ PHASE 5: VERIFY        --> Checklist verification, residual risk assessment
 2. For each fix, note any breaking changes or migration steps required
 3. Generate a verification test for each fix (how to confirm it works)
 
-**Output:** Complete remediation package with code fixes, migration steps, and verification tests for each vulnerability.
+### Output
+Complete remediation package with code fixes, migration steps, and verification tests for each vulnerability.
 
-**Quality gate:** Every critical and high vulnerability has a concrete fix with code. Every fix has a verification test. No fixes introduce new vulnerabilities.
+### Quality Gate
+Every critical and high vulnerability has a concrete fix with code. Every fix has a verification test. No fixes introduce new vulnerabilities.
 
 ---
 
 ### Phase 5: VERIFY -- Checklist Verification and Residual Risk
 
-**Entry criteria:** Remediation fixes have been generated (or applied).
+### Entry Criteria
+Remediation fixes have been generated (or applied).
 
-**Actions:**
+### Actions
 1. Run through the Secure Defaults Checklist (see Reference: Secure Defaults Checklist)
 2. Re-run dependency audit to confirm no new vulnerabilities introduced
 3. Verify each fix addresses the specific vulnerability it targets
@@ -130,11 +143,22 @@ PHASE 5: VERIFY        --> Checklist verification, residual risk assessment
 5. Document accepted risks with justification and compensating controls
 6. Recommend ongoing security practices: regular dependency audits, secret rotation schedule, log monitoring
 
-**Output:** A verification report confirming which vulnerabilities are resolved, which are accepted risks, and what ongoing practices are recommended.
+### Output
+A verification report confirming which vulnerabilities are resolved, which are accepted risks, and what ongoing practices are recommended.
 
-**Quality gate:** Every critical and high vulnerability is either resolved or has a documented accepted-risk justification with compensating controls. The secure defaults checklist passes.
+### Quality Gate
+Every critical and high vulnerability is either resolved or has a documented accepted-risk justification with compensating controls. The secure defaults checklist passes.
 
 ---
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Application security hardening with OWASP Top 10 mitigations, authentication bes, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 
@@ -241,14 +265,14 @@ Between runs, this skill saves:
 
 #### Allowlists Over Denylists
 ```python
-# BAD: Denylist — easy to bypass
+# BAD: Denylist  --  easy to bypass
 def validate_filename(name):
     dangerous = ['..', '/', '\\', '\x00']
     for d in dangerous:
         if d in name:
             raise ValueError("Invalid filename")
 
-# GOOD: Allowlist — only permit known-safe characters
+# GOOD: Allowlist  --  only permit known-safe characters
 import re
 def validate_filename(name):
     if not re.match(r'^[a-zA-Z0-9_\-\.]{1,255}$', name):
@@ -257,13 +281,13 @@ def validate_filename(name):
 
 #### Parameterized Queries
 ```python
-# BAD: String interpolation — SQL injection
+# BAD: String interpolation  --  SQL injection
 cursor.execute(f"SELECT * FROM users WHERE email = '{email}'")
 
-# GOOD: Parameterized — safe
+# GOOD: Parameterized  --  safe
 cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
 
-# GOOD: ORM — parameterized automatically
+# GOOD: ORM  --  parameterized automatically
 User.objects.filter(email=email)
 ```
 
@@ -346,7 +370,7 @@ bcrypt.checkpw(password.encode(), hash)  # returns True/False
 import jwt
 from datetime import datetime, timedelta
 
-# Use RS256 (asymmetric) — services verify without signing key
+# Use RS256 (asymmetric)  --  services verify without signing key
 private_key = open('private.pem').read()
 public_key = open('public.pem').read()
 
@@ -360,7 +384,7 @@ access_token = jwt.encode({
     'jti': str(uuid4()),  # unique token ID for revocation
 }, private_key, algorithm='RS256')
 
-# Verification — ALWAYS specify algorithm and audience
+# Verification  --  ALWAYS specify algorithm and audience
 payload = jwt.decode(
     access_token,
     public_key,
@@ -438,7 +462,7 @@ def can_edit_document(user, document):
 
 #### Broken Access Control Patterns to Catch
 ```python
-# BAD: IDOR — user can access any order by changing the ID
+# BAD: IDOR  --  user can access any order by changing the ID
 @app.get('/orders/{order_id}')
 def get_order(order_id):
     return db.query("SELECT * FROM orders WHERE id = %s", order_id)
@@ -483,7 +507,7 @@ app.add_middleware(
 ### Security Headers (CSP, HSTS, etc.)
 
 ```python
-# Express.js — use helmet
+# Express.js  --  use helmet
 const helmet = require('helmet');
 app.use(helmet());
 
@@ -498,7 +522,7 @@ async def security_headers(request, call_next):
     # Force HTTPS
     response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
     # XSS filter (legacy browsers)
-    response.headers["X-XSS-Protection"] = "0"  # Disabled — CSP is better
+    response.headers["X-XSS-Protection"] = "0"  # Disabled  --  CSP is better
     # Referrer policy
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     # Permissions policy
@@ -542,7 +566,7 @@ JWT_PRIVATE_KEY_PATH=/etc/secrets/jwt-private.pem
 
 ```python
 import os
-DATABASE_URL = os.environ["DATABASE_URL"]  # Crash if missing — intentional
+DATABASE_URL = os.environ["DATABASE_URL"]  # Crash if missing  --  intentional
 ```
 
 #### Vault / Secret Manager (Production)
@@ -618,8 +642,8 @@ def is_rate_limited(redis_client, key, limit, window_seconds):
 
 #### Rate Limit by Layer
 ```
-Layer 1: Per-IP at load balancer (Nginx/Cloudflare) — coarse, catches bots
-Layer 2: Per-user in application — fine-grained, per endpoint
+Layer 1: Per-IP at load balancer (Nginx/Cloudflare)  --  coarse, catches bots
+Layer 2: Per-user in application  --  fine-grained, per endpoint
 Layer 3: Per-operation for expensive endpoints (search, export, ML inference)
 ```
 
@@ -641,7 +665,7 @@ element.textContent = userInput;
 // GOOD: Framework auto-escaping (React, Vue, Angular all do this)
 return <div>{userInput}</div>;  // React escapes automatically
 
-// DANGEROUS: dangerouslySetInnerHTML — only with sanitized HTML
+// DANGEROUS: dangerouslySetInnerHTML  --  only with sanitized HTML
 return <div dangerouslySetInnerHTML={{__html: DOMPurify.sanitize(userInput)}} />;
 ```
 
@@ -715,3 +739,7 @@ def is_safe_url(url):
 - [ ] Session cookies: httpOnly, Secure, SameSite=Lax
 - [ ] File uploads: validate type, limit size, store outside web root
 - [ ] Admin endpoints behind VPN or IP allowlist
+
+---
+
+Copyright 2024-present The Wayfinder Trust. All rights reserved.

@@ -67,6 +67,15 @@ Hard-rule checker.
 
 ---
 
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Script at least three rule-compliant component placements, each under a distinct, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
+
 ## Exit Criteria
 
 DONE when at least three rule-compliant placements exist, each produced by a recorded script under a distinct strategy, ready for numeric scoring.

@@ -5,36 +5,40 @@ Takes dietary preferences, household size, budget, and what's already in your fr
 ## Execution Pattern: ORPA Loop
 
 ## Inputs
-- household: object -- Number of people, ages, dietary restrictions (vegetarian, gluten-free, halal, etc.), allergies, and picky-eater notes
-- budget: string -- Weekly grocery budget (e.g., "$80", "as cheap as possible", "no limit")
-- pantry: array -- Ingredients already on hand (what's in your fridge/cupboard right now)
-- preferences: object -- Cuisine preferences (comfort food, Mediterranean, quick meals), cooking skill level (beginner/intermediate/advanced), max prep time per meal
-- schedule: object -- (Optional) Which days are busy (need 15-min meals) vs. relaxed (can spend an hour cooking)
+- `household`: object -- Number of people, ages, dietary restrictions (vegetarian, gluten-free, halal, etc.), allergies, and picky-eater notes
+- `budget`: string -- Weekly grocery budget (e.g., "$80", "as cheap as possible", "no limit")
+- `pantry`: array -- Ingredients already on hand (what's in your fridge/cupboard right now)
+- `preferences`: object -- Cuisine preferences (comfort food, Mediterranean, quick meals), cooking skill level (beginner/intermediate/advanced), max prep time per meal
+- `schedule`: object -- (Optional) Which days are busy (need 15-min meals) vs. relaxed (can spend an hour cooking)
 
 ## Outputs
-- weekly_menu: object -- 7 days of breakfast, lunch, dinner, and snacks with portion sizes
-- grocery_list: object -- Consolidated shopping list sorted by store section (produce, dairy, meat, pantry, frozen) with quantities and estimated cost
-- prep_instructions: array -- Step-by-step cooking instructions for each meal, written for the stated skill level
-- leftover_plan: object -- How leftovers from one meal feed into another (cook once, eat twice)
-- cost_estimate: object -- Estimated total cost with per-meal breakdown
+- `weekly_menu`: object -- 7 days of breakfast, lunch, dinner, and snacks with portion sizes
+- `grocery_list`: object -- Consolidated shopping list sorted by store section (produce, dairy, meat, pantry, frozen) with quantities and estimated cost
+- `prep_instructions`: array -- Step-by-step cooking instructions for each meal, written for the stated skill level
+- `leftover_plan`: object -- How leftovers from one meal feed into another (cook once, eat twice)
+- `cost_estimate`: object -- Estimated total cost with per-meal breakdown
 
 ## Execution
 
 ### OBSERVE: Take Inventory
-**Entry criteria:** Household info and at least one dietary preference or constraint provided.
-**Actions:**
+### Entry Criteria
+Household info and at least one dietary preference or constraint provided.
+### Actions
 1. Catalog all pantry items with approximate quantities remaining.
 2. Identify hard constraints: allergies (life-threatening, non-negotiable), religious dietary laws, medical diets (diabetic, low-sodium, renal).
 3. Identify soft constraints: preferences, dislikes, cuisine fatigue ("we had pasta three times last week").
 4. Map the weekly schedule: busy nights get 15-minute meals or slow-cooker dumps. Weekends allow batch cooking.
 5. Set budget guardrails: calculate per-meal budget from weekly total divided by (people x meals x 7).
 
-**Output:** Constraint profile, pantry inventory, schedule map, per-meal budget target.
-**Quality gate:** All allergies and medical diets are flagged as hard constraints. Per-meal budget is calculated.
+### Output
+Constraint profile, pantry inventory, schedule map, per-meal budget target.
+### Quality Gate
+All allergies and medical diets are flagged as hard constraints. Per-meal budget is calculated.
 
 ### REASON: Design the Menu
-**Entry criteria:** Constraint profile complete.
-**Actions:**
+### Entry Criteria
+Constraint profile complete.
+### Actions
 1. Generate 7 dinner anchors first (dinner drives grocery volume). Ensure variety: no protein repeated on consecutive days, at least 2 cuisine types across the week.
 2. Design lunches that reuse dinner leftovers where possible (roast chicken Monday dinner becomes chicken salad Tuesday lunch).
 3. Plan breakfasts by category rotation: hot (eggs, oatmeal), cold (yogurt, cereal), grab-and-go (smoothie, toast).
@@ -43,12 +47,15 @@ Takes dietary preferences, household size, budget, and what's already in your fr
 6. Validate against budget: if over budget, swap expensive proteins (steak to chicken thighs), reduce meat portions, add one meatless day.
 7. Validate against time constraints: busy-day meals must be under 20 minutes active prep.
 
-**Output:** Complete 7-day menu with all meals and snacks. Each meal tagged with prep time, cost estimate, and which leftovers it produces or consumes.
-**Quality gate:** No allergens present. Budget within 10% of target. No protein repeated consecutively. Busy-day meals are under 20 min prep.
+### Output
+Complete 7-day menu with all meals and snacks. Each meal tagged with prep time, cost estimate, and which leftovers it produces or consumes.
+### Quality Gate
+No allergens present. Budget within 10% of target. No protein repeated consecutively. Busy-day meals are under 20 min prep.
 
 ### PLAN: Build the Grocery List
-**Entry criteria:** Menu finalized.
-**Actions:**
+### Entry Criteria
+Menu finalized.
+### Actions
 1. Extract all ingredients from all recipes. Combine duplicates (if 3 recipes need onions, list total onion count once).
 2. Subtract pantry items already on hand.
 3. Sort by store section: Produce, Dairy & Eggs, Meat & Seafood, Bread & Bakery, Canned & Dry Goods, Frozen, Condiments & Spices, Beverages.
@@ -56,12 +63,15 @@ Takes dietary preferences, household size, budget, and what's already in your fr
 5. Estimate cost per item using typical grocery store pricing. Sum for total estimate.
 6. Flag any specialty items that might not be at a regular supermarket.
 
-**Output:** Grocery list sorted by store section, with quantities, estimated per-item cost, and total.
-**Quality gate:** Every ingredient in every recipe is accounted for. No pantry items re-purchased. Total cost is within budget.
+### Output
+Grocery list sorted by store section, with quantities, estimated per-item cost, and total.
+### Quality Gate
+Every ingredient in every recipe is accounted for. No pantry items re-purchased. Total cost is within budget.
 
 ### ACT: Deliver the Plan
-**Entry criteria:** Menu and grocery list are complete and validated.
-**Actions:**
+### Entry Criteria
+Menu and grocery list are complete and validated.
+### Actions
 1. Format the weekly menu as a clean daily schedule (Monday through Sunday).
 2. Write cooking instructions for each meal at the user's skill level:
    - Beginner: every step explicit, explain terms ("dice" means cut into small cubes), include temperatures in both F and C.
@@ -71,8 +81,19 @@ Takes dietary preferences, household size, budget, and what's already in your fr
 4. Add meal prep tips: what can be prepped on Sunday to save time during the week.
 5. Deliver grocery list in a format ready to take to the store (or copy into a shopping app).
 
-**Output:** Complete meal plan with recipes, grocery list, leftover plan, and prep tips.
-**Quality gate:** All meals have instructions. Grocery list is store-ready. Leftover connections are explicit.
+### Output
+Complete meal plan with recipes, grocery list, leftover plan, and prep tips.
+### Quality Gate
+All meals have instructions. Grocery list is store-ready. Leftover connections are explicit.
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Takes dietary preferences, household size, budget, and what's already in your fr, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 Done when: (1) 7 days of meals are planned covering breakfast, lunch, dinner, and snacks, (2) grocery list is consolidated and sorted by store section, (3) total estimated cost is within budget, (4) no allergens or dietary violations, (5) cooking instructions match stated skill level.

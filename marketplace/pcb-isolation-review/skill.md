@@ -78,6 +78,15 @@ Power and rating entries in `isolation_findings`.
 
 ---
 
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Review every isolation barrier: isolated power on the far side, zero nets crossi, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
+
 ## Exit Criteria
 
 DONE when every barrier has zero crossing nets outside its isolator, an isolated power source sized for its load, a quoted working voltage, and a creepage constraint handed to layout.

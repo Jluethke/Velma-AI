@@ -28,22 +28,22 @@
 
 ### Phase 1: Discovery and Parsing
 
-**Entry Criteria:**
+### Entry Criteria
 - `codebase_root` is a valid, readable directory.
 - `exclude_patterns` are well-formed POSIX fnmatch glob expressions.
 
-**Actions:**
+### Actions
 1. Recursively traverse `codebase_root` and collect all `.py` files, excluding paths matching `exclude_patterns` using fnmatch.
 2. For each Python file, attempt to parse the AST (Abstract Syntax Tree) to extract all `import` and `from ... import` statements.
 3. Classify each import as: standard library (using `sys.stdlib_module_names` or equivalent), third-party (installed packages), or local (relative or absolute paths within codebase).
 4. Build a raw import dictionary: `{module_path: [imported_modules]}`, preserving import type metadata.
 
-**Output:**
+### Output
 - `raw_imports`: Dictionary mapping each module to its direct imports with classification metadata (stdlib/third_party/local).
 - `modules_discovered`: Count of unique modules.
 - `parse_errors`: List of files with syntax errors (logged but not fatal).
 
-**Quality Gate:**
+### Quality Gate
 - All `.py` files in the codebase (excluding patterns) are discovered; verified by comparing file count to directory traversal.
 - Import classification accuracy: stdlib imports must match Python's standard library list; local imports must reference files within codebase_root; third-party imports must not match either.
 - Parse errors are logged; skill continues with remaining modules.
@@ -52,22 +52,22 @@
 
 ### Phase 2: Normalization and Resolution
 
-**Entry Criteria:**
+### Entry Criteria
 - `raw_imports` dictionary is populated.
 - Package structure (presence of `__init__.py` files) is known.
 
-**Actions:**
+### Actions
 1. Resolve all relative imports (e.g., `from . import foo`, `from ..utils import bar`) to absolute module paths using the package hierarchy and file system structure.
 2. Normalize module paths: convert file paths to module dotted notation (e.g., `/src/myapp/utils.py` → `myapp.utils`). Handle namespace packages (directories without `__init__.py`) by treating them as packages.
 3. Filter imports based on `include_stdlib` and `include_third_party` flags; remove filtered imports from the graph.
 4. Remove duplicate imports and self-references (a module importing itself).
 5. Identify imports that reference non-existent local modules and log them as unresolved (do not halt processing).
 
-**Output:**
+### Output
 - `normalized_imports`: Dictionary with all imports resolved to absolute module paths.
 - `unresolved_imports`: List of imports referencing non-existent local modules (e.g., `{module: "myapp.utils", attempted_import: "myapp.missing_module"}`).
 
-**Quality Gate:**
+### Quality Gate
 - All relative imports are correctly resolved to absolute paths; verified by checking that all resolved paths exist in the codebase or are external.
 - Module paths are consistent (no duplicates with different naming conventions); verified by checking for path collisions.
 - Unresolved imports are identified and logged; they do not prevent phase completion.
@@ -76,23 +76,23 @@
 
 ### Phase 3: Graph Construction and Cycle Detection
 
-**Entry Criteria:**
+### Entry Criteria
 - `normalized_imports` is complete and validated.
 
-**Actions:**
+### Actions
 1. Build a directed graph from the normalized imports: nodes are modules, edges are import relationships (directed from importer to importee).
 2. Apply Tarjan's strongly connected components algorithm to identify all circular dependencies (cycles are strongly connected components with size > 1).
 3. For each cycle, extract the chain of modules involved in topological order.
 4. Calculate per-module metrics: in-degree (number of modules that import this module), out-degree (number of modules this module imports), and coupling score using the formula `(in_degree + out_degree) / (2 * total_modules)` (range 0-1).
 5. Identify high-coupling modules where `coupling_score > (coupling_threshold / (2 * total_modules))`.
 
-**Output:**
+### Output
 - `import_graph`: Adjacency list representation of the dependency graph (dict of lists).
 - `circular_dependencies`: List of cycles, each as an ordered array of module paths forming a cycle.
 - `coupling_metrics`: Per-module in-degree, out-degree, and coupling score (0-1 range).
 - `high_coupling_modules`: Sorted list of modules exceeding the threshold, with their coupling scores.
 
-**Quality Gate:**
+### Quality Gate
 - All cycles are detected using Tarjan's algorithm (no false negatives); verified by checking that no module in a cycle can reach another without traversing the cycle.
 - Metrics are mathematically consistent: sum of all in-degrees equals sum of all out-degrees equals total edges in graph.
 - High-coupling modules are correctly identified: all modules in output have `coupling_score > threshold_normalized`.
@@ -101,10 +101,10 @@
 
 ### Phase 4: Analysis and Recommendations
 
-**Entry Criteria:**
+### Entry Criteria
 - `import_graph`, `circular_dependencies`, and `coupling_metrics` are complete.
 
-**Actions:**
+### Actions
 1. For each circular dependency, generate a decoupling recommendation:
    - Analyze the cycle structure and suggest a breaking point (e.g., "break edge from module_a to module_b").
    - Recommend a specific strategy: dependency injection, interface extraction, mediator pattern, or module reorganization.
@@ -116,11 +116,11 @@
 3. Calculate overall health score: `100 - (10 * circular_count) - (5 * high_coupling_count / total_modules) - (2 * avg_coupling_score * 100)`, clamped to 0-100.
 4. Compile key findings: list of finding objects with type ("circular_dependency", "high_coupling", "unresolved_import"), description, and affected modules.
 
-**Output:**
+### Output
 - `decoupling_recommendations`: Array of objects with `modules_involved`, `issue_type`, `description`, `suggested_action`, and `estimated_effort`.
 - `report_summary`: Object with `total_modules`, `circular_dependency_count`, `high_coupling_count`, `overall_health_score` (0-100), and `key_findings` (array of finding objects).
 
-**Quality Gate:**
+### Quality Gate
 - Every circular dependency has at least one recommendation; verified by checking count.
 - Every recommendation is specific and actionable (contains module names and concrete action, not generic advice).
 - Health score is consistent with analysis: increases when cycles/coupling decrease, decreases when they increase.
@@ -130,31 +130,40 @@
 
 ### Phase 5: Visualization and Reporting
 
-**Entry Criteria:**
+### Entry Criteria
 - All analysis is complete.
 - `output_format` is one of: "dot", "json", or "both".
 
-**Actions:**
+### Actions
 1. Render the dependency graph in the requested format:
    - **DOT format**: Generate Graphviz-compatible output with nodes colored by coupling level (green: low <0.05, yellow: medium 0.05-0.1, red: high >0.1). Highlight cycle edges in red with label "cycle". Include node attributes: label (module name), in_degree, out_degree.
    - **JSON format**: Structured representation with `nodes` (array of {id, label, in_degree, out_degree, coupling_score, is_high_coupling}), `edges` (array of {source, target, is_cycle}), and `metadata` (total_modules, total_edges, cycle_count).
-2. Generate a comprehensive report including:
+2. Generate a full report including:
    - Overview section: total modules, total imports, circular dependency count, high-coupling module count.
    - Detailed findings section: list each circular dependency with modules involved; list each high-coupling module with metrics.
    - Recommendations section: prioritized by impact (cycles first, then high-coupling by score).
    - Metrics summary: average in-degree, average out-degree, average coupling score.
 3. Validate output format: ensure DOT is syntactically valid (can be parsed by Graphviz); ensure JSON is valid and parseable.
 
-**Output:**
+### Output
 - `graph_visualization`: String in DOT or JSON format (or both, as separate strings if format is "both").
 - `report_summary`: Structured report object (same as Phase 4 output).
 
-**Quality Gate:**
+### Quality Gate
 - Graph visualization is syntactically valid and renderable (DOT can be parsed by Graphviz; JSON is valid JSON).
 - Report is complete: contains all sections (overview, findings, recommendations, metrics).
 - All analysis results are represented in the output: every cycle, every high-coupling module, every recommendation appears in visualization or report.
 
 ---
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Analyze a codebase to extract module dependencies, detect circular imports, iden, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 
@@ -232,3 +241,7 @@ Resolution options:
 **State Persistence:** This skill does not require state persistence between runs. Each execution is independent. However, storing previous analysis results (import_graph, coupling_metrics, health_score) enables trend tracking (e.g., "coupling improved by 15% since last month"). Recommended: save report_summary to a JSON file after each run for historical comparison.
 
 **Composition:** This skill can be composed with downstream skills: code refactoring automation (apply decoupling recommendations), test generation for decoupled modules, architecture documentation generation, or continuous monitoring (run periodically and alert on health_score decline).
+
+---
+
+Copyright 2024-present The Wayfinder Trust. All rights reserved.

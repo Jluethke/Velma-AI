@@ -2,7 +2,7 @@
 
 Identifies and profiles the right decision-maker at a target company for an IP licensing conversation, maps how the decision flows internally, selects the strongest entry point, and produces everything needed to go from cold to meeting.
 
-**Why this exists:** Most licensing outreach fails at step one — wrong person, wrong frame, wrong timing. This skill fixes all three before a single message is sent.
+**Why this exists:** Most licensing outreach fails at step one  --  wrong person, wrong frame, wrong timing. This skill fixes all three before a single message is sent.
 
 **Core principle:** Never contact a target before you know who initiates the decision, who blocks it, who signs it, and what keeps them up at night. The outreach is the last step, not the first.
 
@@ -20,7 +20,7 @@ PHASE 4: ENTRY POINT         --> Choose who to contact first and why
 - `target_company`: string -- Company name (e.g., "Coalition Insurance")
 - `sector`: string -- Industry sector (e.g., "cyber insurance", "autonomous vehicles", "humanoid robotics")
 - `patent_families`: list[object] -- Patent families being licensed. Each: `{family, title, what_it_covers, market_application}`
-- `licensor_name`: string -- Licensing entity (e.g., "Northstar Systems Group")
+- `licensor_name`: string -- Licensing entity (e.g., "the governance provider Group")
 - `licensor_context`: string -- One paragraph: what was built, what the IP covers, why it matters now
 - `deal_structure`: object -- `{type, upfront_range, royalty_rate, field_of_use}`
 - `urgency_driver`: string -- (Optional) What's creating pressure for them right now
@@ -40,10 +40,10 @@ PHASE 4: ENTRY POINT         --> Choose who to contact first and why
 
 ### Phase 1: ROLE TARGETING
 
-**Entry criteria:** `target_company` and `sector` provided.
+### Entry Criteria
+`target_company` and `sector` provided.
 
-**Actions:**
-
+### Actions
 1. **Define the role stack.** For the target sector, identify which executive roles are most likely to own the decision to license AI governance infrastructure. Standard priority order:
 
    | Sector | Primary | Secondary | Tertiary |
@@ -63,17 +63,19 @@ PHASE 4: ENTRY POINT         --> Choose who to contact first and why
 
 3. **Output the prioritized role stack** with explanation for each.
 
-**Output:** `role_stack`
-**Quality gate:** At least 3 roles identified with ranked influence. Role ranking is justified by deal type, not generic seniority.
+### Output
+`role_stack`
+### Quality Gate
+At least 3 roles identified with ranked influence. Role ranking is justified by deal type, not generic seniority.
 
 ---
 
 ### Phase 2: PEOPLE RESOLUTION
 
-**Entry criteria:** Role stack complete.
+### Entry Criteria
+Role stack complete.
 
-**Actions:**
-
+### Actions
 1. **Find the actual people.** For each role in the stack, search:
    - Company leadership page and About section
    - LinkedIn (search "[Company] + [Role Title]")
@@ -99,21 +101,23 @@ PHASE 4: ENTRY POINT         --> Choose who to contact first and why
 
 4. **Limit to 2–4 names maximum.** More than 4 is noise. Focus on who can move.
 
-**Output:** `people_list`
-**Quality gate:** Each person has a name, title, at least one priority identified, and at least one reachability method. Warm intro paths are flagged explicitly.
+### Output
+`people_list`
+### Quality Gate
+Each person has a name, title, at least one priority identified, and at least one reachability method. Warm intro paths are flagged explicitly.
 
 ---
 
 ### Phase 3: DECISION MAPPING
 
-**Entry criteria:** People identified.
+### Entry Criteria
+People identified.
 
-**Actions:**
-
+### Actions
 1. **Map the decision flow.** For a deal of this type (IP license, compliance infrastructure, $2-5M), determine:
    - **Who initiates?** Who first recognizes the need and puts it on the agenda (typically CRO or GC)
    - **Who champions?** Who sponsors the deal internally once interested (the person you convert in step 9)
-   - **Who blocks?** Who can kill it without being the buyer — Legal (IP review), Finance (budget), Procurement (vendor process), IT (integration)
+   - **Who blocks?** Who can kill it without being the buyer  --  Legal (IP review), Finance (budget), Procurement (vendor process), IT (integration)
    - **Who approves?** Who has budget authority at this deal size
    - **Who signs?** The final signatory (often CEO, COO, or GC depending on company size)
 
@@ -128,40 +132,44 @@ PHASE 4: ENTRY POINT         --> Choose who to contact first and why
    - Normal (60-120 days): Genuine interest but requires internal selling
    - Slow (> 120 days): Requires board-level approval or procurement process
 
-**Output:** `decision_map`
-**Quality gate:** Initiator, champion, blocker, approver, and signer are each identified with a named role. Blocking layer is addressed with a specific counter.
+### Output
+`decision_map`
+### Quality Gate
+Initiator, champion, blocker, approver, and signer are each identified with a named role. Blocking layer is addressed with a specific counter.
 
 ---
 
 ### Phase 4: ENTRY POINT SELECTION
 
-**Entry criteria:** Decision map complete.
+### Entry Criteria
+Decision map complete.
 
-**Actions:**
-
+### Actions
 1. **Evaluate three entry strategies:**
 
-   **Option A — High Power (CRO first):**
+   **Option A  --  High Power (CRO first):**
    - Pros: Feels the pain directly, can initiate internally, risk management is their job
    - Cons: May not have budget authority alone, will route to GC and Finance
    - Best when: Regulatory pressure is acute and recent
 
-   **Option B — Legal Pressure (GC first):**
+   **Option B  --  Legal Pressure (GC first):**
    - Pros: Can approve the deal structure, understands IP, lower resistance to licensing conversations
    - Cons: May not feel the urgency unless CRO has already raised it
    - Best when: A specific regulatory filing or enforcement action is imminent
 
-   **Option C — Warm Path (mutual connection first):**
+   **Option C  --  Warm Path (mutual connection first):**
    - Pros: Highest response rate, pre-qualified trust
    - Cons: Depends on network, takes longer to initiate
    - Best when: A warm intro is available and the deal can afford a 2-week delay
 
-2. **Recommend one entry point with clear rationale.** Don't hedge — pick one and explain why.
+2. **Recommend one entry point with clear rationale.** Don't hedge  --  pick one and explain why.
 
 3. **Define the fallback.** If primary doesn't respond in 10 days, who is the pivot?
 
-**Output:** `entry_strategy` and `risk_surface` and `outreach_notes`
-**Quality gate:** One entry point recommended with specific rationale tied to this company's situation. Fallback defined.
+### Output
+`entry_strategy` and `risk_surface` and `outreach_notes`
+### Quality Gate
+One entry point recommended with specific rationale tied to this company's situation. Fallback defined.
 
 ---
 
@@ -179,15 +187,15 @@ The skill is DONE when:
 
 | Phase | Failure Mode | Response |
 |---|---|---|
-| ROLE TARGETING | Sector doesn't match standard role map | Adjust — infer from company's publicly stated org structure |
-| PEOPLE RESOLUTION | No named executives found publicly | Adjust — output role-based targeting with LinkedIn search instructions |
-| PEOPLE RESOLUTION | No warm intro path exists | Adjust — recommend conference targeting strategy with specific upcoming events |
-| DECISION MAPPING | Company is pre-Series B (flat org) | Adjust — CEO is initiator, approver, and signer; map accordingly |
+| ROLE TARGETING | Sector doesn't match standard role map | Adjust  --  infer from company's publicly stated org structure |
+| PEOPLE RESOLUTION | No named executives found publicly | Adjust  --  output role-based targeting with LinkedIn search instructions |
+| PEOPLE RESOLUTION | No warm intro path exists | Adjust  --  recommend conference targeting strategy with specific upcoming events |
+| DECISION MAPPING | Company is pre-Series B (flat org) | Adjust  --  CEO is initiator, approver, and signer; map accordingly |
 | ENTRY POINT | Multiple equally strong options | Output all three with recommendation and conditions under which to switch |
 
 ## State Persistence
 
-- `target_registry`: All companies researched — name, contact found, outreach status, response
+- `target_registry`: All companies researched  --  name, contact found, outreach status, response
 - `contact_history`: Named contacts, role, response status, relationship notes
 - `objection_library`: Objections encountered with tested responses, improves across deals
 - `sector_intelligence`: Regulatory updates and market signals by sector, informs targeting

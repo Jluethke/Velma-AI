@@ -80,6 +80,15 @@ Transient and fusing entries in `power_input_findings`.
 
 ---
 
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Review power-input protection at worst case against datasheets: reverse polarity, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
+
 ## Exit Criteria
 
 DONE when every power-input requirement has a PASS or FAIL with numbers and datasheet citations, and every FAIL names the exact part, value, or topology change.

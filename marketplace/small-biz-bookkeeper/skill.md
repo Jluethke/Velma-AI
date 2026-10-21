@@ -13,25 +13,26 @@ PHASE 5: SYSTEM        --> Set up a simple ongoing bookkeeping habit so this doe
 ```
 
 ## Inputs
-- business_type: string -- What you do: freelancer/consultant, Etsy/e-commerce seller, gig worker (Uber, DoorDash, TaskRabbit), content creator, tutor, side business with inventory, rental income, or other. This determines which deductions apply and which IRS schedule you file.
-- income_sources: array -- Every way you earned money: client payments (1099 income), platform sales (Etsy, Shopify, Amazon), gig platform payouts, ad revenue, affiliate income, tips, cash payments. Include amounts if known, or "I made about $X from Y" estimates.
-- expenses: array -- Everything you spent on the business, however disorganized: receipts, bank statements, credit card charges, PayPal transactions, Venmo payments, cash purchases. Include the "I think this was for work but I'm not sure" stuff -- we'll sort it out.
-- business_details: object -- (Optional) When you started, whether you have an LLC or operate as sole proprietor, EIN or SSN filing, state you operate in, whether you work from home, whether you use your car for business
-- tax_situation: object -- (Optional) Filing status (single, married filing jointly, head of household), W-2 job income (if this is a side business), estimated tax payments already made this year, last year's tax situation (did you owe, get a refund, get surprised)
-- time_period: string -- What period to organize: current year to date, last full year, last quarter, or specific date range
+- `business_type`: string -- What you do: freelancer/consultant, Etsy/e-commerce seller, gig worker (Uber, DoorDash, TaskRabbit), content creator, tutor, side business with inventory, rental income, or other. This determines which deductions apply and which IRS schedule you file.
+- `income_sources`: array -- Every way you earned money: client payments (1099 income), platform sales (Etsy, Shopify, Amazon), gig platform payouts, ad revenue, affiliate income, tips, cash payments. Include amounts if known, or "I made about $X from Y" estimates.
+- `expenses`: array -- Everything you spent on the business, however disorganized: receipts, bank statements, credit card charges, PayPal transactions, Venmo payments, cash purchases. Include the "I think this was for work but I'm not sure" stuff -- we'll sort it out.
+- `business_details`: object -- (Optional) When you started, whether you have an LLC or operate as sole proprietor, EIN or SSN filing, state you operate in, whether you work from home, whether you use your car for business
+- `tax_situation`: object -- (Optional) Filing status (single, married filing jointly, head of household), W-2 job income (if this is a side business), estimated tax payments already made this year, last year's tax situation (did you owe, get a refund, get surprised)
+- `time_period`: string -- What period to organize: current year to date, last full year, last quarter, or specific date range
 
 ## Outputs
-- categorized_ledger: object -- Every income and expense item assigned to the correct IRS category (Schedule C line items), with explanations for why each item goes where
-- deduction_report: object -- All identified deductions with dollar amounts, IRS rules in plain English, and documentation needed to defend each deduction in an audit
-- profit_loss: object -- Simple P&L statement: total revenue, total expenses by category, net profit/loss, effective tax rate estimate
-- quarterly_taxes: object -- Estimated quarterly tax amounts, due dates, payment methods, and whether you're at risk for an underpayment penalty
-- bookkeeping_system: object -- Simple ongoing process to stay organized: what to track, where to track it, how often, and the 15-minute weekly habit that prevents the year-end scramble
+- `categorized_ledger`: object -- Every income and expense item assigned to the correct IRS category (Schedule C line items), with explanations for why each item goes where
+- `deduction_report`: object -- All identified deductions with dollar amounts, IRS rules in plain English, and documentation needed to defend each deduction in an audit
+- `profit_loss`: object -- Simple P&L statement: total revenue, total expenses by category, net profit/loss, effective tax rate estimate
+- `quarterly_taxes`: object -- Estimated quarterly tax amounts, due dates, payment methods, and whether you're at risk for an underpayment penalty
+- `bookkeeping_system`: object -- Simple ongoing process to stay organized: what to track, where to track it, how often, and the 15-minute weekly habit that prevents the year-end scramble
 
 ## Execution
 
 ### Phase 1: INTAKE
-**Entry criteria:** At least business type and some income/expense information provided.
-**Actions:**
+### Entry Criteria
+At least business type and some income/expense information provided.
+### Actions
 1. Establish the business entity type and filing method. Sole proprietor (Schedule C), single-member LLC (also Schedule C unless elected otherwise), partnership (1065/K-1), S-Corp (1120-S). Most small businesses and side hustles are Schedule C -- if the user doesn't know, it's almost certainly Schedule C.
 2. Gather all income sources. For each source, determine:
    - Whether it generates a 1099 (the IRS already knows about it -- don't skip it)
@@ -45,12 +46,15 @@ PHASE 5: SYSTEM        --> Set up a simple ongoing bookkeeping habit so this doe
 4. Flag the "where did this money go" gaps: periods with income but no recorded expenses (you definitely spent money, you just didn't track it), and large round-number estimates that need itemizing.
 5. Note the time period and calculate running totals: gross income by source, total identifiable expenses, and the gap between them (this rough number is your taxable profit before we find deductions).
 
-**Output:** Complete income list by source with 1099 flags, expense list however messy, identified gaps, rough profit estimate.
-**Quality gate:** All 1099-reportable income is captured. Expense list includes everything the user can produce. Gaps are flagged, not ignored.
+### Output
+Complete income list by source with 1099 flags, expense list however messy, identified gaps, rough profit estimate.
+### Quality Gate
+All 1099-reportable income is captured. Expense list includes everything the user can produce. Gaps are flagged, not ignored.
 
 ### Phase 2: CATEGORIZE
-**Entry criteria:** Income and expense lists assembled.
-**Actions:**
+### Entry Criteria
+Income and expense lists assembled.
+### Actions
 1. Map every expense to an IRS Schedule C category. The main ones in plain English:
    - **Advertising:** Website, business cards, social media ads, Google ads, trade show fees, branded merchandise
    - **Car and truck:** Mileage or actual expenses for business driving (not commuting to a W-2 job)
@@ -66,12 +70,15 @@ PHASE 5: SYSTEM        --> Set up a simple ongoing bookkeeping habit so this doe
 4. Flag personal expenses misclassified as business: gym memberships (not deductible unless you're a personal trainer), regular clothing (not deductible even if you wear it to client meetings), meals alone (not deductible -- only meals with a business purpose with a client or colleague).
 5. For each categorized item, note the documentation needed: receipt, invoice, bank statement, mileage log, or written record of business purpose.
 
-**Output:** Every expense assigned to an IRS category with plain-English explanation, mixed-use items split with percentages, capital items flagged with depreciation vs. Section 179 options, personal items flagged and removed.
-**Quality gate:** Every expense is categorized or flagged as personal. Mixed-use percentages are reasonable (claiming 95% business use of a personal car will get audited). Documentation requirements are noted.
+### Output
+Every expense assigned to an IRS category with plain-English explanation, mixed-use items split with percentages, capital items flagged with depreciation vs. Section 179 options, personal items flagged and removed.
+### Quality Gate
+Every expense is categorized or flagged as personal. Mixed-use percentages are reasonable (claiming 95% business use of a personal car will get audited). Documentation requirements are noted.
 
 ### Phase 3: DEDUCTION DIG
-**Entry criteria:** Expenses categorized.
-**Actions:**
+### Entry Criteria
+Expenses categorized.
+### Actions
 1. **Home office deduction:** If the user works from home, calculate both methods:
    - Simplified method: $5 per square foot, up to 300 sq ft ($1,500 max). Easy, no additional documentation.
    - Regular method: Calculate the percentage of home used exclusively for business (office square footage / total home square footage), then deduct that percentage of rent/mortgage interest, utilities, insurance, repairs, and depreciation. Often larger but requires more records.
@@ -91,12 +98,15 @@ PHASE 5: SYSTEM        --> Set up a simple ongoing bookkeeping habit so this doe
    - All: bank fees, payment processing fees, accounting software, legal fees, business portion of phone and internet
 6. Quantify the total deductions found and calculate the tax savings: deductions multiplied by the user's marginal tax rate (including self-employment tax of 15.3% on the first $168,600 of net earnings for 2025).
 
-**Output:** Deduction report listing every identified deduction with dollar amount, IRS rule in plain English, documentation required, and total tax savings estimate. Home office and vehicle calculations shown with both methods.
-**Quality gate:** Home office and vehicle deductions calculated if applicable. At least 3 commonly-missed deductions for the specific business type are checked. Total tax savings is quantified.
+### Output
+Deduction report listing every identified deduction with dollar amount, IRS rule in plain English, documentation required, and total tax savings estimate. Home office and vehicle calculations shown with both methods.
+### Quality Gate
+Home office and vehicle deductions calculated if applicable. At least 3 commonly-missed deductions for the specific business type are checked. Total tax savings is quantified.
 
 ### Phase 4: STATEMENTS
-**Entry criteria:** All categorization and deductions complete.
-**Actions:**
+### Entry Criteria
+All categorization and deductions complete.
+### Actions
 1. Generate a Profit & Loss (P&L) statement:
    - **Revenue section:** Total income by source, listed individually. Gross revenue at the top.
    - **Cost of goods sold (if applicable):** Materials, supplies, and direct costs of producing what you sell. Subtract from revenue to get gross profit.
@@ -114,12 +124,15 @@ PHASE 5: SYSTEM        --> Set up a simple ongoing bookkeeping habit so this doe
 4. Generate a tax calendar with the 4 quarterly deadlines plus annual filing deadline. Include reminders for gathering 1099s (arrive by January 31) and the filing deadline (April 15, or October 15 with extension -- but estimated tax is still due April 15).
 5. Provide the "give this to your accountant" summary: a clean one-page document with total income by source, total expenses by category, net profit, estimated tax payments made, and any questions or unusual items the accountant should look at.
 
-**Output:** P&L statement, estimated tax calculation with quarterly payment amounts, tax deadline calendar, accountant summary document.
-**Quality gate:** P&L balances (revenue minus expenses equals net profit). Tax estimate includes self-employment tax. Quarterly payment deadlines include the correct dates for the current tax year. Accountant summary is concise and complete.
+### Output
+P&L statement, estimated tax calculation with quarterly payment amounts, tax deadline calendar, accountant summary document.
+### Quality Gate
+P&L balances (revenue minus expenses equals net profit). Tax estimate includes self-employment tax. Quarterly payment deadlines include the correct dates for the current tax year. Accountant summary is concise and complete.
 
 ### Phase 5: SYSTEM
-**Entry criteria:** Statements generated.
-**Actions:**
+### Entry Criteria
+Statements generated.
+### Actions
 1. Set up a simple categorization system that fits the user's actual behavior:
    - **Separate bank account:** If they don't have one, this is step one. A dedicated checking account for business income and expenses makes everything 10x easier. It doesn't need to be a "business account" with fees -- a free personal checking account used only for business works fine.
    - **Expense tracking method:** Match to the user's personality. Hate apps? Use a single folder for receipts and review monthly. Like apps? Wave (free), QuickBooks Self-Employed ($15/month), or a spreadsheet. The best system is the one you'll actually use.
@@ -143,8 +156,19 @@ PHASE 5: SYSTEM        --> Set up a simple ongoing bookkeeping habit so this doe
    - Deliver the clean package to your accountant or use it for self-filing.
 5. Address the "but I haven't been tracking anything" recovery plan: for prior years or the current year so far, bank and credit card statements are your backup records. Download 12 months of statements, highlight business transactions, and categorize in bulk. It takes 2-4 hours per year of catch-up, which is way better than the IRS reconstructing your income for you.
 
-**Output:** Bookkeeping system setup checklist, weekly 15-minute habit template, quarterly review template, tax season prep checklist, catch-up plan for prior periods.
-**Quality gate:** System matches the user's actual behavior (not aspirational behavior). Weekly habit takes under 15 minutes. Quarterly deadlines are correct for the current tax year. Catch-up plan has specific steps.
+### Output
+Bookkeeping system setup checklist, weekly 15-minute habit template, quarterly review template, tax season prep checklist, catch-up plan for prior periods.
+### Quality Gate
+System matches the user's actual behavior (not aspirational behavior). Weekly habit takes under 15 minutes. Quarterly deadlines are correct for the current tax year. Catch-up plan has specific steps.
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Takes your income sources, expenses, and business type, then organizes them into, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 Done when: (1) all income and expenses are categorized into IRS-appropriate categories, (2) deductions are identified with dollar amounts and documentation requirements, (3) P&L statement shows net profit/loss, (4) quarterly estimated tax payments are calculated with due dates, (5) simple ongoing bookkeeping system is set up with a weekly 15-minute habit.

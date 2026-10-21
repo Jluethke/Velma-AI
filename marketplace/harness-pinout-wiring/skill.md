@@ -61,6 +61,15 @@ Pin-to-pin map.
 
 ---
 
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Define pin-to-pin wiring for every cable with gauge computed from current, lengt, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
+
 ## Exit Criteria
 
 DONE when every wire has both ends sourced, a computed gauge, a color, its pair or shield membership, and a length.

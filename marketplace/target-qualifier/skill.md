@@ -1,26 +1,26 @@
 # Target Qualifier
 
-Takes the raw target list from the sector scanner and qualifies each company against the specific patent claims — scoring deal size potential, regulatory urgency, warm path availability, and response probability. Outputs a scored, ranked list ready for the prioritization engine.
+Takes the raw target list from the sector scanner and qualifies each company against the specific patent claims  --  scoring deal size potential, regulatory urgency, warm path availability, and response probability. Outputs a scored, ranked list ready for the prioritization engine.
 
 **Why this exists:** Not all qualifying targets are equal. A company with a $2B adaptive AI system and an EU AI Act deadline in 90 days is worth 10x the outreach effort of a $50M startup with no regulatory pressure. This skill separates the A-list from the noise before a single hour of outreach time is spent.
 
-**Core principle:** Score on four dimensions — exposure magnitude, regulatory urgency, deal accessibility, and response probability. Weight toward companies where the pain is acute, the deal is reachable, and the timing is now.
+**Core principle:** Score on four dimensions  --  exposure magnitude, regulatory urgency, deal accessibility, and response probability. Weight toward companies where the pain is acute, the deal is reachable, and the timing is now.
 
 ## Inputs
 
-- `raw_targets`: list[object] — Output from sector-target-scanner
-- `patent_families`: list[object] — Families being licensed with claim details
-- `deal_parameters`: object — `{target_upfront_min, target_upfront_max, royalty_rate_range, preferred_field_of_use}`
-- `licensor_network`: object — `{investors, advisors, board, alumni_networks}` — for warm path scoring
-- `urgency_window_days`: integer — How many days until key regulatory deadline (e.g., 120 for EU AI Act enforcement)
+- `raw_targets`: list[object]  --  Output from sector-target-scanner
+- `patent_families`: list[object]  --  Families being licensed with claim details
+- `deal_parameters`: object  --  `{target_upfront_min, target_upfront_max, royalty_rate_range, preferred_field_of_use}`
+- `licensor_network`: object  --  `{investors, advisors, board, alumni_networks}`  --  for warm path scoring
+- `urgency_window_days`: integer  --  How many days until key regulatory deadline (e.g., 120 for EU AI Act enforcement)
 
 ## Outputs
 
-- `qualified_targets`: list[object] — Scored companies: `{company, overall_score, deal_size_estimate, urgency_score, accessibility_score, response_score, warm_paths, recommended_entry, disqualification_reason}`
-- `a_list`: list[string] — Top 5-10 companies by overall score — immediate outreach priority
-- `b_list`: list[string] — Next 10-20 companies — 90-day pipeline
-- `disqualified`: list[object] — Companies removed with reason
-- `qualification_report`: string — Summary of scoring methodology and top findings
+- `qualified_targets`: list[object]  --  Scored companies: `{company, overall_score, deal_size_estimate, urgency_score, accessibility_score, response_score, warm_paths, recommended_entry, disqualification_reason}`
+- `a_list`: list[string]  --  Top 5-10 companies by overall score  --  immediate outreach priority
+- `b_list`: list[string]  --  Next 10-20 companies  --  90-day pipeline
+- `disqualified`: list[object]  --  Companies removed with reason
+- `qualification_report`: string  --  Summary of scoring methodology and top findings
 
 ---
 
@@ -50,7 +50,8 @@ Takes the raw target list from the sector scanner and qualifies each company aga
    - 2 independent claims → MEDIUM coverage
    - 3 independent claims → HIGH coverage (strong licensing position)
 
-**Output:** Claim mapping per target
+### Output
+Claim mapping per target
 
 ---
 
@@ -75,7 +76,8 @@ Takes the raw target list from the sector scanner and qualifies each company aga
 
 4. **Lifetime deal value.** Upfront + (annual royalty × 5 years) = LTV estimate
 
-**Output:** `deal_size_estimate` per target
+### Output
+`deal_size_estimate` per target
 
 ---
 
@@ -91,7 +93,8 @@ Score 1-10 based on:
 | Recent enforcement action in sector | 15% | Fine or citation in past 12 months |
 | Company has publicly acknowledged gap | 15% | Exec quoted on AI governance challenges |
 
-**Output:** `urgency_score` per target (1-10)
+### Output
+`urgency_score` per target (1-10)
 
 ---
 
@@ -107,7 +110,8 @@ Score 1-10 based on:
 | Company size / procurement complexity | 15% | Mid-market ($100M-$1B) moves faster than enterprise |
 | Prior licensing history | 15% | Company has licensed IP before (not allergic to it) |
 
-**Output:** `accessibility_score` per target
+### Output
+`accessibility_score` per target
 
 ---
 
@@ -120,11 +124,12 @@ Score 1-10 based on:
 | Regulatory pressure is acute | 25% | Regulator has specifically called out this company or sector |
 | Technical team is engaged in governance | 20% | Engineering blog posts on model monitoring, drift, safety |
 | GC or CRO has spoken publicly on AI risk | 20% | Quotes in press, conference talks on AI governance |
-| Company is raising capital | 15% | Series B+ or IPO prep — diligence surfaces IP gaps |
+| Company is raising capital | 15% | Series B+ or IPO prep  --  diligence surfaces IP gaps |
 | Company has been acquired or is in M&A | 10% | New owner does IP audit |
 | No prior contact / clean slate | 10% | Not burned by a prior bad licensing interaction |
 
-**Output:** `response_score` per target
+### Output
+`response_score` per target
 
 ---
 
@@ -155,7 +160,8 @@ overall_score = (
 - Company is pre-revenue or Series A (no budget for IP licensing)
 - Company has explicitly stated they only use open-source AI (low exposure)
 
-**Output:** `qualified_targets`, `a_list`, `b_list`, `disqualified`
+### Output
+`qualified_targets`, `a_list`, `b_list`, `disqualified`
 
 ---
 
@@ -166,7 +172,8 @@ For each A-List target:
 2. Score each warm path: STRONG (shared investor who knows both), MEDIUM (2nd-degree LinkedIn), WEAK (conference overlap)
 3. Draft the activation note for each STRONG or MEDIUM path
 
-**Output:** `warm_paths` per A-List target
+### Output
+`warm_paths` per A-List target
 
 ---
 

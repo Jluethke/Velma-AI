@@ -81,6 +81,15 @@ Implemented logic modules.
 
 ---
 
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Implement interface drivers and application logic, then prove the logic with hos, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
+
 ## Exit Criteria
 
 DONE when every interface has a working driver, every state machine reaches a fault state from every state, and all host tests pass with every fault transition covered.

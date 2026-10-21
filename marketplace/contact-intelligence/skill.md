@@ -1,8 +1,8 @@
 # Contact Intelligence
 
-Deep-research a specific executive or role at a target company to find every viable contact point — email, LinkedIn, phone, conference presence, mutual connections, and warm intro paths. Goes beyond surface-level search to build a complete contact dossier ready for outreach.
+Deep-research a specific executive or role at a target company to find every viable contact point  --  email, LinkedIn, phone, conference presence, mutual connections, and warm intro paths. Goes beyond surface-level search to build a complete contact dossier ready for outreach.
 
-**Why this exists:** Finding a name is easy. Finding the right email format, verifying it's current, identifying three independent contact paths, and knowing which channel this specific person actually responds to — that's what converts cold outreach into meetings.
+**Why this exists:** Finding a name is easy. Finding the right email format, verifying it's current, identifying three independent contact paths, and knowing which channel this specific person actually responds to  --  that's what converts cold outreach into meetings.
 
 **Core principle:** Never send a single-channel outreach to a cold contact. Always have at least three independent paths. Always verify before sending.
 
@@ -48,13 +48,13 @@ PHASE 6: CONTACT DOSSIER        --> Compile the complete actionable profile
 
 ### Phase 1: IDENTITY RESOLUTION
 
-**Entry criteria:** `target_company` and either `target_name` or `target_role` provided.
+### Entry Criteria
+`target_company` and either `target_name` or `target_role` provided.
 
-**Actions:**
-
+### Actions
 1. **Confirm current role holder.** Search these sources in order:
    - Company official website: leadership page, team page, about us
-   - LinkedIn: search "[Company] [Role Title]" — filter by current employees
+   - LinkedIn: search "[Company] [Role Title]"  --  filter by current employees
    - Crunchbase: team section under the company profile
    - PitchBook / CB Insights (if accessible): leadership data
    - Recent press releases announcing executive appointments or promotions
@@ -65,23 +65,25 @@ PHASE 6: CONTACT DOSSIER        --> Compile the complete actionable profile
    - LinkedIn "Current" designation on their profile
    - Recent posts or activity confirming active role
    - Any news of leadership changes, departures, or restructuring at the company
-   - If no confirmation found within 6 months, flag as "unconfirmed — may have changed"
+   - If no confirmation found within 6 months, flag as "unconfirmed  --  may have changed"
 
 3. **Resolve ambiguity.** If multiple people share a role (e.g., Co-CROs) or the role doesn't exist, document what was found and recommend the next best target.
 
 4. **Assign confidence score:** HIGH (confirmed via 2+ sources, active LinkedIn), MEDIUM (confirmed via 1 source), LOW (inferred from org structure or older data).
 
-**Output:** `identity_confirmed`
-**Quality gate:** Person is confirmed at the company in the stated role with a source citation. Confidence is explicitly scored.
+### Output
+`identity_confirmed`
+### Quality Gate
+Person is confirmed at the company in the stated role with a source citation. Confidence is explicitly scored.
 
 ---
 
 ### Phase 2: CONTACT POINT MINING
 
-**Entry criteria:** Identity confirmed.
+### Entry Criteria
+Identity confirmed.
 
-**Actions:**
-
+### Actions
 1. **LinkedIn deep scan.** Extract from their public profile:
    - Exact current title and company
    - Connection degree (1st, 2nd, 3rd) from your account
@@ -103,7 +105,7 @@ PHASE 6: CONTACT DOSSIER        --> Compile the complete actionable profile
    - This reveals email format (commits often expose email)
 
 4. **Published content scan.** Search:
-   - Google: "[Name]" "[Company]" — scan first 3 pages
+   - Google: "[Name]" "[Company]"  --  scan first 3 pages
    - Google: "[Name]" "[Role]" "interview" OR "podcast" OR "article"
    - Industry publications: Insurance Journal, Risk.net, InsureTech News (for insurance targets)
    - Substack, Medium, personal blogs
@@ -117,38 +119,40 @@ PHASE 6: CONTACT DOSSIER        --> Compile the complete actionable profile
    - Past event archives for talk topics and co-panelists
 
 6. **Company press scan.** Search:
-   - "[Company] press releases" — do they appear in quotes?
+   - "[Company] press releases"  --  do they appear in quotes?
    - "[Name] [Company]" on Google News
    - Earnings calls, investor days (public companies)
    - Regulatory filings (insurance companies file exec bios with state regulators)
 
-**Output:** All raw contact vectors feeding into Phases 3-5.
-**Quality gate:** At least 3 independent contact vectors identified. LinkedIn profile URL confirmed. Content footprint documented.
+### Output
+All raw contact vectors feeding into Phases 3-5.
+### Quality Gate
+At least 3 independent contact vectors identified. LinkedIn profile URL confirmed. Content footprint documented.
 
 ---
 
 ### Phase 3: EMAIL DISCOVERY
 
-**Entry criteria:** Identity confirmed and company domain known.
+### Entry Criteria
+Identity confirmed and company domain known.
 
-**Actions:**
-
+### Actions
 1. **Identify the company email format.** Methods in order of confidence:
 
-   **Method A — Direct discovery (highest confidence):**
+   **Method A  --  Direct discovery (highest confidence):**
    - Search GitHub commits: company employees' commits often expose email addresses
    - Search email-finding tools by name + domain: Hunter.io format, Apollo.io, Clearbit, RocketReach
    - Check WHOIS records for the company domain (sometimes reveals admin emails with format hints)
    - Search Google: `"@coalition.com"` + their name (public email appearances)
    - Check any published papers, patents, or regulatory filings with contact emails
 
-   **Method B — Format inference (medium confidence):**
+   **Method B  --  Format inference (medium confidence):**
    - Find 3-5 confirmed emails at the same company from public sources
    - Common formats: firstname@, f.lastname@, firstname.lastname@, flastname@, firstnamelastname@
    - Cross-reference multiple known emails to confirm the pattern
    - Apply the pattern to the target
 
-   **Method C — Tool-based (variable confidence):**
+   **Method C  --  Tool-based (variable confidence):**
    - Hunter.io domain search: lists known emails and the company's format
    - Apollo.io: executive email database
    - ContactOut: LinkedIn email finder
@@ -168,17 +172,19 @@ PHASE 6: CONTACT DOSSIER        --> Compile the complete actionable profile
    - General department email (legal@, risk@, compliance@)
    - PR/comms email (for media-style intro)
 
-**Output:** `primary_email`, `email_alternatives`
-**Quality gate:** Primary email has a stated confidence level (HIGH/MEDIUM/LOW) and a source. At least one alternative is identified. Verification status is documented.
+### Output
+`primary_email`, `email_alternatives`
+### Quality Gate
+Primary email has a stated confidence level (HIGH/MEDIUM/LOW) and a source. At least one alternative is identified. Verification status is documented.
 
 ---
 
 ### Phase 4: CHANNEL RANKING
 
-**Entry criteria:** All contact vectors collected.
+### Entry Criteria
+All contact vectors collected.
 
-**Actions:**
-
+### Actions
 1. **Score each channel by estimated response probability.** Base rates for cold outreach to C-suite:
    - Cold email: 8-15% open rate, 2-5% reply rate
    - LinkedIn DM (1st connection): 25-40% read rate, 10-20% reply rate
@@ -203,17 +209,19 @@ PHASE 6: CONTACT DOSSIER        --> Compile the complete actionable profile
    - Day 10: Warm intro if path exists
    - Day 14: Conference outreach if applicable
 
-**Output:** `channel_ranking`
-**Quality gate:** Each channel has a probability estimate with rationale specific to this person, not generic averages.
+### Output
+`channel_ranking`
+### Quality Gate
+Each channel has a probability estimate with rationale specific to this person, not generic averages.
 
 ---
 
 ### Phase 5: WARM PATH MAPPING
 
-**Entry criteria:** Contact vectors and licensor context known.
+### Entry Criteria
+Contact vectors and licensor context known.
 
-**Actions:**
-
+### Actions
 1. **Map every possible introduction route.** Search systematically:
 
    **Investor overlap:**
@@ -250,7 +258,7 @@ PHASE 6: CONTACT DOSSIER        --> Compile the complete actionable profile
    - STRONG: Shared investor who knows both parties well and will make active intro
    - MEDIUM: 2nd-degree LinkedIn connection who knows the target professionally
    - WEAK: Alumni network or conference overlap with no direct relationship
-   - COLD: No warm path found — proceed with cold outreach strategy
+   - COLD: No warm path found  --  proceed with cold outreach strategy
 
 3. **Draft intro activation message.** For each STRONG or MEDIUM path, draft the note to send to the connector:
    - What you're doing (one sentence)
@@ -258,21 +266,23 @@ PHASE 6: CONTACT DOSSIER        --> Compile the complete actionable profile
    - What you're asking (a warm email intro, not a sales pitch)
    - What the connector needs to say (provide them the words)
 
-**Output:** `warm_paths`
-**Quality gate:** Every intro route is documented with the connector's name/role and how to activate it. Activation message drafted for STRONG and MEDIUM paths.
+### Output
+`warm_paths`
+### Quality Gate
+Every intro route is documented with the connector's name/role and how to activate it. Activation message drafted for STRONG and MEDIUM paths.
 
 ---
 
 ### Phase 6: CONTACT DOSSIER
 
-**Entry criteria:** All phases complete.
+### Entry Criteria
+All phases complete.
 
-**Actions:**
-
+### Actions
 1. **Compile the one-page contact dossier.** Format:
 
 ```
-CONTACT DOSSIER — [Name] — [Title] @ [Company]
+CONTACT DOSSIER  --  [Name]  --  [Title] @ [Company]
 Generated: [Date]
 Confidence: [HIGH/MEDIUM/LOW]
 
@@ -283,40 +293,40 @@ Company: [Company] | [Location]
 Confirmed via: [Source 1], [Source 2]
 
 CONTACT POINTS (ranked by priority)
-1. [Channel]: [Value] — Confidence: [H/M/L] — [Notes]
-2. [Channel]: [Value] — Confidence: [H/M/L] — [Notes]
-3. [Channel]: [Value] — Confidence: [H/M/L] — [Notes]
+1. [Channel]: [Value]  --  Confidence: [H/M/L]  --  [Notes]
+2. [Channel]: [Value]  --  Confidence: [H/M/L]  --  [Notes]
+3. [Channel]: [Value]  --  Confidence: [H/M/L]  --  [Notes]
 
 EMAIL
-Primary: [email] — Confidence: [H/M/L] — Format source: [method]
-Alternative: [email] — [Format variant]
+Primary: [email]  --  Confidence: [H/M/L]  --  Format source: [method]
+Alternative: [email]  --  [Format variant]
 Verification status: [Verified/Unverified/Tool-confirmed]
 
 LINKEDIN
 URL: [url]
 Connection degree: [1st/2nd/3rd]
-Activity level: [High/Medium/Low — posts X/month]
+Activity level: [High/Medium/Low  --  posts X/month]
 Last post topic: [topic]
 Best engagement angle: [what to reference]
 
 WARM PATHS (ranked by strength)
-1. [STRONG] via [Connector Name/Role] — [How to activate]
-2. [MEDIUM] via [Connector] — [How to activate]
-3. [WEAK] via [Network/Event] — [How to activate]
+1. [STRONG] via [Connector Name/Role]  --  [How to activate]
+2. [MEDIUM] via [Connector]  --  [How to activate]
+3. [WEAK] via [Network/Event]  --  [How to activate]
 
 CONTENT FOOTPRINT
-- [Title, Outlet, Date] — Key theme: [theme]
-- [Title, Outlet, Date] — Key theme: [theme]
+- [Title, Outlet, Date]  --  Key theme: [theme]
+- [Title, Outlet, Date]  --  Key theme: [theme]
 
 CONFERENCE PRESENCE
-- [Event, Date, Role] — Topic: [topic]
+- [Event, Date, Role]  --  Topic: [topic]
 
 CHANNEL SEQUENCE
 Day 1: LinkedIn connection request
-Day 2: Email — [primary_email]
-Day 4: LinkedIn DM — [if connected]
+Day 2: Email  --  [primary_email]
+Day 4: LinkedIn DM  --  [if connected]
 Day 7: Email Touch 2
-Day 10: Warm intro via [connector] — [activation message ready]
+Day 10: Warm intro via [connector]  --  [activation message ready]
 Day 14: [Conference / event if applicable]
 
 WHAT NOT TO DO
@@ -324,8 +334,10 @@ WHAT NOT TO DO
 - [Specific caution based on their profile]
 ```
 
-**Output:** `contact_dossier`
-**Quality gate:** Dossier is complete, specific, and actionable. No generic placeholders. Every field has a real value or is explicitly marked "not found."
+### Output
+`contact_dossier`
+### Quality Gate
+Dossier is complete, specific, and actionable. No generic placeholders. Every field has a real value or is explicitly marked "not found."
 
 ---
 
@@ -344,20 +356,20 @@ The skill is DONE when:
 
 | Phase | Failure Mode | Response |
 |---|---|---|
-| IDENTITY | Person not found in role | Flag — search for who does hold the role, output alternative targets |
-| IDENTITY | Person left the company | Flag with date if known — identify successor |
-| EMAIL | Company email format unknown | Output 3 format variants at LOW confidence — flag for manual verification before send |
-| EMAIL | All verification methods fail | Flag — recommend LinkedIn DM as primary channel instead |
-| WARM PATHS | No warm path exists | Flag explicitly — recommend cold outreach strategy with conference targeting as best alternative |
-| CHANNEL RANKING | Person has no public presence | Flag — recommend email as primary, adjust probability estimates down, increase follow-up frequency |
+| IDENTITY | Person not found in role | Flag  --  search for who does hold the role, output alternative targets |
+| IDENTITY | Person left the company | Flag with date if known  --  identify successor |
+| EMAIL | Company email format unknown | Output 3 format variants at LOW confidence  --  flag for manual verification before send |
+| EMAIL | All verification methods fail | Flag  --  recommend LinkedIn DM as primary channel instead |
+| WARM PATHS | No warm path exists | Flag explicitly  --  recommend cold outreach strategy with conference targeting as best alternative |
+| CHANNEL RANKING | Person has no public presence | Flag  --  recommend email as primary, adjust probability estimates down, increase follow-up frequency |
 
 ## State Persistence
 
-- `contact_registry`: All contacts researched — name, company, email, LinkedIn, confidence, last verified date
-- `email_format_library`: Known email formats per company domain — reused for future targets at the same company
-- `warm_path_map`: All identified intro paths across all targets — improves with each research run
-- `conference_calendar`: Upcoming events where target executives will be present — used for timing outreach
-- `content_monitor`: Watching for new publications, interviews, or posts by target contacts — triggers re-engagement
+- `contact_registry`: All contacts researched  --  name, company, email, LinkedIn, confidence, last verified date
+- `email_format_library`: Known email formats per company domain  --  reused for future targets at the same company
+- `warm_path_map`: All identified intro paths across all targets  --  improves with each research run
+- `conference_calendar`: Upcoming events where target executives will be present  --  used for timing outreach
+- `content_monitor`: Watching for new publications, interviews, or posts by target contacts  --  triggers re-engagement
 
 ---
 

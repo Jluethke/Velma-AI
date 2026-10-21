@@ -1,6 +1,6 @@
 # OKR Alignment
 
-**One-line description:** Manager and team lead each submit their real priorities and capacity constraints before OKR setting — AI surfaces the conflicts between company direction and team reality, and produces a negotiated OKR set both sides can commit to.
+**One-line description:** Manager and team lead each submit their real priorities and capacity constraints before OKR setting  --  AI surfaces the conflicts between company direction and team reality, and produces a negotiated OKR set both sides can commit to.
 
 **Execution Pattern:** Phase Pipeline
 
@@ -39,47 +39,86 @@
 ## Execution Phases
 
 ### Phase 0: Pre-Flight Check
-**Entry Criteria:** Both submissions received.
-**Actions:** Confirm `company_objectives`, `team_proposed_okrs`, and `team_capacity_reality` present.
-**Output:** Readiness confirmation.
-**Quality Gate:** Both OKR proposals and capacity reality present.
+### Entry Criteria
+Both submissions received.
+### Actions
+Confirm `company_objectives`, `team_proposed_okrs`, and `team_capacity_reality` present.
+### Output
+Readiness confirmation.
+### Quality Gate
+Both OKR proposals and capacity reality present.
 
 ---
 
 ### Phase 1: Map Alignment and Conflicts
-**Entry Criteria:** Both submissions confirmed.
-**Actions:** 1. Map each company objective to the team's proposed OKRs — does the team's proposal address the company priorities? 2. Identify OKRs the team proposed that the manager would deprioritize. 3. Identify manager priorities the team hasn't addressed. 4. Flag manager non-negotiables that conflict with team capacity.
-**Output:** Alignment map, conflict list, unaddressed priority list.
-**Quality Gate:** Every manager non-negotiable is checked against team capacity.
+### Entry Criteria
+Both submissions confirmed.
+### Actions
+1. Map each company objective to the team's proposed OKRs  --  does the team's proposal address the company priorities? 2. Identify OKRs the team proposed that the manager would deprioritize. 3. Identify manager priorities the team hasn't addressed. 4. Flag manager non-negotiables that conflict with team capacity.
+### Output
+Alignment map, conflict list, unaddressed priority list.
+### Quality Gate
+Every manager non-negotiable is checked against team capacity.
 
 ---
 
 ### Phase 2: Reality-Check the Capacity
-**Entry Criteria:** Conflicts mapped.
-**Actions:** 1. Assess whether the combined desired OKRs are achievable given the team's stated capacity. 2. Calculate the gap between desired scope and realistic capacity. 3. Identify which OKRs need to be descoped, deferred, or resourced differently.
-**Output:** Capacity gap, prioritization options.
-**Quality Gate:** Capacity gap is quantified (not just "too much to do").
+### Entry Criteria
+Conflicts mapped.
+### Actions
+1. Assess whether the combined desired OKRs are achievable given the team's stated capacity. 2. Calculate the gap between desired scope and realistic capacity. 3. Identify which OKRs need to be descoped, deferred, or resourced differently.
+### Output
+Capacity gap, prioritization options.
+### Quality Gate
+Capacity gap is quantified (not just "too much to do").
 
 ---
 
 ### Phase 3: Draft the Negotiated OKR Set
-**Entry Criteria:** Capacity assessed.
-**Actions:** 1. Build a negotiated OKR set: manager non-negotiables in, adjusted for team capacity. 2. Write specific, measurable key results for each objective. 3. Flag OKRs that require external dependencies. 4. Draft the success conditions: what needs to be true for these to be achievable.
-**Output:** Negotiated OKR set with key results, dependency map, success conditions.
-**Quality Gate:** Key results are specific and measurable. Stretch vs. committed OKRs are distinguished.
+### Entry Criteria
+Capacity assessed.
+### Actions
+1. Build a negotiated OKR set: manager non-negotiables in, adjusted for team capacity. 2. Write specific, measurable key results for each objective. 3. Flag OKRs that require external dependencies. 4. Draft the success conditions: what needs to be true for these to be achievable.
+### Output
+Negotiated OKR set with key results, dependency map, success conditions.
+### Quality Gate
+Key results are specific and measurable. Stretch vs. committed OKRs are distinguished.
 
 ---
 
 ### Phase 4: Deliver the Synthesis
-**Entry Criteria:** OKR set drafted.
-**Actions:** 1. Present alignment. 2. Present conflicts with resolution. 3. Present capacity reality check. 4. Deliver negotiated OKR set. 5. Deliver dependency map. 6. State success conditions.
-**Output:** Full synthesis — alignment, conflicts, capacity check, OKR set, dependencies, success conditions.
-**Quality Gate:** Both manager and team lead can commit to this set. No OKR is present without the capacity to achieve it.
+### Entry Criteria
+OKR set drafted.
+### Actions
+1. Present alignment. 2. Present conflicts with resolution. 3. Present capacity reality check. 4. Deliver negotiated OKR set. 5. Deliver dependency map. 6. State success conditions.
+### Output
+Full synthesis  --  alignment, conflicts, capacity check, OKR set, dependencies, success conditions.
+### Quality Gate
+Both manager and team lead can commit to this set. No OKR is present without the capacity to achieve it.
 
 ---
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Manager and team lead each submit their real priorities and concerns before OKR , the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 Done when: (1) every manager non-negotiable is accounted for, (2) capacity gap quantified, (3) negotiated OKR set has specific measurable key results, (4) dependencies named, (5) success conditions stated.
 
 ---
+
+---
+
+## Error Handling
+
+| Phase | Failure Mode | Response |
+|---|---|---|
+| Any | Missing required input | **Stop**: report which input is missing and what it should contain. |
+| Any | Upstream phase output incomplete | **Return**: re-run the upstream phase with the gap identified. |
+
 Copyright 2024-present The Wayfinder Trust. All rights reserved.

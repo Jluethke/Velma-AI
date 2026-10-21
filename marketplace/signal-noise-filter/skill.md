@@ -36,10 +36,10 @@ ACT     --> Output filtered feed with priority tags, suppress noise, flag weak s
 
 ### OBSERVE: Ingest the Stream
 
-**Entry criteria:** An information stream with at least one item is provided.
+### Entry Criteria
+An information stream with at least one item is provided.
 
-**Actions:**
-
+### Actions
 1. **Normalize items.** Each item needs a standard representation:
    ```
    {
@@ -59,18 +59,20 @@ ACT     --> Output filtered feed with priority tags, suppress noise, flag weak s
 
 4. **Check for volume anomalies.** Sudden spikes in information volume about a topic are themselves a signal. If the stream has 10x normal volume on a topic, flag the volume spike as a meta-signal regardless of individual item classification.
 
-**Output:** Normalized, deduplicated stream with source reliability scores attached.
+### Output
+Normalized, deduplicated stream with source reliability scores attached.
 
-**Quality gate:** All items have source reliability scores. Duplicates are merged. Volume anomalies (if any) are flagged.
+### Quality Gate
+All items have source reliability scores. Duplicates are merged. Volume anomalies (if any) are flagged.
 
 ---
 
 ### REASON: Classify Each Item
 
-**Entry criteria:** Normalized stream is ready.
+### Entry Criteria
+Normalized stream is ready.
 
-**Actions:**
-
+### Actions
 1. **Apply the Signal Classification Framework.** For each item, evaluate three dimensions:
 
    **Relevance (0-1):** How related is this to the user's context and priorities?
@@ -112,18 +114,20 @@ ACT     --> Output filtered feed with priority tags, suppress noise, flag weak s
    - Reports: 7-day half-life
    - Metrics: depends on measurement frequency
 
-**Output:** Classified stream: each item labeled signal/weak-signal/noise with scores and reasoning.
+### Output
+Classified stream: each item labeled signal/weak-signal/noise with scores and reasoning.
 
-**Quality gate:** Every item has a classification. Signal items have relevance >= 0.4 and actionability >= 0.4. Noise items have signal score < 0.3. No items are unclassified.
+### Quality Gate
+Every item has a classification. Signal items have relevance >= 0.4 and actionability >= 0.4. Noise items have signal score < 0.3. No items are unclassified.
 
 ---
 
 ### PLAN: Prioritize Signals
 
-**Entry criteria:** Items are classified.
+### Entry Criteria
+Items are classified.
 
-**Actions:**
-
+### Actions
 1. **Score signal priority.** For each signal-classified item:
    ```
    priority = urgency * impact * confidence
@@ -150,18 +154,20 @@ ACT     --> Output filtered feed with priority tags, suppress noise, flag weak s
    - What trigger would promote it to signal status
    - What trigger would demote it to noise
 
-**Output:** Prioritized signal list, grouped by action type, with weak signal monitoring schedule.
+### Output
+Prioritized signal list, grouped by action type, with weak signal monitoring schedule.
 
-**Quality gate:** Signals are ordered by priority score. Alert fatigue rule applied (no more than N signals in final output). Weak signals have check-in triggers.
+### Quality Gate
+Signals are ordered by priority score. Alert fatigue rule applied (no more than N signals in final output). Weak signals have check-in triggers.
 
 ---
 
 ### ACT: Deliver the Filtered Feed
 
-**Entry criteria:** Signals are prioritized, noise is classified, weak signals have monitoring plans.
+### Entry Criteria
+Signals are prioritized, noise is classified, weak signals have monitoring plans.
 
-**Actions:**
-
+### Actions
 1. **Format the filtered feed.** Present in priority order:
    ```
    [SIGNAL - Priority 20.0] Security vulnerability in dependency X
@@ -196,9 +202,11 @@ ACT     --> Output filtered feed with priority tags, suppress noise, flag weak s
    - A weak signal's check-in trigger fires
    - Alert fatigue conditions change (user's capacity changes)
 
-**Output:** Filtered feed, noise summary, filter adaptation log.
+### Output
+Filtered feed, noise summary, filter adaptation log.
 
-**Quality gate:** Feed is in priority order. Noise summary accounts for all suppressed items. If feedback was provided, adaptation log shows what changed.
+### Quality Gate
+Feed is in priority order. Noise summary accounts for all suppressed items. If feedback was provided, adaptation log shows what changed.
 
 ## Exit Criteria
 

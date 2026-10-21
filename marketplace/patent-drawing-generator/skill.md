@@ -14,25 +14,26 @@ PHASE 6: COMPLY      --> Verify USPTO 37 CFR 1.84 compliance
 ```
 
 ## Inputs
-- figure_description: string -- The textual description of the figure from the patent specification (e.g., "System block diagram showing expectation interface, observation interface, divergence computation...")
-- figure_number: string -- The figure number (e.g., "FIG. 1", "FIG. 7")
-- patent_family: string -- Which patent family this belongs to (e.g., "Family A — NeuroPRIN")
-- drawing_type: string (optional) -- Override auto-detection: "block_diagram", "flowchart", "state_machine", "sequence_diagram", "data_flow", "graph", "pipeline"
+- `figure_description`: string -- The textual description of the figure from the patent specification (e.g., "System block diagram showing expectation interface, observation interface, divergence computation...")
+- `figure_number`: string -- The figure number (e.g., "FIG. 1", "FIG. 7")
+- `patent_family`: string -- Which patent family this belongs to (e.g., "Family A  --  governance")
+- `drawing_type`: string (optional) -- Override auto-detection: "block_diagram", "flowchart", "state_machine", "sequence_diagram", "data_flow", "graph", "pipeline"
 
 ## Outputs
-- mermaid_code: string -- Mermaid.js diagram code
+- `mermaid_code`: string -- Mermaid.js diagram code
 - png_path: string -- File path to rendered PNG image
 - svg_path: string -- File path to rendered SVG image
-- drawing_specification: object -- Structured spec with layout, components, connections, labels
-- compliance_notes: list -- USPTO 37 CFR 1.84 compliance checklist results
-- reference_numerals: object -- Map of reference numeral numbers to component names (e.g., {100: "trust computation module", 102: "divergence monitor"})
+- `drawing_specification`: object -- Structured spec with layout, components, connections, labels
+- `compliance_notes`: list -- USPTO 37 CFR 1.84 compliance checklist results
+- `reference_numerals`: object -- Map of reference numeral numbers to component names (e.g., {100: "trust computation module", 102: "divergence monitor"})
 
 ## Execution
 
-### PHASE 1: PARSE — Extract Figure Requirements
+### PHASE 1: PARSE  --  Extract Figure Requirements
 
-**Entry criteria:** Figure description text provided
-**Actions:**
+### Entry Criteria
+Figure description text provided
+### Actions
 1. Parse the figure description to identify:
    - All named components/modules/blocks
    - All connections/flows/relationships between components
@@ -43,13 +44,16 @@ PHASE 6: COMPLY      --> Verify USPTO 37 CFR 1.84 compliance
 3. Identify SECONDARY elements (supporting context)
 4. Note any cross-references to other figures
 
-**Output:** Structured component list with relationships
-**Quality gate:** Every named component in the description appears in the parsed output
+### Output
+Structured component list with relationships
+### Quality Gate
+Every named component in the description appears in the parsed output
 
-### PHASE 2: CLASSIFY — Determine Diagram Type
+### PHASE 2: CLASSIFY  --  Determine Diagram Type
 
-**Entry criteria:** Parsed components and relationships
-**Actions:**
+### Entry Criteria
+Parsed components and relationships
+### Actions
 1. Auto-classify the diagram type:
    - **Block diagram**: Components connected by arrows showing data/control flow (most common for system architecture)
    - **Flowchart**: Decision points with yes/no branches, sequential steps
@@ -64,13 +68,16 @@ PHASE 6: COMPLY      --> Verify USPTO 37 CFR 1.84 compliance
    - State machines: Circles/rounded rectangles for states, labeled arrows
    - Graphs: Axes labeled, curves clearly distinguishable
 
-**Output:** Diagram type classification with USPTO format requirements
-**Quality gate:** Classification matches the description intent
+### Output
+Diagram type classification with USPTO format requirements
+### Quality Gate
+Classification matches the description intent
 
-### PHASE 3: DESIGN — Reference Numerals and Layout
+### PHASE 3: DESIGN  --  Reference Numerals and Layout
 
-**Entry criteria:** Classified diagram type, parsed components
-**Actions:**
+### Entry Criteria
+Classified diagram type, parsed components
+### Actions
 1. Assign reference numerals following USPTO conventions:
    - Use 3-digit numbers starting from 100
    - Group related components: 100-series for first major subsystem, 200-series for second, etc.
@@ -83,13 +90,16 @@ PHASE 6: COMPLY      --> Verify USPTO 37 CFR 1.84 compliance
    - Keep crossing lines to minimum
 3. Generate reference numeral table mapping numbers to component names
 
-**Output:** Reference numeral assignments, layout specification
-**Quality gate:** Every component has a unique numeral; no numeral gaps; layout minimizes line crossings
+### Output
+Reference numeral assignments, layout specification
+### Quality Gate
+Every component has a unique numeral; no numeral gaps; layout minimizes line crossings
 
-### PHASE 4: RENDER — Generate Mermaid Code
+### PHASE 4: RENDER  --  Generate Mermaid Code
 
-**Entry criteria:** Design specification with numerals and layout
-**Actions:**
+### Entry Criteria
+Design specification with numerals and layout
+### Actions
 1. Generate Mermaid.js diagram code based on classified type:
    - `graph TD` for top-down block diagrams
    - `graph LR` for left-right pipelines
@@ -98,19 +108,22 @@ PHASE 6: COMPLY      --> Verify USPTO 37 CFR 1.84 compliance
    - `sequenceDiagram` for sequence diagrams
    - `xychart-beta` for graphs/curves
 2. Apply patent drawing style:
-   - Use rectangle nodes with reference numerals in labels: `A100["100 — Trust Module"]`
+   - Use rectangle nodes with reference numerals in labels: `A100["100  --  Trust Module"]`
    - Label all arrows/connections with data names
    - Use subgraph blocks for subsystem grouping
    - Keep text concise (patent drawings use brief labels, not sentences)
-3. Add title as comment: `%% FIG. X — [Description]`
+3. Add title as comment: `%% FIG. X  --  [Description]`
 
-**Output:** Complete Mermaid code block
-**Quality gate:** Code renders without syntax errors; all components from Phase 1 are represented
+### Output
+Complete Mermaid code block
+### Quality Gate
+Code renders without syntax errors; all components from Phase 1 are represented
 
-### PHASE 5: IMAGE — Render to PNG and SVG
+### PHASE 5: IMAGE  --  Render to PNG and SVG
 
-**Entry criteria:** Valid Mermaid code from Phase 4
-**Actions:**
+### Entry Criteria
+Valid Mermaid code from Phase 4
+### Actions
 1. Save each figure's Mermaid code to a temporary `.mmd` file
 2. Run the rendering script to produce images:
    ```
@@ -118,13 +131,15 @@ PHASE 6: COMPLY      --> Verify USPTO 37 CFR 1.84 compliance
    ```
    This uses `mermaid-py` (pip install mermaid-py) which calls the Mermaid.ink API to render.
 3. For each figure, generate:
-   - **PNG**: `fig_XX.png` — raster image for filing and printing
-   - **SVG**: `fig_XX.svg` — vector image for scaling and professional redraw
+   - **PNG**: `fig_XX.png`  --  raster image for filing and printing
+   - **SVG**: `fig_XX.svg`  --  vector image for scaling and professional redraw
 4. Verify each image rendered successfully (file exists, size > 0)
 5. Generate a render report with file paths and sizes
 
-**Output:** PNG and SVG files for each figure, render report
-**Quality gate:** All figures render without errors; PNG files > 1KB each
+### Output
+PNG and SVG files for each figure, render report
+### Quality Gate
+All figures render without errors; PNG files > 1KB each
 
 **Dependencies:** `pip install mermaid-py` (uses Mermaid.ink rendering API)
 
@@ -132,10 +147,11 @@ PHASE 6: COMPLY      --> Verify USPTO 37 CFR 1.84 compliance
 
 ---
 
-### PHASE 6: COMPLY — USPTO 37 CFR 1.84 Verification
+### PHASE 6: COMPLY  --  USPTO 37 CFR 1.84 Verification
 
-**Entry criteria:** Rendered Mermaid code
-**Actions:**
+### Entry Criteria
+Rendered Mermaid code
+### Actions
 1. Verify against USPTO drawing requirements (37 CFR 1.84):
    - [ ] Black and white only (no color unless petition filed)
    - [ ] Sufficiently clear and legible when reproduced at 2/3 scale
@@ -148,8 +164,19 @@ PHASE 6: COMPLY      --> Verify USPTO 37 CFR 1.84 compliance
 2. Flag any compliance issues
 3. Generate compliance report
 
-**Output:** Compliance checklist with pass/fail for each requirement
-**Quality gate:** All mandatory requirements pass; advisory items noted
+### Output
+Compliance checklist with pass/fail for each requirement
+### Quality Gate
+All mandatory requirements pass; advisory items noted
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Generates USPTO-compliant patent drawings from textual figure descriptions. Prod, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 
@@ -184,3 +211,7 @@ Done when:
 - **Lead Lines**: Fine lines between reference characters and details referred to
 - **Shading**: May be used to indicate surfaces or cross-sections
 - **Symbols**: Standard symbols may be used where conventional
+
+---
+
+Copyright 2024-present The Wayfinder Trust. All rights reserved.

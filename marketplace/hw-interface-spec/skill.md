@@ -81,6 +81,15 @@ Draft interface list and environment name.
 
 ---
 
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Specify every external board interface electrically (standard, levels, rate, con, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
+
 ## Exit Criteria
 
 DONE when an engineer could choose transceivers, connectors, and protection from `interface_table` and `environment_profile` alone, with no host-side fact left uncited or unmarked.

@@ -33,9 +33,10 @@ PHASE 5: MONITOR       --> Set up alerting, freshness SLAs, drift detection
 
 ### Phase 1: SOURCE -- Identify Data Sources
 
-**Entry criteria:** At least one data source is described.
+### Entry Criteria
+At least one data source is described.
 
-**Actions:**
+### Actions
 1. Inventory all data sources: APIs, databases, file drops, event streams, third-party feeds
 2. For each source, determine:
    - Format (JSON, CSV, Parquet, Avro, database tables)
@@ -48,17 +49,20 @@ PHASE 5: MONITOR       --> Set up alerting, freshness SLAs, drift detection
 5. Identify the destination and its requirements: schema, format, access patterns
 6. Determine latency requirements: Is this batch or streaming? (see Reference: Streaming vs Batch)
 
-**Output:** A source inventory listing each source with format, volume, freshness, access method, and constraints. Plus destination requirements and latency target.
+### Output
+A source inventory listing each source with format, volume, freshness, access method, and constraints. Plus destination requirements and latency target.
 
-**Quality gate:** Every source has volume and freshness estimates. Extraction method is determined for each source. Batch vs streaming decision is made.
+### Quality Gate
+Every source has volume and freshness estimates. Extraction method is determined for each source. Batch vs streaming decision is made.
 
 ---
 
 ### Phase 2: DESIGN -- Select Patterns and Orchestration
 
-**Entry criteria:** Source inventory is complete with latency and volume decisions.
+### Entry Criteria
+Source inventory is complete with latency and volume decisions.
 
-**Actions:**
+### Actions
 1. Select extraction pattern per source (see Reference: Extract Patterns):
    - API polling with If-Modified-Since for REST sources
    - Paginated extraction for large API datasets
@@ -86,17 +90,20 @@ PHASE 5: MONITOR       --> Set up alerting, freshness SLAs, drift detection
    - Streaming: Kafka + Flink/Kafka Streams if real-time
 7. Choose architecture pattern: Lambda (batch + speed layers) or Kappa (stream-only)
 
-**Output:** Pipeline architecture document with extraction, transform, load, and orchestration patterns selected for each source, plus tool stack recommendation.
+### Output
+Pipeline architecture document with extraction, transform, load, and orchestration patterns selected for each source, plus tool stack recommendation.
 
-**Quality gate:** Every source has an extraction pattern. Transform logic handles deduplication. Load pattern supports idempotent re-runs. Tool choices match volume requirements.
+### Quality Gate
+Every source has an extraction pattern. Transform logic handles deduplication. Load pattern supports idempotent re-runs. Tool choices match volume requirements.
 
 ---
 
 ### Phase 3: BUILD -- Generate Pipeline Code
 
-**Entry criteria:** Architecture design is complete and approved.
+### Entry Criteria
+Architecture design is complete and approved.
 
-**Actions:**
+### Actions
 1. Generate extraction code per source:
    - API extractors with pagination, rate limiting, error handling (see Reference: API Polling, Paginated API Extraction)
    - CDC queries with incremental bookmarks
@@ -125,17 +132,20 @@ PHASE 5: MONITOR       --> Set up alerting, freshness SLAs, drift detection
    - Row count reasonableness
    - Value range checks
 
-**Output:** Complete, executable pipeline code including extractors, transforms, loaders, DAG, error handling, and quality checks.
+### Output
+Complete, executable pipeline code including extractors, transforms, loaders, DAG, error handling, and quality checks.
 
-**Quality gate:** Pipeline code runs without syntax errors. Every extractor handles errors (retries, timeouts). Transforms handle null values. Loads are idempotent.
+### Quality Gate
+Pipeline code runs without syntax errors. Every extractor handles errors (retries, timeouts). Transforms handle null values. Loads are idempotent.
 
 ---
 
 ### Phase 4: VALIDATE -- Data Quality Tests
 
-**Entry criteria:** Pipeline code is generated and can be tested.
+### Entry Criteria
+Pipeline code is generated and can be tested.
 
-**Actions:**
+### Actions
 1. Run data quality checks on sample data (see Reference: Validation Framework):
    - No nulls in required columns
    - All values within expected ranges
@@ -149,17 +159,20 @@ PHASE 5: MONITOR       --> Set up alerting, freshness SLAs, drift detection
 6. Check freshness: verify data age meets SLA (see Reference: Freshness SLA)
 7. Check row count anomaly detection (see Reference: Row Count Monitoring)
 
-**Output:** Validation report listing all quality checks with pass/fail status and any data issues found.
+### Output
+Validation report listing all quality checks with pass/fail status and any data issues found.
 
-**Quality gate:** All required-column null checks pass. Idempotency test produces zero duplicates. Incremental test processes only new records. Freshness meets SLA.
+### Quality Gate
+All required-column null checks pass. Idempotency test produces zero duplicates. Incremental test processes only new records. Freshness meets SLA.
 
 ---
 
 ### Phase 5: MONITOR -- Set Up Alerting and Drift Detection
 
-**Entry criteria:** Validation passes with all critical checks green.
+### Entry Criteria
+Validation passes with all critical checks green.
 
-**Actions:**
+### Actions
 1. Set up pipeline metrics tracking (see Reference: Key Metrics for Data Pipelines):
    - Row count per run
    - Pipeline duration
@@ -181,11 +194,22 @@ PHASE 5: MONITOR       --> Set up alerting, freshness SLAs, drift detection
    - Auto-retry with backoff for retryable errors
 5. Document runbook: what to do when each alert fires
 
-**Output:** Monitoring configuration with alerting rules, dashboards, and runbook.
+### Output
+Monitoring configuration with alerting rules, dashboards, and runbook.
 
-**Quality gate:** Every key metric has an alert. Freshness SLA is monitored. DLQ is monitored. Runbook covers all alert types.
+### Quality Gate
+Every key metric has an alert. Freshness SLA is monitored. DLQ is monitored. Runbook covers all alert types.
 
 ---
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Build reliable data pipelines and ETL jobs with extraction, transformation, load, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 
@@ -528,7 +552,7 @@ CREATE TABLE events (
 
 #### DAG Pattern (Airflow-style)
 ```python
-# Conceptual DAG — dependencies define execution order
+# Conceptual DAG  --  dependencies define execution order
 pipeline = DAG(
     schedule="0 2 * * *",  # Run at 2 AM daily
     tasks={
@@ -571,7 +595,7 @@ def retry_with_backoff(func, max_retries=5, base_delay=1, max_delay=300):
 #### Idempotency
 ```python
 def idempotent_load(engine, batch_id, data):
-    """Load data idempotently — safe to re-run without duplicates."""
+    """Load data idempotently  --  safe to re-run without duplicates."""
     with engine.begin() as conn:
         # Delete any previous load for this batch
         conn.execute(
@@ -758,7 +782,7 @@ def process_with_poison_detection(record, process_fn, dlq):
     retry_count = record.get('_retry_count', 0)
 
     if retry_count >= MAX_RETRIES:
-        # This record is a poison pill — quarantine it
+        # This record is a poison pill  --  quarantine it
         dlq.send({
             'record': record,
             'reason': 'poison_pill',
@@ -971,3 +995,7 @@ Is latency < 1 min required?
 - [ ] Monitoring: Duration, row count, error rate, freshness tracked
 - [ ] Format: Using Parquet for analytics, JSONL for logs
 - [ ] Schema evolution: New/removed columns handled gracefully
+
+---
+
+Copyright 2024-present The Wayfinder Trust. All rights reserved.

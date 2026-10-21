@@ -58,6 +58,15 @@ BOM and CPL files with stock record.
 
 ---
 
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Produce BOM and placement files in the fab's exact columns, recheck stock at exp, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
+
 ## Exit Criteria
 
 DONE when BOM and CPL match the fab format, every part is in stock at export, and every rotation is confirmed.

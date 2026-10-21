@@ -1,6 +1,6 @@
 # Website Analytics & Conversion Auditor
 
-**One-line description:** A CRO specialist and analytics engineer audits a website's conversion funnel, tracking setup, and measurement gaps — then identifies where visitors drop off and what to test to recover them.
+**One-line description:** A CRO specialist and analytics engineer audits a website's conversion funnel, tracking setup, and measurement gaps  --  then identifies where visitors drop off and what to test to recover them.
 
 **Execution Pattern:** Phase Pipeline
 
@@ -20,9 +20,18 @@
 
 ---
 
+## Outputs
+
+- (none defined)
+
+
+---
+- output: (auto-linked)
+
+- `output`: (auto-linked)
 ## Phases
 
-### Phase 1 — Tracking Audit
+### Phase 1  --  Tracking Audit
 Assess whether the measurement foundation is reliable:
 - Is the analytics tag firing on every page? Are there pages without tracking?
 - Are conversion events correctly tagged and firing once (not double-counting)?
@@ -33,7 +42,7 @@ Assess whether the measurement foundation is reliable:
 
 Deliverable: Tracking gaps list with implementation instructions.
 
-### Phase 2 — Funnel Mapping
+### Phase 2  --  Funnel Mapping
 Map the full conversion funnel from first visit to conversion:
 - Stage 1: Landing (which pages do visitors enter on?)
 - Stage 2: Engagement (which pages do they visit next?)
@@ -45,7 +54,7 @@ For each stage: What % of visitors make it to the next stage? What are the prima
 
 Deliverable: Funnel diagram with estimated drop-off rates at each stage.
 
-### Phase 3 — Exit Page Analysis
+### Phase 3  --  Exit Page Analysis
 For the top 5 exit pages:
 - Why are users leaving here? (content dead end, no CTA, technical issue, answer found)
 - What did they come to find?
@@ -53,7 +62,7 @@ For the top 5 exit pages:
 
 Deliverable: Per-page hypothesis and recommended fix.
 
-### Phase 4 — CRO Opportunity Identification
+### Phase 4  --  CRO Opportunity Identification
 Identify the highest-leverage conversion opportunities:
 - Which page, if improved by 20%, would have the biggest impact on total conversions?
 - Are there pages with high traffic and low conversion rate that should be prioritized?
@@ -62,7 +71,7 @@ Identify the highest-leverage conversion opportunities:
 
 Deliverable: Ranked CRO opportunity list with expected lift and test hypothesis.
 
-### Phase 5 — A/B Test Roadmap
+### Phase 5  --  A/B Test Roadmap
 For the top 3 CRO opportunities:
 - **Hypothesis:** If we change X, we expect Y because Z.
 - **Variant:** Specific change to test (headline, CTA, layout, form, social proof).
@@ -70,7 +79,7 @@ For the top 3 CRO opportunities:
 - **Sample size needed:** Estimated traffic required for statistical significance.
 - **Test duration:** Estimated days to significance at current traffic levels.
 
-### Phase 6 — Measurement Improvement Plan
+### Phase 6  --  Measurement Improvement Plan
 
 **Fix immediately (broken tracking blocking decisions):**
 Specific implementation steps.
@@ -83,3 +92,7 @@ Full test briefs for each experiment.
 
 **Reporting setup:**
 Recommended dashboard structure and weekly/monthly KPIs to track.
+
+---
+
+Copyright 2024-present The Wayfinder Trust. All rights reserved.

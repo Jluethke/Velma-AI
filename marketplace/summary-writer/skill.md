@@ -1,6 +1,6 @@
 # Summary Writer
 
-> **Starter Skill** — Free to use. Royalties to original creator on derivatives. Build on this.
+> **Starter Skill**  --  Free to use. Royalties to original creator on derivatives. Build on this.
 
 Foundation pattern for condensing long content into structured summaries at specified detail levels. Takes any content (article, report, meeting transcript, book chapter, email thread) and a target length, then produces a summary that preserves key facts, decisions, action items, and open questions. The hard part of summarizing is not cutting words -- it is deciding what matters. Fork this for: meeting notes, research digests, news briefings, book summaries, legal document summaries, report abstracts, etc.
 
@@ -35,25 +35,29 @@ ACT     --> Output summary with metadata and omission notes
 
 ### OBSERVE: Analyze Source Content
 
-**Entry criteria:** Source content is provided.
+### Entry Criteria
+Source content is provided.
 
-**Actions:**
+### Actions
 1. Assess content type and structure. Is this a meeting transcript (chronological, multi-speaker), a report (sections, findings, recommendations), an article (thesis, evidence, conclusion), an email thread (conversation, decisions), or unstructured notes? The content type determines the summarization strategy.
 2. Measure the source. Word count, paragraph count, section count. Compute the compression ratio needed: source length / target length. A 10:1 compression requires aggressive prioritization. A 2:1 compression allows nuance.
 3. Identify structural elements. Headers, sections, speakers, timestamps, bullet points, numbered lists, bold/italic emphasis. These are the author's own signals about what matters.
 4. Extract candidate key elements. Scan for: explicit decisions ("we decided to..."), action items ("John will..."), deadlines, data points (numbers, percentages, metrics), conclusions, recommendations, and open questions.
 
-**Output:** Content type assessment, compression ratio, structural map, candidate key elements.
+### Output
+Content type assessment, compression ratio, structural map, candidate key elements.
 
-**Quality gate:** Content type is identified. Compression ratio is computed. At least 3 candidate key elements are extracted.
+### Quality Gate
+Content type is identified. Compression ratio is computed. At least 3 candidate key elements are extracted.
 
 ---
 
 ### REASON: Rank by Importance
 
-**Entry criteria:** Content is analyzed with candidate key elements.
+### Entry Criteria
+Content is analyzed with candidate key elements.
 
-**Actions:**
+### Actions
 1. Apply the importance hierarchy. In descending order of preservation priority:
    - **Decisions made**: these change the state of the world and must be in any summary
    - **Action items with owners**: someone is supposed to do something -- this must survive
@@ -65,17 +69,20 @@ ACT     --> Output summary with metadata and omission notes
 3. Apply audience filter. If audience is specified, boost elements that audience cares about and demote others. An executive cares about decisions and bottom-line impact. An engineer cares about technical details and action items. A lawyer cares about risks and commitments.
 4. Cut from the bottom. Starting with the lowest-priority elements, remove until the remaining content can fit the target length. Track what was cut for omission_notes.
 
-**Output:** Ranked element list, cut decisions, audience-adjusted priorities.
+### Output
+Ranked element list, cut decisions, audience-adjusted priorities.
 
-**Quality gate:** Decisions and action items are preserved unless target length makes it physically impossible. Cut elements are documented.
+### Quality Gate
+Decisions and action items are preserved unless target length makes it physically impossible. Cut elements are documented.
 
 ---
 
 ### PLAN: Draft the Summary
 
-**Entry criteria:** Priority ranking is complete.
+### Entry Criteria
+Priority ranking is complete.
 
-**Actions:**
+### Actions
 1. Draft the summary at target length. Structure by target:
    - **One-line**: Single sentence capturing the core decision or conclusion. Format: "[Subject] [verb] [object] [because/resulting in] [key context]."
    - **Paragraph**: 3-5 sentences. Lead with the conclusion, follow with key supporting facts, end with most important action item or open question.
@@ -85,26 +92,40 @@ ACT     --> Output summary with metadata and omission notes
 3. Verify accuracy. Ensure no facts were distorted by compression. Summarization must simplify, not misrepresent. If a nuanced point cannot be accurately captured at the target length, note the simplification.
 4. Compile key_elements as a structured object separate from the narrative summary.
 
-**Output:** Draft summary, structured key_elements, accuracy verification.
+### Output
+Draft summary, structured key_elements, accuracy verification.
 
-**Quality gate:** Summary is within 10% of target length. All top-tier elements are represented. No facts are misrepresented.
+### Quality Gate
+Summary is within 10% of target length. All top-tier elements are represented. No facts are misrepresented.
 
 ---
 
 ### ACT: Deliver the Summary
 
-**Entry criteria:** Summary draft passes completeness and accuracy checks.
+### Entry Criteria
+Summary draft passes completeness and accuracy checks.
 
-**Actions:**
+### Actions
 1. Output the final summary.
 2. Output key_elements as a structured extraction (decisions, action items, open questions, key facts).
 3. Output omission_notes listing significant content that was cut, so the reader can decide whether to read the original.
 4. Output source_metadata: original length, compression ratio, content type.
 5. Check for loop trigger: did drafting the summary reveal that a key element was misidentified or that two elements should be merged? If so, loop back to REASON.
 
-**Output:** Complete summary package.
+### Output
+Complete summary package.
 
-**Quality gate:** Summary reads as a standalone document (not choppy fragments). Key elements are accurately extracted. Omission notes let the reader assess what they might be missing.
+### Quality Gate
+Summary reads as a standalone document (not choppy fragments). Key elements are accurately extracted. Omission notes let the reader assess what they might be missing.
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Condense long content into structured summaries at specified detail levels, pres, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 
@@ -139,12 +160,12 @@ Between runs, this skill accumulates:
 
 ### Importance Hierarchy (Descending Priority)
 
-1. Decisions made — change the state of the world; must survive any compression
-2. Action items with owners — someone is responsible; must survive
-3. Key conclusions / recommendations — the "so what"
-4. Supporting data and evidence — numbers and facts that substantiate conclusions
-5. Context and background — important for understanding but first to cut
-6. Process details — how things were discussed; almost always cuttable
+1. Decisions made  --  change the state of the world; must survive any compression
+2. Action items with owners  --  someone is responsible; must survive
+3. Key conclusions / recommendations  --  the "so what"
+4. Supporting data and evidence  --  numbers and facts that substantiate conclusions
+5. Context and background  --  important for understanding but first to cut
+6. Process details  --  how things were discussed; almost always cuttable
 
 ### Target Length Guides
 

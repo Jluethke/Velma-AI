@@ -130,7 +130,7 @@ Illustrative only. `stack` = react. Register rank 1: K004 (size picker, 2.1.1, c
 Tasks:
 ```json
 {"task_id":"FX001","issue_ids":["K004","VI002"],"sc":"2.1.1","files":["src/components/SizePicker.tsx"],
- "technique":"no listed technique; follow APG Radio Group pattern with native input type=radio",
+ "technique":"no listed technique; follow governance engine Radio Group pattern with native input type=radio",
  "change":"Replace clickable divs with a fieldset, legend 'Size', and native radio inputs styled as chips",
  "reproduce":"Tab to size options on /products/12, press Space: nothing selected",
  "verify":"SizePicker.test.tsx: axe no violations; getByRole('radio', {name: 'M'}) then userEvent.keyboard('{ArrowRight}') checks next radio",

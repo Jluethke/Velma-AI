@@ -1,6 +1,6 @@
 # Headcount Planning
 
-**One-line description:** Business unit and HR/finance each submit their real headcount needs and budget reality — AI models the gap, assesses the business case, and produces a plan both sides can take to leadership.
+**One-line description:** Business unit and HR/finance each submit their real headcount needs and budget reality  --  AI models the gap, assesses the business case, and produces a plan both sides can take to leadership.
 
 **Execution Pattern:** Phase Pipeline
 
@@ -24,7 +24,7 @@
 ### HR / Finance Lead Submits Privately
 - `hr_budget_available` (object, required): What headcount budget is available for this business unit in this period?
 - `hr_org_wide_priorities` (array, required): What company-level priorities should drive headcount allocation decisions?
-- `hr_alternative_options` (array, required): Contractors, agency staff, reallocation from other teams — what alternatives exist?
+- `hr_alternative_options` (array, required): Contractors, agency staff, reallocation from other teams  --  what alternatives exist?
 - `hr_leveling_guidance` (object, required): What levels are appropriate for the requested roles given the company's structure?
 - `hr_concerns_about_request` (array, required): What about the request needs more evidence or seems out of scope?
 
@@ -41,47 +41,86 @@
 ## Execution Phases
 
 ### Phase 0: Pre-Flight Check
-**Entry Criteria:** Both submissions received.
-**Actions:** Confirm headcount request with business case and budget constraints present.
-**Output:** Readiness confirmation.
-**Quality Gate:** Role list with cost estimates and budget available both present.
+### Entry Criteria
+Both submissions received.
+### Actions
+Confirm headcount request with business case and budget constraints present.
+### Output
+Readiness confirmation.
+### Quality Gate
+Role list with cost estimates and budget available both present.
 
 ---
 
 ### Phase 1: Assess the Gap and Business Cases
-**Entry Criteria:** Both submissions confirmed.
-**Actions:** 1. Calculate the total cost of the request against available budget. 2. Evaluate each role's business case — is the "what won't happen" consequence specific and credible? 3. Check the BU's concerns against HR's alternative options — which alternatives genuinely address the need vs. are workarounds. 4. Check leveling against company standards.
-**Output:** Budget gap calculation, business case strength by role, alternative option assessment, leveling issues.
-**Quality Gate:** Each role has one of three business case ratings: strong (specific consequence), needs more evidence, or not justified.
+### Entry Criteria
+Both submissions confirmed.
+### Actions
+1. Calculate the total cost of the request against available budget. 2. Evaluate each role's business case  --  is the "what won't happen" consequence specific and credible? 3. Check the BU's concerns against HR's alternative options  --  which alternatives genuinely address the need vs. are workarounds. 4. Check leveling against company standards.
+### Output
+Budget gap calculation, business case strength by role, alternative option assessment, leveling issues.
+### Quality Gate
+Each role has one of three business case ratings: strong (specific consequence), needs more evidence, or not justified.
 
 ---
 
 ### Phase 2: Model Phasing and Alternatives
-**Entry Criteria:** Gap assessed.
-**Actions:** 1. Model phasing scenarios — what happens if timing is pushed 60 or 90 days for each role? 2. Model the alternative resourcing options for roles where alternatives could genuinely work. 3. Identify the minimum viable headcount plan that preserves the highest-priority business outcomes. 4. Identify which deferred hires create compounding problems vs. clean deferrals.
-**Output:** Phasing scenarios with business impact, alternative resourcing options with cost comparison, minimum viable plan.
-**Quality Gate:** Phasing impact is specific — "90-day delay on the engineering hire means the Q3 launch moves to Q4" not "it will slow things down."
+### Entry Criteria
+Gap assessed.
+### Actions
+1. Model phasing scenarios  --  what happens if timing is pushed 60 or 90 days for each role? 2. Model the alternative resourcing options for roles where alternatives could genuinely work. 3. Identify the minimum viable headcount plan that preserves the highest-priority business outcomes. 4. Identify which deferred hires create compounding problems vs. clean deferrals.
+### Output
+Phasing scenarios with business impact, alternative resourcing options with cost comparison, minimum viable plan.
+### Quality Gate
+Phasing impact is specific  --  "90-day delay on the engineering hire means the Q3 launch moves to Q4" not "it will slow things down."
 
 ---
 
 ### Phase 3: Build the Approved Plan
-**Entry Criteria:** Options modeled.
-**Actions:** 1. Build the approved headcount plan — what gets approved, conditionally approved, or deferred. 2. For conditional approvals, state the milestones that unlock them. 3. For deferrals, state what the BU needs to demonstrate to get full approval. 4. Document the HR/finance rationale for each decision.
-**Output:** Approved headcount plan, conditional approval milestones, deferral criteria, decision rationale.
-**Quality Gate:** Every decision has a rationale the BU can understand and act on. Deferrals are not permanent rejections without a path.
+### Entry Criteria
+Options modeled.
+### Actions
+1. Build the approved headcount plan  --  what gets approved, conditionally approved, or deferred. 2. For conditional approvals, state the milestones that unlock them. 3. For deferrals, state what the BU needs to demonstrate to get full approval. 4. Document the HR/finance rationale for each decision.
+### Output
+Approved headcount plan, conditional approval milestones, deferral criteria, decision rationale.
+### Quality Gate
+Every decision has a rationale the BU can understand and act on. Deferrals are not permanent rejections without a path.
 
 ---
 
 ### Phase 4: Deliver the Synthesis
-**Entry Criteria:** Plan built.
-**Actions:** 1. Present budget gap and business case assessment. 2. Present phasing and alternative options. 3. Deliver approved headcount plan. 4. State decision criteria for full approval. 5. Deliver alternative resourcing plan where applicable.
-**Output:** Full synthesis — gap analysis, business case ratings, approved plan, decision criteria, alternatives.
-**Quality Gate:** BU knows exactly what they are getting, what is deferred, and what they need to do to get the rest.
+### Entry Criteria
+Plan built.
+### Actions
+1. Present budget gap and business case assessment. 2. Present phasing and alternative options. 3. Deliver approved headcount plan. 4. State decision criteria for full approval. 5. Deliver alternative resourcing plan where applicable.
+### Output
+Full synthesis  --  gap analysis, business case ratings, approved plan, decision criteria, alternatives.
+### Quality Gate
+BU knows exactly what they are getting, what is deferred, and what they need to do to get the rest.
 
 ---
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Business unit and HR/finance each submit their real headcount needs and budget r, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 Done when: (1) every role has a business case assessment, (2) phasing scenarios with specific business impact, (3) approved/deferred decisions with rationale, (4) conditional approval milestones stated, (5) alternatives assessed for feasibility.
 
 ---
+
+---
+
+## Error Handling
+
+| Phase | Failure Mode | Response |
+|---|---|---|
+| Any | Missing required input | **Stop**: report which input is missing and what it should contain. |
+| Any | Upstream phase output incomplete | **Return**: re-run the upstream phase with the gap identified. |
+
 Copyright 2024-present The Wayfinder Trust. All rights reserved.

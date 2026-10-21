@@ -34,8 +34,7 @@ ACT     --> You revise your approach with every perspective accounted for.
 
 ### OBSERVE: Map the Human Terrain
 
-**Actions:**
-
+### Actions
 1. **Get the situation.** Ask: "What's going on? Tell me like you're venting to a friend. Don't filter it -- I want your unedited version first." The unfiltered version reveals biases and emotional charge that the polished version hides.
 
 2. **Map every stakeholder.** Ask: "Who are all the people affected by this? Not just the obvious ones. Who's going to feel the ripple?" Build the full list:
@@ -48,14 +47,14 @@ ACT     --> You revise your approach with every perspective accounted for.
 
 4. **Surface your story.** Ask: "What's the story you're telling yourself about why your position is right?" Get it explicit. This is the narrative they need to hold up against other perspectives.
 
-**Quality gate:** At least 3 stakeholders identified. At least one is non-obvious (future self, indirect party, or someone they initially forgot).
+### Quality Gate
+At least 3 stakeholders identified. At least one is non-obvious (future self, indirect party, or someone they initially forgot).
 
 ---
 
 ### REASON: Walk in Their Shoes
 
-**Actions:**
-
+### Actions
 1. **One perspective at a time.** For each stakeholder, ask: "Put yourself in [name]'s position. You wake up as them tomorrow. What does this situation look like from their side? What are they worried about? What do they want?"
 
 2. **Find their logic.** Ask: "Even if you disagree with them -- what's the version of this where they're not wrong? Where they're acting rationally given what THEY know and what THEY care about?" This is the hardest question. People dismiss others' perspectives as irrational when they're actually just operating from different information or different values.
@@ -69,14 +68,14 @@ ACT     --> You revise your approach with every perspective accounted for.
 
 5. **Your future self.** Always include this one: "It's a year from now. Future-you is looking back at how you handled this. What do they wish you'd done differently? What are they grateful you did?"
 
-**Quality gate:** Every stakeholder has a fleshed-out perspective. At least one perspective genuinely surprised the user. The hardest-to-empathize-with person has been fully explored.
+### Quality Gate
+Every stakeholder has a fleshed-out perspective. At least one perspective genuinely surprised the user. The hardest-to-empathize-with person has been fully explored.
 
 ---
 
 ### PLAN: Find What You're Missing
 
-**Actions:**
-
+### Actions
 1. **Identify the blind spots.** Ask: "Now that you've seen all these perspectives -- what were you not seeing before? What changes about your understanding of the situation?"
 
 2. **Find the overlaps.** Ask: "Where do multiple stakeholders want the same thing? That's your leverage point -- the move that makes several people happy at once."
@@ -87,14 +86,14 @@ ACT     --> You revise your approach with every perspective accounted for.
 
 5. **Prepare for the hard conversations.** For each key stakeholder: "What does [name] need to hear from you? And what should you absolutely NOT say, even if you're thinking it?"
 
-**Quality gate:** At least one blind spot identified. Original position has been updated or consciously re-confirmed with new awareness.
+### Quality Gate
+At least one blind spot identified. Original position has been updated or consciously re-confirmed with new awareness.
 
 ---
 
 ### ACT: Move With Awareness
 
-**Actions:**
-
+### Actions
 1. **Deliver the perspective map.** Summarize each stakeholder's view, their core need, and the gap between what they need and what the user was originally planning.
 
 2. **Provide conversation scripts.** For the 2-3 most important stakeholders, offer: "Here's how to open the conversation in a way that shows you've thought about their side." Not manipulation -- genuine acknowledgment.
@@ -103,7 +102,17 @@ ACT     --> You revise your approach with every perspective accounted for.
 
 4. **Set a check-in.** Ask: "After you have the key conversations or make the decision -- come back and tell me: were the perspectives accurate? What did you miss? What surprised you?" Building the muscle of perspective-taking requires feedback loops.
 
-**Output:** Stakeholder perspective map, blind spot report, revised approach, conversation preparation for key relationships.
+### Output
+Stakeholder perspective map, blind spot report, revised approach, conversation preparation for key relationships.
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for See your situation from everyone else's perspective. Walk through each stakehold, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 

@@ -61,6 +61,15 @@ Critical net list.
 
 ---
 
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Script-route high-current power paths, differential bus pairs, and emergency sto, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
+
 ## Exit Criteria
 
 DONE when every critical net is routed to its class, recorded, and locked.

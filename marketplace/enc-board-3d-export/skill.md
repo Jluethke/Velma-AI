@@ -60,6 +60,15 @@
 
 ---
 
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Export a board as STEP and extract the geometry an enclosure must fit: outline, , the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
+
 ## Exit Criteria
 
 DONE when the STEP model exists and the envelope records every dimension the enclosure depends on, sourced from the board file or datasheets.

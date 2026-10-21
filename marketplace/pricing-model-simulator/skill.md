@@ -34,10 +34,10 @@ PHASE 5: RECOMMEND  --> Optimal pricing with implementation plan and migration s
 
 ### Phase 1: INPUTS -- Analyze Product and Market
 
-**Entry criteria:** Product description and at least one customer segment are defined. Cost structure is provided or estimable.
+### Entry Criteria
+Product description and at least one customer segment are defined. Cost structure is provided or estimable.
 
-**Actions:**
-
+### Actions
 1. **Identify the value metric:**
    - What unit of value does the customer receive? (seats, data processed, transactions, projects, storage, API calls)
    - Correlation test: which metric best predicts customer satisfaction and retention?
@@ -78,18 +78,20 @@ PHASE 5: RECOMMEND  --> Optimal pricing with implementation plan and migration s
    - Identify pricing model patterns in the market (most use per-seat? usage? tiered?)
    - Find white space: price points or models competitors don't offer
 
-**Output:** Value metric recommendation, segment profiles with WTP ranges, cost floors per segment, competitive positioning map.
+### Output
+Value metric recommendation, segment profiles with WTP ranges, cost floors per segment, competitive positioning map.
 
-**Quality gate:** Value metric is identified and justified. At least 2 customer segments are profiled. Cost floor is computed (below which deals are unprofitable).
+### Quality Gate
+Value metric is identified and justified. At least 2 customer segments are profiled. Cost floor is computed (below which deals are unprofitable).
 
 ---
 
 ### Phase 2: MODELS -- Generate Pricing Structures
 
-**Entry criteria:** Value metric, segments, and cost structure are analyzed.
+### Entry Criteria
+Value metric, segments, and cost structure are analyzed.
 
-**Actions:**
-
+### Actions
 Generate 3-5 pricing models from the standard playbook, customized to the product:
 
 1. **Per-Seat/Per-User Model:**
@@ -179,18 +181,20 @@ For each model, define:
 - Upgrade triggers (what causes a customer to move to the next level)
 - Revenue formula: MRR = f(customers, seats, usage, tier)
 
-**Output:** 3-5 fully specified pricing models with price points, inclusions, and revenue formulas.
+### Output
+3-5 fully specified pricing models with price points, inclusions, and revenue formulas.
 
-**Quality gate:** Each model has specific price points (not just structure). Price points are above cost floor for each segment. At least one model uses the identified value metric.
+### Quality Gate
+Each model has specific price points (not just structure). Price points are above cost floor for each segment. At least one model uses the identified value metric.
 
 ---
 
 ### Phase 3: SIMULATE -- Project Revenue
 
-**Entry criteria:** Pricing models are fully specified.
+### Entry Criteria
+Pricing models are fully specified.
 
-**Actions:**
-
+### Actions
 1. **Map current customers to each model:**
    ```
    For each customer:
@@ -235,22 +239,24 @@ For each model, define:
 5. **Run volume scenarios:**
    ```
    Base: current growth continues
-   Upside: 2x customer acquisition (pricing unlocks new segment)
+   Upside: 2x customer acquisition (pricing opens new segment)
    Downside: 50% customer acquisition (pricing deters prospects)
    ```
 
-**Output:** Per-model revenue projections across segments and scenarios, including churn adjustment, expansion revenue, and new customer impact.
+### Output
+Per-model revenue projections across segments and scenarios, including churn adjustment, expansion revenue, and new customer impact.
 
-**Quality gate:** Every model has revenue projections for at least 2 scenarios. Churn impact is estimated and applied. Expansion revenue is modeled based on the pricing structure's natural expansion mechanics.
+### Quality Gate
+Every model has revenue projections for at least 2 scenarios. Churn impact is estimated and applied. Expansion revenue is modeled based on the pricing structure's natural expansion mechanics.
 
 ---
 
 ### Phase 4: COMPARE -- Tradeoff Analysis
 
-**Entry criteria:** Revenue projections are complete for all models.
+### Entry Criteria
+Revenue projections are complete for all models.
 
-**Actions:**
-
+### Actions
 1. **Build comparison matrix:**
    ```
    Score each model (1-10) on:
@@ -287,18 +293,20 @@ For each model, define:
    - Example: Tiered pricing + usage-based add-ons
    - Example: Per-seat base + usage overage charges
 
-**Output:** Weighted comparison matrix, tradeoff narratives, risk assessment, and hybrid possibilities.
+### Output
+Weighted comparison matrix, tradeoff narratives, risk assessment, and hybrid possibilities.
 
-**Quality gate:** All models are scored on the same criteria. Tradeoffs are specific to each model (not generic). Risk assessment identifies the single biggest risk per model.
+### Quality Gate
+All models are scored on the same criteria. Tradeoffs are specific to each model (not generic). Risk assessment identifies the single biggest risk per model.
 
 ---
 
 ### Phase 5: RECOMMEND -- Implementation Plan
 
-**Entry criteria:** Comparison and tradeoff analysis are complete.
+### Entry Criteria
+Comparison and tradeoff analysis are complete.
 
-**Actions:**
-
+### Actions
 1. **Select optimal model with justification:**
    - Highest weighted score, adjusted for risk tolerance
    - Clear statement: "We recommend [Model X] because [1-2 sentence justification]"
@@ -359,9 +367,20 @@ For each model, define:
    - If new customer conversion drops >30%: adjust entry-level pricing
    - If enterprise pushback: offer custom bridge pricing
 
-**Output:** Recommended pricing model, implementation timeline, migration strategy, success metrics, and contingency plan.
+### Output
+Recommended pricing model, implementation timeline, migration strategy, success metrics, and contingency plan.
 
-**Quality gate:** Recommendation is justified with specific data. Implementation has a specific timeline with owners. Migration strategy addresses existing customer impact. Success metrics are defined with review cadence and kill criteria.
+### Quality Gate
+Recommendation is justified with specific data. Implementation has a specific timeline with owners. Migration strategy addresses existing customer impact. Success metrics are defined with review cadence and kill criteria.
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Generates and simulates pricing models (per-seat, usage-based, tiered, freemium,, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 

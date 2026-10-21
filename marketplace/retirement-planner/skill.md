@@ -13,28 +13,29 @@ PHASE 5: QUESTIONS   --> Specific questions to bring to a financial advisor
 ```
 
 ## Inputs
-- personal: object -- Current age, planned retirement age (or "I don't know"), marital status, spouse's age and work status if applicable, state of residence
-- income: object -- Current annual income (gross), spouse's income if applicable, expected income changes (promotion, career wind-down, part-time transition)
-- savings: object -- 401(k)/403(b) balance, IRA/Roth IRA balance, other retirement accounts, taxable investment accounts, savings accounts, pension (if any -- type and estimated monthly benefit)
-- contributions: object -- Current monthly retirement contributions, employer match details (percentage and cap), whether you're maxing out any accounts
-- debt: object -- Mortgage (balance, rate, years remaining), other debts (car loans, credit cards, student loans, medical debt)
-- expenses: object -- (Optional) Estimated monthly expenses now, expected changes in retirement (mortgage paid off, kids independent, healthcare increase, travel plans)
-- social_security: object -- (Optional) Estimated monthly benefit from SSA.gov statement (at 62, at 67, at 70). If unknown, skill estimates from income history
-- goals: object -- (Optional) What retirement looks like to you: stay in current home, downsize, relocate, travel, work part-time, help grandkids with college, leave an inheritance
+- `personal`: object -- Current age, planned retirement age (or "I don't know"), marital status, spouse's age and work status if applicable, state of residence
+- `income`: object -- Current annual income (gross), spouse's income if applicable, expected income changes (promotion, career wind-down, part-time transition)
+- `savings`: object -- 401(k)/403(b) balance, IRA/Roth IRA balance, other retirement accounts, taxable investment accounts, savings accounts, pension (if any -- type and estimated monthly benefit)
+- `contributions`: object -- Current monthly retirement contributions, employer match details (percentage and cap), whether you're maxing out any accounts
+- `debt`: object -- Mortgage (balance, rate, years remaining), other debts (car loans, credit cards, student loans, medical debt)
+- `expenses`: object -- (Optional) Estimated monthly expenses now, expected changes in retirement (mortgage paid off, kids independent, healthcare increase, travel plans)
+- `social_security`: object -- (Optional) Estimated monthly benefit from SSA.gov statement (at 62, at 67, at 70). If unknown, skill estimates from income history
+- `goals`: object -- (Optional) What retirement looks like to you: stay in current home, downsize, relocate, travel, work part-time, help grandkids with college, leave an inheritance
 
 ## Outputs
-- current_snapshot: object -- Net worth summary, savings rate, years to retirement, monthly retirement income gap
-- projections: object -- Three scenarios (current pace, moderate increase, aggressive increase) showing projected savings at retirement and estimated monthly income
-- social_security_analysis: object -- Claiming age comparison (62/67/70) with breakeven ages and total lifetime benefits
-- gap_analysis: object -- Difference between projected retirement income and estimated expenses, with specific shortfall or surplus amounts
-- action_items: array -- Concrete steps ranked by impact, plus specific questions to ask a financial advisor
-- advisor_prep: object -- Summary sheet to bring to a financial advisor meeting
+- `current_snapshot`: object -- Net worth summary, savings rate, years to retirement, monthly retirement income gap
+- `projections`: object -- Three scenarios (current pace, moderate increase, aggressive increase) showing projected savings at retirement and estimated monthly income
+- `social_security_analysis`: object -- Claiming age comparison (62/67/70) with breakeven ages and total lifetime benefits
+- `gap_analysis`: object -- Difference between projected retirement income and estimated expenses, with specific shortfall or surplus amounts
+- `action_items`: array -- Concrete steps ranked by impact, plus specific questions to ask a financial advisor
+- `advisor_prep`: object -- Summary sheet to bring to a financial advisor meeting
 
 ## Execution
 
 ### Phase 1: SNAPSHOT
-**Entry criteria:** At least age, income, and some retirement savings information provided.
-**Actions:**
+### Entry Criteria
+At least age, income, and some retirement savings information provided.
+### Actions
 1. Calculate current net worth: total retirement savings + other investments + home equity (if owned) - total debts. Note: home equity is real wealth but you can't eat your house -- separate "liquid" retirement assets from "illiquid" ones.
 2. Calculate current savings rate: annual retirement contributions (yours + employer match) divided by gross income. Benchmarks:
    - Below 10%: behind for most people
@@ -49,12 +50,15 @@ PHASE 5: QUESTIONS   --> Specific questions to bring to a financial advisor
    - Zero emergency fund (retirement savings will get raided in a crisis)
    - Over 50 and less than 3x annual salary saved (common guideline: 1x by 30, 3x by 40, 6x by 50, 8x by 60, 10x by 67)
 
-**Output:** Net worth summary (liquid vs illiquid), savings rate with benchmark comparison, years to retirement, current trajectory projection, immediate concern flags.
-**Quality gate:** All savings accounts are totaled. Savings rate includes employer match. Trajectory projection uses reasonable growth assumptions (6% real return for stocks/bonds, clearly stated).
+### Output
+Net worth summary (liquid vs illiquid), savings rate with benchmark comparison, years to retirement, current trajectory projection, immediate concern flags.
+### Quality Gate
+All savings accounts are totaled. Savings rate includes employer match. Trajectory projection uses reasonable growth assumptions (6% real return for stocks/bonds, clearly stated).
 
 ### Phase 2: PROJECTION
-**Entry criteria:** Snapshot complete.
-**Actions:**
+### Entry Criteria
+Snapshot complete.
+### Actions
 1. Build three projection scenarios, all in today's dollars (inflation-adjusted, so the numbers mean what they say):
    - **Current pace:** Keep saving exactly what you save now. What's the balance at retirement?
    - **Moderate increase:** Increase contributions by $200/month (or to 15% of income, whichever is more realistic). What changes?
@@ -70,12 +74,15 @@ PHASE 5: QUESTIONS   --> Specific questions to bring to a financial advisor
 4. Show the "magic of time" for each scenario: how much more each year of delay costs. At age 50, waiting one year to increase savings by $500/month costs roughly $100,000 at retirement (due to lost compounding). Make the cost of waiting tangible.
 5. If applicable, model the impact of working 2-3 extra years. Often the single biggest lever because it simultaneously adds savings years, reduces withdrawal years, and increases Social Security benefits.
 
-**Output:** Three scenario projections with balances at retirement, estimated monthly income, and comparison to estimated expenses. Cost-of-waiting calculation. Impact of working longer.
-**Quality gate:** All three scenarios use the same assumptions (growth rate, inflation, tax treatment) for fair comparison. 4% rule is explained as a guideline with caveats. Numbers are in today's dollars.
+### Output
+Three scenario projections with balances at retirement, estimated monthly income, and comparison to estimated expenses. Cost-of-waiting calculation. Impact of working longer.
+### Quality Gate
+All three scenarios use the same assumptions (growth rate, inflation, tax treatment) for fair comparison. 4% rule is explained as a guideline with caveats. Numbers are in today's dollars.
 
 ### Phase 3: SOCIAL SEC
-**Entry criteria:** Projections complete. Age and income information available.
-**Actions:**
+### Entry Criteria
+Projections complete. Age and income information available.
+### Actions
 1. If SSA statement is available, use those numbers directly. If not, estimate benefits based on income history using SSA's approximate formula (benefits are based on highest 35 years of earnings, adjusted for inflation).
 2. Compare three claiming ages with plain-language explanation:
    - **Age 62 (earliest):** Reduced benefit -- approximately 70% of full benefit. You get checks sooner, but each check is permanently smaller. Good if: you need the money to survive, health concerns, spouse has strong income/benefits.
@@ -94,12 +101,15 @@ PHASE 5: QUESTIONS   --> Specific questions to bring to a financial advisor
    - This matters for deciding when to draw from retirement accounts vs. Social Security
    - Roth conversions before claiming can reduce future tax on Social Security (mention as something to discuss with advisor)
 
-**Output:** Side-by-side comparison of claiming at 62/67/70 with monthly amounts, breakeven ages, spousal strategy if applicable, and tax note.
-**Quality gate:** All three claiming ages are compared with specific dollar amounts. Breakeven ages are calculated. Spousal coordination is addressed if married. Tax impact is mentioned without overcomplicating.
+### Output
+Side-by-side comparison of claiming at 62/67/70 with monthly amounts, breakeven ages, spousal strategy if applicable, and tax note.
+### Quality Gate
+All three claiming ages are compared with specific dollar amounts. Breakeven ages are calculated. Spousal coordination is addressed if married. Tax impact is mentioned without overcomplicating.
 
 ### Phase 4: GAP
-**Entry criteria:** Projections and Social Security analysis complete.
-**Actions:**
+### Entry Criteria
+Projections and Social Security analysis complete.
+### Actions
 1. Calculate the retirement income gap (or surplus) for each scenario:
    - Gap = Estimated monthly expenses - (Retirement account income + Social Security + Pension)
    - Negative gap means you're projected to fall short
@@ -119,12 +129,15 @@ PHASE 5: QUESTIONS   --> Specific questions to bring to a financial advisor
    - What if you live to 95? (Longevity risk -- running out of money at 88 is a real fear for good reason)
 4. Healthcare bridge: if retiring before 65 (Medicare eligibility), estimate marketplace insurance costs ($500-1,500/month per person depending on age and location). This is one of the most overlooked costs of early retirement.
 
-**Output:** Gap or surplus for each scenario, ranked levers to close any gap, stress test results, healthcare bridge cost if applicable.
-**Quality gate:** Gap is calculated with specific monthly dollar amounts. Levers are ranked by impact and feasibility. Stress tests cover longevity, market risk, and healthcare. No false comfort if the situation is tight.
+### Output
+Gap or surplus for each scenario, ranked levers to close any gap, stress test results, healthcare bridge cost if applicable.
+### Quality Gate
+Gap is calculated with specific monthly dollar amounts. Levers are ranked by impact and feasibility. Stress tests cover longevity, market risk, and healthcare. No false comfort if the situation is tight.
 
 ### Phase 5: QUESTIONS
-**Entry criteria:** Gap analysis complete.
-**Actions:**
+### Entry Criteria
+Gap analysis complete.
+### Actions
 1. Generate a personalized list of questions to ask a financial advisor, based on what the analysis revealed. Not generic questions -- specific ones:
    - "Given that I have $X in a traditional 401(k) and plan to retire at Y, should I be doing Roth conversions now while I'm in the Z% tax bracket?"
    - "My mortgage will be paid off 3 years after I retire. Should I accelerate payoff or keep investing the difference?"
@@ -148,8 +161,19 @@ PHASE 5: QUESTIONS   --> Specific questions to bring to a financial advisor
    - Don't co-sign loans using retirement assets as collateral
    - Don't assume Social Security won't be there (it may be reduced but is very unlikely to disappear entirely)
 
-**Output:** Personalized advisor questions, one-page preparation sheet, advisor type guide, list of things to avoid.
-**Quality gate:** Questions are specific to this person's situation (not generic). Preparation sheet is concise enough to actually bring to a meeting. Advisor guidance is practical and actionable.
+### Output
+Personalized advisor questions, one-page preparation sheet, advisor type guide, list of things to avoid.
+### Quality Gate
+Questions are specific to this person's situation (not generic). Preparation sheet is concise enough to actually bring to a meeting. Advisor guidance is practical and actionable.
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Takes your current age, savings, income, and retirement goals and builds a reali, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 Done when: (1) current snapshot shows net worth, savings rate, and trajectory, (2) three projection scenarios show retirement balances and estimated monthly income, (3) Social Security claiming ages are compared with breakeven analysis, (4) gap or surplus is quantified with levers to adjust, (5) personalized advisor questions and preparation sheet are provided.
@@ -228,7 +252,7 @@ Note: 4% is a guideline, not a guarantee. Adjust for longevity risk and sequence
 
 | Type | Cost Structure | Acts in Your Interest? |
 |---|---|---|
-| Fee-only fiduciary | Flat fee or hourly | Yes — legally required |
+| Fee-only fiduciary | Flat fee or hourly | Yes  --  legally required |
 | Commission-based | Earns from product sales | Not necessarily |
 | Robo-advisor | Low % AUM fee | Automated; good for simple cases |
 

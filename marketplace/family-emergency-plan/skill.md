@@ -14,25 +14,26 @@ PHASE 6: DRILLS        --> Practice schedule, household training, and plan maint
 ```
 
 ## Inputs
-- location: object -- City/region, home type (house, apartment, condo, mobile home), proximity to flood zones, fault lines, coastline, wildfire-prone areas, tornado alley
-- household: object -- All members: adults (names, medical conditions, medications), children (names, ages, schools), elderly (mobility, cognitive needs), pets (species, count, carrier needs), anyone with disabilities or special medical equipment
-- vehicles: object -- (Optional) Number of cars, fuel type, whether everyone can drive, alternative transportation available
-- existing_prep: object -- (Optional) What you already have: smoke detectors, fire extinguishers, first aid kit, stored water, generator, weather radio
-- concerns: array -- (Optional) Specific fears or past experiences: been through a hurricane, worried about earthquakes, live near a chemical plant, elderly parent lives alone nearby
+- `location`: object -- City/region, home type (house, apartment, condo, mobile home), proximity to flood zones, fault lines, coastline, wildfire-prone areas, tornado alley
+- `household`: object -- All members: adults (names, medical conditions, medications), children (names, ages, schools), elderly (mobility, cognitive needs), pets (species, count, carrier needs), anyone with disabilities or special medical equipment
+- `vehicles`: object -- (Optional) Number of cars, fuel type, whether everyone can drive, alternative transportation available
+- `existing_prep`: object -- (Optional) What you already have: smoke detectors, fire extinguishers, first aid kit, stored water, generator, weather radio
+- `concerns`: array -- (Optional) Specific fears or past experiences: been through a hurricane, worried about earthquakes, live near a chemical plant, elderly parent lives alone nearby
 
 ## Outputs
-- risk_assessment: object -- Top threats ranked by likelihood and severity for your specific location, with seasonal timing
-- contact_card: object -- Wallet-sized emergency contact list with local and out-of-area contacts, ICE numbers, and communication tree
-- supply_checklists: object -- 72-hour go-bag checklist (per person), home supply stockpile, vehicle emergency kit, pet emergency kit
-- evacuation_plan: object -- Primary and alternate routes, meeting points (neighborhood and out-of-area), shelter-in-place procedures by disaster type
-- document_inventory: object -- Critical documents list, secure storage recommendations, digital backup plan
-- maintenance_calendar: object -- Quarterly supply rotation, annual plan review, drill schedule
+- `risk_assessment`: object -- Top threats ranked by likelihood and severity for your specific location, with seasonal timing
+- `contact_card`: object -- Wallet-sized emergency contact list with local and out-of-area contacts, ICE numbers, and communication tree
+- `supply_checklists`: object -- 72-hour go-bag checklist (per person), home supply stockpile, vehicle emergency kit, pet emergency kit
+- `evacuation_plan`: object -- Primary and alternate routes, meeting points (neighborhood and out-of-area), shelter-in-place procedures by disaster type
+- `document_inventory`: object -- Critical documents list, secure storage recommendations, digital backup plan
+- `maintenance_calendar`: object -- Quarterly supply rotation, annual plan review, drill schedule
 
 ## Execution
 
 ### Phase 1: RISK PROFILE
-**Entry criteria:** Location and household composition provided.
-**Actions:**
+### Entry Criteria
+Location and household composition provided.
+### Actions
 1. Identify location-specific natural disaster risks ranked by likelihood:
    - **Coastal areas:** Hurricane, storm surge, flooding, coastal erosion.
    - **Seismic zones:** Earthquake, tsunami (if coastal), landslide.
@@ -50,12 +51,15 @@ PHASE 6: DRILLS        --> Practice schedule, household training, and plan maint
 4. Identify seasonal timing: hurricane season (June-November), tornado season (March-June), wildfire season (varies by region), winter storm season. Your readiness calendar should peak before these windows.
 5. Check proximity to industrial hazards: chemical plants, nuclear facilities, rail lines carrying hazmat, major highways (tanker accidents). These require shelter-in-place protocols specific to chemical exposure.
 
-**Output:** Ranked threat list, home vulnerability assessment, household member needs matrix, seasonal risk calendar, and industrial hazard check.
-**Quality gate:** Threats are specific to the actual location, not generic. Every household member's special needs are documented. Seasonal timing is noted.
+### Output
+Ranked threat list, home vulnerability assessment, household member needs matrix, seasonal risk calendar, and industrial hazard check.
+### Quality Gate
+Threats are specific to the actual location, not generic. Every household member's special needs are documented. Seasonal timing is noted.
 
 ### Phase 2: CONTACTS
-**Entry criteria:** Risk profile complete.
-**Actions:**
+### Entry Criteria
+Risk profile complete.
+### Actions
 1. Build the primary emergency contact list:
    - **911 and local equivalents** (obvious but must be explicit for kids).
    - **Local police non-emergency line** (for situations that aren't 911 but need police).
@@ -71,12 +75,15 @@ PHASE 6: DRILLS        --> Practice schedule, household training, and plan maint
 5. If elderly family members live separately: establish a check-in protocol for storms and outages. Who calls them, how often, and what triggers sending someone to physically check.
 6. Create a wallet-sized contact card for every household member, including children old enough to carry one. Include: home address (kids may not know it by heart), parent phone numbers, out-of-area contact, medical conditions, allergies, and blood type.
 
-**Output:** Complete contact list, communication tree, school emergency info, elderly check-in protocol, and printable wallet cards.
-**Quality gate:** Out-of-area contact is designated and has agreed to the role. Every household member has a wallet card. Communication plan has a backup method for when phones don't work.
+### Output
+Complete contact list, communication tree, school emergency info, elderly check-in protocol, and printable wallet cards.
+### Quality Gate
+Out-of-area contact is designated and has agreed to the role. Every household member has a wallet card. Communication plan has a backup method for when phones don't work.
 
 ### Phase 3: SUPPLIES
-**Entry criteria:** Contact plan complete, risk profile identified.
-**Actions:**
+### Entry Criteria
+Contact plan complete, risk profile identified.
+### Actions
 1. **72-hour go-bag** (one per person, grabs-and-goes in 5 minutes):
    - Water: 1 gallon per person per day (3 gallons per person, minimum).
    - Food: 3 days of non-perishable, no-cook food (granola bars, peanut butter, dried fruit, canned goods with pull-top lids).
@@ -100,12 +107,15 @@ PHASE 6: DRILLS        --> Practice schedule, household training, and plan maint
 5. **Medical-specific supplies**: extra supply of life-sustaining medications, battery backup for powered medical equipment, manual alternatives (manual wheelchair if power chair fails), medical information card on the person at all times.
 6. **Supply rotation calendar**: water every 6 months, food by expiration date, medications quarterly, batteries annually, documents reviewed annually.
 
-**Output:** Go-bag checklist per person, home stockpile list, vehicle kit, pet kit, medical supplies, and rotation calendar.
-**Quality gate:** Water calculations match household size. Medications are included with rotation schedule. Every household member (including pets) has supplies allocated.
+### Output
+Go-bag checklist per person, home stockpile list, vehicle kit, pet kit, medical supplies, and rotation calendar.
+### Quality Gate
+Water calculations match household size. Medications are included with rotation schedule. Every household member (including pets) has supplies allocated.
 
 ### Phase 4: EVACUATION
-**Entry criteria:** Supply plan complete.
-**Actions:**
+### Entry Criteria
+Supply plan complete.
+### Actions
 1. Identify **two meeting points**:
    - **Neighborhood meeting point:** a specific, easily identifiable location near your home (not "the corner" but "the mailbox at 142 Oak Street" or "the big oak tree in the park on Elm"). This is where you meet if you evacuate the house but the neighborhood is safe.
    - **Out-of-neighborhood meeting point:** a specific location outside your immediate area (library, church, relative's house, school). This is where you meet if the neighborhood itself is dangerous.
@@ -123,12 +133,15 @@ PHASE 6: DRILLS        --> Practice schedule, household training, and plan maint
 5. For households with mobility challenges: pre-plan how to evacuate members who can't self-evacuate. Identify neighbors who can help. If in a multi-story building, know whether elevators shut down in emergencies (they do in fires).
 6. **Know your shelters**: identify the nearest public emergency shelter (Red Cross, school, community center). Check pet policies. Pack shelter go-bags accordingly.
 
-**Output:** Meeting points with exact locations, two evacuation routes mapped, disaster-specific procedure cards, shelter-in-place instructions, and public shelter locations.
-**Quality gate:** Meeting points are specific landmarks, not vague descriptions. Both evacuation routes avoid known hazard zones. Every disaster type relevant to the location has a procedure. Mobility-limited members have evacuation assistance planned.
+### Output
+Meeting points with exact locations, two evacuation routes mapped, disaster-specific procedure cards, shelter-in-place instructions, and public shelter locations.
+### Quality Gate
+Meeting points are specific landmarks, not vague descriptions. Both evacuation routes avoid known hazard zones. Every disaster type relevant to the location has a procedure. Mobility-limited members have evacuation assistance planned.
 
 ### Phase 5: DOCUMENTS
-**Entry criteria:** Evacuation plan complete.
-**Actions:**
+### Entry Criteria
+Evacuation plan complete.
+### Actions
 1. **Critical document inventory** (these must be protected and portable):
    - Identification: passports, driver's licenses, birth certificates, Social Security cards, green cards/visa documents.
    - Financial: bank account numbers, credit card numbers and company phone numbers, investment account info, property deeds, vehicle titles.
@@ -144,12 +157,15 @@ PHASE 6: DRILLS        --> Practice schedule, household training, and plan maint
 4. **Financial emergency prep**: have one credit card with available credit reserved for emergencies. Know your insurance deductibles. Understand your coverage: does it cover flood? Earthquake? (Usually not -- these require separate policies.)
 5. **Digital accounts**: list critical online accounts (banking, insurance portals, medical records) with login information stored in a password manager. Ensure at least one trusted person has access to the password manager's master password.
 
-**Output:** Document inventory checklist, home inventory guide, three-layer storage plan, financial preparedness notes, and digital access plan.
-**Quality gate:** Every critical document category is addressed. Three storage layers are established. Home inventory is completed or scheduled. Insurance gaps (flood, earthquake) are flagged.
+### Output
+Document inventory checklist, home inventory guide, three-layer storage plan, financial preparedness notes, and digital access plan.
+### Quality Gate
+Every critical document category is addressed. Three storage layers are established. Home inventory is completed or scheduled. Insurance gaps (flood, earthquake) are flagged.
 
 ### Phase 6: DRILLS
-**Entry criteria:** Complete plan assembled.
-**Actions:**
+### Entry Criteria
+Complete plan assembled.
+### Actions
 1. **Family meeting**: sit down with every household member and walk through the plan. This is not optional. A plan nobody knows about is not a plan. Keep it simple for kids: "If there's an earthquake, we do this. If there's a fire, we do this. We meet here."
 2. **Practice drills by disaster type**:
    - **Fire drill:** Every household member exits the house and meets at the neighborhood meeting point. Time it. Do it at night at least once (fires don't wait for daytime). Test smoke detectors during the drill.
@@ -169,8 +185,19 @@ PHASE 6: DRILLS        --> Practice schedule, household training, and plan maint
    - Teenagers: can drive evacuation route, know how to shut off gas and water, can administer basic first aid.
 6. **Neighbor coordination**: introduce yourself to immediate neighbors if you haven't. In a real emergency, neighbors are your first responders. Share the knowledge that you have a plan -- they might make one too.
 
-**Output:** Family briefing guide, drill schedule by disaster type, quarterly/biannual/annual maintenance calendar, age-appropriate training milestones, and neighbor coordination notes.
-**Quality gate:** Every household member has been briefed. At least one fire drill is scheduled. Maintenance calendar has specific dates. Kids have age-appropriate knowledge.
+### Output
+Family briefing guide, drill schedule by disaster type, quarterly/biannual/annual maintenance calendar, age-appropriate training milestones, and neighbor coordination notes.
+### Quality Gate
+Every household member has been briefed. At least one fire drill is scheduled. Maintenance calendar has specific dates. Kids have age-appropriate knowledge.
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Builds a household emergency preparedness plan covering natural disasters (earth, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 Done when: (1) risk assessment identifies top threats for the specific location, (2) emergency contact card is complete with out-of-area contact and communication tree, (3) supply lists are generated for go-bags, home stockpile, vehicle, and pets, (4) evacuation plan has two routes and two meeting points with disaster-specific procedures, (5) document inventory is complete with a three-layer storage plan, (6) drill and maintenance schedule is established.

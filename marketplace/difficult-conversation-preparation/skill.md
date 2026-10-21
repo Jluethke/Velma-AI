@@ -34,7 +34,7 @@
   - `trigger_reaction` (string): The reaction this addresses
   - `response_strategy` (string): Specific tactic (e.g., "validate emotion," "pause and listen," "reframe as shared problem")
   - `example_response` (string): A sample phrase or approach
-  - `confidence_in_tactic` (string): "high," "medium," or "low" — your confidence you can execute this under stress
+  - `confidence_in_tactic` (string): "high," "medium," or "low"  --  your confidence you can execute this under stress
 - `success_criteria` (object): Outcomes and thresholds.
   - `must_happen` (string[]): 2-3 non-negotiable outcomes
   - `acceptable_outcomes` (string[]): 2-3 good-enough resolutions
@@ -56,31 +56,33 @@
 
 ### Phase 1: Clarify the Core Issue
 
-**Entry Criteria:**
+### Entry Criteria
 - Situation context is provided.
 - You have a sense that a conversation is needed, but may not have fully articulated why.
 - Your emotional state is calm enough to think clearly (if not, pause and return when ready).
 
-**Actions:**
+### Actions
 1. Read the situation context and any draft core issue. Note your initial emotional reaction (anger, hurt, anxiety) but set it aside for now.
 2. Strip away emotional language and secondary grievances. Ask: "What is the one thing that, if resolved, would make the biggest difference?"
 3. Write the core issue in neutral, non-blaming language. Avoid "you always" or "you never." Use "I have noticed," "There is a gap between," or "I am concerned about."
 4. Test the statement: Can the other person hear this without immediately becoming defensive? Is it specific enough to address? Is it about behavior or impact, not character?
 5. If the issue is still too broad or vague, narrow it further. If it contains multiple unrelated grievances, separate them and choose the most important one for this conversation.
 
-**Output:** `core_issue_statement`
+### Output
+`core_issue_statement`
 
-**Quality Gate:** The core issue is stated in one or two sentences, uses neutral language (no blame, no character judgment), identifies a specific and addressable problem, and focuses on behavior or impact rather than intent or personality.
+### Quality Gate
+The core issue is stated in one or two sentences, uses neutral language (no blame, no character judgment), identifies a specific and addressable problem, and focuses on behavior or impact rather than intent or personality.
 
 ---
 
 ### Phase 2: Anticipate Reactions
 
-**Entry Criteria:**
+### Entry Criteria
 - Core issue statement is finalized.
 - Other person profile (or general knowledge of them) is available.
 
-**Actions:**
+### Actions
 1. Review what you know about the other person's communication style, triggers, values, and past reactions to difficult conversations.
 2. If you have information about past successful approaches with this person, note them; you may use similar language in your opening or de-escalation tactics.
 3. Brainstorm 3-6 likely reactions to hearing this core issue. Consider emotional (anger, shame, defensiveness, withdrawal) and behavioral (counterattack, dismissal, shutdown, collaboration) responses.
@@ -89,19 +91,21 @@
 6. Identify which reactions are most dangerous to the conversation (e.g., shutdown, escalation to conflict). These are your priority for de-escalation planning.
 7. Note any reactions that are surprising or uncertain; these become areas to monitor and adapt to during the conversation.
 
-**Output:** `anticipated_reactions`
+### Output
+`anticipated_reactions`
 
-**Quality Gate:** You have identified 3-6 likely reactions. Each is specific and grounded in what you know about the person (not generic). You can explain why you expect each one. You have identified at least one high-severity reaction and a corresponding de-escalation plan.
+### Quality Gate
+You have identified 3-6 likely reactions. Each is specific and grounded in what you know about the person (not generic). You can explain why you expect each one. You have identified at least one high-severity reaction and a corresponding de-escalation plan.
 
 ---
 
 ### Phase 3: Script Your Opening
 
-**Entry Criteria:**
+### Entry Criteria
 - Core issue is clear.
 - Anticipated reactions are documented.
 
-**Actions:**
+### Actions
 1. Draft an opening statement that:
    - Names the issue directly (no hedging or softening that obscures the point)
    - Uses "I" language ("I have noticed," "I am concerned about," "I want to talk about") rather than accusation
@@ -113,19 +117,21 @@
 4. Imagine the other person hearing it. Which of your anticipated reactions is most likely? Does your opening reduce the chance of that reaction, or might it trigger it? If it triggers, adjust.
 5. Refine until the opening is clear, respectful, invites engagement, and you can deliver it authentically without sounding scripted.
 
-**Output:** `opening_script`
+### Output
+`opening_script`
 
-**Quality Gate:** The opening is 3-5 sentences, uses neutral and "I" language, names the issue without blame, invites dialogue, and you can deliver it calmly and authentically. When read aloud, it does not sound accusatory or defensive.
+### Quality Gate
+The opening is 3-5 sentences, uses neutral and "I" language, names the issue without blame, invites dialogue, and you can deliver it calmly and authentically. When read aloud, it does not sound accusatory or defensive.
 
 ---
 
 ### Phase 4: Plan De-escalation Tactics
 
-**Entry Criteria:**
+### Entry Criteria
 - Anticipated reactions are documented.
 - You understand your own de-escalation strengths (listening, reframing, validating, pausing, etc.).
 
-**Actions:**
+### Actions
 1. For each anticipated reaction (especially high-likelihood and high-severity ones), identify a de-escalation tactic that fits your authentic communication style and the relationship:
    - **Validate:** "I hear that this is frustrating for you. That makes sense given your perspective."
    - **Pause and listen:** Stop talking; let them express fully before responding. Resist the urge to interrupt or defend.
@@ -140,40 +146,44 @@
 4. Identify any high-likelihood or high-severity reactions for which you do not have a clear tactic; these are areas to prepare extra (practice, ask a trusted friend for ideas, or adjust your approach).
 5. Ensure you have at least 3-6 tactics across your anticipated reactions.
 
-**Output:** `de_escalation_playbook`
+### Output
+`de_escalation_playbook`
 
-**Quality Gate:** You have a tactic for each high- and medium-likelihood reaction. Each tactic is specific, authentic, and something you can execute in the moment. Your confidence in executing each tactic is documented. You have no high-severity reactions without a corresponding tactic.
+### Quality Gate
+You have a tactic for each high- and medium-likelihood reaction. Each tactic is specific, authentic, and something you can execute in the moment. Your confidence in executing each tactic is documented. You have no high-severity reactions without a corresponding tactic.
 
 ---
 
 ### Phase 5: Define Success Criteria
 
-**Entry Criteria:**
+### Entry Criteria
 - Core issue is clear.
 - Relationship goals are known (or clarified now).
 - Constraints are documented.
 
-**Actions:**
+### Actions
 1. Identify 2-3 outcomes that **must happen** for this conversation to be successful. Examples: "They acknowledge the issue," "We agree on next steps," "The relationship is repaired," "I am heard and understood." These are non-negotiable.
 2. Identify 2-3 **acceptable outcomes** that would be "good enough" even if not perfect. Examples: "We agree to disagree but commit to moving forward," "They understand my perspective even if they don't fully agree," "We schedule a follow-up conversation."
-3. Identify 1-2 **non-negotiable boundaries** — things you will not accept or compromise on. Examples: "I will not accept blame for their behavior," "I will not agree to something I cannot deliver," "I will not tolerate disrespect."
+3. Identify 1-2 **non-negotiable boundaries**  --  things you will not accept or compromise on. Examples: "I will not accept blame for their behavior," "I will not agree to something I cannot deliver," "I will not tolerate disrespect."
 4. Test these criteria against your relationship goals and constraints. Are they realistic? Are they aligned with what you actually want? Are they within your control, or do they depend entirely on the other person's response?
 5. Reframe any criteria that depend entirely on the other person's response. Focus on what you can control: your clarity, your boundaries, your effort to understand, your willingness to listen.
 
-**Output:** `success_criteria`
+### Output
+`success_criteria`
 
-**Quality Gate:** You have 2-3 must-happen outcomes, 2-3 acceptable outcomes, and 1-2 non-negotiable boundaries. Each is specific, testable (you will know if it happened), and realistic. Most criteria focus on what you can control or influence, not solely on the other person's response.
+### Quality Gate
+You have 2-3 must-happen outcomes, 2-3 acceptable outcomes, and 1-2 non-negotiable boundaries. Each is specific, testable (you will know if it happened), and realistic. Most criteria focus on what you can control or influence, not solely on the other person's response.
 
 ---
 
 ### Phase 6: Mental Rehearsal and Confidence Assessment
 
-**Entry Criteria:**
+### Entry Criteria
 - Opening script is ready.
 - De-escalation playbook is complete.
 - Success criteria are defined.
 
-**Actions:**
+### Actions
 1. Mentally walk through the conversation: You deliver your opening. The other person reacts (pick one of your high-likelihood anticipated reactions). You respond with your corresponding de-escalation tactic. The conversation continues toward one of your success criteria.
 2. Repeat this mental rehearsal with 2-3 different anticipated reactions. Identify any moments where you feel stuck, uncertain, or triggered. These are areas to prepare extra or to adjust your approach.
 3. Assess your confidence level on a scale of 1-10: 1 = not ready, 5 = moderately ready, 10 = fully confident. Be honest. If you are below 6, identify what is missing (more practice, more information, more emotional regulation, adjustments to your approach).
@@ -181,29 +191,42 @@
 5. Create a final checklist of 8+ things to do before the conversation (e.g., choose a private, calm setting; ensure you have time; manage your own emotions; review your opening script; identify a quiet place to take a break if needed).
 6. Identify any final adjustments to your opening, tactics, or success criteria based on your mental rehearsal.
 
-**Output:** `confidence_assessment`, `preparation_checklist`
+### Output
+`confidence_assessment`, `preparation_checklist`
 
-**Quality Gate:** You have mentally rehearsed at least two likely scenarios. You have assessed your confidence level (1-10 scale) honestly. If below 6, you have a specific plan to address gaps. Your preparation checklist has 8+ items and is actionable.
+### Quality Gate
+You have mentally rehearsed at least two likely scenarios. You have assessed your confidence level (1-10 scale) honestly. If below 6, you have a specific plan to address gaps. Your preparation checklist has 8+ items and is actionable.
 
 ---
 
 ### Phase 7: Prepare Post-Conversation Reflection (Optional but Recommended)
 
-**Entry Criteria:**
+### Entry Criteria
 - All previous phases are complete.
 - You are about to have the conversation.
 
-**Actions:**
+### Actions
 1. Review the post-conversation reflection template (included in outputs).
 2. Decide when you will complete this reflection: immediately after the conversation, later that day, or the next day. (Sooner is better for memory and learning.)
 3. Plan where you will document this (journal, notes app, shared document if appropriate).
 4. Understand that this reflection is for your learning, not for judgment. The goal is to build a personal knowledge base for future difficult conversations.
 
-**Output:** Awareness of post-conversation reflection template and commitment to complete it.
+### Output
+Awareness of post-conversation reflection template and commitment to complete it.
 
-**Quality Gate:** You understand the purpose of post-conversation reflection and have a plan to complete it within 24 hours of the conversation.
+### Quality Gate
+You understand the purpose of post-conversation reflection and have a plan to complete it within 24 hours of the conversation.
 
 ---
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Prepare for a high-stakes conversation by identifying the core issue, anticipati, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 

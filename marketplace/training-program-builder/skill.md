@@ -100,15 +100,18 @@
   - `note` (string): Specific guidance.
 
 ---
+- `weekly_schedule`: (from manifest)
+- `exercise_library`: (from manifest)
+- `progression_markers`: (from manifest)
 
 ## Execution Phases
 
 ### Phase 1: Assess Fitness Profile and Constraints
 
-**Entry Criteria:**
+### Entry Criteria
 - All required inputs provided: fitness goals, current fitness level, training frequency, equipment access.
 
-**Actions:**
+### Actions
 1. Parse and validate fitness goals. If multiple goals are listed, rank them by feasibility and alignment (e.g., strength and hypertrophy align; strength and endurance may conflict). Flag conflicts and recommend a primary goal.
 2. Validate baseline metrics. Ensure at least 2 metrics are provided and are realistic (e.g., a 150 lb person claiming a 500 lb squat is flagged). If metrics are missing, infer from training age and goal (e.g., beginner with strength goal → assume ~1.0x bodyweight squat).
 3. Classify training age: <1 year = beginner, 1-3 years = intermediate, 3+ years = advanced. Adjust based on movement competency (e.g., 2 years of training but "beginner" movement competency → treat as beginner).
@@ -117,7 +120,7 @@
 6. Map equipment access to exercise selection constraints.
 7. Assess lifestyle factors (sleep, stress, job demands) if provided. If not provided, assume moderate sleep (7 hrs), moderate stress, sedentary job. Note that high stress or poor sleep may require more frequent deloads (every 2-3 weeks instead of 3-4).
 
-**Output:**
+### Output
 - Validated goal profile with primary and secondary goals.
 - Training age classification.
 - Baseline metrics (filled in or inferred).
@@ -125,17 +128,17 @@
 - Equipment-available exercise pool.
 - Lifestyle assessment and deload frequency recommendation.
 
-**Quality Gate:**
+### Quality Gate
 - All inputs are validated and internally consistent, verified by: (1) baseline metrics are realistic for stated training age, (2) training frequency is documented as optimal/adequate/suboptimal with specific reasoning, (3) injury history is documented with specific contraindications, (4) no contradictions exist (e.g., "build muscle" with 1 day/week training is flagged as suboptimal with explanation).
 
 ---
 
 ### Phase 2: Select Periodization Model and Macrocycle Structure
 
-**Entry Criteria:**
+### Entry Criteria
 - Fitness profile is validated.
 
-**Actions:**
+### Actions
 1. Select periodization model based on goal, training age, and frequency:
    - **Beginner + any goal**: Linear periodization (steady progression, easy to follow).
    - **Intermediate + strength**: Block periodization (dedicated strength phase).
@@ -149,23 +152,23 @@
 4. Assign deload weeks: typically every 3-4 weeks (weeks 4, 8, 12 for a 12-week cycle, or weeks 3, 6, 9, 12 for more frequent deloads). Adjust frequency based on lifestyle factors: high stress or poor sleep → every 2-3 weeks; low stress and good sleep → every 4-5 weeks.
 5. Define intensity and volume progression rules for each phase.
 
-**Output:**
+### Output
 - Periodization model selected with justification (e.g., "Linear periodization selected because user is beginner; easy to follow and proven effective for novices").
 - Macrocycle structure: phase names, weeks, primary adaptations.
 - Deload schedule with frequency rationale.
 - Intensity and volume progression strategy.
 
-**Quality Gate:**
+### Quality Gate
 - Periodization model matches training age and goal, verified by: (1) model name is one of the four standard types, (2) justification cites training age and goal, (3) phases are sequenced logically (e.g., hypertrophy before strength, not after), (4) deload weeks are placed at natural fatigue accumulation points (every 3-4 weeks) and not in final 2 weeks before competition.
 
 ---
 
 ### Phase 3: Design Phase-Specific Objectives and Exercise Selection
 
-**Entry Criteria:**
+### Entry Criteria
 - Macrocycle structure is defined.
 
-**Actions:**
+### Actions
 1. For each phase, define:
    - Primary adaptation (muscle growth, strength, power, endurance, etc.).
    - Rep range (e.g., 8-12 for hypertrophy, 3-5 for strength, 12-15 for endurance).
@@ -176,23 +179,23 @@
 4. Determine session structure (full-body, upper/lower split, push/pull/legs, etc.) based on training frequency and goal.
 5. Define progression rules: how to increase weight, reps, or volume each week within the phase. Rules must be specific (e.g., "add 5 lbs each week" not "add weight").
 
-**Output:**
+### Output
 - Phase-specific objectives, rep ranges, intensity zones, volume targets.
 - Exercise selection per phase (primary and accessory).
 - Session structure template.
 - Progression rules per phase (specific and testable).
 
-**Quality Gate:**
+### Quality Gate
 - Each phase has 4-6 primary exercises that are achievable with available equipment, verified by: (1) no contraindicated exercises are included, (2) progression rules are specific (e.g., "add 5 lbs each week" or "increase reps by 1-2 per week"), (3) exercises are ordered logically (compound first), (4) session structure matches training frequency (e.g., 3 days/week → full-body or upper/lower, 5 days/week → push/pull/legs).
 
 ---
 
 ### Phase 4: Build Weekly Microcycles and Deload Protocols
 
-**Entry Criteria:**
+### Entry Criteria
 - Phase objectives and exercise selection are defined.
 
-**Actions:**
+### Actions
 1. For each phase, create a sample week (microcycle) showing:
    - Number of sessions (e.g., 3, 4, 5, 6 per week).
    - Session names and focus (e.g., "Upper A", "Lower B").
@@ -209,22 +212,22 @@
    - Mobility and flexibility work (e.g., 10 min post-session, 2-3x/week dedicated).
    - Stress management and active recovery (e.g., walking, yoga, foam rolling).
 
-**Output:**
+### Output
 - Weekly microcycle templates for each phase (sample weeks).
 - Deload week structure and placement.
 - Recovery and nutrition guidelines.
 
-**Quality Gate:**
+### Quality Gate
 - Each microcycle is realistic and achievable within the training frequency, verified by: (1) total session time per week is 3-6 hours (typical), (2) deload weeks are clearly marked and structured with 50-60% volume reduction, (3) recovery recommendations are specific and actionable (e.g., "7-9 hours sleep" not "sleep well"), (4) no session exceeds 90 minutes (typical limit).
 
 ---
 
 ### Phase 5: Define Progress Markers, Nutrition, and Assessment Protocol
 
-**Entry Criteria:**
+### Entry Criteria
 - Microcycles and deload protocols are designed.
 
-**Actions:**
+### Actions
 1. Define weekly tracking metrics:
    - For strength goals: weight lifted per main lift, reps at target weight, total volume (sets × reps × weight).
    - For hypertrophy: bodyweight, body composition (if available), reps at target weight, pump/soreness (subjective).
@@ -243,7 +246,7 @@
 6. Create a sample meal template showing daily macronutrient distribution.
 7. List optional supplements with rationale (e.g., creatine for strength, whey protein for convenience).
 
-**Output:**
+### Output
 - Weekly tracking metrics and template.
 - Assessment schedule (weeks 4, 8, 12) with specific tests.
 - Success criteria per assessment.
@@ -252,17 +255,17 @@
 - Sample meal template.
 - Optional supplementation list.
 
-**Quality Gate:**
+### Quality Gate
 - Metrics are objective and measurable (not "feel stronger"), verified by: (1) each metric has a unit (lbs, reps, minutes, etc.), (2) assessments are scheduled at logical points (weeks 4, 8, 12), (3) success criteria are realistic and aligned with the goal, (4) nutrition targets are specific (e.g., "2500-2700 calories/day" not "eat enough"), (5) meal template shows daily macronutrient distribution.
 
 ---
 
 ### Phase 6: Generate Adjustment Rules and Contingency Protocols
 
-**Entry Criteria:**
+### Entry Criteria
 - Progress markers and nutrition are defined.
 
-**Actions:**
+### Actions
 1. Define adjustment rules for common scenarios:
    - **Stalled progress (no improvement for 2+ weeks)**: Reduce weight by 10% and rebuild, or increase calories by 200-300 if hypertrophy goal. Retest in 1 week.
    - **Missed sessions (1-2 sessions)**: Resume next scheduled session. Do not skip ahead.
@@ -275,21 +278,21 @@
    - **Plateau after 8 weeks**: Increase training frequency by 1 day/week, or switch to a different periodization model for the final 4 weeks.
 3. Document all adjustment rules with specific triggers and responses.
 
-**Output:**
+### Output
 - Adjustment rules object with stalled_progress, missed_sessions, injury_or_pain, exceeding_targets.
 - Contingency protocols for life disruption, motivation loss, plateau.
 
-**Quality Gate:**
+### Quality Gate
 - Each adjustment rule has a specific trigger (e.g., "2+ weeks no progress") and a specific response (e.g., "reduce weight by 10%"), verified by: (1) no rule uses vague language like "adjust as needed", (2) each rule includes a retest or follow-up point, (3) contingency protocols address common real-world scenarios.
 
 ---
 
 ### Phase 7: Generate Complete Program Document
 
-**Entry Criteria:**
+### Entry Criteria
 - All previous phases are complete and validated.
 
-**Actions:**
+### Actions
 1. Assemble the complete 12-week program in markdown format:
    - Program title and overview (goal, periodization, duration).
    - Phase breakdown (1-2 pages per phase).
@@ -310,15 +313,24 @@
 3. Create a program completion report template for week 12 feedback.
 4. Ensure document is 15-25 pages and self-contained.
 
-**Output:**
+### Output
 - Complete program document (markdown format, 15-25 pages).
 - Program completion report template (markdown format).
 - Notes and caveats (structured as array of objects with category and note).
 
-**Quality Gate:**
+### Quality Gate
 - Document is self-contained and readable by someone unfamiliar with the original workflow, verified by: (1) every phase, exercise, and progression rule is explained, (2) no ambiguity (e.g., "do some cardio" is replaced with "30 min steady-state running, 2x/week"), (3) document is 15-25 pages, (4) all outputs from previous phases are included, (5) adjustment rules and contingency protocols are present.
 
 ---
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Convert fitness goals and current fitness level into a progressive 12-week perio, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 

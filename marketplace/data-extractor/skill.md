@@ -1,6 +1,6 @@
 # Data Extractor
 
-> **Starter Skill** — Free to use. Royalties to original creator on derivatives. Build on this.
+> **Starter Skill**  --  Free to use. Royalties to original creator on derivatives. Build on this.
 
 Foundation pattern for pulling structured data out of unstructured text. Takes raw text (emails, documents, web pages, PDFs, chat logs) and extracts specified fields into clean JSON. Handles messy formatting, inconsistent labels, and missing fields. Fork this to create domain-specific extractors (invoice parser, resume parser, medical record extractor, etc.).
 
@@ -35,65 +35,86 @@ ACT     --> Extract fields into clean JSON, flag low-confidence values
 
 ### OBSERVE: Analyze Source Text
 
-**Entry criteria:** Raw text and at least one target field are provided.
+### Entry Criteria
+Raw text and at least one target field are provided.
 
-**Actions:**
+### Actions
 1. Detect the source format. Look for structural cues: key-value pairs ("Name: John"), tabular data, headers/sections, free-form prose, or mixed formats. Note the dominant pattern.
 2. Scan for each target field. Look for: explicit labels matching the field name, semantic equivalents (e.g., "Tel" for phone, "DOB" for date_of_birth), positional patterns (first line = title, last line = signature), and contextual clues.
 3. Identify delimiters and separators. Common patterns: colon-separated ("Field: Value"), tab-separated, line-separated, comma-separated lists, or paragraph boundaries.
 4. Flag structural ambiguities. Multiple possible values for one field, unlabeled values that could match several fields, or fields that appear in unexpected formats.
 
-**Output:** Source format assessment, field location map, ambiguity flags.
+### Output
+Source format assessment, field location map, ambiguity flags.
 
-**Quality gate:** Every target field has at least one candidate location or is flagged as not found.
+### Quality Gate
+Every target field has at least one candidate location or is flagged as not found.
 
 ---
 
 ### REASON: Resolve and Map
 
-**Entry criteria:** Source analysis is complete with candidate field locations.
+### Entry Criteria
+Source analysis is complete with candidate field locations.
 
-**Actions:**
+### Actions
 1. For each target field, select the best candidate value. Prefer: explicitly labeled > semantically matched > positionally inferred > contextually guessed. Assign confidence accordingly: explicit = 0.9+, semantic = 0.7-0.9, positional = 0.5-0.7, contextual = 0.3-0.5.
 2. Apply type coercion. Convert raw text to target type: parse dates into ISO format, strip currency symbols from numbers, normalize boolean expressions ("yes/true/1" to true), split comma-separated strings into lists.
 3. Handle missing required fields. If a required field cannot be found: check if it can be inferred from other extracted fields (e.g., full_name from first_name + last_name), check if a default value is reasonable, or flag it as missing with extraction_notes.
 4. Resolve conflicts. If multiple candidates exist for one field, prefer the one closest to a matching label, the one with the most specific match, or the most recently occurring instance.
 
-**Output:** Field-to-value mapping with confidence scores and type-coerced values.
+### Output
+Field-to-value mapping with confidence scores and type-coerced values.
 
-**Quality gate:** All required fields have a value or are explicitly flagged as missing. No field has confidence below 0.3 without an extraction note.
+### Quality Gate
+All required fields have a value or are explicitly flagged as missing. No field has confidence below 0.3 without an extraction note.
 
 ---
 
 ### PLAN: Build Extraction Output
 
-**Entry criteria:** All fields are mapped with confidence scores.
+### Entry Criteria
+All fields are mapped with confidence scores.
 
-**Actions:**
+### Actions
 1. Assemble the extracted_data object with all target fields. Use null for fields that could not be extracted.
 2. Compile confidence_scores. One entry per field reflecting extraction certainty.
 3. Generate extraction_notes for any: missing required fields, low-confidence extractions (below 0.7), type coercion assumptions, ambiguous values where alternatives existed.
 4. Record raw_matches showing the exact source text span for each extracted value.
 
-**Output:** Complete extraction package ready for delivery.
+### Output
+Complete extraction package ready for delivery.
 
-**Quality gate:** extracted_data contains every target field (value or null). Every non-null value has a confidence score. Every confidence below 0.7 has an extraction note.
+### Quality Gate
+extracted_data contains every target field (value or null). Every non-null value has a confidence score. Every confidence below 0.7 has an extraction note.
 
 ---
 
 ### ACT: Deliver and Validate
 
-**Entry criteria:** Extraction package is assembled.
+### Entry Criteria
+Extraction package is assembled.
 
-**Actions:**
+### Actions
 1. Output the extracted_data as clean JSON.
 2. Highlight any fields needing human review (confidence below 0.7 or missing required fields).
 3. If examples were provided, compare output format against examples for consistency.
 4. Check for loop trigger: did extraction reveal fields not in the target schema that seem important? If so, note them as suggested additions but do not loop automatically.
 
-**Output:** Final extracted_data, confidence_scores, extraction_notes, raw_matches.
+### Output
+Final extracted_data, confidence_scores, extraction_notes, raw_matches.
 
-**Quality gate:** JSON is valid. All required fields are either populated or flagged. Confidence scores are present for all non-null values.
+### Quality Gate
+JSON is valid. All required fields are either populated or flagged. Confidence scores are present for all non-null values.
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Pull structured data out of unstructured text (emails, documents, web pages, PDF, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 

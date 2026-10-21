@@ -32,11 +32,11 @@
 
 ### Phase 1: Sample Collection and Validation
 
-**Entry Criteria:**
+### Entry Criteria
 - `writing_sample` is provided and is a non-empty string
 - `writing_sample` length is at least 50 characters (minimum for any analysis)
 
-**Actions:**
+### Actions
 1. Receive and store the writing sample as-is
 2. Count total words (split on whitespace) and total characters (including spaces and punctuation)
 3. Detect language using standard language detection (if not English, flag in metadata and proceed with caveat)
@@ -46,13 +46,13 @@
 7. Store all metadata: word_count, character_count, paragraph_count, sentence_count, language_detected, timestamp
 8. Validate that sample contains at least 50 words; if 50-499 words, set validation_status to "warn_low_confidence"; if 500+ words, set to "proceed"; if < 50 words, set to "abort"
 
-**Output:**
+### Output
 - cleaned_writing_sample (string): Original sample with metadata removed
 - sample_metadata (object): word_count, character_count, paragraph_count, sentence_count, language_detected, validation_status
 - segmented_sentences (array of strings): Individual sentences for downstream analysis
 - segmented_paragraphs (array of strings): Individual paragraphs for downstream analysis
 
-**Quality Gate:**
+### Quality Gate
 Pass if and only if ALL of the following are true:
 - cleaned_writing_sample is a non-empty string
 - sample_metadata contains all required fields (word_count, character_count, paragraph_count, sentence_count, language_detected, validation_status)
@@ -71,12 +71,12 @@ Pass if and only if ALL of the following are true:
 
 ### Phase 2: Tone and Emotional Register Analysis
 
-**Entry Criteria:**
+### Entry Criteria
 - cleaned_writing_sample is available
 - segmented_sentences array is available
 - validation_status is not "abort"
 
-**Actions:**
+### Actions
 1. Scan sample for formality markers: count contractions ("don't", "it's", etc.), colloquialisms ("gonna", "kinda", etc.), formal register words ("utilize", "facilitate", "endeavor"), and formal sentence starters ("Furthermore", "Moreover", "In conclusion")
 2. Calculate formality_score on 0-100 scale: (formal_marker_count - informal_marker_count) / total_words * 100, clamped to 0-100. Use reference scale: 0-20 very informal, 21-40 informal, 41-60 neutral, 61-80 formal, 81-100 very formal
 3. Identify emotional tone by scanning for positive words ("excellent", "wonderful", "love"), negative words ("terrible", "hate", "awful"), and neutral/objective language. Assign emotional_valence as: "positive" if positive_words > negative_words * 1.5, "negative" if negative_words > positive_words * 1.5, "mixed" if within 1.5x ratio, "neutral" if both counts are low
@@ -86,10 +86,10 @@ Pass if and only if ALL of the following are true:
 7. Evaluate tone consistency by dividing sample into thirds and comparing formality_score and emotional_valence across thirds. If scores vary by > 20 points, set consistency_assessment to "shifts_by_section"; if vary by > 40 points, set to "highly_variable"; otherwise "consistent"
 8. Extract tone-setting phrases: identify sentences or phrases that exemplify the tone (up to 10 examples)
 
-**Output:**
+### Output
 - tone_profile (object): formality_score (integer 0-100), emotional_valence (string), confidence_level (integer 0-100), audience_awareness_score (integer 0-100), consistency_assessment (string), tone_markers (array of up to 10 strings: direct quotes from sample)
 
-**Quality Gate:**
+### Quality Gate
 Pass if and only if ALL of the following are true:
 - formality_score is an integer between 0 and 100 (inclusive)
 - emotional_valence is one of: "positive", "negative", "neutral", "mixed"
@@ -107,11 +107,11 @@ Pass if and only if ALL of the following are true:
 
 ### Phase 3: Vocabulary and Word Choice Analysis
 
-**Entry Criteria:**
+### Entry Criteria
 - cleaned_writing_sample is available
 - validation_status is not "abort"
 
-**Actions:**
+### Actions
 1. Extract all words from cleaned_writing_sample (split on whitespace, convert to lowercase, remove punctuation)
 2. Count total words and unique words; calculate unique_word_ratio = unique_words / total_words
 3. Assess vocabulary complexity using Flesch-Kincaid grade level formula: 0.39 * (words/sentences) + 11.8 * (syllables/words) - 15.59. Round to nearest 0.5. Map to complexity_grade_level
@@ -121,10 +121,10 @@ Pass if and only if ALL of the following are true:
 7. Identify slang, colloquialisms, or informal vocabulary (e.g., "gonna", "wanna", "cool", "awesome"). List up to 10 examples
 8. Evaluate vocabulary consistency by dividing sample into thirds and comparing unique_word_ratio and complexity_grade_level across thirds. If scores vary by > 2 grade levels, set consistency_assessment to "shifts_by_topic"; if vary by > 4 grade levels, set to "highly_variable"; otherwise "consistent"
 
-**Output:**
+### Output
 - vocabulary_profile (object): complexity_grade_level (number), unique_word_ratio (number 0-1), domain_terms (array of strings), signature_words (array of objects with fields: word (string), frequency_per_1000 (number)), word_choice_patterns (string), slang_or_informal_usage (array of strings), consistency_assessment (string)
 
-**Quality Gate:**
+### Quality Gate
 Pass if and only if ALL of the following are true:
 - complexity_grade_level is a number between 0 and 20
 - unique_word_ratio is a number between 0 and 1
@@ -142,11 +142,11 @@ Pass if and only if ALL of the following are true:
 
 ### Phase 4: Sentence Structure and Syntax Analysis
 
-**Entry Criteria:**
+### Entry Criteria
 - cleaned_writing_sample is available
 - segmented_sentences array is available
 
-**Actions:**
+### Actions
 1. Calculate average_sentence_length = total_words / total_sentences (from metadata)
 2. Classify each sentence in segmented_sentences as simple (one independent clause), compound (two or more independent clauses joined by and/but/or/nor/yet), or complex (independent clause + dependent clause). Count each type. Calculate percentages: simple_percent, compound_percent, complex_percent (must sum to 100)
 3. Assess sentence variety: if one type comprises > 70% of sentences, note as "low variety"; if one type comprises 40-70%, note as "moderate variety"; if all types are 20-50%, note as "high variety"
@@ -155,10 +155,10 @@ Pass if and only if ALL of the following are true:
 6. Analyze transitions and connectors by counting: coordinating conjunctions (and, but, or, nor, yet, so), subordinating conjunctions (because, although, while, if, since), and transitional phrases (however, furthermore, in addition, on the other hand). Calculate frequency per 100 sentences
 7. Identify distinctive syntactic patterns by examining sentence structures: look for repeated patterns such as "X is not Y, but Z", lists with parallel structure, rhetorical questions, or other recurring structures. List up to 5 distinctive patterns
 
-**Output:**
+### Output
 - syntax_profile (object): average_sentence_length (number), sentence_variety_breakdown (object with simple_percent, compound_percent, complex_percent as numbers summing to 100), sentence_variety_assessment (string: "low"|"moderate"|"high"), punctuation_preferences (object with em_dashes, semicolons, colons, parentheses, exclamation_marks, question_marks as frequencies per 100 sentences), paragraph_structure_patterns (string describing average length and topic sentence usage), transition_usage (string describing frequency and types), distinctive_patterns (array of 0-5 strings describing recurring syntactic patterns)
 
-**Quality Gate:**
+### Quality Gate
 Pass if and only if ALL of the following are true:
 - average_sentence_length is a positive number
 - simple_percent + compound_percent + complex_percent = 100 (within 1% rounding error)
@@ -177,12 +177,12 @@ Pass if and only if ALL of the following are true:
 
 ### Phase 5: Voice Signature Extraction
 
-**Entry Criteria:**
+### Entry Criteria
 - tone_profile is complete
 - vocabulary_profile is complete
 - syntax_profile is complete
 
-**Actions:**
+### Actions
 1. Cross-reference tone, vocabulary, and syntax profiles to identify overlapping patterns. For example: if formality_score is high AND complexity_grade_level is high AND average_sentence_length is high, note this as a consistent "formal, complex, sophisticated" voice pattern
 2. Extract distinctive phrases from cleaned_writing_sample that exemplify the voice. Criteria: phrases that appear 1-2 times (not common enough to be signature words, but distinctive enough to be memorable), phrases that combine tone + vocabulary + syntax in a characteristic way. Extract up to 10 phrases
 3. Identify recurring metaphors or analogies by scanning for figurative language (similes with "like" or "as", metaphors, extended metaphors). List up to 5 examples
@@ -190,10 +190,10 @@ Pass if and only if ALL of the following are true:
 5. Synthesize unique markers by identifying what combination of tone + vocabulary + syntax makes this voice recognizable and distinct from generic writing. Markers should be specific to this sample, not generic (e.g., "uses em-dashes for emphasis" is generic; "uses em-dashes to create dramatic pauses in otherwise formal prose" is specific)
 6. Create voice_essence_summary: 2-4 sentences that capture the essence of the voice. Summary should be specific enough that someone could recognize writing in this voice, but concise enough to fit on one page
 
-**Output:**
+### Output
 - voice_signature (object): distinctive_phrases (array of objects with fields: phrase (string: direct quote from sample), context (string: 1-2 sentence description of why this phrase is distinctive)), recurring_metaphors (array of strings: direct quotes or paraphrases of metaphors), characteristic_structures (array of strings: descriptions of recurring syntactic patterns), unique_markers (array of strings: specific, distinctive markers that differentiate this voice from generic writing), voice_essence_summary (string: 2-4 sentences)
 
-**Quality Gate:**
+### Quality Gate
 Pass if and only if ALL of the following are true:
 - distinctive_phrases is an array of 1-10 objects, each with phrase (direct quote from sample) and context (non-empty string)
 - Each phrase in distinctive_phrases is at least 3 words long and appears in cleaned_writing_sample
@@ -212,13 +212,13 @@ Pass if and only if ALL of the following are true:
 
 ### Phase 6: Style Guide Synthesis
 
-**Entry Criteria:**
+### Entry Criteria
 - tone_profile is complete
 - vocabulary_profile is complete
 - syntax_profile is complete
 - voice_signature is complete
 
-**Actions:**
+### Actions
 1. Create Tone Guidelines section (200-300 words): Describe the formality level using the reference scale (0-20 very informal, etc.). Describe emotional register (positive/negative/neutral/mixed). Describe audience awareness (does the writer address the reader directly?). Provide 3-5 actionable rules in the format "[Action]: [Rationale]". Example: "Use contractions: This creates a conversational tone that matches the informal register of the voice."
 2. Create Vocabulary Rules section (200-300 words): Specify the complexity level (grade equivalent). List domain terms to use and avoid (if applicable). List signature words to incorporate (with frequency guidance). Provide 3-5 word choice principles in the format "Prefer [X] over [Y] because [reason]". Example: "Prefer 'use' over 'utilize' because the voice favors simple, direct language."
 3. Create Sentence Structure Preferences section (200-300 words): Specify ideal sentence length range (e.g., "8-15 words for punchy style, 15-25 words for flowing style"). Specify sentence variety expectations (e.g., "Mix simple and complex sentences in roughly 40/60 ratio"). Provide 3-5 structural rules in the format "[Structure]: [Frequency/Guidance]". Example: "Use em-dashes for emphasis: Incorporate 1-2 per 500 words to create dramatic pauses."
@@ -228,10 +228,10 @@ Pass if and only if ALL of the following are true:
 7. Format entire guide as Markdown with clear section headers (##), bold emphasis (**text**), and code blocks for prompts if needed
 8. Ensure total word count is 1500-2500 words
 
-**Output:**
+### Output
 - style_guide (string): Complete Markdown-formatted style guide with all 6 sections
 
-**Quality Gate:**
+### Quality Gate
 Pass if and only if ALL of the following are true:
 - style_guide is a non-empty string in valid Markdown format
 - style_guide contains all 6 required sections: Tone Guidelines, Vocabulary Rules, Sentence Structure Preferences, Punctuation Conventions, Examples, AI Prompting Tips
@@ -255,11 +255,11 @@ Pass if and only if ALL of the following are true:
 
 ### Phase 7: Validation and Feedback Loop
 
-**Entry Criteria:**
+### Entry Criteria
 - style_guide is complete
 - All profiles and voice_signature are available
 
-**Actions:**
+### Actions
 1. Generate a test prompt based on the original sample's topic or domain. Format: "Write a 200-word paragraph about [topic from original sample]. Follow these style guidelines: [extract 3-5 key rules from style_guide]. Write in the voice of the original author."
 2. Execute the test prompt using a language model (GPT-4, Claude, or equivalent). Store the generated test_content_sample (200-word output)
 3. Compare test_content_sample against cleaned_writing_sample across three dimensions:
@@ -271,10 +271,10 @@ Pass if and only if ALL of the following are true:
 6. Generate refinement_recommendations: for each gap, suggest a specific revision to the style_guide. Format: "[Gap]: Revise [section] to [specific change]. Example: [revised rule]"
 7. Generate validation_report with all results
 
-**Output:**
+### Output
 - validation_report (object): confidence_score (integer 0-100), test_content_sample (string: 200-word generated text), gap_analysis (array of strings: 0-10 gaps identified), refinement_recommendations (array of strings: 0-10 specific suggestions), confidence_by_dimension (object with tone_confidence, vocabulary_confidence, syntax_confidence as integers 0-100)
 
-**Quality Gate:**
+### Quality Gate
 Pass if and only if ALL of the following are true:
 - confidence_score is an integer between 0 and 100
 - test_content_sample is a string of approximately 200 words (150-250 words acceptable)
@@ -290,6 +290,15 @@ Pass if and only if ALL of the following are true:
 - If confidence_score < 80, flag for refinement: return validation_report with note that style_guide should be refined using refinement_recommendations before final delivery
 
 ---
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Analyze a writing sample to extract tone, vocabulary, and sentence patterns, the, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 

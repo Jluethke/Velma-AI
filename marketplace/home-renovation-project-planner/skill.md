@@ -43,118 +43,122 @@
 
 ### Phase 0: Pre-Project Site Inspection
 
-**Entry Criteria:**
+### Entry Criteria
 - Scope statement is finalized from Phase 1.
 - Property access is arranged.
 - Inspection timeline is scheduled.
 
-**Actions:**
+### Actions
 1. Conduct on-site inspection of all areas affected by renovation. Document: structural condition, visible damage, code compliance issues, utility locations and condition, accessibility constraints.
 2. Identify hidden issues that could impact scope, budget, or timeline (e.g., asbestos, outdated wiring, foundation cracks, plumbing complications).
 3. Photograph all findings and create a detailed inspection report.
 4. Estimate cost and timeline impact of each issue discovered.
 5. Revise scope statement and budget if major issues are found. If issues are significant, loop back to Phase 1 to adjust scope and re-evaluate contractors.
 
-**Output:**
+### Output
 - `site_inspection_report`: Document with findings, photographs, cost/timeline impact estimates, and recommendations.
 - `scope_revisions_needed`: Boolean (true if major issues require scope adjustment).
 - `revised_budget_impact`: Number (estimated additional cost, or 0 if no impact).
 
-**Quality Gate:** Inspection covers all project areas. All visible issues are documented with photographs. Cost and timeline impacts are estimated. If scope revisions are needed, they are documented and approved before proceeding.
+### Quality Gate
+Inspection covers all project areas. All visible issues are documented with photographs. Cost and timeline impacts are estimated. If scope revisions are needed, they are documented and approved before proceeding.
 
 **Error Handling:**
-- **Failure Mode:** Major structural or code issues discovered that significantly increase cost/timeline. **Response:** Adjust — revise scope statement, re-estimate budget and timeline, and loop back to Phase 1 if contractor selection may be affected.
-- **Failure Mode:** Inspection reveals issues that make project infeasible. **Response:** Abort — document findings and recommend project cancellation or major scope reduction.
+- **Failure Mode:** Major structural or code issues discovered that significantly increase cost/timeline. **Response:** Adjust  --  revise scope statement, re-estimate budget and timeline, and loop back to Phase 1 if contractor selection may be affected.
+- **Failure Mode:** Inspection reveals issues that make project infeasible. **Response:** Abort  --  document findings and recommend project cancellation or major scope reduction.
 
 ---
 
 ### Phase 1: Scope Definition
 
-**Entry Criteria:**
+### Entry Criteria
 - Renovation idea is articulated (at least 2-3 sentences).
 - Property details are available.
 - Desired outcomes are listed.
 
-**Actions:**
+### Actions
 1. Write a scope statement that includes: rooms/areas affected, work categories (structural, cosmetic, systems), must-haves, nice-to-haves, and explicit exclusions.
 2. Identify any known constraints (historic preservation, HOA rules, structural limitations) and document them.
 3. Estimate rough scope complexity (simple, moderate, complex) based on work categories.
 4. Create a decision tree for scope reduction if needed: prioritize must-haves vs. nice-to-haves with estimated cost/timeline for each.
 
-**Output:**
+### Output
 - `scope_statement`: 200-400 word document with rooms, work categories, must-haves, nice-to-haves, exclusions.
 - `scope_complexity`: "simple" | "moderate" | "complex".
 - `constraints_list`: Array of identified limitations.
 - `scope_reduction_tree`: Decision tree with must-haves (required cost/timeline) and nice-to-haves (optional cost/timeline).
 
-**Quality Gate:** Scope is specific enough that a contractor can provide a preliminary estimate without follow-up questions. Exclusions are explicit (e.g., "does NOT include: electrical panel upgrade, roof replacement"). Scope reduction tree clearly identifies which items can be cut if budget/timeline constraints are exceeded.
+### Quality Gate
+Scope is specific enough that a contractor can provide a preliminary estimate without follow-up questions. Exclusions are explicit (e.g., "does NOT include: electrical panel upgrade, roof replacement"). Scope reduction tree clearly identifies which items can be cut if budget/timeline constraints are exceeded.
 
 **Error Handling:**
-- **Failure Mode:** Scope is too vague to solicit bids. **Response:** Adjust — add specificity (e.g., "kitchen remodel" → "kitchen remodel with new cabinets, countertops, appliances, and flooring").
-- **Failure Mode:** Scope exceeds budget or timeline. **Response:** Adjust — use scope reduction tree to prioritize must-haves and reduce nice-to-haves.
+- **Failure Mode:** Scope is too vague to solicit bids. **Response:** Adjust  --  add specificity (e.g., "kitchen remodel" → "kitchen remodel with new cabinets, countertops, appliances, and flooring").
+- **Failure Mode:** Scope exceeds budget or timeline. **Response:** Adjust  --  use scope reduction tree to prioritize must-haves and reduce nice-to-haves.
 
 ---
 
 ### Phase 2: Contractor Research and Evaluation Criteria
 
-**Entry Criteria:**
+### Entry Criteria
 - Scope statement is finalized.
 - Budget ceiling and timeline constraint are defined.
 
-**Actions:**
+### Actions
 1. Research and identify 5-7 contractors qualified for the scope (via referrals, online reviews, licensing databases).
 2. Verify licensing, insurance, and bonding for each candidate. Document verification date and source.
 3. Develop a weighted evaluation rubric with 5-7 criteria (e.g., price 25%, experience 20%, timeline 15%, references 15%, communication 15%, warranty 10%). Assign weights based on project priorities.
 4. Narrow candidate list to 3-5 contractors who meet minimum qualifications (verified licensing, insurance, relevant experience).
 
-**Output:**
+### Output
 - `contractor_candidates`: Array with name, license status, specialties, contact, fit assessment, verification date.
 - `evaluation_rubric`: Object with criteria, weights, scoring scale (1-5), and rationale for each.
 
-**Quality Gate:** All candidates have verified licensing and insurance (verification documented). Rubric weights sum to 100% and reflect project priorities. At least 3 qualified candidates are ready for bidding.
+### Quality Gate
+All candidates have verified licensing and insurance (verification documented). Rubric weights sum to 100% and reflect project priorities. At least 3 qualified candidates are ready for bidding.
 
 **Error Handling:**
-- **Failure Mode:** Fewer than 3 qualified candidates found. **Response:** Adjust — expand search radius, relax qualification criteria (e.g., accept contractors with less direct experience but strong references), or delay project to allow more time for research.
-- **Failure Mode:** Candidates have conflicting availability. **Response:** Adjust — negotiate timeline with candidates or expand search to find contractors with matching availability.
+- **Failure Mode:** Fewer than 3 qualified candidates found. **Response:** Adjust  --  expand search radius, relax qualification criteria (e.g., accept contractors with less direct experience but strong references), or delay project to allow more time for research.
+- **Failure Mode:** Candidates have conflicting availability. **Response:** Adjust  --  negotiate timeline with candidates or expand search to find contractors with matching availability.
 
 ---
 
 ### Phase 3: Bid Collection and Comparison
 
-**Entry Criteria:**
+### Entry Criteria
 - Contractor candidates are identified and qualified.
 - Evaluation rubric is finalized.
 - Scope statement is detailed enough for accurate bids.
 
-**Actions:**
+### Actions
 1. Send scope statement and bid request to all candidates. Request itemized bids with: labor, materials, permits, timeline, warranty, payment schedule, change order process.
 2. Set a bid deadline (7-10 days typical). Specify that bids must be received by [specific date/time].
 3. Collect all bids and verify completeness: all line items present, timeline included, terms clear, change order process described.
 4. If a bid is incomplete or unclear, send a clarification request with a 3-day response deadline. If contractor does not respond within 3 days, remove from consideration.
 5. Create a bid comparison matrix: list each contractor, their total price, timeline, key terms, and notes. Ensure all bids are comparable (same scope).
 
-**Output:**
+### Output
 - `bid_comparison_matrix`: Structured table with contractor, price, timeline, key terms, completeness status.
 - `bids_complete`: Boolean (true if all bids are complete and comparable).
 - `bid_clarifications`: Array of clarification requests sent and responses received.
 
-**Quality Gate:** All bids are itemized, include timeline and warranty terms, and are comparable (same scope). If bids vary significantly in scope, document the differences and request revised bids with identical scope.
+### Quality Gate
+All bids are itemized, include timeline and warranty terms, and are comparable (same scope). If bids vary significantly in scope, document the differences and request revised bids with identical scope.
 
 **Error Handling:**
-- **Failure Mode:** Bids are incomplete or vague. **Response:** Retry — send clarification request to contractor with 3-day deadline. If no response, remove from consideration.
-- **Failure Mode:** Bids vary significantly in scope (e.g., one includes permits, another doesn't). **Response:** Adjust — request revised bids with identical scope, or document scope differences in the matrix and adjust comparison accordingly.
-- **Failure Mode:** Bids are significantly higher than budget. **Response:** Adjust — use scope reduction tree to identify cost-cutting options, negotiate with contractors, or request budget increase from stakeholders.
+- **Failure Mode:** Bids are incomplete or vague. **Response:** Retry  --  send clarification request to contractor with 3-day deadline. If no response, remove from consideration.
+- **Failure Mode:** Bids vary significantly in scope (e.g., one includes permits, another doesn't). **Response:** Adjust  --  request revised bids with identical scope, or document scope differences in the matrix and adjust comparison accordingly.
+- **Failure Mode:** Bids are significantly higher than budget. **Response:** Adjust  --  use scope reduction tree to identify cost-cutting options, negotiate with contractors, or request budget increase from stakeholders.
 
 ---
 
 ### Phase 4: Contractor Evaluation and Selection
 
-**Entry Criteria:**
+### Entry Criteria
 - Bid comparison matrix is complete.
 - Evaluation rubric is finalized.
 - All candidates have verified references available.
 
-**Actions:**
+### Actions
 1. Score each contractor against the evaluation rubric (1-5 per criterion, multiply by weight). Document scoring rationale.
 2. Check references: contact 2-3 past clients per contractor. Ask about: quality of work, timeline adherence, communication responsiveness, budget accuracy, issue resolution, and any concerns.
 3. Rank contractors by weighted score and reference feedback.
@@ -162,29 +166,30 @@
 5. Document the evaluation results, reference feedback, and rationale for selection.
 6. Present selection to stakeholders for approval.
 
-**Output:**
+### Output
 - `evaluation_results`: Scored matrix with each contractor's total weighted score and ranking.
 - `reference_feedback`: Summary of reference calls (strengths, concerns, recommendation for each contractor).
 - `selected_contractor`: Name, contact, and detailed rationale for selection.
 - `stakeholder_approval_status`: Boolean (true if stakeholders approve selection).
 
-**Quality Gate:** Top-ranked contractor has no critical red flags from references (defined as: missed deadlines on 2+ projects, quality issues requiring rework, unresponsive communication, or budget overruns exceeding 20%). Evaluation is documented and defensible. Stakeholders approve selection in writing.
+### Quality Gate
+Top-ranked contractor has no critical red flags from references (defined as: missed deadlines on 2+ projects, quality issues requiring rework, unresponsive communication, or budget overruns exceeding 20%). Evaluation is documented and defensible. Stakeholders approve selection in writing.
 
 **Error Handling:**
-- **Failure Mode:** Top-ranked contractor has critical red flags from references. **Response:** Adjust — move to next-ranked contractor and re-evaluate. If all candidates have red flags, loop back to Phase 2 to identify additional contractors.
-- **Failure Mode:** Stakeholders disagree with selection. **Response:** Adjust — review evaluation rubric with stakeholders, re-weight criteria if needed, re-score and re-select. Document stakeholder feedback and revised rationale.
+- **Failure Mode:** Top-ranked contractor has critical red flags from references. **Response:** Adjust  --  move to next-ranked contractor and re-evaluate. If all candidates have red flags, loop back to Phase 2 to identify additional contractors.
+- **Failure Mode:** Stakeholders disagree with selection. **Response:** Adjust  --  review evaluation rubric with stakeholders, re-weight criteria if needed, re-score and re-select. Document stakeholder feedback and revised rationale.
 
 ---
 
 ### Phase 5: Budget Breakdown
 
-**Entry Criteria:**
+### Entry Criteria
 - Selected contractor bid is finalized.
 - Budget ceiling is defined.
 - Contingency philosophy is chosen.
 - Site inspection report is available (from Phase 0).
 
-**Actions:**
+### Actions
 1. Extract line items from the selected contractor's bid: labor, materials, permits, other costs.
 2. Add any cost impacts identified in site inspection report (Phase 0).
 3. Calculate contingency amount based on philosophy (10%, 15%, or 20% of subtotal).
@@ -192,28 +197,29 @@
 5. Compare total to budget ceiling. If over budget, use scope reduction tree from Phase 1 to identify cost-cutting options: remove nice-to-haves, negotiate with contractor, or request budget increase from stakeholders. Document decision.
 6. Document all assumptions (e.g., "assumes no structural surprises", "permits estimated at $X", "contingency allocated for [specific risks]").
 
-**Output:**
+### Output
 - `budget_breakdown`: Itemized spreadsheet with categories, costs, contingency, total.
 - `budget_status`: "within budget" | "over budget by $X" | "contingency applied".
 - `budget_assumptions`: Array of documented assumptions.
 - `scope_reduction_applied`: Boolean (true if scope was reduced to meet budget).
 - `contingency_allocation_detail`: Object describing what contingency is allocated for (e.g., "structural issues: $X", "permit delays: $Y").
 
-**Quality Gate:** Total budget (including contingency) is clear and either within ceiling or has stakeholder approval for overage. Contingency is explicitly allocated to specific risk categories, not hidden. All assumptions are documented.
+### Quality Gate
+Total budget (including contingency) is clear and either within ceiling or has stakeholder approval for overage. Contingency is explicitly allocated to specific risk categories, not hidden. All assumptions are documented.
 
 **Error Handling:**
-- **Failure Mode:** Total exceeds budget ceiling and stakeholders will not approve increase. **Response:** Adjust — use scope reduction tree to identify cost-cutting options, negotiate contractor price, or recommend project delay to allow additional savings.
+- **Failure Mode:** Total exceeds budget ceiling and stakeholders will not approve increase. **Response:** Adjust  --  use scope reduction tree to identify cost-cutting options, negotiate contractor price, or recommend project delay to allow additional savings.
 
 ---
 
 ### Phase 6: Timeline and Scheduling
 
-**Entry Criteria:**
+### Entry Criteria
 - Selected contractor's timeline estimate is available.
 - Timeline constraint is defined.
 - Project phases are understood.
 
-**Actions:**
+### Actions
 1. Extract timeline from contractor bid: duration per phase, start/end dates, dependencies.
 2. Identify project phases (e.g., permits, demolition, rough-in, finishing, inspection, closeout).
 3. Add buffer time: 15-25% padding per phase based on complexity and contingency philosophy. Document buffer rationale for each phase.
@@ -221,29 +227,30 @@
 5. Map timeline against constraint (e.g., "must complete by June 1"). If timeline exceeds constraint, negotiate with contractor for acceleration, reduce scope, or request timeline extension from stakeholders. Document decision.
 6. Document seasonal factors (e.g., "exterior work only in dry season") and dependencies (e.g., "electrical rough-in must precede drywall").
 
-**Output:**
+### Output
 - `project_timeline`: Gantt chart or phase schedule with start, end, duration, buffer, dependencies.
 - `critical_path`: Sequence of phases that determines overall project duration.
 - `timeline_status`: "meets constraint" | "exceeds constraint by X days" | "buffer applied".
 - `seasonal_factors`: Array of environmental or scheduling constraints.
 - `buffer_rationale`: Object describing buffer allocation per phase and rationale.
 
-**Quality Gate:** Timeline is realistic (includes buffer), meets or exceeds constraint with stakeholder approval, and critical path is identified. All phase dependencies are documented. Buffer allocation is justified.
+### Quality Gate
+Timeline is realistic (includes buffer), meets or exceeds constraint with stakeholder approval, and critical path is identified. All phase dependencies are documented. Buffer allocation is justified.
 
 **Error Handling:**
-- **Failure Mode:** Timeline exceeds constraint. **Response:** Adjust — negotiate with contractor for acceleration (may increase cost), reduce scope, or request timeline extension from stakeholders. Document decision and cost/scope impacts.
+- **Failure Mode:** Timeline exceeds constraint. **Response:** Adjust  --  negotiate with contractor for acceleration (may increase cost), reduce scope, or request timeline extension from stakeholders. Document decision and cost/scope impacts.
 
 ---
 
 ### Phase 7: Decision Documentation
 
-**Entry Criteria:**
+### Entry Criteria
 - Contractor is selected.
 - Budget is finalized.
 - Timeline is approved.
 - All stakeholders are identified.
 
-**Actions:**
+### Actions
 1. Write a decision memo (1-2 pages) that includes:
    - Selected contractor name and detailed rationale (why chosen over others, reference feedback summary).
    - Total project cost, budget breakdown by category, contingency amount and allocation.
@@ -255,26 +262,27 @@
 2. Distribute memo to all stakeholders for review (allow 3-5 business days).
 3. Obtain written approval from all stakeholders before proceeding to contract. Approval may be email confirmation or signed document.
 
-**Output:**
+### Output
 - `decision_memo`: Written document with contractor selection rationale, budget, timeline, assumptions, risks, mitigation strategies, and sign-off section.
 - `stakeholder_approvals`: Array of stakeholder names, titles, approval date, and approval method (email/signature).
 - `approval_status`: Boolean (true if all stakeholders have approved).
 
-**Quality Gate:** Decision memo is clear, complete, and signed by all stakeholders. No ambiguity about contractor selection, budget, or timeline. All stakeholder approvals are documented with date and method.
+### Quality Gate
+Decision memo is clear, complete, and signed by all stakeholders. No ambiguity about contractor selection, budget, or timeline. All stakeholder approvals are documented with date and method.
 
 **Error Handling:**
-- **Failure Mode:** Stakeholders withhold approval or request changes. **Response:** Adjust — identify specific concerns, revise plan if needed (e.g., adjust budget, timeline, or contractor selection), and re-present for approval.
+- **Failure Mode:** Stakeholders withhold approval or request changes. **Response:** Adjust  --  identify specific concerns, revise plan if needed (e.g., adjust budget, timeline, or contractor selection), and re-present for approval.
 
 ---
 
 ### Phase 8: Contract Finalization and Kickoff
 
-**Entry Criteria:**
+### Entry Criteria
 - Decision memo is signed by all stakeholders.
 - Selected contractor is ready to proceed.
 - Budget and timeline are finalized.
 
-**Actions:**
+### Actions
 1. Prepare or review contract with selected contractor. Ensure it includes: scope, budget, timeline, payment schedule, warranty, change order process (with template), insurance/bonding, dispute resolution, communication protocol.
 2. Have contract reviewed by legal counsel if budget exceeds $50,000 or complexity is high.
 3. Obtain signatures from contractor and homeowner. Ensure both parties receive a signed copy.
@@ -283,7 +291,7 @@
 6. Distribute contract, kickoff checklist, and communication protocol to all stakeholders.
 7. Schedule pre-construction meeting with contractor, homeowner, and key stakeholders to review contract, timeline, communication protocol, and expectations.
 
-**Output:**
+### Output
 - `project_contract`: Signed contract or contract checklist.
 - `change_order_template`: Template for mid-project scope changes with fields: description, cost impact, timeline impact, approval workflow, approval sign-off.
 - `kickoff_checklist`: Array of next steps with assigned owner and due date (e.g., "[Owner] schedule pre-construction meeting by [date]").
@@ -291,22 +299,23 @@
 - `contingency_tracking_log_initialized`: Empty log ready to track contingency spend during execution.
 - `contract_signed`: Boolean (true if contract is signed by all parties).
 
-**Quality Gate:** Contract is signed by all parties. Kickoff checklist is clear and assigned to specific owners with due dates. Communication protocol is documented and agreed upon by all parties. Pre-construction meeting is scheduled.
+### Quality Gate
+Contract is signed by all parties. Kickoff checklist is clear and assigned to specific owners with due dates. Communication protocol is documented and agreed upon by all parties. Pre-construction meeting is scheduled.
 
 **Error Handling:**
-- **Failure Mode:** Contractor refuses to sign contract or requests major changes. **Response:** Adjust — negotiate terms or loop back to Phase 4 to select alternate contractor.
-- **Failure Mode:** Stakeholders have concerns about contract terms. **Response:** Adjust — address concerns with contractor and revise contract if needed.
+- **Failure Mode:** Contractor refuses to sign contract or requests major changes. **Response:** Adjust  --  negotiate terms or loop back to Phase 4 to select alternate contractor.
+- **Failure Mode:** Stakeholders have concerns about contract terms. **Response:** Adjust  --  address concerns with contractor and revise contract if needed.
 
 ---
 
 ### Phase 9: Project Execution and Change Management
 
-**Entry Criteria:**
+### Entry Criteria
 - Contract is signed.
 - Pre-construction meeting is completed.
 - Communication protocol is established.
 
-**Actions:**
+### Actions
 1. Execute project according to timeline and contract terms.
 2. Conduct weekly check-ins per communication protocol. Document: progress, issues, change requests, budget/timeline impacts.
 3. If scope changes are requested, use change order template to document: description, cost impact, timeline impact, and obtain written approval from all required parties before work proceeds.
@@ -315,30 +324,31 @@
 6. Address issues promptly per escalation path in communication protocol.
 7. Retain final payment (typically 5-10% of contract) until project is complete and punch list is cleared.
 
-**Output:**
+### Output
 - `weekly_progress_reports`: Array of weekly status updates with progress, issues, change requests, budget/timeline impacts.
 - `change_orders_issued`: Array of approved change orders with cost/timeline impacts.
 - `contingency_tracking_log`: Updated log of contingency spend by category.
 - `inspection_reports`: Array of milestone inspection reports with findings and sign-off.
 - `issues_log`: Array of issues identified, escalation path used, and resolution.
 
-**Quality Gate:** Weekly check-ins occur per schedule. All change orders are documented and approved before work proceeds. Contingency tracking is current. Inspections are completed at key milestones. Issues are resolved promptly.
+### Quality Gate
+Weekly check-ins occur per schedule. All change orders are documented and approved before work proceeds. Contingency tracking is current. Inspections are completed at key milestones. Issues are resolved promptly.
 
 **Error Handling:**
-- **Failure Mode:** Contractor misses milestone deadline. **Response:** Adjust — review critical path, identify acceleration options, and adjust timeline if needed. If delay is significant, invoke penalty clause per contract.
-- **Failure Mode:** Quality issues discovered at inspection. **Response:** Adjust — document issue, require contractor to remediate, and withhold payment until resolved.
-- **Failure Mode:** Contingency is exhausted before project completion. **Response:** Adjust — identify additional funding or reduce remaining scope with stakeholder approval.
+- **Failure Mode:** Contractor misses milestone deadline. **Response:** Adjust  --  review critical path, identify acceleration options, and adjust timeline if needed. If delay is significant, invoke penalty clause per contract.
+- **Failure Mode:** Quality issues discovered at inspection. **Response:** Adjust  --  document issue, require contractor to remediate, and withhold payment until resolved.
+- **Failure Mode:** Contingency is exhausted before project completion. **Response:** Adjust  --  identify additional funding or reduce remaining scope with stakeholder approval.
 
 ---
 
 ### Phase 10: Project Closeout
 
-**Entry Criteria:**
+### Entry Criteria
 - All construction work is complete.
 - All inspections are passed.
 - Punch list is cleared.
 
-**Actions:**
+### Actions
 1. Conduct final walkthrough with contractor and homeowner. Verify all work is complete and meets contract specifications.
 2. Create and complete punch list: document any minor items remaining (e.g., touch-up paint, final cleaning). Contractor must complete punch list items within [X days per contract].
 3. Verify all permits are closed and final inspections are passed.
@@ -348,7 +358,7 @@
 7. Complete lessons learned reflection: document what went well, what could improve, budget variance analysis (actual vs. estimated), timeline variance analysis (actual vs. estimated).
 8. Archive all project documentation: contract, change orders, invoices, inspection reports, warranties, lien waivers, photos, lessons learned.
 
-**Output:**
+### Output
 - `final_walkthrough_report`: Document confirming all work is complete and meets specifications.
 - `punch_list`: Array of minor items remaining with contractor responsibility and deadline.
 - `punch_list_completion_status`: Boolean (true if all punch list items are complete).
@@ -359,13 +369,23 @@
 - `project_archive_location`: String (location where all project documentation is stored).
 - `project_status`: "complete" (when all closeout tasks are done).
 
-**Quality Gate:** Final walkthrough confirms all work is complete. Punch list is cleared. Permits are closed. Warranty documentation is collected. Lien waivers are signed. Final payment is processed. Lessons learned are documented. All project documentation is archived.
+### Quality Gate
+Final walkthrough confirms all work is complete. Punch list is cleared. Permits are closed. Warranty documentation is collected. Lien waivers are signed. Final payment is processed. Lessons learned are documented. All project documentation is archived.
 
 **Error Handling:**
-- **Failure Mode:** Contractor refuses to complete punch list items. **Response:** Adjust — invoke contract dispute resolution process or withhold final payment until items are complete.
-- **Failure Mode:** Lien waivers are not provided. **Response:** Adjust — withhold final payment until lien waivers are received. Consult legal counsel if contractor refuses.
+- **Failure Mode:** Contractor refuses to complete punch list items. **Response:** Adjust  --  invoke contract dispute resolution process or withhold final payment until items are complete.
+- **Failure Mode:** Lien waivers are not provided. **Response:** Adjust  --  withhold final payment until lien waivers are received. Consult legal counsel if contractor refuses.
 
 ---
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Convert a renovation idea into a fully scoped, budgeted, and scheduled project p, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 
@@ -392,24 +412,24 @@ The skill is complete when:
 
 | Phase | Failure Mode | Response |
 |---|---|---|
-| Phase 0: Site Inspection | Major structural or code issues discovered | **Adjust** — revise scope statement, re-estimate budget and timeline, loop back to Phase 1 if contractor selection affected |
-| Phase 0: Site Inspection | Issues make project infeasible | **Abort** — document findings and recommend project cancellation or major scope reduction |
-| Phase 1: Scope Definition | Scope is too vague to solicit bids | **Adjust** — add specificity (e.g., "kitchen remodel" → "kitchen remodel with new cabinets, countertops, appliances, and flooring") |
-| Phase 1: Scope Definition | Scope exceeds budget or timeline | **Adjust** — use scope reduction tree to prioritize must-haves and reduce nice-to-haves |
-| Phase 2: Contractor Research | Fewer than 3 qualified candidates found | **Adjust** — expand search radius, relax qualification criteria, or delay project |
-| Phase 3: Bid Collection | Bids are incomplete or incomparable | **Retry** — send clarification request with 3-day deadline; remove non-responsive contractors |
-| Phase 3: Bid Collection | Bids are significantly higher than budget | **Adjust** — use scope reduction tree to identify cost-cutting options, negotiate with contractors, or increase budget |
-| Phase 4: Contractor Evaluation | Top candidate has critical red flags from references | **Adjust** — move to next-ranked candidate; if all have red flags, loop back to Phase 2 |
-| Phase 4: Contractor Evaluation | Stakeholders disagree with selection | **Adjust** — re-weight evaluation rubric and re-score with stakeholder input |
-| Phase 5: Budget Breakdown | Total exceeds budget ceiling | **Adjust** — use scope reduction tree to identify cost-cutting options, negotiate contractor price, or request budget increase |
-| Phase 6: Timeline | Project duration exceeds constraint | **Adjust** — negotiate acceleration (may increase cost), reduce scope, or extend timeline |
-| Phase 7: Decision Documentation | Stakeholders withhold approval | **Adjust** — identify concerns and revise plan (budget, timeline, or contractor selection) |
-| Phase 8: Contract Finalization | Contractor refuses to sign or requests major changes | **Adjust** — negotiate terms or loop back to Phase 4 to select alternate contractor |
-| Phase 9: Project Execution | Contractor misses milestone deadline | **Adjust** — review critical path, identify acceleration options, invoke penalty clause if significant |
-| Phase 9: Project Execution | Quality issues discovered at inspection | **Adjust** — document issue, require contractor remediation, withhold payment until resolved |
-| Phase 9: Project Execution | Contingency is exhausted before completion | **Adjust** — identify additional funding or reduce remaining scope with stakeholder approval |
-| Phase 10: Project Closeout | Contractor refuses to complete punch list items | **Adjust** — invoke contract dispute resolution or withhold final payment |
-| Phase 10: Project Closeout | Lien waivers not provided | **Adjust** — withhold final payment until received; consult legal counsel if contractor refuses |
+| Phase 0: Site Inspection | Major structural or code issues discovered | **Adjust**  --  revise scope statement, re-estimate budget and timeline, loop back to Phase 1 if contractor selection affected |
+| Phase 0: Site Inspection | Issues make project infeasible | **Abort**  --  document findings and recommend project cancellation or major scope reduction |
+| Phase 1: Scope Definition | Scope is too vague to solicit bids | **Adjust**  --  add specificity (e.g., "kitchen remodel" → "kitchen remodel with new cabinets, countertops, appliances, and flooring") |
+| Phase 1: Scope Definition | Scope exceeds budget or timeline | **Adjust**  --  use scope reduction tree to prioritize must-haves and reduce nice-to-haves |
+| Phase 2: Contractor Research | Fewer than 3 qualified candidates found | **Adjust**  --  expand search radius, relax qualification criteria, or delay project |
+| Phase 3: Bid Collection | Bids are incomplete or incomparable | **Retry**  --  send clarification request with 3-day deadline; remove non-responsive contractors |
+| Phase 3: Bid Collection | Bids are significantly higher than budget | **Adjust**  --  use scope reduction tree to identify cost-cutting options, negotiate with contractors, or increase budget |
+| Phase 4: Contractor Evaluation | Top candidate has critical red flags from references | **Adjust**  --  move to next-ranked candidate; if all have red flags, loop back to Phase 2 |
+| Phase 4: Contractor Evaluation | Stakeholders disagree with selection | **Adjust**  --  re-weight evaluation rubric and re-score with stakeholder input |
+| Phase 5: Budget Breakdown | Total exceeds budget ceiling | **Adjust**  --  use scope reduction tree to identify cost-cutting options, negotiate contractor price, or request budget increase |
+| Phase 6: Timeline | Project duration exceeds constraint | **Adjust**  --  negotiate acceleration (may increase cost), reduce scope, or extend timeline |
+| Phase 7: Decision Documentation | Stakeholders withhold approval | **Adjust**  --  identify concerns and revise plan (budget, timeline, or contractor selection) |
+| Phase 8: Contract Finalization | Contractor refuses to sign or requests major changes | **Adjust**  --  negotiate terms or loop back to Phase 4 to select alternate contractor |
+| Phase 9: Project Execution | Contractor misses milestone deadline | **Adjust**  --  review critical path, identify acceleration options, invoke penalty clause if significant |
+| Phase 9: Project Execution | Quality issues discovered at inspection | **Adjust**  --  document issue, require contractor remediation, withhold payment until resolved |
+| Phase 9: Project Execution | Contingency is exhausted before completion | **Adjust**  --  identify additional funding or reduce remaining scope with stakeholder approval |
+| Phase 10: Project Closeout | Contractor refuses to complete punch list items | **Adjust**  --  invoke contract dispute resolution or withhold final payment |
+| Phase 10: Project Closeout | Lien waivers not provided | **Adjust**  --  withhold final payment until received; consult legal counsel if contractor refuses |
 | Phase 10: Project Closeout | User rejects final output | **Targeted revision** -- ask which phase's plan, budget estimate, or contractor schedule fell short and rerun only that section. Do not regenerate the full project plan. |
 
 ---
@@ -425,7 +445,7 @@ The skill is complete when:
 | Timeline | 15% | 1-5 (5 = fastest) | Must meet project deadline |
 | References | 15% | 1-5 (5 = excellent feedback) | Past performance predicts future |
 | Communication | 15% | 1-5 (5 = responsive) | Clear communication prevents issues |
-| Warranty | 10% | 1-5 (5 = comprehensive) | Protection against defects |
+| Warranty | 10% | 1-5 (5 = full) | Protection against defects |
 
 ### Budget Contingency Guidelines
 

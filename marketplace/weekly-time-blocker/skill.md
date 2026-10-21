@@ -73,15 +73,17 @@
   - If format is "both": object with keys `json` and `ics`
 
 ---
+- `time_blocked_calendar`: (from manifest)
+- `balance_report`: (from manifest)
 
 ## Execution Phases
 
 ### Phase 1: Elicit and Clarify Week Overview
 
-**Entry Criteria:**
+### Entry Criteria
 - `week_description` is provided and contains at least 3 distinct time commitments or constraints.
 
-**Actions:**
+### Actions
 1. Parse the week description to identify all action items: meetings, deadlines, personal commitments, constraints.
 2. For each meeting mentioned, extract: title, estimated duration, day/time (if specified), flexibility (fixed or moveable).
 3. For each deadline, extract: task name, due date, estimated effort hours.
@@ -92,10 +94,10 @@
 8. For any missing or ambiguous information, document the assumption made (e.g., "Assumed 1-hour duration for unspecified meetings").
 9. Compile into `clarified_week_summary` object.
 
-**Output:**
+### Output
 - `clarified_week_summary` (object, as defined in Outputs section)
 
-**Quality Gate:**
+### Quality Gate
 - Every meeting, deadline, and commitment mentioned in the input is captured in the summary.
 - Every field in `clarified_week_summary` has a value; if information is missing, an assumption is documented in `assumptions_made`.
 - Assumptions are specific and testable (e.g., "Assumed 1-hour duration" not "Assumed reasonable duration").
@@ -104,10 +106,10 @@
 
 ### Phase 2: Extract and Categorize Commitments
 
-**Entry Criteria:**
+### Entry Criteria
 - `clarified_week_summary` is complete.
 
-**Actions:**
+### Actions
 1. Create four lists: fixed_meetings, flexible_meetings, deep_work_needed, personal_commitments.
 2. For each meeting in `clarified_week_summary.meetings`, classify as fixed (time-locked, non-negotiable) or flexible (moveable, time-negotiable). Use the `time_locked` field.
 3. For each deadline in `clarified_week_summary.deadlines`, determine if it requires a deep work block. If yes, add to deep_work_needed with estimated hours and deadline.
@@ -118,12 +120,12 @@
 8. Identify any obvious conflicts (e.g., two meetings at the same time, deadline before week starts).
 9. If overbook percentage > 100%, flag as "overbooked" in conflict list with specific percentage.
 
-**Output:**
+### Output
 - Categorized commitments (internal, used in Phase 3)
 - Conflict list (if any)
 - Overbook assessment (percentage, or "not overbooked")
 
-**Quality Gate:**
+### Quality Gate
 - Every commitment is categorized and counted.
 - Overbook percentage is calculated explicitly.
 - If overbooked, the percentage is documented and conflicts are flagged.
@@ -132,21 +134,21 @@
 
 ### Phase 3: Identify Deep Work Requirements
 
-**Entry Criteria:**
+### Entry Criteria
 - Categorized commitments from Phase 2.
 - `deep_work_preference` input is provided.
 
-**Actions:**
+### Actions
 1. For each deadline and priority, determine the deep work block needed: task name, duration, deadline, focus level (1-5, where 5 is maximum focus required).
 2. Assign preferred time based on `deep_work_preference` and user's energy pattern from Phase 1.
 3. Determine minimum contiguous block duration for each task (e.g., "needs at least 2 hours uninterrupted").
 4. Rank deep work blocks by deadline urgency (earliest first) and focus level (highest first).
 5. Compile into `deep_work_blocks` array, sorted by deadline.
 
-**Output:**
+### Output
 - `deep_work_blocks` (array of objects, as defined in Outputs section, sorted by deadline)
 
-**Quality Gate:**
+### Quality Gate
 - Each deep work block has a realistic duration estimate (minimum 1 hour, maximum 4 hours per block).
 - Preferred times align with user's stated energy pattern (morning, afternoon, or flexible).
 - Total deep work hours are documented for validation in Phase 6.
@@ -155,12 +157,12 @@
 
 ### Phase 4: Calculate Recovery and Buffer Time
 
-**Entry Criteria:**
+### Entry Criteria
 - Total meeting hours from Phase 2.
 - Total deep work hours from Phase 3.
 - `recovery_ratio` input.
 
-**Actions:**
+### Actions
 1. Calculate total meeting hours from fixed_meetings and flexible_meetings.
 2. Calculate allocated recovery time: meeting_hours × recovery_ratio.
 3. Allocate recovery time as:
@@ -171,10 +173,10 @@
 4. Distribute recovery time across the week to avoid clustering all breaks on one day.
 5. Compile into `recovery_allocation` object.
 
-**Output:**
+### Output
 - `recovery_allocation` (object, as defined in Outputs section)
 
-**Quality Gate:**
+### Quality Gate
 - Total allocated recovery time ≥ calculated recovery time.
 - Recovery time is distributed across all 5 work days (no day has zero recovery).
 - Lunch block is protected (not overwritten by meetings).
@@ -183,11 +185,11 @@
 
 ### Phase 5a: Place Fixed Commitments and Lunch
 
-**Entry Criteria:**
+### Entry Criteria
 - Fixed meetings from Phase 2.
 - Work hours and preferences from inputs.
 
-**Actions:**
+### Actions
 1. Initialize a 5-day calendar (Mon-Fri) with work_hours_start to work_hours_end.
 2. Check `existing_events` input; mark those time slots as unavailable.
 3. Place all fixed meetings first (non-negotiable time slots). If a fixed meeting conflicts with existing events, flag as conflict and note in validation report.
@@ -195,11 +197,11 @@
 5. Verify no double-bookings between fixed meetings and lunch.
 6. Compile into draft_schedule.
 
-**Output:**
+### Output
 - draft_schedule (internal, used in Phase 5b)
 - Fixed placement conflicts (if any)
 
-**Quality Gate:**
+### Quality Gate
 - All fixed meetings are placed without overlap.
 - Lunch is protected on all 5 days.
 - No conflicts with existing_events (or conflicts are documented).
@@ -208,12 +210,12 @@
 
 ### Phase 5b: Place Deep Work, Recovery, and Flexible Meetings
 
-**Entry Criteria:**
+### Entry Criteria
 - draft_schedule from Phase 5a.
 - Deep work blocks from Phase 3.
 - Recovery allocation from Phase 4.
 
-**Actions:**
+### Actions
 1. Place deep work blocks in preferred times, respecting minimum contiguous duration and avoiding fragmentation.
 2. Place recovery breaks (15-30 min) between meetings and after deep work blocks.
 3. Place end-of-day buffers (30 min before work_hours_end).
@@ -222,10 +224,10 @@
 6. Assign color codes: meeting=blue, deep_work=green, recovery=yellow, personal=purple, lunch=orange.
 7. Compile into `time_blocked_schedule` array.
 
-**Output:**
+### Output
 - `time_blocked_schedule` (array of objects, as defined in Outputs section)
 
-**Quality Gate:**
+### Quality Gate
 - No time slot is double-booked.
 - All fixed meetings and deep work blocks are placed (or flagged as impossible to fit).
 - Lunch is protected.
@@ -236,12 +238,12 @@
 
 ### Phase 6: Validate Schedule Against Constraints
 
-**Entry Criteria:**
+### Entry Criteria
 - `time_blocked_schedule` from Phase 5b.
 - Original constraints from Phase 1.
 - Overbook assessment from Phase 2.
 
-**Actions:**
+### Actions
 1. Check for conflicts: any overlapping blocks? Flag if found.
 2. Calculate recovery time percentage: (total recovery minutes / total work minutes) × 100.
 3. Calculate deep work hours allocated: sum of all deep_work blocks.
@@ -257,10 +259,10 @@
 7. Check against hard constraints from Phase 1 (e.g., "no meetings after 5pm", "Wednesday afternoon free").
 8. Compile into `validation_report` object.
 
-**Output:**
+### Output
 - `validation_report` (object, as defined in Outputs section)
 
-**Quality Gate:**
+### Quality Gate
 - All constraints are checked and results documented.
 - Feasibility is categorized as feasible, overloaded, or underutilized with specific metrics.
 - Any conflicts or shortfalls are documented with quantified impact.
@@ -269,10 +271,10 @@
 
 ### Phase 7: Optimize and Rebalance
 
-**Entry Criteria:**
+### Entry Criteria
 - `validation_report` from Phase 6 indicates issues (conflicts, overload, shortfall) OR schedule is already feasible.
 
-**Actions:**
+### Actions
 1. If no issues found, proceed to Phase 8 with current schedule.
 2. If conflicts exist: resolve by moving flexible meetings to available slots or adjusting deep work block times. Document each move in optimization_notes.
 3. If overloaded days (>6 hours meetings): move flexible meetings to lighter days or extend across multiple days. Document in optimization_notes.
@@ -283,11 +285,11 @@
 8. Perform up to 2 optimization passes. After pass 2, if feasibility is still <80% (i.e., overloaded or shortfall remains), flag as "requires scope negotiation" and proceed to Phase 8 with best feasible schedule.
 9. Compile into `optimized_schedule` array and `optimization_notes` array.
 
-**Output:**
+### Output
 - `optimized_schedule` (array of objects, same structure as time_blocked_schedule)
 - `optimization_notes` (array of strings, documenting specific changes made)
 
-**Quality Gate:**
+### Quality Gate
 - `optimized_schedule` passes all validation checks from Phase 6 (feasible category) OR is flagged as "requires scope negotiation" with specific reasons.
 - All hard constraints are satisfied.
 - Recovery time percentage ≥20% OR is documented as impossible without scope reduction.
@@ -298,11 +300,11 @@
 
 ### Phase 8: Generate Calendar-Ready Output
 
-**Entry Criteria:**
+### Entry Criteria
 - `optimized_schedule` from Phase 7 (feasible or flagged as requiring scope negotiation).
 - `calendar_format` input is specified.
 
-**Actions:**
+### Actions
 1. Transform `optimized_schedule` into calendar event objects:
    - For JSON format: array of objects with title, start_datetime (ISO 8601), end_datetime, category, description, color.
    - For ICS format: generate valid iCalendar format (RFC 5545) with VEVENT entries.
@@ -316,11 +318,11 @@
 6. If validation fails on both formats, return JSON as fallback and include error_log.
 7. Compile into `calendar_output`.
 
-**Output:**
+### Output
 - `calendar_output` (string or object, depending on format)
 - `validation_errors` (array of strings, if any)
 
-**Quality Gate:**
+### Quality Gate
 - Output is valid JSON or ICS (or both).
 - All events from `optimized_schedule` are present.
 - Datetimes are correctly formatted and non-overlapping.
@@ -328,6 +330,15 @@
 - If validation fails, fallback format is provided with error documentation.
 
 ---
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Transform a week-ahead description into a balanced, time-blocked calendar with p, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 
@@ -423,3 +434,7 @@ The skill is DONE when:
 **Version:** 1.1
 **Last Updated:** 2024
 **License:** Free to use (price: 0 TRUST). Royalties apply to published derivatives.
+
+---
+
+Copyright 2024-present The Wayfinder Trust. All rights reserved.

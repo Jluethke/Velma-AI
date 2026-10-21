@@ -15,16 +15,16 @@ ACT     --> Output pricing table, sensitivity analysis, and phased implementatio
 
 ## Inputs
 
-- **cost_structure**: object -- Cost breakdown:
+- **`cost_structure`**: object -- Cost breakdown:
   - `variable_cost_per_unit`: number -- Direct cost per unit/user/seat
   - `fixed_costs_monthly`: number -- Overhead, salaries, infrastructure
   - `customer_acquisition_cost`: number -- Blended CAC
   - `gross_margin_target`: number (0-1) -- Desired gross margin
-- **competitor_prices**: array of objects -- Competitive landscape:
+- **`competitor_prices`**: array of objects -- Competitive landscape:
   - `competitor_name`: string
   - `plans`: array of {name: string, price: number, billing: string, features: string[]}
   - `positioning`: string ("budget" | "mid-market" | "premium" | "enterprise")
-- **customer_segments**: array of objects -- Who buys and why:
+- **`customer_segments`**: array of objects -- Who buys and why:
   - `segment_name`: string
   - `size_pct`: number -- Percentage of customer base
   - `current_price`: number (if applicable)
@@ -32,7 +32,7 @@ ACT     --> Output pricing table, sensitivity analysis, and phased implementatio
   - `willingness_to_pay`: string ("low" | "medium" | "high")
   - `churn_rate`: number (0-1)
   - `key_value_driver`: string -- What they value most
-- **market_position**: object -- Where you sit:
+- **`market_position`**: object -- Where you sit:
   - `positioning`: string ("budget" | "mid-market" | "premium" | "enterprise")
   - `differentiation`: string[] -- What makes you different
   - `current_pricing`: object (if exists)
@@ -40,19 +40,19 @@ ACT     --> Output pricing table, sensitivity analysis, and phased implementatio
 
 ## Outputs
 
-- **pricing_table**: object -- Recommended pricing structure:
+- **`pricing_table`**: object -- Recommended pricing structure:
   - `model`: string -- Pricing model name
   - `plans`: array of {name, price, billing, features, target_segment, margin}
   - `rationale`: string -- Why this structure
-- **sensitivity_analysis**: object -- What-if scenarios:
+- **`sensitivity_analysis`**: object -- What-if scenarios:
   - `scenarios`: array of {name, assumptions, projected_revenue, projected_margin, projected_churn}
   - `breakeven_point`: object
   - `elasticity_estimate`: number
-- **implementation_plan**: object -- How to roll it out:
+- **`implementation_plan`**: object -- How to roll it out:
   - `phases`: array of {name, timeline, actions, risks, metrics}
   - `migration_strategy`: string -- How to handle existing customers
   - `communication_plan`: string
-- **margin_report**: object -- Financial analysis:
+- **`margin_report`**: object -- Financial analysis:
   - `per_plan_margins`: array of {plan, revenue, cogs, gross_margin_pct}
   - `blended_margin`: number
   - `ltv_by_plan`: array of {plan, ltv, ltv_cac_ratio}
@@ -61,9 +61,10 @@ ACT     --> Output pricing table, sensitivity analysis, and phased implementatio
 
 ### OBSERVE: Gather Pricing Intelligence
 
-**Entry criteria:** At minimum, cost_structure with variable_cost_per_unit OR competitor_prices with at least 2 competitors.
+### Entry Criteria
+At minimum, cost_structure with variable_cost_per_unit OR competitor_prices with at least 2 competitors.
 
-**Actions:**
+### Actions
 1. Parse cost structure and calculate unit economics:
    - Gross margin at current price (if exists): `(price - variable_cost) / price`
    - CAC payback period: `CAC / ((price - variable_cost) * monthly_retention_rate)`
@@ -82,15 +83,18 @@ ACT     --> Output pricing table, sensitivity analysis, and phased implementatio
    - Is there a mismatch between positioning and pricing?
    - What is the pricing power? (differentiation strength, switching costs, network effects)
 
-**Output:** Unit economics snapshot, competitive price map, segment value matrix, pricing power assessment.
+### Output
+Unit economics snapshot, competitive price map, segment value matrix, pricing power assessment.
 
-**Quality gate:** Unit economics calculated with at least gross margin and CAC payback. Competitive landscape mapped with at least 2 data points. At least 2 customer segments identified. If data is insufficient for any dimension, flag gaps and proceed with available data.
+### Quality Gate
+Unit economics calculated with at least gross margin and CAC payback. Competitive landscape mapped with at least 2 data points. At least 2 customer segments identified. If data is insufficient for any dimension, flag gaps and proceed with available data.
 
 ### REASON: Evaluate Pricing Models
 
-**Entry criteria:** Unit economics, competitive landscape, and segment data available.
+### Entry Criteria
+Unit economics, competitive landscape, and segment data available.
 
-**Actions:**
+### Actions
 1. Evaluate each pricing model against the business context:
 
    **Cost-Plus Pricing:**
@@ -131,15 +135,18 @@ ACT     --> Output pricing table, sensitivity analysis, and phased implementatio
    - Annual discount: 15-25% off for annual billing (reduces churn, improves cash flow)
    - .99 pricing vs. round numbers (consumer = .99, B2B = round numbers)
 
-**Output:** Model evaluation matrix with scores, recommended model, pricing psychology recommendations.
+### Output
+Model evaluation matrix with scores, recommended model, pricing psychology recommendations.
 
-**Quality gate:** At least 3 models evaluated with pros/cons specific to the business context. Recommended model has a clear rationale tied to segment data and competitive positioning.
+### Quality Gate
+At least 3 models evaluated with pros/cons specific to the business context. Recommended model has a clear rationale tied to segment data and competitive positioning.
 
 ### PLAN: Design Pricing Structure
 
-**Entry criteria:** Pricing model selected with justification.
+### Entry Criteria
+Pricing model selected with justification.
 
-**Actions:**
+### Actions
 1. Design the specific pricing table:
    - Define plan names (avoid "Basic" -- it sounds cheap; use "Starter", "Professional", "Business", "Enterprise")
    - Set price points using the competitive gap analysis and willingness-to-pay data
@@ -158,7 +165,7 @@ ACT     --> Output pricing table, sensitivity analysis, and phased implementatio
 3. Build sensitivity analysis:
    - **Conservative scenario:** 20% of current customers downgrade, 5% churn on price change
    - **Expected scenario:** 10% downgrade, 15% upgrade, 3% churn
-   - **Optimistic scenario:** 5% downgrade, 25% upgrade, 1% churn
+   - **Optimiztic scenario:** 5% downgrade, 25% upgrade, 1% churn
    - For each scenario: projected MRR, gross margin, LTV:CAC
    - Price elasticity estimate: `% change in quantity / % change in price`
    - Break-even calculation: at what conversion mix does the new pricing match current revenue?
@@ -169,15 +176,18 @@ ACT     --> Output pricing table, sensitivity analysis, and phased implementatio
    - Win-back plan for customers who churn on price change
    - Annual lock-in incentive to accelerate migration
 
-**Output:** Complete pricing table with margins, 3-scenario sensitivity analysis, migration strategy.
+### Output
+Complete pricing table with margins, 3-scenario sensitivity analysis, migration strategy.
 
-**Quality gate:** Pricing table has 2-4 tiers with distinct target segments. Every tier has positive gross margin. Sensitivity analysis includes conservative scenario that doesn't destroy the business. Migration strategy accounts for existing customer retention.
+### Quality Gate
+Pricing table has 2-4 tiers with distinct target segments. Every tier has positive gross margin. Sensitivity analysis includes conservative scenario that doesn't destroy the business. Migration strategy accounts for existing customer retention.
 
 ### ACT: Deliver Recommendations
 
-**Entry criteria:** Pricing table, sensitivity analysis, and migration strategy complete.
+### Entry Criteria
+Pricing table, sensitivity analysis, and migration strategy complete.
 
-**Actions:**
+### Actions
 1. Compile the pricing recommendation package:
    - Pricing table with plan details, features, and margin analysis
    - Visual pricing page mockup (text description of how to display pricing)
@@ -195,15 +205,17 @@ ACT     --> Output pricing table, sensitivity analysis, and phased implementatio
    - Month 6: LTV:CAC ratio improvement
 4. Update state persistence with pricing snapshot for future comparison.
 
-**Output:** Complete pricing recommendation package with implementation plan and success metrics.
+### Output
+Complete pricing recommendation package with implementation plan and success metrics.
 
-**Quality gate:** Implementation plan has concrete phases with timelines. Success metrics are specific and measurable. Communication plan addresses existing customer concerns. At least one risk mitigation per implementation phase.
+### Quality Gate
+Implementation plan has concrete phases with timelines. Success metrics are specific and measurable. Communication plan addresses existing customer concerns. At least one risk mitigation per implementation phase.
 
 ## Exit Criteria
 
 The skill is DONE when:
 1. Pricing table is complete with 2-4 tiers, each with features, price, and margin analysis.
-2. Sensitivity analysis covers at least 3 scenarios (conservative, expected, optimistic).
+2. Sensitivity analysis covers at least 3 scenarios (conservative, expected, optimiztic).
 3. Implementation plan has phased rollout with timelines and success metrics.
 4. Migration strategy for existing customers is defined.
 5. Every recommended price point has margin justification (no plan operates below break-even).

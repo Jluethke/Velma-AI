@@ -65,17 +65,19 @@
   - `validation_status`: string ("complete", "needs_review", "incomplete")
 
 ---
+- `task_inventory`: (from manifest)
+- `seasonal_calendar`: (from manifest)
+- `operations_manual`: (from manifest)
 
 ## Execution Phases
 
 ### Phase 1: Inventory Recurring Household Tasks
 
-**Entry Criteria:**
+### Entry Criteria
 - Household members are identified
 - Property details are documented
 
-**Actions:**
-
+### Actions
 1. Conduct a household walkthrough (mental or physical) and list all recurring maintenance and operational tasks (cleaning, lawn care, appliance maintenance, etc.).
 2. For each task, determine frequency using the standard definitions: daily, weekly, bi-weekly, monthly, quarterly, or annual.
 3. Estimate time required per occurrence and document the basis for the estimate (e.g., "15 minutes based on last execution").
@@ -83,10 +85,10 @@
 5. Identify tasks that are currently being done ad-hoc and should be formalized by documenting current practice and establishing a regular schedule.
 6. Categorize tasks by type: cleaning, maintenance, administrative, outdoor, pet care, etc.
 
-**Output:**
+### Output
 - `recurring_tasks_draft`: array of task objects with name, frequency, duration, requirements, category
 
-**Quality Gate:**
+### Quality Gate
 - At least 15 recurring tasks identified, verified by walkthrough checklist
 - Every task has a defined frequency matching the standard definitions (daily, weekly, bi-weekly, monthly, quarterly, annual)
 - No task description is vague; each specifies the exact action (e.g., "clean kitchen counters" not "clean")
@@ -96,12 +98,11 @@
 
 ### Phase 2: Identify Seasonal Maintenance Activities
 
-**Entry Criteria:**
+### Entry Criteria
 - Property details (type, climate zone, major systems) are documented
 - Recurring tasks list is complete from Phase 1
 
-**Actions:**
-
+### Actions
 1. Map property systems and components to seasonal maintenance windows based on climate zone and best practices using the seasonal maintenance reference table.
 2. For each major system (HVAC, plumbing, roof, exterior, etc.), list seasonal tasks with specific actions:
    - Spring: cleaning gutters (remove debris, inspect for damage), HVAC inspection (filter change, coil cleaning), exterior inspection (caulking, paint, siding)
@@ -112,10 +113,10 @@
 4. Estimate cost and duration for each task, noting whether it requires professional vendors or household execution.
 5. Identify tasks that require professional vendors by assessing household skill level and equipment availability.
 
-**Output:**
+### Output
 - `seasonal_maintenance_draft`: array of seasonal task objects with season, priority level, owner type (household/vendor), estimated cost, specific actions
 
-**Quality Gate:**
+### Quality Gate
 - All four seasons have at least 3 tasks, verified by seasonal checklist
 - Critical and high-priority tasks (safety, damage prevention) are clearly marked and account for at least 50% of seasonal tasks
 - Cost estimates are provided for all vendor tasks and are based on local market research or prior quotes
@@ -125,12 +126,11 @@
 
 ### Phase 3: Compile Vendor and Service Provider Contacts
 
-**Entry Criteria:**
+### Entry Criteria
 - Seasonal maintenance list identifies vendor tasks from Phase 2
 - Existing vendor relationships are documented (if available)
 
-**Actions:**
-
+### Actions
 1. Review seasonal maintenance tasks and recurring tasks that require professional services (plumbing, electrical, HVAC, pest control, landscaping, etc.) and create a list of required service categories.
 2. For each service category, identify current vendors or research recommended vendors using referrals, online reviews, and local recommendations.
 3. Collect contact information for each vendor: phone, email, website, hours of operation, and verify information is current by calling or emailing to confirm.
@@ -139,10 +139,10 @@
 6. Note any service agreements, warranties, preferred scheduling windows, and contract terms.
 7. Create a vendor performance tracking template for each vendor to record reliability, cost, and quality ratings after each service.
 
-**Output:**
+### Output
 - `vendor_directory_draft`: array of vendor objects with contact, service scope, response time, cost, emergency flag, last verified date, performance tracking template
 
-**Quality Gate:**
+### Quality Gate
 - At least one vendor per major service category (plumbing, electrical, HVAC, heating, cooling, pest control, landscaping, appliance repair, or equivalent based on property type), verified by service category checklist
 - Emergency contacts are clearly marked and include 24/7 availability confirmation
 - All contact information is current and verified within the past 30 days by direct contact
@@ -153,13 +153,12 @@
 
 ### Phase 4: Assign Responsibilities to Household Members
 
-**Entry Criteria:**
+### Entry Criteria
 - Recurring tasks list is complete from Phase 1
 - Seasonal maintenance list is complete from Phase 2
 - Household members and their skills/availability are documented
 
-**Actions:**
-
+### Actions
 1. Review all tasks (recurring + seasonal) and categorize by skill level required: basic (no special training), intermediate (some training or experience), advanced (specialized training), professional-only (requires licensed contractor).
 2. For each household member, create a skills inventory documenting current skills, availability (hours per week), and learning interests.
 3. Match household member skills and availability to tasks, assigning primary owner and backup owner for each task to ensure coverage during absences.
@@ -168,12 +167,12 @@
 6. Document training needs and create a plan to build household self-sufficiency (e.g., "Alice to attend HVAC basics workshop in Q2").
 7. Create a communication protocol specifying who notifies whom if a task is delayed, completed early, or reveals a problem (e.g., "notify manual owner within 24 hours of discovering issue").
 
-**Output:**
+### Output
 - `responsibility_matrix_draft`: object mapping member names to assigned tasks with backup assignments and workload hours
 - `skill_gaps`: array of tasks requiring professional vendors or training, with recommended training resources
 - `communication_protocol`: object specifying notification procedures, escalation paths, and update frequency
 
-**Quality Gate:**
+### Quality Gate
 - Every task has a primary owner and backup owner, verified by responsibility matrix checklist
 - Workload is balanced: no member exceeds 40% of total task hours, verified by workload calculation
 - Backup owners are assigned for all critical tasks (safety, damage prevention), verified by critical task list
@@ -184,12 +183,11 @@
 
 ### Phase 5: Organize and Structure the Manual
 
-**Entry Criteria:**
+### Entry Criteria
 - All four prior phases are complete with draft outputs
 - Manual format preference is specified
 
-**Actions:**
-
+### Actions
 1. Choose manual structure based on format preference and create a template:
    - **Shared cloud document**: Google Doc or Notion with sections, tables, and shared access; enable comment and version history features
    - **Printed binder**: PDF with table of contents, tabs, and printable checklists; include page numbers and cross-references
@@ -211,12 +209,12 @@
 4. Create a master checklist for each household member showing their assigned tasks, frequency, and estimated duration.
 5. Include a "How to Update This Manual" section with specific instructions: who can edit, what format to use, how to notify other members of changes, and when to schedule the next review.
 
-**Output:**
+### Output
 - `manual_draft`: complete structured document (as markdown, HTML, or document object) with all sections, consistent formatting, and visual hierarchy
 - `manual_location`: file path or URL where manual will be stored
 - `tracking_system_setup`: instructions for setting up task completion tracking (spreadsheet, app, or calendar integration)
 
-**Quality Gate:**
+### Quality Gate
 - Manual is organized logically with consistent heading hierarchy (H1 main sections, H2 subsections, H3 details), verified by outline review
 - All tasks from prior phases appear in the manual: recurring tasks, seasonal maintenance, vendor directory, responsibility matrix, cost summary
 - Checklists are actionable and specific: each checklist item is a concrete action (e.g., "Replace HVAC filter" not "Maintain HVAC")
@@ -227,11 +225,10 @@
 
 ### Phase 6: Validate Completeness and Clarity
 
-**Entry Criteria:**
+### Entry Criteria
 - Manual draft is complete and structured from Phase 5
 
-**Actions:**
-
+### Actions
 1. Review the manual against the original workflow inputs: verify it covers all recurring tasks, seasonal maintenance, vendors, responsibility assignments, cost tracking, and communication protocol.
 2. Conduct a walkthrough with household members: ask each to review their assigned tasks and confirm accuracy, feasibility, and clarity. Use a validation checklist.
 3. Identify gaps: tasks that are missing, unclear assignments, outdated vendor info, or unrealistic time estimates. Document each gap with location and suggested fix.
@@ -241,13 +238,13 @@
 7. Compile feedback and revisions: create a change log documenting all feedback and how it was addressed.
 8. Obtain sign-off from all household members confirming they have reviewed and approved their assignments.
 
-**Output:**
+### Output
 - `validation_report`: object with gaps identified, feedback from members, revisions made, and sign-off confirmations
 - `manual_final`: validated, approved manual ready for distribution with all revisions applied
 - `completeness_report`: summary of task counts, coverage, cost tracking status, and validation status
 - `change_log`: detailed record of all feedback and revisions made during validation
 
-**Quality Gate:**
+### Quality Gate
 - All household members have reviewed and approved their assignments, verified by sign-off documentation
 - No gaps or ambiguities remain: every task description is clear enough for a household member unfamiliar with it to execute without additional clarification
 - Vendor information is verified as current within the past 30 days, with last_verified_date documented
@@ -258,12 +255,11 @@
 
 ### Phase 7: Distribute and Establish Update Cadence
 
-**Entry Criteria:**
+### Entry Criteria
 - Manual is validated and approved from Phase 6
 - Manual location (URL or file path) is determined
 
-**Actions:**
-
+### Actions
 1. Distribute the manual to all household members via the chosen format (shared link, printed copy, wiki access, spreadsheet, etc.) and verify receipt by requesting acknowledgment.
 2. Ensure all members know where to find the manual, how to access it, and how to request updates using the communication protocol.
 3. Schedule a household meeting to review the manual together, answer questions, and confirm understanding. Document attendance and any questions raised.
@@ -273,7 +269,7 @@
 7. Set up task completion tracking system (spreadsheet, app, or calendar integration) to monitor whether tasks are being completed on schedule. Review completion data quarterly to identify unrealistic assignments or skill gaps.
 8. Establish a lessons learned process: create a template for household members to document issues encountered during tasks (e.g., "furnace filter is hard to access, allow 30 min instead of 15") and schedule quarterly reviews to incorporate improvements into task descriptions.
 
-**Output:**
+### Output
 - `distribution_confirmation`: list of household members who have received and acknowledged the manual with dates
 - `next_review_date`: ISO 8601 date of the next scheduled review
 - `manual_owner`: name and contact info of the designated editor/maintainer
@@ -281,7 +277,7 @@
 - `tracking_system_status`: confirmation that task completion tracking is set up and accessible
 - `lessons_learned_template`: template for documenting task improvements and scheduled review dates
 
-**Quality Gate:**
+### Quality Gate
 - All household members have confirmed receipt and understanding, verified by acknowledgment documentation
 - Review date is scheduled and reminders are set for all members (calendar invites or notifications)
 - Manual owner is assigned, has edit access, and has confirmed acceptance of the role
@@ -290,6 +286,15 @@
 - Lessons learned template is available and household members understand the process
 
 ---
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Document recurring household tasks, seasonal maintenance, vendor contacts, respo, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 

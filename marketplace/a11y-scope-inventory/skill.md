@@ -88,7 +88,7 @@ The draft `page_inventory`.
    - angular: `rg -l "@Component\(" <repo_dir>/src/app`
    - html: `find <repo_dir>/templates -path "*partials*" -o -path "*includes*" -o -path "*components*"`
 2. Keep only interactive or structural ones: buttons, links styled as buttons, form fields, selects, comboboxes, date pickers, dialogs and modals, menus, tabs, accordions, carousels, tooltips, toasts, data tables, pagination, headers, footers, navigation.
-3. For each, set `aria_pattern` from the WAI-ARIA Authoring Practices Guide (APG) pattern list at `https://www.w3.org/WAI/ARIA/apg/patterns/`: Accordion, Alert, Alert and Message Dialogs, Breadcrumb, Button, Carousel, Checkbox, Combobox, Dialog (Modal), Disclosure, Feed, Grid, Link, Listbox, Menu and Menubar, Menu Button, Meter, Radio Group, Slider, Slider (Multi-Thumb), Spinbutton, Switch, Table, Tabs, Toolbar, Tooltip, Tree View, Treegrid, Window Splitter. If the component is a plain native element (`<button>`, `<a href>`, `<input>`, `<select>`), set "native".
+3. For each, set `aria_pattern` from the WAI-ARIA Authoring Practices Guide (governance engine) pattern list at `https://www.w3.org/WAI/ARIA/governance engine/patterns/`: Accordion, Alert, Alert and Message Dialogs, Breadcrumb, Button, Carousel, Checkbox, Combobox, Dialog (Modal), Disclosure, Feed, Grid, Link, Listbox, Menu and Menubar, Menu Button, Meter, Radio Group, Slider, Slider (Multi-Thumb), Spinbutton, Switch, Table, Tabs, Toolbar, Tooltip, Tree View, Treegrid, Window Splitter. If the component is a plain native element (`<button>`, `<a href>`, `<input>`, `<select>`), set "native".
 4. Fill `used_on` by searching page templates for the component name: `rg -l "<ComponentName" <repo_dir>/src` and mapping files to page rows.
 5. Emit `page_inventory` and `component_inventory` as JSON files in the project, for example `<repo_dir>/a11y/page_inventory.json` and `<repo_dir>/a11y/component_inventory.json`.
 
@@ -98,7 +98,7 @@ The draft `page_inventory`.
 ### Quality Gate
 - `python -m json.tool <repo_dir>/a11y/page_inventory.json` and the same for `component_inventory.json` exit 0.
 - Every component row has a `source_file` that exists: `test -f <repo_dir>/<source_file>` succeeds for each.
-- Every component row has an `aria_pattern` value from the APG list above or "native".
+- Every component row has an `aria_pattern` value from the governance engine list above or "native".
 
 ---
 
@@ -136,7 +136,7 @@ Phase 3 produces rows such as:
 
 ## Exit Criteria
 
-DONE when `page_inventory` covers every template, every step of every complete process, and every listed page state, and `component_inventory` lists every shared interactive component with an existing source file and an APG pattern.
+DONE when `page_inventory` covers every template, every step of every complete process, and every listed page state, and `component_inventory` lists every shared interactive component with an existing source file and an governance engine pattern.
 
 ---
 
@@ -148,7 +148,7 @@ DONE when `page_inventory` covers every template, every step of every complete p
 | Phase 1 | Routes are generated at runtime and `rg` finds none | **Adjust**: crawl the running site with the browser and the sitemap, and record that the inventory came from crawling. |
 | Phase 2 | Owner gives no random sample size | **Return**: record it as an open question and continue with the structured and process sample only. |
 | Phase 2 | A page needs a login the tester does not have | **Stop**: request a test account; do not skip logged-in pages silently. |
-| Phase 3 | Component has no clear APG pattern | **Adjust**: set "custom" and describe the expected keyboard behavior in plain words in the row. |
+| Phase 3 | Component has no clear governance engine pattern | **Adjust**: set "custom" and describe the expected keyboard behavior in plain words in the row. |
 
 **Do not:** invent routes that are not in source or sitemap; test only the home page; skip error and modal states (they hold most form and focus failures).
 

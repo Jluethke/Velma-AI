@@ -5,25 +5,26 @@ Explains cryptocurrency, blockchain, and digital wallets to someone who has zero
 ## Execution Pattern: ORPA Loop
 
 ## Inputs
-- what_prompted_this: string -- Why you're looking into crypto right now. Examples: "someone told me I should invest," "my kid mentioned Bitcoin," "I got an email about cryptocurrency," "I see it in the news and don't understand it," "someone asked me to pay in crypto," "I'm just curious"
-- specific_questions: array -- (Optional) Specific things you want to understand. Examples: "Is Bitcoin real money?" "Can someone steal it?" "Is it illegal?" "Why does the price go up and down so much?" "What's an NFT?" "What's the blockchain?"
-- concern_level: string -- (Optional) How you feel about it: "curious but cautious," "my family member is into it and I'm worried," "someone is pressuring me to invest," "I think I might be getting scammed," "just want to understand the basics"
-- financial_background: string -- (Optional) Your comfort with financial topics: "I have a bank account and that's about it," "I invest in my 401k," "I understand stocks," "I have no idea how any of this works"
-- encounter_details: object -- (Optional) If someone is trying to get you to buy crypto or pay in crypto, describe exactly what they said, how they contacted you, and what they want you to do
+- `what_prompted_this`: string -- Why you're looking into crypto right now. Examples: "someone told me I should invest," "my kid mentioned Bitcoin," "I got an email about cryptocurrency," "I see it in the news and don't understand it," "someone asked me to pay in crypto," "I'm just curious"
+- `specific_questions`: array -- (Optional) Specific things you want to understand. Examples: "Is Bitcoin real money?" "Can someone steal it?" "Is it illegal?" "Why does the price go up and down so much?" "What's an NFT?" "What's the blockchain?"
+- `concern_level`: string -- (Optional) How you feel about it: "curious but cautious," "my family member is into it and I'm worried," "someone is pressuring me to invest," "I think I might be getting scammed," "just want to understand the basics"
+- `financial_background`: string -- (Optional) Your comfort with financial topics: "I have a bank account and that's about it," "I invest in my 401k," "I understand stocks," "I have no idea how any of this works"
+- `encounter_details`: object -- (Optional) If someone is trying to get you to buy crypto or pay in crypto, describe exactly what they said, how they contacted you, and what they want you to do
 
 ## Outputs
-- plain_english_explanations: object -- Every concept explained using analogies from everyday life. No technical terms without an immediate translation.
-- honest_assessment: string -- What crypto actually is good for, what it's terrible for, and what's still genuinely unknown. No cheerleading, no fear-mongering.
-- scam_awareness: object -- How to recognize the most common crypto scams, what red flags look like, and why crypto is a favorite tool of scammers (and what that means)
-- your_situation_assessment: string -- Based on what prompted this, a direct assessment of whether the person is in a safe, risky, or dangerous situation
-- informed_decision_framework: array -- If they're considering getting involved, what to think about first. If they're not, why understanding the basics still matters.
-- next_steps: array -- Exactly what to do (or not do) based on their situation
+- `plain_english_explanations`: object -- Every concept explained using analogies from everyday life. No technical terms without an immediate translation.
+- `honest_assessment`: string -- What crypto actually is good for, what it's terrible for, and what's still genuinely unknown. No cheerleading, no fear-mongering.
+- `scam_awareness`: object -- How to recognize the most common crypto scams, what red flags look like, and why crypto is a favorite tool of scammers (and what that means)
+- `your_situation_assessment`: string -- Based on what prompted this, a direct assessment of whether the person is in a safe, risky, or dangerous situation
+- `informed_decision_framework`: array -- If they're considering getting involved, what to think about first. If they're not, why understanding the basics still matters.
+- `next_steps`: array -- Exactly what to do (or not do) based on their situation
 
 ## Execution
 
 ### OBSERVE: Understand Their Starting Point and Situation
-**Entry criteria:** The person has shared why they're looking into crypto.
-**Actions:**
+### Entry Criteria
+The person has shared why they're looking into crypto.
+### Actions
 1. Assess urgency. If someone is pressuring them to invest or pay in crypto RIGHT NOW, this is likely a scam and the scam-awareness section becomes the priority. Financial pressure plus crypto equals danger in the vast majority of cases.
 2. Note their emotional state. Curiosity is different from anxiety is different from confusion. Adjust tone accordingly:
    - Curious: teach freely, include interesting details
@@ -39,15 +40,18 @@ Explains cryptocurrency, blockchain, and digital wallets to someone who has zero
    - Romance angle (online relationship that leads to investment talk)
    - Payment request (asked to pay for something in crypto, especially gift cards or Bitcoin ATMs)
 
-**Output:** Situation assessment (safe/curious, potentially risky, or likely scam), emotional state, knowledge gaps identified, priority topics.
-**Quality gate:** If any scam indicators are present, they are flagged immediately. Situation is never assessed as "safe" when scam indicators exist.
+### Output
+Situation assessment (safe/curious, potentially risky, or likely scam), emotional state, knowledge gaps identified, priority topics.
+### Quality Gate
+If any scam indicators are present, they are flagged immediately. Situation is never assessed as "safe" when scam indicators exist.
 
 ### REASON: Build Explanations That Actually Make Sense
-**Entry criteria:** Starting point and situation assessed.
-**Actions:**
+### Entry Criteria
+Starting point and situation assessed.
+### Actions
 1. Build the core explanations using everyday analogies:
    - **What is Bitcoin?** "Imagine a spreadsheet that everyone in the world can see but nobody can cheat on. Every time someone sends money to someone else, it gets written on this spreadsheet. That spreadsheet is called the blockchain. Bitcoin is the money that gets tracked on it. There's no bank in the middle -- the spreadsheet itself is the proof that you own it."
-   - **Where does Bitcoin come from?** "Think of it like gold mining, but with computers. People run powerful computers that solve math puzzles, and when they solve one, they get rewarded with new Bitcoin. This is called 'mining.' There's a fixed total amount that can ever exist -- 21 million -- so you can't just print more of it like dollars."
+   - **Where does Bitcoin come from?** "Think of it like gold mining, but with computers. People run capable computers that solve math puzzles, and when they solve one, they get rewarded with new Bitcoin. This is called 'mining.' There's a fixed total amount that can ever exist -- 21 million -- so you can't just print more of it like dollars."
    - **Is it real money?** "It's real in the sense that people will trade it for regular money and some places accept it as payment. It's not real in the way your dollar bills are -- no government backs it, no bank insures it. If you lose it, there's no customer service to call."
    - **What's a wallet?** "A crypto wallet isn't like your physical wallet. It's more like a mailbox with a lock. Everyone can see the mailbox (your public address, like a P.O. box number), but only you have the key to open it (your private key, which is a very long password). If you lose that key, your money is locked in that mailbox forever. Nobody can get it out. Not even the people who made the mailbox."
    - **Why does the price change so much?** "Because there's no company behind it earning money, no building, no products. The price is purely based on what people think it's worth today. That makes it swing wildly -- like a collectible whose price depends entirely on how many people want it at any given moment."
@@ -61,12 +65,15 @@ Explains cryptocurrency, blockchain, and digital wallets to someone who has zero
 3. Prepare the honest assessment: what crypto is actually useful for (sending money across borders without bank fees, digital ownership verification, some privacy benefits) and what it's terrible for (stable savings, guaranteed returns, anything requiring consumer protection).
 4. Build the situation-specific response based on what brought them here.
 
-**Output:** Complete set of analogies, scam awareness content, honest assessment, and situation-specific guidance.
-**Quality gate:** Every explanation uses a concrete analogy from daily life. Scam section is included regardless of input. No investment advice is given in any direction.
+### Output
+Complete set of analogies, scam awareness content, honest assessment, and situation-specific guidance.
+### Quality Gate
+Every explanation uses a concrete analogy from daily life. Scam section is included regardless of input. No investment advice is given in any direction.
 
 ### PLAN: Structure for Maximum Clarity
-**Entry criteria:** All explanations and assessments built.
-**Actions:**
+### Entry Criteria
+All explanations and assessments built.
+### Actions
 1. If scam indicators were detected, restructure the entire response to lead with the safety warning. Everything else becomes secondary.
 2. For general curiosity, order the response:
    - Start with the most relatable analogy (the shared spreadsheet)
@@ -86,12 +93,15 @@ Explains cryptocurrency, blockchain, and digital wallets to someone who has zero
    - Never give anyone your private key or seed phrase (that's like giving someone the key to your mailbox)
    - If you must try it, start with an amount you'd be comfortable dropping on the sidewalk and never seeing again
 
-**Output:** Ordered response structure appropriate to their situation and concern level.
-**Quality gate:** Most urgent information comes first. Scam warning is never buried below general education.
+### Output
+Ordered response structure appropriate to their situation and concern level.
+### Quality Gate
+Most urgent information comes first. Scam warning is never buried below general education.
 
 ### ACT: Deliver Clear Answers
-**Entry criteria:** Response structure finalized.
-**Actions:**
+### Entry Criteria
+Response structure finalized.
+### Actions
 1. If scam detected: lead with "I want to address something important before we get to the explanations." Describe exactly why their situation has red flags. Be direct but not scary. Give them specific steps: stop communication, don't send money, verify independently.
 2. Deliver each explanation in its own short section with a clear heading. Use the analogy first, then the fact. People remember stories better than definitions.
 3. For each specific question they asked, give a direct answer in the first sentence, then the explanation. Don't make them read three paragraphs to find out that yes, Bitcoin is legal.
@@ -100,8 +110,19 @@ Explains cryptocurrency, blockchain, and digital wallets to someone who has zero
 6. Close with the memorable rules of thumb. Keep them short enough to remember.
 7. If they seem interested in learning more, suggest the Digital Safety Guide skill (online safety basics) and the Tech Translator skill (for when they encounter confusing crypto terms later).
 
-**Output:** Complete crypto education package tailored to their situation and questions.
-**Quality gate:** Zero jargon without explanation. Zero investment advice. Scam awareness is always included. Tone is respectful and never talks down. A reader with no financial background could follow every explanation.
+### Output
+Complete crypto education package tailored to their situation and questions.
+### Quality Gate
+Zero jargon without explanation. Zero investment advice. Scam awareness is always included. Tone is respectful and never talks down. A reader with no financial background could follow every explanation.
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Explains cryptocurrency, blockchain, and digital wallets to someone who has zero, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 Done when: (1) every question is answered in plain English with a real-world analogy, (2) scam awareness is covered, (3) their specific situation is assessed (safe, risky, or dangerous), (4) honest pros and cons are presented without bias, (5) memorable rules of thumb are provided, (6) if scam indicators exist, clear action steps are given as the top priority.
@@ -151,7 +172,7 @@ Done when: (1) every question is answered in plain English with a real-world ana
 | Blockchain | Shared spreadsheet everyone can see but nobody can alter |
 | Bitcoin | Digital currency tracked on a blockchain; fixed supply of 21 million |
 | Wallet | Mailbox with a lock -- public address visible, private key secret |
-| Private key | Password that unlocks your wallet; lose it = lose your money permanently |
+| Private key | Password that opens your wallet; lose it = lose your money permanently |
 | Seed phrase | 12-24 word backup for the private key -- treat like a bank PIN |
 | Mining | Computers solving math puzzles to earn new Bitcoin |
 | Exchange | Platform to buy/sell crypto (Coinbase, Kraken, Binance) |

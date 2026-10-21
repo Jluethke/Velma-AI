@@ -1,6 +1,6 @@
 # Go-to-Market Alignment
 
-**One-line description:** Marketing and sales each submit their real ICP views and field realities before a launch — AI surfaces the messaging gaps and ICP misalignments, and produces a joint GTM plan with an SLA both sides commit to.
+**One-line description:** Marketing and sales each submit their real ICP views and field realities before a launch  --  AI surfaces the messaging gaps and ICP misalignments, and produces a joint GTM plan with an SLA both sides commit to.
 
 **Execution Pattern:** Phase Pipeline
 
@@ -17,7 +17,7 @@
 ### Marketing Submits Privately
 - `marketing_strategy` (string, required): What's the overall marketing strategy for this launch?
 - `marketing_icp_view` (object, required): Who is the ideal customer? How does marketing define them?
-- `marketing_messaging` (object, required): Core messaging — value prop, differentiators, proof points.
+- `marketing_messaging` (object, required): Core messaging  --  value prop, differentiators, proof points.
 - `marketing_channel_plan` (array, required): Channels, budget allocation, expected MQL volume and timeline.
 - `marketing_concerns_about_sales` (array, required): What do you worry sales won't do with what marketing generates?
 
@@ -41,47 +41,86 @@
 ## Execution Phases
 
 ### Phase 0: Pre-Flight Check
-**Entry Criteria:** Both submissions received.
-**Actions:** Confirm ICP views and messaging fields present from both sides.
-**Output:** Readiness confirmation.
-**Quality Gate:** ICP definition present from both sides.
+### Entry Criteria
+Both submissions received.
+### Actions
+Confirm ICP views and messaging fields present from both sides.
+### Output
+Readiness confirmation.
+### Quality Gate
+ICP definition present from both sides.
 
 ---
 
 ### Phase 1: Map the ICP Gap
-**Entry Criteria:** Both submissions confirmed.
-**Actions:** 1. Compare marketing's ICP definition to sales' field reality. Identify specific differences — title, company size, use case, buying process. 2. Assess which ICP is more accurate and why. 3. Identify whether the current channel plan reaches the real ICP.
-**Output:** ICP gap with specific differences, channel reach assessment.
-**Quality Gate:** ICP gap is specific — "Marketing targets VP of Marketing; sales closes with Head of Demand Gen" is specific.
+### Entry Criteria
+Both submissions confirmed.
+### Actions
+1. Compare marketing's ICP definition to sales' field reality. Identify specific differences  --  title, company size, use case, buying process. 2. Assess which ICP is more accurate and why. 3. Identify whether the current channel plan reaches the real ICP.
+### Output
+ICP gap with specific differences, channel reach assessment.
+### Quality Gate
+ICP gap is specific  --  "Marketing targets VP of Marketing; sales closes with Head of Demand Gen" is specific.
 
 ---
 
 ### Phase 2: Pressure-Test the Messaging
-**Entry Criteria:** ICP gap mapped.
-**Actions:** 1. Take the current messaging and run it against the objections sales is hearing in the field. 2. Identify which value props land and which create friction. 3. Identify the proof points and materials sales needs that don't exist. 4. Draft messaging adjustments based on field reality.
-**Output:** Messaging assessment, proof point gaps, messaging adjustments.
-**Quality Gate:** Every sales objection is addressed by either the messaging or a flag that it cannot be addressed with messaging alone.
+### Entry Criteria
+ICP gap mapped.
+### Actions
+1. Take the current messaging and run it against the objections sales is hearing in the field. 2. Identify which value props land and which create friction. 3. Identify the proof points and materials sales needs that don't exist. 4. Draft messaging adjustments based on field reality.
+### Output
+Messaging assessment, proof point gaps, messaging adjustments.
+### Quality Gate
+Every sales objection is addressed by either the messaging or a flag that it cannot be addressed with messaging alone.
 
 ---
 
 ### Phase 3: Build the Joint GTM Plan
-**Entry Criteria:** Messaging assessed.
-**Actions:** 1. Draft the unified ICP definition both sides agree on. 2. Build the channel plan against the real ICP. 3. Define the MQL/SQL handoff: what qualifies as an MQL, what sales does within what timeframe, what feedback goes back to marketing. 4. Draft the launch readiness checklist.
-**Output:** Joint GTM plan with unified ICP, channel plan, SLA, launch checklist.
-**Quality Gate:** SLA has specific definitions and timeframes, not aspirational language.
+### Entry Criteria
+Messaging assessed.
+### Actions
+1. Draft the unified ICP definition both sides agree on. 2. Build the channel plan against the real ICP. 3. Define the MQL/SQL handoff: what qualifies as an MQL, what sales does within what timeframe, what feedback goes back to marketing. 4. Draft the launch readiness checklist.
+### Output
+Joint GTM plan with unified ICP, channel plan, SLA, launch checklist.
+### Quality Gate
+SLA has specific definitions and timeframes, not aspirational language.
 
 ---
 
 ### Phase 4: Deliver the Synthesis
-**Entry Criteria:** Plan built.
-**Actions:** 1. Present ICP alignment and gap. 2. Present messaging assessment. 3. Deliver joint GTM plan. 4. Deliver SLA draft. 5. Deliver launch readiness checklist.
-**Output:** Full synthesis — ICP alignment, messaging reality check, joint GTM plan, SLA, launch checklist.
-**Quality Gate:** Both leads can defend the GTM plan in a launch review.
+### Entry Criteria
+Plan built.
+### Actions
+1. Present ICP alignment and gap. 2. Present messaging assessment. 3. Deliver joint GTM plan. 4. Deliver SLA draft. 5. Deliver launch readiness checklist.
+### Output
+Full synthesis  --  ICP alignment, messaging reality check, joint GTM plan, SLA, launch checklist.
+### Quality Gate
+Both leads can defend the GTM plan in a launch review.
 
 ---
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Marketing and sales each submit their real ICP views, field realities, and conce, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 Done when: (1) ICP gap mapped specifically, (2) every sales objection assessed, (3) proof point gaps named, (4) SLA has specific definitions, (5) launch checklist covers all critical items.
 
 ---
+
+---
+
+## Error Handling
+
+| Phase | Failure Mode | Response |
+|---|---|---|
+| Any | Missing required input | **Stop**: report which input is missing and what it should contain. |
+| Any | Upstream phase output incomplete | **Return**: re-run the upstream phase with the gap identified. |
+
 Copyright 2024-present The Wayfinder Trust. All rights reserved.

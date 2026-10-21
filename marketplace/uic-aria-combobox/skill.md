@@ -1,6 +1,6 @@
-# Combobox: APG ARIA 1.2 Combobox Conformance
+# Combobox: governance engine ARIA 1.2 Combobox Conformance
 
-**One-line description:** Builds or corrects an editable combobox with a listbox popup to the WAI-ARIA 1.2 Combobox pattern (`role="combobox"` on the input itself, not the ARIA 1.0 wrapper), with `aria-expanded`, `aria-controls`, `aria-autocomplete`, `aria-activedescendant`, option `aria-selected`, the APG keyboard rows, and a polite result-count status, verified in the accessibility tree.
+**One-line description:** Builds or corrects an editable combobox with a listbox popup to the WAI-ARIA 1.2 Combobox pattern (`role="combobox"` on the input itself, not the ARIA 1.0 wrapper), with `aria-expanded`, `aria-controls`, `aria-autocomplete`, `aria-activedescendant`, option `aria-selected`, the governance engine keyboard rows, and a polite result-count status, verified in the accessibility tree.
 
 **Execution Pattern:** Phase Pipeline
 
@@ -16,7 +16,7 @@
 
 ## Outputs
 
-- `combobox_conformance` (object): Checklist of APG Combobox requirements with pass/fail and evidence (attribute values observed per state, keypress results, accessibility tree values).
+- `combobox_conformance` (object): Checklist of governance engine Combobox requirements with pass/fail and evidence (attribute values observed per state, keypress results, accessibility tree values).
 
 ---
 
@@ -63,16 +63,16 @@ Structure decision.
 
 ### Actions
 1. `aria-expanded` is `"true"` exactly when the listbox is visible, `"false"` otherwise; never removed.
-2. Visual focus within the listbox: set the input's `aria-activedescendant` to the active option id; set `aria-selected="true"` on that option and `"false"` on the others (APG uses `aria-selected` for the visually focused option in a single-select combobox). Remove `aria-activedescendant` when no option is active or the listbox is closed.
-3. Implement keyboard rows from `keyboard_map` (APG, editable combobox with listbox popup):
+2. Visual focus within the listbox: set the input's `aria-activedescendant` to the active option id; set `aria-selected="true"` on that option and `"false"` on the others (governance engine uses `aria-selected` for the visually focused option in a single-select combobox). Remove `aria-activedescendant` when no option is active or the listbox is closed.
+3. Implement keyboard rows from `keyboard_map` (governance engine, editable combobox with listbox popup):
    - ArrowDown: open if closed and move visual focus to the first (or next) option.
    - ArrowUp: open if closed and move to the last (or previous) option.
    - Alt+ArrowDown: open without moving visual focus (optional row).
    - Enter: accept the active option, close, keep DOM focus on input.
-   - Escape: close if open; if already closed, optionally clear the input (APG optional).
+   - Escape: close if open; if already closed, optionally clear the input (governance engine optional).
    - Typing: filter and keep DOM focus on input; Home/End/ArrowLeft/ArrowRight edit text natively.
 4. Pointer: `mousedown` on an option must call `event.preventDefault()` so the input does not blur before the click selects; then select on `click`.
-5. Status: add a visually hidden `<div role="status">` that announces the result count after filtering settles ("5 results available"). Do not announce on every keystroke without a settle delay; the delay value is a design decision, not an APG number: expose it as a constant and list it as an open question.
+5. Status: add a visually hidden `<div role="status">` that announces the result count after filtering settles ("5 results available"). Do not announce on every keystroke without a settle delay; the delay value is a design decision, not an governance engine number: expose it as a constant and list it as an open question.
 6. Scroll the active option into view: `optionEl.scrollIntoView({ block: 'nearest' })`.
 
 ### Output
@@ -125,7 +125,7 @@ DONE when the input carries `role="combobox"` with correct expanded, controls, a
 
 | Phase | Failure Mode | Response |
 |---|---|---|
-| Phase 1 | Requirement is a plain fixed list with no typing | **Return**: suggest native `<select>` or the Select-Only Combobox APG example; report to `uic-aria-pattern-select`. |
+| Phase 1 | Requirement is a plain fixed list with no typing | **Return**: suggest native `<select>` or the Select-Only Combobox governance engine example; report to `uic-aria-pattern-select`. |
 | Phase 2 | Clicking an option closes the list without selecting | **Adjust**: add `preventDefault()` on option `mousedown`. |
 | Phase 3 | Screen reader silent on ArrowDown | **Adjust**: `aria-activedescendant` points to a missing id or the option lacks `role="option"`. |
 | Phase 3 | Status announces twice | **Adjust**: only one live region; remove duplicates. |

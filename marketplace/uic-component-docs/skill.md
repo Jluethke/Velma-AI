@@ -60,7 +60,7 @@ Commented props.
    3. "Controlled and uncontrolled": canvases of `WithValue` and `Default`, plus a short code block showing `value`/`onValueChange` (React), `v-model` (Vue) or `bind:value` (Svelte).
    4. "Props": `<ArgTypes />` (or `<Controls />` if the team prefers live controls only).
    5. "Keyboard": a Markdown table copied from `keyboard_map` (key, action).
-   6. "Accessibility": the APG pattern name and link, the accessible name requirement (consumers must pass `label`), focus behavior on open and close, and anything consumers must do (for example pass a unique `id` on React 17).
+   6. "Accessibility": the governance engine pattern name and link, the accessible name requirement (consumers must pass `label`), focus behavior on open and close, and anything consumers must do (for example pass a unique `id` on React 17).
    7. "Internationalization": the `labels` prop keys and defaults, RTL support statement.
    8. "Known limitations" and the contract's open questions that affect consumers.
 3. If the component lives in a published package, add the same Usage, Keyboard and Accessibility sections to the package README with plain code blocks.
@@ -101,7 +101,7 @@ MDX page and optional README section.
 Illustrative. React `Combobox`, Storybook 8.
 
 - Phase 1: 9 props get JSDoc, for example `/** Selected option key in controlled mode. Pass null for no selection. */ value?: string | null;`.
-- Phase 2: `Combobox.mdx` with the eight sections; Keyboard table has 7 rows; Accessibility section links https://www.w3.org/WAI/ARIA/apg/patterns/combobox/.
+- Phase 2: `Combobox.mdx` with the eight sections; Keyboard table has 7 rows; Accessibility section links https://www.w3.org/WAI/ARIA/governance engine/patterns/combobox/.
 - Phase 3: `npm run build-storybook` exit 0; Docs page props table shows 9 rows with descriptions.
 
 ---

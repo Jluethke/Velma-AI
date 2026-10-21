@@ -8,49 +8,50 @@
 
 ## Inputs
 
-- `user_experience_level` (string, required) — User's mindfulness experience: "beginner", "intermediate", or "advanced"
-- `available_time_minutes` (number, required) — Time available for practice: 5, 10, 15, 20, or 30+
-- `primary_goals` (string[], required) — Mental health or wellness goals. Accepted values: "stress_reduction", "focus", "sleep", "anxiety", "emotional_regulation", "general_wellness". At least one required.
-- `secondary_goals` (string[], optional) — Additional goals (same value set as primary_goals)
-- `physical_constraints` (string[], optional) — Any physical limitations (e.g., "back_pain", "cannot_lie_down", "mobility_limited")
-- `mental_health_history` (string[], optional) — Relevant mental health context for safety screening (e.g., "trauma", "dissociation", "grief", "depression"). Used to filter contraindicated techniques.
-- `practice_environment` (string, optional) — Where practice will occur: "quiet_room", "office", "public_transit", "home_with_distractions". Default: "quiet_room"
-- `preference_style` (string, optional) — Preferred guidance style: "guided_narrative" (rich imagery, external structure), "minimal_cues" (sparse, internal focus), or "technical" (anatomical/physiological detail). Default: "guided_narrative"
-- `previous_sequence_id` (string, optional) — ID of previously completed sequence to avoid repetition and enable progression tracking
+- `user_experience_level` (string, required)  --  User's mindfulness experience: "beginner", "intermediate", or "advanced"
+- `available_time_minutes` (number, required)  --  Time available for practice: 5, 10, 15, 20, or 30+
+- `primary_goals` (string[], required)  --  Mental health or wellness goals. Accepted values: "stress_reduction", "focus", "sleep", "anxiety", "emotional_regulation", "general_wellness". At least one required.
+- `secondary_goals` (string[], optional)  --  Additional goals (same value set as primary_goals)
+- `physical_constraints` (string[], optional)  --  Any physical limitations (e.g., "back_pain", "cannot_lie_down", "mobility_limited")
+- `mental_health_history` (string[], optional)  --  Relevant mental health context for safety screening (e.g., "trauma", "dissociation", "grief", "depression"). Used to filter contraindicated techniques.
+- `practice_environment` (string, optional)  --  Where practice will occur: "quiet_room", "office", "public_transit", "home_with_distractions". Default: "quiet_room"
+- `preference_style` (string, optional)  --  Preferred guidance style: "guided_narrative" (rich imagery, external structure), "minimal_cues" (sparse, internal focus), or "technical" (anatomical/physiological detail). Default: "guided_narrative"
+- `previous_sequence_id` (string, optional)  --  ID of previously completed sequence to avoid repetition and enable progression tracking
 
 ---
 
 ## Outputs
 
-- `sequence_title` (string) — Personalized name for the practice (e.g., "5-Minute Calm Focus")
-- `sequence_phases` (object[]) — Ordered list of practice phases, each with:
-  - `phase_name` (string) — Name of phase (e.g., "Opening", "Core Practice", "Closing")
-  - `duration_minutes` (number) — Time allocated
-  - `techniques` (object[]) — Array of techniques, each with:
+- `sequence_title` (string)  --  Personalized name for the practice (e.g., "5-Minute Calm Focus")
+- `sequence_phases` (object[])  --  Ordered list of practice phases, each with:
+  - `phase_name` (string)  --  Name of phase (e.g., "Opening", "Core Practice", "Closing")
+  - `duration_minutes` (number)  --  Time allocated
+  - `techniques` (object[])  --  Array of techniques, each with:
     - `technique_name` (string)
     - `duration_minutes` (number)
-    - `instructions` (string) — Step-by-step guidance (numbered, specific, actionable)
-    - `cues` (string[]) — Verbal or mental cues to use during practice
-    - `modifications` (object[]) — Alternative versions, each with `name`, `instructions`, `when_to_use`
-- `total_duration_minutes` (number) — Total practice time
-- `goal_alignment` (object) — Maps each goal to techniques addressing it and the mechanism of benefit
-- `practice_tips` (string[]) — 3-5 tips for successful practice, specific to user profile (not generic)
-- `progression_notes` (object[]) — Suggestions for advancing or adapting over time, each with `timeframe` (e.g., "after 2 weeks"), `action`, and `rationale`
-- `safety_notes` (string[]) — Any contraindications or cautions based on mental health history or constraints
-- `validation_status` (string) — "pass" or "adjust_required" with details if adjustments were made
+    - `instructions` (string)  --  Step-by-step guidance (numbered, specific, actionable)
+    - `cues` (string[])  --  Verbal or mental cues to use during practice
+    - `modifications` (object[])  --  Alternative versions, each with `name`, `instructions`, `when_to_use`
+- `total_duration_minutes` (number)  --  Total practice time
+- `goal_alignment` (object)  --  Maps each goal to techniques addressing it and the mechanism of benefit
+- `practice_tips` (string[])  --  3-5 tips for successful practice, specific to user profile (not generic)
+- `progression_notes` (object[])  --  Suggestions for advancing or adapting over time, each with `timeframe` (e.g., "after 2 weeks"), `action`, and `rationale`
+- `safety_notes` (string[])  --  Any contraindications or cautions based on mental health history or constraints
+- `validation_status` (string)  --  "pass" or "adjust_required" with details if adjustments were made
 
 ---
+- `progression_guidance`: (from manifest)
 
 ## Execution Phases
 
 ### Phase 1: Assessment & Safety Screening
 
-**Entry Criteria:**
+### Entry Criteria
 - User experience level is provided and valid (beginner, intermediate, or advanced)
 - Available time is provided and is one of: 5, 10, 15, 20, 30+
 - At least one primary goal is provided
 
-**Actions:**
+### Actions
 1. Validate user experience level against accepted values (beginner, intermediate, advanced). If invalid, default to "beginner" and log assumption in validation_status output.
 2. Validate available time against accepted durations (5, 10, 15, 20, 30+). If outside range, round to nearest valid duration and log adjustment.
 3. Validate primary goals against accepted goal set. Remove any unrecognized goals; abort if no valid goals remain after filtering.
@@ -61,12 +62,12 @@
 8. If previous_sequence_id is provided, retrieve user's practice history (if available in state persistence layer) to inform Phase 3 technique selection and avoid recent repetition.
 9. Record user profile summary: experience_level, time_minutes, primary_goals, secondary_goals, physical_constraints, mental_health_history, practice_environment, style_preference, previous_sequences.
 
-**Output:**
+### Output
 - Validated user profile (experience_level, time_minutes, goals, constraints, mental_health_history, environment, style_preference, history_reference)
 - Profile validation status (all_valid, assumptions_made, or invalid_input with specific details)
 - Contraindication flags (array of mental health contexts requiring safety review in Phase 2)
 
-**Quality Gate:**
+### Quality Gate
 - All inputs are validated and normalized to accepted values
 - User profile is internally consistent (e.g., no contradictory constraints)
 - If assumptions were made, they are explicitly logged with the assumption and reason
@@ -77,11 +78,11 @@
 
 ### Phase 2: Technique Mapping & Contraindication Screening
 
-**Entry Criteria:**
+### Entry Criteria
 - User profile from Phase 1 is complete and valid
 - Contraindication flags (if any) are available
 
-**Actions:**
+### Actions
 1. Map experience level to technique complexity tier:
    - Beginner: breathing, body scan, grounding
    - Intermediate: visualization, loving-kindness, mantra, extended body scan
@@ -105,12 +106,12 @@
 7. Rank remaining techniques by goal alignment (primary goals first, secondary goals second).
 8. Output: Filtered technique pool with 4-8 candidate techniques ranked by goal alignment, with contraindication notes and environment adaptations.
 
-**Output:**
+### Output
 - Technique pool (array of technique objects with name, complexity, goal_alignment, constraints, contraindication_status, environment_adaptations)
 - Ranking by relevance to user's primary goals
 - Safety notes (array of contraindications or cautions to include in final output)
 
-**Quality Gate:**
+### Quality Gate
 - Technique pool contains only techniques appropriate to user's experience level
 - All techniques in pool address at least one user goal
 - No technique in pool violates physical constraints (verified by checking constraint_filter field)
@@ -122,12 +123,12 @@
 
 ### Phase 3: Technique Selection & Progression
 
-**Entry Criteria:**
+### Entry Criteria
 - Technique pool from Phase 2 is populated and ranked
 - Available time window is confirmed
 - User history (if available) is available for progression logic
 
-**Actions:**
+### Actions
 1. Allocate time budget: opening (1-2 min), core practice (remaining - 2 min), closing (1-2 min). For 5-min sessions, use opening (1 min), core (3 min), closing (1 min).
 2. Select core techniques from pool to fill core practice time:
    - For 5 min: 1 technique
@@ -139,12 +140,12 @@
 6. Verify that each primary goal is addressed by at least one selected technique. If not, return to step 2 and reselect.
 7. Output: Ordered list of 1-4 core techniques with assigned durations, goal alignment, and progression context.
 
-**Output:**
+### Output
 - Core_techniques (array with name, duration_minutes, goal_alignment, sequence_order, progression_context)
 - Time allocation breakdown (opening_minutes, core_minutes, closing_minutes)
 - Progression recommendation (e.g., "User is ready to extend core practice by 2 min" or "Suggest introducing intermediate technique after 2 weeks")
 
-**Quality Gate:**
+### Quality Gate
 - Total technique duration + opening + closing = available_time_minutes (within 1 min tolerance)
 - Techniques are ordered from grounding/simple to introspective/complex (verified against pedagogical order list)
 - Each primary goal is addressed by at least one technique (verified by checking goal_alignment field for each goal)
@@ -154,12 +155,12 @@
 
 ### Phase 4: Sequence Construction & Instruction Generation
 
-**Entry Criteria:**
+### Entry Criteria
 - Core techniques and time allocation from Phase 3
 - User profile (experience level, style preference, constraints, environment)
 - Safety notes from Phase 2
 
-**Actions:**
+### Actions
 1. Build opening phase (1-2 min):
    - For all levels: settling ("Find a comfortable position..."), posture check ("Ensure your spine is upright..."), intention-setting ("Today we practice to [primary goal]")
    - Include brief goal reminder with specific language matching user's goal (e.g., "We will practice to reduce stress by calming your nervous system" rather than generic "to reduce stress")
@@ -186,12 +187,12 @@
 5. Compile full sequence with timing markers and phase labels. Ensure total duration matches available_time_minutes (within 1 min).
 6. If safety_notes from Phase 2 are present, insert relevant cautions into instructions (e.g., if body scan is contraindicated, note "If you feel disconnected from your body, open your eyes and focus on external sensations instead")
 
-**Output:**
+### Output
 - sequence_phases (array of phase objects, each with name, duration_minutes, techniques with full instructions, cues, and modifications)
 - Sequence text (human-readable, ready to guide practice)
 - Instruction quality check (all instructions use imperative verbs, all timing is explicit, all modifications are usable)
 
-**Quality Gate:**
+### Quality Gate
 - Every instruction is specific and actionable (verified by checking for vague words: "relax", "feel", "focus" without object; all should be replaced with specific actions)
 - Timing adds up correctly (opening + core + closing = available_time_minutes ± 1 min)
 - Modifications are genuinely usable alternatives, not vague suggestions (each modification has specific instructions, not "try a different approach")
@@ -202,12 +203,12 @@
 
 ### Phase 5: Validation, Enrichment & Output Assembly
 
-**Entry Criteria:**
+### Entry Criteria
 - Complete sequence from Phase 4
 - User profile and goals from Phase 1
 - Safety notes from Phase 2
 
-**Actions:**
+### Actions
 1. Validate sequence feasibility:
    - Total duration matches available_time_minutes (within 1 min tolerance)
    - All primary goals are addressed by at least one technique (verified by checking goal_alignment for each primary goal)
@@ -225,7 +226,7 @@
 5. Create sequence title: personalized name reflecting time, primary goal, and style. Format: "[Time]-Minute [Goal] [Descriptor]" (e.g., "10-Minute Anxiety Release", "20-Minute Focus & Calm", "5-Minute Grounding for Work")
 6. Assemble final output object with all fields: sequence_title, sequence_phases, total_duration_minutes, goal_alignment, practice_tips, progression_notes, safety_notes, validation_status
 
-**Output:**
+### Output
 - sequence_title (string)
 - goal_alignment (object mapping each goal to techniques and mechanisms)
 - practice_tips (string[], 3-5 tips specific to user profile)
@@ -234,7 +235,7 @@
 - validation_status ("pass" or "adjust_required" with details)
 - Complete output object ready for return to user
 
-**Quality Gate:**
+### Quality Gate
 - Validation status is "pass" (if not, abort and return error details)
 - Goal alignment is explicit and complete (every primary goal is mapped to at least one technique)
 - Practice tips are specific to user profile, not generic (verified by checking for personalization: beginner-specific language, environment-specific language, goal-specific language)
@@ -243,6 +244,15 @@
 - All outputs are populated and non-empty
 
 ---
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Generate a personalized mindfulness practice sequence tailored to experience lev, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 
@@ -262,21 +272,21 @@ The skill is complete when:
 
 | Phase | Failure Mode | Response |
 |---|---|---|
-| Assessment | User experience level is invalid or missing | **Adjust** — default to "beginner" and log assumption in validation_status output |
-| Assessment | Available time is outside accepted range (5, 10, 15, 20, 30+) | **Adjust** — round to nearest valid duration and log adjustment in validation_status |
-| Assessment | No valid primary goals provided after filtering | **Abort** — return error: "No valid goals provided. Accepted values: stress_reduction, focus, sleep, anxiety, emotional_regulation, general_wellness" |
-| Assessment | Physical constraints conflict with experience level (e.g., "cannot_lie_down" + beginner body scan) | **Adjust** — note constraint and filter technique pool accordingly in Phase 2 |
-| Assessment | Mental health history includes unknown context | **Adjust** — log unknown context and proceed without contraindication filtering for that context |
-| Technique Mapping | No techniques match user's experience level and goals after physical constraint filtering | **Adjust** — relax experience level constraint by one tier (beginner → intermediate, intermediate → advanced) and retry technique pool generation |
-| Technique Mapping | Contraindication screening removes all techniques for a primary goal | **Adjust** — flag in safety_notes that goal cannot be safely addressed; suggest alternative goal or recommend consultation with mental health professional |
-| Technique Selection | Selected techniques exceed available time by >2 min | **Adjust** — reduce number of techniques or shorten durations proportionally; log adjustment in validation_status |
-| Technique Selection | No technique addresses primary goal after selection | **Abort** — return to Phase 2 and expand technique pool or relax constraints |
-| Sequence Construction | Guidance style preference is invalid | **Adjust** — default to "guided_narrative" and log assumption |
-| Sequence Construction | Total sequence duration exceeds available time by >2 min | **Adjust** — trim technique durations proportionally and recalculate; log adjustment in validation_status |
-| Sequence Construction | Instructions for a technique are incomplete or unclear | **Adjust** — regenerate instructions using template: Setup → Step-by-step (numbered) → Cues → Timing → Troubleshooting |
-| Validation | Sequence does not address all primary goals | **Adjust** — return to Phase 3 and reselect techniques; log adjustment in validation_status |
-| Validation | Sequence violates physical constraints | **Adjust** — apply modifications or reselect techniques; log adjustment in validation_status |
-| Validation | Sequence order is not pedagogically sound | **Adjust** — reorder techniques according to pedagogical sequence (grounding → breathing → body scan → visualization → loving-kindness → concentration → insight) |
+| Assessment | User experience level is invalid or missing | **Adjust**  --  default to "beginner" and log assumption in validation_status output |
+| Assessment | Available time is outside accepted range (5, 10, 15, 20, 30+) | **Adjust**  --  round to nearest valid duration and log adjustment in validation_status |
+| Assessment | No valid primary goals provided after filtering | **Abort**  --  return error: "No valid goals provided. Accepted values: stress_reduction, focus, sleep, anxiety, emotional_regulation, general_wellness" |
+| Assessment | Physical constraints conflict with experience level (e.g., "cannot_lie_down" + beginner body scan) | **Adjust**  --  note constraint and filter technique pool accordingly in Phase 2 |
+| Assessment | Mental health history includes unknown context | **Adjust**  --  log unknown context and proceed without contraindication filtering for that context |
+| Technique Mapping | No techniques match user's experience level and goals after physical constraint filtering | **Adjust**  --  relax experience level constraint by one tier (beginner → intermediate, intermediate → advanced) and retry technique pool generation |
+| Technique Mapping | Contraindication screening removes all techniques for a primary goal | **Adjust**  --  flag in safety_notes that goal cannot be safely addressed; suggest alternative goal or recommend consultation with mental health professional |
+| Technique Selection | Selected techniques exceed available time by >2 min | **Adjust**  --  reduce number of techniques or shorten durations proportionally; log adjustment in validation_status |
+| Technique Selection | No technique addresses primary goal after selection | **Abort**  --  return to Phase 2 and expand technique pool or relax constraints |
+| Sequence Construction | Guidance style preference is invalid | **Adjust**  --  default to "guided_narrative" and log assumption |
+| Sequence Construction | Total sequence duration exceeds available time by >2 min | **Adjust**  --  trim technique durations proportionally and recalculate; log adjustment in validation_status |
+| Sequence Construction | Instructions for a technique are incomplete or unclear | **Adjust**  --  regenerate instructions using template: Setup → Step-by-step (numbered) → Cues → Timing → Troubleshooting |
+| Validation | Sequence does not address all primary goals | **Adjust**  --  return to Phase 3 and reselect techniques; log adjustment in validation_status |
+| Validation | Sequence violates physical constraints | **Adjust**  --  apply modifications or reselect techniques; log adjustment in validation_status |
+| Validation | Sequence order is not pedagogically sound | **Adjust**  --  reorder techniques according to pedagogical sequence (grounding → breathing → body scan → visualization → loving-kindness → concentration → insight) |
 | Validation | User rejects final output | **Targeted revision** -- ask which technique selection, timing, or sequence order fell short and rerun only that phase. Do not regenerate the full sequence. |
 
 ---
@@ -372,7 +382,7 @@ The skill is complete when:
 | Sleep | Body Scan, Visualization | Breathing, Progressive Relaxation | Releases tension; calms nervous system; provides mental escape |
 | Anxiety | Grounding, Breathing, Loving-Kindness | Body Scan, Visualization | Interrupts anxiety spiral; activates parasympathetic response; builds self-compassion |
 | Emotional Regulation | Loving-Kindness, Body Scan, Insight | Visualization, Breathing | Develops metacognitive awareness; reduces reactivity; builds psychological flexibility |
-| General Wellness | Any technique appropriate to level | — | Varies by technique |
+| General Wellness | Any technique appropriate to level |  --  | Varies by technique |
 
 ### Guidance Style Definitions
 
@@ -413,3 +423,7 @@ If state persistence layer is available:
 **Version:** 2.0  
 **Last Updated:** 2024  
 **License:** Free to use. Royalties apply to published derivatives.
+
+---
+
+Copyright 2024-present The Wayfinder Trust. All rights reserved.

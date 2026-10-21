@@ -1,0 +1,1490 @@
+[
+  {
+    "chain_name": "genetics-experiment",
+    "description": "Run a genetics investigation from primer design through PCR, gel electrophoresis, sequencing, variant calling, functional annotation, and inheritance pattern analysis.",
+    "domain": "science",
+    "tags": ["science", "genetics", "biology", "molecular-biology", "dna"],
+    "steps": [
+      {
+        "flow_name": "primer-designer",
+        "description": "Design PCR primers for a target gene region, checking melting temperature, GC content, secondary structure, and specificity.",
+        "inputs": [
+          {"name": "target-gene", "desc": "Gene name or genomic coordinates of the region of interest"},
+          {"name": "reference-sequence", "desc": "FASTA sequence or accession number for the reference genome"},
+          {"name": "amplicon-size-range", "desc": "Desired product size in base pairs (e.g. 200-500 bp)"}
+        ],
+        "outputs": [
+          {"name": "primer-pairs", "desc": "Forward and reverse primer sequences with Tm, GC%, and predicted amplicon size"},
+          {"name": "specificity-report", "desc": "BLAST results confirming primer specificity against the reference genome"},
+          {"name": "secondary-structure-check", "desc": "Hairpin, self-dimer, and hetero-dimer scores for each primer pair"}
+        ],
+        "process": [
+          "Retrieve the target region from the reference sequence using coordinates or gene name",
+          "Generate candidate primer pairs using thermodynamic criteria (Tm 58-62C, GC 40-60%, length 18-25 nt)",
+          "Screen for secondary structures (hairpins, dimers) and discard candidates above threshold",
+          "Run in-silico BLAST against the reference to confirm single-target amplification",
+          "Rank primer pairs by combined score and return the top three candidates"
+        ],
+        "tags": ["genetics", "pcr", "primer-design"]
+      },
+      {
+        "flow_name": "pcr-optimizer",
+        "description": "Optimize PCR conditions including annealing temperature, cycle count, MgCl2 concentration, and template input to maximize yield and specificity.",
+        "inputs": [
+          {"name": "primer-pairs", "desc": "Selected primer pair sequences from the design step"},
+          {"name": "template-dna", "desc": "Description of template DNA source, concentration, and quality metrics"},
+          {"name": "polymerase-type", "desc": "Enzyme type and manufacturer (e.g. Taq, Phusion, Q5)"}
+        ],
+        "outputs": [
+          {"name": "optimized-protocol", "desc": "Final PCR protocol with temperatures, times, cycle count, and reagent volumes"},
+          {"name": "gradient-results", "desc": "Annealing temperature gradient results showing optimal temperature"},
+          {"name": "troubleshooting-notes", "desc": "Common failure modes and recommended adjustments if bands are weak or nonspecific"}
+        ],
+        "process": [
+          "Calculate theoretical optimal annealing temperature from primer Tm values",
+          "Design a gradient PCR experiment spanning +/- 5C around the theoretical optimum",
+          "Set up MgCl2 titration at the optimal annealing temperature (1.0, 1.5, 2.0, 2.5 mM)",
+          "Evaluate band intensity and specificity on a quick agarose check gel",
+          "Document the final optimized protocol with all reagent concentrations and cycling parameters"
+        ],
+        "tags": ["genetics", "pcr", "optimization"]
+      },
+      {
+        "flow_name": "gel-electrophoresis-protocol",
+        "description": "Run and document agarose gel electrophoresis to confirm PCR product size and purity before downstream processing.",
+        "inputs": [
+          {"name": "pcr-product", "desc": "Amplified PCR product from the optimization step"},
+          {"name": "expected-size", "desc": "Expected amplicon size in base pairs"},
+          {"name": "gel-parameters", "desc": "Agarose percentage, buffer type, voltage, and run time"}
+        ],
+        "outputs": [
+          {"name": "gel-image", "desc": "Annotated gel photograph with lane labels, ladder, and size markers"},
+          {"name": "band-assessment", "desc": "Assessment of band size, intensity, and presence of nonspecific products"},
+          {"name": "purification-decision", "desc": "Recommendation on whether gel extraction or direct cleanup is appropriate"}
+        ],
+        "process": [
+          "Prepare gel at the specified agarose concentration with ethidium bromide or SYBR Safe",
+          "Load PCR products alongside a molecular weight ladder with known size standards",
+          "Run electrophoresis at the specified voltage and time, monitoring migration progress",
+          "Image the gel under UV or blue light and annotate lanes with sample identifiers",
+          "Compare observed band sizes to expected amplicon size and assess purity for next steps"
+        ],
+        "tags": ["genetics", "electrophoresis", "quality-control"]
+      },
+      {
+        "flow_name": "dna-sequencing-runner",
+        "description": "Prepare samples for Sanger or next-generation sequencing, submit to a sequencing facility, and retrieve raw data files.",
+        "inputs": [
+          {"name": "purified-product", "desc": "Gel-purified or column-cleaned PCR product with concentration measurement"},
+          {"name": "sequencing-method", "desc": "Sanger, Illumina, Nanopore, or other platform selection"},
+          {"name": "coverage-target", "desc": "Desired sequencing depth or number of reads"}
+        ],
+        "outputs": [
+          {"name": "raw-sequence-data", "desc": "FASTQ or AB1 files from the sequencing run"},
+          {"name": "quality-scores", "desc": "Per-base quality scores and overall run quality metrics"},
+          {"name": "sequence-summary", "desc": "Read count, average length, Q30 percentage, and error rate"}
+        ],
+        "process": [
+          "Quantify purified DNA using fluorometric or spectrophotometric measurement",
+          "Prepare sequencing library per platform protocol (Sanger: premix with primer; NGS: adapter ligation)",
+          "Submit samples to the sequencing facility with required metadata and sample sheet",
+          "Download raw data files and verify file integrity with checksums",
+          "Generate initial quality metrics using FastQC or equivalent and flag any low-quality runs"
+        ],
+        "tags": ["genetics", "sequencing", "ngs"]
+      },
+      {
+        "flow_name": "variant-caller",
+        "description": "Align sequencing reads to a reference genome and call genetic variants (SNPs, indels, structural variants) with quality filtering.",
+        "inputs": [
+          {"name": "raw-sequence-data", "desc": "FASTQ files from the sequencing step"},
+          {"name": "reference-sequence", "desc": "Reference genome FASTA for read alignment"},
+          {"name": "quality-thresholds", "desc": "Minimum mapping quality, base quality, and coverage depth filters"}
+        ],
+        "outputs": [
+          {"name": "variant-calls", "desc": "VCF file of called variants with quality scores and genotype information"},
+          {"name": "alignment-stats", "desc": "Mapping rate, coverage depth distribution, and duplicate rate"},
+          {"name": "filtered-variants", "desc": "High-confidence variant set after quality filtering"}
+        ],
+        "process": [
+          "Trim adapters and low-quality bases from raw reads using a quality trimmer",
+          "Align trimmed reads to the reference genome with BWA-MEM or equivalent aligner",
+          "Mark duplicates and recalibrate base quality scores",
+          "Call variants using GATK HaplotypeCaller, FreeBayes, or the appropriate caller for the platform",
+          "Apply hard or VQSR filtering to produce a high-confidence variant set"
+        ],
+        "tags": ["genetics", "bioinformatics", "variant-calling"]
+      },
+      {
+        "flow_name": "functional-annotator",
+        "description": "Annotate called variants with gene location, predicted protein impact, population frequency, and clinical significance.",
+        "inputs": [
+          {"name": "filtered-variants", "desc": "High-confidence VCF from the variant calling step"},
+          {"name": "annotation-databases", "desc": "Selected databases for annotation (ClinVar, gnomAD, dbSNP, COSMIC)"},
+          {"name": "transcript-model", "desc": "Gene model source (RefSeq or Ensembl) for consequence prediction"}
+        ],
+        "outputs": [
+          {"name": "annotated-variants", "desc": "Variants annotated with gene, consequence, protein change, and population frequency"},
+          {"name": "pathogenicity-scores", "desc": "In-silico prediction scores (SIFT, PolyPhen, CADD) for each variant"},
+          {"name": "clinical-hits", "desc": "Variants matching known pathogenic or likely pathogenic entries in clinical databases"}
+        ],
+        "process": [
+          "Run VEP, SnpEff, or ANNOVAR to map each variant to its genomic context and predicted consequence",
+          "Cross-reference variants against population frequency databases to flag rare alleles",
+          "Apply in-silico pathogenicity predictors and aggregate scores",
+          "Match variants against ClinVar and disease-specific databases for known clinical significance",
+          "Produce a ranked report prioritizing variants by predicted functional impact"
+        ],
+        "tags": ["genetics", "annotation", "bioinformatics"]
+      },
+      {
+        "flow_name": "inheritance-pattern-analyzer",
+        "description": "Analyze variant segregation across family members or a study cohort to determine inheritance patterns and penetrance.",
+        "inputs": [
+          {"name": "annotated-variants", "desc": "Functionally annotated variant list from the annotation step"},
+          {"name": "pedigree-data", "desc": "Family structure, affected status, and sample identifiers"},
+          {"name": "phenotype-description", "desc": "Clinical or phenotypic description of the trait under investigation"}
+        ],
+        "outputs": [
+          {"name": "segregation-report", "desc": "Variant co-segregation analysis with LOD scores or equivalent"},
+          {"name": "inheritance-model", "desc": "Best-fit inheritance model (autosomal dominant, recessive, X-linked, de novo)"},
+          {"name": "candidate-variants", "desc": "Final shortlist of candidate causal variants with supporting evidence"}
+        ],
+        "process": [
+          "Map genotypes to pedigree positions and verify Mendelian consistency",
+          "Test each candidate variant under dominant, recessive, X-linked, and de novo models",
+          "Calculate LOD scores or Bayesian posterior probabilities for co-segregation",
+          "Cross-reference segregation results with functional annotation to prioritize candidates",
+          "Compile final candidate variant list with inheritance model, evidence strength, and next-step recommendations"
+        ],
+        "tags": ["genetics", "inheritance", "pedigree-analysis"]
+      }
+    ]
+  },
+  {
+    "chain_name": "marine-biology-survey",
+    "description": "Conduct a marine biology survey from dive transect planning through species identification, water quality sampling, coral assessment, biodiversity indexing, and ecosystem reporting.",
+    "domain": "science",
+    "tags": ["science", "marine-biology", "ecology", "field-study"],
+    "steps": [
+      {
+        "flow_name": "dive-transect-planner",
+        "description": "Design underwater survey transects with GPS coordinates, depth ranges, habitat types, and dive safety parameters.",
+        "inputs": [
+          {"name": "study-site", "desc": "Geographic coordinates and general description of the survey area"},
+          {"name": "survey-objectives", "desc": "Research questions and target organisms or habitats"},
+          {"name": "dive-constraints", "desc": "Maximum depth, current conditions, visibility, and diver certification levels"}
+        ],
+        "outputs": [
+          {"name": "transect-map", "desc": "Georeferenced transect layout with waypoints, depths, and habitat zones"},
+          {"name": "dive-plan", "desc": "Dive profiles with bottom times, surface intervals, and emergency procedures"},
+          {"name": "sampling-schedule", "desc": "Date, time, tide, and weather windows for each planned dive"}
+        ],
+        "process": [
+          "Review bathymetric charts and satellite imagery to identify candidate transect locations",
+          "Select transect orientations that cross habitat gradients relevant to the research questions",
+          "Calculate dive profiles using no-decompression limits for the planned depths",
+          "Schedule dives around tidal cycles and weather windows for optimal visibility",
+          "Prepare transect markers, underwater slates, and GPS logging equipment"
+        ],
+        "tags": ["marine-biology", "field-planning", "diving"]
+      },
+      {
+        "flow_name": "species-identification-protocol",
+        "description": "Identify and record marine species encountered along transects using visual ID, photography, and taxonomic keys.",
+        "inputs": [
+          {"name": "transect-map", "desc": "Planned transect layout with habitat zones"},
+          {"name": "target-taxa", "desc": "Taxonomic groups of interest (fish, invertebrates, algae, corals)"},
+          {"name": "identification-resources", "desc": "Field guides, taxonomic keys, and reference photo libraries"}
+        ],
+        "outputs": [
+          {"name": "species-list", "desc": "Complete species inventory with abundance counts per transect segment"},
+          {"name": "photo-vouchers", "desc": "Georeferenced photographs of each identified species for verification"},
+          {"name": "unidentified-specimens", "desc": "Specimens or photos requiring expert consultation or molecular ID"}
+        ],
+        "process": [
+          "Swim each transect at constant speed, recording all observed organisms within the survey belt",
+          "Photograph each species with a scale reference and habitat context",
+          "Assign field identifications using taxonomic keys and note confidence level for each",
+          "Collect voucher specimens of uncertain identifications following permit requirements",
+          "Compile species counts per transect segment with GPS position and depth"
+        ],
+        "tags": ["marine-biology", "taxonomy", "species-id"]
+      },
+      {
+        "flow_name": "water-quality-sampler",
+        "description": "Measure and record water quality parameters including temperature, salinity, dissolved oxygen, pH, turbidity, and nutrient concentrations.",
+        "inputs": [
+          {"name": "sampling-schedule", "desc": "Planned sampling locations, depths, and times"},
+          {"name": "instrument-list", "desc": "Available sensors and sample collection equipment (CTD, Niskin bottles, probes)"},
+          {"name": "parameter-targets", "desc": "Which water quality parameters to measure and at what precision"}
+        ],
+        "outputs": [
+          {"name": "water-quality-data", "desc": "Tabulated measurements with location, depth, time, and instrument calibration status"},
+          {"name": "nutrient-samples", "desc": "Preserved water samples labeled for lab analysis of nitrate, phosphate, and chlorophyll"},
+          {"name": "calibration-log", "desc": "Pre- and post-measurement calibration records for each instrument"}
+        ],
+        "process": [
+          "Calibrate all field instruments against certified standards before deployment",
+          "Deploy CTD or multiparameter sonde at each sampling station through the water column",
+          "Collect discrete water samples at target depths using Niskin bottles or equivalent",
+          "Preserve nutrient and chlorophyll samples on ice for laboratory analysis",
+          "Record all measurements with metadata (time, GPS, depth, sea state, weather conditions)"
+        ],
+        "tags": ["marine-biology", "water-quality", "oceanography"]
+      },
+      {
+        "flow_name": "coral-health-assessor",
+        "description": "Assess coral colony health using bleaching indices, disease prevalence, tissue condition, and recruitment counts.",
+        "inputs": [
+          {"name": "transect-map", "desc": "Survey transect layout covering reef areas"},
+          {"name": "species-list", "desc": "Coral species identified along each transect"},
+          {"name": "baseline-data", "desc": "Historical coral cover and health data for the site, if available"}
+        ],
+        "outputs": [
+          {"name": "bleaching-assessment", "desc": "Bleaching severity and extent per colony using a standardized color reference card"},
+          {"name": "disease-prevalence", "desc": "Proportion of colonies affected by each disease type per transect"},
+          {"name": "recruitment-counts", "desc": "Juvenile coral counts per quadrat indicating reef recovery potential"}
+        ],
+        "process": [
+          "Score each coral colony for bleaching severity using the Coral Watch color chart",
+          "Record disease signs (white band, black band, white plague, tissue loss) by colony",
+          "Count juvenile coral recruits in fixed quadrats along each transect",
+          "Photograph representative healthy, bleached, and diseased colonies with scale bars",
+          "Compare current health metrics to baseline data to detect trends"
+        ],
+        "tags": ["marine-biology", "coral-reef", "conservation"]
+      },
+      {
+        "flow_name": "biodiversity-index-calculator",
+        "description": "Calculate species richness, Shannon diversity, Simpson index, evenness, and beta diversity across survey sites.",
+        "inputs": [
+          {"name": "species-list", "desc": "Species abundance data from all transects"},
+          {"name": "site-metadata", "desc": "Habitat type, depth, and environmental conditions per transect"},
+          {"name": "comparison-datasets", "desc": "Previous surveys or regional reference data for context"}
+        ],
+        "outputs": [
+          {"name": "diversity-indices", "desc": "Shannon H, Simpson D, Pielou evenness, and species richness per site"},
+          {"name": "beta-diversity", "desc": "Bray-Curtis dissimilarity or Jaccard index between sites"},
+          {"name": "rarefaction-curves", "desc": "Species accumulation curves showing sampling adequacy"}
+        ],
+        "process": [
+          "Tabulate species abundance matrices by site and habitat",
+          "Calculate alpha diversity indices (Shannon, Simpson, richness, evenness) per site",
+          "Compute beta diversity metrics (Bray-Curtis, Jaccard) between all site pairs",
+          "Generate rarefaction curves to evaluate whether sampling effort was sufficient",
+          "Run ordination (NMDS or PCA) to visualize community composition across sites"
+        ],
+        "tags": ["ecology", "biodiversity", "statistics"]
+      },
+      {
+        "flow_name": "marine-ecosystem-reporter",
+        "description": "Compile survey results into a structured marine ecosystem report with maps, data tables, statistical summaries, and management recommendations.",
+        "inputs": [
+          {"name": "diversity-indices", "desc": "Calculated biodiversity metrics from all sites"},
+          {"name": "water-quality-data", "desc": "Environmental measurements from sampling stations"},
+          {"name": "coral-health-data", "desc": "Bleaching, disease, and recruitment assessments"}
+        ],
+        "outputs": [
+          {"name": "ecosystem-report", "desc": "Complete survey report with methods, results, and discussion sections"},
+          {"name": "data-archive", "desc": "Formatted datasets ready for repository submission (GBIF, OBIS)"},
+          {"name": "management-brief", "desc": "One-page summary of findings and recommended conservation actions"}
+        ],
+        "process": [
+          "Organize all data tables, photographs, and maps into a consistent format",
+          "Write methods section describing transect design, sampling protocols, and analytical approaches",
+          "Present results with statistical summaries, figures, and spatial maps",
+          "Discuss findings in the context of regional trends and known stressors",
+          "Draft management recommendations grounded in the survey data"
+        ],
+        "tags": ["marine-biology", "reporting", "conservation"]
+      }
+    ]
+  },
+  {
+    "chain_name": "social-science-study",
+    "description": "Design and execute a social science study: define constructs, build a survey instrument, plan sampling, write interview protocols, code qualitative data, run mixed-methods analysis, and synthesize findings.",
+    "domain": "science",
+    "tags": ["science", "social-science", "research", "mixed-methods"],
+    "steps": [
+      {
+        "flow_name": "construct-definer",
+        "description": "Define the theoretical constructs under study with operational definitions, measurement indicators, and literature grounding.",
+        "inputs": [
+          {"name": "research-question", "desc": "The specific question or hypothesis the study addresses"},
+          {"name": "theoretical-framework", "desc": "The theory or conceptual model guiding the study"},
+          {"name": "prior-literature", "desc": "Key studies and existing measures of the constructs"}
+        ],
+        "outputs": [
+          {"name": "construct-definitions", "desc": "Operational definitions for each construct with measurable indicators"},
+          {"name": "conceptual-model", "desc": "Diagram of relationships between constructs and expected directions"},
+          {"name": "measurement-plan", "desc": "Mapping of each construct to specific survey items or interview prompts"}
+        ],
+        "process": [
+          "Extract construct definitions from the theoretical framework and prior literature",
+          "Write operational definitions that specify observable indicators for each construct",
+          "Map relationships between constructs into a conceptual model with directional hypotheses",
+          "Identify existing validated scales or measures for each construct",
+          "Document gaps where new measurement items need development"
+        ],
+        "tags": ["social-science", "theory", "construct-validity"]
+      },
+      {
+        "flow_name": "survey-instrument-designer",
+        "description": "Design a survey questionnaire with validated scales, demographic items, response formats, skip logic, and pilot testing plan.",
+        "inputs": [
+          {"name": "construct-definitions", "desc": "Operational definitions and measurement plan from construct definition"},
+          {"name": "target-population", "desc": "Description of the population to be surveyed"},
+          {"name": "delivery-mode", "desc": "Online, paper, phone, or in-person administration method"}
+        ],
+        "outputs": [
+          {"name": "survey-instrument", "desc": "Complete questionnaire with item text, response scales, and skip logic"},
+          {"name": "pilot-plan", "desc": "Cognitive interview and pilot test protocol with sample size and criteria"},
+          {"name": "psychometric-targets", "desc": "Expected reliability (Cronbach alpha) and validity benchmarks per scale"}
+        ],
+        "process": [
+          "Assemble items from validated scales, adapting wording for the target population",
+          "Write new items for constructs without existing measures, balancing positive and negative framing",
+          "Organize the instrument with logical flow, attention checks, and skip logic",
+          "Design a cognitive interviewing protocol to test item clarity with 5-10 respondents",
+          "Plan the pilot study with target sample size for preliminary reliability analysis"
+        ],
+        "tags": ["social-science", "survey-design", "psychometrics"]
+      },
+      {
+        "flow_name": "sampling-strategy-planner",
+        "description": "Design a sampling strategy with target population definition, sampling frame, sample size calculation, and recruitment plan.",
+        "inputs": [
+          {"name": "target-population", "desc": "Population of interest with inclusion and exclusion criteria"},
+          {"name": "study-design", "desc": "Cross-sectional, longitudinal, experimental, or quasi-experimental"},
+          {"name": "effect-size-estimate", "desc": "Expected effect size from prior literature for power calculation"}
+        ],
+        "outputs": [
+          {"name": "sampling-plan", "desc": "Sampling method (random, stratified, cluster, convenience) with justification"},
+          {"name": "sample-size", "desc": "Required sample size with power analysis parameters and assumptions"},
+          {"name": "recruitment-protocol", "desc": "Step-by-step recruitment procedure with timeline and contingency plans"}
+        ],
+        "process": [
+          "Define the accessible sampling frame and identify stratification variables",
+          "Run power analysis using the expected effect size, alpha level, and desired power",
+          "Select the sampling method that balances internal validity with feasibility",
+          "Design the recruitment procedure with contact methods, incentives, and consent process",
+          "Plan for expected attrition and calculate the inflated sample size needed"
+        ],
+        "tags": ["social-science", "sampling", "power-analysis"]
+      },
+      {
+        "flow_name": "interview-protocol-builder",
+        "description": "Write a semi-structured interview protocol with opening, main, and closing sections, probes, and procedural safeguards.",
+        "inputs": [
+          {"name": "research-question", "desc": "The qualitative research questions the interviews address"},
+          {"name": "construct-definitions", "desc": "Constructs and themes to explore in depth"},
+          {"name": "participant-profile", "desc": "Description of who will be interviewed and in what setting"}
+        ],
+        "outputs": [
+          {"name": "interview-guide", "desc": "Structured guide with core questions, follow-up probes, and time estimates"},
+          {"name": "consent-script", "desc": "Informed consent procedure including recording permission and withdrawal rights"},
+          {"name": "interviewer-notes", "desc": "Training notes on rapport, neutrality, and handling sensitive topics"}
+        ],
+        "process": [
+          "Draft opening questions that build rapport and establish the participant's context",
+          "Write core questions for each construct, moving from general to specific",
+          "Develop follow-up probes for anticipated responses and unexpected directions",
+          "Add closing questions that invite participant reflections and final thoughts",
+          "Write the consent script and interviewer procedural notes"
+        ],
+        "tags": ["social-science", "qualitative", "interviewing"]
+      },
+      {
+        "flow_name": "qualitative-coding-scheme",
+        "description": "Develop and apply a codebook for qualitative data analysis with deductive codes from theory and inductive codes from the data.",
+        "inputs": [
+          {"name": "interview-transcripts", "desc": "Transcribed interview data ready for analysis"},
+          {"name": "conceptual-model", "desc": "Theoretical framework guiding deductive code categories"},
+          {"name": "coding-approach", "desc": "Thematic analysis, grounded theory, content analysis, or framework analysis"}
+        ],
+        "outputs": [
+          {"name": "codebook", "desc": "Complete codebook with code names, definitions, inclusion criteria, and examples"},
+          {"name": "coded-data", "desc": "Transcripts with applied codes and annotations"},
+          {"name": "inter-rater-reliability", "desc": "Cohen kappa or percentage agreement between independent coders"}
+        ],
+        "process": [
+          "Read through all transcripts to gain familiarity before coding",
+          "Create initial deductive codes from the conceptual model and research questions",
+          "Code a subset of transcripts independently with two coders and calculate agreement",
+          "Refine the codebook based on disagreements and emergent inductive codes",
+          "Apply the finalized codebook to all transcripts and compile frequency and co-occurrence tables"
+        ],
+        "tags": ["social-science", "qualitative", "coding"]
+      },
+      {
+        "flow_name": "mixed-methods-analyzer",
+        "description": "Integrate quantitative survey results and qualitative interview findings using a convergent, explanatory, or exploratory design.",
+        "inputs": [
+          {"name": "survey-results", "desc": "Statistical analysis output from the quantitative component"},
+          {"name": "coded-data", "desc": "Themed qualitative findings from the coding step"},
+          {"name": "integration-design", "desc": "Convergent, sequential explanatory, or sequential exploratory approach"}
+        ],
+        "outputs": [
+          {"name": "joint-display", "desc": "Side-by-side matrix comparing quantitative and qualitative findings by construct"},
+          {"name": "integration-narrative", "desc": "Written analysis of convergence, divergence, and complementarity between data sources"},
+          {"name": "meta-inferences", "desc": "Overarching conclusions that neither data source could support alone"}
+        ],
+        "process": [
+          "Organize quantitative results and qualitative themes by shared construct or research question",
+          "Build a joint display table showing statistical findings alongside illustrative quotes",
+          "Identify areas of convergence where both sources support the same conclusion",
+          "Flag divergences where quantitative and qualitative findings conflict and explore explanations",
+          "Draw meta-inferences that integrate both data streams into unified findings"
+        ],
+        "tags": ["social-science", "mixed-methods", "integration"]
+      },
+      {
+        "flow_name": "findings-synthesizer",
+        "description": "Synthesize all study findings into a structured report with implications for theory, practice, and future research.",
+        "inputs": [
+          {"name": "meta-inferences", "desc": "Integrated findings from mixed-methods analysis"},
+          {"name": "conceptual-model", "desc": "Original theoretical framework for comparison with results"},
+          {"name": "limitations", "desc": "Known threats to validity and generalizability"}
+        ],
+        "outputs": [
+          {"name": "findings-report", "desc": "Complete findings section with tables, figures, and narrative interpretation"},
+          {"name": "implications-section", "desc": "Practical and theoretical implications of the results"},
+          {"name": "future-research-agenda", "desc": "Specific questions and designs for follow-up studies"}
+        ],
+        "process": [
+          "Summarize key findings organized by research question",
+          "Compare results to the original conceptual model and note supported and unsupported hypotheses",
+          "Discuss findings in the context of prior literature, noting agreements and departures",
+          "Articulate practical implications for policy, programs, or professional practice",
+          "Identify study limitations and propose specific future research directions"
+        ],
+        "tags": ["social-science", "reporting", "synthesis"]
+      }
+    ]
+  },
+  {
+    "chain_name": "environmental-monitoring",
+    "description": "Design and run an environmental monitoring program: sensor network layout, data quality assurance, trend analysis, anomaly detection, source attribution, regulatory comparison, and impact reporting.",
+    "domain": "science",
+    "tags": ["science", "environmental-science", "monitoring", "ecology"],
+    "steps": [
+      {
+        "flow_name": "sensor-network-designer",
+        "description": "Design a monitoring sensor network with station placement, parameter selection, sampling frequency, and telemetry architecture.",
+        "inputs": [
+          {"name": "monitoring-objectives", "desc": "What pollutants, parameters, or conditions to track and why"},
+          {"name": "site-map", "desc": "Geographic extent, land use, and potential source locations"},
+          {"name": "budget-envelope", "desc": "Available funding for equipment, installation, and ongoing maintenance"}
+        ],
+        "outputs": [
+          {"name": "station-layout", "desc": "Map of monitoring stations with coordinates, parameters measured, and sampling intervals"},
+          {"name": "equipment-spec", "desc": "Sensor models, power requirements, data logger specifications, and telemetry method"},
+          {"name": "maintenance-schedule", "desc": "Calibration, cleaning, and replacement intervals for each station"}
+        ],
+        "process": [
+          "Identify monitoring parameters based on regulatory requirements and research objectives",
+          "Select station locations to capture spatial gradients, point sources, and background levels",
+          "Choose sensor models that meet detection limits and accuracy requirements within budget",
+          "Design the data telemetry chain from sensor to central database",
+          "Create a maintenance and calibration schedule to ensure continuous data quality"
+        ],
+        "tags": ["environmental", "sensors", "monitoring-design"]
+      },
+      {
+        "flow_name": "data-quality-assurance",
+        "description": "Apply QA/QC protocols to environmental monitoring data including range checks, drift correction, gap filling, and flagging.",
+        "inputs": [
+          {"name": "raw-data", "desc": "Incoming sensor data streams with timestamps and station identifiers"},
+          {"name": "calibration-log", "desc": "Instrument calibration records and maintenance events"},
+          {"name": "quality-criteria", "desc": "Acceptable ranges, drift thresholds, and completeness requirements"}
+        ],
+        "outputs": [
+          {"name": "qc-dataset", "desc": "Cleaned dataset with quality flags on each measurement"},
+          {"name": "completeness-report", "desc": "Data recovery rate per station and parameter"},
+          {"name": "drift-corrections", "desc": "Applied calibration drift corrections with before/after values"}
+        ],
+        "process": [
+          "Apply automated range checks to flag physically impossible values",
+          "Detect and correct instrument drift using calibration records",
+          "Identify data gaps and apply approved gap-filling methods where appropriate",
+          "Flag suspect values for manual review without removing them from the dataset",
+          "Calculate data recovery rates and document all QA/QC actions taken"
+        ],
+        "tags": ["environmental", "data-quality", "qaqc"]
+      },
+      {
+        "flow_name": "trend-analyzer",
+        "description": "Detect long-term trends in environmental time series using statistical methods appropriate for autocorrelated and seasonal data.",
+        "inputs": [
+          {"name": "qc-dataset", "desc": "Quality-controlled environmental monitoring data"},
+          {"name": "time-range", "desc": "Analysis period and temporal resolution (hourly, daily, monthly)"},
+          {"name": "covariates", "desc": "Meteorological or other variables that may confound trend detection"}
+        ],
+        "outputs": [
+          {"name": "trend-results", "desc": "Estimated trend magnitudes with confidence intervals and statistical significance"},
+          {"name": "seasonal-patterns", "desc": "Decomposed seasonal cycles and their year-to-year variation"},
+          {"name": "change-points", "desc": "Detected abrupt shifts in the time series with estimated timing"}
+        ],
+        "process": [
+          "Decompose each time series into trend, seasonal, and residual components",
+          "Apply Mann-Kendall or Sen slope estimator for monotonic trend detection",
+          "Test for change points using CUSUM or Pettitt test",
+          "Adjust for meteorological covariates to isolate anthropogenic signal",
+          "Report trend magnitudes per year with 95% confidence intervals"
+        ],
+        "tags": ["environmental", "statistics", "trend-analysis"]
+      },
+      {
+        "flow_name": "anomaly-detector",
+        "description": "Detect unusual pollution events or environmental anomalies that deviate from established baselines and seasonal norms.",
+        "inputs": [
+          {"name": "qc-dataset", "desc": "Quality-controlled data with seasonal patterns characterized"},
+          {"name": "baseline-statistics", "desc": "Historical mean, variance, and percentile distributions per parameter"},
+          {"name": "alert-thresholds", "desc": "Regulatory or health-based thresholds for immediate notification"}
+        ],
+        "outputs": [
+          {"name": "anomaly-list", "desc": "Detected exceedances and anomalies with timestamps, durations, and magnitudes"},
+          {"name": "alert-notifications", "desc": "Triggered alerts for threshold exceedances requiring response"},
+          {"name": "event-characterization", "desc": "Duration, peak value, and estimated load for each detected event"}
+        ],
+        "process": [
+          "Calculate rolling statistics and seasonal baselines from the historical record",
+          "Compare incoming data against baselines using z-score or percentile methods",
+          "Classify deviations as within normal variability, noteworthy, or exceedance",
+          "Characterize each anomaly event by start time, peak, duration, and total load",
+          "Generate alerts for regulatory threshold exceedances"
+        ],
+        "tags": ["environmental", "anomaly-detection", "alerts"]
+      },
+      {
+        "flow_name": "source-attributor",
+        "description": "Attribute detected pollution events to likely sources using wind analysis, chemical fingerprinting, and spatial modeling.",
+        "inputs": [
+          {"name": "anomaly-list", "desc": "Detected anomaly events from the detection step"},
+          {"name": "meteorological-data", "desc": "Wind speed, direction, mixing height, and precipitation records"},
+          {"name": "source-inventory", "desc": "Known emission sources with locations, types, and estimated output rates"}
+        ],
+        "outputs": [
+          {"name": "source-attribution", "desc": "Probable source assignments for each anomaly event with confidence levels"},
+          {"name": "transport-analysis", "desc": "Back-trajectory or dispersion modeling results linking event to source area"},
+          {"name": "fingerprint-match", "desc": "Chemical ratio or isotope signature comparison against known source profiles"}
+        ],
+        "process": [
+          "Run back-trajectory analysis (HYSPLIT or equivalent) for each anomaly event",
+          "Compare chemical ratios at the receptor against known source fingerprints",
+          "Cross-reference trajectory results with the source inventory within the footprint area",
+          "Assign attribution confidence based on meteorological consistency and chemical match",
+          "Document alternative explanations where attribution is uncertain"
+        ],
+        "tags": ["environmental", "source-attribution", "air-quality"]
+      },
+      {
+        "flow_name": "regulatory-comparator",
+        "description": "Compare monitoring results against applicable regulatory standards, guidelines, and permit limits to assess compliance status.",
+        "inputs": [
+          {"name": "qc-dataset", "desc": "Quality-controlled monitoring data"},
+          {"name": "regulatory-standards", "desc": "Applicable federal, state, and local standards with averaging periods"},
+          {"name": "permit-limits", "desc": "Facility-specific permit conditions and reporting requirements"}
+        ],
+        "outputs": [
+          {"name": "compliance-summary", "desc": "Compliance status per parameter and standard with exceedance counts"},
+          {"name": "design-value-calculations", "desc": "Regulatory design values (e.g. 98th percentile, 4th-highest daily max)"},
+          {"name": "reporting-forms", "desc": "Pre-filled regulatory reporting templates with required statistics"}
+        ],
+        "process": [
+          "Identify all applicable standards and their averaging periods for each measured parameter",
+          "Calculate the regulatory form of the statistic for each standard (annual mean, percentile, max, etc.)",
+          "Compare calculated values against standard thresholds and flag exceedances",
+          "Compute multi-year design values where standards require rolling averages",
+          "Prepare regulatory reporting forms with required data completeness documentation"
+        ],
+        "tags": ["environmental", "regulatory", "compliance"]
+      },
+      {
+        "flow_name": "environmental-impact-reporter",
+        "description": "Compile monitoring findings, trends, anomalies, and compliance status into an environmental impact report with maps, charts, and recommendations.",
+        "inputs": [
+          {"name": "trend-results", "desc": "Long-term trend analysis from the trend step"},
+          {"name": "source-attribution", "desc": "Anomaly source attribution results"},
+          {"name": "compliance-summary", "desc": "Regulatory compliance status summary"}
+        ],
+        "outputs": [
+          {"name": "impact-report", "desc": "Complete environmental impact report with executive summary and technical appendices"},
+          {"name": "spatial-maps", "desc": "Interpolated concentration maps showing spatial patterns across the monitoring network"},
+          {"name": "action-recommendations", "desc": "Prioritized recommendations for source reduction or further investigation"}
+        ],
+        "process": [
+          "Assemble all analytical results into a consistent report framework",
+          "Create spatial maps showing pollutant distributions across the monitoring domain",
+          "Write the executive summary highlighting key trends, exceedances, and attributions",
+          "Present compliance status and discuss implications for continued monitoring",
+          "Develop prioritized action recommendations based on health significance and attribution confidence"
+        ],
+        "tags": ["environmental", "reporting", "impact-assessment"]
+      }
+    ]
+  },
+  {
+    "chain_name": "forensic-investigation",
+    "description": "Conduct a forensic science investigation from evidence collection through chain of custody, lab analysis, quality control, statistical weight of evidence, and expert reporting.",
+    "domain": "science",
+    "tags": ["science", "forensics", "investigation", "law-enforcement"],
+    "steps": [
+      {
+        "flow_name": "evidence-collection-protocol",
+        "description": "Document and collect physical evidence at a scene following contamination prevention, packaging standards, and photographic documentation.",
+        "inputs": [
+          {"name": "scene-description", "desc": "Type of scene, size, access conditions, and preliminary observations"},
+          {"name": "evidence-types", "desc": "Expected evidence categories (trace, biological, digital, chemical)"},
+          {"name": "collection-team", "desc": "Available personnel, equipment, and time constraints"}
+        ],
+        "outputs": [
+          {"name": "evidence-inventory", "desc": "Cataloged list of all collected items with unique identifiers, locations, and descriptions"},
+          {"name": "scene-documentation", "desc": "Photographs, sketches, and measurements documenting the scene before and during collection"},
+          {"name": "collection-notes", "desc": "Detailed notes on collection method, packaging, and any deviations from protocol"}
+        ],
+        "process": [
+          "Secure the scene perimeter and establish a single entry/exit path",
+          "Photograph the scene in overview, mid-range, and close-up before touching anything",
+          "Sketch the scene layout with measurements and evidence positions",
+          "Collect evidence using appropriate techniques (swabs, tweezers, envelopes) with glove changes between items",
+          "Package and label each item with a unique identifier, collector initials, date, and time"
+        ],
+        "tags": ["forensics", "evidence", "scene-processing"]
+      },
+      {
+        "flow_name": "chain-of-custody-documenter",
+        "description": "Maintain an unbroken chain of custody record from scene to lab to court, tracking every transfer, storage condition, and access event.",
+        "inputs": [
+          {"name": "evidence-inventory", "desc": "Catalog of collected evidence items with unique identifiers"},
+          {"name": "storage-requirements", "desc": "Temperature, humidity, and security requirements per evidence type"},
+          {"name": "transfer-schedule", "desc": "Planned transfers between scene, lab, storage, and court"}
+        ],
+        "outputs": [
+          {"name": "custody-log", "desc": "Complete chain of custody form for each item with signatures, dates, times, and purposes"},
+          {"name": "storage-record", "desc": "Storage location and condition monitoring log for each evidence item"},
+          {"name": "integrity-verification", "desc": "Seal checks and tamper-evident packaging status at each transfer point"}
+        ],
+        "process": [
+          "Assign each evidence item to a chain of custody form at the moment of collection",
+          "Record every transfer with releasing and receiving signatures, date, time, and purpose",
+          "Verify tamper-evident seals at each transfer and document seal condition",
+          "Log storage conditions (temperature, humidity, access logs) for sensitive evidence",
+          "Audit the complete chain before lab analysis and again before court presentation"
+        ],
+        "tags": ["forensics", "chain-of-custody", "legal"]
+      },
+      {
+        "flow_name": "forensic-lab-analyzer",
+        "description": "Perform laboratory analysis on forensic evidence covering trace, biological (DNA), toxicological, and chemical examinations.",
+        "inputs": [
+          {"name": "evidence-inventory", "desc": "Items submitted for laboratory analysis with requested examinations"},
+          {"name": "custody-log", "desc": "Verified chain of custody documentation"},
+          {"name": "analysis-priority", "desc": "Examination priority order based on case needs and evidence perishability"}
+        ],
+        "outputs": [
+          {"name": "lab-results", "desc": "Analytical findings per evidence item with method, instrument, and analyst identification"},
+          {"name": "raw-data", "desc": "Chromatograms, electropherograms, spectra, and images supporting each finding"},
+          {"name": "method-documentation", "desc": "Standard operating procedure references and any deviations for each analysis"}
+        ],
+        "process": [
+          "Receive evidence, verify chain of custody, and log items into the laboratory information system",
+          "Perform requested examinations following validated SOPs for each discipline",
+          "Run positive and negative controls alongside case samples for each analytical batch",
+          "Document all observations, measurements, and instrument readings in the case file",
+          "Review raw data against acceptance criteria before reporting results"
+        ],
+        "tags": ["forensics", "laboratory", "dna", "toxicology"]
+      },
+      {
+        "flow_name": "forensic-quality-control",
+        "description": "Apply quality control checks to forensic lab results including blank monitoring, proficiency testing, measurement uncertainty, and peer review.",
+        "inputs": [
+          {"name": "lab-results", "desc": "Preliminary analytical results from the lab step"},
+          {"name": "control-data", "desc": "Positive control, negative control, and calibration verification results"},
+          {"name": "accreditation-requirements", "desc": "ISO 17025 or equivalent accreditation quality criteria"}
+        ],
+        "outputs": [
+          {"name": "qc-assessment", "desc": "Pass/fail status for each analytical batch with any corrective actions taken"},
+          {"name": "measurement-uncertainty", "desc": "Estimated uncertainty for each quantitative result"},
+          {"name": "peer-review-record", "desc": "Independent technical review of analytical conclusions with reviewer signature"}
+        ],
+        "process": [
+          "Evaluate control results against established acceptance criteria",
+          "Calculate measurement uncertainty using the lab's validated uncertainty budget",
+          "Check for contamination indicators in reagent blanks and negative controls",
+          "Submit case file for independent technical and administrative review",
+          "Document any corrective actions for out-of-specification results"
+        ],
+        "tags": ["forensics", "quality-control", "accreditation"]
+      },
+      {
+        "flow_name": "statistical-weight-of-evidence",
+        "description": "Calculate the statistical significance of forensic findings using likelihood ratios, random match probabilities, or Bayesian frameworks.",
+        "inputs": [
+          {"name": "lab-results", "desc": "Confirmed analytical findings from the QC step"},
+          {"name": "population-databases", "desc": "Reference population databases for frequency estimation (DNA, fingerprint, etc.)"},
+          {"name": "case-context", "desc": "Prosecution and defense propositions for likelihood ratio formulation"}
+        ],
+        "outputs": [
+          {"name": "statistical-report", "desc": "Calculated random match probability, likelihood ratio, or posterior probability"},
+          {"name": "population-frequency", "desc": "Frequency of the observed profile or characteristic in reference populations"},
+          {"name": "verbal-scale", "desc": "Verbal expression of evidential weight following reporting guidelines"}
+        ],
+        "process": [
+          "Formulate the prosecution and defense propositions clearly",
+          "Calculate the probability of the evidence under each proposition",
+          "Compute the likelihood ratio (or equivalent statistic) from the probability pair",
+          "Express the result on the agreed verbal scale (e.g., weak, moderate, strong, very strong support)",
+          "Document all assumptions, databases used, and sensitivity to alternative formulations"
+        ],
+        "tags": ["forensics", "statistics", "likelihood-ratio"]
+      },
+      {
+        "flow_name": "expert-report-writer",
+        "description": "Write a forensic expert report suitable for court submission with methods, findings, conclusions, and expert qualifications.",
+        "inputs": [
+          {"name": "lab-results", "desc": "Final analytical results after QC"},
+          {"name": "statistical-report", "desc": "Statistical weight of evidence calculations"},
+          {"name": "case-reference", "desc": "Case number, requesting authority, and evidence item identifiers"}
+        ],
+        "outputs": [
+          {"name": "expert-report", "desc": "Complete forensic report meeting court admissibility standards"},
+          {"name": "testimony-outline", "desc": "Structured outline for expert testimony on the findings"},
+          {"name": "disclosure-package", "desc": "All materials required for defense disclosure (data, methods, qualifications)"}
+        ],
+        "process": [
+          "Structure the report following jurisdiction-specific format requirements",
+          "Describe methods used in language accessible to non-scientists",
+          "Present findings and conclusions with the calculated evidential weight",
+          "State the expert's qualifications, training, and experience relevant to the analysis",
+          "Prepare the disclosure package including raw data, SOPs, and proficiency test records"
+        ],
+        "tags": ["forensics", "reporting", "expert-testimony"]
+      }
+    ]
+  },
+  {
+    "chain_name": "citizen-science-project",
+    "description": "Design and launch a citizen science project: build a non-expert protocol, create training materials, set up mobile data collection, validate submissions, aggregate results, and communicate findings.",
+    "domain": "science",
+    "tags": ["science", "citizen-science", "community", "data-collection"],
+    "steps": [
+      {
+        "flow_name": "citizen-protocol-designer",
+        "description": "Design a field data collection protocol that non-experts can follow accurately, with clear decision trees and visual guides.",
+        "inputs": [
+          {"name": "research-question", "desc": "The scientific question the citizen data will address"},
+          {"name": "target-observations", "desc": "What participants need to observe, measure, or photograph"},
+          {"name": "participant-profile", "desc": "Expected skill level, age range, and available equipment"}
+        ],
+        "outputs": [
+          {"name": "field-protocol", "desc": "Step-by-step observation protocol with decision trees and visual aids"},
+          {"name": "data-form", "desc": "Standardized data entry form with required fields and allowed values"},
+          {"name": "equipment-list", "desc": "Equipment each participant needs, with consumer-grade alternatives for lab instruments"}
+        ],
+        "process": [
+          "Translate the research question into specific observable data points",
+          "Write step-by-step instructions at a middle-school reading level",
+          "Create visual decision trees for identification or classification tasks",
+          "Design the data form with constrained response options to minimize free-text errors",
+          "Test the protocol with three non-scientist volunteers and revise based on errors"
+        ],
+        "tags": ["citizen-science", "protocol-design", "education"]
+      },
+      {
+        "flow_name": "volunteer-training-builder",
+        "description": "Create training materials including video tutorials, practice exercises, and competency checks for citizen science volunteers.",
+        "inputs": [
+          {"name": "field-protocol", "desc": "The observation protocol volunteers will follow"},
+          {"name": "common-errors", "desc": "Errors observed during protocol testing to address in training"},
+          {"name": "delivery-format", "desc": "Online self-paced, in-person workshop, or hybrid training model"}
+        ],
+        "outputs": [
+          {"name": "training-curriculum", "desc": "Complete training module sequence with learning objectives per module"},
+          {"name": "practice-exercises", "desc": "Hands-on exercises with known correct answers for skill verification"},
+          {"name": "competency-quiz", "desc": "Assessment that volunteers must pass before contributing data"}
+        ],
+        "process": [
+          "Break the protocol into teachable modules aligned with each observation step",
+          "Create visual examples showing correct and incorrect observations",
+          "Design practice exercises using real-world examples with known answers",
+          "Build a competency quiz covering common error scenarios from pilot testing",
+          "Set the pass threshold for quiz completion before data collection access"
+        ],
+        "tags": ["citizen-science", "training", "education"]
+      },
+      {
+        "flow_name": "mobile-data-collector",
+        "description": "Set up a mobile data collection app or platform with GPS tagging, photo capture, offline capability, and automatic upload.",
+        "inputs": [
+          {"name": "data-form", "desc": "Standardized data entry form from the protocol step"},
+          {"name": "platform-choice", "desc": "Selected platform (iNaturalist, ODK, Survey123, custom app)"},
+          {"name": "offline-requirements", "desc": "Whether data entry must work without cell service"}
+        ],
+        "outputs": [
+          {"name": "configured-app", "desc": "Ready-to-deploy mobile data collection form with all fields and validation rules"},
+          {"name": "user-guide", "desc": "Screenshot-annotated guide for downloading, logging in, and submitting observations"},
+          {"name": "data-pipeline", "desc": "Automatic sync and storage architecture from phone to central database"}
+        ],
+        "process": [
+          "Translate the data form into the selected platform's form builder",
+          "Configure GPS auto-capture, timestamp, and photo attachment fields",
+          "Set up field validation rules (required fields, numeric ranges, picklist constraints)",
+          "Enable offline data entry with automatic upload when connectivity returns",
+          "Write the user guide with annotated screenshots for each step"
+        ],
+        "tags": ["citizen-science", "mobile", "data-collection"]
+      },
+      {
+        "flow_name": "citizen-quality-validator",
+        "description": "Validate citizen science submissions using automated checks, expert review, and consensus algorithms to flag and correct errors.",
+        "inputs": [
+          {"name": "submitted-data", "desc": "Raw observations from citizen scientists"},
+          {"name": "expert-panel", "desc": "Available experts for review of uncertain identifications"},
+          {"name": "validation-rules", "desc": "Automated checks (GPS in study area, photo present, values in range)"}
+        ],
+        "outputs": [
+          {"name": "validated-dataset", "desc": "Submissions that passed validation with confidence scores"},
+          {"name": "flagged-records", "desc": "Submissions needing expert review or re-observation"},
+          {"name": "volunteer-feedback", "desc": "Per-volunteer accuracy scores and personalized improvement tips"}
+        ],
+        "process": [
+          "Run automated validation rules on all incoming submissions",
+          "Route records that pass automated checks through community consensus (multiple IDs)",
+          "Escalate records without consensus to the expert review panel",
+          "Score each volunteer's accuracy rate based on agreement with validated records",
+          "Send personalized feedback to volunteers with common errors and tips"
+        ],
+        "tags": ["citizen-science", "validation", "quality-control"]
+      },
+      {
+        "flow_name": "data-aggregation-pipeline",
+        "description": "Aggregate validated citizen science data into analysis-ready datasets with spatial and temporal summaries.",
+        "inputs": [
+          {"name": "validated-dataset", "desc": "Quality-controlled citizen science observations"},
+          {"name": "spatial-grid", "desc": "Grid cells, administrative boundaries, or habitat polygons for spatial aggregation"},
+          {"name": "temporal-bins", "desc": "Time intervals for aggregation (daily, weekly, seasonal, annual)"}
+        ],
+        "outputs": [
+          {"name": "aggregated-data", "desc": "Spatially and temporally binned summary statistics"},
+          {"name": "effort-correction", "desc": "Observation counts normalized by sampling effort per grid cell and time period"},
+          {"name": "metadata-record", "desc": "Dataset documentation following metadata standards (EML, Dublin Core)"}
+        ],
+        "process": [
+          "Assign each observation to its spatial grid cell and temporal bin",
+          "Calculate summary statistics (count, mean, proportion) per cell per time period",
+          "Estimate and correct for sampling effort bias across the study domain",
+          "Flag cells with insufficient observations for reliable estimates",
+          "Generate metadata documentation for the aggregated dataset"
+        ],
+        "tags": ["citizen-science", "data-management", "aggregation"]
+      },
+      {
+        "flow_name": "results-communicator",
+        "description": "Communicate citizen science results back to volunteers and the public with accessible summaries, interactive maps, and acknowledgments.",
+        "inputs": [
+          {"name": "aggregated-data", "desc": "Analysis results from the aggregation step"},
+          {"name": "volunteer-list", "desc": "Participating volunteers with contribution counts"},
+          {"name": "audience-targets", "desc": "Volunteers, general public, policymakers, or scientific community"}
+        ],
+        "outputs": [
+          {"name": "public-summary", "desc": "Plain-language summary of key findings with visualizations"},
+          {"name": "interactive-map", "desc": "Web map showing observations and results that volunteers can explore"},
+          {"name": "acknowledgment-list", "desc": "Contributor acknowledgments formatted for publication and website display"}
+        ],
+        "process": [
+          "Write a plain-language summary aimed at the volunteer reading level",
+          "Create visualizations (maps, charts, infographics) showing major findings",
+          "Build or update the project website and interactive map with current results",
+          "Send personalized thank-you messages to volunteers with their individual contribution stats",
+          "Prepare contributor acknowledgment lists for publications and reports"
+        ],
+        "tags": ["citizen-science", "communication", "outreach"]
+      }
+    ]
+  },
+  {
+    "chain_name": "replication-study",
+    "description": "Replicate a published scientific study: extract the original protocol, critique the methodology, design the replication with pre-registration, collect data, compare effect sizes, and write the replication report.",
+    "domain": "science",
+    "tags": ["science", "replication", "open-science", "methodology"],
+    "steps": [
+      {
+        "flow_name": "original-protocol-extractor",
+        "description": "Extract the complete experimental protocol from a published paper, noting any ambiguities, missing details, or unreported decisions.",
+        "inputs": [
+          {"name": "target-paper", "desc": "Citation and full text of the study to be replicated"},
+          {"name": "supplementary-materials", "desc": "Any supplementary files, data, or code from the original study"},
+          {"name": "author-contact", "desc": "Correspondence with original authors if clarifications are needed"}
+        ],
+        "outputs": [
+          {"name": "extracted-protocol", "desc": "Step-by-step protocol as described in the paper with section references"},
+          {"name": "ambiguity-log", "desc": "List of unclear or missing procedural details that require decisions"},
+          {"name": "materials-list", "desc": "All materials, instruments, software, and stimuli used in the original study"}
+        ],
+        "process": [
+          "Read the methods section line by line and extract each procedural step",
+          "Cross-reference with supplementary materials for additional procedural detail",
+          "Document every point where the methods description is ambiguous or incomplete",
+          "Contact original authors to resolve critical ambiguities if possible",
+          "Compile the complete materials and equipment list with model numbers and versions"
+        ],
+        "tags": ["replication", "protocol", "methods"]
+      },
+      {
+        "flow_name": "methodological-critic",
+        "description": "Critically evaluate the original study's methodology for threats to internal and external validity, statistical issues, and potential confounds.",
+        "inputs": [
+          {"name": "extracted-protocol", "desc": "Complete protocol extracted from the original paper"},
+          {"name": "target-paper", "desc": "Full text including results and discussion"},
+          {"name": "related-replications", "desc": "Any prior replication attempts or commentaries on this study"}
+        ],
+        "outputs": [
+          {"name": "validity-assessment", "desc": "Identified threats to internal and external validity"},
+          {"name": "statistical-critique", "desc": "Assessment of sample size, effect size, analytical choices, and p-value patterns"},
+          {"name": "replication-risk-factors", "desc": "Factors that may make replication succeed or fail (hidden moderators, context dependence)"}
+        ],
+        "process": [
+          "Assess internal validity: randomization, blinding, confound control, attrition",
+          "Evaluate statistical practices: sample size justification, multiple comparisons, reporting completeness",
+          "Check for signs of flexibility in analysis (many dependent variables, subgroup analyses)",
+          "Review prior replications or failures for this finding or similar effects",
+          "Identify context-dependent factors that might not transfer to the replication setting"
+        ],
+        "tags": ["replication", "methodology", "critique"]
+      },
+      {
+        "flow_name": "replication-designer",
+        "description": "Design the replication study with pre-registration, specifying exact procedures, sample size based on original effect, and decision criteria.",
+        "inputs": [
+          {"name": "extracted-protocol", "desc": "Original protocol with ambiguities noted"},
+          {"name": "validity-assessment", "desc": "Identified methodological concerns from the critique"},
+          {"name": "replication-type", "desc": "Direct (exact), close (minor adaptations), or conceptual replication"}
+        ],
+        "outputs": [
+          {"name": "replication-protocol", "desc": "Complete protocol for the replication with all decisions documented"},
+          {"name": "pre-registration", "desc": "Pre-registration document for OSF or equivalent registry"},
+          {"name": "power-analysis", "desc": "Sample size calculation using the original effect size with safeguard power"}
+        ],
+        "process": [
+          "Resolve each ambiguity in the original protocol with a documented decision and justification",
+          "Calculate required sample size using the original effect size at 95% power (safeguard approach)",
+          "Write the pre-registration specifying hypotheses, methods, and analysis plan",
+          "Define replication success criteria (significance, effect size within CI, equivalence test)",
+          "Submit pre-registration to OSF before any data collection"
+        ],
+        "tags": ["replication", "pre-registration", "study-design"]
+      },
+      {
+        "flow_name": "replication-data-collector",
+        "description": "Execute the replication protocol, collecting data according to the pre-registered plan with fidelity checks.",
+        "inputs": [
+          {"name": "replication-protocol", "desc": "Finalized protocol from the design step"},
+          {"name": "materials-list", "desc": "All required materials, instruments, and software"},
+          {"name": "participant-pool", "desc": "Available participants or samples meeting inclusion criteria"}
+        ],
+        "outputs": [
+          {"name": "replication-data", "desc": "Complete dataset from the replication study"},
+          {"name": "fidelity-log", "desc": "Documentation of protocol adherence and any deviations"},
+          {"name": "participant-demographics", "desc": "Demographic characteristics of the replication sample for comparison"}
+        ],
+        "process": [
+          "Set up all materials and calibrate instruments following the protocol exactly",
+          "Recruit and screen participants according to pre-registered inclusion criteria",
+          "Conduct the study following the protocol with a fidelity checklist for each session",
+          "Record any deviations from protocol with the reason and time of occurrence",
+          "Compile the complete dataset and verify data integrity before analysis"
+        ],
+        "tags": ["replication", "data-collection", "fidelity"]
+      },
+      {
+        "flow_name": "effect-size-comparator",
+        "description": "Compare the replication effect size to the original using confidence intervals, equivalence tests, and meta-analytic combination.",
+        "inputs": [
+          {"name": "replication-data", "desc": "Data from the replication study"},
+          {"name": "original-results", "desc": "Reported effect size, sample size, and test statistics from the original study"},
+          {"name": "pre-registration", "desc": "Pre-registered analysis plan and success criteria"}
+        ],
+        "outputs": [
+          {"name": "replication-results", "desc": "Effect size estimate with confidence interval from the replication"},
+          {"name": "comparison-analysis", "desc": "Side-by-side comparison, equivalence test, and prediction interval check"},
+          {"name": "meta-analytic-estimate", "desc": "Combined effect size from original and replication with heterogeneity assessment"}
+        ],
+        "process": [
+          "Run the pre-registered primary analysis on the replication data",
+          "Calculate the replication effect size and its 95% confidence interval",
+          "Test whether the replication effect falls within the original's 95% prediction interval",
+          "Run a TOST equivalence test to assess whether effects are statistically equivalent",
+          "Compute a fixed-effect meta-analytic combination of original and replication"
+        ],
+        "tags": ["replication", "statistics", "effect-size"]
+      },
+      {
+        "flow_name": "replication-reporter",
+        "description": "Write the replication report following Registered Report or standard format, documenting all outcomes regardless of direction.",
+        "inputs": [
+          {"name": "comparison-analysis", "desc": "Statistical comparison between original and replication"},
+          {"name": "fidelity-log", "desc": "Protocol adherence documentation"},
+          {"name": "pre-registration", "desc": "The pre-registered plan for comparison to actual analysis"}
+        ],
+        "outputs": [
+          {"name": "replication-report", "desc": "Complete manuscript following replication reporting standards"},
+          {"name": "data-and-code-archive", "desc": "Reproducible analysis archive (data, code, environment) for repository deposit"},
+          {"name": "comparison-table", "desc": "Summary table comparing original and replication on all key metrics"}
+        ],
+        "process": [
+          "Structure the report following the journal's Registered Report or replication guidelines",
+          "Present both original and replication results side by side with all pre-registered analyses",
+          "Discuss protocol fidelity, deviations, and their potential impact on results",
+          "Address whether the replication supports, partially supports, or fails to support the original",
+          "Prepare the data and code archive for open repository deposit"
+        ],
+        "tags": ["replication", "reporting", "open-science"]
+      }
+    ]
+  },
+  {
+    "chain_name": "grant-application-pipeline",
+    "description": "Write a research grant application: draft specific aims, frame significance, develop research strategy with preliminary data, build the timeline, justify the budget, prepare biosketches, and complete the submission checklist.",
+    "domain": "science",
+    "tags": ["science", "grants", "funding", "academic"],
+    "steps": [
+      {
+        "flow_name": "specific-aims-drafter",
+        "description": "Draft the specific aims page with a compelling opening, knowledge gap statement, central hypothesis, and numbered aims with expected outcomes.",
+        "inputs": [
+          {"name": "research-question", "desc": "The overarching question the proposed research addresses"},
+          {"name": "preliminary-data", "desc": "Key preliminary results that support feasibility"},
+          {"name": "funding-mechanism", "desc": "Grant type (R01, R21, NSF CAREER, etc.) with page and format requirements"}
+        ],
+        "outputs": [
+          {"name": "specific-aims-draft", "desc": "One-page specific aims with opening paragraph, gap, hypothesis, and 2-3 aims"},
+          {"name": "aim-milestones", "desc": "Measurable milestones and expected outcomes for each aim"},
+          {"name": "significance-hook", "desc": "The core significance statement connecting the work to a broader impact"}
+        ],
+        "process": [
+          "Write an opening paragraph establishing the importance of the research area",
+          "State the knowledge gap and what is unknown or unresolved",
+          "Present the central hypothesis and the rationale supporting it",
+          "Draft 2-3 specific aims with approach summaries and expected outcomes",
+          "End with a payoff statement describing the impact if all aims succeed"
+        ],
+        "tags": ["grants", "specific-aims", "writing"]
+      },
+      {
+        "flow_name": "significance-framer",
+        "description": "Write the significance and innovation sections showing why the work matters and what is novel about the approach.",
+        "inputs": [
+          {"name": "specific-aims-draft", "desc": "Aims page from the drafting step"},
+          {"name": "literature-review", "desc": "Key citations establishing the state of the field"},
+          {"name": "competing-approaches", "desc": "Existing approaches and their limitations that the proposal addresses"}
+        ],
+        "outputs": [
+          {"name": "significance-section", "desc": "Written significance section grounded in the literature and health/societal impact"},
+          {"name": "innovation-section", "desc": "Innovation section highlighting novel concepts, approaches, or technologies"},
+          {"name": "citation-list", "desc": "Organized reference list for the significance and innovation sections"}
+        ],
+        "process": [
+          "Establish the burden or scale of the problem being addressed",
+          "Review the current state of knowledge with key supporting citations",
+          "Identify the critical barrier or gap that the proposed work fills",
+          "Articulate what is innovative about the proposed approach compared to existing methods",
+          "Connect the expected outcomes to tangible impact on the field, health, or society"
+        ],
+        "tags": ["grants", "significance", "innovation"]
+      },
+      {
+        "flow_name": "research-strategy-writer",
+        "description": "Write the research strategy section with detailed methods for each aim, including experimental design, data analysis plans, and contingencies.",
+        "inputs": [
+          {"name": "specific-aims-draft", "desc": "Aims with approach summaries"},
+          {"name": "preliminary-data", "desc": "Figures and descriptions of preliminary results"},
+          {"name": "methods-expertise", "desc": "Available methods, equipment, and collaborator expertise"}
+        ],
+        "outputs": [
+          {"name": "research-strategy", "desc": "Complete research strategy section with sub-sections per aim"},
+          {"name": "preliminary-data-figures", "desc": "Formatted figures with legends showing key preliminary results"},
+          {"name": "rigor-and-reproducibility", "desc": "Section addressing scientific rigor, biological variables, and authentication"}
+        ],
+        "process": [
+          "Write the approach for each aim with rationale, methods, expected results, and interpretation",
+          "Incorporate preliminary data figures at points where they demonstrate feasibility",
+          "Include power analyses and sample size justifications for each experiment",
+          "Address potential pitfalls and alternative approaches for each aim",
+          "Write the rigor and reproducibility section per funder requirements"
+        ],
+        "tags": ["grants", "research-strategy", "methods"]
+      },
+      {
+        "flow_name": "grant-budget-justifier",
+        "description": "Build and justify the project budget with personnel effort, equipment, supplies, travel, and indirect costs aligned to the aims.",
+        "inputs": [
+          {"name": "research-strategy", "desc": "Approved research plan with methods and timeline"},
+          {"name": "institutional-rates", "desc": "Salary scales, fringe rates, and indirect cost rate agreement"},
+          {"name": "funding-limits", "desc": "Maximum budget, cost categories, and funder restrictions"}
+        ],
+        "outputs": [
+          {"name": "budget-table", "desc": "Year-by-year budget with personnel, equipment, supplies, travel, and indirect costs"},
+          {"name": "budget-justification", "desc": "Narrative justification explaining why each cost is necessary for the project"},
+          {"name": "subcontract-budgets", "desc": "Subaward budgets for collaborating institutions, if applicable"}
+        ],
+        "process": [
+          "List all personnel with percent effort, role, and salary basis per year",
+          "Itemize equipment needs (over $5K threshold) with vendor quotes",
+          "Estimate supplies by aim and year based on experimental plans",
+          "Justify travel for conferences, collaborator visits, and field work",
+          "Calculate indirect costs using the institutional rate and identify excluded categories"
+        ],
+        "tags": ["grants", "budget", "financial"]
+      },
+      {
+        "flow_name": "biosketch-preparer",
+        "description": "Prepare NIH-format or NSF-format biosketches for each investigator with positions, contributions, and synergistic activities.",
+        "inputs": [
+          {"name": "investigator-cvs", "desc": "Current CVs for PI and all co-investigators"},
+          {"name": "format-requirements", "desc": "Funder-specific biosketch format (NIH, NSF, DOE, etc.)"},
+          {"name": "project-relevance", "desc": "How each investigator's expertise connects to the proposed aims"}
+        ],
+        "outputs": [
+          {"name": "biosketches", "desc": "Formatted biosketches for each investigator meeting funder requirements"},
+          {"name": "contribution-statements", "desc": "Up to five contributions per investigator with citations"},
+          {"name": "training-record", "desc": "Relevant training and mentoring record for each investigator"}
+        ],
+        "process": [
+          "Extract relevant positions, education, and training from each CV",
+          "Select up to five contributions that demonstrate expertise relevant to the proposed work",
+          "Write personal statements connecting each investigator's background to their project role",
+          "List synergistic activities and broader impacts per funder format",
+          "Verify page limits and formatting against the most current funder template"
+        ],
+        "tags": ["grants", "biosketch", "cv"]
+      },
+      {
+        "flow_name": "grant-submission-checklist",
+        "description": "Verify all grant components are complete, formatted correctly, and ready for electronic submission.",
+        "inputs": [
+          {"name": "all-grant-sections", "desc": "Assembled specific aims, significance, strategy, budget, and biosketches"},
+          {"name": "submission-portal", "desc": "eRA Commons, Research.gov, or other electronic submission system"},
+          {"name": "institutional-requirements", "desc": "Internal deadline, routing forms, and institutional signatures needed"}
+        ],
+        "outputs": [
+          {"name": "submission-checklist", "desc": "Item-by-item verification of all required components with status"},
+          {"name": "formatting-audit", "desc": "Font, margin, page limit, and file format verification per funder rules"},
+          {"name": "submission-confirmation", "desc": "Confirmation number and timestamp from the submission portal"}
+        ],
+        "process": [
+          "Verify all required sections are present against the funding opportunity announcement checklist",
+          "Check formatting (font, margins, page limits) for every attachment",
+          "Confirm all personnel have active accounts in the submission portal",
+          "Route through institutional sponsored programs office by the internal deadline",
+          "Submit and save the confirmation receipt with the application tracking number"
+        ],
+        "tags": ["grants", "submission", "checklist"]
+      }
+    ]
+  },
+  {
+    "chain_name": "thesis-research-pipeline",
+    "description": "Complete a graduate thesis from topic selection through literature gap analysis, methodology design, data collection, results writing, discussion, and defense preparation.",
+    "domain": "science",
+    "tags": ["science", "thesis", "graduate", "academic"],
+    "steps": [
+      {
+        "flow_name": "topic-narrower",
+        "description": "Narrow a broad research interest into a specific, feasible thesis topic with a clear research question and scope boundary.",
+        "inputs": [
+          {"name": "broad-interest", "desc": "The general research area or phenomenon of interest"},
+          {"name": "advisor-guidance", "desc": "Advisor's suggested directions, constraints, and lab capabilities"},
+          {"name": "degree-requirements", "desc": "Scope expectations for masters vs doctoral thesis"}
+        ],
+        "outputs": [
+          {"name": "thesis-topic", "desc": "Specific thesis topic statement with research question"},
+          {"name": "scope-boundary", "desc": "Explicit statement of what is included and excluded from the thesis"},
+          {"name": "feasibility-assessment", "desc": "Assessment of data availability, methods access, timeline fit, and advisor expertise"}
+        ],
+        "process": [
+          "List subtopics within the broad area and rate each for novelty, feasibility, and interest",
+          "Read 10-15 recent papers in the top candidates to gauge the state of knowledge",
+          "Draft candidate research questions and test each for specificity and answerability",
+          "Assess feasibility against available time, data, methods, and funding",
+          "Discuss the shortlist with the advisor and converge on the final topic"
+        ],
+        "tags": ["thesis", "topic-selection", "academic"]
+      },
+      {
+        "flow_name": "literature-gap-analyzer",
+        "description": "Systematically review the literature to identify what is known, where gaps exist, and how the proposed thesis fills a specific gap.",
+        "inputs": [
+          {"name": "thesis-topic", "desc": "Specific topic and research question from the narrowing step"},
+          {"name": "search-databases", "desc": "Databases to search (PubMed, Web of Science, Scopus, Google Scholar, etc.)"},
+          {"name": "inclusion-criteria", "desc": "Date range, language, study type, and relevance filters"}
+        ],
+        "outputs": [
+          {"name": "literature-synthesis", "desc": "Organized synthesis of what is known, grouped by theme or chronology"},
+          {"name": "gap-statement", "desc": "Specific statement of the gap the thesis addresses with supporting evidence"},
+          {"name": "reference-library", "desc": "Organized citation database with annotations for each source"}
+        ],
+        "process": [
+          "Develop search strings from the research question keywords and synonyms",
+          "Run searches across selected databases and deduplicate results",
+          "Screen titles and abstracts against inclusion criteria",
+          "Read and annotate included papers, extracting methods, findings, and limitations",
+          "Synthesize findings into themes and identify the specific gap the thesis will address"
+        ],
+        "tags": ["thesis", "literature-review", "gap-analysis"]
+      },
+      {
+        "flow_name": "methodology-chapter-writer",
+        "description": "Write the methodology chapter specifying research design, data sources, measurement instruments, analytical methods, and ethical considerations.",
+        "inputs": [
+          {"name": "research-question", "desc": "The specific research question and any sub-questions"},
+          {"name": "gap-statement", "desc": "The literature gap being addressed"},
+          {"name": "available-resources", "desc": "Lab equipment, datasets, software, and budget available"}
+        ],
+        "outputs": [
+          {"name": "methodology-chapter", "desc": "Complete methods chapter draft with all sub-sections"},
+          {"name": "analysis-plan", "desc": "Pre-specified statistical or analytical plan with decision rules"},
+          {"name": "ethics-application", "desc": "IRB or ethics committee application if human or animal subjects are involved"}
+        ],
+        "process": [
+          "Select and justify the research design (experimental, observational, mixed, etc.)",
+          "Describe data sources, sampling strategy, and measurement instruments",
+          "Specify the analytical methods with software, parameters, and decision criteria",
+          "Address validity threats and how the design mitigates them",
+          "Draft the ethics application if required by the institutional review board"
+        ],
+        "tags": ["thesis", "methodology", "research-design"]
+      },
+      {
+        "flow_name": "thesis-data-collector",
+        "description": "Execute data collection following the approved methodology, with progress tracking, quality checks, and secure storage.",
+        "inputs": [
+          {"name": "methodology-chapter", "desc": "Approved methods specifying what data to collect and how"},
+          {"name": "ethics-approval", "desc": "IRB or ethics approval documentation if applicable"},
+          {"name": "data-management-plan", "desc": "Storage, backup, and security plan for collected data"}
+        ],
+        "outputs": [
+          {"name": "raw-dataset", "desc": "Complete raw data in structured format with codebook"},
+          {"name": "collection-log", "desc": "Chronological log of data collection activities, issues, and deviations"},
+          {"name": "quality-summary", "desc": "Data completeness, missing values, and quality check results"}
+        ],
+        "process": [
+          "Set up data collection instruments, databases, and storage following the management plan",
+          "Collect data following the approved protocol with regular progress logging",
+          "Run quality checks at predetermined intervals to catch problems early",
+          "Document any deviations from the protocol with justification",
+          "Compile the final dataset with a codebook explaining all variables"
+        ],
+        "tags": ["thesis", "data-collection", "fieldwork"]
+      },
+      {
+        "flow_name": "thesis-results-writer",
+        "description": "Analyze the collected data and write the results chapter with tables, figures, and statistical output organized by research question.",
+        "inputs": [
+          {"name": "raw-dataset", "desc": "Clean dataset ready for analysis"},
+          {"name": "analysis-plan", "desc": "Pre-specified analytical plan from the methodology chapter"},
+          {"name": "research-question", "desc": "Research questions and sub-questions structuring the results"}
+        ],
+        "outputs": [
+          {"name": "results-chapter", "desc": "Complete results chapter with narrative, tables, and figures"},
+          {"name": "statistical-output", "desc": "Complete statistical output files for appendix or supplementary materials"},
+          {"name": "analysis-code", "desc": "Reproducible analysis scripts with comments"}
+        ],
+        "process": [
+          "Run descriptive statistics and assess distributional assumptions",
+          "Execute the pre-specified analyses for each research question in order",
+          "Create tables and figures that communicate each finding clearly",
+          "Write the results narrative reporting test statistics, effect sizes, and confidence intervals",
+          "Document all analysis code for reproducibility"
+        ],
+        "tags": ["thesis", "results", "analysis"]
+      },
+      {
+        "flow_name": "thesis-discussion-writer",
+        "description": "Write the discussion and conclusion chapters interpreting results in the context of literature, acknowledging limitations, and proposing future research.",
+        "inputs": [
+          {"name": "results-chapter", "desc": "Completed results from the analysis step"},
+          {"name": "literature-synthesis", "desc": "Literature review for contextualizing findings"},
+          {"name": "gap-statement", "desc": "The original gap statement to evaluate whether it was addressed"}
+        ],
+        "outputs": [
+          {"name": "discussion-chapter", "desc": "Discussion interpreting each finding relative to prior literature"},
+          {"name": "limitations-section", "desc": "Honest assessment of study limitations and their impact on conclusions"},
+          {"name": "conclusion-and-future", "desc": "Concluding summary and specific directions for future research"}
+        ],
+        "process": [
+          "Restate each key finding and interpret it in the context of existing literature",
+          "Explain unexpected results and generate possible explanations",
+          "Discuss implications for theory, practice, or policy",
+          "Acknowledge limitations and assess how they affect the conclusions",
+          "Propose specific future research questions arising from the findings"
+        ],
+        "tags": ["thesis", "discussion", "conclusions"]
+      },
+      {
+        "flow_name": "defense-prep-coach",
+        "description": "Prepare for the thesis defense with presentation structure, anticipated questions, practice sessions, and procedural logistics.",
+        "inputs": [
+          {"name": "complete-thesis", "desc": "Final thesis document submitted to the committee"},
+          {"name": "committee-members", "desc": "Names and expertise areas of each committee member"},
+          {"name": "defense-format", "desc": "Presentation length, Q&A format, and institutional procedures"}
+        ],
+        "outputs": [
+          {"name": "defense-slides", "desc": "Structured presentation covering introduction through conclusions"},
+          {"name": "anticipated-questions", "desc": "List of likely questions mapped to committee member expertise"},
+          {"name": "logistics-checklist", "desc": "Room booking, equipment, recording, and post-defense paperwork"}
+        ],
+        "process": [
+          "Structure the presentation: motivation, gap, methods, key results, implications",
+          "Create clear slides with one message per slide and minimal text",
+          "Anticipate questions from each committee member based on their expertise",
+          "Practice the presentation three times, adjusting for time and clarity",
+          "Confirm all logistics (room, projector, remote access, forms, signatures)"
+        ],
+        "tags": ["thesis", "defense", "presentation"]
+      }
+    ]
+  },
+  {
+    "chain_name": "lab-startup-protocol",
+    "description": "Set up a new research laboratory: plan equipment procurement, design safety protocols, write standard operating procedures, build a training curriculum, plan the first experiment, and establish quality management.",
+    "domain": "science",
+    "tags": ["science", "laboratory", "setup", "management"],
+    "steps": [
+      {
+        "flow_name": "equipment-procurement-planner",
+        "description": "Build a prioritized equipment procurement list with specifications, vendor comparison, installation requirements, and phased purchasing plan.",
+        "inputs": [
+          {"name": "research-program", "desc": "Planned research directions and methods requiring equipment"},
+          {"name": "startup-budget", "desc": "Available startup funds and any matching or shared equipment programs"},
+          {"name": "lab-space", "desc": "Physical lab space dimensions, utilities, and infrastructure"}
+        ],
+        "outputs": [
+          {"name": "equipment-list", "desc": "Prioritized list with specifications, estimated costs, and vendors"},
+          {"name": "procurement-timeline", "desc": "Phased purchasing plan aligned with budget availability and lead times"},
+          {"name": "installation-requirements", "desc": "Power, ventilation, water, and space requirements for each major item"}
+        ],
+        "process": [
+          "List all equipment needed for planned research, categorized by priority (essential, important, nice-to-have)",
+          "Research specifications and get quotes from at least two vendors per major item",
+          "Identify shared or core facility equipment that does not need purchasing",
+          "Create a phased purchasing plan matching the budget release schedule",
+          "Document installation requirements for facilities planning"
+        ],
+        "tags": ["lab-management", "procurement", "equipment"]
+      },
+      {
+        "flow_name": "lab-safety-protocol-designer",
+        "description": "Design lab safety protocols covering chemical hygiene, biological safety, radiation (if applicable), emergency procedures, and PPE requirements.",
+        "inputs": [
+          {"name": "hazard-inventory", "desc": "List of chemicals, biological agents, radiation sources, and physical hazards"},
+          {"name": "regulatory-requirements", "desc": "OSHA, EPA, institutional EHS, and biosafety committee requirements"},
+          {"name": "lab-layout", "desc": "Floor plan showing benches, fume hoods, exits, safety equipment locations"}
+        ],
+        "outputs": [
+          {"name": "safety-manual", "desc": "Complete lab safety manual covering all identified hazard categories"},
+          {"name": "emergency-procedures", "desc": "Step-by-step emergency response for fire, spill, exposure, and medical events"},
+          {"name": "ppe-matrix", "desc": "PPE requirements mapped to each procedure and hazard class"}
+        ],
+        "process": [
+          "Inventory all hazards by category (chemical, biological, physical, radiological)",
+          "Write handling, storage, and disposal procedures for each hazard class",
+          "Design emergency response procedures for each credible accident scenario",
+          "Create the PPE matrix mapping protective equipment to specific procedures",
+          "Submit protocols for institutional EHS review and approval"
+        ],
+        "tags": ["lab-management", "safety", "compliance"]
+      },
+      {
+        "flow_name": "sop-writer",
+        "description": "Write standard operating procedures for core lab methods with step-by-step instructions, quality criteria, and troubleshooting guides.",
+        "inputs": [
+          {"name": "core-methods", "desc": "List of the primary analytical and experimental methods the lab will use"},
+          {"name": "instrument-manuals", "desc": "Manufacturer documentation for key instruments"},
+          {"name": "quality-standards", "desc": "Precision, accuracy, and reproducibility targets for each method"}
+        ],
+        "outputs": [
+          {"name": "sop-collection", "desc": "Complete set of SOPs for each core method with version control"},
+          {"name": "quality-criteria", "desc": "Acceptance criteria for each SOP including control chart limits"},
+          {"name": "troubleshooting-guides", "desc": "Decision trees for common problems encountered in each method"}
+        ],
+        "process": [
+          "Draft each SOP with purpose, scope, materials, procedure, and quality criteria sections",
+          "Include instrument startup, calibration, and shutdown in each relevant SOP",
+          "Write troubleshooting decision trees based on known failure modes",
+          "Have a second person test-run each SOP and incorporate their feedback",
+          "Establish version control and review schedule for each SOP"
+        ],
+        "tags": ["lab-management", "sop", "quality"]
+      },
+      {
+        "flow_name": "lab-training-curriculum",
+        "description": "Build a training program for new lab members covering safety, equipment operation, core methods, data management, and lab culture.",
+        "inputs": [
+          {"name": "safety-manual", "desc": "Lab safety protocols from the safety design step"},
+          {"name": "sop-collection", "desc": "Standard operating procedures for core methods"},
+          {"name": "team-roles", "desc": "Expected roles (graduate student, postdoc, technician, undergraduate) and their responsibilities"}
+        ],
+        "outputs": [
+          {"name": "training-plan", "desc": "Sequenced training modules with estimated hours per module"},
+          {"name": "competency-assessments", "desc": "Practical assessments demonstrating proficiency in each core skill"},
+          {"name": "onboarding-checklist", "desc": "Day-by-day onboarding checklist for the first two weeks"}
+        ],
+        "process": [
+          "Sequence training modules from safety orientation through independent method execution",
+          "Create demonstrations and hands-on exercises for each core method",
+          "Design competency assessments where trainees perform procedures under observation",
+          "Write the two-week onboarding checklist covering accounts, access, safety, and first methods",
+          "Set expectations for ongoing training and periodic competency re-verification"
+        ],
+        "tags": ["lab-management", "training", "onboarding"]
+      },
+      {
+        "flow_name": "first-experiment-planner",
+        "description": "Plan the lab's first experiment to validate equipment, methods, and team readiness using a known system before tackling novel questions.",
+        "inputs": [
+          {"name": "research-program", "desc": "Primary research questions the lab will address"},
+          {"name": "sop-collection", "desc": "Validated SOPs for the methods involved"},
+          {"name": "benchmark-data", "desc": "Published results on a well-characterized system for comparison"}
+        ],
+        "outputs": [
+          {"name": "experiment-protocol", "desc": "Detailed protocol for the validation experiment"},
+          {"name": "expected-results", "desc": "Quantitative benchmarks the first experiment should reproduce"},
+          {"name": "go-no-go-criteria", "desc": "Criteria for declaring the lab ready to proceed to novel experiments"}
+        ],
+        "process": [
+          "Select a well-characterized system where expected results are published",
+          "Write the experiment protocol using the lab's SOPs",
+          "Define quantitative success criteria based on published benchmarks",
+          "Run the experiment with the full team following normal procedures",
+          "Compare results to benchmarks and document any discrepancies for SOP revision"
+        ],
+        "tags": ["lab-management", "validation", "experiment"]
+      },
+      {
+        "flow_name": "lab-quality-management",
+        "description": "Establish a quality management system with control charts, proficiency testing, equipment logs, and regular audit procedures.",
+        "inputs": [
+          {"name": "sop-collection", "desc": "SOPs with embedded quality criteria"},
+          {"name": "quality-criteria", "desc": "Acceptance limits for each method"},
+          {"name": "regulatory-requirements", "desc": "Any accreditation or funding agency quality requirements"}
+        ],
+        "outputs": [
+          {"name": "qms-document", "desc": "Quality management system manual with policies and procedures"},
+          {"name": "control-charts", "desc": "Initial control chart templates for each monitored parameter"},
+          {"name": "audit-schedule", "desc": "Internal audit calendar with assigned responsibilities"}
+        ],
+        "process": [
+          "Define quality policies covering data integrity, method validation, and corrective actions",
+          "Set up control chart templates for each analytical method with warning and action limits",
+          "Schedule proficiency testing or interlaboratory comparisons at regular intervals",
+          "Create equipment maintenance and calibration log templates",
+          "Design the internal audit process with quarterly self-assessment and annual review"
+        ],
+        "tags": ["lab-management", "quality", "qms"]
+      }
+    ]
+  }
+]

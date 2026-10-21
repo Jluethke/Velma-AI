@@ -5,24 +5,25 @@ The master life management skill. Continuously monitors all life domains (health
 ## Execution Pattern: ORPA Loop
 
 ## Inputs
-- life_domains: array -- The user's active life domains with descriptions and importance weights. Default domains: health, career, finances, relationships, learning, projects/hobbies.
-- current_state: object -- Self-assessment or data-driven snapshot of each domain (what's going well, what's struggling, recent events)
-- goals: object -- Per-domain goals with timeframes (e.g., health: "lose 10 lbs in 3 months", career: "get promoted this year")
-- schedule_constraints: object -- Non-negotiable time commitments (work hours, family obligations, commute, sleep requirements)
-- active_skills: array -- Sub-skills currently available for orchestration (daily-planner, habit-builder, workout-planner, etc.)
+- `life_domains`: array -- The user's active life domains with descriptions and importance weights. Default domains: health, career, finances, relationships, learning, projects/hobbies.
+- `current_state`: object -- Self-assessment or data-driven snapshot of each domain (what's going well, what's struggling, recent events)
+- `goals`: object -- Per-domain goals with timeframes (e.g., health: "lose 10 lbs in 3 months", career: "get promoted this year")
+- `schedule_constraints`: object -- Non-negotiable time commitments (work hours, family obligations, commute, sleep requirements)
+- `active_skills`: array -- Sub-skills currently available for orchestration (daily-planner, habit-builder, workout-planner, etc.)
 
 ## Outputs
-- domain_scores: object -- Per-domain score (1-10) with trend direction, evidence, and composite life score
-- weekly_plan: object -- Balanced weekly plan with time allocation per domain and micro-goals
-- daily_checkins: object -- Daily check-in template with domain-relevant prompts
-- monthly_review: object -- Monthly assessment with trend analysis, wins, losses, and strategy adjustments
-- rebalancing_plan: object -- Specific actions to bring neglected domains above minimum thresholds
+- `domain_scores`: object -- Per-domain score (1-10) with trend direction, evidence, and composite life score
+- `weekly_plan`: object -- Balanced weekly plan with time allocation per domain and micro-goals
+- `daily_checkins`: object -- Daily check-in template with domain-relevant prompts
+- `monthly_review`: object -- Monthly assessment with trend analysis, wins, losses, and strategy adjustments
+- `rebalancing_plan`: object -- Specific actions to bring neglected domains above minimum thresholds
 
 ## Execution
 
 ### OBSERVE: Scan All Life Domains
-**Entry criteria:** At least 3 life domains defined with some current state information.
-**Actions:**
+### Entry Criteria
+At least 3 life domains defined with some current state information.
+### Actions
 1. Define and validate the domain map. Default domains with descriptions:
    - **Health:** Physical fitness, nutrition, sleep, energy, mental health, stress management
    - **Career:** Job performance, skill development, professional relationships, income trajectory, satisfaction
@@ -53,12 +54,15 @@ The master life management skill. Continuously monitors all life domains (health
    - Correlation: does domain X suffer when domain Y improves? (zero-sum pattern)
    - Seasonal patterns: do certain domains decline at predictable times?
 
-**Output:** Domain scorecard (scores, trends, balance ratio), pattern detection results, sub-skill data integration.
-**Quality gate:** Every domain has a score (1-10) and a trend direction (up/stable/down). Balance ratio is calculated. Any domain below floor is flagged. Any domain absorbing >40% of time is flagged.
+### Output
+Domain scorecard (scores, trends, balance ratio), pattern detection results, sub-skill data integration.
+### Quality Gate
+Every domain has a score (1-10) and a trend direction (up/stable/down). Balance ratio is calculated. Any domain below floor is flagged. Any domain absorbing >40% of time is flagged.
 
 ### REASON: Diagnose and Prioritize
-**Entry criteria:** Domain scorecard complete.
-**Actions:**
+### Entry Criteria
+Domain scorecard complete.
+### Actions
 1. Classify each domain by status:
    - **Critical (score 1-3):** Requires immediate attention. This domain is in crisis or has been neglected to the point of consequences.
    - **Below par (score 4-5):** Needs investment. Not crisis but declining or unsatisfying.
@@ -80,12 +84,15 @@ The master life management skill. Continuously monitors all life domains (health
    - General time management issues -> activate daily-planner
    - Trying to build new behaviors -> activate habit-builder
 
-**Output:** Domain status classifications, floor violations, diminishing returns analysis, domain interaction map, sub-skill activation recommendations.
-**Quality gate:** Every domain has a status classification. Floor violations are prioritized. At least one domain is identified as the highest-leverage intervention. Sub-skill activations are specific (not "use the planner" but "activate workout-planner with goal: 3x/week strength training, 45 min sessions").
+### Output
+Domain status classifications, floor violations, diminishing returns analysis, domain interaction map, sub-skill activation recommendations.
+### Quality Gate
+Every domain has a status classification. Floor violations are prioritized. At least one domain is identified as the highest-leverage intervention. Sub-skill activations are specific (not "use the planner" but "activate workout-planner with goal: 3x/week strength training, 45 min sessions").
 
 ### PLAN: Generate Balanced Weekly Plan
-**Entry criteria:** Domain priorities and sub-skill activations identified.
-**Actions:**
+### Entry Criteria
+Domain priorities and sub-skill activations identified.
+### Actions
 1. Allocate discretionary time across domains:
    - Calculate total discretionary hours per week: total waking hours - work - fixed commitments - basic maintenance (cooking, cleaning, commuting).
    - Assign minimum time blocks per domain:
@@ -111,12 +118,15 @@ The master life management skill. Continuously monitors all life domains (health
    - Career gets daily attention (it's typically the largest time commitment). Other domains rotate.
 5. Schedule the weekly review: 30 min on Sunday. Non-negotiable. This is the ORPA loop re-entry point.
 
-**Output:** Weekly plan with daily domain priorities, micro-goals per domain, time allocation, sub-skill integration map, review schedule.
-**Quality gate:** Every active domain has at least one micro-goal. Time allocation sums to available discretionary hours. No domain below floor is scheduled for less than 15% of discretionary time. Weekly review is scheduled.
+### Output
+Weekly plan with daily domain priorities, micro-goals per domain, time allocation, sub-skill integration map, review schedule.
+### Quality Gate
+Every active domain has at least one micro-goal. Time allocation sums to available discretionary hours. No domain below floor is scheduled for less than 15% of discretionary time. Weekly review is scheduled.
 
 ### ACT: Execute, Check In, and Review
-**Entry criteria:** Weekly plan generated.
-**Actions:**
+### Entry Criteria
+Weekly plan generated.
+### Actions
 1. Produce the daily check-in template (takes <3 minutes):
    - "Today's domain priorities: [domain 1], [domain 2]"
    - "Micro-goal progress: [list with checkboxes]"
@@ -141,8 +151,10 @@ The master life management skill. Continuously monitors all life domains (health
    - Sub-skill evaluation: are the active skills helping? Should any be changed?
 4. Re-enter OBSERVE: the weekly review naturally triggers the next ORPA cycle with updated data.
 
-**Output:** Daily check-in template, weekly review template, monthly review template, or (on loop re-entry) updated domain scores and adjusted weekly plan.
-**Quality gate:** Daily check-in takes <3 minutes. Weekly review covers all active domains. Monthly review includes trend analysis (not just point-in-time scores). Re-entry to OBSERVE has fresh data from the review.
+### Output
+Daily check-in template, weekly review template, monthly review template, or (on loop re-entry) updated domain scores and adjusted weekly plan.
+### Quality Gate
+Daily check-in takes <3 minutes. Weekly review covers all active domains. Monthly review includes trend analysis (not just point-in-time scores). Re-entry to OBSERVE has fresh data from the review.
 
 ## Exit Criteria
 Life OS is a continuous loop -- it never fully exits while active. Each ORPA cycle completes when: (1) domain scores are updated, (2) a balanced weekly plan is produced, (3) daily check-in and review templates are delivered. The user may pause Life OS at any time; it resumes from the last known domain scores.
@@ -182,7 +194,7 @@ Going from 3 to 6 in any domain produces massive life satisfaction improvement. 
 ### The Compound Effect of Small Daily Actions
 - 1% improvement per day = 37x improvement over a year (compound growth)
 - 1% decline per day = nearly zero after a year
-- The micro-goals in Life OS harness this: small, daily actions in each domain compound into transformative change over months.
+- The micro-goals in Life OS harness this: small, daily actions in each domain compound into significant change over months.
 
 ### Time Allocation Benchmarks (Discretionary Hours)
 For a typical working adult with ~35 hours/week of discretionary time (after work, sleep, maintenance):
@@ -228,3 +240,7 @@ Life OS maintains a persistent life dashboard tracking:
 - Monthly composite life satisfaction score
 - Sub-skill metrics aggregated (workout adherence, nutrition compliance, habit streaks, learning progress)
 - Annual pattern data (which months/seasons show which domain declines)
+
+---
+
+Copyright 2024-present The Wayfinder Trust. All rights reserved.

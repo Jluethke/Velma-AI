@@ -1,0 +1,1232 @@
+[
+  {
+    "chain_name": "spectral-analysis-pipeline",
+    "description": "Decompose a signal into its frequency components: window and transform the data, identify spectral peaks, estimate power spectral density, filter target bands, and validate against the time-domain signal.",
+    "domain": "science",
+    "tags": ["science", "research", "process", "signal-processing"],
+    "steps": [
+      {
+        "flow_name": "signal-preprocessor",
+        "description": "Prepare the raw signal for spectral analysis: check sampling rate, detrend, handle gaps, and apply a window function.",
+        "inputs": [
+          {"name": "raw-signal", "desc": "The time-domain signal with timestamps and values"},
+          {"name": "sampling-metadata", "desc": "Sampling rate, units, known gaps, and recording conditions"}
+        ],
+        "outputs": [
+          {"name": "windowed-signal", "desc": "Preprocessed signal ready for transform"},
+          {"name": "preprocessing-log", "desc": "Steps taken: detrending method, window type, gap handling"}
+        ],
+        "process": [
+          "Verify the sampling rate matches metadata and check for irregular spacing.",
+          "Remove any DC offset and linear trend from the signal.",
+          "Handle gaps by interpolation or segmentation depending on gap length.",
+          "Apply a window function (Hanning, Hamming, or Blackman) to reduce spectral leakage."
+        ],
+        "tags": ["science", "process", "signal"]
+      },
+      {
+        "flow_name": "fourier-transformer",
+        "description": "Compute the frequency-domain representation using FFT or related transform, producing amplitude and phase spectra.",
+        "inputs": [
+          {"name": "windowed-signal", "desc": "The preprocessed time-domain signal"},
+          {"name": "transform-parameters", "desc": "FFT size, overlap, zero-padding, and transform type"}
+        ],
+        "outputs": [
+          {"name": "amplitude-spectrum", "desc": "Magnitude at each frequency bin"},
+          {"name": "phase-spectrum", "desc": "Phase angle at each frequency bin"}
+        ],
+        "process": [
+          "Choose the FFT size (next power of 2 or zero-padded).",
+          "Compute the discrete Fourier transform of the windowed signal.",
+          "Convert complex output to amplitude (magnitude) and phase.",
+          "Scale the amplitude spectrum to physical units (e.g., amplitude spectral density)."
+        ],
+        "tags": ["science", "process", "fft"]
+      },
+      {
+        "flow_name": "spectral-peak-finder",
+        "description": "Identify significant peaks in the amplitude spectrum: locate frequency, amplitude, bandwidth, and signal-to-noise ratio of each peak.",
+        "inputs": [
+          {"name": "amplitude-spectrum", "desc": "Magnitude at each frequency bin"},
+          {"name": "noise-floor-estimate", "desc": "Expected background noise level or method to estimate it"}
+        ],
+        "outputs": [
+          {"name": "peak-table", "desc": "Each peak with frequency, amplitude, bandwidth, and SNR"},
+          {"name": "noise-floor", "desc": "The estimated noise floor used for SNR calculation"}
+        ],
+        "process": [
+          "Estimate the noise floor using a moving median or percentile method.",
+          "Find local maxima that exceed the noise floor by a specified threshold.",
+          "For each peak, measure the center frequency, amplitude, and 3dB bandwidth.",
+          "Compute the signal-to-noise ratio for each peak."
+        ],
+        "tags": ["science", "process", "peak-detection"]
+      },
+      {
+        "flow_name": "power-density-estimator",
+        "description": "Estimate the power spectral density using Welch's method or a multitaper approach for a smooth, unbiased estimate.",
+        "inputs": [
+          {"name": "windowed-signal", "desc": "The preprocessed signal"},
+          {"name": "estimation-parameters", "desc": "Segment length, overlap fraction, taper count"}
+        ],
+        "outputs": [
+          {"name": "psd-estimate", "desc": "Power spectral density with frequency axis and confidence bounds"},
+          {"name": "spectral-resolution", "desc": "Frequency resolution and bandwidth of the estimate"}
+        ],
+        "process": [
+          "Divide the signal into overlapping segments.",
+          "Compute the periodogram of each segment (or apply multiple tapers).",
+          "Average across segments to reduce variance.",
+          "Compute confidence intervals based on the number of independent segments."
+        ],
+        "tags": ["science", "process", "psd"]
+      },
+      {
+        "flow_name": "band-filter-extractor",
+        "description": "Design and apply a bandpass filter to isolate a target frequency band, then convert back to time domain.",
+        "inputs": [
+          {"name": "windowed-signal", "desc": "The preprocessed signal"},
+          {"name": "target-band", "desc": "The frequency range to extract (low cutoff, high cutoff)"}
+        ],
+        "outputs": [
+          {"name": "filtered-signal", "desc": "Time-domain signal containing only the target band"},
+          {"name": "filter-specification", "desc": "Filter type, order, cutoff frequencies, and rolloff"}
+        ],
+        "process": [
+          "Design a bandpass filter with the specified cutoff frequencies.",
+          "Choose filter type (Butterworth, Chebyshev, or FIR) based on rolloff needs.",
+          "Apply the filter using zero-phase (forward-backward) filtering to avoid phase distortion.",
+          "Verify the filtered output by checking its spectrum against the target band."
+        ],
+        "tags": ["science", "process", "filtering"]
+      },
+      {
+        "flow_name": "spectral-report-assembler",
+        "description": "Compile the spectral analysis results into a structured report: dominant frequencies, spectral shape, filtered components, and interpretation.",
+        "inputs": [
+          {"name": "peak-table", "desc": "Identified spectral peaks"},
+          {"name": "psd-estimate", "desc": "Power spectral density estimate"},
+          {"name": "filtered-signal", "desc": "Extracted band-limited signal"}
+        ],
+        "outputs": [
+          {"name": "spectral-report", "desc": "Structured analysis report with figures and interpretation"},
+          {"name": "frequency-summary", "desc": "Table of dominant frequencies and their physical interpretation"}
+        ],
+        "process": [
+          "Summarize the dominant spectral peaks and their physical meaning.",
+          "Describe the overall spectral shape (broadband vs narrowband, colored noise type).",
+          "Present the filtered component and its time-domain behavior.",
+          "Note any unexpected features or artifacts found during the analysis."
+        ],
+        "tags": ["science", "process", "reporting"]
+      }
+    ]
+  },
+  {
+    "chain_name": "dose-response-modeling",
+    "description": "Fit dose-response curves from experimental data: organize the data, select candidate models, fit curves, extract potency parameters (EC50/IC50), assess model adequacy, and compare treatments.",
+    "domain": "science",
+    "tags": ["science", "research", "process", "pharmacology", "dose-response"],
+    "steps": [
+      {
+        "flow_name": "dose-data-organizer",
+        "description": "Organize raw dose-response data: log-transform concentrations, normalize responses, flag outliers, and structure for fitting.",
+        "inputs": [
+          {"name": "raw-dose-response-data", "desc": "Concentration-response pairs with replicates"},
+          {"name": "assay-metadata", "desc": "Units, vehicle control values, positive control values, assay type"}
+        ],
+        "outputs": [
+          {"name": "organized-data", "desc": "Cleaned data with log-concentrations, normalized responses, and replicate structure"},
+          {"name": "normalization-record", "desc": "How normalization was done (0% and 100% reference points)"}
+        ],
+        "process": [
+          "Log-transform concentrations (base 10 or natural log, stated explicitly).",
+          "Normalize responses to the vehicle control (0%) and positive control (100%).",
+          "Flag statistical outliers within replicate groups using Grubbs test or similar.",
+          "Structure the data as columns: log_concentration, response, replicate_id, treatment_group."
+        ],
+        "tags": ["science", "process", "data-preparation"]
+      },
+      {
+        "flow_name": "sigmoid-model-selector",
+        "description": "Select candidate dose-response models: 4-parameter logistic (4PL), 5-parameter logistic (5PL), or log-logistic, based on the data shape.",
+        "inputs": [
+          {"name": "organized-data", "desc": "Cleaned dose-response data"},
+          {"name": "prior-knowledge", "desc": "Whether the curve is expected to be symmetric, whether bottom/top plateaus are known"}
+        ],
+        "outputs": [
+          {"name": "candidate-models", "desc": "List of models to fit, with their parameter definitions"},
+          {"name": "initial-guesses", "desc": "Starting parameter values for each model derived from the data"}
+        ],
+        "process": [
+          "Inspect the data for asymmetry (suggesting 5PL over 4PL).",
+          "Determine whether to fix the bottom asymptote at 0% and the top at 100% or estimate them.",
+          "List the candidate models with their equations and free parameters.",
+          "Estimate initial parameter guesses from the data (midpoint for EC50, slope from the steepest segment)."
+        ],
+        "tags": ["science", "process", "model-selection"]
+      },
+      {
+        "flow_name": "curve-fitter",
+        "description": "Fit each candidate model to the data using nonlinear least squares or maximum likelihood, reporting parameter estimates with standard errors.",
+        "inputs": [
+          {"name": "organized-data", "desc": "Cleaned dose-response data"},
+          {"name": "candidate-models", "desc": "Models and initial guesses"}
+        ],
+        "outputs": [
+          {"name": "fit-results", "desc": "For each model: parameter estimates, standard errors, and goodness-of-fit statistics"},
+          {"name": "convergence-log", "desc": "Whether each fit converged and any issues encountered"}
+        ],
+        "process": [
+          "Fit each candidate model using weighted nonlinear least squares (weights from replicate variance).",
+          "Record parameter estimates, their standard errors, and confidence intervals.",
+          "Compute goodness-of-fit: R-squared, residual standard error, AIC, and BIC.",
+          "Check convergence and parameter identifiability (are confidence intervals finite?)."
+        ],
+        "tags": ["science", "process", "curve-fitting"]
+      },
+      {
+        "flow_name": "potency-parameter-extractor",
+        "description": "Extract the key potency parameters from the fitted model: EC50/IC50, Hill slope, maximum effect, and minimum effect.",
+        "inputs": [
+          {"name": "fit-results", "desc": "Fitted model parameters"},
+          {"name": "organized-data", "desc": "Original data for context"}
+        ],
+        "outputs": [
+          {"name": "potency-table", "desc": "EC50/IC50 with confidence interval, Hill slope, Emax, Emin for each model"},
+          {"name": "dose-at-effect", "desc": "Inverse prediction: concentration needed for specific effect levels (e.g., EC90)"}
+        ],
+        "process": [
+          "Extract EC50 (or IC50 for inhibition) directly from the fitted midpoint parameter.",
+          "Compute the confidence interval for EC50 using the delta method or profile likelihood.",
+          "Back-calculate concentrations for other effect levels (EC10, EC90) from the fitted curve.",
+          "Report the Hill coefficient and its interpretation (steepness of the transition)."
+        ],
+        "tags": ["science", "process", "potency"]
+      },
+      {
+        "flow_name": "model-adequacy-checker",
+        "description": "Check whether the fitted model is adequate: residual analysis, lack-of-fit test, and comparison of candidate models.",
+        "inputs": [
+          {"name": "fit-results", "desc": "Fitted models with residuals"},
+          {"name": "organized-data", "desc": "Original data"}
+        ],
+        "outputs": [
+          {"name": "adequacy-report", "desc": "Residual plots, lack-of-fit test result, model comparison (AIC/BIC)"},
+          {"name": "selected-model", "desc": "The best model and why it was chosen"}
+        ],
+        "process": [
+          "Plot residuals vs. fitted values and vs. concentration to check for patterns.",
+          "Run a lack-of-fit test (compare pure error to model residuals using replicate data).",
+          "Compare candidate models using AIC or likelihood ratio test if nested.",
+          "Select the simplest model that passes the lack-of-fit test."
+        ],
+        "tags": ["science", "process", "diagnostics"]
+      },
+      {
+        "flow_name": "treatment-comparator",
+        "description": "Compare dose-response curves across treatments: test whether EC50 values differ, whether curves are parallel, and whether maximum effects differ.",
+        "inputs": [
+          {"name": "potency-table", "desc": "EC50 and curve parameters for each treatment"},
+          {"name": "fit-results", "desc": "Full fit details for statistical comparison"}
+        ],
+        "outputs": [
+          {"name": "comparison-results", "desc": "Statistical tests for EC50 differences, parallelism, and Emax differences"},
+          {"name": "potency-ratios", "desc": "Relative potency ratios with confidence intervals"}
+        ],
+        "process": [
+          "Test whether EC50 values differ between treatments (extra-sum-of-squares F-test).",
+          "Test whether curves are parallel (same Hill slope) by constraining and comparing fits.",
+          "If parallel, compute the relative potency ratio and its confidence interval.",
+          "Test whether maximum effects differ by comparing Emax parameters."
+        ],
+        "tags": ["science", "process", "comparison"]
+      }
+    ]
+  },
+  {
+    "chain_name": "survival-analysis-protocol",
+    "description": "Analyze time-to-event data: prepare the dataset with censoring indicators, estimate survival curves, compare groups, fit regression models, check assumptions, and report results.",
+    "domain": "science",
+    "tags": ["science", "research", "process", "survival-analysis", "statistics"],
+    "steps": [
+      {
+        "flow_name": "survival-data-preparer",
+        "description": "Prepare the survival dataset: define the time variable, the event indicator, and the censoring mechanism.",
+        "inputs": [
+          {"name": "raw-dataset", "desc": "Subject-level data with dates or times and event status"},
+          {"name": "study-design", "desc": "Start point, endpoint definition, censoring rules, and follow-up window"}
+        ],
+        "outputs": [
+          {"name": "survival-dataset", "desc": "Cleaned dataset with time, event (0/1), and covariates"},
+          {"name": "censoring-summary", "desc": "Number and proportion censored, reasons for censoring"}
+        ],
+        "process": [
+          "Define time zero (enrollment, diagnosis, randomization) for each subject.",
+          "Calculate time to event or censoring from time zero.",
+          "Code the event indicator: 1 for the event, 0 for censored observations.",
+          "Classify censoring reasons (end of study, loss to follow-up, competing event)."
+        ],
+        "tags": ["science", "process", "data-preparation"]
+      },
+      {
+        "flow_name": "kaplan-meier-estimator",
+        "description": "Estimate the survival function using the Kaplan-Meier method: step function, confidence bands, and median survival time.",
+        "inputs": [
+          {"name": "survival-dataset", "desc": "Time, event indicator, and group variable"},
+          {"name": "confidence-level", "desc": "Desired confidence level for the survival bands (e.g., 95%)"}
+        ],
+        "outputs": [
+          {"name": "km-curves", "desc": "Kaplan-Meier survival curves by group with confidence bands"},
+          {"name": "km-summary", "desc": "Median survival, restricted mean survival time, and survival at landmark times"}
+        ],
+        "process": [
+          "Compute the KM estimator: product of conditional survival probabilities at each event time.",
+          "Compute Greenwood confidence intervals at each time point.",
+          "Extract the median survival time (where the curve crosses 0.50) with its CI.",
+          "Report survival probability at clinically relevant landmark times."
+        ],
+        "tags": ["science", "process", "kaplan-meier"]
+      },
+      {
+        "flow_name": "logrank-test-runner",
+        "description": "Compare survival curves between groups using the log-rank test and its variants.",
+        "inputs": [
+          {"name": "survival-dataset", "desc": "Time, event, and group membership"},
+          {"name": "test-variant", "desc": "Standard log-rank, Wilcoxon (Peto-Prentice), or stratified log-rank"}
+        ],
+        "outputs": [
+          {"name": "logrank-result", "desc": "Test statistic, degrees of freedom, and p-value"},
+          {"name": "hazard-ratio-estimate", "desc": "Unadjusted hazard ratio from the log-rank framework"}
+        ],
+        "process": [
+          "Select the appropriate test variant based on the expected hazard pattern.",
+          "Compute observed and expected events per group at each event time.",
+          "Calculate the test statistic and its p-value.",
+          "Estimate the unadjusted hazard ratio from the O/E ratio."
+        ],
+        "tags": ["science", "process", "hypothesis-testing"]
+      },
+      {
+        "flow_name": "cox-model-fitter",
+        "description": "Fit a Cox proportional hazards model: estimate hazard ratios for covariates, test significance, and extract the baseline hazard.",
+        "inputs": [
+          {"name": "survival-dataset", "desc": "Time, event, and covariates"},
+          {"name": "covariate-specification", "desc": "Which covariates to include and how (continuous, categorical, interaction)"}
+        ],
+        "outputs": [
+          {"name": "cox-model", "desc": "Fitted model with hazard ratios, confidence intervals, and p-values"},
+          {"name": "model-fit-statistics", "desc": "Concordance index, likelihood ratio test, and Wald test"}
+        ],
+        "process": [
+          "Specify the model formula with covariates and any interaction or stratification terms.",
+          "Fit the Cox model using partial likelihood estimation.",
+          "Extract hazard ratios with 95% confidence intervals for each covariate.",
+          "Compute the concordance index as a measure of discrimination."
+        ],
+        "tags": ["science", "process", "cox-regression"]
+      },
+      {
+        "flow_name": "proportional-hazards-checker",
+        "description": "Check the proportional hazards assumption: Schoenfeld residual tests, log-log plots, and time-varying covariate analysis.",
+        "inputs": [
+          {"name": "cox-model", "desc": "The fitted Cox model"},
+          {"name": "survival-dataset", "desc": "The data used for fitting"}
+        ],
+        "outputs": [
+          {"name": "ph-test-results", "desc": "Schoenfeld residual tests for each covariate and globally"},
+          {"name": "remediation-plan", "desc": "If PH is violated, recommended fixes (stratification, time-varying, or parametric model)"}
+        ],
+        "process": [
+          "Compute scaled Schoenfeld residuals and test for a non-zero slope over time.",
+          "Plot log(-log(S(t))) curves by group to visually check for parallelism.",
+          "If violation is detected, identify which covariate(s) violate and at what time range.",
+          "Recommend a fix: stratify on the violating variable, add a time interaction, or switch to a parametric model."
+        ],
+        "tags": ["science", "process", "assumption-checking"]
+      },
+      {
+        "flow_name": "survival-report-writer",
+        "description": "Write the survival analysis report: KM curves, group comparisons, Cox model results, assumption diagnostics, and clinical interpretation.",
+        "inputs": [
+          {"name": "km-curves", "desc": "Kaplan-Meier survival curves"},
+          {"name": "cox-model", "desc": "Fitted Cox model results"},
+          {"name": "ph-test-results", "desc": "Proportional hazards diagnostics"}
+        ],
+        "outputs": [
+          {"name": "survival-report", "desc": "Structured report with tables, figures, and interpretation"},
+          {"name": "key-findings", "desc": "One-paragraph summary of the main survival findings"}
+        ],
+        "process": [
+          "Present the KM curves with number-at-risk tables below.",
+          "Report the Cox model results in a standard table format.",
+          "Summarize the PH diagnostics and any model modifications made.",
+          "Write the interpretation: what the results mean for the research question."
+        ],
+        "tags": ["science", "process", "reporting"]
+      }
+    ]
+  },
+  {
+    "chain_name": "spatial-statistics-pipeline",
+    "description": "Analyze spatial data: map point patterns, test for clustering, estimate spatial autocorrelation, interpolate with kriging, and produce spatial prediction maps with uncertainty.",
+    "domain": "science",
+    "tags": ["science", "research", "process", "spatial-analysis", "geostatistics"],
+    "steps": [
+      {
+        "flow_name": "spatial-data-mapper",
+        "description": "Map the spatial data: project coordinates, define the study region boundary, and compute basic spatial statistics.",
+        "inputs": [
+          {"name": "spatial-dataset", "desc": "Observations with coordinates (x,y or lat/lon) and measured values"},
+          {"name": "region-definition", "desc": "Study area boundary (polygon) and coordinate reference system"}
+        ],
+        "outputs": [
+          {"name": "projected-dataset", "desc": "Observations in a projected coordinate system with distances in meters"},
+          {"name": "spatial-summary", "desc": "Point count, spatial extent, mean nearest-neighbor distance, and intensity"}
+        ],
+        "process": [
+          "Project the coordinates to a local metric CRS if they are in geographic (lat/lon).",
+          "Clip observations to the study region boundary.",
+          "Compute basic spatial statistics: intensity (points per area), mean nearest-neighbor distance.",
+          "Produce a map of the study region with observation locations."
+        ],
+        "tags": ["science", "process", "spatial"]
+      },
+      {
+        "flow_name": "clustering-tester",
+        "description": "Test for spatial clustering: Ripley's K function, nearest-neighbor index, or quadrat test to determine if the pattern departs from randomness.",
+        "inputs": [
+          {"name": "projected-dataset", "desc": "Spatially referenced observations"},
+          {"name": "spatial-summary", "desc": "Basic spatial statistics for context"}
+        ],
+        "outputs": [
+          {"name": "clustering-result", "desc": "Test statistic and whether the pattern is clustered, dispersed, or random"},
+          {"name": "scale-dependence", "desc": "At what spatial scales clustering or dispersion is strongest"}
+        ],
+        "process": [
+          "Compute Ripley's K function across a range of distances.",
+          "Compare observed K to the expected K under complete spatial randomness (CSR).",
+          "Identify the distances at which the pattern most deviates from CSR.",
+          "Run a significance test using Monte Carlo simulation of CSR envelopes."
+        ],
+        "tags": ["science", "process", "clustering"]
+      },
+      {
+        "flow_name": "autocorrelation-estimator",
+        "description": "Estimate spatial autocorrelation in the measured values: compute the variogram, fit a variogram model, and extract range, sill, and nugget parameters.",
+        "inputs": [
+          {"name": "projected-dataset", "desc": "Observations with coordinates and measured values"},
+          {"name": "lag-parameters", "desc": "Maximum lag distance, bin width, and directional anisotropy checks"}
+        ],
+        "outputs": [
+          {"name": "empirical-variogram", "desc": "Semivariance vs. lag distance with bin counts"},
+          {"name": "fitted-variogram", "desc": "Model parameters: nugget, sill, range, and model type (spherical, exponential, Gaussian)"}
+        ],
+        "process": [
+          "Compute the empirical variogram: mean squared differences of pairs at each lag bin.",
+          "Check for anisotropy by computing directional variograms.",
+          "Fit candidate variogram models (spherical, exponential, Gaussian) using weighted least squares.",
+          "Select the best model and extract the nugget (measurement error), sill (total variance), and range (correlation distance)."
+        ],
+        "tags": ["science", "process", "variogram"]
+      },
+      {
+        "flow_name": "kriging-interpolator",
+        "description": "Interpolate the measured values across the study region using ordinary or universal kriging, producing predictions and kriging variance at unsampled locations.",
+        "inputs": [
+          {"name": "projected-dataset", "desc": "Observations with coordinates and values"},
+          {"name": "fitted-variogram", "desc": "The variogram model to use for kriging weights"}
+        ],
+        "outputs": [
+          {"name": "prediction-surface", "desc": "Interpolated values on a regular grid covering the study region"},
+          {"name": "kriging-variance", "desc": "Prediction uncertainty at each grid cell"}
+        ],
+        "process": [
+          "Define the prediction grid covering the study region at the desired resolution.",
+          "For each grid cell, solve the kriging system to obtain weights for nearby observations.",
+          "Compute the kriging prediction (weighted combination of nearby observations).",
+          "Compute the kriging variance (prediction uncertainty that increases away from data points)."
+        ],
+        "tags": ["science", "process", "kriging"]
+      },
+      {
+        "flow_name": "spatial-validation-runner",
+        "description": "Validate the spatial model using leave-one-out cross-validation: compare predicted values to withheld observations and compute accuracy metrics.",
+        "inputs": [
+          {"name": "projected-dataset", "desc": "All observations"},
+          {"name": "fitted-variogram", "desc": "The variogram model"}
+        ],
+        "outputs": [
+          {"name": "cv-metrics", "desc": "Mean error, mean absolute error, RMSE, and standardized prediction error"},
+          {"name": "cv-diagnostics", "desc": "Scatter plot of predicted vs. observed and spatial map of residuals"}
+        ],
+        "process": [
+          "Remove one observation at a time and predict its value from the remaining data.",
+          "Compute the prediction error and the standardized error (error / kriging standard deviation).",
+          "Calculate summary metrics: ME (should be near zero), MAE, RMSE.",
+          "Check that standardized errors have mean near 0 and variance near 1 (model is well-calibrated)."
+        ],
+        "tags": ["science", "process", "validation"]
+      },
+      {
+        "flow_name": "spatial-report-producer",
+        "description": "Produce the spatial analysis report: maps, variogram analysis, prediction surface, uncertainty map, and interpretation.",
+        "inputs": [
+          {"name": "prediction-surface", "desc": "Interpolated map"},
+          {"name": "kriging-variance", "desc": "Uncertainty map"},
+          {"name": "cv-metrics", "desc": "Validation results"}
+        ],
+        "outputs": [
+          {"name": "spatial-report", "desc": "Structured report with maps, statistics, and interpretation"},
+          {"name": "data-collection-guidance", "desc": "Where to sample next to reduce prediction uncertainty"}
+        ],
+        "process": [
+          "Present the observation map, prediction map, and uncertainty map side by side.",
+          "Summarize the variogram analysis: correlation range, nugget ratio, and anisotropy.",
+          "Report validation metrics and whether the model is adequately calibrated.",
+          "Identify high-uncertainty areas and recommend additional sampling locations."
+        ],
+        "tags": ["science", "process", "reporting"]
+      }
+    ]
+  },
+  {
+    "chain_name": "factorial-experiment-analyzer",
+    "description": "Analyze a factorial experiment: encode the design matrix, compute main effects and interactions, test significance, generate response surface plots, and identify optimal factor settings.",
+    "domain": "science",
+    "tags": ["science", "research", "process", "experimental-design", "DOE"],
+    "steps": [
+      {
+        "flow_name": "design-matrix-encoder",
+        "description": "Encode the factorial design: list factors and levels, build the coded design matrix, and verify the design structure (full or fractional, resolution).",
+        "inputs": [
+          {"name": "factor-definitions", "desc": "Each factor with its name, levels, and coded values"},
+          {"name": "experimental-results", "desc": "Response values for each run in the design"}
+        ],
+        "outputs": [
+          {"name": "design-matrix", "desc": "Coded design matrix with factors, interactions, and response columns"},
+          {"name": "design-properties", "desc": "Number of factors, levels, runs, resolution, and aliasing structure"}
+        ],
+        "process": [
+          "List all factors with their low (-1) and high (+1) coded levels.",
+          "Build the full design matrix including all main effects and interactions.",
+          "If fractional, identify the generators and the aliasing structure.",
+          "Verify that the response column has the correct number of observations per run."
+        ],
+        "tags": ["science", "process", "design-matrix"]
+      },
+      {
+        "flow_name": "effect-calculator",
+        "description": "Calculate main effects and interaction effects: the average change in response when each factor moves from low to high.",
+        "inputs": [
+          {"name": "design-matrix", "desc": "Coded factors and responses"},
+          {"name": "design-properties", "desc": "Design structure and aliasing"}
+        ],
+        "outputs": [
+          {"name": "effect-estimates", "desc": "Each effect (main and interaction) with its magnitude and sign"},
+          {"name": "effect-ranking", "desc": "Effects sorted by absolute magnitude"}
+        ],
+        "process": [
+          "Compute each main effect: average response at high level minus average at low level.",
+          "Compute each interaction effect: half the difference of a factor's effect at the other factor's levels.",
+          "For higher-order interactions, apply the sign-table method.",
+          "Rank effects by absolute magnitude to identify the most influential factors."
+        ],
+        "tags": ["science", "process", "effects"]
+      },
+      {
+        "flow_name": "significance-tester-factorial",
+        "description": "Test which effects are statistically significant: ANOVA, normal probability plot of effects, or Lenth's method for unreplicated designs.",
+        "inputs": [
+          {"name": "effect-estimates", "desc": "All estimated effects"},
+          {"name": "design-properties", "desc": "Whether the design is replicated or unreplicated"}
+        ],
+        "outputs": [
+          {"name": "anova-table", "desc": "Source, sum of squares, df, mean square, F-ratio, and p-value for each effect"},
+          {"name": "significant-effects", "desc": "Effects that pass the significance threshold"}
+        ],
+        "process": [
+          "If replicated, use ANOVA with pure error from replicates.",
+          "If unreplicated, use a normal probability plot of effects or Lenth's pseudo-standard-error.",
+          "Compute the F-ratio and p-value for each effect.",
+          "Apply a multiple-comparison correction if testing many effects simultaneously."
+        ],
+        "tags": ["science", "process", "significance"]
+      },
+      {
+        "flow_name": "response-surface-plotter",
+        "description": "Generate contour and surface plots of the response as a function of the two most important factors, with other factors held at their center or optimal values.",
+        "inputs": [
+          {"name": "design-matrix", "desc": "Full design data"},
+          {"name": "significant-effects", "desc": "Which effects matter"}
+        ],
+        "outputs": [
+          {"name": "surface-plots", "desc": "Contour and 3D surface plots for the top factor pairs"},
+          {"name": "response-model", "desc": "Fitted polynomial model of the response surface"}
+        ],
+        "process": [
+          "Fit a polynomial model (linear + interactions, or quadratic if center points exist).",
+          "Select the two most influential factors for the primary plot.",
+          "Generate a contour plot and a 3D surface plot of predicted response.",
+          "If more than two factors are significant, produce additional plots with non-focal factors held constant."
+        ],
+        "tags": ["science", "process", "visualization"]
+      },
+      {
+        "flow_name": "optimum-finder",
+        "description": "Find the factor settings that optimize the response: steepest ascent direction, predicted optimum within the design space, and confidence region around it.",
+        "inputs": [
+          {"name": "response-model", "desc": "Fitted response surface model"},
+          {"name": "factor-definitions", "desc": "Factor ranges and constraints"}
+        ],
+        "outputs": [
+          {"name": "optimal-settings", "desc": "Factor levels that maximize or minimize the response"},
+          {"name": "predicted-optimum", "desc": "Predicted response at the optimal settings with confidence interval"}
+        ],
+        "process": [
+          "If the optimum is within the design region, solve for the stationary point of the response model.",
+          "If the optimum is outside (first-order model), compute the steepest ascent direction.",
+          "Apply any constraints on factor ranges.",
+          "Report the optimal settings and the predicted response with its uncertainty."
+        ],
+        "tags": ["science", "process", "optimization"]
+      },
+      {
+        "flow_name": "factorial-report-compiler",
+        "description": "Compile the factorial experiment report: design summary, effect estimates, significance tests, response surfaces, optimal settings, and recommendations.",
+        "inputs": [
+          {"name": "effect-ranking", "desc": "Ranked effects"},
+          {"name": "anova-table", "desc": "Significance tests"},
+          {"name": "optimal-settings", "desc": "Recommended factor settings"}
+        ],
+        "outputs": [
+          {"name": "factorial-report", "desc": "Structured report of the factorial analysis"},
+          {"name": "next-experiment-recommendation", "desc": "Whether to run additional experiments (augment, center points, response surface)"}
+        ],
+        "process": [
+          "Summarize the design: factors, levels, runs, and resolution.",
+          "Present the effect estimates with the Pareto chart and ANOVA table.",
+          "Show the response surface plots for the key factor pairs.",
+          "Recommend the optimal settings and whether follow-up experiments are needed."
+        ],
+        "tags": ["science", "process", "reporting"]
+      }
+    ]
+  },
+  {
+    "chain_name": "sensor-fusion-pipeline",
+    "description": "Combine data from multiple sensors into a single estimate: align sensor timelines, characterize each sensor's noise, compute optimal fusion weights, fuse with a Kalman-style approach, and validate the fused output.",
+    "domain": "science",
+    "tags": ["science", "research", "process", "sensor-fusion", "data-integration"],
+    "steps": [
+      {
+        "flow_name": "sensor-timeline-aligner",
+        "description": "Align the time axes of multiple sensors: handle different sampling rates, clock offsets, and latency differences.",
+        "inputs": [
+          {"name": "multi-sensor-data", "desc": "Data streams from each sensor with timestamps and values"},
+          {"name": "sensor-specifications", "desc": "Sampling rates, latencies, and known clock offsets for each sensor"}
+        ],
+        "outputs": [
+          {"name": "aligned-data", "desc": "All sensor streams resampled to a common time axis"},
+          {"name": "alignment-log", "desc": "Clock corrections applied, interpolation method used, and samples lost"}
+        ],
+        "process": [
+          "Identify the common time window covered by all sensors.",
+          "Apply known clock offsets and latency corrections.",
+          "Resample each sensor to a common time grid using appropriate interpolation.",
+          "Flag periods where any sensor has gaps exceeding its Nyquist interval."
+        ],
+        "tags": ["science", "process", "alignment"]
+      },
+      {
+        "flow_name": "sensor-noise-characterizer",
+        "description": "Characterize each sensor's noise: estimate its variance, spectral profile, and any systematic biases.",
+        "inputs": [
+          {"name": "aligned-data", "desc": "Time-aligned sensor streams"},
+          {"name": "reference-data", "desc": "A known reference or a period where the true value is constant, if available"}
+        ],
+        "outputs": [
+          {"name": "noise-profiles", "desc": "Each sensor's noise variance, spectral shape, and bias estimate"},
+          {"name": "correlation-matrix", "desc": "Cross-correlation between sensor noise terms"}
+        ],
+        "process": [
+          "If reference data is available, compute residuals (sensor minus reference) to estimate noise.",
+          "If no reference, use Allan variance or difference-based methods on static periods.",
+          "Estimate the noise power spectrum to identify if noise is white, pink, or has specific features.",
+          "Compute cross-correlations between sensor errors to detect common-mode noise."
+        ],
+        "tags": ["science", "process", "noise"]
+      },
+      {
+        "flow_name": "fusion-weight-calculator",
+        "description": "Compute the optimal fusion weights for each sensor based on their noise characteristics: lower noise earns higher weight.",
+        "inputs": [
+          {"name": "noise-profiles", "desc": "Each sensor's noise variance and spectral profile"},
+          {"name": "correlation-matrix", "desc": "Cross-correlations between sensor noise"}
+        ],
+        "outputs": [
+          {"name": "fusion-weights", "desc": "Optimal weight for each sensor, possibly varying with frequency or time"},
+          {"name": "expected-fused-variance", "desc": "The predicted variance of the fused estimate"}
+        ],
+        "process": [
+          "Compute minimum-variance weights: inversely proportional to noise variance (for uncorrelated sensors).",
+          "If sensors are correlated, use the full covariance matrix for the weight calculation.",
+          "If noise profiles are frequency-dependent, compute frequency-dependent weights.",
+          "Calculate the expected variance of the fused output to confirm improvement over any single sensor."
+        ],
+        "tags": ["science", "process", "weighting"]
+      },
+      {
+        "flow_name": "kalman-fuser",
+        "description": "Fuse the sensor streams using a Kalman filter or weighted average: combine measurements at each time step with optimal gain.",
+        "inputs": [
+          {"name": "aligned-data", "desc": "Time-aligned sensor streams"},
+          {"name": "fusion-weights", "desc": "Optimal weights for each sensor"}
+        ],
+        "outputs": [
+          {"name": "fused-estimate", "desc": "The combined output signal with timestamp and value"},
+          {"name": "fused-uncertainty", "desc": "Time-varying uncertainty (standard deviation) of the fused estimate"}
+        ],
+        "process": [
+          "Initialize the state estimate from the first available measurements.",
+          "At each time step, predict the state forward (using a process model if available).",
+          "Update the prediction by incorporating each sensor's measurement with its weight.",
+          "Record the fused estimate and its uncertainty at each time step."
+        ],
+        "tags": ["science", "process", "fusion"]
+      },
+      {
+        "flow_name": "fusion-output-validator",
+        "description": "Validate the fused output: compare against held-out reference data, check that uncertainty estimates are calibrated, and confirm improvement over individual sensors.",
+        "inputs": [
+          {"name": "fused-estimate", "desc": "The combined output"},
+          {"name": "reference-data", "desc": "Held-out ground truth or independent measurement for validation"}
+        ],
+        "outputs": [
+          {"name": "validation-metrics", "desc": "RMSE, bias, and coverage of uncertainty intervals against the reference"},
+          {"name": "improvement-summary", "desc": "How much the fused output improved over each individual sensor"}
+        ],
+        "process": [
+          "Compare the fused output to the reference data at matched time points.",
+          "Compute RMSE, mean bias, and mean absolute error.",
+          "Check calibration: what fraction of reference values fall within the stated uncertainty bounds.",
+          "Compare fused RMSE to each individual sensor's RMSE to quantify improvement."
+        ],
+        "tags": ["science", "process", "validation"]
+      },
+      {
+        "flow_name": "fusion-report-assembler",
+        "description": "Compile the sensor fusion report: sensor characterization, fusion method, validation results, and deployment recommendations.",
+        "inputs": [
+          {"name": "noise-profiles", "desc": "Sensor noise characterization"},
+          {"name": "fused-estimate", "desc": "The fused output"},
+          {"name": "validation-metrics", "desc": "Accuracy and calibration results"}
+        ],
+        "outputs": [
+          {"name": "fusion-report", "desc": "Structured report of the entire fusion pipeline"},
+          {"name": "deployment-config", "desc": "Sensor weights and filter parameters for production deployment"}
+        ],
+        "process": [
+          "Summarize each sensor's noise profile and its contribution to the fused output.",
+          "Describe the fusion method (weighted average, Kalman, or extended Kalman) and its parameters.",
+          "Present the validation results and the improvement over individual sensors.",
+          "Provide the filter configuration for deployment: weights, process noise, measurement noise."
+        ],
+        "tags": ["science", "process", "reporting"]
+      }
+    ]
+  },
+  {
+    "chain_name": "scientific-writing-distillation",
+    "description": "Distill raw experimental findings into structured scientific prose: extract claims from data, organize into a logical argument, draft each section (abstract, methods, results, discussion), and check internal consistency.",
+    "domain": "science",
+    "tags": ["science", "research", "process", "writing", "distillation"],
+    "steps": [
+      {
+        "flow_name": "claim-extractor",
+        "description": "Extract the factual claims supported by the data: each claim is a statement with its supporting evidence, effect size, and confidence level.",
+        "inputs": [
+          {"name": "experimental-results", "desc": "Tables, figures, and statistical outputs from the experiment"},
+          {"name": "research-question", "desc": "The original question the experiment addressed"}
+        ],
+        "outputs": [
+          {"name": "claim-list", "desc": "Each claim with its evidence, effect size, p-value or CI, and strength label"},
+          {"name": "unsupported-observations", "desc": "Observations in the data that do not yet map to a testable claim"}
+        ],
+        "process": [
+          "Scan each figure and table for results that answer the research question.",
+          "For each result, write the claim as a declarative sentence.",
+          "Attach the supporting statistic: effect size, confidence interval, and p-value.",
+          "Rate the claim strength: definitive (p < 0.001 and large effect), moderate, or suggestive."
+        ],
+        "tags": ["science", "process", "claims"]
+      },
+      {
+        "flow_name": "argument-organizer",
+        "description": "Organize the claims into a logical argument structure: which claim comes first, what transitions connect them, and what the overall narrative arc is.",
+        "inputs": [
+          {"name": "claim-list", "desc": "Extracted claims with evidence"},
+          {"name": "research-question", "desc": "The question driving the narrative"}
+        ],
+        "outputs": [
+          {"name": "argument-outline", "desc": "Ordered list of claims with transition logic and section assignments"},
+          {"name": "narrative-arc", "desc": "One-sentence summary of the story: question, approach, answer"}
+        ],
+        "process": [
+          "Group claims by the sub-question they address.",
+          "Order groups to follow the logic: from setup to primary finding to secondary findings to implications.",
+          "Identify the transitions between groups: causal, contrastive, or additive.",
+          "Assign each claim group to the appropriate section (results vs. discussion)."
+        ],
+        "tags": ["science", "process", "organization"]
+      },
+      {
+        "flow_name": "methods-section-drafter",
+        "description": "Draft the methods section: enough detail for replication, organized by procedure not by chronology, with all parameters specified.",
+        "inputs": [
+          {"name": "experimental-results", "desc": "Raw data and analysis outputs for cross-reference"},
+          {"name": "protocol-notes", "desc": "Lab notebook entries, SOPs, and analysis scripts used"}
+        ],
+        "outputs": [
+          {"name": "methods-draft", "desc": "Complete methods section text"},
+          {"name": "replication-checklist", "desc": "Every parameter, reagent, and setting needed to replicate"}
+        ],
+        "process": [
+          "Organize by procedure type: participants/samples, materials, protocol, analysis.",
+          "For each procedure, specify every parameter (concentrations, temperatures, durations, software versions).",
+          "Reference established protocols by citation rather than re-describing them in full.",
+          "Check that every analysis mentioned in the results has its method described here."
+        ],
+        "tags": ["science", "process", "writing"]
+      },
+      {
+        "flow_name": "results-section-drafter",
+        "description": "Draft the results section: present each claim in order with its supporting data, referencing figures and tables, without interpretation.",
+        "inputs": [
+          {"name": "argument-outline", "desc": "Ordered claims with section assignments"},
+          {"name": "claim-list", "desc": "Claims with full statistical details"}
+        ],
+        "outputs": [
+          {"name": "results-draft", "desc": "Complete results section text with figure and table references"},
+          {"name": "figure-table-callouts", "desc": "Ordered list of which figure/table is cited where"}
+        ],
+        "process": [
+          "Write each claim as a topic sentence, followed by the supporting statistic.",
+          "Reference the appropriate figure or table in parentheses after the statistic.",
+          "Use transitional phrases to connect claims within each sub-question.",
+          "Avoid interpretation: save 'why' for the discussion, keep results to 'what'."
+        ],
+        "tags": ["science", "process", "writing"]
+      },
+      {
+        "flow_name": "discussion-section-drafter",
+        "description": "Draft the discussion section: interpret the findings, compare with existing literature, acknowledge limitations, and state implications.",
+        "inputs": [
+          {"name": "claim-list", "desc": "The findings to interpret"},
+          {"name": "literature-context", "desc": "Relevant prior work for comparison"}
+        ],
+        "outputs": [
+          {"name": "discussion-draft", "desc": "Complete discussion section text"},
+          {"name": "limitation-list", "desc": "Each limitation with its potential impact on the conclusions"}
+        ],
+        "process": [
+          "Open with the main finding restated in the context of the original question.",
+          "Compare each finding with existing literature: consistent, extends, or contradicts.",
+          "Present limitations honestly, noting which conclusions they do and do not affect.",
+          "Close with implications: what should change in the field or in practice."
+        ],
+        "tags": ["science", "process", "writing"]
+      },
+      {
+        "flow_name": "abstract-distiller",
+        "description": "Distill the entire paper into a structured abstract: background, objective, methods, results, and conclusion in the word limit.",
+        "inputs": [
+          {"name": "results-draft", "desc": "Results section for key findings"},
+          {"name": "discussion-draft", "desc": "Discussion section for the main conclusion"}
+        ],
+        "outputs": [
+          {"name": "abstract-text", "desc": "The abstract within the specified word limit"},
+          {"name": "keyword-list", "desc": "Keywords for indexing"}
+        ],
+        "process": [
+          "Write one sentence of background establishing why the question matters.",
+          "State the objective in one sentence.",
+          "Summarize the methods in one to two sentences (design, sample, main analysis).",
+          "State the primary result with its key statistic.",
+          "Close with the main conclusion and its implication."
+        ],
+        "tags": ["science", "process", "distillation"]
+      },
+      {
+        "flow_name": "internal-consistency-checker",
+        "description": "Check the manuscript for internal consistency: numbers match between text and figures, methods cover every analysis, and claims in the abstract appear in the results.",
+        "inputs": [
+          {"name": "abstract-text", "desc": "The abstract"},
+          {"name": "methods-draft", "desc": "Methods section"},
+          {"name": "results-draft", "desc": "Results section"}
+        ],
+        "outputs": [
+          {"name": "consistency-report", "desc": "List of discrepancies found between sections"},
+          {"name": "revision-checklist", "desc": "Items to fix before submission"}
+        ],
+        "process": [
+          "Extract every number from the results and check it appears correctly in the abstract and figures.",
+          "Verify that every analysis in the results has its method described.",
+          "Check that every claim in the abstract has a corresponding result in the results section.",
+          "Flag any claim in the discussion not supported by a result in the results section."
+        ],
+        "tags": ["science", "process", "quality-check"]
+      }
+    ]
+  },
+  {
+    "chain_name": "enzyme-kinetics-characterization",
+    "description": "Characterize an enzyme's kinetics: collect initial rate data, fit the Michaelis-Menten model, determine Km and Vmax, identify inhibition type, test for cooperativity, and produce the kinetic profile.",
+    "domain": "science",
+    "tags": ["science", "research", "process", "biochemistry", "kinetics"],
+    "steps": [
+      {
+        "flow_name": "initial-rate-extractor",
+        "description": "Extract initial reaction rates from progress curves: identify the linear phase, compute the slope, and flag curves where the linear phase is too short.",
+        "inputs": [
+          {"name": "progress-curves", "desc": "Product or substrate concentration vs. time for each substrate concentration"},
+          {"name": "assay-conditions", "desc": "Enzyme concentration, temperature, pH, buffer composition"}
+        ],
+        "outputs": [
+          {"name": "rate-table", "desc": "Substrate concentration and initial rate (v0) for each condition"},
+          {"name": "linearity-report", "desc": "Duration of the linear phase for each curve and any flagged conditions"}
+        ],
+        "process": [
+          "For each progress curve, identify the initial linear region (before >10% substrate depletion).",
+          "Fit a line to the linear region and extract the slope as v0.",
+          "Flag curves where the linear region is shorter than 3 time points.",
+          "Record assay conditions (temperature, pH) alongside each rate."
+        ],
+        "tags": ["science", "process", "kinetics"]
+      },
+      {
+        "flow_name": "michaelis-menten-fitter",
+        "description": "Fit the Michaelis-Menten equation to the initial rate data: estimate Km and Vmax by nonlinear regression.",
+        "inputs": [
+          {"name": "rate-table", "desc": "Substrate concentrations and initial rates"},
+          {"name": "fitting-method", "desc": "Nonlinear least squares, Lineweaver-Burk, or Eadie-Hofstee for comparison"}
+        ],
+        "outputs": [
+          {"name": "mm-parameters", "desc": "Km and Vmax with standard errors and confidence intervals"},
+          {"name": "mm-fit-quality", "desc": "R-squared, residual plot, and whether the MM model is adequate"}
+        ],
+        "process": [
+          "Fit v = Vmax * [S] / (Km + [S]) using nonlinear least squares.",
+          "Estimate standard errors and confidence intervals for Km and Vmax.",
+          "Optionally produce a Lineweaver-Burk plot for visual diagnosis.",
+          "Check the fit quality: are residuals random, or is there systematic curvature?"
+        ],
+        "tags": ["science", "process", "fitting"]
+      },
+      {
+        "flow_name": "inhibition-type-identifier",
+        "description": "If inhibitor data is present, determine the inhibition type: competitive, uncompetitive, noncompetitive, or mixed, by comparing fits.",
+        "inputs": [
+          {"name": "rate-table", "desc": "Rates at multiple substrate and inhibitor concentrations"},
+          {"name": "mm-parameters", "desc": "Uninhibited Km and Vmax as baseline"}
+        ],
+        "outputs": [
+          {"name": "inhibition-type", "desc": "The identified inhibition mechanism with Ki"},
+          {"name": "inhibition-evidence", "desc": "Model comparison (AIC/F-test) and diagnostic plots supporting the assignment"}
+        ],
+        "process": [
+          "Fit competitive, uncompetitive, noncompetitive, and mixed inhibition models to the data.",
+          "Compare models using AIC or the extra-sum-of-squares F-test.",
+          "Check diagnostic patterns: Lineweaver-Burk lines converging at y-axis (competitive) vs. x-axis (uncompetitive).",
+          "Report Ki and the inhibition type with the model comparison evidence."
+        ],
+        "tags": ["science", "process", "inhibition"]
+      },
+      {
+        "flow_name": "cooperativity-tester",
+        "description": "Test for cooperative binding using the Hill equation: estimate the Hill coefficient and determine if the enzyme shows positive, negative, or no cooperativity.",
+        "inputs": [
+          {"name": "rate-table", "desc": "Rates across a wide substrate range"},
+          {"name": "mm-fit-quality", "desc": "Whether the standard MM model showed systematic deviations"}
+        ],
+        "outputs": [
+          {"name": "hill-parameters", "desc": "Hill coefficient (n), K0.5, and Vmax from the Hill equation fit"},
+          {"name": "cooperativity-verdict", "desc": "Whether cooperativity is present and its type (positive if n>1, negative if n<1)"}
+        ],
+        "process": [
+          "Fit the Hill equation: v = Vmax * [S]^n / (K0.5^n + [S]^n).",
+          "Compare the Hill model fit to the standard MM model fit using AIC.",
+          "If n is significantly different from 1, classify as positive (n>1) or negative (n<1) cooperativity.",
+          "Plot log(v / (Vmax - v)) vs. log[S] to visualize the Hill coefficient graphically."
+        ],
+        "tags": ["science", "process", "cooperativity"]
+      },
+      {
+        "flow_name": "kinetic-profile-compiler",
+        "description": "Compile the complete kinetic profile: Km, Vmax, kcat, catalytic efficiency, inhibition parameters, and cooperativity, with all supporting evidence.",
+        "inputs": [
+          {"name": "mm-parameters", "desc": "Michaelis-Menten parameters"},
+          {"name": "inhibition-type", "desc": "Inhibition characterization if applicable"},
+          {"name": "hill-parameters", "desc": "Cooperativity analysis"}
+        ],
+        "outputs": [
+          {"name": "kinetic-profile", "desc": "Complete kinetic characterization document"},
+          {"name": "comparison-table", "desc": "Parameters formatted for comparison with literature values"}
+        ],
+        "process": [
+          "Calculate kcat from Vmax and enzyme concentration.",
+          "Calculate catalytic efficiency (kcat/Km) and compare to the diffusion limit.",
+          "Compile all kinetic parameters into a single table.",
+          "Compare with published values for the same enzyme or enzyme family."
+        ],
+        "tags": ["science", "process", "reporting"]
+      }
+    ]
+  },
+  {
+    "chain_name": "chromatography-peak-analysis",
+    "description": "Analyze chromatographic data: detect peaks, integrate areas, identify compounds, assess separation quality, quantify concentrations, and produce the analytical report.",
+    "domain": "science",
+    "tags": ["science", "research", "process", "analytical-chemistry", "chromatography"],
+    "steps": [
+      {
+        "flow_name": "baseline-corrector",
+        "description": "Detect and subtract the chromatographic baseline: remove drift, compensate for gradient effects, and produce a flat baseline for integration.",
+        "inputs": [
+          {"name": "raw-chromatogram", "desc": "Detector signal vs. retention time"},
+          {"name": "method-parameters", "desc": "Gradient profile, detector type, and expected baseline behavior"}
+        ],
+        "outputs": [
+          {"name": "corrected-chromatogram", "desc": "Signal with baseline subtracted"},
+          {"name": "baseline-trace", "desc": "The estimated baseline for quality review"}
+        ],
+        "process": [
+          "Identify peak-free regions of the chromatogram for baseline anchoring.",
+          "Fit a smooth curve (polynomial, spline, or asymmetric least squares) through the anchor points.",
+          "Subtract the fitted baseline from the raw signal.",
+          "Verify the corrected signal is centered at zero in peak-free regions."
+        ],
+        "tags": ["science", "process", "baseline"]
+      },
+      {
+        "flow_name": "peak-detector-integrator",
+        "description": "Detect peaks in the corrected chromatogram: locate starts, apexes, and ends, then integrate the area under each peak.",
+        "inputs": [
+          {"name": "corrected-chromatogram", "desc": "Baseline-corrected signal"},
+          {"name": "detection-parameters", "desc": "Minimum peak height, minimum area, and slope sensitivity"}
+        ],
+        "outputs": [
+          {"name": "peak-list", "desc": "Each peak with retention time, height, area, width, symmetry factor, and plate count"},
+          {"name": "integration-report", "desc": "Integration events (peak start, apex, end, split, shoulder) for each peak"}
+        ],
+        "process": [
+          "Detect peak starts and ends using slope threshold or derivative methods.",
+          "Locate the apex (maximum) of each detected peak.",
+          "Integrate the area between start and end using trapezoidal or Simpson's rule.",
+          "Compute peak shape parameters: asymmetry factor, tailing factor, and theoretical plates."
+        ],
+        "tags": ["science", "process", "integration"]
+      },
+      {
+        "flow_name": "compound-identifier",
+        "description": "Identify compounds by matching retention times to standards, or by retention index, or by spectral library matching if spectral data is available.",
+        "inputs": [
+          {"name": "peak-list", "desc": "Detected peaks with retention times"},
+          {"name": "reference-library", "desc": "Standard retention times, retention indices, or spectral library"}
+        ],
+        "outputs": [
+          {"name": "identified-peaks", "desc": "Each peak with its compound assignment and confidence level"},
+          {"name": "unidentified-peaks", "desc": "Peaks that could not be matched with sufficient confidence"}
+        ],
+        "process": [
+          "Match each peak's retention time to the reference library within a tolerance window.",
+          "If retention indices are available, compute and match indices for temperature-independent identification.",
+          "If spectral data (UV, MS) is available, use library matching with a similarity score.",
+          "Assign confidence levels: confirmed (standard + spectrum), probable (retention time only), unknown."
+        ],
+        "tags": ["science", "process", "identification"]
+      },
+      {
+        "flow_name": "separation-quality-assessor",
+        "description": "Assess the quality of the chromatographic separation: resolution between critical pairs, plate count, peak capacity, and system suitability.",
+        "inputs": [
+          {"name": "peak-list", "desc": "Detected peaks with shape parameters"},
+          {"name": "method-parameters", "desc": "Column and method specifications"}
+        ],
+        "outputs": [
+          {"name": "separation-metrics", "desc": "Resolution between adjacent peaks, plate count, peak capacity"},
+          {"name": "suitability-verdict", "desc": "Pass/fail against system suitability criteria"}
+        ],
+        "process": [
+          "Compute resolution (Rs) between every adjacent peak pair.",
+          "Identify critical pairs (Rs < 2.0) that may need method adjustment.",
+          "Calculate the average plate count and peak capacity of the column.",
+          "Check system suitability criteria: replicate precision, plate count, tailing factor limits."
+        ],
+        "tags": ["science", "process", "separation"]
+      },
+      {
+        "flow_name": "concentration-quantifier",
+        "description": "Quantify compound concentrations from peak areas using external or internal standard calibration curves.",
+        "inputs": [
+          {"name": "identified-peaks", "desc": "Peaks with their compound assignments and areas"},
+          {"name": "calibration-data", "desc": "Standard concentrations and their peak areas, or internal standard response factors"}
+        ],
+        "outputs": [
+          {"name": "concentration-table", "desc": "Each compound with its calculated concentration and uncertainty"},
+          {"name": "calibration-quality", "desc": "Calibration curve fit, linearity range, LOD, and LOQ"}
+        ],
+        "process": [
+          "Fit calibration curves (linear or weighted linear) for each target compound.",
+          "Check linearity over the calibration range (R-squared, residual pattern).",
+          "Calculate the concentration of each identified peak from its area and the calibration curve.",
+          "Estimate the limit of detection (LOD) and limit of quantification (LOQ) from the calibration."
+        ],
+        "tags": ["science", "process", "quantification"]
+      },
+      {
+        "flow_name": "chromatography-report-writer",
+        "description": "Compile the chromatographic analysis report: method summary, chromatogram figure, peak table, identification, quantification, and system suitability.",
+        "inputs": [
+          {"name": "concentration-table", "desc": "Quantification results"},
+          {"name": "separation-metrics", "desc": "Separation quality assessment"},
+          {"name": "identified-peaks", "desc": "Compound identifications"}
+        ],
+        "outputs": [
+          {"name": "chromatography-report", "desc": "Structured analytical report"},
+          {"name": "results-certificate", "desc": "Summary table suitable for a certificate of analysis"}
+        ],
+        "process": [
+          "Present the annotated chromatogram with identified peaks labeled.",
+          "Include the peak table with retention time, area, identification, and concentration.",
+          "Report system suitability results and whether criteria were met.",
+          "Summarize the analytical findings in a format suitable for the intended audience."
+        ],
+        "tags": ["science", "process", "reporting"]
+      }
+    ]
+  },
+  {
+    "chain_name": "microscopy-image-quantification",
+    "description": "Quantify features in microscopy images: preprocess, segment objects (cells, particles, structures), measure morphometric parameters, count objects, analyze spatial distributions, and produce quantified results.",
+    "domain": "science",
+    "tags": ["science", "research", "process", "microscopy", "image-analysis"],
+    "steps": [
+      {
+        "flow_name": "image-preprocessor",
+        "description": "Preprocess microscopy images: correct illumination, reduce noise, and enhance contrast to prepare for segmentation.",
+        "inputs": [
+          {"name": "raw-images", "desc": "Microscopy images with metadata (magnification, pixel size, channel info)"},
+          {"name": "acquisition-parameters", "desc": "Microscope type, objective, exposure, and illumination source"}
+        ],
+        "outputs": [
+          {"name": "preprocessed-images", "desc": "Corrected and enhanced images ready for segmentation"},
+          {"name": "preprocessing-log", "desc": "Corrections applied: flat-field, background subtraction, denoising method"}
+        ],
+        "process": [
+          "Apply flat-field correction to remove illumination non-uniformity.",
+          "Subtract background using a rolling-ball or morphological opening method.",
+          "Apply noise reduction (median filter, Gaussian, or non-local means) appropriate to the noise type.",
+          "Adjust contrast if needed, recording the exact transformation applied."
+        ],
+        "tags": ["science", "process", "preprocessing"]
+      },
+      {
+        "flow_name": "object-segmenter",
+        "description": "Segment individual objects (cells, nuclei, particles) from the preprocessed images using thresholding, watershed, or other appropriate method.",
+        "inputs": [
+          {"name": "preprocessed-images", "desc": "Enhanced microscopy images"},
+          {"name": "segmentation-parameters", "desc": "Expected object size range, shape, and intensity characteristics"}
+        ],
+        "outputs": [
+          {"name": "segmentation-masks", "desc": "Label images where each object has a unique integer ID"},
+          {"name": "segmentation-summary", "desc": "Total objects detected, objects touching borders (excluded), and split/merge events"}
+        ],
+        "process": [
+          "Choose a segmentation approach based on object characteristics (threshold, watershed, or contour-based).",
+          "Apply the segmentation and label connected components.",
+          "Split touching objects using watershed or distance-transform-based separation.",
+          "Exclude objects touching the image border and objects below the minimum size threshold."
+        ],
+        "tags": ["science", "process", "segmentation"]
+      },
+      {
+        "flow_name": "morphometry-measurer",
+        "description": "Measure morphometric parameters for each segmented object: area, perimeter, circularity, aspect ratio, and intensity statistics.",
+        "inputs": [
+          {"name": "segmentation-masks", "desc": "Label images with object IDs"},
+          {"name": "preprocessed-images", "desc": "Original intensity images for intensity-based measurements"}
+        ],
+        "outputs": [
+          {"name": "morphometry-table", "desc": "Each object with all measured parameters"},
+          {"name": "population-statistics", "desc": "Summary statistics (mean, SD, median) for each parameter across all objects"}
+        ],
+        "process": [
+          "For each labeled object, measure area (in calibrated units), perimeter, and bounding box.",
+          "Compute shape descriptors: circularity, solidity, aspect ratio, and eccentricity.",
+          "Measure intensity statistics within each object: mean, median, max, min, integrated density.",
+          "Compile all measurements into a table with one row per object."
+        ],
+        "tags": ["science", "process", "morphometry"]
+      },
+      {
+        "flow_name": "spatial-distribution-analyzer",
+        "description": "Analyze the spatial distribution of objects: nearest-neighbor distances, clustering, and spatial density maps.",
+        "inputs": [
+          {"name": "morphometry-table", "desc": "Object centroids and measurements"},
+          {"name": "segmentation-summary", "desc": "Context about image area and border exclusions"}
+        ],
+        "outputs": [
+          {"name": "spatial-statistics", "desc": "Nearest-neighbor distribution, Clark-Evans index, and density map"},
+          {"name": "spatial-pattern", "desc": "Classification as clustered, random, or dispersed with statistical test result"}
+        ],
+        "process": [
+          "Compute the centroid of each object.",
+          "Calculate nearest-neighbor distances for all objects.",
+          "Compute the Clark-Evans index (observed/expected NN distance) to test for clustering.",
+          "Generate a spatial density map (kernel density estimate) showing regions of high and low object density."
+        ],
+        "tags": ["science", "process", "spatial"]
+      },
+      {
+        "flow_name": "colocalization-analyzer",
+        "description": "If multi-channel images are available, analyze colocalization: compute Pearson's, Manders', and overlap coefficients between channels within segmented objects.",
+        "inputs": [
+          {"name": "preprocessed-images", "desc": "Multi-channel images"},
+          {"name": "segmentation-masks", "desc": "Object regions to analyze"}
+        ],
+        "outputs": [
+          {"name": "colocalization-metrics", "desc": "Per-object and population-level colocalization coefficients"},
+          {"name": "colocalization-maps", "desc": "Pixel-level colocalization visualization (scatter plots, overlap images)"}
+        ],
+        "process": [
+          "Within each segmented object, extract pixel intensities from both channels.",
+          "Compute Pearson's correlation coefficient between the two channels.",
+          "Compute Manders' M1 and M2 coefficients (fraction of each channel overlapping with the other).",
+          "Generate a scatter plot of channel 1 vs. channel 2 intensity and an overlap map."
+        ],
+        "tags": ["science", "process", "colocalization"]
+      },
+      {
+        "flow_name": "quantification-report-producer",
+        "description": "Produce the image quantification report: representative images, measurement distributions, spatial analysis, and statistical comparisons between groups.",
+        "inputs": [
+          {"name": "morphometry-table", "desc": "All object measurements"},
+          {"name": "spatial-statistics", "desc": "Spatial analysis results"},
+          {"name": "colocalization-metrics", "desc": "Colocalization results if applicable"}
+        ],
+        "outputs": [
+          {"name": "quantification-report", "desc": "Structured report with figures, tables, and statistical tests"},
+          {"name": "exportable-data", "desc": "Clean CSV of all measurements for downstream analysis"}
+        ],
+        "process": [
+          "Present representative images showing the segmentation overlaid on the original.",
+          "Plot distributions of key measurements (area, intensity) as histograms or violin plots.",
+          "If comparing experimental groups, run appropriate statistical tests on each measurement.",
+          "Export all measurements as a structured CSV for external analysis tools."
+        ],
+        "tags": ["science", "process", "reporting"]
+      }
+    ]
+  }
+]

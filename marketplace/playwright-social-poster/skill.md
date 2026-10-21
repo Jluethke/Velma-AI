@@ -1,6 +1,6 @@
 # Playwright Social Poster
 
-Takes a fully written content pack and generates complete, runnable Playwright (Python) automation scripts for each platform — LinkedIn, Reddit, Twitter/X, Facebook, Instagram. Scripts handle login session management, post creation, content insertion, scheduling logic, and error handling. Output is copy-paste runnable code.
+Takes a fully written content pack and generates complete, runnable Playwright (Python) automation scripts for each platform  --  LinkedIn, Reddit, Twitter/X, Facebook, Instagram. Scripts handle login session management, post creation, content insertion, scheduling logic, and error handling. Output is copy-paste runnable code.
 
 **Why this exists:** Writing the content is one problem. Actually posting it across 5 platforms on a schedule is another. This skill generates the automation layer so a single Python process can run the entire 30-day campaign unattended.
 
@@ -8,24 +8,24 @@ Takes a fully written content pack and generates complete, runnable Playwright (
 
 ## Inputs
 
-- `full_content_pack`: string — Complete content document from social-content-writer
-- `content_calendar`: list[object] — Day-by-day schedule with platform, post reference, and target community
-- `platform_credentials_env`: object — Environment variable names (not values) for each platform: `{linkedin_session_path, reddit_session_path, twitter_session_path, facebook_session_path, instagram_session_path}`
-- `post_times`: object — Preferred posting time per platform in UTC: `{linkedin: "13:00", reddit: "15:00", twitter: "12:00", facebook: "14:00", instagram: "11:00"}`
-- `dry_run_mode`: boolean — If true, scripts print what they would post but do not submit. Default true.
-- `headless`: boolean — Run browser headlessly. Default false for first run (need to see login). True for scheduled runs.
+- `full_content_pack`: string  --  Complete content document from social-content-writer
+- `content_calendar`: list[object]  --  Day-by-day schedule with platform, post reference, and target community
+- `platform_credentials_env`: object  --  Environment variable names (not values) for each platform: `{linkedin_session_path, reddit_session_path, twitter_session_path, facebook_session_path, instagram_session_path}`
+- `post_times`: object  --  Preferred posting time per platform in UTC: `{linkedin: "13:00", reddit: "15:00", twitter: "12:00", facebook: "14:00", instagram: "11:00"}`
+- `dry_run_mode`: boolean  --  If true, scripts print what they would post but do not submit. Default true.
+- `headless`: boolean  --  Run browser headlessly. Default false for first run (need to see login). True for scheduled runs.
 
 ## Outputs
 
-- `linkedin_script`: string — Complete Python Playwright script for LinkedIn posting
-- `reddit_script`: string — Complete Python Playwright script for Reddit posting
-- `twitter_script`: string — Complete Python Playwright script for Twitter/X posting
-- `facebook_script`: string — Complete Python Playwright script for Facebook posting
-- `instagram_script`: string — Complete Python Playwright script for Instagram posting
-- `orchestrator_script`: string — Master Python script that reads the content calendar and dispatches to each platform script on schedule
-- `session_setup_script`: string — One-time setup script that launches each platform, waits for manual login, and saves the session cookie to disk
-- `requirements_txt`: string — All Python dependencies
-- `readme`: string — Step-by-step setup and usage instructions
+- `linkedin_script`: string  --  Complete Python Playwright script for LinkedIn posting
+- `reddit_script`: string  --  Complete Python Playwright script for Reddit posting
+- `twitter_script`: string  --  Complete Python Playwright script for Twitter/X posting
+- `facebook_script`: string  --  Complete Python Playwright script for Facebook posting
+- `instagram_script`: string  --  Complete Python Playwright script for Instagram posting
+- `orchestrator_script`: string  --  Master Python script that reads the content calendar and dispatches to each platform script on schedule
+- `session_setup_script`: string  --  One-time setup script that launches each platform, waits for manual login, and saves the session cookie to disk
+- `requirements_txt`: string  --  All Python dependencies
+- `readme`: string  --  Step-by-step setup and usage instructions
 
 ---
 
@@ -36,7 +36,7 @@ Takes a fully written content pack and generates complete, runnable Playwright (
 **Generate the session setup script first.** This runs once, manually:
 
 ```python
-# session_setup.py — Run ONCE per platform to save login session
+# session_setup.py  --  Run ONCE per platform to save login session
 # Usage: python session_setup.py --platform linkedin
 
 import asyncio
@@ -86,7 +86,8 @@ if __name__ == "__main__":
     asyncio.run(setup_session(args.platform))
 ```
 
-**Output:** `session_setup_script`
+### Output
+`session_setup_script`
 
 ---
 
@@ -96,7 +97,7 @@ Generate a complete LinkedIn posting script. Key behaviors:
 - Load saved session
 - Navigate to linkedin.com/feed
 - Click "Start a post"
-- Insert post body (handle line breaks — LinkedIn uses Shift+Enter for line breaks within a post)
+- Insert post body (handle line breaks  --  LinkedIn uses Shift+Enter for line breaks within a post)
 - Add hashtags
 - For carousels: upload pre-generated slide images if present
 - Click "Post"
@@ -174,7 +175,8 @@ async def post_to_linkedin(content: dict, dry_run: bool = True, headless: bool =
             await browser.close()
 ```
 
-**Output:** `linkedin_script` (full script with all posts from content pack loaded as data)
+### Output
+`linkedin_script` (full script with all posts from content pack loaded as data)
 
 ---
 
@@ -189,7 +191,7 @@ Key behaviors:
 - Fill body
 - Check community rules compliance (flair if required)
 - Submit
-- Handle CAPTCHA detection — pause and alert if triggered
+- Handle CAPTCHA detection  --  pause and alert if triggered
 
 ```python
 # reddit_poster.py
@@ -204,7 +206,7 @@ async def post_to_reddit(content: dict, dry_run: bool = True, headless: bool = T
         "subreddit": str,   # e.g. "MachineLearning"
         "title": str,
         "body": str,
-        "flair": str        # Optional — required by some subreddits
+        "flair": str        # Optional  --  required by some subreddits
     }
     """
     if dry_run:
@@ -253,7 +255,7 @@ async def post_to_reddit(content: dict, dry_run: bool = True, headless: bool = T
 
             # Check for CAPTCHA
             if await page.locator('[id*="captcha"]').is_visible():
-                print("[ALERT] CAPTCHA detected — manual intervention required")
+                print("[ALERT] CAPTCHA detected  --  manual intervention required")
                 input("Solve the CAPTCHA then press ENTER to continue...")
 
             print(f"[SUCCESS] Reddit post submitted to r/{subreddit}")
@@ -268,7 +270,8 @@ async def post_to_reddit(content: dict, dry_run: bool = True, headless: bool = T
             await browser.close()
 ```
 
-**Output:** `reddit_script`
+### Output
+`reddit_script`
 
 ---
 
@@ -278,7 +281,7 @@ Key behaviors:
 - Load session
 - Navigate to twitter.com/compose/tweet
 - For threads: post first tweet, then reply to own tweet for each subsequent tweet
-- Handle character count — split if over 280
+- Handle character count  --  split if over 280
 - Add media if specified
 
 ```python
@@ -342,7 +345,8 @@ async def post_thread_to_twitter(tweets: list, dry_run: bool = True, headless: b
             await browser.close()
 ```
 
-**Output:** `twitter_script`
+### Output
+`twitter_script`
 
 ---
 
@@ -406,14 +410,15 @@ async def post_to_facebook_group(content: dict, dry_run: bool = True, headless: 
             await browser.close()
 ```
 
-**Output:** `facebook_script`
+### Output
+`facebook_script`
 
 ---
 
 ### Phase 6: INSTAGRAM SCRIPT
 
 Key behaviors:
-- Instagram web posting is limited — use the mobile user agent approach
+- Instagram web posting is limited  --  use the mobile user agent approach
 - For carousels: requires pre-rendered slide images
 - Caption + hashtags posted in first comment (for cleaner look) or caption field
 
@@ -494,7 +499,8 @@ async def post_to_instagram(content: dict, dry_run: bool = True, headless: bool 
             await browser.close()
 ```
 
-**Output:** `instagram_script`
+### Output
+`instagram_script`
 
 ---
 
@@ -503,7 +509,7 @@ async def post_to_instagram(content: dict, dry_run: bool = True, headless: bool 
 The master script reads the content calendar JSON, checks what needs to post today, and dispatches to each platform poster at the right time.
 
 ```python
-# orchestrator.py — Run daily via cron or Task Scheduler
+# orchestrator.py  --  Run daily via cron or Task Scheduler
 # Reads content_calendar.json, posts what's scheduled for today
 
 import asyncio
@@ -568,7 +574,8 @@ if __name__ == "__main__":
     asyncio.run(run_todays_posts())
 ```
 
-**Output:** `orchestrator_script`
+### Output
+`orchestrator_script`
 
 ---
 
@@ -585,22 +592,23 @@ python-dateutil
 1. Prerequisites (Python 3.10+, Playwright install)
 2. One-time setup: run `session_setup.py` for each platform
 3. Content prep: confirm `content_pack.json` and `content_calendar.json` are in place
-4. Dry run: `python orchestrator.py` with DRY_RUN=True — verify output
+4. Dry run: `python orchestrator.py` with DRY_RUN=True  --  verify output
 5. Go live: set DRY_RUN=False
 6. Scheduling: add to cron (`0 10 * * * python /path/to/orchestrator.py`) or Windows Task Scheduler
 7. Error handling: errors logged to `errors/` with screenshots
 8. Session refresh: if a platform logs you out, rerun `session_setup.py --platform [name]`
 
-**Output:** `requirements_txt`, `readme`
+### Output
+`requirements_txt`, `readme`
 
 ---
 
 ## Exit Criteria
 
 Done when:
-1. Session setup script generated — handles all 5 platforms
-2. All 5 platform scripts generated — fully runnable with error handling and dry-run mode
-3. Orchestrator script generated — reads calendar, dispatches, logs results
+1. Session setup script generated  --  handles all 5 platforms
+2. All 5 platform scripts generated  --  fully runnable with error handling and dry-run mode
+3. Orchestrator script generated  --  reads calendar, dispatches, logs results
 4. Requirements.txt complete
 5. README covers setup through scheduling
 6. All scripts use persistent sessions (no hardcoded credentials)

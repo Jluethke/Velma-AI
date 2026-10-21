@@ -28,12 +28,12 @@
 
 ### Phase 1: Sleep Profile Elicitation and Parsing
 
-**Entry Criteria:**
+### Entry Criteria
 - `sleep_habits_description` is provided and contains at least 3 distinct pieces of information from this list: (1) current sleep/wake times, (2) sleep quality rating, (3) identified sleep problems, (4) bedroom environment details, (5) caffeine/alcohol/exercise timing, (6) stress level, (7) health conditions.
 - Description length is at least 100 characters (approximately 15-20 words).
 - If description is shorter or missing required information, **Adjust** per error handling Phase 1.
 
-**Actions:**
+### Actions
 1. Parse the sleep habits description to extract explicit facts: current sleep/wake times (record as HH:MM format if provided), reported sleep duration (hours), identified problems (list each complaint separately), environmental details (temperature, light, noise, bed quality), behavioral patterns (caffeine timing, alcohol use, exercise timing, screen use, schedule regularity).
 2. Identify implicit information: infer schedule regularity from described patterns (consistent/variable/highly variable), infer stress levels from language cues (calm/moderate/high), infer environmental quality from mentioned factors (ideal/acceptable/problematic).
 3. Cross-reference with `medical_context` if provided: flag any conditions that affect sleep (sleep apnea, insomnia, restless leg syndrome, narcolepsy, depression, anxiety) and note medications mentioned.
@@ -41,11 +41,11 @@
 5. Flag any missing critical information (e.g., "no mention of caffeine use", "sleep/wake times not provided") in a `clarification_flags` array for Phase 1 quality gate.
 6. Assign confidence level (high/medium/low) to each extracted data point based on explicitness in description.
 
-**Output:**
+### Output
 - `sleep_profile` (preliminary): Structured object with extracted sleep facts, confidence levels, and flagged gaps.
 - `clarification_flags` (array): List of information gaps (max 5) that may affect recommendations. Example: "Sleep/wake times not provided; assuming typical adult schedule."
 
-**Quality Gate:**
+### Quality Gate
 - Every explicit statement from the description appears in the structured profile with exact quote or paraphrase.
 - No assumptions are made without flagging them in clarification_flags.
 - Profile contains at least 5 distinct data points with confidence levels assigned.
@@ -55,12 +55,12 @@
 
 ### Phase 2: Sleep Quality Assessment and Problem Identification
 
-**Entry Criteria:**
+### Entry Criteria
 - Sleep profile from Phase 1 is complete and passes quality gate.
 - At least 5 distinct data points are present in profile.
 - User has not explicitly stated "I have no sleep problems" (if so, proceed to Phase 7 for optimization mode).
 
-**Actions:**
+### Actions
 1. Score sleep quality across six dimensions on a 1-10 scale using this rubric:
    - **Sleep Onset Latency**: How quickly user falls asleep. 10 = <10 min, 9 = 10-15 min, 7 = 15-30 min, 5 = 30-45 min, 3 = 45-60 min, 1 = >60 min. Evidence: explicit time mentioned or inferred from "takes forever to fall asleep" language.
    - **Sleep Duration Adequacy**: Whether reported duration meets user's needs. 10 = feels rested on current duration, 7 = mostly rested, 5 = sometimes rested, 3 = often tired, 1 = chronically sleep deprived. Evidence: explicit statement of feeling rested or complaints of fatigue.
@@ -74,13 +74,13 @@
 5. Cross-reference with evidence-based sleep science: match identified problems to known interventions using the Reference Section.
 6. Screen for red flags requiring medical referral: insomnia >3 months, suspected sleep apnea (snoring, gasping, daytime sleepiness), narcolepsy, restless leg syndrome, severe mood disturbance. If present, flag in output.
 
-**Output:**
+### Output
 - `sleep_assessment` (object): Scores for all six dimensions with format: {dimension_name: {score: 1-10, evidence: "quote or fact", contributing_factors: ["factor1", "factor2"]}}.
 - `problem_analysis` (object): Problems organized by category (environmental, behavioral, physiological, psychological). Each problem: {description: string, severity_rank: 1-10, modifiability_rank: 1-10, evidence: string, suggested_interventions: [string array]}.
 - `intervention_candidates` (array): List of evidence-based interventions matched to identified problems. Format: {intervention: string, addresses_problem: string, evidence_strength: "strong/moderate/weak", difficulty_level: 1-10}.
 - `medical_referral_flags` (array): Any red flags identified (empty array if none).
 
-**Quality Gate:**
+### Quality Gate
 - Every problem identified has a specific cause traced to the sleep profile with direct evidence (quote or inferred fact).
 - Scores are justified by explicit evidence from the description, not assumptions. If assumption is made, it is flagged.
 - At least one intervention candidate exists for each problem scoring <6.
@@ -91,12 +91,12 @@
 
 ### Phase 3: Constraint and Feasibility Analysis
 
-**Entry Criteria:**
+### Entry Criteria
 - Problem analysis from Phase 2 is complete.
 - `user_constraints` provided or inferred from description.
 - At least 3 intervention candidates identified.
 
-**Actions:**
+### Actions
 1. Extract or infer user constraints: budget_level (low = <$100 total, medium = $100-500, high = >$500), time_to_implement (weeks available, 1-12), living_situation (shared bedroom/private/other), physical_limitations (mobility, health conditions affecting what changes are possible), flexibility_score (1-10 willingness to change habits). If not provided, infer from description (e.g., "I can't afford new mattress" = low budget; "I work night shift" = low flexibility).
 2. For each intervention candidate from Phase 2, assess feasibility using this rubric:
    - **Cost**: Does it fit budget level? low = <$50, medium = $50-200, high = >$200. Assign cost_estimate (low/medium/high) and dollar_range (e.g., "$30-60").
@@ -109,13 +109,13 @@
 5. Identify any constraints that fundamentally limit options (e.g., "shared bedroom" eliminates some environmental changes, "night shift work" eliminates schedule changes). Note these in constraint_notes.
 6. If filtering eliminates all interventions for a problem, flag for Phase 3 error handling.
 
-**Output:**
+### Output
 - `feasibility_assessment` (object): Constraints extracted with format: {constraint_name: value, inferred_from: "description quote or 'provided'"}.
 - `prioritized_interventions` (array): Interventions ranked by feasibility_score (descending). Format: {intervention: string, feasibility_score: 1-10, cost_estimate: "low/medium/high", cost_range: "$X-Y", time_to_implement: "immediate/short/medium/long", effort_required: 1-10, compatibility: "yes/no/partial", compatibility_note: string if partial, impact_potential: 1-10}.
 - `constraint_notes` (string): Summary of limiting factors and workarounds (e.g., "Shared bedroom limits white noise volume; suggest earplugs as alternative.").
 - `filtered_out_interventions` (array): Interventions removed due to low feasibility, with reason (for transparency).
 
-**Quality Gate:**
+### Quality Gate
 - Every constraint is explicitly stated in user_constraints or clearly inferred from description with citation.
 - Feasibility scores are calculated using the formula (not subjective).
 - At least 3 feasible interventions remain after filtering (feasibility_score ≥5).
@@ -126,12 +126,12 @@
 
 ### Phase 4: Environmental Recommendations Generation
 
-**Entry Criteria:**
+### Entry Criteria
 - Prioritized interventions from Phase 3 are available.
 - Environmental problems identified in Phase 2.
 - At least 1 environmental intervention has feasibility_score ≥5.
 
-**Actions:**
+### Actions
 1. Filter prioritized interventions to those addressing environmental factors: bedroom temperature, light, noise, bed quality, air quality, mattress/pillow, room layout.
 2. For each environmental intervention, generate a specific, actionable recommendation:
    - **Recommendation**: Concrete action with specific target (e.g., "Lower bedroom temperature to 65-68°F using a programmable thermostat or by opening windows" NOT "Make room cooler"). Include specific product names or methods if applicable.
@@ -146,12 +146,12 @@
 5. Ensure recommendations don't conflict with each other (e.g., don't recommend both blackout curtains and keeping windows open for air flow without addressing the conflict).
 6. Limit to 5-7 environmental recommendations total to avoid overwhelm.
 
-**Output:**
+### Output
 - `environmental_recommendations` (array of objects): Each with fields: recommendation (string), rationale (string with sleep science principle), implementation_steps (array of strings, 3-5 steps), cost_estimate (string with range), timeline (immediate/1-2 weeks/1 month), success_indicator (measurable outcome), priority_rank (1-10), phase_assignment (phase_1/phase_2/phase_3).
 - `environmental_quick_wins` (array): Subset of recommendations implementable immediately with minimal cost (<$50) and effort. Minimum 1, maximum 3.
 - `environmental_conflicts_resolved` (array): Any conflicts identified and how they were resolved (e.g., "Conflict: blackout curtains vs. natural light. Resolution: Use blackout curtains for sleep; open during morning for light exposure.").
 
-**Quality Gate:**
+### Quality Gate
 - Every recommendation is specific enough that a user could execute it without further clarification (includes specific targets, products, or methods).
 - Cost and timeline estimates are realistic and justified (not vague like "affordable" or "soon").
 - No recommendation contradicts user constraints from Phase 3 (e.g., no expensive recommendations if budget_level = low).
@@ -163,12 +163,12 @@
 
 ### Phase 5: Behavioral Recommendations Generation
 
-**Entry Criteria:**
+### Entry Criteria
 - Prioritized interventions from Phase 3 are available.
 - Behavioral problems identified in Phase 2.
 - At least 1 behavioral intervention has feasibility_score ≥5.
 
-**Actions:**
+### Actions
 1. Filter prioritized interventions to those addressing behavioral factors: caffeine timing, alcohol use, exercise timing, screen time, sleep schedule, napping habits, stress management, sleep rituals, relaxation techniques.
 2. For each behavioral intervention, generate a specific, actionable recommendation:
    - **Recommendation**: Concrete behavior change with specific target (e.g., "Stop caffeine intake after 2 PM; switch to herbal tea or water after that time" NOT "Reduce caffeine"). Include specific times, quantities, or methods.
@@ -184,13 +184,13 @@
 6. Include stress management and relaxation techniques if psychological factors are present (e.g., anxiety, racing thoughts). Examples: progressive muscle relaxation, 4-7-8 breathing, meditation, journaling.
 7. Limit to 5-7 behavioral recommendations total to avoid overwhelm.
 
-**Output:**
+### Output
 - `behavioral_recommendations` (array of objects): Each with fields: recommendation (string), rationale (string with sleep science principle), implementation_strategy (string with gradual steps if needed), timeline (phase_1/phase_2/phase_3), difficulty_level (1-10 with justification), success_indicator (measurable outcome), sequence_order (integer), replacement_behavior (string if applicable).
 - `behavioral_quick_wins` (array): Subset of recommendations easiest to adopt immediately (difficulty ≤3) with high impact. Minimum 1, maximum 3.
 - `difficult_changes` (array): High-difficulty recommendations (difficulty ≥7) with detailed gradual implementation plans. Format: {recommendation: string, difficulty_level: 1-10, gradual_plan: {week_1: string, week_2: string, ...}, expected_challenges: [string array], mitigation_strategies: [string array]}.
 - `replacement_behaviors` (object): Map of eliminated habits to suggested replacement behaviors (e.g., {"evening screens": ["reading", "meditation", "conversation"]}).
 
-**Quality Gate:**
+### Quality Gate
 - Every recommendation is specific and measurable (includes specific times, quantities, or methods).
 - Sequence order respects difficulty (easier first) and dependencies (some changes enable others).
 - Replacement behaviors are suggested for all eliminated habits.
@@ -203,13 +203,13 @@
 
 ### Phase 6: Implementation Protocol and Timeline Design
 
-**Entry Criteria:**
+### Entry Criteria
 - Environmental recommendations from Phase 4 (may be empty if no environmental problems).
 - Behavioral recommendations from Phase 5 (may be empty if no behavioral problems).
 - User constraints and flexibility_score from Phase 3.
 - At least 3 total recommendations (environmental + behavioral).
 
-**Actions:**
+### Actions
 1. Create a phased rollout plan based on user's flexibility_score and time_to_implement:
    - If flexibility_score ≥7 and time_to_implement ≥4 weeks: Create full 3-phase plan (Phase 1: 2-4 changes, Phase 2: 2-4 changes, Phase 3: remaining changes).
    - If flexibility_score 4-6 or time_to_implement 2-3 weeks: Create 2-phase plan (Phase 1: 2-3 easiest changes, Phase 2: remaining changes).
@@ -225,14 +225,14 @@
 6. Suggest checkpoints: weekly reviews (every Sunday evening) to assess progress, identify obstacles, and adjust as needed. Provide review prompts (e.g., "Which recommendations did you follow? Which were hardest? Did sleep improve?").
 7. Create a contingency plan: if a recommendation isn't working after 2 weeks, suggest alternatives (e.g., "If blackout curtains don't help, try sleep mask instead").
 
-**Output:**
+### Output
 - `implementation_protocol` (object): Structured plan with phase_1, phase_2, phase_3 (each containing: recommendations (array of strings), start_date (YYYY-MM-DD), end_date (YYYY-MM-DD), daily_actions (array of strings), expected_improvements (array of measurable targets)). If only 1-2 phases, include only those.
 - `success_metrics` (array): Measurable targets for overall protocol success. Format: {metric: string, target: string, baseline: string (current state), measurement_method: string}. Example: {metric: "Sleep onset latency", target: "<20 minutes", baseline: "45 minutes", measurement_method: "Record time from lights out to sleep using sleep tracking app or manual log"}.
 - `tracking_template` (string): Daily/weekly log format (as markdown table or text template) for user to track progress. Include fields: date, sleep_time, wake_time, duration, quality_1_10, awakenings, adherence_checklist, notes.
 - `checkpoint_schedule` (array): Dates for weekly reviews. Format: {date: YYYY-MM-DD, day_of_week: string, review_prompts: [string array]}. Example: {date: "2024-01-21", day_of_week: "Sunday", review_prompts: ["Which recommendations did you follow this week?", "Which were hardest?", "Did sleep improve?", "Any obstacles to address?"]}.
 - `contingency_plan` (object): If recommendation not working after 2 weeks, suggest alternatives. Format: {recommendation: string, alternative_1: string, alternative_2: string}.
 
-**Quality Gate:**
+### Quality Gate
 - No phase has more than 5 simultaneous changes.
 - Every recommendation from Phases 4-5 appears in exactly one phase (none missing, none duplicated).
 - Success metrics are testable and measurable (not subjective like "feel better").
@@ -245,13 +245,13 @@
 
 ### Phase 7: Protocol Document Compilation
 
-**Entry Criteria:**
+### Entry Criteria
 - Implementation protocol from Phase 6 is complete.
 - All recommendations, assessments, and timelines are finalized.
 - Sleep profile, problem analysis, and success metrics are available.
 
-**Actions:**
-1. Compile a comprehensive sleep hygiene protocol document with these sections in order:
+### Actions
+1. Compile a full sleep hygiene protocol document with these sections in order:
    - **Executive Summary** (200-300 words): User's sleep profile (current sleep/wake times, duration, quality), key problems identified (2-3 main issues), expected improvements from protocol (specific targets), timeline (e.g., "4-week protocol"), and personalization note (e.g., "This protocol is tailored to your shared bedroom and low budget; recommendations prioritize low-cost, non-disruptive changes.").
    - **Your Sleep Assessment** (300-400 words): Scores and analysis from Phase 2 in user-friendly language (avoid jargon; explain each dimension). Example: "Sleep Onset Latency (7/10): You typically fall asleep in 20-30 minutes, which is slightly longer than ideal (<15 min) but not severe. This is likely due to [specific factors from problem analysis]."
    - **Environmental Changes** (400-500 words): Recommendations from Phase 4 with implementation steps and success indicators. Format: For each recommendation, include: (1) What to do (specific action), (2) Why it helps (sleep science), (3) How to do it (step-by-step), (4) Cost and timeline, (5) How to know if it's working (success indicator). Use clear headings and bullet points.
@@ -269,10 +269,10 @@
 5. Add a "Next Steps" section at the end: (1) Print or save this document, (2) Start with Phase 1 on [specific date], (3) Track daily using the log, (4) Review weekly on [specific day], (5) Adjust as needed based on progress.
 6. Ensure document is self-contained: user can follow it without external guidance or additional resources (except for professional help if needed).
 
-**Output:**
+### Output
 - `protocol_document` (string): Complete formatted sleep hygiene protocol, 2500-3500 words, ready for user consumption. Include all sections listed above with proper formatting (markdown or plain text with clear structure).
 
-**Quality Gate:**
+### Quality Gate
 - Document is readable by a non-expert (no unexplained jargon; if technical terms used, explain them).
 - Every recommendation from Phases 4-5 appears in the document with full context (what, why, how, when, success indicator).
 - Document is actionable: user can follow it without external guidance (all steps are explicit).
@@ -283,6 +283,15 @@
 
 ---
 
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Analyze sleep habits and generate a personalized sleep hygiene protocol with spe, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
+
 ## Exit Criteria
 
 The skill is DONE when:
@@ -292,7 +301,7 @@ The skill is DONE when:
 4. At least 2 environmental recommendations have been generated with specific implementation details, cost estimates, timelines, and success indicators (Phase 4 complete).
 5. At least 2 behavioral recommendations have been generated with sequencing, difficulty levels, and implementation strategies (Phase 5 complete).
 6. A phased implementation protocol spanning 2-4+ weeks has been created with success metrics, tracking template, and checkpoint schedule (Phase 6 complete).
-7. A comprehensive protocol document (2500-3500 words) has been compiled and formatted for user use with all required sections (Phase 7 complete).
+7. A full protocol document (2500-3500 words) has been compiled and formatted for user use with all required sections (Phase 7 complete).
 8. All outputs match the specified output schema: sleep_profile (with confidence levels), problem_analysis (with severity and modifiability ranks), environmental_recommendations (array with all required fields), behavioral_recommendations (array with all required fields), implementation_protocol (with phases, dates, and metrics), protocol_document (string, formatted).
 9. All outputs are internally consistent: recommendations in protocol_document match those in environmental_recommendations and behavioral_recommendations arrays; implementation_protocol phases include all recommendations; success_metrics are testable and appear in tracking_template.
 10. If medical referral flags are present, they are explicitly noted in problem_analysis and protocol_document.

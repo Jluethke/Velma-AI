@@ -35,21 +35,21 @@
 
 ### Phase 1: Parse and Validate Meeting Notes
 
-**Entry Criteria:**
+### Entry Criteria
 - Meeting notes are provided as a non-empty string
 - Notes are in a readable text format (plain text, markdown, or structured)
 
-**Actions:**
+### Actions
 1. Read the full meeting notes text and verify it is not empty or corrupted
 2. If attendee_list is not provided, scan notes for person names and extract candidate attendees
 3. Segment notes into logical sections by identifying structural markers (headers, line breaks, bullet points, or topic transitions)
 4. Verify that notes contain at least one sentence with action-oriented language ("will", "should", "must", "needs to", "action", "task")
 
-**Output:**
+### Output
 - Parsed meeting structure with identified sections and extracted attendee list
 - Validation status: "pass" or "fail" with reason
 
-**Quality Gate:**
+### Quality Gate
 - Validation status is "pass" (notes are legible and contain at least one action-oriented statement)
 - Attendee list is non-empty (either provided or extracted)
 - Parsed sections are identifiable and non-empty
@@ -58,22 +58,22 @@
 
 ### Phase 2: Extract Candidate Action Items
 
-**Entry Criteria:**
+### Entry Criteria
 - Meeting notes have passed validation in Phase 1
 - Attendee list is available
 
-**Actions:**
+### Actions
 1. Scan notes for action-oriented language patterns: "will", "should", "must", "needs to", "to do", "action", "task", "assigned"
 2. For each match, extract the complete sentence or phrase containing the action verb
 3. Preserve original wording and note the source location (section, line reference) to enable traceability
 4. Exclude meta-statements (e.g., "we discussed the timeline") unless they contain an explicit action verb
 5. If no action items are found, record this as a processing note and continue with empty list
 
-**Output:**
+### Output
 - List of raw action item candidates (unstructured phrases or sentences)
 - Source references (section and line numbers) for each candidate
 
-**Quality Gate:**
+### Quality Gate
 - Each candidate is a complete phrase or sentence containing an action verb
 - Source references are accurate and traceable
 - If no candidates found, this is recorded explicitly (not treated as failure)
@@ -82,11 +82,11 @@
 
 ### Phase 3: Assign Owners
 
-**Entry Criteria:**
+### Entry Criteria
 - Candidate action items are extracted
 - Attendee list is available
 
-**Actions:**
+### Actions
 1. For each action item, examine the surrounding context (same sentence, previous sentence, same paragraph) for owner indicators
 2. Apply owner assignment rules in order of precedence:
    - **Explicit assignment:** "John will X" or "assigned to Sarah" → owner = John or Sarah
@@ -96,12 +96,12 @@
 3. Match owner names against the attendee list; if name is not in list, flag as "unclear_owner"
 4. Record the assignment method (explicit/role-based/collective/none) for reference
 
-**Output:**
+### Output
 - Action items with assigned owner field (name, "unassigned", or role reference)
 - Ambiguity flags for unclear or missing owners
 - Assignment method metadata for each item
 
-**Quality Gate:**
+### Quality Gate
 - Every action item has an owner field (either a name, role reference, or "unassigned")
 - All ambiguous assignments are flagged with specific reason
 - Assignment method is recorded for traceability
@@ -110,10 +110,10 @@
 
 ### Phase 4: Extract and Infer Deadlines
 
-**Entry Criteria:**
+### Entry Criteria
 - Action items have assigned owners
 
-**Actions:**
+### Actions
 1. For each action item, scan the item text and surrounding context (same paragraph, next sentence) for deadline indicators
 2. Classify deadline mentions into categories:
    - **Absolute dates:** "2024-01-15", "January 15", "next Friday", "end of month"
@@ -125,12 +125,12 @@
 5. For vague timeframes, flag as "ambiguous_deadline" and record the original phrase
 6. If no deadline is mentioned, flag as "missing_deadline"
 
-**Output:**
+### Output
 - Action items with deadline field (ISO 8601 date string or relative timeframe)
 - Ambiguity flags for missing or vague deadlines
 - Deadline classification metadata (absolute/relative/implicit/vague)
 
-**Quality Gate:**
+### Quality Gate
 - Every action item has a deadline field (either a date, relative timeframe, or null with flag)
 - All vague or missing deadlines are flagged with specific reason
 - Deadline classification is recorded for reference
@@ -139,10 +139,10 @@
 
 ### Phase 5: Determine Reminder Schedule
 
-**Entry Criteria:**
+### Entry Criteria
 - Action items have deadlines
 
-**Actions:**
+### Actions
 1. For each action item with a valid, unambiguous deadline (ISO 8601 date):
    - Calculate reminder date by subtracting `default_reminder_days_before` from the deadline
    - Ensure reminder date is in the future (after current date)
@@ -151,12 +151,12 @@
 3. For action items with ambiguous or missing deadlines, set reminder_date to null (do not calculate)
 4. Record the reminder calculation method (default/explicit preference) for reference
 
-**Output:**
+### Output
 - Action items with reminder_date field (ISO 8601 date or null)
 - Flags for items where reminder cannot be scheduled
 - Reminder calculation metadata
 
-**Quality Gate:**
+### Quality Gate
 - All valid, unambiguous deadlines have a corresponding reminder_date in the future
 - All reminder dates are before their corresponding deadlines
 - Items with ambiguous deadlines have reminder_date set to null
@@ -165,10 +165,10 @@
 
 ### Phase 6: Flag Ambiguities and Assess Priority
 
-**Entry Criteria:**
+### Entry Criteria
 - All action items have owners, deadlines, and reminders
 
-**Actions:**
+### Actions
 1. Compile all ambiguity flags from previous phases into the ambiguity_flags array for each item. Recognized categories:
    - `missing_owner`: No owner assigned
    - `unclear_owner`: Owner name not in attendee list
@@ -185,11 +185,11 @@
    - **Requires_clarification:** Item has 2 or more critical ambiguities (missing owner, missing deadline, unclear scope)
 3. Create ambiguities_summary object with total_flagged_items count, by_type breakdown, and list of items requiring clarification
 
-**Output:**
+### Output
 - Action items with priority field and complete ambiguity_flags array
 - ambiguities_summary object with counts and lists
 
-**Quality Gate:**
+### Quality Gate
 - Every action item has a priority level
 - All ambiguities from previous phases are documented in ambiguity_flags
 - ambiguities_summary counts match the flagged items in the array
@@ -198,10 +198,10 @@
 
 ### Phase 7: Format and Output Structured Action Items
 
-**Entry Criteria:**
+### Entry Criteria
 - All action items are complete with owners, deadlines, reminders, priorities, and flags
 
-**Actions:**
+### Actions
 1. Assign unique IDs to each action item in sequence: "ACTION-001", "ACTION-002", etc.
 2. Validate each action item against the output schema:
    - id: non-empty string matching pattern "ACTION-NNN"
@@ -221,18 +221,27 @@
    - Summary of ambiguity resolution approach
 5. Verify output is valid JSON and all required fields are present
 
-**Output:**
+### Output
 - `action_items` array (JSON, sorted by deadline then priority)
 - `ambiguities_summary` object
 - `processing_notes` string
 
-**Quality Gate:**
+### Quality Gate
 - Output is valid JSON parseable by standard JSON parsers
 - All required fields are present in each action item
 - ambiguities_summary.by_type counts match actual flags in action_items
 - ambiguities_summary.items_requiring_clarification IDs match items with priority="requires_clarification"
 
 ---
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Convert meeting notes into structured action items with assigned owners, deadlin, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 

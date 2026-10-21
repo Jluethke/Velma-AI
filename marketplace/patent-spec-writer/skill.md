@@ -1,6 +1,6 @@
 # Patent Specification Writer
 
-> **Starter Skill** — Free to use. Royalties to original creator on derivatives. Build on this.
+> **Starter Skill**  --  Free to use. Royalties to original creator on derivatives. Build on this.
 
 Writes a complete patent specification document from claims, invention descriptions, and source code. Produces all required sections: Title, Field, Background, Summary, Detailed Description, and Abstract. Ensures the specification enables the claims (enablement requirement), describes the best mode, and differentiates from prior art. Outputs USPTO-ready markdown.
 
@@ -22,7 +22,7 @@ PHASE 7: REVIEW      --> Verify enablement, consistency, and completeness
 - `invention_description`: string -- High-level description of what the invention does
 - `source_code_paths`: list[string] -- Implementation files for enablement details
 - `prior_art`: list[object] -- Known prior art with names and descriptions of how this invention differs
-- `related_families`: list[object] -- Related patent families for cross-references (e.g., [{name: "Family B — ALG", relationship: "complementary governance layer"}])
+- `related_families`: list[object] -- Related patent families for cross-references (e.g., [{name: "Family B  --  governance engine", relationship: "complementary governance layer"}])
 - `domain`: string -- Technical domain for appropriate terminology
 
 ## Outputs
@@ -37,11 +37,12 @@ PHASE 7: REVIEW      --> Verify enablement, consistency, and completeness
 
 ## Execution
 
-### PHASE 1: SCAFFOLD — Build Document Structure
+### PHASE 1: SCAFFOLD  --  Build Document Structure
 
-**Entry criteria:** Claims provided
+### Entry Criteria
+Claims provided
 
-**Actions:**
+### Actions
 1. Create document skeleton with sections in USPTO order:
    - Title of the Invention
    - Cross-Reference to Related Applications
@@ -60,17 +61,20 @@ PHASE 7: REVIEW      --> Verify enablement, consistency, and completeness
    - FIG. 3+: Additional figures for subsystem detail, state machines, data flow, mathematical relationships
 5. For each planned figure, create a structured description: figure_number, title, drawing_type_hint (block_diagram/flowchart/state_machine/sequence_diagram/data_flow/graph), narrative description listing every component and connection, and component list.
 
-**Output:** Document skeleton with section headers, term list, and planned figure set.
+### Output
+Document skeleton with section headers, term list, and planned figure set.
 
-**Quality gate:** All required sections present. Every claim term cataloged. At least 3 figures planned with complete descriptions.
+### Quality Gate
+All required sections present. Every claim term cataloged. At least 3 figures planned with complete descriptions.
 
 ---
 
-### PHASE 2: BACKGROUND — Problem and Prior Art
+### PHASE 2: BACKGROUND  --  Problem and Prior Art
 
-**Entry criteria:** Document skeleton and prior art inputs
+### Entry Criteria
+Document skeleton and prior art inputs
 
-**Actions:**
+### Actions
 1. Write Field of the Invention: one paragraph situating the invention in its technical domain.
 2. Write Background / Problem Statement: describe the problem that existing approaches fail to solve. Focus on what's missing, not what exists.
 3. Write Distinction from Prior Art subsection: for each prior art reference, explicitly state:
@@ -79,17 +83,20 @@ PHASE 7: REVIEW      --> Verify enablement, consistency, and completeness
    - How the present invention differs on each point
 4. Use specific, technical language. Name the prior art systems. Explain the gap clearly.
 
-**Output:** Completed Background section with prior art differentiation.
+### Output
+Completed Background section with prior art differentiation.
 
-**Quality gate:** Every prior art reference has explicit differentiation. The gap between prior art and invention is clear.
+### Quality Gate
+Every prior art reference has explicit differentiation. The gap between prior art and invention is clear.
 
 ---
 
-### PHASE 3: DESCRIPTION — Detailed Enablement
+### PHASE 3: DESCRIPTION  --  Detailed Enablement
 
-**Entry criteria:** Claims analyzed, source code available
+### Entry Criteria
+Claims analyzed, source code available
 
-**Actions:**
+### Actions
 1. Write System Architecture section: describe the major components from the independent system claim. Explain how they connect, what data flows between them, and the overall processing pipeline.
 2. For EACH claim element (independent and dependent), write a subsection explaining:
    - What the element does
@@ -102,47 +109,56 @@ PHASE 7: REVIEW      --> Verify enablement, consistency, and completeness
 6. Write all descriptions in present tense, third person, passive voice where possible ("the trust value is computed by...").
 7. Never use product names, library names, or language names. Describe functionally.
 
-**Output:** Complete Detailed Description section.
+### Output
+Complete Detailed Description section.
 
-**Quality gate:** Every claim element has a corresponding description. A skilled practitioner could implement the invention from this description alone.
+### Quality Gate
+Every claim element has a corresponding description. A skilled practitioner could implement the invention from this description alone.
 
 ---
 
-### PHASE 4: SUMMARY — Abstract and Summary
+### PHASE 4: SUMMARY  --  Abstract and Summary
 
-**Entry criteria:** Detailed Description complete
+### Entry Criteria
+Detailed Description complete
 
-**Actions:**
+### Actions
 1. Write Summary of the Invention: 2-3 paragraphs summarizing what the invention provides. Mirror the independent claims in prose form.
 2. Write Abstract: under 150 words. One paragraph. Describes the technical disclosure without legal language. No "claim" or "wherein" language in abstract.
 3. Write Title: concise but descriptive. Under 15 words. No product names.
 
-**Output:** Title, Summary, and Abstract.
+### Output
+Title, Summary, and Abstract.
 
-**Quality gate:** Abstract under 150 words. Title under 15 words. Neither contains product names.
+### Quality Gate
+Abstract under 150 words. Title under 15 words. Neither contains product names.
 
 ---
 
-### PHASE 5: CROSSREF — Cross-References
+### PHASE 5: CROSSREF  --  Cross-References
 
-**Entry criteria:** Related families provided
+### Entry Criteria
+Related families provided
 
-**Actions:**
+### Actions
 1. Write Cross-Reference to Related Applications section listing each related patent family.
 2. For each related family, add a brief description of the relationship (e.g., "complementary governance layer", "coordination subsystem").
 3. Add inline cross-references in the Detailed Description wherever the invention interfaces with or complements a related family's invention.
 
-**Output:** Cross-reference section and inline references.
+### Output
+Cross-reference section and inline references.
 
-**Quality gate:** All related families referenced. Relationships clearly described.
+### Quality Gate
+All related families referenced. Relationships clearly described.
 
 ---
 
-### PHASE 6: FIGURES — Generate Drawing Descriptions
+### PHASE 6: FIGURES  --  Generate Drawing Descriptions
 
-**Entry criteria:** Detailed Description and claims are complete
+### Entry Criteria
+Detailed Description and claims are complete
 
-**Actions:**
+### Actions
 1. For each figure planned in Phase 1, write a complete formal description:
    - Figure number (FIG. 1, FIG. 2, etc.)
    - Title (e.g., "System Architecture Block Diagram", "Trust Computation Flowchart")
@@ -156,17 +172,20 @@ PHASE 7: REVIEW      --> Verify enablement, consistency, and completeness
 4. Ensure every component named in an independent claim appears in at least one figure.
 5. Ensure every figure is referenced in the Detailed Description.
 
-**Output:** figure_descriptions list, Brief Description of the Drawings section added to specification.
+### Output
+figure_descriptions list, Brief Description of the Drawings section added to specification.
 
-**Quality gate:** Every independent claim element appears in at least one figure. Every figure has a complete component list. Drawing type hints are valid.
+### Quality Gate
+Every independent claim element appears in at least one figure. Every figure has a complete component list. Drawing type hints are valid.
 
 ---
 
-### PHASE 7: REVIEW — Verify Completeness
+### PHASE 7: REVIEW  --  Verify Completeness
 
-**Entry criteria:** All sections drafted
+### Entry Criteria
+All sections drafted
 
-**Actions:**
+### Actions
 1. Build enablement map: for each claim element, record which specification section describes it.
 2. Check for gaps: any claim element without a corresponding specification description is a filing risk.
 3. Verify no implementation language leaked into the specification (product names, language names).
@@ -174,9 +193,20 @@ PHASE 7: REVIEW      --> Verify enablement, consistency, and completeness
 5. Verify abstract is under 150 words.
 6. Generate completeness report with section word counts and coverage percentages.
 
-**Output:** Enablement map, completeness report, final specification.
+### Output
+Enablement map, completeness report, final specification.
 
-**Quality gate:** 100% claim element coverage. Zero implementation language. Abstract under limit.
+### Quality Gate
+100% claim element coverage. Zero implementation language. Abstract under limit.
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Writes complete patent specification documents from claims and source code. Prod, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 

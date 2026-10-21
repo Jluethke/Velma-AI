@@ -33,10 +33,10 @@ PHASE 5: ACTIONS    --> Strategic recommendations, messaging angles, feature pri
 
 ### Phase 1: IDENTIFY -- Find All Competitors
 
-**Entry criteria:** Company profile and market context are provided.
+### Entry Criteria
+Company profile and market context are provided.
 
-**Actions:**
-
+### Actions
 1. **List direct competitors:**
    ```
    Same category, same buyer, same problem.
@@ -78,19 +78,21 @@ PHASE 5: ACTIONS    --> Strategic recommendations, messaging angles, feature pri
    Prioritize by: frequency in competitive deals, market share, growth rate, strategic threat
    ```
 
-**Output:** Categorized competitor list with tier assignment and prioritization rationale.
+### Output
+Categorized competitor list with tier assignment and prioritization rationale.
 
-**Quality gate:** At least 3 direct competitors identified. At least 2 indirect competitors identified. At least 1 emerging threat identified. Sources are cited for each.
+### Quality Gate
+At least 3 direct competitors identified. At least 2 indirect competitors identified. At least 1 emerging threat identified. Sources are cited for each.
 
 ---
 
 ### Phase 2: ANALYZE -- Deep Competitor Profiles
 
-**Entry criteria:** Prioritized competitor list is complete.
+### Entry Criteria
+Prioritized competitor list is complete.
 
-**Actions:**
-
-For each Tier 1 competitor, build a comprehensive profile:
+### Actions
+For each Tier 1 competitor, build a full profile:
 
 1. **Company overview:**
    ```
@@ -166,18 +168,20 @@ For each Tier 1 competitor, build a comprehensive profile:
    - Common reasons for switching away
    ```
 
-**Output:** Detailed profiles for each Tier 1 competitor. Summary profiles for Tier 2 and 3.
+### Output
+Detailed profiles for each Tier 1 competitor. Summary profiles for Tier 2 and 3.
 
-**Quality gate:** Each Tier 1 profile has all 7 sections completed. Strengths and weaknesses are evidence-based (linked to specific data points). Customer sentiment includes at least 10 data points per competitor.
+### Quality Gate
+Each Tier 1 profile has all 7 sections completed. Strengths and weaknesses are evidence-based (linked to specific data points). Customer sentiment includes at least 10 data points per competitor.
 
 ---
 
 ### Phase 3: COMPARE -- Feature and Positioning Matrices
 
-**Entry criteria:** Competitor profiles are complete.
+### Entry Criteria
+Competitor profiles are complete.
 
-**Actions:**
-
+### Actions
 1. **Build weighted feature matrix:**
    ```
    Steps:
@@ -228,18 +232,20 @@ For each Tier 1 competitor, build a comprehensive profile:
    - Who just raised funding? (preparing to invest)
    ```
 
-**Output:** Weighted feature matrix with scores, pricing comparison across buyer profiles, positioning map(s), and competitive dynamics summary.
+### Output
+Weighted feature matrix with scores, pricing comparison across buyer profiles, positioning map(s), and competitive dynamics summary.
 
-**Quality gate:** Feature weights reflect buyer priorities (justified). At least 3 competitors are scored across at least 10 features. Positioning map reveals at least one empty quadrant or opportunity zone.
+### Quality Gate
+Feature weights reflect buyer priorities (justified). At least 3 competitors are scored across at least 10 features. Positioning map reveals at least one empty quadrant or opportunity zone.
 
 ---
 
 ### Phase 4: GAPS -- Competitive Opportunities and Vulnerabilities
 
-**Entry criteria:** Comparison matrices are complete.
+### Entry Criteria
+Comparison matrices are complete.
 
-**Actions:**
-
+### Actions
 1. **Identify competitive gaps (your opportunities):**
    ```
    For each competitor weakness:
@@ -278,18 +284,20 @@ For each Tier 1 competitor, build a comprehensive profile:
    - Are any competitors showing signs of decline? (opportunity to capture share)
    ```
 
-**Output:** Gap analysis with opportunities and vulnerabilities, each with a strategic decision (exploit/defend/concede/reframe), and competitive movement alerts.
+### Output
+Gap analysis with opportunities and vulnerabilities, each with a strategic decision (exploit/defend/concede/reframe), and competitive movement alerts.
 
-**Quality gate:** Every gap is assessed for buyer importance and feasibility. Every vulnerability has a strategic decision. At least 2 exploitable gaps are identified with specific action plans.
+### Quality Gate
+Every gap is assessed for buyer importance and feasibility. Every vulnerability has a strategic decision. At least 2 exploitable gaps are identified with specific action plans.
 
 ---
 
 ### Phase 5: ACTIONS -- Strategic Recommendations
 
-**Entry criteria:** Gap analysis is complete.
+### Entry Criteria
+Gap analysis is complete.
 
-**Actions:**
-
+### Actions
 1. **Product priorities:**
    ```
    Based on gaps and vulnerabilities, recommend feature priorities:
@@ -355,9 +363,20 @@ For each Tier 1 competitor, build a comprehensive profile:
    - G2: competitor review volume and rating changes
    ```
 
-**Output:** Product priority recommendations, messaging angles per competitor, sales battlecards, and competitive monitoring plan.
+### Output
+Product priority recommendations, messaging angles per competitor, sales battlecards, and competitive monitoring plan.
 
-**Quality gate:** Product priorities are linked to specific competitive gaps. Messaging angles are specific and provable. Each Tier 1 competitor has a battlecard. Monitoring plan has specific cadence and assignments.
+### Quality Gate
+Product priorities are linked to specific competitive gaps. Messaging angles are specific and provable. Each Tier 1 competitor has a battlecard. Monitoring plan has specific cadence and assignments.
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Systematic competitive teardown: identifies direct, indirect, and emerging compe, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 

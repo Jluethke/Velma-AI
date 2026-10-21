@@ -1,6 +1,6 @@
 # Side Hustle Financial Modeler
 
-**One-line description:** Transform a side hustle idea into a comprehensive financial model with market validation, startup costs, break-even analysis, 12-month projections, and three-scenario planning (best/worst/likely case).
+**One-line description:** Transform a side hustle idea into a full financial model with market validation, startup costs, break-even analysis, 12-month projections, and three-scenario planning (best/worst/likely case).
 
 **Execution Pattern:** Phase Pipeline
 
@@ -28,7 +28,7 @@
 - `break_even_analysis` (object): Break-even units/month, break-even months, cash runway, and funding requirement. Fields: {unit_contribution_margin, break_even_units_per_month, break_even_revenue_per_month, break_even_months, cash_runway_months, funding_required, achievable}.
 - `time_commitment_validation` (object): Cross-check of projected unit volume against available hours. Fields: {available_hours_per_week, hours_per_unit, projected_hours_needed_month_6, feasible, flag}.
 - `base_case_projection` (array of objects): Month-by-month P&L (revenue, costs, net profit, cumulative cash).
-- `best_case_projection` (array of objects): Optimistic scenario month-by-month P&L.
+- `best_case_projection` (array of objects): Optimiztic scenario month-by-month P&L.
 - `worst_case_projection` (array of objects): Pessimistic scenario month-by-month P&L.
 - `scenario_comparison` (object): Side-by-side summary of all three scenarios. Fields: {base_case: {profitability_month, month_12_net_profit, cash_runway}, best_case: {...}, worst_case: {...}}.
 - `sensitivity_analysis` (object): Key drivers and their impact on profitability. Fields: {price_sensitivity: {plus_10_percent, minus_10_percent}, volume_sensitivity: {plus_20_percent, minus_20_percent}, cost_sensitivity: {plus_15_percent, minus_15_percent}, top_3_drivers: []}.
@@ -42,10 +42,10 @@
 
 ### Phase 1: Idea Validation & Scope Definition
 
-**Entry Criteria:**
+### Entry Criteria
 - `idea_description`, `target_market`, and `revenue_model` are provided and meet specificity requirements.
 
-**Actions:**
+### Actions
 1. Parse the idea description and extract: product/service type, unique value proposition, target customer segment.
 2. Validate the revenue model: confirm it is quantified (price per unit, hourly rate, or subscription amount). If not, request a specific price point.
 3. Validate the target market: confirm it is specific (not "everyone"). If too broad, request a narrower segment.
@@ -53,10 +53,10 @@
 5. Document any implicit constraints (e.g., "I can only work 10 hours/week," "I have $2,000 to invest").
 6. Flag any red flags: idea is too similar to existing products, market is saturated, or revenue model is unrealistic for the market.
 
-**Output:**
+### Output
 - `idea_summary`: {idea, target_market, revenue_model, business_type, constraints, red_flags}
 
-**Quality Gate:**
+### Quality Gate
 - Idea description is specific (not "make money online" or "sell stuff"). Verified by: idea includes product/service type AND target customer AND value proposition.
 - Revenue model is quantified (price per unit or per time period is specified as a number). Verified by: revenue_model contains a dollar amount or hourly rate.
 - Target market is defined (not "everyone"). Verified by: target_market is a specific customer segment (e.g., "busy parents with kids under 5", not "parents").
@@ -65,20 +65,20 @@
 
 ### Phase 2: Market Validation
 
-**Entry Criteria:**
+### Entry Criteria
 - `idea_summary` is complete.
 
-**Actions:**
+### Actions
 1. Assess the validation method: has the user conducted customer interviews, surveys, pre-sales, or waitlist signups? Or is this a new idea with no validation yet?
 2. If validation exists: document the findings (e.g., "5 customers pre-ordered at $50; 20 people signed up for waitlist"). Assign confidence level (high/medium/low).
 3. If no validation exists: recommend a validation method for the business type (e.g., for product: "conduct 5 customer interviews; ask: would you buy this at $50?"; for service: "post on relevant forums/communities and gauge interest").
 4. Flag risk: if confidence is low or no validation has been done, mark risk_flag = true and note in recommendation.
 5. Document the assumption: "Assume customer demand exists at the proposed price point." Confidence level = confidence from validation (or "low" if no validation done).
 
-**Output:**
+### Output
 - `market_validation`: {validation_method, findings, confidence_level, risk_flag, recommendation_if_unvalidated}
 
-**Quality Gate:**
+### Quality Gate
 - Validation method is documented (even if it's "no validation done yet"). Verified by: validation_method field is not empty.
 - Confidence level is assigned (high/medium/low). Verified by: confidence_level field is one of the three values.
 - Risk flag is set if confidence is low or no validation exists. Verified by: risk_flag = true when confidence_level = "low" or validation_method = "none".
@@ -87,21 +87,21 @@
 
 ### Phase 3: Startup Costs Identification
 
-**Entry Criteria:**
+### Entry Criteria
 - `idea_summary` and `market_validation` are complete.
 - `known_startup_costs` (if provided) are available.
 
-**Actions:**
+### Actions
 1. For the business type identified in Phase 1, enumerate typical startup cost categories: equipment/tools, software/licenses, initial inventory, branding/website, legal/registration, marketing launch, contingency (10% buffer).
 2. For each category, estimate the cost based on the idea scope. Use industry benchmarks from the Reference Section if available.
 3. If `known_startup_costs` are provided, use them; otherwise, apply reasonable defaults for the business type.
 4. Sum all costs and flag any category that exceeds 30% of total startup investment (concentration risk).
 5. Document the assumption: "Startup costs estimated using [benchmark/user input/industry average]." Confidence level = high (if user provided) or medium (if estimated).
 
-**Output:**
+### Output
 - `startup_costs_breakdown`: {equipment, software_licenses, inventory, branding, legal, marketing, contingency, total_startup_cost, concentration_risk_flags}
 
-**Quality Gate:**
+### Quality Gate
 - All major cost categories are represented (no "other: TBD"). Verified by: every category has a numeric value, not null or "TBD".
 - Total startup cost is realistic for the business type. Verified by: total_startup_cost falls within the benchmark range for the business_type (e.g., $500-$5,000 for product-based).
 - Concentration risk is flagged if any category exceeds 30% of total. Verified by: concentration_risk_flags array is populated if any category > 30% of total.
@@ -110,11 +110,11 @@
 
 ### Phase 4: Monthly Operating Costs & Revenue Model Refinement
 
-**Entry Criteria:**
+### Entry Criteria
 - `idea_summary`, `market_validation`, and `startup_costs_breakdown` are complete.
 - `known_monthly_costs` (if provided) are available.
 
-**Actions:**
+### Actions
 1. Separate monthly costs into fixed (rent, software subscriptions, insurance) and variable (COGS, payment processing fees, shipping).
 2. For each variable cost, calculate the per-unit cost based on the revenue model (e.g., if selling a $50 product with $15 COGS, variable cost per unit is $15).
 3. Verify unit economics: confirm that variable cost per unit < price per unit. If not, the business model is not viable; abort and recommend increasing price or reducing COGS.
@@ -123,11 +123,11 @@
 6. If `known_monthly_costs` are provided, use them; otherwise, apply defaults from the Reference Section.
 7. Document assumptions: "Estimated monthly units = X (conservative assumption for new side hustle)" and "Variable cost per unit = $Y (based on [COGS/supplier quotes/industry average])."
 
-**Output:**
+### Output
 - `monthly_costs_breakdown`: {fixed_costs: {category: amount, ...}, variable_cost_per_unit, estimated_monthly_units, total_monthly_cost}
 - `revenue_model_refined`: {price_per_unit, estimated_monthly_units, monthly_revenue, unit_contribution_margin}
 
-**Quality Gate:**
+### Quality Gate
 - Fixed and variable costs are separated. Verified by: fixed_costs is an object with categories, and variable_cost_per_unit is a numeric value.
 - Variable cost per unit is less than price per unit (positive unit margin). Verified by: unit_contribution_margin = price_per_unit - variable_cost_per_unit > 0.
 - Monthly revenue estimate is realistic (not 1,000 units/month for a brand-new side hustle). Verified by: estimated_monthly_units is <= 50 for month 1 (or justified by market validation).
@@ -136,10 +136,10 @@
 
 ### Phase 5: Break-Even Analysis & Funding Requirement
 
-**Entry Criteria:**
+### Entry Criteria
 - `startup_costs_breakdown`, `monthly_costs_breakdown`, and `revenue_model_refined` are complete.
 
-**Actions:**
+### Actions
 1. Calculate unit contribution margin: price per unit − variable cost per unit.
 2. Calculate break-even units per month: fixed monthly costs ÷ unit contribution margin. Round up to nearest whole unit.
 3. Calculate break-even revenue per month: break-even units × price per unit.
@@ -148,10 +148,10 @@
 6. Calculate funding requirement: if break-even is beyond month 6 AND cash runway is less than break-even months, calculate the additional capital needed = (monthly loss × (break-even months - 6)). This is the amount of external funding (loan, investment, or savings) needed to sustain the business until profitability.
 7. Document assumptions: "Break-even analysis assumes [growth rate, cost structure, unit volume] remain constant."
 
-**Output:**
+### Output
 - `break_even_analysis`: {unit_contribution_margin, break_even_units_per_month, break_even_revenue_per_month, break_even_months, cash_runway_months, funding_required, achievable}
 
-**Quality Gate:**
+### Quality Gate
 - Break-even units per month is achievable (less than 50% of realistic monthly capacity). Verified by: break_even_units_per_month <= 50 for month 1, or justified by market validation.
 - Break-even timeline is within 24 months (or noted as "long-term investment"). Verified by: break_even_months <= 24 OR achievable = false with explanation.
 - Cash runway is documented if break-even is not immediately achievable. Verified by: cash_runway_months is a numeric value if monthly profit is negative.
@@ -161,13 +161,12 @@
 
 ### Phase 6: Scenario Projections (Base, Best, Worst)
 
-**Entry Criteria:**
+### Entry Criteria
 - All prior phases are complete.
 - `projection_months` (default 12) is set.
 - `growth_assumption_base` (default 0.10, must be 0.0-0.30) is set.
 
-**Actions:**
-
+### Actions
 **6a. Base Case (Likely Scenario):**
 1. Start with month 1 units = estimated_monthly_units from Phase 4.
 2. Apply monthly growth rate (`growth_assumption_base`) to units each month: units_month_n = units_month_(n-1) × (1 + growth_assumption_base). Cap growth at 30% per month (industry benchmark for sustainable growth).
@@ -177,7 +176,7 @@
 6. Track cumulative cash: month 1 cumulative = −startup_cost + month 1 net profit; month n cumulative = month_(n-1) cumulative + month_n net profit.
 7. Identify the month profitability is achieved (cumulative cash turns positive). If not achieved within projection_months, note "profitability not achieved within projection period."
 
-**6b. Best Case (Optimistic Scenario):**
+**6b. Best Case (Optimiztic Scenario):**
 1. Assume 20-30% monthly growth (higher than base case). Rationale: successful marketing, word-of-mouth, or viral traction.
 2. Assume cost efficiencies: variable cost per unit decreases 2-3% per month (economies of scale), OR fixed costs are 10% lower (e.g., negotiated better rates).
 3. Generate month-by-month projection using same structure as base case.
@@ -190,12 +189,12 @@
 4. Note the cash runway: how many months until cash is depleted? If cumulative cash goes negative, flag the month when cash runs out.
 5. Document assumptions: "Worst case assumes 2% monthly growth and 1.5% monthly COGS increase due to [specific reason]."
 
-**Output:**
+### Output
 - `base_case_projection`: [{month, units, revenue, fixed_costs, variable_costs, total_costs, net_profit, cumulative_cash}, ...] for projection_months rows.
 - `best_case_projection`: [{month, units, revenue, fixed_costs, variable_costs, total_costs, net_profit, cumulative_cash}, ...] for projection_months rows.
 - `worst_case_projection`: [{month, units, revenue, fixed_costs, variable_costs, total_costs, net_profit, cumulative_cash}, ...] for projection_months rows.
 
-**Quality Gate:**
+### Quality Gate
 - All three projections span the full projection period (12 months default). Verified by: each projection array has projection_months entries.
 - Cumulative cash is tracked correctly (month 1 includes −startup_cost). Verified by: month 1 cumulative_cash = −startup_cost + month 1 net_profit.
 - Best case shows profitability within projection period (or noted as "long-term"). Verified by: best_case_projection has at least one month with positive cumulative_cash.
@@ -205,11 +204,11 @@
 
 ### Phase 7: Scenario Synthesis, Sensitivity Analysis & Recommendation
 
-**Entry Criteria:**
+### Entry Criteria
 - All three scenario projections are complete.
 - `available_hours_per_week` (default 10) is set.
 
-**Actions:**
+### Actions
 1. Create a scenario comparison table: for each scenario (base, best, worst), extract profitability month (when cumulative cash turns positive, or "not achieved"), 12-month net profit, and cash runway (months until cash depleted, or "N/A" if profitable).
 2. Perform sensitivity analysis on the base case projection:
    - **Price sensitivity:** Calculate 12-month net profit if price per unit increases by +10% and decreases by −10%. Record the impact on profit.
@@ -221,7 +220,7 @@
 5. Identify critical success factors: what must go right for this side hustle to succeed? Examples: "must achieve 20 units/month by month 3," "must keep COGS below $10/unit," "must validate demand before launch," "must secure 5 paying customers in first month."
 6. Generate recommendation: Go (pursue), No-Go (don't pursue), or Conditional (pursue if X is validated). Rationale must be based on: break-even timeline, cash runway, market validation confidence, time commitment feasibility, and sensitivity analysis.
 
-**Output:**
+### Output
 - `scenario_comparison`: {base_case: {profitability_month, month_12_net_profit, cash_runway}, best_case: {...}, worst_case: {...}}
 - `sensitivity_analysis`: {price_sensitivity: {plus_10_percent, minus_10_percent}, volume_sensitivity: {plus_20_percent, minus_20_percent}, cost_sensitivity: {plus_15_percent, minus_15_percent}, top_3_drivers: []}
 - `time_commitment_validation`: {available_hours_per_week, hours_per_unit, projected_hours_needed_month_6, feasible, flag}
@@ -229,7 +228,7 @@
 - `critical_success_factors`: ["factor 1", "factor 2", ...]
 - `recommendation`: {decision, rationale, next_steps: []}
 
-**Quality Gate:**
+### Quality Gate
 - Scenario comparison is clear and actionable (all three scenarios have profitability_month and cash_runway documented). Verified by: scenario_comparison has all six fields populated (not null or "TBD").
 - Sensitivity analysis identifies at least 3 key drivers with specific impact values. Verified by: sensitivity_analysis has three drivers with numeric impact values, and top_3_drivers array is populated.
 - Assumption log is complete; no assumption is left undocumented. Verified by: every numeric value in the model (growth rate, cost estimate, unit volume) has a corresponding entry in assumption_log.
@@ -237,6 +236,15 @@
 - Recommendation is justified by the financial model, not subjective. Verified by: recommendation.rationale cites specific metrics (break-even month, cash runway, sensitivity drivers, market validation confidence).
 
 ---
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Transform a side hustle idea into a financial model with market validation, star, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 
@@ -375,3 +383,7 @@ If running this skill multiple times for the same side hustle idea, consider tra
 - **Model iterations:** Track versions of the model as assumptions change. Compare version 1 (pre-launch) to version 2 (post-launch) to measure accuracy.
 
 This enables iterative refinement of the model and learning over time.
+
+---
+
+Copyright 2024-present The Wayfinder Trust. All rights reserved.

@@ -57,6 +57,15 @@
 
 ---
 
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Run SKiDL ERC to zero errors with justified waivers only, generate the KiCad net, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
+
 ## Exit Criteria
 
 DONE when the netlist regenerates from source with zero ERC errors and matches the BOM count.

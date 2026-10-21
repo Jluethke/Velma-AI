@@ -1,6 +1,6 @@
 # Test Case Writer
 
-> **Starter Skill** — Free to use. Royalties to original creator on derivatives. Build on this.
+> **Starter Skill**  --  Free to use. Royalties to original creator on derivatives. Build on this.
 
 Takes a skill.md and generates shadow validation test cases. Creates input/output pairs that test happy paths, edge cases, error handling, and quality gate boundaries. Produces a test_cases.json file compatible with the SkillChain shadow validation system. Essential for anyone publishing a skill that needs to pass validation.
 
@@ -32,10 +32,10 @@ PHASE 4: VALIDATE   --> Verify test cases are self-consistent and achievable
 
 ### Phase 1: ANALYZE -- Extract Testable Surfaces
 
-**Entry criteria:** A valid skill.md is provided.
+### Entry Criteria
+A valid skill.md is provided.
 
-**Actions:**
-
+### Actions
 1. Parse the skill into sections: inputs, outputs, phases, quality gates, error handling, exit criteria.
 2. For each input, identify its valid range: what types are accepted? What are the boundaries (min/max, empty, null, huge)?
 3. For each output, identify what makes it correct: what fields must be present? What values are valid?
@@ -43,18 +43,20 @@ PHASE 4: VALIDATE   --> Verify test cases are self-consistent and achievable
 5. For each error handler, identify the trigger condition: what input or state causes this failure mode?
 6. List all testable surfaces: each input boundary, each output requirement, each gate boundary, each error trigger. Count them.
 
-**Output:** Testable surface inventory with boundary conditions and trigger conditions.
+### Output
+Testable surface inventory with boundary conditions and trigger conditions.
 
-**Quality gate:** At least 10 testable surfaces identified. Every phase has at least one testable surface. Every quality gate has its pass/fail boundary defined.
+### Quality Gate
+At least 10 testable surfaces identified. Every phase has at least one testable surface. Every quality gate has its pass/fail boundary defined.
 
 ---
 
 ### Phase 2: DESIGN -- Plan Test Case Coverage
 
-**Entry criteria:** Testable surfaces are cataloged.
+### Entry Criteria
+Testable surfaces are cataloged.
 
-**Actions:**
-
+### Actions
 1. Allocate test cases across categories using this distribution:
    - Happy path: 40% of test_count (typical inputs producing expected outputs)
    - Edge cases: 25% (boundary inputs, minimal inputs, maximal inputs)
@@ -70,18 +72,20 @@ PHASE 4: VALIDATE   --> Verify test cases are self-consistent and achievable
 3. For each test case, define the scenario: a one-sentence description of what is being tested and why.
 4. Build the coverage matrix: which testable surfaces are covered, which are not. Flag any uncovered critical surfaces.
 
-**Output:** Test case allocation with scenarios and coverage matrix.
+### Output
+Test case allocation with scenarios and coverage matrix.
 
-**Quality gate:** Every category has at least one test case. At least 70% of critical testable surfaces (quality gates, error handlers) are covered. No two test cases test the exact same thing.
+### Quality Gate
+Every category has at least one test case. At least 70% of critical testable surfaces (quality gates, error handlers) are covered. No two test cases test the exact same thing.
 
 ---
 
 ### Phase 3: GENERATE -- Write Concrete Test Cases
 
-**Entry criteria:** Test case scenarios are planned.
+### Entry Criteria
+Test case scenarios are planned.
 
-**Actions:**
-
+### Actions
 1. For each test case, generate:
    - `id`: sequential string like "tc_001", "tc_002"
    - `name`: short descriptive name (e.g., "happy_path_standard_input", "edge_empty_list", "error_missing_required_field")
@@ -97,22 +101,24 @@ PHASE 4: VALIDATE   --> Verify test cases are self-consistent and achievable
 4. For error handling cases: use inputs that trigger specific failure modes from the skill's error handling table. Expected keywords should include the error type or recovery action.
 5. For quality gate cases: use inputs that produce outputs right at the gate boundary. Expected keywords should validate that the gate correctly passes or fails.
 
-**Output:** Complete test case array with all fields populated.
+### Output
+Complete test case array with all fields populated.
 
-**Quality gate:** Every test case has 8-12 expected_keywords. Keywords are specific (not "the", "and", "is"). No two test cases have identical inputs. Every test case references at least one phase.
+### Quality Gate
+Every test case has 8-12 expected_keywords. Keywords are specific (not "the", "and", "is"). No two test cases have identical inputs. Every test case references at least one phase.
 
 ---
 
 ### Phase 4: VALIDATE -- Verify Test Consistency
 
-**Entry criteria:** All test cases are generated.
+### Entry Criteria
+All test cases are generated.
 
-**Actions:**
-
+### Actions
 1. Cross-check each test case input against the skill's declared input types: does the input match the expected type? If not, the test case is testing the wrong thing.
 2. Cross-check expected_keywords against the skill's declared outputs: could the skill plausibly produce text containing these keywords?
 3. Verify error handling test cases actually trigger the declared failure modes, not undocumented ones.
-4. Check for keyword overlap between test cases: if two test cases have more than 50% keyword overlap, they may be testing the same thing — differentiate or merge.
+4. Check for keyword overlap between test cases: if two test cases have more than 50% keyword overlap, they may be testing the same thing  --  differentiate or merge.
 5. Assemble the final test_cases.json:
    ```json
    {
@@ -124,11 +130,22 @@ PHASE 4: VALIDATE   --> Verify test cases are self-consistent and achievable
    }
    ```
 
-**Output:** Validated test_cases.json and final coverage matrix.
+### Output
+Validated test_cases.json and final coverage matrix.
 
-**Quality gate:** All test case inputs match declared input types. No keyword overlap exceeds 50% between cases. Every error handling test case maps to a declared failure mode.
+### Quality Gate
+All test case inputs match declared input types. No keyword overlap exceeds 50% between cases. Every error handling test case maps to a declared failure mode.
 
 ---
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Generate shadow validation test cases for a skill.md: input/output pairs coverin, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 

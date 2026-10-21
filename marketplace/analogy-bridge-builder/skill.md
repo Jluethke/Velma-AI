@@ -27,21 +27,21 @@
 
 ### Phase 1: Clarify the Struggling Concept
 
-**Entry Criteria:**
+### Entry Criteria
 - `struggling_concept` input is provided.
 - The concept is stated in plain language (not a single word without context).
 
-**Actions:**
+### Actions
 1. Parse the struggling concept statement to identify: the core idea, what makes it hard, what the user wants to do with it.
 2. Extract key attributes: Is it abstract or concrete? Does it involve relationships, sequences, hierarchies, or transformations?
 3. Identify the user's pain point: Is it the terminology, the underlying logic, the application, or the relationship to other concepts?
 4. Restate the concept in multiple ways to ensure clarity.
 5. Document the intended application: How will the user use this understanding?
 
-**Output:**
+### Output
 - `clarified_concept` object containing: concept_name, core_definition (1-2 sentences, no jargon), key_attributes (list of 3+), pain_points (explicit descriptions, not vague), intended_application.
 
-**Quality Gate:**
+### Quality Gate
 - The clarified concept is stated in 1-2 sentences without jargon, verified by reading aloud to check for technical terms.
 - At least 3 key attributes are identified and listed separately.
 - Each pain point is explicit and specific (e.g., "user struggles with why X relates to Y", not "user finds it hard").
@@ -51,21 +51,21 @@
 
 ### Phase 2: Discover User Knowledge Domains
 
-**Entry Criteria:**
+### Entry Criteria
 - `user_knowledge_domains` input is provided with at least 3 domains.
 - Domains are concrete and specific (not "science" or "life", but "biology", "cooking", "music theory").
 
-**Actions:**
+### Actions
 1. For each domain, identify: what mechanisms or structures does the user understand in this domain? What are the rules, relationships, or patterns?
 2. Probe for implicit domains: Ask "What do you do for fun?", "What was your first job?", "What do you explain to others?" to surface tacit expertise.
 3. For each domain, assess expertise level (novice/intermediate/expert) based on depth of understanding.
 4. Note which domains have structural parallels to the struggling concept (e.g., if the concept involves hierarchy, look for domains with clear hierarchies).
 5. Rank domains by relevance and richness (how much detail can be drawn from each).
 
-**Output:**
+### Output
 - `domain_inventory` array with objects: domain_name, expertise_level, key_mechanisms (list of 2+), relevance_score (1-10 scale, where 10 is highly relevant to the struggling concept).
 
-**Quality Gate:**
+### Quality Gate
 - Each domain has at least 2 identified mechanisms or structures, listed explicitly.
 - At least 2 domains are marked with relevance_score of 6 or higher.
 - Domains are diverse (not all technical, not all abstract, not all from the same category).
@@ -75,21 +75,21 @@
 
 ### Phase 3: Map Structural Similarities
 
-**Entry Criteria:**
+### Entry Criteria
 - Clarified concept with key attributes is available.
 - Domain inventory with mechanisms is available.
 
-**Actions:**
+### Actions
 1. For each key attribute of the struggling concept, search the user's domains for analogous structures or mechanisms.
 2. Create candidate bridges: "Concept attribute X is like Domain Y's mechanism Z because both involve [shared structure]."
 3. Assess each bridge for structural strength: Does the analogy preserve the essential logic? Are there misleading aspects? Rate as strong/moderate/weak based on structural isomorphism.
 4. Identify and document any misleading aspects and mitigation strategies (e.g., "This analogy breaks down when X; we'll address that in Phase 4").
 5. Select the 3-5 strongest bridges (prioritize strong and moderate, exclude weak).
 
-**Output:**
+### Output
 - `analogy_bridges` array (preliminary) with: source_domain, concept_attribute_being_mapped, mechanism_in_domain, structural_similarity_explanation, strength_rating (strong/moderate/weak), misleading_aspects (if any).
 
-**Quality Gate:**
+### Quality Gate
 - Each bridge has a clear, stated reason for the mapping (structural isomorphism explanation, not intuitive guessing).
 - At least 3 bridges are identified and rated strong or moderate.
 - All weak bridges are either refined or excluded; no weak bridges proceed to Phase 4.
@@ -99,20 +99,20 @@
 
 ### Phase 4: Construct Detailed Analogies
 
-**Entry Criteria:**
+### Entry Criteria
 - Analogy bridges are identified, ranked, and filtered (weak bridges excluded).
 
-**Actions:**
+### Actions
 1. For each selected bridge, write a full analogy: "In [domain], [mechanism] works like this: [concrete example]. Similarly, in [concept], [attribute] works like this: [concrete example]. The key parallel is [shared structure]."
 2. For each analogy, explicitly state where it breaks down: "This analogy doesn't hold when [boundary condition], because [reason]."
 3. Identify at least 1 boundary condition per analogy; list multiple if applicable.
 4. Add a confidence note: Is this analogy rock-solid (high), or does it require some interpretive leeway (medium/low)?
 5. Ensure each analogy is 2-4 sentences of explanation, not a paragraph; test readability with non-expert language.
 
-**Output:**
+### Output
 - `analogy_bridges` array (final) with: source_domain, analogy_text (2-4 sentences, plain language), boundary_conditions (list of 1+), confidence_level (high/medium/low), confidence_justification (e.g., "high confidence: the structures are isomorphic" vs. "medium confidence: requires accepting a simplification").
 
-**Quality Gate:**
+### Quality Gate
 - Each analogy is stated in plain language, accessible to someone unfamiliar with the domain (verified by checking for domain-specific jargon).
 - Boundary conditions are explicit and numbered (not assumed or vague).
 - Confidence levels are justified with specific reasoning, not generic statements.
@@ -123,10 +123,10 @@
 
 ### Phase 5: Validate and Refine
 
-**Entry Criteria:**
+### Entry Criteria
 - Detailed analogies are written with boundary conditions and confidence levels.
 
-**Actions:**
+### Actions
 1. Test each analogy against the clarified concept: Does it explain the pain point? Does it preserve the core logic? Rate as valid/partially_valid/invalid.
 2. Check for contradictions: Do two analogies conflict with each other, or do they complement? Document as complementary or contradictory.
 3. For contradictory analogies: Determine if they represent different aspects of the concept (keep both with explicit note) or if one is misleading (refine or remove the weaker one).
@@ -134,10 +134,10 @@
 5. Assign a final confidence level to each analogy after refinement.
 6. Confirm that at least 3 analogies remain after validation.
 
-**Output:**
+### Output
 - `confidence_assessment` object with keys: strongest_analogies (list of domain names for high-confidence analogies), weakest_analogies (list of domain names for medium/low-confidence analogies), contradictions_resolved (boolean: true if all contradictions are addressed), overall_readiness (string: ready_to_use or needs_refinement), notes (string describing key strengths and any remaining limitations).
 
-**Quality Gate:**
+### Quality Gate
 - No analogy is marked low confidence without a clear reason documented in the notes.
 - At least 2 analogies are marked high confidence after refinement.
 - All contradictions between analogies are resolved (either removed, refined, or explicitly noted as complementary).
@@ -148,21 +148,21 @@
 
 ### Phase 6: Synthesize into Integrated Explanation
 
-**Entry Criteria:**
+### Entry Criteria
 - Validated analogies with confidence assessments are available.
 - At least 3 analogies are marked ready for use.
 
-**Actions:**
+### Actions
 1. Order the analogies from simplest to most detailed, or from most intuitive to most precise, depending on the user's learning style and the analogy_style_preference input.
 2. Write a synthesis that: (a) introduces the struggling concept and its pain point, (b) uses the analogies progressively to build understanding, (c) concludes with the core insight.
 3. Use transitions that show how each analogy adds to the previous one ("Building on that...", "Similarly...", "Taking this further...", "In contrast...").
 4. End with a summary statement that explicitly ties the analogies back to the original struggling concept and the intended application.
 5. Verify readability: The explanation should be understandable in 2-3 minutes of reading; count words and adjust if necessary (target: 300-600 words).
 
-**Output:**
+### Output
 - `integrated_explanation` string: A 3-5 paragraph explanation (300-600 words) that weaves analogies together, uses clear transitions, and explicitly returns to the original struggling concept and its application.
 
-**Quality Gate:**
+### Quality Gate
 - The explanation is readable in 2-3 minutes (approximately 300-600 words).
 - A reader unfamiliar with the concept can articulate the core idea in their own words after reading (verified by asking "What is the main point?" or similar).
 - The explanation explicitly returns to the original struggling concept by name and references the intended application.
@@ -170,6 +170,15 @@
 - Transitions between analogies are smooth and show how each builds on the previous one.
 
 ---
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Transform abstract or difficult concepts into intuitive understanding by generat, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 
@@ -251,3 +260,7 @@ If this skill is used repeatedly with the same user:
 - Build a profile of the user's learning preferences (simple vs. detailed, playful vs. technical, visual vs. abstract).
 - Over time, accelerate future analogy generation by prioritizing domains and styles that have worked well.
 - Maintain a log of analogies generated for each concept to avoid repetition and identify patterns in what works.
+
+---
+
+Copyright 2024-present The Wayfinder Trust. All rights reserved.

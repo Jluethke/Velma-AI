@@ -1,6 +1,6 @@
 # Patent Claims Drafter
 
-> **Starter Skill** — Free to use. Royalties to original creator on derivatives. Build on this.
+> **Starter Skill**  --  Free to use. Royalties to original creator on derivatives. Build on this.
 
 Drafts patent claims from invention descriptions, source code, and technical documentation. Produces independent claims (system, method, computer-readable medium) and dependent claims following USPTO conventions. Focuses on functional language, avoids implementation specifics, and ensures claims are broad enough for protection while specific enough for novelty.
 
@@ -34,63 +34,73 @@ PHASE 5: VALIDATE    --> Check for common patent claim errors
 
 ## Execution
 
-### PHASE 1: ANALYZE — Understand the Invention
+### PHASE 1: ANALYZE  --  Understand the Invention
 
-**Entry criteria:** At least invention_description or technical_docs provided
+### Entry Criteria
+At least invention_description or technical_docs provided
 
-**Actions:**
+### Actions
 1. Read all provided source materials. Build a mental model of: what the invention does, what inputs it takes, what outputs it produces, what processing steps occur between input and output.
-2. Identify the core pipeline or architecture. Patent claims describe a system in terms of modules/components and their relationships — find these.
+2. Identify the core pipeline or architecture. Patent claims describe a system in terms of modules/components and their relationships  --  find these.
 3. Extract all configurable parameters, thresholds, and modes. These become dependent claims ("wherein the threshold is configurable").
 4. Note any domain-specific terminology that must be generalized. Replace product names with functional descriptions. Replace programming language constructs with abstract equivalents.
 
-**Output:** Invention model with components, data flow, processing steps, and configurable elements.
+### Output
+Invention model with components, data flow, processing steps, and configurable elements.
 
-**Quality gate:** The invention model captures every major functional element without referencing specific implementations.
+### Quality Gate
+The invention model captures every major functional element without referencing specific implementations.
 
 ---
 
-### PHASE 2: IDENTIFY — Extract Novel Elements
+### PHASE 2: IDENTIFY  --  Extract Novel Elements
 
-**Entry criteria:** Invention model complete
+### Entry Criteria
+Invention model complete
 
-**Actions:**
+### Actions
 1. List every functional element that could be claimed.
-2. Identify which elements are NOVEL — not found in prior art. These become the focus of independent claims.
+2. Identify which elements are NOVEL  --  not found in prior art. These become the focus of independent claims.
 3. Group novel elements by independence. Elements that stand alone go in independent claims. Elements that narrow or refine go in dependent claims.
 4. Rank elements by defensibility. Broad functional claims > specific implementation claims. Process claims > apparatus claims for software.
-5. Identify the minimum novel combination — the smallest set of elements that, together, distinguish this invention from everything before it.
+5. Identify the minimum novel combination  --  the smallest set of elements that, together, distinguish this invention from everything before it.
 
-**Output:** Ranked list of novel elements with grouping into independent vs. dependent claim candidates.
+### Output
+Ranked list of novel elements with grouping into independent vs. dependent claim candidates.
 
-**Quality gate:** At least 3 distinct novel elements identified. Each can be expressed without implementation language.
+### Quality Gate
+At least 3 distinct novel elements identified. Each can be expressed without implementation language.
 
 ---
 
-### PHASE 3: INDEPENDENT — Draft Independent Claims
+### PHASE 3: INDEPENDENT  --  Draft Independent Claims
 
-**Entry criteria:** Novel elements identified and ranked
+### Entry Criteria
+Novel elements identified and ranked
 
-**Actions:**
+### Actions
 1. Draft Claim 1 (System): "A system comprising: [modules/components with functional relationships]". Each element uses functional language ("a module configured to..." not "a Python class that...").
 2. Draft Claim N (Method): "A method comprising: [ordered steps corresponding to system claim]". Mirror the system claim structure as process steps.
 3. Draft Claim M (Computer-Readable Medium): "A non-transitory computer-readable medium storing instructions that, when executed by a processor, cause the processor to: [steps]".
 4. Ensure all three independent claims cover the same core invention from different angles.
-5. Use "configured to", "operable to", "adapted to" — never "programmed in", "coded with", "implemented using".
+5. Use "configured to", "operable to", "adapted to"  --  never "programmed in", "coded with", "implemented using".
 6. Remove ALL product names, library names, language names, framework names.
 7. Make all numerical thresholds configurable ("a configurable threshold" not "a threshold of 0.3").
 
-**Output:** Three independent claims with preamble, transitional phrase, and body.
+### Output
+Three independent claims with preamble, transitional phrase, and body.
 
-**Quality gate:** Zero implementation language. Zero product names. Each claim is self-contained and readable without the others.
+### Quality Gate
+Zero implementation language. Zero product names. Each claim is self-contained and readable without the others.
 
 ---
 
-### PHASE 4: DEPENDENT — Draft Dependent Claims
+### PHASE 4: DEPENDENT  --  Draft Dependent Claims
 
-**Entry criteria:** Independent claims drafted
+### Entry Criteria
+Independent claims drafted
 
-**Actions:**
+### Actions
 1. For each independent claim, identify features that narrow the scope:
    - Specific configurations of modules
    - Optional sub-components
@@ -104,31 +114,45 @@ PHASE 5: VALIDATE    --> Check for common patent claim errors
 5. Include at least one dependent claim for each major configurable parameter.
 6. Include cross-reference claims to related patent families where applicable.
 
-**Output:** Complete dependent claim set with parent references and claim tree.
+### Output
+Complete dependent claim set with parent references and claim tree.
 
-**Quality gate:** Every dependent claim adds meaningful narrowing. No orphan claims. No circular references.
+### Quality Gate
+Every dependent claim adds meaningful narrowing. No orphan claims. No circular references.
 
 ---
 
-### PHASE 5: VALIDATE — Check for Errors
+### PHASE 5: VALIDATE  --  Check for Errors
 
-**Entry criteria:** Full claim set drafted
+### Entry Criteria
+Full claim set drafted
 
-**Actions:**
+### Actions
 1. Scan every claim for forbidden language:
-   - Product names (e.g., "NeuroPRIN", "TensorFlow", "Python")
+   - Product names (e.g., "governance", "TensorFlow", "Python")
    - Implementation language (e.g., "function", "class", "array", "loop")
    - Fixed numerical values without "configurable" qualifier
    - Trademarked terms
 2. Verify antecedent basis: every term in a dependent claim must appear in its parent chain or be properly introduced.
 3. Verify claim differentiation: no two dependent claims say the same thing differently.
 4. Check independent claim breadth: are they broad enough to cover alternative implementations?
-5. Verify the 3 independent claims are consistent — they describe the same invention as system/method/CRM.
+5. Verify the 3 independent claims are consistent  --  they describe the same invention as system/method/CRM.
 6. Generate red_flags list for anything that needs human review.
 
-**Output:** Validated claim set with red_flags.
+### Output
+Validated claim set with red_flags.
 
-**Quality gate:** Zero forbidden language. All antecedent basis resolved. Red flags documented.
+### Quality Gate
+Zero forbidden language. All antecedent basis resolved. Red flags documented.
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Drafts patent claims from invention descriptions, source code, and technical doc, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 

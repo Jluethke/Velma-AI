@@ -7,12 +7,12 @@
       "skill_name": "openapi-parser-validator",
       "inputs": {
         "openapi_spec": "workflow_input.openapi_spec",
-        "strict_mode": true
+        "strict_mode": "from_context.strict_mode"
       },
       "outputs": {
+        "spec_metadata": "specification_metadata",
         "validated_spec": "validated_specification",
-        "validation_errors": "validation_error_list",
-        "spec_metadata": "specification_metadata"
+        "validation_errors": "validation_error_list"
       },
       "parallel_group": "group_1"
     },
@@ -20,14 +20,14 @@
       "id": "step_2_extract_metadata",
       "skill_name": "endpoint-metadata-extractor",
       "inputs": {
-        "validated_spec": "step_1_parse_validate.validated_spec",
-        "include_dependencies": true
+        "include_dependencies": "from_context.include_dependencies",
+        "validated_spec": "step_1_parse_validate.validated_spec"
       },
       "outputs": {
-        "endpoint_registry": "endpoints_with_metadata",
-        "parameter_matrix": "parameters_by_endpoint",
         "auth_matrix": "authentication_requirements",
-        "dependency_graph": "test_sequence_dependencies"
+        "dependency_graph": "test_sequence_dependencies",
+        "endpoint_registry": "endpoints_with_metadata",
+        "parameter_matrix": "parameters_by_endpoint"
       },
       "parallel_group": "group_2"
     },
@@ -35,9 +35,9 @@
       "id": "step_3_happy_path",
       "skill_name": "happy-path-test-generator",
       "inputs": {
+        "dependency_graph": "step_2_extract_metadata.dependency_graph",
         "endpoint_registry": "step_2_extract_metadata.endpoint_registry",
-        "parameter_matrix": "step_2_extract_metadata.parameter_matrix",
-        "dependency_graph": "step_2_extract_metadata.dependency_graph"
+        "parameter_matrix": "step_2_extract_metadata.parameter_matrix"
       },
       "outputs": {
         "happy_path_tests": "valid_endpoint_tests",
@@ -49,13 +49,13 @@
       "id": "step_4_edge_cases",
       "skill_name": "edge-case-test-generator",
       "inputs": {
-        "parameter_matrix": "step_2_extract_metadata.parameter_matrix",
+        "custom_edge_cases": "workflow_input.custom_edge_cases",
         "endpoint_registry": "step_2_extract_metadata.endpoint_registry",
-        "custom_edge_cases": "workflow_input.custom_edge_cases"
+        "parameter_matrix": "step_2_extract_metadata.parameter_matrix"
       },
       "outputs": {
-        "edge_case_tests": "boundary_and_combination_tests",
-        "coverage_matrix": "parameter_coverage_by_type"
+        "coverage_matrix": "parameter_coverage_by_type",
+        "edge_case_tests": "boundary_and_combination_tests"
       },
       "parallel_group": "group_3"
     },
@@ -63,17 +63,17 @@
       "id": "step_5_error_security",
       "skill_name": "error-security-test-generator",
       "inputs": {
-        "endpoint_registry": "step_2_extract_metadata.endpoint_registry",
         "auth_matrix": "step_2_extract_metadata.auth_matrix",
-        "parameter_matrix": "step_2_extract_metadata.parameter_matrix",
+        "endpoint_registry": "step_2_extract_metadata.endpoint_registry",
+        "include_auth_tests": "workflow_input.include_auth_tests",
         "include_security_tests": "workflow_input.include_security_tests",
-        "include_auth_tests": "workflow_input.include_auth_tests"
+        "parameter_matrix": "step_2_extract_metadata.parameter_matrix"
       },
       "outputs": {
-        "error_path_tests": "error_triggering_test_cases",
-        "security_tests": "vulnerability_test_cases",
         "error_coverage": "error_code_coverage_matrix",
-        "security_coverage": "vulnerability_coverage_matrix"
+        "error_path_tests": "error_triggering_test_cases",
+        "security_coverage": "vulnerability_coverage_matrix",
+        "security_tests": "vulnerability_test_cases"
       },
       "parallel_group": "group_3"
     },
@@ -81,8 +81,8 @@
       "id": "step_6_load_tests",
       "skill_name": "load-performance-test-generator",
       "inputs": {
-        "endpoint_registry": "step_2_extract_metadata.endpoint_registry",
         "dependency_graph": "step_2_extract_metadata.dependency_graph",
+        "endpoint_registry": "step_2_extract_metadata.endpoint_registry",
         "include_load_tests": "workflow_input.include_load_tests",
         "performance_sla_ms": "workflow_input.performance_sla_ms"
       },
@@ -96,17 +96,17 @@
       "id": "step_7_compile_suite",
       "skill_name": "test-suite-compiler",
       "inputs": {
-        "happy_path_tests": "step_3_happy_path.happy_path_tests",
-        "edge_case_tests": "step_4_edge_cases.edge_case_tests",
-        "error_path_tests": "step_5_error_security.error_path_tests",
-        "security_tests": "step_5_error_security.security_tests",
-        "load_test_scenarios": "step_6_load_tests.load_test_scenarios",
         "dependency_graph": "step_2_extract_metadata.dependency_graph",
-        "endpoint_registry": "step_2_extract_metadata.endpoint_registry"
+        "edge_case_tests": "step_4_edge_cases.edge_case_tests",
+        "endpoint_registry": "step_2_extract_metadata.endpoint_registry",
+        "error_path_tests": "step_5_error_security.error_path_tests",
+        "happy_path_tests": "step_3_happy_path.happy_path_tests",
+        "load_test_scenarios": "step_6_load_tests.load_test_scenarios",
+        "security_tests": "step_5_error_security.security_tests"
       },
       "outputs": {
-        "test_suite": "structured_test_suite_object",
-        "test_execution_plan": "ordered_test_execution_sequence"
+        "test_execution_plan": "ordered_test_execution_sequence",
+        "test_suite": "structured_test_suite_object"
       },
       "parallel_group": "group_4"
     },
@@ -114,11 +114,11 @@
       "id": "step_8_generate_code",
       "skill_name": "test-code-generator",
       "inputs": {
-        "test_suite": "step_7_compile_suite.test_suite",
-        "test_framework": "workflow_input.test_framework",
-        "test_execution_plan": "step_7_compile_suite.test_execution_plan",
         "output_format": "workflow_input.output_format",
-        "performance_sla_ms": "workflow_input.performance_sla_ms"
+        "performance_sla_ms": "workflow_input.performance_sla_ms",
+        "test_execution_plan": "step_7_compile_suite.test_execution_plan",
+        "test_framework": "workflow_input.test_framework",
+        "test_suite": "step_7_compile_suite.test_suite"
       },
       "outputs": {
         "test_code": "executable_test_code",
@@ -130,18 +130,18 @@
       "id": "step_9_documentation",
       "skill_name": "test-documentation-generator",
       "inputs": {
-        "test_suite": "step_7_compile_suite.test_suite",
         "endpoint_registry": "step_2_extract_metadata.endpoint_registry",
         "error_coverage": "step_5_error_security.error_coverage",
-        "security_coverage": "step_5_error_security.security_coverage",
         "parameter_coverage": "step_4_edge_cases.coverage_matrix",
+        "performance_assertions": "step_6_load_tests.performance_assertions",
+        "security_coverage": "step_5_error_security.security_coverage",
         "test_execution_plan": "step_7_compile_suite.test_execution_plan",
-        "performance_assertions": "step_6_load_tests.performance_assertions"
+        "test_suite": "step_7_compile_suite.test_suite"
       },
       "outputs": {
-        "test_documentation": "human_readable_test_plan",
         "coverage_report": "coverage_metrics_and_gaps",
-        "execution_guide": "step_by_step_test_execution_instructions"
+        "execution_guide": "step_by_step_test_execution_instructions",
+        "test_documentation": "human_readable_test_plan"
       },
       "parallel_group": "group_5"
     }
@@ -372,5 +372,27 @@
     "step_7_compile_suite",
     "step_8_generate_code",
     "step_9_documentation"
-  ]
+  ],
+  "chain_links": {
+    "prerequisites": [],
+    "next_chains": [],
+    "related_chains": [
+      {
+        "chain_name": "api-build",
+        "relationship": "complement"
+      },
+      {
+        "chain_name": "api-client-sdk",
+        "relationship": "complement"
+      },
+      {
+        "chain_name": "api-to-production",
+        "relationship": "complement"
+      },
+      {
+        "chain_name": "graphql-service",
+        "relationship": "complement"
+      }
+    ]
+  }
 }

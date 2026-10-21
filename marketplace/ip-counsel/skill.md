@@ -36,15 +36,16 @@ PHASE 5: REVIEW      --> Filing readiness checklist, priority ordering, action p
 - `action_plan`: object -- Prioritized next steps with urgency flags (public disclosure risk first)
 
 ---
+- `filing_priority`: (from manifest)
 
 ## Execution
 
 ### Phase 1: INITIALIZE -- Build IP Inventory
 
-**Entry criteria:** At least one of `codebase_path` or `existing_drafts_path` is provided.
+### Entry Criteria
+At least one of `codebase_path` or `existing_drafts_path` is provided.
 
-**Actions:**
-
+### Actions
 1. **Scan for existing IP documents.** Search these locations (relative to project root) for existing IP documents:
    - `Documents/IP*/`, `IP/`, `patents/`, `drafts/`, `.ip/`, `governance/`
    - File extensions: `*.patent`, `*.claims`, `*.invention`
@@ -59,18 +60,20 @@ PHASE 5: REVIEW      --> Filing readiness checklist, priority ordering, action p
 
 5. **Detect duplicates.** Check for drafts covering the same invention, overlapping subject matter across families, or explicitly abandoned inventions being re-drafted without acknowledgment.
 
-**Output:** Complete IP inventory organized by family with duplicate and reconciliation flags.
+### Output
+Complete IP inventory organized by family with duplicate and reconciliation flags.
 
-**Quality gate:** Every existing IP document is cataloged. Duplicates are flagged with specific overlap descriptions. Reconciliation documents are linked to the drafts they affect. Applicant entity is consistent across all documents (or inconsistencies are flagged).
+### Quality Gate
+Every existing IP document is cataloged. Duplicates are flagged with specific overlap descriptions. Reconciliation documents are linked to the drafts they affect. Applicant entity is consistent across all documents (or inconsistencies are flagged).
 
 ---
 
 ### Phase 2: ANALYZE -- Innovation Scan and Gap Analysis
 
-**Entry criteria:** IP inventory is complete.
+### Entry Criteria
+IP inventory is complete.
 
-**Actions:**
-
+### Actions
 1. **Scan codebase for patentable innovations.** Identify novel algorithms, methods, architectures, and system compositions. For each, classify: what it does, what is novel about it, where it lives in the codebase, whether it is publicly visible or server-side only.
 
 2. **Cross-reference innovations against inventory.** For each innovation, determine: is it covered by an existing draft? Is the existing draft current or stale? Are there gaps where no draft exists?
@@ -83,18 +86,20 @@ PHASE 5: REVIEW      --> Filing readiness checklist, priority ordering, action p
 
 6. **Apply the Trade Secret vs Patent Decision Matrix.** For each unprotected innovation, evaluate: can competitors reverse-engineer it? Is it publicly visible? Is the value in the algorithm or the implementation? What is the competitive timeline? Can you afford enforcement?
 
-**Output:** Innovation list with coverage status, gap analysis (unprotected inventions, stale drafts, contradictions, disclosure risks), trade secret vs patent recommendations.
+### Output
+Innovation list with coverage status, gap analysis (unprotected inventions, stale drafts, contradictions, disclosure risks), trade secret vs patent recommendations.
 
-**Quality gate:** Every innovation has a coverage status (covered/gap/stale). All contradictions across families are documented. Disclosure risks are flagged with urgency level. Trade secret vs patent recommendation is justified for each unprotected innovation.
+### Quality Gate
+Every innovation has a coverage status (covered/gap/stale). All contradictions across families are documented. Disclosure risks are flagged with urgency level. Trade secret vs patent recommendation is justified for each unprotected innovation.
 
 ---
 
 ### Phase 3: RESEARCH -- Prior Art Search
 
-**Entry criteria:** Gap analysis is complete with a list of innovations needing protection.
+### Entry Criteria
+Gap analysis is complete with a list of innovations needing protection.
 
-**Actions:**
-
+### Actions
 1. **Build search queries.** For each patent family, define 3-5 search queries using varied terminology: technical terms AND layman's terms, synonyms, problem-focused queries, component queries, and combination queries.
 
 2. **Execute searches in priority order.** Search Google Patents (with CPC codes), USPTO (granted + published applications), Academic literature (arXiv, IEEE, Google Scholar, ACM), then Open Source/Industry (GitHub, blog posts, standards, product docs).
@@ -109,18 +114,20 @@ PHASE 5: REVIEW      --> Filing readiness checklist, priority ordering, action p
 
 7. **Produce Prior Art Report per family.** Include: search queries used, closest prior art entries, novelty assessment table (claim, closest art, what is novel, "So What" result, confidence), and recommendations (strong/narrow/remove/add-dependents).
 
-**Output:** Prior art report per family with citations, novelty assessment table, and filing recommendations.
+### Output
+Prior art report per family with citations, novelty assessment table, and filing recommendations.
 
-**Quality gate:** At least 3 search queries per family executed across at least 2 source types. Every independent claim has a closest prior art reference identified. Novelty assertions use "no prior art was found" language (never "no prior art exists"). The "So What" test is applied to every MEDIUM/HIGH relevance result.
+### Quality Gate
+At least 3 search queries per family executed across at least 2 source types. Every independent claim has a closest prior art reference identified. Novelty assertions use "no prior art was found" language (never "no prior art exists"). The "So What" test is applied to every MEDIUM/HIGH relevance result.
 
 ---
 
 ### Phase 4: DRAFT -- Generate Provisional Applications
 
-**Entry criteria:** Prior art search is complete with novelty assessments.
+### Entry Criteria
+Prior art search is complete with novelty assessments.
 
-**Actions:**
-
+### Actions
 1. **Select innovations for drafting.** Based on prior art results and trade secret analysis, determine which innovations should be filed as provisionals. Skip innovations where prior art fully anticipates the claim.
 
 2. **Generate provisional drafts using the uniform template.** Each provisional must include: title, applicant/inventors, cross-references to related applications, field of invention, background, summary, detailed description of preferred embodiments, claims (independent + dependent), abstract (150 words max), and figure list.
@@ -131,18 +138,20 @@ PHASE 5: REVIEW      --> Filing readiness checklist, priority ordering, action p
 
 5. **Organize into families with cross-references.** Each application references the provisionals of its own family and all related families.
 
-**Output:** Filing-ready provisional patent drafts, organized by family with cross-references.
+### Output
+Filing-ready provisional patent drafts, organized by family with cross-references.
 
-**Quality gate:** Every draft passes the quality checklist. No implementation-specific language in any claim. Applicant entity is consistent across all drafts. Each family has cross-references to related families. Each draft is clearly labeled "DRAFT -- NOT FILED".
+### Quality Gate
+Every draft passes the quality checklist. No implementation-specific language in any claim. Applicant entity is consistent across all drafts. Each family has cross-references to related families. Each draft is clearly labeled "DRAFT -- NOT FILED".
 
 ---
 
 ### Phase 5: REVIEW -- Filing Readiness and Action Plan
 
-**Entry criteria:** Provisional drafts are generated and quality-checked.
+### Entry Criteria
+Provisional drafts are generated and quality-checked.
 
-**Actions:**
-
+### Actions
 1. **Complete the filing readiness checklist per family.** Technical preparation (disclosure, claims, specification, figures, abstract), prior art and differentiation (search log, closest art, differentiation, freedom-to-operate), legal and administrative (applicant, inventors, assignment, provisional vs non-provisional, jurisdiction, budget), quality checks (no implementation language, no thresholds, no contradictions, reconciliation review, trade secret analysis, enablement check).
 
 2. **Priority-order families for filing.** Filing priority: (1) publicly visible code -- EMERGENCY, (2) drafts-ready families, (3) core competitive moat, (4) complete documentation, (5) novel architecture, (6) not yet deployed.
@@ -151,9 +160,20 @@ PHASE 5: REVIEW      --> Filing readiness checklist, priority ordering, action p
 
 4. **Generate the action plan.** Prioritized next steps with timeline, cost estimates, and urgency flags. Include: which families to file first, which need attorney review, which need more prior art research, which should remain trade secrets.
 
-**Output:** Per-family filing readiness status, prioritized action plan with timeline and cost estimates.
+### Output
+Per-family filing readiness status, prioritized action plan with timeline and cost estimates.
 
-**Quality gate:** Every family has a complete readiness checklist. Priority ordering reflects disclosure risk (public code first). Cost estimates are within the filing budget or budget overruns are flagged. Action plan has specific next steps with owners and deadlines.
+### Quality Gate
+Every family has a complete readiness checklist. Priority ordering reflects disclosure risk (public code first). Cost estimates are within the filing budget or budget overruns are flagged. Action plan has specific next steps with owners and deadlines.
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for IP strategist  --  scans codebase, builds inventory, identifies unprotected inno, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 
@@ -462,7 +482,7 @@ FIGURES
 
 Each patent family should contain:
 1. A core provisional application (broadest description)
-2. Continuation-in-part (CIP) applications (improvements after initial filing)
+2. Continuation-in-part (governance) applications (improvements after initial filing)
 3. Divisional applications (when examiner requires restriction)
 
 Cross-reference strategy: every application cites the provisionals of its own family and all related families, creating a web of priority dates.

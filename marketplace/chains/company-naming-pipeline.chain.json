@@ -1,0 +1,147 @@
+{
+  "name": "company-naming-pipeline",
+  "description": "Rename an enterprise-sales company end-to-end: generate candidate names from patent themes + vibe categories, probe DNS/HTTP/WHOIS for each candidate across multiple TLDs, search for brand conflicts (web + LinkedIn + optional USPTO TESS), and synthesize into a ranked shortlist with a top-3 registration action plan and an overall buy-readiness score.",
+  "steps": [
+    {
+      "id": "step_1",
+      "skill_name": "naming-candidate-generator",
+      "inputs": {
+        "company_purpose": "from_user_input",
+        "patent_theme_keywords": "from_user_input",
+        "vibe_categories": "from_user_input",
+        "include_roots": "from_user_input",
+        "prefix_candidates": "from_user_input",
+        "suffix_candidates": "from_user_input",
+        "blocked_words": "from_user_input",
+        "min_length": "from_user_input",
+        "max_length": "from_user_input",
+        "generate_count": "from_user_input"
+      },
+      "outputs": {
+        "candidate_names": "candidate_names_data",
+        "generation_metadata": "generation_metadata_data"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "step_2",
+      "skill_name": "domain-availability-checker",
+      "inputs": {
+        "candidate_names": "step_1.candidate_names",
+        "tlds": "step_1.candidate_names",
+        "http_timeout_s": "step_1.candidate_names",
+        "whois_enabled": "step_1.candidate_names",
+        "max_whois_per_run": "step_1.candidate_names"
+      },
+      "outputs": {
+        "availability_grid": "availability_grid_data",
+        "score_per_candidate": "score_per_candidate_data"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "step_3",
+      "skill_name": "brand-conflict-search",
+      "inputs": {
+        "shortlist_names": "step_2.availability_grid",
+        "conflict_depth": "step_2.availability_grid",
+        "search_domains_to_include": "step_2.availability_grid"
+      },
+      "outputs": {
+        "conflict_report": "conflict_report_data",
+        "safe_names": "safe_names_data"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "step_4",
+      "skill_name": "naming-shortlister",
+      "inputs": {
+        "availability_grid": "step_2.availability_grid",
+        "score_per_candidate": "step_2.score_per_candidate",
+        "conflict_report": "step_3.conflict_report",
+        "weighting_config": "step_2.availability_grid"
+      },
+      "outputs": {
+        "ranked_shortlist": "ranked_shortlist_data",
+        "recommendation_top3": "recommendation_top3_data",
+        "buy_readiness_score": "buy_readiness_score_data"
+      },
+      "parallel_group": 4
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "step_1",
+      "to_step": "step_2",
+      "data_type": "candidate_names",
+      "field_mapping": "candidate_names -> candidate_names; candidate_names -> tlds; candidate_names -> http_timeout_s; candidate_names -> whois_enabled; candidate_names -> max_whois_per_run"
+    },
+    {
+      "from_step": "step_2",
+      "to_step": "step_3",
+      "data_type": "availability_grid",
+      "field_mapping": "availability_grid -> shortlist_names; availability_grid -> conflict_depth; availability_grid -> search_domains_to_include"
+    },
+    {
+      "from_step": "step_2",
+      "to_step": "step_4",
+      "data_type": "availability_grid",
+      "field_mapping": "availability_grid -> availability_grid; score_per_candidate -> score_per_candidate; availability_grid -> weighting_config"
+    },
+    {
+      "from_step": "step_3",
+      "to_step": "step_4",
+      "data_type": "conflict_report",
+      "field_mapping": "conflict_report -> conflict_report"
+    }
+  ],
+  "entry_inputs": [
+    "blocked_words",
+    "company_purpose",
+    "generate_count",
+    "include_roots",
+    "max_length",
+    "min_length",
+    "patent_theme_keywords",
+    "prefix_candidates",
+    "suffix_candidates",
+    "vibe_categories"
+  ],
+  "terminal_outputs": [
+    "ranked_shortlist",
+    "recommendation_top3",
+    "buy_readiness_score"
+  ],
+  "parallel_groups": [
+    [
+      "step_1"
+    ],
+    [
+      "step_2"
+    ],
+    [
+      "step_3"
+    ],
+    [
+      "step_4"
+    ]
+  ],
+  "estimated_cost": 0,
+  "critical_path": [
+    "step_1",
+    "step_2",
+    "step_3",
+    "step_4"
+  ],
+  "chain_links": {
+    "prerequisites": [],
+    "next_chains": [],
+    "related_chains": [
+      {
+        "chain_name": "trademark-clearance-pipeline",
+        "relationship": "complement"
+      }
+    ]
+  }
+}

@@ -1,6 +1,6 @@
 # Meeting Prep
 
-> **Starter Skill** — Free to use. Royalties to original creator on derivatives. Build on this.
+> **Starter Skill**  --  Free to use. Royalties to original creator on derivatives. Build on this.
 
 Takes a meeting topic, attendees, your role, and desired outcome, then builds a complete prep package: agenda suggestion, talking points, questions to ask, potential objections and responses, desired commitments to secure, and follow-up email template. Works for sales calls, 1:1s, board meetings, job interviews, and difficult conversations.
 
@@ -35,10 +35,10 @@ PHASE 4: FOLLOWUP   --> Draft the post-meeting follow-up template
 
 ### Phase 1: CONTEXT -- Understand the Dynamics
 
-**Entry criteria:** Meeting topic, attendees, your role, and desired outcome are provided.
+### Entry Criteria
+Meeting topic, attendees, your role, and desired outcome are provided.
 
-**Actions:**
-
+### Actions
 1. Classify the meeting type if not provided. Use these signals:
    - Sales call: attendee is a prospect/client, outcome involves a deal
    - 1:1: two people, one is a manager
@@ -46,22 +46,24 @@ PHASE 4: FOLLOWUP   --> Draft the post-meeting follow-up template
    - Interview: one party is evaluating the other for a role
    - Difficult conversation: topic involves conflict, feedback, termination, or disagreement
 2. Map the power dynamics: who has decision authority? Who is an influencer? Who might be an obstacle?
-3. Identify each attendee's likely priorities: what do THEY want from this meeting? (Not what you want — what they want.)
+3. Identify each attendee's likely priorities: what do THEY want from this meeting? (Not what you want  --  what they want.)
 4. Assess the stakes: what happens if the meeting goes well? What happens if it goes badly? What happens if it accomplishes nothing?
 5. Identify the elephant in the room: is there an unspoken issue that will affect the meeting even if nobody mentions it?
 
-**Output:** Meeting classification, power map, attendee priority estimates, stakes assessment, elephant identification.
+### Output
+Meeting classification, power map, attendee priority estimates, stakes assessment, elephant identification.
 
-**Quality gate:** Every attendee has an estimated priority. Stakes are defined for success, failure, and stalemate. Meeting type is classified.
+### Quality Gate
+Every attendee has an estimated priority. Stakes are defined for success, failure, and stalemate. Meeting type is classified.
 
 ---
 
 ### Phase 2: STRATEGY -- Design the Arc
 
-**Entry criteria:** Context analysis is complete.
+### Entry Criteria
+Context analysis is complete.
 
-**Actions:**
-
+### Actions
 1. Define the opening: how to set the right tone in the first 2 minutes. For sales: establish credibility. For 1:1s: create psychological safety. For difficult conversations: name the topic directly.
 2. Define the core ask: the single most important thing to communicate or request. This must happen even if the meeting runs short.
 3. Define the supporting points: 2-3 pieces of evidence, data, or narrative that support the core ask.
@@ -70,18 +72,20 @@ PHASE 4: FOLLOWUP   --> Draft the post-meeting follow-up template
 6. Define the closing: how to end the meeting with clear next steps, not a vague "let's follow up."
 7. Time-box the strategy: allocate minutes to opening, core discussion, Q&A, and closing based on the time_limit.
 
-**Output:** Meeting arc with opening, core ask, supporting points, commitments, concessions, closing, and time allocation.
+### Output
+Meeting arc with opening, core ask, supporting points, commitments, concessions, closing, and time allocation.
 
-**Quality gate:** Core ask is a single clear sentence. At least 2 supporting points exist. Commitments are specific (not "think about it"). Time allocation sums to the time_limit.
+### Quality Gate
+Core ask is a single clear sentence. At least 2 supporting points exist. Commitments are specific (not "think about it"). Time allocation sums to the time_limit.
 
 ---
 
 ### Phase 3: MATERIALS -- Build the Prep Package
 
-**Entry criteria:** Strategy is defined.
+### Entry Criteria
+Strategy is defined.
 
-**Actions:**
-
+### Actions
 1. **Agenda suggestion**: time-boxed items with owner and purpose for each block. Include a 2-minute buffer.
 2. **Talking points**: 5-8 bullet points you want to make, ordered by priority. Each point is one sentence. Mark the must-says vs. nice-to-says.
 3. **Questions to ask**: 5-7 questions, categorized:
@@ -93,18 +97,20 @@ PHASE 4: FOLLOWUP   --> Draft the post-meeting follow-up template
 5. **Red flags to watch for**: body language, phrases, or behaviors that signal the meeting is going off track, and how to redirect.
 6. **Desired commitments checklist**: each commitment as a checkbox, so you can track during the meeting what you secured.
 
-**Output:** Complete prep package with agenda, talking points, questions, objections, red flags, and commitments checklist.
+### Output
+Complete prep package with agenda, talking points, questions, objections, red flags, and commitments checklist.
 
-**Quality gate:** Agenda fits within time_limit. At least 3 questions are discovery-type. Every objection has a prepared response. Talking points are prioritized.
+### Quality Gate
+Agenda fits within time_limit. At least 3 questions are discovery-type. Every objection has a prepared response. Talking points are prioritized.
 
 ---
 
 ### Phase 4: FOLLOWUP -- Draft Follow-Up Template
 
-**Entry criteria:** Prep package is complete.
+### Entry Criteria
+Prep package is complete.
 
-**Actions:**
-
+### Actions
 1. Draft a follow-up email template with blanks for meeting-specific details:
    - Subject line that references the meeting topic and outcome
    - Opening: thank the attendees, reference one specific thing discussed
@@ -118,11 +124,22 @@ PHASE 4: FOLLOWUP   --> Draft the post-meeting follow-up template
    - Commitment checklist
    - One-line reminder of each attendee's likely priority
 
-**Output:** Follow-up email template and one-page cheat sheet.
+### Output
+Follow-up email template and one-page cheat sheet.
 
-**Quality gate:** Email template has placeholders clearly marked with square brackets. Cheat sheet fits on one page (under 25 lines). Both match the meeting type's tone.
+### Quality Gate
+Email template has placeholders clearly marked with square brackets. Cheat sheet fits on one page (under 25 lines). Both match the meeting type's tone.
 
 ---
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Build a complete meeting prep package: agenda, talking points, questions, antici, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 

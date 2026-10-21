@@ -59,6 +59,15 @@ Draft `part_candidates`.
 
 ---
 
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Realize the selected architecture with datasheet-justified parts meeting voltage, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
+
 ## Exit Criteria
 
 DONE when every function in the selected architecture has a datasheet-justified part meeting margins, and every prior review change is applied.

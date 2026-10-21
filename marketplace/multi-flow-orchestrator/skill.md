@@ -5,21 +5,22 @@ Decomposes compound tasks that require multiple flows into an ordered execution 
 ## Execution Pattern: Phase Pipeline
 
 ## Inputs
-- compound_task: string -- Description of the larger goal that requires multiple flows (e.g., "Launch a side business while maintaining my fitness and managing my time")
-- available_skills: array -- Flows available for orchestration, with their manifest data (inputs, outputs, domain)
-- constraints: object -- Time constraints, budget, priority ordering, resource limits
+- `compound_task`: string -- Description of the larger goal that requires multiple flows (e.g., "Launch a side business while maintaining my fitness and managing my time")
+- `available_skills`: array -- Flows available for orchestration, with their manifest data (inputs, outputs, domain)
+- `constraints`: object -- Time constraints, budget, priority ordering, resource limits
 
 ## Outputs
-- skill_chain: array -- Ordered list of flows to execute with rationale for each
-- data_flow_map: object -- DAG (directed acyclic graph) showing which flow outputs feed which flow inputs
-- execution_plan: object -- Step-by-step execution sequence with parallel/sequential groupings and timing
-- unified_deliverable: object -- Merged output from all flows, organized by theme with cross-references
+- `skill_chain`: array -- Ordered list of flows to execute with rationale for each
+- `data_flow_map`: object -- DAG (directed acyclic graph) showing which flow outputs feed which flow inputs
+- `execution_plan`: object -- Step-by-step execution sequence with parallel/sequential groupings and timing
+- `unified_deliverable`: object -- Merged output from all flows, organized by theme with cross-references
 
 ## Execution
 
 ### Phase 1: GOAL -- Define the Compound Task
-**Entry criteria:** Compound task description provided.
-**Actions:**
+### Entry Criteria
+Compound task description provided.
+### Actions
 1. Parse the compound task into distinct sub-objectives:
    - What are the concrete outcomes the user wants? (Not "be healthier" but "lose 10 lbs, exercise 4x/week, eat 2000 cal/day")
    - What domains are involved? (productivity, health, business, learning, etc.)
@@ -33,12 +34,15 @@ Decomposes compound tasks that require multiple flows into an ordered execution 
    - Which are most time-sensitive?
    - Which are independent (can run in parallel)?
 
-**Output:** Decomposed task: sub-objectives with priority, domain, time horizon, and implicit requirements.
-**Quality gate:** At least 2 distinct sub-objectives identified. Each sub-objective is concrete enough to match to a flow. Priorities are assigned.
+### Output
+Decomposed task: sub-objectives with priority, domain, time horizon, and implicit requirements.
+### Quality Gate
+At least 2 distinct sub-objectives identified. Each sub-objective is concrete enough to match to a flow. Priorities are assigned.
 
 ### Phase 2: DECOMPOSE -- Map Tasks to Flows
-**Entry criteria:** Sub-objectives defined.
-**Actions:**
+### Entry Criteria
+Sub-objectives defined.
+### Actions
 1. For each sub-objective, search available flows for the best match:
    - Match by domain (health sub-objective -> health-domain flows)
    - Match by input/output compatibility (does the flow accept what we have and produce what we need?)
@@ -53,12 +57,15 @@ Decomposes compound tasks that require multiple flows into an ordered execution 
    - Input source: does this come from the user, from another flow's output, or from persistent state?
 4. Build the flow roster: the list of flows that will execute, with their roles.
 
-**Output:** Flow roster with role assignments, gap analysis, input source mapping.
-**Quality gate:** Every sub-objective has at least one assigned flow. Input sources are identified for every flow (no flow has orphan inputs). Gaps are flagged with alternatives.
+### Output
+Flow roster with role assignments, gap analysis, input source mapping.
+### Quality Gate
+Every sub-objective has at least one assigned flow. Input sources are identified for every flow (no flow has orphan inputs). Gaps are flagged with alternatives.
 
 ### Phase 3: SEQUENCE -- Build the Execution DAG
-**Entry criteria:** Flow roster with input/output mappings complete.
-**Actions:**
+### Entry Criteria
+Flow roster with input/output mappings complete.
+### Actions
 1. Build the data dependency graph (DAG):
    - Nodes = flows
    - Edges = data flow (output of flow A is input to flow B)
@@ -76,12 +83,15 @@ Decomposes compound tasks that require multiple flows into an ordered execution 
    - Parallel execution: time of longest parallel group per wave
 5. Identify the critical path: the sequence of dependent flows that determines minimum total time.
 
-**Output:** Execution DAG with waves, parallel/sequential groupings, critical path, estimated total time.
-**Quality gate:** DAG has no cycles. Every flow appears in exactly one wave. Critical path is identified. All data flows are typed-compatible (output type matches expected input type).
+### Output
+Execution DAG with waves, parallel/sequential groupings, critical path, estimated total time.
+### Quality Gate
+DAG has no cycles. Every flow appears in exactly one wave. Critical path is identified. All data flows are typed-compatible (output type matches expected input type).
 
 ### Phase 4: EXECUTE -- Run the Flow Chain
-**Entry criteria:** Valid DAG with execution order defined.
-**Actions:**
+### Entry Criteria
+Valid DAG with execution order defined.
+### Actions
 1. Execute Wave 1 flows (those with no upstream dependencies):
    - Provide user-supplied inputs
    - Collect outputs and validate against expected output types
@@ -98,12 +108,15 @@ Decomposes compound tasks that require multiple flows into an ordered execution 
    - Present partial results with clear indication of what was completed and what was blocked
 4. Log execution telemetry: flow name, execution time, success/failure, data transformations applied.
 
-**Output:** Individual flow outputs, execution log, any failures or blocked flows.
-**Quality gate:** All Wave 1 flows have executed. Data transformations between waves are verified (downstream flows received correct inputs). Failures are logged with reason.
+### Output
+Individual flow outputs, execution log, any failures or blocked flows.
+### Quality Gate
+All Wave 1 flows have executed. Data transformations between waves are verified (downstream flows received correct inputs). Failures are logged with reason.
 
 ### Phase 5: SYNTHESIZE -- Merge into Unified Deliverable
-**Entry criteria:** All executable flows have produced outputs.
-**Actions:**
+### Entry Criteria
+All executable flows have produced outputs.
+### Actions
 1. Organize outputs by theme/domain:
    - Group related outputs (all health-related together, all business-related together)
    - Identify cross-domain connections ("your workout schedule is blocked in your daily plan from 7-8 AM")
@@ -118,8 +131,19 @@ Decomposes compound tasks that require multiple flows into an ordered execution 
    - Action items: consolidated list of all recommended actions, deduplicated and ordered
 4. Record successful chain patterns for reuse: "The chain [nutrition-optimizer -> workout-planner -> daily-planner] successfully served the goal 'optimize health and schedule.'"
 
-**Output:** Unified deliverable with executive summary, per-flow results, integration analysis, consolidated action items.
-**Quality gate:** All flow outputs are represented. Conflicts are identified and resolved (or flagged). Action items are deduplicated. The deliverable reads as a coherent document, not a collection of fragments.
+### Output
+Unified deliverable with executive summary, per-flow results, integration analysis, consolidated action items.
+### Quality Gate
+All flow outputs are represented. Conflicts are identified and resolved (or flagged). Action items are deduplicated. The deliverable reads as a coherent document, not a collection of fragments.
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Decomposes compound tasks into sequences of individual flows, maps data dependen, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 Complete when: (1) all flows in the chain have executed (or been marked as blocked with explanation), (2) outputs are synthesized into a unified deliverable, (3) conflicts are resolved or flagged, (4) consolidated action items are produced.
@@ -175,3 +199,7 @@ Tracks over time:
 - Execution times per flow (for better time estimates)
 - Conflict patterns (which flow combinations commonly conflict and how conflicts were resolved)
 - Chain failure points (which flows most often block downstream execution)
+
+---
+
+Copyright 2024-present The Wayfinder Trust. All rights reserved.

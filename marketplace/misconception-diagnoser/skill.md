@@ -33,25 +33,25 @@
 
 ### Phase 1: Data Collection and Organization
 
-**Entry Criteria:**
+### Entry Criteria
 - Student ID, problem set ID, and student responses are provided
 - Answer key is available and complete
 - Student grade level is specified
 
-**Actions:**
+### Actions
 1. Validate that all student responses have corresponding answer key entries; flag any mismatches
 2. Organize student responses by problem ID for systematic comparison
 3. Load misconception database if provided; if not, use domain-standard misconceptions for the grade level
 4. Create a working analysis record with metadata (student ID, timestamp, problem count, grade level)
 5. Verify that all required fields in responses and answer key are present and non-empty
 
-**Output:**
+### Output
 - Organized response dataset ready for error identification
 - Validated answer key
 - Active misconception reference database
 - Working analysis record with metadata
 
-**Quality Gate:**
+### Quality Gate
 - All student responses are matched to answer key entries (mismatches are flagged, not dropped)
 - No missing or malformed data in the working record
 - Misconception database is loaded and accessible
@@ -61,11 +61,11 @@
 
 ### Phase 2: Error Identification and Categorization
 
-**Entry Criteria:**
+### Entry Criteria
 - Organized response dataset is available
 - Answer key is validated
 
-**Actions:**
+### Actions
 1. Compare each student response to the correct answer
 2. For each incorrect response, examine the student's work shown to determine error type:
    - **Computational:** Arithmetic or calculation mistake (correct method, wrong result)
@@ -76,11 +76,11 @@
 4. Record the error type, affected problem ID, and evidence (work shown, incorrect answer)
 5. Tally errors by type for summary statistics
 
-**Output:**
+### Output
 - `error_analysis` object with breakdown by error type (computational, conceptual, procedural, careless, uncategorized)
 - Detailed error log with categorization for each incorrect problem
 
-**Quality Gate:**
+### Quality Gate
 - Every incorrect response is categorized or marked "uncategorized" with a flag
 - Error categorization is supported by evidence from student work or explicitly noted as insufficient
 - Error counts sum to total incorrect responses
@@ -90,11 +90,11 @@
 
 ### Phase 3: Misconception Identification
 
-**Entry Criteria:**
+### Entry Criteria
 - Error categorization is complete
 - Misconception database is active
 
-**Actions:**
+### Actions
 1. For each conceptual or procedural error, search the misconception database for matching patterns
 2. Match error patterns to known misconceptions; assign confidence level based on pattern match strength:
    - High confidence (0.8-1.0): Error pattern matches known misconception exactly, appears in multiple problems, or is consistent with student's work shown
@@ -104,10 +104,10 @@
 4. Record all identified misconceptions with affected problem IDs, confidence levels, and evidence
 5. Flag any misconceptions appearing in 3+ problems (high priority for remediation)
 
-**Output:**
+### Output
 - `identified_misconceptions` array with confidence levels and evidence
 
-**Quality Gate:**
+### Quality Gate
 - Every conceptual/procedural error is mapped to at least one misconception
 - Confidence levels are justified by pattern match strength (High/Medium/Low/Inferred)
 - Misconceptions are specific and actionable (e.g., "Believes multiplying always makes numbers larger" not "Does not understand multiplication")
@@ -117,11 +117,11 @@
 
 ### Phase 4: Misconception Clustering and Prioritization
 
-**Entry Criteria:**
+### Entry Criteria
 - Misconceptions are identified with confidence levels
 - Learning objectives are available from answer key
 
-**Actions:**
+### Actions
 1. Group identified misconceptions by learning objective (e.g., "fraction addition", "equation solving")
 2. Within each group, rank misconceptions using the Priority Ranking Criteria (see Reference section):
    - Frequency: how many problems affected
@@ -131,10 +131,10 @@
 4. Create a prioritized list of learning objectives to address, ordered by priority rank
 5. Document the ranking rationale for each cluster (e.g., "Rank 1: affects 4 problems, confidence 0.85, blocks fraction operations")
 
-**Output:**
+### Output
 - `misconception_clusters` array organized by learning objective and priority
 
-**Quality Gate:**
+### Quality Gate
 - All identified misconceptions appear in exactly one cluster
 - Priority ranking is consistent with criteria (higher frequency/confidence = higher priority)
 - Clusters are actionable (each cluster has 1-4 misconceptions)
@@ -144,11 +144,11 @@
 
 ### Phase 5: Remediation Exercise Generation
 
-**Entry Criteria:**
+### Entry Criteria
 - Misconception clusters are prioritized
 - Student grade level and difficulty baseline are specified
 
-**Actions:**
+### Actions
 1. For each misconception, design a targeted remediation exercise that:
    - Directly addresses the misconception
    - Includes scaffolding (worked examples, guided steps, hints)
@@ -164,10 +164,10 @@
 5. Define success criteria (measurable and specific, e.g., "student solves 3 of 4 similar problems correctly" not "student understands")
 6. If a misconception cannot be addressed with a generated exercise, document it and recommend instructor-designed remediation
 
-**Output:**
+### Output
 - `remediation_exercises` array with full exercise details
 
-**Quality Gate:**
+### Quality Gate
 - Each exercise targets exactly one misconception
 - Difficulty level is mapped to a specific scaffolding approach (Novice/Intermediate/Advanced)
 - Success criteria are measurable and specific (not vague)
@@ -178,11 +178,11 @@
 
 ### Phase 6: Remediation Plan Sequencing
 
-**Entry Criteria:**
+### Entry Criteria
 - Remediation exercises are generated
 - Misconception clusters are prioritized
 
-**Actions:**
+### Actions
 1. Sequence exercises based on:
    - Priority rank (address Rank 1 misconceptions before Rank 2, etc.)
    - Prerequisites (if misconception A must be resolved before B, sequence accordingly)
@@ -193,10 +193,10 @@
 5. Create the final remediation plan with sequence, checkpoints, and metrics
 6. If total estimated duration exceeds 120 minutes, prioritize top 3-5 misconceptions and recommend phased remediation over multiple sessions
 
-**Output:**
+### Output
 - `remediation_plan` object with sequenced exercises, checkpoints, and success metrics
 
-**Quality Gate:**
+### Quality Gate
 - Sequence respects priority and prerequisite constraints
 - Checkpoints are spaced appropriately (after every 2-3 exercises)
 - Estimated duration is realistic for the student's grade level (e.g., 15-20 min per exercise for elementary, 20-30 min for secondary)
@@ -207,11 +207,11 @@
 
 ### Phase 7: Remediation Completion and Validation
 
-**Entry Criteria:**
+### Entry Criteria
 - Remediation plan is finalized and communicated to student/instructor
 - Student has completed remediation exercises
 
-**Actions:**
+### Actions
 1. Collect student responses to remediation exercises (submitted answers and work shown)
 2. Score remediation exercises against success criteria
 3. For each misconception, determine if success criteria were met:
@@ -224,11 +224,11 @@
    - Referral for specialized support
 5. Document resolution status for each misconception
 
-**Output:**
+### Output
 - `remediation_validation` object with resolution status for each misconception
 - `remediation_follow_up_recommendations` (array of strings) for misconceptions not resolved
 
-**Quality Gate:**
+### Quality Gate
 - All remediation exercises have been scored
 - Resolution status is determined for each misconception using the 80%/50%/0% thresholds
 - Follow-up recommendations are specific and actionable (not vague)
@@ -237,12 +237,12 @@
 
 ### Phase 8: Diagnostic Report Generation
 
-**Entry Criteria:**
+### Entry Criteria
 - All analysis phases are complete
 - Remediation plan is finalized
 - Remediation validation is complete (if applicable)
 
-**Actions:**
+### Actions
 1. Compile error analysis summary (total problems, error breakdown by type, percentage incorrect)
 2. Summarize identified misconceptions with confidence levels, affected problems, and priority ranks
 3. Present misconception clusters organized by priority
@@ -252,10 +252,10 @@
 7. Format as a structured report with sections: summary, error analysis, misconceptions, remediation plan, recommendations
 8. Ensure report is clear and accessible to non-technical readers (parents, students, teachers)
 
-**Output:**
+### Output
 - `diagnostic_report` (object) with sections: summary, error_analysis_section, misconceptions_section, remediation_plan_section, recommendations (array), generated_timestamp
 
-**Quality Gate:**
+### Quality Gate
 - Report is clear and accessible to non-technical readers
 - All major findings are included (error breakdown, misconceptions, remediation plan)
 - Recommendations are specific and actionable (e.g., "Emphasize that the equals sign means both sides are equal, not 'the answer is coming'" not "Teach equations better")
@@ -263,6 +263,15 @@
 - Timestamp is included for audit trail
 
 ---
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Analyze a student's practice problem mistakes to identify misconception patterns, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 
@@ -272,7 +281,7 @@ The skill is complete when:
 3. Misconceptions are clustered by learning objective and prioritized using the Priority Ranking Criteria
 4. Remediation exercises are generated for each misconception with scaffolding notes and measurable success criteria
 5. A sequenced remediation plan is created with checkpoints, estimated duration, and success metrics
-6. A comprehensive diagnostic report is generated with sections for summary, error analysis, misconceptions, remediation plan, and recommendations
+6. A full diagnostic report is generated with sections for summary, error analysis, misconceptions, remediation plan, and recommendations
 7. (Optional) Remediation exercises have been completed by the student and validation status is documented
 
 ---
@@ -366,3 +375,7 @@ If this skill is run multiple times on the same student:
 - **Adjust difficulty:** Use student's response to previous remediation exercises to inform difficulty level for new exercises
 - **Build student profile:** Identify persistent vs. transient misconceptions; persistent misconceptions may require different intervention strategies
 - **Data structure:** Store as `student_misconception_history` (array of objects with: date, problem_set_id, misconception_id, resolution_status, remediation_exercises_completed)
+
+---
+
+Copyright 2024-present The Wayfinder Trust. All rights reserved.

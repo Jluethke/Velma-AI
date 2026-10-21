@@ -1,6 +1,6 @@
 # Website Performance Auditor
 
-**One-line description:** A performance engineer audits a website for Core Web Vitals failures, render-blocking resources, image bloat, caching gaps, and JavaScript overhead — then delivers a ranked fix list with expected impact.
+**One-line description:** A performance engineer audits a website for Core Web Vitals failures, render-blocking resources, image bloat, caching gaps, and JavaScript overhead  --  then delivers a ranked fix list with expected impact.
 
 **Execution Pattern:** Phase Pipeline
 
@@ -18,9 +18,18 @@
 
 ---
 
+## Outputs
+
+- (none defined)
+
+
+---
+- output: (auto-linked)
+
+- `output`: (auto-linked)
 ## Phases
 
-### Phase 1 — Core Web Vitals Assessment
+### Phase 1  --  Core Web Vitals Assessment
 Evaluate the three CWV metrics and their impact on ranking + UX:
 - **LCP (Largest Contentful Paint):** What is the LCP element? Is it render-blocked? What is the expected score?
 - **INP (Interaction to Next Paint):** Are there long tasks blocking the main thread?
@@ -28,32 +37,32 @@ Evaluate the three CWV metrics and their impact on ranking + UX:
 
 For each metric: current likely state → target → primary fix.
 
-### Phase 2 — Asset Audit
+### Phase 2  --  Asset Audit
 - Images: Format (WebP/AVIF?), compression, lazy loading, responsive srcset, LCP image preload
 - JavaScript: Bundle size, unused JS, third-party scripts, render-blocking scripts
 - CSS: Critical CSS inlined? Unused CSS? Render-blocking stylesheets?
 - Fonts: Self-hosted vs CDN, font-display:swap, subsetting, preload hints
 
-### Phase 3 — Network & Caching
+### Phase 3  --  Network & Caching
 - HTTP/2 or HTTP/3?
 - CDN coverage: Is static content served from edge?
 - Cache-Control headers: Are assets cached correctly? Cache busting strategy?
 - Compression: gzip/Brotli enabled? On all text resources?
 - DNS prefetch/preconnect for critical third parties?
 
-### Phase 4 — Server-Side & Infrastructure
+### Phase 4  --  Server-Side & Infrastructure
 - TTFB (Time to First Byte): Server response time, database query performance, edge rendering
 - Serverless cold starts: Are they impacting perceived load?
 - Static vs dynamic: Are pages that could be static being rendered dynamically?
 - API response times: Are any client-side API calls on the critical path?
 
-### Phase 5 — Third-Party Impact
+### Phase 5  --  Third-Party Impact
 List every third-party script (analytics, chat, ads, tracking, social):
 - Estimated load impact of each
 - Whether it is render-blocking
 - Recommendation: remove, defer, async, self-host, or replace with lighter alternative
 
-### Phase 6 — Performance Fix Plan
+### Phase 6  --  Performance Fix Plan
 Ranked by impact-to-effort ratio:
 
 **Immediate (1 day, high impact):**
@@ -66,3 +75,7 @@ Same.
 Same.
 
 **Expected outcome:** Estimated Lighthouse performance score improvement and CWV pass/fail change after implementing Immediate + Sprint fixes.
+
+---
+
+Copyright 2024-present The Wayfinder Trust. All rights reserved.

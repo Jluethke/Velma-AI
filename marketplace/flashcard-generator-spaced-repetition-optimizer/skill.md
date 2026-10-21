@@ -30,12 +30,12 @@
 
 ### Phase 1: Concept Extraction
 
-**Entry Criteria:**
+### Entry Criteria
 - Study material is provided and is non-empty (minimum 100 characters)
 - Material domain is specified
 - Material is in readable text format (plain text, markdown, or outline)
 
-**Actions:**
+### Actions
 1. Parse study material and identify all atomic concepts (definitions, principles, facts, procedures). Atomic means: cannot be meaningfully subdivided without losing core meaning.
 2. Extract explicit definitions and implicit concepts from context. For each concept, record: name, definition (1-2 sentences), context (where it appears in material), and domain relevance.
 3. Determine concept granularity based on deck_size_preference: small decks use broader concepts (e.g., "photosynthesis" as one concept), large decks use finer-grained concepts (e.g., "light-dependent reactions", "light-independent reactions" as separate concepts).
@@ -43,13 +43,13 @@
 5. Build prerequisite graph: for each concept, identify which other concepts must be learned first. Flag circular dependencies (if A requires B and B requires A, flag for manual resolution).
 6. Validate that all major topics from study material have at least one concept. If coverage <80%, flag missing topics.
 
-**Output:**
+### Output
 - `concept_inventory`: array of {id (string), name (string), definition (string), context (string), prerequisites (string[]), difficulty_estimate (1-5)}.
 - `concept_count`: integer (total concepts extracted).
 - `prerequisite_graph`: object mapping concept IDs to arrays of dependent concept IDs.
 - `coverage_estimate`: float (percentage of study material topics represented).
 
-**Quality Gate:**
+### Quality Gate
 - Every major topic from study material has at least one concept (verified by manual review or topic matching).
 - Concepts are atomic: each concept name is a single noun phrase; definition does not contain "and" connecting independent ideas.
 - Definitions are complete and unambiguous: a learner unfamiliar with the domain could understand the definition without external context.
@@ -60,12 +60,12 @@
 
 ### Phase 2: Base Flashcard Generation
 
-**Entry Criteria:**
+### Entry Criteria
 - Concept inventory is complete and validated
 - Concept count is within deck_size_preference bounds (small: 20-40, medium: 40-80, large: 80-150)
 - No unresolved circular dependencies in prerequisite graph
 
-**Actions:**
+### Actions
 1. For each concept, generate a primary recall question using one of these templates: "What is [concept]?", "Define [concept]", "Explain how [concept] works", "Describe [concept]". Choose template that best fits concept type.
 2. Write a concise, complete answer (2-3 sentences): includes definition + key context + one distinguishing characteristic. Answer must be self-contained and readable without reference to other cards.
 3. Assign difficulty level (1-5) using this heuristic: difficulty = 1 + (number of prerequisites) + (complexity_factor). Complexity factor: 0 for simple facts, 1 for principles, 2 for procedures or relationships.
@@ -74,12 +74,12 @@
 6. Create card ID (format: "card_[concept_id]_base") and establish relationships to prerequisite cards (list prerequisite card IDs).
 7. Validate that all cards are independent: no card's answer references another card's content.
 
-**Output:**
+### Output
 - `base_flashcards`: array of {id (string), question (string), answer (string), type: "recall", difficulty (1-5), prerequisite_card_ids (string[]), initial_review_day (integer), mastery_threshold (integer)}.
 - `base_card_count`: integer.
 - `difficulty_distribution_base`: object {1: count, 2: count, 3: count, 4: count, 5: count}.
 
-**Quality Gate:**
+### Quality Gate
 - Every concept has exactly one base recall card (verified by count: base_card_count = concept_count).
 - Every answer is self-contained: readable without context, contains definition + distinguishing detail, 2-3 sentences.
 - Difficulty assignments are consistent: concepts with same prerequisite count and complexity have same difficulty (variance <1 level).
@@ -91,12 +91,11 @@
 
 ### Phase 3: Elaboration and Example Enrichment
 
-**Entry Criteria:**
+### Entry Criteria
 - Base flashcards are generated and validated
 - include_elaboration and include_examples flags are evaluated
 
-**Actions:**
-
+### Actions
 **Elaboration cards** (if include_elaboration = true):
 1. Identify concept pairs with meaningful relationships. Relationship types: (a) prerequisite (A must be learned before B), (b) contrast (A and B are opposites or alternatives), (c) analogy (A is like B in structure), (d) application (A is used to solve problems involving B), (e) synthesis (A, B, C work together).
 2. For each relationship, generate an elaboration question using templates: "How does [A] relate to [B]?", "Contrast [A] and [B]", "When would you use [A] instead of [B]?", "How do [A] and [B] work together?", "[A] is to [B] as [C] is to [D]".
@@ -120,14 +119,14 @@
 3. Validate elaboration cards: each connects two distinct concepts (not self-referential), relationship is meaningful (not arbitrary), answer explains why the relationship matters.
 4. Validate example cards: each example is concrete and domain-appropriate, explanation clearly links example to concept, no generic or abstract examples.
 
-**Output:**
+### Output
 - `elaboration_flashcards`: array of {id (string), question (string), answer (string), type: "elaboration", difficulty (1-5), related_card_ids (string[]), review_offset_days (integer), mastery_threshold (integer)}.
 - `example_flashcards`: array of {id (string), question (string), answer (string), type: "example", difficulty (1-5), related_card_ids (string[]), review_offset_days (integer), mastery_threshold (integer)}.
 - `elaboration_card_count`: integer.
 - `example_card_count`: integer.
 - `enrichment_card_count`: integer (elaboration_card_count + example_card_count).
 
-**Quality Gate:**
+### Quality Gate
 - Elaboration cards connect concepts meaningfully: each card's answer explains a specific relationship type (prerequisite, contrast, analogy, application, or synthesis). No arbitrary links.
 - Examples are concrete and memorable: each example is a specific instance (not abstract), domain-appropriate, and illustrates the concept without ambiguity.
 - No elaboration card duplicates base card content: elaboration cards add new information (the relationship), not repetition.
@@ -139,12 +138,12 @@
 
 ### Phase 4: Interleaving and Schedule Design
 
-**Entry Criteria:**
+### Entry Criteria
 - All flashcard types (base, elaboration, example) are generated and validated
 - interleaving_style is specified
 - Total card count is determined
 
-**Actions:**
+### Actions
 1. Merge all flashcard types into a unified set. Total card count = base_card_count + elaboration_card_count + example_card_count.
 2. If total card count exceeds 150 and deck_size_preference = "large", apply deck splitting logic: divide cards into sub-decks ("Fundamentals", "Intermediate", "Advanced") based on difficulty and prerequisite structure. Each sub-deck should have 50-100 cards. Create deck_split_info object with sub-deck names and card counts.
 3. Apply interleaving strategy based on interleaving_style:
@@ -156,13 +155,13 @@
    - Day 3: Cards with difficulty 1-2 + all elaboration cards
    - Day 7: Cards with difficulty 3-4
    - Day 14: Cards with difficulty 5 + complex elaborations (elaborations connecting 3+ concepts)
-   - Day 30: All cards (comprehensive review)
+   - Day 30: All cards (full review)
 5. Validate that all cards appear in the schedule exactly once per review cycle. No card appears on multiple days in the same cycle.
 6. Calculate estimated study time: (total_cards × 30 seconds per card) / 60 minutes. Add 20% buffer for elaboration and example cards (they take slightly longer).
 7. Calculate recommended daily card load: total_cards / 14 days (assuming 2-week initial learning cycle). If load >30 cards/day, extend cycle to 21 or 30 days and recalculate.
 8. Validate study load: recommended_daily_cards should be 15-25 cards/day for optimal retention. If outside this range, flag in output.
 
-**Output:**
+### Output
 - `complete_flashcard_set`: merged array of all flashcards with assigned review schedules. Each card includes: id, question, answer, type, difficulty, related_card_ids, review_interval_days, mastery_threshold.
 - `spaced_repetition_schedule`: {day_1 (string[]), day_3 (string[]), day_7 (string[]), day_14 (string[]), day_30 (string[])} with card IDs.
 - `estimated_study_hours`: float (total hours to reach mastery on all cards).
@@ -170,7 +169,7 @@
 - `study_load_validation`: object {is_optimal (boolean), daily_card_count (integer), recommended_cycle_days (integer), note (string)}.
 - `deck_split_info`: object or null. If deck is split: {sub_decks (array of {name, card_count, difficulty_range}), progression_order (string[])}. If not split: null.
 
-**Quality Gate:**
+### Quality Gate
 - All cards appear in the schedule: sum of cards across all days = total_card_count.
 - Prerequisite cards appear before dependent cards in day 1 sequence: topological sort validation passes.
 - Review intervals are spaced: no two reviews of same card on same day; each card appears on exactly one day per cycle.
@@ -182,12 +181,12 @@
 
 ### Phase 5: Learning Sequence Optimization
 
-**Entry Criteria:**
+### Entry Criteria
 - Complete flashcard set with schedules is ready
 - Prerequisite relationships are validated and acyclic
 - Interleaving strategy is applied
 
-**Actions:**
+### Actions
 1. Build optimal learning sequence for day 1 (first study session):
    - Start with lowest-difficulty cards (difficulty 1)
    - Proceed to higher difficulties (2, 3, 4, 5)
@@ -200,13 +199,13 @@
 5. Generate session breakdown: describe structure as "Study X cards in Y minutes: Z cards difficulty 1 (A min), W cards difficulty 2 (B min), etc."
 6. Identify cognitive load checkpoints: after every 15-20 cards, suggest a 5-minute break.
 
-**Output:**
+### Output
 - `learning_sequence`: array of card IDs in optimal order for day 1.
 - `first_session_duration_minutes`: integer (estimated time to complete day 1).
 - `session_breakdown`: string describing structure and time allocation (e.g., "Study 45 cards in 28 minutes: 12 difficulty-1 cards (6 min), 18 difficulty-2 cards (9 min), 15 difficulty-3 cards (13 min). Suggested breaks after cards 15 and 30.").
 - `sequence_validation`: object {prerequisites_satisfied (boolean), no_circular_dependencies (boolean), alternation_pattern_applied (boolean)}.
 
-**Quality Gate:**
+### Quality Gate
 - Learning sequence respects all prerequisite constraints: for every card, all prerequisite cards appear earlier in sequence (verified by topological sort).
 - Sequence alternates between concept types: pattern follows base → example → base → example (or base → elaboration → base if no examples). At least 60% of transitions follow this pattern.
 - First session is completable in under 90 minutes: first_session_duration_minutes <90.
@@ -217,12 +216,12 @@
 
 ### Phase 6: Quality Validation and Reporting
 
-**Entry Criteria:**
+### Entry Criteria
 - All previous phases complete
 - Complete flashcard set and schedules are ready
 - Learning sequence is optimized
 
-**Actions:**
+### Actions
 1. **Coverage analysis**: Check that all concepts from study material are represented in flashcards. Calculate coverage_percentage = (concepts_with_cards / total_concepts_extracted) × 100. If coverage <85%, flag missing concepts.
 2. **Gap analysis**: Identify concepts mentioned in study material but not yet in flashcards. For each gap, note: concept name, where it appears in material, why it was omitted (e.g., "too vague", "no clear definition"), suggestion for inclusion.
 3. **Redundancy check**: Identify cards with duplicate or near-duplicate content. For each redundancy: list card IDs, describe the duplication, recommend consolidation or differentiation.
@@ -233,7 +232,7 @@
 8. **Schedule validation**: Confirm spaced repetition schedule is complete and balanced. Verify: (a) all cards appear in schedule, (b) no card appears twice in same day, (c) day 1 has most cards, day 30 has all cards, (d) review intervals follow spacing effect principles.
 9. Generate improvement suggestions: for each identified issue (gap, redundancy, weak example, prerequisite gap, unbalanced difficulty), create actionable suggestion (e.g., "Add 3 cards for [missing concept]", "Consolidate cards X and Y", "Replace example in card Z with [better example]").
 
-**Output:**
+### Output
 - `quality_report`: object with:
   - `coverage_percentage`: float (0-100)
   - `gap_analysis`: array of {concept_name (string), location_in_material (string), reason_omitted (string), inclusion_suggestion (string)}
@@ -253,7 +252,7 @@
   - `deck_split_info`: object or null
   - `generation_timestamp`: string (ISO 8601 format)
 
-**Quality Gate:**
+### Quality Gate
 - Coverage ≥85% (if <85%, gap_analysis must list all missing concepts with inclusion suggestions).
 - No more than 2 redundant card pairs (if >2, flag as high-priority improvement).
 - Difficulty distribution is non-zero for at least 3 levels (or note if deck is too small to require all levels).
@@ -262,6 +261,15 @@
 - Schedule validation passes: all cards included, no duplicates, spacing follows principles.
 
 ---
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Transform study material into optimized spaced repetition flashcard sets using i, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 

@@ -1,6 +1,6 @@
 # Medical Second Opinion
 
-**One-line description:** Patient submits their symptoms, concerns, and questions they were too afraid to ask — second-opinion doctor submits their clinical assessment — AI produces a decision framework and the questions to bring back to the primary doctor.
+**One-line description:** Patient submits their symptoms, concerns, and questions they were too afraid to ask  --  second-opinion doctor submits their clinical assessment  --  AI produces a decision framework and the questions to bring back to the primary doctor.
 
 **Execution Pattern:** Phase Pipeline
 
@@ -32,7 +32,7 @@
 - `diagnosis_alignment` (object): Whether the second opinion confirms or questions the primary diagnosis.
 - `treatment_comparison` (object): Primary treatment vs. alternatives with tradeoffs aligned to patient's quality of life priorities.
 - `patient_questions_answered` (array): The patient's unasked questions, answered based on the doctor's submission.
-- `recommended_next_steps` (array): What to do next — additional workup, treatment changes, or proceeding with primary plan.
+- `recommended_next_steps` (array): What to do next  --  additional workup, treatment changes, or proceeding with primary plan.
 - `decision_framework` (object): A framework for the patient to make an informed decision based on their stated priorities.
 - `questions_for_primary_doctor` (array): Specific questions to bring to the primary doctor based on the second opinion findings.
 
@@ -41,44 +41,73 @@
 ## Execution Phases
 
 ### Phase 0: Pre-Flight Check
-**Entry Criteria:** Both submissions received.
-**Actions:** Confirm patient symptoms, concerns, and doctor's assessment and agreement/difference fields are present.
-**Output:** Readiness confirmation.
-**Quality Gate:** Clinical assessment and patient quality of life priorities both present.
+### Entry Criteria
+Both submissions received.
+### Actions
+Confirm patient symptoms, concerns, and doctor's assessment and agreement/difference fields are present.
+### Output
+Readiness confirmation.
+### Quality Gate
+Clinical assessment and patient quality of life priorities both present.
 
 ---
 
 ### Phase 1: Compare Clinical Assessments
-**Entry Criteria:** Both submissions confirmed.
-**Actions:** 1. Extract the second opinion doctor's view on diagnosis — does it align or differ? 2. Extract any differences in treatment recommendation. 3. Note recommended additional workup. 4. Assess the doctor's prognosis view vs. what the patient has been told.
-**Output:** Diagnosis alignment, treatment differences, workup recommendations, prognosis comparison.
-**Quality Gate:** Any diagnostic difference is named specifically with the clinical reasoning.
+### Entry Criteria
+Both submissions confirmed.
+### Actions
+1. Extract the second opinion doctor's view on diagnosis  --  does it align or differ? 2. Extract any differences in treatment recommendation. 3. Note recommended additional workup. 4. Assess the doctor's prognosis view vs. what the patient has been told.
+### Output
+Diagnosis alignment, treatment differences, workup recommendations, prognosis comparison.
+### Quality Gate
+Any diagnostic difference is named specifically with the clinical reasoning.
 
 ---
 
 ### Phase 2: Align to Patient Priorities
-**Entry Criteria:** Clinical assessments compared.
-**Actions:** 1. Map each treatment option against the patient's stated quality of life priorities. 2. Address each of the patient's concerns about the proposed treatment. 3. Answer the patient's unasked questions using the doctor's submission. 4. Note where the patient's fears align with or differ from clinical reality.
-**Output:** Treatment-to-priorities map, concern responses, question answers, fear calibration.
-**Quality Gate:** Every patient question is answered. Fears are calibrated against clinical reality.
+### Entry Criteria
+Clinical assessments compared.
+### Actions
+1. Map each treatment option against the patient's stated quality of life priorities. 2. Address each of the patient's concerns about the proposed treatment. 3. Answer the patient's unasked questions using the doctor's submission. 4. Note where the patient's fears align with or differ from clinical reality.
+### Output
+Treatment-to-priorities map, concern responses, question answers, fear calibration.
+### Quality Gate
+Every patient question is answered. Fears are calibrated against clinical reality.
 
 ---
 
 ### Phase 3: Build the Decision Framework
-**Entry Criteria:** Patient priorities aligned.
-**Actions:** 1. Draft a decision framework: what the patient needs to weigh, in order of their stated priorities. 2. Draft the questions to bring back to the primary doctor based on where the second opinion differs or raises questions. 3. Draft next steps based on the doctor's recommendations.
-**Output:** Decision framework, questions for primary doctor, next steps.
-**Quality Gate:** Questions for primary doctor are specific — not "ask about alternatives" but the actual questions.
+### Entry Criteria
+Patient priorities aligned.
+### Actions
+1. Draft a decision framework: what the patient needs to weigh, in order of their stated priorities. 2. Draft the questions to bring back to the primary doctor based on where the second opinion differs or raises questions. 3. Draft next steps based on the doctor's recommendations.
+### Output
+Decision framework, questions for primary doctor, next steps.
+### Quality Gate
+Questions for primary doctor are specific  --  not "ask about alternatives" but the actual questions.
 
 ---
 
 ### Phase 4: Deliver the Synthesis
-**Entry Criteria:** Framework built.
-**Actions:** 1. Present diagnosis alignment or difference. 2. Present treatment comparison with patient priority alignment. 3. Answer the patient's questions. 4. Deliver decision framework. 5. List next steps and questions for primary doctor.
-**Output:** Full synthesis — diagnosis alignment, treatment comparison, answered questions, decision framework, next steps.
-**Quality Gate:** Patient has enough information to make an informed decision or to know what information they still need.
+### Entry Criteria
+Framework built.
+### Actions
+1. Present diagnosis alignment or difference. 2. Present treatment comparison with patient priority alignment. 3. Answer the patient's questions. 4. Deliver decision framework. 5. List next steps and questions for primary doctor.
+### Output
+Full synthesis  --  diagnosis alignment, treatment comparison, answered questions, decision framework, next steps.
+### Quality Gate
+Patient has enough information to make an informed decision or to know what information they still need.
 
 ---
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Patient submits their symptoms, concerns, and the questions they were too afraid, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 Done when: (1) diagnostic alignment or difference stated, (2) treatment options compared against patient's priorities, (3) every unasked question answered, (4) decision framework reflects patient's stated values, (5) questions for primary doctor are specific.

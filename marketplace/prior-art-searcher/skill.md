@@ -1,6 +1,6 @@
 # Prior Art Searcher
 
-> **Starter Skill** — Free to use. Royalties to original creator on derivatives. Build on this.
+> **Starter Skill**  --  Free to use. Royalties to original creator on derivatives. Build on this.
 
 Searches for and analyzes prior art relevant to a patent application. Identifies existing patents, publications, and systems that could affect patentability. For each prior art reference, produces a differentiation analysis explaining how the invention differs. Outputs a structured prior art report with clearance status and recommended claim modifications.
 
@@ -36,9 +36,10 @@ ACT     --> Produce prior art report with clearance status
 
 ### OBSERVE: Identify Search Space
 
-**Entry criteria:** Claims and invention summary provided
+### Entry Criteria
+Claims and invention summary provided
 
-**Actions:**
+### Actions
 1. Extract key concepts from each independent claim. Identify the novel combination of elements.
 2. Generate search queries from:
    - Exact technical terms from claims (e.g., "exponential decay trust computation")
@@ -49,17 +50,20 @@ ACT     --> Produce prior art report with clearance status
 4. Search each source for each query combination. Record all queries in search_log.
 5. Collect candidate references: patents, papers, products, open-source projects.
 
-**Output:** List of candidate prior art references with source details.
+### Output
+List of candidate prior art references with source details.
 
-**Quality gate:** At least 3 different search sources queried. At least 10 queries performed. All major claim concepts searched.
+### Quality Gate
+At least 3 different search sources queried. At least 10 queries performed. All major claim concepts searched.
 
 ---
 
 ### REASON: Analyze Overlap
 
-**Entry criteria:** Candidate references collected
+### Entry Criteria
+Candidate references collected
 
-**Actions:**
+### Actions
 1. For each candidate reference, analyze:
    - Which claim elements it covers (if any)
    - Which claim elements it does NOT cover
@@ -73,17 +77,20 @@ ACT     --> Produce prior art report with clearance status
 3. For HIGH-risk references, identify the specific differentiating elements that save patentability.
 4. Check for combination risk: do two or more LOW/MEDIUM references together cover an independent claim?
 
-**Output:** Risk-rated prior art list with element-level overlap analysis.
+### Output
+Risk-rated prior art list with element-level overlap analysis.
 
-**Quality gate:** Every candidate rated. Every HIGH-risk reference has specific differentiation identified.
+### Quality Gate
+Every candidate rated. Every HIGH-risk reference has specific differentiation identified.
 
 ---
 
 ### PLAN: Build Differentiation Strategy
 
-**Entry criteria:** Overlap analysis complete
+### Entry Criteria
+Overlap analysis complete
 
-**Actions:**
+### Actions
 1. For each HIGH or MEDIUM risk reference, draft explicit differentiation language:
    - "[Prior art] does X. The present invention does Y. Specifically, [prior art] lacks [novel element], which the present invention provides through [mechanism]."
 2. Identify if any claims need narrowing to avoid overlap. Draft specific modifications:
@@ -95,26 +102,31 @@ ACT     --> Produce prior art report with clearance status
    - **AT_RISK**: HIGH-risk references exist but can be differentiated with claim modifications.
    - **BLOCKED**: A reference covers the core novel combination. Filing inadvisable without major redesign.
 
-**Output:** Differentiation strategy, claim modifications, clearance status.
+### Output
+Differentiation strategy, claim modifications, clearance status.
 
-**Quality gate:** Every HIGH/MEDIUM reference has actionable differentiation language. Clearance status is justified.
+### Quality Gate
+Every HIGH/MEDIUM reference has actionable differentiation language. Clearance status is justified.
 
 ---
 
 ### ACT: Produce Report
 
-**Entry criteria:** Differentiation strategy complete
+### Entry Criteria
+Differentiation strategy complete
 
-**Actions:**
+### Actions
 1. Compile the full prior art report with all references, ratings, and differentiation.
 2. Order references by risk level (HIGH first).
 3. Include the search_log showing all queries and sources for reproducibility.
 4. If clearance_status is AT_RISK, include the specific claim_modifications needed.
 5. If new references were found during analysis, loop back to OBSERVE to search for related work.
 
-**Output:** Complete prior art report, clearance status, claim modifications, search log.
+### Output
+Complete prior art report, clearance status, claim modifications, search log.
 
-**Quality gate:** Report is self-contained. Any reviewer can understand the risk landscape from the report alone.
+### Quality Gate
+Report is self-contained. Any reviewer can understand the risk landscape from the report alone.
 
 ## Exit Criteria
 
@@ -192,11 +204,11 @@ If all three conditions hold: treat the combination as HIGH risk.
 
 ### Common CPC Code Families (Software/AI)
 
-- G06N — Machine learning and neural networks
-- G06F 11 — Error detection and fault tolerance
-- G06F 21 — Security and access control
-- H04L 41/069 — Network management by policy
-- G06Q — Business methods and financial systems
+- G06N  --  Machine learning and neural networks
+- G06F 11  --  Error detection and fault tolerance
+- G06F 21  --  Security and access control
+- H04L 41/069  --  Network management by policy
+- G06Q  --  Business methods and financial systems
 
 ---
 

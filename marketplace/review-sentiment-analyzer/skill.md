@@ -14,34 +14,34 @@ PHASE 5: RECOMMEND  --> Generate actionable fixes per cluster with expected impa
 
 ## Inputs
 
-- **review_data**: array of objects -- Reviews to analyze:
+- **`review_data`**: array of objects -- Reviews to analyze:
   - `text`: string -- Review body
   - `rating`: number (1-5) -- Star rating
   - `date`: string (ISO date) -- Review date
   - `platform`: string -- Source platform (Amazon, Shopify, G2, Trustpilot, etc.)
   - `verified_purchase`: boolean (optional)
   - `helpful_votes`: number (optional) -- Social proof weight
-- **product_context**: object -- What the product is:
+- **`product_context`**: object -- What the product is:
   - `product_name`: string
   - `category`: string
   - `price_point`: number
   - `key_claims`: string[] -- What the product promises (used to check expectation alignment)
   - `recent_changes`: string[] (optional) -- Recent product updates that may affect reviews
-- **analysis_period**: object (optional) -- Time window:
+- **`analysis_period`**: object (optional) -- Time window:
   - `start_date`: string (ISO date)
   - `end_date`: string (ISO date)
   - `compare_to`: string -- "previous_period" | "all_time" | specific date range
-- **comparison_baseline**: object (optional) -- Competitor reviews or previous analysis for comparison
+- **`comparison_baseline`**: object (optional) -- Competitor reviews or previous analysis for comparison
 
 ## Outputs
 
-- **sentiment_report**: object -- Overall sentiment analysis:
+- **`sentiment_report`**: object -- Overall sentiment analysis:
   - `overall_sentiment`: number (-100 to +100, net sentiment score)
   - `rating_distribution`: object -- Count per star rating
   - `aspect_sentiments`: array of {aspect, positive_pct, neutral_pct, negative_pct, net_sentiment, trend}
   - `sentiment_trend`: array of {period, net_sentiment} -- Over time
   - `key_findings`: string[] -- Top 3-5 insights
-- **issue_clusters**: array of objects -- Grouped negative feedback:
+- **`issue_clusters`**: array of objects -- Grouped negative feedback:
   - `cluster_name`: string
   - `theme`: string
   - `frequency`: number -- Count of reviews mentioning this issue
@@ -50,14 +50,14 @@ PHASE 5: RECOMMEND  --> Generate actionable fixes per cluster with expected impa
   - `representative_quotes`: string[] -- 3-5 actual review excerpts
   - `root_cause`: string -- Likely underlying cause
   - `trend`: string ("emerging" | "stable" | "declining")
-- **priority_matrix**: array of objects -- Ranked issues:
+- **`priority_matrix`**: array of objects -- Ranked issues:
   - `cluster_name`: string
   - `priority_score`: number (0-10)
   - `frequency_score`: number
   - `severity_score`: number
   - `recency_score`: number
   - `rank`: number
-- **action_recommendations**: array of objects -- What to do:
+- **`action_recommendations`**: array of objects -- What to do:
   - `cluster_name`: string
   - `action`: string
   - `expected_impact`: string
@@ -69,9 +69,10 @@ PHASE 5: RECOMMEND  --> Generate actionable fixes per cluster with expected impa
 
 ### Phase 1: COLLECT -- Gather and Normalize
 
-**Entry criteria:** review_data provided with at least 20 reviews containing text and rating fields.
+### Entry Criteria
+review_data provided with at least 20 reviews containing text and rating fields.
 
-**Actions:**
+### Actions
 1. Normalize review data:
    - Standardize date formats to ISO 8601
    - Normalize ratings to 1-5 scale (convert 10-point scales, thumbs up/down to star equivalents)
@@ -90,15 +91,18 @@ PHASE 5: RECOMMEND  --> Generate actionable fixes per cluster with expected impa
    - Verified vs. unverified purchase ratio
    - Review length distribution (longer reviews tend to be more informative)
 
-**Output:** Normalized review dataset with computed statistics, flagged anomalies, and time-period segmentation.
+### Output
+Normalized review dataset with computed statistics, flagged anomalies, and time-period segmentation.
 
-**Quality gate:** At least 20 valid reviews after normalization. Rating distribution computed. If fewer than 20 reviews, warn that analysis will have low statistical confidence. Date range spans at least 30 days (if less, trend analysis will be unreliable).
+### Quality Gate
+At least 20 valid reviews after normalization. Rating distribution computed. If fewer than 20 reviews, warn that analysis will have low statistical confidence. Date range spans at least 30 days (if less, trend analysis will be unreliable).
 
 ### Phase 2: ANALYZE -- Sentiment Classification
 
-**Entry criteria:** Normalized review dataset ready. Baseline statistics computed.
+### Entry Criteria
+Normalized review dataset ready. Baseline statistics computed.
 
-**Actions:**
+### Actions
 1. Define aspect categories based on product category:
    - **Universal aspects:** Quality, Value/Price, Shipping/Delivery, Customer Support, Ease of Use
    - **Category-specific aspects:**
@@ -124,15 +128,18 @@ PHASE 5: RECOMMEND  --> Generate actionable fixes per cluster with expected impa
    - Which aspects are stronger/weaker vs. competitor?
    - Where is the sentiment gap largest?
 
-**Output:** Aspect-level sentiment matrix with percentages, trends, and comparison data.
+### Output
+Aspect-level sentiment matrix with percentages, trends, and comparison data.
 
-**Quality gate:** At least 5 aspects analyzed with sentiment percentages. Trend data available for at least the last 3 periods. If an aspect has fewer than 10 mentions, flag as "low confidence" and deprioritize in recommendations.
+### Quality Gate
+At least 5 aspects analyzed with sentiment percentages. Trend data available for at least the last 3 periods. If an aspect has fewer than 10 mentions, flag as "low confidence" and deprioritize in recommendations.
 
 ### Phase 3: CLUSTER -- Theme Grouping
 
-**Entry criteria:** Aspect sentiment analysis complete. Negative reviews identified per aspect.
+### Entry Criteria
+Aspect sentiment analysis complete. Negative reviews identified per aspect.
 
-**Actions:**
+### Actions
 1. Take all negative reviews (1-3 stars, or reviews with negative aspect sentiment) and group by semantic theme:
    - Read each negative review and extract the specific complaint
    - Group complaints that describe the same underlying issue (even if worded differently)
@@ -158,15 +165,18 @@ PHASE 5: RECOMMEND  --> Generate actionable fixes per cluster with expected impa
    - Clusters with consistent mentions over time = "stable"
    - Clusters with decreasing mentions = "declining" (possibly already addressed)
 
-**Output:** Themed issue clusters with frequency, severity, representative quotes, root causes, and trend classification.
+### Output
+Themed issue clusters with frequency, severity, representative quotes, root causes, and trend classification.
 
-**Quality gate:** Clusters account for at least 80% of negative reviews (no more than 20% uncategorized). Each cluster has at least 3 reviews (otherwise merge with related cluster or classify as "other"). Root cause identified for every cluster.
+### Quality Gate
+Clusters account for at least 80% of negative reviews (no more than 20% uncategorized). Each cluster has at least 3 reviews (otherwise merge with related cluster or classify as "other"). Root cause identified for every cluster.
 
 ### Phase 4: PRIORITIZE -- Impact Ranking
 
-**Entry criteria:** Issue clusters defined with frequency, severity, and trend data.
+### Entry Criteria
+Issue clusters defined with frequency, severity, and trend data.
 
-**Actions:**
+### Actions
 1. Score each cluster on three dimensions (each 0-10):
 
    **Frequency Score (40% weight):**
@@ -193,15 +203,18 @@ PHASE 5: RECOMMEND  --> Generate actionable fixes per cluster with expected impa
 5. Identify "strategic fixes": clusters that require significant investment but would transform the product perception.
 6. Identify "noise": clusters that are low priority and low effort -- fix if convenient but don't prioritize.
 
-**Output:** Priority-ranked issue matrix with scores, rankings, and quick-win/strategic classifications.
+### Output
+Priority-ranked issue matrix with scores, rankings, and quick-win/strategic classifications.
 
-**Quality gate:** All clusters scored on all three dimensions. Priority ranking is unambiguous (no ties -- break ties by severity first, then recency). At least one cluster identified as a quick win.
+### Quality Gate
+All clusters scored on all three dimensions. Priority ranking is unambiguous (no ties -- break ties by severity first, then recency). At least one cluster identified as a quick win.
 
 ### Phase 5: RECOMMEND -- Actionable Fixes
 
-**Entry criteria:** Priority matrix complete with ranked clusters.
+### Entry Criteria
+Priority matrix complete with ranked clusters.
 
-**Actions:**
+### Actions
 1. For each cluster (top 5 by priority), generate a specific, actionable recommendation:
    - **What to fix:** Concrete action, not vague ("patch firmware BLE stack" not "improve connectivity")
    - **Expected impact:** Estimated reduction in negative reviews, rating improvement projection
@@ -226,9 +239,20 @@ PHASE 5: RECOMMEND  --> Generate actionable fixes per cluster with expected impa
 
 5. Update state persistence with current analysis for future trend tracking.
 
-**Output:** Action plan with fixes, messaging changes, amplification recommendations, and review response strategy.
+### Output
+Action plan with fixes, messaging changes, amplification recommendations, and review response strategy.
 
-**Quality gate:** Top 5 clusters each have a specific action with effort, timeline, and validation metric. At least 2 positive sentiment themes identified for amplification. Review response templates provided for the top 3 negative clusters.
+### Quality Gate
+Top 5 clusters each have a specific action with effort, timeline, and validation metric. At least 2 positive sentiment themes identified for amplification. Review response templates provided for the top 3 negative clusters.
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Analyzes product reviews for sentiment patterns, clusters issues by theme, prior, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 

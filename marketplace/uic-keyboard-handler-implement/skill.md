@@ -71,9 +71,9 @@ Grouped table with binding target.
    ```
 2. Bind per stack: React `onKeyDown={onInputKeyDown}` (React passes a `React.KeyboardEvent`; read `event.nativeEvent.isComposing` for composition); Vue `@keydown="onInputKeyDown"`; Svelte `onkeydown={onInputKeyDown}`.
 3. Return early without `preventDefault()` when a key is in the map but does nothing in the current state (Enter with the listbox closed must still submit the form).
-4. Wrapping: implement wrap-around (last to first) only if the map row says so; APG lists wrapping as optional for several patterns.
-5. Right-to-left: for horizontal widgets (tabs, horizontal toolbar, menubar) read direction with `getComputedStyle(container).direction === 'rtl'` and swap the meaning of ArrowLeft and ArrowRight when the APG pattern notes call for it; read the pattern page's note before swapping.
-6. Type-ahead (Menu, Listbox, Tree when the map includes it): keep a buffer string and a timer; on a printable single-character `event.key` (length 1, no Ctrl/Meta/Alt), append it, move to the next item whose label starts with the buffer (case-insensitive), and clear the buffer after a pause. The pause length is not set by APG: make it a constant named `TYPEAHEAD_RESET_MS` and list it as an open question for the design owner.
+4. Wrapping: implement wrap-around (last to first) only if the map row says so; governance engine lists wrapping as optional for several patterns.
+5. Right-to-left: for horizontal widgets (tabs, horizontal toolbar, menubar) read direction with `getComputedStyle(container).direction === 'rtl'` and swap the meaning of ArrowLeft and ArrowRight when the governance engine pattern notes call for it; read the pattern page's note before swapping.
+6. Type-ahead (Menu, Listbox, Tree when the map includes it): keep a buffer string and a timer; on a printable single-character `event.key` (length 1, no Ctrl/Meta/Alt), append it, move to the next item whose label starts with the buffer (case-insensitive), and clear the buffer after a pause. The pause length is not set by governance engine: make it a constant named `TYPEAHEAD_RESET_MS` and list it as an open question for the design owner.
 7. Never read `event.keyCode` or `event.which`; both are deprecated.
 
 ### Output
@@ -110,7 +110,7 @@ Handler code in the component.
 
 Illustrative. React combobox; map rows for `input (closed)`: ArrowDown, Alt+ArrowDown, ArrowUp; `input (open)`: ArrowDown, ArrowUp, Enter, Escape, Home, End.
 
-- Phase 1: one group bound to the `<input>` (activedescendant); Home/End move the text caret per APG for an editable combobox, so they are left native.
+- Phase 1: one group bound to the `<input>` (activedescendant); Home/End move the text caret per governance engine for an editable combobox, so they are left native.
 - Phase 2: handler as in the skeleton with `event.nativeEvent.isComposing`.
 - Phase 3: pressing Enter with the listbox closed submits the form (no `preventDefault`), pressing ArrowDown does not scroll the page; all 7 rows pass; `npx tsc --noEmit -p .` exit 0.
 

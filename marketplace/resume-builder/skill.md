@@ -5,25 +5,26 @@ Takes your work history, education, and the job you're applying for, then builds
 ## Execution Pattern: ORPA Loop
 
 ## Inputs
-- work_history: array -- Jobs held with titles, companies, dates, and what you actually did (even rough descriptions are fine)
-- education: array -- Degrees, certifications, courses, bootcamps, or self-taught skills with dates
-- target_job: object -- The job you're applying for: title, company (if known), and the full job posting text (or a link to it)
+- `work_history`: array -- Jobs held with titles, companies, dates, and what you actually did (even rough descriptions are fine)
+- `education`: array -- Degrees, certifications, courses, bootcamps, or self-taught `skills` with dates
+- `target_job`: object -- The job you're applying for: title, company (if known), and the full job posting text (or a link to it)
 - skills: array -- Technical and soft skills, tools you use, languages spoken
-- situation: string -- (Optional) Special circumstances: career change, returning after a gap, military transition, first job out of school, haven't updated resume in years
-- preferences: object -- (Optional) Format preferences: one page or two, include objective/summary or not, any sections to emphasize or downplay
+- `situation`: string -- (Optional) Special circumstances: career change, returning after a gap, military transition, first job out of school, haven't updated resume in years
+- `preferences`: object -- (Optional) Format preferences: one page or two, include objective/summary or not, any sections to emphasize or downplay
 
 ## Outputs
-- resume: object -- Complete resume with all sections formatted and ready to submit, in both ATS-friendly plain text and visually formatted versions
-- keyword_analysis: object -- Keywords from the job posting matched against your resume, with a match percentage and suggestions for gaps
-- bullet_rewrites: array -- Before/after comparison showing how duty-based bullets were rewritten as accomplishment-based bullets
-- gap_strategy: object -- (If applicable) How employment gaps are addressed: what's on the resume, what to say if asked
-- cover_letter_hooks: array -- 3-4 strongest talking points from your resume that could anchor a cover letter
+- `resume`: object -- Complete resume with all sections formatted and ready to submit, in both ATS-friendly plain text and visually formatted versions
+- `keyword_analysis`: object -- Keywords from the job posting matched against your resume, with a match percentage and suggestions for gaps
+- `bullet_rewrites`: array -- Before/after comparison showing how duty-based bullets were rewritten as accomplishment-based bullets
+- `gap_strategy`: object -- (If applicable) How employment gaps are addressed: what's on the resume, what to say if asked
+- `cover_letter_hooks`: array -- 3-4 strongest talking points from your resume that could anchor a cover letter
 
 ## Execution
 
 ### OBSERVE: Gather and Analyze Raw Material
-**Entry criteria:** At least work history and a target job description provided.
-**Actions:**
+### Entry Criteria
+At least work history and a target job description provided.
+### Actions
 1. Parse the job posting to extract: required qualifications, preferred qualifications, key responsibilities, technology/tool requirements, soft skill signals, and company culture cues.
 2. Build a keyword list from the posting: exact terms the ATS will scan for. Rank by frequency and prominence (title keywords > body keywords).
 3. Inventory the user's experience: total years, industries, progression trajectory (moving up, lateral, or scattered), and any patterns (leadership growth, technical deepening, industry expertise).
@@ -31,12 +32,15 @@ Takes your work history, education, and the job you're applying for, then builds
 5. Detect special situations: employment gaps longer than 6 months, career changes (different industry or role type), overqualification, underqualification, or very short tenures at multiple jobs.
 6. Note any quantifiable achievements buried in the raw input ("I managed a team" becomes "How many people? What did the team accomplish?"). Flag questions to ask the user.
 
-**Output:** Job requirement breakdown, keyword priority list, experience inventory, gap analysis, situation flags, follow-up questions for the user.
-**Quality gate:** All required qualifications from the posting are mapped to user experience or flagged as gaps. Keyword list extracted.
+### Output
+Job requirement breakdown, keyword priority list, experience inventory, gap analysis, situation flags, follow-up questions for the user.
+### Quality Gate
+All required qualifications from the posting are mapped to user experience or flagged as gaps. Keyword list extracted.
 
 ### REASON: Design the Resume Strategy
-**Entry criteria:** Raw material analyzed, follow-up questions answered.
-**Actions:**
+### Entry Criteria
+Raw material analyzed, follow-up questions answered.
+### Actions
 1. Choose the resume format based on the user's situation:
    - Reverse chronological: standard for linear career paths with clear progression.
    - Functional/skills-based: better for career changers or significant gaps.
@@ -51,12 +55,15 @@ Takes your work history, education, and the job you're applying for, then builds
    - Longer gaps: include a brief honest entry (freelance consulting, family caregiver, professional development).
    - Career changes: reframe transferable skills with new language.
 
-**Output:** Resume structure blueprint, format decision, section order, keyword placement plan, gap handling strategy.
-**Quality gate:** Format matches situation. Keyword match rate projected above 65%. Gaps addressed. Length appropriate.
+### Output
+Resume structure blueprint, format decision, section order, keyword placement plan, gap handling strategy.
+### Quality Gate
+Format matches situation. Keyword match rate projected above 65%. Gaps addressed. Length appropriate.
 
 ### PLAN: Write the Resume Content
-**Entry criteria:** Strategy approved.
-**Actions:**
+### Entry Criteria
+Strategy approved.
+### Actions
 1. Write bullet points as accomplishments using the XYZ formula: "Accomplished [X] as measured by [Y] by doing [Z]."
    - Bad: "Responsible for managing social media accounts."
    - Good: "Grew Instagram following from 2K to 15K in 6 months by implementing a data-driven content calendar and engagement strategy."
@@ -68,12 +75,15 @@ Takes your work history, education, and the job you're applying for, then builds
 7. Format for ATS compatibility: no tables, no columns, no headers/footers, no graphics. Use standard section titles (Experience, Education, Skills). Save as .docx or plain text -- not PDF unless specifically requested.
 8. Create a second visually polished version for human readers: clean typography, subtle section dividers, consistent spacing, readable at a glance.
 
-**Output:** Complete resume in both ATS-plain and human-readable formats, with all sections written and formatted.
-**Quality gate:** Every bullet starts with an action verb. At least 60% of bullets include a quantified result. Keywords integrated naturally. Passes ATS parsing test (no formatting that would break extraction).
+### Output
+Complete resume in both ATS-plain and human-readable formats, with all sections written and formatted.
+### Quality Gate
+Every bullet starts with an action verb. At least 60% of bullets include a quantified result. Keywords integrated naturally. Passes ATS parsing test (no formatting that would break extraction).
 
 ### ACT: Deliver and Optimize
-**Entry criteria:** Resume content complete and formatted.
-**Actions:**
+### Entry Criteria
+Resume content complete and formatted.
+### Actions
 1. Present the resume with a section-by-section walkthrough explaining key decisions: "I put your project management experience first because the job posting mentions it three times."
 2. Deliver the keyword analysis: show which job posting keywords are in the resume, which are missing, and whether the missing ones can be added or are genuinely not in the user's background.
 3. Show the before/after bullet rewrites so the user understands the transformation and can apply the same technique to future updates.
@@ -81,8 +91,19 @@ Takes your work history, education, and the job you're applying for, then builds
 5. Offer the cover letter hooks: "Your three strongest talking points for a cover letter are..."
 6. Suggest tailoring notes: "If you apply to a similar role at a different company, here's what to adjust: swap these keywords, update the summary to mention their industry."
 
-**Output:** Final resume (both formats), keyword match report, bullet transformation examples, interview prep notes for gaps, and cover letter starting points.
-**Quality gate:** Resume is ready to submit. Keyword match rate is above 65%. User understands how to tailor for similar roles.
+### Output
+Final resume (both formats), keyword match report, bullet transformation examples, interview prep notes for gaps, and cover letter starting points.
+### Quality Gate
+Resume is ready to submit. Keyword match rate is above 65%. User understands how to tailor for similar roles.
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Takes your work history, education, and the job you're applying for, then builds, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 Done when: (1) resume is complete in ATS-friendly and human-readable formats, (2) keyword match rate against job posting is above 65%, (3) all bullets are accomplishment-based with action verbs, (4) employment gaps are addressed (if applicable), (5) user has cover letter hooks and tailoring guidance for future applications.

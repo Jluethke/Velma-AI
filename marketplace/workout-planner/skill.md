@@ -5,23 +5,24 @@ Designs evidence-based workout programs using progressive overload and periodiza
 ## Execution Pattern: ORPA Loop
 
 ## Inputs
-- fitness_goals: array -- Primary goals ranked: strength, hypertrophy (muscle growth), endurance, fat loss, athletic performance, general fitness
-- available_equipment: array -- Gym type: full gym, home gym (specify equipment), bodyweight only
-- schedule: object -- Available training days per week, session duration, time constraints
-- current_fitness_level: string -- Beginner (<1 year consistent training), intermediate (1-3 years), advanced (3+ years)
-- injuries_limitations: array -- Current injuries, mobility restrictions, exercises to avoid
+- `fitness_goals`: array -- Primary goals ranked: strength, hypertrophy (muscle growth), endurance, fat loss, athletic performance, general fitness
+- `available_equipment`: array -- Gym type: full gym, home gym (specify equipment), bodyweight only
+- `schedule`: object -- Available training days per week, session duration, time constraints
+- `current_fitness_level`: string -- Beginner (<1 year consistent training), intermediate (1-3 years), advanced (3+ years)
+- `injuries_limitations`: array -- Current injuries, mobility restrictions, exercises to avoid
 
 ## Outputs
-- weekly_program: object -- Full week structure with training split, muscle group assignments, rest days
-- daily_workout: object -- Specific exercises with sets, reps, weight/intensity, rest periods, RPE targets
-- progress_tracking: object -- Metrics to log per session (weight, reps, RPE, notes)
-- deload_recommendations: object -- When and how to deload based on fatigue accumulation
+- `weekly_program`: object -- Full week structure with training split, muscle group assignments, rest days
+- `daily_workout`: object -- Specific exercises with sets, reps, weight/intensity, rest periods, RPE targets
+- `progress_tracking`: object -- Metrics to log per session (weight, reps, RPE, notes)
+- `deload_recommendations`: object -- When and how to deload based on fatigue accumulation
 
 ## Execution
 
 ### OBSERVE: Assess Training Context
-**Entry criteria:** Fitness goals and schedule provided.
-**Actions:**
+### Entry Criteria
+Fitness goals and schedule provided.
+### Actions
 1. Classify primary goal to select training methodology:
    - **Strength:** Low reps (1-5), high intensity (>80% 1RM), long rest (3-5 min), compound focus.
    - **Hypertrophy:** Moderate reps (8-12), moderate intensity (65-80% 1RM), moderate rest (60-90s), volume focus.
@@ -36,12 +37,15 @@ Designs evidence-based workout programs using progressive overload and periodiza
 4. Note injuries and contraindicated movements. Identify safe alternatives.
 5. If training history exists: review recent performance data (weights, reps, RPE trends).
 
-**Output:** Training profile: methodology, split selection, exercise pool, contraindications, baseline performance.
-**Quality gate:** Selected split matches available days. Exercise pool contains at least 3 options per muscle group. All contraindicated movements are flagged with alternatives.
+### Output
+Training profile: methodology, split selection, exercise pool, contraindications, baseline performance.
+### Quality Gate
+Selected split matches available days. Exercise pool contains at least 3 options per muscle group. All contraindicated movements are flagged with alternatives.
 
 ### REASON: Design Programming Variables
-**Entry criteria:** Training profile complete.
-**Actions:**
+### Entry Criteria
+Training profile complete.
+### Actions
 1. Set volume targets per muscle group per week (evidence-based ranges):
    - Beginners: 10-12 sets per muscle group per week
    - Intermediate: 12-18 sets per muscle group per week
@@ -60,12 +64,15 @@ Designs evidence-based workout programs using progressive overload and periodiza
    - 1 week deload (50-60% volume, same intensity)
    - Repeat with increased baseline
 
-**Output:** Programming variables: volume per muscle group, intensity ranges, progression scheme, mesocycle structure.
-**Quality gate:** Weekly volume falls within evidence-based ranges. Progression scheme matches training level. Mesocycle includes a deload.
+### Output
+Programming variables: volume per muscle group, intensity ranges, progression scheme, mesocycle structure.
+### Quality Gate
+Weekly volume falls within evidence-based ranges. Progression scheme matches training level. Mesocycle includes a deload.
 
 ### PLAN: Build the Program
-**Entry criteria:** Programming variables defined.
-**Actions:**
+### Entry Criteria
+Programming variables defined.
+### Actions
 1. Assign exercises to each training day following the split:
    - **Compound movements first:** Squat, deadlift, bench press, overhead press, row, pull-up. These are the foundation.
    - **Accessory movements second:** Target weak points, smaller muscle groups, single-joint work.
@@ -81,12 +88,15 @@ Designs evidence-based workout programs using progressive overload and periodiza
    - **Performance-based:** 2+ sessions where target reps not met at same weight, or RPE consistently >9.5 on working sets
 5. Add warm-up protocol: 5 min general (bike/row), 2-3 sets of first exercise at ascending weights (50%, 70%, 85% of working weight).
 
-**Output:** Complete weekly program with daily workouts, exercise selection, set/rep schemes, rest periods, warm-up protocol, deload schedule.
-**Quality gate:** Volume per muscle group matches targets. No muscle group trained on consecutive days without 48h rest. Compound movements appear before isolation. Session duration fits user's time constraints.
+### Output
+Complete weekly program with daily workouts, exercise selection, set/rep schemes, rest periods, warm-up protocol, deload schedule.
+### Quality Gate
+Volume per muscle group matches targets. No muscle group trained on consecutive days without 48h rest. Compound movements appear before isolation. Session duration fits user's time constraints.
 
 ### ACT: Deliver and Track
-**Entry criteria:** Complete program built.
-**Actions:**
+### Entry Criteria
+Complete program built.
+### Actions
 1. Output the weekly program in a scannable format:
    - Day | Exercise | Sets x Reps | Weight/RPE | Rest | Notes
 2. Provide a tracking template for each session (what to log).
@@ -99,8 +109,10 @@ Designs evidence-based workout programs using progressive overload and periodiza
    - Recommend adjustments: increase volume, change exercise variation, add a deload, modify rep range.
    - Detect recovery issues: declining performance across all lifts = systemic fatigue (sleep, nutrition, stress).
 
-**Output:** Formatted program, tracking template, progression rules, or (on re-entry) adjustment recommendations.
-**Quality gate:** Every exercise has clear progression criteria. Deload triggers are specific and measurable. If adjustments are recommended, they cite the specific data point that triggered them.
+### Output
+Formatted program, tracking template, progression rules, or (on re-entry) adjustment recommendations.
+### Quality Gate
+Every exercise has clear progression criteria. Deload triggers are specific and measurable. If adjustments are recommended, they cite the specific data point that triggered them.
 
 ## Exit Criteria
 Initial run: complete when a full weekly program is delivered with tracking templates and progression rules. Ongoing: the loop continues as long as the user logs data and seeks adjustments. Exit when user transitions to a new goal (triggers a fresh OBSERVE).
@@ -176,3 +188,7 @@ Tracks over time:
 - Volume per muscle group per week
 - Deload history and post-deload performance changes
 - Plateau detection per exercise
+
+---
+
+Copyright 2024-present The Wayfinder Trust. All rights reserved.

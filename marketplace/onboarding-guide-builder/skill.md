@@ -1,6 +1,6 @@
 # Onboarding Guide Builder
 
-> **Starter Skill** — Free to use. Royalties to original creator on derivatives. Build on this.
+> **Starter Skill**  --  Free to use. Royalties to original creator on derivatives. Build on this.
 
 Takes a tool, platform, system, or role and generates a structured onboarding guide for a new user or employee. Covers: prerequisites, day-1 setup, first-week milestones, common mistakes, who to ask for help, glossary of terms, and "you're ramped up when" criteria. Fork this for: employee onboarding, SaaS onboarding, community onboarding, course onboarding.
 
@@ -35,28 +35,30 @@ PHASE 4: VALIDATE   --> Verify completeness and identify gaps
 
 ### Phase 1: SCOPE -- Define the Onboarding Boundary
 
-**Entry criteria:** Subject and audience are provided.
+### Entry Criteria
+Subject and audience are provided.
 
-**Actions:**
-
-1. Determine what "productive" means for this subject. Productive is NOT "knows everything" — it is "can do the 3-5 most common tasks independently without asking for help."
+### Actions
+1. Determine what "productive" means for this subject. Productive is NOT "knows everything"  --  it is "can do the 3-5 most common tasks independently without asking for help."
 2. List the 3-5 most common tasks a ramped-up person performs. These are the learning objectives.
 3. Identify prerequisites: what must the person already know or have before starting? (e.g., "has a GitHub account", "understands basic SQL", "has admin access to the platform").
 4. Identify what is explicitly OUT of scope: advanced features, edge cases, and topics that can wait until after the ramp period.
 5. Determine the right granularity for the audience_level: a beginner needs every click explained; an expert-in-adjacent-field needs conceptual mapping ("this is like X in the tool you already know").
 
-**Output:** Productivity definition, learning objectives, prerequisites list, out-of-scope list, granularity guidance.
+### Output
+Productivity definition, learning objectives, prerequisites list, out-of-scope list, granularity guidance.
 
-**Quality gate:** Learning objectives are specific tasks (not "understand the system"). Prerequisites are verifiable (not "be smart"). Out-of-scope items are listed to prevent scope creep.
+### Quality Gate
+Learning objectives are specific tasks (not "understand the system"). Prerequisites are verifiable (not "be smart"). Out-of-scope items are listed to prevent scope creep.
 
 ---
 
 ### Phase 2: MAP -- Chart the Learning Path
 
-**Entry criteria:** Scope is defined.
+### Entry Criteria
+Scope is defined.
 
-**Actions:**
-
+### Actions
 1. Order the learning objectives by dependency: which tasks must be learned first because other tasks depend on them? Build a dependency chain.
 2. Break the ramp period into milestones:
    - **Day 1**: environment setup, first successful action (the "hello world" moment).
@@ -69,18 +71,20 @@ PHASE 4: VALIDATE   --> Verify completeness and identify gaps
 4. Identify the "aha moments": the 2-3 key insights that transform confusion into understanding. Place them strategically in the learning path.
 5. Map common mistakes to milestones: at each stage, what do people typically get wrong? Warn about them before they happen.
 
-**Output:** Milestone-based learning path with skills, actions, validations, aha moments, and common mistakes.
+### Output
+Milestone-based learning path with skills, actions, validations, aha moments, and common mistakes.
 
-**Quality gate:** Every milestone has at least one validation step. Common mistakes are listed with prevention advice, not just "be careful." The path follows dependency order.
+### Quality Gate
+Every milestone has at least one validation step. Common mistakes are listed with prevention advice, not just "be careful." The path follows dependency order.
 
 ---
 
 ### Phase 3: BUILD -- Write the Guide
 
-**Entry criteria:** Learning path is mapped.
+### Entry Criteria
+Learning path is mapped.
 
-**Actions:**
-
+### Actions
 1. **Welcome section**: one paragraph explaining what this guide covers, who it is for, and how long it will take. Set expectations.
 2. **Prerequisites checklist**: everything needed before starting, each as a checkable item with instructions for how to get it if missing.
 3. **Day 1 guide**: step-by-step instructions for initial setup and the first successful action. Include screenshots or diagram descriptions where helpful. End with: "If you've done X, you're on track."
@@ -91,29 +95,42 @@ PHASE 4: VALIDATE   --> Verify completeness and identify gaps
 8. **Glossary**: every domain-specific term used in the guide, with a plain-English definition.
 9. **"You're ramped up when" criteria**: 5-8 self-assessment statements. "You're ramped up when you can [specific action] without looking it up."
 
-**Output:** Complete onboarding guide with all 9 sections.
+### Output
+Complete onboarding guide with all 9 sections.
 
-**Quality gate:** Day 1 guide has numbered steps that a new person could follow without prior knowledge. Every domain term used in the guide appears in the glossary. Ramp criteria are measurable (not "you feel comfortable").
+### Quality Gate
+Day 1 guide has numbered steps that a new person could follow without prior knowledge. Every domain term used in the guide appears in the glossary. Ramp criteria are measurable (not "you feel comfortable").
 
 ---
 
 ### Phase 4: VALIDATE -- Check for Gaps
 
-**Entry criteria:** Guide is fully written.
+### Entry Criteria
+Guide is fully written.
 
-**Actions:**
-
+### Actions
 1. Walk through the guide as a new person: does every step in Day 1 have enough detail to execute? Are there any points where you would be stuck and not know where to go?
 2. Cross-reference: does every learning objective from Phase 1 have a corresponding walkthrough in Phase 3? Are any missing?
 3. Check the glossary: scan the guide for technical terms and verify each one is defined in the glossary.
 4. Verify existing_resources are referenced (not duplicated): if documentation already exists, link to it rather than rewriting it.
 5. Build the day-by-day checklist: extract every action item from the guide into a chronological checklist grouped by day or milestone. Each item should be completable and verifiable.
 
-**Output:** Validation report with any gaps found, final checklist, cross-reference confirmation.
+### Output
+Validation report with any gaps found, final checklist, cross-reference confirmation.
 
-**Quality gate:** Every learning objective has a walkthrough. Every technical term is in the glossary. The checklist covers the full ramp period. No step says "figure out how to..." without providing the how.
+### Quality Gate
+Every learning objective has a walkthrough. Every technical term is in the glossary. The checklist covers the full ramp period. No step says "figure out how to..." without providing the how.
 
 ---
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Generate a structured onboarding guide for a new user or employee: prerequisites, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 

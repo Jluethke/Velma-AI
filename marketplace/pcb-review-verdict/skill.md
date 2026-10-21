@@ -62,6 +62,15 @@ Merged `review_report`.
 
 ---
 
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Merge power-input, isolation, and interlock findings into one report, write the , the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
+
 ## Exit Criteria
 
 DONE at PASS, with a complete report and creepage constraints for layout, or at an escalation after pass 3. Layout never starts without PASS.

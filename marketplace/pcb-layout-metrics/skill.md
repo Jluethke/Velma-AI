@@ -57,6 +57,15 @@ Measured metrics.
 
 ---
 
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Measure the finished board's via count, trace length, hot-loop areas, power path, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
+
 ## Exit Criteria
 
 DONE when the board's measured metrics and their deltas against prediction and baseline are recorded.

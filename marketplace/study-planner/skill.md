@@ -5,25 +5,26 @@ Takes a subject, exam date or learning goal, available study hours per week, and
 ## Execution Pattern: ORPA Loop
 
 ## Inputs
-- subject: string -- What you're studying (e.g., "AP Biology", "AWS Solutions Architect cert", "Spanish for travel", "real estate exam")
-- goal: object -- Target outcome and deadline: exam date, certification test date, or learning milestone (e.g., "conversational Spanish by June")
-- hours_available: object -- Hours per week available for study, which days are free, preferred study time (morning/afternoon/evening), and maximum single-session length
-- current_level: string -- Where you are now: "total beginner", "some background", "refreshing old knowledge", "almost ready just need review"
-- learning_style: string -- (Optional) How you learn best: "reading", "flashcards", "practice problems", "videos", "teaching others", "hands-on projects"
-- resources: array -- (Optional) Textbooks, courses, or materials you already have access to
+- `subject`: string -- What you're studying (e.g., "AP Biology", "AWS Solutions Architect cert", "Spanish for travel", "real estate exam")
+- `goal`: object -- Target outcome and deadline: exam date, certification test date, or learning milestone (e.g., "conversational Spanish by June")
+- `hours_available`: object -- Hours per week available for study, which days are free, preferred study time (morning/afternoon/evening), and maximum single-session length
+- `current_level`: string -- Where you are now: "total beginner", "some background", "refreshing old knowledge", "almost ready just need review"
+- `learning_style`: string -- (Optional) How you learn best: "reading", "flashcards", "practice problems", "videos", "teaching others", "hands-on projects"
+- `resources`: array -- (Optional) Textbooks, courses, or materials you already have access to
 
 ## Outputs
-- study_plan: object -- Week-by-week schedule with daily sessions, topics per session, and time allocations
-- topic_breakdown: array -- Subject broken into ordered topics with dependencies mapped (what to learn before what)
-- review_schedule: object -- Spaced repetition calendar: when to review each topic for maximum retention (1 day, 3 days, 7 days, 14 days, 30 days after initial study)
-- practice_questions: array -- 5-10 practice questions per topic, ranging from recall to application, with answer explanations
-- progress_checkpoints: array -- Weekly self-assessment milestones to verify you're on track
+- `study_plan`: object -- Week-by-week schedule with daily sessions, topics per session, and time allocations
+- `topic_breakdown`: array -- Subject broken into ordered topics with dependencies mapped (what to learn before what)
+- `review_schedule`: object -- Spaced repetition calendar: when to review each topic for maximum retention (1 day, 3 days, 7 days, 14 days, 30 days after initial study)
+- `practice_questions`: array -- 5-10 practice questions per topic, ranging from recall to application, with answer explanations
+- `progress_checkpoints`: array -- Weekly self-assessment milestones to verify you're on track
 
 ## Execution
 
 ### OBSERVE: Assess the Situation
-**Entry criteria:** Subject and either a deadline or learning goal provided.
-**Actions:**
+### Entry Criteria
+Subject and either a deadline or learning goal provided.
+### Actions
 1. Identify the full scope of the subject. For standardized exams, pull the official topic list or exam blueprint (e.g., "AP Bio covers 8 units: Chemistry of Life, Cell Structure, Cellular Energetics..."). For informal learning, define a reasonable scope.
 2. Calculate available study time: total hours between now and deadline. Subtract 10% for buffer (life happens).
 3. Assess current knowledge: which topics does the user already know? Which are completely new? This determines where to spend the most time.
@@ -31,12 +32,15 @@ Takes a subject, exam date or learning goal, available study hours per week, and
 5. Check for prerequisites: does the subject have a natural order? (You can't study calculus without algebra. You can't study organic chemistry without general chemistry.)
 6. Note the user's learning style and schedule constraints. Night owls shouldn't plan 6 AM study sessions.
 
-**Output:** Topic inventory with priority weights, available time budget, knowledge gap map, prerequisite chain.
-**Quality gate:** All major topics identified. Time budget is realistic (not counting on 8-hour weekend sessions if user has kids). Prerequisites mapped.
+### Output
+Topic inventory with priority weights, available time budget, knowledge gap map, prerequisite chain.
+### Quality Gate
+All major topics identified. Time budget is realistic (not counting on 8-hour weekend sessions if user has kids). Prerequisites mapped.
 
 ### REASON: Design the Study Architecture
-**Entry criteria:** Topic inventory and time budget complete.
-**Actions:**
+### Entry Criteria
+Topic inventory and time budget complete.
+### Actions
 1. Sequence topics by prerequisite order first, then by priority weight (high-yield topics early, low-yield topics later).
 2. Allocate time per topic proportional to: (a) how much the user doesn't know, (b) how heavily it's tested or how important it is, (c) how complex it is.
 3. Build the spaced repetition schedule using expanding intervals:
@@ -51,12 +55,15 @@ Takes a subject, exam date or learning goal, available study hours per week, and
 7. Build in "flex days" (1 per week) for catching up if you fall behind. If you don't fall behind, use them for extra practice.
 8. For the final 10-15% of the timeline, schedule pure review and practice exams -- no new material.
 
-**Output:** Week-by-week study plan with daily sessions, topic sequence, spaced repetition calendar, and checkpoint schedule.
-**Quality gate:** All topics covered before deadline. Spaced repetition intervals are maintained. No study session exceeds stated maximum. At least one flex day per week.
+### Output
+Week-by-week study plan with daily sessions, topic sequence, spaced repetition calendar, and checkpoint schedule.
+### Quality Gate
+All topics covered before deadline. Spaced repetition intervals are maintained. No study session exceeds stated maximum. At least one flex day per week.
 
 ### PLAN: Create Study Materials
-**Entry criteria:** Study schedule finalized.
-**Actions:**
+### Entry Criteria
+Study schedule finalized.
+### Actions
 1. Break each topic into a single-session study chunk. Each chunk has: a learning objective ("After this session, you should be able to..."), key concepts (3-5 per chunk), and a practice activity.
 2. Create practice questions for each topic:
    - Level 1 (Recall): "What is X? Define Y."
@@ -68,20 +75,34 @@ Takes a subject, exam date or learning goal, available study hours per week, and
 5. Match study activities to learning style: flashcard users get flashcard-format materials, practice-problem learners get worked examples, visual learners get diagram suggestions.
 6. For exam prep, include timing practice: "You'll have 90 seconds per question on the real exam, so practice answering these in under 2 minutes each."
 
-**Output:** Study chunks with objectives, practice questions by level, weekly checkpoints, cheat sheets, and style-matched activities.
-**Quality gate:** Every topic has at least 5 practice questions. Checkpoints cover cumulative material. Cheat sheets are genuinely one page.
+### Output
+Study chunks with objectives, practice questions by level, weekly checkpoints, cheat sheets, and style-matched activities.
+### Quality Gate
+Every topic has at least 5 practice questions. Checkpoints cover cumulative material. Cheat sheets are genuinely one page.
 
 ### ACT: Deliver and Calibrate
-**Entry criteria:** Study plan and materials are complete.
-**Actions:**
+### Entry Criteria
+Study plan and materials are complete.
+### Actions
 1. Present the full study plan in a clean weekly calendar format showing exactly what to study each day and for how long.
 2. Deliver the first week's materials in detail (study chunks, practice questions, cheat sheet). Subsequent weeks delivered as the user progresses.
 3. Explain the spaced repetition system: "You'll see old topics pop up on your schedule. That's intentional -- reviewing at these intervals is what makes knowledge stick."
 4. Set the first checkpoint: "After Week 1, test yourself on these 10 questions. If you score below 70%, spend your flex day reviewing before moving on."
 5. Offer adjustment: "If this pace feels too fast or too slow after the first week, we'll recalibrate. The plan is a starting point, not a prison."
 
-**Output:** Formatted study plan, first week's materials, checkpoint criteria, and adjustment protocol.
-**Quality gate:** Plan is actionable starting today. First session is clearly defined. User understands the review system.
+### Output
+Formatted study plan, first week's materials, checkpoint criteria, and adjustment protocol.
+### Quality Gate
+Plan is actionable starting today. First session is clearly defined. User understands the review system.
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Takes a subject, exam date or learning goal, available study hours per week, and, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 Done when: (1) all topics are sequenced and scheduled within the available time, (2) spaced repetition review sessions are built into the calendar, (3) practice questions exist for every topic, (4) weekly checkpoints are defined with pass/fail criteria, (5) the plan fits within the user's stated available hours.
@@ -129,10 +150,10 @@ Done when: (1) all topics are sequenced and scheduled within the available time,
 
 | Level | Type | Example Prompt |
 |---|---|---|
-| 1 — Recall | Definition, fact | "What is [term]? Define [concept]." |
-| 2 — Understanding | Explanation, comparison | "Explain why X happens. Compare X and Y." |
-| 3 — Application | Scenario-based | "Given [situation], how would you apply X?" |
-| 4 — Analysis | Prediction, critique | "What would happen if X changed? Why does this approach fail?" |
+| 1  --  Recall | Definition, fact | "What is [term]? Define [concept]." |
+| 2  --  Understanding | Explanation, comparison | "Explain why X happens. Compare X and Y." |
+| 3  --  Application | Scenario-based | "Given [situation], how would you apply X?" |
+| 4  --  Analysis | Prediction, critique | "What would happen if X changed? Why does this approach fail?" |
 
 ### Time Budget Reality Check
 

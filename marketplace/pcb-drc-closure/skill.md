@@ -58,6 +58,15 @@ Parsed DRC result.
 
 ---
 
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Run KiCad headless DRC with schematic parity and fix every violation at its caus, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
+
 ## Exit Criteria
 
 DONE when the final DRC run exits with code 0 and the JSON report shows zero items.

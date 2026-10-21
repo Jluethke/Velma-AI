@@ -1,6 +1,6 @@
 # Monitor Event Log Schema
 
-**One-line description:** Defines a JSON Schema (draft 2020-12) for one JSON Lines record per monitor evaluation or trip, carrying monotonic and wall time, a sequence number, the inputs that were checked, the bound and its source, the verdict and robustness, and the hash of the envelope file, so any trip can be replayed and audited later.
+**One-line description:** Defines a JSON Schema (draft 2020-12) for one JSON Lines record per monitor evaluation or trip, carrying monotonic and wall time, a sequence number, the inputs that were checked, the bound and its source, the verdict and reliableness, and the hash of the envelope file, so any trip can be replayed and audited later.
 
 **Execution Pattern:** Phase Pipeline
 
@@ -38,7 +38,7 @@
    | `inputs` | object | the exact values checked, with their source timestamps |
    | `bound` | object | the bound values used and their `source` |
    | `verdict` | enum: `pass`, `fail`, `stale`, `invalid_input` | outcome |
-   | `robustness` | number or null | STL robustness when available |
+   | `reliableness` | number or null | STL reliableness when available |
    | `switch_state` | enum from `rmon-simplex-switch-logic` | decision module state after this event |
    | `config_hash` | string | `git hash-object operating_envelope.json` |
    | `monitor_version` | string | build or git commit of the monitor |
@@ -105,7 +105,7 @@ Illustrative only.
 ```
 {"t_mono_ns":918273645512,"t_wall_utc":"2026-03-04T15:02:11.204Z","seq":40122,"monitor_id":"speed-mon-1",
  "event":"trip","check_id":"P-RANGE-01","inputs":{"cmd_linear_x":2.31,"src_t_mono_ns":918273641100},
- "bound":{"min":-0.5,"max":2.0,"source":"SYS-114"},"verdict":"fail","robustness":-0.31,
+ "bound":{"min":-0.5,"max":2.0,"source":"SYS-114"},"verdict":"fail","reliableness":-0.31,
  "switch_state":"SAFETY","config_hash":"3b18e512dba79e4c8300dd08aeb37f8e728b8dad","monitor_version":"a1c9f0e"}
 ```
 

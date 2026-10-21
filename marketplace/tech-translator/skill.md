@@ -5,24 +5,25 @@ Takes any piece of tech jargon, error message, settings screen, or confusing not
 ## Execution Pattern: ORPA Loop
 
 ## Inputs
-- the_thing: string -- The exact text you're confused by. Copy-paste the error message, notification, settings description, popup, or tech term. Don't paraphrase -- the exact wording matters.
-- where_you_saw_it: string -- (Optional) Where this appeared: on your phone, on your computer, in an email, on a website, in an app (which app?), during setup, after an update, when something stopped working
-- what_you_were_doing: string -- (Optional) What you were trying to do when this appeared. Examples: "I was trying to open a website," "I was installing an app," "it just popped up out of nowhere," "I was trying to print," "my phone showed this after an update"
-- what_you_want_to_do: string -- (Optional) What you're trying to accomplish. Sometimes the best translation includes "and here's how to actually fix this"
-- device: string -- (Optional) What device: iPhone, Android phone, iPad, Windows computer, Mac, Chromebook, or the specific app/software showing the message
+- `the_thing`: string -- The exact text you're confused by. Copy-paste the error message, notification, settings description, popup, or tech term. Don't paraphrase -- the exact wording matters.
+- `where_you_saw_it`: string -- (Optional) Where this appeared: on your phone, on your computer, in an email, on a website, in an app (which app?), during setup, after an update, when something stopped working
+- `what_you_were_doing`: string -- (Optional) What you were trying to do when this appeared. Examples: "I was trying to open a website," "I was installing an app," "it just popped up out of nowhere," "I was trying to print," "my phone showed this after an update"
+- `what_you_want_to_do`: string -- (Optional) What you're trying to accomplish. Sometimes the best translation includes "and here's how to actually fix this"
+- `device`: string -- (Optional) What device: iPhone, Android phone, iPad, Windows computer, Mac, Chromebook, or the specific app/software showing the message
 
 ## Outputs
-- plain_english: string -- What the message actually means in everyday language. One or two sentences maximum. No jargon.
-- why_it_happened: string -- What caused this to appear, in terms a non-technical person can understand
-- what_to_do: object -- The recommended action with step-by-step instructions. Includes what each choice/button actually means if there are options presented.
-- safety_check: string -- Whether this is a normal message (safe to deal with), a warning worth paying attention to, or something potentially dangerous (like a scam popup)
-- if_it_happens_again: string -- (Optional) What it means if you keep seeing this, and whether that indicates a bigger issue
+- `plain_english`: string -- What the message actually means in everyday language. One or two sentences maximum. No jargon.
+- `why_it_happened`: string -- What caused this to appear, in terms a non-technical person can understand
+- `what_to_do`: object -- The recommended action with step-by-step instructions. Includes what each choice/button actually means if there are options presented.
+- `safety_check`: string -- Whether this is a normal message (safe to deal with), a warning worth paying attention to, or something potentially dangerous (like a scam popup)
+- `if_it_happens_again`: string -- (Optional) What it means if you keep seeing this, and whether that indicates a bigger issue
 
 ## Execution
 
 ### OBSERVE: Read the Message Exactly
-**Entry criteria:** The person has provided the text they need translated.
-**Actions:**
+### Entry Criteria
+The person has provided the text they need translated.
+### Actions
 1. Read the exact text character by character. Technical messages often contain crucial details in specific words:
    - Error codes (numbers like "404," "503," "0x80070005") -- these identify the specific problem
    - Account references ("your account," "this device," "this network") -- who/what is affected
@@ -45,12 +46,15 @@ Takes any piece of tech jargon, error message, settings screen, or confusing not
    - Messages that won't let you close the browser window -- SCAM. Force-close the browser (details in the response).
 4. Note the context: where they saw it, what they were doing, and what device they're on. This often reveals the actual issue better than the message itself.
 
-**Output:** Exact message categorized, scam check result, context noted.
-**Quality gate:** Message type is identified. Scam check is performed on every input. If any scam indicators are found, this is flagged before anything else.
+### Output
+Exact message categorized, scam check result, context noted.
+### Quality Gate
+Message type is identified. Scam check is performed on every input. If any scam indicators are found, this is flagged before anything else.
 
 ### REASON: Translate to Plain English
-**Entry criteria:** Message categorized and context understood.
-**Actions:**
+### Entry Criteria
+Message categorized and context understood.
+### Actions
 1. If it's a scam popup: the translation is simple and urgent. "This is not a real warning from your computer. This is a scam. Do not call any phone number. Do not click anything on this popup. Here's how to close it safely..." Then provide force-close instructions for their device.
 2. For legitimate messages, build the translation in three layers:
    - **Layer 1 -- What it means:** One sentence, no jargon. Translate every technical term.
@@ -74,12 +78,15 @@ Takes any piece of tech jargon, error message, settings screen, or confusing not
    - "Location Services: Allow [app] to access your location while using the app / Always / Never" = "This controls whether the app knows where you are. 'While Using' means it only knows your location when the app is open on your screen. 'Always' means it tracks your location even when you're not using it. 'Never' means it never knows where you are. Recommendation: 'While Using the App' for maps and weather. 'Never' for most other apps."
 5. Assess whether this is a one-time thing or a symptom of a bigger issue. "If you see this once, it's nothing. If you see it every day, it might mean..."
 
-**Output:** Three-layer translation (meaning, cause, fix), permission analysis with recommendations, or settings rewrite with recommendation.
-**Quality gate:** Translation uses zero technical terms without immediate explanation. Recommendation is clear and specific. If multiple options exist, each one is explained.
+### Output
+Three-layer translation (meaning, cause, fix), permission analysis with recommendations, or settings rewrite with recommendation.
+### Quality Gate
+Translation uses zero technical terms without immediate explanation. Recommendation is clear and specific. If multiple options exist, each one is explained.
 
 ### PLAN: Structure the Response
-**Entry criteria:** Translation complete.
-**Actions:**
+### Entry Criteria
+Translation complete.
+### Actions
 1. For scam popups, lead with the warning and safe-close instructions. Nothing else matters until they're safe.
 2. For error messages, structure as:
    - "What this means:" (1-2 sentences)
@@ -97,12 +104,15 @@ Takes any piece of tech jargon, error message, settings screen, or confusing not
    - "What I'd recommend:" (with reasoning)
 5. Include the safety check result: is this normal (green light), worth paying attention to (yellow light), or potentially dangerous (red light)?
 
-**Output:** Structured response appropriate to the message type.
-**Quality gate:** Lead with the most important information. Recommendations are specific. Safety level is clearly communicated.
+### Output
+Structured response appropriate to the message type.
+### Quality Gate
+Lead with the most important information. Recommendations are specific. Safety level is clearly communicated.
 
 ### ACT: Deliver the Translation
-**Entry criteria:** Response structured.
-**Actions:**
+### Entry Criteria
+Response structured.
+### Actions
 1. Lead with the plain English translation. Don't make them read an explanation of what DNS is before telling them their internet is down.
 2. Use the format appropriate to the message type (error/permission/settings).
 3. For the "what to do" section, write instructions at the exact comfort level of the person:
@@ -116,8 +126,19 @@ Takes any piece of tech jargon, error message, settings screen, or confusing not
 6. If relevant, connect to patterns: "Messages like this usually mean [simple explanation]. If you see a lot of them, it might mean [bigger issue] and here's what to do about that."
 7. Close with: "If you see another message that doesn't make sense, just send it over. There's no such thing as a dumb question when it comes to tech jargon -- they make these messages confusing on purpose."
 
-**Output:** Complete, plain-English translation with recommendation and safety assessment.
-**Quality gate:** A non-technical person could read this and immediately know (1) what the message means, (2) whether it's safe, and (3) exactly what to do about it. No jargon survives untranslated.
+### Output
+Complete, plain-English translation with recommendation and safety assessment.
+### Quality Gate
+A non-technical person could read this and immediately know (1) what the message means, (2) whether it's safe, and (3) exactly what to do about it. No jargon survives untranslated.
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Takes any piece of tech jargon, error message, settings screen, or confusing not, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 Done when: (1) the message is translated into plain English with zero unexplained jargon, (2) the cause is explained in everyday terms, (3) a specific recommended action is provided with step-by-step instructions, (4) safety is assessed (normal, attention needed, or scam), (5) for permission requests, each option is explained and a recommendation is given.
@@ -149,13 +170,13 @@ Done when: (1) the message is translated into plain English with zero unexplaine
 
 | Type | Key Signals | Priority |
 |---|---|---|
-| Scam popup | Phone number, alarm sounds, won't close, "call us now" | URGENT — close first, explain second |
-| Security warning | Certificate, SSL, unverified, HTTPS, invalid | Yellow — take action but don't panic |
+| Scam popup | Phone number, alarm sounds, won't close, "call us now" | URGENT  --  close first, explain second |
+| Security warning | Certificate, SSL, unverified, HTTPS, invalid | Yellow  --  take action but don't panic |
 | Error message | Failed, couldn't, unavailable, error code | Depends on severity |
-| Permission request | "wants to access," "allow/deny" | Normal — explain each option |
-| Update notification | "update available," "new version" | Normal — explain what to do |
-| Settings description | Configuration, toggle options | Normal — rewrite in plain English |
-| Connection problem | DNS, DHCP, server, network, unable to connect | Normal — standard fix steps |
+| Permission request | "wants to access," "allow/deny" | Normal  --  explain each option |
+| Update notification | "update available," "new version" | Normal  --  explain what to do |
+| Settings description | Configuration, toggle options | Normal  --  rewrite in plain English |
+| Connection problem | DNS, DHCP, server, network, unable to connect | Normal  --  standard fix steps |
 
 ### Scam Popup Red Flags
 
@@ -164,7 +185,7 @@ Any one of these = SCAM:
 - Loud alarm sound from a browser window
 - Message that won't let you close the browser
 - "Your computer is infected" in a browser popup
-- "Windows detected a virus — click here" from a website
+- "Windows detected a virus  --  click here" from a website
 - Claims to be from Apple/Microsoft but came from a random website
 
 ### Common Error Message Translations

@@ -59,6 +59,15 @@ Lever opportunity list.
 
 ---
 
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Generate at least four alternative board architectures, two or more unconvention, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
+
 ## Exit Criteria
 
 DONE when at least four cited, coherent candidates exist, each with a mechanism that predicts which baseline metrics it moves and in which direction.

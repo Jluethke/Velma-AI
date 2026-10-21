@@ -31,9 +31,10 @@ PHASE 5: PUBLISH       --> Format, add to docs system, update navigation
 
 ### Phase 1: AUDIENCE -- Identify Reader and Document Type
 
-**Entry criteria:** A subject matter to document is identified.
+### Entry Criteria
+A subject matter to document is identified.
 
-**Actions:**
+### Actions
 1. Identify the primary reader: beginner, intermediate, or expert
 2. Determine what the reader needs to accomplish:
    - "I'm new, teach me" -> Tutorial
@@ -48,17 +49,20 @@ PHASE 5: PUBLISH       --> Format, add to docs system, update navigation
 4. Identify any existing documentation to update or complement (not duplicate)
 5. Determine the technical depth appropriate for the audience
 
-**Output:** Audience profile listing reader level, doc type, Diataxis quadrant, and technical depth.
+### Output
+Audience profile listing reader level, doc type, Diataxis quadrant, and technical depth.
 
-**Quality gate:** Reader level is explicit (not "everyone"). Doc type is chosen from the four Diataxis quadrants. No documentation will duplicate existing content without reason.
+### Quality Gate
+Reader level is explicit (not "everyone"). Doc type is chosen from the four Diataxis quadrants. No documentation will duplicate existing content without reason.
 
 ---
 
 ### Phase 2: OUTLINE -- Structure Sections
 
-**Entry criteria:** Audience profile is complete.
+### Entry Criteria
+Audience profile is complete.
 
-**Actions:**
+### Actions
 1. Select the appropriate document template:
    - README: title, install, quick start, features, usage, API, config, contributing, license (see Reference: README Template)
    - Tutorial: what you'll build, prerequisites, step-by-step, what you've learned, next steps (see Reference: Tutorial Structure)
@@ -70,17 +74,20 @@ PHASE 5: PUBLISH       --> Format, add to docs system, update navigation
 4. Identify which diagrams are needed (see Reference: Diagrams)
 5. Plan progressive disclosure: start simple, add complexity gradually
 
-**Output:** Document outline with all sections listed, noting which need code examples, diagrams, or tables.
+### Output
+Document outline with all sections listed, noting which need code examples, diagrams, or tables.
 
-**Quality gate:** Outline follows the appropriate template structure. Every major section is present. Code example locations are identified.
+### Quality Gate
+Outline follows the appropriate template structure. Every major section is present. Code example locations are identified.
 
 ---
 
 ### Phase 3: DRAFT -- Write Content
 
-**Entry criteria:** Outline is complete and approved.
+### Entry Criteria
+Outline is complete and approved.
 
-**Actions:**
+### Actions
 1. Write each section following the clarity rules (see Reference: Writing Rules):
    - Active voice: "The function returns X" not "X is returned by the function"
    - Present tense: "This method creates" not "This method will create"
@@ -102,17 +109,20 @@ PHASE 5: PUBLISH       --> Format, add to docs system, update navigation
 6. For API docs: every public function has parameters, returns, throws, and example (see Reference: API Documentation)
 7. Follow docs-as-code principles (see Reference: Versioning Documentation)
 
-**Output:** Complete draft document with all sections written, code examples included, and diagrams created.
+### Output
+Complete draft document with all sections written, code examples included, and diagrams created.
 
-**Quality gate:** All clarity checklist items pass. Every code example has imports and is self-contained. No forbidden words remain. No sections are marked "TODO."
+### Quality Gate
+All clarity checklist items pass. Every code example has imports and is self-contained. No forbidden words remain. No sections are marked "TODO."
 
 ---
 
 ### Phase 4: VALIDATE -- Check Quality
 
-**Entry criteria:** Draft is complete with all sections written.
+### Entry Criteria
+Draft is complete with all sections written.
 
-**Actions:**
+### Actions
 1. Verify every code example is runnable:
    - All imports present
    - All variables defined
@@ -132,17 +142,20 @@ PHASE 5: PUBLISH       --> Format, add to docs system, update navigation
 6. For changelogs: verify the format follows Keep a Changelog (see Reference: Changelog Format)
 7. Review against the clarity checklist one final time
 
-**Output:** Validation report listing any issues found and their fixes.
+### Output
+Validation report listing any issues found and their fixes.
 
-**Quality gate:** All code examples run successfully. No assumed knowledge gaps. All links resolve. No forbidden words. Clarity checklist passes.
+### Quality Gate
+All code examples run successfully. No assumed knowledge gaps. All links resolve. No forbidden words. Clarity checklist passes.
 
 ---
 
 ### Phase 5: PUBLISH -- Format and Deliver
 
-**Entry criteria:** Validation passes with all issues resolved.
+### Entry Criteria
+Validation passes with all issues resolved.
 
-**Actions:**
+### Actions
 1. Format the document for its target system:
    - Markdown for GitHub/GitLab
    - MDX for Docusaurus
@@ -157,11 +170,22 @@ PHASE 5: PUBLISH       --> Format, add to docs system, update navigation
 6. Add frontmatter/metadata (title, description, keywords for search)
 7. Update changelog if this documents a new feature or change
 
-**Output:** Published documentation, integrated into the docs system with navigation and search.
+### Output
+Published documentation, integrated into the docs system with navigation and search.
 
-**Quality gate:** Document renders correctly in the target system. Navigation links work. Search finds the document using expected keywords. No rendering artifacts.
+### Quality Gate
+Document renders correctly in the target system. Navigation links work. Search finds the document using expected keywords. No rendering artifacts.
 
 ---
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Technical writing skill covering README templates, API documentation, tutorial s, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 
@@ -622,3 +646,7 @@ For most projects:
 4. CHANGELOG.md (Keep a Changelog format)
 5. ADR/ directory for Architecture Decision Records (when >3 devs)
 ```
+
+---
+
+Copyright 2024-present The Wayfinder Trust. All rights reserved.

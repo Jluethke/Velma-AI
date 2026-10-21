@@ -33,9 +33,10 @@ PHASE 5: OPTIMIZE      --> Caching, parallelization, affected-only builds
 
 ### Phase 1: INVENTORY -- Scan Project
 
-**Entry criteria:** Project source code or description is accessible.
+### Entry Criteria
+Project source code or description is accessible.
 
-**Actions:**
+### Actions
 1. Identify primary language(s) and version requirements
 2. Identify framework(s) and their build requirements
 3. Identify test runner and test structure (unit, integration, E2E)
@@ -46,17 +47,20 @@ PHASE 5: OPTIMIZE      --> Caching, parallelization, affected-only builds
 8. Identify monorepo vs single-repo structure
 9. Check for required services in CI (PostgreSQL, Redis, etc.)
 
-**Output:** A project inventory listing language, framework, test runner, package manager, deploy target, repo structure, and required services.
+### Output
+A project inventory listing language, framework, test runner, package manager, deploy target, repo structure, and required services.
 
-**Quality gate:** Language and framework are identified. Test runner is known (or confirmed absent). Deploy target is specified.
+### Quality Gate
+Language and framework are identified. Test runner is known (or confirmed absent). Deploy target is specified.
 
 ---
 
 ### Phase 2: DESIGN -- Select Pipeline Stages and Deployment Strategy
 
-**Entry criteria:** Project inventory is complete.
+### Entry Criteria
+Project inventory is complete.
 
-**Actions:**
+### Actions
 1. Design pipeline stage order (see Reference: Stage Order and Gates):
    - Lint (fastest gate, <30s)
    - Unit tests (fast, parallel, <2min)
@@ -80,17 +84,20 @@ PHASE 5: OPTIMIZE      --> Caching, parallelization, affected-only builds
    - Layer caching optimization
    - Non-root user, health checks
 
-**Output:** Pipeline design document listing stages, deployment strategy, environment promotion, rollback plan, and Docker strategy.
+### Output
+Pipeline design document listing stages, deployment strategy, environment promotion, rollback plan, and Docker strategy.
 
-**Quality gate:** Stage order follows the lint -> test -> build -> deploy pattern. Deployment strategy is chosen with justification. Rollback plan exists.
+### Quality Gate
+Stage order follows the lint -> test -> build -> deploy pattern. Deployment strategy is chosen with justification. Rollback plan exists.
 
 ---
 
 ### Phase 3: GENERATE -- Produce CI Configuration
 
-**Entry criteria:** Pipeline design is complete.
+### Entry Criteria
+Pipeline design is complete.
 
-**Actions:**
+### Actions
 1. Generate the primary CI/CD configuration file (see Reference: GitHub Actions Patterns):
    - Trigger configuration (push, PR, manual)
    - Concurrency control (cancel superseded runs)
@@ -117,17 +124,20 @@ PHASE 5: OPTIMIZE      --> Caching, parallelization, affected-only builds
    - Production deploy with approval gate
 7. For monorepos: add affected-only build detection (see Reference: Monorepo CI)
 
-**Output:** Complete CI/CD configuration files ready to commit. Includes CI config, Dockerfile, docker-compose (if needed), and .dockerignore.
+### Output
+Complete CI/CD configuration files ready to commit. Includes CI config, Dockerfile, docker-compose (if needed), and .dockerignore.
 
-**Quality gate:** CI config is valid YAML. All secrets are referenced via `${{ secrets.* }}` (not hardcoded). Docker runs as non-root. Tests run before deploy.
+### Quality Gate
+CI config is valid YAML. All secrets are referenced via `${{ secrets.* }}` (not hardcoded). Docker runs as non-root. Tests run before deploy.
 
 ---
 
 ### Phase 4: VALIDATE -- Dry-Run Check and Security Review
 
-**Entry criteria:** CI configuration files are generated.
+### Entry Criteria
+CI configuration files are generated.
 
-**Actions:**
+### Actions
 1. Validate CI config syntax (YAML structure, valid action references)
 2. Security review:
    - No secrets logged or echoed in steps
@@ -144,17 +154,20 @@ PHASE 5: OPTIMIZE      --> Caching, parallelization, affected-only builds
 6. Verify rollback mechanism works (manual steps documented if automated isn't possible)
 7. Cross-reference against the cross-platform CI equivalents if targeting multiple CI systems (see Reference: Cross-Platform CI Equivalents)
 
-**Output:** Validation report listing any issues found. Pass/fail status for each check.
+### Output
+Validation report listing any issues found. Pass/fail status for each check.
 
-**Quality gate:** Zero security issues. All syntax checks pass. Tests gate deployment. No secrets exposure risks.
+### Quality Gate
+Zero security issues. All syntax checks pass. Tests gate deployment. No secrets exposure risks.
 
 ---
 
 ### Phase 5: OPTIMIZE -- Caching, Parallelization, Affected-Only Builds
 
-**Entry criteria:** Validation passes with zero security issues.
+### Entry Criteria
+Validation passes with zero security issues.
 
-**Actions:**
+### Actions
 1. Identify bottlenecks (see Reference: Pipeline Performance Optimization):
    - Dependency installation time
    - Docker build time
@@ -172,11 +185,22 @@ PHASE 5: OPTIMIZE      --> Caching, parallelization, affected-only builds
 5. Estimate time savings for each optimization applied
 6. Set a target: PR pipeline should complete in < 10 minutes
 
-**Output:** Optimized CI configuration with documented improvements. Before/after time estimates.
+### Output
+Optimized CI configuration with documented improvements. Before/after time estimates.
 
-**Quality gate:** All optimizations are applied without breaking the pipeline. Dependency caching is verified. Test parallelization maintains correctness (no shared state issues).
+### Quality Gate
+All optimizations are applied without breaking the pipeline. Dependency caching is verified. Test parallelization maintains correctness (no shared state issues).
 
 ---
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Build production CI/CD pipelines with GitHub Actions, Docker multi-stage builds,, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 
@@ -294,12 +318,12 @@ jobs:
 
 #### Caching Dependencies
 ```yaml
-# Node.js — built into setup-node
+# Node.js  --  built into setup-node
 - uses: actions/setup-node@v4
   with:
     cache: 'npm'  # Caches ~/.npm automatically
 
-# Python — explicit cache
+# Python  --  explicit cache
 - uses: actions/setup-python@v5
   with:
     python-version: '3.12'
@@ -701,7 +725,7 @@ deploy:
           fi
           sleep 5
         done
-        echo "Health check failed — rolling back"
+        echo "Health check failed  --  rolling back"
         kubectl rollout undo deployment/myapp
         exit 1
 ```
@@ -810,3 +834,7 @@ steps:
 - [ ] Rollback tested and documented
 - [ ] Monorepo only builds affected packages
 - [ ] Pipeline finishes in < 10 minutes for PRs
+
+---
+
+Copyright 2024-present The Wayfinder Trust. All rights reserved.

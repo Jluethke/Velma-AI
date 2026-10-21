@@ -5,25 +5,26 @@ Optimizes small farm production from land assessment through harvest tracking --
 ## Execution Pattern: Phase Pipeline
 
 ## Inputs
-- land_area: object -- Total cultivable area, plot divisions, topography (flat, sloped, terraced), sun exposure
-- climate_zone: string -- USDA hardiness zone or equivalent, frost dates (last spring, first fall), annual rainfall, temperature range
-- soil_type: string -- Primary soil type (clay, loam, sandy, silt) and any available soil test results (pH, NPK, organic matter %)
-- water_availability: object -- Source (well, municipal, rain catchment, irrigation canal), volume (gallons/week or liters/day), reliability (year-round vs seasonal)
-- labor_hours: number -- Available person-hours per week for farm work (planting, maintenance, harvesting, processing)
-- goals: object -- Primary objectives ranked: maximum yield, maximum nutrition, market revenue, self-sufficiency, soil building, minimum input cost
+- `land_area`: object -- Total cultivable area, plot divisions, topography (flat, sloped, terraced), sun exposure
+- `climate_zone`: string -- USDA hardiness zone or equivalent, frost dates (last spring, first fall), annual rainfall, temperature range
+- `soil_type`: string -- Primary soil type (clay, loam, sandy, silt) and any available soil test results (pH, NPK, organic matter %)
+- `water_availability`: object -- Source (well, municipal, rain catchment, irrigation canal), volume (gallons/week or liters/day), reliability (year-round vs seasonal)
+- `labor_hours`: number -- Available person-hours per week for farm work (planting, maintenance, harvesting, processing)
+- `goals`: object -- Primary objectives ranked: maximum yield, maximum nutrition, market revenue, self-sufficiency, soil building, minimum input cost
 
 ## Outputs
-- crop_selection: array -- Recommended crops with scoring matrix (yield x nutrition x market value x climate fit x labor requirement)
-- planting_calendar: object -- Month-by-month planting and harvest schedule with succession planting timing
-- rotation_plan: object -- Multi-year crop rotation by plot, with cover crop integration
-- resource_allocation: object -- Water, fertilizer, and labor budget per plot per month
-- yield_tracking: object -- Expected vs actual yield comparison with soil health indicators
+- `crop_selection`: array -- Recommended crops with scoring matrix (yield x nutrition x market value x climate fit x labor requirement)
+- `planting_calendar`: object -- Month-by-month planting and harvest schedule with succession planting timing
+- `rotation_plan`: object -- Multi-year crop rotation by plot, with cover crop integration
+- `resource_allocation`: object -- Water, fertilizer, and labor budget per plot per month
+- `yield_tracking`: object -- Expected vs actual yield comparison with soil health indicators
 
 ## Execution
 
 ### Phase 1: ASSESS -- Land and Resource Inventory
-**Entry criteria:** Land area and climate zone provided.
-**Actions:**
+### Entry Criteria
+Land area and climate zone provided.
+### Actions
 1. Map the farm: divide total area into logical plots based on sun exposure, soil variation, water access, and topography.
    - South-facing slopes: warm-season crops, earliest planting
    - North-facing or shaded: cool-season crops, shade-tolerant species
@@ -41,12 +42,15 @@ Optimizes small farm production from land assessment through harvest tracking --
 4. Inventory water: calculate total weekly water budget. Estimate crop water needs (rule of thumb: 1 inch of water per week per 100 sq ft during growing season = ~62 gallons).
 5. Inventory labor: map person-hours to seasonal demands. Spring planting and fall harvest are 2-3x normal maintenance labor.
 
-**Output:** Farm map with plots, soil profiles per plot, growing season length, water budget, labor calendar.
-**Quality gate:** Every plot has a soil assessment. Growing season is calculated from frost dates. Water budget is sufficient for at least 60% of cultivable area. If not, flag water as primary constraint.
+### Output
+Farm map with plots, soil profiles per plot, growing season length, water budget, labor calendar.
+### Quality Gate
+Every plot has a soil assessment. Growing season is calculated from frost dates. Water budget is sufficient for at least 60% of cultivable area. If not, flag water as primary constraint.
 
 ### Phase 2: PLAN -- Crop Selection and Scoring
-**Entry criteria:** Farm map and resource inventory complete.
-**Actions:**
+### Entry Criteria
+Farm map and resource inventory complete.
+### Actions
 1. Build a candidate crop list filtered by climate zone and growing season length.
    - Only include crops whose "days to maturity" fits within the growing season.
    - For short seasons: prioritize fast-maturing varieties or transplant-started crops.
@@ -67,12 +71,15 @@ Optimizes small farm production from land assessment through harvest tracking --
    - Carrots + onions (each repels the other's pest fly)
    - Avoid antagonistic pairings: tomatoes near brassicas, onions near beans, fennel near most crops.
 
-**Output:** Scored crop list with selections, companion planting map, per-plot crop assignments.
-**Quality gate:** Selected crops span at least 3 plant families (for rotation). Companion pairings have no antagonistic conflicts. Total water requirement of selected crops does not exceed water budget.
+### Output
+Scored crop list with selections, companion planting map, per-plot crop assignments.
+### Quality Gate
+Selected crops span at least 3 plant families (for rotation). Companion pairings have no antagonistic conflicts. Total water requirement of selected crops does not exceed water budget.
 
 ### Phase 3: SCHEDULE -- Planting and Harvest Calendar
-**Entry criteria:** Crop selections and plot assignments complete.
-**Actions:**
+### Entry Criteria
+Crop selections and plot assignments complete.
+### Actions
 1. Build month-by-month planting calendar:
    - Calculate planting dates by working backward from harvest and forward from last frost:
      - Direct sow date = last frost date + (days after frost safe to plant)
@@ -89,12 +96,15 @@ Optimizes small farm production from land assessment through harvest tracking --
    - Winter cover: crimson clover (nitrogen fixer), winter rye (erosion prevention, weed suppression)
 5. Build harvest calendar: expected harvest windows per crop, storage/preservation needs.
 
-**Output:** Month-by-month planting calendar with indoor start dates, direct sow dates, succession plantings, harvest windows, and cover crop timing.
-**Quality gate:** No crop is planted outside its safe temperature window. Succession plantings don't exceed plot capacity. Cover crops are scheduled for every fallow period.
+### Output
+Month-by-month planting calendar with indoor start dates, direct sow dates, succession plantings, harvest windows, and cover crop timing.
+### Quality Gate
+No crop is planted outside its safe temperature window. Succession plantings don't exceed plot capacity. Cover crops are scheduled for every fallow period.
 
 ### Phase 4: OPTIMIZE -- Resource Allocation
-**Entry criteria:** Planting calendar complete.
-**Actions:**
+### Entry Criteria
+Planting calendar complete.
+### Actions
 1. **Water allocation by plot:**
    - Calculate weekly water needs per plot based on crops, growth stage, and weather.
    - Seedling/transplant stage: higher frequency, lower volume (keep soil moist, not saturated).
@@ -113,12 +123,15 @@ Optimizes small farm production from land assessment through harvest tracking --
    - Peak periods: spring planting (bed prep + transplant), fall harvest (picking + preservation).
    - Labor-saving investments ranked by ROI: mulching (#1), drip irrigation (#2), raised beds (#3), season extension (row cover).
 
-**Output:** Weekly resource budget: water (gallons/plot), fertilizer (type/amount/timing), labor (hours/task), efficiency recommendations.
-**Quality gate:** Total water allocation does not exceed budget. Nitrogen-fixing crops are not over-fertilized. Labor hours fit within user's availability (with 20% buffer for unexpected tasks).
+### Output
+Weekly resource budget: water (gallons/plot), fertilizer (type/amount/timing), labor (hours/task), efficiency recommendations.
+### Quality Gate
+Total water allocation does not exceed budget. Nitrogen-fixing crops are not over-fertilized. Labor hours fit within user's availability (with 20% buffer for unexpected tasks).
 
 ### Phase 5: MONITOR -- Yield Tracking and Soil Health
-**Entry criteria:** Growing season is underway or complete.
-**Actions:**
+### Entry Criteria
+Growing season is underway or complete.
+### Actions
 1. Track yield per crop per plot:
    - Record: lbs harvested, harvest date, quality rating (1-5).
    - Calculate: actual yield per 100 sq ft vs expected yield.
@@ -137,8 +150,19 @@ Optimizes small farm production from land assessment through harvest tracking --
    - Soil health trends
    - Recommendations for next season (crop swaps, rotation adjustments, soil amendments)
 
-**Output:** Season yield report, soil health indicators, crop performance ranking, next-season recommendations.
-**Quality gate:** Every planted crop has a yield record. At least one soil health metric is tracked. Recommendations are specific and actionable ("add 2 inches of compost to plot B to restore organic matter" not "improve soil").
+### Output
+Season yield report, soil health indicators, crop performance ranking, next-season recommendations.
+### Quality Gate
+Every planted crop has a yield record. At least one soil health metric is tracked. Recommendations are specific and actionable ("add 2 inches of compost to plot B to restore organic matter" not "improve soil").
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Optimizes small farm operations from crop selection through harvest, using clima, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 One cycle completes when a season report with yield data and next-season recommendations is delivered. The pipeline restarts for each new growing season with updated soil data and adjusted crop selections.
@@ -214,3 +238,7 @@ Tracks over seasons:
 - Rotation history per plot
 - Weather data (rainfall, temperature extremes, frost dates)
 - Pest and disease occurrence records
+
+---
+
+Copyright 2024-present The Wayfinder Trust. All rights reserved.

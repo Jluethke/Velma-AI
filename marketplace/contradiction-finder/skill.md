@@ -35,10 +35,10 @@ ACT     --> Output contradiction report with specific conflicting claims, shared
 
 ### OBSERVE: Ingest and Extract Claims
 
-**Entry criteria:** At least one claim or document is provided.
+### Entry Criteria
+At least one claim or document is provided.
 
-**Actions:**
-
+### Actions
 1. **Extract claims from documents.** If full documents are provided, decompose them into discrete claims. A claim is a single assertable statement:
    - Split on sentence boundaries
    - Filter out questions, commands, and procedural text (not assertable)
@@ -58,18 +58,20 @@ ACT     --> Output contradiction report with specific conflicting claims, shared
 
 4. **Check resolution history.** Filter out claim pairs that have already been resolved in previous runs (from `resolution_history`). Mark them as "previously resolved" in the output.
 
-**Output:** Normalized claim database grouped by topic, with resolution history applied.
+### Output
+Normalized claim database grouped by topic, with resolution history applied.
 
-**Quality gate:** At least 2 claims exist in at least 1 topic group (otherwise, no contradictions are possible). Claims are normalized and tokenized.
+### Quality Gate
+At least 2 claims exist in at least 1 topic group (otherwise, no contradictions are possible). Claims are normalized and tokenized.
 
 ---
 
 ### REASON: Detect Contradictions
 
-**Entry criteria:** Normalized, grouped claims are ready for pairwise comparison.
+### Entry Criteria
+Normalized, grouped claims are ready for pairwise comparison.
 
-**Actions:**
-
+### Actions
 1. **Pairwise comparison within topic groups.** For each pair of claims (i, j) within the same topic group:
 
    **Step 1 -- Compute keyword overlap (Jaccard similarity):**
@@ -139,18 +141,20 @@ ACT     --> Output contradiction report with specific conflicting claims, shared
    - Which antonym pairs triggered the flag
    - The shared context words (overlap minus negation markers, top 5)
 
-**Output:** List of flagged contradictions with conflict scores, trigger details, and shared context.
+### Output
+List of flagged contradictions with conflict scores, trigger details, and shared context.
 
-**Quality gate:** All within-group pairs (up to max_comparisons) have been evaluated. Every flagged contradiction has a conflict score >= 0.25. Trigger details (negation/antonym) are recorded.
+### Quality Gate
+All within-group pairs (up to max_comparisons) have been evaluated. Every flagged contradiction has a conflict score >= 0.25. Trigger details (negation/antonym) are recorded.
 
 ---
 
 ### PLAN: Rank and Group Contradictions
 
-**Entry criteria:** Contradictions are detected with conflict scores.
+### Entry Criteria
+Contradictions are detected with conflict scores.
 
-**Actions:**
-
+### Actions
 1. **Rank by conflict score.** Sort contradictions descending by conflict score. Higher scores indicate more confident contradiction detection:
    - 0.25-0.40: Possible contradiction, worth reviewing
    - 0.40-0.60: Likely contradiction
@@ -180,18 +184,20 @@ ACT     --> Output contradiction report with specific conflicting claims, shared
    ```
    Scale so that 1.0 = no contradictions, 0.0 = maximum contradiction density.
 
-**Output:** Ranked, grouped contradiction list with resolution suggestions and overall consistency score.
+### Output
+Ranked, grouped contradiction list with resolution suggestions and overall consistency score.
 
-**Quality gate:** Contradictions are sorted by conflict score. Each has a resolution difficulty estimate. Each has at least one resolution suggestion. Consistency score is computed.
+### Quality Gate
+Contradictions are sorted by conflict score. Each has a resolution difficulty estimate. Each has at least one resolution suggestion. Consistency score is computed.
 
 ---
 
 ### ACT: Deliver the Contradiction Report
 
-**Entry criteria:** Contradictions are ranked, grouped, and have resolution suggestions.
+### Entry Criteria
+Contradictions are ranked, grouped, and have resolution suggestions.
 
-**Actions:**
-
+### Actions
 1. **Format the contradiction report.** For each contradiction:
    ```
    CONTRADICTION #1 (conflict score: 0.72, difficulty: medium)
@@ -232,9 +238,11 @@ ACT     --> Output contradiction report with specific conflicting claims, shared
    - A resolution is provided by a user (update status, re-check related contradictions)
    - The consistency score drops below a threshold (indicates the claim body is becoming unreliable)
 
-**Output:** Formatted contradiction report, summary statistics, updated state.
+### Output
+Formatted contradiction report, summary statistics, updated state.
 
-**Quality gate:** Every contradiction has a specific conflict score, trigger details, and resolution suggestion. Summary accurately reflects the findings. State is updated for persistence.
+### Quality Gate
+Every contradiction has a specific conflict score, trigger details, and resolution suggestion. Summary accurately reflects the findings. State is updated for persistence.
 
 ## Exit Criteria
 
@@ -307,7 +315,7 @@ Alternative framing:  instead, rather
 | buy / sell | Finance/Commerce | Direct opposites in transaction context |
 | long / short | Finance | Position direction; ambiguous in other contexts |
 | high / low | General | Also: more/less, greater/fewer |
-| strong / weak | General | Also: robust/fragile, resilient/brittle |
+| strong / weak | General | Also: reliable/fragile, resilient/brittle |
 | safe / dangerous | Risk | Also: secure/vulnerable, stable/unstable |
 | correct / incorrect | Logic | Also: right/wrong, accurate/inaccurate |
 | true / false | Logic | Boolean opposition |

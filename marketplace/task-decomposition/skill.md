@@ -17,18 +17,23 @@ PHASE 5: TRACK         --> Monitor completion, propagate failures to parents
 - **root_task**: object -- The top-level task to decompose (description, domain, initial priority)
 - **governor**: object (optional) -- SystemGovernor for phase-based gating
 - **max_depth**: int (optional) -- Maximum decomposition depth (default: 3 levels)
+- `task_description`: (from manifest)
 
 ## Outputs
 
 - **task_tree**: object -- Hierarchical task structure with parent-child links
 - **dispatch_order**: list[object] -- Tasks sorted by priority for sequential dispatch
 - **completion_status**: object -- Final status of root task (propagated from children)
+- `guidance`: (from manifest)
+- `code_patterns`: (from manifest)
+- `implementation_example`: (from manifest)
 
 ## Execution
 
 ### Phase 1: CAPTURE -- Define Root Task
-**Entry criteria:** A goal or task description exists that may benefit from decomposition.
-**Actions:**
+### Entry Criteria
+A goal or task description exists that may benefit from decomposition.
+### Actions
 1. Create the root task as a frozen dataclass:
    - task_id, description, domain, priority, status=PENDING
    - parent_task_id=None (root has no parent)
@@ -42,12 +47,15 @@ PHASE 5: TRACK         --> Monitor completion, propagate failures to parents
    - confidence >= 0.5 -> MEDIUM
    - else -> LOW
 4. Identify subtask candidates by analyzing the task description for decomposable elements
-**Output:** Root task registered with task_id, or empty string if governance denied submission.
-**Quality gate:** Root task has a valid task_id. Governance gate checked. Priority assigned based on confidence mapping.
+### Output
+Root task registered with task_id, or empty string if governance denied submission.
+### Quality Gate
+Root task has a valid task_id. Governance gate checked. Priority assigned based on confidence mapping.
 
 ### Phase 2: DECOMPOSE -- Break into Subtasks
-**Entry criteria:** Root task registered successfully (governance allowed submission).
-**Actions:**
+### Entry Criteria
+Root task registered successfully (governance allowed submission).
+### Actions
 1. Analyze the root task for decomposable subtasks using ORPA reasoning:
    - **Observe**: What does this task require?
    - **Reason**: What are the independent sub-problems?
@@ -60,12 +68,15 @@ PHASE 5: TRACK         --> Monitor completion, propagate failures to parents
    - Parent status set to RUNNING
 3. Respect max_depth -- do not decompose beyond configured depth
 4. Each subtask is itself a frozen dataclass (immutable, audit-friendly)
-**Output:** Subtask tree with parent-child links. Parent status set to RUNNING.
-**Quality gate:** All subtasks have valid parent links. Parent has all subtask_ids. Depth does not exceed max_depth. All tasks are frozen dataclasses (no mutation bugs).
+### Output
+Subtask tree with parent-child links. Parent status set to RUNNING.
+### Quality Gate
+All subtasks have valid parent links. Parent has all subtask_ids. Depth does not exceed max_depth. All tasks are frozen dataclasses (no mutation bugs).
 
 ### Phase 3: PRIORITIZE -- Assign Order
-**Entry criteria:** Subtask tree created with all parent-child links.
-**Actions:**
+### Entry Criteria
+Subtask tree created with all parent-child links.
+### Actions
 1. Assign priorities using PRIORITY_VALUES:
    ```python
    PRIORITY_VALUES = {
@@ -81,12 +92,15 @@ PHASE 5: TRACK         --> Monitor completion, propagate failures to parents
    - Tasks with subtask_ids (parents waiting on children) are NOT dispatchable
    - Only leaf tasks (no subtask_ids) are dispatchable
 4. Build the dispatch order: `get_next_dispatchable(domain="")` returns highest-priority PENDING task without unresolved subtasks
-**Output:** Prioritized dispatch order with dependency resolution.
-**Quality gate:** No parent task appears before its children in dispatch order. FIFO ordering preserved within priority tiers. Only leaf tasks are marked dispatchable.
+### Output
+Prioritized dispatch order with dependency resolution.
+### Quality Gate
+No parent task appears before its children in dispatch order. FIFO ordering preserved within priority tiers. Only leaf tasks are marked dispatchable.
 
 ### Phase 4: DISPATCH -- Route to Handlers
-**Entry criteria:** Dispatch order computed with all dependencies resolved.
-**Actions:**
+### Entry Criteria
+Dispatch order computed with all dependencies resolved.
+### Actions
 1. For each dispatchable task in priority order:
    - Re-check governance gate (phase may have changed since submission)
    - Route to appropriate handler/agent (domain match -> capability match -> idle -> any)
@@ -98,12 +112,15 @@ PHASE 5: TRACK         --> Monitor completion, propagate failures to parents
    - TASK_DISPATCHED when assigned
    - TASK_COMPLETED when finished successfully
    - TASK_FAILED when failed
-**Output:** Tasks dispatched and executed with completion/failure status recorded.
-**Quality gate:** Every dispatched task has an assigned handler. Events emitted for all state transitions. Failed tasks have error details recorded.
+### Output
+Tasks dispatched and executed with completion/failure status recorded.
+### Quality Gate
+Every dispatched task has an assigned handler. Events emitted for all state transitions. Failed tasks have error details recorded.
 
 ### Phase 5: TRACK -- Monitor & Propagate
-**Entry criteria:** Tasks are being dispatched and completing/failing.
-**Actions:**
+### Entry Criteria
+Tasks are being dispatched and completing/failing.
+### Actions
 1. Monitor subtask completion for each parent:
    ```python
    check_parent_completion(parent_id):
@@ -121,8 +138,19 @@ PHASE 5: TRACK         --> Monitor completion, propagate failures to parents
    - Tasks submitted, completed, failed, denied by governance
    - Average completion time per priority level
    - Decomposition depth statistics
-**Output:** Root task with final completion/failure status propagated from all children.
-**Quality gate:** No orphaned tasks (every task has a terminal status or is still running). Root task status accurately reflects the outcome of all its children. Metrics collected.
+### Output
+Root task with final completion/failure status propagated from all children.
+### Quality Gate
+No orphaned tasks (every task has a terminal status or is still running). Root task status accurately reflects the outcome of all its children. Metrics collected.
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for ORPA hierarchical task planner with priority-based dispatch, automatic parent co, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 
@@ -209,3 +237,7 @@ check_parent_completion(parent_id):
 - **Tick Engine**: The planner's dispatch loop is wired as the tick engine's task evaluator. Runs in background thread.
 - **Event Bus**: Task completion/failure emits events for audit trails and learning triggers.
 - **Reward Signals**: Completed tasks feed the reward computation with priority and outcome data.
+
+---
+
+Copyright 2024-present The Wayfinder Trust. All rights reserved.

@@ -14,23 +14,23 @@ PHASE 5: DISTRIBUTE --> Multi-channel publishing plan with scheduling and cross-
 
 ## Inputs
 
-- **brand_context**: object -- Brand identity and positioning:
+- **`brand_context`**: object -- Brand identity and positioning:
   - `brand_name`: string
   - `industry`: string
   - `value_proposition`: string
   - `brand_voice`: object -- {tone: string, style: string, examples: string[]}
   - `product_or_service`: string -- What you sell
   - `competitors`: string[] (optional)
-- **audience_segments**: array of objects -- Who you're creating content for:
+- **`audience_segments`**: array of objects -- Who you're creating content for:
   - `segment_name`: string
   - `title_or_role`: string
   - `pain_points`: string[]
   - `content_preferences`: string[] -- What formats they consume
   - `channels`: string[] -- Where they spend time
   - `expertise_level`: string ("beginner" | "intermediate" | "expert")
-- **content_pillars**: string[] -- Core topics (3-5 thematic areas)
-- **distribution_channels**: string[] -- Channels to publish on (blog, LinkedIn, Twitter/X, Instagram, TikTok, newsletter, YouTube, podcast, etc.)
-- **performance_data**: object (optional) -- Historical content performance:
+- **`content_pillars`**: string[] -- Core topics (3-5 thematic areas)
+- **`distribution_channels`**: string[] -- Channels to publish on (blog, LinkedIn, Twitter/X, Instagram, TikTok, newsletter, YouTube, podcast, etc.)
+- **`performance_data`**: object (optional) -- Historical content performance:
   - `top_performing`: array of {title, format, channel, metric, value}
   - `underperforming`: array of same
   - `audience_growth`: object -- Follower/subscriber trends per channel
@@ -38,13 +38,13 @@ PHASE 5: DISTRIBUTE --> Multi-channel publishing plan with scheduling and cross-
 
 ## Outputs
 
-- **content_strategy**: object -- Strategic framework:
+- **`content_strategy`**: object -- Strategic framework:
   - `audience_personas`: array -- Detailed persona definitions
   - `pillar_definitions`: array of {pillar, description, audience_fit, content_types, frequency}
   - `channel_strategy`: array of {channel, purpose, frequency, content_types, tone}
   - `brand_voice_guide`: object -- Codified voice and style rules
   - `content_mix`: object -- Ratio of content types (educational, promotional, community, curation)
-- **content_ideas**: array of objects -- Scored ideas:
+- **`content_ideas`**: array of objects -- Scored ideas:
   - `title`: string
   - `pillar`: string
   - `format`: string
@@ -54,25 +54,27 @@ PHASE 5: DISTRIBUTE --> Multi-channel publishing plan with scheduling and cross-
   - `combined_score`: number
   - `audience_segment`: string
   - `hook`: string
-- **content_drafts**: array of objects -- Per-format drafts:
+- **`content_drafts`**: array of objects -- Per-format drafts:
   - `format`: string
   - `channel`: string
   - `content`: string
   - `word_count`: number
   - `cta`: string
   - `hashtags`: string[] (if applicable)
-- **distribution_plan**: object -- Publishing schedule:
+- **`distribution_plan`**: object -- Publishing schedule:
   - `calendar`: array of {date, time, channel, content, format, purpose}
   - `cross_promotion`: array of {source_channel, target_channel, adaptation}
   - `repurposing_plan`: array of {original, derivative_format, derivative_channel}
+- `performance_analysis`: (from manifest)
 
 ## Execution
 
 ### Phase 1: STRATEGY -- Define Content Framework
 
-**Entry criteria:** brand_context provided with at minimum brand_name and value_proposition. At least one audience_segment defined.
+### Entry Criteria
+brand_context provided with at minimum brand_name and value_proposition. At least one audience_segment defined.
 
-**Actions:**
+### Actions
 1. Build detailed audience personas from segments:
    - Demographics and psychographics
    - Content consumption habits: when, where, how, how long
@@ -105,15 +107,18 @@ PHASE 5: DISTRIBUTE --> Multi-channel publishing plan with scheduling and cross-
    - Conversion metrics (email signups, trials, demos)
    - Timeline for achieving each goal
 
-**Output:** Complete content strategy document with personas, pillar definitions, voice guide, channel strategy, and goals.
+### Output
+Complete content strategy document with personas, pillar definitions, voice guide, channel strategy, and goals.
 
-**Quality gate:** At least 2 audience personas defined with pain points and content preferences. 3-5 content pillars mapped to business goals. Voice guide has both do's and don'ts with examples. Channel strategy covers at least 3 channels with differentiated purposes. Goals are specific and time-bound.
+### Quality Gate
+At least 2 audience personas defined with pain points and content preferences. 3-5 content pillars mapped to business goals. Voice guide has both do's and don'ts with examples. Channel strategy covers at least 3 channels with differentiated purposes. Goals are specific and time-bound.
 
 ### Phase 2: IDEATE -- Content Idea Generation
 
-**Entry criteria:** Content strategy complete with pillars, personas, and channels defined.
+### Entry Criteria
+Content strategy complete with pillars, personas, and channels defined.
 
-**Actions:**
+### Actions
 1. Generate content ideas using multiple ideation frameworks:
    - **Pain-point mining:** One idea per audience pain point per content format
    - **Question-based:** "How to...", "What is...", "Why does...", "[X] vs [Y]"
@@ -146,15 +151,18 @@ PHASE 5: DISTRIBUTE --> Multi-channel publishing plan with scheduling and cross-
    - Identify "anchor content" that spawns 5-10 derivative pieces
    - Plan content series (multi-part content builds anticipation and retention)
 
-**Output:** Ranked content idea bank with scores, classifications, hooks, and clustering.
+### Output
+Ranked content idea bank with scores, classifications, hooks, and clustering.
 
-**Quality gate:** At least 20 ideas generated across all pillars. Each pillar has at least 3 ideas. Ideas span at least 3 different formats. Combined scores range from 3-10 (not all ideas scored identically). At least 2 "anchor content" pieces identified for repurposing.
+### Quality Gate
+At least 20 ideas generated across all pillars. Each pillar has at least 3 ideas. Ideas span at least 3 different formats. Combined scores range from 3-10 (not all ideas scored identically). At least 2 "anchor content" pieces identified for repurposing.
 
 ### Phase 3: CREATE -- Content Drafting
 
-**Entry criteria:** Top priority ideas selected (at least 3 from the idea bank).
+### Entry Criteria
+Top priority ideas selected (at least 3 from the idea bank).
 
-**Actions:**
+### Actions
 1. For each selected idea, create the primary content piece:
    - Follow the brand voice guide strictly
    - Match the format expectations of the target channel
@@ -183,15 +191,18 @@ PHASE 5: DISTRIBUTE --> Multi-channel publishing plan with scheduling and cross-
    - Different CTA approaches
    - Different angles on the same topic
 
-**Output:** Primary content drafts with platform-specific derivatives, formatted for each target channel.
+### Output
+Primary content drafts with platform-specific derivatives, formatted for each target channel.
 
-**Quality gate:** Primary content matches brand voice guide. Every piece has a CTA. Platform-specific formatting rules followed. At least 3 derivative pieces per primary content. No piece is a direct copy-paste of another (each is adapted for its channel). Word counts match platform expectations.
+### Quality Gate
+Primary content matches brand voice guide. Every piece has a CTA. Platform-specific formatting rules followed. At least 3 derivative pieces per primary content. No piece is a direct copy-paste of another (each is adapted for its channel). Word counts match platform expectations.
 
 ### Phase 4: OPTIMIZE -- Search and Performance Optimization
 
-**Entry criteria:** Content drafts complete for all priority pieces.
+### Entry Criteria
+Content drafts complete for all priority pieces.
 
-**Actions:**
+### Actions
 1. SEO optimization for blog/web content:
    - Target keyword in H1, first paragraph, and one H2
    - Secondary keywords in body copy (natural placement, not forced)
@@ -226,15 +237,18 @@ PHASE 5: DISTRIBUTE --> Multi-channel publishing plan with scheduling and cross-
    - Define what "success" looks like for each piece (pageviews, shares, conversions)
    - Plan measurement: when to check (24h, 7d, 30d) and what to look for
 
-**Output:** Optimized content with SEO metadata, readability scores, CTA placement, platform-specific tweaks, and performance baselines.
+### Output
+Optimized content with SEO metadata, readability scores, CTA placement, platform-specific tweaks, and performance baselines.
 
-**Quality gate:** Blog content has meta title, description, and 3+ internal links. Readability score within target range. Every piece has exactly one primary CTA. Platform-specific optimizations applied for each channel. Performance baselines set.
+### Quality Gate
+Blog content has meta title, description, and 3+ internal links. Readability score within target range. Every piece has exactly one primary CTA. Platform-specific optimizations applied for each channel. Performance baselines set.
 
 ### Phase 5: DISTRIBUTE -- Multi-Channel Publishing Plan
 
-**Entry criteria:** Optimized content ready for publishing across all target channels.
+### Entry Criteria
+Optimized content ready for publishing across all target channels.
 
-**Actions:**
+### Actions
 1. Create the publishing calendar:
    - Schedule primary content first, then derivative content staggered over 3-7 days
    - Optimal posting times per channel:
@@ -275,9 +289,20 @@ PHASE 5: DISTRIBUTE --> Multi-channel publishing plan with scheduling and cross-
    - Monthly: traffic by channel, top-performing content, conversion rates
    - Quarterly: strategy review, pillar performance, audience growth trajectory
 
-**Output:** Complete publishing calendar, cross-promotion plan, amplification strategy, repurposing pipeline, and KPI dashboard.
+### Output
+Complete publishing calendar, cross-promotion plan, amplification strategy, repurposing pipeline, and KPI dashboard.
 
-**Quality gate:** Calendar covers at least 2 weeks of content across all channels. Every primary piece has at least 2 derivative pieces scheduled. Cross-promotion flows are defined for every channel pair. Repurposing pipeline includes at least the blog -> social -> email flow. KPIs are defined and baseline metrics set.
+### Quality Gate
+Calendar covers at least 2 weeks of content across all channels. Every primary piece has at least 2 derivative pieces scheduled. Cross-promotion flows are defined for every channel pair. Repurposing pipeline includes at least the blog -> social -> email flow. KPIs are defined and baseline metrics set.
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for End-to-end content marketing system covering strategy, ideation, creation, optim, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 

@@ -1,0 +1,159 @@
+{
+  "name": "vehicle-mod",
+  "description": "Vehicle modification workflow: plan the BCM config change with risk assessment, scan vehicle health before touching anything, execute the mod, then verify with a fresh scan.",
+  "steps": [
+    {
+      "id": "step_1",
+      "skill_name": "mod-planner",
+      "inputs": {
+        "vehicle": "from_user_input",
+        "desired_mod": "from_user_input",
+        "constraints": "from_user_input"
+      },
+      "outputs": {
+        "feasibility": "feasibility_data",
+        "ecu_changes": "ecu_changes_data",
+        "bcm_config_changes": "bcm_config_changes_data",
+        "compatibility_warnings": "compatibility_warnings_data",
+        "install_plan": "install_plan_data"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "step_2",
+      "skill_name": "vehicle-health",
+      "inputs": {
+        "vehicle": "step_1.feasibility",
+        "scan_scope": "step_1.feasibility",
+        "history": "step_1.feasibility"
+      },
+      "outputs": {
+        "module_status": "module_status_data",
+        "dtc_report": "dtc_report_data",
+        "signal_health": "signal_health_data",
+        "trend_analysis": "trend_analysis_data",
+        "action_plan": "action_plan_data"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "step_3",
+      "skill_name": "vehicle-health",
+      "inputs": {
+        "vehicle": "step_2.module_status",
+        "scan_scope": "step_2.module_status",
+        "history": "step_2.module_status"
+      },
+      "outputs": {
+        "module_status": "module_status_data",
+        "dtc_report": "dtc_report_data",
+        "signal_health": "signal_health_data",
+        "trend_analysis": "trend_analysis_data",
+        "action_plan": "action_plan_data"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "step_4",
+      "skill_name": "troubleshooter",
+      "inputs": {
+        "symptom": "from_context.symptom",
+        "vehicle": "from_context.vehicle",
+        "conditions": "from_context.conditions"
+      },
+      "outputs": {
+        "diagnosis": "diagnosis",
+        "test_results": "test_results",
+        "root_cause": "root_cause",
+        "fix_plan": "fix_plan"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "step_5",
+      "skill_name": "edge-vehicle-integration-boundary",
+      "inputs": {
+        "health_report": "from_context.health_report",
+        "vehicle_interface": "from_context.vehicle_interface",
+        "test_site": "from_context.test_site"
+      },
+      "outputs": {
+        "integration_record": "integration_record"
+      },
+      "parallel_group": 5
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "step_1",
+      "to_step": "step_2",
+      "data_type": "feasibility",
+      "field_mapping": "feasibility -> vehicle; feasibility -> scan_scope; feasibility -> history"
+    },
+    {
+      "from_step": "step_2",
+      "to_step": "step_3",
+      "data_type": "module_status",
+      "field_mapping": "module_status -> vehicle; module_status -> scan_scope; module_status -> history"
+    },
+    {
+      "from_step": "step_3",
+      "to_step": "step_4",
+      "data_type": "object",
+      "field_mapping": {}
+    },
+    {
+      "from_step": "step_4",
+      "to_step": "step_5",
+      "data_type": "object",
+      "field_mapping": {}
+    }
+  ],
+  "entry_inputs": [
+    "constraints",
+    "desired_mod",
+    "vehicle"
+  ],
+  "terminal_outputs": [
+    "integration_record"
+  ],
+  "parallel_groups": [
+    [
+      "step_1"
+    ],
+    [
+      "step_2"
+    ],
+    [
+      "step_3"
+    ],
+    [
+      "step_4"
+    ],
+    [
+      "step_5"
+    ]
+  ],
+  "estimated_cost": 0,
+  "critical_path": [
+    "step_1",
+    "step_2",
+    "step_3",
+    "step_4",
+    "step_5"
+  ],
+  "chain_links": {
+    "prerequisites": [],
+    "next_chains": [],
+    "related_chains": [
+      {
+        "chain_name": "can-bus-engineering",
+        "relationship": "complement"
+      },
+      {
+        "chain_name": "vehicle-diagnostics",
+        "relationship": "complement"
+      }
+    ]
+  }
+}

@@ -1,0 +1,1175 @@
+[
+  {
+    "chain_name": "molecular-dynamics-simulation",
+    "description": "Run and analyze a molecular dynamics simulation: build the system, minimize energy, equilibrate, run production, analyze trajectories, validate against experiment, and produce the MD report.",
+    "domain": "science",
+    "tags": ["science", "process", "simulation", "chemistry"],
+    "steps": [
+      {
+        "flow_name": "md-system-builder",
+        "description": "Build the simulation system from molecular coordinates, topology, and force field selection.",
+        "inputs": [
+          {"name": "molecule-structure", "desc": "PDB, MOL2, or XYZ coordinate file for the target molecule or system"},
+          {"name": "simulation-goal", "desc": "What property or behavior the simulation should investigate"},
+          {"name": "solvent-conditions", "desc": "Solvent type, ionic strength, pH, and box dimensions"}
+        ],
+        "outputs": [
+          {"name": "system-topology", "desc": "Complete topology file with atom types, bonds, angles, and dihedrals"},
+          {"name": "force-field-selection", "desc": "Chosen force field and parameter justification"},
+          {"name": "initial-coordinates", "desc": "Solvated and ionized system coordinates ready for minimization"}
+        ],
+        "process": [
+          "Parse the input structure and assign atom types from the chosen force field",
+          "Solvate the system in a periodic box with the specified solvent and add counterions",
+          "Validate that all parameters are assigned and no missing terms exist",
+          "Write the topology and coordinate files in the simulation engine's format"
+        ],
+        "tags": ["science", "simulation", "molecular-dynamics"]
+      },
+      {
+        "flow_name": "md-energy-minimization",
+        "description": "Minimize the system energy to remove steric clashes and bad contacts before dynamics.",
+        "inputs": [
+          {"name": "system-topology", "desc": "Topology file from the system builder"},
+          {"name": "initial-coordinates", "desc": "Starting coordinates with solvent and ions"}
+        ],
+        "outputs": [
+          {"name": "minimized-coordinates", "desc": "Energy-minimized structure with no steric clashes"},
+          {"name": "minimization-log", "desc": "Energy convergence trace showing steps and final potential energy"}
+        ],
+        "process": [
+          "Run steepest descent minimization until the maximum force drops below the threshold",
+          "Switch to conjugate gradient minimization for fine convergence",
+          "Check that the final energy is reasonable and no atoms have extreme velocities",
+          "Write the minimized coordinates for the equilibration step"
+        ],
+        "tags": ["science", "simulation", "energy-minimization"]
+      },
+      {
+        "flow_name": "md-equilibration-protocol",
+        "description": "Equilibrate the system through NVT then NPT ensembles to reach stable temperature and pressure.",
+        "inputs": [
+          {"name": "minimized-coordinates", "desc": "Energy-minimized structure"},
+          {"name": "system-topology", "desc": "Topology file"},
+          {"name": "target-conditions", "desc": "Target temperature (K) and pressure (bar)"}
+        ],
+        "outputs": [
+          {"name": "equilibrated-coordinates", "desc": "System at stable temperature and pressure, ready for production"},
+          {"name": "equilibration-metrics", "desc": "Temperature, pressure, density, and energy traces over the equilibration"}
+        ],
+        "process": [
+          "Run NVT equilibration with position restraints on solute to stabilize temperature",
+          "Run NPT equilibration to converge the density and box volume at the target pressure",
+          "Check that temperature, pressure, and density have plateaued within acceptable variance",
+          "Release restraints gradually and confirm the system remains stable"
+        ],
+        "tags": ["science", "simulation", "equilibration"]
+      },
+      {
+        "flow_name": "md-production-run",
+        "description": "Run the production simulation and collect trajectory frames for analysis.",
+        "inputs": [
+          {"name": "equilibrated-coordinates", "desc": "Equilibrated starting point"},
+          {"name": "system-topology", "desc": "Topology file"},
+          {"name": "simulation-goal", "desc": "Target property dictating run length and frame output interval"}
+        ],
+        "outputs": [
+          {"name": "trajectory-file", "desc": "Trajectory with coordinates saved at regular intervals"},
+          {"name": "energy-log", "desc": "Time series of potential energy, kinetic energy, temperature, and pressure"},
+          {"name": "run-parameters", "desc": "Timestep, total time, thermostat, barostat, and output frequency used"}
+        ],
+        "process": [
+          "Configure the production run parameters: timestep, total length, output frequency",
+          "Launch the simulation with the chosen thermostat and barostat settings",
+          "Monitor for instabilities (energy drift, temperature excursions, box collapse)",
+          "Collect the trajectory, energy log, and checkpoint files"
+        ],
+        "tags": ["science", "simulation", "production"]
+      },
+      {
+        "flow_name": "md-trajectory-analysis",
+        "description": "Analyze the production trajectory for structural, dynamic, and thermodynamic properties.",
+        "inputs": [
+          {"name": "trajectory-file", "desc": "Production trajectory"},
+          {"name": "system-topology", "desc": "Topology for atom selection and grouping"},
+          {"name": "simulation-goal", "desc": "Which analyses to prioritize"}
+        ],
+        "outputs": [
+          {"name": "structural-metrics", "desc": "RMSD, RMSF, radius of gyration, secondary structure content over time"},
+          {"name": "interaction-analysis", "desc": "Hydrogen bonds, salt bridges, contact maps, and binding free energy estimates"},
+          {"name": "dynamic-properties", "desc": "Diffusion coefficients, correlation functions, and relaxation times"}
+        ],
+        "process": [
+          "Compute RMSD and RMSF relative to the starting or average structure",
+          "Analyze hydrogen bonds, salt bridges, and hydrophobic contacts over time",
+          "Calculate radial distribution functions for solvent and ion interactions",
+          "Extract dynamic properties: mean square displacement, autocorrelation functions"
+        ],
+        "tags": ["science", "simulation", "analysis"]
+      },
+      {
+        "flow_name": "md-experimental-validation",
+        "description": "Compare simulation results against experimental observables to assess accuracy.",
+        "inputs": [
+          {"name": "structural-metrics", "desc": "RMSD, RMSF, and structural data from the trajectory analysis"},
+          {"name": "interaction-analysis", "desc": "Computed interaction energies and contacts"},
+          {"name": "experimental-data", "desc": "Published or measured experimental values for comparison"}
+        ],
+        "outputs": [
+          {"name": "validation-report", "desc": "Side-by-side comparison of simulated vs experimental values with deviations"},
+          {"name": "md-summary-report", "desc": "Complete MD study report covering system setup, protocol, results, and validation"}
+        ],
+        "process": [
+          "Tabulate simulated observables alongside their experimental counterparts",
+          "Compute agreement metrics (correlation, RMSE, percent deviation) for each property",
+          "Identify where the simulation diverges from experiment and possible causes (force field, sampling, system size)",
+          "Write the final report combining methods, results, and validation assessment"
+        ],
+        "tags": ["science", "simulation", "validation"]
+      }
+    ]
+  },
+  {
+    "chain_name": "neutron-activation-analysis",
+    "description": "Analyze sample composition by neutron activation: prepare samples, irradiate, measure gamma spectra, identify isotopes, quantify elemental concentrations, and produce the NAA report.",
+    "domain": "science",
+    "tags": ["science", "process", "analytical-chemistry", "nuclear"],
+    "steps": [
+      {
+        "flow_name": "naa-sample-preparation",
+        "description": "Prepare and encapsulate samples and standards for reactor irradiation.",
+        "inputs": [
+          {"name": "sample-material", "desc": "Description of the sample matrix and expected elements"},
+          {"name": "analysis-goals", "desc": "Target elements and required detection limits"}
+        ],
+        "outputs": [
+          {"name": "prepared-samples", "desc": "Weighed, encapsulated samples and certified reference materials ready for irradiation"},
+          {"name": "irradiation-plan", "desc": "Reactor position, neutron flux, and irradiation duration for each sample set"}
+        ],
+        "process": [
+          "Dry, homogenize, and weigh the samples into irradiation vials",
+          "Select and prepare certified reference materials that bracket the expected concentrations",
+          "Calculate the required irradiation time based on target sensitivity and expected activities",
+          "Seal and label all vials with sample IDs and positions in the irradiation container"
+        ],
+        "tags": ["science", "nuclear", "sample-prep"]
+      },
+      {
+        "flow_name": "naa-irradiation-counting",
+        "description": "Irradiate samples in the reactor and measure gamma spectra at timed decay intervals.",
+        "inputs": [
+          {"name": "prepared-samples", "desc": "Sealed sample and standard vials"},
+          {"name": "irradiation-plan", "desc": "Flux position and duration"}
+        ],
+        "outputs": [
+          {"name": "gamma-spectra", "desc": "Measured gamma spectra at each counting interval for all samples and standards"},
+          {"name": "counting-log", "desc": "Detector geometry, live time, dead time, and decay time for each measurement"}
+        ],
+        "process": [
+          "Irradiate the sample set at the planned reactor position and neutron flux",
+          "After irradiation, allow short-lived isotopes to decay to reduce dead time",
+          "Count samples on the HPGe detector at scheduled intervals (short, medium, long decay)",
+          "Record live time, dead time, sample-to-detector distance, and spectrum file for each count"
+        ],
+        "tags": ["science", "nuclear", "gamma-spectroscopy"]
+      },
+      {
+        "flow_name": "naa-isotope-identification",
+        "description": "Identify radioisotopes in the gamma spectra by matching photopeaks to known energies.",
+        "inputs": [
+          {"name": "gamma-spectra", "desc": "Raw gamma spectra from all counting sessions"},
+          {"name": "analysis-goals", "desc": "Target element list to guide peak search"}
+        ],
+        "outputs": [
+          {"name": "peak-assignments", "desc": "Each identified photopeak with isotope, energy, net area, and uncertainty"},
+          {"name": "interference-flags", "desc": "Peaks where multiple isotopes overlap and require correction"}
+        ],
+        "process": [
+          "Calibrate the energy axis using known calibration sources",
+          "Run automatic peak search and fit Gaussian peaks to extract net areas",
+          "Match peak energies to the isotope library and assign each peak",
+          "Flag spectral interferences where two isotopes contribute to the same energy region"
+        ],
+        "tags": ["science", "nuclear", "isotope-id"]
+      },
+      {
+        "flow_name": "naa-matrix-corrections",
+        "description": "Correct for self-shielding, matrix effects, and spectral interferences.",
+        "inputs": [
+          {"name": "peak-assignments", "desc": "Identified peaks with net areas"},
+          {"name": "interference-flags", "desc": "Overlapping peak issues"},
+          {"name": "sample-material", "desc": "Matrix composition for self-shielding calculation"}
+        ],
+        "outputs": [
+          {"name": "corrected-activities", "desc": "Corrected net activities for each isotope in each sample"},
+          {"name": "correction-factors", "desc": "Self-shielding, coincidence summing, and interference correction factors applied"}
+        ],
+        "process": [
+          "Calculate neutron self-shielding factors based on sample mass and composition",
+          "Apply coincidence summing corrections for isotopes with cascade gamma emissions",
+          "Subtract spectral interference contributions from overlapping peaks",
+          "Propagate uncertainties through all correction factors"
+        ],
+        "tags": ["science", "nuclear", "corrections"]
+      },
+      {
+        "flow_name": "naa-concentration-calculation",
+        "description": "Quantify elemental concentrations by comparing sample activities to standards.",
+        "inputs": [
+          {"name": "corrected-activities", "desc": "Corrected net activities for all samples and standards"},
+          {"name": "counting-log", "desc": "Timing and geometry data for decay and efficiency corrections"}
+        ],
+        "outputs": [
+          {"name": "elemental-concentrations", "desc": "Concentration of each element in each sample with uncertainties"},
+          {"name": "quality-metrics", "desc": "Detection limits, precision, and accuracy against reference materials"}
+        ],
+        "process": [
+          "Apply the comparator method: ratio sample activity to standard activity with decay corrections",
+          "Calculate mass fractions for each element from the activity ratios",
+          "Compute detection limits for elements below the quantification threshold",
+          "Validate accuracy by comparing measured reference material values to certified values"
+        ],
+        "tags": ["science", "nuclear", "quantification"]
+      },
+      {
+        "flow_name": "naa-report-assembly",
+        "description": "Compile the NAA results into a final analytical report.",
+        "inputs": [
+          {"name": "elemental-concentrations", "desc": "Quantified elements with uncertainties"},
+          {"name": "quality-metrics", "desc": "Detection limits and reference material agreement"},
+          {"name": "correction-factors", "desc": "All corrections applied during the analysis"}
+        ],
+        "outputs": [
+          {"name": "naa-report", "desc": "Complete NAA report with methods, results tables, QA/QC, and interpretation"},
+          {"name": "data-archive", "desc": "Archived spectra, peak fit files, and calculation spreadsheets"}
+        ],
+        "process": [
+          "Organize results into tables by sample with element, concentration, uncertainty, and detection limit",
+          "Write the methods section covering irradiation, counting, and correction procedures",
+          "Include QA/QC results showing reference material agreement",
+          "Archive all raw spectra and intermediate calculations alongside the report"
+        ],
+        "tags": ["science", "nuclear", "reporting"]
+      }
+    ]
+  },
+  {
+    "chain_name": "lidar-point-cloud-analysis",
+    "description": "Analyze a lidar point cloud: import and register the scan, classify points, generate terrain and surface models, extract features, validate, and produce the analysis report.",
+    "domain": "science",
+    "tags": ["science", "process", "remote-sensing", "geospatial"],
+    "steps": [
+      {
+        "flow_name": "lidar-import-registration",
+        "description": "Import raw lidar data and register multiple scans into a common coordinate system.",
+        "inputs": [
+          {"name": "raw-lidar-files", "desc": "LAS/LAZ files from the lidar sensor or data provider"},
+          {"name": "survey-metadata", "desc": "Coordinate reference system, flight lines, and GPS/IMU data"}
+        ],
+        "outputs": [
+          {"name": "registered-point-cloud", "desc": "Merged point cloud in the project coordinate system"},
+          {"name": "registration-quality", "desc": "RMS alignment error and overlap statistics between scans"}
+        ],
+        "process": [
+          "Import each scan and verify the point count, extent, and return types",
+          "Transform all scans to the project coordinate reference system",
+          "Register overlapping scans using ICP or tie-point alignment and record the residuals",
+          "Merge into a single point cloud and remove duplicate points in overlap zones"
+        ],
+        "tags": ["science", "remote-sensing", "lidar"]
+      },
+      {
+        "flow_name": "lidar-point-classification",
+        "description": "Classify each point as ground, vegetation, building, water, noise, or other categories.",
+        "inputs": [
+          {"name": "registered-point-cloud", "desc": "Merged and aligned point cloud"},
+          {"name": "classification-scheme", "desc": "ASPRS class codes or custom classes for the project"}
+        ],
+        "outputs": [
+          {"name": "classified-point-cloud", "desc": "Point cloud with class labels assigned to every point"},
+          {"name": "classification-statistics", "desc": "Point count and percentage in each class"}
+        ],
+        "process": [
+          "Run ground classification using progressive morphological filtering or cloth simulation",
+          "Classify above-ground points into vegetation height strata (low, medium, high)",
+          "Identify building footprints from planar surface detection in the above-ground points",
+          "Flag noise points (isolated outliers, low-return artifacts) and unclassified points"
+        ],
+        "tags": ["science", "remote-sensing", "classification"]
+      },
+      {
+        "flow_name": "lidar-terrain-surface-models",
+        "description": "Generate digital terrain model (DTM) and digital surface model (DSM) from classified points.",
+        "inputs": [
+          {"name": "classified-point-cloud", "desc": "Point cloud with ground and surface classes assigned"}
+        ],
+        "outputs": [
+          {"name": "digital-terrain-model", "desc": "Gridded bare-earth elevation model from ground points"},
+          {"name": "digital-surface-model", "desc": "Gridded top-of-canopy/structure elevation model from all first returns"},
+          {"name": "normalized-height-model", "desc": "Height above ground for every point (DSM minus DTM)"}
+        ],
+        "process": [
+          "Interpolate ground-classified points to a regular grid to create the DTM",
+          "Interpolate first-return points to create the DSM at the same grid resolution",
+          "Subtract the DTM from the DSM to produce the normalized height model",
+          "Fill voids and smooth artifacts at grid boundaries"
+        ],
+        "tags": ["science", "remote-sensing", "terrain"]
+      },
+      {
+        "flow_name": "lidar-feature-extraction",
+        "description": "Extract measurable features from the point cloud and derived models.",
+        "inputs": [
+          {"name": "classified-point-cloud", "desc": "Classified points"},
+          {"name": "normalized-height-model", "desc": "Height above ground for each point"},
+          {"name": "survey-metadata", "desc": "Project goals defining which features to extract"}
+        ],
+        "outputs": [
+          {"name": "extracted-features", "desc": "Canopy height metrics, building footprints, power line clearances, or other requested features"},
+          {"name": "feature-statistics", "desc": "Summary statistics for each feature class across the study area"}
+        ],
+        "process": [
+          "Compute canopy height metrics per plot or grid cell (mean, max, percentiles, cover fraction)",
+          "Delineate building footprints and estimate roof heights from the classified building points",
+          "Measure clearance distances between power lines and vegetation where applicable",
+          "Export features as vector polygons, raster grids, or tabular summaries"
+        ],
+        "tags": ["science", "remote-sensing", "feature-extraction"]
+      },
+      {
+        "flow_name": "lidar-ground-truth-validation",
+        "description": "Validate the lidar products against independently measured ground truth.",
+        "inputs": [
+          {"name": "digital-terrain-model", "desc": "DTM to validate"},
+          {"name": "extracted-features", "desc": "Extracted features to validate"},
+          {"name": "ground-truth-data", "desc": "Field measurements, survey points, or reference datasets"}
+        ],
+        "outputs": [
+          {"name": "validation-results", "desc": "Error statistics: RMSE, bias, and R-squared for terrain and features"},
+          {"name": "error-map", "desc": "Spatial distribution of errors across the study area"}
+        ],
+        "process": [
+          "Match ground truth points to the corresponding DTM cells and extracted feature locations",
+          "Compute the signed error (lidar minus ground truth) at each validation point",
+          "Calculate summary error statistics: mean error, RMSE, median absolute error, R-squared",
+          "Map the spatial pattern of errors to identify systematic biases (slope, land cover, scan angle)"
+        ],
+        "tags": ["science", "remote-sensing", "validation"]
+      },
+      {
+        "flow_name": "lidar-analysis-report",
+        "description": "Compile the lidar processing results into a final analysis report.",
+        "inputs": [
+          {"name": "validation-results", "desc": "Accuracy assessment statistics"},
+          {"name": "extracted-features", "desc": "Final feature datasets"},
+          {"name": "classification-statistics", "desc": "Point classification summary"}
+        ],
+        "outputs": [
+          {"name": "lidar-report", "desc": "Complete lidar analysis report with methods, products, accuracy, and deliverables"},
+          {"name": "deliverable-package", "desc": "All output rasters, vectors, and point clouds for the client or collaborator"}
+        ],
+        "process": [
+          "Write the methods section covering data acquisition, registration, classification, and feature extraction",
+          "Present the products with maps, cross-sections, and summary statistics",
+          "Include the accuracy assessment with error statistics and spatial error maps",
+          "Package all deliverables with metadata and coordinate system documentation"
+        ],
+        "tags": ["science", "remote-sensing", "reporting"]
+      }
+    ]
+  },
+  {
+    "chain_name": "bioassay-guided-fractionation",
+    "description": "Isolate an active compound from a complex mixture: screen the crude extract, fractionate, track activity through sub-fractions, identify the active compound, and confirm its activity.",
+    "domain": "science",
+    "tags": ["science", "process", "natural-products", "chemistry"],
+    "steps": [
+      {
+        "flow_name": "crude-extract-bioactivity-screen",
+        "description": "Screen the crude extract for biological activity to confirm the starting material is active.",
+        "inputs": [
+          {"name": "crude-extract", "desc": "Source material extract (plant, microbial, marine) in a defined solvent"},
+          {"name": "bioassay-protocol", "desc": "Target activity assay: antimicrobial, cytotoxic, enzyme inhibition, or other"}
+        ],
+        "outputs": [
+          {"name": "crude-activity-result", "desc": "Activity measurement (IC50, MIC, percent inhibition) for the crude extract"},
+          {"name": "fractionation-decision", "desc": "Go/no-go decision and recommended fractionation strategy based on activity level"}
+        ],
+        "process": [
+          "Dissolve the crude extract at a standard concentration series",
+          "Run the bioassay with positive and negative controls",
+          "Determine the dose-response curve and activity metric",
+          "Decide whether the activity warrants fractionation and which method to use"
+        ],
+        "tags": ["science", "natural-products", "bioassay"]
+      },
+      {
+        "flow_name": "primary-fractionation",
+        "description": "Separate the crude extract into primary fractions by polarity or size.",
+        "inputs": [
+          {"name": "crude-extract", "desc": "Active crude extract to fractionate"},
+          {"name": "fractionation-decision", "desc": "Recommended method: liquid-liquid partition, flash chromatography, or size exclusion"}
+        ],
+        "outputs": [
+          {"name": "primary-fractions", "desc": "Set of fractions with solvent, mass, and fraction ID"},
+          {"name": "fractionation-log", "desc": "Column conditions, solvent gradient, and fraction collection windows"}
+        ],
+        "process": [
+          "Set up the fractionation system (column packing, solvent preparation, gradient program)",
+          "Load the crude extract and collect fractions at defined intervals or polarity steps",
+          "Evaporate each fraction to dryness and record the recovered mass",
+          "Label and store fractions for bioassay testing"
+        ],
+        "tags": ["science", "natural-products", "chromatography"]
+      },
+      {
+        "flow_name": "fraction-activity-tracking",
+        "description": "Test each fraction for activity to identify which ones carry the active compound.",
+        "inputs": [
+          {"name": "primary-fractions", "desc": "Fractions to test"},
+          {"name": "bioassay-protocol", "desc": "Same assay used for the crude screen"}
+        ],
+        "outputs": [
+          {"name": "active-fractions", "desc": "Fractions that retain activity above the threshold"},
+          {"name": "activity-map", "desc": "Activity plotted against fraction number showing the activity distribution"}
+        ],
+        "process": [
+          "Dissolve each fraction at the test concentration",
+          "Run the bioassay on all fractions in parallel with the same controls as the crude screen",
+          "Rank fractions by activity level",
+          "Select the most active fraction(s) for sub-fractionation"
+        ],
+        "tags": ["science", "natural-products", "bioassay"]
+      },
+      {
+        "flow_name": "sub-fractionation-purification",
+        "description": "Sub-fractionate the active fraction to further purify the active compound.",
+        "inputs": [
+          {"name": "active-fractions", "desc": "Primary fractions with confirmed activity"},
+          {"name": "activity-map", "desc": "Activity profile guiding the sub-fractionation strategy"}
+        ],
+        "outputs": [
+          {"name": "purified-compound", "desc": "Isolated compound at the highest achievable purity"},
+          {"name": "purification-log", "desc": "HPLC or column conditions, retention times, and purity assessment"}
+        ],
+        "process": [
+          "Select the chromatographic method for sub-fractionation (preparative HPLC, semi-prep)",
+          "Optimize the gradient to resolve the active peak from neighboring compounds",
+          "Collect the target peak and assess purity by analytical HPLC",
+          "Repeat if purity is below 95 percent or if activity splits between sub-fractions"
+        ],
+        "tags": ["science", "natural-products", "purification"]
+      },
+      {
+        "flow_name": "compound-structure-elucidation",
+        "description": "Identify the isolated compound by spectroscopic methods (NMR, MS, IR, UV).",
+        "inputs": [
+          {"name": "purified-compound", "desc": "Isolated compound of sufficient purity and mass for spectroscopy"},
+          {"name": "purification-log", "desc": "Chromatographic behavior hinting at compound class"}
+        ],
+        "outputs": [
+          {"name": "structure-assignment", "desc": "Proposed molecular structure with supporting spectral data"},
+          {"name": "spectral-data-package", "desc": "NMR, MS, IR, and UV spectra with peak assignments"}
+        ],
+        "process": [
+          "Acquire high-resolution mass spectrum to determine the molecular formula",
+          "Record 1D and 2D NMR spectra (1H, 13C, COSY, HSQC, HMBC) and assign peaks",
+          "Use IR and UV data to confirm functional groups and chromophores",
+          "Compare against databases and literature to confirm or propose the structure"
+        ],
+        "tags": ["science", "natural-products", "spectroscopy"]
+      },
+      {
+        "flow_name": "pure-compound-activity-confirmation",
+        "description": "Confirm the biological activity of the pure compound and compare to the crude extract.",
+        "inputs": [
+          {"name": "purified-compound", "desc": "Structurally identified pure compound"},
+          {"name": "bioassay-protocol", "desc": "Same assay as the original screen"},
+          {"name": "crude-activity-result", "desc": "Original crude extract activity for comparison"}
+        ],
+        "outputs": [
+          {"name": "confirmed-activity", "desc": "Dose-response curve and potency metric for the pure compound"},
+          {"name": "fractionation-report", "desc": "Complete bioassay-guided fractionation report from crude to pure compound"}
+        ],
+        "process": [
+          "Run a full dose-response curve with the pure compound",
+          "Compare potency (IC50, MIC) to the crude extract to assess enrichment",
+          "Test for cytotoxicity or selectivity if relevant to the application",
+          "Write the final report covering the fractionation path, structure, and confirmed activity"
+        ],
+        "tags": ["science", "natural-products", "confirmation"]
+      }
+    ]
+  },
+  {
+    "chain_name": "age-depth-modeling",
+    "description": "Build an age-depth model for a sediment or ice core: compile dated horizons, calibrate, select the modeling approach, run the model, and produce the chronology.",
+    "domain": "science",
+    "tags": ["science", "process", "geochronology", "paleoclimate"],
+    "steps": [
+      {
+        "flow_name": "chronological-data-compilation",
+        "description": "Compile all dated horizons from the core including radiocarbon, tephra, and paleomagnetic tie points.",
+        "inputs": [
+          {"name": "core-log", "desc": "Core description with depths, lithology, and sampling locations"},
+          {"name": "dating-results", "desc": "Raw dating results: radiocarbon ages, tephra IDs, paleomagnetic reversals, other markers"}
+        ],
+        "outputs": [
+          {"name": "dated-horizons-table", "desc": "Table of all dated points: depth, age, uncertainty, dating method, and material dated"},
+          {"name": "outlier-candidates", "desc": "Dates flagged as potential outliers based on stratigraphic inversion or large uncertainty"}
+        ],
+        "process": [
+          "Enter each date with its depth, reported age, uncertainty, and method",
+          "Check for stratigraphic inversions (younger dates below older dates)",
+          "Flag dates on reworked material or with anomalously large uncertainties",
+          "Add any event horizons (tephra layers, paleomagnetic boundaries) with their known ages"
+        ],
+        "tags": ["science", "geochronology", "data-compilation"]
+      },
+      {
+        "flow_name": "radiocarbon-calibration",
+        "description": "Calibrate radiocarbon ages to calendar years using the appropriate calibration curve.",
+        "inputs": [
+          {"name": "dated-horizons-table", "desc": "Raw dates including radiocarbon ages to calibrate"},
+          {"name": "calibration-curve", "desc": "IntCal20, SHCal20, or Marine20 depending on sample origin"}
+        ],
+        "outputs": [
+          {"name": "calibrated-dates", "desc": "Calendar age probability distributions for each radiocarbon date"},
+          {"name": "reservoir-corrections", "desc": "Any marine or freshwater reservoir corrections applied"}
+        ],
+        "process": [
+          "Select the calibration curve based on hemisphere and sample environment",
+          "Apply reservoir corrections for marine or freshwater samples if needed",
+          "Calibrate each radiocarbon age to produce the calendar age probability distribution",
+          "Record the median, 1-sigma, and 2-sigma calendar age ranges"
+        ],
+        "tags": ["science", "geochronology", "calibration"]
+      },
+      {
+        "flow_name": "age-model-selection",
+        "description": "Select the age-depth modeling approach based on the dating density and core type.",
+        "inputs": [
+          {"name": "calibrated-dates", "desc": "Calibrated calendar age distributions"},
+          {"name": "outlier-candidates", "desc": "Flagged potential outliers"},
+          {"name": "core-log", "desc": "Lithology and sedimentation context"}
+        ],
+        "outputs": [
+          {"name": "model-configuration", "desc": "Chosen model (Bacon, OxCal, clam, linear interpolation) with parameter settings"},
+          {"name": "outlier-decisions", "desc": "Which flagged dates to include, downweight, or exclude and why"}
+        ],
+        "process": [
+          "Assess dating density and decide if a Bayesian approach is justified",
+          "Choose the model: Bacon for flexible accumulation, OxCal for sequence models, clam for simple cases",
+          "Set model parameters: section thickness, accumulation rate prior, memory strength",
+          "Decide on outlier treatment: exclude, downweight, or model with an outlier probability"
+        ],
+        "tags": ["science", "geochronology", "model-selection"]
+      },
+      {
+        "flow_name": "age-model-execution",
+        "description": "Run the age-depth model and extract the chronology with confidence intervals.",
+        "inputs": [
+          {"name": "calibrated-dates", "desc": "Input dates for the model"},
+          {"name": "model-configuration", "desc": "Model type and parameters"},
+          {"name": "outlier-decisions", "desc": "Outlier handling instructions"}
+        ],
+        "outputs": [
+          {"name": "age-depth-model", "desc": "Median age and 95% confidence interval at every depth increment"},
+          {"name": "accumulation-rate", "desc": "Sedimentation rate profile with uncertainty over the core length"}
+        ],
+        "process": [
+          "Run the model with the configured parameters (MCMC iterations for Bayesian models)",
+          "Check convergence diagnostics (trace plots, Gelman-Rubin statistic)",
+          "Extract the median age and 95% credible interval at each depth step",
+          "Compute the sediment accumulation rate as the inverse of the age-depth slope"
+        ],
+        "tags": ["science", "geochronology", "modeling"]
+      },
+      {
+        "flow_name": "chronology-report",
+        "description": "Produce the final chronology report with the age-depth plot and supporting data.",
+        "inputs": [
+          {"name": "age-depth-model", "desc": "Final age model with confidence intervals"},
+          {"name": "accumulation-rate", "desc": "Sedimentation rate profile"},
+          {"name": "dated-horizons-table", "desc": "Original dated horizons for display on the plot"}
+        ],
+        "outputs": [
+          {"name": "chronology-report", "desc": "Report including the age-depth plot, accumulation rates, methods, and data tables"},
+          {"name": "age-model-output-file", "desc": "Machine-readable file of depth vs age for use in proxy interpretation"}
+        ],
+        "process": [
+          "Generate the age-depth plot with dated horizons, median model, and 95% envelope",
+          "Plot the sedimentation rate profile with uncertainty bands",
+          "Write the methods section documenting model choice, parameters, and outlier handling",
+          "Export the age model as a table and file for downstream proxy-age assignment"
+        ],
+        "tags": ["science", "geochronology", "reporting"]
+      }
+    ]
+  },
+  {
+    "chain_name": "thin-section-petrography",
+    "description": "Analyze a rock thin section: examine under plane and cross-polarized light, identify minerals, classify the rock, interpret petrogenesis, and produce the petrographic report.",
+    "domain": "science",
+    "tags": ["science", "process", "geology", "petrology"],
+    "steps": [
+      {
+        "flow_name": "plane-polarized-light-exam",
+        "description": "Examine the thin section under plane-polarized light to record color, relief, cleavage, and texture.",
+        "inputs": [
+          {"name": "thin-section", "desc": "Polished thin section mounted on a glass slide"},
+          {"name": "sample-context", "desc": "Field location, hand sample description, and geological setting"}
+        ],
+        "outputs": [
+          {"name": "ppl-observations", "desc": "Mineral colors, relief, crystal habit, cleavage, and textural relationships under PPL"},
+          {"name": "texture-description", "desc": "Rock texture: grain size, shape, sorting, fabric, and any deformation features"}
+        ],
+        "process": [
+          "Scan the entire section at low magnification to note the overall texture and mineral distribution",
+          "Record each mineral phase: color, pleochroism, relief, crystal form, and cleavage",
+          "Document the texture: equigranular vs porphyritic, foliated vs massive, grain boundaries",
+          "Note any alteration, veining, inclusions, or accessory phases"
+        ],
+        "tags": ["science", "geology", "petrography"]
+      },
+      {
+        "flow_name": "cross-polarized-light-exam",
+        "description": "Examine under cross-polarized light to record birefringence, extinction, and twinning for mineral identification.",
+        "inputs": [
+          {"name": "thin-section", "desc": "Same thin section"},
+          {"name": "ppl-observations", "desc": "PPL observations to correlate with XPL behavior"}
+        ],
+        "outputs": [
+          {"name": "xpl-observations", "desc": "Birefringence colors, extinction angle and type, twinning, and interference figures for each phase"},
+          {"name": "mineral-candidates", "desc": "Preliminary mineral identifications based on combined PPL and XPL properties"}
+        ],
+        "process": [
+          "Record the maximum birefringence color for each mineral phase",
+          "Determine extinction type (parallel, inclined, symmetrical) and measure the angle where possible",
+          "Identify twinning patterns (simple, polysynthetic, cross-hatch) diagnostic of specific minerals",
+          "Obtain interference figures (uniaxial vs biaxial, optic sign) for ambiguous phases"
+        ],
+        "tags": ["science", "geology", "petrography"]
+      },
+      {
+        "flow_name": "mineral-assemblage-identification",
+        "description": "Confirm the mineral assemblage by integrating PPL and XPL observations with diagnostic criteria.",
+        "inputs": [
+          {"name": "ppl-observations", "desc": "Plane-polarized light data"},
+          {"name": "xpl-observations", "desc": "Cross-polarized light data"},
+          {"name": "mineral-candidates", "desc": "Preliminary identifications to confirm"}
+        ],
+        "outputs": [
+          {"name": "confirmed-minerals", "desc": "Final mineral list with volume percentages estimated by point counting or visual estimate"},
+          {"name": "modal-composition", "desc": "Quantitative or semi-quantitative mineral proportions"}
+        ],
+        "process": [
+          "Compare each candidate mineral's properties against determinative tables",
+          "Resolve ambiguities using distinguishing criteria (e.g., feldspar twinning, pyroxene cleavage angles)",
+          "Estimate modal proportions by visual comparison charts or point counting",
+          "List the mineral assemblage in order of abundance"
+        ],
+        "tags": ["science", "geology", "mineralogy"]
+      },
+      {
+        "flow_name": "rock-classification",
+        "description": "Classify the rock using the mineral assemblage, texture, and appropriate classification scheme.",
+        "inputs": [
+          {"name": "confirmed-minerals", "desc": "Identified minerals and proportions"},
+          {"name": "texture-description", "desc": "Texture data from PPL examination"},
+          {"name": "sample-context", "desc": "Geological setting for context"}
+        ],
+        "outputs": [
+          {"name": "rock-name", "desc": "Formal rock name using the IUGS or appropriate classification scheme"},
+          {"name": "classification-rationale", "desc": "The classification diagram or criteria used and where the sample plots"}
+        ],
+        "process": [
+          "Determine if the rock is igneous, metamorphic, or sedimentary based on texture and mineralogy",
+          "Apply the appropriate classification: QAPF for plutonic, TAS for volcanic, metamorphic facies, or sedimentary",
+          "Plot the modal composition on the relevant diagram to assign the rock name",
+          "Note any prefix modifiers (e.g., biotite granite, garnet-bearing amphibolite)"
+        ],
+        "tags": ["science", "geology", "classification"]
+      },
+      {
+        "flow_name": "petrogenesis-interpretation",
+        "description": "Interpret the rock's origin and history from the mineral assemblage, textures, and geological context.",
+        "inputs": [
+          {"name": "rock-name", "desc": "Classified rock name"},
+          {"name": "confirmed-minerals", "desc": "Mineral assemblage"},
+          {"name": "texture-description", "desc": "Textural evidence"},
+          {"name": "sample-context", "desc": "Field relationships and regional geology"}
+        ],
+        "outputs": [
+          {"name": "petrogenetic-interpretation", "desc": "Interpreted formation conditions, source, and subsequent history"},
+          {"name": "petrographic-report", "desc": "Complete petrographic report with descriptions, photomicrographs, classification, and interpretation"}
+        ],
+        "process": [
+          "Infer formation conditions from the mineral assemblage (P-T range, melt composition, metamorphic grade)",
+          "Interpret the textural sequence: crystallization order, deformation events, alteration stages",
+          "Relate the petrography to the regional geological context and tectonic setting",
+          "Write the final report with annotated photomicrographs, mineral table, classification, and interpretation"
+        ],
+        "tags": ["science", "geology", "interpretation"]
+      }
+    ]
+  },
+  {
+    "chain_name": "electrode-characterization",
+    "description": "Characterize an electrode for electrochemistry: cyclic voltammetry, surface area, impedance spectroscopy, stability testing, and produce the electrode performance report.",
+    "domain": "science",
+    "tags": ["science", "process", "electrochemistry", "materials"],
+    "steps": [
+      {
+        "flow_name": "cyclic-voltammetry-scan",
+        "description": "Measure cyclic voltammograms at multiple scan rates to characterize the electrode's redox behavior.",
+        "inputs": [
+          {"name": "electrode-setup", "desc": "Working electrode, counter electrode, reference electrode, and electrolyte composition"},
+          {"name": "scan-parameters", "desc": "Potential window, scan rates (mV/s), and number of cycles"}
+        ],
+        "outputs": [
+          {"name": "cv-data", "desc": "Current-voltage curves at each scan rate with peak positions and currents"},
+          {"name": "redox-characterization", "desc": "Peak potentials, peak separation, reversibility assessment, and scan rate dependence"}
+        ],
+        "process": [
+          "Set up the three-electrode cell and purge with inert gas if needed",
+          "Record CVs at the lowest scan rate first, increasing through the series",
+          "Identify anodic and cathodic peak potentials and currents at each scan rate",
+          "Assess reversibility from peak separation and the peak current vs square root of scan rate plot"
+        ],
+        "tags": ["science", "electrochemistry", "voltammetry"]
+      },
+      {
+        "flow_name": "electroactive-surface-area-measurement",
+        "description": "Determine the electroactive surface area from capacitance or redox probe measurements.",
+        "inputs": [
+          {"name": "cv-data", "desc": "Cyclic voltammetry data from the scan rate study"},
+          {"name": "electrode-setup", "desc": "Electrode geometry and electrolyte"}
+        ],
+        "outputs": [
+          {"name": "surface-area", "desc": "Electroactive surface area in cm-squared and roughness factor relative to geometric area"},
+          {"name": "surface-area-method", "desc": "Method used (double-layer capacitance, Randles-Sevcik with a known redox probe)"}
+        ],
+        "process": [
+          "For capacitance method: measure charging current at multiple scan rates in non-faradaic region",
+          "Plot current vs scan rate and extract the double-layer capacitance from the slope",
+          "Convert capacitance to area using the standard specific capacitance for the material",
+          "For Randles-Sevcik: use peak current vs scan rate slope with a standard redox probe of known diffusion coefficient"
+        ],
+        "tags": ["science", "electrochemistry", "surface-area"]
+      },
+      {
+        "flow_name": "electrochemical-impedance-measurement",
+        "description": "Run electrochemical impedance spectroscopy and fit an equivalent circuit model.",
+        "inputs": [
+          {"name": "electrode-setup", "desc": "Cell configuration and electrolyte"},
+          {"name": "eis-parameters", "desc": "Frequency range, AC amplitude, and DC bias potential"}
+        ],
+        "outputs": [
+          {"name": "eis-spectra", "desc": "Nyquist and Bode plots of impedance vs frequency"},
+          {"name": "equivalent-circuit", "desc": "Best-fit circuit model with element values (Rs, Rct, Cdl, Warburg, CPE)"}
+        ],
+        "process": [
+          "Set the DC bias to the open circuit potential or a potential of interest",
+          "Sweep frequency from high (100 kHz) to low (10 mHz) with a small AC perturbation",
+          "Plot the Nyquist diagram and identify semicircles, linear regions, and their physical meaning",
+          "Fit an equivalent circuit model and report the charge transfer resistance, double-layer capacitance, and diffusion parameters"
+        ],
+        "tags": ["science", "electrochemistry", "impedance"]
+      },
+      {
+        "flow_name": "electrode-stability-test",
+        "description": "Assess the electrode's stability over extended cycling or constant operation.",
+        "inputs": [
+          {"name": "electrode-setup", "desc": "Cell configuration"},
+          {"name": "cv-data", "desc": "Baseline CV for comparison after aging"}
+        ],
+        "outputs": [
+          {"name": "stability-data", "desc": "Current or signal retention over time or cycle number"},
+          {"name": "degradation-analysis", "desc": "Rate of signal loss, failure mode identification, and operational lifetime estimate"}
+        ],
+        "process": [
+          "Run chronoamperometry at a fixed potential for the target duration",
+          "Alternatively run many CV cycles and compare the first and last cycles",
+          "Calculate the percent retention of peak current or response signal",
+          "Identify degradation modes: fouling, dissolution, structural damage, electrolyte decomposition"
+        ],
+        "tags": ["science", "electrochemistry", "stability"]
+      },
+      {
+        "flow_name": "electrode-performance-report",
+        "description": "Compile all electrochemical data into a performance report for the electrode.",
+        "inputs": [
+          {"name": "redox-characterization", "desc": "CV results"},
+          {"name": "surface-area", "desc": "Electroactive surface area"},
+          {"name": "equivalent-circuit", "desc": "EIS fit results"},
+          {"name": "stability-data", "desc": "Long-term stability data"}
+        ],
+        "outputs": [
+          {"name": "electrode-report", "desc": "Complete electrode characterization report with figures, tables, and performance summary"},
+          {"name": "performance-metrics", "desc": "Key metrics: sensitivity, linear range, detection limit, response time, stability"}
+        ],
+        "process": [
+          "Assemble the CV, EIS, and stability figures with consistent formatting",
+          "Tabulate the key performance metrics and compare against literature benchmarks",
+          "Identify the limiting factors for electrode performance",
+          "Write the report covering preparation, characterization, results, and recommendations"
+        ],
+        "tags": ["science", "electrochemistry", "reporting"]
+      }
+    ]
+  },
+  {
+    "chain_name": "pollen-analysis",
+    "description": "Analyze pollen assemblages from a sediment core: prepare samples, count and identify pollen, compute statistics, build the pollen diagram, interpret vegetation and climate, and produce the palynological report.",
+    "domain": "science",
+    "tags": ["science", "process", "palynology", "paleoclimate"],
+    "steps": [
+      {
+        "flow_name": "pollen-sample-preparation",
+        "description": "Process sediment samples to extract and concentrate pollen grains for microscopy.",
+        "inputs": [
+          {"name": "core-samples", "desc": "Sediment subsamples at defined depth intervals from the core"},
+          {"name": "preparation-protocol", "desc": "Chemical treatment sequence (HCl, HF, acetolysis, heavy liquid) based on sediment type"}
+        ],
+        "outputs": [
+          {"name": "prepared-slides", "desc": "Mounted slides with concentrated pollen residue and exotic marker grains"},
+          {"name": "preparation-log", "desc": "Sample weights, volumes of exotic marker added, and processing notes"}
+        ],
+        "process": [
+          "Add a known number of exotic marker grains (Lycopodium or Eucalyptus) to each sample for concentration calculations",
+          "Dissolve carbonates with HCl and silicates with HF as needed",
+          "Run acetolysis to remove cellulose and darken pollen walls for easier identification",
+          "Mount the residue on slides in glycerol jelly or silicone oil"
+        ],
+        "tags": ["science", "palynology", "sample-prep"]
+      },
+      {
+        "flow_name": "pollen-counting-identification",
+        "description": "Count pollen grains under the microscope and identify each to the lowest possible taxonomic level.",
+        "inputs": [
+          {"name": "prepared-slides", "desc": "Slides with concentrated pollen"},
+          {"name": "reference-collection", "desc": "Pollen morphology keys and reference slides for the study region"}
+        ],
+        "outputs": [
+          {"name": "pollen-counts", "desc": "Raw counts of each pollen taxon per sample with a minimum of 300 terrestrial grains"},
+          {"name": "identification-notes", "desc": "Difficult identifications, damaged grains, and non-pollen palynomorphs noted"}
+        ],
+        "process": [
+          "Scan traverse lines across the slide at 400x magnification",
+          "Identify each pollen grain using morphological features: aperture type and number, wall structure, size, shape",
+          "Count until at least 300 terrestrial pollen grains are reached per sample",
+          "Record non-pollen palynomorphs (spores, algae, charcoal) encountered during counting"
+        ],
+        "tags": ["science", "palynology", "counting"]
+      },
+      {
+        "flow_name": "pollen-percentage-concentration",
+        "description": "Convert raw counts to percentages and concentrations for each taxon.",
+        "inputs": [
+          {"name": "pollen-counts", "desc": "Raw counts per taxon per sample"},
+          {"name": "preparation-log", "desc": "Exotic marker counts and sample volumes for concentration calculation"}
+        ],
+        "outputs": [
+          {"name": "pollen-percentages", "desc": "Each taxon as a percentage of the total terrestrial pollen sum per sample"},
+          {"name": "pollen-concentrations", "desc": "Grains per cubic centimeter for each taxon calculated from the exotic marker ratio"}
+        ],
+        "process": [
+          "Define the pollen sum (typically terrestrial pollen, excluding aquatics and spores)",
+          "Calculate the percentage of each taxon relative to the pollen sum",
+          "Calculate concentrations using the ratio of counted pollen to counted exotic markers",
+          "If an age model exists, calculate pollen accumulation rates (grains per cm-squared per year)"
+        ],
+        "tags": ["science", "palynology", "statistics"]
+      },
+      {
+        "flow_name": "pollen-diagram-construction",
+        "description": "Build the pollen diagram showing taxon percentages or concentrations plotted against depth or age.",
+        "inputs": [
+          {"name": "pollen-percentages", "desc": "Percentage data for all taxa and samples"},
+          {"name": "core-samples", "desc": "Depth information for each sample"}
+        ],
+        "outputs": [
+          {"name": "pollen-diagram", "desc": "Standard pollen diagram with taxa grouped by vegetation type (trees, shrubs, herbs)"},
+          {"name": "pollen-zones", "desc": "Statistically or visually defined pollen zones marking assemblage changes"}
+        ],
+        "process": [
+          "Order taxa by ecological group: trees and shrubs (AP), herbs (NAP), aquatics, spores",
+          "Plot each taxon as a silhouette or bar against the depth/age axis",
+          "Apply zonation (CONISS or visual) to identify boundaries between distinct assemblages",
+          "Add the total pollen concentration and charcoal curves as summary tracks"
+        ],
+        "tags": ["science", "palynology", "visualization"]
+      },
+      {
+        "flow_name": "vegetation-climate-interpretation",
+        "description": "Interpret the pollen zones in terms of vegetation change and inferred climate conditions.",
+        "inputs": [
+          {"name": "pollen-diagram", "desc": "Completed pollen diagram with zones"},
+          {"name": "pollen-zones", "desc": "Zone boundaries and their defining taxa"},
+          {"name": "sample-context", "desc": "Regional vegetation, climate, and archaeological or geological context"}
+        ],
+        "outputs": [
+          {"name": "vegetation-reconstruction", "desc": "Reconstructed vegetation for each zone with dominant communities described"},
+          {"name": "climate-inference", "desc": "Inferred climate conditions (temperature, moisture) for each zone based on indicator taxa"}
+        ],
+        "process": [
+          "Describe the vegetation assemblage in each zone using modern analogue comparisons",
+          "Identify key indicator taxa for climate inference (e.g., thermophilous trees, steppe herbs)",
+          "Correlate zone boundaries with known climate events, archaeological phases, or disturbance history",
+          "Assess the role of human impact vs climate as drivers of vegetation change"
+        ],
+        "tags": ["science", "palynology", "interpretation"]
+      },
+      {
+        "flow_name": "palynological-report",
+        "description": "Write the complete palynological report with the diagram, interpretation, and data tables.",
+        "inputs": [
+          {"name": "pollen-diagram", "desc": "Final diagram"},
+          {"name": "vegetation-reconstruction", "desc": "Zone-by-zone vegetation description"},
+          {"name": "climate-inference", "desc": "Climate interpretations"}
+        ],
+        "outputs": [
+          {"name": "palynology-report", "desc": "Complete report including methods, diagram, interpretation, and raw data appendix"},
+          {"name": "pollen-data-archive", "desc": "Raw and processed pollen data in a standard format for repository submission"}
+        ],
+        "process": [
+          "Write the methods covering sampling, preparation, counting, and statistical procedures",
+          "Present the pollen diagram with zone descriptions and photomicrographs of key taxa",
+          "Discuss the vegetation and climate history in the context of regional records",
+          "Format the raw data for archival in a palynological database (European Pollen Database, Neotoma)"
+        ],
+        "tags": ["science", "palynology", "reporting"]
+      }
+    ]
+  },
+  {
+    "chain_name": "acoustic-emission-testing",
+    "description": "Monitor structural integrity with acoustic emission: install sensors, acquire data, filter and locate events, classify by waveform, assess damage severity, and produce the AE report.",
+    "domain": "science",
+    "tags": ["science", "process", "nondestructive-testing", "structural"],
+    "steps": [
+      {
+        "flow_name": "ae-sensor-installation",
+        "description": "Install acoustic emission sensors on the structure and verify coupling quality.",
+        "inputs": [
+          {"name": "structure-description", "desc": "Geometry, material, and loading conditions of the test article"},
+          {"name": "monitoring-objectives", "desc": "What damage or defect types to detect and the coverage area"}
+        ],
+        "outputs": [
+          {"name": "sensor-layout", "desc": "Sensor positions, types, coupling media, and preamplifier gains"},
+          {"name": "coupling-verification", "desc": "Pencil lead break test results confirming adequate sensitivity at each sensor"}
+        ],
+        "process": [
+          "Select sensor type and frequency range based on the material and expected source mechanisms",
+          "Determine sensor positions for source location coverage using the structure's wave velocity",
+          "Mount sensors with appropriate couplant and secure them against vibration",
+          "Perform pencil lead break tests at each sensor and at mid-points to verify sensitivity and wave speed"
+        ],
+        "tags": ["science", "ndt", "acoustic-emission"]
+      },
+      {
+        "flow_name": "ae-data-acquisition",
+        "description": "Acquire acoustic emission signals during loading and record waveforms with timing data.",
+        "inputs": [
+          {"name": "sensor-layout", "desc": "Installed sensor configuration"},
+          {"name": "acquisition-parameters", "desc": "Threshold, hit definition time, peak definition time, and sampling rate"}
+        ],
+        "outputs": [
+          {"name": "raw-ae-data", "desc": "Recorded AE hits with waveforms, timestamps, amplitudes, durations, and energy"},
+          {"name": "load-history", "desc": "Synchronized load or stress data for correlation with AE activity"}
+        ],
+        "process": [
+          "Set the amplitude threshold above the background noise floor",
+          "Configure hit definition timing parameters to separate discrete events",
+          "Begin loading the structure and record AE data synchronized with the load signal",
+          "Monitor hit rates in real time to detect sudden increases indicating damage onset"
+        ],
+        "tags": ["science", "ndt", "data-acquisition"]
+      },
+      {
+        "flow_name": "ae-event-filtering-location",
+        "description": "Filter noise from genuine AE events and locate the sources on the structure.",
+        "inputs": [
+          {"name": "raw-ae-data", "desc": "All recorded hits"},
+          {"name": "sensor-layout", "desc": "Sensor positions and measured wave velocities"}
+        ],
+        "outputs": [
+          {"name": "located-events", "desc": "AE events with computed source coordinates and location accuracy estimates"},
+          {"name": "noise-rejected", "desc": "Hits classified as electromagnetic interference, friction, or mechanical noise"}
+        ],
+        "process": [
+          "Apply amplitude, duration, and frequency filters to remove obvious noise hits",
+          "Use arrival time differences between sensors to compute source locations (triangulation)",
+          "Discard events that do not meet the minimum sensor trigger criterion for valid location",
+          "Map located events onto the structure geometry"
+        ],
+        "tags": ["science", "ndt", "source-location"]
+      },
+      {
+        "flow_name": "ae-waveform-classification",
+        "description": "Classify AE events by their waveform parameters to distinguish source mechanisms.",
+        "inputs": [
+          {"name": "located-events", "desc": "Filtered and located AE events with waveforms"},
+          {"name": "monitoring-objectives", "desc": "Expected damage types for classification categories"}
+        ],
+        "outputs": [
+          {"name": "classified-events", "desc": "Events labeled by source mechanism: matrix cracking, delamination, fiber breakage, friction, etc."},
+          {"name": "classification-statistics", "desc": "Event counts and energy by class over time and load level"}
+        ],
+        "process": [
+          "Extract waveform features: peak amplitude, rise time, duration, frequency centroid, counts",
+          "Apply pattern recognition (k-means, supervised classification, or decision boundaries) to group events",
+          "Assign physical meaning to each cluster based on known waveform signatures for the material",
+          "Track the evolution of each class with increasing load"
+        ],
+        "tags": ["science", "ndt", "classification"]
+      },
+      {
+        "flow_name": "ae-damage-severity-assessment",
+        "description": "Assess damage severity using AE intensity analysis and load history correlation.",
+        "inputs": [
+          {"name": "classified-events", "desc": "Events with source mechanism labels"},
+          {"name": "load-history", "desc": "Applied load or stress over time"},
+          {"name": "classification-statistics", "desc": "Cumulative event and energy data by class"}
+        ],
+        "outputs": [
+          {"name": "severity-assessment", "desc": "Damage severity rating based on AE intensity, Kaiser effect, and Felicity ratio"},
+          {"name": "ae-monitoring-report", "desc": "Complete AE report with setup, data, analysis, damage assessment, and recommendations"}
+        ],
+        "process": [
+          "Calculate cumulative AE energy and event count as functions of load",
+          "Evaluate the Kaiser effect: check whether AE resumes below the previous maximum load (Felicity ratio < 1 indicates damage)",
+          "Compute AE intensity (log of cumulative signal strength divided by area) for severity grading",
+          "Write the monitoring report covering the test setup, loading protocol, AE results, damage assessment, and structural recommendations"
+        ],
+        "tags": ["science", "ndt", "severity"]
+      }
+    ]
+  },
+  {
+    "chain_name": "stable-isotope-ecology",
+    "description": "Use stable isotopes to study ecological relationships: collect tissue samples, measure isotope ratios, construct the isotopic niche, compute trophic position, map the food web, and produce the isotope ecology report.",
+    "domain": "science",
+    "tags": ["science", "process", "ecology", "stable-isotopes"],
+    "steps": [
+      {
+        "flow_name": "isotope-tissue-sampling",
+        "description": "Collect and prepare tissue samples from organisms across trophic levels for isotope analysis.",
+        "inputs": [
+          {"name": "study-design", "desc": "Target species, trophic levels, sample sizes, and tissue types to collect"},
+          {"name": "site-description", "desc": "Habitat type, location, and baseline resource characterization"}
+        ],
+        "outputs": [
+          {"name": "tissue-samples", "desc": "Dried, ground tissue samples with species, tissue type, and collection metadata"},
+          {"name": "baseline-samples", "desc": "Primary producer and primary consumer samples for baseline isotope values"}
+        ],
+        "process": [
+          "Collect tissue samples from organisms at each target trophic level (producers, herbivores, predators)",
+          "Select the tissue type appropriate for the time scale of interest (muscle, liver, blood, feathers)",
+          "Dry samples at 60 degrees C, grind to a fine powder, and weigh aliquots into tin capsules",
+          "Include baseline organisms (e.g., filter feeders, primary producers) for trophic position calculation"
+        ],
+        "tags": ["science", "ecology", "sampling"]
+      },
+      {
+        "flow_name": "isotope-ratio-measurement",
+        "description": "Measure stable isotope ratios (delta-13C, delta-15N, and optionally delta-2H, delta-34S) by mass spectrometry.",
+        "inputs": [
+          {"name": "tissue-samples", "desc": "Prepared sample capsules"},
+          {"name": "baseline-samples", "desc": "Baseline organism capsules"}
+        ],
+        "outputs": [
+          {"name": "isotope-values", "desc": "Delta values for each sample with analytical precision (from replicate standards)"},
+          {"name": "quality-control", "desc": "Standard reference material results showing accuracy and precision of the run"}
+        ],
+        "process": [
+          "Combust samples in the elemental analyzer coupled to the isotope ratio mass spectrometer",
+          "Measure delta-13C and delta-15N for all samples with interspersed reference standards",
+          "Correct raw delta values to the international scale using two-point normalization",
+          "Assess precision from replicate standards and flag any outlier measurements"
+        ],
+        "tags": ["science", "ecology", "mass-spectrometry"]
+      },
+      {
+        "flow_name": "isotopic-niche-construction",
+        "description": "Construct the isotopic niche space for each species or group using bivariate isotope data.",
+        "inputs": [
+          {"name": "isotope-values", "desc": "Delta-13C and delta-15N values for all samples"}
+        ],
+        "outputs": [
+          {"name": "isotopic-niches", "desc": "Standard ellipse areas (SEA) and convex hull areas for each species or group"},
+          {"name": "niche-overlap-matrix", "desc": "Pairwise overlap between species niches in isotope space"}
+        ],
+        "process": [
+          "Plot delta-13C vs delta-15N for each species in bivariate isotope space",
+          "Compute standard ellipse areas corrected for sample size (SEAc) using Bayesian estimation",
+          "Calculate convex hull total area as a measure of population-level niche width",
+          "Compute pairwise niche overlap as the proportion of one species' ellipse inside another's"
+        ],
+        "tags": ["science", "ecology", "niche-analysis"]
+      },
+      {
+        "flow_name": "trophic-position-calculation",
+        "description": "Calculate the trophic position of each consumer relative to the isotopic baseline.",
+        "inputs": [
+          {"name": "isotope-values", "desc": "Consumer delta-15N values"},
+          {"name": "baseline-samples", "desc": "Baseline organism isotope values"},
+          {"name": "study-design", "desc": "Trophic discrimination factors to apply"}
+        ],
+        "outputs": [
+          {"name": "trophic-positions", "desc": "Estimated trophic position for each consumer species with uncertainty"},
+          {"name": "food-chain-length", "desc": "Maximum trophic position observed in the food web"}
+        ],
+        "process": [
+          "Determine the baseline delta-15N from primary consumers or a two-source baseline model",
+          "Apply the trophic discrimination factor (typically 3.4 per mil per trophic level for delta-15N)",
+          "Calculate trophic position: TP = baseline_trophic_level + (delta-15N_consumer minus delta-15N_baseline) / discrimination_factor",
+          "Propagate uncertainty from baseline variability and discrimination factor estimates"
+        ],
+        "tags": ["science", "ecology", "trophic"]
+      },
+      {
+        "flow_name": "food-web-mapping",
+        "description": "Map the food web structure from isotope data showing energy flow pathways.",
+        "inputs": [
+          {"name": "trophic-positions", "desc": "Trophic level estimates for each species"},
+          {"name": "isotopic-niches", "desc": "Niche positions showing carbon source use"},
+          {"name": "niche-overlap-matrix", "desc": "Overlap between species indicating shared resources"}
+        ],
+        "outputs": [
+          {"name": "food-web-diagram", "desc": "Visual food web with species positioned by delta-13C (x) and trophic position (y)"},
+          {"name": "dietary-overlap-analysis", "desc": "Which species share resources and the degree of competition implied"}
+        ],
+        "process": [
+          "Position each species on a biplot with delta-13C on the x-axis (carbon source) and trophic position on the y-axis",
+          "Draw links between consumers and likely prey based on isotopic mixing model outputs or literature diet data",
+          "Identify the dominant energy channels (e.g., pelagic vs benthic, C3 vs C4)",
+          "Highlight species with high dietary overlap that may compete for resources"
+        ],
+        "tags": ["science", "ecology", "food-web"]
+      },
+      {
+        "flow_name": "isotope-ecology-report",
+        "description": "Produce the stable isotope ecology report with the food web, niche analyses, and interpretation.",
+        "inputs": [
+          {"name": "food-web-diagram", "desc": "Mapped food web"},
+          {"name": "isotopic-niches", "desc": "Species niche metrics"},
+          {"name": "trophic-positions", "desc": "Trophic level estimates"},
+          {"name": "dietary-overlap-analysis", "desc": "Competition and resource partitioning analysis"}
+        ],
+        "outputs": [
+          {"name": "isotope-ecology-report", "desc": "Complete report covering sampling, analytical methods, food web, niche analysis, and ecological interpretation"},
+          {"name": "isotope-data-archive", "desc": "Raw isotope data formatted for repository submission"}
+        ],
+        "process": [
+          "Write the methods covering sampling design, laboratory procedures, and statistical analyses",
+          "Present the food web, niche plots, trophic position estimates, and overlap analysis",
+          "Discuss the ecological implications: energy flow, resource partitioning, food chain length, keystone roles",
+          "Format the raw data for archival in a public data repository"
+        ],
+        "tags": ["science", "ecology", "reporting"]
+      }
+    ]
+  }
+]

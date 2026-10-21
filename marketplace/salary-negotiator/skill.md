@@ -5,25 +5,26 @@ Takes your offer details, market data, experience level, and competing offers, t
 ## Execution Pattern: ORPA Loop
 
 ## Inputs
-- offer: object -- The offer you received: base salary, bonus structure, equity/stock options, benefits, PTO, start date, job title, and any other terms mentioned
-- role_details: object -- Job title, company name, company size (startup/mid/enterprise), location (for cost-of-living context), and whether remote/hybrid/onsite
-- your_profile: object -- Years of experience, current salary (if comfortable sharing), relevant skills or certifications, education level, and any unique value you bring (rare expertise, book of business, security clearance, etc.)
-- competing_offers: array -- (Optional) Other offers or active interview processes you have, with whatever details you're willing to share
-- constraints: object -- (Optional) Non-negotiables ("I need remote work", "I need to start after June 1"), dealbreakers ("I won't relocate"), and flexibility areas ("salary is most important" vs. "I'd trade salary for more PTO")
-- comfort_level: string -- (Optional) How comfortable you are negotiating: "never done it", "done it but hated it", "somewhat comfortable", "experienced negotiator"
+- `offer`: object -- The offer you received: base salary, bonus structure, equity/stock options, benefits, PTO, start date, job title, and any other terms mentioned
+- `role_details`: object -- Job title, company name, company size (startup/mid/enterprise), location (for cost-of-living context), and whether remote/hybrid/onsite
+- `your_profile`: object -- Years of experience, current salary (if comfortable sharing), relevant skills or certifications, education level, and any unique value you bring (rare expertise, book of business, security clearance, etc.)
+- `competing_offers`: array -- (Optional) Other offers or active interview processes you have, with whatever details you're willing to share
+- `constraints`: object -- (Optional) Non-negotiables ("I need remote work", "I need to start after June 1"), dealbreakers ("I won't relocate"), and flexibility areas ("salary is most important" vs. "I'd trade salary for more PTO")
+- `comfort_level`: string -- (Optional) How comfortable you are negotiating: "never done it", "done it but hated it", "somewhat comfortable", "experienced negotiator"
 
 ## Outputs
-- market_analysis: object -- Salary range for this role, location, and experience level, with sources and confidence level
-- negotiation_strategy: object -- Overall approach (what to ask for, what order, what to concede) with rationale
-- scripts: array -- Word-for-word scripts for each negotiation scenario: initial counter, responding to pushback, negotiating benefits, and accepting/declining
-- tactics_guide: object -- Common employer negotiation tactics explained with counter-strategies
-- decision_framework: object -- Side-by-side comparison of current offer vs. target, with total compensation calculation including benefits value
+- `market_analysis`: object -- Salary range for this role, location, and experience level, with sources and confidence level
+- `negotiation_strategy`: object -- Overall approach (what to ask for, what order, what to concede) with rationale
+- `scripts`: array -- Word-for-word scripts for each negotiation scenario: initial counter, responding to pushback, negotiating benefits, and accepting/declining
+- `tactics_guide`: object -- Common employer negotiation tactics explained with counter-strategies
+- `decision_framework`: object -- Side-by-side comparison of current offer vs. target, with total compensation calculation including benefits value
 
 ## Execution
 
 ### OBSERVE: Analyze the Offer and Your Position
-**Entry criteria:** An offer (even verbal or partial) and basic role details provided.
-**Actions:**
+### Entry Criteria
+An offer (even verbal or partial) and basic role details provided.
+### Actions
 1. Break down the total compensation package, not just base salary:
    - Base salary (annual, before tax).
    - Bonus: guaranteed vs. discretionary, percentage vs. fixed, when paid.
@@ -40,12 +41,15 @@ Takes your offer details, market data, experience level, and competing offers, t
 4. Identify what the employer values most about you (why they chose you over other candidates) -- this is your leverage anchor.
 5. Note any red flags in the offer: below-market base, unusually high "on-target earnings" that depend on unrealistic targets, vesting cliffs that require 4 years to see equity, benefits that don't start for 90 days.
 
-**Output:** Total compensation breakdown, leverage assessment, employer value anchor, and red flag list.
-**Quality gate:** Total comp is calculated (not just base salary). Leverage honestly assessed. Red flags identified.
+### Output
+Total compensation breakdown, leverage assessment, employer value anchor, and red flag list.
+### Quality Gate
+Total comp is calculated (not just base salary). Leverage honestly assessed. Red flags identified.
 
 ### REASON: Build the Negotiation Strategy
-**Entry criteria:** Offer analysis and leverage assessment complete.
-**Actions:**
+### Entry Criteria
+Offer analysis and leverage assessment complete.
+### Actions
 1. Determine the target: what should you ask for? Use market data to set three numbers:
    - **Walk-away number:** The minimum you'll accept. Below this, the job isn't worth taking. Factor in cost-of-living, commute costs, and opportunity cost of leaving current role.
    - **Target number:** What you'd be genuinely happy with. Typically 10-20% above the offer for strong leverage, 5-10% for moderate leverage.
@@ -64,12 +68,15 @@ Takes your offer details, market data, experience level, and competing offers, t
 4. If competing offers exist, plan how and when to mention them. Never bluff a competing offer you don't have. If you do have one, use it factually: "I have another offer at $X, and I'd prefer to work here. Can you match or come closer?"
 5. Decide on communication channel: email gives you time to think and creates a paper trail. Phone or in-person lets you read tone and build rapport. Recommend email for the counter-offer, phone for the discussion.
 
-**Output:** Three-number range (walk-away, target, aspirational), negotiation sequence, anticipated pushback with counters, communication plan.
-**Quality gate:** All three numbers are market-justified. Pushback responses cover the 5 most common employer tactics. Strategy matches the user's comfort level.
+### Output
+Three-number range (walk-away, target, aspirational), negotiation sequence, anticipated pushback with counters, communication plan.
+### Quality Gate
+All three numbers are market-justified. Pushback responses cover the 5 most common employer tactics. Strategy matches the user's comfort level.
 
 ### PLAN: Write the Scripts
-**Entry criteria:** Strategy finalized.
-**Actions:**
+### Entry Criteria
+Strategy finalized.
+### Actions
 1. Write the initial counter-offer script (email format):
    - Open with enthusiasm: "Thank you for the offer. I'm genuinely excited about the opportunity to [specific thing about the role]."
    - State your case: "Based on my [experience/skills/unique value] and the market rate for this role in [location], I was hoping we could discuss the compensation."
@@ -98,12 +105,15 @@ Takes your offer details, market data, experience level, and competing offers, t
    - "Never done it" users: more detailed, with notes on tone and pacing. Include what to do if you get nervous (it's okay to pause, ask for a moment, or say you'll follow up via email).
    - "Experienced" users: concise frameworks they can personalize.
 
-**Output:** Complete script library covering every negotiation scenario, tailored to user's comfort level.
-**Quality gate:** Every script sounds like a real human (not a template). Tone is confident but not aggressive. All scripts include graceful fallback positions.
+### Output
+Complete script library covering every negotiation scenario, tailored to user's comfort level.
+### Quality Gate
+Every script sounds like a real human (not a template). Tone is confident but not aggressive. All scripts include graceful fallback positions.
 
 ### ACT: Deliver the Strategy Package
-**Entry criteria:** Scripts and strategy complete.
-**Actions:**
+### Entry Criteria
+Scripts and strategy complete.
+### Actions
 1. Present the market analysis first: "Here's what this role pays in your market, and here's where your offer falls." This gives the user confidence that their ask is reasonable.
 2. Walk through the negotiation strategy: what to ask for, in what order, and why.
 3. Deliver scripts for each scenario with coaching notes: "Send this email first. They'll likely respond with X. Here's what to say."
@@ -116,8 +126,19 @@ Takes your offer details, market data, experience level, and competing offers, t
 6. Provide the post-negotiation checklist: get everything in writing, review the formal offer letter against verbal agreements, check benefits enrollment deadlines, plan your resignation from current job (if applicable).
 7. Remind the user: "Negotiating is normal. Employers expect it. No one has ever had an offer rescinded for asking politely. The worst they can say is no, and then you're right back where you started."
 
-**Output:** Complete negotiation package: market analysis, strategy, scripts, tactics guide, decision framework, and post-negotiation checklist.
-**Quality gate:** User understands their market value. Scripts are ready to use. User knows what to do in every likely scenario. Decision framework makes the tradeoffs clear.
+### Output
+Complete negotiation package: market analysis, strategy, scripts, tactics guide, decision framework, and post-negotiation checklist.
+### Quality Gate
+User understands their market value. Scripts are ready to use. User knows what to do in every likely scenario. Decision framework makes the tradeoffs clear.
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Takes your offer details, market data, experience level, and competing offers, t, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 Done when: (1) total compensation is broken down and valued, (2) market salary range is established with sources, (3) negotiation strategy with three target numbers is set, (4) scripts cover initial counter, pushback responses, benefits negotiation, acceptance, and decline, (5) common employer tactics are explained, (6) decision framework compares offer scenarios side by side.
@@ -163,11 +184,11 @@ Done when: (1) total compensation is broken down and valued, (2) market salary r
 
 ### Negotiation Sequence (Order Matters)
 
-1. Base salary — compounds into future raises, bonuses, 401(k) matches
-2. Signing bonus — one-time cost; easier to approve when base is "firm"
+1. Base salary  --  compounds into future raises, bonuses, 401(k) matches
+2. Signing bonus  --  one-time cost; easier to approve when base is "firm"
 3. Equity / bonus structure
 4. PTO, start date, title, remote flexibility
-5. Professional development budget, WFH stipend (easy concessions — save for last)
+5. Professional development budget, WFH stipend (easy concessions  --  save for last)
 
 ### Common Employer Tactics + Counter-Strategies
 

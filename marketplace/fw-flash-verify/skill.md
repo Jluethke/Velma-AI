@@ -60,6 +60,15 @@ Flash result and identity check.
 
 ---
 
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Flash firmware only after bring-up passes, prove the exact artifact runs, and me, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
+
 ## Exit Criteria
 
 DONE when the board runs the exact built artifact and every load-driving output is measured de-energized through reset, boot, and watchdog reset.

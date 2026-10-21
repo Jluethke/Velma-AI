@@ -61,6 +61,15 @@ Cable list with cited far-end identities.
 
 ---
 
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Select mating housings, terminals, seals, and crimp tools for both ends of every, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
+
 ## Exit Criteria
 
 DONE when every cable end has a datasheet-sourced housing, terminals, seals where needed, and crimp tool, and every far-end connector identity is cited or flagged unidentified.

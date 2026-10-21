@@ -2,7 +2,7 @@
 
 > **Starter Skill** -- Free to use. Royalties to original creator on derivatives. Build on this.
 
-Before you start, imagine it already failed. What went wrong? You describe your plan, then we walk through the future where it collapsed and work backward to figure out why. Your optimism is hiding failure modes from you. Let's find them before they find you.
+Before you start, imagine it already failed. What went wrong? You describe your plan, then we walk through the future where it collapsed and work backward to figure out why. Your optimizm is hiding failure modes from you. Let's find them before they find you.
 
 ## Execution Pattern: ORPA Loop
 
@@ -34,8 +34,7 @@ ACT     --> You leave with a kill list of vulnerabilities and what to do about e
 
 ### OBSERVE: Lay Out the Plan
 
-**Actions:**
-
+### Actions
 1. **Get the plan on the table.** Ask: "What are you about to do? Walk me through it like you're explaining it to someone who wants to invest in it." Let them sell it. The selling reveals what they think matters.
 
 2. **Pin down success.** Ask: "If this goes perfectly -- best realistic case, not fantasy -- what does that look like in specific terms? What's the number, the date, the outcome you'd point to and say 'it worked'?" Vague success = vague planning.
@@ -44,14 +43,14 @@ ACT     --> You leave with a kill list of vulnerabilities and what to do about e
 
 4. **Find the unspoken assumptions.** Ask: "What has to go RIGHT for this to work? Not what you're doing -- what has to happen that you don't fully control?" This surfaces dependencies they've internalized as certainties.
 
-**Quality gate:** The plan is specific enough to fail in specific ways. "Make more money" can't be premortemed. "Launch the course by June and get 200 signups" can.
+### Quality Gate
+The plan is specific enough to fail in specific ways. "Make more money" can't be premortemed. "Launch the course by June and get 200 signups" can.
 
 ---
 
 ### REASON: The Failure Autopsy
 
-**Actions:**
-
+### Actions
 1. **Set the scene.** Say: "It's [their timeline]. The plan failed. Not a little -- it really didn't work. You're sitting there looking at the wreckage. I want you to tell me the story of what happened. What went wrong first?"
 
 2. **Keep pulling the thread.** After each failure they name, ask: "And then what happened? What did that cause?" Follow the cascade. Most plans don't die from one blow -- they die from a chain reaction the planner never traced.
@@ -64,14 +63,14 @@ ACT     --> You leave with a kill list of vulnerabilities and what to do about e
 
 4. **Check for the comfortable lie.** Ask: "Is there a part of this plan where you're telling yourself 'it'll probably be fine' without actually having a reason to believe that?" The comfortable lie is the #1 killer of plans.
 
-**Quality gate:** At least 5 distinct failure modes identified. At least one is about the person, not the circumstances. At least one was uncomfortable to say out loud.
+### Quality Gate
+At least 5 distinct failure modes identified. At least one is about the person, not the circumstances. At least one was uncomfortable to say out loud.
 
 ---
 
 ### PLAN: Sort the Wreckage
 
-**Actions:**
-
+### Actions
 1. **Categorize each failure mode.** For every failure they surfaced, ask: "Is this something you can prevent, something you can prepare for, or something you just have to accept might happen?" Three buckets:
    - **Preventable:** You can take action NOW to eliminate this risk entirely.
    - **Mitigatable:** You can't prevent it, but you can reduce the damage or have a backup plan.
@@ -85,14 +84,14 @@ ACT     --> You leave with a kill list of vulnerabilities and what to do about e
 
 5. **Recalibrate confidence.** Ask: "Now that you've seen all of this -- the preventable stuff, the contingencies, the real risks -- what's your confidence percentage now? Higher or lower than before?"
 
-**Quality gate:** Every failure mode is categorized. Preventable ones have specific actions. Mitigatable ones have tripwires and Plan Bs. Acceptable risks are consciously chosen.
+### Quality Gate
+Every failure mode is categorized. Preventable ones have specific actions. Mitigatable ones have tripwires and Plan Bs. Acceptable risks are consciously chosen.
 
 ---
 
 ### ACT: Walk Out Stronger
 
-**Actions:**
-
+### Actions
 1. **Deliver the vulnerability map.** List every failure mode with its category, the specific action or contingency, and a deadline.
 
 2. **Highlight the top 3.** Ask: "If you could only protect against three of these, which three would you choose?" This forces prioritization when everything feels urgent.
@@ -103,7 +102,17 @@ ACT     --> You leave with a kill list of vulnerabilities and what to do about e
 
 5. **Close the loop.** If confidence went up after the exercise, validate it: seeing risks clearly often increases real confidence because you're no longer fighting unnamed anxiety. If confidence went down, that's valuable too -- better to know now than after you've committed resources.
 
-**Output:** Vulnerability map, top 3 priorities, tonight's action, re-check date.
+### Output
+Vulnerability map, top 3 priorities, tonight's action, re-check date.
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Imagine your plan already failed. Work backward to find preventable, mitigatable, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 
@@ -129,7 +138,7 @@ Done when: (1) at least 5 failure modes are identified and categorized, (2) prev
 | Category | Description | Example |
 |---|---|---|
 | Preventable | Eliminable with action NOW | Not having a backup contact list |
-| Mitigatable | Can't prevent; can limit damage | Market downturn — maintain 3-month runway |
+| Mitigatable | Can't prevent; can limit damage | Market downturn  --  maintain 3-month runway |
 | Acceptable risk | Eyes-open choice to proceed | Competitor may copy the idea |
 
 ### Premortem Question Bank
@@ -152,7 +161,7 @@ Done when: (1) at least 5 failure modes are identified and categorized, (2) prev
 |---|---|
 | Confidence went UP after premortem | Naming fears reduces ambient anxiety; real confidence increased |
 | Confidence stayed same | Risks already consciously accounted for; well-calibrated |
-| Confidence went DOWN | Previously unexamined risks surfaced; valuable — better now than later |
+| Confidence went DOWN | Previously unexamined risks surfaced; valuable  --  better now than later |
 
 ### Top-3 Priority Forcing Question
 

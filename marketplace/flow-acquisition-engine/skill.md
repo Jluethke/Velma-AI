@@ -5,24 +5,25 @@ Systematically decomposes any learnable flow into prerequisite-ordered sub-flows
 ## Execution Pattern: Phase Pipeline
 
 ## Inputs
-- target_skill: string -- The flow to learn (e.g., "Python programming," "public speaking," "financial modeling")
-- current_level: string -- Self-assessed starting point: "none," "beginner," "intermediate," "advanced"
-- target_proficiency: string -- Desired end state: "functional" (can do it), "competent" (can do it well), "expert" (can teach it and handle edge cases)
-- available_hours_per_week: number -- Realistic weekly time commitment for learning and practice
-- learning_preferences: object -- Preferred learning modes (reading, video, hands-on, social), constraints (no paid courses, offline only, etc.)
+- `target_skill`: string -- The flow to learn (e.g., "Python programming," "public speaking," "financial modeling")
+- `current_level`: string -- Self-assessed starting point: "none," "beginner," "intermediate," "advanced"
+- `target_proficiency`: string -- Desired end state: "functional" (can do it), "competent" (can do it well), "expert" (can teach it and handle edge cases)
+- `available_hours_per_week`: number -- Realistic weekly time commitment for learning and practice
+- `learning_preferences`: object -- Preferred learning modes (reading, video, hands-on, social), constraints (no paid courses, offline only, etc.)
 
 ## Outputs
-- skill_assessment: object -- Diagnostic evaluation of current sub-flow proficiency levels
-- learning_roadmap: object -- Ordered sequence of sub-flows with time estimates and dependency graph
-- curriculum: array -- Learning resources and exercises per sub-flow, organized by difficulty tier
-- practice_exercises: array -- Concrete exercises with expected outputs, hints, and self-evaluation rubrics
-- proficiency_evaluation: object -- Mastery test per sub-flow with pass criteria and gap identification
+- `skill_assessment`: object -- Diagnostic evaluation of current sub-flow proficiency levels
+- `learning_roadmap`: object -- Ordered sequence of sub-flows with time estimates and dependency graph
+- `curriculum`: array -- Learning resources and exercises per sub-flow, organized by difficulty tier
+- `practice_exercises`: array -- Concrete exercises with expected outputs, hints, and self-evaluation rubrics
+- `proficiency_evaluation`: object -- Mastery test per sub-flow with pass criteria and gap identification
 
 ## Execution
 
 ### Phase 1: ASSESS -- Diagnostic Proficiency Evaluation
-**Entry criteria:** Target flow and self-assessed level provided.
-**Actions:**
+### Entry Criteria
+Target flow and self-assessed level provided.
+### Actions
 1. Decompose the target flow into 5-15 fundamental sub-flows. Use domain-standard taxonomies where they exist (e.g., programming: syntax, data structures, algorithms, debugging, architecture, testing).
 2. For each sub-flow, generate 2-3 diagnostic questions or challenges:
    - **Recognition level:** "Can you identify what [concept] means when you see it?"
@@ -36,12 +37,15 @@ Systematically decomposes any learnable flow into prerequisite-ordered sub-flows
    - **Expert:** Intuitive understanding, innovates, teaches others.
 4. Identify the gap between current level and target proficiency for each sub-flow.
 
-**Output:** Proficiency matrix: sub-flow x current level x target level x gap size.
-**Quality gate:** All sub-flows have an assessed level. Gap sizes are ranked. The biggest gaps are identified as priority learning areas.
+### Output
+Proficiency matrix: sub-flow x current level x target level x gap size.
+### Quality Gate
+All sub-flows have an assessed level. Gap sizes are ranked. The biggest gaps are identified as priority learning areas.
 
 ### Phase 2: ROADMAP -- Prerequisite-Ordered Learning Sequence
-**Entry criteria:** Proficiency matrix with gap analysis exists.
-**Actions:**
+### Entry Criteria
+Proficiency matrix with gap analysis exists.
+### Actions
 1. Build a dependency graph of sub-flows. Identify prerequisites: which sub-flows must be learned before others? (E.g., "variables and types" before "functions," "functions" before "object-oriented programming.")
 2. Topologically sort the sub-flows: learning order that respects all prerequisites.
 3. Estimate time to bridge each gap based on:
@@ -52,12 +56,15 @@ Systematically decomposes any learnable flow into prerequisite-ordered sub-flows
 4. Create milestones: group sub-flows into learning phases (each phase: 1-4 weeks depending on complexity).
 5. Identify "high-leverage sub-flows" -- sub-flows that unlock multiple downstream flows. Prioritize these.
 
-**Output:** Ordered learning roadmap with phases, time estimates, milestones, and dependency graph.
-**Quality gate:** No sub-flow is scheduled before its prerequisites. Total estimated time is feasible given available hours. At least one milestone every 2 weeks to maintain motivation.
+### Output
+Ordered learning roadmap with phases, time estimates, milestones, and dependency graph.
+### Quality Gate
+No sub-flow is scheduled before its prerequisites. Total estimated time is feasible given available hours. At least one milestone every 2 weeks to maintain motivation.
 
 ### Phase 3: CURRICULUM -- Resources and Progressive Exercises
-**Entry criteria:** Ordered roadmap exists.
-**Actions:**
+### Entry Criteria
+Ordered roadmap exists.
+### Actions
 1. For each sub-flow, generate a learning sequence across three tiers:
    - **Tier 1 (Understand):** Concepts, mental models, worked examples. Focus: "What is this and why does it matter?"
    - **Tier 2 (Apply):** Guided exercises with scaffolding. Focus: "Can I do this with support?"
@@ -69,12 +76,15 @@ Systematically decomposes any learnable flow into prerequisite-ordered sub-flows
 3. Apply the interleaving principle: after every 3 sub-flows, include a "synthesis exercise" that requires combining them.
 4. Apply spaced repetition: schedule review exercises for previously learned sub-flows at increasing intervals (1 day, 3 days, 7 days, 14 days, 30 days).
 
-**Output:** Complete curriculum: learning resources, exercises per tier per sub-flow, synthesis exercises, spaced repetition schedule.
-**Quality gate:** Every sub-flow has exercises at all three tiers. Each exercise has clear expected output and self-evaluation criteria. Synthesis exercises exist every 3 sub-flows.
+### Output
+Complete curriculum: learning resources, exercises per tier per sub-flow, synthesis exercises, spaced repetition schedule.
+### Quality Gate
+Every sub-flow has exercises at all three tiers. Each exercise has clear expected output and self-evaluation criteria. Synthesis exercises exist every 3 sub-flows.
 
 ### Phase 4: PRACTICE -- Guided Deliberate Practice
-**Entry criteria:** Curriculum generated for current learning phase.
-**Actions:**
+### Entry Criteria
+Curriculum generated for current learning phase.
+### Actions
 1. Present exercises from the current sub-flow and tier. Start at the tier matching the user's assessed level (don't make an intermediate learner do beginner exercises for sub-flows they've passed).
 2. For each exercise:
    - State the challenge clearly with all necessary context.
@@ -88,12 +98,15 @@ Systematically decomposes any learnable flow into prerequisite-ordered sub-flows
    - Just outside comfort zone: if success rate is >80%, increase difficulty. If <50%, decrease difficulty.
 4. Track exercise completion and success rate per sub-flow.
 
-**Output:** Completed exercises with feedback, success rates per sub-flow, adjusted difficulty recommendations.
-**Quality gate:** User has attempted all exercises in the current tier. Success rate is recorded. If success rate >80%, advance to next tier. If <50%, remediation exercises generated.
+### Output
+Completed exercises with feedback, success rates per sub-flow, adjusted difficulty recommendations.
+### Quality Gate
+User has attempted all exercises in the current tier. Success rate is recorded. If success rate >80%, advance to next tier. If <50%, remediation exercises generated.
 
 ### Phase 5: EVALUATE -- Mastery Test and Gap Remediation
-**Entry criteria:** Current learning phase exercises completed.
-**Actions:**
+### Entry Criteria
+Current learning phase exercises completed.
+### Actions
 1. Generate a mastery test for the completed sub-flows:
    - 2-3 application-level questions (use the concept correctly)
    - 1-2 transfer-level questions (apply in unfamiliar context)
@@ -104,13 +117,24 @@ Systematically decomposes any learnable flow into prerequisite-ordered sub-flows
    - **Fail (<50%):** Sub-flow not yet learned. Return to Tier 2 exercises with additional scaffolding.
 3. Update the proficiency matrix with new assessment data.
 4. If all sub-flows in the current phase are passed: advance to next roadmap phase.
-5. If the entire roadmap is complete: final comprehensive evaluation across all sub-flows.
+5. If the entire roadmap is complete: final full evaluation across all sub-flows.
 
-**Output:** Mastery evaluation with scores, gap analysis, remediation plan or advancement recommendation.
-**Quality gate:** Every completed sub-flow has a mastery score. Gaps are specific (not "needs improvement" but "struggles with [specific concept] in [specific context]"). Remediation exercises target the exact gap.
+### Output
+Mastery evaluation with scores, gap analysis, remediation plan or advancement recommendation.
+### Quality Gate
+Every completed sub-flow has a mastery score. Gaps are specific (not "needs improvement" but "struggles with [specific concept] in [specific context]"). Remediation exercises target the exact gap.
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Structured flow acquisition engine that assesses current proficiency, decomposes, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
-The flow is complete when: (1) all sub-flows in the roadmap are assessed at or above target proficiency level, OR (2) the user has completed all phases and received a final comprehensive evaluation with remaining gap analysis for self-directed continuation.
+The flow is complete when: (1) all sub-flows in the roadmap are assessed at or above target proficiency level, OR (2) the user has completed all phases and received a final full evaluation with remaining gap analysis for self-directed continuation.
 
 ## Error Handling
 | Phase | Failure Mode | Response |
@@ -178,3 +202,7 @@ The flow tracks:
 - Time spent per sub-flow (actual vs. estimated)
 - Plateau detection (same score on 3+ consecutive attempts)
 - Spaced repetition schedule and review compliance
+
+---
+
+Copyright 2024-present The Wayfinder Trust. All rights reserved.

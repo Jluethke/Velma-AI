@@ -1,28 +1,29 @@
 # Pet Care Guide
 
-Takes your pet type (dog, cat, bird, fish, reptile, small animal), breed, age, and living situation, then provides a comprehensive care schedule covering feeding, exercise, grooming, vet visits, vaccinations, dental care, and behavioral milestones. Answers common questions: "Is this behavior normal?" "What should I feed them at this age?" "When do they need shots?" Designed for new pet owners and people who inherited a pet and don't know the basics.
+Takes your pet type (dog, cat, bird, fish, reptile, small animal), breed, age, and living situation, then provides a full care schedule covering feeding, exercise, grooming, vet visits, vaccinations, dental care, and behavioral milestones. Answers common questions: "Is this behavior normal?" "What should I feed them at this age?" "When do they need shots?" Designed for new pet owners and people who inherited a pet and don't know the basics.
 
 ## Execution Pattern: ORPA Loop
 
 ## Inputs
-- pet: object -- Species, breed (or "mixed/unknown"), age (or estimate), weight, sex, spayed/neutered status
-- living_situation: object -- Home type (apartment, house with yard, rural property), climate, other pets in household, children in household (with ages)
-- experience: string -- Owner's pet experience level: first-time owner, had pets as a kid, experienced owner new to this species, lifelong pet person
-- concerns: array -- (Optional) Specific worries or questions: behavioral issues, dietary uncertainty, upcoming life changes (baby, moving, new pet), health symptoms
-- history: object -- (Optional) Known medical history, vaccination records, previous diet, rescue/shelter background, known trauma or behavioral flags
+- `pet`: object -- Species, breed (or "mixed/unknown"), age (or estimate), weight, sex, spayed/neutered status
+- `living_situation`: object -- Home type (apartment, house with yard, rural property), climate, other pets in household, children in household (with ages)
+- `experience`: string -- Owner's pet experience level: first-time owner, had pets as a kid, experienced owner new to this species, lifelong pet person
+- `concerns`: array -- (Optional) Specific worries or questions: behavioral issues, dietary uncertainty, upcoming life changes (baby, moving, new pet), health symptoms
+- `history`: object -- (Optional) Known medical history, vaccination records, previous diet, rescue/shelter background, known trauma or behavioral flags
 
 ## Outputs
-- care_schedule: object -- Daily, weekly, monthly, and annual care tasks organized as a calendar-friendly schedule
-- feeding_plan: object -- What to feed, how much, how often, treats policy, foods to absolutely avoid
-- health_roadmap: object -- Vaccination schedule, vet visit timeline, dental care plan, parasite prevention, spay/neuter guidance if applicable
-- behavior_guide: object -- What's normal at this age/breed, warning signs, socialization milestones, training priorities
-- emergency_reference: object -- Poison hotline, emergency vet criteria (when to go NOW vs. monitor), first aid basics
+- `care_schedule`: object -- Daily, weekly, monthly, and annual care tasks organized as a calendar-friendly schedule
+- `feeding_plan`: object -- What to feed, how much, how often, treats policy, foods to absolutely avoid
+- `health_roadmap`: object -- Vaccination schedule, vet visit timeline, dental care plan, parasite prevention, spay/neuter guidance if applicable
+- `behavior_guide`: object -- What's normal at this age/breed, warning signs, socialization milestones, training priorities
+- `emergency_reference`: object -- Poison hotline, emergency vet criteria (when to go NOW vs. monitor), first aid basics
 
 ## Execution
 
 ### OBSERVE: Build the Pet Profile
-**Entry criteria:** Pet species, approximate age, and living situation provided.
-**Actions:**
+### Entry Criteria
+Pet species, approximate age, and living situation provided.
+### Actions
 1. Identify the pet's life stage: neonatal, puppy/kitten/juvenile, adolescent, adult, senior. Each stage has radically different needs. A 10-week-old puppy and a 10-year-old dog are completely different care situations.
 2. Research breed-specific characteristics: energy level, common health predispositions, temperament norms, size expectations, coat type and grooming needs. For mixed breeds, identify likely dominant traits.
 3. Assess the living environment: apartment dogs need more structured exercise than yard dogs. Indoor cats need environmental enrichment. Fish tank size determines stocking limits. Climate affects outdoor time for all species.
@@ -30,12 +31,15 @@ Takes your pet type (dog, cat, bird, fish, reptile, small animal), breed, age, a
 5. Flag any immediate concerns: if the pet is newly adopted, very young, showing symptoms, or has unknown history, prioritize a vet visit recommendation before anything else.
 6. For rescue/shelter pets: acknowledge the decompression period (3-3-3 rule for dogs: 3 days overwhelm, 3 weeks settling, 3 months true personality). Adjust expectations accordingly.
 
-**Output:** Complete pet profile with life stage, breed characteristics, environment assessment, household dynamics, and priority flags.
-**Quality gate:** Life stage is correctly identified. Breed predispositions are noted. Immediate vet needs are flagged.
+### Output
+Complete pet profile with life stage, breed characteristics, environment assessment, household dynamics, and priority flags.
+### Quality Gate
+Life stage is correctly identified. Breed predispositions are noted. Immediate vet needs are flagged.
 
 ### REASON: Design the Care Plan
-**Entry criteria:** Pet profile complete.
-**Actions:**
+### Entry Criteria
+Pet profile complete.
+### Actions
 1. **Feeding plan** by life stage:
    - Puppies/kittens: 3-4 meals/day, specific caloric needs by weight and expected adult size, when to transition to adult food.
    - Adults: 2 meals/day for dogs (1 for some breeds), measured portions based on weight and activity, quality indicators for commercial food.
@@ -47,12 +51,15 @@ Takes your pet type (dog, cat, bird, fish, reptile, small animal), breed, age, a
 5. **Health calendar**: core vaccinations by age (DHPP and rabies for dogs, FVRCP and rabies for cats), booster schedule, annual exam timing, parasite prevention (flea, tick, heartworm by region), dental cleaning recommendations.
 6. **Behavioral milestones**: what to expect at each life stage. Puppy teething at 3-6 months, adolescent regression at 6-18 months, cat territorial behavior at maturity, senior cognitive changes. When behavior is normal development vs. when it's a problem.
 
-**Output:** Complete care plan organized by daily, weekly, monthly, and annual tasks. Feeding specifics, health calendar, exercise plan, grooming schedule, and behavioral expectations.
-**Quality gate:** Feeding amounts are specific to weight and age, not generic. Vaccination schedule matches species and regional norms. Exercise plan is realistic for the owner's living situation.
+### Output
+Complete care plan organized by daily, weekly, monthly, and annual tasks. Feeding specifics, health calendar, exercise plan, grooming schedule, and behavioral expectations.
+### Quality Gate
+Feeding amounts are specific to weight and age, not generic. Vaccination schedule matches species and regional norms. Exercise plan is realistic for the owner's living situation.
 
 ### PLAN: Anticipate and Prevent
-**Entry criteria:** Care plan designed.
-**Actions:**
+### Entry Criteria
+Care plan designed.
+### Actions
 1. **Pet-proofing checklist** for the home: toxic plants to remove, chemicals to secure, small objects to pick up (puppies and birds), window and balcony safety (cats), electrical cord management, trash can security.
 2. **Training priorities** ranked by urgency:
    - Dogs: potty training (immediate), bite inhibition (immediate), name response, leash walking, basic commands (sit, stay, come), crate training.
@@ -63,12 +70,15 @@ Takes your pet type (dog, cat, bird, fish, reptile, small animal), breed, age, a
 5. **Cost forecasting**: estimated annual cost breakdown: food, routine vet care, vaccinations, parasite prevention, grooming, supplies, emergency fund recommendation. Breed-specific costs (bulldogs have higher vet bills, long-haired cats need more grooming).
 6. **Emergency preparedness**: identify nearest emergency vet (24-hour), save poison control number (ASPCA: 888-426-4435 in US), build a pet first-aid kit list, know the signs that mean "go to the vet now" vs. "monitor and call in the morning."
 
-**Output:** Pet-proofing checklist, training priority list, socialization plan, upcoming milestones, annual cost estimate, and emergency reference card.
-**Quality gate:** Pet-proofing covers species-specific hazards. Training priorities are age-appropriate. Emergency vet is identified.
+### Output
+Pet-proofing checklist, training priority list, socialization plan, upcoming milestones, annual cost estimate, and emergency reference card.
+### Quality Gate
+Pet-proofing covers species-specific hazards. Training priorities are age-appropriate. Emergency vet is identified.
 
 ### ACT: Deliver the Guide
-**Entry criteria:** Full care plan, prevention plan, and emergency reference assembled.
-**Actions:**
+### Entry Criteria
+Full care plan, prevention plan, and emergency reference assembled.
+### Actions
 1. Organize the care schedule as a practical daily routine:
    - Morning: feed, walk/exercise, fresh water.
    - Midday: check in, play session (if home), potty break (puppies).
@@ -81,8 +91,19 @@ Takes your pet type (dog, cat, bird, fish, reptile, small animal), breed, age, a
 4. Provide the "new owner FAQ" for the species: the 10 most common panicked-Google-at-midnight questions and their answers (puppy breathing fast while sleeping is normal, cat knocking things off tables is normal, fish at the top of tank may need water change).
 5. Include a "things your vet should know" prep sheet: list of questions to ask at the first visit, what records to bring, what to observe before the appointment.
 
-**Output:** Complete, actionable pet care guide with daily routine, feeding specifics, health calendar, behavior guide, emergency reference, and vet visit prep.
-**Quality gate:** Every instruction is specific enough to follow without googling. Urgency levels are clear on health concerns. Schedule is realistic for the owner's experience level.
+### Output
+Complete, actionable pet care guide with daily routine, feeding specifics, health calendar, behavior guide, emergency reference, and vet visit prep.
+### Quality Gate
+Every instruction is specific enough to follow without googling. Urgency levels are clear on health concerns. Schedule is realistic for the owner's experience level.
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Takes your pet type (dog, cat, bird, fish, reptile, small animal), breed, age, a, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 Done when: (1) daily care routine is outlined with specific feeding, exercise, and grooming instructions, (2) health calendar covers vaccinations, vet visits, and parasite prevention for at least the next 12 months, (3) behavioral expectations are set for the pet's current life stage, (4) emergency reference card is provided with poison control and vet-now criteria, (5) any specific concerns from the owner are addressed with clear next steps.

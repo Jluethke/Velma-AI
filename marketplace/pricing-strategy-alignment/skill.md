@@ -1,6 +1,6 @@
 # Pricing Strategy Alignment
 
-**One-line description:** Product and finance each submit their real pricing constraints — competitive pressure, margin requirements, customer sensitivity — AI models the tradeoffs and produces a strategy both sides can defend to the board.
+**One-line description:** Product and finance each submit their real pricing constraints  --  competitive pressure, margin requirements, customer sensitivity  --  AI models the tradeoffs and produces a strategy both sides can defend to the board.
 
 **Execution Pattern:** Phase Pipeline
 
@@ -31,7 +31,7 @@
 ## Outputs
 - `margin_viability_assessment` (object): Whether the proposed pricing direction is viable given margin requirements.
 - `competitive_position_check` (object): Whether the proposed pricing maintains the intended market position.
-- `pricing_model_options` (array): 2-3 pricing model options — price point, packaging, or model changes — with revenue and margin implications.
+- `pricing_model_options` (array): 2-3 pricing model options  --  price point, packaging, or model changes  --  with revenue and margin implications.
 - `revenue_impact_model` (object): Modeled impact of each option on revenue and margin.
 - `negotiated_pricing_strategy` (object): A recommended pricing strategy both sides can commit to.
 - `implementation_risks` (array): Customer reaction, competitive response, margin exposure risks.
@@ -41,47 +41,86 @@
 ## Execution Phases
 
 ### Phase 0: Pre-Flight Check
-**Entry Criteria:** Both submissions received.
-**Actions:** Confirm margin requirements and proposed pricing direction present.
-**Output:** Readiness confirmation.
-**Quality Gate:** Margin floor and pricing direction both present.
+### Entry Criteria
+Both submissions received.
+### Actions
+Confirm margin requirements and proposed pricing direction present.
+### Output
+Readiness confirmation.
+### Quality Gate
+Margin floor and pricing direction both present.
 
 ---
 
 ### Phase 1: Assess Margin Viability
-**Entry Criteria:** Both submissions confirmed.
-**Actions:** 1. Check proposed pricing direction against margin floor. Is it viable at all? 2. Identify the gap if not viable. 3. Assess customer sensitivity against the proposed change. 4. Check competitive positioning implications.
-**Output:** Margin viability, sensitivity assessment, competitive position check.
-**Quality Gate:** Margin viability stated in specific numbers.
+### Entry Criteria
+Both submissions confirmed.
+### Actions
+1. Check proposed pricing direction against margin floor. Is it viable at all? 2. Identify the gap if not viable. 3. Assess customer sensitivity against the proposed change. 4. Check competitive positioning implications.
+### Output
+Margin viability, sensitivity assessment, competitive position check.
+### Quality Gate
+Margin viability stated in specific numbers.
 
 ---
 
 ### Phase 2: Build Pricing Options
-**Entry Criteria:** Viability assessed.
-**Actions:** 1. Design 2-3 options that bridge product's competitive needs and finance's margin requirements. 2. For each option, model revenue and margin impact. 3. Assess implementation complexity and timing.
-**Output:** 3 pricing options with revenue/margin models.
-**Quality Gate:** Each option is viable on both dimensions (competitive position and margin).
+### Entry Criteria
+Viability assessed.
+### Actions
+1. Design 2-3 options that bridge product's competitive needs and finance's margin requirements. 2. For each option, model revenue and margin impact. 3. Assess implementation complexity and timing.
+### Output
+3 pricing options with revenue/margin models.
+### Quality Gate
+Each option is viable on both dimensions (competitive position and margin).
 
 ---
 
 ### Phase 3: Recommend
-**Entry Criteria:** Options built.
-**Actions:** 1. Recommend the option that best serves both sides given the company context. 2. Draft implementation risks. 3. Draft the board-level rationale.
-**Output:** Recommendation, implementation risks, board rationale.
-**Quality Gate:** Recommendation is specific. Board rationale is defensible.
+### Entry Criteria
+Options built.
+### Actions
+1. Recommend the option that best serves both sides given the company context. 2. Draft implementation risks. 3. Draft the board-level rationale.
+### Output
+Recommendation, implementation risks, board rationale.
+### Quality Gate
+Recommendation is specific. Board rationale is defensible.
 
 ---
 
 ### Phase 4: Deliver the Synthesis
-**Entry Criteria:** Recommendation made.
-**Actions:** 1. Present margin viability. 2. Present competitive position check. 3. Deliver pricing options with models. 4. Deliver recommendation. 5. List implementation risks.
-**Output:** Full synthesis — viability, competitive check, options, recommendation, risks.
-**Quality Gate:** Both sides can present this to the board with confidence.
+### Entry Criteria
+Recommendation made.
+### Actions
+1. Present margin viability. 2. Present competitive position check. 3. Deliver pricing options with models. 4. Deliver recommendation. 5. List implementation risks.
+### Output
+Full synthesis  --  viability, competitive check, options, recommendation, risks.
+### Quality Gate
+Both sides can present this to the board with confidence.
 
 ---
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Product and finance each submit their real constraints on pricing  --  competiti, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 Done when: (1) margin viability stated with numbers, (2) 3 pricing options with revenue/margin models, (3) recommendation with board rationale, (4) implementation risks named.
 
 ---
+
+---
+
+## Error Handling
+
+| Phase | Failure Mode | Response |
+|---|---|---|
+| Any | Missing required input | **Stop**: report which input is missing and what it should contain. |
+| Any | Upstream phase output incomplete | **Return**: re-run the upstream phase with the gap identified. |
+
 Copyright 2024-present The Wayfinder Trust. All rights reserved.

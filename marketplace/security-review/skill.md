@@ -1,6 +1,6 @@
 # Security Review
 
-**One-line description:** Security and engineering each submit their real findings and capacity constraints — AI prioritizes by actual risk, assesses alternative controls, and produces a remediation plan both sides can execute.
+**One-line description:** Security and engineering each submit their real findings and capacity constraints  --  AI prioritizes by actual risk, assesses alternative controls, and produces a remediation plan both sides can execute.
 
 **Execution Pattern:** Phase Pipeline
 
@@ -16,7 +16,7 @@
 
 ### CISO / Security Lead Submits Privately
 - `security_findings` (array, required): List of findings with description and affected systems.
-- `security_risk_ratings` (object, required): Risk severity for each finding — Critical, High, Medium, Low — with justification.
+- `security_risk_ratings` (object, required): Risk severity for each finding  --  Critical, High, Medium, Low  --  with justification.
 - `security_required_remediations` (array, required): What must be fixed and what constitutes acceptable remediation?
 - `security_timeline_expectations` (object, required): What must be fixed in 30, 60, 90 days?
 - `security_non_negotiables` (array, required): What findings cannot be deferred under any circumstances?
@@ -41,47 +41,86 @@
 ## Execution Phases
 
 ### Phase 0: Pre-Flight Check
-**Entry Criteria:** Both submissions received.
-**Actions:** Confirm findings list with risk ratings and capacity assessment present.
-**Output:** Readiness confirmation.
-**Quality Gate:** Findings with risk ratings and engineering capacity both present.
+### Entry Criteria
+Both submissions received.
+### Actions
+Confirm findings list with risk ratings and capacity assessment present.
+### Output
+Readiness confirmation.
+### Quality Gate
+Findings with risk ratings and engineering capacity both present.
 
 ---
 
 ### Phase 1: Prioritize by Real Risk
-**Entry Criteria:** Both submissions confirmed.
-**Actions:** 1. For each finding, assess the actual exploitability — is this theoretical or actively exploitable in the current environment? 2. Check engineering's capacity concerns against security's non-negotiables. 3. Identify where engineering's proposed alternative controls genuinely reduce risk vs. where they are insufficient. 4. Surface where security's severity ratings may be theoretical rather than reflective of actual business context.
-**Output:** Risk re-prioritization, non-negotiable conflict check, alternative controls assessment.
-**Quality Gate:** Every Critical and High finding has an exploitability assessment — not just a CVSS score.
+### Entry Criteria
+Both submissions confirmed.
+### Actions
+1. For each finding, assess the actual exploitability  --  is this theoretical or actively exploitable in the current environment? 2. Check engineering's capacity concerns against security's non-negotiables. 3. Identify where engineering's proposed alternative controls genuinely reduce risk vs. where they are insufficient. 4. Surface where security's severity ratings may be theoretical rather than reflective of actual business context.
+### Output
+Risk re-prioritization, non-negotiable conflict check, alternative controls assessment.
+### Quality Gate
+Every Critical and High finding has an exploitability assessment  --  not just a CVSS score.
 
 ---
 
 ### Phase 2: Build the Remediation Plan
-**Entry Criteria:** Risks prioritized.
-**Actions:** 1. Assign each finding to a remediation bucket: fix now, fix in 30/60/90 days, mitigate with compensating control, accept risk. 2. For each bucket, assign owners, confirm capacity, confirm timeline. 3. For accepted risks, draft the formal risk acceptance statement with business owner sign-off requirement. 4. Build the timeline commitment.
-**Output:** Remediation plan with owners and timeline, accepted risk register, timeline commitment.
-**Quality Gate:** Every Critical finding either has a committed fix date or a formal risk acceptance. No "we will address soon."
+### Entry Criteria
+Risks prioritized.
+### Actions
+1. Assign each finding to a remediation bucket: fix now, fix in 30/60/90 days, mitigate with compensating control, accept risk. 2. For each bucket, assign owners, confirm capacity, confirm timeline. 3. For accepted risks, draft the formal risk acceptance statement with business owner sign-off requirement. 4. Build the timeline commitment.
+### Output
+Remediation plan with owners and timeline, accepted risk register, timeline commitment.
+### Quality Gate
+Every Critical finding either has a committed fix date or a formal risk acceptance. No "we will address soon."
 
 ---
 
 ### Phase 3: Build the Monitoring and Escalation Plan
-**Entry Criteria:** Remediation planned.
-**Actions:** 1. Define how remediation will be tracked — meetings, tickets, reporting cadence. 2. Draft escalation criteria — what triggers escalation to CISO, CEO, or board. 3. Identify what will be communicated to leadership and when. 4. Define what constitutes completion for each finding.
-**Output:** Monitoring plan, escalation criteria, leadership communication plan, completion criteria.
-**Quality Gate:** Escalation criteria are specific — "if a Critical finding is not remediated within 30 days of discovery" not "if things get bad."
+### Entry Criteria
+Remediation planned.
+### Actions
+1. Define how remediation will be tracked  --  meetings, tickets, reporting cadence. 2. Draft escalation criteria  --  what triggers escalation to CISO, CEO, or board. 3. Identify what will be communicated to leadership and when. 4. Define what constitutes completion for each finding.
+### Output
+Monitoring plan, escalation criteria, leadership communication plan, completion criteria.
+### Quality Gate
+Escalation criteria are specific  --  "if a Critical finding is not remediated within 30 days of discovery" not "if things get bad."
 
 ---
 
 ### Phase 4: Deliver the Synthesis
-**Entry Criteria:** Plan built.
-**Actions:** 1. Present risk prioritization with exploitability assessment. 2. Deliver remediation plan with owners and timeline. 3. Present accepted risk register. 4. Present alternative controls assessment. 5. State escalation criteria.
-**Output:** Full synthesis — risk prioritization, remediation plan, accepted risks, alternative controls, escalation criteria.
-**Quality Gate:** Security has a plan they can enforce. Engineering has commitments they can actually meet.
+### Entry Criteria
+Plan built.
+### Actions
+1. Present risk prioritization with exploitability assessment. 2. Deliver remediation plan with owners and timeline. 3. Present accepted risk register. 4. Present alternative controls assessment. 5. State escalation criteria.
+### Output
+Full synthesis  --  risk prioritization, remediation plan, accepted risks, alternative controls, escalation criteria.
+### Quality Gate
+Security has a plan they can enforce. Engineering has commitments they can actually meet.
 
 ---
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Security and engineering each submit their real findings and capacity constraint, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 Done when: (1) every Critical and High finding has exploitability assessment, (2) every finding assigned to remediation bucket with owner, (3) accepted risk register with formal sign-off requirements, (4) timeline commitment with specific dates, (5) escalation criteria defined.
 
 ---
+
+---
+
+## Error Handling
+
+| Phase | Failure Mode | Response |
+|---|---|---|
+| Any | Missing required input | **Stop**: report which input is missing and what it should contain. |
+| Any | Upstream phase output incomplete | **Return**: re-run the upstream phase with the gap identified. |
+
 Copyright 2024-present The Wayfinder Trust. All rights reserved.

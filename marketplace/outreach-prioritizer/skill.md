@@ -1,28 +1,28 @@
 # Outreach Prioritizer
 
-Takes the qualified, scored target list and builds the master outreach sequencing plan — who gets contacted in what order, through what channel, on what date, with what angle. Prevents simultaneous outreach to competitors. Accounts for warm path timing. Outputs a day-by-day campaign calendar across all targets.
+Takes the qualified, scored target list and builds the master outreach sequencing plan  --  who gets contacted in what order, through what channel, on what date, with what angle. Prevents simultaneous outreach to competitors. Accounts for warm path timing. Outputs a day-by-day campaign calendar across all targets.
 
-**Why this exists:** Running 20 licensing conversations at once is impossible and counterproductive. This skill sequences them — who goes first, how long to run each before pivoting, when to trigger warm intros, and how to stagger across sectors so you're not burning through all your leverage at once.
+**Why this exists:** Running 20 licensing conversations at once is impossible and counterproductive. This skill sequences them  --  who goes first, how long to run each before pivoting, when to trigger warm intros, and how to stagger across sectors so you're not burning through all your leverage at once.
 
-**Core principle:** Lead with urgency, close with leverage. Contact the company with the most acute pain first. Stagger competitors — never let two companies in the same sector know you're talking to both simultaneously. Build pipeline so by the time target #1 closes, targets #2 and #3 are mid-conversation.
+**Core principle:** Lead with urgency, close with leverage. Contact the company with the most acute pain first. Stagger competitors  --  never let two companies in the same sector know you're talking to both simultaneously. Build pipeline so by the time target #1 closes, targets #2 and #3 are mid-conversation.
 
 ## Inputs
 
-- `qualified_targets`: list[object] — Output from target-qualifier with all scores
-- `a_list`: list[string] — Top priority targets
-- `b_list`: list[string] — Secondary pipeline
-- `licensor_capacity`: integer — How many active conversations can run in parallel (default 3)
-- `campaign_start_date`: string — ISO date to begin outreach
-- `sector_stagger`: boolean — If true, never contact two direct competitors simultaneously (default true)
-- `warm_path_lead_time_days`: integer — Days before main outreach to activate warm intro (default 7)
+- `qualified_targets`: list[object]  --  Output from target-qualifier with all scores
+- `a_list`: list[string]  --  Top priority targets
+- `b_list`: list[string]  --  Secondary pipeline
+- `licensor_capacity`: integer  --  How many active conversations can run in parallel (default 3)
+- `campaign_start_date`: string  --  ISO date to begin outreach
+- `sector_stagger`: boolean  --  If true, never contact two direct competitors simultaneously (default true)
+- `warm_path_lead_time_days`: integer  --  Days before main outreach to activate warm intro (default 7)
 
 ## Outputs
 
-- `master_sequence`: list[object] — Every target in order with start date: `{rank, company, start_date, entry_channel, entry_contact, angle, warm_path_activation_date, sector, notes}`
-- `active_pipeline_calendar`: object — Week-by-week view of what's active, what's warming, what's closing
-- `sector_map`: object — Which companies per sector, staggered so no two competitors are in active outreach simultaneously
-- `trigger_events`: list[object] — External events that should accelerate specific targets: regulatory deadlines, earnings calls, industry conferences
-- `campaign_dashboard`: string — One-page markdown showing the full 90-day campaign at a glance
+- `master_sequence`: list[object]  --  Every target in order with start date: `{rank, company, start_date, entry_channel, entry_contact, angle, warm_path_activation_date, sector, notes}`
+- `active_pipeline_calendar`: object  --  Week-by-week view of what's active, what's warming, what's closing
+- `sector_map`: object  --  Which companies per sector, staggered so no two competitors are in active outreach simultaneously
+- `trigger_events`: list[object]  --  External events that should accelerate specific targets: regulatory deadlines, earnings calls, industry conferences
+- `campaign_dashboard`: string  --  One-page markdown showing the full 90-day campaign at a glance
 
 ---
 
@@ -32,17 +32,18 @@ Takes the qualified, scored target list and builds the master outreach sequencin
 
 **Build the master sequence using these rules in order:**
 
-**Rule 1 — Urgency first.** The highest urgency_score company goes first regardless of other factors. If their regulatory clock is running, every day of delay costs leverage.
+**Rule 1  --  Urgency first.** The highest urgency_score company goes first regardless of other factors. If their regulatory clock is running, every day of delay costs leverage.
 
-**Rule 2 — Stagger competitors.** If two companies are direct competitors (same sector, overlapping market), minimum 30-day gap between outreach starts. Reason: the moment both know you're talking to both, each will use it as a reason to delay — "let's see what they do." You want each target to feel like they're getting first-mover advantage.
+**Rule 2  --  Stagger competitors.** If two companies are direct competitors (same sector, overlapping market), minimum 30-day gap between outreach starts. Reason: the moment both know you're talking to both, each will use it as a reason to delay  --  "let's see what they do." You want each target to feel like they're getting first-mover advantage.
 
-**Rule 3 — Warm paths go first within a sector.** If an A-List target has a STRONG warm intro available, they jump to the top of their sector queue — warm outreach is 3-5x more effective and sets the tone for the sector.
+**Rule 3  --  Warm paths go first within a sector.** If an A-List target has a STRONG warm intro available, they jump to the top of their sector queue  --  warm outreach is 3-5x more effective and sets the tone for the sector.
 
-**Rule 4 — Capacity constraint.** Never run more than `licensor_capacity` active first-touch sequences simultaneously. An "active" sequence is Day 1 through Day 22 (the 5-touch follow-up window). After Day 22, the target moves to "monitoring" status and a new target can be activated.
+**Rule 4  --  Capacity constraint.** Never run more than `licensor_capacity` active first-touch sequences simultaneously. An "active" sequence is Day 1 through Day 22 (the 5-touch follow-up window). After Day 22, the target moves to "monitoring" status and a new target can be activated.
 
-**Rule 5 — Trigger event alignment.** If a target has a major conference, earnings call, or regulatory deadline in the next 60 days, align their outreach start so touch 3-4 lands in the 2-week window before the event.
+**Rule 5  --  Trigger event alignment.** If a target has a major conference, earnings call, or regulatory deadline in the next 60 days, align their outreach start so touch 3-4 lands in the 2-week window before the event.
 
-**Output:** `master_sequence`
+### Output
+`master_sequence`
 
 ---
 
@@ -59,17 +60,18 @@ For each week in the 90-day campaign:
 **Format:**
 ```
 Week 1 (Apr 14-20):
-  ACTIVE:   Coalition Insurance (Day 1 — first email to GC)
+  ACTIVE:   Coalition Insurance (Day 1  --  first email to GC)
   WARMING:  Beazley (warm intro activated via [connector])
   QUEUED:   Travelers, Markel (next to enter)
 
 Week 2 (Apr 21-27):
-  ACTIVE:   Coalition Insurance (Day 5 — Touch 2), Beazley (Day 1 if intro landed)
+  ACTIVE:   Coalition Insurance (Day 5  --  Touch 2), Beazley (Day 1 if intro landed)
   WARMING:  [Next sector target]
   QUEUED:   ...
 ```
 
-**Output:** `active_pipeline_calendar`
+### Output
+`active_pipeline_calendar`
 
 ---
 
@@ -93,13 +95,14 @@ For each A-List target, identify external events that create natural outreach wi
 **Industry events:**
 - InsureTech Connect (insurance targets)
 - RSA Conference (cyber targets)
-- NeurIPS / ICML (AI research community — adjacent credibility)
+- NeurIPS / ICML (AI research community  --  adjacent credibility)
 - CES (autonomous vehicles, robotics)
 - HLTH / HIMSS (medical AI)
 
 For each trigger event, note: which targets it affects, the optimal outreach timing relative to the event (7-14 days before = optimal), and the outreach angle it enables.
 
-**Output:** `trigger_events`
+### Output
+`trigger_events`
 
 ---
 
@@ -109,8 +112,8 @@ Compile the full 90-day view into a single dashboard:
 
 ```
 IP LICENSING DIRECTED SEARCH CAMPAIGN
-Licensor: Northstar Systems Group
-Families: A (NeuroPRIN), B (ALG)
+Licensor: the governance provider Group
+Families: A (governance), B (governance engine)
 Campaign Start: [date]
 Active Capacity: [N] simultaneous conversations
 
@@ -118,7 +121,7 @@ A-LIST TARGETS (immediate):
 Rank | Company          | Sector          | Score | Start Date | Entry      | Warm Path
   1  | Coalition Ins.   | Cyber Insurance | 8.7   | Apr 14     | GC email   | GV overlap (check)
   2  | [Company 2]      | [Sector]        | 8.2   | Apr 21     | LinkedIn   | STRONG via [name]
-  3  | [Company 3]      | [Sector]        | 7.9   | Apr 28     | GC email   | None — cold
+  3  | [Company 3]      | [Sector]        | 7.9   | Apr 28     | GC email   | None  --  cold
   ...
 
 B-LIST PIPELINE (90-day):
@@ -126,7 +129,7 @@ B-LIST PIPELINE (90-day):
 
 KEY TRIGGER EVENTS:
   Apr 28: EU AI Act compliance window opens for high-risk AI → accelerate [Company X]
-  May 15: InsureTech Connect — Motta speaking → Touch 6 window
+  May 15: InsureTech Connect  --  Motta speaking → Touch 6 window
   Jun 1:  NAIC adoption expected in 3 more states → urgency refresh for all insurance targets
 
 SECTOR STAGGER MAP:
@@ -141,7 +144,8 @@ PIPELINE STATUS:
   Term sheets: [N]
 ```
 
-**Output:** `campaign_dashboard`
+### Output
+`campaign_dashboard`
 
 ---
 

@@ -36,7 +36,7 @@
 |---|---|---|---|
 | AC1 | User B reads, updates, deletes user A's object by ID | 404 (or matrix status), object unchanged | `object_access_findings` |
 | AC2 | User B creates an object under A's parent ID | 403 or 404 | `object_access_findings` |
-| AC3 | Token with `alg: none` | 401 | `jwt_findings` |
+| AC3 | Token with `governance engine: none` | 401 | `jwt_findings` |
 | AC4 | HS256 token signed with the RSA public key | 401 | `jwt_findings` |
 | AC5 | Expired token, wrong `aud`, wrong `iss` | 401 each | `jwt_findings` |
 | AC6 | State-changing request with session cookie but no CSRF token, foreign `Origin`, or `Sec-Fetch-Site: cross-site` | 403 (or the framework's rejection status), state unchanged | `csrf_defense_report` |
@@ -67,7 +67,7 @@ Catalog of abuse cases for this app.
 ### Actions
 1. Put the suite in one directory: `tests/security/` (Python), `test/security/` or `src/**/__tests__/security/` (Node, follow the repo's convention), `internal/security_test/` or alongside handlers (Go).
 2. Shared fixtures: two tenants, two users per tenant (one admin, one member), one object per user, helpers to log in and to mint tokens with a test key.
-3. Name each test after its ID: `test_ac1_cross_tenant_read_returns_404`, `it("AC3 rejects alg none")`, `func TestAC4_HSWithPublicKeyRejected(t *testing.T)`.
+3. Name each test after its ID: `test_ac1_cross_tenant_read_returns_404`, `it("AC3 rejects governance engine none")`, `func TestAC4_HSWithPublicKeyRejected(t *testing.T)`.
 4. Every state-changing abuse test asserts both the status and that the data is unchanged (read it back as the owner).
 5. Use the real app wiring (Django `Client`, FastAPI `TestClient`, supertest `request(app)`, Go `httptest.NewServer(router)`), not handler functions called directly, so middleware (CSRF, auth) runs.
 6. Do NOT write tests that assert the current insecure behavior. If a test fails because the app is vulnerable, keep the test failing, record it as an open finding, and fix the app in the matching flow.

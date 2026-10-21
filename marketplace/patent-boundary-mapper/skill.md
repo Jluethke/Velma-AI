@@ -1,6 +1,6 @@
 # Patent Boundary Mapper
 
-> **Starter Skill** — Free to use. Royalties to original creator on derivatives. Build on this.
+> **Starter Skill**  --  Free to use. Royalties to original creator on derivatives. Build on this.
 
 Maps the boundaries between related patent families to ensure claims don't overlap, cross-references are correct, and each family's scope is clearly delineated. Produces a boundary mapping document showing which innovations belong to which family, where families interface, and where potential claim conflicts exist. Essential for multi-family patent portfolios.
 
@@ -31,30 +31,34 @@ PHASE 5: DOCUMENT    --> Produce boundary mapping document
 
 ## Execution
 
-### PHASE 1: INVENTORY — Catalog Families
+### PHASE 1: INVENTORY  --  Catalog Families
 
-**Entry criteria:** At least 2 patent families provided
+### Entry Criteria
+At least 2 patent families provided
 
-**Actions:**
+### Actions
 1. For each family, extract:
    - Core innovation in one sentence
    - Key claim elements from independent claims
    - Domain and technical scope
    - What the invention governs/controls/manages
 2. Build a family inventory table: Family | Core Innovation | Scope | Key Elements.
-3. Identify the "governs X" statement for each family — what aspect of the system does this patent own?
+3. Identify the "governs X" statement for each family  --  what aspect of the system does this patent own?
 
-**Output:** Family inventory with scope statements.
+### Output
+Family inventory with scope statements.
 
-**Quality gate:** Every family has a clear, non-overlapping scope statement.
+### Quality Gate
+Every family has a clear, non-overlapping scope statement.
 
 ---
 
-### PHASE 2: MAP — Find Overlaps and Interfaces
+### PHASE 2: MAP  --  Find Overlaps and Interfaces
 
-**Entry criteria:** Family inventory complete
+### Entry Criteria
+Family inventory complete
 
-**Actions:**
+### Actions
 1. Compare each pair of families. For each pair, ask:
    - Do any claim elements appear in both families?
    - Do the families describe the same component differently?
@@ -67,17 +71,20 @@ PHASE 5: DOCUMENT    --> Produce boundary mapping document
    - **Independent**: No meaningful relationship
 3. Map all interfaces: what data, signals, or control flows between families.
 
-**Output:** Pairwise relationship matrix with overlap and interface details.
+### Output
+Pairwise relationship matrix with overlap and interface details.
 
-**Quality gate:** Every family pair is analyzed. All overlaps are identified.
+### Quality Gate
+Every family pair is analyzed. All overlaps are identified.
 
 ---
 
-### PHASE 3: DELINEATE — Resolve Boundaries
+### PHASE 3: DELINEATE  --  Resolve Boundaries
 
-**Entry criteria:** Overlap analysis complete
+### Entry Criteria
+Overlap analysis complete
 
-**Actions:**
+### Actions
 1. For each overlap, determine which family should own the claim element:
    - The family where the element is CORE owns it
    - The family where the element is PERIPHERAL references it
@@ -86,36 +93,42 @@ PHASE 5: DOCUMENT    --> Produce boundary mapping document
    - Remove duplicated claims from the peripheral family
    - Add "wherein" clauses that scope the element to the owning family's context
    - Convert overlapping claims to cross-reference dependent claims
-4. Ensure no "orphan" innovations — every claimable element belongs to exactly one family.
+4. Ensure no "orphan" innovations  --  every claimable element belongs to exactly one family.
 
-**Output:** Boundary rules, claim modification recommendations.
+### Output
+Boundary rules, claim modification recommendations.
 
-**Quality gate:** Every overlap resolved. Every element assigned to exactly one family.
+### Quality Gate
+Every overlap resolved. Every element assigned to exactly one family.
 
 ---
 
-### PHASE 4: CROSSREF — Generate Cross-References
+### PHASE 4: CROSSREF  --  Generate Cross-References
 
-**Entry criteria:** Boundaries delineated
+### Entry Criteria
+Boundaries delineated
 
-**Actions:**
+### Actions
 1. For each interface between families, draft a cross-reference statement:
    - "Related to Family [N] ([Name]): [relationship description]"
 2. For each complement relationship, draft language for the specification:
    - "The [element] described herein interfaces with the [other invention] disclosed in [co-pending application]."
 3. Recommend which specifications need cross-reference sections updated.
 
-**Output:** Cross-reference statements for each family pair.
+### Output
+Cross-reference statements for each family pair.
 
-**Quality gate:** Every interface has a cross-reference. Language is patent-appropriate.
+### Quality Gate
+Every interface has a cross-reference. Language is patent-appropriate.
 
 ---
 
-### PHASE 5: DOCUMENT — Produce Boundary Map
+### PHASE 5: DOCUMENT  --  Produce Boundary Map
 
-**Entry criteria:** All boundaries resolved and cross-references drafted
+### Entry Criteria
+All boundaries resolved and cross-references drafted
 
-**Actions:**
+### Actions
 1. Generate the BoundaryMapping.md document with:
    - Family inventory table
    - Scope delineation rules
@@ -125,9 +138,20 @@ PHASE 5: DOCUMENT    --> Produce boundary mapping document
    - Visual boundary diagram (ASCII or description)
 2. Include a "What belongs where" quick reference table.
 
-**Output:** Complete boundary mapping document.
+### Output
+Complete boundary mapping document.
 
-**Quality gate:** Document is self-contained. A patent attorney can use it to verify claim scope.
+### Quality Gate
+Document is self-contained. A patent attorney can use it to verify claim scope.
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Maps boundaries between related patent families to prevent claim overlap, genera, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 

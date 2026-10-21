@@ -5,25 +5,26 @@ Calculates personalized caloric and macronutrient targets using the Mifflin-St J
 ## Execution Pattern: Phase Pipeline
 
 ## Inputs
-- goals: string -- Primary goal: "cut" (fat loss), "bulk" (muscle gain), "maintain" (body recomposition), "performance" (fuel training)
-- current_diet: object -- Description of current eating patterns, typical meals, eating schedule
-- restrictions: array -- Allergies, intolerances, ethical restrictions (vegan, halal, kosher), medical (diabetes, celiac)
-- preferences: object -- Liked/disliked foods, cuisine preferences, cooking skill level, meal prep willingness, budget
-- body_stats: object -- Age, sex, height, weight, body fat % (if known), waist measurement
-- activity_level: string -- Sedentary, lightly active (1-3 days exercise/week), moderately active (3-5 days), very active (6-7 days), extremely active (2x/day or physical job + training)
+- `goals`: string -- Primary goal: "cut" (fat loss), "bulk" (muscle gain), "maintain" (body recomposition), "performance" (fuel training)
+- `current_diet`: object -- Description of current eating patterns, typical meals, eating schedule
+- `restrictions`: array -- Allergies, intolerances, ethical restrictions (vegan, halal, kosher), medical (diabetes, celiac)
+- `preferences`: object -- Liked/disliked foods, cuisine preferences, cooking skill level, meal prep willingness, budget
+- `body_stats`: object -- Age, sex, height, weight, body fat % (if known), waist measurement
+- `activity_level`: string -- Sedentary, lightly active (1-3 days exercise/week), moderately active (3-5 days), very active (6-7 days), extremely active (2x/day or physical job + training)
 
 ## Outputs
-- caloric_targets: object -- Daily calorie target with BMR breakdown, TDEE calculation, and deficit/surplus applied
-- macro_split: object -- Protein, carbohydrate, fat targets in grams and percentages with rationale
-- meal_plan: array -- Daily meal plan with recipes, macro breakdown per meal, prep instructions
-- tracking_report: object -- Intake vs targets comparison with adherence metrics
-- adjustment_plan: object -- Modified targets based on actual results (weight trend, energy, performance)
+- `caloric_targets`: object -- Daily calorie target with BMR breakdown, TDEE calculation, and deficit/surplus applied
+- `macro_split`: object -- Protein, carbohydrate, fat targets in grams and percentages with rationale
+- `meal_plan`: array -- Daily meal plan with recipes, macro breakdown per meal, prep instructions
+- `tracking_report`: object -- Intake vs targets comparison with adherence metrics
+- `adjustment_plan`: object -- Modified targets based on actual results (weight trend, energy, performance)
 
 ## Execution
 
 ### Phase 1: ASSESS -- Calculate Baseline Requirements
-**Entry criteria:** Body stats and activity level provided.
-**Actions:**
+### Entry Criteria
+Body stats and activity level provided.
+### Actions
 1. Calculate Basal Metabolic Rate using Mifflin-St Jeor equation:
    - **Males:** BMR = (10 x weight in kg) + (6.25 x height in cm) - (5 x age) + 5
    - **Females:** BMR = (10 x weight in kg) + (6.25 x height in cm) - (5 x age) - 161
@@ -40,12 +41,15 @@ Calculates personalized caloric and macronutrient targets using the Mifflin-St J
    - **Performance:** TDEE + 100 to 200 (slight surplus to fuel recovery without excess fat gain).
 4. Validate: if calculated intake is below 1200 cal (women) or 1500 cal (men), flag as potentially unsafe and recommend a smaller deficit or medical supervision.
 
-**Output:** BMR, TDEE, adjusted daily calorie target with all calculations shown.
-**Quality gate:** All unit conversions are correct. Activity multiplier matches described activity level. Calorie target is within safe ranges.
+### Output
+BMR, TDEE, adjusted daily calorie target with all calculations shown.
+### Quality Gate
+All unit conversions are correct. Activity multiplier matches described activity level. Calorie target is within safe ranges.
 
 ### Phase 2: CALCULATE -- Determine Macronutrient Split
-**Entry criteria:** Daily calorie target calculated.
-**Actions:**
+### Entry Criteria
+Daily calorie target calculated.
+### Actions
 1. Set protein target (most important macro for body composition):
    - **Cut:** 1.0-1.2g per pound of body weight (preserves muscle in deficit)
    - **Bulk:** 0.8-1.0g per pound of body weight
@@ -69,12 +73,15 @@ Calculates personalized caloric and macronutrient targets using the Mifflin-St J
    - 4-5 meal split: spread protein across all meals (maximize muscle protein synthesis -- 25-40g per meal)
    - Pre/post workout: carbs + protein around training for performance
 
-**Output:** Macro targets in grams and percentages, per-meal distribution, pre/post workout nutrition.
-**Quality gate:** Protein + fat + carb calories sum to total calorie target (within 10 cal rounding). No macro falls below minimum thresholds. Ratios match the stated goal.
+### Output
+Macro targets in grams and percentages, per-meal distribution, pre/post workout nutrition.
+### Quality Gate
+Protein + fat + carb calories sum to total calorie target (within 10 cal rounding). No macro falls below minimum thresholds. Ratios match the stated goal.
 
 ### Phase 3: PLAN -- Build Meal Plan
-**Entry criteria:** Macro targets and restrictions defined.
-**Actions:**
+### Entry Criteria
+Macro targets and restrictions defined.
+### Actions
 1. Design daily meal templates matching macro targets:
    - Each meal: protein source + carb source + fat source + vegetables
    - Hit protein target first (hardest macro for most people)
@@ -95,12 +102,15 @@ Calculates personalized caloric and macronutrient targets using the Mifflin-St J
    - Snack options that fit macros
 5. Provide a "flexible dieting" framework: how to swap foods while maintaining macro targets (protein equivalents, carb equivalents, etc.)
 
-**Output:** 3-5 sample day meal plans with per-meal macros, protein/carb/fat menus for flexible swapping, meal prep guide.
-**Quality gate:** Every sample day hits macro targets within +/-5%. All restrictions are respected. At least one quick-prep option exists for every meal slot.
+### Output
+3-5 sample day meal plans with per-meal macros, protein/carb/fat menus for flexible swapping, meal prep guide.
+### Quality Gate
+Every sample day hits macro targets within +/-5%. All restrictions are respected. At least one quick-prep option exists for every meal slot.
 
 ### Phase 4: TRACK -- Monitor Intake and Progress
-**Entry criteria:** User has been following the plan and logging data.
-**Actions:**
+### Entry Criteria
+User has been following the plan and logging data.
+### Actions
 1. Compare logged intake against targets:
    - Daily average calories vs target (7-day rolling average to smooth daily variance)
    - Macro compliance: are protein/carb/fat within +/-10% of targets?
@@ -122,12 +132,15 @@ Calculates personalized caloric and macronutrient targets using the Mifflin-St J
    - Protein consistently under target (priority issue for body composition)
    - Energy/performance declining (may need to increase calories or add a diet break)
 
-**Output:** Tracking report: intake vs targets, weight trend analysis, subjective metric trends, flagged issues.
-**Quality gate:** At least 7 days of data before generating a report. Weight trend uses moving average, not single-day readings. Flags are specific and actionable.
+### Output
+Tracking report: intake vs targets, weight trend analysis, subjective metric trends, flagged issues.
+### Quality Gate
+At least 7 days of data before generating a report. Weight trend uses moving average, not single-day readings. Flags are specific and actionable.
 
 ### Phase 5: ADJUST -- Modify Plan Based on Results
-**Entry criteria:** At least 2 weeks of tracking data with weight trend.
-**Actions:**
+### Entry Criteria
+At least 2 weeks of tracking data with weight trend.
+### Actions
 1. If weight is not changing as expected:
    - **Losing too fast (>2 lbs/week on a cut):** Increase calories by 200/day. Risk of muscle loss.
    - **Not losing (on a cut):** Verify tracking accuracy first. If accurate, reduce by 100-200 cal/day (from carbs or fat, not protein).
@@ -144,8 +157,19 @@ Calculates personalized caloric and macronutrient targets using the Mifflin-St J
    - Consider a less aggressive deficit/surplus (smaller gap = easier adherence = better results over time).
 4. Update calorie and macro targets based on new weight (recalculate BMR with current weight every 4-6 weeks).
 
-**Output:** Adjusted targets with rationale, updated meal plan if needed, specific recommendations for improving adherence.
-**Quality gate:** Adjustments are based on 2+ weeks of data, not single-day fluctuations. Changes are incremental (100-300 cal adjustments, not dramatic shifts). Protein target is never reduced.
+### Output
+Adjusted targets with rationale, updated meal plan if needed, specific recommendations for improving adherence.
+### Quality Gate
+Adjustments are based on 2+ weeks of data, not single-day fluctuations. Changes are incremental (100-300 cal adjustments, not dramatic shifts). Protein target is never reduced.
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Calculates caloric needs using Mifflin-St Jeor, designs macro-optimized meal pla, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 The skill completes one cycle when adjusted targets and an updated plan are delivered. The pipeline restarts when new tracking data is available or goals change. Long-term exit: user reaches and sustains goal weight/body composition for 4+ weeks at maintenance calories.
@@ -220,3 +244,7 @@ Tracks over time:
 - Energy and performance ratings
 - Adherence rate per week
 - Calorie adjustments history and their impact
+
+---
+
+Copyright 2024-present The Wayfinder Trust. All rights reserved.

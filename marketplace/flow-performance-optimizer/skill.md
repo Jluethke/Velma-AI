@@ -5,20 +5,21 @@ Reads a flow's execution history and validation results to identify performance 
 ## Execution Pattern: ORPA Loop
 
 ## Inputs
-- skill_md_content: string -- The flow.md being optimized (current version)
-- execution_history: array -- Past execution data: per-run records with phase timing, success/failure per phase, output quality signals
-- validation_results: object -- Shadow validation results: pass/fail counts, keyword match rates, consistency scores across runs
+- `skill_md_content`: string -- The flow.md being optimized (current version)
+- `execution_history`: array -- Past execution data: per-run records with phase timing, success/failure per phase, output quality signals
+- `validation_results`: object -- Shadow validation results: pass/fail counts, keyword match rates, consistency scores across runs
 
 ## Outputs
-- performance_analysis: object -- Quantified performance profile: per-phase timing, failure rates, consistency scores, bottleneck identification
-- optimization_report: object -- Root cause analysis for each identified issue with severity ranking
-- recommended_changes: array -- Specific modifications to flow.md with predicted impact on performance metrics
+- `performance_analysis`: object -- Quantified performance profile: per-phase timing, failure rates, consistency scores, bottleneck identification
+- `optimization_report`: object -- Root cause analysis for each identified issue with severity ranking
+- `recommended_changes`: array -- Specific modifications to flow.md with predicted impact on performance metrics
 
 ## Execution
 
 ### OBSERVE: Collect Performance Data
-**Entry criteria:** At least skill_md_content is provided. Execution history and validation results are optional but produce better analysis.
-**Actions:**
+### Entry Criteria
+At least skill_md_content is provided. Execution history and validation results are optional but produce better analysis.
+### Actions
 1. If execution history is available:
    - Calculate per-phase metrics: average execution time, failure rate, output variability
    - Identify the slowest phase (bottleneck)
@@ -35,12 +36,15 @@ Reads a flow's execution history and validation results to identify performance 
    - Estimate risk per phase based on structural quality
 4. Cross-reference: do structural weaknesses in flow.md correlate with observed failures in execution history?
 
-**Output:** Performance profile: per-phase metrics (timing, failure rate, consistency), overall validation success rate, bottleneck identification, structural weaknesses.
-**Quality gate:** At least one performance dimension is quantified (timing, failure rate, or consistency). Bottleneck phase is identified with evidence.
+### Output
+Performance profile: per-phase metrics (timing, failure rate, consistency), overall validation success rate, bottleneck identification, structural weaknesses.
+### Quality Gate
+At least one performance dimension is quantified (timing, failure rate, or consistency). Bottleneck phase is identified with evidence.
 
 ### REASON: Root Cause Analysis
-**Entry criteria:** Performance profile exists.
-**Actions:**
+### Entry Criteria
+Performance profile exists.
+### Actions
 1. For each identified performance issue, determine root cause:
    - **Slow phase:** Is it doing too much? Are actions sequential when some could be parallel? Is it waiting on external data? Is the scope too broad?
    - **Frequent failures:** Is the entry criteria too weak (garbage in)? Is the phase attempting something beyond its capability? Is error handling missing?
@@ -54,12 +58,15 @@ Reads a flow's execution history and validation results to identify performance 
    - **Dependency:** The flow depends on external data or capabilities it doesn't always have
 3. Rank issues by impact: which root cause, if fixed, would most improve the overall validation success rate?
 
-**Output:** Root cause analysis per issue, classified by type, ranked by impact.
-**Quality gate:** Every identified performance issue has a root cause. Root causes are specific (not "Phase 3 is bad" but "Phase 3 actions 2 and 3 are ambiguous, producing different output structures across runs"). Impact ranking is justified.
+### Output
+Root cause analysis per issue, classified by type, ranked by impact.
+### Quality Gate
+Every identified performance issue has a root cause. Root causes are specific (not "Phase 3 is bad" but "Phase 3 actions 2 and 3 are ambiguous, producing different output structures across runs"). Impact ranking is justified.
 
 ### PLAN: Generate Optimization Recommendations
-**Entry criteria:** Root causes identified and ranked.
-**Actions:**
+### Entry Criteria
+Root causes identified and ranked.
+### Actions
 1. For each root cause, generate a specific, implementable recommendation:
 
    **For structural issues:**
@@ -82,12 +89,15 @@ Reads a flow's execution history and validation results to identify performance 
    - "Tightening Phase 3 output format is predicted to improve consistency score from 0.65 to 0.80, which would increase shadow validation pass rate from 60% to ~75%."
 3. Order recommendations by ROI: predicted improvement / implementation effort.
 
-**Output:** Specific recommendations with predicted impact, ordered by ROI.
-**Quality gate:** Every recommendation includes: (1) exactly what to change in flow.md (with before/after text), (2) which performance metric it targets, (3) predicted improvement magnitude. No recommendation is vague ("improve the prompts").
+### Output
+Specific recommendations with predicted impact, ordered by ROI.
+### Quality Gate
+Every recommendation includes: (1) exactly what to change in flow.md (with before/after text), (2) which performance metric it targets, (3) predicted improvement magnitude. No recommendation is vague ("improve the prompts").
 
 ### ACT: Deliver Optimization Report
-**Entry criteria:** Recommendations generated with impact predictions.
-**Actions:**
+### Entry Criteria
+Recommendations generated with impact predictions.
+### Actions
 1. Format the optimization report:
    - **Performance summary:** Current metrics (pass rate, consistency, avg execution time) and target metrics after optimization.
    - **Top 3 quick wins:** Changes that can be implemented in <15 minutes with highest impact.
@@ -101,8 +111,10 @@ Reads a flow's execution history and validation results to identify performance 
 3. Record optimization patterns for reuse:
    - "Adding output format constraints improved consistency by X% across Y flows" -- this becomes a general optimization heuristic.
 
-**Output:** Complete optimization report with summary, quick wins, full recommendations, implementation order, monitoring plan.
-**Quality gate:** Report addresses the flow's top 3 performance issues. Every recommendation has predicted impact. Quick wins are genuinely quick (<15 min to implement). Monitoring plan specifies what to measure and when.
+### Output
+Complete optimization report with summary, quick wins, full recommendations, implementation order, monitoring plan.
+### Quality Gate
+Report addresses the flow's top 3 performance issues. Every recommendation has predicted impact. Quick wins are genuinely quick (<15 min to implement). Monitoring plan specifies what to measure and when.
 
 ## Exit Criteria
 Complete when: (1) performance profile is quantified, (2) root causes are identified for all major issues, (3) specific recommendations are delivered with predicted impact, (4) implementation order is defined. On re-entry, includes comparison to previous baseline.
@@ -157,3 +169,7 @@ Tracks over time:
 - Which recommendation types had the most impact (building an optimization playbook)
 - Common root causes by flow domain
 - Optimization effort vs. actual improvement (calibrating impact predictions)
+
+---
+
+Copyright 2024-present The Wayfinder Trust. All rights reserved.

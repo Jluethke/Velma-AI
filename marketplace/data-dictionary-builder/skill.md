@@ -1,6 +1,6 @@
 # Data Dictionary Builder
 
-**One-line description:** Automatically generate a comprehensive data dictionary from a database schema, including column descriptions, data types, relationships, sample values, and business context.
+**One-line description:** Automatically generate a full data dictionary from a database schema, including column descriptions, data types, relationships, sample values, and business context.
 
 **Execution Pattern:** Phase Pipeline
 
@@ -78,17 +78,19 @@
 - `output_file`: string (optional) -- Path to generated data dictionary file (if file output requested)
 
 ---
+- `relationship_map`: (from manifest)
+- `quality_report`: (from manifest)
 
 ## Execution Phases
 
 ### Phase 1: Connect and Retrieve Schema
 
-**Entry Criteria:**
+### Entry Criteria
 - Database connection parameters are provided and valid
 - Connection type matches the target database system
 - Credentials are available (from environment variables or secure vault preferred)
 
-**Actions:**
+### Actions
 1. Establish connection to database using provided credentials
 2. Verify connection is authenticated and authorized
 3. Query system catalogs to retrieve schema metadata (tables, columns, types, constraints)
@@ -96,11 +98,11 @@
 5. Retrieve table and column comments from schema if available
 6. Verify at least one table is accessible in the target schema
 
-**Output:**
+### Output
 - Raw schema metadata object with complete table and column definitions
 - Connection status confirmation
 
-**Quality Gate:**
+### Quality Gate
 - Connection succeeds without authentication errors, verified by successful query execution
 - At least one table is accessible and returned in metadata
 - Schema metadata includes column names, data types, and nullability for all columns
@@ -109,11 +111,11 @@
 
 ### Phase 2: Extract and Structure Column Metadata
 
-**Entry Criteria:**
+### Entry Criteria
 - Schema metadata successfully retrieved
 - At least one table is available
 
-**Actions:**
+### Actions
 1. Iterate through each table in the schema
 2. For each column, extract: name, data type, nullable flag, default value
 3. Identify and flag primary key columns by checking primary key constraints
@@ -123,11 +125,11 @@
 7. Extract existing column comments from schema metadata
 8. Validate that all extracted values are non-null; use explicit defaults (empty string, false, null) for missing values
 
-**Output:**
+### Output
 - Structured column metadata array with all attributes defined
 - Primary key and constraint mappings
 
-**Quality Gate:**
+### Quality Gate
 - Every column has a name and data type, verified by checking that name and data_type fields are populated
 - Nullable and default values are explicitly set for every column (no undefined fields)
 - Foreign key references are validated against existing tables; orphaned references are flagged
@@ -136,11 +138,11 @@
 
 ### Phase 3: Identify Table Relationships
 
-**Entry Criteria:**
+### Entry Criteria
 - Column metadata is complete
 - Foreign key information is extracted
 
-**Actions:**
+### Actions
 1. Build relationship graph from foreign key constraints
 2. For each foreign key, determine cardinality by analyzing source and target table structure:
    - 1:1 if target column has unique constraint
@@ -151,11 +153,11 @@
 5. Document relationship type as FOREIGN_KEY (constraint-based) or IMPLICIT (name-based)
 6. Validate that all referenced tables exist in schema; flag non-existent targets
 
-**Output:**
+### Output
 - Relationships array with source, target, cardinality, and type
 - Warnings for orphaned or invalid references
 
-**Quality Gate:**
+### Quality Gate
 - All foreign key targets exist in the schema, verified by cross-referencing against table list
 - Cardinality is correctly identified for each relationship, verified by checking constraint definitions
 - No unresolved circular dependencies; circular relationships are documented with bootstrap table identified
@@ -164,12 +166,12 @@
 
 ### Phase 4: Query Sample Data
 
-**Entry Criteria:**
+### Entry Criteria
 - Column metadata is complete
 - Sampling is enabled in configuration
 - Database connection is active
 
-**Actions:**
+### Actions
 1. For each table, execute COUNT(*) query to determine row count
 2. If row count exceeds max_table_rows threshold, skip sampling for that table and mark as "sampling skipped - table too large"
 3. For tables within threshold, execute SELECT query with LIMIT and random sampling (e.g., ORDER BY RANDOM() LIMIT sample_size)
@@ -179,13 +181,13 @@
 7. Note any data quality issues: unexpected nulls (>50% null), outliers (values outside expected range), formatting inconsistencies
 8. If mask_pii is enabled, scan sample values against PII patterns (email: ^[^@]+@[^@]+\.[^@]+$, phone: ^\d{3}-\d{3}-\d{4}$, SSN: ^\d{3}-\d{2}-\d{4}$, credit card: ^\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}$); mask matching values as [MASKED] and flag column as pii_detected=true
 
-**Output:**
+### Output
 - Sample values array per column (masked if PII detected)
 - Data quality notes and patterns
 - Enumerated value lists where applicable
 - PII detection flags
 
-**Quality Gate:**
+### Quality Gate
 - Sample queries complete without timeout (max 30 seconds per table), verified by query execution time
 - At least one sample value is retrieved per column or explicitly marked as "no data available" if column is empty
 - Data patterns are documented with specific observations (e.g., "numeric range 0-100", "date format YYYY-MM-DD")
@@ -194,11 +196,11 @@
 
 ### Phase 5: Gather Business Context
 
-**Entry Criteria:**
+### Entry Criteria
 - Column metadata is complete
 - Optional business context source is available
 
-**Actions:**
+### Actions
 1. Extract existing descriptions from schema comments using database-specific comment retrieval (e.g., pg_description for PostgreSQL)
 2. If business_context_source is provided, parse external documentation file (JSON, CSV, or markdown format)
 3. Match external descriptions to columns using two-pass approach:
@@ -213,12 +215,12 @@
    - Status/flag columns: document state transitions and valid combinations
 7. Document any business rules found in comments (e.g., "must be > 0", "unique within customer")
 
-**Output:**
+### Output
 - Business descriptions for each column
 - Valid values and business rules
 - List of columns requiring manual documentation
 
-**Quality Gate:**
+### Quality Gate
 - Every column has at least a placeholder description ("[No description available]" if missing), verified by checking description field is non-empty
 - Valid values are documented for enumerated columns (distinct count < 20)
 - Missing descriptions are explicitly flagged in validation report with column name and table name
@@ -227,11 +229,11 @@
 
 ### Phase 6: Compile Data Dictionary
 
-**Entry Criteria:**
+### Entry Criteria
 - All previous phases are complete
 - Column metadata, relationships, samples, and business context are available
 
-**Actions:**
+### Actions
 1. Organize output by table, sorted alphabetically
 2. For each table, compile: name, type, row count, description, columns array
 3. For each column, assemble: name, type, nullable, default, constraints, description, samples, data quality notes, pii_detected flag
@@ -244,11 +246,11 @@
 7. If output_format is unsupported, abort with error listing supported formats
 8. If file output requested, write to specified path; verify write succeeds
 
-**Output:**
+### Output
 - Structured data_dictionary object
 - Formatted output file (if applicable)
 
-**Quality Gate:**
+### Quality Gate
 - All tables and columns from schema are represented in output, verified by comparing counts to Phase 1 metadata
 - Output is valid JSON (if json format) or valid markdown (if markdown format), verified by parsing
 - File is written successfully with correct permissions (if applicable), verified by file existence and size check
@@ -257,10 +259,10 @@
 
 ### Phase 7: Validate and Report
 
-**Entry Criteria:**
+### Entry Criteria
 - Data dictionary is compiled
 
-**Actions:**
+### Actions
 1. Check for missing descriptions: identify columns where description is empty or "[No description available]"; list by table.column
 2. Check for orphaned columns: identify foreign keys where target table does not exist in schema; list with target table name
 3. Check naming consistency: identify columns with unusual patterns (e.g., single-letter names, inconsistent case, special characters); flag for review
@@ -270,16 +272,25 @@
 7. Generate validation report with sections: missing_descriptions, orphaned_columns, naming_inconsistencies, pii_columns, warnings
 8. Append validation report to data dictionary output
 
-**Output:**
+### Output
 - Validation report object with missing items, inconsistencies, warnings
 - Updated data dictionary with validation results
 
-**Quality Gate:**
+### Quality Gate
 - Validation report is complete with all checks performed, verified by checking all report sections are populated
 - All warnings are specific and reference column/table names (e.g., "Column 'user_id' in table 'orders' has 75% null values"), verified by checking each warning contains table and column names
 - No critical issues block dictionary use; critical issues (e.g., connection failure) are handled in error handling phase
 
 ---
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Generate a full data dictionary from a database schema, including column descrip, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 

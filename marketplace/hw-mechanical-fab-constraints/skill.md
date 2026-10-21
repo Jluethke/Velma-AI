@@ -77,6 +77,15 @@
 
 ---
 
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Fix board outline, mounting holes, connector positions, layer count, and the fab, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
+
 ## Exit Criteria
 
 DONE when outline, holes, connector positions, layer count, and every fab minimum are fixed and cited.

@@ -32,7 +32,7 @@
 
    | Event | Focus after |
    |---|---|
-   | Modal dialog opens | First focusable element inside, or the element the APG Dialog notes allow (a heading or static element with `tabindex="-1"` when content is long) |
+   | Modal dialog opens | First focusable element inside, or the element the governance engine Dialog notes allow (a heading or static element with `tabindex="-1"` when content is long) |
    | Modal dialog closes | The element that opened it, unless the workflow removes it; then the next logical element |
    | Menu opens from button by Enter, Space or ArrowDown | First menu item |
    | Menu opens by ArrowUp | Last menu item |

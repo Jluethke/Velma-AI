@@ -38,20 +38,20 @@
 
 ### Phase 1: Parse & Extract Messaging
 
-**Entry Criteria:**
+### Entry Criteria
 - `product_description` is provided and ≥50 characters
 - `brand_voice_guidelines` is either provided or will default to "Tone: professional yet approachable. Vocabulary: accessible. Values: clarity, efficiency, trust."
 
-**Actions:**
+### Actions
 1. Parse the product description to extract: (a) product name, (b) core benefit(s) (what problem it solves), (c) target audience (who uses it), (d) unique selling point(s) (why it's different), (e) any existing calls-to-action or value propositions.
 2. Extract 5-7 key messaging elements: headlines (benefit statements), features (concrete capabilities), value propositions (why it matters), and social proof anchors (if present).
 3. Apply brand voice: If `brand_voice_guidelines` is provided, parse it into (tone, vocabulary_level, key_values). If not provided, use default. Document the applied voice explicitly.
 4. If `keyword_focus` is provided, map each keyword to platforms where it will be emphasized: High-priority (App Store, YouTube), Medium-priority (LinkedIn, Facebook), Low-priority (Twitter, Instagram, SMS due to character constraints). Note any keywords that cannot be naturally integrated.
 
-**Output:**
+### Output
 - `messaging_blueprint` (object with: product_name, core_benefits [array], target_audience, unique_selling_points [array], key_messages [array of 5-7 strings], brand_voice {tone, vocabulary_level, key_values}, keyword_map {high_priority, medium_priority, low_priority})
 
-**Quality Gate:**
+### Quality Gate
 - Messaging blueprint contains all 7 required fields (product_name, core_benefits, target_audience, unique_selling_points, key_messages, brand_voice, keyword_map).
 - All messaging elements are distinct (no duplicates).
 - Brand voice is explicitly stated with tone, vocabulary level, and values.
@@ -62,21 +62,21 @@
 
 ### Phase 2: Generate Social & Short-Form Variations
 
-**Entry Criteria:**
+### Entry Criteria
 - `messaging_blueprint` is complete from Phase 1
 - Brand voice is explicitly defined
 
-**Actions:**
+### Actions
 1. **Twitter:** Compose a tweet (≤280 chars) following this structure: [Benefit or curiosity hook] + [Supporting detail or proof point] + [2-3 hashtags]. Tone must match brand voice (casual, professional, witty, etc.). If `include_ctas` is true, include a link or call-to-action (e.g., "Learn more: [link]"). Verify character count ≤280 including spaces and hashtags.
 2. **LinkedIn:** Write a professional post (300-1300 chars) following this structure: [Opening question or insight] + [1-2 sentences of context or thought leadership] + [Core benefit or value proposition] + [Soft CTA, e.g., "What's your experience?", "Share your thoughts in comments"]. Tone must reflect professional credibility and industry awareness. Vocabulary must match brand guidelines (avoid jargon if brand is "accessible").
 3. **Facebook:** Create an engagement-focused post (100-200 chars) with conversational tone, emojis if brand-appropriate, and a clear CTA (e.g., "Learn more", "Get started"). Structure: [Relatable hook or question] + [Benefit] + [CTA]. Tone must be friendly and community-focused.
 4. **Instagram:** Write a visual-first caption (125-150 chars) assuming an accompanying image. Include personality (emojis, exclamations if brand-appropriate), 5-10 hashtags, and a soft CTA or engagement prompt (e.g., "Tag someone who needs this"). Tone must match brand voice and be visually-complementary.
 5. **SMS:** Compose an SMS message (≤160 chars) with urgency, a clear benefit statement, and a direct CTA or link. Structure: [Benefit or urgency trigger] + [Core value] + [CTA/link]. Tone must be direct and action-oriented.
 
-**Output:**
+### Output
 - `social_variations` (object with: twitter, linkedin, facebook, instagram, sms, each with character_count and tone_descriptor)
 
-**Quality Gate:**
+### Quality Gate
 - **Character limits:** Twitter ≤280, Facebook 100-200, Instagram 125-150, SMS ≤160. Any variation exceeding its limit triggers a Retry error.
 - **Tone consistency:** Each variation reflects the brand voice defined in messaging_blueprint. Tone descriptors (casual, professional, witty, etc.) are consistent across all variations, with platform-specific adaptations noted (e.g., "Twitter: casual; LinkedIn: professional; both emphasize trust").
 - **CTA presence:** If `include_ctas` is true, all 5 variations include a CTA. If false, no CTAs are present.
@@ -86,22 +86,22 @@
 
 ### Phase 3: Generate Email & Landing Page Variations
 
-**Entry Criteria:**
+### Entry Criteria
 - `messaging_blueprint` is complete from Phase 1
 - Brand voice is explicitly defined
 
-**Actions:**
+### Actions
 1. **Email Subject Line:** Compose a subject line (40-50 chars) optimized for open rates. Structure: [Curiosity gap OR benefit statement] + [Optional personalization token, e.g., {{first_name}}]. Avoid spam trigger words (FREE, ACT NOW, LIMITED TIME, URGENT, GUARANTEE, RISK-FREE, WINNER, CASH, WINNER, CLICK HERE). Tone must match brand voice (e.g., if brand is "casual," use conversational language; if "enterprise," use professional language). Verify character count ≤50 including spaces and tokens.
 2. **Landing Page Hero:** Create a three-part hero section:
    - **Headline:** A single, benefit-first statement (8-12 words). Structure: [Benefit or outcome] + [for target audience]. Example: "Sync files instantly across your remote team." Tone must be confident and benefit-focused.
    - **Subheadline:** A supporting statement or social proof (15-25 words). Structure: [Supporting detail OR proof point OR pain point validation]. Example: "No more version conflicts. No more lost work. Join 10,000+ teams."
    - **CTA Text:** A clear, action-oriented button text (2-5 words). Examples: "Start Free Trial", "Get Started", "Learn More", "Request Demo". Tone must be direct and inviting.
 
-**Output:**
+### Output
 - `email_variations` (object with: email_subject, character_count, spam_trigger_check)
 - `landing_page_variations` (object with: headline, headline_word_count, subheadline, subheadline_word_count, cta_text, cta_word_count)
 
-**Quality Gate:**
+### Quality Gate
 - **Email subject line:** ≤50 chars, no spam trigger words, tone matches brand voice. Verification: Check character count and scan against spam trigger word list.
 - **Landing page headline:** 8-12 words, benefit-first, scannable. Verification: Count words; confirm first 3 words convey a benefit.
 - **Landing page subheadline:** 15-25 words, supporting detail or proof point. Verification: Count words; confirm it answers "why should I care?" or "why is this different?".
@@ -112,22 +112,22 @@
 
 ### Phase 4: Generate App Store & Video Variations
 
-**Entry Criteria:**
+### Entry Criteria
 - `messaging_blueprint` is complete from Phase 1
 - `keyword_focus` is available (if provided); if not, keyword integration is skipped
 - Brand voice is explicitly defined
 
-**Actions:**
+### Actions
 1. **App Store Description:** Write a keyword-rich description (80-160 words) following this structure: [Headline: core benefit in 1 sentence] + [Problem statement: pain point the product solves] + [Solution: 3-5 key features, each with a benefit] + [Social proof or credibility statement, if available] + [Download incentive or CTA, e.g., "Download free today", "Start your free trial"]. Integrate keywords from `keyword_focus` naturally into the features and benefits sections (target 2-3 keywords per 100 words; avoid keyword stuffing >3% keyword density). Tone must be feature-rich and benefit-driven. Vocabulary must match brand guidelines (accessible if brand is non-technical).
-2. **YouTube Description:** Compose a video description (150-300 words) following this structure: [Hook (first 55 chars): compelling reason to watch] + [Video overview: what the video covers] + [Timestamps: if applicable, list key sections with timestamps] + [Links: relevant product links, related videos, or resources] + [Keywords: naturally integrated into the description] + [CTA: subscribe, like, comment, or visit link]. Tone must be informative and engaging. Optimize for YouTube search by including keywords in the first 55 characters and throughout the description.
+2. **YouTube Description:** Compose a video description (150-300 words) following this structure: [Hook (first 55 chars): clear reason to watch] + [Video overview: what the video covers] + [Timestamps: if applicable, list key sections with timestamps] + [Links: relevant product links, related videos, or resources] + [Keywords: naturally integrated into the description] + [CTA: subscribe, like, comment, or visit link]. Tone must be informative and engaging. Optimize for YouTube search by including keywords in the first 55 characters and throughout the description.
 
-**Output:**
+### Output
 - `app_store_variations` (object with: app_store, word_count, keyword_integration_notes, app_store_cta)
 - `youtube_variations` (object with: youtube_description, word_count, hook_first_55_chars, keyword_integration_notes, youtube_cta)
 
-**Quality Gate:**
+### Quality Gate
 - **App store copy:** 80-160 words, includes 3-5 features with benefits, keyword density ≤3%, no keyword stuffing. Verification: Count words; list features; scan for keyword density.
-- **YouTube description:** 150-300 words, hook in first 55 chars, includes timestamps and links, keywords naturally integrated. Verification: Count words; confirm first 55 chars are compelling; check for timestamps and links.
+- **YouTube description:** 150-300 words, hook in first 55 chars, includes timestamps and links, keywords naturally integrated. Verification: Count words; confirm first 55 chars are clear; check for timestamps and links.
 - **Keyword integration:** If `keyword_focus` was provided, confirm all high-priority keywords appear in app store and YouTube descriptions. If a keyword cannot be naturally integrated, note this in keyword_integration_notes.
 - **Tone consistency:** Both variations reflect the brand voice defined in messaging_blueprint.
 
@@ -135,11 +135,11 @@
 
 ### Phase 5: Compile, Validate & Score
 
-**Entry Criteria:**
+### Entry Criteria
 - All variations from Phases 2, 3, and 4 are complete
 - All quality gates from previous phases have passed
 
-**Actions:**
+### Actions
 1. **Merge all variations:** Combine all 10 platform copies (twitter, linkedin, facebook, instagram, sms, email_subject, landing_page_hero, app_store, youtube_description) into a single `variations` output object. Include character counts and word counts for each variation.
 2. **Generate metadata:** Create a metadata object with: product_name, target_audience, brand_voice_used (tone, vocabulary_level, key_values), keywords_emphasized (array of keywords actually used), generation_timestamp (ISO 8601 format).
 3. **Perform tone consistency scoring (0-100):** Compare all 10 variations against the brand voice defined in messaging_blueprint. Apply the following rubric:
@@ -178,12 +178,12 @@
    - **SMS:** "Expected click-through rate: 20-40%. Tip: SMS has highest engagement rate of all channels. Include clear CTA or link. Avoid ALL CAPS."
 7. **Generate consistency notes:** Document any tone drift, brand alignment deviations, or platform constraint violations. Explain why each occurred and whether it was intentional (e.g., "Instagram caption is shorter than ideal due to character limit, but maintains brand voice").
 
-**Output:**
+### Output
 - `variations` (complete object with all 10 copies, character/word counts, and platform_performance_notes)
 - `metadata` (object with product_name, target_audience, brand_voice_used, keywords_emphasized, generation_timestamp)
 - `quality_report` (object with: tone_consistency_score [0-100], brand_alignment_score [0-100], platform_compliance_flags [array, empty if all pass], consistency_notes [string describing any deviations and why])
 
-**Quality Gate:**
+### Quality Gate
 - All 10 variations are present and non-empty.
 - Tone consistency score is ≥75, OR if <75, consistency_notes explain the deviations and recommend regeneration of specific variations.
 - Brand alignment score is ≥75, OR if <75, consistency_notes explain the deviations and recommend regeneration.
@@ -193,6 +193,15 @@
 - **Verification method:** A user could review the quality_report and immediately understand whether the variations are ready to publish, or which variations need regeneration.
 
 ---
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Convert a single product description into 10 optimized copy variations for Twitt, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 

@@ -34,10 +34,10 @@ PHASE 5: RISKS      --> Risk assessment with mitigation strategies, kill criteri
 
 ### Phase 1: MARKET -- Size and Dynamics
 
-**Entry criteria:** Product description and target market definition are provided.
+### Entry Criteria
+Product description and target market definition are provided.
 
-**Actions:**
-
+### Actions
 1. **Top-down market sizing:**
    ```
    TAM = Total market for this product category globally
@@ -81,18 +81,20 @@ PHASE 5: RISKS      --> Risk assessment with mitigation strategies, kill criteri
    Declining (<5%/yr or negative): Avoid unless you have a disruption thesis
    ```
 
-**Output:** Market size (TAM/SAM/SOM) with methodology, growth rate, dynamics, and maturity assessment.
+### Output
+Market size (TAM/SAM/SOM) with methodology, growth rate, dynamics, and maturity assessment.
 
-**Quality gate:** Both top-down and bottom-up estimates are computed. Growth rate is sourced. Market dynamics include at least 2 drivers and 2 headwinds.
+### Quality Gate
+Both top-down and bottom-up estimates are computed. Growth rate is sourced. Market dynamics include at least 2 drivers and 2 headwinds.
 
 ---
 
 ### Phase 2: LANDSCAPE -- Competitive Map
 
-**Entry criteria:** Market is sized and defined.
+### Entry Criteria
+Market is sized and defined.
 
-**Actions:**
-
+### Actions
 1. **Identify competitors by category:**
    ```
    Direct: Same product, same buyer, same problem
@@ -136,18 +138,20 @@ PHASE 5: RISKS      --> Risk assessment with mitigation strategies, kill criteri
    HHI > 2500: highly concentrated (harder to enter)
    ```
 
-**Output:** Competitor profiles, barrier assessment, market concentration analysis.
+### Output
+Competitor profiles, barrier assessment, market concentration analysis.
 
-**Quality gate:** At least 3 direct competitors are profiled. Barriers are assessed with specific severity ratings. Market concentration is estimated.
+### Quality Gate
+At least 3 direct competitors are profiled. Barriers are assessed with specific severity ratings. Market concentration is estimated.
 
 ---
 
 ### Phase 3: POSITION -- Differentiation Strategy
 
-**Entry criteria:** Competitive landscape is mapped.
+### Entry Criteria
+Competitive landscape is mapped.
 
-**Actions:**
-
+### Actions
 1. **Identify competitive gaps:**
    ```
    For each competitor weakness, ask:
@@ -196,18 +200,20 @@ PHASE 5: RISKS      --> Risk assessment with mitigation strategies, kill criteri
    - Why switch now (urgency trigger)
    ```
 
-**Output:** Competitive gap analysis, differentiation strategy, positioning statement, per-segment value propositions.
+### Output
+Competitive gap analysis, differentiation strategy, positioning statement, per-segment value propositions.
 
-**Quality gate:** Differentiation is specific (not "better product"). Positioning statement is testable (could be false -- if it can't be false, it's not saying anything). Value proposition addresses a specific pain per segment.
+### Quality Gate
+Differentiation is specific (not "better product"). Positioning statement is testable (could be false -- if it can't be false, it's not saying anything). Value proposition addresses a specific pain per segment.
 
 ---
 
 ### Phase 4: STRATEGY -- Go-to-Market Plan
 
-**Entry criteria:** Positioning and differentiation are defined.
+### Entry Criteria
+Positioning and differentiation are defined.
 
-**Actions:**
-
+### Actions
 1. **Channel strategy:**
    ```
    Select primary and secondary channels based on ACV and buyer behavior:
@@ -282,18 +288,20 @@ PHASE 5: RISKS      --> Risk assessment with mitigation strategies, kill criteri
    - Target: 50-100 customers
    ```
 
-**Output:** Channel strategy, messaging framework, pricing approach, partnership plan, and phased launch timeline.
+### Output
+Channel strategy, messaging framework, pricing approach, partnership plan, and phased launch timeline.
 
-**Quality gate:** Channel selection is justified by ACV and buyer behavior (not just preference). Messaging addresses at least 2 buyer personas. Launch timeline has specific customer targets per phase.
+### Quality Gate
+Channel selection is justified by ACV and buyer behavior (not just preference). Messaging addresses at least 2 buyer personas. Launch timeline has specific customer targets per phase.
 
 ---
 
 ### Phase 5: RISKS -- Assessment and Kill Criteria
 
-**Entry criteria:** GTM plan is defined with resource commitments.
+### Entry Criteria
+GTM plan is defined with resource commitments.
 
-**Actions:**
-
+### Actions
 1. **Build risk matrix:**
    ```
    Per risk:
@@ -346,9 +354,20 @@ PHASE 5: RISKS      --> Risk assessment with mitigation strategies, kill criteri
    - Competitors have not responded to your entry
    ```
 
-**Output:** Risk matrix, kill criteria with specific thresholds and dates, pivot triggers, and double-down triggers.
+### Output
+Risk matrix, kill criteria with specific thresholds and dates, pivot triggers, and double-down triggers.
 
-**Quality gate:** At least 5 risks are assessed. Kill criteria have specific numerical thresholds (not "if things aren't working"). Review date is set. Decision maker is identified.
+### Quality Gate
+At least 5 risks are assessed. Kill criteria have specific numerical thresholds (not "if things aren't working"). Review date is set. Decision maker is identified.
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Analyzes market entry opportunities by sizing the market (TAM/SAM/SOM), mapping , the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 

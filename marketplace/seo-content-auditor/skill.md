@@ -35,19 +35,21 @@
 - `schema_markup_audit` (object): Schema presence status, markup type detected, validation results, recommendations for implementation.
 - `readability_metrics` (object): Flesch-Kincaid grade level, average sentence length, average word length, overall readability score, specific rewrite suggestions for long/complex sentences.
 - `content_freshness_audit` (object): Publication age, last update age, freshness assessment, refresh recommendations (if applicable).
-- `seo_audit_report` (object): Comprehensive findings with critical/important/nice-to-have recommendations, overall SEO score (0-100), improvement comparison (if previous audit provided).
+- `seo_audit_report` (object): Full findings with critical/important/nice-to-have recommendations, overall SEO score (0-100), improvement comparison (if previous audit provided).
 
 ---
+- `readability_audit`: (from manifest)
+- `overall_score`: (from manifest)
 
 ## Execution Phases
 
 ### Phase 1: Keyword Analysis
 
-**Entry Criteria:**
+### Entry Criteria
 - Blog post content is provided and contains minimum 100 words.
 - Target keywords are provided OR workflow will infer them from content frequency.
 
-**Actions:**
+### Actions
 1. Tokenize blog post content into words (remove stop words, normalize case).
 2. If target keywords provided: count occurrences of each keyword and variants in content.
 3. If target keywords not provided: identify top 5-10 most frequent meaningful terms as inferred keywords.
@@ -57,7 +59,7 @@
 7. If competitor_urls provided: fetch and analyze competitor content density for same keywords; record benchmark values.
 8. Output keyword analysis object with density assessment (optimal if 1-3% for primary, 0.5-1.5% for secondary; too-high if >3%; too-low if <0.5%).
 
-**Output:**
+### Output
 - Keyword frequency map (dict: keyword → count)
 - Primary keyword (string)
 - Secondary keywords (array of strings)
@@ -65,7 +67,7 @@
 - Competitive benchmark (dict: keyword → competitor_average_density, if competitor data provided)
 - Density assessment (string: "optimal", "too-high", "too-low")
 
-**Quality Gate:**
+### Quality Gate
 - Primary keyword identified and density calculated.
 - All density values are numeric, between 0-5%, and sum to ≤10% combined.
 - If competitor data provided, benchmark values are present and comparable.
@@ -74,12 +76,12 @@
 
 ### Phase 2: URL Slug and Meta Description Audit
 
-**Entry Criteria:**
+### Entry Criteria
 - Blog post URL (if provided) available for slug analysis.
 - Blog post content available.
 - Meta description (if present) provided in input.
 
-**Actions:**
+### Actions
 1. If blog_post_url provided: extract URL slug (path component after domain).
 2. Analyze slug for: (a) primary keyword inclusion, (b) length (optimal: 3-5 words, <75 characters), (c) format (hyphens vs underscores; hyphens preferred), (d) readability (no numbers, dates, or special characters unless necessary).
 3. Generate URL slug recommendations if issues found.
@@ -90,11 +92,11 @@
 8. If missing: flag as critical issue and generate recommended meta description (include primary keyword, value proposition, CTA).
 9. Generate recommendations for improvement or creation.
 
-**Output:**
+### Output
 - URL slug audit object: {slug_present: boolean, slug_value: string, keyword_included: boolean, length_assessment: string, format_assessment: string, recommendations: array}
 - Meta description audit object: {present: boolean, character_count: number, keyword_included: boolean, issues: array, recommendations: array}
 
-**Quality Gate:**
+### Quality Gate
 - URL slug status (present/absent) is clear; if present, all assessments are specific (e.g., "keyword included", "length 45 characters, optimal").
 - Meta description status (present/missing) is clear.
 - If present, character count is accurate (verified by character count algorithm).
@@ -104,10 +106,10 @@
 
 ### Phase 3: Header Structure Analysis
 
-**Entry Criteria:**
+### Entry Criteria
 - Blog post content with header markup (H1, H2, H3 tags) is provided.
 
-**Actions:**
+### Actions
 1. Parse content and extract all headers with their levels and text content.
 2. Count H1, H2, H3 occurrences.
 3. Verify hierarchy: H1 should appear exactly once at top; H2s should follow H1; H3s should follow H2s; no level skipping (e.g., H1 → H3 is invalid).
@@ -118,10 +120,10 @@
 8. If competitor_urls provided: compare header structure (count, keyword placement) against competitors.
 9. Generate recommendations for header optimization.
 
-**Output:**
+### Output
 - Header structure audit object: {h1_count: number, h2_count: number, h3_count: number, hierarchy_valid: boolean, hierarchy_issues: array, primary_keyword_in_headers: boolean, secondary_keywords_in_headers: boolean, header_list: array of {level, text, keyword_match}, competitive_benchmark: object (if competitor data provided), issues: array, recommendations: array}
 
-**Quality Gate:**
+### Quality Gate
 - Header counts are accurate (verified by parsing algorithm).
 - Hierarchy assessment is clear and specific: valid ("H1 present, H2s follow H1, no skipping") or invalid with specific issues listed (e.g., "Multiple H1s detected", "H3 appears before H2").
 - Keyword placement in headers is identified with specific header text.
@@ -131,10 +133,10 @@
 
 ### Phase 3.5: Image Alt-Text Audit
 
-**Entry Criteria:**
+### Entry Criteria
 - Blog post content with image tags (img elements with src and alt attributes) is provided.
 
-**Actions:**
+### Actions
 1. Parse content and extract all image elements.
 2. Count total images in blog post.
 3. For each image: check if alt attribute is present and non-empty.
@@ -145,10 +147,10 @@
 8. Generate specific alt-text recommendations for each image (include keyword if relevant, describe image content).
 9. Output list of missing alt-text images with suggested replacements.
 
-**Output:**
+### Output
 - Image alt-text audit object: {total_images: number, images_with_alt: number, alt_text_coverage_percentage: number, keyword_in_alt_text_count: number, missing_alt_text: array of {image_src, suggested_alt_text}, low_quality_alt_text: array of {image_src, current_alt_text, suggested_alt_text}, recommendations: array}
 
-**Quality Gate:**
+### Quality Gate
 - Image count is accurate.
 - Alt-text coverage percentage is numeric, between 0-100%.
 - All missing alt-text images are listed with specific, keyword-relevant suggestions.
@@ -159,12 +161,12 @@
 
 ### Phase 4: Internal Linking Audit
 
-**Entry Criteria:**
+### Entry Criteria
 - Blog post content is available.
 - Existing internal links (if any) provided in input.
 - Site content inventory (optional) provided for recommendations.
 
-**Actions:**
+### Actions
 1. Count existing internal links in blog post.
 2. For each internal link: assess anchor text quality (is it descriptive, keyword-relevant, and >3 characters? Avoid "click here", "read more", "link").
 3. Identify 2-4 opportunities for additional internal links based on content context and keyword relevance.
@@ -174,10 +176,10 @@
 7. Calculate optimal link count based on word count: 2-4 links per 1000 words.
 8. Generate recommendations for new internal links with specific anchor text and placement.
 
-**Output:**
+### Output
 - Internal linking audit object: {current_link_count: number, optimal_link_count_range: string, anchor_text_quality: string, distribution_assessment: string, opportunities: array of {suggested_anchor_text, suggested_target_url, context, placement}, recommendations: array}
 
-**Quality Gate:**
+### Quality Gate
 - Current link count is accurate (verified by parsing algorithm).
 - Optimal link count range is calculated and specific (e.g., "2-4 links for 1500-word post").
 - Anchor text quality assessment is specific (e.g., "3 of 5 links use descriptive anchor text; 2 use generic 'click here'").
@@ -188,11 +190,11 @@
 
 ### Phase 4.5: External Linking Audit
 
-**Entry Criteria:**
+### Entry Criteria
 - Blog post content is available.
 - Existing external links (if any) provided in input.
 
-**Actions:**
+### Actions
 1. Count existing external links in blog post.
 2. For each external link: assess (a) target domain authority (if domain_authority provided in input), (b) relevance to content topic, (c) anchor text quality.
 3. Identify links to low-authority domains (<20 DA) or irrelevant sites; flag as potential issues.
@@ -201,10 +203,10 @@
 6. Generate recommendations: (a) replace low-authority links with high-authority alternatives, (b) add 1-2 links to authoritative sources if none present, (c) improve anchor text if generic.
 7. Calculate external link count and assess whether it's appropriate for post length (typically 1-3 external links per 1000 words).
 
-**Output:**
+### Output
 - External linking audit object: {current_external_link_count: number, optimal_external_link_count_range: string, authority_assessment: string, relevance_assessment: string, low_authority_links: array of {url, domain_authority, suggested_replacement}, recommendations: array}
 
-**Quality Gate:**
+### Quality Gate
 - External link count is accurate.
 - Optimal external link count range is calculated and specific.
 - Authority assessment is specific (e.g., "2 of 3 links point to high-authority domains (DA >50)").
@@ -216,11 +218,11 @@
 
 ### Phase 5: Readability Analysis
 
-**Entry Criteria:**
+### Entry Criteria
 - Blog post content is provided and contains minimum 100 words.
 - Target audience level is provided or defaults to "general".
 
-**Actions:**
+### Actions
 1. Calculate total word count, sentence count, and syllable count.
 2. Calculate average sentence length: total_words / number_of_sentences.
 3. Calculate average word length: total_characters / total_words.
@@ -232,25 +234,25 @@
 9. Identify paragraphs that are too dense (>5 sentences) and suggest breaking into multiple paragraphs.
 10. Generate recommendations for improving readability.
 
-**Output:**
+### Output
 - Readability metrics object: {flesch_kincaid_grade: number, avg_sentence_length: number, avg_word_length: number, readability_score: number (0-100), assessment: string, target_audience_match: boolean, long_sentences: array of {sentence_text, word_count, suggested_rewrite}, complex_vocabulary: array of {word, syllable_count, suggested_simpler_word}, dense_paragraphs: array of {paragraph_text, sentence_count, break_suggestion}, recommendations: array}
 
-**Quality Gate:**
+### Quality Gate
 - All metrics are numeric and within specified ranges: Flesch-Kincaid 0-18, readability score 0-100, avg sentence length 5-30 words, avg word length 3-7 characters.
 - Readability score matches target audience expectation (within ±5 points of target range).
 - All long sentences (>20 words) are identified with specific rewrites.
 - All complex vocabulary items are identified with simpler alternatives.
 - All dense paragraphs are identified with break suggestions.
-- Recommendations are actionable and specific (e.g., "Rewrite 'The implementation of SEO best practices necessitates comprehensive keyword research' as 'To implement SEO best practices, start with keyword research'").
+- Recommendations are actionable and specific (e.g., "Rewrite 'The implementation of SEO best practices necessitates full keyword research' as 'To implement SEO best practices, start with keyword research'").
 
 ---
 
 ### Phase 6: Schema Markup Validation
 
-**Entry Criteria:**
+### Entry Criteria
 - Blog post content with potential schema markup (JSON-LD, microdata, RDFa) is provided.
 
-**Actions:**
+### Actions
 1. Parse content for structured data markup (JSON-LD, microdata, RDFa).
 2. If schema markup present: identify markup type (Article, BlogPosting, NewsArticle, FAQ, HowTo, etc.).
 3. Validate markup against schema.org specifications for the detected type.
@@ -260,10 +262,10 @@
 7. Generate specific schema markup recommendations (JSON-LD format preferred).
 8. Assess whether markup would enable rich snippets in search results.
 
-**Output:**
+### Output
 - Schema markup audit object: {markup_present: boolean, markup_type: string (if present), validation_status: string, missing_required_properties: array, missing_recommended_properties: array, rich_snippet_eligible: boolean, recommendations: array, suggested_markup: string (JSON-LD template if markup missing)}
 
-**Quality Gate:**
+### Quality Gate
 - Markup presence status (present/absent) is clear.
 - If present, markup type is identified and validation results are specific (e.g., "BlogPosting markup valid; missing dateModified property").
 - If absent, recommended markup type is specific based on content analysis.
@@ -275,23 +277,23 @@
 
 ### Phase 7: Content Freshness Assessment
 
-**Entry Criteria:**
+### Entry Criteria
 - Blog post content is provided.
 - Publish date and/or last updated date provided (optional).
 
-**Actions:**
+### Actions
 1. If publish_date provided: calculate publication age in days from today.
 2. If last_updated_date provided: calculate days since last update.
 3. Assess freshness: content <6 months old is "fresh", 6-12 months is "aging", >12 months is "stale".
 4. If content is stale (>12 months): flag as issue and recommend refresh.
 5. Check content for time-sensitive information (e.g., "2024 trends", "current best practices") that may be outdated.
-6. Generate recommendations: (a) update last_modified date if minor edits made, (b) comprehensive refresh if major changes needed, (c) add "last updated" date to post for transparency.
+6. Generate recommendations: (a) update last_modified date if minor edits made, (b) full refresh if major changes needed, (c) add "last updated" date to post for transparency.
 7. If content is fresh and regularly updated, note as positive signal.
 
-**Output:**
+### Output
 - Content freshness audit object: {publish_date: string, publication_age_days: number, last_updated_date: string, days_since_update: number, freshness_assessment: string, time_sensitive_content_detected: boolean, recommendations: array}
 
-**Quality Gate:**
+### Quality Gate
 - Freshness assessment is specific ("fresh", "aging", "stale") with age threshold clearly stated.
 - If dates provided, age calculations are accurate (verified by date math).
 - Time-sensitive content is identified with specific examples (e.g., "'2024 SEO trends' section may be outdated").
@@ -299,12 +301,12 @@
 
 ---
 
-### Phase 8: Comprehensive SEO Report Compilation
+### Phase 8: Full SEO Report Compilation
 
-**Entry Criteria:**
+### Entry Criteria
 - All audit phases (1-7) are complete and outputs available.
 
-**Actions:**
+### Actions
 1. Aggregate all findings from keyword, URL, meta, header, image, internal link, external link, readability, schema, and freshness audits.
 2. Categorize issues as: Critical (blocks SEO or accessibility), Important (should fix before publishing), Nice-to-Have (optimization).
 3. Assign priority scores to recommendations based on SEO impact and effort required.
@@ -324,10 +326,10 @@
 7. If previous_audit_result provided: calculate improvement comparison (delta for each metric, percentage improvement).
 8. Generate full report with all findings, recommendations, and improvement tracking.
 
-**Output:**
+### Output
 - SEO audit report object: {overall_seo_score: number (0-100), score_breakdown: object (category → sub_score), summary: string, critical_issues: array of {issue, impact, recommendation}, important_issues: array of {issue, impact, recommendation}, nice_to_have: array of {issue, impact, recommendation}, top_3_actions: array of {action, expected_impact, effort_level}, full_findings: object (all audit results), improvement_comparison: object (if previous audit provided, showing deltas), publication_readiness: string ("Ready to publish", "Address critical issues", "Significant optimization needed")}
 
-**Quality Gate:**
+### Quality Gate
 - Overall SEO score is numeric (0-100) and calculated from weighted sub-scores.
 - All issues are categorized (critical/important/nice-to-have) with specific impact statements.
 - Top 3 actions are specific and actionable (e.g., "Add alt-text to 5 images missing descriptions (5 min effort, +5 SEO points)").
@@ -336,6 +338,15 @@
 - Publication readiness is clear and specific (e.g., "Ready to publish after addressing 2 critical issues: add H1 header and meta description").
 
 ---
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Analyze a blog post for SEO optimization across keyword density, meta descriptio, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 
@@ -351,7 +362,7 @@ The skill is complete when:
 9. Readability metrics are calculated with specific rewrite suggestions for long/complex sentences and dense paragraphs.
 10. Schema markup audit validates presence and recommends appropriate markup type with JSON-LD template.
 11. Content freshness audit assesses publication age and recommends refresh if stale.
-12. Comprehensive SEO report is generated with overall score (0-100), prioritized recommendations, top 3 actions, and publication readiness assessment.
+12. Full SEO report is generated with overall score (0-100), prioritized recommendations, top 3 actions, and publication readiness assessment.
 13. If previous audit provided, improvement comparison shows metric deltas and percentage improvements.
 14. All outputs are populated and ready for user review.
 
@@ -400,7 +411,7 @@ The skill is complete when:
 - Include primary keyword naturally (once)
 - Include call-to-action or value proposition
 - Unique per page (no duplicates)
-- Compelling and click-worthy language
+- Clear and click-worthy language
 - Avoid keyword stuffing or misleading claims
 
 ### Header Structure Standards

@@ -33,9 +33,10 @@ PHASE 5: DOCUMENT      --> Generate README, contributing guide, ADR template
 
 ### Phase 1: REQUIREMENTS -- Gather Project Requirements
 
-**Entry criteria:** A new project needs to be set up.
+### Entry Criteria
+A new project needs to be set up.
 
-**Actions:**
+### Actions
 1. Identify the primary language and version requirement
 2. Identify the framework and its project conventions
 3. Determine the deployment target and its requirements
@@ -48,17 +49,20 @@ PHASE 5: DOCUMENT      --> Generate README, contributing guide, ADR template
 8. Determine testing requirements (unit, integration, E2E)
 9. Determine CI/CD requirements (which CI system, deployment strategy)
 
-**Output:** Requirements document listing language, framework, deploy target, team size, project type, repo structure, services, and testing/CI needs.
+### Output
+Requirements document listing language, framework, deploy target, team size, project type, repo structure, services, and testing/CI needs.
 
-**Quality gate:** Language and framework are specified. Deploy target is known. Monorepo/polyrepo decision is made.
+### Quality Gate
+Language and framework are specified. Deploy target is known. Monorepo/polyrepo decision is made.
 
 ---
 
 ### Phase 2: STRUCTURE -- Design Directory Layout
 
-**Entry criteria:** Requirements are complete.
+### Entry Criteria
+Requirements are complete.
 
-**Actions:**
+### Actions
 1. Choose directory structure pattern (see Reference: Directory Structure Patterns):
    - **Feature-based** (recommended for most projects): each feature is a self-contained directory
    - **Layer-based** (simpler, for small projects): routes/, services/, models/ flat structure
@@ -80,17 +84,20 @@ PHASE 5: DOCUMENT      --> Generate README, contributing guide, ADR template
    - Conventional commits
    - Pre-commit hooks
 
-**Output:** Directory structure diagram with all planned files and their purposes.
+### Output
+Directory structure diagram with all planned files and their purposes.
 
-**Quality gate:** Directory structure follows the chosen pattern. All essential files are planned. Build configuration matches the language/framework.
+### Quality Gate
+Directory structure follows the chosen pattern. All essential files are planned. Build configuration matches the language/framework.
 
 ---
 
 ### Phase 3: SCAFFOLD -- Generate Project Files
 
-**Entry criteria:** Directory structure is designed.
+### Entry Criteria
+Directory structure is designed.
 
-**Actions:**
+### Actions
 1. Generate the build configuration (see Reference: Build Configuration):
    - Python: pyproject.toml with dependencies, dev dependencies, tool config
    - JS/TS: package.json with scripts, dependencies, engines
@@ -121,17 +128,20 @@ PHASE 5: DOCUMENT      --> Generate README, contributing guide, ADR template
     - Health check endpoint (for services)
 11. Select language-specific starter template (see Reference: Language-Specific Starters)
 
-**Output:** Complete set of project files ready to commit.
+### Output
+Complete set of project files ready to commit.
 
-**Quality gate:** All planned files from Phase 2 are generated. Build configuration includes both production and dev dependencies. .env.example documents every variable. At least one test exists.
+### Quality Gate
+All planned files from Phase 2 are generated. Build configuration includes both production and dev dependencies. .env.example documents every variable. At least one test exists.
 
 ---
 
 ### Phase 4: VALIDATE -- Build Check
 
-**Entry criteria:** All project files are generated.
+### Entry Criteria
+All project files are generated.
 
-**Actions:**
+### Actions
 1. Verify the project builds:
    - `pip install -e .` / `npm ci` / `cargo build` / `go build`
 2. Verify the linter passes:
@@ -151,17 +161,20 @@ PHASE 5: DOCUMENT      --> Generate README, contributing guide, ADR template
    - Docker runs as non-root
    - No secrets in generated files
 
-**Output:** Validation report listing pass/fail status for each check.
+### Output
+Validation report listing pass/fail status for each check.
 
-**Quality gate:** Build succeeds. Linter passes. Formatter passes. Tests pass. Docker builds (if applicable). No secrets in committed files.
+### Quality Gate
+Build succeeds. Linter passes. Formatter passes. Tests pass. Docker builds (if applicable). No secrets in committed files.
 
 ---
 
 ### Phase 5: DOCUMENT -- Generate Documentation
 
-**Entry criteria:** Validation passes on all checks.
+### Entry Criteria
+Validation passes on all checks.
 
-**Actions:**
+### Actions
 1. Generate README.md following the template (see Reference: README Template from technical-writing):
    - Project name and one-line description
    - Install command
@@ -182,11 +195,22 @@ PHASE 5: DOCUMENT      --> Generate README, contributing guide, ADR template
 4. Generate LICENSE file (MIT for open source, proprietary for business)
 5. Verify the Quick Decision Checklist (see Reference: Quick Decision Checklist)
 
-**Output:** Complete documentation files ready to commit alongside the project.
+### Output
+Complete documentation files ready to commit alongside the project.
 
-**Quality gate:** README has install, quick start, and test instructions. CONTRIBUTING has dev setup and PR process. All documentation follows the project's chosen conventions.
+### Quality Gate
+README has install, quick start, and test instructions. CONTRIBUTING has dev setup and PR process. All documentation follows the project's chosen conventions.
 
 ---
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Project scaffolding skill covering monorepo vs polyrepo decisions, directory str, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 
@@ -908,3 +932,7 @@ Starting a new project? Run through this in 5 minutes:
 [ ] Docker: dev container with hot reload (if needed)
 [ ] LICENSE file
 ```
+
+---
+
+Copyright 2024-present The Wayfinder Trust. All rights reserved.

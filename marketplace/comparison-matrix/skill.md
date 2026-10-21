@@ -1,6 +1,6 @@
 # Comparison Matrix
 
-> **Starter Skill** — Free to use. Royalties to original creator on derivatives. Build on this.
+> **Starter Skill**  --  Free to use. Royalties to original creator on derivatives. Build on this.
 
 Foundation pattern for comparing 2-5 options across weighted criteria. Takes options and evaluation criteria with importance weights, scores each option, and produces a ranked recommendation with tradeoff analysis. Fork this to create domain-specific decision tools (product comparison, vendor selection, job offer comparison, tool evaluation, treatment option comparison, etc.).
 
@@ -36,58 +36,68 @@ ACT     --> Output comparison matrix, winner, and tradeoff summary
 
 ### OBSERVE: Frame the Comparison
 
-**Entry criteria:** At least 2 options and 1 criterion are provided.
+### Entry Criteria
+At least 2 options and 1 criterion are provided.
 
-**Actions:**
+### Actions
 1. Validate options. Ensure 2-5 options are provided. If more than 5, ask the user to shortlist or group similar options. If fewer than 2, this is not a comparison -- suggest the Pros and Cons Analyzer skill instead.
 2. Validate and normalize criteria weights. Weights must sum to 1.0. If raw weights are provided (e.g., "cost is twice as important as speed"), normalize them. If no weights are given, start with equal weights and flag for user adjustment.
 3. Apply dealbreakers. For each option, check against dealbreaker thresholds. Eliminate options that fail hard constraints. Document which options were eliminated and why.
 4. Set scoring scale. Use 1-10 for all criteria. Define anchor points: 1 = worst realistic, 5 = acceptable, 10 = best realistic. Scoring anchors should be specific to the domain when possible.
 
-**Output:** Validated option list (post-dealbreakers), normalized criteria with weights, scoring scale with anchors.
+### Output
+Validated option list (post-dealbreakers), normalized criteria with weights, scoring scale with anchors.
 
-**Quality gate:** 2-5 options survive dealbreakers. Weights sum to 1.0. Each criterion has a clear direction (higher_better or lower_better).
+### Quality Gate
+2-5 options survive dealbreakers. Weights sum to 1.0. Each criterion has a clear direction (higher_better or lower_better).
 
 ---
 
 ### REASON: Score and Compute
 
-**Entry criteria:** Options and weighted criteria are finalized.
+### Entry Criteria
+Options and weighted criteria are finalized.
 
-**Actions:**
+### Actions
 1. Score each option on each criterion (1-10). Provide a one-sentence justification for every score. Score all options on a single criterion before moving to the next criterion -- this prevents halo effects.
 2. Compute weighted scores. For each cell: `weighted = raw_score * criterion_weight`. For "lower_better" criteria, invert: `weighted = (11 - raw_score) * criterion_weight`.
 3. Compute weighted totals per option. Sum all weighted scores. Normalize to 0-100 scale for readability.
 4. Run sensitivity check. For each criterion, test: if this weight moved +/- 20%, would the top-ranked option change? Flag sensitive criteria.
 5. Identify tradeoffs between top 2 options. For each criterion where they differ by 2+ points, state the tradeoff in plain language: "Option A is stronger on X but weaker on Y."
 
-**Output:** Scored matrix, weighted totals, sensitivity flags, tradeoff analysis.
+### Output
+Scored matrix, weighted totals, sensitivity flags, tradeoff analysis.
 
-**Quality gate:** Every cell has a score and justification. Weighted totals are mathematically consistent. Sensitivity check completed.
+### Quality Gate
+Every cell has a score and justification. Weighted totals are mathematically consistent. Sensitivity check completed.
 
 ---
 
 ### PLAN: Rank and Recommend
 
-**Entry criteria:** Scoring and analysis are complete.
+### Entry Criteria
+Scoring and analysis are complete.
 
-**Actions:**
+### Actions
 1. Rank options by weighted total. Note the gap between adjacent ranks. Gaps under 5 points (on 100-point scale) mean the options are effectively tied.
 2. Assess recommendation confidence. High (0.7-1.0): clear winner with 10+ point gap and no sensitivity flags. Medium (0.4-0.7): winner with small gap or 1-2 sensitivity flags. Low (0.0-0.4): near-tie or multiple sensitivity flags -- needs more information or refined weights.
 3. Write tradeoff summary. For the top 2-3 options, one sentence each: "Choose X if you prioritize A and B. Choose Y if C matters more than A."
 4. Draft recommendation. State the winner, the confidence level, and a one-paragraph rationale referencing the key criteria that drove the result.
 
-**Output:** Ranked list, confidence assessment, tradeoff summaries, recommendation.
+### Output
+Ranked list, confidence assessment, tradeoff summaries, recommendation.
 
-**Quality gate:** Recommendation confidence is justified by gap size and sensitivity. Tradeoff summary covers top 2 options minimum.
+### Quality Gate
+Recommendation confidence is justified by gap size and sensitivity. Tradeoff summary covers top 2 options minimum.
 
 ---
 
 ### ACT: Deliver Comparison Package
 
-**Entry criteria:** Ranking and recommendation are ready.
+### Entry Criteria
+Ranking and recommendation are ready.
 
-**Actions:**
+### Actions
 1. Format the comparison matrix as a table: options as rows, criteria as columns, with raw scores, weighted scores, and totals.
 2. Output the ranking with score gaps.
 3. Output tradeoff summaries in plain language.
@@ -95,9 +105,20 @@ ACT     --> Output comparison matrix, winner, and tradeoff summary
 5. List sensitivity flags so the user knows where weight adjustments could change the outcome.
 6. Check for loop trigger: did scoring reveal a missing criterion or a new option worth considering? If so, note it but do not loop automatically.
 
-**Output:** Complete comparison package: matrix, ranking, tradeoffs, recommendation, sensitivity flags.
+### Output
+Complete comparison package: matrix, ranking, tradeoffs, recommendation, sensitivity flags.
 
-**Quality gate:** Matrix is internally consistent. Ranking matches weighted totals. Recommendation references specific criteria scores.
+### Quality Gate
+Matrix is internally consistent. Ranking matches weighted totals. Recommendation references specific criteria scores.
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Compare 2-5 options across weighted criteria with scoring, ranking, tradeoff ana, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 
@@ -126,12 +147,12 @@ The skill is DONE when:
 
 | Score | Meaning |
 |---|---|
-| 10 | Best realistic outcome — exceeds all requirements |
-| 8–9 | Strong — fully meets requirements with notable upside |
-| 6–7 | Acceptable — meets core requirements, minor gaps |
-| 4–5 | Marginal — meets some requirements, notable gaps |
-| 2–3 | Weak — significant shortfall on this criterion |
-| 1 | Worst realistic — fails the criterion entirely |
+| 10 | Best realistic outcome  --  exceeds all requirements |
+| 8–9 | Strong  --  fully meets requirements with notable upside |
+| 6–7 | Acceptable  --  meets core requirements, minor gaps |
+| 4–5 | Marginal  --  meets some requirements, notable gaps |
+| 2–3 | Weak  --  significant shortfall on this criterion |
+| 1 | Worst realistic  --  fails the criterion entirely |
 
 ### Sensitivity Threshold Rule
 
@@ -146,7 +167,7 @@ When sensitivity flags exist, report as: "The winner changes if [criterion] weig
 Options are **effectively tied** when their normalized total scores are within 5 points. In a tie:
 1. Identify the criterion with the largest score difference between the two tied options
 2. Ask the user to rate that single criterion's weight relative to their actual priorities
-3. Use the response to break the tie — never recommend arbitrarily when tied
+3. Use the response to break the tie  --  never recommend arbitrarily when tied
 
 ### Common Weight Distributions by Decision Type
 

@@ -33,9 +33,10 @@ ACT     --> Generate fix recommendations, migration scripts, index additions
 
 ### OBSERVE: Read Schema, Queries, Indexes, Migration History
 
-**Entry criteria:** At least one input is provided (schema, queries, or task description).
+### Entry Criteria
+At least one input is provided (schema, queries, or task description).
 
-**Actions:**
+### Actions
 1. Read and parse schema definitions -- tables, columns, types, constraints, foreign keys
 2. Identify existing indexes -- which columns are indexed, index types (B-tree, GIN, hash, partial)
 3. Read EXPLAIN plans for any provided slow queries (see Reference: Reading EXPLAIN Plans)
@@ -44,17 +45,20 @@ ACT     --> Generate fix recommendations, migration scripts, index additions
 6. Note table sizes, row counts, and data types used for primary keys
 7. Check for timestamp columns (created_at, updated_at) on each table
 
-**Output:** A structured inventory of the database state: tables, columns, indexes, constraints, FK relationships, and query patterns.
+### Output
+A structured inventory of the database state: tables, columns, indexes, constraints, FK relationships, and query patterns.
 
-**Quality gate:** Inventory covers all provided tables. Every table has its indexes listed. Every provided query has been parsed.
+### Quality Gate
+Inventory covers all provided tables. Every table has its indexes listed. Every provided query has been parsed.
 
 ---
 
 ### REASON: Identify Anti-Patterns, Missing Indexes, Normalization Issues
 
-**Entry criteria:** Database inventory is complete.
+### Entry Criteria
+Database inventory is complete.
 
-**Actions:**
+### Actions
 1. Check normalization level for each table (see Reference: Schema Design: Normalization)
    - 1NF: Are there array or comma-separated columns?
    - 2NF: For composite keys, do all non-key columns depend on the full key?
@@ -81,17 +85,20 @@ ACT     --> Generate fix recommendations, migration scripts, index additions
 7. Check connection pool sizing (see Reference: Connection Pooling)
 8. Evaluate caching strategy if applicable (see Reference: Caching Layers)
 
-**Output:** A categorized list of findings: anti-patterns, missing indexes, normalization issues, query performance issues, and configuration problems. Each finding includes severity (critical/high/medium/low) and evidence.
+### Output
+A categorized list of findings: anti-patterns, missing indexes, normalization issues, query performance issues, and configuration problems. Each finding includes severity (critical/high/medium/low) and evidence.
 
-**Quality gate:** Every finding has a severity level, a specific location (table/column/query), and evidence (why it's a problem). No vague findings like "schema could be better."
+### Quality Gate
+Every finding has a severity level, a specific location (table/column/query), and evidence (why it's a problem). No vague findings like "schema could be better."
 
 ---
 
 ### PLAN: Prioritize Fixes by Impact
 
-**Entry criteria:** Findings list is complete with severities.
+### Entry Criteria
+Findings list is complete with severities.
 
-**Actions:**
+### Actions
 1. Group findings by category: query performance, schema design, migrations, configuration
 2. Order by impact:
    - **Critical**: Data correctness issues (money as FLOAT, missing constraints)
@@ -104,17 +111,20 @@ ACT     --> Generate fix recommendations, migration scripts, index additions
    - Dependencies (does fix B require fix A first?)
 4. Create an ordered execution plan with dependencies
 
-**Output:** A prioritized fix plan with execution order, risk assessment, and effort estimates.
+### Output
+A prioritized fix plan with execution order, risk assessment, and effort estimates.
 
-**Quality gate:** Every finding from REASON has a corresponding fix in the plan (or a documented reason for deferral). No high-risk changes without a rollback strategy.
+### Quality Gate
+Every finding from REASON has a corresponding fix in the plan (or a documented reason for deferral). No high-risk changes without a rollback strategy.
 
 ---
 
 ### ACT: Generate Fix Recommendations, Migration Scripts, Index Additions
 
-**Entry criteria:** Prioritized fix plan is approved.
+### Entry Criteria
+Prioritized fix plan is approved.
 
-**Actions:**
+### Actions
 1. Generate CREATE INDEX statements for missing indexes (see Reference: Index Strategy)
    - Use appropriate index type (B-tree, GIN, hash, partial)
    - Use CONCURRENTLY for production indexes to avoid locking
@@ -131,9 +141,11 @@ ACT     --> Generate fix recommendations, migration scripts, index additions
 5. Generate partitioning recommendations if applicable (see Reference: Partitioning)
 6. Produce a summary checklist for verification
 
-**Output:** Concrete, executable SQL and code changes for each fix. Migration scripts with UP and DOWN methods. A verification checklist.
+### Output
+Concrete, executable SQL and code changes for each fix. Migration scripts with UP and DOWN methods. A verification checklist.
 
-**Quality gate:** Every generated SQL statement is syntactically valid. Every migration has a rollback. Index additions use CONCURRENTLY. Backfills are batched.
+### Quality Gate
+Every generated SQL statement is syntactically valid. Every migration has a rollback. Index additions use CONCURRENTLY. Backfills are batched.
 
 ---
 
@@ -210,7 +222,7 @@ CREATE TABLE enrollments (
   PRIMARY KEY (student_id, course_id)
 );
 
--- GOOD: 2NF — move student_name to its own table
+-- GOOD: 2NF  --  move student_name to its own table
 ```
 
 #### Third Normal Form (3NF)
@@ -342,7 +354,7 @@ Key things to look for:
 #### N+1 Query Detection
 The #1 performance killer in ORMs:
 ```python
-# BAD: N+1 — 1 query for users, then 1 query per user for orders
+# BAD: N+1  --  1 query for users, then 1 query per user for orders
 users = User.query.all()  # SELECT * FROM users
 for user in users:
     print(user.orders)    # SELECT * FROM orders WHERE user_id = ?  (N times!)
@@ -496,7 +508,7 @@ default_pool_size = 20     # Multiplex to 20 real DB connections
    SET lock_timeout = '5s';  -- Fail instead of waiting forever
    ```
 
-#### Optimistic Locking
+#### Optimiztic Locking
 ```sql
 -- Add version column
 ALTER TABLE products ADD COLUMN version INT DEFAULT 0;
@@ -541,7 +553,7 @@ Write to cache immediately, flush to DB asynchronously. Higher performance, risk
 #### Cache Stampede Prevention
 When TTL expires, hundreds of requests hit DB simultaneously:
 ```python
-# Solution 1: Lock — only one request refills cache
+# Solution 1: Lock  --  only one request refills cache
 def get_user(user_id):
     cached = cache.get(f"user:{user_id}")
     if cached:
@@ -637,3 +649,7 @@ CREATE TABLE orders_eu PARTITION OF orders FOR VALUES IN ('EU', 'UK');
 - [ ] Slow query log is enabled and monitored
 - [ ] Cache invalidation strategy is explicit, not ad-hoc
 - [ ] Transactions use the minimum isolation level needed
+
+---
+
+Copyright 2024-present The Wayfinder Trust. All rights reserved.

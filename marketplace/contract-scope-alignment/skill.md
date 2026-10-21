@@ -1,6 +1,6 @@
 # Contract Scope Alignment
 
-**One-line description:** Client and contractor each submit what they actually expect before signing — AI surfaces the scope, budget, and timeline divergences and produces a draft Statement of Work.
+**One-line description:** Client and contractor each submit what they actually expect before signing  --  AI surfaces the scope, budget, and timeline divergences and produces a draft Statement of Work.
 
 **Execution Pattern:** Phase Pipeline
 
@@ -32,7 +32,7 @@
 
 ## Outputs
 - `scope_alignment_map` (object): Where client and contractor agree on deliverables vs. where interpretations diverge, with specific examples of each gap.
-- `budget_bridge` (object): Gap between client's budget and contractor's pricing with options — full scope, phased delivery, descoped version.
+- `budget_bridge` (object): Gap between client's budget and contractor's pricing with options  --  full scope, phased delivery, descoped version.
 - `timeline_reconciliation` (object): Honest assessment of timeline feasibility with risk factors and options.
 - `risk_register` (array): Top risks to project success with owner assignment and mitigation approach.
 - `sow_draft` (string): Plain-English Statement of Work covering scope, deliverables, timeline, payment terms, revision policy, and out-of-scope definition.
@@ -43,84 +43,108 @@
 ## Execution Phases
 
 ### Phase 0: Pre-Flight Check
-**Entry Criteria:** Both client and contractor have submitted their Fabric session.
+### Entry Criteria
+Both client and contractor have submitted their Fabric session.
 
-**Actions:**
-1. Confirm both sides contain all required inputs. Flag if scope_interpretation or project_description is absent — these are the critical comparison points.
+### Actions
+1. Confirm both sides contain all required inputs. Flag if scope_interpretation or project_description is absent  --  these are the critical comparison points.
 2. Note any fields that are vague or incomplete and flag them in the synthesis.
 
-**Output:** Readiness confirmation or fields needing more detail.
+### Output
+Readiness confirmation or fields needing more detail.
 
-**Quality Gate:** Both sides submitted. At minimum, project_description (client) and scope_interpretation (contractor) are present.
+### Quality Gate
+Both sides submitted. At minimum, project_description (client) and scope_interpretation (contractor) are present.
 
 ---
 
 ### Phase 1: Extract the Deliverable Lists
-**Entry Criteria:** Both submissions confirmed sufficient.
+### Entry Criteria
+Both submissions confirmed sufficient.
 
-**Actions:**
-1. From the client: extract the actual deliverable list — both what they stated and what they implied.
+### Actions
+1. From the client: extract the actual deliverable list  --  both what they stated and what they implied.
 2. From the contractor: extract their deliverable interpretation as a concrete list.
 3. Create a comparison table: what the client thinks they're getting vs. what the contractor thinks they're building. Item by item.
 4. Flag anything the client listed that the contractor didn't mention.
 5. Flag anything the contractor included that the client didn't ask for.
 6. Identify scope creep setups: anything the client mentioned in passing that the contractor may interpret as in-scope.
 
-**Output:** Side-by-side deliverable comparison table with flagged gaps and additions.
+### Output
+Side-by-side deliverable comparison table with flagged gaps and additions.
 
-**Quality Gate:** Both deliverable lists are explicit and specific. Vague items (e.g., "website") are broken into components.
+### Quality Gate
+Both deliverable lists are explicit and specific. Vague items (e.g., "website") are broken into components.
 
 ---
 
 ### Phase 2: Assess Budget and Timeline Reality
-**Entry Criteria:** Deliverable comparison complete.
+### Entry Criteria
+Deliverable comparison complete.
 
-**Actions:**
+### Actions
 1. Budget gap: Is the contractor's pricing compatible with the client's budget? Quantify the gap. Assess whether it's bridgeable with descoping, phasing, or payment terms.
 2. Timeline feasibility: Is the client's desired timeline achievable given the contractor's honest estimate? What are the specific risk factors? What would have to go perfectly right?
 3. Dependency asymmetry: Does the contractor need approvals, content, or decisions from the client that the client hasn't budgeted time for? This is the most common hidden cause of delays.
 4. Assess both sides' flexibility areas for negotiating room.
 
-**Output:** Budget gap with bridging options, timeline feasibility assessment with risk factors, dependency map.
+### Output
+Budget gap with bridging options, timeline feasibility assessment with risk factors, dependency map.
 
-**Quality Gate:** Budget gap is quantified with specific numbers. Timeline risk factors are specific (e.g., "requires client content delivery by Week 2"), not generic.
+### Quality Gate
+Budget gap is quantified with specific numbers. Timeline risk factors are specific (e.g., "requires client content delivery by Week 2"), not generic.
 
 ---
 
 ### Phase 3: Draft the Statement of Work
-**Entry Criteria:** Budget and timeline assessed.
+### Entry Criteria
+Budget and timeline assessed.
 
-**Actions:**
-1. List all deliverables explicitly — no vague language. "Website" → specific pages, features, and exclusions.
+### Actions
+1. List all deliverables explicitly  --  no vague language. "Website" → specific pages, features, and exclusions.
 2. Define out-of-scope with equal specificity to in-scope.
 3. Set milestone-based payment terms reflecting both sides' risk tolerance.
 4. Define the revision policy: number of rounds, what constitutes a round, what triggers additional charges.
-5. Set a client decision turnaround SLA — the most common cause of timeline slippage.
+5. Set a client decision turnaround SLA  --  the most common cause of timeline slippage.
 6. Include a change order process: how scope changes are requested, priced, and approved.
 7. Include acceptance criteria: how both sides know a deliverable is complete.
 
-**Output:** Draft SOW covering scope, deliverables, timeline, payment milestones, revision policy, decision SLA, change order process, acceptance criteria.
+### Output
+Draft SOW covering scope, deliverables, timeline, payment milestones, revision policy, decision SLA, change order process, acceptance criteria.
 
-**Quality Gate:** Every item flagged in the deliverable comparison table is addressed in the SOW — either included with specifics or explicitly excluded.
+### Quality Gate
+Every item flagged in the deliverable comparison table is addressed in the SOW  --  either included with specifics or explicitly excluded.
 
 ---
 
 ### Phase 4: Deliver the Alignment Package
-**Entry Criteria:** SOW drafted.
+### Entry Criteria
+SOW drafted.
 
-**Actions:**
-1. Present the scope comparison table first — this is usually the biggest surprise.
+### Actions
+1. Present the scope comparison table first  --  this is usually the biggest surprise.
 2. Present the budget bridge with options clearly labeled.
 3. Present timeline assessment honestly. Don't soften the risk.
 4. Present the risk register with owners and mitigations.
 5. Deliver the SOW draft labeled as a starting point. Both sides should edit before signing.
 6. Close with the 3 negotiation priorities for the kickoff call.
 
-**Output:** Full alignment package — scope comparison, budget bridge, timeline assessment, risk register, SOW draft, negotiation priorities.
+### Output
+Full alignment package  --  scope comparison, budget bridge, timeline assessment, risk register, SOW draft, negotiation priorities.
 
-**Quality Gate:** Both parties can read this and immediately identify the conversations they need to have. The SOW is specific enough that a lawyer could use it as a foundation.
+### Quality Gate
+Both parties can read this and immediately identify the conversations they need to have. The SOW is specific enough that a lawyer could use it as a foundation.
 
 ---
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Client and contractor each submit what they actually expect before a contract is, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 Done when: (1) deliverable gap is mapped item by item, (2) budget gap is quantified with at least two options, (3) timeline feasibility is assessed with specific risk factors, (4) risk register covers top 5 risks with owners, (5) SOW draft covers scope, timeline, payment, revisions, and change orders.

@@ -76,6 +76,15 @@ Scope-dependent entries in `toolchain_versions`.
 
 ---
 
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Verify KiCad 9, SKiDL, Freerouting, and scope-dependent firmware, enclosure, and, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
+
 ## Exit Criteria
 
 DONE when every tool the product scope requires reports a version, or the run is stopped awaiting approval of a listed install plan.

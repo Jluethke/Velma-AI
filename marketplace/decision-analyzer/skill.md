@@ -31,15 +31,16 @@ ACT     --> Output decision matrix, tradeoff visualization, recommended action
 - `decision_journal_entry`: object -- Structured record for future pattern recognition: decision, context, prediction, actual (to be filled later)
 
 ---
+- `confidence_level`: (from manifest)
 
 ## Execution
 
 ### OBSERVE: Frame the Decision
 
-**Entry criteria:** A decision statement or vague problem requiring a choice is provided.
+### Entry Criteria
+A decision statement or vague problem requiring a choice is provided.
 
-**Actions:**
-
+### Actions
 1. **Clarify the decision frame.** Restate the decision as a precise question. A well-framed decision has: a clear actor (who decides), a clear timeframe (by when), and measurable success criteria (how we know it worked). Bad frame: "What should we do about performance?" Good frame: "Should the platform team invest 2 sprints in caching (option A) or database indexing (option B) to reduce p95 latency below 200ms by Q3?"
 
 2. **Generate options.** If options are not provided, brainstorm at least 3. Always include: (a) the status quo / do nothing option, (b) the obvious choice, (c) at least one creative alternative that reframes the problem. Watch for false dichotomies -- most "A or B" decisions have options C, D, E hiding in the framing.
@@ -57,18 +58,20 @@ ACT     --> Output decision matrix, tradeoff visualization, recommended action
    - **Type 2 (reversible):** Can be undone at some cost. Feature flags, A/B tests, pilot programs. These deserve speed over analysis.
    - The reversibility classification should influence how much time you spend in REASON. Jeff Bezos's razor: Type 2 decisions should be made with ~70% of the information you wish you had.
 
-**Output:** Decision frame document containing: precise question, list of viable options (constraints applied), weighted criteria, reversibility classification.
+### Output
+Decision frame document containing: precise question, list of viable options (constraints applied), weighted criteria, reversibility classification.
 
-**Quality gate:** At least 2 viable options remain after constraints. Criteria weights sum to 1.0. Each option has a reversibility classification.
+### Quality Gate
+At least 2 viable options remain after constraints. Criteria weights sum to 1.0. Each option has a reversibility classification.
 
 ---
 
 ### REASON: Score and Analyze
 
-**Entry criteria:** Decision frame is complete with options and weighted criteria.
+### Entry Criteria
+Decision frame is complete with options and weighted criteria.
 
-**Actions:**
-
+### Actions
 1. **Build the scoring matrix.** For each option x criterion pair, assign a score from 1-10. Scoring rules:
    - 1-2: Actively harmful on this criterion
    - 3-4: Below expectations
@@ -79,7 +82,7 @@ ACT     --> Output decision matrix, tradeoff visualization, recommended action
 
 2. **Compute weighted scores.** For each option: `weighted_total = SUM(score_i * weight_i)`. Normalize to 0-100 scale for readability.
 
-3. **Sensitivity analysis.** Identify which criteria weights, if changed by +/- 20%, would change the top-ranked option. If the top option changes with small weight perturbations, the decision is sensitive and needs more scrutiny. Report: "This decision is robust/fragile to weight changes in [criterion]."
+3. **Sensitivity analysis.** Identify which criteria weights, if changed by +/- 20%, would change the top-ranked option. If the top option changes with small weight perturbations, the decision is sensitive and needs more scrutiny. Report: "This decision is reliable/fragile to weight changes in [criterion]."
 
 4. **Identify tradeoffs.** For each pair of top-scoring options, identify the tradeoff: "Option A beats Option B on [criteria X, Y] but loses on [criteria Z]. Choosing A means accepting [concrete consequence] in exchange for [concrete benefit]." Tradeoffs are not bugs -- they are the actual decision. A decision with no tradeoffs is not a real decision.
 
@@ -88,20 +91,22 @@ ACT     --> Output decision matrix, tradeoff visualization, recommended action
    - Second-order: Consequences of the consequences
    - Look for: feedback loops (positive or negative), unintended incentives, precedent-setting effects, optionality created or destroyed
 
-6. **Pre-mortem.** For each top option, imagine it is 12 months later and the decision failed spectacularly. Write the story of how it failed. This surfaces risks that optimism bias hides. Key question: "What would have to be true for this to be the wrong choice?"
+6. **Pre-mortem.** For each top option, imagine it is 12 months later and the decision failed spectacularly. Write the story of how it failed. This surfaces risks that optimizm bias hides. Key question: "What would have to be true for this to be the wrong choice?"
 
-**Output:** Scored matrix with weighted totals, sensitivity analysis results, tradeoff map, second-order effects, pre-mortem narratives.
+### Output
+Scored matrix with weighted totals, sensitivity analysis results, tradeoff map, second-order effects, pre-mortem narratives.
 
-**Quality gate:** Every option-criterion pair has a documented score. Sensitivity analysis completed. At least one pre-mortem narrative per top-2 option. No score is assigned without a reasoning sentence.
+### Quality Gate
+Every option-criterion pair has a documented score. Sensitivity analysis completed. At least one pre-mortem narrative per top-2 option. No score is assigned without a reasoning sentence.
 
 ---
 
 ### PLAN: Formulate Recommendation
 
-**Entry criteria:** Scoring, tradeoffs, and risk analysis are complete.
+### Entry Criteria
+Scoring, tradeoffs, and risk analysis are complete.
 
-**Actions:**
-
+### Actions
 1. **Rank options by weighted total.** Report the ranking with scores and the gap between adjacent options. A 2-point gap on a 100-point scale is noise. A 15-point gap is signal.
 
 2. **Assign confidence levels.** Based on:
@@ -125,18 +130,20 @@ ACT     --> Output decision matrix, tradeoff visualization, recommended action
    - **Status quo bias**: Is "do nothing" being unfairly favored or unfairly dismissed?
    - **Availability bias**: Are recent dramatic events distorting risk assessment?
 
-**Output:** Ranked recommendation with confidence, risk register, decision triggers, bias check.
+### Output
+Ranked recommendation with confidence, risk register, decision triggers, bias check.
 
-**Quality gate:** Recommendation has a confidence level. At least 2 risks identified with mitigations. At least 1 decision trigger defined. Bias check completed.
+### Quality Gate
+Recommendation has a confidence level. At least 2 risks identified with mitigations. At least 1 decision trigger defined. Bias check completed.
 
 ---
 
 ### ACT: Deliver Decision Package
 
-**Entry criteria:** Recommendation is formulated with confidence and risks.
+### Entry Criteria
+Recommendation is formulated with confidence and risks.
 
-**Actions:**
-
+### Actions
 1. **Produce the decision matrix.** Format:
    ```
    Option        | Criterion A (w=0.3) | Criterion B (w=0.5) | Criterion C (w=0.2) | Weighted Total
@@ -177,9 +184,11 @@ ACT     --> Output decision matrix, tradeoff visualization, recommended action
 
 5. **Check for loop trigger.** Does the act of producing this recommendation reveal new information that changes the inputs? New options discovered during pre-mortem? Criteria that turned out to be unmeasurable? If yes, loop back to OBSERVE with the new information.
 
-**Output:** Decision matrix, tradeoff visualization, recommendation statement, decision journal entry.
+### Output
+Decision matrix, tradeoff visualization, recommendation statement, decision journal entry.
 
-**Quality gate:** Matrix is internally consistent (weighted scores match totals). Recommendation confidence matches the analysis rigor. Journal entry is complete except `actual_outcome`.
+### Quality Gate
+Matrix is internally consistent (weighted scores match totals). Recommendation confidence matches the analysis rigor. Journal entry is complete except `actual_outcome`.
 
 ## Exit Criteria
 
@@ -254,7 +263,7 @@ The pre-mortem (Klein, 2007) is the single most effective debiasing technique in
 4. Share stories and extract unique failure modes
 5. For each failure mode: assess probability, define preventive action
 
-Pre-mortems work because they give permission to voice concerns that would be suppressed by optimism pressure. They convert "what could go wrong?" (speculative) into "what did go wrong?" (narrative), which activates different cognitive processes and surfaces more specific risks.
+Pre-mortems work because they give permission to voice concerns that would be suppressed by optimizm pressure. They convert "what could go wrong?" (speculative) into "what did go wrong?" (narrative), which activates different cognitive processes and surfaces more specific risks.
 
 ### Reversibility Framework (Bezos Type 1/Type 2)
 

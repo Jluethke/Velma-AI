@@ -1,6 +1,6 @@
 # Test Coverage Generator
 
-Analyze a codebase to identify every testable surface, prioritize by risk and business criticality, generate comprehensive test cases across the test pyramid, validate test quality and independence, and report remaining coverage gaps with maintenance recommendations.
+Analyze a codebase to identify every testable surface, prioritize by risk and business criticality, generate full test cases across the test pyramid, validate test quality and independence, and report remaining coverage gaps with maintenance recommendations.
 
 ## Execution Pattern: Phase Pipeline
 
@@ -34,10 +34,10 @@ PHASE 5: REPORT     --> Coverage summary, remaining gaps, maintenance recommenda
 
 ### Phase 1: ANALYZE -- Identify Testable Surfaces
 
-**Entry criteria:** Source code is provided. At least one function or class to analyze.
+### Entry Criteria
+Source code is provided. At least one function or class to analyze.
 
-**Actions:**
-
+### Actions
 1. **Extract testable units:**
    - List every public function with: name, parameters (types if available), return type, side effects
    - List every public class with: methods, constructor parameters, state mutations
@@ -72,18 +72,20 @@ PHASE 5: REPORT     --> Coverage summary, remaining gaps, maintenance recommenda
    - Identify: fully covered, partially covered, uncovered functions
    - Identify: tested happy paths, tested error paths, untested paths
 
-**Output:** Complete map of testable surfaces: functions, branches, edge cases, integration points, and current coverage status.
+### Output
+Complete map of testable surfaces: functions, branches, edge cases, integration points, and current coverage status.
 
-**Quality gate:** Every public function is listed. Branch count is computed for all functions with >1 branch. Edge cases are identified for all functions with parameters. If existing tests are provided, coverage mapping is complete.
+### Quality Gate
+Every public function is listed. Branch count is computed for all functions with >1 branch. Edge cases are identified for all functions with parameters. If existing tests are provided, coverage mapping is complete.
 
 ---
 
 ### Phase 2: PRIORITIZE -- Rank by Risk
 
-**Entry criteria:** Testable surface map is complete.
+### Entry Criteria
+Testable surface map is complete.
 
-**Actions:**
-
+### Actions
 1. **Assign risk scores** (see Reference: Risk Scoring Matrix):
    - **Business criticality** (0-3): How important is this function to the product?
      - 3: Revenue path (payment, checkout, billing)
@@ -119,18 +121,20 @@ PHASE 5: REPORT     --> Coverage summary, remaining gaps, maintenance recommenda
    - Within the same risk score: prefer error paths over happy paths (errors are more likely untested)
    - Group tests by file/module for efficient development
 
-**Output:** Prioritized test plan: ordered list of tests to write with risk score, test type (unit/integration/e2e), target function, and specific scenarios.
+### Output
+Prioritized test plan: ordered list of tests to write with risk score, test type (unit/integration/e2e), target function, and specific scenarios.
 
-**Quality gate:** Every test in the plan has a risk score. The top 10 entries are all risk score >= 6. The plan follows the test pyramid (more unit tests than integration, more integration than e2e).
+### Quality Gate
+Every test in the plan has a risk score. The top 10 entries are all risk score >= 6. The plan follows the test pyramid (more unit tests than integration, more integration than e2e).
 
 ---
 
 ### Phase 3: GENERATE -- Write Test Cases
 
-**Entry criteria:** Prioritized test plan is ordered.
+### Entry Criteria
+Prioritized test plan is ordered.
 
-**Actions:**
-
+### Actions
 1. **For each planned test, generate:**
 
    a. **Test name**: descriptive, follows `test_<function>_<scenario>_<expected>` convention
@@ -174,18 +178,20 @@ PHASE 5: REPORT     --> Coverage summary, remaining gaps, maintenance recommenda
    - Include necessary imports
    - Include comments explaining WHY each test exists (not WHAT it does)
 
-**Output:** Complete test code: test files with all generated tests, fixtures, factories, and mocks.
+### Output
+Complete test code: test files with all generated tests, fixtures, factories, and mocks.
 
-**Quality gate:** Every test has exactly one assertion focus (may have multiple assert statements, but they all verify one behavior). No test depends on another test's side effects. No test uses `sleep()` or real time delays. All mocks are for external boundaries (not internal functions).
+### Quality Gate
+Every test has exactly one assertion focus (may have multiple assert statements, but they all verify one behavior). No test depends on another test's side effects. No test uses `sleep()` or real time delays. All mocks are for external boundaries (not internal functions).
 
 ---
 
 ### Phase 4: VALIDATE -- Check Test Quality
 
-**Entry criteria:** Test code is generated.
+### Entry Criteria
+Test code is generated.
 
-**Actions:**
-
+### Actions
 1. **Independence check:**
    - Can each test run in isolation? (no dependency on test execution order)
    - Does each test set up its own state? (no reliance on shared mutable state)
@@ -216,18 +222,20 @@ PHASE 5: REPORT     --> Coverage summary, remaining gaps, maintenance recommenda
    - If changing a `+` to `-` in the source wouldn't fail any test: the computation is untested
    - Flag tests that would survive obvious mutations (weak tests)
 
-**Output:** Validation report: quality score per test, independence issues, determinism issues, speed issues, assertion quality issues, mutation survival risks.
+### Output
+Validation report: quality score per test, independence issues, determinism issues, speed issues, assertion quality issues, mutation survival risks.
 
-**Quality gate:** All tests pass the independence check (can run in any order). All tests pass the determinism check (same result on repeated runs). No test takes >5s. Every test would catch at least one meaningful mutation.
+### Quality Gate
+All tests pass the independence check (can run in any order). All tests pass the determinism check (same result on repeated runs). No test takes >5s. Every test would catch at least one meaningful mutation.
 
 ---
 
 ### Phase 5: REPORT -- Coverage Summary
 
-**Entry criteria:** Tests are generated and validated.
+### Entry Criteria
+Tests are generated and validated.
 
-**Actions:**
-
+### Actions
 1. **Calculate coverage projection:**
    - Current line coverage: X%
    - Projected line coverage after adding generated tests: Y%
@@ -253,11 +261,22 @@ PHASE 5: REPORT     --> Coverage summary, remaining gaps, maintenance recommenda
    - Modules with declining coverage (code growing faster than tests)
    - Highest ROI testing targets (most risk reduction per test written)
 
-**Output:** Coverage summary: current coverage, projected coverage, remaining gaps, maintenance recommendations, trend analysis.
+### Output
+Coverage summary: current coverage, projected coverage, remaining gaps, maintenance recommendations, trend analysis.
 
-**Quality gate:** Coverage projections are based on specific tests (not estimates). Every gap has a justification. Maintenance recommendations are actionable (specific files, specific changes).
+### Quality Gate
+Coverage projections are based on specific tests (not estimates). Every gap has a justification. Maintenance recommendations are actionable (specific files, specific changes).
 
 ---
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Analyze a codebase for testable surfaces, prioritize by risk, generate full test, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 

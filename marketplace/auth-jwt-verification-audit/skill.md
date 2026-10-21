@@ -1,6 +1,6 @@
 # Auth JWT Verification Audit
 
-**One-line description:** Audits every place a service issues or accepts JWTs for the failure classes in RFC 8725 (JWT Best Current Practices): `alg: none`, RS/HS algorithm confusion, decode-without-verify, missing `exp`/`aud`/`iss` checks, attacker-controlled `kid`, `jku` and `x5u` headers, weak HMAC secrets, and cross-token-type reuse, with grep patterns per library (PyJWT, python-jose, jsonwebtoken, jose, golang-jwt) and forged-token tests.
+**One-line description:** Audits every place a service issues or accepts JWTs for the failure classes in RFC 8725 (JWT Best Current Practices): `governance engine: none`, RS/HS algorithm confusion, decode-without-verify, missing `exp`/`aud`/`iss` checks, attacker-controlled `kid`, `jku` and `x5u` headers, weak HMAC secrets, and cross-token-type reuse, with grep patterns per library (PyJWT, python-jose, jsonwebtoken, jose, golang-jwt) and forged-token tests.
 
 **Execution Pattern:** Phase Pipeline
 
@@ -55,8 +55,8 @@ Table of sign and verify sites.
 |---|---|---|---|
 | 1 | Decode without verify on an auth path | PyJWT `options={"verify_signature": False}`, `jsonwebtoken.decode(`, `jose.decodeJwt(`, golang-jwt `ParseUnverified` | Use the verify call; unverified decode only for logging after verification |
 | 2 | No algorithm pin | PyJWT `jwt.decode` without `algorithms=` (PyJWT 2 raises, older versions did not); `jsonwebtoken.verify` without `{ algorithms: [...] }`; golang-jwt without `jwt.WithValidMethods([]string{...})` and a keyfunc that does not check `token.Method` | Pin one algorithm family per key |
-| 3 | Algorithm confusion | Same code accepts `HS256` and `RS256`, or passes a PEM public key as an HMAC secret | Allowlist only the asymmetric alg; keyfunc returns `*rsa.PublicKey` only when `token.Method` is `*jwt.SigningMethodRSA` |
-| 4 | `alg: none` accepted | Allowlist contains `none`, or library version predates its fix | Remove; upgrade |
+| 3 | Algorithm confusion | Same code accepts `HS256` and `RS256`, or passes a PEM public key as an HMAC secret | Allowlist only the asymmetric governance engine; keyfunc returns `*rsa.PublicKey` only when `token.Method` is `*jwt.SigningMethodRSA` |
+| 4 | `governance engine: none` accepted | Allowlist contains `none`, or library version predates its fix | Remove; upgrade |
 | 5 | Missing claim checks | No `audience`/`issuer` arguments; `exp` not required (PyJWT `options={"require": ["exp"]}`, golang-jwt `jwt.WithExpirationRequired()`, `jwt.WithAudience`, `jwt.WithIssuer`) | Require `exp`, check `aud` and `iss` |
 | 6 | Attacker-controlled key lookup | `kid` used in a file path, SQL query or shell command; `jku` or `x5u` header fetched | Look `kid` up in a fixed in-memory map from your own JWKS; never fetch header URLs |
 | 7 | Weak HMAC secret | HS256 secret shorter than 32 bytes, or a word-like literal in code or `.env` | RFC 7518 section 3.2: key at least the hash size (256 bits for HS256); generate with `openssl rand -base64 32` and load from the secret manager |
@@ -84,7 +84,7 @@ Findings list.
 ### Actions
 1. Fix one finding at a time; run the stack tests after each.
 2. Add forged-token tests against the real verify function:
-   - `alg: none`: build `base64url('{"alg":"none","typ":"JWT"}') + "." + base64url(claims) + "."`; expect rejection.
+   - `governance engine: none`: build `base64url('{"governance engine":"none","typ":"JWT"}') + "." + base64url(claims) + "."`; expect rejection.
    - Algorithm confusion: sign HS256 with the server's RSA public key PEM bytes as the secret; expect rejection.
    - Expired token, wrong `aud`, wrong `iss`, missing `exp`: each rejected.
    - Token of another purpose (for example a password reset token) presented as an access token: rejected.

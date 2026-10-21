@@ -76,6 +76,15 @@ Rail list with itemized consumers.
 
 ---
 
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Build the power tree from input to every rail with itemized datasheet currents, , the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
+
 ## Exit Criteria
 
 DONE when every rail's voltage, current, regulator type, and dissipation are derived from cited datasheet numbers, and total input power is known.

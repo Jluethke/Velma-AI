@@ -38,13 +38,12 @@
 
 ### Phase 1: Identify Stakeholders
 
-**Entry Criteria:**
+### Entry Criteria
 - Project scope is defined.
 - Organizational structure is available.
 - Project charter or business case is provided (optional but recommended).
 
-**Actions:**
-
+### Actions
 1. Parse the project scope and organizational structure to identify all potential stakeholder groups (executives, team members, customers, vendors, regulators, affected departments, etc.).
 2. For each identified group, record: name, representative roles, department/unit, and primary contact method if known.
 3. Distinguish between direct stakeholders (directly involved or impacted) and indirect stakeholders (peripherally affected).
@@ -52,20 +51,21 @@
 5. Consolidate the list, removing duplicates and grouping similar roles into stakeholder groups.
 6. If cultural_context is provided, note regional or linguistic variations in stakeholder groups (e.g., separate groups for different regions or language speakers).
 
-**Output:** `stakeholder_inventory` array with all identified groups.
+### Output
+`stakeholder_inventory` array with all identified groups.
 
-**Quality Gate:** At least 5 distinct stakeholder groups are identified. Each group has a clear role and department. No individual is listed twice. If cultural_context is provided, regional or linguistic variations are documented.
+### Quality Gate
+At least 5 distinct stakeholder groups are identified. Each group has a clear role and department. No individual is listed twice. If cultural_context is provided, regional or linguistic variations are documented.
 
 ---
 
 ### Phase 2: Analyze Stakeholder Needs and Interests
 
-**Entry Criteria:**
+### Entry Criteria
 - Stakeholder inventory is complete.
 - Project timeline and risk register are available (optional).
 
-**Actions:**
-
+### Actions
 1. For each stakeholder group, infer or document their key interests relative to the project (e.g., executives care about ROI and timeline; end-users care about usability and training).
 2. Identify concerns or potential objections each group may have (e.g., change resistance, resource constraints, competing priorities).
 3. Assess influence level using the Power/Interest Grid: Can this group block, accelerate, or significantly shape the project? Assign High/Medium/Low based on documented criteria.
@@ -73,63 +73,66 @@
 5. Document specific communication needs for each group (e.g., executives need monthly summaries; end-users need hands-on training). Needs must be observable and distinct, not generic.
 6. Cross-reference with risk register: flag stakeholders affected by known risks and document their specific concerns.
 
-**Output:** `stakeholder_analysis_matrix` with influence, interest, concerns, and communication needs per group.
+### Output
+`stakeholder_analysis_matrix` with influence, interest, concerns, and communication needs per group.
 
-**Quality Gate:** Every stakeholder group has documented interests and concerns. Influence and interest levels are assigned using Power/Interest Grid criteria. Communication needs are specific and observable (e.g., 'monthly executive summary email' not 'regular updates'). Risk-affected stakeholders are flagged with specific concerns.
+### Quality Gate
+Every stakeholder group has documented interests and concerns. Influence and interest levels are assigned using Power/Interest Grid criteria. Communication needs are specific and observable (e.g., 'monthly executive summary email' not 'regular updates'). Risk-affected stakeholders are flagged with specific concerns.
 
 ---
 
 ### Phase 3: Design Tailored Messages
 
-**Entry Criteria:**
+### Entry Criteria
 - Stakeholder analysis matrix is complete.
 - Project goals and key milestones are defined.
 - Brand guidelines are available (optional).
 
-**Actions:**
-
+### Actions
 1. For each stakeholder group, define 3-5 key themes or messages that resonate with their interests (e.g., for executives: "On-time delivery, budget control, risk mitigation"; for end-users: "Minimal disruption, clear training, support availability").
 2. Develop 2-3 talking points per theme that support the message with evidence or context.
 3. Set tone and technical level appropriate to the group (e.g., executives: formal, high-level; technical teams: detailed, jargon-acceptable; end-users: clear, non-technical).
 4. If cultural_context is provided, adapt messages for cultural norms and linguistic clarity (e.g., avoid idioms, adjust formality levels, consider translation requirements).
 5. Document message variations for different scenarios (routine update, risk escalation, milestone achievement, change notification).
 
-**Output:** `message_framework` with tailored messages, talking points, tone, and technical level per group.
+### Output
+`message_framework` with tailored messages, talking points, tone, and technical level per group.
 
-**Quality Gate:** Every stakeholder group has 3-5 key themes. Each theme has 2-3 supporting talking points. Tone and technical level are documented and appropriate to audience expertise. If cultural_context is provided, cultural adaptations are documented. Message variations cover routine and scenario-specific communications.
+### Quality Gate
+Every stakeholder group has 3-5 key themes. Each theme has 2-3 supporting talking points. Tone and technical level are documented and appropriate to audience expertise. If cultural_context is provided, cultural adaptations are documented. Message variations cover routine and scenario-specific communications.
 
 ---
 
 ### Phase 4: Select Communication Channels
 
-**Entry Criteria:**
+### Entry Criteria
 - Message framework is complete.
 - Stakeholder analysis matrix is available.
 - Organizational communication norms are documented (optional).
 
-**Actions:**
-
+### Actions
 1. For each stakeholder group, identify the optimal primary communication channel (email, town hall, one-on-one, dashboard, report, etc.) based on group size, urgency, preference, and message type.
 2. Identify secondary channels for redundancy or different message types (e.g., email for routine updates, meetings for complex discussions).
 3. Document the rationale for each channel choice, referencing stakeholder preferences, organizational norms, and message complexity.
 4. Verify channel availability and accessibility for all stakeholders in the group (e.g., not all stakeholders may have dashboard access).
 5. If cultural_context is provided, ensure channels are accessible across regions and languages (e.g., provide translations, accommodate time zones).
 
-**Output:** `channel_matrix` with primary and secondary channels, rationale, and accessibility notes per group.
+### Output
+`channel_matrix` with primary and secondary channels, rationale, and accessibility notes per group.
 
-**Quality Gate:** Every stakeholder group has at least one assigned channel. Primary channel choice is justified with specific criteria (group size, urgency, preference). Secondary channels are identified for redundancy. Channel accessibility is verified. If cultural_context is provided, multi-region and multi-language accessibility is documented.
+### Quality Gate
+Every stakeholder group has at least one assigned channel. Primary channel choice is justified with specific criteria (group size, urgency, preference). Secondary channels are identified for redundancy. Channel accessibility is verified. If cultural_context is provided, multi-region and multi-language accessibility is documented.
 
 ---
 
 ### Phase 5: Establish Communication Cadence and Risk Assessment
 
-**Entry Criteria:**
+### Entry Criteria
 - Channel matrix is complete.
 - Project timeline is defined.
 - Risk register is available (optional).
 
-**Actions:**
-
+### Actions
 1. For each stakeholder group, determine the appropriate communication frequency based on their influence level, interest level, and role (e.g., executives: monthly; core team: weekly; end-users: as-needed or pre-launch intensive).
 2. Map communication events to project phases and key milestones (e.g., kickoff, phase completion, risk escalation, go-live).
 3. Establish specific timing (e.g., "every Monday 10 AM" or "within 24 hours of milestone completion"). Use relative timing for uncertain project schedules.
@@ -138,21 +141,22 @@
 6. For each identified failure mode, document likelihood (High/Medium/Low), impact (High/Medium/Low), mitigation strategy (preventive action), and contingency action (reactive response).
 7. Identify which stakeholders are most at-risk of disengagement or miscommunication based on influence, interest, and cultural factors.
 
-**Output:** `communication_schedule` with frequency, timing, and key dates per group. `communication_risk_assessment` with failure modes, mitigation strategies, and contingency actions.
+### Output
+`communication_schedule` with frequency, timing, and key dates per group. `communication_risk_assessment` with failure modes, mitigation strategies, and contingency actions.
 
-**Quality Gate:** Every stakeholder group has a defined communication frequency. Schedule aligns with project timeline. No group is over-communicated or under-communicated relative to their role. Every identified failure mode has a documented mitigation strategy and contingency action. At-risk stakeholders are flagged.
+### Quality Gate
+Every stakeholder group has a defined communication frequency. Schedule aligns with project timeline. No group is over-communicated or under-communicated relative to their role. Every identified failure mode has a documented mitigation strategy and contingency action. At-risk stakeholders are flagged.
 
 ---
 
 ### Phase 6: Create Reusable Templates and Crisis Protocol
 
-**Entry Criteria:**
+### Entry Criteria
 - Message framework, channel matrix, and communication schedule are complete.
 - Brand guidelines are available (optional).
 - Communication risk assessment is complete.
 
-**Actions:**
-
+### Actions
 1. For each primary channel type (email, meeting agenda, status report, dashboard, presentation), create a template that reflects the message framework and tone for each stakeholder group.
 2. Include placeholders for project-specific data (dates, milestones, metrics, risks).
 3. Ensure templates are consistent with brand guidelines (tone, formatting, visual style).
@@ -162,19 +166,20 @@
 7. Develop crisis communication protocol: for each high-impact failure mode (project delay, budget overrun, scope change, stakeholder escalation), create a rapid-response template and define escalation path, responsible party, and notification timeline.
 8. Define escalation triggers: what conditions trigger crisis communication? (e.g., delay > 2 weeks, budget variance > 10%, scope change affecting > 3 groups).
 
-**Output:** `template_library` with templates for each channel and stakeholder group. `crisis_communication_protocol` with escalation paths, triggers, and rapid-response templates.
+### Output
+`template_library` with templates for each channel and stakeholder group. `crisis_communication_protocol` with escalation paths, triggers, and rapid-response templates.
 
-**Quality Gate:** At least one template exists for each primary channel. Templates include placeholders and customization guidance. Templates reflect the tailored messaging for each group. Crisis protocol covers high-impact failure modes. Escalation triggers are specific and measurable. Responsible parties are assigned for each escalation path.
+### Quality Gate
+At least one template exists for each primary channel. Templates include placeholders and customization guidance. Templates reflect the tailored messaging for each group. Crisis protocol covers high-impact failure modes. Escalation triggers are specific and measurable. Responsible parties are assigned for each escalation path.
 
 ---
 
 ### Phase 7: Design Engagement Tracking and Validate Plan
 
-**Entry Criteria:**
+### Entry Criteria
 - All outputs from Phases 1-6 are complete.
 
-**Actions:**
-
+### Actions
 1. Define engagement tracking metrics: communication delivery rate (% of stakeholders who received each communication), engagement rate (% who opened/attended/responded), sentiment (positive/neutral/negative feedback), and at-risk indicator (stakeholders with low engagement or negative sentiment).
 2. Specify measurement methods for each metric (email open rates, meeting attendance, survey responses, feedback analysis).
 3. Set target thresholds for each metric (e.g., delivery rate > 95%, engagement rate > 70%, sentiment > 60% positive).
@@ -187,11 +192,22 @@
 10. Compile all components into a single, integrated communication plan document with executive summary, stakeholder overview, detailed plans per group, template appendix, risk assessment, crisis protocol, and engagement tracking specification.
 11. Add a responsibility matrix: who owns each communication task? Who approves messages? Who monitors engagement?
 
-**Output:** `engagement_tracking_dashboard_spec` with metrics, measurement methods, and tracking fields. `communication_plan_document` (integrated, validated plan).
+### Output
+`engagement_tracking_dashboard_spec` with metrics, measurement methods, and tracking fields. `communication_plan_document` (integrated, validated plan).
 
-**Quality Gate:** All stakeholder groups are covered in all components. No contradictions between components. Engagement tracking metrics are measurable and aligned with communication objectives. Plan is actionable and ready for distribution. Responsibility is assigned for each communication task. Crisis protocol is integrated with risk assessment. Tracking specification enables mid-project refinement based on actual stakeholder response.
+### Quality Gate
+All stakeholder groups are covered in all components. No contradictions between components. Engagement tracking metrics are measurable and aligned with communication objectives. Plan is actionable and ready for distribution. Responsibility is assigned for each communication task. Crisis protocol is integrated with risk assessment. Tracking specification enables mid-project refinement based on actual stakeholder response.
 
 ---
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Identify stakeholder groups, analyze their needs, design tailored messages and c, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 

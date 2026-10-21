@@ -78,6 +78,15 @@ Scorecard with reject reasons and Pareto status.
 
 ---
 
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Score candidate architectures by the baseline's method, reject any that weaken a, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
+
 ## Exit Criteria
 
 DONE when every candidate is scored by one method, unsafe candidates are rejected with reasons, and the selection carries numeric deltas against baseline.

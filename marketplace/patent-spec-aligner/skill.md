@@ -13,34 +13,38 @@ PHASE 5: RECONCILE  --> Update figure description section to match drawing label
 ```
 
 ## Inputs
-- claims_text: string -- Full text of patent claims (independent + dependent)
-- specification_text: string -- Full text of patent specification
-- drawings_json: object -- Drawings data with reference_numerals per figure
-- patent_family: string -- Patent family identifier
+- `claims_text`: string -- Full text of patent claims (independent + dependent)
+- `specification_text`: string -- Full text of patent specification
+- `drawings_json`: object -- Drawings data with reference_numerals per figure
+- `patent_family`: string -- Patent family identifier
 
 ## Outputs
-- detailed_description_section: string -- Complete "Detailed Description of the Drawings" section ready to insert into specification, with inline reference numerals in parentheses
-- alignment_report: object -- Cross-reference table showing claim term -> reference numeral -> figure number
-- updated_figure_descriptions: string -- Updated "Brief Description of the Drawings" section with numeral references
-- consistency_violations: list -- Any mismatches found between claims, spec, and drawings
+- `detailed_description_section`: string -- Complete "Detailed Description of the Drawings" section ready to insert into specification, with inline reference numerals in parentheses
+- `alignment_report`: object -- Cross-reference table showing claim term -> reference numeral -> figure number
+- `updated_figure_descriptions`: string -- Updated "Brief Description of the Drawings" section with numeral references
+- `consistency_violations`: list -- Any mismatches found between claims, spec, and drawings
 
 ## Execution
 
 ### PHASE 1: EXTRACT -- Parse All Three Documents
 
-**Entry criteria:** Claims, specification, and drawings JSON provided
-**Actions:**
+### Entry Criteria
+Claims, specification, and drawings JSON provided
+### Actions
 1. From CLAIMS: Extract every noun phrase that names a component, module, interface, or system element. Track which claim number introduces each term.
 2. From SPECIFICATION: Find all existing figure references ("FIG. X"), extract what each figure is described as showing. Find any existing inline reference numerals.
 3. From DRAWINGS JSON: Extract all reference numerals and their labels from every figure. Build a master numeral table.
 
-**Output:** Three extracted term lists (claims terms, spec figure descriptions, drawing numerals)
-**Quality gate:** Every independent claim term is captured. Every figure is accounted for.
+### Output
+Three extracted term lists (claims terms, spec figure descriptions, drawing numerals)
+### Quality Gate
+Every independent claim term is captured. Every figure is accounted for.
 
 ### PHASE 2: MAP -- Build Cross-Reference Table
 
-**Entry criteria:** Extracted terms from all three documents
-**Actions:**
+### Entry Criteria
+Extracted terms from all three documents
+### Actions
 1. For each claim term, find the matching reference numeral in the drawings
 2. For each reference numeral, identify which figure(s) it appears in
 3. Build a master cross-reference table:
@@ -52,13 +56,16 @@ PHASE 5: RECONCILE  --> Update figure description section to match drawing label
 4. Flag any claim terms that have NO matching numeral in any drawing
 5. Flag any drawing numerals that don't correspond to any claim term
 
-**Output:** Cross-reference table with match status
-**Quality gate:** Every independent claim element has a corresponding numeral and figure
+### Output
+Cross-reference table with match status
+### Quality Gate
+Every independent claim element has a corresponding numeral and figure
 
 ### PHASE 3: VALIDATE -- Find Consistency Violations
 
-**Entry criteria:** Cross-reference table
-**Actions:**
+### Entry Criteria
+Cross-reference table
+### Actions
 1. Check: Every term in an independent claim appears in at least one drawing with a reference numeral
 2. Check: Every reference numeral in a drawing uses the same label text as the claim term (not a paraphrase)
 3. Check: The specification's figure description section lists the same figures as the drawings
@@ -70,13 +77,16 @@ PHASE 5: RECONCILE  --> Update figure description section to match drawing label
    - WARNING: Dependent claim term not in drawings (acceptable but suboptimal)
    - INFO: Drawing shows element not in any claim (acceptable for context)
 
-**Output:** Violation list with severity
-**Quality gate:** Zero CRITICAL violations (or explicit remediation for each)
+### Output
+Violation list with severity
+### Quality Gate
+Zero CRITICAL violations (or explicit remediation for each)
 
 ### PHASE 4: GENERATE -- Write Detailed Description of the Drawings
 
-**Entry criteria:** Cross-reference table, violations resolved
-**Actions:**
+### Entry Criteria
+Cross-reference table, violations resolved
+### Actions
 1. For each figure (in order), write a paragraph that:
    - Opens with "Referring to FIG. X, ..." or "FIG. X illustrates ..."
    - Names every labeled component with its reference numeral in parentheses on first mention
@@ -89,21 +99,35 @@ PHASE 5: RECONCILE  --> Update figure description section to match drawing label
    - Each paragraph covers one figure
    - Use present tense: "comprises," "receives," "computes," "produces"
 
-**Output:** Complete "Detailed Description of the Drawings" section
-**Quality gate:** Every reference numeral appears at least once. Every claim term is used with its numeral.
+### Output
+Complete "Detailed Description of the Drawings" section
+### Quality Gate
+Every reference numeral appears at least once. Every claim term is used with its numeral.
 
 ### PHASE 5: RECONCILE -- Update Figure Description Section
 
-**Entry criteria:** Detailed description generated
-**Actions:**
+### Entry Criteria
+Detailed description generated
+### Actions
 1. Rewrite the "Brief Description of the Drawings" (the short figure list) to match:
    - Use claim-aligned terminology
    - Reference key numerals
    - Example: "FIG. 1 is a system block diagram of a system for runtime governance showing the expectation interface (100), observation interface (102), divergence computation module (104), trust inference module (106) including neural trust inference component (108), authority mapping module (110), enforcement adapter (114), and audit artifact generator (116)."
 2. Produce final updated figure descriptions section
 
-**Output:** Updated brief figure descriptions with numerals
-**Quality gate:** Every figure description uses claim terms and key numerals
+### Output
+Updated brief figure descriptions with numerals
+### Quality Gate
+Every figure description uses claim terms and key numerals
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Aligns patent specifications, claims, and drawings by ensuring reference numeral, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 
@@ -149,7 +173,7 @@ Done when:
 
 "Referring to FIG. [X], [figure describes / illustrates] [main topic]. The [first component] ([numeral]) [function]. The [second component] ([numeral]) receives [data] from the [first component] ([numeral]) and [function]. [Continue for each connection.]"
 
-First mention: "the scoring module (104)" — numeral in parentheses immediately after term.
+First mention: "the scoring module (104)"  --  numeral in parentheses immediately after term.
 Subsequent mentions: same form or "(104)" alone in context.
 
 ### Terminology Consistency Rule
@@ -157,3 +181,7 @@ Subsequent mentions: same form or "(104)" alone in context.
 The exact same noun phrase must appear in claims, specification, and drawing labels.
 
 Claim says "trust inference module" → Specification must say "trust inference module" → Drawing label must say "Trust Inference Module" (capitalization OK; different words are NOT OK).
+
+---
+
+Copyright 2024-present The Wayfinder Trust. All rights reserved.

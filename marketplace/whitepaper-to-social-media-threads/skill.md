@@ -44,27 +44,29 @@
   - `revision_notes` (string[]): Any suggested revisions or improvements, each with specific tweet ID and recommended change
 
 ---
+- `engagement_predictions`: (from manifest)
+- `content_calendar`: (from manifest)
 
 ## Execution Phases
 
 ### PHASE 1: Analyze Whitepaper and Extract Key Insights
 
-**Entry Criteria:**
+### Entry Criteria
 - Whitepaper content is provided in full
 - Target audience is defined
 - Number of threads to create is specified
 
-**Actions:**
+### Actions
 1. Read the whitepaper end-to-end, identifying main arguments, supporting evidence, and novel claims. Document the whitepaper structure (sections, key findings, methodology).
 2. Segment the whitepaper into logical sections (introduction, methodology, findings, implications, conclusion).
 3. For each section, extract 1-2 candidate insights: claims that are novel, actionable, or surprising to the target audience. For each candidate, record: title, core claim, supporting evidence (data point, quote, or example), relevance score (1-10: how much does the target audience care?), and actionability score (1-10: can the audience do something with this?).
 4. Rank candidate insights by: (relevance_score + actionability_score) / 2, with ties broken by novelty (how new is this idea compared to existing knowledge in the field?).
 5. Select the top `num_threads` insights. For each, create a summary with: title, core claim, supporting evidence (minimum 1 data point or quote), relevance justification, and actionability justification.
 
-**Output:**
+### Output
 - `extracted_insights` (object[]): Array of selected insights, each with: title, core claim, supporting evidence (array of data points, quotes, or examples), relevance_score (1-10), actionability_score (1-10), and justification for selection.
 
-**Quality Gate:**
+### Quality Gate
 - At least `num_threads` distinct insights are extracted and ranked by combined relevance + actionability score.
 - Each insight has at least one piece of supporting evidence (data point, quote, or example) directly from the whitepaper.
 - Insights are ranked by measurable scores; top-ranked insights are selected.
@@ -75,11 +77,11 @@
 
 ### PHASE 2: Design Thread Structure for Each Insight
 
-**Entry Criteria:**
+### Entry Criteria
 - Key insights are extracted and ranked.
 - Platform and tone are specified.
 
-**Actions:**
+### Actions
 1. For each insight, determine the optimal thread length based on complexity and platform:
    - **Simple insights (single data point or claim):** 3-4 tweets
    - **Moderate insights (2-3 supporting points):** 5-6 tweets
@@ -96,10 +98,10 @@
 4. Determine if the insight requires visual support: Does the insight involve complex data (recommend chart/graph), process or workflow (recommend diagram), or specific tool/interface (recommend screenshot)? Note visual asset type and placement.
 5. Adapt tone and language for the target audience: For "technical" tone, use domain terminology and assume expertise; for "accessible" tone, explain concepts and use analogies; for "provocative" tone, use bold claims and challenge assumptions; for "professional-engaging" tone, balance authority with approachability.
 
-**Output:**
+### Output
 - `thread_outlines` (object[]): Array of thread outlines, each with: insight_id, thread_length (number of tweets), arc_structure (ordered list of tweet purposes: hook, context, evidence, implication, cta), primary_engagement_hook (specific hook type and example), tone_notes (how to adapt language for target audience), and visual_support_recommendation (asset type and placement, or "none").
 
-**Quality Gate:**
+### Quality Gate
 - Each thread has a clear arc from hook to CTA with 3-8 intermediate steps.
 - The primary engagement hook is specific and testable (e.g., "surprising statistic: X% of [audience] don't realize Y" not just "interesting").
 - Thread length is justified by complexity (simple insights get 3-4 tweets; complex insights get 7-8 tweets).
@@ -110,11 +112,11 @@
 
 ### PHASE 3: Write Hook Tweets
 
-**Entry Criteria:**
+### Entry Criteria
 - Thread outlines are designed.
 - Engagement hooks are identified.
 
-**Actions:**
+### Actions
 1. For each thread, write a hook tweet that embodies the primary engagement hook and fits the platform character limit:
    - **Twitter/X:** 280 characters max
    - **LinkedIn:** up to 3000 characters (but keep hook to 1-2 sentences for impact)
@@ -125,10 +127,10 @@
 4. Include a thread indicator ("🧵" or "1/5") to signal a multi-tweet thread.
 5. Test the hook for clarity using this rubric: (a) Can someone unfamiliar with the whitepaper understand what the thread is about? (b) Does the hook create curiosity or emotion? (c) Is the hook accurate and not misleading? If any answer is "no", revise.
 
-**Output:**
+### Output
 - `hook_tweets` (string[]): Array of hook tweets, one per thread, indexed by thread ID.
 
-**Quality Gate:**
+### Quality Gate
 - Each hook is under character limit for the platform (280 for Twitter/X, 300 for Bluesky, 3000 for LinkedIn).
 - Each hook creates curiosity or engagement without misleading or overstating the insight.
 - Each hook accurately represents the insight it introduces (verifiable against whitepaper).
@@ -139,11 +141,11 @@
 
 ### PHASE 4: Write Body Tweets
 
-**Entry Criteria:**
+### Entry Criteria
 - Hook tweets are written.
 - Thread outlines specify the arc and supporting evidence.
 
-**Actions:**
+### Actions
 1. For each thread, write body tweets that develop the insight along the designed arc. Use the arc structure from Phase 2 (context, evidence, implication, etc.) as a guide, but adapt as needed for the specific insight type.
 2. **Context tweet (typically tweet 2):** Explain why this insight matters. What problem does it address? Why should the audience care? Use language that connects to the audience's goals or pain points.
 3. **Evidence tweets (typically tweets 3-5):** Present supporting data, quotes, examples, or reasoning. Use specific numbers ("X% of [audience]...", "In [year], [metric] increased by Y%"), real-world scenarios ("When [company] tried X, they saw Y result"), or expert quotes ("According to [expert], ..."). Avoid generic statements like "research shows" without specifics.
@@ -151,10 +153,10 @@
 5. **Ensure each tweet is self-contained** (readable without the others) but also flows naturally into the next. Use formatting (line breaks, bullet points, emojis) to improve readability within character limits.
 6. **Avoid repetition:** No tweet repeats information from the hook or previous tweets. Each tweet adds new information or perspective.
 
-**Output:**
+### Output
 - `body_tweets` (object[]): Array of thread objects, each containing: thread_id, array of body_tweets (3-7 per thread, depending on complexity).
 
-**Quality Gate:**
+### Quality Gate
 - Each body tweet is under character limit for the platform (280 for Twitter/X, 300 for Bluesky, 3000 for LinkedIn).
 - Body tweets collectively cover: context (why it matters), evidence (specific data/examples/quotes), and implication (what it means for the audience).
 - Evidence is specific (numbers, quotes, examples, company names) not generic ("research shows", "studies indicate").
@@ -166,12 +168,12 @@
 
 ### PHASE 5: Write Call-to-Action Tweets
 
-**Entry Criteria:**
+### Entry Criteria
 - Body tweets are written.
 - Campaign goal is specified.
 - `include_cta` is true.
 
-**Actions:**
+### Actions
 1. For each thread, write a CTA tweet that directs the audience to the next step based on the campaign goal:
    - **Awareness:** "Read the full whitepaper: [link]" or "Share this with your team if you found it valuable." or "Save this thread for later reference."
    - **Lead generation:** "Download the full report and get exclusive insights: [link]" or "Sign up for our newsletter to get more insights like this: [link]" or "Request a demo to see how this applies to your business: [link]"
@@ -182,10 +184,10 @@
 4. Keep CTA tone consistent with the thread and the specified tone.
 5. If `include_cta` is false, set cta_tweet to null.
 
-**Output:**
+### Output
 - `cta_tweets` (string[]): Array of CTA tweets, one per thread, indexed by thread ID. If include_cta is false, array contains null values.
 
-**Quality Gate:**
+### Quality Gate
 - Each CTA is specific and actionable (not vague like "learn more" or "get involved").
 - CTA aligns with the stated campaign goal (awareness, lead generation, community building, or thought leadership).
 - CTA includes a link or clear next step (if applicable).
@@ -196,11 +198,11 @@
 
 ### PHASE 6: Add Hashtags and Formatting
 
-**Entry Criteria:**
+### Entry Criteria
 - All tweets (hook, body, CTA) are written.
 - Platform is specified.
 
-**Actions:**
+### Actions
 1. For each thread, identify 2-4 relevant hashtags that:
    - Relate to the insight topic (e.g., #DataScience, #MachineLearning, #ProductManagement)
    - Target the audience (e.g., #Startups, #Enterprise, #Founders)
@@ -211,10 +213,10 @@
 4. Add thread numbering (1/5, 2/5, etc.) to each tweet to signal it's part of a thread. Place numbering at the beginning or end of each tweet, consistently.
 5. Ensure formatting is consistent across all threads (same emoji style, same numbering format, same hashtag placement, etc.).
 
-**Output:**
+### Output
 - `formatted_threads` (object[]): Array of complete threads, each with: thread_id, hook_tweet (with numbering), body_tweets (with numbering), cta_tweet (with numbering and hashtags), hashtags (array), and emoji_accents (array).
 
-**Quality Gate:**
+### Quality Gate
 - Hashtags are relevant to the insight topic and target audience.
 - Hashtags are discoverable (50K-500K posts on platform) and not oversaturated (>1M posts).
 - Hashtags do not exceed 4 per thread.
@@ -226,21 +228,21 @@
 
 ### PHASE 7: Review for Accuracy, Tone, and Engagement
 
-**Entry Criteria:**
+### Entry Criteria
 - All threads are formatted and complete.
 
-**Actions:**
+### Actions
 1. **Accuracy check:** For each thread, verify that the tweets accurately represent the whitepaper content. For each claim in the tweets, check: (a) Is this claim explicitly stated in the whitepaper? (b) Is the claim supported by evidence (data, quotes, examples) in the whitepaper? (c) Is the claim overstated or misleading? If any claim fails these checks, flag it for revision.
 2. **Tone consistency:** Review all threads for consistent tone. Do they all sound like they're from the same author/brand? Are they appropriate for the target audience? Use this rubric: (a) Does the thread use the specified tone (technical, accessible, provocative, professional-engaging)? (b) Is the voice consistent across all tweets in the thread? (c) Is the voice consistent across all threads? If any answer is "no", flag for revision.
 3. **Engagement potential:** For each thread, assess the likelihood of engagement using this rubric:
    - Hook engagement: Does the hook create curiosity or emotion? (Yes/No)
    - Body engagement: Are the body tweets interesting and specific (not generic)? (Yes/No)
-   - CTA engagement: Is the CTA clear and compelling? (Yes/No)
+   - CTA engagement: Is the CTA clear and clear? (Yes/No)
    - Overall engagement score: (# of "Yes" answers) / 3 × 100%. Threads scoring <66% (fewer than 2 "Yes" answers) are flagged for revision.
 4. **Revision identification:** For each flagged tweet, document: (a) the specific issue (accuracy, tone, engagement), (b) the current text, (c) the recommended revision. Be specific: don't say "make it better"; say "replace 'research shows' with 'a 2024 study found that X% of [audience]...'".
 5. **Final approval:** Confirm that all threads are ready for publishing (all accuracy checks pass, tone is consistent, engagement potential is high), or list revisions needed.
 
-**Output:**
+### Output
 - `quality_report` (object):
   - `accuracy_check` (string): Summary of accuracy verification with specific claims verified (e.g., "All claims verified against whitepaper. Claim in thread 2, tweet 3 ('X% of [audience] don't realize Y') verified by page 12, figure 3. No overstatements detected.").
   - `tone_consistency` (string): Assessment of tone consistency with examples (e.g., "All threads maintain professional-engaging tone. Example: 'This changes how we think about X' (thread 1) and 'Here's how to apply this' (thread 2) both use accessible language with authority.").
@@ -248,7 +250,7 @@
   - `revision_notes` (string[]): List of specific revisions needed, each with: thread_id, tweet_id, issue (accuracy/tone/engagement), current_text, recommended_revision. If no revisions needed, return empty array.
   - `approval_status` (string): "Approved for publishing" or "Requires revisions before publishing".
 
-**Quality Gate:**
+### Quality Gate
 - All claims in threads are verified against the whitepaper and supported by evidence.
 - Tone is consistent across all threads and appropriate for the target audience.
 - Engagement potential is assessed for each thread using the rubric (hook, body, CTA).
@@ -259,11 +261,11 @@
 
 ### PHASE 8: Compile Publishing Package
 
-**Entry Criteria:**
+### Entry Criteria
 - All threads are approved for publishing.
 - Quality report is complete.
 
-**Actions:**
+### Actions
 1. Organize all threads into a publishing package with:
    - **Thread list:** Thread ID, insight title, thread length (number of tweets), primary engagement hook, and approval status.
    - **Complete thread text:** All tweets in order, ready to copy-paste. Format: "[Thread ID]/[Total threads] [Tweet text] #hashtag1 #hashtag2"
@@ -291,14 +293,14 @@
    - [ ] Each thread has a clear hook, body, and CTA.
    - [ ] Engagement potential is high for each thread (>66% on engagement rubric).
 
-**Output:**
+### Output
 - `publishing_schedule` (object):
   - `total_threads` (number): Number of threads in the package.
   - `recommended_cadence` (string): Suggested posting frequency with justification (e.g., "One thread per day for 4 days, posting at 9 AM UTC. Rationale: allows audience to engage with each thread before the next one is posted. Adjust posting time to 9 AM [audience timezone] if needed.").
   - `platform_notes` (string): Platform-specific recommendations (e.g., "Twitter/X: Thread 1 would benefit from a chart showing the statistic. Recommend pinning top-performing thread. LinkedIn: Thread 3 could be expanded with a personal story about how this insight was discovered. Bluesky: All threads are suitable; audience is technical and early-adopter focused.").
   - `publishing_checklist` (string[]): Pre-publishing verification steps (checkbox format).
 
-**Quality Gate:**
+### Quality Gate
 - Publishing package is organized and easy to navigate.
 - Posting cadence is realistic and optimized for audience engagement (accounts for timezone, platform peak hours, and thread count).
 - Platform-specific notes are actionable and specific (not generic).
@@ -307,6 +309,15 @@
 - Publishing checklist is complete and all items are verified.
 
 ---
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Convert a technical whitepaper into engaging social media threads, each highligh, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 

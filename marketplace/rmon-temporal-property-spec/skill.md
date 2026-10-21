@@ -75,7 +75,7 @@ Formula column filled.
 
 ### Actions
 1. For each property write a trace of 5 to 10 samples: at least one sample that satisfies it, one that violates it, and one exactly on the boundary.
-2. Write the expected verdict per sample in `hand_trace`. In STL robustness terms, a positive value means satisfied, negative means violated, zero is the boundary.
+2. Write the expected verdict per sample in `hand_trace`. In STL reliableness terms, a positive value means satisfied, negative means violated, zero is the boundary.
 3. These traces become the first unit tests in `rmon-py-rtamt-stl-monitor` and the fault injection plan.
 
 ### Output
@@ -95,7 +95,7 @@ id: P-RANGE-01
 formula: out = (cmd_linear_x >= -0.5) and (cmd_linear_x <= 2.0)
 hand_trace: [1.0 -> +1.0, 2.0 -> 0.0, 2.3 -> -0.3, -0.6 -> -0.1]
 ```
-Robustness of an `and` is the minimum of its parts: at 2.3, min(2.3 + 0.5, 2.0 - 2.3) = -0.3.
+Reliableness of an `and` is the minimum of its parts: at 2.3, min(2.3 + 0.5, 2.0 - 2.3) = -0.3.
 
 ---
 

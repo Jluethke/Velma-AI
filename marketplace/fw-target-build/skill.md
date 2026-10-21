@@ -79,6 +79,15 @@ Resource figures in `firmware_build`.
 
 ---
 
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Build tested firmware for the target with warnings as errors, keep flash and RAM, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
+
 ## Exit Criteria
 
 DONE when the target build is clean, resources sit under 80%, and the flash procedure ends in a check that proves this artifact is running.

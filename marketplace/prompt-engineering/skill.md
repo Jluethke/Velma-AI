@@ -32,9 +32,10 @@ ACT     --> Write prompt, test it, evaluate output, iterate if needed
 
 ### OBSERVE: Read Task, Identify Output Needs, Check Constraints
 
-**Entry criteria:** A task description exists.
+### Entry Criteria
+A task description exists.
 
-**Actions:**
+### Actions
 1. Parse the task: What is the LLM being asked to produce? (classification, generation, analysis, extraction, transformation)
 2. Identify the output format: JSON, markdown, plain text, code, structured data
 3. Identify quality constraints: accuracy requirements, tone, length limits
@@ -43,17 +44,20 @@ ACT     --> Write prompt, test it, evaluate output, iterate if needed
 6. Check for existing examples of good output (for few-shot candidate selection)
 7. Identify failure modes to guard against: hallucination, refusal, format violations, verbosity
 
-**Output:** A task analysis document listing: task type, output format, quality bar, model constraints, available examples, and known failure modes.
+### Output
+A task analysis document listing: task type, output format, quality bar, model constraints, available examples, and known failure modes.
 
-**Quality gate:** Task type is classified. Output format is specified. At least one failure mode is identified.
+### Quality Gate
+Task type is classified. Output format is specified. At least one failure mode is identified.
 
 ---
 
 ### REASON: Select Technique, Choose Parameters
 
-**Entry criteria:** Task analysis is complete.
+### Entry Criteria
+Task analysis is complete.
 
-**Actions:**
+### Actions
 1. Select prompting technique using the decision tree (see Reference: Decision Tree):
    - Simple, well-defined task -> zero-shot with format instructions
    - Reasoning/math task -> chain-of-thought (see Reference: Chain-of-Thought Prompting)
@@ -73,17 +77,20 @@ ACT     --> Write prompt, test it, evaluate output, iterate if needed
    - Context window pressure -> compress context, use retrieval
 5. For multi-turn applications: plan context management strategy (see Reference: Multi-Turn Strategies)
 
-**Output:** Technique selection document listing: prompting technique, temperature, output structure, failure mitigations, and multi-turn strategy (if applicable).
+### Output
+Technique selection document listing: prompting technique, temperature, output structure, failure mitigations, and multi-turn strategy (if applicable).
 
-**Quality gate:** Technique choice is justified by task type. Temperature matches the creativity/accuracy tradeoff needed. At least one failure mitigation is selected.
+### Quality Gate
+Technique choice is justified by task type. Temperature matches the creativity/accuracy tradeoff needed. At least one failure mitigation is selected.
 
 ---
 
 ### PLAN: Draft Prompt Structure
 
-**Entry criteria:** Technique selection is complete.
+### Entry Criteria
+Technique selection is complete.
 
-**Actions:**
+### Actions
 1. Draft the prompt using the 5-part framework (see Reference: The 5-Part Framework):
    - **ROLE**: Define the AI's expertise, tone, and perspective
    - **CONTEXT**: Provide background information, data, or situation
@@ -98,17 +105,20 @@ ACT     --> Write prompt, test it, evaluate output, iterate if needed
 4. If building a system prompt: include identity, behavior, capabilities, guardrails, and fallback (see Reference: System Prompt Design)
 5. If structured output: include the exact schema in the prompt
 
-**Output:** A complete draft prompt ready for testing.
+### Output
+A complete draft prompt ready for testing.
 
-**Quality gate:** Prompt has all 5 parts (role, context, task, format, constraints). The most important instruction is placed last (recency bias). Sections are separated with delimiters.
+### Quality Gate
+Prompt has all 5 parts (role, context, task, format, constraints). The most important instruction is placed last (recency bias). Sections are separated with delimiters.
 
 ---
 
 ### ACT: Write, Test, Evaluate, Iterate
 
-**Entry criteria:** Draft prompt is complete.
+### Entry Criteria
+Draft prompt is complete.
 
-**Actions:**
+### Actions
 1. Run the prompt against the target model with 3-5 representative test inputs
 2. Evaluate each output using the rubric (see Reference: Prompt Evaluation):
    - Accuracy: does it contain only factual information?
@@ -125,9 +135,11 @@ ACT     --> Write prompt, test it, evaluate output, iterate if needed
 6. If hallucinations occur: add grounding constraints, lower temperature, add "only use provided information"
 7. Document what was tried and what worked/failed
 
-**Output:** Final prompt with evaluation scores and iteration notes.
+### Output
+Final prompt with evaluation scores and iteration notes.
 
-**Quality gate:** Average score >= 4.0 on all rubric dimensions across test inputs. Format is consistent across all test outputs. No hallucinations on factual tasks.
+### Quality Gate
+Average score >= 4.0 on all rubric dimensions across test inputs. Format is consistent across all test outputs. No hallucinations on factual tasks.
 
 ---
 
@@ -571,3 +583,7 @@ Is the task simple and well-defined?
 | Self-verification | Math, logic | "Verify your answer" |
 | Confidence scores | Uncertain tasks | "Rate your confidence 1-10" |
 | Decomposition | Complex tasks | "Break this into subtasks" |
+
+---
+
+Copyright 2024-present The Wayfinder Trust. All rights reserved.

@@ -5,22 +5,23 @@ Optimally matches available resources (energy, water, materials, labor, budget) 
 ## Execution Pattern: ORPA Loop
 
 ## Inputs
-- resources: array -- Available resources with quantities and units (e.g., 500 labor-hours/month, 10,000 gallons water/week, $50,000 budget)
-- needs: array -- Competing demands with resource requirements per unit of output (e.g., "Product A requires 2 labor-hours + $50 materials + 3 gallons water per unit")
-- constraints: array -- Hard limits (budget ceiling, environmental regulations, minimum production quotas, contractual obligations)
-- optimization_goal: string -- What to maximize: "total_output," "revenue," "efficiency," "equity," "sustainability"
+- `resources`: array -- Available resources with quantities and units (e.g., 500 labor-hours/month, 10,000 gallons water/week, $50,000 budget)
+- `needs`: array -- Competing demands with resource requirements per unit of output (e.g., "Product A requires 2 labor-hours + $50 materials + 3 gallons water per unit")
+- `constraints`: array -- Hard limits (budget ceiling, environmental regulations, minimum production quotas, contractual obligations)
+- `optimization_goal`: string -- What to maximize: "total_output," "revenue," "efficiency," "equity," "sustainability"
 
 ## Outputs
-- allocation_plan: object -- Resource assignment per need with quantities, utilization rates, and justification
-- efficiency_metrics: object -- Output per unit of each resource, waste percentage, utilization rates
-- bottleneck_analysis: object -- Identification of the binding constraint(s) and their impact on total output
-- rebalancing_recommendations: array -- Specific changes to improve allocation efficiency
+- `allocation_plan`: object -- Resource assignment per need with quantities, utilization rates, and justification
+- `efficiency_metrics`: object -- Output per unit of each resource, waste percentage, utilization rates
+- `bottleneck_analysis`: object -- Identification of the binding constraint(s) and their impact on total output
+- `rebalancing_recommendations`: array -- Specific changes to improve allocation efficiency
 
 ## Execution
 
 ### OBSERVE: Inventory Resources and Demands
-**Entry criteria:** At least one resource and two competing needs defined.
-**Actions:**
+### Entry Criteria
+At least one resource and two competing needs defined.
+### Actions
 1. Catalog all resources with available quantities, replenishment rates (renewable vs. finite), and costs:
    - **Renewable resources:** labor (renews weekly), solar energy (daily), water (seasonal)
    - **Finite resources:** budget (period-fixed), materials inventory, machine lifetime
@@ -35,12 +36,15 @@ Optimally matches available resources (energy, water, materials, labor, budget) 
    - **Soft constraints:** should be met but can flex (preferred timelines, quality targets, stakeholder expectations)
 4. Identify the optimization goal and any secondary objectives (e.g., maximize revenue BUT maintain minimum equity across stakeholders).
 
-**Output:** Resource inventory, demand matrix, constraint catalog, optimization objective hierarchy.
-**Quality gate:** Every demand has quantified resource requirements. Every resource has a measured available quantity. At least one hard constraint exists. The optimization goal is explicit.
+### Output
+Resource inventory, demand matrix, constraint catalog, optimization objective hierarchy.
+### Quality Gate
+Every demand has quantified resource requirements. Every resource has a measured available quantity. At least one hard constraint exists. The optimization goal is explicit.
 
 ### REASON: Analyze Constraints and Identify Bottlenecks
-**Entry criteria:** Complete resource and demand inventory.
-**Actions:**
+### Entry Criteria
+Complete resource and demand inventory.
+### Actions
 1. Calculate total demand vs total supply for each resource:
    - If total demand < supply: resource has surplus (slack). Not a bottleneck.
    - If total demand > supply: resource is oversubscribed. Potential bottleneck.
@@ -59,12 +63,15 @@ Optimally matches available resources (energy, water, materials, labor, budget) 
    - Mismatched allocation (high-value resources used for low-value needs)
 5. Check for Pareto improvements: can any reallocation make at least one need better off without making any other worse off? If yes, the current allocation is not Pareto-optimal.
 
-**Output:** Bottleneck identification, efficiency rankings per need, waste analysis, Pareto improvement opportunities.
-**Quality gate:** The primary bottleneck is identified with quantified impact. Needs are ranked by value per bottleneck unit. Any existing waste is quantified (not just "some waste exists" but "X units of Y resource are idle in Z context").
+### Output
+Bottleneck identification, efficiency rankings per need, waste analysis, Pareto improvement opportunities.
+### Quality Gate
+The primary bottleneck is identified with quantified impact. Needs are ranked by value per bottleneck unit. Any existing waste is quantified (not just "some waste exists" but "X units of Y resource are idle in Z context").
 
 ### PLAN: Generate Optimal Allocation
-**Entry criteria:** Bottleneck and efficiency rankings identified.
-**Actions:**
+### Entry Criteria
+Bottleneck and efficiency rankings identified.
+### Actions
 1. Apply simplified linear programming logic:
    - **Objective function:** Maximize total value = sum of (output_per_need x value_per_output)
    - **Subject to:** resource constraints (for each resource: total allocated <= available)
@@ -84,12 +91,15 @@ Optimally matches available resources (energy, water, materials, labor, budget) 
    - What if the bottleneck resource is reduced by 20%? Which needs lose allocation first?
    - What if a new high-priority need emerges? Where do resources come from?
 
-**Output:** Optimal allocation plan with quantities per need, expected output, utilization rates, and sensitivity analysis.
-**Quality gate:** No hard constraint is violated. Total allocated does not exceed available for any resource. The allocation is Pareto-optimal (no free improvements exist). Sensitivity analysis identifies the most fragile allocations.
+### Output
+Optimal allocation plan with quantities per need, expected output, utilization rates, and sensitivity analysis.
+### Quality Gate
+No hard constraint is violated. Total allocated does not exceed available for any resource. The allocation is Pareto-optimal (no free improvements exist). Sensitivity analysis identifies the most fragile allocations.
 
 ### ACT: Deliver and Recommend
-**Entry criteria:** Allocation plan generated and validated.
-**Actions:**
+### Entry Criteria
+Allocation plan generated and validated.
+### Actions
 1. Format the allocation plan as an actionable document:
    - Per-need allocation table: Need | Resource A allocated | Resource B allocated | Expected output | Value
    - Utilization dashboard: Resource | Available | Allocated | Idle | Utilization %
@@ -102,8 +112,10 @@ Optimally matches available resources (energy, water, materials, labor, budget) 
    - Detect changes: new resources, new demands, changed constraints.
    - Recalculate and present delta: "Reallocation needed. Changes: [list]. Net impact: [positive/negative]."
 
-**Output:** Formatted allocation plan, utilization dashboard, bottleneck report, rebalancing recommendations.
-**Quality gate:** Every recommendation is quantified (specific amounts, not vague). Trade-offs between competing objectives are explicit. The plan is implementable (no vague "optimize" instructions -- specific resource moves with quantities).
+### Output
+Formatted allocation plan, utilization dashboard, bottleneck report, rebalancing recommendations.
+### Quality Gate
+Every recommendation is quantified (specific amounts, not vague). Trade-offs between competing objectives are explicit. The plan is implementable (no vague "optimize" instructions -- specific resource moves with quantities).
 
 ## Exit Criteria
 Complete when an allocation plan is delivered with utilization metrics and specific rebalancing recommendations. On re-entry, complete when the delta analysis and updated allocation are delivered.
@@ -159,3 +171,7 @@ Tracks over time:
 - Bottleneck shifts (which resource is the constraint and when it changes)
 - Waste patterns and trends
 - Output per unit trends (is efficiency improving?)
+
+---
+
+Copyright 2024-present The Wayfinder Trust. All rights reserved.

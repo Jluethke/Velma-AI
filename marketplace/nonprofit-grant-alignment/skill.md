@@ -1,6 +1,6 @@
 # Nonprofit Grant Alignment
 
-**One-line description:** A program director and a funder each submit their real priorities, funding criteria, and impact expectations before the grant is submitted — AI aligns on a proposal that reflects what the funder actually funds and what the organization can actually deliver.
+**One-line description:** A program director and a funder each submit their real priorities, funding criteria, and impact expectations before the grant is submitted  --  AI aligns on a proposal that reflects what the funder actually funds and what the organization can actually deliver.
 
 **Execution Pattern:** Phase Pipeline
 
@@ -15,8 +15,8 @@
 - `shared_grant_program_area` (string, required): Program area, population served, geographic focus.
 
 ### Funder Submits Privately
-- `funder_strategic_priorities` (object, required): What you are trying to achieve with this grant cycle — outcomes, populations, approaches that align with your theory of change.
-- `funder_funding_criteria` (object, required): What you fund and what you do not — evidence standards, organizational capacity requirements, geographic restrictions.
+- `funder_strategic_priorities` (object, required): What you are trying to achieve with this grant cycle  --  outcomes, populations, approaches that align with your theory of change.
+- `funder_funding_criteria` (object, required): What you fund and what you do not  --  evidence standards, organizational capacity requirements, geographic restrictions.
 - `funder_grant_economics` (object, required): Grant range, multi-year availability, indirect cost policy, reporting requirements, what success looks like to justify renewal.
 - `funder_concerns_about_this_applicant` (object, required): Organizational capacity, financial health, leadership stability, prior grant performance.
 - `funder_what_they_will_not_fund` (array, required): Approaches, activities, or cost categories that are outside your funding criteria.
@@ -41,46 +41,84 @@
 ## Execution Phases
 
 ### Phase 0: Pre-Flight Check
-**Entry Criteria:** Both submissions received.
-**Actions:** Confirm funder's strategic priorities and program director's program design both present.
-**Output:** Readiness confirmation.
-**Quality Gate:** Funder's criteria and program's theory of change and outcomes both present.
+### Entry Criteria
+Both submissions received.
+### Actions
+Confirm funder's strategic priorities and program director's program design both present.
+### Output
+Readiness confirmation.
+### Quality Gate
+Funder's criteria and program's theory of change and outcomes both present.
 
 ---
 
 ### Phase 1: Assess Strategic and Criteria Alignment
-**Entry Criteria:** Both submissions confirmed.
-**Actions:** 1. Compare program design against funder's strategic priorities — genuine fit or forced alignment? 2. Evaluate program against funding criteria — eligibility, evidence standards, capacity requirements. 3. Assess financial health and organizational capacity. 4. Identify what the funder will not fund that affects program design.
-**Output:** Strategic alignment, criteria compliance, capacity assessment, non-fundable element identification.
-**Quality Gate:** Alignment assessment is specific — "funder priorities include X, program addresses Y — the gap is Z."
+### Entry Criteria
+Both submissions confirmed.
+### Actions
+1. Compare program design against funder's strategic priorities  --  genuine fit or forced alignment? 2. Evaluate program against funding criteria  --  eligibility, evidence standards, capacity requirements. 3. Assess financial health and organizational capacity. 4. Identify what the funder will not fund that affects program design.
+### Output
+Strategic alignment, criteria compliance, capacity assessment, non-fundable element identification.
+### Quality Gate
+Alignment assessment is specific  --  "funder priorities include X, program addresses Y  --  the gap is Z."
 
 ---
 
 ### Phase 2: Build the Proposal Framework
-**Entry Criteria:** Assessment complete.
-**Actions:** 1. Define the framing — how to describe the program in funder language without distorting program design. 2. Build the budget structure — grant amount, indirect cost, multi-year ask. 3. Define the outcomes to measure and how to report them. 4. Identify organizational capacity evidence to include.
-**Output:** Proposal framing, budget structure, outcomes framework, capacity evidence.
-**Quality Gate:** Proposed outcomes are measurable and within the program's actual track record to deliver — not aspirational.
+### Entry Criteria
+Assessment complete.
+### Actions
+1. Define the framing  --  how to describe the program in funder language without distorting program design. 2. Build the budget structure  --  grant amount, indirect cost, multi-year ask. 3. Define the outcomes to measure and how to report them. 4. Identify organizational capacity evidence to include.
+### Output
+Proposal framing, budget structure, outcomes framework, capacity evidence.
+### Quality Gate
+Proposed outcomes are measurable and within the program's actual track record to deliver  --  not aspirational.
 
 ---
 
 ### Phase 3: Define the Grant Relationship
-**Entry Criteria:** Framework built.
-**Actions:** 1. Define reporting obligations — frequency, format, what triggers a check-in conversation. 2. Establish renewal expectations — what performance justifies renewal? 3. Define what happens if program design must change mid-grant. 4. Assemble the grant relationship framework.
-**Output:** Reporting plan, renewal expectations, mid-grant change process, relationship framework.
-**Quality Gate:** Reporting obligations are specific deliverables at specific dates — not "quarterly updates."
+### Entry Criteria
+Framework built.
+### Actions
+1. Define reporting obligations  --  frequency, format, what triggers a check-in conversation. 2. Establish renewal expectations  --  what performance justifies renewal? 3. Define what happens if program design must change mid-grant. 4. Assemble the grant relationship framework.
+### Output
+Reporting plan, renewal expectations, mid-grant change process, relationship framework.
+### Quality Gate
+Reporting obligations are specific deliverables at specific dates  --  not "quarterly updates."
 
 ---
 
 ### Phase 4: Deliver the Synthesis
-**Entry Criteria:** Relationship defined.
-**Output:** Full synthesis — alignment assessment, proposal design, budget structure, outcomes framework, capacity evidence, grant relationship plan.
-**Quality Gate:** Program director can write the proposal. Funder knows what they would be funding and how performance would be measured.
+### Entry Criteria
+Relationship defined.
+### Output
+Full synthesis  --  alignment assessment, proposal design, budget structure, outcomes framework, capacity evidence, grant relationship plan.
+### Quality Gate
+Program director can write the proposal. Funder knows what they would be funding and how performance would be measured.
 
 ---
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for A program director and a funder each submit their real priorities, funding crite, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 Done when: (1) strategic alignment is assessed honestly, (2) fundability criteria are evaluated, (3) proposal framing is defined, (4) budget structure is complete, (5) reporting obligations are specific.
 
 ---
+
+---
+
+## Error Handling
+
+| Phase | Failure Mode | Response |
+|---|---|---|
+| Any | Missing required input | **Stop**: report which input is missing and what it should contain. |
+| Any | Upstream phase output incomplete | **Return**: re-run the upstream phase with the gap identified. |
+
 Copyright 2024-present The Wayfinder Trust. All rights reserved.

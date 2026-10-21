@@ -1,6 +1,6 @@
 # Risk Assessor
 
-> **Starter Skill** — Free to use. Royalties to original creator on derivatives. Build on this.
+> **Starter Skill**  --  Free to use. Royalties to original creator on derivatives. Build on this.
 
 Foundation pattern for identifying and scoring risks in any plan, project, or decision. Takes a plan description, produces a risk register with: risk description, likelihood (1-5), impact (1-5), risk score (L x I), mitigation strategy, owner, and monitoring trigger. Includes both obvious and hidden risks. Fork this for: project risk management, investment risk, travel safety, health risk, business continuity.
 
@@ -37,8 +37,7 @@ LOOP     --> Re-assess when plan changes or risks materialize
 
 ### OBSERVE -- Identify Risk Surfaces
 
-**Actions:**
-
+### Actions
 1. Read the plan description and identify every assumption it makes. An assumption is something that must be true for the plan to work but is not guaranteed. Each assumption is a candidate risk if it fails.
 2. Scan for risks across 7 categories:
    - **Technical**: technology fails, integrations break, performance degrades.
@@ -48,49 +47,51 @@ LOOP     --> Re-assess when plan changes or risks materialize
    - **Financial**: costs exceed estimates, revenue falls short, cash flow timing.
    - **Reputational**: public perception, trust damage, media exposure.
    - **Legal/Compliance**: regulatory violation, contract breach, IP infringement.
-3. For each risk category, generate at least 2 candidate risks specific to this plan. Use the "pre-mortem" technique: imagine the plan has failed — what went wrong?
+3. For each risk category, generate at least 2 candidate risks specific to this plan. Use the "pre-mortem" technique: imagine the plan has failed  --  what went wrong?
 4. Add known_risks to the list (avoid duplication).
 5. Identify hidden risks: second-order effects, risks that emerge only when two other things go wrong simultaneously, risks everyone assumes someone else is handling.
 
-**Output:** Candidate risk list organized by category, with hidden risks flagged separately.
+### Output
+Candidate risk list organized by category, with hidden risks flagged separately.
 
-**Quality gate:** At least 10 candidate risks identified. At least 5 of 7 categories are represented. At least 2 hidden risks are identified that were not in known_risks.
+### Quality Gate
+At least 10 candidate risks identified. At least 5 of 7 categories are represented. At least 2 hidden risks are identified that were not in known_risks.
 
 ---
 
 ### REASON -- Score Each Risk
 
-**Actions:**
-
+### Actions
 1. For each candidate risk, score **likelihood** (1-5):
-   - 1: Rare — less than 5% chance
-   - 2: Unlikely — 5-20% chance
-   - 3: Possible — 20-50% chance
-   - 4: Likely — 50-80% chance
-   - 5: Almost certain — greater than 80% chance
+   - 1: Rare  --  less than 5% chance
+   - 2: Unlikely  --  5-20% chance
+   - 3: Possible  --  20-50% chance
+   - 4: Likely  --  50-80% chance
+   - 5: Almost certain  --  greater than 80% chance
 
 2. For each candidate risk, score **impact** (1-5):
-   - 1: Negligible — minor inconvenience, easily absorbed
-   - 2: Minor — noticeable but manageable with existing resources
-   - 3: Moderate — requires plan adjustment, delays, or additional resources
-   - 4: Major — significant damage to timeline, budget, or objectives
-   - 5: Catastrophic — plan failure, existential threat, irrecoverable
+   - 1: Negligible  --  minor inconvenience, easily absorbed
+   - 2: Minor  --  noticeable but manageable with existing resources
+   - 3: Moderate  --  requires plan adjustment, delays, or additional resources
+   - 4: Major  --  significant damage to timeline, budget, or objectives
+   - 5: Catastrophic  --  plan failure, existential threat, irrecoverable
 
 3. Calculate **risk score** = likelihood x impact. Maximum 25.
 4. Classify risk level: Low (1-4), Medium (5-9), High (10-15), Critical (16-25).
-5. Build the risk matrix: plot all risks on a 5x5 grid. Identify clusters — multiple risks in the same cell indicate a systemic vulnerability.
+5. Build the risk matrix: plot all risks on a 5x5 grid. Identify clusters  --  multiple risks in the same cell indicate a systemic vulnerability.
 6. Filter by risk_appetite: conservative = escalate anything Medium+, moderate = escalate High+, aggressive = escalate Critical only.
 
-**Output:** Scored risk list with levels, risk matrix, escalation recommendations.
+### Output
+Scored risk list with levels, risk matrix, escalation recommendations.
 
-**Quality gate:** Every risk has both a likelihood and impact score with justification (not just a number). Risk levels are calculated correctly. The matrix is populated.
+### Quality Gate
+Every risk has both a likelihood and impact score with justification (not just a number). Risk levels are calculated correctly. The matrix is populated.
 
 ---
 
 ### PLAN -- Design Mitigations
 
-**Actions:**
-
+### Actions
 1. For each risk scoring High or Critical, design a mitigation strategy using one of four approaches:
    - **Avoid**: change the plan to eliminate the risk entirely.
    - **Reduce**: take action to lower the likelihood or impact.
@@ -108,27 +109,39 @@ LOOP     --> Re-assess when plan changes or risks materialize
 4. For Low risks, note them as accepted and document why.
 5. Design monitoring triggers for the top 5 risks: what observable event signals that the risk is materializing? (e.g., "if sprint velocity drops below 70% for 2 consecutive sprints, the resource risk is materializing").
 
-**Output:** Mitigation strategies for all High/Critical risks, brief recommendations for Medium, acceptance notes for Low, monitoring triggers for top 5.
+### Output
+Mitigation strategies for all High/Critical risks, brief recommendations for Medium, acceptance notes for Low, monitoring triggers for top 5.
 
-**Quality gate:** Every High/Critical risk has a mitigation with owner and deadline. Residual risk scores are lower than original scores. Monitoring triggers are observable events, not vague "keep an eye on it."
+### Quality Gate
+Every High/Critical risk has a mitigation with owner and deadline. Residual risk scores are lower than original scores. Monitoring triggers are observable events, not vague "keep an eye on it."
 
 ---
 
 ### ACT -- Produce the Register
 
-**Actions:**
-
+### Actions
 1. Assemble the risk register as a table with columns: ID, Risk Description, Category, Likelihood (1-5), Impact (1-5), Score (L x I), Level, Mitigation Strategy, Owner, Monitoring Trigger, Residual Score.
 2. Sort by risk score descending (highest risks first).
 3. Produce the top risks summary: the 3-5 highest-scoring risks with full mitigation detail, written in plain language suitable for stakeholder communication.
 4. Produce the monitoring plan: a schedule of risk check-ins (weekly for Critical, biweekly for High, monthly for Medium) with what to look for at each check-in.
 5. List all hidden risks with a recommendation to investigate each one further.
 
-**Output:** Complete risk register, top risks summary, monitoring plan, hidden risks list.
+### Output
+Complete risk register, top risks summary, monitoring plan, hidden risks list.
 
-**Quality gate:** Risk register has at least 10 entries. Top risks summary is under 300 words. Monitoring plan has specific check-in dates or frequencies. Every risk has an owner (even if "TBD").
+### Quality Gate
+Risk register has at least 10 entries. Top risks summary is under 300 words. Monitoring plan has specific check-in dates or frequencies. Every risk has an owner (even if "TBD").
 
 ---
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Identify and score risks in any plan, project, or decision: likelihood, impact, , the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 
@@ -146,7 +159,7 @@ The skill is DONE when:
 |---|---|---|
 | OBSERVE | Plan description is a single sentence with no detail | **Adjust** -- ask clarifying questions about scope, timeline, resources, and dependencies before proceeding |
 | OBSERVE | Fewer than 10 risks identified | **Retry** -- apply the pre-mortem technique more aggressively, check each of the 7 categories again |
-| REASON | All risks score Low (1-4) | **Adjust** -- re-examine assumptions; either the plan is genuinely low-risk or the scoring is too optimistic. Flag for review. |
+| REASON | All risks score Low (1-4) | **Adjust** -- re-examine assumptions; either the plan is genuinely low-risk or the scoring is too optimiztic. Flag for review. |
 | PLAN | No stakeholders provided to assign as owners | **Adjust** -- assign ownership by role ("project lead", "finance team") rather than by name |
 | ACT | Risk register exceeds 30 entries | **Adjust** -- merge similar risks and focus detail on the top 15. List the remainder as a watch list. |
 | ACT | User rejects final output | **Targeted revision** -- ask which risk's scoring, mitigation strategy, or monitoring trigger fell short and rerun only that risk's REASON-PLAN phases. Do not reassess all risks. |

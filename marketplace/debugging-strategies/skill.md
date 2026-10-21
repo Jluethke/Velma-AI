@@ -34,9 +34,10 @@ ACT     --> Execute investigation, apply fix, verify fix, add regression test
 
 ### OBSERVE: Read the Error, Reproduce, Gather Context
 
-**Entry criteria:** A bug report, error message, or unexpected behavior is described.
+### Entry Criteria
+A bug report, error message, or unexpected behavior is described.
 
-**Actions:**
+### Actions
 1. Read the exact error message and stack trace (see Reference: Reading Error Messages):
    - Python: read bottom to top, last frame is where exception was raised
    - Java: read top to bottom, look for "Caused by:" (root cause is the last one)
@@ -58,17 +59,20 @@ ACT     --> Execute investigation, apply fix, verify fix, add regression test
    - "Instead, I see: [actual behavior]"
    - "I've already checked: [what you've ruled out]"
 
-**Output:** Bug observation report listing: exact error, reproduction steps, environment, what changed, and initial context.
+### Output
+Bug observation report listing: exact error, reproduction steps, environment, what changed, and initial context.
 
-**Quality gate:** Error message is recorded exactly (not paraphrased). Reproduction steps exist (or "not yet reproducible" is noted). Recent changes are checked.
+### Quality Gate
+Error message is recorded exactly (not paraphrased). Reproduction steps exist (or "not yet reproducible" is noted). Recent changes are checked.
 
 ---
 
 ### REASON: Hypothesize Root Cause, Classify Bug Type
 
-**Entry criteria:** Bug observation report is complete.
+### Entry Criteria
+Bug observation report is complete.
 
-**Actions:**
+### Actions
 1. Classify the bug type (see Reference: Common Bug Categories):
    - "It Works on My Machine" -> environment differences (OS, language version, config, data, deps)
    - Intermittent failures -> race condition, resource exhaustion, timing, external dependency
@@ -84,17 +88,20 @@ ACT     --> Execute investigation, apply fix, verify fix, add regression test
    - What you would expect to see if this hypothesis is wrong
 4. Rank hypotheses by: likelihood first, then ease of testing
 
-**Output:** Classified bug type with 2-3 ranked hypotheses, each with expected evidence if true/false.
+### Output
+Classified bug type with 2-3 ranked hypotheses, each with expected evidence if true/false.
 
-**Quality gate:** At least 2 hypotheses are generated. Each has a testable prediction. Bug type is classified. No hypothesis is "maybe it's the framework" without specific evidence.
+### Quality Gate
+At least 2 hypotheses are generated. Each has a testable prediction. Bug type is classified. No hypothesis is "maybe it's the framework" without specific evidence.
 
 ---
 
 ### PLAN: Choose Investigation Strategy
 
-**Entry criteria:** Hypotheses are ranked with testable predictions.
+### Entry Criteria
+Hypotheses are ranked with testable predictions.
 
-**Actions:**
+### Actions
 1. Choose the primary investigation strategy:
    - **Binary search in code** (see Reference: Binary Search Debugging): when you don't know WHERE the bug is, bisect the code path with debug output at midpoints
    - **Binary search in time** (`git bisect`): when you know it used to work, find the commit that broke it
@@ -111,17 +118,20 @@ ACT     --> Execute investigation, apply fix, verify fix, add regression test
 4. Plan the investigation steps: which hypothesis to test first, what to change, what to measure
 5. Commit to changing ONE variable at a time (the cardinal rule)
 
-**Output:** Investigation plan with strategy, tools, steps, and timeline.
+### Output
+Investigation plan with strategy, tools, steps, and timeline.
 
-**Quality gate:** Strategy is chosen with justification. Investigation steps test one variable at a time. Escalation triggers are defined (when to step back, when to pair).
+### Quality Gate
+Strategy is chosen with justification. Investigation steps test one variable at a time. Escalation triggers are defined (when to step back, when to pair).
 
 ---
 
 ### ACT: Execute Investigation, Apply Fix, Verify
 
-**Entry criteria:** Investigation plan is ready.
+### Entry Criteria
+Investigation plan is ready.
 
-**Actions:**
+### Actions
 1. Execute the investigation following the plan:
    - Test the top-ranked hypothesis first
    - Change one variable at a time
@@ -143,9 +153,11 @@ ACT     --> Execute investigation, apply fix, verify fix, add regression test
 5. For production debugging, follow safe practices (see Reference: Safe Production Debugging)
 6. Use structured logging for investigation (see Reference: Log-Based Debugging)
 
-**Output:** Root cause analysis with evidence, fix (code change or configuration), regression test, and investigation log.
+### Output
+Root cause analysis with evidence, fix (code change or configuration), regression test, and investigation log.
 
-**Quality gate:** Root cause is identified with evidence (not just "it works now"). Fix is verified to resolve the issue. Regression test catches the bug. Investigation log documents what was tried and ruled out.
+### Quality Gate
+Root cause is identified with evidence (not just "it works now"). Fix is verified to resolve the issue. Regression test catches the bug. Investigation log documents what was tried and ruled out.
 
 ---
 
@@ -590,3 +602,7 @@ STOP and:
 - "It must be a framework/library bug" -> It's almost never the framework.
   (But sometimes it is. Check the issue tracker.)
 ```
+
+---
+
+Copyright 2024-present The Wayfinder Trust. All rights reserved.

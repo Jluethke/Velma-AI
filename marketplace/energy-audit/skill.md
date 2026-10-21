@@ -34,8 +34,7 @@ ACT     --> You commit to one swap and one protection this week.
 
 ### OBSERVE: Map the Week
 
-**Actions:**
-
+### Actions
 1. **Walk through the week.** Ask: "Take me through a typical week, day by day. Not the ideal week -- the ACTUAL week. What do you do from when you wake up to when you sleep? Include work, commute, chores, scrolling, everything. Especially the things you think don't count." The "doesn't count" stuff is usually where the energy leaks live. Twenty minutes of doomscrolling doesn't show up on any to-do list, but it costs more energy than most tasks.
 
 2. **Categorize every activity.** Group into buckets:
@@ -50,14 +49,14 @@ ACT     --> You commit to one swap and one protection this week.
 
 4. **Find the hidden hours.** Ask: "Where does time disappear? What do you start doing and then look up and an hour has passed? What activity is a black hole for your time that you don't plan for?" These are usually the biggest energy drains because they combine time loss with the frustration of time loss.
 
-**Quality gate:** A full week is mapped with approximate hours per category. At least one "leak" activity is identified. Total hours are roughly plausible.
+### Quality Gate
+A full week is mapped with approximate hours per category. At least one "leak" activity is identified. Total hours are roughly plausible.
 
 ---
 
 ### REASON: Score the Energy
 
-**Actions:**
-
+### Actions
 1. **Score every activity.** For each regular activity, ask: "After you do this, do you have MORE energy than before, LESS energy, or about the same? Not during -- after. Some things are hard in the moment but leave you energized. Some things feel easy but leave you depleted."
    - **+2:** Actively energizing. You feel better after.
    - **+1:** Mildly energizing. Slight lift.
@@ -73,14 +72,14 @@ ACT     --> You commit to one swap and one protection this week.
 
 5. **The obligation audit.** Ask: "Which of the draining activities are you doing because you HAVE to, and which are you doing because you feel like you SHOULD? There's a difference. 'Have to' means real consequences if you stop. 'Should' means guilt if you stop. Guilt is not a reason."
 
-**Quality gate:** Every regular activity has an energy score. Peak/valley pattern is identified. At least one mismatch (high hours + negative energy) is found. Obligation vs. choice is distinguished.
+### Quality Gate
+Every regular activity has an energy score. Peak/valley pattern is identified. At least one mismatch (high hours + negative energy) is found. Obligation vs. choice is distinguished.
 
 ---
 
 ### PLAN: Redesign for Energy
 
-**Actions:**
-
+### Actions
 1. **Identify the top 3 drains.** Sort by `hours * negative_score`. Ask: "These are your biggest energy costs. For each one: can you eliminate it, reduce it, delegate it, or reframe it?" Reframing means changing HOW you do it (e.g., walking meetings instead of sitting meetings, batch-processing email instead of constant checking).
 
 2. **Identify the underused charges.** Sort by positive energy score. Ask: "These are the things that charge your battery, but you're barely doing them. What's stopping you from doing more? Time? Permission? Guilt about 'wasting time' on something that makes you feel good?"
@@ -95,14 +94,14 @@ ACT     --> You commit to one swap and one protection this week.
 
 5. **Set boundaries.** Ask: "What's one thing you need to say NO to this week to protect your energy? And what's one thing you need to say YES to that you keep denying yourself?"
 
-**Quality gate:** Top 3 drains have a plan (eliminate, reduce, delegate, or reframe). At least one charge activity is being expanded. Daily peak/valley structure is designed. One no and one yes are committed.
+### Quality Gate
+Top 3 drains have a plan (eliminate, reduce, delegate, or reframe). At least one charge activity is being expanded. Daily peak/valley structure is designed. One no and one yes are committed.
 
 ---
 
 ### ACT: One Swap, One Protection
 
-**Actions:**
-
+### Actions
 1. **The swap.** Ask: "This week, what's the one drain you're going to reduce or eliminate, and what's the one charge you're going to add or expand? Don't overhaul your whole life. One swap." The swap should be specific: "I'm replacing the 45-minute post-lunch scroll with a 20-minute walk" -- not "I'm going to be more intentional."
 
 2. **The protection.** Ask: "What's the one energy boundary you're going to enforce this week? The meeting you'll decline, the request you'll push back on, the commitment you'll renegotiate?" Energy protection requires active defense. If you don't decide what to protect, your calendar will decide for you.
@@ -111,7 +110,17 @@ ACT     --> You commit to one swap and one protection this week.
 
 4. **The re-audit.** Say: "In 2 weeks, do this again. Your energy map will have shifted. Some things you thought were draining will turn out to be fine once they're in the right time slot. Some charges will have worn off. The map is alive -- it needs updating."
 
-**Output:** Energy map with scores, mismatch report, restructured schedule, one swap + one protection for this week, 2-week re-audit date.
+### Output
+Energy map with scores, mismatch report, restructured schedule, one swap + one protection for this week, 2-week re-audit date.
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Track where your energy goes, identify what charges vs. drains you, find time-vs, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 
@@ -148,9 +157,9 @@ Activities with the largest negative products are the highest-leverage targets f
 
 | Category | Examples | Common Energy Pattern |
 |---|---|---|
-| Work — deep focus | Writing, designing, coding, analysis | +1 to +2 when matched to peak hours |
-| Work — admin | Email, scheduling, approvals | -1 to 0; do in valley hours |
-| Work — meetings | Recurring standups, status updates | -1 to -2 if unstructured |
+| Work  --  deep focus | Writing, designing, coding, analysis | +1 to +2 when matched to peak hours |
+| Work  --  admin | Email, scheduling, approvals | -1 to 0; do in valley hours |
+| Work  --  meetings | Recurring standups, status updates | -1 to -2 if unstructured |
 | Maintenance | Cooking, cleaning, errands | 0 to -1 |
 | Relationships | Quality time with people you enjoy | +1 to +2 |
 | Relationships (obligatory) | Events you attend from guilt | -1 to -2 |

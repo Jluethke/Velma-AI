@@ -41,10 +41,10 @@
 
 ### Phase 1: Collect and Validate Inputs
 
-**Entry Criteria:**
+### Entry Criteria
 - Workflow is triggered with income, expenses, and goals provided.
 
-**Actions:**
+### Actions
 1. Validate `monthly_net_income`: Must be a number > 0. If missing, zero, or negative, abort with error message: "Monthly income is required and must be positive. Received: [value]".
 2. Validate `expenses` array: Must be non-empty. Each expense must have `category` (string, non-empty), `amount` (number > 0), and `type` ("fixed" or "variable"). Remove or flag invalid entries. If all entries are invalid, abort with error: "At least one valid expense is required.".
 3. Validate `financial_goals` array: Must be non-empty. Each goal must have `goal_name` (string, non-empty), `target_amount` (number > 0), `current_balance` (number ≥ 0), and `priority` (integer 1-5). If priority is outside 1-5, set to 3 (default). Remove or flag invalid entries. If all entries are invalid, abort with error: "At least one valid goal is required.".
@@ -54,10 +54,10 @@
 7. Set `debt_payoff_method`: If provided and equals "avalanche" or "snowball", use provided value. Otherwise, default to "avalanche".
 8. Output `clarified_inputs` object with all validated and normalized values.
 
-**Output:**
+### Output
 - `clarified_inputs` (object with all validated inputs and applied defaults)
 
-**Quality Gate:**
+### Quality Gate
 - `monthly_net_income` is a positive number, verified by: value > 0.
 - `expenses` array is non-empty and all entries have valid `category` (non-empty string), `amount` (positive number), and `type` ("fixed" or "variable"), verified by: count(valid_expenses) > 0.
 - `financial_goals` array is non-empty and all entries have valid `goal_name` (non-empty string), `target_amount` (positive number), `current_balance` (non-negative number), and `priority` (integer 1-5), verified by: count(valid_goals) > 0 and all priorities in [1,5].
@@ -69,10 +69,10 @@
 
 ### Phase 2: Calculate Current Financial State
 
-**Entry Criteria:**
+### Entry Criteria
 - `clarified_inputs` is complete and valid (all required fields present and numeric).
 
-**Actions:**
+### Actions
 1. Sum all expenses by category: For each unique category in expenses, sum all amounts where category matches. Store as `by_category` object.
 2. Sum all expenses by type: Sum all amounts where type = "fixed", sum all amounts where type = "variable". Store as `by_type` object with keys "fixed" and "variable".
 3. Calculate total monthly expenses: `total_expenses = sum(all expense amounts)`.
@@ -80,11 +80,11 @@
 5. If `monthly_surplus_deficit < 0` (deficit exists): Flag as critical issue. Output warning message: "CRITICAL: Monthly expenses ($[total]) exceed income ($[income]). Monthly deficit: $[deficit]. Budget is not sustainable. Recommend: (1) Reduce variable expenses, (2) Increase income, or (3) Adjust financial goals. Pause workflow for user decision." Pause and wait for user to adjust inputs before proceeding to Phase 3.
 6. Output `expense_summary` (object with `by_category`, `by_type`, and `total`) and `monthly_surplus_deficit` (number).
 
-**Output:**
+### Output
 - `expense_summary` (object: `{by_category: {[category]: number}, by_type: {fixed: number, variable: number}, total: number}`)
 - `monthly_surplus_deficit` (number, positive or negative)
 
-**Quality Gate:**
+### Quality Gate
 - Expense totals are accurate: `sum(by_category values) = total` and `by_type.fixed + by_type.variable = total`, verified by: recalculating sums and comparing.
 - Surplus/deficit is calculated as a specific number and flagged as positive (surplus) or negative (deficit), verified by: `monthly_surplus_deficit = monthly_net_income - total_expenses` and sign is correct.
 - If deficit exists, a critical warning is raised and workflow pauses for user decision, verified by: deficit flag is set and pause message is output.
@@ -93,11 +93,11 @@
 
 ### Phase 3: Plan Emergency Fund
 
-**Entry Criteria:**
+### Entry Criteria
 - `monthly_surplus_deficit` is positive (surplus exists). If deficit, Phase 2 pauses workflow.
 - `emergency_fund_target` and `current_emergency_fund_balance` are defined (from Phase 1).
 
-**Actions:**
+### Actions
 1. Calculate emergency fund gap: `gap = emergency_fund_target - current_emergency_fund_balance`.
 2. If `gap ≤ 0`: Emergency fund is complete or exceeded. Set `monthly_contribution = 0`, `months_to_target = 0`, and `priority = false`. Proceed to Phase 4.
 3. If `gap > 0`:
@@ -106,10 +106,10 @@
    c. Set priority flag: `priority = true` if `gap > (2 × total_monthly_expenses)`, else `priority = false`. (Emergency fund is high-priority if gap exceeds 2 months of expenses.)
 4. Output `emergency_fund_plan` with all calculated fields.
 
-**Output:**
+### Output
 - `emergency_fund_plan` (object: `{target: number, current_balance: number, gap: number, monthly_contribution: number, months_to_target: number, priority: boolean}`)
 
-**Quality Gate:**
+### Quality Gate
 - Emergency fund contribution does not exceed available surplus: `monthly_contribution ≤ monthly_surplus_deficit`, verified by: checking value.
 - Timeline is realistic: `months_to_target` is a non-negative integer (0 if complete, > 0 if in progress), verified by: `months_to_target ≥ 0 and months_to_target = integer`.
 - Priority flag correctly reflects financial health: `priority = true` if `gap > (2 × total_monthly_expenses)`, else `priority = false`, verified by: checking condition.
@@ -119,12 +119,12 @@
 
 ### Phase 4: Plan Debt Payoff Strategy
 
-**Entry Criteria:**
+### Entry Criteria
 - `emergency_fund_plan` is complete (from Phase 3).
 - `debt_list` is provided (may be empty).
 - Remaining surplus after emergency fund allocation is calculated: `remaining_surplus = monthly_surplus_deficit - emergency_fund_monthly_contribution`.
 
-**Actions:**
+### Actions
 1. If `debt_list` is empty: Output empty `debt_payoff_plan = []` and proceed to Phase 5.
 2. If debts exist:
    a. Calculate remaining monthly surplus: `remaining_surplus = monthly_surplus_deficit - emergency_fund_plan.monthly_contribution`.
@@ -140,10 +140,10 @@
       - Calculate total interest paid: `total_interest_paid = (monthly_payment × payoff_months) - debt.balance`. (Interest = total paid minus principal.)
    g. Output `debt_payoff_plan` as array of objects with all calculated fields, sorted by `payoff_order`.
 
-**Output:**
+### Output
 - `debt_payoff_plan` (object[]: `[{creditor: string, balance: number, interest_rate: number, minimum_payment: number, monthly_payment: number, payoff_months: number, total_interest_paid: number, payoff_order: number}, ...]`)
 
-**Quality Gate:**
+### Quality Gate
 - Debt payoff order matches selected method: If "avalanche", verify `interest_rate` is descending across payoff_order. If "snowball", verify `balance` is ascending across payoff_order, verified by: checking sort order.
 - Monthly payments are feasible: `sum(monthly_payment for all debts) ≤ remaining_surplus`, verified by: summing and comparing.
 - Payoff timelines are positive integers: `payoff_months ≥ 1` for all debts, verified by: checking all values.
@@ -154,11 +154,11 @@
 
 ### Phase 5: Allocate Remaining Surplus to Savings Goals
 
-**Entry Criteria:**
+### Entry Criteria
 - `emergency_fund_plan` and `debt_payoff_plan` are complete (from Phases 3 and 4).
 - Remaining monthly surplus is calculated: `remaining_surplus = monthly_surplus_deficit - emergency_fund_plan.monthly_contribution - sum(debt_payoff_plan[*].monthly_payment)`.
 
-**Actions:**
+### Actions
 1. Calculate remaining surplus after emergency fund and debt payments: `remaining_surplus = monthly_surplus_deficit - emergency_fund_plan.monthly_contribution - sum(debt.monthly_payment for all debts in debt_payoff_plan)`.
 2. If `remaining_surplus ≤ 0`: Output empty `savings_allocation_plan = []`. Note in report: "No remaining surplus available for additional savings goals. User must complete emergency fund and debt payoff before saving for additional goals." Proceed to Phase 6.
 3. If `remaining_surplus > 0`:
@@ -172,10 +172,10 @@
       - If `gap > 0`: Calculate months to target: `months_to_target = ceiling(gap / monthly_allocation)` (rounded up to nearest integer).
    e. Output `savings_allocation_plan` as array of objects with all calculated fields, sorted by `priority`.
 
-**Output:**
+### Output
 - `savings_allocation_plan` (object[]: `[{goal_name: string, target_amount: number, current_balance: number, gap: number, priority: number, monthly_allocation: number, months_to_target: number}, ...]`)
 
-**Quality Gate:**
+### Quality Gate
 - Total allocations do not exceed remaining surplus: `sum(monthly_allocation for all goals) ≤ remaining_surplus`, verified by: summing and comparing.
 - All goals receive allocation proportional to priority: Each goal's allocation = `(weight / total_weight) × remaining_surplus`, verified by: recalculating allocations.
 - Timelines are non-negative integers: `months_to_target ≥ 0` for all goals, verified by: checking all values.
@@ -185,10 +185,10 @@
 
 ### Phase 6: Create Zero-Based Budget
 
-**Entry Criteria:**
+### Entry Criteria
 - All allocations from Phases 2-5 are complete and validated.
 
-**Actions:**
+### Actions
 1. Build budget allocation table as array of objects, each with `category` (string) and `amount` (number):
    a. Add line item: `{category: "Fixed Expenses", amount: expense_summary.by_type.fixed}`.
    b. Add line item: `{category: "Variable Expenses", amount: expense_summary.by_type.variable}`.
@@ -200,10 +200,10 @@
 4. If `balance ≠ 0` (due to rounding): Adjust the largest allocation by the rounding difference to make `balance = 0`. (Zero-based budget requires income = total allocated.)
 5. Output `zero_based_budget` object with `income`, `allocations` array, `total_allocated`, and `balance` (must equal 0).
 
-**Output:**
+### Output
 - `zero_based_budget` (object: `{income: number, allocations: [{category: string, amount: number}, ...], total_allocated: number, balance: number}`)
 
-**Quality Gate:**
+### Quality Gate
 - Total allocated equals monthly net income (zero-based): `total_allocated = monthly_net_income` and `balance = 0`, verified by: checking equality.
 - Every dollar of income is assigned to a category: `allocations` array contains all expense, debt, savings, and emergency fund line items, verified by: checking array completeness.
 - All line items are accounted for and accurate: Each line item amount matches its source (expense_summary, debt_payoff_plan, savings_allocation_plan, emergency_fund_plan), verified by: spot-checking calculations.
@@ -212,10 +212,10 @@
 
 ### Phase 7: Generate Financial Timeline and Report
 
-**Entry Criteria:**
+### Entry Criteria
 - All previous phases (1-6) are complete and validated.
 
-**Actions:**
+### Actions
 1. Calculate key dates (using today's date as reference):
    a. Emergency fund complete date: If `emergency_fund_plan.months_to_target = 0`, set to today. Otherwise, set to today + `emergency_fund_plan.months_to_target` months (format: YYYY-MM-DD).
    b. All debt free date: If `debt_payoff_plan` is empty, set to today. Otherwise, set to today + max(`debt.payoff_months` for all debts) months (format: YYYY-MM-DD).
@@ -237,16 +237,25 @@
       - If `savings_allocation_plan` is not empty: "You will reach your savings goals in [max_months] months ([max_date]) if you maintain this plan."
 4. Output `financial_timeline` and `budget_report`.
 
-**Output:**
+### Output
 - `financial_timeline` (object: `{emergency_fund_complete_date: string (YYYY-MM-DD), all_debt_free_date: string (YYYY-MM-DD), savings_goals_timeline: [{goal_name: string, target_date: string (YYYY-MM-DD)}, ...]}`)
 - `budget_report` (string with summary, analysis, and recommendations)
 
-**Quality Gate:**
+### Quality Gate
 - All dates are in the future (or today if goal is already met) and realistic: Each date ≥ today, verified by: checking date values.
 - Report is clear, actionable, and references all major plan components: Report includes summary, expense breakdown, emergency fund status, debt payoff strategy, savings goals, budget allocation, and recommendations, verified by: checking for all sections.
 - Recommendations are specific and tied to the user's financial situation: Each recommendation references a specific metric (e.g., "timeline exceeds 10 years", "surplus is tight", "debt-free in [months] months"), verified by: checking that recommendations are not generic.
 
 ---
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Convert income, expenses, and financial goals into a complete zero-based budget , the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 

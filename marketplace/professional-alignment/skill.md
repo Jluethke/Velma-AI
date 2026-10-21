@@ -33,62 +33,73 @@ ACT     --> Run the legwork, write the deliverable with sources cited, name what
 
 ### OBSERVE: Gather primary sources and canon
 
-**Entry criteria:** a role and a task.
+### Entry Criteria
+a role and a task.
 
-**Actions:**
+### Actions
 1. List the LOAD-BEARING facts the conclusion will rest on: the few that, if wrong, sink the deliverable.
 2. For each, name its primary source: the actual document, claims, statute, code, db, contract, or money reality. Not memory, not a prior summary, not a checklist that describes the source.
 3. Pull the operation canon for this role and task: the standing rules, the relevant memory files, the learned guardrails, and the ledger (who and what already touched this).
 4. Open each primary source. Read the part that bears on the load-bearing facts.
 
-**Output:** the load-bearing fact list, each tagged with its primary source and whether the source was actually opened this run.
+### Output
+the load-bearing fact list, each tagged with its primary source and whether the source was actually opened this run.
 
-**Quality gate:** no load-bearing fact is sourced to memory or a summary. Each names a primary artifact that was opened this run.
+### Quality Gate
+no load-bearing fact is sourced to memory or a summary. Each names a primary artifact that was opened this run.
 
 ---
 
 ### REASON: Question the premise; verified vs assumed
 
-**Entry criteria:** sources opened.
+### Entry Criteria
+sources opened.
 
-**Actions:**
+### Actions
 1. Mark each load-bearing fact VERIFIED (read it in the source this run) or ASSUMED (not yet confirmed). Default to ASSUMED.
 2. Test the framing you were handed. Does any stated "fact" in the task contradict a primary source or the canon? If so, surface it before building on it. The premise is an input to check, not a given.
 3. Screen the draft conclusion against the learned guardrails and the discipline bans. A hit means stop and recheck, not override on autopilot.
 
-**Output:** every load-bearing fact marked VERIFIED or ASSUMED; every conflict between the handed premise and a primary source named.
+### Output
+every load-bearing fact marked VERIFIED or ASSUMED; every conflict between the handed premise and a primary source named.
 
-**Quality gate:** every premise-versus-source conflict is surfaced, not silently resolved in favor of the premise.
+### Quality Gate
+every premise-versus-source conflict is surfaced, not silently resolved in favor of the premise.
 
 ---
 
 ### PLAN: Decide the legwork
 
-**Entry criteria:** the verified/assumed split is known.
+### Entry Criteria
+the verified/assumed split is known.
 
-**Actions:**
+### Actions
 1. For every ASSUMED load-bearing fact, name the concrete check that verifies it: open the file, grep it, count it, run the test, query the db, reconcile against the bank or contract reality.
 2. Order the checks by how much the conclusion depends on each.
 3. If a check cannot be run (no access, missing input), record it as a known gap. Do not assume the answer in place of the check.
 
-**Output:** an ordered legwork list, each item either a runnable check or a named gap.
+### Output
+an ordered legwork list, each item either a runnable check or a named gap.
 
-**Quality gate:** no ASSUMED load-bearing fact is left without either a check or a recorded gap.
+### Quality Gate
+no ASSUMED load-bearing fact is left without either a check or a recorded gap.
 
 ---
 
 ### ACT: Produce with the work shown
 
-**Entry criteria:** the legwork list is ready.
+### Entry Criteria
+the legwork list is ready.
 
-**Actions:**
+### Actions
 1. Run the checks. Promote facts from ASSUMED to VERIFIED as the source confirms them. If a source contradicts the draft, change the draft, not the source.
 2. Write the deliverable. Every load-bearing claim cites the source it was verified against.
 3. State the `unverified` list plainly: what could not be confirmed, and why.
 4. Set `go_no_go`. Proceed to "go" only if every load-bearing fact is VERIFIED. If one is still ASSUMED, "hold" and ask the human rather than ship a confident but unchecked conclusion.
 5. Write the `legwork_record` so the next run inherits what was checked.
 
-**Quality gate:** no polished conclusion ships with a load-bearing fact still ASSUMED. The `unverified` list is present even when empty.
+### Quality Gate
+no polished conclusion ships with a load-bearing fact still ASSUMED. The `unverified` list is present even when empty.
 
 ---
 
@@ -104,3 +115,7 @@ Each of these was a VERIFIED step skipped by performing the title instead of doi
 ## Reference: composition
 
 This flow composes with the operation's machinery. In OBSERVE, load the learned guardrails and the standing rules as the `canon` input. In REASON, screen against the discipline envelope. In ACT, write the `legwork_record` to the ops ledger as a note or feedback record so the learning loop keeps the canon current. Chain it in front of any professional flow (for example `professional-alignment -> tax-strategy`, or `professional-alignment -> code-review`) so the alignment runs before the role acts.
+
+---
+
+Copyright 2024-present The Wayfinder Trust. All rights reserved.

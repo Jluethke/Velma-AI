@@ -31,11 +31,11 @@
 
 ### Phase 1: Define, Validate, and Categorize Criteria
 
-**Entry Criteria:**
+### Entry Criteria
 - `evaluation_criteria` input is provided.
 - At least 2 criteria are defined.
 
-**Actions:**
+### Actions
 1. Separate criteria into three categories: hard_constraints (must-have, no weight), weighted_preferences (scored and weighted), and informational (data-only, no weight).
 2. For hard_constraints, validate that each has a clear required_value (e.g., "Visa Sponsorship Required: true").
 3. For weighted_preferences, validate that criterion weights sum to 100. If not, normalize them proportionally and document the adjustment.
@@ -44,12 +44,12 @@
 6. Flag any criteria with weight < 5 as "minimal influence" for user awareness.
 7. Create a summary of hard constraints that will eliminate cities (e.g., "Cities without visa sponsorship will be excluded").
 
-**Output:**
+### Output
 - Validated `criteria_list`: array of {name, type, normalized_weight (if weighted_preference), description}.
 - `weight_distribution_summary`: string describing the priority balance among weighted_preferences.
 - `hard_constraints_summary`: string listing constraints that will filter cities.
 
-**Quality Gate:**
+### Quality Gate
 - Weighted_preference weights sum to exactly 100.
 - Each criterion has a clear definition and type.
 - Hard constraints have measurable required values.
@@ -59,12 +59,12 @@
 
 ### Phase 2: Identify, Validate, and Pre-Filter Candidate Cities
 
-**Entry Criteria:**
+### Entry Criteria
 - `candidate_cities` input is provided.
 - At least 2 cities are listed.
 - Hard constraints from Phase 1 are available.
 
-**Actions:**
+### Actions
 1. Validate that each city name is recognized (city, state/country format).
 2. Check for duplicates; remove if found.
 3. Confirm that 2-10 cities are in scope (abort if <2 or >10; suggest narrowing or splitting into multiple comparisons).
@@ -73,12 +73,12 @@
 6. If all cities are eliminated by hard constraints, abort and ask user to relax constraints or add new cities.
 7. Document geographic diversity of remaining cities (e.g., "3 West Coast, 2 Midwest, 2 Northeast").
 
-**Output:**
+### Output
 - Validated `city_list`: array of {city_name, region, country} for cities passing hard constraints.
 - `eliminated_cities`: array of {city_name, failed_constraint, reason}.
 - `geographic_summary`: string.
 
-**Quality Gate:**
+### Quality Gate
 - All remaining cities are valid and distinct.
 - Remaining city count is within 2-10 range.
 - Hard constraint filtering is documented.
@@ -88,11 +88,11 @@
 
 ### Phase 3: Gather Cost of Living Data
 
-**Entry Criteria:**
+### Entry Criteria
 - `city_list` is validated (post-hard-constraint filtering).
 - Data sources are identified.
 
-**Actions:**
+### Actions
 1. For each city, retrieve or estimate cost of living index (e.g., Numbeo, Expatica, or local research). Data must be from within the past 6 months.
 2. If available, break down by category: housing (rent/mortgage), food, transportation, utilities, entertainment.
 3. If `budget_range` is provided, flag cities outside the range as "over budget" or "under budget" with variance in percentage.
@@ -101,12 +101,12 @@
 6. If data is unavailable for a city, use regional average and flag as "estimated".
 7. Calculate cost-of-living trend (if historical data available): note whether each city's cost is rising, stable, or declining over the past 12 months.
 
-**Output:**
+### Output
 - `cost_of_living_data`: object with per-city cost index, breakdown by category, data freshness, source reliability, and trend.
 - `budget_compliance`: array of {city, in_budget: boolean, variance_percent: number, status: "within_budget"|"over_budget"|"under_budget"}.
 - `cost_trend_analysis`: object with per-city trend (rising/stable/declining) and annual change percentage.
 
-**Quality Gate:**
+### Quality Gate
 - All cities have a cost of living estimate.
 - Data is from the same time period (within 6 months).
 - Any estimates are flagged as such.
@@ -117,11 +117,11 @@
 
 ### Phase 4: Gather Job Market Data
 
-**Entry Criteria:**
+### Entry Criteria
 - `city_list` is validated.
 - `user_profession` is provided or defaulted.
 
-**Actions:**
+### Actions
 1. For each city, research job availability in user's field (e.g., via Glassdoor, LinkedIn, Indeed, local job boards). Data must be from within the past 6 months.
 2. Estimate: number of open positions, median salary, unemployment rate, industry presence, and career growth potential (is the industry growing or declining?).
 3. If `user_profession` is "General", use overall employment metrics.
@@ -130,11 +130,11 @@
 6. For each city, assess career growth potential: is the industry growing (>2% annual growth), stable (0-2%), or declining (<0%)? Document the growth rate.
 7. If job market data is unavailable for user's specific profession, use general employment metrics and note the limitation.
 
-**Output:**
+### Output
 - `job_market_data`: object with per-city job availability, median salary, unemployment rate, industry presence, normalized score, and career growth potential.
 - `career_growth_analysis`: object with per-city industry growth rate and trend.
 
-**Quality Gate:**
+### Quality Gate
 - All cities have job market data.
 - Salary data is from the same time period.
 - Job availability is contextualized to user's profession (or noted as general if profession-specific data unavailable).
@@ -144,10 +144,10 @@
 
 ### Phase 5: Gather Quality of Life Data
 
-**Entry Criteria:**
+### Entry Criteria
 - `city_list` is validated.
 
-**Actions:**
+### Actions
 1. For each city, research quality of life metrics: safety (crime rate per 100k), schools (education quality index), healthcare (hospital availability, quality rating), culture (museums, arts venues, dining options), recreation (parks, outdoor activities).
 2. Use sources like Niche, Numbeo, local government data, or user research. Data must be from within the past 12 months.
 3. Normalize each sub-metric to 0-100 scale (0 = worst, 100 = best).
@@ -155,11 +155,11 @@
 5. Document data sources, recency, and any subjective elements (e.g., "based on Niche user reviews, n=500 reviews").
 6. If a sub-metric is unavailable for a city, note it and use available sub-metrics only; do not estimate.
 
-**Output:**
+### Output
 - `quality_of_life_data`: object with per-city scores for safety, schools, healthcare, culture, recreation, composite QoL score, and data sources.
 - `qol_sub_metric_weights`: object showing how sub-metrics were weighted (equal or user-specified).
 
-**Quality Gate:**
+### Quality Gate
 - All cities have QoL data for at least 4 of 5 sub-metrics.
 - Data is current (within 12 months).
 - Any subjective ratings are sourced and sample sizes are documented.
@@ -169,11 +169,11 @@
 
 ### Phase 6: Gather Climate Data
 
-**Entry Criteria:**
+### Entry Criteria
 - `city_list` is validated.
 - `climate_preference` is provided or defaulted.
 
-**Actions:**
+### Actions
 1. For each city, retrieve climate data: average high/low temperatures (by season), precipitation (annual and monthly), humidity (average and range), sunshine hours (annual), extreme weather frequency (hurricanes, tornadoes, earthquakes, blizzards).
 2. Use sources like NOAA, Weather Underground, or climate databases. Data should be 10-year averages (e.g., "1990-2020 average").
 3. If `climate_preference` is provided, score each city's climate alignment (0-100 scale, where 100 = perfect match). Use explicit scoring rules: e.g., "Warm year-round: score 100 if avg winter low >= 50F and avg summer high <= 95F; score 50 if avg winter low >= 40F and avg summer high <= 100F; score 0 otherwise."
@@ -181,11 +181,11 @@
 5. Document any extreme weather risks and their frequency (e.g., "Hurricanes: 1 major hurricane every 5 years on average").
 6. For each city, note the best and worst seasons for weather.
 
-**Output:**
+### Output
 - `climate_data`: object with per-city temperature ranges (by season), precipitation, humidity, sunshine hours, climate score (if preference given), extreme weather risks, and best/worst seasons.
 - `climate_scoring_rules`: string documenting the explicit rules used to score climate alignment (if preference given).
 
-**Quality Gate:**
+### Quality Gate
 - All cities have climate data.
 - Climate scoring is transparent and reproducible (explicit rules documented).
 - Extreme weather risks are documented with frequency.
@@ -195,11 +195,11 @@
 
 ### Phase 7: Normalize Scores Across Criteria
 
-**Entry Criteria:**
+### Entry Criteria
 - Data from Phases 3-6 is complete.
 - All raw data is in different units (cost in USD, job market as count, QoL as index, climate as temperature).
 
-**Actions:**
+### Actions
 1. For each weighted_preference criterion, identify the raw data range (e.g., cost of living: $1,500-$3,500/month; job market: 50-500 open positions).
 2. Apply min-max normalization: `normalized_score = ((value - min) / (max - min)) * 100`.
 3. For criteria where lower is better (cost of living), invert the scale: `normalized_score = 100 - ((value - min) / (max - min)) * 100`.
@@ -208,12 +208,12 @@
 6. Validate that all normalized scores are 0-100. If any score is outside this range, review the formula and recalculate.
 7. Round normalized scores to 1 decimal place.
 
-**Output:**
+### Output
 - `normalized_scores`: object with per-city, per-criterion normalized scores (0-100).
 - `normalization_formulas`: object documenting the formula applied to each criterion, including min/max values and inversion logic.
 - `normalization_validation`: object confirming all scores are 0-100 and no errors occurred.
 
-**Quality Gate:**
+### Quality Gate
 - All normalized scores are between 0 and 100.
 - Inversion logic is correct (lower cost = higher score).
 - Formulas are reproducible and documented.
@@ -223,11 +223,11 @@
 
 ### Phase 8: Calculate Weighted Composite Scores
 
-**Entry Criteria:**
+### Entry Criteria
 - Normalized scores from Phase 7 are complete.
 - Validated criteria weights from Phase 1 are available.
 
-**Actions:**
+### Actions
 1. Validate that weighted_preference weights sum to exactly 100. If not, abort and return to Phase 1.
 2. For each city, calculate: `composite_score = sum(normalized_score[criterion] * weight[criterion] / 100)` for all weighted_preference criteria only (exclude hard_constraints and informational criteria).
 3. Round composite scores to 1 decimal place.
@@ -235,12 +235,12 @@
 5. Calculate score gaps between adjacent cities (e.g., "Austin leads Denver by 3.2 points").
 6. Identify any ties (composite scores identical to 1 decimal place). If ties exist, note them and prepare tie-breaking criteria (e.g., "Both score 78.5; City A has better job market, City B is cheaper").
 
-**Output:**
+### Output
 - `composite_scores`: object with per-city composite score, rank, and tie status (if applicable).
 - `score_gaps`: array of {rank_1: string, rank_2: string, gap: number}.
 - `tie_breaking_criteria`: array of {tied_cities: [city1, city2], tie_breaker_1: string, tie_breaker_2: string} (if ties exist).
 
-**Quality Gate:**
+### Quality Gate
 - Composite scores are between 0 and 100.
 - Weights were correctly applied (sum = 100).
 - Ranking is correct (highest score = rank 1).
@@ -250,10 +250,10 @@
 
 ### Phase 9: Generate Comparison Matrix, Visualizations, and Validation Checklist
 
-**Entry Criteria:**
+### Entry Criteria
 - Composite scores and normalized scores from Phases 7-8 are complete.
 
-**Actions:**
+### Actions
 1. Build a detailed comparison matrix: rows = cities, columns = criteria + composite score. Cells = normalized scores.
 2. Include a summary row showing criterion weights.
 3. Highlight the highest and lowest scores in each column (for quick visual scanning).
@@ -262,13 +262,13 @@
 6. Create a ranked list with composite scores, strengths, and weaknesses.
 7. For the top 3 ranked cities, generate a validation checklist of in-person items to verify: commute times (by car, public transit, bike), neighborhood feel (walkability, safety, noise), local food scene (restaurants, markets, cuisine diversity), proximity to personal network (family, friends, professional contacts), cost of living reality check (actual rent, groceries, dining prices), job market reality check (company presence, networking opportunities), climate reality check (seasonal weather, extreme weather events), and cultural fit (community vibe, diversity, values alignment).
 
-**Output:**
+### Output
 - `comparison_matrix`: structured object with cities, criteria, normalized scores, weights, and composite scores.
 - `city_summaries`: object with per-city narrative summary, strengths, and weaknesses.
 - `ranked_list`: array of {rank, city, composite_score, strengths: string[], weaknesses: string[]}.
 - `validation_checklist`: object with per-city (top 3 only) checklist of in-person validation items.
 
-**Quality Gate:**
+### Quality Gate
 - Matrix is complete (no missing cells).
 - Summaries are accurate and actionable.
 - Ranked list matches composite score order.
@@ -278,11 +278,11 @@
 
 ### Phase 10: Sensitivity Analysis, Trade-Offs, and Final Recommendation
 
-**Entry Criteria:**
+### Entry Criteria
 - Composite scores and ranking from Phase 8 are complete.
 - Criterion weights from Phase 1 are available.
 
-**Actions:**
+### Actions
 1. Identify the top 3 ranked cities.
 2. For each weighted_preference criterion with weight >= 15, simulate a ±10% weight adjustment and recalculate rankings. Document scenarios where the ranking changes (e.g., "If job market weight increases from 30% to 40%, Denver moves from rank 2 to rank 1").
 3. For each sensitivity scenario, provide an interpretation: what does this tell the user about the importance of that criterion? (e.g., "Denver's ranking is sensitive to job market weight, suggesting that if job market is more important than you initially thought, Denver becomes the top choice.").
@@ -291,14 +291,14 @@
 6. Note any criteria where cities have extreme differences (e.g., one city scores 95 in climate, another 40).
 7. Generate a final recommendation that: (a) names the top-ranked city, (b) acknowledges key trade-offs, (c) notes which cities are close competitors and under what conditions they might be better, (d) recommends a 3-6 month trial period (renting short-term) before permanent relocation, and (e) suggests using the validation checklist to verify data-based conclusions in person.
 
-**Output:**
+### Output
 - `sensitivity_scenarios`: array of {scenario_name, criterion, weight_change_percent, new_ranking: [city1, city2, ...], interpretation: string}.
 - `trade_offs`: array of {city_pair: [city1, city2], trade_off_description: string}.
 - `close_competitors`: array of {city, rank, score, competitor, competitor_score, gap} (if any cities are within 5 points).
 - `extreme_differences`: array of {criterion, highest_city, highest_score, lowest_city, lowest_score, difference} (if difference >= 30 points).
 - `recommendation`: string (multi-paragraph, addressing points a-e above).
 
-**Quality Gate:**
+### Quality Gate
 - Sensitivity scenarios are realistic (±10% is a reasonable adjustment).
 - Trade-offs are specific and actionable.
 - Close competitors are correctly identified (gap <= 5 points).
@@ -306,6 +306,15 @@
 - Recommendation includes trial period suggestion.
 
 ---
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Generate a weighted-scoring decision matrix comparing candidate cities across co, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 
@@ -387,7 +396,7 @@ If a city's rank changes when a criterion's weight is adjusted by ±10%, that ci
 - "If job market weight increases from 30% to 40%, Denver moves from rank 2 to rank 1."
 - This means Denver's job market score is significantly higher than Austin's, and increasing the weight of that criterion favors Denver.
 
-**Use case**: If you are uncertain about a criterion's importance, sensitivity analysis shows which cities are most affected by that uncertainty. Cities that are NOT sensitive to weight changes are robust choices regardless of your priorities.
+**Use case**: If you are uncertain about a criterion's importance, sensitivity analysis shows which cities are most affected by that uncertainty. Cities that are NOT sensitive to weight changes are reliable choices regardless of your priorities.
 
 ### Trade-Off Examples
 
@@ -432,3 +441,7 @@ This enables:
 - Comparison of "old ranking vs. new ranking" as cities change or data updates.
 - Trend analysis (e.g., "Austin's job market has improved 5 points since last month").
 - Learning from user feedback (e.g., "User chose City A despite lower score; what did we miss?").
+
+---
+
+Copyright 2024-present The Wayfinder Trust. All rights reserved.

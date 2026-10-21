@@ -1,6 +1,6 @@
 # Template Filler
 
-> **Starter Skill** — Free to use. Royalties to original creator on derivatives. Build on this.
+> **Starter Skill**  --  Free to use. Royalties to original creator on derivatives. Build on this.
 
 Foundation pattern for populating document templates with contextual data. Takes a template with placeholders and a context object, intelligently fills each placeholder using available context, infers missing values from surrounding data, flags values it is unsure about, and produces the completed document. The key differentiator from simple find-and-replace: this skill understands context and can infer, adapt, and flag rather than blindly substituting. Fork this for: contract generators, invoice builders, form fillers, mail merge, report generators, proposal writers, etc.
 
@@ -35,25 +35,29 @@ ACT     --> Output the completed document with confidence and review flags
 
 ### OBSERVE: Parse Template and Context
 
-**Entry criteria:** A template and context object are provided.
+### Entry Criteria
+A template and context object are provided.
 
-**Actions:**
+### Actions
 1. Detect placeholder syntax. Scan the template for placeholder patterns. Support common formats: `{{name}}`, `{name}`, `[NAME]`, `<name>`, `$name`, `%name%`, `<<name>>`. Identify the dominant pattern and extract all unique placeholders.
 2. Inventory placeholders. List every unique placeholder with: name, number of occurrences, surrounding text (for context clues about what the placeholder represents).
 3. Inventory context keys. List every key in the context object with: key name, value type, value preview. Note nested objects and arrays.
 4. Detect format requirements from the template. If a placeholder appears next to a dollar sign, it probably needs currency formatting. If it appears in a date string, it needs date formatting. If it appears in uppercase context, the value may need capitalization.
 
-**Output:** Placeholder inventory, context key inventory, detected format requirements, placeholder syntax pattern.
+### Output
+Placeholder inventory, context key inventory, detected format requirements, placeholder syntax pattern.
 
-**Quality gate:** All unique placeholders are identified. Context keys are inventoried. Placeholder syntax is consistent or inconsistencies are noted.
+### Quality Gate
+All unique placeholders are identified. Context keys are inventoried. Placeholder syntax is consistent or inconsistencies are noted.
 
 ---
 
 ### REASON: Match and Infer
 
-**Entry criteria:** Placeholder and context inventories are complete.
+### Entry Criteria
+Placeholder and context inventories are complete.
 
-**Actions:**
+### Actions
 1. Exact match. For each placeholder, look for a context key with the same name (case-insensitive, ignoring underscores/hyphens/spaces). These get confidence 0.95+.
 2. Semantic match. For unmatched placeholders, look for context keys that are synonyms or abbreviations. `{{company}}` matches context key `organization_name`. `{{phone}}` matches `contact_telephone`. These get confidence 0.7-0.9.
 3. Infer from surrounding context. For still-unmatched placeholders, use the surrounding template text and other filled values to infer. If the template says "Dear {{recipient_name}}" and the context has `to_email: john@example.com`, infer "John" from the email. These get confidence 0.4-0.7.
@@ -61,17 +65,20 @@ ACT     --> Output the completed document with confidence and review flags
 5. In strict_mode, skip steps 2-4 entirely. Only exact matches are filled; everything else is flagged as unfilled.
 6. Flag uncertainties. Any fill with confidence below 0.7 gets added to review_flags with the reason and suggested value.
 
-**Output:** Placeholder-to-value mapping with sources and confidence scores, review flags.
+### Output
+Placeholder-to-value mapping with sources and confidence scores, review flags.
 
-**Quality gate:** Every placeholder has a status: filled (with confidence) or unfilled. No placeholder is silently ignored.
+### Quality Gate
+Every placeholder has a status: filled (with confidence) or unfilled. No placeholder is silently ignored.
 
 ---
 
 ### PLAN: Fill and Format
 
-**Entry criteria:** Placeholder mapping is complete.
+### Entry Criteria
+Placeholder mapping is complete.
 
-**Actions:**
+### Actions
 1. Apply format rules. Before inserting values:
    - Dates: format to specified format (ISO, US, EU, or custom). Default to the format used elsewhere in the template.
    - Numbers: apply specified precision, thousands separators, and currency symbols.
@@ -81,17 +88,20 @@ ACT     --> Output the completed document with confidence and review flags
 3. Handle unfilled placeholders. Leave them visually distinct: wrap in `[NEEDS: placeholder_name]` or highlight with a comment. Do not silently delete them.
 4. Validate the completed document. Read through the filled document for: grammatical coherence (does the filled value make grammatical sense in context?), formatting consistency, and logical consistency (does the filled date come after other dates in the document?).
 
-**Output:** Filled document, fill report, validation results.
+### Output
+Filled document, fill report, validation results.
 
-**Quality gate:** All filled values are properly formatted. Unfilled placeholders are visually flagged. No grammatical breaks from value insertion.
+### Quality Gate
+All filled values are properly formatted. Unfilled placeholders are visually flagged. No grammatical breaks from value insertion.
 
 ---
 
 ### ACT: Deliver the Completed Document
 
-**Entry criteria:** Document is filled and validated.
+### Entry Criteria
+Document is filled and validated.
 
-**Actions:**
+### Actions
 1. Output the filled_document.
 2. Output the fill_report showing every placeholder, its value, source type, and confidence.
 3. Output review_flags for placeholders needing human attention.
@@ -99,9 +109,20 @@ ACT     --> Output the completed document with confidence and review flags
 5. If unfilled_count > 0, list the unfilled placeholders with the context clues available, so the user can provide the missing values.
 6. Check for loop trigger: did filling reveal that a placeholder was misinterpreted (grammatical break, logical inconsistency)? If so, loop back to REASON with the correction.
 
-**Output:** Complete filled document package.
+### Output
+Complete filled document package.
 
-**Quality gate:** filled_document is a valid document (no broken syntax). fill_report covers every placeholder. review_flags highlight all low-confidence fills.
+### Quality Gate
+filled_document is a valid document (no broken syntax). fill_report covers every placeholder. review_flags highlight all low-confidence fills.
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Populate document templates with contextual data: intelligent placeholder matchi, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 

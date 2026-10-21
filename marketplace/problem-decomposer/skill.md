@@ -34,10 +34,10 @@ PHASE 5: VALIDATE   --> Verify completeness (do sub-problems cover the whole pro
 
 ### Phase 1: CAPTURE -- Clarify the Problem
 
-**Entry criteria:** A problem statement is provided.
+### Entry Criteria
+A problem statement is provided.
 
-**Actions:**
-
+### Actions
 1. **Apply the 5 Whys.** Take the stated problem and ask "Why?" five times to find the root cause:
    ```
    Problem: "Our API is slow."
@@ -71,18 +71,20 @@ PHASE 5: VALIDATE   --> Verify completeness (do sub-problems cover the whole pro
    - **Divergent** (many possible answers): Design, strategy, innovation. Decompose into option-generating sub-problems.
    - **Wicked** (problem definition shifts as you solve it): Organizational change, market entry, culture. Decompose iteratively -- expect the decomposition to change.
 
-**Output:** Clarified problem statement, root cause analysis (5 Whys), scope boundaries, success criteria, problem type classification.
+### Output
+Clarified problem statement, root cause analysis (5 Whys), scope boundaries, success criteria, problem type classification.
 
-**Quality gate:** Problem statement is specific enough to decompose. Scope boundaries are explicit. At least 2 measurable success criteria exist.
+### Quality Gate
+Problem statement is specific enough to decompose. Scope boundaries are explicit. At least 2 measurable success criteria exist.
 
 ---
 
 ### Phase 2: DECOMPOSE -- Break into MECE Sub-Problems
 
-**Entry criteria:** Problem is clarified with scope and success criteria.
+### Entry Criteria
+Problem is clarified with scope and success criteria.
 
-**Actions:**
-
+### Actions
 1. **Apply MECE decomposition.** MECE = Mutually Exclusive, Collectively Exhaustive:
    - **Mutually Exclusive**: No overlap between sub-problems. If two sub-problems cover the same ground, solving one would partially solve the other, creating confusion about responsibility and progress.
    - **Collectively Exhaustive**: Sub-problems cover the entire original problem. If all sub-problems are solved, the original problem is solved. No gaps.
@@ -142,18 +144,20 @@ PHASE 5: VALIDATE   --> Verify completeness (do sub-problems cover the whole pro
    - Known risks or uncertainties
    - Priority (must-have vs. nice-to-have)
 
-**Output:** Hierarchical decomposition tree with MECE validation at each level, leaf nodes tagged with effort/skills/risks.
+### Output
+Hierarchical decomposition tree with MECE validation at each level, leaf nodes tagged with effort/skills/risks.
 
-**Quality gate:** At least 3 sub-problems at level 1. MECE validation passes at every level. Every leaf node has an effort estimate. No sub-problem is larger than 30% of the total effort (otherwise it needs further decomposition).
+### Quality Gate
+At least 3 sub-problems at level 1. MECE validation passes at every level. Every leaf node has an effort estimate. No sub-problem is larger than 30% of the total effort (otherwise it needs further decomposition).
 
 ---
 
 ### Phase 3: SEQUENCE -- Map Dependencies and Critical Path
 
-**Entry criteria:** MECE decomposition tree is complete with leaf-level tasks.
+### Entry Criteria
+MECE decomposition tree is complete with leaf-level tasks.
 
-**Actions:**
-
+### Actions
 1. **Identify dependencies.** For each leaf-level sub-problem, ask:
    - What must be DONE before this can start? (predecessors)
    - What does this ENABLE? (successors)
@@ -186,18 +190,20 @@ PHASE 5: VALIDATE   --> Verify completeness (do sub-problems cover the whole pro
    - It requires specialized expertise or resources
    - Bottlenecks deserve extra attention: earlier start, more resources, risk mitigation
 
-**Output:** Dependency graph (DAG), critical path with durations, parallel work opportunities, bottleneck flags.
+### Output
+Dependency graph (DAG), critical path with durations, parallel work opportunities, bottleneck flags.
 
-**Quality gate:** No cycles in the dependency graph. Critical path identified with total duration. Every dependency is justified (not just assumed).
+### Quality Gate
+No cycles in the dependency graph. Critical path identified with total duration. Every dependency is justified (not just assumed).
 
 ---
 
 ### Phase 4: PLAN -- Generate the Execution Roadmap
 
-**Entry criteria:** Dependencies and critical path are mapped.
+### Entry Criteria
+Dependencies and critical path are mapped.
 
-**Actions:**
-
+### Actions
 1. **Phase the work.** Group tasks into execution phases based on dependencies:
    - Phase 1: Tasks with no predecessors (can start immediately)
    - Phase 2: Tasks whose predecessors are all in Phase 1
@@ -226,18 +232,20 @@ PHASE 5: VALIDATE   --> Verify completeness (do sub-problems cover the whole pro
    - What is the contingency if mitigation fails?
    - Can the critical path be shortened? (fast-tracking, crashing, scope reduction)
 
-**Output:** Phased execution roadmap with milestones, timelines (expected + worst case), ownership, risk flags.
+### Output
+Phased execution roadmap with milestones, timelines (expected + worst case), ownership, risk flags.
 
-**Quality gate:** Every task has an owner (or is flagged as unowned). Every phase has entry/exit milestones. Critical path tasks have risk mitigations. Total timeline matches or exceeds critical path duration.
+### Quality Gate
+Every task has an owner (or is flagged as unowned). Every phase has entry/exit milestones. Critical path tasks have risk mitigations. Total timeline matches or exceeds critical path duration.
 
 ---
 
 ### Phase 5: VALIDATE -- Verify Completeness
 
-**Entry criteria:** Execution roadmap is complete.
+### Entry Criteria
+Execution roadmap is complete.
 
-**Actions:**
-
+### Actions
 1. **Completeness check.** Re-examine the original problem statement and success criteria:
    - For each success criterion, trace which sub-problems contribute to achieving it
    - If any success criterion has no sub-problems mapped to it, the decomposition has a gap
@@ -264,9 +272,20 @@ PHASE 5: VALIDATE   --> Verify completeness (do sub-problems cover the whole pro
    - "We assume regulatory approval takes 6 weeks"
    - Assumptions are risks. Each assumption should have a validation plan.
 
-**Output:** Completeness validation report: success criteria coverage, MECE re-validation results, stakeholder coverage, sanity check results, documented assumptions.
+### Output
+Completeness validation report: success criteria coverage, MECE re-validation results, stakeholder coverage, sanity check results, documented assumptions.
 
-**Quality gate:** Every success criterion maps to at least one sub-problem. No MECE violations found. All major assumptions documented. Stakeholder concerns are covered.
+### Quality Gate
+Every success criterion maps to at least one sub-problem. No MECE violations found. All major assumptions documented. Stakeholder concerns are covered.
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Five-phase problem decomposition: capture, decompose (MECE), sequence (critical , the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 

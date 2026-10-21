@@ -59,6 +59,15 @@ SES session file and router output.
 
 ---
 
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Route remaining nets with Freerouting through a Specctra DSN round trip, pour an, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
+
 ## Exit Criteria
 
 DONE when every net is routed, zones are filled, and locked critical nets are unchanged.

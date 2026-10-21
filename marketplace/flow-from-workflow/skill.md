@@ -1,8 +1,8 @@
 # Flow from Workflow
 
-> **Starter Flow** — Free to use. Royalties to original creator on derivatives. Build on this.
+> **Starter Flow**  --  Free to use. Royalties to original creator on derivatives. Build on this.
 
-Takes a plain-English description of something you do repeatedly — a workflow, a routine, a process you always follow — and converts it into a publishable FlowFabric flow with proper ORPA structure, inputs/outputs, quality gates, and error handling. Different from prompt-to-flow-converter: this works from workflow descriptions, not existing prompts. "I always check my email, then prioritize my tasks, then block my calendar" becomes a structured flow.
+Takes a plain-English description of something you do repeatedly  --  a workflow, a routine, a process you always follow  --  and converts it into a publishable FlowFabric flow with proper ORPA structure, inputs/outputs, quality gates, and error handling. Different from prompt-to-flow-converter: this works from workflow descriptions, not existing prompts. "I always check my email, then prioritize my tasks, then block my calendar" becomes a structured flow.
 
 ## Execution Pattern: Phase Pipeline
 
@@ -25,7 +25,7 @@ PHASE 4: GENERATE   --> Produce a complete flow.md with all required sections
 - `clarified_steps`: object[] -- The workflow broken into numbered, unambiguous steps with inputs and outputs per step.
 - `execution_pattern`: string -- ORPA or Phase Pipeline recommendation with justification.
 - `generated_skill`: string -- Complete flow.md content ready for publishing.
-- `improvement_notes`: string[] -- Suggestions for making the workflow more robust.
+- `improvement_notes`: string[] -- Suggestions for making the workflow more reliable.
 
 ---
 
@@ -33,17 +33,18 @@ PHASE 4: GENERATE   --> Produce a complete flow.md with all required sections
 
 ### Phase 1: ELICIT -- Collect and Clarify the Workflow
 
-**Entry criteria:** A workflow description is provided in any format.
+### Entry Criteria
+A workflow description is provided in any format.
 
-**Actions:**
-
-1. Read the workflow description end to end. Identify every action verb — these are candidate steps.
+### Actions
+1. Read the workflow description end to end. Identify every action verb  --  these are candidate steps.
 2. For each candidate step, determine: what triggers it? What does it consume (input)? What does it produce (output)? What decision, if any, does it involve?
 3. Identify implicit steps the user skipped. Workflows described from memory always omit "obvious" steps. Look for gaps: "I check email then block my calendar" omits the prioritization step between them.
 4. Identify branching: any "if X then Y, otherwise Z" logic. These become conditional paths or error handling.
 5. Identify the termination condition: how does the user know the workflow is done?
 
-**Output:** A numbered list of clarified steps, each with: action, input, output, decision (if any).
+### Output
+A numbered list of clarified steps, each with: action, input, output, decision (if any).
 
 **Quality gate:** Every step has a defined input and output. No step says "handle it" or "deal with it" without specifics. The workflow has a clear start trigger and end condition.
 
@@ -51,17 +52,18 @@ PHASE 4: GENERATE   --> Produce a complete flow.md with all required sections
 
 ### Phase 2: DECOMPOSE -- Map Steps to Flow Operations
 
-**Entry criteria:** Clarified steps are complete.
+### Entry Criteria
+Clarified steps are complete.
 
-**Actions:**
-
+### Actions
 1. Group related steps into phases (3-6 phases ideal). Steps that share a purpose or operate on the same data belong together.
 2. For each phase, define: entry criteria (what must be true before starting), actions (the steps), exit criteria (what must be true to proceed).
 3. Identify which steps are sequential (must run in order) vs. parallelizable (could run simultaneously).
 4. Determine the execution pattern: if the workflow reacts to discovered state and loops (ORPA), or follows a fixed sequence (Phase Pipeline).
-5. Extract all domain knowledge embedded in the workflow — rules of thumb, thresholds, criteria the user applies intuitively.
+5. Extract all domain knowledge embedded in the workflow  --  rules of thumb, thresholds, criteria the user applies intuitively.
 
-**Output:** Phase map with grouped steps, execution pattern recommendation, and extracted domain knowledge.
+### Output
+Phase map with grouped steps, execution pattern recommendation, and extracted domain knowledge.
 
 **Quality gate:** Each phase has 2-5 concrete actions. No phase is a single vague step. Domain knowledge is explicit, not assumed.
 
@@ -69,10 +71,10 @@ PHASE 4: GENERATE   --> Produce a complete flow.md with all required sections
 
 ### Phase 3: FORMALIZE -- Build Flow Structure
 
-**Entry criteria:** Phase map and execution pattern are determined.
+### Entry Criteria
+Phase map and execution pattern are determined.
 
-**Actions:**
-
+### Actions
 1. Define formal inputs: extract every piece of information the workflow needs to start. Type each input (string, array, object, number). Mark required vs. optional.
 2. Define formal outputs: extract every artifact the workflow produces. Be specific about structure.
 3. Write each phase with full structure: entry criteria, numbered actions, output, quality gate.
@@ -80,7 +82,8 @@ PHASE 4: GENERATE   --> Produce a complete flow.md with all required sections
 5. Write exit criteria: concrete, testable conditions that mean the flow is done.
 6. Add a reference section with any domain knowledge, checklists, or decision criteria extracted in Phase 2.
 
-**Output:** Complete flow skeleton with all sections populated.
+### Output
+Complete flow skeleton with all sections populated.
 
 **Quality gate:** Every input feeds into at least one phase action. Every output is produced by a phase. Error handling covers at least one failure mode per phase. Exit criteria are testable, not subjective.
 
@@ -88,20 +91,30 @@ PHASE 4: GENERATE   --> Produce a complete flow.md with all required sections
 
 ### Phase 4: GENERATE -- Produce the Final Flow
 
-**Entry criteria:** Flow skeleton is complete and passes quality checks.
+### Entry Criteria
+Flow skeleton is complete and passes quality checks.
 
-**Actions:**
-
+### Actions
 1. Assemble the flow.md following SkillChain format: title, one-line description, execution pattern declaration, inputs, outputs, execution phases, exit criteria, error handling, reference section.
 2. Review the generated flow against the original workflow description. Every step the user described must appear somewhere in the flow. Flag any that were intentionally omitted (with justification).
-3. Generate 2-3 improvement notes: ways the workflow could be made more robust, edge cases to handle, automation opportunities.
+3. Generate 2-3 improvement notes: ways the workflow could be made more reliable, edge cases to handle, automation opportunities.
 4. Add state persistence section if the workflow benefits from memory between runs (e.g., tracking patterns over time, remembering past decisions).
 
-**Output:** Complete flow.md content and improvement notes.
+### Output
+Complete flow.md content and improvement notes.
 
 **Quality gate:** The flow follows SkillChain execution standard format. A reader unfamiliar with the workflow could execute it from the flow alone. No steps reference "you know what I mean" or assume context.
 
 ---
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Convert a plain-English workflow description into a publishable FlowFabric flow , the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 

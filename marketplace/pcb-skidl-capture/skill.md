@@ -61,6 +61,15 @@ Skeleton `skidl_source`.
 
 ---
 
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Write the board schematic as SKiDL source with one subcircuit per function, name, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
+
 ## Exit Criteria
 
 DONE when the SKiDL file contains every BOM part, connected per datasheets, with named interfaces between subcircuits.

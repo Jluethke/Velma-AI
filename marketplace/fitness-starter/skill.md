@@ -5,26 +5,27 @@ Builds a beginner-friendly, 4-week exercise plan for people who have not worked 
 ## Execution Pattern: ORPA Loop
 
 ## Inputs
-- age_range: string -- Approximate age bracket (e.g., "30s," "mid-50s," "early 70s") -- affects exercise selection and recovery expectations
-- current_activity: string -- Honest assessment of current activity level: "completely sedentary," "I walk sometimes," "active job but no exercise," "used to be fit, haven't done anything in years"
-- limitations: array -- Physical issues that affect exercise: bad knees, lower back pain, shoulder injury, arthritis, balance concerns, recent surgery, chronic conditions (diabetes, heart condition -- recommend doctor clearance). Be specific: "left knee hurts going down stairs" is more useful than "bad knees"
-- equipment: string -- What they have access to: "nothing" (bodyweight only), "home basics" (resistance bands, light dumbbells, yoga mat), "full gym," or specific items they own
-- time_commitment: object -- How many days per week they can realistically commit (not aspirationally) and how many minutes per session. Honest answers only: "3 days, 20 minutes" beats "every day for an hour" that will never happen
-- goals: array -- (Optional) What they want from exercise: "feel less tired," "lose weight," "be able to play with my grandkids," "stop my back from hurting," "just get moving." Vague is fine
+- `age_range`: string -- Approximate age bracket (e.g., "30s," "mid-50s," "early 70s") -- affects exercise selection and recovery expectations
+- `current_activity`: string -- Honest assessment of current activity level: "completely sedentary," "I walk sometimes," "active job but no exercise," "used to be fit, haven't done anything in years"
+- `limitations`: array -- Physical issues that affect exercise: bad knees, lower back pain, shoulder injury, arthritis, balance concerns, recent surgery, chronic conditions (diabetes, heart condition -- recommend doctor clearance). Be specific: "left knee hurts going down stairs" is more useful than "bad knees"
+- `equipment`: string -- What they have access to: "nothing" (bodyweight only), "home basics" (resistance bands, light dumbbells, yoga mat), "full gym," or specific items they own
+- `time_commitment`: object -- How many days per week they can realistically commit (not aspirationally) and how many minutes per session. Honest answers only: "3 days, 20 minutes" beats "every day for an hour" that will never happen
+- `goals`: array -- (Optional) What they want from exercise: "feel less tired," "lose weight," "be able to play with my grandkids," "stop my back from hurting," "just get moving." Vague is fine
 
 ## Outputs
-- four_week_plan: object -- Week-by-week plan with specific daily workouts, rest days, and progression notes
-- exercise_library: array -- Every exercise used in the plan with name, plain-English description, form cues, common mistakes, and modifications for limitations
-- warm_up_routine: object -- Standard warm-up sequence used before every workout
-- cool_down_routine: object -- Standard cool-down and stretch sequence used after every workout
-- progress_milestones: array -- Measurable markers at week 1, 2, 3, and 4 so the user can see improvement
-- what_comes_next: object -- Brief guidance for week 5 and beyond so the plan does not end in a cliff
+- `four_week_plan`: object -- Week-by-week plan with specific daily workouts, rest days, and progression notes
+- `exercise_library`: array -- Every exercise used in the plan with name, plain-English description, form cues, common mistakes, and modifications for limitations
+- `warm_up_routine`: object -- Standard warm-up sequence used before every workout
+- `cool_down_routine`: object -- Standard cool-down and stretch sequence used after every workout
+- `progress_milestones`: array -- Measurable markers at week 1, 2, 3, and 4 so the user can see improvement
+- `what_comes_next`: object -- Brief guidance for week 5 and beyond so the plan does not end in a cliff
 
 ## Execution
 
 ### OBSERVE: Understand the Starting Point
-**Entry criteria:** Age range and current activity level are provided.
-**Actions:**
+### Entry Criteria
+Age range and current activity level are provided.
+### Actions
 1. Assess the true starting point without judgment. "Completely sedentary for 5 years" is just data -- it tells us where to begin, not what someone is worth. The plan must start below where the user thinks they should start. If someone says "I can probably handle 30 minutes," plan for 15.
 2. Map all physical limitations to specific movement categories:
    - **Knee issues:** Avoid deep squats, lunges, jumping, excessive stair work. Substitute: chair sits, wall sits, leg extensions, swimming.
@@ -39,12 +40,15 @@ Builds a beginner-friendly, 4-week exercise plan for people who have not worked 
 4. Set realistic time blocks. If the user has 20 minutes: 3-minute warm-up, 12-14 minutes of work, 3-4 minutes cool-down. Every second is planned.
 5. If the user has a heart condition, diabetes, is over 65, or has had recent surgery, include a note: "Check with your doctor before starting. Show them this plan -- they can adjust anything that needs adjusting."
 
-**Output:** Starting fitness profile: true baseline, limitation map with exercise substitutions, exercise pool filtered by equipment, time blocks, medical clearance note if applicable.
-**Quality gate:** Every listed limitation has at least 2 safe alternative exercises. The starting intensity is deliberately easy -- the user should finish week 1 thinking "that wasn't so bad."
+### Output
+Starting fitness profile: true baseline, limitation map with exercise substitutions, exercise pool filtered by equipment, time blocks, medical clearance note if applicable.
+### Quality Gate
+Every listed limitation has at least 2 safe alternative exercises. The starting intensity is deliberately easy -- the user should finish week 1 thinking "that wasn't so bad."
 
 ### REASON: Design the Progression
-**Entry criteria:** Fitness profile complete with exercise pool and limitations mapped.
-**Actions:**
+### Entry Criteria
+Fitness profile complete with exercise pool and limitations mapped.
+### Actions
 1. Design the 4-week progression. The principle: start embarrassingly easy, build so gradually the user barely notices. Soreness and failure kill motivation for beginners.
    - **Week 1 -- Just Show Up:** 2-3 sessions, 15-20 minutes each. Goal is to establish the routine, not challenge the body. Intensity should feel like 3-4 out of 10. The user should finish feeling "I could have done more." That is the point.
    - **Week 2 -- Build Confidence:** 3 sessions, 20-25 minutes. Add one new exercise per session. Slightly increase reps or duration. Intensity 4-5 out of 10. Introduce the concept of tracking (write down what you did).
@@ -65,12 +69,15 @@ Builds a beginner-friendly, 4-week exercise plan for people who have not worked 
    - **End of Week 3:** "My [limitation] feels a bit better during exercise." or "I recovered faster today."
    - **End of Week 4:** Side-by-side comparison of week 1 vs week 4 numbers. Include non-exercise wins: sleeping better, more energy, less stiffness in the morning.
 
-**Output:** Complete 4-week plan structure with weekly goals, session outlines, exercise selections, volume targets, rest days, milestones.
-**Quality gate:** Week 1 is genuinely easy (a fit person would find it trivial -- that is correct). No week increases volume by more than 20-25% from the previous week. Every exercise respects the limitation map. Rest days are adequate.
+### Output
+Complete 4-week plan structure with weekly goals, session outlines, exercise selections, volume targets, rest days, milestones.
+### Quality Gate
+Week 1 is genuinely easy (a fit person would find it trivial -- that is correct). No week increases volume by more than 20-25% from the previous week. Every exercise respects the limitation map. Rest days are adequate.
 
 ### PLAN: Write the Exercise Instructions
-**Entry criteria:** 4-week plan structure is finalized with exercise selections.
-**Actions:**
+### Entry Criteria
+4-week plan structure is finalized with exercise selections.
+### Actions
 1. Write the universal warm-up routine (used before every session):
    - 30 seconds gentle marching in place
    - 30 seconds arm circles (small to big)
@@ -102,12 +109,15 @@ Builds a beginner-friendly, 4-week exercise plan for people who have not worked 
    - Consider adding 5 minutes of walking on rest days.
    - The next goal: "maintain this for 3 months. That's when it becomes a habit, not a chore."
 
-**Output:** Complete exercise library with plain-English instructions, warm-up routine, cool-down routine, what-comes-next guidance.
-**Quality gate:** Instructions are clear enough that someone with no fitness background can follow them without a video. Every exercise has an easier modification. No jargon is used without explanation.
+### Output
+Complete exercise library with plain-English instructions, warm-up routine, cool-down routine, what-comes-next guidance.
+### Quality Gate
+Instructions are clear enough that someone with no fitness background can follow them without a video. Every exercise has an easier modification. No jargon is used without explanation.
 
 ### ACT: Deliver the Complete Plan
-**Entry criteria:** All plan components are written and validated.
-**Actions:**
+### Entry Criteria
+All plan components are written and validated.
+### Actions
 1. Present the plan in a structured, non-overwhelming format. Lead with encouragement, not a wall of text:
    - Start with: "Here's your plan. Week 1 is intentionally easy. Trust the process."
    - Present one week at a time if requested, rather than dumping all 4 weeks.
@@ -126,8 +136,19 @@ Builds a beginner-friendly, 4-week exercise plan for people who have not worked 
 5. Address the inner critic directly: "You might feel silly doing 8 squats when the internet says you should be doing 50. Ignore the internet. You are building a foundation. The people doing 50 started where you are right now."
 6. If re-entering the loop after week 4 (user wants to continue), assess progress and build weeks 5-8 with modest increases.
 
-**Output:** Complete 4-week beginner fitness plan with exercise library, warm-up and cool-down routines, milestones, practical tips, and continuation guidance.
-**Quality gate:** The plan feels doable, not intimidating. Every exercise is safe for stated limitations. The tone is encouraging without being condescending. The user knows exactly what to do on day 1.
+### Output
+Complete 4-week beginner fitness plan with exercise library, warm-up and cool-down routines, milestones, practical tips, and continuation guidance.
+### Quality Gate
+The plan feels doable, not intimidating. Every exercise is safe for stated limitations. The tone is encouraging without being condescending. The user knows exactly what to do on day 1.
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Builds a beginner-friendly, 4-week exercise plan for people who have not worked , the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 Done when: (1) a 4-week plan is generated matching the user's limitations, equipment, and time, (2) every exercise has plain-English instructions with modifications, (3) warm-up and cool-down routines are included, (4) progress milestones are defined for each week, (5) continuation guidance is provided.

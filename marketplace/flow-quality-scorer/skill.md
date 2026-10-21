@@ -5,19 +5,20 @@ Reads a FlowFabric flow definition and evaluates it against the Execution Standa
 ## Execution Pattern: ORPA Loop
 
 ## Inputs
-- skill_md_content: string -- Full text of the flow.md file to evaluate
-- manifest_json: object -- The flow's manifest.json for cross-validation
+- `skill_md_content`: string -- Full text of the flow.md file to evaluate
+- `manifest_json`: object -- The flow's manifest.json for cross-validation
 
 ## Outputs
-- quality_score: object -- Overall score (0-100) with per-dimension breakdown
-- issues_list: array -- Specific issues found, ranked by severity (critical > major > minor)
-- improvement_suggestions: array -- Actionable fixes for each issue, prioritized by impact on score
+- `quality_score`: object -- Overall score (0-100) with per-dimension breakdown
+- `issues_list`: array -- Specific issues found, ranked by severity (critical > major > minor)
+- `improvement_suggestions`: array -- Actionable fixes for each issue, prioritized by impact on score
 
 ## Execution
 
 ### OBSERVE: Parse and Extract
-**Entry criteria:** flow.md content provided.
-**Actions:**
+### Entry Criteria
+flow.md content provided.
+### Actions
 1. Parse the flow.md for all Execution Standard elements:
    - Execution pattern declaration (ORPA or Phase Pipeline)
    - Input definitions (name, type, description, constraints)
@@ -33,12 +34,15 @@ Reads a FlowFabric flow definition and evaluates it against the Execution Standa
    - Are all manifest outputs produced by at least one phase?
 3. Check for structural completeness: count how many of the 7 required elements (per Execution Standard) are present, partially present, or missing.
 
-**Output:** Extraction report: elements found/missing/partial, cross-validation results.
-**Quality gate:** flow.md has been fully parsed. All 7 required element categories have been checked.
+### Output
+Extraction report: elements found/missing/partial, cross-validation results.
+### Quality Gate
+flow.md has been fully parsed. All 7 required element categories have been checked.
 
 ### REASON: Score Each Dimension
-**Entry criteria:** Extraction report complete.
-**Actions:**
+### Entry Criteria
+Extraction report complete.
+### Actions
 1. Score across 8 quality dimensions:
 
 **Dimension 1: Execution Pattern (0-10 pts)**
@@ -92,12 +96,15 @@ Reads a FlowFabric flow definition and evaluates it against the Execution Standa
 2. Calculate total score: sum of all dimensions (0-100).
 3. Assign letter grade: A (90+), B (75-89), C (60-74), D (45-59), F (<45).
 
-**Output:** Per-dimension scores with rationale, total score, letter grade.
-**Quality gate:** All 8 dimensions have a score. Rationale cites specific evidence from the flow.md (quotes or references to specific sections).
+### Output
+Per-dimension scores with rationale, total score, letter grade.
+### Quality Gate
+All 8 dimensions have a score. Rationale cites specific evidence from the flow.md (quotes or references to specific sections).
 
 ### PLAN: Rank Issues and Prioritize Fixes
-**Entry criteria:** All dimensions scored with rationale.
-**Actions:**
+### Entry Criteria
+All dimensions scored with rationale.
+### Actions
 1. Compile all identified issues and classify by severity:
    - **Critical (blocks validation):** Missing execution pattern, no phases defined, no outputs defined. These must be fixed first.
    - **Major (reduces validation success):** Vague phase actions, missing quality gates, no exit criteria. These significantly impact consistency.
@@ -111,12 +118,15 @@ Reads a FlowFabric flow definition and evaluates it against the Execution Standa
    - Rewriting all phase actions to be specific: +15 pts, 60 min effort = moderate ROI
    - Deep reference section: +7 pts, 60 min effort = lower ROI (but valuable for long term)
 
-**Output:** Severity-ranked issue list, specific improvement suggestions, prioritized fix plan.
-**Quality gate:** Every scored deduction (where the flow lost points) has a corresponding improvement suggestion. Suggestions are specific enough to implement without further guidance.
+### Output
+Severity-ranked issue list, specific improvement suggestions, prioritized fix plan.
+### Quality Gate
+Every scored deduction (where the flow lost points) has a corresponding improvement suggestion. Suggestions are specific enough to implement without further guidance.
 
 ### ACT: Deliver Quality Report
-**Entry criteria:** Issues ranked and suggestions generated.
-**Actions:**
+### Entry Criteria
+Issues ranked and suggestions generated.
+### Actions
 1. Format the quality report:
    - **Score summary:** Total score, letter grade, one-line verdict
    - **Dimension breakdown:** Table with dimension, score, max, and key finding
@@ -127,8 +137,10 @@ Reads a FlowFabric flow definition and evaluates it against the Execution Standa
    - Compare to previous score: which dimensions improved? Which declined?
    - Track quality trajectory over versions
 
-**Output:** Formatted quality report with score, issues, suggestions, and quick wins.
-**Quality gate:** Report contains all four sections (summary, breakdown, issues, quick wins). Every issue has a specific fix. Quick wins are the highest-ROI items.
+### Output
+Formatted quality report with score, issues, suggestions, and quick wins.
+### Quality Gate
+Report contains all four sections (summary, breakdown, issues, quick wins). Every issue has a specific fix. Quick wins are the highest-ROI items.
 
 ## Exit Criteria
 Complete when the quality report is delivered with a numerical score, per-dimension breakdown, severity-ranked issues, and specific improvement suggestions. On re-entry, complete when the comparison to previous version is included.
@@ -182,3 +194,7 @@ Tracks over time:
 - Most common issues by domain (are "meta" flows better structured than "productivity" flows?)
 - Which improvement suggestions led to score increases (feedback loop on suggestion quality)
 - Average quality score across the marketplace (benchmark data)
+
+---
+
+Copyright 2024-present The Wayfinder Trust. All rights reserved.

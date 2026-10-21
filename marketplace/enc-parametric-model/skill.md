@@ -78,6 +78,15 @@ Shell model.
 
 ---
 
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Write a parametric build123d enclosure driven by the board envelope: process-cor, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
+
 ## Exit Criteria
 
 DONE when the model regenerates from the board envelope alone, meets the process's wall and feature rules, and provides access to every connector and indicator.

@@ -58,6 +58,15 @@ Stock-confirmed part list.
 
 ---
 
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Confirm fab-library stock, record pin-compatible alternates, choose datasheet-ma, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
+
 ## Exit Criteria
 
 DONE when every part is in stock with a recorded alternate and every line has a datasheet-matched footprint.

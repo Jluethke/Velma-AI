@@ -14,25 +14,26 @@ PHASE 6: MAINTAIN  --> Habits and systems to prevent re-accumulation
 ```
 
 ## Inputs
-- space: object -- Which rooms or areas need decluttering, approximate size of home, storage areas (attic, basement, garage, storage unit)
-- goal: string -- Why you're decluttering: moving, downsizing, selling the house, new baby needs a room, just overwhelmed, divorce/estate settlement, hoarding recovery
-- timeline: object -- How much time you have (moving in 3 weeks vs. no deadline), hours per week you can dedicate, whether you have help
-- emotional_factors: object -- (Optional) Sentimental attachments, deceased loved one's belongings, anxiety about letting go, perfectionism that prevents starting
-- constraints: object -- (Optional) Physical limitations (can't lift heavy boxes), no car for donation runs, no local donation centers, roommates or family members who disagree about what goes
+- `space`: object -- Which rooms or areas need decluttering, approximate size of home, storage areas (attic, basement, garage, storage unit)
+- `goal`: string -- Why you're decluttering: moving, downsizing, selling the house, new baby needs a room, just overwhelmed, divorce/estate settlement, hoarding recovery
+- `timeline`: object -- How much time you have (moving in 3 weeks vs. no deadline), hours per week you can dedicate, whether you have help
+- `emotional_factors`: object -- (Optional) Sentimental attachments, deceased loved one's belongings, anxiety about letting go, perfectionism that prevents starting
+- `constraints`: object -- (Optional) Physical limitations (can't lift heavy boxes), no car for donation runs, no local donation centers, roommates or family members who disagree about what goes
 
 ## Outputs
-- room_plan: object -- Sequenced room-by-room plan with estimated time per room and difficulty rating
-- sorting_guide: object -- Category-specific decision criteria for each room (what to keep, donate, trash, sell, undecided)
-- disposal_map: object -- Where to take everything: donation centers, resale options, recycling facilities, hazardous waste disposal, bulk trash pickup
-- organization_plan: object -- How to arrange what stays so it's functional and stays that way
-- maintenance_system: object -- Weekly/monthly habits to prevent re-cluttering
-- progress_tracker: object -- Checklist format to mark rooms and categories as completed
+- `room_plan`: object -- Sequenced room-by-room plan with estimated time per room and difficulty rating
+- `sorting_guide`: object -- Category-specific decision criteria for each room (what to keep, donate, trash, sell, undecided)
+- `disposal_map`: object -- Where to take everything: donation centers, resale options, recycling facilities, hazardous waste disposal, bulk trash pickup
+- `organization_plan`: object -- How to arrange what stays so it's functional and stays that way
+- `maintenance_system`: object -- Weekly/monthly habits to prevent re-cluttering
+- `progress_tracker`: object -- Checklist format to mark rooms and categories as completed
 
 ## Execution
 
 ### Phase 1: ASSESS
-**Entry criteria:** At least one room identified and a general goal stated.
-**Actions:**
+### Entry Criteria
+At least one room identified and a general goal stated.
+### Actions
 1. Classify the clutter situation honestly:
    - **Light:** Surfaces are cluttered, closets are stuffed, but rooms are functional. 1-2 weekend project.
    - **Moderate:** Some rooms are partially unusable, can't find things easily, guests can't stay in the guest room. Multi-week project.
@@ -43,12 +44,15 @@ PHASE 6: MAINTAIN  --> Habits and systems to prevent re-accumulation
 4. Inventory the scope: list every room and area that needs attention. Estimate the volume (a closet is a 2-hour job, a garage might be 2 full days). Multiply estimates by 1.5 because everyone underestimates.
 5. Identify the "quick win" room: the one that will make the biggest visible difference with the least emotional difficulty. Start there. Momentum matters more than logic.
 
-**Output:** Clutter classification, timeline assessment, emotional readiness check, room inventory with time estimates, and recommended starting point.
-**Quality gate:** Situation is classified honestly. Time estimates include the 1.5x buffer. Quick-win room is identified. Crisis situations are flagged with professional resources.
+### Output
+Clutter classification, timeline assessment, emotional readiness check, room inventory with time estimates, and recommended starting point.
+### Quality Gate
+Situation is classified honestly. Time estimates include the 1.5x buffer. Quick-win room is identified. Crisis situations are flagged with professional resources.
 
 ### Phase 2: STRATEGY
-**Entry criteria:** Assessment complete.
-**Actions:**
+### Entry Criteria
+Assessment complete.
+### Actions
 1. Sequence the rooms from easiest to hardest, not biggest to smallest. Starting with the basement full of 20 years of memories is how people quit on day one.
    - **Easy rooms:** Bathroom (mostly expired products), laundry room, linen closet. These are low-emotion, high-impact.
    - **Medium rooms:** Kitchen (gadgets and expired food), kids' rooms (outgrown items), living room (surface clutter).
@@ -59,12 +63,15 @@ PHASE 6: MAINTAIN  --> Habits and systems to prevent re-accumulation
 4. Plan the sorting station: designate a staging area with four bins or zones: Keep, Donate, Trash, Undecided. The Undecided box gets sealed, dated, and stored. If you haven't opened it in 30 days, donate the contents without looking inside.
 5. Schedule sessions: assign rooms to specific days/weekends. Build in rest days. Burnout is the number one reason decluttering projects fail.
 
-**Output:** Sequenced room plan with session lengths, done-state definitions, sorting station setup, and calendar schedule.
-**Quality gate:** Sequence goes easy to hard. No session exceeds 3 hours. Every room has a clear "done" definition. Rest days are included.
+### Output
+Sequenced room plan with session lengths, done-state definitions, sorting station setup, and calendar schedule.
+### Quality Gate
+Sequence goes easy to hard. No session exceeds 3 hours. Every room has a clear "done" definition. Rest days are included.
 
 ### Phase 3: SORT
-**Entry criteria:** Room sequence established.
-**Actions:**
+### Entry Criteria
+Room sequence established.
+### Actions
 1. For each room, provide category-specific sorting criteria:
    - **Clothing:** If you haven't worn it in 12 months and it's not formalwear or seasonal, it goes. Doesn't fit? Goes. Keeping it for "when I lose weight"? Goes. Stained, pilled, stretched? Trash.
    - **Kitchen:** Duplicate gadgets (how many spatulas do you actually use?), expired food and spices (check dates), single-use appliances gathering dust, mismatched containers without lids.
@@ -79,12 +86,15 @@ PHASE 6: MAINTAIN  --> Habits and systems to prevent re-accumulation
    - "Someone gave it to me" -- the gift was the thought, not the object. You honored it by receiving it. You're allowed to release it.
    - "I might need it someday" -- if you replace it for under $20 and haven't needed it in a year, let it go.
 
-**Output:** Room-by-room sorting guide with category-specific criteria, decision shortcuts, and scripts for common emotional blocks.
-**Quality gate:** Criteria are specific and actionable, not vague. Emotional blocks are addressed directly. Sentimental items are handled with respect, not dismissed.
+### Output
+Room-by-room sorting guide with category-specific criteria, decision shortcuts, and scripts for common emotional blocks.
+### Quality Gate
+Criteria are specific and actionable, not vague. Emotional blocks are addressed directly. Sentimental items are handled with respect, not dismissed.
 
 ### Phase 4: DISPOSE
-**Entry criteria:** Sorting categories established.
-**Actions:**
+### Entry Criteria
+Sorting categories established.
+### Actions
 1. **Donate items** -- map out local options:
    - Goodwill, Salvation Army, local thrift stores (call first about what they accept).
    - Women's shelters (professional clothing, toiletries, household goods).
@@ -109,12 +119,15 @@ PHASE 6: MAINTAIN  --> Habits and systems to prevent re-accumulation
    - Rent a dumpster for major cleanouts (typically $300-500 for a weekend).
 5. **Shred** -- anything with personal information: bank statements, old tax docs, medical records, pre-approved credit offers.
 
-**Output:** Disposal map with specific local options per category, resale value assessment, recycling locations, and bulk trash logistics.
-**Quality gate:** Every category of removed item has a designated destination. Hazardous materials have proper disposal paths. Resale value assessment is realistic about effort vs. return.
+### Output
+Disposal map with specific local options per category, resale value assessment, recycling locations, and bulk trash logistics.
+### Quality Gate
+Every category of removed item has a designated destination. Hazardous materials have proper disposal paths. Resale value assessment is realistic about effort vs. return.
 
 ### Phase 5: ORGANIZE
-**Entry criteria:** Sorting and disposal plan complete.
-**Actions:**
+### Entry Criteria
+Sorting and disposal plan complete.
+### Actions
 1. For each room, design a "home" for everything that stays. Every item needs a place it lives. If it doesn't have a place, it ends up on the counter.
 2. Apply the frequency principle: things you use daily go in the most accessible spots. Things you use monthly go on higher shelves or in the back. Things you use annually go in storage.
 3. Recommend storage solutions only after decluttering, not before. Buying organizers before removing excess is putting lipstick on clutter. Simple solutions first: shelf dividers, drawer organizers, clear bins with labels, over-door hooks.
@@ -122,12 +135,15 @@ PHASE 6: MAINTAIN  --> Habits and systems to prevent re-accumulation
 5. Flat surface management: counters, tables, and desks are clutter magnets. Define what's allowed to live on each surface. Everything else has a drawer, shelf, or cabinet it belongs in.
 6. Paper flow system: mail is sorted at the door (trash, action, file). Action items go in one spot. Filing happens weekly. No more paper piles.
 
-**Output:** Room-by-room organization plan with specific storage solutions, flat surface rules, and paper management system.
-**Quality gate:** Every kept item has a designated home. Storage solutions are recommended for what remains, not what was removed. System is maintainable by the actual person, not an idealized version of them.
+### Output
+Room-by-room organization plan with specific storage solutions, flat surface rules, and paper management system.
+### Quality Gate
+Every kept item has a designated home. Storage solutions are recommended for what remains, not what was removed. System is maintainable by the actual person, not an idealized version of them.
 
 ### Phase 6: MAINTAIN
-**Entry criteria:** Organization complete.
-**Actions:**
+### Entry Criteria
+Organization complete.
+### Actions
 1. **Daily habit (5 minutes):** Before bed, do a 5-minute reset -- put things back where they belong. Not a deep clean, just returning items to their homes.
 2. **Weekly check (15 minutes):** Pick one area per week for a quick scan. Is stuff accumulating? Deal with it now while it's small.
 3. **Monthly assessment (30 minutes):** Walk through the house with a donation bag. Grab anything that's drifted into "I don't use this anymore" territory.
@@ -135,8 +151,19 @@ PHASE 6: MAINTAIN  --> Habits and systems to prevent re-accumulation
 5. **Shopping guardrails:** Before buying anything non-consumable, wait 48 hours. If you still want it after 48 hours, decide where it will live in your home before purchasing.
 6. **Gift management:** Communicate preferences to family (experience gifts, consumables, donations to charity). Politely decline gifts that will become clutter. You're allowed to do this.
 
-**Output:** Maintenance schedule with daily, weekly, monthly, and seasonal routines plus shopping and gift management guidelines.
-**Quality gate:** Routines are realistic time commitments. Shopping guardrails address the root cause of re-cluttering. System accounts for real life, not ideal conditions.
+### Output
+Maintenance schedule with daily, weekly, monthly, and seasonal routines plus shopping and gift management guidelines.
+### Quality Gate
+Routines are realistic time commitments. Shopping guardrails address the root cause of re-cluttering. System accounts for real life, not ideal conditions.
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for A room-by-room decluttering system that doesn't require you to "spark joy" or th, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 Done when: (1) every targeted room has a sorting plan with specific criteria, (2) disposal map covers donate, sell, recycle, and trash with local options, (3) organization plan gives every kept item a home, (4) maintenance system includes daily through seasonal routines, (5) emotional considerations are addressed without dismissing them, (6) timeline is realistic for the stated availability.

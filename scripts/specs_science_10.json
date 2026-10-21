@@ -1,0 +1,1201 @@
+[
+  {
+    "chain_name": "gravity-survey-analysis",
+    "description": "Reduce and interpret gravity survey data from raw readings through Bouguer anomaly computation, regional-residual separation, forward modeling, and inversion to produce a subsurface density interpretation.",
+    "domain": "science",
+    "tags": ["science", "geophysics", "process"],
+    "steps": [
+      {
+        "flow_name": "gravity-raw-reduction",
+        "description": "Apply instrument drift, tidal, latitude, and elevation corrections to raw gravity readings to produce reduced gravity values.",
+        "inputs": [
+          {"name": "raw-gravity-readings", "desc": "Station-by-station gravity meter readings with timestamps and coordinates"},
+          {"name": "base-station-ties", "desc": "Repeated base station readings for drift correction"},
+          {"name": "station-elevations", "desc": "Surveyed elevations and coordinates for each station"}
+        ],
+        "outputs": [
+          {"name": "reduced-gravity-values", "desc": "Gravity values corrected for drift, tides, latitude, and free-air effect"},
+          {"name": "reduction-log", "desc": "Record of each correction applied and its magnitude"}
+        ],
+        "process": [
+          "Compute instrument drift from base station repeats and apply a linear or polynomial correction",
+          "Remove tidal gravity variations using a tide prediction model for the survey dates and location",
+          "Apply latitude correction (normal gravity formula) and free-air correction using surveyed elevations",
+          "Tabulate the corrected values with station IDs and coordinates"
+        ],
+        "tags": ["science", "geophysics", "gravity"]
+      },
+      {
+        "flow_name": "bouguer-anomaly-computation",
+        "description": "Compute Bouguer anomaly by applying the Bouguer slab and terrain corrections to the reduced gravity values.",
+        "inputs": [
+          {"name": "reduced-gravity-values", "desc": "Gravity values after drift, tidal, latitude, and free-air corrections"},
+          {"name": "terrain-model", "desc": "Digital elevation model surrounding the survey area"}
+        ],
+        "outputs": [
+          {"name": "bouguer-anomaly-map", "desc": "Map of Bouguer anomaly values at each station"},
+          {"name": "terrain-correction-values", "desc": "Terrain correction computed for each station"}
+        ],
+        "process": [
+          "Apply the Bouguer slab correction using an assumed near-surface density (typically 2.67 g/cc)",
+          "Compute terrain corrections using the DEM for near-zone and far-zone topographic effects",
+          "Subtract the normal gravity field to obtain the Bouguer anomaly at each station",
+          "Grid the anomaly values and produce a contour map"
+        ],
+        "tags": ["science", "geophysics", "gravity"]
+      },
+      {
+        "flow_name": "regional-residual-separation",
+        "description": "Separate the Bouguer anomaly into regional (deep) and residual (shallow) components using polynomial fitting or spectral filtering.",
+        "inputs": [
+          {"name": "bouguer-anomaly-map", "desc": "Gridded Bouguer anomaly values"},
+          {"name": "separation-parameters", "desc": "Method choice (polynomial order, filter cutoff wavelength)"}
+        ],
+        "outputs": [
+          {"name": "regional-field", "desc": "Long-wavelength component representing deep structure"},
+          {"name": "residual-anomaly", "desc": "Short-wavelength component representing shallow targets"}
+        ],
+        "process": [
+          "Select the separation method (polynomial surface fitting, upward continuation, or bandpass filter)",
+          "Fit the regional field to the Bouguer anomaly grid",
+          "Subtract the regional from the Bouguer anomaly to obtain the residual",
+          "Validate that the residual highlights known shallow features and the regional is geologically reasonable"
+        ],
+        "tags": ["science", "geophysics", "gravity"]
+      },
+      {
+        "flow_name": "gravity-forward-model",
+        "description": "Build a forward model of subsurface density structures and compute their predicted gravity response for comparison with the observed anomaly.",
+        "inputs": [
+          {"name": "residual-anomaly", "desc": "Residual gravity anomaly highlighting shallow targets"},
+          {"name": "geological-constraints", "desc": "Known geology, drill holes, seismic sections, or density measurements"}
+        ],
+        "outputs": [
+          {"name": "forward-model-geometry", "desc": "3D geometry of modeled density bodies"},
+          {"name": "predicted-anomaly", "desc": "Gravity anomaly predicted by the forward model"}
+        ],
+        "process": [
+          "Define initial body geometries using geological constraints (known contacts, faults, intrusions)",
+          "Assign density contrasts to each body based on rock property measurements or literature values",
+          "Compute the gravity response of each body and sum to produce the predicted anomaly",
+          "Compare predicted vs observed anomaly to identify where the model needs adjustment"
+        ],
+        "tags": ["science", "geophysics", "gravity"]
+      },
+      {
+        "flow_name": "gravity-inversion",
+        "description": "Invert the gravity anomaly to recover subsurface density distribution, refining the forward model geometry to match observations within data uncertainty.",
+        "inputs": [
+          {"name": "residual-anomaly", "desc": "Observed residual gravity anomaly"},
+          {"name": "forward-model-geometry", "desc": "Initial model geometry from forward modeling"}
+        ],
+        "outputs": [
+          {"name": "inverted-density-model", "desc": "Subsurface density distribution that fits the observed anomaly"},
+          {"name": "misfit-report", "desc": "RMS misfit between observed and modeled anomaly, with residual map"}
+        ],
+        "process": [
+          "Set up the inversion mesh and assign initial density values from the forward model",
+          "Select the inversion algorithm (smooth, compact, or constrained by geological boundaries)",
+          "Run the inversion, iterating until the data misfit reaches the target threshold",
+          "Evaluate the result for geological plausibility and quantify non-uniqueness"
+        ],
+        "tags": ["science", "geophysics", "gravity"]
+      },
+      {
+        "flow_name": "gravity-interpretation-report",
+        "description": "Synthesize all gravity analysis products into an interpretation report with figures, depth estimates, and geological conclusions.",
+        "inputs": [
+          {"name": "inverted-density-model", "desc": "Final subsurface density model from inversion"},
+          {"name": "misfit-report", "desc": "Data misfit and residual analysis"},
+          {"name": "bouguer-anomaly-map", "desc": "Original Bouguer anomaly map for reference"}
+        ],
+        "outputs": [
+          {"name": "gravity-report", "desc": "Interpretation report with figures, cross-sections, depth estimates, and conclusions"},
+          {"name": "data-archive", "desc": "Packaged data, models, and processing logs for reproducibility"}
+        ],
+        "process": [
+          "Compile cross-sections through the density model at key profiles",
+          "Annotate with depth estimates and geological unit assignments",
+          "Write the interpretation narrative linking the gravity results to the geological question",
+          "Package all data, scripts, and intermediate products for archival"
+        ],
+        "tags": ["science", "geophysics", "gravity"]
+      }
+    ]
+  },
+  {
+    "chain_name": "magnetometry-survey-analysis",
+    "description": "Process and interpret magnetic survey data from raw readings through diurnal correction, reduction to pole, source identification, depth estimation, and subsurface modeling.",
+    "domain": "science",
+    "tags": ["science", "geophysics", "process"],
+    "steps": [
+      {
+        "flow_name": "magnetic-raw-processing",
+        "description": "Apply diurnal correction and remove the International Geomagnetic Reference Field (IGRF) from raw total-field magnetic readings.",
+        "inputs": [
+          {"name": "raw-magnetic-readings", "desc": "Total-field magnetometer readings with timestamps and coordinates"},
+          {"name": "base-station-magnetogram", "desc": "Continuous base station magnetic record for diurnal correction"}
+        ],
+        "outputs": [
+          {"name": "corrected-magnetic-anomaly", "desc": "Magnetic anomaly after diurnal and IGRF removal"},
+          {"name": "processing-log", "desc": "Record of corrections applied"}
+        ],
+        "process": [
+          "Subtract diurnal variations using the base station magnetogram aligned to survey timestamps",
+          "Remove the IGRF reference field for the survey date and location",
+          "Flag and handle any despiking needed for cultural noise or instrument glitches",
+          "Grid the anomaly values for mapping"
+        ],
+        "tags": ["science", "geophysics", "magnetics"]
+      },
+      {
+        "flow_name": "reduction-to-pole",
+        "description": "Transform the magnetic anomaly to what it would look like at the magnetic north pole, centering anomalies over their sources.",
+        "inputs": [
+          {"name": "corrected-magnetic-anomaly", "desc": "Gridded magnetic anomaly after diurnal and IGRF removal"},
+          {"name": "field-parameters", "desc": "Magnetic inclination and declination at the survey location"}
+        ],
+        "outputs": [
+          {"name": "rtp-anomaly", "desc": "Reduced-to-pole magnetic anomaly grid"},
+          {"name": "rtp-quality-check", "desc": "Comparison of original and RTP anomaly shapes to verify the transformation"}
+        ],
+        "process": [
+          "Compute the reduction-to-pole operator in the frequency domain using the local field direction",
+          "Apply the operator to the gridded anomaly, handling low-latitude instability if needed",
+          "Compare anomaly shapes before and after RTP to confirm sources are now centered under their anomalies",
+          "Document the field parameters and any stabilization applied"
+        ],
+        "tags": ["science", "geophysics", "magnetics"]
+      },
+      {
+        "flow_name": "magnetic-source-identification",
+        "description": "Identify individual magnetic sources from the RTP anomaly using derivative analysis, analytic signal, and tilt angle methods.",
+        "inputs": [
+          {"name": "rtp-anomaly", "desc": "Reduced-to-pole magnetic anomaly grid"},
+          {"name": "geological-context", "desc": "Known geology and expected magnetic rock types"}
+        ],
+        "outputs": [
+          {"name": "source-catalog", "desc": "List of identified magnetic sources with locations and anomaly characteristics"},
+          {"name": "derivative-maps", "desc": "First vertical derivative, analytic signal, and tilt angle maps"}
+        ],
+        "process": [
+          "Compute the first vertical derivative to sharpen source edges",
+          "Compute the analytic signal amplitude to locate source centers regardless of magnetization direction",
+          "Apply the tilt angle method to delineate source boundaries",
+          "Catalog each distinct source with its location, amplitude, wavelength, and geological interpretation"
+        ],
+        "tags": ["science", "geophysics", "magnetics"]
+      },
+      {
+        "flow_name": "magnetic-depth-estimation",
+        "description": "Estimate depth to magnetic sources using Euler deconvolution, Werner deconvolution, or spectral depth analysis.",
+        "inputs": [
+          {"name": "rtp-anomaly", "desc": "Reduced-to-pole magnetic anomaly grid"},
+          {"name": "source-catalog", "desc": "Identified magnetic sources with locations"}
+        ],
+        "outputs": [
+          {"name": "depth-estimates", "desc": "Depth to each source with uncertainty ranges"},
+          {"name": "depth-method-comparison", "desc": "Cross-comparison of depths from multiple methods"}
+        ],
+        "process": [
+          "Run Euler deconvolution with structural indices for contacts, dikes, and spheres",
+          "Apply Werner deconvolution along selected profiles crossing key anomalies",
+          "Use radially averaged power spectrum for average depth to magnetic basement",
+          "Compare depth estimates from each method and assign confidence based on agreement"
+        ],
+        "tags": ["science", "geophysics", "magnetics"]
+      },
+      {
+        "flow_name": "magnetic-body-modeling",
+        "description": "Build forward and inverse models of subsurface magnetic bodies that fit the observed anomaly within data uncertainty.",
+        "inputs": [
+          {"name": "rtp-anomaly", "desc": "Observed RTP anomaly for model comparison"},
+          {"name": "depth-estimates", "desc": "Depth constraints from Euler and Werner methods"},
+          {"name": "geological-context", "desc": "Known geology and rock property data"}
+        ],
+        "outputs": [
+          {"name": "magnetic-model", "desc": "Geometry and susceptibility of modeled magnetic bodies"},
+          {"name": "model-fit-report", "desc": "Observed vs modeled anomaly profiles with misfit statistics"}
+        ],
+        "process": [
+          "Define initial body geometries using depth estimates and geological constraints",
+          "Assign susceptibility values from rock property measurements or literature",
+          "Forward-model and adjust geometry to minimize misfit along key profiles",
+          "Run a 3D inversion if profile modeling is insufficient"
+        ],
+        "tags": ["science", "geophysics", "magnetics"]
+      },
+      {
+        "flow_name": "magnetic-interpretation-report",
+        "description": "Compile magnetic survey results into an interpretation report with maps, depth sections, source models, and geological conclusions.",
+        "inputs": [
+          {"name": "magnetic-model", "desc": "Final subsurface magnetic model"},
+          {"name": "source-catalog", "desc": "Catalog of identified magnetic sources"},
+          {"name": "model-fit-report", "desc": "Misfit analysis and model quality assessment"}
+        ],
+        "outputs": [
+          {"name": "magnetics-report", "desc": "Interpretation report with maps, sections, and conclusions"},
+          {"name": "magnetics-data-archive", "desc": "All data, models, and processing files packaged for reproducibility"}
+        ],
+        "process": [
+          "Compile anomaly maps, derivative products, and depth estimates into coherent figure panels",
+          "Draw cross-sections through the magnetic model at key profiles",
+          "Write the geological interpretation linking magnetic results to the survey objectives",
+          "Package all data and processing workflows for archival"
+        ],
+        "tags": ["science", "geophysics", "magnetics"]
+      }
+    ]
+  },
+  {
+    "chain_name": "dendrochronology-analysis",
+    "description": "Analyze tree-ring data from ring-width measurement through crossdating, standardization, chronology building, climate correlation, and paleoclimate reconstruction.",
+    "domain": "science",
+    "tags": ["science", "paleoclimate", "process"],
+    "steps": [
+      {
+        "flow_name": "ring-width-measurement",
+        "description": "Measure ring widths from prepared core or cross-section samples under a stereomicroscope with a measuring stage.",
+        "inputs": [
+          {"name": "prepared-samples", "desc": "Sanded tree cores or cross-sections mounted for measurement"},
+          {"name": "measurement-setup", "desc": "Stage calibration, software, and measurement protocol"}
+        ],
+        "outputs": [
+          {"name": "raw-ring-widths", "desc": "Annual ring-width measurements for each sample in standard format (Tucson decadal)"},
+          {"name": "sample-metadata", "desc": "Species, site, core ID, and measurement notes for each sample"}
+        ],
+        "process": [
+          "Verify sample surface preparation is adequate for ring boundary visibility",
+          "Calibrate the measuring stage and set the resolution",
+          "Measure each ring from pith to bark, recording widths in the standard Tucson decadal format",
+          "Flag any problematic rings (false rings, missing rings, compression wood) for crossdating attention"
+        ],
+        "tags": ["science", "dendrochronology"]
+      },
+      {
+        "flow_name": "crossdating-verification",
+        "description": "Crossdate each sample series against the master chronology to verify that every ring is assigned to the correct calendar year.",
+        "inputs": [
+          {"name": "raw-ring-widths", "desc": "Measured ring-width series for all samples"},
+          {"name": "master-chronology", "desc": "Existing site or regional master chronology for the species"}
+        ],
+        "outputs": [
+          {"name": "crossdated-series", "desc": "Ring-width series with verified calendar year assignments"},
+          {"name": "crossdating-statistics", "desc": "Correlation statistics, t-values, and flagged segments for each sample"}
+        ],
+        "process": [
+          "Run COFECHA or equivalent to compute segment correlations against the master chronology",
+          "Identify segments with low correlation and check visually for missing or false rings",
+          "Insert or remove rings as needed and re-verify until all segments pass quality thresholds",
+          "Document all dating corrections with justification"
+        ],
+        "tags": ["science", "dendrochronology"]
+      },
+      {
+        "flow_name": "ring-width-standardization",
+        "description": "Remove the biological age trend from ring-width series to isolate the climate signal, producing dimensionless index values.",
+        "inputs": [
+          {"name": "crossdated-series", "desc": "Verified annual ring-width series"},
+          {"name": "detrending-method", "desc": "Choice of detrending curve (negative exponential, spline, regional curve standardization)"}
+        ],
+        "outputs": [
+          {"name": "standardized-indices", "desc": "Dimensionless ring-width index series for each sample"},
+          {"name": "detrending-parameters", "desc": "Fitted curve type and parameters for each series"}
+        ],
+        "process": [
+          "Fit the chosen detrending function to each raw ring-width series",
+          "Divide the measured width by the fitted value to produce a dimensionless index",
+          "Inspect each standardized series for residual non-climatic trends",
+          "Document the detrending method and any manual adjustments"
+        ],
+        "tags": ["science", "dendrochronology"]
+      },
+      {
+        "flow_name": "site-chronology-builder",
+        "description": "Combine standardized individual series into a site chronology using a biweight robust mean, and assess signal strength.",
+        "inputs": [
+          {"name": "standardized-indices", "desc": "Standardized ring-width indices for all samples at the site"},
+          {"name": "sample-metadata", "desc": "Sample counts and date ranges"}
+        ],
+        "outputs": [
+          {"name": "site-chronology", "desc": "Mean site chronology with sample depth and confidence intervals"},
+          {"name": "signal-strength-statistics", "desc": "Expressed population signal (EPS), running Rbar, and sample depth over time"}
+        ],
+        "process": [
+          "Compute the biweight robust mean of all standardized series for each year",
+          "Calculate the running EPS and Rbar to assess where the chronology has adequate signal strength",
+          "Truncate the chronology where EPS falls below the 0.85 threshold",
+          "Plot the final chronology with sample depth and EPS over time"
+        ],
+        "tags": ["science", "dendrochronology"]
+      },
+      {
+        "flow_name": "climate-correlation-analysis",
+        "description": "Correlate the site chronology with instrumental climate records to identify which climate variables the tree rings respond to.",
+        "inputs": [
+          {"name": "site-chronology", "desc": "Final site chronology"},
+          {"name": "climate-records", "desc": "Monthly or seasonal temperature, precipitation, and drought index records for the region"}
+        ],
+        "outputs": [
+          {"name": "correlation-results", "desc": "Monthly and seasonal correlation coefficients with significance tests"},
+          {"name": "response-function", "desc": "Bootstrap response function showing the climate window the trees respond to"}
+        ],
+        "process": [
+          "Compute Pearson correlations between the chronology and each monthly climate variable over the calibration period",
+          "Run a bootstrap response function analysis to assess stability of the correlations",
+          "Identify the seasonal window with the strongest and most stable correlation",
+          "Test for temporal instability in the growth-climate relationship"
+        ],
+        "tags": ["science", "dendrochronology", "climate"]
+      },
+      {
+        "flow_name": "paleoclimate-reconstruction",
+        "description": "Use the calibrated growth-climate relationship to reconstruct the climate variable back through the full length of the tree-ring chronology.",
+        "inputs": [
+          {"name": "site-chronology", "desc": "Full tree-ring chronology"},
+          {"name": "correlation-results", "desc": "Calibrated growth-climate relationship and optimal season"}
+        ],
+        "outputs": [
+          {"name": "climate-reconstruction", "desc": "Reconstructed climate variable with uncertainty envelope for the full chronology period"},
+          {"name": "verification-statistics", "desc": "Split-period calibration-verification results (RE, CE, r-squared)"}
+        ],
+        "process": [
+          "Build the transfer function using linear regression or scaling over the calibration period",
+          "Validate using a split-period or leave-one-out cross-validation",
+          "Compute reduction of error (RE) and coefficient of efficiency (CE) statistics",
+          "Apply the transfer function to the full chronology and attach the reconstruction uncertainty envelope"
+        ],
+        "tags": ["science", "dendrochronology", "climate"]
+      },
+      {
+        "flow_name": "dendrochronology-report",
+        "description": "Compile the dendrochronology analysis into a report with chronology plots, climate correlations, and the paleoclimate reconstruction.",
+        "inputs": [
+          {"name": "climate-reconstruction", "desc": "Final paleoclimate reconstruction with uncertainty"},
+          {"name": "verification-statistics", "desc": "Calibration and verification results"},
+          {"name": "signal-strength-statistics", "desc": "EPS and Rbar over time"}
+        ],
+        "outputs": [
+          {"name": "dendro-report", "desc": "Full analysis report with figures, statistics, and interpretation"},
+          {"name": "dendro-data-archive", "desc": "Ring-width data, chronology, and reconstruction in standard formats"}
+        ],
+        "process": [
+          "Assemble figures showing the chronology, climate correlations, and reconstruction",
+          "Write the methods section detailing each processing step and parameter choice",
+          "Interpret the reconstruction in the context of regional climate history",
+          "Format the data files in standard formats (ITRDB) for archival"
+        ],
+        "tags": ["science", "dendrochronology"]
+      }
+    ]
+  },
+  {
+    "chain_name": "semiconductor-characterization",
+    "description": "Characterize a semiconductor device or material through I-V measurement, C-V analysis, Hall effect measurement, defect assessment, and a compiled device report.",
+    "domain": "science",
+    "tags": ["science", "semiconductor", "process"],
+    "steps": [
+      {
+        "flow_name": "iv-curve-measurement",
+        "description": "Measure current-voltage characteristics of the semiconductor device to extract threshold voltage, transconductance, and on-off ratio.",
+        "inputs": [
+          {"name": "device-under-test", "desc": "Semiconductor device or test structure with probe contacts"},
+          {"name": "measurement-conditions", "desc": "Temperature, sweep range, compliance, and step size"}
+        ],
+        "outputs": [
+          {"name": "iv-data", "desc": "Current-voltage curves (transfer and output characteristics)"},
+          {"name": "extracted-parameters", "desc": "Threshold voltage, transconductance, on-off ratio, subthreshold swing"}
+        ],
+        "process": [
+          "Set up the probe station and source-measure unit with the specified sweep parameters",
+          "Measure the transfer characteristic (Id vs Vg at fixed Vd) for threshold and transconductance extraction",
+          "Measure the output characteristic (Id vs Vd at multiple Vg) for saturation and linearity assessment",
+          "Extract the key device parameters using standard methods (linear extrapolation, max-gm)"
+        ],
+        "tags": ["science", "semiconductor"]
+      },
+      {
+        "flow_name": "cv-analysis-doping",
+        "description": "Perform capacitance-voltage analysis to extract the doping profile, oxide thickness, and flatband voltage of the semiconductor structure.",
+        "inputs": [
+          {"name": "device-under-test", "desc": "MOS capacitor or gated device for C-V measurement"},
+          {"name": "cv-measurement-conditions", "desc": "Frequency, AC signal amplitude, DC sweep range, temperature"}
+        ],
+        "outputs": [
+          {"name": "cv-data", "desc": "Capacitance vs voltage curves at one or more frequencies"},
+          {"name": "doping-profile", "desc": "Extracted doping concentration vs depth profile"}
+        ],
+        "process": [
+          "Measure C-V curve from accumulation through inversion at the specified frequency",
+          "Extract oxide capacitance from the accumulation region",
+          "Compute the doping profile from the slope of the 1/C-squared vs V plot",
+          "Check for frequency dispersion (compare curves at multiple frequencies) as a quality indicator"
+        ],
+        "tags": ["science", "semiconductor"]
+      },
+      {
+        "flow_name": "hall-effect-measurement",
+        "description": "Measure the Hall effect to determine carrier concentration, carrier type (n or p), and Hall mobility of the semiconductor material.",
+        "inputs": [
+          {"name": "hall-sample", "desc": "Semiconductor sample in van der Pauw or Hall bar geometry"},
+          {"name": "hall-conditions", "desc": "Magnetic field strength, current level, temperature"}
+        ],
+        "outputs": [
+          {"name": "hall-data", "desc": "Hall voltage measurements and sheet resistance values"},
+          {"name": "carrier-properties", "desc": "Carrier type, carrier concentration, and Hall mobility"}
+        ],
+        "process": [
+          "Measure the sheet resistance using the van der Pauw method with current reversal and contact averaging",
+          "Apply the magnetic field and measure the Hall voltage with current and field reversals to eliminate offsets",
+          "Compute the Hall coefficient, carrier concentration, and carrier type from the sign of the Hall voltage",
+          "Calculate the Hall mobility from the ratio of Hall coefficient to resistivity"
+        ],
+        "tags": ["science", "semiconductor"]
+      },
+      {
+        "flow_name": "defect-density-assessment",
+        "description": "Assess defect density in the semiconductor using deep-level transient spectroscopy (DLTS) or photoluminescence (PL) to identify trap levels.",
+        "inputs": [
+          {"name": "device-under-test", "desc": "Semiconductor device or sample prepared for DLTS or PL"},
+          {"name": "defect-measurement-conditions", "desc": "Temperature range, rate windows (DLTS) or excitation wavelength (PL)"}
+        ],
+        "outputs": [
+          {"name": "defect-spectrum", "desc": "DLTS peaks or PL spectrum identifying defect energy levels"},
+          {"name": "trap-parameters", "desc": "Activation energy, capture cross-section, and trap density for each identified level"}
+        ],
+        "process": [
+          "For DLTS: sweep temperature while recording capacitance transients at selected rate windows",
+          "Construct the DLTS spectrum (peak height vs temperature) and identify distinct trap levels",
+          "Extract activation energy and capture cross-section from an Arrhenius plot of the emission rate",
+          "For PL: measure emission spectrum at cryogenic temperature and assign peaks to known defect transitions"
+        ],
+        "tags": ["science", "semiconductor"]
+      },
+      {
+        "flow_name": "semiconductor-device-report",
+        "description": "Compile all characterization results into a device report with parameter tables, comparison to specifications, and a quality assessment.",
+        "inputs": [
+          {"name": "extracted-parameters", "desc": "I-V parameters (threshold, gm, on-off)"},
+          {"name": "doping-profile", "desc": "Doping concentration vs depth from C-V"},
+          {"name": "carrier-properties", "desc": "Carrier type, concentration, and mobility from Hall"},
+          {"name": "trap-parameters", "desc": "Identified defect levels and densities"}
+        ],
+        "outputs": [
+          {"name": "semiconductor-report", "desc": "Full characterization report with parameter tables, figures, and conclusions"},
+          {"name": "characterization-data-package", "desc": "All raw data and extracted parameters for archival"}
+        ],
+        "process": [
+          "Tabulate all extracted parameters alongside target specifications",
+          "Generate standard figures (I-V curves, C-V curves, doping profile, DLTS spectrum)",
+          "Compare results to the design target or published literature values",
+          "Write the conclusions and identify any performance or defect concerns"
+        ],
+        "tags": ["science", "semiconductor"]
+      }
+    ]
+  },
+  {
+    "chain_name": "ocean-current-analysis",
+    "description": "Analyze ocean current data from ADCP or drifter measurements through quality control, tidal decomposition, circulation pattern identification, validation, and reporting.",
+    "domain": "science",
+    "tags": ["science", "oceanography", "process"],
+    "steps": [
+      {
+        "flow_name": "ocean-current-qc",
+        "description": "Quality-control raw ADCP or drifter current measurements by removing outliers, correcting for magnetic deviation, and flagging suspect data.",
+        "inputs": [
+          {"name": "raw-current-data", "desc": "ADCP profiles or drifter positions and velocities with timestamps"},
+          {"name": "magnetic-declination", "desc": "Local magnetic declination for compass correction"}
+        ],
+        "outputs": [
+          {"name": "qc-current-data", "desc": "Quality-controlled current velocities with flags"},
+          {"name": "qc-report", "desc": "Summary of data removed, flagged, and corrected"}
+        ],
+        "process": [
+          "Apply magnetic declination correction to convert magnetic to true north",
+          "Remove data below the echo amplitude or correlation thresholds (ADCP) or fix obvious position jumps (drifters)",
+          "Flag outliers using speed thresholds and temporal consistency checks",
+          "Compute basic statistics (mean speed, direction, data return) for the quality-controlled dataset"
+        ],
+        "tags": ["science", "oceanography"]
+      },
+      {
+        "flow_name": "tidal-current-decomposition",
+        "description": "Separate the current time series into tidal and residual (non-tidal) components using harmonic analysis.",
+        "inputs": [
+          {"name": "qc-current-data", "desc": "Quality-controlled current velocities"},
+          {"name": "tidal-constituents", "desc": "List of tidal constituents to fit (M2, S2, K1, O1, etc.)"}
+        ],
+        "outputs": [
+          {"name": "tidal-current", "desc": "Predicted tidal current from the fitted harmonics"},
+          {"name": "residual-current", "desc": "Non-tidal residual current after removing the tidal prediction"},
+          {"name": "tidal-ellipse-parameters", "desc": "Semi-major axis, eccentricity, inclination, and phase for each constituent"}
+        ],
+        "process": [
+          "Perform harmonic analysis on the east and north velocity components using t_tide or UTide",
+          "Extract tidal ellipse parameters for each resolved constituent",
+          "Subtract the tidal prediction from the observed current to produce the residual",
+          "Validate the decomposition by checking explained variance and residual spectrum"
+        ],
+        "tags": ["science", "oceanography"]
+      },
+      {
+        "flow_name": "circulation-pattern-analysis",
+        "description": "Identify dominant circulation patterns in the residual current using EOF analysis, progressive vector diagrams, and seasonal statistics.",
+        "inputs": [
+          {"name": "residual-current", "desc": "Non-tidal residual current velocities"},
+          {"name": "wind-and-pressure-data", "desc": "Concurrent wind and atmospheric pressure records for forcing analysis"}
+        ],
+        "outputs": [
+          {"name": "circulation-patterns", "desc": "Dominant modes of variability, progressive vector diagrams, and seasonal statistics"},
+          {"name": "forcing-correlations", "desc": "Correlations between residual current and wind/pressure forcing"}
+        ],
+        "process": [
+          "Compute progressive vector diagrams to visualize net transport direction and magnitude",
+          "Run EOF analysis on multi-depth current profiles to identify dominant vertical modes",
+          "Compute seasonal mean current roses and statistics",
+          "Correlate residual current with wind speed, direction, and atmospheric pressure to identify forcing mechanisms"
+        ],
+        "tags": ["science", "oceanography"]
+      },
+      {
+        "flow_name": "satellite-altimetry-validation",
+        "description": "Validate in-situ current measurements against satellite-derived surface currents from altimetry.",
+        "inputs": [
+          {"name": "qc-current-data", "desc": "In-situ surface current measurements"},
+          {"name": "altimetry-data", "desc": "Satellite-derived geostrophic surface current for the measurement area"}
+        ],
+        "outputs": [
+          {"name": "validation-statistics", "desc": "Bias, RMSE, and correlation between in-situ and satellite currents"},
+          {"name": "validation-figures", "desc": "Time series comparison and scatter plots"}
+        ],
+        "process": [
+          "Extract the satellite geostrophic current at the in-situ measurement location",
+          "Compare surface layer in-situ current with satellite current using concurrent time windows",
+          "Compute bias, RMSE, and correlation coefficient for each velocity component",
+          "Identify systematic differences and their likely causes (ageostrophic flow, spatial resolution)"
+        ],
+        "tags": ["science", "oceanography"]
+      },
+      {
+        "flow_name": "ocean-current-report",
+        "description": "Compile the ocean current analysis into a report with current maps, tidal ellipses, circulation patterns, and conclusions.",
+        "inputs": [
+          {"name": "tidal-ellipse-parameters", "desc": "Tidal constituent results"},
+          {"name": "circulation-patterns", "desc": "Residual current analysis results"},
+          {"name": "validation-statistics", "desc": "Satellite validation results"}
+        ],
+        "outputs": [
+          {"name": "current-report", "desc": "Current analysis report with figures, statistics, and conclusions"},
+          {"name": "current-data-archive", "desc": "All data and processing files packaged for reproducibility"}
+        ],
+        "process": [
+          "Compile tidal ellipse maps, current roses, and progressive vector diagrams into figure panels",
+          "Summarize the dominant circulation patterns and their forcing mechanisms",
+          "Discuss the validation results and data quality assessment",
+          "Package all data and processing scripts for archival"
+        ],
+        "tags": ["science", "oceanography"]
+      }
+    ]
+  },
+  {
+    "chain_name": "rheology-testing",
+    "description": "Characterize material rheology through geometry selection, steady-shear and oscillatory measurements, linear viscoelastic region determination, constitutive model fitting, and reporting.",
+    "domain": "science",
+    "tags": ["science", "materials", "process"],
+    "steps": [
+      {
+        "flow_name": "rheometry-geometry-selection",
+        "description": "Select the appropriate measurement geometry (cone-plate, parallel plate, Couette) based on the material's viscosity range and sample constraints.",
+        "inputs": [
+          {"name": "sample-description", "desc": "Material type, expected viscosity range, and available sample volume"},
+          {"name": "instrument-capabilities", "desc": "Available geometries, torque range, and gap control"}
+        ],
+        "outputs": [
+          {"name": "selected-geometry", "desc": "Chosen geometry with dimensions and gap setting"},
+          {"name": "loading-protocol", "desc": "Sample loading and conditioning procedure"}
+        ],
+        "process": [
+          "Assess the viscosity range to choose between cone-plate (low-medium), parallel plate (soft solids, gels), or Couette (low viscosity liquids)",
+          "Select the geometry dimensions based on sample volume and torque sensitivity requirements",
+          "Define the sample loading procedure including any pre-shear or rest time",
+          "Document the temperature control method and any solvent trap needed"
+        ],
+        "tags": ["science", "rheology"]
+      },
+      {
+        "flow_name": "steady-shear-flow-curve",
+        "description": "Measure the steady-state shear viscosity as a function of shear rate to characterize shear-thinning, shear-thickening, or Newtonian behavior.",
+        "inputs": [
+          {"name": "loaded-sample", "desc": "Material loaded in the selected geometry, conditioned and at temperature"},
+          {"name": "shear-rate-range", "desc": "Shear rate sweep range and number of points"}
+        ],
+        "outputs": [
+          {"name": "flow-curve-data", "desc": "Viscosity and shear stress vs shear rate"},
+          {"name": "flow-behavior-classification", "desc": "Newtonian, shear-thinning, shear-thickening, or yield stress behavior"}
+        ],
+        "process": [
+          "Run a logarithmic shear rate sweep from low to high rates with steady-state detection at each point",
+          "Verify time independence by running a reverse sweep (high to low) and checking for hysteresis",
+          "Plot viscosity vs shear rate on log-log axes and shear stress vs shear rate",
+          "Classify the flow behavior and identify the zero-shear viscosity and power-law region if applicable"
+        ],
+        "tags": ["science", "rheology"]
+      },
+      {
+        "flow_name": "oscillatory-amplitude-sweep",
+        "description": "Perform an oscillatory amplitude sweep to determine the linear viscoelastic region (LVER) of the material.",
+        "inputs": [
+          {"name": "loaded-sample", "desc": "Material loaded and conditioned in the geometry"},
+          {"name": "amplitude-sweep-parameters", "desc": "Frequency to hold constant, strain or stress amplitude range"}
+        ],
+        "outputs": [
+          {"name": "amplitude-sweep-data", "desc": "Storage modulus (G') and loss modulus (G'') vs strain amplitude"},
+          {"name": "lver-limit", "desc": "Critical strain marking the end of the linear viscoelastic region"}
+        ],
+        "process": [
+          "Run a logarithmic strain amplitude sweep at a fixed frequency (typically 1 Hz)",
+          "Plot G' and G'' vs strain amplitude and identify the plateau region",
+          "Determine the critical strain where G' drops by 5% from the plateau value",
+          "Record the LVER limit for use in frequency sweep measurements"
+        ],
+        "tags": ["science", "rheology"]
+      },
+      {
+        "flow_name": "oscillatory-frequency-sweep",
+        "description": "Measure storage and loss moduli as a function of frequency within the LVER to characterize the viscoelastic spectrum.",
+        "inputs": [
+          {"name": "loaded-sample", "desc": "Material loaded and conditioned"},
+          {"name": "frequency-sweep-parameters", "desc": "Strain amplitude (within LVER), frequency range"},
+          {"name": "lver-limit", "desc": "Critical strain from the amplitude sweep to set the measurement strain below"}
+        ],
+        "outputs": [
+          {"name": "frequency-sweep-data", "desc": "G', G'', complex viscosity, and tan(delta) vs frequency"},
+          {"name": "viscoelastic-classification", "desc": "Material behavior type: liquid-like, gel-like, or solid-like with crossover frequency if present"}
+        ],
+        "process": [
+          "Set the strain amplitude below the LVER limit",
+          "Run a logarithmic frequency sweep from high to low frequency",
+          "Plot G' and G'' vs frequency and identify crossover points, plateaus, and terminal zone behavior",
+          "Classify the material and check Cox-Merz rule agreement with steady-shear data"
+        ],
+        "tags": ["science", "rheology"]
+      },
+      {
+        "flow_name": "constitutive-model-fitting",
+        "description": "Fit the rheological data to a constitutive model (Cross, Carreau, Herschel-Bulkley, Maxwell) to extract material parameters.",
+        "inputs": [
+          {"name": "flow-curve-data", "desc": "Steady-shear viscosity vs shear rate"},
+          {"name": "frequency-sweep-data", "desc": "G' and G'' vs frequency"}
+        ],
+        "outputs": [
+          {"name": "fitted-model-parameters", "desc": "Best-fit model parameters with confidence intervals"},
+          {"name": "model-fit-quality", "desc": "Residual plots and goodness-of-fit statistics"}
+        ],
+        "process": [
+          "Select candidate constitutive models based on the observed flow behavior",
+          "Fit each candidate to the steady-shear and/or oscillatory data using nonlinear regression",
+          "Compare models by residual analysis and information criteria (AIC or BIC)",
+          "Report the best-fit parameters with 95% confidence intervals"
+        ],
+        "tags": ["science", "rheology"]
+      },
+      {
+        "flow_name": "rheology-report",
+        "description": "Compile the rheological characterization into a report with flow curves, viscoelastic spectra, model fits, and material classification.",
+        "inputs": [
+          {"name": "flow-curve-data", "desc": "Steady-shear flow curve"},
+          {"name": "frequency-sweep-data", "desc": "Oscillatory frequency sweep data"},
+          {"name": "fitted-model-parameters", "desc": "Constitutive model fit results"}
+        ],
+        "outputs": [
+          {"name": "rheology-characterization-report", "desc": "Full rheology report with figures, tables, and material classification"},
+          {"name": "rheology-data-package", "desc": "All raw data, processed curves, and model fits for archival"}
+        ],
+        "process": [
+          "Generate publication-quality figures for flow curve, amplitude sweep, and frequency sweep",
+          "Tabulate the material parameters and model fit results",
+          "Compare to published data for similar materials if available",
+          "Write conclusions about material behavior relevant to the application"
+        ],
+        "tags": ["science", "rheology"]
+      }
+    ]
+  },
+  {
+    "chain_name": "ancient-dna-analysis",
+    "description": "Analyze ancient DNA from specimen extraction through library preparation, sequencing, endogenous content filtering, reference mapping, authentication, and reporting.",
+    "domain": "science",
+    "tags": ["science", "genetics", "process"],
+    "steps": [
+      {
+        "flow_name": "adna-extraction",
+        "description": "Extract DNA from ancient specimens (bone, tooth, sediment) using protocols optimized for short, damaged fragments.",
+        "inputs": [
+          {"name": "ancient-specimen", "desc": "Bone powder, tooth root, or sediment sample prepared under clean-room conditions"},
+          {"name": "extraction-protocol", "desc": "Selected protocol (silica column, magnetic bead) with blank controls"}
+        ],
+        "outputs": [
+          {"name": "dna-extract", "desc": "Purified DNA extract ready for library preparation"},
+          {"name": "extraction-log", "desc": "Weights, volumes, incubation times, and blank control results"}
+        ],
+        "process": [
+          "Process the specimen in a dedicated ancient DNA clean room with UV-sterilized equipment",
+          "Run the lysis, binding, and elution steps per the selected protocol",
+          "Process extraction blanks alongside every batch to monitor contamination",
+          "Quantify the extract with a fluorometric assay (Qubit or equivalent)"
+        ],
+        "tags": ["science", "ancient-dna"]
+      },
+      {
+        "flow_name": "adna-library-preparation",
+        "description": "Prepare sequencing libraries from the aDNA extract using damage-aware protocols that preserve the short, degraded fragments.",
+        "inputs": [
+          {"name": "dna-extract", "desc": "Purified ancient DNA extract"},
+          {"name": "library-protocol", "desc": "Single-stranded or double-stranded library protocol with UDG treatment option"}
+        ],
+        "outputs": [
+          {"name": "sequencing-library", "desc": "Indexed sequencing library ready for capture or shotgun sequencing"},
+          {"name": "library-metrics", "desc": "Molecule count, complexity estimate, and fragment length distribution"}
+        ],
+        "process": [
+          "Perform end repair and adapter ligation using a protocol suited to short fragments",
+          "Add unique dual indexes for downstream demultiplexing and contamination tracking",
+          "Amplify with minimal PCR cycles to preserve library complexity",
+          "QC the library on a fragment analyzer to verify the size distribution"
+        ],
+        "tags": ["science", "ancient-dna"]
+      },
+      {
+        "flow_name": "adna-sequencing-and-filtering",
+        "description": "Sequence the library and filter reads for endogenous content, removing modern contamination and low-quality sequences.",
+        "inputs": [
+          {"name": "sequencing-library", "desc": "Indexed aDNA library on the sequencer"},
+          {"name": "reference-genome", "desc": "Target reference genome for alignment"}
+        ],
+        "outputs": [
+          {"name": "filtered-alignments", "desc": "BAM file of quality-filtered, deduplicated alignments to the reference"},
+          {"name": "endogenous-content-report", "desc": "Percent endogenous, duplication rate, and coverage statistics"}
+        ],
+        "process": [
+          "Demultiplex and trim adapters from the raw sequencing reads",
+          "Align to the reference genome with a mapper that handles short reads (BWA aln or equivalent)",
+          "Remove PCR duplicates and filter for mapping quality and minimum length",
+          "Compute endogenous content, coverage, and duplication rate"
+        ],
+        "tags": ["science", "ancient-dna"]
+      },
+      {
+        "flow_name": "adna-damage-authentication",
+        "description": "Authenticate the ancient DNA by verifying characteristic damage patterns (C-to-T deamination at fragment ends) and fragment length distribution.",
+        "inputs": [
+          {"name": "filtered-alignments", "desc": "Quality-filtered alignments to the reference genome"},
+          {"name": "library-metrics", "desc": "Library preparation details (UDG treatment status)"}
+        ],
+        "outputs": [
+          {"name": "damage-profile", "desc": "Misincorporation patterns at read ends showing the expected C-to-T enrichment"},
+          {"name": "authentication-verdict", "desc": "Assessment of whether the DNA is authentically ancient based on damage and fragment patterns"}
+        ],
+        "process": [
+          "Run mapDamage or DamageProfiler to compute misincorporation rates at each position from the read ends",
+          "Verify the expected C-to-T elevation at the 5-prime end (and G-to-A at 3-prime for non-UDG libraries)",
+          "Check that the fragment length distribution peaks in the 30-80 bp range typical of ancient DNA",
+          "Assess contamination estimates from the mitochondrial reads if sufficient coverage exists"
+        ],
+        "tags": ["science", "ancient-dna"]
+      },
+      {
+        "flow_name": "adna-analysis-and-reporting",
+        "description": "Analyze the authenticated aDNA data for population genetics, phylogenetic placement, or phenotype prediction, and compile the final report.",
+        "inputs": [
+          {"name": "filtered-alignments", "desc": "Authenticated, quality-filtered alignments"},
+          {"name": "authentication-verdict", "desc": "Confirmed ancient DNA authentication"},
+          {"name": "endogenous-content-report", "desc": "Coverage and endogenous content statistics"}
+        ],
+        "outputs": [
+          {"name": "adna-report", "desc": "Full ancient DNA analysis report with authentication evidence, population results, and interpretation"},
+          {"name": "adna-data-archive", "desc": "Raw data, alignments, and analysis scripts packaged for repository submission"}
+        ],
+        "process": [
+          "Call variants or genotype at diagnostic SNPs depending on coverage",
+          "Place the individual in a population genetic context (PCA, ADMIXTURE, f-statistics)",
+          "Interpret the results in the archaeological and historical context of the specimen",
+          "Package all data and scripts for submission to a public repository (ENA or SRA)"
+        ],
+        "tags": ["science", "ancient-dna"]
+      }
+    ]
+  },
+  {
+    "chain_name": "ground-penetrating-radar-analysis",
+    "description": "Process and interpret ground-penetrating radar data from raw radargrams through signal processing, velocity analysis, feature interpretation, validation, and reporting.",
+    "domain": "science",
+    "tags": ["science", "geophysics", "process"],
+    "steps": [
+      {
+        "flow_name": "gpr-raw-processing",
+        "description": "Apply time-zero correction, gain functions, and frequency filtering to raw GPR radargrams.",
+        "inputs": [
+          {"name": "raw-radargrams", "desc": "GPR profiles as time-domain traces with position markers"},
+          {"name": "acquisition-parameters", "desc": "Antenna frequency, time window, sampling rate, and survey geometry"}
+        ],
+        "outputs": [
+          {"name": "processed-radargrams", "desc": "Gain-corrected, filtered radargrams ready for interpretation"},
+          {"name": "processing-log", "desc": "Record of all processing steps and parameters applied"}
+        ],
+        "process": [
+          "Apply time-zero correction to align all traces to the ground surface",
+          "Apply a gain function (SEC or AGC) to compensate for geometric spreading and attenuation",
+          "Bandpass filter to remove low-frequency noise (wow) and high-frequency noise",
+          "Apply background removal to suppress horizontal banding from system ringing"
+        ],
+        "tags": ["science", "geophysics", "gpr"]
+      },
+      {
+        "flow_name": "gpr-velocity-analysis",
+        "description": "Estimate the subsurface radar wave velocity to convert two-way travel time to depth.",
+        "inputs": [
+          {"name": "processed-radargrams", "desc": "Processed GPR profiles"},
+          {"name": "calibration-targets", "desc": "Known buried objects or layer depths for velocity calibration"}
+        ],
+        "outputs": [
+          {"name": "velocity-model", "desc": "Estimated velocity for each material layer or spatially variable velocity field"},
+          {"name": "depth-converted-profiles", "desc": "GPR profiles converted from time to depth using the velocity model"}
+        ],
+        "process": [
+          "Analyze hyperbola apexes from point targets to fit velocity using curve matching",
+          "Cross-reference with known target depths if calibration objects are available",
+          "Build a layered or spatially variable velocity model",
+          "Convert all profiles from two-way travel time to depth"
+        ],
+        "tags": ["science", "geophysics", "gpr"]
+      },
+      {
+        "flow_name": "gpr-migration",
+        "description": "Migrate the GPR profiles to collapse diffraction hyperbolas and position reflectors at their true subsurface locations.",
+        "inputs": [
+          {"name": "processed-radargrams", "desc": "Gain-corrected and filtered radargrams"},
+          {"name": "velocity-model", "desc": "Subsurface velocity estimates for migration"}
+        ],
+        "outputs": [
+          {"name": "migrated-profiles", "desc": "Migrated GPR profiles with diffractions collapsed and dipping reflectors repositioned"},
+          {"name": "migration-quality-check", "desc": "Comparison of pre- and post-migration images at key features"}
+        ],
+        "process": [
+          "Select the migration algorithm (Kirchhoff, Stolt, or finite-difference) based on data quality and velocity complexity",
+          "Apply migration using the estimated velocity model",
+          "Compare pre- and post-migration images to verify diffraction collapse",
+          "Adjust the velocity model and re-migrate if diffractions are under- or over-collapsed"
+        ],
+        "tags": ["science", "geophysics", "gpr"]
+      },
+      {
+        "flow_name": "gpr-feature-interpretation",
+        "description": "Interpret subsurface features from the processed GPR profiles, classifying reflectors as geological layers, buried structures, utilities, or voids.",
+        "inputs": [
+          {"name": "depth-converted-profiles", "desc": "Depth-converted and migrated GPR profiles"},
+          {"name": "site-context", "desc": "Known site history, expected targets, and surface conditions"}
+        ],
+        "outputs": [
+          {"name": "feature-catalog", "desc": "Interpreted features with locations, depths, and classifications"},
+          {"name": "interpretation-maps", "desc": "Plan-view maps of interpreted features across the survey area"}
+        ],
+        "process": [
+          "Trace continuous reflectors across multiple profiles to identify layer boundaries",
+          "Classify point reflectors and hyperbolic patterns as utilities, boulders, or voids based on signature",
+          "Map feature locations and depths in plan view by connecting picks across parallel profiles",
+          "Assign confidence levels based on signal quality and consistency across profiles"
+        ],
+        "tags": ["science", "geophysics", "gpr"]
+      },
+      {
+        "flow_name": "gpr-validation",
+        "description": "Validate GPR interpretations against ground truth from excavation, boring logs, or known reference targets.",
+        "inputs": [
+          {"name": "feature-catalog", "desc": "Interpreted GPR features with predicted locations and depths"},
+          {"name": "ground-truth-data", "desc": "Boring logs, excavation records, or known target locations"}
+        ],
+        "outputs": [
+          {"name": "validation-results", "desc": "Comparison of predicted vs actual feature locations with accuracy statistics"},
+          {"name": "depth-accuracy-assessment", "desc": "Depth error statistics and velocity model accuracy evaluation"}
+        ],
+        "process": [
+          "Match each ground-truth feature to the nearest GPR interpretation",
+          "Compute horizontal and vertical position errors",
+          "Assess whether the velocity model produced accurate depths or needs refinement",
+          "Document any features detected by GPR but not confirmed, and vice versa"
+        ],
+        "tags": ["science", "geophysics", "gpr"]
+      },
+      {
+        "flow_name": "gpr-report",
+        "description": "Compile the GPR survey results into an interpretation report with annotated profiles, plan-view maps, and conclusions.",
+        "inputs": [
+          {"name": "interpretation-maps", "desc": "Plan-view feature maps"},
+          {"name": "feature-catalog", "desc": "Interpreted features with depths and classifications"},
+          {"name": "validation-results", "desc": "Ground truth comparison results"}
+        ],
+        "outputs": [
+          {"name": "gpr-report", "desc": "Full GPR survey report with annotated profiles, maps, and recommendations"},
+          {"name": "gpr-data-archive", "desc": "All raw and processed data packaged for reproducibility"}
+        ],
+        "process": [
+          "Annotate representative profile sections with feature picks and depth labels",
+          "Compile plan-view maps showing all interpreted features",
+          "Write the interpretation narrative addressing the survey objectives",
+          "Package all data files and processing parameters for archival"
+        ],
+        "tags": ["science", "geophysics", "gpr"]
+      }
+    ]
+  },
+  {
+    "chain_name": "luminescence-dating",
+    "description": "Date sediments by optically stimulated luminescence (OSL) or thermoluminescence (TL) from sample collection through mineral preparation, equivalent dose measurement, dose rate determination, age computation, and reporting.",
+    "domain": "science",
+    "tags": ["science", "geochronology", "process"],
+    "steps": [
+      {
+        "flow_name": "luminescence-sample-collection",
+        "description": "Collect sediment samples for luminescence dating under light-safe conditions and record the stratigraphic context.",
+        "inputs": [
+          {"name": "sampling-site", "desc": "Exposed section or core with target dating horizons identified"},
+          {"name": "sampling-protocol", "desc": "Opaque tube insertion method and field documentation requirements"}
+        ],
+        "outputs": [
+          {"name": "collected-samples", "desc": "Sediment samples in opaque tubes with stratigraphic positions recorded"},
+          {"name": "field-dosimetry-data", "desc": "In-situ gamma spectrometry or dosimeter placement records"}
+        ],
+        "process": [
+          "Drive opaque metal or PVC tubes horizontally into the cleaned section face",
+          "Seal both ends immediately to prevent light exposure",
+          "Record the stratigraphic position, depth below surface, and water table level",
+          "Measure the field gamma dose rate with a portable spectrometer or install dosimeters"
+        ],
+        "tags": ["science", "geochronology"]
+      },
+      {
+        "flow_name": "mineral-grain-preparation",
+        "description": "Extract and prepare quartz or feldspar mineral grains from the sediment under safe-light conditions.",
+        "inputs": [
+          {"name": "collected-samples", "desc": "Sediment samples in opaque tubes"},
+          {"name": "target-mineral", "desc": "Quartz or feldspar, and target grain-size fraction"}
+        ],
+        "outputs": [
+          {"name": "prepared-aliquots", "desc": "Mineral grains mounted on discs ready for measurement"},
+          {"name": "preparation-log", "desc": "Grain size, etching time, density separation parameters, and yield"}
+        ],
+        "process": [
+          "Open tubes under dim red or orange safe-light and discard the light-exposed ends",
+          "Wet sieve to isolate the target grain-size fraction (typically 90-250 microns)",
+          "Treat with HCl and H2O2 to remove carbonates and organics",
+          "Separate quartz from feldspar using heavy liquid density separation and etch quartz with HF"
+        ],
+        "tags": ["science", "geochronology"]
+      },
+      {
+        "flow_name": "equivalent-dose-measurement",
+        "description": "Measure the equivalent dose (De) using the single-aliquot regenerative-dose (SAR) protocol on a luminescence reader.",
+        "inputs": [
+          {"name": "prepared-aliquots", "desc": "Quartz or feldspar grains mounted on measurement discs"},
+          {"name": "sar-protocol", "desc": "Preheat temperatures, regenerative dose steps, and test dose value"}
+        ],
+        "outputs": [
+          {"name": "de-distribution", "desc": "Equivalent dose values for each aliquot with uncertainties"},
+          {"name": "sar-diagnostics", "desc": "Recycling ratios, recuperation, and dose recovery test results"}
+        ],
+        "process": [
+          "Run the SAR protocol: natural measurement, then a sequence of regenerative doses bracketing the expected De",
+          "Include a zero-dose and repeated-dose step to check recuperation and recycling ratio",
+          "Construct the dose-response curve for each aliquot and interpolate the natural signal to obtain De",
+          "Run dose recovery tests on a subset to verify the protocol accurately recovers a known dose"
+        ],
+        "tags": ["science", "geochronology"]
+      },
+      {
+        "flow_name": "environmental-dose-rate",
+        "description": "Determine the environmental dose rate from radioelement concentrations, cosmic ray contribution, and water content.",
+        "inputs": [
+          {"name": "field-dosimetry-data", "desc": "In-situ gamma spectrometry or dosimeter readings"},
+          {"name": "sediment-chemistry", "desc": "Uranium, thorium, and potassium concentrations from lab analysis (ICP-MS or NAA)"}
+        ],
+        "outputs": [
+          {"name": "total-dose-rate", "desc": "Total environmental dose rate in Gy/ka with uncertainty"},
+          {"name": "dose-rate-components", "desc": "Alpha, beta, gamma, and cosmic dose rate contributions"}
+        ],
+        "process": [
+          "Convert U, Th, and K concentrations to alpha, beta, and gamma dose rates using published conversion factors",
+          "Correct the beta dose rate for grain-size attenuation and the alpha dose rate for efficiency",
+          "Estimate the cosmic dose rate from burial depth and site latitude/altitude",
+          "Apply the water content correction and sum all components"
+        ],
+        "tags": ["science", "geochronology"]
+      },
+      {
+        "flow_name": "luminescence-age-calculation",
+        "description": "Compute the luminescence age from the equivalent dose and dose rate, assessing for complications like incomplete bleaching or dose rate changes.",
+        "inputs": [
+          {"name": "de-distribution", "desc": "Equivalent dose values with uncertainties"},
+          {"name": "total-dose-rate", "desc": "Environmental dose rate in Gy/ka"}
+        ],
+        "outputs": [
+          {"name": "luminescence-age", "desc": "Calculated age in ka with total uncertainty"},
+          {"name": "age-model-assessment", "desc": "Assessment of De distribution shape, overdispersion, and chosen age model (CAM, MAM, FMM)"}
+        ],
+        "process": [
+          "Plot the De distribution and assess overdispersion relative to measurement uncertainty",
+          "Select the appropriate age model: central age model for well-bleached, minimum age model for partially bleached",
+          "Compute the age as De / dose rate and propagate all uncertainties",
+          "Compare the result with independent age control if available"
+        ],
+        "tags": ["science", "geochronology"]
+      },
+      {
+        "flow_name": "luminescence-dating-report",
+        "description": "Compile the luminescence dating results into a report with stratigraphic context, measurement data, and final ages.",
+        "inputs": [
+          {"name": "luminescence-age", "desc": "Final age estimate with uncertainty"},
+          {"name": "age-model-assessment", "desc": "De distribution analysis and age model choice"},
+          {"name": "sar-diagnostics", "desc": "SAR protocol quality checks"}
+        ],
+        "outputs": [
+          {"name": "luminescence-report", "desc": "Full dating report with methods, results, and geological interpretation"},
+          {"name": "luminescence-data-archive", "desc": "All measurement data, dose rates, and age calculations for archival"}
+        ],
+        "process": [
+          "Present the De distributions as radial plots and histograms",
+          "Tabulate all dose rate components and total dose rates",
+          "Report final ages in their stratigraphic context with figures",
+          "Discuss any complications (partial bleaching, dose rate changes) and their effect on the ages"
+        ],
+        "tags": ["science", "geochronology"]
+      }
+    ]
+  },
+  {
+    "chain_name": "multivariate-process-control",
+    "description": "Monitor a process with multivariate statistical control from variable compilation through PCA modeling, control limit setting, batch monitoring, fault diagnosis, and reporting.",
+    "domain": "science",
+    "tags": ["science", "statistics", "process"],
+    "steps": [
+      {
+        "flow_name": "process-variable-compilation",
+        "description": "Compile and preprocess the process variable matrix from historical normal operating data.",
+        "inputs": [
+          {"name": "process-data-sources", "desc": "Historian databases, sensor logs, or batch records for the process"},
+          {"name": "variable-selection", "desc": "List of process variables to include and their engineering units"}
+        ],
+        "outputs": [
+          {"name": "process-matrix", "desc": "Cleaned, aligned time-series matrix of process variables for the reference period"},
+          {"name": "variable-metadata", "desc": "Variable names, units, ranges, and any known correlations"}
+        ],
+        "process": [
+          "Extract time-aligned process variable data from the historian for the reference (normal) period",
+          "Handle missing values by interpolation or exclusion based on gap length",
+          "Remove known abnormal periods (shutdowns, upsets, calibrations) from the reference dataset",
+          "Auto-scale each variable to zero mean and unit variance"
+        ],
+        "tags": ["science", "process-control"]
+      },
+      {
+        "flow_name": "pca-model-building",
+        "description": "Build a PCA or PLS model from the reference process data to capture the normal correlation structure.",
+        "inputs": [
+          {"name": "process-matrix", "desc": "Scaled process variable matrix for the reference period"},
+          {"name": "model-selection-criteria", "desc": "Cross-validation method and number of components to evaluate"}
+        ],
+        "outputs": [
+          {"name": "pca-model", "desc": "Fitted PCA or PLS model with loadings, scores, and retained components"},
+          {"name": "model-diagnostics", "desc": "Explained variance, cross-validation results, and component selection rationale"}
+        ],
+        "process": [
+          "Compute the PCA decomposition of the scaled process matrix",
+          "Select the number of retained components using cross-validation or scree plot",
+          "Examine loading plots to verify that the components capture meaningful process relationships",
+          "Compute model statistics (explained variance per component, Q residuals on the training set)"
+        ],
+        "tags": ["science", "process-control"]
+      },
+      {
+        "flow_name": "control-limit-setting",
+        "description": "Set T-squared and Q-residual control limits from the reference data using the appropriate statistical distributions.",
+        "inputs": [
+          {"name": "pca-model", "desc": "Fitted PCA model from the reference period"},
+          {"name": "confidence-level", "desc": "Desired confidence level for the control limits (typically 95% or 99%)"}
+        ],
+        "outputs": [
+          {"name": "control-limits", "desc": "T-squared and Q-residual control limits at the specified confidence level"},
+          {"name": "reference-control-charts", "desc": "Control charts of T-squared and Q for the reference data, confirming the limits capture normal variation"}
+        ],
+        "process": [
+          "Compute the T-squared limit from the F-distribution for the number of components and observations",
+          "Compute the Q-residual limit from the Jackson-Mudholkar approximation or bootstrap",
+          "Plot the reference-period T-squared and Q values against the limits to verify coverage",
+          "Adjust if the reference data show non-normality that the limits do not accommodate"
+        ],
+        "tags": ["science", "process-control"]
+      },
+      {
+        "flow_name": "batch-monitoring",
+        "description": "Monitor new batch or continuous process data against the PCA model and control limits to detect out-of-control events.",
+        "inputs": [
+          {"name": "new-process-data", "desc": "Incoming process variable data from the batch or stream being monitored"},
+          {"name": "pca-model", "desc": "Fitted PCA model from reference data"},
+          {"name": "control-limits", "desc": "T-squared and Q-residual limits"}
+        ],
+        "outputs": [
+          {"name": "monitoring-results", "desc": "Time series of T-squared and Q values with alarm flags"},
+          {"name": "alarm-log", "desc": "Timestamped list of control limit violations"}
+        ],
+        "process": [
+          "Scale new observations using the reference-period means and standard deviations",
+          "Project onto the PCA model to compute T-squared and Q at each time point",
+          "Flag observations that exceed either control limit",
+          "Log alarm timestamps and durations for further investigation"
+        ],
+        "tags": ["science", "process-control"]
+      },
+      {
+        "flow_name": "fault-contribution-diagnosis",
+        "description": "Diagnose which process variables contributed to each out-of-control event using contribution plots.",
+        "inputs": [
+          {"name": "alarm-log", "desc": "Timestamped control limit violations"},
+          {"name": "pca-model", "desc": "PCA model with loadings"},
+          {"name": "new-process-data", "desc": "Process data during the alarm periods"}
+        ],
+        "outputs": [
+          {"name": "contribution-plots", "desc": "Variable contributions to T-squared and Q at each alarm time"},
+          {"name": "root-cause-candidates", "desc": "Ranked list of variables most responsible for each alarm event"}
+        ],
+        "process": [
+          "Compute the contribution of each variable to the T-squared statistic at the alarm time",
+          "Compute the contribution of each variable to the Q residual at the alarm time",
+          "Rank variables by contribution magnitude to identify the probable root cause",
+          "Cross-reference with process knowledge to confirm the diagnosis"
+        ],
+        "tags": ["science", "process-control"]
+      },
+      {
+        "flow_name": "process-monitoring-report",
+        "description": "Compile the multivariate process monitoring results into a report with control charts, contribution analysis, and recommendations.",
+        "inputs": [
+          {"name": "monitoring-results", "desc": "T-squared and Q time series with alarms"},
+          {"name": "contribution-plots", "desc": "Variable contributions for each alarm event"},
+          {"name": "root-cause-candidates", "desc": "Diagnosed root causes"}
+        ],
+        "outputs": [
+          {"name": "monitoring-report", "desc": "Process monitoring report with control charts, fault diagnosis, and recommendations"},
+          {"name": "monitoring-data-archive", "desc": "Model, limits, monitoring data, and contribution analysis for archival"}
+        ],
+        "process": [
+          "Generate control chart figures with alarm annotations",
+          "Compile contribution plots for each significant alarm event",
+          "Write a summary of detected faults, their root causes, and process impact",
+          "Recommend corrective actions or model updates based on the findings"
+        ],
+        "tags": ["science", "process-control"]
+      }
+    ]
+  }
+]

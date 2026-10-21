@@ -35,8 +35,7 @@ ACT     --> You write the letter. Then you decide what to do about it.
 
 ### OBSERVE: Present You, Honestly
 
-**Actions:**
-
+### Actions
 1. **Set the time horizon.** Ask: "How far into the future are we going? A year is tactical -- what habits, projects, relationships. Five years is strategic -- career trajectory, life structure, identity. Ten years is existential -- who you become, what you build, what you stand for." Each horizon serves a different purpose.
 
 2. **Map current reality.** Ask: "Tell me where you are right now. Not the social media version -- the real one. What's going well that you're proud of? What's struggling that you're worried about? What are you avoiding that you know you should be dealing with?" Get all three. Most people will happily share the first, reluctantly share the second, and try to skip the third.
@@ -45,14 +44,14 @@ ACT     --> You write the letter. Then you decide what to do about it.
 
 4. **Map actual behavior.** Ask: "Now let's look at how you actually spend your time, energy, and money. What does your calendar say you value? What does your bank account say you value? Do those match what you just told me?" Declared values vs. revealed values. The gap between them is where the letter lives.
 
-**Quality gate:** Current state is described honestly (including avoidances). Declared goals exist. At least one gap between stated goals and actual behavior is identified.
+### Quality Gate
+Current state is described honestly (including avoidances). Declared goals exist. At least one gap between stated goals and actual behavior is identified.
 
 ---
 
 ### REASON: The Trajectory Test
 
-**Actions:**
-
+### Actions
 1. **Project the current trajectory.** Ask: "If you change absolutely nothing -- same habits, same job, same relationships, same patterns -- where are you in [time horizon]? Not the worst case, not the best case. The MOST LIKELY case given current behavior." This is the trajectory test. Most people have never done it. They assume their future will be different from their present without having changed anything that would make it different.
 
 2. **Find the gratitude seeds.** Ask: "What are you doing RIGHT NOW that your future self will thank you for? What investments are you making -- in skills, relationships, health, savings -- that won't pay off for years but are quietly building?" These are important to acknowledge. Not everything is broken. Some things are working and deserve recognition.
@@ -63,14 +62,14 @@ ACT     --> You write the letter. Then you decide what to do about it.
 
 5. **The uncomfortable truth.** Ask: "What's the thing you know you need to change but haven't, because changing it is harder than living with it? What's the comfortable discomfort you've settled into?" Present bias makes us tolerate slow decay because each day's deterioration is too small to justify the effort of change.
 
-**Quality gate:** Trajectory is honestly projected. At least 2 gratitude seeds and 3 regret seeds identified. The identity question has been answered.
+### Quality Gate
+Trajectory is honestly projected. At least 2 gratitude seeds and 3 regret seeds identified. The identity question has been answered.
 
 ---
 
 ### PLAN: Future You Speaks
 
-**Actions:**
-
+### Actions
 1. **Give future-you a voice.** Say: "Now you're going to write this letter. But first, let's figure out what future-you wants to say. Based on everything we've discussed, future-you has been living with the consequences of your current choices. What's the first thing they want to tell you?"
 
 2. **Structure the letter.** Guide them through sections:
@@ -82,14 +81,14 @@ ACT     --> You write the letter. Then you decide what to do about it.
 
 3. **Test for honesty.** After the draft, ask: "Is this letter kind enough? Is it honest enough? Future-you loves you but isn't going to sugarcoat it. Would they really say this, or is this the polished version?"
 
-**Quality gate:** The letter has all five sections. It contains at least one thing that was hard to write. It's addressed to the user specifically, not generically.
+### Quality Gate
+The letter has all five sections. It contains at least one thing that was hard to write. It's addressed to the user specifically, not generically.
 
 ---
 
 ### ACT: Bridge the Gap
 
-**Actions:**
-
+### Actions
 1. **Extract the actions.** Ask: "Reading this letter -- what are the 3 most important things present-you needs to DO in the next 30 days to make future-you proud?" Not 30 things. Three. Present-you has limited bandwidth.
 
 2. **Find the one change.** Ask: "If the letter boils down to one message -- one thing future-you is screaming at you to understand -- what is it?" This is the thesis of the letter. The single insight that, if internalized, changes the trajectory.
@@ -98,7 +97,17 @@ ACT     --> You write the letter. Then you decide what to do about it.
 
 4. **Offer the re-check.** Say: "Come back in 6 months. We'll do this again. The letter will be different because you'll be different. That's the point -- the letter is a snapshot of your awareness at this moment. Track how your awareness evolves."
 
-**Output:** The completed letter, 3 priority actions for the next 30 days, the one core message, and a re-check date.
+### Output
+The completed letter, 3 priority actions for the next 30 days, the one core message, and a re-check date.
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Write a letter from your future self by first analyzing the gap between your cur, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 

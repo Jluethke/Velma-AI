@@ -1,71 +1,232 @@
 {
   "name": "verified-fix",
-  "description": "The verified fix engine as a flow pipeline. Drop a bug description, get a tested fix back. Scans the codebase, identifies root cause, generates multiple fix candidates, tests each one, scores them on pass rate improvement + minimality + confidence, picks the winner, and produces a before-and-after verification proof. No Python tools needed — AI handles everything.",
-  "category": "developer",
-  "version": "1.0.0",
+  "description": "The verified fix engine as a flow pipeline. Drop a bug description, get a tested fix back. Scans the codebase, identifies root cause, generates multiple fix candidates, tests each one, scores them on pass rate improvement + minimality + confidence, picks the winner, and produces a before-and-after verification proof. No Python tools needed  --  AI handles everything.",
   "steps": [
     {
+      "id": "step_1",
       "skill_name": "codebase-mapper",
-      "alias": "scan",
-      "depends_on": [],
-      "config": {
-        "instruction": "Map the codebase structure: files, directories, languages, frameworks, test runner, dependencies. Identify the test command (pytest, jest, cargo test, go test, etc.) and how to run it. Output a structured map with: project_root, language, test_command, entry_points, key_files."
+      "inputs": {
+        "repo_path": "from_user_input",
+        "language_filter": "from_user_input",
+        "depth": "from_user_input",
+        "previous_map": "from_user_input"
       },
-      "phase_filter": null
+      "outputs": {
+        "architecture_map": "architecture_map_data",
+        "dependency_graph": "dependency_graph_data",
+        "file_index": "file_index_data",
+        "tech_stack_summary": "tech_stack_summary_data",
+        "drift_report": "drift_report_data"
+      },
+      "parallel_group": 1
     },
     {
+      "id": "step_2",
       "skill_name": "test-coverage-generator",
-      "alias": "baseline_tests",
-      "depends_on": ["scan"],
-      "config": {
-        "instruction": "Run the existing test suite using the test_command from the codebase scan. Record: total tests, passing, failing, error messages, stack traces. This is the BEFORE baseline. Output: test_results with total, passed, failed, and a list of failure objects (test_name, error_message, stack_trace, file, line)."
+      "inputs": {
+        "source_code": "step_1.architecture_map",
+        "existing_tests": "step_1.architecture_map",
+        "coverage_report": "step_1.architecture_map",
+        "test_framework": "step_1.architecture_map",
+        "coverage_history": "step_1.architecture_map"
       },
-      "phase_filter": null
+      "outputs": {
+        "coverage_analysis": "coverage_analysis_data",
+        "prioritized_test_plan": "prioritized_test_plan_data",
+        "generated_tests": "generated_tests_data",
+        "validation_report": "validation_report_data",
+        "coverage_summary": "coverage_summary_data"
+      },
+      "parallel_group": 2
     },
     {
+      "id": "step_3",
       "skill_name": "bug-root-cause",
-      "alias": "root_cause",
-      "depends_on": ["baseline_tests"],
-      "config": {
-        "instruction": "Analyze the failing tests and error messages from the baseline. Identify the root cause: which file, which function, what's wrong, why it fails. Trace the error through the call stack. Output: root_cause_file, root_cause_function, root_cause_explanation, affected_files, fix_hints."
+      "inputs": {
+        "error_message": "step_2.coverage_analysis",
+        "stack_trace": "step_2.coverage_analysis",
+        "logs": "step_2.coverage_analysis",
+        "recent_changes": "step_2.coverage_analysis",
+        "environment_info": "step_2.coverage_analysis",
+        "bug_history": "step_2.coverage_analysis"
       },
-      "phase_filter": null
+      "outputs": {
+        "root_cause_analysis": "root_cause_analysis_data",
+        "fix_recommendation": "fix_recommendation_data",
+        "regression_test": "regression_test_data",
+        "prevention_measures": "prevention_measures_data",
+        "pattern_report": "pattern_report_data"
+      },
+      "parallel_group": 3
     },
     {
+      "id": "step_4",
       "skill_name": "code-review",
-      "alias": "generate_fixes",
-      "depends_on": ["root_cause"],
-      "config": {
-        "instruction": "Based on the root cause analysis, generate 3 different fix candidates. Each fix should be a minimal code change (unified diff format). Rank by: (1) smallest change that fixes the issue, (2) no regressions to passing tests, (3) follows existing code patterns. For each candidate output: candidate_id, description, diff, confidence (0-1), modified_lines_count."
+      "inputs": {
+        "diff": "step_3.root_cause_analysis",
+        "pr_description": "step_3.root_cause_analysis",
+        "codebase_context": "step_3.root_cause_analysis",
+        "task_description": "step_3.root_cause_analysis"
       },
-      "phase_filter": null
+      "outputs": {
+        "review_comments": "review_comments_data",
+        "approval_decision": "approval_decision_data",
+        "summary": "summary_data"
+      },
+      "parallel_group": 4
     },
     {
+      "id": "step_5",
       "skill_name": "test-coverage-generator",
-      "alias": "verify_fixes",
-      "depends_on": ["generate_fixes"],
-      "config": {
-        "instruction": "For each fix candidate from the previous step: (1) Apply the diff to the codebase, (2) Run the full test suite, (3) Record results: tests passed, tests failed, any new failures (regressions). (4) Compute a composite score: test_improvement (newly passing / previously failing), minimality (1 / modified_lines), regression_penalty (previously passing that now fail). (5) Roll back the diff before trying the next candidate. Output: scored_candidates sorted by composite score descending."
+      "inputs": {
+        "source_code": "step_4.review_comments",
+        "existing_tests": "step_4.review_comments",
+        "coverage_report": "step_4.review_comments",
+        "test_framework": "step_4.review_comments",
+        "coverage_history": "step_4.review_comments"
       },
-      "phase_filter": null
+      "outputs": {
+        "coverage_analysis": "coverage_analysis_data",
+        "prioritized_test_plan": "prioritized_test_plan_data",
+        "generated_tests": "generated_tests_data",
+        "validation_report": "validation_report_data",
+        "coverage_summary": "coverage_summary_data"
+      },
+      "parallel_group": 5
     },
     {
+      "id": "step_6",
       "skill_name": "code-review",
-      "alias": "apply_winner",
-      "depends_on": ["verify_fixes"],
-      "config": {
-        "instruction": "Take the highest-scoring fix candidate from verify_fixes. Apply it to the codebase permanently. If the highest scorer didn't achieve 100% test passage, try the next candidate in descending score order (up to 3 attempts). For the winning fix, output: applied_diff, before_results (from baseline), after_results (from verification), tests_fixed, regressions (should be 0), verification_proof with before/after comparison."
+      "inputs": {
+        "diff": "step_5.coverage_analysis",
+        "pr_description": "step_5.coverage_analysis",
+        "codebase_context": "step_5.coverage_analysis",
+        "task_description": "step_5.coverage_analysis"
       },
-      "phase_filter": null
+      "outputs": {
+        "review_comments": "review_comments_data",
+        "approval_decision": "approval_decision_data",
+        "summary": "summary_data"
+      },
+      "parallel_group": 6
     },
     {
+      "id": "step_7",
       "skill_name": "checklist-builder",
-      "alias": "report",
-      "depends_on": ["apply_winner"],
-      "config": {
-        "instruction": "Generate a verification report for the fix. Include: (1) Bug description and root cause, (2) Fix applied (diff summary), (3) Before: X tests passing, Y failing, (4) After: X tests passing, Y failing, (5) Tests fixed (list), (6) Regressions (list — should be empty), (7) Confidence score, (8) Consensus: did multiple candidates agree on the fix location? Output as a structured checklist with pass/fail for each verification step."
+      "inputs": {
+        "goal_or_event": "step_6.review_comments",
+        "deadline": "step_6.review_comments",
+        "constraints": "step_6.review_comments",
+        "experience_level": "step_6.review_comments"
       },
-      "phase_filter": null
+      "outputs": {
+        "checklist": "checklist_data",
+        "timeline": "timeline_data",
+        "dont_forget": "dont_forget_data",
+        "dependencies": "dependencies_data"
+      },
+      "parallel_group": 7
     }
-  ]
+  ],
+  "edges": [
+    {
+      "from_step": "step_1",
+      "to_step": "step_2",
+      "data_type": "architecture_map",
+      "field_mapping": "architecture_map -> source_code; architecture_map -> existing_tests; architecture_map -> coverage_report; architecture_map -> test_framework; architecture_map -> coverage_history"
+    },
+    {
+      "from_step": "step_2",
+      "to_step": "step_3",
+      "data_type": "coverage_analysis",
+      "field_mapping": "coverage_analysis -> error_message; coverage_analysis -> stack_trace; coverage_analysis -> logs; coverage_analysis -> recent_changes; coverage_analysis -> environment_info; coverage_analysis -> bug_history"
+    },
+    {
+      "from_step": "step_3",
+      "to_step": "step_4",
+      "data_type": "root_cause_analysis",
+      "field_mapping": "root_cause_analysis -> diff; root_cause_analysis -> pr_description; root_cause_analysis -> codebase_context; root_cause_analysis -> task_description"
+    },
+    {
+      "from_step": "step_4",
+      "to_step": "step_5",
+      "data_type": "review_comments",
+      "field_mapping": "review_comments -> source_code; review_comments -> existing_tests; review_comments -> coverage_report; review_comments -> test_framework; review_comments -> coverage_history"
+    },
+    {
+      "from_step": "step_5",
+      "to_step": "step_6",
+      "data_type": "coverage_analysis",
+      "field_mapping": "coverage_analysis -> diff; coverage_analysis -> pr_description; coverage_analysis -> codebase_context; coverage_analysis -> task_description"
+    },
+    {
+      "from_step": "step_6",
+      "to_step": "step_7",
+      "data_type": "review_comments",
+      "field_mapping": "review_comments -> goal_or_event; review_comments -> deadline; review_comments -> constraints; review_comments -> experience_level"
+    }
+  ],
+  "entry_inputs": [
+    "depth",
+    "language_filter",
+    "previous_map",
+    "repo_path"
+  ],
+  "terminal_outputs": [
+    "checklist",
+    "timeline",
+    "dont_forget",
+    "dependencies"
+  ],
+  "parallel_groups": [
+    [
+      "step_1"
+    ],
+    [
+      "step_2"
+    ],
+    [
+      "step_3"
+    ],
+    [
+      "step_4"
+    ],
+    [
+      "step_5"
+    ],
+    [
+      "step_6"
+    ],
+    [
+      "step_7"
+    ]
+  ],
+  "estimated_cost": 0,
+  "critical_path": [
+    "step_1",
+    "step_2",
+    "step_3",
+    "step_4",
+    "step_5",
+    "step_6",
+    "step_7"
+  ],
+  "chain_links": {
+    "next_chains": [],
+    "related_chains": [
+      {
+        "chain_name": "bug-repro-to-regression",
+        "relationship": "complement"
+      },
+      {
+        "chain_name": "debug-and-fix",
+        "relationship": "complement"
+      },
+      {
+        "chain_name": "something-went-wrong",
+        "relationship": "complement"
+      }
+    ],
+    "prerequisites": []
+  }
 }

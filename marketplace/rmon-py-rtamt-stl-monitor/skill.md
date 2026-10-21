@@ -1,6 +1,6 @@
 # RTAMT Online STL Monitor in Python
 
-**One-line description:** Implements the past-time temporal properties as an online discrete-time monitor with RTAMT (Nickovic and Yamaguchi, ATVA 2020), feeds it one sample at a time, reads the returned robustness as the trip signal (negative means violated), and checks it against the hand traces from the property specification.
+**One-line description:** Implements the past-time temporal properties as an online discrete-time monitor with RTAMT (Nickovic and Yamaguchi, ATVA 2020), feeds it one sample at a time, reads the returned reliableness as the trip signal (negative means violated), and checks it against the hand traces from the property specification.
 
 **Execution Pattern:** Phase Pipeline
 
@@ -63,9 +63,9 @@ All properties parsed.
 ### Actions
 1. Create `monitor/stl_monitor.py` with a class that owns the parsed specs and exposes `step(k, sample)` where `k` is the integer sample index and `sample` is a dict of variable values.
 2. Inside `step`, call each spec's `update` with the sample index and a list of `(name, value)` pairs, for example `rob = s.update(k, [("x", sample["x"])])`. Confirm the exact `update` signature in your version's README; some versions take a dict.
-3. Treat `rob < 0` as `fail`, `rob >= 0` as `pass`. Log `rob` in the `robustness` field of the event record.
+3. Treat `rob < 0` as `fail`, `rob >= 0` as `pass`. Log `rob` in the `reliableness` field of the event record.
 4. Feed samples at a fixed period. If a sample is missing, do NOT feed the previous value again; report `stale` from the staleness checker instead, since repeated values hide a frozen producer.
-5. Before `step`, reject NaN or infinite values with `math.isfinite`; robustness of NaN is not a meaningful verdict.
+5. Before `step`, reject NaN or infinite values with `math.isfinite`; reliableness of NaN is not a meaningful verdict.
 
 ### Output
 `monitor/stl_monitor.py`.
@@ -82,7 +82,7 @@ All properties parsed.
 - Module imports.
 
 ### Actions
-1. Create `tests/test_stl_monitor.py`. For each property, feed its `hand_trace` samples in order and assert the sign of each returned robustness equals the expected verdict. For boundary samples assert `rob == 0` or `abs(rob) < 1e-9` when floats are involved.
+1. Create `tests/test_stl_monitor.py`. For each property, feed its `hand_trace` samples in order and assert the sign of each returned reliableness equals the expected verdict. For boundary samples assert `rob == 0` or `abs(rob) < 1e-9` when floats are involved.
 2. Run `python -m pytest tests/test_stl_monitor.py -q`.
 3. If a test fails, compare the formula with the English sentence first. The hand trace is the reference.
 
@@ -107,13 +107,13 @@ $ python -m pytest tests/test_stl_monitor.py -q
 ............                                                   [100%]
 12 passed in 0.88s
 ```
-Sample k=3 with `cmd_linear_x` 2.3 returns robustness -0.3; the monitor records `fail` and emits `PROPERTY_VIOLATED` to the switch.
+Sample k=3 with `cmd_linear_x` 2.3 returns reliableness -0.3; the monitor records `fail` and emits `PROPERTY_VIOLATED` to the switch.
 
 ---
 
 ## Exit Criteria
 
-DONE when every property parses in the recorded RTAMT version, the online step rejects non-finite input, and robustness signs match every hand trace sample.
+DONE when every property parses in the recorded RTAMT version, the online step rejects non-finite input, and reliableness signs match every hand trace sample.
 
 ---
 
@@ -124,9 +124,9 @@ DONE when every property parses in the recorded RTAMT version, the online step r
 | Phase 1 | `AttributeError` on the specification class | **Adjust**: use the class name from the installed version's README. |
 | Phase 1 | Parse error on a future operator | **Return**: to `rmon-temporal-property-spec` to restate in past time. |
 | Phase 2 | `update` signature mismatch | **Adjust**: follow the installed version's README example exactly. |
-| Phase 3 | Robustness sign disagrees with hand trace | **Retry**: fix the formula through the spec flow; never edit the trace. |
+| Phase 3 | Reliableness sign disagrees with hand trace | **Retry**: fix the formula through the spec flow; never edit the trace. |
 
-**Do not:** invent RTAMT methods, feed repeated stale values, or treat robustness 0 as a violation when the property is non-strict.
+**Do not:** invent RTAMT methods, feed repeated stale values, or treat reliableness 0 as a violation when the property is non-strict.
 
 ---
 

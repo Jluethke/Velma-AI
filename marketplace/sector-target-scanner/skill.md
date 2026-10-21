@@ -1,26 +1,26 @@
 # Sector Target Scanner
 
-Systematically scans a target sector to identify every company deploying adaptive AI systems that fall within the scope of patent Family A (runtime actuation governance) or Family B (runtime learning governance). Uses public signals — job postings, press releases, regulatory filings, conference appearances, patent filings, and product disclosures — to build a raw target list with qualifying evidence for each company.
+Systematically scans a target sector to identify every company deploying adaptive AI systems that fall within the scope of patent Family A (runtime actuation governance) or Family B (runtime learning governance). Uses public signals  --  job postings, press releases, regulatory filings, conference appearances, patent filings, and product disclosures  --  to build a raw target list with qualifying evidence for each company.
 
-**Why this exists:** You can't license to companies you haven't found. Most licensing campaigns target the obvious names and miss the mid-market. This skill exhausts the sector before a single email is sent — so the prioritization engine works from a complete list, not a partial one.
+**Why this exists:** You can't license to companies you haven't found. Most licensing campaigns target the obvious names and miss the mid-market. This skill exhausts the sector before a single email is sent  --  so the prioritization engine works from a complete list, not a partial one.
 
-**Core principle:** A company is a qualifying target if their deployed AI system either (A) makes real-time actuation decisions (Family A) or (B) adapts its parameters based on live data (Family B). You do not need to confirm implementation details — public signals of deployment are sufficient to initiate contact. Confirmation happens in the conversation.
+**Core principle:** A company is a qualifying target if their deployed AI system either (A) makes real-time actuation decisions (Family A) or (B) adapts its parameters based on live data (Family B). You do not need to confirm implementation details  --  public signals of deployment are sufficient to initiate contact. Confirmation happens in the conversation.
 
 ## Inputs
 
-- `sector`: string — Target sector (e.g., "cyber insurance", "autonomous vehicles", "medical AI", "financial services AI", "humanoid robotics")
-- `patent_families`: list[object] — Families to scan against. Each: `{family, title, what_it_covers, claim_triggers}`
-- `geography`: string — Geographic scope: "US" | "EU" | "global" (default: "US")
-- `company_size`: string — Minimum company size: "startup" | "mid_market" | "enterprise" | "all" (default: "mid_market")
-- `scan_depth`: string — "surface" (top 20 companies, public sources only) | "deep" (exhaust all signals, 50+ companies)
-- `exclude_list`: list[string] — Company names already in pipeline (skip these)
+- `sector`: string  --  Target sector (e.g., "cyber insurance", "autonomous vehicles", "medical AI", "financial services AI", "humanoid robotics")
+- `patent_families`: list[object]  --  Families to scan against. Each: `{family, title, what_it_covers, claim_triggers}`
+- `geography`: string  --  Geographic scope: "US" | "EU" | "global" (default: "US")
+- `company_size`: string  --  Minimum company size: "startup" | "mid_market" | "enterprise" | "all" (default: "mid_market")
+- `scan_depth`: string  --  "surface" (top 20 companies, public sources only) | "deep" (exhaust all signals, 50+ companies)
+- `exclude_list`: list[string]  --  Company names already in pipeline (skip these)
 
 ## Outputs
 
-- `raw_targets`: list[object] — Every company found: `{company, sector, hq, size_estimate, ai_system_description, qualifying_signal, signal_sources, family_a_exposure, family_b_exposure, confidence}`
-- `signal_summary`: object — What signals were found most frequently across the sector (indicates where to look deeper)
-- `sector_intelligence`: object — Regulatory landscape, recent enforcement actions, upcoming compliance deadlines, named companies that have publicly discussed AI governance gaps
-- `scan_report`: string — One-page summary of what was found, coverage confidence, and recommended scan extensions
+- `raw_targets`: list[object]  --  Every company found: `{company, sector, hq, size_estimate, ai_system_description, qualifying_signal, signal_sources, family_a_exposure, family_b_exposure, confidence}`
+- `signal_summary`: object  --  What signals were found most frequently across the sector (indicates where to look deeper)
+- `sector_intelligence`: object  --  Regulatory landscape, recent enforcement actions, upcoming compliance deadlines, named companies that have publicly discussed AI governance gaps
+- `scan_report`: string  --  One-page summary of what was found, coverage confidence, and recommended scan extensions
 
 ---
 
@@ -28,10 +28,10 @@ Systematically scans a target sector to identify every company deploying adaptiv
 
 ### Phase 1: SECTOR MAPPING
 
-**Entry criteria:** `sector` and `patent_families` provided.
+### Entry Criteria
+`sector` and `patent_families` provided.
 
-**Actions:**
-
+### Actions
 1. **Define what a qualifying system looks like in this sector.**
 
    | Sector | Family A Signal | Family B Signal |
@@ -54,7 +54,8 @@ Systematically scans a target sector to identify every company deploying adaptiv
 
 3. **For each company, determine:** Does their core product involve an AI system that matches either family's claim triggers?
 
-**Output:** Initial target list (unscored)
+### Output
+Initial target list (unscored)
 
 ---
 
@@ -62,7 +63,7 @@ Systematically scans a target sector to identify every company deploying adaptiv
 
 **For each company on the initial list, search for qualifying signals:**
 
-**Signal Type 1 — Job Postings (highest signal quality)**
+**Signal Type 1  --  Job Postings (highest signal quality)**
 
 Search: `[Company] site:linkedin.com/jobs OR site:greenhouse.io OR site:lever.co "machine learning" OR "model monitoring" OR "AI governance" OR "responsible AI" OR "model reliability" OR "MLOps"`
 
@@ -83,7 +84,7 @@ Job titles that confirm Family A exposure:
 
 **Why job postings work:** A company hiring for "model monitoring" has an adaptive model that needs monitoring. A company hiring for "AI governance" knows they have a governance gap. These are the warmest targets.
 
-**Signal Type 2 — Press Releases and Product Announcements**
+**Signal Type 2  --  Press Releases and Product Announcements**
 
 Search: `[Company] "AI" "real-time" "adaptive" OR "dynamic" OR "continuously learning" site:prnewswire.com OR site:businesswire.com`
 
@@ -95,7 +96,7 @@ Qualifying language:
 - "AI-powered decisioning"
 - "model updates automatically"
 
-**Signal Type 3 — Regulatory Filings**
+**Signal Type 3  --  Regulatory Filings**
 
 For insurance companies: NAIC regulatory filings, state insurance commissioner filings, annual reports (10-K for public companies)
 
@@ -105,7 +106,7 @@ For autonomous vehicles: NHTSA safety filings, California DMV AV testing reports
 
 For medical AI: FDA 510(k) clearances mentioning adaptive algorithms, De Novo classifications
 
-**Signal Type 4 — Conference Appearances**
+**Signal Type 4  --  Conference Appearances**
 
 Search for company employees speaking at:
 - InsureTech Connect, RIMS, AI in Insurance Summit
@@ -114,21 +115,22 @@ Search for company employees speaking at:
 - CES, AV Summit (autonomous vehicles)
 - HLTH, HIMSS (medical AI)
 
-Speakers who present on: adaptive AI, model governance, AI reliability, regulatory compliance for AI — these people feel the pain. They're the champions.
+Speakers who present on: adaptive AI, model governance, AI reliability, regulatory compliance for AI  --  these people feel the pain. They're the champions.
 
-**Signal Type 5 — Patent Filings**
+**Signal Type 5  --  Patent Filings**
 
 Search USPTO/Google Patents: `[Company] "machine learning" "adaptive" "governance" OR "monitoring" OR "constraint"`
 
-Companies filing adjacent patents know the space — they're likely implementing something that overlaps with Family A or B.
+Companies filing adjacent patents know the space  --  they're likely implementing something that overlaps with Family A or B.
 
-**Signal Type 6 — Published Research and Technical Blog Posts**
+**Signal Type 6  --  Published Research and Technical Blog Posts**
 
 Search: `[Company] engineering blog "model" "drift" OR "governance" OR "monitoring" OR "rollback"`
 
 Companies publishing on model drift, data drift, or model governance are actively thinking about the problem Family B solves.
 
-**Output:** `raw_targets` with qualifying signals and sources per company
+### Output
+`raw_targets` with qualifying signals and sources per company
 
 ---
 
@@ -148,7 +150,8 @@ Companies publishing on model drift, data drift, or model governance are activel
 
 4. **Assign confidence score.** HIGH (confirmed deployment via press or filing), MEDIUM (strong signals via job postings or technical blog), LOW (inferred from product description).
 
-**Output:** Updated `raw_targets` with exposure fields
+### Output
+Updated `raw_targets` with exposure fields
 
 ---
 
@@ -162,7 +165,8 @@ Companies publishing on model drift, data drift, or model governance are activel
 
 4. **Note recent enforcement actions.** Has any company in this sector been cited or fined for AI-related governance failures? This becomes a reference point in outreach.
 
-**Output:** `sector_intelligence`, `signal_summary`, `scan_report`
+### Output
+`sector_intelligence`, `signal_summary`, `scan_report`
 
 ---
 
@@ -180,15 +184,15 @@ Done when:
 
 | Failure Mode | Response |
 |---|---|
-| Company has no public AI disclosures | Mark LOW confidence — include in list with note "stealth deployment possible" |
-| Sector has <10 qualifying targets | Expand geography or lower company size threshold — flag for review |
-| Regulatory framework unclear | Flag — note that outreach should lead with technology proof, not regulatory urgency |
+| Company has no public AI disclosures | Mark LOW confidence  --  include in list with note "stealth deployment possible" |
+| Sector has <10 qualifying targets | Expand geography or lower company size threshold  --  flag for review |
+| Regulatory framework unclear | Flag  --  note that outreach should lead with technology proof, not regulatory urgency |
 
 ## State Persistence
 
-- `sector_registry`: All sectors scanned — companies found, signal types, scan date
-- `signal_library`: Qualifying signal patterns per sector — improves scan accuracy over time
-- `regulatory_calendar`: Upcoming enforcement deadlines by sector — drives urgency timing
+- `sector_registry`: All sectors scanned  --  companies found, signal types, scan date
+- `signal_library`: Qualifying signal patterns per sector  --  improves scan accuracy over time
+- `regulatory_calendar`: Upcoming enforcement deadlines by sector  --  drives urgency timing
 
 ---
 

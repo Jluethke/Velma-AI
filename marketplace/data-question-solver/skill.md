@@ -33,21 +33,21 @@
 
 ### Phase 1: Question Clarification
 
-**Entry Criteria:**
+### Entry Criteria
 - Business question is provided in natural language.
 - Audience context is known or can be inferred.
 
-**Actions:**
+### Actions
 1. Parse the business question to extract: primary metric(s), dimensions (how to slice the data), filters (constraints), and time period.
 2. Identify the business decision this question informs. Clarify success criteria: what answer would be "good enough"? What precision is required?
 3. Check for ambiguity: does "revenue" mean gross or net? Does "customer" mean unique individuals or accounts? Document assumptions.
 4. Determine if the question requires predictive analysis, trend analysis, or snapshot analysis.
 5. Validate that the question is answerable with available data (or flag data gaps for Phase 2).
 
-**Output:**
+### Output
 - `clarified_question` object with fields: primary_metric, dimensions, filters, time_period, business_context, success_criteria, analysis_type, assumptions.
 
-**Quality Gate:**
+### Quality Gate
 - The clarified question is unambiguous and could be handed to a SQL developer without further clarification.
 - All assumptions are documented with explicit values (e.g., "null revenue treated as 0" not "nulls handled").
 - Success criteria are testable and measurable (e.g., "accuracy within 5%" not "accurate").
@@ -57,21 +57,21 @@
 
 ### Phase 1.5: Stakeholder Alignment Checkpoint
 
-**Entry Criteria:**
+### Entry Criteria
 - Clarified question is complete.
 - Success criteria are documented.
 
-**Actions:**
+### Actions
 1. Schedule a brief alignment meeting or async review with key stakeholders (question originator, data owner, business analyst).
 2. Present the clarified question, metrics, dimensions, filters, and success criteria.
 3. Confirm that the interpretation matches stakeholder intent. Document any corrections or refinements.
 4. Obtain explicit sign-off (written or recorded) that the clarified question is correct before proceeding to Phase 2.
 5. If stakeholders request changes, iterate on the clarified question and re-present until alignment is achieved.
 
-**Output:**
+### Output
 - `stakeholder_sign_off` (string): Confirmation that clarified question has been reviewed and approved. Include date, stakeholder names, and any conditions or caveats.
 
-**Quality Gate:**
+### Quality Gate
 - Stakeholder sign-off is documented and dated.
 - No ambiguity remains about what the solution should deliver.
 - Verified by: written confirmation (email, document, or meeting notes).
@@ -80,11 +80,11 @@
 
 ### Phase 2: Data Governance and Compliance Assessment
 
-**Entry Criteria:**
+### Entry Criteria
 - Clarified question has stakeholder sign-off.
 - Known constraints are documented.
 
-**Actions:**
+### Actions
 1. Identify PII (personally identifiable information) in the data: which columns contain sensitive data (names, emails, phone numbers, SSNs, etc.)? Document handling requirements (anonymization, encryption, access restrictions).
 2. Determine regulatory compliance requirements: does the data fall under GDPR, HIPAA, CCPA, or other regulations? Document specific requirements (e.g., data retention, consent, audit trails).
 3. Identify access controls: who is allowed to see the data? Are there role-based restrictions? Document approval process for data access.
@@ -93,10 +93,10 @@
 6. Identify any contractual or licensing constraints on data use (e.g., third-party data with usage restrictions).
 7. Plan for audit and logging: what actions should be logged for compliance? How long should logs be retained?
 
-**Output:**
+### Output
 - `governance_assessment` object with fields: pii_columns, pii_handling_strategy, regulatory_requirements, access_controls, data_residency, data_owner, stewardship_plan, licensing_constraints, audit_logging_plan.
 
-**Quality Gate:**
+### Quality Gate
 - All PII is identified and handling strategy is documented.
 - Regulatory requirements are mapped to specific data handling practices.
 - Access controls are defined and approved by data owner.
@@ -107,11 +107,11 @@
 
 ### Phase 3: Data Source Identification
 
-**Entry Criteria:**
+### Entry Criteria
 - Governance assessment is complete.
 - Data catalog or schema documentation is available (or assumed).
 
-**Actions:**
+### Actions
 1. Map each metric and dimension in the clarified question to source tables and columns.
 2. Identify join keys and relationships between tables. Document any many-to-many relationships or slowly changing dimensions.
 3. Check for data gaps: are all required fields available? Do any fields need to be derived or calculated?
@@ -120,10 +120,10 @@
 6. Validate that data sources comply with governance requirements: are PII fields encrypted? Are access controls in place? Are audit logs available?
 7. Document any access restrictions or licensing constraints that affect data handling.
 
-**Output:**
+### Output
 - `data_sources_identified` array with objects: table_name, columns_needed, join_keys, source_system, last_updated, freshness_requirement, access_restrictions, data_quality_notes, governance_compliance.
 
-**Quality Gate:**
+### Quality Gate
 - Every metric and dimension from the clarified question maps to at least one source field.
 - Join logic is documented and validated (no circular dependencies).
 - Data gaps are flagged; if critical gaps exist, escalate to stakeholder for alternative question or data acquisition.
@@ -134,12 +134,12 @@
 
 ### Phase 4: Data Quality Check Design
 
-**Entry Criteria:**
+### Entry Criteria
 - Data sources are identified.
 - SLA requirements and known constraints are documented.
 - Governance requirements are understood.
 
-**Actions:**
+### Actions
 1. For each source table, define quality checks: null checks (which columns must be non-null?), range checks (valid value ranges), uniqueness checks (primary keys, natural keys), and referential integrity checks (foreign keys).
 2. Define thresholds: what percentage of records can fail a check before the pipeline halts? (e.g., "if >5% of rows are null, abort"). Document rationale for each threshold.
 3. Identify business rule checks: domain-specific validations (e.g., "end_date must be >= start_date", "revenue must be positive").
@@ -148,10 +148,10 @@
 6. Plan for data quality monitoring: which checks should be logged and tracked over time? Define alerting thresholds for anomalies.
 7. Design automated test cases for quality checks: create sample data sets that should pass and fail each check. Document expected behavior.
 
-**Output:**
+### Output
 - `quality_checks_spec` array with objects: table_name, check_type (null, range, uniqueness, referential, business_rule), check_definition, threshold, failure_response, monitoring_flag, test_cases.
 
-**Quality Gate:**
+### Quality Gate
 - Every source table has at least 2-3 quality checks.
 - Thresholds are realistic and documented with rationale (e.g., "based on historical data quality: 2% nulls observed, threshold set to 5%").
 - Failure responses are actionable and specific (e.g., "if >5% nulls: log error, pause pipeline, notify data owner" not "investigate").
@@ -162,13 +162,13 @@
 
 ### Phase 5: Data Pipeline Design
 
-**Entry Criteria:**
+### Entry Criteria
 - Data sources are identified.
 - Quality checks are defined.
 - Freshness and SLA requirements are known.
 - Governance requirements are documented.
 
-**Actions:**
+### Actions
 1. Design the Extract phase: how will data be pulled from source systems? (e.g., full load, incremental, CDC). Document frequency and timing. Ensure extraction respects access controls and audit logging.
 2. Design the Transform phase: what calculations, aggregations, joins, and derivations are needed? Group transformations into logical steps (e.g., "clean customer data," "calculate metrics," "apply business rules"). Include PII masking or encryption steps if required.
 3. Integrate quality checks into the pipeline: where should checks run? (e.g., after extract, after transform, before load). Define check order and dependencies. Document what happens if a check fails (halt, log, continue).
@@ -178,10 +178,10 @@
 7. Plan for monitoring and alerting: define metrics to track (row counts, execution time, quality check results, data freshness). Set up alerts for anomalies (e.g., "row count drops >20%", "execution time exceeds SLA", "quality check fails"). Document alert recipients and escalation paths.
 8. Estimate costs: calculate compute (CPU, memory), storage (data volume, retention), and licensing costs for the pipeline and visualization. Document assumptions and provide cost breakdown by component.
 
-**Output:**
+### Output
 - `pipeline_design` object with fields: extract_strategy, transform_steps (array of step objects with name, input, output, logic, governance_controls), quality_check_integration, load_strategy, dependencies, dependency_graph, error_handling, monitoring_plan, alerting_thresholds, cost_estimate.
 
-**Quality Gate:**
+### Quality Gate
 - The pipeline is acyclic (no circular dependencies).
 - Every transform step has a clear input and output.
 - Quality checks are integrated at appropriate points with defined failure responses.
@@ -197,11 +197,11 @@
 
 ### Phase 6: SQL Query Development and Validation
 
-**Entry Criteria:**
+### Entry Criteria
 - Pipeline design is complete.
 - Data sources and transformations are defined.
 
-**Actions:**
+### Actions
 1. Write SQL for each transform step in the pipeline. Start with the simplest queries (e.g., table scans, filters) and build up to complex aggregations and joins.
 2. For each query, document: purpose, input tables, output columns, filters, aggregations, and any assumptions (e.g., "assumes no duplicate customer IDs").
 3. Create automated test cases for each query: define sample input data, expected output, and edge cases. Document test results.
@@ -212,10 +212,10 @@
 8. Document query dependencies: which queries must run before others? Create a dependency graph.
 9. Set up automated regression testing: create a test suite that runs each query against known inputs and validates outputs. This catches regressions when source data or business rules change.
 
-**Output:**
+### Output
 - `sql_queries` array with objects: query_name, purpose, input_tables, output_columns, sql_code, execution_plan, expected_row_count, edge_cases_handled, test_cases, test_results, optimization_notes, dependencies.
 
-**Quality Gate:**
+### Quality Gate
 - Every query has been tested and produces expected results.
 - Queries are readable and maintainable (use CTEs, meaningful aliases, comments).
 - Edge cases are handled and documented (nulls, missing joins, unexpected values).
@@ -229,12 +229,12 @@
 
 ### Phase 7: Visualization and Metrics Design
 
-**Entry Criteria:**
+### Entry Criteria
 - SQL queries are validated and produce final results.
 - Audience context is known.
 - Governance requirements are understood.
 
-**Actions:**
+### Actions
 1. Review the query results: what patterns emerge? What is the shape of the data (e.g., time series, categorical distribution, correlation)?
 2. Select visualization type(s) based on the data shape and business question: time series → line chart, comparison → bar chart, distribution → histogram, relationships → scatter plot, composition → pie/stacked bar, etc.
 3. Define dimensions and measures for the visualization: which columns go on axes? Which are filtered or colored? Which are interactive?
@@ -244,10 +244,10 @@
 7. Apply governance controls: ensure PII is masked or hidden. Implement row-level security if needed. Document access controls for the visualization.
 8. Plan for refresh: how often should the visualization update? Should it be real-time, daily, or on-demand? Document refresh frequency and SLA.
 
-**Output:**
+### Output
 - `visualization_spec` object with fields: visualization_type, dimensions, measures, filters, interactivity, metrics_kpis, annotations, refresh_frequency, audience_notes, governance_controls, access_restrictions.
 
-**Quality Gate:**
+### Quality Gate
 - The visualization directly answers the business question.
 - Visualization type is justified by data shape and analysis type (e.g., "line chart chosen for time series trend analysis").
 - Interactivity is intuitive and doesn't overwhelm the user (no more than 5-7 filters).
@@ -261,12 +261,12 @@
 
 ### Phase 8: Documentation and Validation
 
-**Entry Criteria:**
+### Entry Criteria
 - All previous phases are complete.
 - Solution artifacts (clarified question, pipeline design, SQL queries, visualization spec) are ready.
 - Stakeholder sign-off has been obtained.
 
-**Actions:**
+### Actions
 1. Create a data lineage diagram or document: show how data flows from source systems through transforms to final visualization. Include quality checks at each step. Document data ownership and stewardship at each stage.
 2. Document all assumptions made during the solution design: data freshness, null handling, business rule interpretations, etc. Include rationale for each assumption.
 3. Write a maintenance guide: who owns the pipeline? How often should it be reviewed? What should be monitored? Include escalation contacts and procedures.
@@ -277,10 +277,10 @@
 8. Validate the complete solution with stakeholders: does it answer the business question? Are there any missing pieces? Obtain final sign-off.
 9. Document limitations and caveats: what the solution does and does not cover. Include known data quality issues and their impact on results.
 
-**Output:**
+### Output
 - `solution_documentation` string containing: executive summary, data lineage diagram, assumptions with rationale, maintenance guide, refresh schedule, troubleshooting runbook, cost estimate with ROI, as-built deviations, limitations and caveats, stakeholder sign-off.
 
-**Quality Gate:**
+### Quality Gate
 - A new team member could understand and maintain the solution from the documentation alone.
 - All assumptions are explicit and justified with rationale.
 - Maintenance guide includes specific contacts, escalation procedures, and review frequency.
@@ -292,6 +292,15 @@
 - Verified by: stakeholder review, data governance team review, technical review by data engineer.
 
 ---
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Transform a business question into a complete data solution including SQL querie, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 

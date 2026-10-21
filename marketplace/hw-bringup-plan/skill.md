@@ -79,6 +79,15 @@ Critical circuit steps.
 
 ---
 
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Write a staged bring-up plan: unpowered checks, current-limited first power, rai, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
+
 ## Exit Criteria
 
 DONE when the plan takes a new board from unpowered to the real system with every critical circuit and every interlock fault exercised before the real system is connected, and efficiency measured at three loads.

@@ -18,6 +18,7 @@ PHASE 5: OPTIMIZE      --> Performance tuning, goal evolution, self-directed lea
 - **task_types**: list[string] -- Types of tasks the swarm will handle
 - **governance_config**: object (optional) -- Trust levels, phase gating, constraint enforcement
 - **concurrency_limits**: object (optional) -- Max workers, specialists, subtasks per specialist
+- `task_description`: (from manifest)
 
 ## Outputs
 
@@ -25,12 +26,15 @@ PHASE 5: OPTIMIZE      --> Performance tuning, goal evolution, self-directed lea
 - **dispatch_system**: object -- Task planner + coordinator with routing algorithm
 - **lifecycle_manager**: object -- Agent state machine with governance gating
 - **swarm_config**: object -- All parameters, limits, and integration points
+- `guidance`: (from manifest)
+- `code_patterns`: (from manifest)
 
 ## Execution
 
 ### Phase 1: DEFINE -- Agents, Roles, Capabilities
-**Entry criteria:** A multi-agent need has been identified with at least 2 distinct agent roles.
-**Actions:**
+### Entry Criteria
+A multi-agent need has been identified with at least 2 distinct agent roles.
+### Actions
 1. Define each agent using the AgentProtocol interface (PEP 544):
    ```python
    @runtime_checkable
@@ -53,12 +57,15 @@ PHASE 5: OPTIMIZE      --> Performance tuning, goal evolution, self-directed lea
    ACTIVE -> SUSPENDED (pause mid-work)
    Any -> TERMINATED (irreversible)
    ```
-**Output:** Agent definitions with descriptors, domain mappings, and concrete implementations.
-**Quality gate:** Every agent implements AgentProtocol. Every agent has at least one domain or capability. State machine transitions are valid (no TERMINATED -> anything).
+### Output
+Agent definitions with descriptors, domain mappings, and concrete implementations.
+### Quality Gate
+Every agent implements AgentProtocol. Every agent has at least one domain or capability. State machine transitions are valid (no TERMINATED -> anything).
 
 ### Phase 2: COORDINATE -- Routing & Trust
-**Entry criteria:** Agent definitions complete with domains and capabilities.
-**Actions:**
+### Entry Criteria
+Agent definitions complete with domains and capabilities.
+### Actions
 1. Design the task routing algorithm (priority cascade, first match wins):
    ```
    1. Domain match:     registry.find_by_domain(task.domain)
@@ -81,12 +88,15 @@ PHASE 5: OPTIMIZE      --> Performance tuning, goal evolution, self-directed lea
    task_id = coordinator.submit_from_agent(agent_id, description, domain, priority, parent_task_id)
    ```
 5. Set concurrency parameters: `max_per_tick=1`, `max_workers=4`
-**Output:** Routing algorithm, trust inheritance rules, specialist config, concurrency parameters.
-**Quality gate:** Routing has a fallback for every scenario (no task gets permanently stuck). Trust can never flow upward. Specialist limits are finite.
+### Output
+Routing algorithm, trust inheritance rules, specialist config, concurrency parameters.
+### Quality Gate
+Routing has a fallback for every scenario (no task gets permanently stuck). Trust can never flow upward. Specialist limits are finite.
 
 ### Phase 3: IMPLEMENT -- Lifecycle & Dispatch
-**Entry criteria:** Routing algorithm and trust rules defined.
-**Actions:**
+### Entry Criteria
+Routing algorithm and trust rules defined.
+### Actions
 1. Build the TaskPlanner with governance gating:
    - `submit(task)`: Governance gate (only NOMINAL and DEGRADED allow submissions)
    - `decompose(parent_id, subtasks)`: Break parent into children with links
@@ -110,12 +120,15 @@ PHASE 5: OPTIMIZE      --> Performance tuning, goal evolution, self-directed lea
    spawn(config) -> SpecialistAgent -> ThreadPoolExecutor -> background execution -> result -> learning
    ```
 5. Wire event bus integration (TASK_DISPATCHED, TASK_COMPLETED, TASK_FAILED, GOAL_EVOLVED, SPECIALIST_SPAWNED, SPECIALIST_COMPLETED)
-**Output:** Working task planner, coordinator, specialist spawner, and event integration.
-**Quality gate:** Governance gate blocks tasks in restricted phases. Priority dispatch is deterministic. Parent-child completion propagates correctly. Events fire on all state transitions.
+### Output
+Working task planner, coordinator, specialist spawner, and event integration.
+### Quality Gate
+Governance gate blocks tasks in restricted phases. Priority dispatch is deterministic. Parent-child completion propagates correctly. Events fire on all state transitions.
 
 ### Phase 4: VALIDATE -- Test Interactions
-**Entry criteria:** All components implemented and wired.
-**Actions:**
+### Entry Criteria
+All components implemented and wired.
+### Actions
 1. Test agent state transitions:
    - IDLE -> ACTIVE -> IDLE on success
    - IDLE -> ACTIVE -> IDLE on failure (agent survives, not terminated)
@@ -135,12 +148,15 @@ PHASE 5: OPTIMIZE      --> Performance tuning, goal evolution, self-directed lea
    - FROZEN/higher: tasks denied, counter increments
 6. Test self-recursive generation:
    - Queue empty -> exercises generated from goals -> queue has tasks
-**Output:** Test results confirming all interactions work correctly.
-**Quality gate:** All state transitions valid. Routing never hangs. Trust never flows upward. Parent completion is deterministic. Governance gate blocks appropriately.
+### Output
+Test results confirming all interactions work correctly.
+### Quality Gate
+All state transitions valid. Routing never hangs. Trust never flows upward. Parent completion is deterministic. Governance gate blocks appropriately.
 
 ### Phase 5: OPTIMIZE -- Performance & Evolution
-**Entry criteria:** All tests passing, basic swarm operational.
-**Actions:**
+### Entry Criteria
+All tests passing, basic swarm operational.
+### Actions
 1. Tune dispatch parameters:
    - `exercises_per_empty_tick`: 2 (exercises generated when queue empty)
    - `goal_evolution_interval`: 25 (completed exercises before goals can evolve)
@@ -159,8 +175,19 @@ PHASE 5: OPTIMIZE      --> Performance tuning, goal evolution, self-directed lea
    ```
 4. Add performance tracking: success_rate per agent, no_agent_found counter, dispatch latency
 5. Connect to TickEngine: `engine.set_task_evaluator(coordinator.dispatch_cycle)`
-**Output:** Optimized swarm with self-directed learning, goal evolution, and performance metrics.
-**Quality gate:** Learning loop closes (task outcomes feed back into goal evolution). Performance metrics are being collected. TickEngine drives the dispatch cycle.
+### Output
+Optimized swarm with self-directed learning, goal evolution, and performance metrics.
+### Quality Gate
+Learning loop closes (task outcomes feed back into goal evolution). Performance metrics are being collected. TickEngine drives the dispatch cycle.
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Self-recursive multi-agent swarm coordination with ORPA task decomposition and s, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 
@@ -245,3 +272,7 @@ else             -> LOW
 7. Optional: SpecialistSpawner for multi-domain decomposition
 8. Optional: SystemGovernor for governance gating
 9. Connect to TickEngine -- engine.set_task_evaluator(coordinator.dispatch_cycle)
+
+---
+
+Copyright 2024-present The Wayfinder Trust. All rights reserved.

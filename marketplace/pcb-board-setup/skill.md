@@ -85,6 +85,15 @@ Board with outline, stackup, and rules.
 
 ---
 
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Generate the starting KiCad 9 board from a reviewed SKiDL design and set outline, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
+
 ## Exit Criteria
 
 DONE when the board file carries the correct outline, stackup, cited fab rules, current-derived power widths, pair classes, and isolation keepouts, with every footprint present and unplaced.

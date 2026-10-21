@@ -1,6 +1,6 @@
 # Post-Mortem Runner
 
-> **Starter Skill** — Free to use. Royalties to original creator on derivatives. Build on this.
+> **Starter Skill**  --  Free to use. Royalties to original creator on derivatives. Build on this.
 
 Foundation pattern for running a structured post-mortem on anything that went wrong (or right). Takes the incident/event description, timeline, people involved, and outcome, then produces: root cause analysis (5 whys), contributing factors, what worked well, what failed, action items with owners, and a one-paragraph stakeholder summary. Blameless by design. Fork this for: incident response, project failures, lost deals, product launches, event reviews.
 
@@ -36,10 +36,10 @@ PHASE 4: COMMIT     --> Produce action items, stakeholder summary, and the final
 
 ### Phase 1: GATHER -- Build the Factual Record
 
-**Entry criteria:** Event description and outcome are provided.
+### Entry Criteria
+Event description and outcome are provided.
 
-**Actions:**
-
+### Actions
 1. Establish the timeline. If provided, validate it for completeness. If not provided, extract chronological events from the description:
    - **Detection**: when was the problem/event first noticed? By whom?
    - **Escalation**: when were additional people brought in?
@@ -49,7 +49,7 @@ PHASE 4: COMMIT     --> Produce action items, stakeholder summary, and the final
 
 2. Identify the gap between expected and actual outcome. Quantify it if possible (e.g., "expected 99.9% uptime, actual was 94.2%" or "expected to close the deal, lost to competitor on price").
 
-3. List all people involved and their roles during the event. Note: this is NOT about who is to blame — it is about understanding who had what information and what authority at each point.
+3. List all people involved and their roles during the event. Note: this is NOT about who is to blame  --  it is about understanding who had what information and what authority at each point.
 
 4. Classify the severity if not provided:
    - **Critical**: customer-facing impact, data loss, financial loss, safety risk.
@@ -59,18 +59,20 @@ PHASE 4: COMMIT     --> Produce action items, stakeholder summary, and the final
 
 5. Set the blameless tone: document facts and decisions, not judgments. "The deployment was pushed at 4 PM on Friday" is a fact. "The deployment was irresponsibly pushed" is a judgment. Facts only.
 
-**Output:** Validated timeline, outcome gap, people/roles map, severity classification.
+### Output
+Validated timeline, outcome gap, people/roles map, severity classification.
 
-**Quality gate:** Timeline has at least 4 entries (detection, escalation, response, resolution). Outcome gap is quantified or clearly described. All entries are factual, not judgmental.
+### Quality Gate
+Timeline has at least 4 entries (detection, escalation, response, resolution). Outcome gap is quantified or clearly described. All entries are factual, not judgmental.
 
 ---
 
 ### Phase 2: ANALYZE -- Find Root Causes
 
-**Entry criteria:** Factual record is complete.
+### Entry Criteria
+Factual record is complete.
 
-**Actions:**
-
+### Actions
 1. Run the **5 Whys** from the outcome gap:
    - Why 1: Why did the [negative outcome] happen? Answer with the most direct cause.
    - Why 2: Why did [Why 1 answer] happen?
@@ -91,40 +93,44 @@ PHASE 4: COMMIT     --> Produce action items, stakeholder summary, and the final
 
 4. Distinguish between **proximate cause** (the thing that triggered the event) and **root cause** (the underlying condition that allowed the trigger to cause harm).
 
-**Output:** 5 Whys chain, contributing factors list with categories and systemic flags, proximate vs. root cause distinction.
+### Output
+5 Whys chain, contributing factors list with categories and systemic flags, proximate vs. root cause distinction.
 
-**Quality gate:** 5 Whys chain reaches at least Why 3. At least 3 contributing factors identified. Root cause is distinct from proximate cause. No "why" answer assigns blame to a person.
+### Quality Gate
+5 Whys chain reaches at least Why 3. At least 3 contributing factors identified. Root cause is distinct from proximate cause. No "why" answer assigns blame to a person.
 
 ---
 
 ### Phase 3: EXTRACT -- Lessons Learned
 
-**Entry criteria:** Root cause analysis is complete.
+### Entry Criteria
+Root cause analysis is complete.
 
-**Actions:**
-
-1. **What worked well**: identify 2-4 things that went RIGHT during the event. Even in failures, something worked — fast detection, good communication, effective workaround, calm response. Acknowledge these explicitly.
+### Actions
+1. **What worked well**: identify 2-4 things that went RIGHT during the event. Even in failures, something worked  --  fast detection, good communication, effective workaround, calm response. Acknowledge these explicitly.
 
 2. **What failed**: identify 3-5 things that went WRONG, tied to the root causes and contributing factors. Be specific: not "communication was bad" but "the on-call engineer was not notified for 45 minutes because the escalation path was outdated."
 
-3. **What was lucky**: identify anything where the outcome could have been worse but was not, due to luck rather than design. Lucky breaks mask future risk — they need to be addressed so that luck is not required next time.
+3. **What was lucky**: identify anything where the outcome could have been worse but was not, due to luck rather than design. Lucky breaks mask future risk  --  they need to be addressed so that luck is not required next time.
 
 4. **Lessons learned**: for each failure point, write a concrete lesson. Format: "We learned that [observation], so we will [specific change]." Each lesson must be actionable and preventive, not just observational.
 
 5. **Pattern check**: has this type of event happened before? If so, why did previous corrective actions not prevent this recurrence? This identifies action items that need teeth.
 
-**Output:** What worked, what failed, what was lucky, lessons learned, pattern check.
+### Output
+What worked, what failed, what was lucky, lessons learned, pattern check.
 
-**Quality gate:** At least 2 "worked well" items (blameless means acknowledging good too). Each "what failed" ties to a root cause or contributing factor. Every lesson contains a "so we will" action. Lucky items are identified as risk gaps.
+### Quality Gate
+At least 2 "worked well" items (blameless means acknowledging good too). Each "what failed" ties to a root cause or contributing factor. Every lesson contains a "so we will" action. Lucky items are identified as risk gaps.
 
 ---
 
 ### Phase 4: COMMIT -- Produce Deliverables
 
-**Entry criteria:** Lessons are extracted.
+### Entry Criteria
+Lessons are extracted.
 
-**Actions:**
-
+### Actions
 1. **Action items**: for each lesson learned, create an action item with:
    - **Description**: specific, concrete task.
    - **Owner**: person or team responsible (from people_involved or by role).
@@ -147,11 +153,22 @@ PHASE 4: COMMIT     --> Produce action items, stakeholder summary, and the final
    - Prevention checklist
    - Stakeholder summary
 
-**Output:** Action items with owners, prevention checklist, stakeholder summary, full report.
+### Output
+Action items with owners, prevention checklist, stakeholder summary, full report.
 
-**Quality gate:** Every lesson has a corresponding action item. Stakeholder summary is under 100 words. Action items have owners and deadlines. Prevention checklist is reusable (not event-specific).
+### Quality Gate
+Every lesson has a corresponding action item. Stakeholder summary is under 100 words. Action items have owners and deadlines. Prevention checklist is reusable (not event-specific).
 
 ---
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Run a structured, blameless post-mortem: root cause analysis (5 Whys), contribut, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 
@@ -185,7 +202,7 @@ The skill is DONE when:
 
 | Level | Question | Purpose |
 |---|---|---|
-| Why 1 | Why did [outcome] happen? | Proximate cause — the trigger |
+| Why 1 | Why did [outcome] happen? | Proximate cause  --  the trigger |
 | Why 2 | Why did [Why 1] happen? | Immediate enabling condition |
 | Why 3 | Why did [Why 2] happen? | Systemic gap usually appears here |
 | Why 4 | Why did [Why 3] happen? | Process or cultural root |

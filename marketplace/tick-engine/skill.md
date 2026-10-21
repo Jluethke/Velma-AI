@@ -18,18 +18,23 @@ PHASE 5: MONITOR       --> Add statistics, tick latency tracking, health indicat
 - **evaluators**: list[string] -- Which evaluators to wire (task, governance, resource)
 - **hook_requirements**: list[object] (optional) -- Pre-tick and post-tick hooks to register
 - **observer_count**: int (optional) -- Expected number of tick observers
+- `task_description`: (from manifest)
 
 ## Outputs
 
 - **tick_engine**: object -- Configured engine with hooks, evaluators, and observers
 - **tick_snapshot**: object -- Per-tick state snapshot broadcast to all observers
 - **statistics**: object -- Tick count, latency, evaluator timing, error counts
+- `guidance`: (from manifest)
+- `code_patterns`: (from manifest)
+- `implementation_example`: (from manifest)
 
 ## Execution
 
 ### Phase 1: REQUIREMENTS -- Identify Needs
-**Entry criteria:** A system needs a central heartbeat for multi-agent or multi-subsystem coordination.
-**Actions:**
+### Entry Criteria
+A system needs a central heartbeat for multi-agent or multi-subsystem coordination.
+### Actions
 1. Determine tick rate based on system requirements:
    - Fast (1-5s): real-time monitoring, trading systems
    - Medium (10-30s): agent coordination, training loops
@@ -41,12 +46,15 @@ PHASE 5: MONITOR       --> Add statistics, tick latency tracking, health indicat
 3. Identify pre-tick hooks (state preparation, cache refresh, memory priming)
 4. Identify post-tick hooks (learning loops, disk I/O, memory queries)
 5. Count expected observers (subsystems that need tick snapshots)
-**Output:** Tick rate, evaluator list, hook list, observer requirements.
-**Quality gate:** Tick rate is finite and positive. At least one evaluator or hook is defined. Heavy operations assigned to post-tick hooks (outside lock).
+### Output
+Tick rate, evaluator list, hook list, observer requirements.
+### Quality Gate
+Tick rate is finite and positive. At least one evaluator or hook is defined. Heavy operations assigned to post-tick hooks (outside lock).
 
 ### Phase 2: DESIGN -- Define Architecture
-**Entry criteria:** Requirements identified with tick rate and evaluator list.
-**Actions:**
+### Entry Criteria
+Requirements identified with tick rate and evaluator list.
+### Actions
 1. Define the tick sequence:
    ```
    tick():
@@ -68,12 +76,15 @@ PHASE 5: MONITOR       --> Add statistics, tick latency tracking, health indicat
 3. Design background ticking: daemon thread with `Event.wait(timeout=tick_rate)` for clean shutdown signaling (NOT `time.sleep()`)
 4. Design pluggability: `set_task_evaluator()` and `set_governance_evaluator()` setter methods
 5. Define snapshot structure (tick count, timestamp, resource metrics, evaluator results)
-**Output:** Tick architecture specification with sequence, threading model, and snapshot format.
-**Quality gate:** LLM calls are in background threads (never block the tick). Lock scope is minimal. Shutdown uses Event signaling, not sleep.
+### Output
+Tick architecture specification with sequence, threading model, and snapshot format.
+### Quality Gate
+LLM calls are in background threads (never block the tick). Lock scope is minimal. Shutdown uses Event signaling, not sleep.
 
 ### Phase 3: IMPLEMENT -- Build the Engine
-**Entry criteria:** Architecture specification complete.
-**Actions:**
+### Entry Criteria
+Architecture specification complete.
+### Actions
 1. Implement the core tick method with `_tick_lock`:
    - Pre-tick hooks run under lock (fast operations only)
    - Task evaluator launches in daemon thread (non-blocking)
@@ -93,12 +104,15 @@ PHASE 5: MONITOR       --> Add statistics, tick latency tracking, health indicat
    - `add_pre_tick_hook(callback)`, `add_post_tick_hook(callback)`
    - `add_observer(callback)`
 5. Implement error isolation: each hook/observer wrapped in try/except, errors logged but never propagate
-**Output:** Working tick engine with all components implemented.
-**Quality gate:** Tick executes without blocking on LLM calls. Error in one hook doesn't crash the engine. Shutdown is clean (no orphaned threads).
+### Output
+Working tick engine with all components implemented.
+### Quality Gate
+Tick executes without blocking on LLM calls. Error in one hook doesn't crash the engine. Shutdown is clean (no orphaned threads).
 
 ### Phase 4: VALIDATE -- Test Behavior
-**Entry criteria:** Tick engine implemented with hooks and evaluators.
-**Actions:**
+### Entry Criteria
+Tick engine implemented with hooks and evaluators.
+### Actions
 1. Test timing accuracy: verify ticks fire at configured interval (+/- acceptable jitter)
 2. Test non-blocking behavior: simulate slow task evaluator, verify tick doesn't wait for it
 3. Test error isolation: throw exception in a hook, verify other hooks still execute
@@ -106,12 +120,15 @@ PHASE 5: MONITOR       --> Add statistics, tick latency tracking, health indicat
 5. Test observer notification: all registered observers receive snapshot after each tick
 6. Test shutdown: verify `Event.wait()` allows clean exit without hanging threads
 7. Test concurrent access: multiple threads calling tick-related methods simultaneously
-**Output:** Test results confirming timing, non-blocking, error isolation, and shutdown behavior.
-**Quality gate:** Ticks fire on schedule. Slow evaluators don't block. Hook errors are contained. Shutdown completes in < 5 seconds.
+### Output
+Test results confirming timing, non-blocking, error isolation, and shutdown behavior.
+### Quality Gate
+Ticks fire on schedule. Slow evaluators don't block. Hook errors are contained. Shutdown completes in < 5 seconds.
 
 ### Phase 5: MONITOR -- Statistics & Health
-**Entry criteria:** All validation tests passing.
-**Actions:**
+### Entry Criteria
+All validation tests passing.
+### Actions
 1. Add tick statistics tracking:
    - Total tick count
    - Average tick latency (time from tick start to snapshot creation)
@@ -130,8 +147,19 @@ PHASE 5: MONITOR       --> Add statistics, tick latency tracking, health indicat
    - Tick regularity (actual interval vs configured interval)
    - Lock contention detection
    - Memory growth per tick
-**Output:** Monitoring dashboard data with tick statistics, evaluator timing, and health indicators.
-**Quality gate:** All statistics are being collected. Health indicators have thresholds for alerting. No memory leaks detected across 1000+ ticks.
+### Output
+Monitoring dashboard data with tick statistics, evaluator timing, and health indicators.
+### Quality Gate
+All statistics are being collected. Health indicators have thresholds for alerting. No memory leaks detected across 1000+ ticks.
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Non-blocking, thread-safe discrete-time event loop with pluggable hooks, evaluat, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 
@@ -187,3 +215,7 @@ The tick engine is the heartbeat of a runtime system. Instead of reacting to eve
 - **Event Bus**: Tick observers can emit CognitiveEvents onto the bus. The bus is the fan-out mechanism; the tick engine is the clock.
 - **Task Decomposition**: The task evaluator callback is typically the TaskPlanner's dispatch loop.
 - **Reward Signals**: Post-tick hooks are where the learning loop applies reward signals from completed tasks.
+
+---
+
+Copyright 2024-present The Wayfinder Trust. All rights reserved.

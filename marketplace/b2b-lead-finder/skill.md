@@ -15,7 +15,7 @@ ACT     --> Output validated lead list with scores, reasoning, and ICP refinemen
 
 ## Inputs
 
-- **icp_definition**: object -- Ideal Customer Profile containing:
+- **`icp_definition`**: object -- Ideal Customer Profile containing:
   - `industry`: string[] -- Target industries (e.g., ["SaaS", "Fintech", "E-commerce"])
   - `employee_range`: {min: number, max: number} -- Company size bounds
   - `tech_stack`: string[] -- Required and preferred technologies
@@ -24,12 +24,12 @@ ACT     --> Output validated lead list with scores, reasoning, and ICP refinemen
   - `budget_signals`: string[] -- Funding stage, ARR range, or other budget indicators
   - `pain_points`: string[] -- Problems the product solves
   - `deal_breakers`: string[] -- Hard disqualifiers
-- **target_count**: integer -- Number of qualified leads to find (1-100)
-- **exclusion_list**: string[] -- Company names or domains to exclude (existing customers, past contacts, competitors)
+- **`target_count`**: integer -- Number of qualified leads to find (1-100)
+- **`exclusion_list`**: string[] -- Company names or domains to exclude (existing customers, past contacts, competitors)
 
 ## Outputs
 
-- **scored_lead_list**: array of objects -- Each containing:
+- **`scored_lead_list`**: array of objects -- Each containing:
   - `company_name`: string
   - `composite_score`: number (0-100)
   - `dimension_scores`: object (score per ICP dimension with reasoning)
@@ -37,31 +37,35 @@ ACT     --> Output validated lead list with scores, reasoning, and ICP refinemen
   - `key_contacts`: array of {name, title, channel}
   - `outreach_approach`: string (recommended angle)
   - `flags`: string[] (any concerns or notes)
-- **outreach_priorities**: array -- Ordered list with contact timing and channel recommendations
-- **icp_refinement_suggestions**: array of strings -- Data-driven suggestions to evolve the ICP
+- **`outreach_priorities`**: array -- Ordered list with contact timing and channel recommendations
+- **`icp_refinement_suggestions`**: array of strings -- Data-driven suggestions to evolve the ICP
 
 ## Execution
 
 ### OBSERVE: Gather Inputs and Context
 
-**Entry criteria:** ICP definition provided with at least industry + employee_range + one other dimension. Target count is a positive integer.
+### Entry Criteria
+ICP definition provided with at least industry + employee_range + one other dimension. Target count is a positive integer.
 
-**Actions:**
+### Actions
 1. Parse ICP definition into weighted scoring dimensions. Assign default weights if not specified: Industry (25%), Company Size (20%), Tech Stack (25%), Team Size (15%), Budget Signal (15%).
 2. Load exclusion list and normalize company names (lowercase, strip Inc/Corp/Ltd suffixes).
 3. Load past lead history from state persistence -- extract previously contacted companies, their scores, and conversion outcomes.
 4. Identify intent signals relevant to this ICP: job postings, technology adoption indicators, funding announcements, content engagement patterns.
 5. Define search parameters: what data sources to scan, what filters to apply.
 
-**Output:** Structured ICP scoring rubric with weights, normalized exclusion set, historical context summary.
+### Output
+Structured ICP scoring rubric with weights, normalized exclusion set, historical context summary.
 
-**Quality gate:** ICP rubric has at least 3 weighted dimensions totaling 100%. Exclusion list loaded and deduplicated. If ICP is incomplete (fewer than 3 dimensions), prompt for additional criteria before proceeding.
+### Quality Gate
+ICP rubric has at least 3 weighted dimensions totaling 100%. Exclusion list loaded and deduplicated. If ICP is incomplete (fewer than 3 dimensions), prompt for additional criteria before proceeding.
 
 ### REASON: Score and Evaluate Candidates
 
-**Entry criteria:** Scoring rubric is complete and validated. Candidate leads available for evaluation.
+### Entry Criteria
+Scoring rubric is complete and validated. Candidate leads available for evaluation.
 
-**Actions:**
+### Actions
 1. For each candidate lead, score against every ICP dimension independently (0 to dimension weight max).
 2. Apply dimension-specific scoring rules:
    - **Industry match**: Exact match = full points; adjacent industry = 60-80%; unrelated = 0.
@@ -75,15 +79,18 @@ ACT     --> Output validated lead list with scores, reasoning, and ICP refinemen
 6. Cross-reference against past lead history -- mark duplicates.
 7. Flag any leads with mixed signals (e.g., perfect tech fit but deal-breaker present).
 
-**Output:** Scored lead array with per-dimension breakdowns, fit tiers, duplicate/exclusion flags.
+### Output
+Scored lead array with per-dimension breakdowns, fit tiers, duplicate/exclusion flags.
 
-**Quality gate:** Every lead has a composite score and fit tier. No unscored dimensions. All exclusion list matches identified. If more than 50% of candidates score below 60, the search parameters may be too broad -- flag for OBSERVE loop-back.
+### Quality Gate
+Every lead has a composite score and fit tier. No unscored dimensions. All exclusion list matches identified. If more than 50% of candidates score below 60, the search parameters may be too broad -- flag for OBSERVE loop-back.
 
 ### PLAN: Rank and Prioritize
 
-**Entry criteria:** All candidate leads scored and validated. Duplicates and exclusions identified.
+### Entry Criteria
+All candidate leads scored and validated. Duplicates and exclusions identified.
 
-**Actions:**
+### Actions
 1. Remove disqualified and duplicate leads from the working set.
 2. Sort remaining leads by composite score (descending).
 3. If remaining leads < target_count, prepare widened search parameters for OBSERVE loop-back (relax one non-critical ICP dimension by 20%).
@@ -97,15 +104,18 @@ ACT     --> Output validated lead list with scores, reasoning, and ICP refinemen
    - Historical conversion data (which dimensions correlate most with conversion?)
    - Near-miss leads (what single dimension change would qualify them?)
 
-**Output:** Prioritized lead list with outreach approaches, ICP refinement suggestions.
+### Output
+Prioritized lead list with outreach approaches, ICP refinement suggestions.
 
-**Quality gate:** Final lead count meets target_count (or loop-back triggered). Every lead has an outreach approach and priority rank. At least 1 ICP refinement suggestion generated.
+### Quality Gate
+Final lead count meets target_count (or loop-back triggered). Every lead has an outreach approach and priority rank. At least 1 ICP refinement suggestion generated.
 
 ### ACT: Deliver Results
 
-**Entry criteria:** Prioritized lead list with outreach approaches finalized. ICP refinements identified.
+### Entry Criteria
+Prioritized lead list with outreach approaches finalized. ICP refinements identified.
 
-**Actions:**
+### Actions
 1. Format scored_lead_list with all required fields (company, score, dimensions, tier, contacts, approach, flags).
 2. Format outreach_priorities as an ordered action list with recommended timing and channel per lead.
 3. Format icp_refinement_suggestions with data-backed reasoning for each suggestion.
@@ -115,9 +125,11 @@ ACT     --> Output validated lead list with scores, reasoning, and ICP refinemen
    - Store scoring distribution statistics for trend analysis.
 5. Generate summary statistics: total candidates evaluated, pass rate, average score, tier distribution.
 
-**Output:** Complete output package (scored_lead_list, outreach_priorities, icp_refinement_suggestions) plus state update confirmation.
+### Output
+Complete output package (scored_lead_list, outreach_priorities, icp_refinement_suggestions) plus state update confirmation.
 
-**Quality gate:** Output contains exactly target_count leads (or all qualified leads if fewer exist, with explanation). Every lead has all required fields populated. State persistence confirmed.
+### Quality Gate
+Output contains exactly target_count leads (or all qualified leads if fewer exist, with explanation). Every lead has all required fields populated. State persistence confirmed.
 
 ## Exit Criteria
 

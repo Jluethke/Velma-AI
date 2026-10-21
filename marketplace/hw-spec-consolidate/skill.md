@@ -65,6 +65,15 @@
 
 ---
 
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Merge hardware requirements into one cross-checked board spec, decide which deli, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
+
 ## Exit Criteria
 
 DONE when `board_spec` is internally consistent, `product_scope` decides which branches run, and no assumption is hidden.

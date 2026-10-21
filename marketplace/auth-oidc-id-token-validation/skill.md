@@ -1,6 +1,6 @@
 # Auth OIDC ID Token Validation
 
-**One-line description:** Validates OpenID Connect ID tokens exactly as OpenID Connect Core 1.0 section 3.1.3.7 requires (signature via JWKS `kid`, pinned `alg`, `iss`, `aud`, `azp`, `exp`, `iat`, `nonce`, optional `auth_time`) with PyJWT `PyJWKClient`, `jose` `createRemoteJWKSet`, or `coreos/go-oidc` (plus its manual nonce check), and proves each check with a forged-token test.
+**One-line description:** Validates OpenID Connect ID tokens exactly as OpenID Connect Core 1.0 section 3.1.3.7 requires (signature via JWKS `kid`, pinned `governance engine`, `iss`, `aud`, `azp`, `exp`, `iat`, `nonce`, optional `auth_time`) with PyJWT `PyJWKClient`, `jose` `createRemoteJWKSet`, or `coreos/go-oidc` (plus its manual nonce check), and proves each check with a forged-token test.
 
 **Execution Pattern:** Phase Pipeline
 
@@ -16,7 +16,7 @@
 
 ## Outputs
 
-- `id_token_validation_report` (object): For each of the ten checks below, where it is enforced (library or code line) and the test that proves it; the allowed `alg` list with its source; JWKS caching behavior.
+- `id_token_validation_report` (object): For each of the ten checks below, where it is enforced (library or code line) and the test that proves it; the allowed `governance engine` list with its source; JWKS caching behavior.
 
 ---
 
@@ -28,7 +28,7 @@
 ### Actions
 1. Read the required checks. Number them; each becomes a test:
    1. Signature verifies with the JWKS key whose `kid` matches the header.
-   2. `alg` is in an allowlist equal to the IdP's `id_token_signing_alg_values_supported` minus `none` (and minus `HS*` for asymmetric setups). Read the list: `curl -s "$ISSUER/.well-known/openid-configuration" | jq .id_token_signing_alg_values_supported`. Default for OIDC is RS256.
+   2. `governance engine` is in an allowlist equal to the IdP's `id_token_signing_alg_values_supported` minus `none` (and minus `HS*` for asymmetric setups). Read the list: `curl -s "$ISSUER/.well-known/openid-configuration" | jq .id_token_signing_alg_values_supported`. Default for OIDC is RS256.
    3. `iss` exactly equals the discovery `issuer`.
    4. `aud` contains `client_id`.
    5. If `aud` has more than one value, `azp` is present and equals `client_id`.
@@ -103,7 +103,7 @@ Validation function.
 
 ### Actions
 1. Generate a local RSA key and a fake JWKS for tests: `openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out test_key.pem`. Point the validator at the fake JWKS in tests (monkeypatch or dependency injection).
-2. Write one test per check, each signing a token that breaks only that check: wrong `kid` key, `alg: none` (unsigned), `alg: HS256` signed with the public key bytes, wrong `iss`, wrong `aud`, two audiences without `azp`, expired `exp`, missing `iat`, wrong `nonce`, `auth_time` too old when `max_age` set. Each must be rejected.
+2. Write one test per check, each signing a token that breaks only that check: wrong `kid` key, `governance engine: none` (unsigned), `governance engine: HS256` signed with the public key bytes, wrong `iss`, wrong `aud`, two audiences without `azp`, expired `exp`, missing `iat`, wrong `nonce`, `auth_time` too old when `max_age` set. Each must be rejected.
 3. Add one positive test with all claims valid.
 4. Run the stack test command and read every test name in the output.
 
@@ -145,7 +145,7 @@ DONE when all ten OIDC Core checks are enforced and mapped to code, users are ke
 | Phase 1 | Discovery lacks `id_token_signing_alg_values_supported` | **Adjust**: use RS256 (OIDC default) and cite OIDC Discovery; confirm with the IdP docs. |
 | Phase 2 | `PyJWKClientError: Unable to find a signing key that matches` | **Retry**: the IdP rotated keys; confirm the client refetches JWKS on unknown `kid`. |
 | Phase 2 | `InvalidIssuerError` with a real token | **Adjust**: compare exact strings, including trailing slash; multi-tenant IdPs may use a tenant-specific issuer. |
-| Phase 3 | `alg: none` token accepted | **Stop**: the algorithm allowlist is not applied; fix before any other work. |
+| Phase 3 | `governance engine: none` token accepted | **Stop**: the algorithm allowlist is not applied; fix before any other work. |
 
 ---
 

@@ -34,10 +34,10 @@ PHASE 5: VALIDATE   --> Trace execution paths, verify completeness, test failure
 
 ### Phase 1: GOAL -- Define the System Objective
 
-**Entry criteria:** A goal description is provided that describes what the agent system should accomplish.
+### Entry Criteria
+A goal description is provided that describes what the agent system should accomplish.
 
-**Actions:**
-
+### Actions
 1. **Clarify the goal:**
    - What is the input to the system? (what triggers it)
    - What is the output? (what does "done" look like)
@@ -61,18 +61,20 @@ PHASE 5: VALIDATE   --> Trace execution paths, verify completeness, test failure
    - Include: happy path, edge case, error case, adversarial input
    - These become the validation scenarios in Phase 5
 
-**Output:** Goal specification: input/output definition, success criteria, constraints, scope, human-in-the-loop requirements, and acceptance test scenarios.
+### Output
+Goal specification: input/output definition, success criteria, constraints, scope, human-in-the-loop requirements, and acceptance test scenarios.
 
-**Quality gate:** Success criteria are measurable. At least 3 acceptance test scenarios are defined. Human-in-the-loop boundaries are explicit (not "as needed").
+### Quality Gate
+Success criteria are measurable. At least 3 acceptance test scenarios are defined. Human-in-the-loop boundaries are explicit (not "as needed").
 
 ---
 
 ### Phase 2: DECOMPOSE -- Break Into Agent Roles
 
-**Entry criteria:** Goal specification is complete.
+### Entry Criteria
+Goal specification is complete.
 
-**Actions:**
-
+### Actions
 1. **Task decomposition:**
    - Break the goal into sub-tasks using functional decomposition
    - For each sub-task: what skills does it require? what data does it need? what does it produce?
@@ -103,18 +105,20 @@ PHASE 5: VALIDATE   --> Trace execution paths, verify completeness, test failure
    - Complex agent: many tools, multi-step reasoning, creative output
    - Estimate token budget per agent call (affects cost)
 
-**Output:** Task dependency graph, agent role definitions with responsibilities, topology selection with justification, handoff specifications, complexity estimates.
+### Output
+Task dependency graph, agent role definitions with responsibilities, topology selection with justification, handoff specifications, complexity estimates.
 
-**Quality gate:** Every sub-task maps to exactly one agent. The task graph is a valid DAG (no cycles unless explicitly designed as iterative). Each handoff has a defined payload schema. Topology choice is justified by the goal's parallelism and dependency structure.
+### Quality Gate
+Every sub-task maps to exactly one agent. The task graph is a valid DAG (no cycles unless explicitly designed as iterative). Each handoff has a defined payload schema. Topology choice is justified by the goal's parallelism and dependency structure.
 
 ---
 
 ### Phase 3: DESIGN -- Architecture and Communication
 
-**Entry criteria:** Agent roles and topology are defined.
+### Entry Criteria
+Agent roles and topology are defined.
 
-**Actions:**
-
+### Actions
 1. **Design communication channels:**
 
    **Message passing** (for pipeline/hierarchy):
@@ -129,7 +133,7 @@ PHASE 5: VALIDATE   --> Trace execution paths, verify completeness, test failure
    ```
    - Central state store (database, key-value store, shared memory)
    - Agents read/write to shared state
-   - Concurrency control: optimistic locking, version numbers
+   - Concurrency control: optimiztic locking, version numbers
    - State schema: what fields, who can read, who can write
    ```
 
@@ -175,18 +179,20 @@ PHASE 5: VALIDATE   --> Trace execution paths, verify completeness, test failure
    - Tracing: end-to-end request ID through all agents
    - Alerting: what triggers human notification
 
-**Output:** Communication design (channels, message formats), state management architecture, error recovery procedures, context management strategy, observability plan.
+### Output
+Communication design (channels, message formats), state management architecture, error recovery procedures, context management strategy, observability plan.
 
-**Quality gate:** Every agent pair with a dependency has a defined communication channel. Error recovery covers agent failure, communication failure, and workflow failure. Context window budget is estimated for each agent and fits within model limits.
+### Quality Gate
+Every agent pair with a dependency has a defined communication channel. Error recovery covers agent failure, communication failure, and workflow failure. Context window budget is estimated for each agent and fits within model limits.
 
 ---
 
 ### Phase 4: IMPLEMENT -- Generate Agent Definitions
 
-**Entry criteria:** Architecture and communication design are complete.
+### Entry Criteria
+Architecture and communication design are complete.
 
-**Actions:**
-
+### Actions
 1. **For each agent, generate:**
 
    a. **System prompt:**
@@ -263,22 +269,24 @@ PHASE 5: VALIDATE   --> Trace execution paths, verify completeness, test failure
 3. **Generate configuration:**
    - Environment variables needed
    - API keys and credentials (reference only, not values)
-   - Model selection per agent (e.g., fast model for simple tasks, powerful model for complex)
+   - Model selection per agent (e.g., fast model for simple tasks, capable model for complex)
    - Token budgets per agent
    - Retry and timeout settings
 
-**Output:** Complete agent definitions: system prompts, tool configs, I/O schemas, routing rules, coordinator logic, and configuration.
+### Output
+Complete agent definitions: system prompts, tool configs, I/O schemas, routing rules, coordinator logic, and configuration.
 
-**Quality gate:** Every agent has a system prompt with clear responsibility, inputs, outputs, and constraints. Input/output schemas are valid JSON Schema. Routing rules cover all possible agent outputs (success, failure, escalation). Coordinator handles all workflow paths.
+### Quality Gate
+Every agent has a system prompt with clear responsibility, inputs, outputs, and constraints. Input/output schemas are valid JSON Schema. Routing rules cover all possible agent outputs (success, failure, escalation). Coordinator handles all workflow paths.
 
 ---
 
 ### Phase 5: VALIDATE -- Trace and Test
 
-**Entry criteria:** All agent definitions and routing rules are generated.
+### Entry Criteria
+All agent definitions and routing rules are generated.
 
-**Actions:**
-
+### Actions
 1. **Trace execution paths:**
    - For each acceptance test scenario from Phase 1:
      - Walk through the workflow step by step
@@ -315,11 +323,22 @@ PHASE 5: VALIDATE   --> Trace execution paths, verify completeness, test failure
    - Performance estimates (latency, cost, throughput, reliability)
    - Recommendations for optimization
 
-**Output:** Validation report: execution traces, completeness verification, failure mode analysis, performance estimates, optimization recommendations.
+### Output
+Validation report: execution traces, completeness verification, failure mode analysis, performance estimates, optimization recommendations.
 
-**Quality gate:** All acceptance test scenarios trace successfully to completion. No orphan agents or dead-end paths. Every failure mode has a defined mitigation. Performance estimates are within the constraints defined in Phase 1.
+### Quality Gate
+All acceptance test scenarios trace successfully to completion. No orphan agents or dead-end paths. Every failure mode has a defined mitigation. Performance estimates are within the constraints defined in Phase 1.
 
 ---
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Design multi-agent workflows from goal to deployment. Decompose objectives into , the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 

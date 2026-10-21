@@ -77,6 +77,15 @@ Per-connector access results.
 
 ---
 
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Prove an enclosure fits its board: zero interference volume, clearance above the, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
+
 ## Exit Criteria
 
 DONE when the report shows zero interference, full mating access, and process-compliant geometry, or names each failing check with its measurement.

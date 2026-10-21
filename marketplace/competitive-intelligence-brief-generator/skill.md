@@ -12,7 +12,7 @@
 - `industry_focus` (string, optional) -- Primary industry or sector (e.g., "SaaS", "Healthcare Tech"). If omitted, inferred from company data.
 - `time_window_months` (number, optional, default: 12) -- How many months back to scan for recent moves.
 - `competitive_set_size` (number, optional, default: 5) -- Number of direct competitors to reference in strength/weakness analysis.
-- `analysis_depth` (string, optional, default: "standard") -- "quick" (summary), "standard" (detailed), or "deep" (exhaustive with sub-analyses).
+- `analysis_depth` (string, optional, default: "standard") -- "quick" (summary), "standard" (detailed), or "deep" (exhaustive with sub-analyzes).
 - `data_freshness_threshold_months` (number, optional, default: 6) -- Maximum age of data sources before flagging as stale. If primary sources exceed this age, brief status becomes "partial".
 
 ---
@@ -39,11 +39,11 @@
 
 ### Phase 1: Company Validation and Context Gathering
 
-**Entry Criteria:**
+### Entry Criteria
 - `company_name` is provided and non-empty.
 - `industry_focus` is provided or will be inferred.
 
-**Actions:**
+### Actions
 1. Validate that the company name matches a known entity by cross-referencing against: official company website, SEC filings (if US-based), LinkedIn company page, Crunchbase, or industry-specific databases. Record the verification source and date.
 2. If company name is ambiguous (matches multiple entities), **Abort** and request clarification (ticker symbol, headquarters, or parent company).
 3. Retrieve company metadata: headquarters, founding date, employee count range, primary industry, current status (active/acquired/merged/defunct). Record source and recency for each data point.
@@ -53,12 +53,12 @@
 7. Determine the competitive set: identify 3-7 direct competitors in the same market segment, using industry analyst reports (Gartner, Forrester) or market research as primary source.
 8. For each competitor, record: name, market position (leader/challenger/niche), and brief description. This baseline enables strength/weakness comparison in later phases.
 
-**Output:**
+### Output
 - `company_verified` object with name, status, location, founding year, employee range, verification_source, verification_date.
 - `positioning_summary` with market segment, stated positioning, target customers, value proposition, source_recency_days.
 - `competitive_set` array with competitor names, market positions, and descriptions.
 
-**Quality Gate:**
+### Quality Gate
 - Company status is confirmed as "active" or recently acquired/merged (not defunct). If defunct or >2 years old, note as historical analysis only.
 - Positioning summary is grounded in official company sources (website, SEC filings, investor materials), not speculation. Source recency is <6 months.
 - Competitive set includes at least 3 direct competitors, verified against analyst reports or market research.
@@ -68,11 +68,11 @@
 
 ### Phase 2: Strengths Analysis
 
-**Entry Criteria:**
+### Entry Criteria
 - Company is validated.
 - Positioning summary and competitive set are defined.
 
-**Actions:**
+### Actions
 1. Identify product/service strengths: what does this company do better than competitors? Evaluate: feature set breadth, performance benchmarks, ease of use (UX), integration ecosystem, customization options, reliability/uptime, security certifications. For each, gather evidence from: product reviews (G2, Capterra), customer case studies, analyst reports, or performance benchmarks.
 2. Identify market position strengths: brand recognition, customer loyalty, market share, customer concentration, NPS/satisfaction, geographic reach. Evidence sources: analyst reports, customer surveys, LinkedIn following, press mentions, industry rankings.
 3. Identify operational strengths: team depth (headcount, seniority), technology stack (modern vs. legacy), IP/patents, cost structure (unit economics), supply chain resilience, hiring velocity. Evidence sources: LinkedIn company page, patent databases, job postings, news coverage, SEC filings.
@@ -82,10 +82,10 @@
 7. Cross-reference against competitive set: for each strength, explicitly note whether it is unique to this company, shared with 1-2 competitors, or table-stakes across all competitors.
 8. If insufficient public information exists for a strength category, note "private company limitation" and infer from recent moves or customer base signals.
 
-**Output:**
+### Output
 - `strengths` array with 5-12 items, each with: title, description, evidence, evidence_source, evidence_recency_days, impact_level, differentiated_vs_competitors (yes/no).
 
-**Quality Gate:**
+### Quality Gate
 - Every strength is supported by at least one evidence source (not opinion). If inferred, confidence_level is marked "low" and caveat is noted.
 - Strengths are specific and measurable (not "good product" but "fastest query response time in category: 50ms vs. competitor average 200ms").
 - At least 2 strengths are marked "differentiated_vs_competitors: yes" or analysis notes that company is not differentiated (rare but possible).
@@ -95,11 +95,11 @@
 
 ### Phase 3: Weaknesses Analysis
 
-**Entry Criteria:**
+### Entry Criteria
 - Strengths analysis is complete.
 - Competitive set is defined.
 
-**Actions:**
+### Actions
 1. Identify product/service weaknesses: what is missing, outdated, or inferior vs. competitors? Evaluate: limited integrations, poor UX, performance gaps, missing features, technical debt signals, scalability limits. Evidence sources: customer reviews (G2, Capterra, Reddit), feature comparison matrices, analyst reports, support forum discussions.
 2. Identify market position weaknesses: brand awareness gaps, customer churn, market share loss, geographic limitations, customer concentration risk, pricing pressure. Evidence sources: analyst reports, customer reviews, news coverage, LinkedIn job postings (high turnover signals), Glassdoor reviews.
 3. Identify operational weaknesses: team gaps (missing functions), technical debt, legacy systems, hiring challenges, key person dependency, organizational friction. Evidence sources: LinkedIn company page (team composition, turnover), job postings, news coverage, Glassdoor reviews, patent activity (or lack thereof).
@@ -110,10 +110,10 @@
 8. If insufficient public information exists for a weakness category, note "private company limitation" and infer from competitive set comparison or market feedback signals.
 9. If no critical or high-severity weaknesses are identified, note that company is exceptionally strong in this dimension.
 
-**Output:**
+### Output
 - `weaknesses` array with 4-10 items, each with: title, description, evidence, evidence_source, evidence_recency_days, severity_level, structural_vs_temporary, confidence_level.
 
-**Quality Gate:**
+### Quality Gate
 - Every weakness is supported by evidence (not speculation). If inferred, confidence_level is marked "low" and caveat is noted.
 - Weaknesses are specific and actionable (not "bad culture" but "high engineering turnover: 35% annual attrition vs. 15% industry average, evidenced by LinkedIn job postings and Glassdoor reviews").
 - At least one critical or high-severity weakness is identified, OR analysis explicitly notes that company is exceptionally strong (rare).
@@ -124,11 +124,11 @@
 
 ### Phase 4: Recent Moves Analysis
 
-**Entry Criteria:**
+### Entry Criteria
 - Company validation and positioning are complete.
 - Time window is defined (default: last 12 months).
 
-**Actions:**
+### Actions
 1. Scan for product launches, major feature releases, or product sunsetting within the time window. Evidence sources: company blog, press releases, product roadmap, customer announcements, G2/Capterra release notes.
 2. Scan for partnerships, integrations, or ecosystem moves (e.g., API launches, marketplace launches, reseller agreements). Evidence sources: press releases, company blog, partnership announcements, LinkedIn posts.
 3. Scan for acquisitions, investments, or M&A activity. Evidence sources: press releases, SEC filings, Crunchbase, news coverage.
@@ -139,11 +139,11 @@
 8. Identify patterns: are moves defensive (responding to competition) or offensive (expanding market)? Are they aligned with stated positioning? Are they accelerating or decelerating in frequency?
 9. If no recent moves are found in the time window, **Adjust**: extend time window or note that company is in "steady state" (no major strategic shifts detected).
 
-**Output:**
+### Output
 - `recent_moves` array with 3-15 items, each with: move_type, date, description, strategic_implication, data_source, confidence_level.
 - `move_pattern_summary` (string): brief narrative of whether moves are offensive/defensive, aligned with positioning, and accelerating/decelerating.
 
-**Quality Gate:**
+### Quality Gate
 - Moves are documented with specific dates and sources. No move is dated "sometime in 2024" without specificity.
 - Strategic implications are explicit and specific (not "they hired people" but "they hired 12 engineers in ML/AI, signaling acceleration of AI-powered features and potential pivot toward autonomous agents").
 - Moves span multiple categories (not all product, not all hiring). If moves are concentrated in one category, note this as a strategic signal.
@@ -154,10 +154,10 @@
 
 ### Phase 5: Strategic Synthesis and Recommendations
 
-**Entry Criteria:**
+### Entry Criteria
 - Strengths, weaknesses, and recent moves are documented.
 
-**Actions:**
+### Actions
 1. Synthesize positioning: based on strengths, weaknesses, and recent moves, what is the company's overall competitive strategy? Classify as one of: cost leader, feature/capability leader, vertical specialist, platform play, or hybrid. Justify the classification with 2-3 supporting data points from strengths/moves.
 2. Assess trajectory: based on recent moves and current position, is the company gaining or losing ground? Classify as: "gaining_ground" (expanding market share, accelerating moves, strong funding), "losing_ground" (declining moves, customer churn signals, funding gaps), "stable" (steady moves, no major shifts), or "pivoting" (strategic direction change evident). Justify with evidence from recent moves and trend analysis.
 3. Identify threats to the company: what could disrupt its position? For each threat, estimate likelihood (high/medium/low) and impact if realized (high/medium/low). Identify monitoring signals: what would indicate the threat is materializing? Threats may include: new competitor, technology shift, customer consolidation, regulatory change, market saturation, pricing pressure.
@@ -166,13 +166,13 @@
 6. For each recommendation, provide: recommendation statement, rationale (2-3 sentences grounded in evidence), supporting_evidence_from_phases (array of references like "Phase 2, Strength: X" or "Phase 4, Move: Y"), priority (high/medium/low), timeframe (immediate/3-6mo/6-12mo/ongoing), and confidence_score (0-100 based on how directly supported by evidence).
 7. Rank recommendations by priority and confidence score. High-priority, high-confidence recommendations should be actionable immediately.
 
-**Output:**
+### Output
 - `competitive_trajectory` (string, enum: "gaining_ground", "losing_ground", "stable", "pivoting") with supporting evidence summary.
 - `key_threats` array with 2-5 items, each with: threat_description, likelihood, impact_if_realized, monitoring_signals (array of specific signals to watch).
 - `key_opportunities` array with 2-5 items, each with: opportunity_description, addressability, timeframe.
 - `strategic_recommendations` array with 4-8 items, each with: recommendation, rationale, supporting_evidence_from_phases, priority, timeframe, confidence_score.
 
-**Quality Gate:**
+### Quality Gate
 - Competitive trajectory is justified by 2+ data points from recent moves or trend analysis. Not opinion-based.
 - Recommendations are grounded in the strengths/weaknesses/moves analysis (traceable via supporting_evidence_from_phases). No generic recommendations like "stay aware."
 - Recommendations are actionable (not "stay aware" but "accelerate feature X to close the gap on their strength Y, estimated 2-quarter effort").
@@ -184,11 +184,11 @@
 
 ### Phase 6: Brief Compilation and Formatting
 
-**Entry Criteria:**
+### Entry Criteria
 - All prior phases are complete.
 - Confidence scores and evidence recency are documented.
 
-**Actions:**
+### Actions
 1. Assemble the brief in a standard structure:
    - **Executive Summary** (1 paragraph, 100-150 words): who they are, where they stand competitively, top 1-2 strengths, top 1-2 weaknesses, competitive trajectory, and top 1-2 recommended actions.
    - **Company Overview** (1 section): positioning, market segment, key metrics (employee count, funding, revenue if public), founding date, headquarters.
@@ -207,13 +207,13 @@
 6. Generate confidence_notes: explain data quality, caveats, gaps, and assumptions. If brief_status is "partial", specify which sections are incomplete and why.
 7. Validate that the brief is readable: a person unfamiliar with the company should be able to understand: (a) what the company does, (b) how it compares to competitors, (c) what we should do in response. Test by checking that Executive Summary + Recommendations sections are self-contained and actionable.
 
-**Output:**
+### Output
 - `brief_document` (markdown string, 3-5 pages).
 - `brief_status` ("complete", "partial", or "failed").
 - `confidence_notes` (string, 200-400 words).
 - `data_quality_summary` (object with: average_source_age_days, sources_over_threshold_count, data_completeness_percentage, gaps_identified array).
 
-**Quality Gate:**
+### Quality Gate
 - Brief is readable and well-structured. Executive Summary + Recommendations sections are self-contained and actionable without reading full brief.
 - All sections are populated (no "TBD" placeholders). If data is missing, it is noted in confidence_notes.
 - Recommendations are actionable and tied to evidence (each recommendation references supporting evidence from earlier sections).
@@ -222,6 +222,15 @@
 - No internal contradictions between sections. If contradictions exist, they are flagged for author review.
 
 ---
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Analyze a target company's market positioning, competitive strengths/weaknesses,, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 

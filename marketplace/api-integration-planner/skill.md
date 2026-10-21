@@ -34,10 +34,10 @@ PHASE 5: HARDEN     --> Add circuit breakers, caching, fallback strategies, moni
 
 ### Phase 1: DISCOVER -- Understand the API
 
-**Entry criteria:** API documentation or description is provided. Integration requirements state what data/actions are needed.
+### Entry Criteria
+API documentation or description is provided. Integration requirements state what data/actions are needed.
 
-**Actions:**
-
+### Actions
 1. **Identify required endpoints:**
    - For each integration requirement, find the API endpoint(s) that fulfill it
    - Record per endpoint: HTTP method, path, parameters (query, path, body, headers)
@@ -70,18 +70,20 @@ PHASE 5: HARDEN     --> Add circuit breakers, caching, fallback strategies, moni
    - Identify fields you need vs fields you can ignore
    - Note: nullable fields, deprecated fields, fields with enum values
 
-**Output:** API discovery report: endpoints needed with full specs, auth flow, rate limits, pagination, quirks, and data model map.
+### Output
+API discovery report: endpoints needed with full specs, auth flow, rate limits, pagination, quirks, and data model map.
 
-**Quality gate:** Every integration requirement maps to at least one endpoint. Auth flow is fully documented (obtain + refresh + expire). Rate limits are identified (or marked as "undocumented -- need to discover empirically").
+### Quality Gate
+Every integration requirement maps to at least one endpoint. Auth flow is fully documented (obtain + refresh + expire). Rate limits are identified (or marked as "undocumented -- need to discover empirically").
 
 ---
 
 ### Phase 2: DESIGN -- Plan Integration Architecture
 
-**Entry criteria:** API discovery report is complete.
+### Entry Criteria
+API discovery report is complete.
 
-**Actions:**
-
+### Actions
 1. **Choose integration pattern** (see Reference: Integration Pattern Decision Matrix):
 
    - **Direct HTTP calls**: Best for simple integrations (<5 endpoints), low call volume, synchronous workflows
@@ -110,18 +112,20 @@ PHASE 5: HARDEN     --> Add circuit breakers, caching, fallback strategies, moni
    - Versioning strategy: pin to a version, or follow latest?
    - Deprecation handling: alert when deprecated fields are used in responses
 
-**Output:** Integration design document: pattern choice with justification, data flow diagram, error handling strategy, consistency approach, evolution plan.
+### Output
+Integration design document: pattern choice with justification, data flow diagram, error handling strategy, consistency approach, evolution plan.
 
-**Quality gate:** Pattern choice is justified based on call volume, complexity, and sync/async needs. Error handling classifies every HTTP status code. Retry policy has a max retry count and uses backoff.
+### Quality Gate
+Pattern choice is justified based on call volume, complexity, and sync/async needs. Error handling classifies every HTTP status code. Retry policy has a max retry count and uses backoff.
 
 ---
 
 ### Phase 3: IMPLEMENT -- Generate Client Code
 
-**Entry criteria:** Integration design is approved.
+### Entry Criteria
+Integration design is approved.
 
-**Actions:**
-
+### Actions
 1. **Generate the API client class:**
    ```
    Structure:
@@ -159,18 +163,20 @@ PHASE 5: HARDEN     --> Add circuit breakers, caching, fallback strategies, moni
    - Do NOT log: auth tokens, API keys, request bodies with PII
    - Structured logging format for easy querying
 
-**Output:** Complete API client code with auth, retries, rate limiting, pagination, and logging.
+### Output
+Complete API client code with auth, retries, rate limiting, pagination, and logging.
 
-**Quality gate:** Every endpoint method has typed parameters and return type. Error handling covers all classified error types. Rate limiting is client-side (don't rely solely on server rejections). Secrets are not hardcoded.
+### Quality Gate
+Every endpoint method has typed parameters and return type. Error handling covers all classified error types. Rate limiting is client-side (don't rely solely on server rejections). Secrets are not hardcoded.
 
 ---
 
 ### Phase 4: VALIDATE -- Test the Integration
 
-**Entry criteria:** Client code is generated.
+### Entry Criteria
+Client code is generated.
 
-**Actions:**
-
+### Actions
 1. **Test against sandbox/mock:**
    - If sandbox environment exists: run actual API calls against it
    - If no sandbox: create mock server that mimics the API responses
@@ -201,18 +207,20 @@ PHASE 5: HARDEN     --> Add circuit breakers, caching, fallback strategies, moni
    - Date/time parsing matches expected timezone handling
    - Numeric precision maintained (no float rounding issues on currency)
 
-**Output:** Validation results: test pass/fail for each scenario, issues found, data mapping verification.
+### Output
+Validation results: test pass/fail for each scenario, issues found, data mapping verification.
 
-**Quality gate:** All happy-path tests pass. All error scenario tests pass (errors are handled, not crashed). Pagination works for 0, 1, and N pages. Idempotency is verified for write operations.
+### Quality Gate
+All happy-path tests pass. All error scenario tests pass (errors are handled, not crashed). Pagination works for 0, 1, and N pages. Idempotency is verified for write operations.
 
 ---
 
 ### Phase 5: HARDEN -- Production Readiness
 
-**Entry criteria:** Validation passes all scenarios.
+### Entry Criteria
+Validation passes all scenarios.
 
-**Actions:**
-
+### Actions
 1. **Add circuit breaker** (see Reference: Circuit Breaker Pattern):
    - Closed (normal): requests pass through
    - Open (failing): requests fail immediately without calling API (after N consecutive failures)
@@ -244,11 +252,22 @@ PHASE 5: HARDEN     --> Add circuit breakers, caching, fallback strategies, moni
    - How to debug integration failures (where to look, what to check)
    - How to handle API version upgrades
 
-**Output:** Hardening plan with circuit breaker configuration, cache strategy, fallback behaviors, monitoring setup, and operational runbook.
+### Output
+Hardening plan with circuit breaker configuration, cache strategy, fallback behaviors, monitoring setup, and operational runbook.
 
-**Quality gate:** Circuit breaker has specific thresholds (not just "add a circuit breaker"). Cache strategy specifies TTLs per endpoint. Fallback behavior is defined for every failure mode. Monitoring covers latency, errors, and quota.
+### Quality Gate
+Circuit breaker has specific thresholds (not just "add a circuit breaker"). Cache strategy specifies TTLs per endpoint. Fallback behavior is defined for every failure mode. Monitoring covers latency, errors, and quota.
 
 ---
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Plan and implement API integrations from discovery through hardening. Covers RES, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 

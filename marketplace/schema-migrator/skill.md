@@ -40,11 +40,11 @@
 
 ### Phase 0: Pre-flight Check
 
-**Entry Criteria:**
+### Entry Criteria
 - `schema_definition` is provided and non-empty.
 - `schema_format` is recognized.
 
-**Actions:**
+### Actions
 1. Verify that `schema_format` is one of the supported formats (sql, json, yaml, markdown). If not, abort with error listing supported formats.
 2. Check that the schema definition is not empty and contains at least one table definition.
 3. Scan for reserved keywords in table and column names (e.g., SELECT, INSERT, UPDATE, DELETE). Flag any found and suggest aliases.
@@ -57,7 +57,7 @@
 - `preflight_issues` (array): List of issues found (reserved keywords, naming inconsistencies, missing PKs).
 - `preflight_warnings` (array): List of warnings (e.g., "schema uses mixed naming conventions").
 
-**Quality Gate:**
+### Quality Gate
 - `schema_format` is recognized and supported.
 - Schema definition is non-empty and contains at least one table.
 - No critical issues (reserved keywords, all tables missing PKs) are present. Warnings are acceptable.
@@ -66,12 +66,12 @@
 
 ### Phase 1: Parse and Validate Schema
 
-**Entry Criteria:**
+### Entry Criteria
 - Preflight check passes (Phase 0 complete).
 - `schema_definition` is provided and non-empty.
 - `schema_format` is recognized.
 
-**Actions:**
+### Actions
 1. Parse the schema definition according to `schema_format`.
 2. Extract all tables, columns, data types, constraints (PRIMARY KEY, FOREIGN KEY, UNIQUE, NOT NULL, DEFAULT).
 3. Identify all relationships (foreign keys) and their cardinality (1:1, 1:N, M:N).
@@ -86,7 +86,7 @@
 - `validation_issues` (array): List of schema problems with severity (HIGH, MEDIUM, LOW) and remediation guidance.
 - `dependency_graph` (object): Map of table dependencies for topological sorting.
 
-**Quality Gate:**
+### Quality Gate
 - All tables are identified and have at least one column.
 - All columns have types.
 - All relationships are bidirectional (if A.fk → B.pk, this is recorded on both sides).
@@ -97,11 +97,11 @@
 
 ### Phase 2: Determine Migration Strategy
 
-**Entry Criteria:**
+### Entry Criteria
 - Parsed schema is valid (Phase 1 complete).
 - `current_schema` is provided (for upgrades) or omitted (for new database).
 
-**Actions:**
+### Actions
 1. If `current_schema` is provided, parse it using the same logic as Phase 1.
 2. Diff the current schema against the target schema to identify:
    - New tables (CREATE TABLE).
@@ -124,7 +124,7 @@
 - `migration_dependencies` (object): Map of which migrations depend on which (for sequencing).
 - `data_transformation_notes` (array): List of migrations requiring manual data transformation, with guidance.
 
-**Quality Gate:**
+### Quality Gate
 - All operations are ordered to respect foreign key constraints (verified by topological sort).
 - Destructive operations are clearly marked with RISK: HIGH.
 - No circular dependencies in migration order.
@@ -134,11 +134,11 @@
 
 ### Phase 3: Generate Migration Scripts
 
-**Entry Criteria:**
+### Entry Criteria
 - Migration plan is complete (Phase 2).
 - `target_database` and `migration_framework` are specified.
 
-**Actions:**
+### Actions
 1. For each migration operation, generate SQL in the target database dialect using the syntax reference in the Reference section.
 2. Wrap migrations in the chosen framework's format:
    - **Flyway:** V{version}__{description}.sql files with -- Flyway comments.
@@ -156,7 +156,7 @@
 - `migration_metadata` (array): List of migrations with version, description, risk level, estimated execution time, and rollback procedure.
 - `sql_validation_report` (object): Syntax validation results for all generated SQL.
 
-**Quality Gate:**
+### Quality Gate
 - Every migration has both up and down scripts.
 - Down scripts are true inverses of up scripts (reversible); verified by checking that down script undoes all changes from up script.
 - All SQL is syntactically valid for the target database (verified by parsing or linting).
@@ -167,12 +167,12 @@
 
 ### Phase 4: Generate Seed Data Scripts
 
-**Entry Criteria:**
+### Entry Criteria
 - `include_seed_data` is true.
 - Parsed schema is available (Phase 1).
 - `seed_data_spec` is provided (optional; if omitted, seed data is generated for lookup tables only).
 
-**Actions:**
+### Actions
 1. Identify tables that require seed data:
    - Apply the lookup table heuristic (see Reference section) to identify reference tables.
    - Include any tables specified in `seed_data_spec`.
@@ -191,7 +191,7 @@
 - `seed_metadata` (array): List of seed operations with table, row count, purpose, and whether it is required or optional.
 - `seed_validation_report` (object): Validation results showing FK constraint compliance.
 
-**Quality Gate:**
+### Quality Gate
 - All seed data respects foreign key constraints (no orphaned records); verified by checking that all FK values exist in parent tables.
 - Seed scripts are idempotent (can be run multiple times safely); verified by checking for INSERT IGNORE, INSERT OR REPLACE, or ON CONFLICT clauses.
 - All SQL is syntactically valid for the target database.
@@ -201,11 +201,11 @@
 
 ### Phase 5: Generate Entity-Relationship Diagram
 
-**Entry Criteria:**
+### Entry Criteria
 - Parsed schema is available (Phase 1).
 - `erd_format` is specified.
 
-**Actions:**
+### Actions
 1. Extract all tables and relationships from the parsed schema.
 2. Determine cardinality for each relationship (1:1, 1:N, M:N) based on foreign key constraints and uniqueness.
 3. Generate ERD in the requested format:
@@ -223,7 +223,7 @@
 - `erd_metadata` (object): Statistics (table count, relationship count, max cardinality, complexity level).
 - `erd_sections` (array, optional): If ERD is split into multiple diagrams, list each section with its tables and relationships.
 
-**Quality Gate:**
+### Quality Gate
 - All tables appear in the ERD (or in one of the ERD sections if split).
 - All relationships are shown with correct cardinality.
 - The diagram is readable and follows standard ER notation (crow's foot for cardinality, solid/dashed lines for required/optional).
@@ -233,11 +233,11 @@
 
 ### Phase 6: Generate Documentation
 
-**Entry Criteria:**
+### Entry Criteria
 - All previous phases are complete.
 - `documentation_style` is specified.
 
-**Actions:**
+### Actions
 1. Create a README with:
    - Overview of the schema and its purpose.
    - Prerequisites (database version, tools, permissions).
@@ -266,7 +266,7 @@
 - `documentation` (object): Complete documentation package with keys: `readme`, `schema_overview`, `migration_guide`, `erd_visual`, `metadata`.
 - `documentation_files` (array): List of generated documentation files with paths and formats.
 
-**Quality Gate:**
+### Quality Gate
 - All documentation is complete and internally consistent (no broken references).
 - Instructions are clear and actionable (include example commands for each target database).
 - No references to undefined tables, columns, or migrations.
@@ -277,10 +277,10 @@
 
 ### Phase 7: Validate and Package
 
-**Entry Criteria:**
+### Entry Criteria
 - All previous phases are complete.
 
-**Actions:**
+### Actions
 1. Validate all generated SQL scripts:
    - Check syntax for the target database dialect (using parser or linter).
    - Verify that all referenced tables and columns exist in the parsed schema.
@@ -308,13 +308,22 @@
 - `artifact_manifest` (object): Map of all generated files with metadata (path, size, checksum, format).
 - `package_structure` (string): Description of the output directory structure.
 
-**Quality Gate:**
+### Quality Gate
 - No critical errors (syntax, missing references). If critical errors exist, return FAIL status and do not package artifacts.
 - All warnings are documented and explained.
 - Artifact manifest is complete and accurate (all files listed with correct paths and sizes).
 - Package structure is clear and follows conventions (migrations/, seeds/, docs/, erd/).
 
 ---
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Convert a database schema definition into migration scripts, seed data, and an E, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 

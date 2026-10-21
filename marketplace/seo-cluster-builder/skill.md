@@ -14,14 +14,14 @@ PHASE 5: BRIEF      --> Generate content briefs per page (keyword, outline, word
 
 ## Inputs
 
-- **seed_keywords**: string[] -- Starting keywords (3-10 seed terms that define the topic space)
-- **website_url**: string (optional) -- Current website for existing content audit
-- **target_audience**: object -- Who the content is for:
+- **`seed_keywords`**: string[] -- Starting keywords (3-10 seed terms that define the topic space)
+- **`website_url`**: string (optional) -- Current website for existing content audit
+- **`target_audience`**: object -- Who the content is for:
   - `persona`: string -- Primary reader description
   - `expertise_level`: string ("beginner" | "intermediate" | "expert")
   - `intent`: string ("learn" | "evaluate" | "buy" | "solve")
   - `industry`: string (optional)
-- **existing_content**: array of objects (optional) -- Content already published:
+- **`existing_content`**: array of objects (optional) -- Content already published:
   - `url`: string
   - `title`: string
   - `target_keyword`: string
@@ -31,21 +31,21 @@ PHASE 5: BRIEF      --> Generate content briefs per page (keyword, outline, word
 
 ## Outputs
 
-- **keyword_clusters**: array of objects -- Organized keyword groups:
+- **`keyword_clusters`**: array of objects -- Organized keyword groups:
   - `cluster_name`: string
   - `cluster_type`: string ("pillar" | "cluster" | "supporting")
   - `keywords`: array of {keyword, volume, difficulty, intent, priority}
   - `total_volume`: number
-- **topic_pillar_map**: object -- Hierarchical content structure:
+- **`topic_pillar_map`**: object -- Hierarchical content structure:
   - `pillars`: array of {title, target_keyword, cluster_pages: array, supporting_pages: array, internal_linking_plan: array}
-- **content_calendar**: array of objects -- Prioritized publishing schedule:
+- **`content_calendar`**: array of objects -- Prioritized publishing schedule:
   - `week`: number
   - `content_title`: string
   - `content_type`: string
   - `target_keyword`: string
   - `priority_score`: number
   - `estimated_traffic`: number
-- **content_briefs**: array of objects -- Detailed briefs per content piece:
+- **`content_briefs`**: array of objects -- Detailed briefs per content piece:
   - `title`: string
   - `target_keyword`: string
   - `secondary_keywords`: string[]
@@ -60,9 +60,10 @@ PHASE 5: BRIEF      --> Generate content briefs per page (keyword, outline, word
 
 ### Phase 1: SEED -- Keyword Analysis and Scope
 
-**Entry criteria:** At least 3 seed keywords provided. Target audience defined with at minimum a persona description.
+### Entry Criteria
+At least 3 seed keywords provided. Target audience defined with at minimum a persona description.
 
-**Actions:**
+### Actions
 1. For each seed keyword, determine:
    - **Search volume** (monthly, estimated range)
    - **Keyword difficulty** (0-100 scale based on domain authority of ranking pages)
@@ -83,15 +84,18 @@ PHASE 5: BRIEF      --> Generate content briefs per page (keyword, outline, word
    - **Orphans:** Are any pages not linked from other content? (isolated content lacks cluster benefit)
 4. Define cluster boundaries: which subtopics belong together and which are separate clusters.
 
-**Output:** Seed keyword analysis with intent, volume, difficulty; topic scope assessment; existing content audit (if applicable); cluster boundary definitions.
+### Output
+Seed keyword analysis with intent, volume, difficulty; topic scope assessment; existing content audit (if applicable); cluster boundary definitions.
 
-**Quality gate:** Each seed keyword has intent classification, volume estimate, and difficulty assessment. Topic scope supports at least 2 pillar pages with 4+ cluster pages each. If existing content audit reveals cannibalization, flag for resolution before creating new content.
+### Quality Gate
+Each seed keyword has intent classification, volume estimate, and difficulty assessment. Topic scope supports at least 2 pillar pages with 4+ cluster pages each. If existing content audit reveals cannibalization, flag for resolution before creating new content.
 
 ### Phase 2: EXPAND -- Keyword Cluster Generation
 
-**Entry criteria:** Seed keywords analyzed. Cluster boundaries defined. Topic scope validated.
+### Entry Criteria
+Seed keywords analyzed. Cluster boundaries defined. Topic scope validated.
 
-**Actions:**
+### Actions
 1. Expand each seed keyword into a full keyword cluster:
    - **Head terms** (1-2 words, high volume, high difficulty): The broad terms that define the topic. Usually the pillar page target.
    - **Long-tail keywords** (3-5 words, lower volume, lower difficulty): Specific queries that cluster pages will target. These are where you win first.
@@ -111,22 +115,25 @@ PHASE 5: BRIEF      --> Generate content briefs per page (keyword, outline, word
    - Total cluster volume (sum of all keyword volumes)
    - Average difficulty (determines how hard the cluster is to rank for)
    - Intent distribution (what percentage is informational vs. commercial vs. transactional?)
-5. Identify keyword gaps: high-volume keywords in the topic space that no competitor is comprehensively covering.
+5. Identify keyword gaps: high-volume keywords in the topic space that no competitor is fullly covering.
 
-**Output:** Complete keyword clusters with per-keyword metrics, cluster-level summaries, and gap analysis.
+### Output
+Complete keyword clusters with per-keyword metrics, cluster-level summaries, and gap analysis.
 
-**Quality gate:** Each cluster contains at least 8 keywords. Head terms, long-tail, questions, and modifiers are all represented. Every keyword has volume, difficulty, and intent. Total keyword coverage represents at least 70% of estimated topic search volume.
+### Quality Gate
+Each cluster contains at least 8 keywords. Head terms, long-tail, questions, and modifiers are all represented. Every keyword has volume, difficulty, and intent. Total keyword coverage represents at least 70% of estimated topic search volume.
 
 ### Phase 3: MAP -- Topic-Pillar Architecture
 
-**Entry criteria:** Keyword clusters complete with at least 2 clusters containing 8+ keywords each.
+### Entry Criteria
+Keyword clusters complete with at least 2 clusters containing 8+ keywords each.
 
-**Actions:**
+### Actions
 1. Designate pillar pages:
    - One pillar page per major cluster (targeting the highest-volume head term)
-   - Pillar pages are comprehensive, long-form content (2,500-5,000 words)
+   - Pillar pages are full, long-form content (2,500-5,000 words)
    - Pillar pages cover the topic broadly and link to cluster pages for depth
-   - Format: definitive guide, ultimate resource, comprehensive overview
+   - Format: definitive guide, ultimate resource, full overview
 2. Designate cluster pages:
    - 4-8 cluster pages per pillar (targeting mid-volume long-tail keywords)
    - Each cluster page covers one subtopic in depth (1,500-2,500 words)
@@ -151,15 +158,18 @@ PHASE 5: BRIEF      --> Generate content briefs per page (keyword, outline, word
    - Which existing pages should be consolidated (cannibalization fix)?
    - Which existing pages should be redirected (outdated or off-topic)?
 
-**Output:** Complete topic-pillar map with page hierarchy, internal linking plan, content type assignments, and existing content integration plan.
+### Output
+Complete topic-pillar map with page hierarchy, internal linking plan, content type assignments, and existing content integration plan.
 
-**Quality gate:** Every pillar has at least 4 cluster pages. Internal linking plan connects every cluster page to its pillar and at least one sibling cluster page. No orphan pages. Content types cover at least informational and commercial intents.
+### Quality Gate
+Every pillar has at least 4 cluster pages. Internal linking plan connects every cluster page to its pillar and at least one sibling cluster page. No orphan pages. Content types cover at least informational and commercial intents.
 
 ### Phase 4: PLAN -- Content Calendar
 
-**Entry criteria:** Topic-pillar map complete with all pages defined and prioritized.
+### Entry Criteria
+Topic-pillar map complete with all pages defined and prioritized.
 
-**Actions:**
+### Actions
 1. Score each content piece on priority using the formula:
    ```
    priority = (normalized_volume × 0.35) + (business_value × 0.30) +
@@ -188,15 +198,18 @@ PHASE 5: BRIEF      --> Generate content briefs per page (keyword, outline, word
    - Established domain (DA 30+): 3-6 months
    - Topic authority bonus: once 3+ cluster pages rank, new additions rank faster
 
-**Output:** Prioritized content calendar with weekly assignments, traffic estimates, and time-to-rank projections.
+### Output
+Prioritized content calendar with weekly assignments, traffic estimates, and time-to-rank projections.
 
-**Quality gate:** Calendar covers at least 12 weeks. Pillar pages scheduled before their cluster pages. Priority scores calculated for every piece. Publishing cadence is sustainable for the stated resources. Traffic projections use conservative click-through estimates.
+### Quality Gate
+Calendar covers at least 12 weeks. Pillar pages scheduled before their cluster pages. Priority scores calculated for every piece. Publishing cadence is sustainable for the stated resources. Traffic projections use conservative click-through estimates.
 
 ### Phase 5: BRIEF -- Content Brief Generation
 
-**Entry criteria:** Content calendar finalized. At least the first month's content identified.
+### Entry Criteria
+Content calendar finalized. At least the first month's content identified.
 
-**Actions:**
+### Actions
 1. For each content piece (starting with the highest priority), generate a detailed brief:
    - **Target keyword**: Primary keyword this page will rank for
    - **Secondary keywords**: 3-5 related keywords to include naturally
@@ -214,7 +227,7 @@ PHASE 5: BRIEF      --> Generate content briefs per page (keyword, outline, word
    - Table of contents (linked to H2s)
    - Summary/TL;DR section at top
    - "Jump to" navigation for long content
-   - Comprehensive FAQ section targeting question keywords (with FAQ schema)
+   - Full FAQ section targeting question keywords (with FAQ schema)
 
 3. For cluster pages specifically, add:
    - Prominent link back to pillar page in introduction
@@ -223,9 +236,20 @@ PHASE 5: BRIEF      --> Generate content briefs per page (keyword, outline, word
 
 4. Store briefs in state for tracking publication status.
 
-**Output:** Detailed content briefs for priority content pieces with outlines, keyword targets, linking plans, and competitive gaps.
+### Output
+Detailed content briefs for priority content pieces with outlines, keyword targets, linking plans, and competitive gaps.
 
-**Quality gate:** Each brief has a target keyword, word count recommendation, and outline with at least 4 H2 sections. Internal linking plan includes at least 3 links per brief. Competitor gap analysis identifies at least 1 unique angle not covered by existing top results.
+### Quality Gate
+Each brief has a target keyword, word count recommendation, and outline with at least 4 H2 sections. Internal linking plan includes at least 3 links per brief. Competitor gap analysis identifies at least 1 unique angle not covered by existing top results.
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Builds SEO topic cluster architecture from seed keywords. Generates keyword clus, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 
@@ -244,7 +268,7 @@ The skill is DONE when:
 | SEED | Seed keywords are too narrow (insufficient subtopics for a cluster) | **Adjust** -- broaden the seed keywords. If "Python list comprehension" is too narrow, expand to "Python data structures" |
 | SEED | Existing content audit reveals severe cannibalization | **Abort** on new content until cannibalization is resolved. Provide a consolidation plan first. |
 | EXPAND | Keyword volume data unavailable | **Adjust** -- use relative difficulty and SERP analysis as proxies. Estimate volume ranges (low/medium/high) from autocomplete suggestions and related searches. |
-| MAP | Too few keywords for pillar structure | **Adjust** -- create a single comprehensive page instead of pillar+cluster. Recommend expanding the topic in future iterations. |
+| MAP | Too few keywords for pillar structure | **Adjust** -- create a single full page instead of pillar+cluster. Recommend expanding the topic in future iterations. |
 | PLAN | Publishing cadence exceeds available resources | **Adjust** -- reduce to 1 post/week and extend the calendar. Prioritize ruthlessly -- do fewer pieces better rather than many pieces poorly. |
 | BRIEF | Competitor analysis shows an extremely saturated topic | **Adjust** -- recommend targeting lower-competition long-tail keywords first to build domain authority before attacking head terms. |
 | BRIEF | User rejects final output | **Targeted revision** -- ask which keyword cluster, content brief, or publishing calendar entry fell short and rerun only that section. Do not regenerate the full cluster strategy. |
@@ -255,7 +279,7 @@ This skill maintains persistent state across executions:
 - **keyword_research**: Full keyword dataset with volumes, difficulty, and intent -- reusable across sessions, refreshed quarterly
 - **published_content**: Which content from the calendar has been published -- tracks progress against plan
 - **ranking_data**: Keyword position tracking over time -- measures content effectiveness
-- **content_gaps**: Keywords identified as gaps in previous analyses -- ensures they get addressed
+- **content_gaps**: Keywords identified as gaps in previous analyzes -- ensures they get addressed
 - **cannibalization_log**: Historical cannibalization issues and resolutions
 
 ## Reference
@@ -266,7 +290,7 @@ The topic cluster model (also called pillar-cluster or hub-and-spoke) is an SEO 
 
 ```
                     +-----------+
-                    | PILLAR    |  (comprehensive, 3-5K words)
+                    | PILLAR    |  (full, 3-5K words)
                     | PAGE      |  (targets head term)
                     +-----+-----+
                           |
@@ -315,7 +339,7 @@ The priority formula `volume(35%) + business(30%) + ease(20%) + intent(15%)` bal
 Google's quality evaluator guidelines emphasize Experience, Expertise, Authoritativeness, and Trustworthiness:
 - **Experience:** Include first-hand experience, original data, screenshots, real examples
 - **Expertise:** Cite credentials, link to authoritative sources, demonstrate depth of knowledge
-- **Authoritativeness:** Build topical authority through comprehensive cluster coverage
+- **Authoritativeness:** Build topical authority through full cluster coverage
 - **Trustworthiness:** Accurate information, transparent sourcing, clear authorship
 
 Copyright 2024-present The Wayfinder Trust. All rights reserved.

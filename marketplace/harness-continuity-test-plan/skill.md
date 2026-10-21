@@ -55,6 +55,15 @@ Continuity tests.
 
 ---
 
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Write the harness test plan: per-wire continuity with computed resistance, isola, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
+
 ## Exit Criteria
 
 DONE when executing the plan proves every wire lands on its correct pin, no two conductors short, and every shield is continuous and isolated.

@@ -5,24 +5,25 @@ Maps supply chain dependencies from raw materials to finished product, identifie
 ## Execution Pattern: Phase Pipeline
 
 ## Inputs
-- suppliers: array -- Current suppliers with: name, location, products supplied, lead time, cost, quality rating, contract terms, % of total spend
+- `suppliers`: array -- Current suppliers with: name, location, `products` supplied, lead time, cost, quality rating, contract terms, % of total spend
 - products: array -- Products dependent on supply chain, with bill of materials (BOM) linking components to suppliers
-- demand_forecast: object -- Expected demand per product per period (monthly/weekly), demand variability (standard deviation or coefficient of variation)
-- lead_times: object -- Per-supplier lead time (average and standard deviation), including transportation time
-- risk_tolerance: string -- "low" (maximize resilience, accept higher cost), "medium" (balanced), "high" (minimize cost, accept more risk)
+- `demand_forecast`: object -- Expected demand per product per period (monthly/weekly), demand variability (standard deviation or coefficient of variation)
+- `lead_times`: object -- Per-supplier lead time (average and standard deviation), including transportation time
+- `risk_tolerance`: string -- "low" (maximize resilience, accept higher cost), "medium" (balanced), "high" (minimize cost, accept more risk)
 
 ## Outputs
-- supplier_map: object -- Visual dependency map showing all supplier relationships, tier depths, and concentration points
-- risk_analysis: object -- Scored risk assessment per supplier and per supply chain node (single-source, geographic, financial, quality)
-- diversification_plan: object -- Recommendations for dual/multi-sourcing with cost-benefit analysis
-- safety_stock_calculations: object -- Optimal safety stock levels, reorder points, and weeks of supply per component
-- disruption_simulations: array -- Scenario analyses showing production impact of various disruption types
+- `supplier_map`: object -- Visual dependency map showing all supplier relationships, tier depths, and concentration points
+- `risk_analysis`: object -- Scored risk assessment per supplier and per supply chain node (single-source, geographic, financial, quality)
+- `diversification_plan`: object -- Recommendations for dual/multi-sourcing with cost-benefit analysis
+- `safety_stock_calculations`: object -- Optimal safety stock levels, reorder points, and weeks of supply per component
+- `disruption_simulations`: array -- Scenario analyzes showing production impact of various disruption types
 
 ## Execution
 
 ### Phase 1: MAP -- Supply Chain Topology
-**Entry criteria:** Supplier list and product BOMs provided.
-**Actions:**
+### Entry Criteria
+Supplier list and product BOMs provided.
+### Actions
 1. Build the supply chain map:
    - **Tier 1:** Direct suppliers (you buy from them)
    - **Tier 2:** Suppliers' suppliers (they buy from; often invisible but critical)
@@ -33,12 +34,15 @@ Maps supply chain dependencies from raw materials to finished product, identifie
 4. Map spend concentration: calculate % of total spend per supplier. Flag any supplier with >30% of total spend or >50% of a critical component.
 5. Map lead time layers: total lead time from raw material to finished product for each critical path (sum of all tier lead times).
 
-**Output:** Supply chain map with tier structure, critical paths, geographic distribution, spend concentration, and total lead times.
-**Quality gate:** Every finished product has at least one complete path traced to Tier 1. All single-source dependencies are identified. Geographic and spend concentration are quantified.
+### Output
+Supply chain map with tier structure, critical paths, geographic distribution, spend concentration, and total lead times.
+### Quality Gate
+Every finished product has at least one complete path traced to Tier 1. All single-source dependencies are identified. Geographic and spend concentration are quantified.
 
 ### Phase 2: ANALYZE -- Risk Assessment
-**Entry criteria:** Supply chain map complete.
-**Actions:**
+### Entry Criteria
+Supply chain map complete.
+### Actions
 1. Score each supplier across four risk dimensions (each 1-10):
    - **Single-source risk:** Are they the only supplier for a critical component? (10 = sole source of critical item, 1 = one of many interchangeable suppliers)
    - **Geographic risk:** Political stability, natural disaster exposure, logistics vulnerability of their location. (10 = high-risk region, 1 = stable, well-connected region)
@@ -51,12 +55,15 @@ Maps supply chain dependencies from raw materials to finished product, identifie
    - Contract penalties, customer relationship damage, market share loss (harder to quantify but real)
    - Compare to cost of mitigation (safety stock, dual sourcing premium)
 
-**Output:** Risk scorecard per supplier, ranked risk list, hidden dependencies, cost-of-disruption estimates.
-**Quality gate:** Every supplier has a composite risk score. The top 5 highest-risk nodes are identified. Cost of disruption is estimated for at least the top 3 risks.
+### Output
+Risk scorecard per supplier, ranked risk list, hidden dependencies, cost-of-disruption estimates.
+### Quality Gate
+Every supplier has a composite risk score. The top 5 highest-risk nodes are identified. Cost of disruption is estimated for at least the top 3 risks.
 
 ### Phase 3: OPTIMIZE -- Diversification and Safety Stock
-**Entry criteria:** Risk analysis complete.
-**Actions:**
+### Entry Criteria
+Risk analysis complete.
+### Actions
 1. **Dual-sourcing recommendations:**
    - For every single-source critical component: identify potential alternate suppliers.
    - Calculate the "insurance premium" of dual sourcing: (cost from alternate - cost from primary) x volume.
@@ -78,12 +85,15 @@ Maps supply chain dependencies from raw materials to finished product, identifie
    - Compare to cost of stockout (production loss, expediting fees, customer penalties)
    - Find the minimum-total-cost point
 
-**Output:** Dual-sourcing recommendations with cost-benefit, safety stock levels per component, reorder points, target weeks of supply.
-**Quality gate:** Every critical component has a safety stock calculation. Dual-sourcing recommendations include quantified cost-benefit. Total inventory investment is calculated.
+### Output
+Dual-sourcing recommendations with cost-benefit, safety stock levels per component, reorder points, target weeks of supply.
+### Quality Gate
+Every critical component has a safety stock calculation. Dual-sourcing recommendations include quantified cost-benefit. Total inventory investment is calculated.
 
 ### Phase 4: SIMULATE -- Disruption Scenarios
-**Entry criteria:** Safety stock and diversification plans defined.
-**Actions:**
+### Entry Criteria
+Safety stock and diversification plans defined.
+### Actions
 1. Define disruption scenarios:
    - **Supplier failure:** Primary supplier for [component] goes offline for 2/4/8 weeks.
    - **Regional disruption:** All suppliers in [region] offline for 4 weeks (natural disaster, political event).
@@ -98,12 +108,15 @@ Maps supply chain dependencies from raw materials to finished product, identifie
    - **Mitigation effectiveness:** how much does the proposed safety stock / dual sourcing reduce the impact?
 3. Present scenarios as before/after: "Without mitigation, a 4-week supplier failure causes $X in lost revenue. With proposed safety stock, impact is reduced to $Y."
 
-**Output:** Disruption scenario analysis with impact quantification, mitigation effectiveness comparison, worst-case identification.
-**Quality gate:** At least 3 scenarios are modeled. Each scenario has quantified financial impact. Before/after mitigation comparison is provided.
+### Output
+Disruption scenario analysis with impact quantification, mitigation effectiveness comparison, worst-case identification.
+### Quality Gate
+At least 3 scenarios are modeled. Each scenario has quantified financial impact. Before/after mitigation comparison is provided.
 
 ### Phase 5: MONITOR -- Supplier Performance Tracking
-**Entry criteria:** Optimization plan delivered.
-**Actions:**
+### Entry Criteria
+Optimization plan delivered.
+### Actions
 1. Define KPIs to track per supplier:
    - **On-time delivery rate:** % of orders delivered within agreed lead time. Target: >95%. Warning: <90%.
    - **Quality acceptance rate:** % of deliveries passing incoming inspection. Target: >98%. Warning: <95%.
@@ -122,8 +135,19 @@ Maps supply chain dependencies from raw materials to finished product, identifie
    - Alert: activate alternate supplier qualification, increase safety stock
    - Critical: shift volume to alternate supplier, renegotiate or terminate
 
-**Output:** Supplier scorecard template, KPI definitions, early warning trigger definitions, escalation protocols.
-**Quality gate:** Every active supplier has defined KPIs with targets and warning thresholds. At least 3 early warning triggers are defined with specific escalation actions.
+### Output
+Supplier scorecard template, KPI definitions, early warning trigger definitions, escalation protocols.
+### Quality Gate
+Every active supplier has defined KPIs with targets and warning thresholds. At least 3 early warning triggers are defined with specific escalation actions.
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Maps supply chain dependencies, analyzes single-source and geographic concentrat, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 The pipeline completes when: (1) supply chain map is documented, (2) risks are scored and ranked, (3) safety stock levels and dual-sourcing recommendations are delivered with cost-benefit, (4) at least 3 disruption scenarios are modeled, and (5) supplier monitoring framework is established.
@@ -200,3 +224,7 @@ Tracks over time:
 - Disruption history and recovery times
 - Spend concentration trends
 - Alternate supplier qualification pipeline status
+
+---
+
+Copyright 2024-present The Wayfinder Trust. All rights reserved.

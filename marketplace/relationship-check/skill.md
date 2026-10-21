@@ -36,8 +36,7 @@ ACT     --> You leave with one conversation to have and one habit to build.
 
 ### OBSERVE: Map the Relationship
 
-**Actions:**
-
+### Actions
 1. **Get the overview.** Ask: "Tell me about this relationship. How long have you known each other? What's the foundation -- what brought you together and what keeps you connected?" The origin story reveals the values the relationship was built on. Drift happens when people move away from those original values without noticing.
 
 2. **Take the temperature.** Ask: "On a scale of 1-10, how healthy is this relationship right now? And here's the harder question: what number do you think THEY would give it?" The gap between those two numbers is the first signal. If you think it's a 7 and they'd say 4, you have a blind spot.
@@ -51,14 +50,14 @@ ACT     --> You leave with one conversation to have and one habit to build.
 
 4. **Find the drift.** Ask: "What's different about this relationship now compared to a year ago? Two years ago? Is the change gradual enough that you almost didn't notice it?"
 
-**Quality gate:** All five dimensions addressed. The "their perspective" question has been attempted. At least one area of concern is identified.
+### Quality Gate
+All five dimensions addressed. The "their perspective" question has been attempted. At least one area of concern is identified.
 
 ---
 
 ### REASON: Surface What's Unsaid
 
-**Actions:**
-
+### Actions
 1. **The resentment check.** Ask: "Is there anything you're tolerating that you haven't addressed? Something they do -- or don't do -- that bothers you, but you've decided it's 'not worth bringing up'?" Resentment is the compound interest of unaddressed small issues. It always comes due.
 
 2. **The expectation audit.** Ask: "What do you expect from them that you've never explicitly stated? And what do they probably expect from you that they haven't said?" Unspoken expectations are premeditated disappointments. Most relationship conflicts are about expectations that were never agreed to.
@@ -71,14 +70,14 @@ ACT     --> You leave with one conversation to have and one habit to build.
 
 6. **The future question.** Ask: "Where is this relationship heading if nothing changes? Not where you want it to go -- where is the current trajectory actually taking you?"
 
-**Quality gate:** At least 2 unsaid things surfaced. The expectation gap is identified. The trajectory question is answered honestly.
+### Quality Gate
+At least 2 unsaid things surfaced. The expectation gap is identified. The trajectory question is answered honestly.
 
 ---
 
 ### PLAN: Close the Gaps
 
-**Actions:**
-
+### Actions
 1. **Prioritize the unsaid things.** Ask: "Of everything that came up -- what's the ONE thing that would matter most to address? Not the easiest, not the most dramatic -- the one that would create the most positive change?"
 
 2. **Design the conversation.** Help them think through:
@@ -91,14 +90,14 @@ ACT     --> You leave with one conversation to have and one habit to build.
 
 4. **Set the re-check cadence.** Ask: "How often should you do this check-in -- with yourself, or with them? Monthly? Quarterly? What feels like the right rhythm before drift sets in again?"
 
-**Quality gate:** One priority conversation identified with approach designed. A recurring maintenance habit is defined. Re-check date is set.
+### Quality Gate
+One priority conversation identified with approach designed. A recurring maintenance habit is defined. Re-check date is set.
 
 ---
 
 ### ACT: Move Toward Repair
 
-**Actions:**
-
+### Actions
 1. **Deliver the health snapshot.** Summarize the five dimensions with honest assessments, the perception gap (their rating vs. estimated partner rating), and the trajectory.
 
 2. **Deliver the unsaid inventory.** List what needs to be said, ranked by importance, with notes on timing and approach.
@@ -109,7 +108,17 @@ ACT     --> You leave with one conversation to have and one habit to build.
 
 5. **Close with the real question.** Ask: "Is this relationship one you're actively choosing, or one you're passively staying in? There's honor in both answers, but you should know which one it is."
 
-**Output:** Health snapshot, unsaid inventory, conversation guide, weekly maintenance habit, re-check date.
+### Output
+Health snapshot, unsaid inventory, conversation guide, weekly maintenance habit, re-check date.
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Structured relationship health check-in: surface drift, resentment, unspoken exp, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 
@@ -155,7 +164,7 @@ Ask two questions:
 ### Conversation Opener Templates
 
 **Non-confrontational entry:**
-"I've been thinking about us, and there's something I want to talk about. Not because anything's wrong — I just want us to be intentional."
+"I've been thinking about us, and there's something I want to talk about. Not because anything's wrong  --  I just want us to be intentional."
 
 **Appreciation-first entry:**
 "I realized I've been taking [specific thing] for granted, and I wanted to say something. Also, I want to talk about [topic]."

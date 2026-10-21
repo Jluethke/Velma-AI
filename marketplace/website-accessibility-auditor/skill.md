@@ -13,15 +13,24 @@
 - `website_url` (string, required): The URL to audit.
 - `target_wcag_level` (string, optional): "A", "AA", or "AAA". Defaults to "AA" (legal minimum in most jurisdictions).
 - `known_user_base` (string, optional): Any known user demographics or disability considerations.
-- `tech_stack` (string, optional): Framework if known — affects code fix recommendations.
+- `tech_stack` (string, optional): Framework if known  --  affects code fix recommendations.
 - `existing_a11y_issues` (string, optional): Any issues already known or previously reported.
 
 ---
 
+## Outputs
+
+- (none defined)
+
+
+---
+- output: (auto-linked)
+
+- `output`: (auto-linked)
 ## Phases
 
-### Phase 1 — Perceivable
-WCAG Principle 1 — Can all users perceive the content?
+### Phase 1  --  Perceivable
+WCAG Principle 1  --  Can all users perceive the content?
 
 - **Images:** Do all meaningful images have descriptive alt text? Are decorative images marked `alt=""`?
 - **Color contrast:** Do all text/background combinations meet 4.5:1 (normal text) or 3:1 (large text)?
@@ -29,8 +38,8 @@ WCAG Principle 1 — Can all users perceive the content?
 - **Captions & transcripts:** Do videos have captions? Audio have transcripts?
 - **Responsive text:** Does text resize to 200% without horizontal scrolling or content loss?
 
-### Phase 2 — Operable
-WCAG Principle 2 — Can all users operate the interface?
+### Phase 2  --  Operable
+WCAG Principle 2  --  Can all users operate the interface?
 
 - **Keyboard navigation:** Can every interactive element be reached and activated with keyboard only?
 - **Focus visibility:** Is the focus indicator clearly visible (not hidden with outline:none)?
@@ -40,8 +49,8 @@ WCAG Principle 2 — Can all users operate the interface?
 - **Timing:** Are there time limits? Can they be extended or disabled?
 - **Flashing content:** Is there any content that flashes more than 3 times per second?
 
-### Phase 3 — Understandable
-WCAG Principle 3 — Can all users understand the content and interface?
+### Phase 3  --  Understandable
+WCAG Principle 3  --  Can all users understand the content and interface?
 
 - **Language:** Is `<html lang="...">` set correctly?
 - **Error identification:** Are form errors described in text, not just color?
@@ -50,8 +59,8 @@ WCAG Principle 3 — Can all users understand the content and interface?
 - **Consistent navigation:** Does navigation appear in the same location across pages?
 - **Predictable focus:** Does focus not unexpectedly move or trigger navigation?
 
-### Phase 4 — Robust
-WCAG Principle 4 — Is the content robust enough for assistive technologies?
+### Phase 4  --  Reliable
+WCAG Principle 4  --  Is the content reliable enough for assistive technologies?
 
 - **Semantic HTML:** Are headings (H1–H6) used for structure, not styling?
 - **ARIA usage:** Is ARIA used correctly? Are there ARIA attributes without matching roles?
@@ -59,15 +68,15 @@ WCAG Principle 4 — Is the content robust enough for assistive technologies?
 - **Status messages:** Are dynamic status updates announced via `aria-live` regions?
 - **Valid HTML:** Are there duplicate IDs, unclosed tags, or invalid nesting?
 
-### Phase 5 — Legal & Compliance Risk
+### Phase 5  --  Legal & Compliance Risk
 - Applicable laws: ADA (US), AODA (Canada), EAA (EU), Equality Act (UK)
 - Current compliance level estimate: Compliant / At Risk / Non-compliant
 - Highest-risk issues that could generate complaints or litigation
 - Recommended next step: internal audit, third-party audit, or formal VPAT
 
-### Phase 6 — Remediation Plan
+### Phase 6  --  Remediation Plan
 
-**Blockers (prevent access entirely — fix immediately):**
+**Blockers (prevent access entirely  --  fix immediately):**
 Issue, affected users, WCAG criterion, specific code fix.
 
 **High (significantly impair experience):**
@@ -78,3 +87,7 @@ Same format.
 
 **Quick wins (< 2 hours each, high compliance value):**
 Specific code changes, copy changes, or config toggles.
+
+---
+
+Copyright 2024-present The Wayfinder Trust. All rights reserved.

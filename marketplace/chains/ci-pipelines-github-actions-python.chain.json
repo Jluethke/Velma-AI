@@ -3,11 +3,11 @@
   "description": "Build a hardened GitHub Actions CI for a Python project: commands, clean-room check, workflow, cache, version matrix, JUnit artifacts, SHA pins, secrets audit, workflow lint and required checks.",
   "steps": [
     {
-      "id": "s01_ci0_detect_stack",
+      "id": "step_1",
       "skill_name": "ci0-detect-stack",
       "inputs": {
         "repo_dir": "from_user_input",
-        "stack": "from_user_input_optional"
+        "stack": "from_user_input"
       },
       "outputs": {
         "stack_profile": "stack_profile",
@@ -16,11 +16,11 @@
       "parallel_group": 1
     },
     {
-      "id": "s02_ci0_py_ci_commands",
+      "id": "step_2",
       "skill_name": "ci0-py-ci-commands",
       "inputs": {
-        "repo_dir": "from_user_input",
-        "stack_profile": "s01_ci0_detect_stack.stack_profile"
+        "repo_dir": "from_context.repo_dir",
+        "stack_profile": "step_1.stack_profile"
       },
       "outputs": {
         "py_ci_commands": "py_ci_commands"
@@ -28,15 +28,15 @@
       "parallel_group": 2
     },
     {
-      "id": "s03_ci0_clean_room_command_check",
+      "id": "step_3",
       "skill_name": "ci0-clean-room-command-check",
       "inputs": {
-        "repo_dir": "from_user_input",
-        "py_ci_commands": "s02_ci0_py_ci_commands.py_ci_commands",
-        "node_ci_commands": "from_user_input_optional",
-        "go_ci_commands": "from_user_input_optional",
-        "jvm_ci_commands": "from_user_input_optional",
-        "runner_image": "from_user_input_optional"
+        "repo_dir": "from_context.repo_dir",
+        "py_ci_commands": "step_2.py_ci_commands",
+        "node_ci_commands": "from_context.node_ci_commands",
+        "go_ci_commands": "from_context.go_ci_commands",
+        "jvm_ci_commands": "from_context.jvm_ci_commands",
+        "runner_image": "from_context.runner_image"
       },
       "outputs": {
         "verified_commands": "verified_commands",
@@ -45,12 +45,12 @@
       "parallel_group": 3
     },
     {
-      "id": "s04_ci0_gha_workflow_baseline",
+      "id": "step_4",
       "skill_name": "ci0-gha-workflow-baseline",
       "inputs": {
-        "repo_dir": "from_user_input",
-        "verified_commands": "s03_ci0_clean_room_command_check.verified_commands",
-        "default_branch": "from_user_input"
+        "repo_dir": "from_context.repo_dir",
+        "verified_commands": "step_3.verified_commands",
+        "default_branch": "from_context.default_branch"
       },
       "outputs": {
         "gha_workflow_path": "gha_workflow_path",
@@ -59,11 +59,11 @@
       "parallel_group": 4
     },
     {
-      "id": "s05_ci0_gha_dependency_cache",
+      "id": "step_5",
       "skill_name": "ci0-gha-dependency-cache",
       "inputs": {
-        "gha_workflow_path": "s04_ci0_gha_workflow_baseline.gha_workflow_path",
-        "stack_profile": "s01_ci0_detect_stack.stack_profile"
+        "gha_workflow_path": "step_4.gha_workflow_path",
+        "stack_profile": "step_1.stack_profile"
       },
       "outputs": {
         "gha_cache_diff": "gha_cache_diff"
@@ -71,231 +71,220 @@
       "parallel_group": 5
     },
     {
-      "id": "s06_ci0_gha_test_matrix",
+      "id": "step_6",
       "skill_name": "ci0-gha-test-matrix",
       "inputs": {
-        "gha_workflow_path": "s04_ci0_gha_workflow_baseline.gha_workflow_path",
-        "matrix_versions": "from_user_input",
-        "matrix_os": "from_user_input_optional"
+        "gha_workflow_path": "step_4.gha_workflow_path",
+        "matrix_versions": "from_context.matrix_versions",
+        "matrix_os": "from_context.matrix_os"
       },
       "outputs": {
         "gha_matrix_diff": "gha_matrix_diff",
         "check_run_names": "check_run_names"
       },
-      "parallel_group": 5
+      "parallel_group": 6
     },
     {
-      "id": "s07_ci0_gha_junit_artifacts",
+      "id": "step_7",
       "skill_name": "ci0-gha-junit-artifacts",
       "inputs": {
-        "gha_workflow_path": "s04_ci0_gha_workflow_baseline.gha_workflow_path",
-        "junit_report_globs": "s03_ci0_clean_room_command_check.junit_report_globs"
+        "gha_workflow_path": "step_4.gha_workflow_path",
+        "junit_report_globs": "step_3.junit_report_globs"
       },
       "outputs": {
         "gha_report_diff": "gha_report_diff"
       },
-      "parallel_group": 5
+      "parallel_group": 7
     },
     {
-      "id": "s08_ci0_gha_pin_actions_sha",
+      "id": "step_8",
       "skill_name": "ci0-gha-pin-actions-sha",
       "inputs": {
-        "gha_workflow_path": "s04_ci0_gha_workflow_baseline.gha_workflow_path"
+        "gha_workflow_path": "step_4.gha_workflow_path"
       },
       "outputs": {
         "pinned_actions_table": "pinned_actions_table"
       },
-      "parallel_group": 5
+      "parallel_group": 8
     },
     {
-      "id": "s09_ci0_gha_secrets_permissions",
+      "id": "step_9",
       "skill_name": "ci0-gha-secrets-permissions",
       "inputs": {
-        "gha_workflow_path": "s04_ci0_gha_workflow_baseline.gha_workflow_path"
+        "gha_workflow_path": "step_4.gha_workflow_path"
       },
       "outputs": {
         "secrets_findings": "secrets_findings"
       },
-      "parallel_group": 5
+      "parallel_group": 9
     },
     {
-      "id": "s10_ci0_gha_lint_workflows",
+      "id": "step_10",
       "skill_name": "ci0-gha-lint-workflows",
       "inputs": {
-        "gha_workflow_path": "s04_ci0_gha_workflow_baseline.gha_workflow_path"
+        "gha_workflow_path": "step_4.gha_workflow_path"
       },
       "outputs": {
         "lint_report": "lint_report"
       },
-      "parallel_group": 5
+      "parallel_group": 10
     },
     {
-      "id": "s11_ci0_gha_required_checks",
+      "id": "step_11",
       "skill_name": "ci0-gha-required-checks",
       "inputs": {
-        "repo_slug": "from_user_input",
-        "default_branch": "from_user_input",
-        "check_run_names": "s06_ci0_gha_test_matrix.check_run_names"
+        "repo_slug": "from_context.repo_slug",
+        "default_branch": "from_context.default_branch",
+        "check_run_names": "step_6.check_run_names"
       },
       "outputs": {
         "protection_record": "protection_record"
       },
-      "parallel_group": 6
+      "parallel_group": 11
     }
   ],
   "edges": [
     {
-      "from_step": "s01_ci0_detect_stack",
-      "to_step": "s02_ci0_py_ci_commands",
-      "data_type": "ci0-detect-stack",
-      "field_mapping": {
-        "stack_profile": "stack_profile"
-      }
+      "from_step": "step_1",
+      "to_step": "step_2",
+      "data_type": "object",
+      "field_mapping": {}
     },
     {
-      "from_step": "s02_ci0_py_ci_commands",
-      "to_step": "s03_ci0_clean_room_command_check",
-      "data_type": "ci0-py-ci-commands",
-      "field_mapping": {
-        "py_ci_commands": "py_ci_commands"
-      }
+      "from_step": "step_2",
+      "to_step": "step_3",
+      "data_type": "object",
+      "field_mapping": {}
     },
     {
-      "from_step": "s03_ci0_clean_room_command_check",
-      "to_step": "s04_ci0_gha_workflow_baseline",
-      "data_type": "ci0-clean-room-command-check",
-      "field_mapping": {
-        "verified_commands": "verified_commands"
-      }
+      "from_step": "step_3",
+      "to_step": "step_4",
+      "data_type": "object",
+      "field_mapping": {}
     },
     {
-      "from_step": "s04_ci0_gha_workflow_baseline",
-      "to_step": "s05_ci0_gha_dependency_cache",
-      "data_type": "ci0-gha-workflow-baseline",
-      "field_mapping": {
-        "gha_workflow_path": "gha_workflow_path"
-      }
+      "from_step": "step_4",
+      "to_step": "step_5",
+      "data_type": "object",
+      "field_mapping": {}
     },
     {
-      "from_step": "s01_ci0_detect_stack",
-      "to_step": "s05_ci0_gha_dependency_cache",
-      "data_type": "ci0-detect-stack",
-      "field_mapping": {
-        "stack_profile": "stack_profile"
-      }
+      "from_step": "step_5",
+      "to_step": "step_6",
+      "data_type": "object",
+      "field_mapping": {}
     },
     {
-      "from_step": "s04_ci0_gha_workflow_baseline",
-      "to_step": "s06_ci0_gha_test_matrix",
-      "data_type": "ci0-gha-workflow-baseline",
-      "field_mapping": {
-        "gha_workflow_path": "gha_workflow_path"
-      }
+      "from_step": "step_6",
+      "to_step": "step_7",
+      "data_type": "object",
+      "field_mapping": {}
     },
     {
-      "from_step": "s04_ci0_gha_workflow_baseline",
-      "to_step": "s07_ci0_gha_junit_artifacts",
-      "data_type": "ci0-gha-workflow-baseline",
-      "field_mapping": {
-        "gha_workflow_path": "gha_workflow_path"
-      }
+      "from_step": "step_7",
+      "to_step": "step_8",
+      "data_type": "object",
+      "field_mapping": {}
     },
     {
-      "from_step": "s03_ci0_clean_room_command_check",
-      "to_step": "s07_ci0_gha_junit_artifacts",
-      "data_type": "ci0-clean-room-command-check",
-      "field_mapping": {
-        "junit_report_globs": "junit_report_globs"
-      }
+      "from_step": "step_8",
+      "to_step": "step_9",
+      "data_type": "object",
+      "field_mapping": {}
     },
     {
-      "from_step": "s04_ci0_gha_workflow_baseline",
-      "to_step": "s08_ci0_gha_pin_actions_sha",
-      "data_type": "ci0-gha-workflow-baseline",
-      "field_mapping": {
-        "gha_workflow_path": "gha_workflow_path"
-      }
+      "from_step": "step_9",
+      "to_step": "step_10",
+      "data_type": "object",
+      "field_mapping": {}
     },
     {
-      "from_step": "s04_ci0_gha_workflow_baseline",
-      "to_step": "s09_ci0_gha_secrets_permissions",
-      "data_type": "ci0-gha-workflow-baseline",
-      "field_mapping": {
-        "gha_workflow_path": "gha_workflow_path"
-      }
-    },
-    {
-      "from_step": "s04_ci0_gha_workflow_baseline",
-      "to_step": "s10_ci0_gha_lint_workflows",
-      "data_type": "ci0-gha-workflow-baseline",
-      "field_mapping": {
-        "gha_workflow_path": "gha_workflow_path"
-      }
-    },
-    {
-      "from_step": "s06_ci0_gha_test_matrix",
-      "to_step": "s11_ci0_gha_required_checks",
-      "data_type": "ci0-gha-test-matrix",
-      "field_mapping": {
-        "check_run_names": "check_run_names"
-      }
+      "from_step": "step_10",
+      "to_step": "step_11",
+      "data_type": "object",
+      "field_mapping": {}
     }
   ],
   "entry_inputs": [
     "repo_dir",
-    "stack",
-    "node_ci_commands",
-    "go_ci_commands",
-    "jvm_ci_commands",
-    "runner_image",
-    "default_branch",
-    "matrix_versions",
-    "matrix_os",
-    "repo_slug"
+    "stack"
   ],
   "terminal_outputs": [
-    "existing_ci_files",
-    "gha_job_ids",
-    "gha_cache_diff",
-    "gha_matrix_diff",
-    "gha_report_diff",
-    "pinned_actions_table",
-    "secrets_findings",
-    "lint_report",
     "protection_record"
   ],
   "parallel_groups": [
     [
-      "s01_ci0_detect_stack"
+      "step_1"
     ],
     [
-      "s02_ci0_py_ci_commands"
+      "step_2"
     ],
     [
-      "s03_ci0_clean_room_command_check"
+      "step_3"
     ],
     [
-      "s04_ci0_gha_workflow_baseline"
+      "step_4"
     ],
     [
-      "s05_ci0_gha_dependency_cache",
-      "s06_ci0_gha_test_matrix",
-      "s07_ci0_gha_junit_artifacts",
-      "s08_ci0_gha_pin_actions_sha",
-      "s09_ci0_gha_secrets_permissions",
-      "s10_ci0_gha_lint_workflows"
+      "step_5"
     ],
     [
-      "s11_ci0_gha_required_checks"
+      "step_6"
+    ],
+    [
+      "step_7"
+    ],
+    [
+      "step_8"
+    ],
+    [
+      "step_9"
+    ],
+    [
+      "step_10"
+    ],
+    [
+      "step_11"
     ]
   ],
-  "estimated_cost": 11,
+  "estimated_cost": "low",
   "critical_path": [
-    "s01_ci0_detect_stack",
-    "s02_ci0_py_ci_commands",
-    "s03_ci0_clean_room_command_check",
-    "s04_ci0_gha_workflow_baseline",
-    "s06_ci0_gha_test_matrix",
-    "s11_ci0_gha_required_checks"
-  ]
+    "step_1",
+    "step_2",
+    "step_3",
+    "step_4",
+    "step_5",
+    "step_6",
+    "step_7",
+    "step_8",
+    "step_9",
+    "step_10",
+    "step_11"
+  ],
+  "chain_links": {
+    "prerequisites": [],
+    "next_chains": [],
+    "related_chains": [
+      {
+        "chain_name": "ci-pipelines",
+        "relationship": "complement"
+      },
+      {
+        "chain_name": "ci-pipelines-flaky-quarantine",
+        "relationship": "complement"
+      },
+      {
+        "chain_name": "ci-pipelines-gha-supply-chain",
+        "relationship": "complement"
+      },
+      {
+        "chain_name": "ci-pipelines-gitlab",
+        "relationship": "complement"
+      },
+      {
+        "chain_name": "ci-pipelines-speed",
+        "relationship": "complement"
+      }
+    ]
+  }
 }

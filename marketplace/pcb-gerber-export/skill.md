@@ -59,6 +59,15 @@
 
 ---
 
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Export a DRC-clean board to Gerbers and Excellon drill, zip for the fab, verify , the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
+
 ## Exit Criteria
 
 DONE when the fab zip is complete, verified in a viewer, and renders confirm orientation markings.

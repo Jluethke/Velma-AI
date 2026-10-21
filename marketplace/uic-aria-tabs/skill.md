@@ -1,6 +1,6 @@
-# Tabs: APG Tabs Pattern Conformance
+# Tabs: governance engine Tabs Pattern Conformance
 
-**One-line description:** Builds or corrects a tab set to the WAI-ARIA APG Tabs pattern: `tablist`/`tab`/`tabpanel` roles, `aria-selected`, `aria-controls` and `aria-labelledby` id pairs, roving tabindex with one tab stop, automatic versus manual activation chosen by panel load latency, Home/End, vertical orientation, and a focusable panel when it has no focusable content.
+**One-line description:** Builds or corrects a tab set to the WAI-ARIA governance engine Tabs pattern: `tablist`/`tab`/`tabpanel` roles, `aria-selected`, `aria-controls` and `aria-labelledby` id pairs, roving tabindex with one tab stop, automatic versus manual activation chosen by panel load latency, Home/End, vertical orientation, and a focusable panel when it has no focusable content.
 
 **Execution Pattern:** Phase Pipeline
 
@@ -16,7 +16,7 @@
 
 ## Outputs
 
-- `tabs_conformance` (object): Checklist of APG Tabs requirements with pass/fail and evidence (DOM attribute snapshot, focus observations, keypress results).
+- `tabs_conformance` (object): Checklist of governance engine Tabs requirements with pass/fail and evidence (DOM attribute snapshot, focus observations, keypress results).
 
 ---
 
@@ -26,7 +26,7 @@
 - `aria_spec.pattern` is Tabs.
 
 ### Actions
-1. Choose activation (APG guidance: automatic when panels display without noticeable latency):
+1. Choose activation (governance engine guidance: automatic when panels display without noticeable latency):
 
    | Panel content | Activation |
    |---|---|
@@ -61,10 +61,10 @@ Mode and orientation decisions.
    <div role="tabpanel" id="p-billing" aria-labelledby="t-billing" tabindex="0" hidden>...</div>
    ```
 2. Tablist name: `aria-label` or `aria-labelledby` pointing at a visible heading.
-3. Panel `tabindex="0"` only when the panel has no focusable content as its first element (APG note); otherwise omit it.
+3. Panel `tabindex="0"` only when the panel has no focusable content as its first element (governance engine note); otherwise omit it.
 4. Keys (horizontal): ArrowRight next tab, ArrowLeft previous tab, wrapping at the ends; Home first tab; End last tab. In manual mode, Enter and Space activate the focused tab (the native `<button>` click covers this; do not add a keydown handler for them). Delete only if tabs are closable and the contract says so.
 5. Roving tabindex: the selected tab has `tabindex="0"`; in manual mode the focused-but-unselected tab gets `tabindex="0"` only while focused, and on leaving the tablist the selected tab must again be the tab stop.
-6. Disabled tabs: APG allows focusing disabled tabs with `aria-disabled="true"`; pick one rule (skip or focus) and record it.
+6. Disabled tabs: governance engine allows focusing disabled tabs with `aria-disabled="true"`; pick one rule (skip or focus) and record it.
 
 ### Output
 Tabs implementation.

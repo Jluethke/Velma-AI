@@ -5,25 +5,26 @@ Continuous operations loop for running a company. Scans all business functions -
 ## Execution Pattern: ORPA Loop
 
 ## Inputs
-- company_metrics: object -- Core KPIs: MRR/ARR, growth rate, churn rate, CAC, LTV, gross margin, NRR (net revenue retention)
-- pipeline_data: object -- Sales pipeline: deals by stage, pipeline value, conversion rates per stage, average deal cycle time
-- team_status: object -- Headcount, open roles, capacity utilization, morale indicators, recent hires/departures
-- product_metrics: object -- Feature adoption, bug count, uptime, release velocity, user engagement metrics
-- customer_feedback: array -- NPS/CSAT scores, support ticket trends, churn reasons, feature requests, win/loss analysis
-- financial_data: object -- Cash balance, monthly burn rate, runway (months), revenue vs budget variance, unit economics
+- `company_metrics`: object -- Core KPIs: MRR/ARR, growth rate, churn rate, CAC, LTV, gross margin, NRR (net revenue retention)
+- `pipeline_data`: object -- Sales pipeline: deals by stage, pipeline value, conversion rates per stage, average deal cycle time
+- `team_status`: object -- Headcount, open roles, capacity utilization, morale indicators, recent hires/departures
+- `product_metrics`: object -- Feature adoption, bug count, uptime, release velocity, user engagement metrics
+- `customer_feedback`: array -- NPS/CSAT scores, support ticket trends, churn reasons, feature requests, win/loss analysis
+- `financial_data`: object -- Cash balance, monthly burn rate, runway (months), revenue vs budget variance, unit economics
 
 ## Outputs
-- executive_briefing: object -- One-page summary of company state with RAG (red/amber/green) status per function
-- action_items: array -- Top 3-5 prioritized actions for this week with owners, deadlines, and expected impact
-- kpi_dashboard: object -- All tracked KPIs with current value, trend (up/down/flat), target, and variance
-- risk_flags: array -- Early warning indicators with severity, potential impact, and recommended response
-- delegation_plan: object -- Which issues should be routed to specialized skills for deeper analysis
+- `executive_briefing`: object -- One-page summary of company state with RAG (red/amber/green) status per function
+- `action_items`: array -- Top 3-5 prioritized actions for this week with owners, deadlines, and expected impact
+- `kpi_dashboard`: object -- All tracked KPIs with current value, trend (up/down/flat), target, and variance
+- `risk_flags`: array -- Early warning indicators with severity, potential impact, and recommended response
+- `delegation_plan`: object -- Which issues should be routed to specialized skills for deeper analysis
 
 ## Execution
 
 ### OBSERVE: Scan Company State
-**Entry criteria:** At least financial_data and one other input category provided.
-**Actions:**
+### Entry Criteria
+At least financial_data and one other input category provided.
+### Actions
 1. Collect and normalize all available data into a unified company snapshot:
    - **Revenue health:** MRR, MRR growth rate (month-over-month), ARR run rate, revenue vs plan variance
    - **Customer health:** Churn rate (logo and revenue), NRR, NPS trend, support ticket volume and resolution time
@@ -43,12 +44,15 @@ Continuous operations loop for running a company. Scans all business functions -
    - **Months to default alive:** At current trajectory, when does revenue exceed burn? (Infinite if never.)
 4. Compare to last period: what changed? Which metrics improved, declined, or stayed flat?
 
-**Output:** Company snapshot with all metrics, RAG status per function, derived metrics, period-over-period comparison.
-**Quality gate:** Every function has a RAG status with supporting data. At least one derived metric is calculated. Period-over-period comparison identifies changes. No function is assessed without data (mark as "DATA UNAVAILABLE" rather than guessing).
+### Output
+Company snapshot with all metrics, RAG status per function, derived metrics, period-over-period comparison.
+### Quality Gate
+Every function has a RAG status with supporting data. At least one derived metric is calculated. Period-over-period comparison identifies changes. No function is assessed without data (mark as "DATA UNAVAILABLE" rather than guessing).
 
 ### REASON: Identify What Needs Attention
-**Entry criteria:** Company snapshot complete.
-**Actions:**
+### Entry Criteria
+Company snapshot complete.
+### Actions
 1. Triage RED items by impact:
    - **Revenue-threatening:** Issues that directly reduce revenue (churn spike, pipeline collapse, pricing complaints)
    - **Existential:** Issues that threaten company survival (runway < 6 months, key person dependency, regulatory violation)
@@ -72,12 +76,15 @@ Continuous operations loop for running a company. Scans all business functions -
    - Competitive pressure -> route to competitor-teardown
    - Team capacity issues -> internal assessment (no skill needed, management judgment)
 
-**Output:** Prioritized issue list with root cause hypotheses, one-action recommendations, owner assignments, skill delegation map.
-**Quality gate:** Issues are ranked by impact (revenue-threatening > existential > growth-limiting). Each issue has a root cause hypothesis (not just "churn is high" but "churn is high because [hypothesis]"). At least one issue has a delegation to a specialized skill.
+### Output
+Prioritized issue list with root cause hypotheses, one-action recommendations, owner assignments, skill delegation map.
+### Quality Gate
+Issues are ranked by impact (revenue-threatening > existential > growth-limiting). Each issue has a root cause hypothesis (not just "churn is high" but "churn is high because [hypothesis]"). At least one issue has a delegation to a specialized skill.
 
 ### PLAN: Generate Action Plan
-**Entry criteria:** Issues prioritized with root cause hypotheses.
-**Actions:**
+### Entry Criteria
+Issues prioritized with root cause hypotheses.
+### Actions
 1. Select the Top 3 issues to address this week:
    - Maximum 3 priorities. More than 3 means nothing is truly prioritized.
    - Each must have: description, root cause, specific action, owner, deadline, success metric.
@@ -100,12 +107,15 @@ Continuous operations loop for running a company. Scans all business functions -
    - Support ticket volume increasing -> product quality or onboarding problem
    - Biggest customer reducing usage -> potential high-value churn
 
-**Output:** Top 3 action items with owners and deadlines, executive briefing, KPI dashboard, risk flags.
-**Quality gate:** Exactly 3-5 action items (not 10). Each action has an owner, deadline, and measurable success metric. Executive briefing fits on one page. KPI dashboard includes trend data. At least 2 risk flags identified.
+### Output
+Top 3 action items with owners and deadlines, executive briefing, KPI dashboard, risk flags.
+### Quality Gate
+Exactly 3-5 action items (not 10). Each action has an owner, deadline, and measurable success metric. Executive briefing fits on one page. KPI dashboard includes trend data. At least 2 risk flags identified.
 
 ### ACT: Deliver and Delegate
-**Entry criteria:** Briefing and action plan complete.
-**Actions:**
+### Entry Criteria
+Briefing and action plan complete.
+### Actions
 1. Deliver the executive briefing package:
    - Executive briefing (for the operator/CEO)
    - Action items with delegation (for the team)
@@ -127,8 +137,10 @@ Continuous operations loop for running a company. Scans all business functions -
    - What actions consistently work? (Build these into processes.)
    - What surprises occurred? (Improve leading indicators to catch these earlier.)
 
-**Output:** Complete briefing package, delegation instructions, follow-up tracking from previous cycle.
-**Quality gate:** Briefing is delivered in a format ready for distribution. Delegations include specific inputs for each skill. Follow-up on previous actions is explicit (not "we'll check later" but "Action X from last week: [status]").
+### Output
+Complete briefing package, delegation instructions, follow-up tracking from previous cycle.
+### Quality Gate
+Briefing is delivered in a format ready for distribution. Delegations include specific inputs for each skill. Follow-up on previous actions is explicit (not "we'll check later" but "Action X from last week: [status]").
 
 ## Exit Criteria
 Company Operator is a continuous loop running weekly (or bi-weekly for smaller companies). Each cycle completes when the executive briefing, action items, KPI dashboard, and risk flags are delivered. The loop exits only when the company is sold, shut down, or the operator chooses to stop.
@@ -229,3 +241,7 @@ Company Operator maintains a company knowledge base tracking:
 - Operational velocity: is the company getting faster or slower at addressing issues
 - Recurring themes: issues that keep coming back (signals structural problems vs tactical ones)
 - Board/investor update history: what was reported, what actually happened (accountability)
+
+---
+
+Copyright 2024-present The Wayfinder Trust. All rights reserved.

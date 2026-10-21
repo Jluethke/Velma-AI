@@ -34,10 +34,10 @@ ACT     --> Output: module diagram, dependency graph, key file index, tech stack
 
 ### OBSERVE: Scan Repository Structure
 
-**Entry criteria:** `repo_path` exists and is accessible. Directory contains at least one source file.
+### Entry Criteria
+`repo_path` exists and is accessible. Directory contains at least one source file.
 
-**Actions:**
-
+### Actions
 1. **Directory tree scan:**
    - Walk the directory tree up to `depth` levels, excluding common non-source directories (see Reference: Ignore Patterns)
    - Record every directory with its file count, total line count, and dominant language
@@ -64,18 +64,20 @@ ACT     --> Output: module diagram, dependency graph, key file index, tech stack
    - Record public API surface per module (exported classes, functions, constants)
    - Identify inheritance hierarchies and interface implementations
 
-**Output:** Raw scan data: directory tree with metadata, file classifications, import graph, definition index.
+### Output
+Raw scan data: directory tree with metadata, file classifications, import graph, definition index.
 
-**Quality gate:** Every source file is classified. Import graph has no unresolved internal references (external deps are expected to be unresolved). At least one entry point is identified, or the absence is flagged.
+### Quality Gate
+Every source file is classified. Import graph has no unresolved internal references (external deps are expected to be unresolved). At least one entry point is identified, or the absence is flagged.
 
 ---
 
 ### REASON: Identify Architecture
 
-**Entry criteria:** Raw scan data is complete.
+### Entry Criteria
+Raw scan data is complete.
 
-**Actions:**
-
+### Actions
 1. **Module boundary detection:**
    - Group files into modules using directory structure + import clustering
    - A module is a directory (or set of directories) where internal imports outnumber external imports by at least 2:1
@@ -113,18 +115,20 @@ ACT     --> Output: module diagram, dependency graph, key file index, tech stack
    - Detect infrastructure: Docker, Kubernetes, Terraform, CI configs (.github/workflows, .gitlab-ci.yml, Jenkinsfile)
    - Detect databases: ORM imports, migration directories, connection strings in config
 
-**Output:** Module map with layer assignments, dependency graph with coupling metrics, dead code candidates, tech stack inventory, layer violation report.
+### Output
+Module map with layer assignments, dependency graph with coupling metrics, dead code candidates, tech stack inventory, layer violation report.
 
-**Quality gate:** Every source file belongs to exactly one module. Coupling metrics are computed for all module pairs with dependencies. Dead code candidates have confidence levels. Tech stack detection covers package manifest + import evidence.
+### Quality Gate
+Every source file belongs to exactly one module. Coupling metrics are computed for all module pairs with dependencies. Dead code candidates have confidence levels. Tech stack detection covers package manifest + import evidence.
 
 ---
 
 ### PLAN: Generate Architecture Map
 
-**Entry criteria:** Module analysis and metrics are complete.
+### Entry Criteria
+Module analysis and metrics are complete.
 
-**Actions:**
-
+### Actions
 1. **Compose module diagram:**
    - Arrange modules by architectural layer (top to bottom: presentation -> application -> domain, infrastructure on the side)
    - Show dependency edges with direction and weight (import count)
@@ -153,18 +157,20 @@ ACT     --> Output: module diagram, dependency graph, key file index, tech stack
    - Identify structural regressions: new circular dependencies, new layer violations
    - Flag rapid growth modules: modules that grew > 30% in file count since last run
 
-**Output:** Complete architecture map document with module diagram, dependency graph, file index, metrics, and drift report.
+### Output
+Complete architecture map document with module diagram, dependency graph, file index, metrics, and drift report.
 
-**Quality gate:** Module diagram is internally consistent (all referenced modules exist). Metrics are within valid ranges. Drift report (if applicable) has specific file-level evidence for each change.
+### Quality Gate
+Module diagram is internally consistent (all referenced modules exist). Metrics are within valid ranges. Drift report (if applicable) has specific file-level evidence for each change.
 
 ---
 
 ### ACT: Deliver Architecture Map
 
-**Entry criteria:** Architecture map document is composed and validated.
+### Entry Criteria
+Architecture map document is composed and validated.
 
-**Actions:**
-
+### Actions
 1. **Format the architecture map:**
    - Module diagram in text-based format (ASCII or Mermaid syntax for rendering)
    - Dependency graph as adjacency list with weights
@@ -190,9 +196,11 @@ ACT     --> Output: module diagram, dependency graph, key file index, tech stack
    - Top 3 structural risks
    - Top 3 architectural strengths
 
-**Output:** Final architecture map with all components: diagram, graph, index, metrics, findings, summary.
+### Output
+Final architecture map with all components: diagram, graph, index, metrics, findings, summary.
 
-**Quality gate:** Every structural risk has a specific remediation suggestion. Architecture map is self-contained (no undefined references). Summary accurately reflects the metrics.
+### Quality Gate
+Every structural risk has a specific remediation suggestion. Architecture map is self-contained (no undefined references). Summary accurately reflects the metrics.
 
 ---
 

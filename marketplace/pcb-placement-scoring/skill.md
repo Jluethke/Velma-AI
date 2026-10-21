@@ -63,6 +63,15 @@ Raw metrics per candidate.
 
 ---
 
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Score placement candidates on ratsnest length, switching hot-loop area, hotspot , the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
+
 ## Exit Criteria
 
 DONE when one placement is selected by a recorded numeric comparison and its decisions are written for routing.

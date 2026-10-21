@@ -28,20 +28,20 @@
 
 ### Phase 0: Pre-Flight Information Check
 
-**Entry Criteria:**
+### Entry Criteria
 - User is ready to analyze a conflict.
 
-**Actions:**
+### Actions
 1. Confirm that conflict_description is provided and contains at least: two parties, one core disagreement, and what each party wants.
 2. If any of these elements is missing, ask the user to provide specifics before proceeding.
 3. Note any optional inputs that are missing (relationship_type, relationship_importance, stakes_level) and plan to infer them in Phase 2.
 4. Flag any information that would improve confidence (e.g., "Have you attempted any resolution yet?", "How long has this conflict existed?").
 
-**Output:**
+### Output
 - Confirmation that conflict_description is sufficient to proceed, or a list of clarifying questions.
 - List of missing optional inputs and inference plan.
 
-**Quality Gate:**
+### Quality Gate
 - Conflict description contains at least 2 parties and 1 core disagreement.
 - If critical information is missing, the user is asked to provide it before Phase 1 begins.
 - If user chooses to proceed with incomplete information, this is documented and confidence level is flagged as "low" in the final output.
@@ -50,20 +50,20 @@
 
 ### Phase 1: Parse and Validate Conflict Description
 
-**Entry Criteria:**
+### Entry Criteria
 - Conflict description is provided and contains at least 2 parties and 1 core disagreement.
 
-**Actions:**
+### Actions
 1. Extract parties involved (names, roles, or descriptors).
 2. Identify the core issue: what specifically are they disagreeing about? State in one sentence.
 3. Note any stated positions, interests, or constraints from each party.
 4. Identify any prior attempts to resolve or escalations.
 5. Flag any missing information (e.g., "unclear what party B actually wants") and note assumptions made.
 
-**Output:**
+### Output
 - Structured conflict summary with parties, core issue, stated positions, prior attempts, and information gaps.
 
-**Quality Gate:**
+### Quality Gate
 - At least 2 parties are identified and named or described.
 - Core issue is stated in one sentence.
 - All stated positions from each party are captured.
@@ -73,23 +73,23 @@
 
 ### Phase 2: Assess Relationship Context, Power Dynamics, and Stakes
 
-**Entry Criteria:**
+### Entry Criteria
 - Conflict summary is complete.
 
-**Actions:**
+### Actions
 1. Classify relationship type: professional (peer/hierarchical), personal, transactional, or mixed.
 2. Assess relationship importance: will this relationship exist after the conflict is resolved? How much does it matter? Assign score 1-5.
 3. Assess power dynamics: do you have authority, expertise, or leverage over the other party? Do they have leverage over you? Classify as: balanced, you have advantage, other party has advantage, or highly asymmetric.
 4. Assess stakes: what are the consequences of unresolved conflict? (career impact, financial, emotional, operational disruption, etc.) Classify as low/medium/high.
 5. Determine urgency: must this be resolved immediately, soon, or is it ongoing?
 
-**Output:**
+### Output
 - Relationship classification (type, importance score 1-5).
 - Power dynamics assessment (balance, who has advantage, specific sources of power).
 - Stakes assessment (level: low/medium/high, specific consequences).
 - Urgency classification (immediate/soon/ongoing).
 
-**Quality Gate:**
+### Quality Gate
 - Relationship type is explicit.
 - Importance score is justified by at least one factor (e.g., "ongoing working relationship").
 - Power dynamics are assessed and tied to specific factors (e.g., "other party has budget authority").
@@ -100,23 +100,23 @@
 
 ### Phase 3: Assess Your Position on Assertiveness-Cooperativeness Matrix
 
-**Entry Criteria:**
+### Entry Criteria
 - Relationship and stakes context is clear.
 
-**Actions:**
+### Actions
 1. Determine assertiveness: how much do you need your concerns, interests, or position to be satisfied? (1=not at all, 5=absolutely critical). Consider: is this a core value, a preference, or a negotiable point?
 2. Determine cooperativeness: how much do you care about the other party's satisfaction and the relationship outcome? (1=not at all, 5=very much). Consider: do you want them to feel heard? Do you value their continued goodwill?
 3. Cross-reference with relationship importance and stakes: high-stakes + important relationship typically increases cooperativeness; core values typically increase assertiveness.
 4. Document any tensions (e.g., "I care about the relationship but my core value is at stake").
 5. Validate scores for internal consistency: if relationship importance is 4-5, cooperativeness should not be 1-2; if stakes are high, assertiveness should not be 1.
 
-**Output:**
+### Output
 - Assertiveness score (1-5) with justification tied to specific factors from the conflict.
 - Cooperativeness score (1-5) with justification tied to relationship importance and stakes.
 - Tension summary (if any).
 - Consistency check result (pass/flag).
 
-**Quality Gate:**
+### Quality Gate
 - Scores are justified by specific factors from the conflict (not generic reasoning).
 - Scores are internally consistent: if relationship importance is 4-5, cooperativeness is 3-5; if stakes are high and relationship is important, both assertiveness and cooperativeness are 3+.
 - If scores are contradictory (e.g., both 1), this is flagged as Avoiding mode and confirmed with user.
@@ -125,10 +125,10 @@
 
 ### Phase 4: Map to Thomas-Kilmann Mode(s)
 
-**Entry Criteria:**
+### Entry Criteria
 - Assertiveness and cooperativeness scores are determined and validated.
 
-**Actions:**
+### Actions
 1. Plot scores on the Thomas-Kilmann matrix:
    - **Competing** (high assertiveness 4-5, low cooperativeness 1-2): You want your way; relationship is secondary.
    - **Collaborating** (high assertiveness 4-5, high cooperativeness 4-5): You want both your needs met and the relationship preserved; seek win-win.
@@ -140,13 +140,13 @@
 4. Document why this mode fits the situation better than others, referencing relationship type, power dynamics, and stakes.
 5. Note any mismatches between natural tendency (your_assertiveness_preference) and recommended mode (e.g., "You naturally avoid, but this situation calls for collaboration"). If mismatch exists, suggest a specific tactic to help shift modes (e.g., "Set a reminder to stay engaged", "Practice the opening statement", "Bring a trusted advisor to the conversation").
 
-**Output:**
+### Output
 - Primary mode (string: Competing, Collaborating, Compromising, Avoiding, or Accommodating).
 - Secondary mode (string or null).
 - Mode rationale (2-3 sentences explaining the fit, referencing relationship and stakes context).
 - Mismatch warnings with mode-shift tactics (if any).
 
-**Quality Gate:**
+### Quality Gate
 - Mode is justified by assertiveness and cooperativeness scores.
 - Rationale references relationship type, power dynamics, and stakes context.
 - If secondary mode exists, the boundary is explained (e.g., "Assertiveness is 3.5, so Compromising and Collaborating are both viable; Collaborating is recommended if the other party is willing to engage openly").
@@ -156,10 +156,10 @@
 
 ### Phase 5: Generate Mode-Specific Strategies
 
-**Entry Criteria:**
+### Entry Criteria
 - Primary (and secondary, if applicable) mode is identified.
 
-**Actions:**
+### Actions
 1. For the primary mode, generate 2-3 specific, actionable strategies tailored to the conflict and relationship:
    - **Competing strategies:** Assert your position clearly, set boundaries, escalate if needed, use authority or leverage.
    - **Collaborating strategies:** Propose joint problem-solving, explore underlying interests, brainstorm options that satisfy both parties, involve mediator if needed.
@@ -171,10 +171,10 @@
 4. Review each strategy to confirm it specifies concrete actions (not "communicate better" but "schedule a 30-minute meeting to discuss X").
 5. Order strategies by likelihood of success or by recommended sequence.
 
-**Output:**
+### Output
 - Array of 2-4 strategies, each with: strategy_name (string), description (string with concrete actions), when_to_use (string), expected_outcome (string), risks (string).
 
-**Quality Gate:**
+### Quality Gate
 - Each strategy is specific enough to act on immediately (includes what to say or do, not just intent).
 - Each strategy is matched to the mode and the conflict (not generic).
 - Risks are realistic, not catastrophic.
@@ -184,10 +184,10 @@
 
 ### Phase 6: Develop Implementation Guidance
 
-**Entry Criteria:**
+### Entry Criteria
 - Strategies are generated.
 
-**Actions:**
+### Actions
 1. Determine timing: when should the first strategy be initiated? (immediately, after cooling off, after gathering information, etc.) Be specific (e.g., "within 48 hours", "after the next team meeting").
 2. Specify communication approach: how should you initiate the conversation? (in person, email, meeting request, informal chat, etc.) What tone? What opening? Provide a sample opening statement.
 3. Identify potential obstacles: what could derail each strategy? (other party refuses to engage, emotions escalate, misunderstandings, power imbalance, etc.)
@@ -195,7 +195,7 @@
 5. Define success indicators: how will you know the strategy is working? Specify both short-term indicators (e.g., "they agree to discuss") and long-term indicators (e.g., "the issue is resolved and the relationship is intact").
 6. Note any preparation needed (gather data, calm down, consult an expert, etc.).
 
-**Output:**
+### Output
 - Timing recommendation (string, specific not vague).
 - Communication approach (string with specific opening or format, including sample opening statement).
 - Potential obstacles (array of strings).
@@ -203,7 +203,7 @@
 - Success indicators (array of objects with short_term and long_term indicators).
 - Preparation steps (array of strings, if any).
 
-**Quality Gate:**
+### Quality Gate
 - Timing is specific (not "soon" but "within 48 hours").
 - Communication approach includes a concrete opening statement.
 - Obstacles are realistic and tied to the conflict.
@@ -215,10 +215,10 @@
 
 ### Phase 7: Validate and Deliver Recommendation
 
-**Entry Criteria:**
+### Entry Criteria
 - All prior phases are complete.
 
-**Actions:**
+### Actions
 1. Review the full recommendation: does it cohere? Do the strategies align with the mode? Does the implementation guidance support the strategies?
 2. Check for contradictions (e.g., "avoid the conflict" but "schedule an immediate meeting").
 3. Assess confidence: how clear was the input? How well does the conflict fit the Thomas-Kilmann framework? (high/medium/low). Consider: was Phase 0 information check passed? Were any critical assumptions made? Is the conflict interpersonal or structural?
@@ -226,13 +226,13 @@
 5. Add a cultural context note: if the conflict involves parties from cultures that prioritize harmony, hierarchy, or collective decision-making, note that the Thomas-Kilmann framework is Western-centric and may need adaptation. Suggest consulting a cultural mediator if this applies.
 6. Assemble the final output object with all sections.
 
-**Output:**
+### Output
 - Complete recommendation package (all outputs from prior phases).
 - Confidence level (high/medium/low) with justification.
 - Assumptions and caveats (if any).
 - Cultural context note (if applicable).
 
-**Quality Gate:**
+### Quality Gate
 - No contradictions between phases.
 - Confidence level is justified by specific factors (e.g., "low: conflict description was vague about party B's interests").
 - All outputs are populated and coherent.
@@ -242,10 +242,10 @@
 
 ### Phase 8 (Optional): Post-Implementation Feedback Loop
 
-**Entry Criteria:**
+### Entry Criteria
 - User has attempted one or more strategies and wishes to assess effectiveness.
 
-**Actions:**
+### Actions
 1. Ask: which strategy was attempted? What was the outcome?
 2. Ask: did the other party respond as expected? Were there surprises?
 3. Ask: is the conflict resolved, de-escalating, escalating, or unchanged?
@@ -254,16 +254,25 @@
 6. If escalating: recommend external mediation, escalation to authority, or a shift to Avoiding mode as a holding pattern.
 7. Update the recommendation with lessons learned.
 
-**Output:**
+### Output
 - Outcome assessment (resolved/de-escalating/unchanged/escalating).
 - Lessons learned (what worked, what didn't, why).
 - Next steps (retry, try secondary strategy, escalate, mediate, or hold).
 
-**Quality Gate:**
+### Quality Gate
 - Outcome is tied to specific observable results, not subjective feelings.
 - Next steps are concrete and actionable.
 
 ---
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Analyze a conflict using the Thomas-Kilmann framework and recommend resolution s, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 

@@ -33,10 +33,10 @@ PHASE 5: TRACK      --> Monitor savings realization over time
 
 ### Phase 1: CATEGORIZE
 
-**Entry criteria:** Expense data with at least 3 months of history is provided. Revenue data for the same period is available.
+### Entry Criteria
+Expense data with at least 3 months of history is provided. Revenue data for the same period is available.
 
-**Actions:**
-
+### Actions
 1. **Parse and normalize expenses:**
    - Extract vendor, amount, date, and description from each line item
    - Convert all amounts to monthly equivalents for comparability
@@ -66,18 +66,20 @@ PHASE 5: TRACK      --> Monitor savings realization over time
    - Month-over-month trend per category
    - Flag categories with >10% MoM growth
 
-**Output:** Categorized expense breakdown with totals, percentages, per-unit costs, and trend flags.
+### Output
+Categorized expense breakdown with totals, percentages, per-unit costs, and trend flags.
 
-**Quality gate:** At least 90% of expense line items are categorized (not "Other"). Revenue ratio totals are internally consistent. All amounts are positive and plausible.
+### Quality Gate
+At least 90% of expense line items are categorized (not "Other"). Revenue ratio totals are internally consistent. All amounts are positive and plausible.
 
 ---
 
 ### Phase 2: BENCHMARK
 
-**Entry criteria:** Categorized expense breakdown is complete.
+### Entry Criteria
+Categorized expense breakdown is complete.
 
-**Actions:**
-
+### Actions
 1. **Select appropriate benchmark set:**
    - By company stage: Seed, Series A, Series B, Series C+, Growth, Public
    - By industry: SaaS, E-commerce, Marketplace, FinTech, HealthTech, Hardware
@@ -103,18 +105,20 @@ PHASE 5: TRACK      --> Monitor savings realization over time
    - Remote-first companies should have lower office but may have higher tools spend
    - AI/ML companies will have higher infrastructure costs
 
-**Output:** Benchmark comparison table with status per category, dollar gap to median, and contextual notes.
+### Output
+Benchmark comparison table with status per category, dollar gap to median, and contextual notes.
 
-**Quality gate:** Every category has a benchmark comparison. Benchmark source is identified. Contextual adjustments are noted where applicable.
+### Quality Gate
+Every category has a benchmark comparison. Benchmark source is identified. Contextual adjustments are noted where applicable.
 
 ---
 
 ### Phase 3: IDENTIFY
 
-**Entry criteria:** Benchmark comparison is complete, showing which categories are above benchmark.
+### Entry Criteria
+Benchmark comparison is complete, showing which categories are above benchmark.
 
-**Actions:**
-
+### Actions
 1. **SaaS redundancy scan:**
    - Group tools by function (project management, communication, CRM, etc.)
    - Flag categories with 2+ tools serving same function
@@ -146,18 +150,20 @@ PHASE 5: TRACK      --> Monitor savings realization over time
    - One-time expenses that became recurring
    - Vendor price increases absorbed without review
 
-**Output:** List of savings opportunities, each with: description, current cost, estimated savings, confidence level (high/medium/low), effort to implement (low/medium/high).
+### Output
+List of savings opportunities, each with: description, current cost, estimated savings, confidence level (high/medium/low), effort to implement (low/medium/high).
 
-**Quality gate:** At least 3 savings opportunities identified. Each opportunity has a specific dollar estimate (not "some savings"). Confidence level is justified.
+### Quality Gate
+At least 3 savings opportunities identified. Each opportunity has a specific dollar estimate (not "some savings"). Confidence level is justified.
 
 ---
 
 ### Phase 4: RECOMMEND
 
-**Entry criteria:** Savings opportunities list is complete.
+### Entry Criteria
+Savings opportunities list is complete.
 
-**Actions:**
-
+### Actions
 1. **Score each opportunity using Impact x Effort matrix:**
    ```
    Score = (Annual Savings / $10K) * Confidence * (1 / Effort_Factor)
@@ -191,18 +197,20 @@ PHASE 5: TRACK      --> Monitor savings realization over time
    - Impact on burn rate and runway extension
    - Monthly savings ramp (when each opportunity starts delivering)
 
-**Output:** Prioritized optimization plan with implementation details, cumulative savings timeline, and runway impact.
+### Output
+Prioritized optimization plan with implementation details, cumulative savings timeline, and runway impact.
 
-**Quality gate:** Opportunities are ranked by score, not just gut feel. Each has an owner and timeline. Cumulative savings are calculated. Runway impact is quantified.
+### Quality Gate
+Opportunities are ranked by score, not just gut feel. Each has an owner and timeline. Cumulative savings are calculated. Runway impact is quantified.
 
 ---
 
 ### Phase 5: TRACK
 
-**Entry criteria:** Optimization plan is approved and implementation has begun.
+### Entry Criteria
+Optimization plan is approved and implementation has begun.
 
-**Actions:**
-
+### Actions
 1. **Establish tracking framework:**
    - Monthly baseline per category (pre-optimization spend)
    - Expected savings per month per opportunity (ramp schedule)
@@ -233,9 +241,20 @@ PHASE 5: TRACK      --> Monitor savings realization over time
    - Opportunities still pending implementation
    - New opportunities identified since initial analysis
 
-**Output:** Monthly savings tracker, cost drift alerts, quarterly benchmark update, cumulative realization report.
+### Output
+Monthly savings tracker, cost drift alerts, quarterly benchmark update, cumulative realization report.
 
-**Quality gate:** Actual savings are measured against baseline (not estimated). Cost drift is detected within 1 month. Savings realization rate is computed and reported.
+### Quality Gate
+Actual savings are measured against baseline (not estimated). Cost drift is detected within 1 month. Savings realization rate is computed and reported.
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Categorizes expenses, benchmarks spend ratios against industry standards, identi, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 

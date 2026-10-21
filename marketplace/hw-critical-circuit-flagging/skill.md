@@ -59,6 +59,15 @@ Draft critical circuit list.
 
 ---
 
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Flag every circuit where a mistake destroys parts or creates a hazard, with a te, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
+
 ## Exit Criteria
 
 DONE when every circuit that can damage hardware or a person is listed with a testable survival requirement, and every interlock is defined as normally closed, energize to run, and manually reset.

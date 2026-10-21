@@ -28,7 +28,7 @@
 - `ltv_projections` (object[]): Array of LTV projections by cohort with fields: cohort_id (string), projected_ltv (number ≥ 0), confidence_interval_lower (number ≥ 0), confidence_interval_upper (number ≥ 0), revenue_forecast (array of {period (number), cumulative_revenue (number ≥ 0)}).
 - `churn_patterns` (object): Analysis of churn drivers with fields: high_risk_cohorts (array of strings), low_risk_cohorts (array of strings), churn_triggers (array of {trigger_name (string), affected_cohorts (array of strings), magnitude (number, churn_rate 0.0–1.0), period (number)}), cohort_specific_drivers (object mapping cohort_id to driver description), median_time_to_churn_by_cohort (object mapping cohort_id to number of periods).
 - `churn_reduction_strategies` (object[]): Prioritized list of interventions with fields: strategy_id (string), name (string), description (string), target_cohorts (array of strings), estimated_retention_lift (number, 0.01–0.30), estimated_ltv_impact (number), implementation_effort (string: "low", "medium", "high"), estimated_roi (number ≥ 0), priority (string: "quick_win", "medium_term", "long_term").
-- `analysis_report` (string): Markdown-formatted comprehensive report with executive summary, detailed findings, visualizations (as embedded descriptions or links), and recommendations. Minimum 500 characters, maximum 50,000 characters.
+- `analysis_report` (string): Markdown-formatted full report with executive summary, detailed findings, visualizations (as embedded descriptions or links), and recommendations. Minimum 500 characters, maximum 50,000 characters.
 - `execution_metadata` (object): Metadata with fields: execution_timestamp (ISO 8601), data_quality_score (number, 0.0–1.0), total_customers_analyzed (number ≥ 0), cohorts_identified (number ≥ 1), analysis_completeness (string: "full", "partial", "limited"), analysis_version (string, e.g., "1.0"), previous_analysis_timestamp (ISO 8601, optional).
 
 ---
@@ -37,12 +37,12 @@
 
 ### Phase 1: Data Ingestion and Validation
 
-**Entry Criteria:**
+### Entry Criteria
 - Revenue data and churn metrics are provided in structured format (JSON, CSV, or database query result).
 - Both datasets contain customer_id field for joining.
 - At least 100 customers are present in the combined dataset.
 
-**Actions:**
+### Actions
 1. Load revenue_data and churn_metrics into memory or data processing environment.
 2. Validate schema: confirm required fields (customer_id, dates, amounts/status) are present and have correct types.
 3. Standardize date formats to ISO 8601; convert all dates to UTC.
@@ -52,11 +52,11 @@
 7. Calculate data quality score: (rows_valid / rows_total) × (fields_complete / fields_expected). Score must be ≥ 0.95 to pass quality gate.
 8. Join revenue_data and churn_metrics on customer_id to create unified customer view; flag unmatched customers (in revenue but not churn metrics, or vice versa).
 
-**Output:**
+### Output
 - Cleaned, deduplicated dataset with unified schema.
 - Data quality report: quality_score (0.0–1.0), row_count (total and valid), missing_value_summary (by field), duplicate_count (removed), unmatched_customer_count.
 
-**Quality Gate:**
+### Quality Gate
 - Data quality score ≥ 0.95 (verified by: rows_valid / rows_total ≥ 0.95 AND fields_complete / fields_expected ≥ 0.95).
 - No duplicate transactions remain (duplicate_count = 0).
 - All dates are in ISO 8601 format and UTC timezone.
@@ -67,11 +67,11 @@
 
 ### Phase 2: Cohort Definition and Assignment
 
-**Entry Criteria:**
+### Entry Criteria
 - Cleaned dataset from Phase 1 is available with quality_score ≥ 0.95.
 - cohort_dimension parameter is specified and valid (one of: "acquisition_month", "acquisition_quarter", "product_tier", "geography").
 
-**Actions:**
+### Actions
 1. Extract acquisition_date for each customer: use earliest transaction_date from revenue_data, or explicit signup_date if available in churn_metrics.
 2. Group customers by cohort_dimension: extract year-month (for "acquisition_month"), year-quarter (for "acquisition_quarter"), product_tier value (for "product_tier"), or geography value (for "geography").
 3. Assign cohort_id to each customer using format: cohort_dimension_value (e.g., "2023-01" for January 2023, "tier_premium" for premium tier).
@@ -79,11 +79,11 @@
 5. Generate cohort_assignments output with customer_id, cohort_id, acquisition_date, cohort_dimension_value.
 6. Document cohort summary: cohort_count (total unique cohorts), size_distribution (min, max, median, mean customers per cohort), low_confidence_cohort_count.
 
-**Output:**
+### Output
 - cohort_assignments array (one row per customer).
 - Cohort summary: cohort_count (number), size_distribution (object with min, max, median, mean), low_confidence_cohort_count (number), low_confidence_cohorts (array of cohort_ids).
 
-**Quality Gate:**
+### Quality Gate
 - Every customer is assigned to exactly one cohort (verified by: count(cohort_assignments) = count(customers)).
 - Cohort_id is consistent and reproducible (verified by: same input produces same cohort_ids).
 - No cohort is empty (verified by: min(customers_per_cohort) > 0).
@@ -94,12 +94,12 @@
 
 ### Phase 3: Retention Rate Calculation
 
-**Entry Criteria:**
+### Entry Criteria
 - cohort_assignments from Phase 2 are available with cohort_count between 3 and 50.
 - retention_period_unit and max_retention_periods are specified and valid.
 - max_retention_periods ≥ 3.
 
-**Actions:**
+### Actions
 1. For each cohort, define time periods: 0, 1, 2, ..., max_retention_periods (e.g., months 0–24 post-acquisition).
 2. For each customer in each cohort, calculate age_in_periods: floor((current_date - acquisition_date) / period_unit_duration).
 3. For each cohort and period, count:
@@ -111,11 +111,11 @@
 6. Validate monotonicity: for each cohort, check that retention_rate(t) ≥ retention_rate(t+1) for all t. Flag non-monotonic cohorts (e.g., reactivation spikes) in anomaly_report.
 7. Document data sparsity: if >30% of cohort-period cells have active_count = 0, flag as sparse and note in report.
 
-**Output:**
+### Output
 - retention_matrix array (one row per cohort-period pair).
 - Anomaly report: non_monotonic_cohorts (array of cohort_ids with retention spikes), sparse_data_flag (boolean), sparsity_percentage (number, 0.0–1.0).
 
-**Quality Gate:**
+### Quality Gate
 - All retention_rate values are between 0.0 and 1.0 (verified by: min(retention_rate) ≥ 0.0 AND max(retention_rate) ≤ 1.0).
 - Retention is non-increasing over time for ≥70% of cohorts (verified by: count(monotonic_cohorts) / cohort_count ≥ 0.70). Non-monotonic cohorts are documented.
 - Every cohort has retention data for at least 3 periods (verified by: min(periods_per_cohort) ≥ 3). Cohorts with <3 periods are flagged.
@@ -125,11 +125,11 @@
 
 ### Phase 4: Retention Curve Fitting and Visualization
 
-**Entry Criteria:**
+### Entry Criteria
 - retention_matrix from Phase 3 is available with ≥3 periods per cohort.
 - Data sparsity is ≤30%.
 
-**Actions:**
+### Actions
 1. For each cohort, extract retention_rate time series: array of {period_number, retention_rate}.
 2. Fit three curve models to retention data using least-squares regression:
    - Exponential decay: retention(t) = a × e^(-b×t). Fit by log-transforming and using linear regression.
@@ -143,12 +143,12 @@
 6. Identify inflection points: periods where retention decline rate changes by >50% (d²retention/dt² changes sign or magnitude).
 7. Document curve equations and parameters for each cohort: e.g., "Cohort 2023-01: exponential decay with a=0.95, b=0.08, R²=0.92".
 
-**Output:**
+### Output
 - retention_curves array with: cohort_id, curve_data (array of {period, retention_rate, fitted_value}), curve_fit ("exponential", "power_law", or "linear"), r_squared (0.0–1.0), curve_equation (string, e.g., "retention(t) = 0.95 × e^(-0.08×t)").
 - Visualization description: markdown-formatted chart description with axis labels, legend, and key insights.
 - Inflection point summary: array of {cohort_id, period, inflection_type ("acceleration" or "deceleration")}.
 
-**Quality Gate:**
+### Quality Gate
 - R² ≥ 0.80 for fitted curves in ≥70% of cohorts (verified by: count(cohorts with R² ≥ 0.80) / cohort_count ≥ 0.70). Cohorts with R² < 0.80 are flagged as "irregular retention pattern".
 - Curve equations are mathematically valid: a > 0, b > 0, and fitted values are 0.0–1.0 (verified by: min(fitted_value) ≥ 0.0 AND max(fitted_value) ≤ 1.0).
 - Visualization description is clear and includes all cohorts (verified by: description length > 100 characters AND all cohort_ids mentioned).
@@ -157,12 +157,12 @@
 
 ### Phase 5: Lifetime Value Projection
 
-**Entry Criteria:**
+### Entry Criteria
 - retention_curves from Phase 4 are available with R² ≥ 0.80 for ≥70% of cohorts.
 - revenue_data, ltv_discount_rate, and revenue_model are specified.
 - ltv_discount_rate is 0.0–1.0.
 
-**Actions:**
+### Actions
 1. Calculate average revenue per user (ARPU) by cohort and period:
    - ARPU(cohort, period) = sum(revenue_amount for users in cohort during period) / active_count(cohort, period).
    - Handle division by zero: if active_count = 0, set ARPU = 0.
@@ -181,12 +181,12 @@
    - cumulative_revenue(t) = Σ(ARPU(τ) × retention_rate(τ)) for τ = 0 to t.
 7. Compare LTV across cohorts: identify highest_ltv_cohort, lowest_ltv_cohort, ltv_variance (std dev of LTV across cohorts).
 
-**Output:**
+### Output
 - ltv_projections array with: cohort_id, projected_ltv (number ≥ 0), confidence_interval_lower (number ≥ 0), confidence_interval_upper (number ≥ 0), revenue_forecast (array of {period, cumulative_revenue}).
 - LTV comparison summary: highest_ltv_cohort (string), highest_ltv_value (number), lowest_ltv_cohort (string), lowest_ltv_value (number), ltv_variance (number), ltv_mean (number).
 - ARPU validation report: outlier_count (number), outliers_removed_or_capped (number).
 
-**Quality Gate:**
+### Quality Gate
 - All LTV values are positive and ≤ 10× annual_revenue (verified by: min(projected_ltv) ≥ 0 AND max(projected_ltv) ≤ 10× annual_revenue). Unrealistic projections are flagged.
 - Confidence intervals are non-zero and symmetric around projected_ltv (verified by: confidence_interval_upper > confidence_interval_lower AND abs((projected_ltv - confidence_interval_lower) - (confidence_interval_upper - projected_ltv)) / projected_ltv ≤ 0.20).
 - Revenue forecasts are monotonically non-decreasing (verified by: cumulative_revenue(t) ≤ cumulative_revenue(t+1) for all t). Non-monotonic forecasts are flagged.
@@ -195,11 +195,11 @@
 
 ### Phase 6: Churn Pattern Analysis
 
-**Entry Criteria:**
+### Entry Criteria
 - retention_curves, ltv_projections, and churn_metrics from previous phases are available.
 - churn_risk_threshold is specified (0.0–1.0).
 
-**Actions:**
+### Actions
 1. Identify high-risk cohorts: cohorts with retention_rate(final_period) < churn_risk_threshold. Document cohort_id, final_retention_rate, and ltv_impact.
 2. Identify low-risk cohorts: cohorts with retention_rate(final_period) > (1 - churn_risk_threshold). Document cohort_id and final_retention_rate.
 3. Analyze churn timing: for each cohort, calculate:
@@ -219,7 +219,7 @@
    - If engagement-related churn is evident (e.g., churn correlates with inactivity): note "engagement-dependent".
 7. Identify reactivation opportunities: if reactivation data is available, count customers who churned and later reactivated; calculate reactivation_rate by cohort.
 
-**Output:**
+### Output
 - churn_patterns object with:
   - high_risk_cohorts (array of cohort_ids with retention < threshold).
   - low_risk_cohorts (array of cohort_ids with retention > (1 - threshold)).
@@ -229,7 +229,7 @@
   - churn_reason_distribution (object, optional, if data available): {cohort_id: {reason: percentage}}.
   - reactivation_rate_by_cohort (object, optional, if data available): {cohort_id: rate (0.0–1.0)}.
 
-**Quality Gate:**
+### Quality Gate
 - High-risk and low-risk cohorts are clearly differentiated (verified by: high_risk_cohorts and low_risk_cohorts have no overlap AND at least one cohort in each category, or note if all cohorts are in one category).
 - Churn triggers are statistically significant: magnitude > 2× baseline_churn_rate (verified by: all triggers have magnitude ≥ 2× baseline).
 - Churn drivers are specific and actionable: each driver is one of {"price_sensitivity", "feature_gap", "competitive", "support", "engagement", "other"} (verified by: all drivers in cohort_specific_drivers are from this list).
@@ -239,12 +239,12 @@
 
 ### Phase 7: Churn Reduction Strategy Generation
 
-**Entry Criteria:**
+### Entry Criteria
 - churn_patterns from Phase 6 are available with high_risk_cohorts identified.
 - ltv_projections from Phase 5 are available.
 - business_constraints (optional) are specified.
 
-**Actions:**
+### Actions
 1. For each high-risk cohort, brainstorm interventions based on identified drivers:
    - Engagement campaigns: email, in-app messaging, outreach (target: engagement-dependent churn).
    - Pricing adjustments: discounts, tiered pricing, win-back offers (target: price-sensitive churn).
@@ -266,7 +266,7 @@
 5. Estimate combined impact: if all strategies are implemented, project cumulative retention and LTV improvement (cap at 50% total retention lift).
 6. Document assumptions: discount rate, revenue model, retention_lift ranges, cost estimates, timeline constraints.
 
-**Output:**
+### Output
 - churn_reduction_strategies array with:
   - strategy_id (string, e.g., "S001").
   - name (string, e.g., "Tier-specific onboarding program").
@@ -280,7 +280,7 @@
 - Combined impact summary: total_estimated_retention_lift (number, capped at 0.50), total_estimated_ltv_impact (number), implementation_timeline (weeks), total_estimated_cost (number, if budget available).
 - Strategy assumptions document: discount_rate, revenue_model, retention_lift_ranges (by intervention type), cost_estimates, timeline_constraints.
 
-**Quality Gate:**
+### Quality Gate
 - Every strategy targets at least one high-risk cohort (verified by: all target_cohorts in high_risk_cohorts).
 - Estimated retention_lift is realistic: 0.01 ≤ retention_lift ≤ 0.30 per intervention (verified by: all retention_lift values in this range).
 - ROI is calculated consistently across all strategies (verified by: ROI = (LTV_impact × cohort_size × retention_lift) / cost, or effort-based proxy if cost unavailable).
@@ -291,11 +291,11 @@
 
 ### Phase 8: Report Compilation and Delivery
 
-**Entry Criteria:**
+### Entry Criteria
 - All previous phases are complete and outputs are available.
 - All quality gates from Phases 1–7 are passed (or failures are documented).
 
-**Actions:**
+### Actions
 1. Assemble executive summary (300–500 words):
    - Key findings: total customers analyzed, cohorts identified, overall retention trend (e.g., "median retention at 12 months: 65%"), LTV range (min–max by cohort).
    - Top 3 churn drivers and affected cohorts (e.g., "Price sensitivity affects 2023-01 and 2023-02 cohorts; 35% of churn").
@@ -333,11 +333,11 @@
    - analysis_version: "1.0" for first run; increment for subsequent runs (e.g., "1.1", "2.0").
    - previous_analysis_timestamp: ISO 8601 timestamp of prior analysis (if available from state persistence).
 
-**Output:**
-- analysis_report: markdown-formatted comprehensive report (500–50,000 characters).
+### Output
+- analysis_report: markdown-formatted full report (500–50,000 characters).
 - execution_metadata: object with execution_timestamp, data_quality_score, total_customers_analyzed, cohorts_identified, analysis_completeness, analysis_version, previous_analysis_timestamp (optional).
 
-**Quality Gate:**
+### Quality Gate
 - Report is self-contained and readable by non-technical stakeholders (verified by: no unexplained jargon, clear headings, summary tables, visualization descriptions).
 - All key findings from Phases 1–7 are represented in report (verified by: report mentions data quality score, cohort count, retention trends, LTV range, high-risk cohorts, churn drivers, top 3 strategies).
 - Recommendations are specific and actionable: each strategy includes name, description, target cohorts, estimated impact, timeline, and success metrics (verified by: no vague language like "improve", "optimize", "enhance").
@@ -353,7 +353,7 @@
 **Persistence Mechanism:**
 - Store execution_metadata and key outputs (retention_matrix, ltv_projections, churn_patterns, churn_reduction_strategies) with execution_timestamp.
 - On subsequent runs, retrieve previous_analysis_timestamp and compare outputs to prior analysis.
-- Generate trend report: retention improvement/decline by cohort, LTV change, strategy impact (if strategies were implemented between analyses).
+- Generate trend report: retention improvement/decline by cohort, LTV change, strategy impact (if strategies were implemented between analyzes).
 
 **Versioning:**
 - Increment analysis_version on each run: "1.0" → "1.1" (minor update, same cohort_dimension) → "2.0" (major update, different cohort_dimension or methodology).
@@ -366,6 +366,15 @@
 - Alert on anomalies: if retention drops >10% or LTV drops >15% compared to prior analysis, flag for investigation.
 
 ---
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Transform revenue and churn data into cohort-based retention curves, LTV project, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 

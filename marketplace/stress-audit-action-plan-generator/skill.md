@@ -35,16 +35,15 @@
 
 ### Phase 1: Baseline Assessment & Stressor Elicitation
 
-**Entry Criteria:**
+### Entry Criteria
 - User is available and willing to engage in a 25-35 minute audit.
 - User context (if provided) is understood.
 
-**Actions:**
-
+### Actions
 1. If `baseline_stress_rating` is not provided, ask: "On a scale of 1-10, how would you rate your overall stress level right now? 1 = calm, 10 = overwhelmed." Record the response as `baseline_stress_rating`.
 2. Introduce the audit: "We're going to identify what's causing you stress, understand which stressors you can influence, and build a concrete action plan. This takes about 25-35 minutes. At the end, we'll see if your sense of control and clarity has shifted."
 3. Based on `stressor_collection_method`:
-   - If "open-ended": Ask "What's stressing you out right now? Think about work, relationships, health, finances, personal goals. List everything that comes to mind. Don't filter—just say it."
+   - If "open-ended": Ask "What's stressing you out right now? Think about work, relationships, health, finances, personal goals. List everything that comes to mind. Don't filter -- just say it."
    - If "guided-prompts": Ask about specific domains in order: "Let's go through some life areas. For each, tell me if there's stress: (1) Work or career, (2) Relationships or family, (3) Health or physical wellbeing, (4) Finances, (5) Personal growth or goals, (6) Environment or living situation, (7) Time management or overwhelm."
    - If "checklist": Provide a pre-built checklist of common stressors (see Reference section) and ask user to select and add custom items.
 4. If `include_physical_health` is true, explicitly ask: "How are you sleeping, exercising, and eating right now? Any physical health concerns or changes?"
@@ -52,11 +51,11 @@
 6. Ask: "Anything else? Take a moment to think. Sometimes people remember something when they pause." Wait 10 seconds.
 7. Ask: "Are there any stressors you're hesitant to mention? Sometimes people hold back on relationship or health issues. This is confidential and just for you."
 
-**Output:**
+### Output
 - `raw_stressor_list` (object[]): Unfiltered list with `id`, `description`.
 - `baseline_stress_rating` (integer, 1-10).
 
-**Quality Gate:**
+### Quality Gate
 - At least 3 stressors identified and recorded with IDs.
 - Each stressor is a concrete description (e.g., "unclear project deadlines", "tension with my partner"), not vague (e.g., "work is hard", "life is stressful").
 - No duplicates in raw list.
@@ -66,12 +65,11 @@
 
 ### Phase 2: Stressor Validation, Deduplication & Barrier Identification
 
-**Entry Criteria:**
+### Entry Criteria
 - Raw stressor list is complete (user confirmed "nothing else").
 - Baseline stress rating is recorded.
 
-**Actions:**
-
+### Actions
 1. Review the list with the user: "Here's what I heard. Let me read it back to make sure I got it right."
 2. For each stressor, ask: "Is this accurate? Anything to add or clarify?" Accept only yes/no or specific clarifications; if user says "yes, that's right", mark as validated.
 3. Merge similar stressors (e.g., "deadline pressure" and "too many projects" → "workload and deadline management"). Ask user: "These sound related. Should we combine them?"
@@ -79,10 +77,10 @@
 5. Ask: "Are there any stressors you're hesitant to mention? Relationship or health issues are common ones people hold back on. This is confidential."
 6. Finalize the list. Confirm: "So we have [number] stressors. Does this feel complete?"
 
-**Output:**
+### Output
 - `validated_stressor_list` (object[]): Deduplicated, clarified stressors with `id`, `description`, `user_confirmed` (boolean).
 
-**Quality Gate:**
+### Quality Gate
 - User explicitly confirms (yes/no) that the list is accurate and complete.
 - Each stressor is distinct (no duplicates or near-duplicates).
 - Each stressor description is specific and concrete, verified by user.
@@ -92,11 +90,10 @@
 
 ### Phase 3: Controllability Categorization
 
-**Entry Criteria:**
+### Entry Criteria
 - Validated stressor list is finalized and user-confirmed.
 
-**Actions:**
-
+### Actions
 1. Introduce the framework: "For each stressor, we'll ask: Can you directly influence this? Can you partially influence it? Or is it outside your control? This matters because we'll handle each type differently. Controllable stressors get action plans. Uncontrollable ones get coping strategies."
 2. Explain the decision rule: "Ask yourself: If I took action on this, would the outcome change? If yes, significantly → controllable. If yes, somewhat → partially controllable. If no, not really → uncontrollable."
 3. For each stressor, ask: "Can you directly change or reduce this stressor? Yes, no, or partially?"
@@ -108,10 +105,10 @@
 6. Assign each stressor to exactly one category. Record the category.
 7. Confirm: "Does this categorization feel right? Any you want to reconsider?"
 
-**Output:**
+### Output
 - `categorized_stressors` (object[]): Each stressor with `id`, `description`, `category` (string: "controllable", "partially_controllable", or "uncontrollable"), `user_confirmed` (boolean).
 
-**Quality Gate:**
+### Quality Gate
 - Every stressor is assigned to exactly one category, verified by user.
 - User explicitly confirms (yes/no) that categorizations feel right.
 - At least one stressor in each category present, OR user confirms that absence is accurate (e.g., "I have no uncontrollable stressors right now").
@@ -121,23 +118,22 @@
 
 ### Phase 4: Impact & Urgency Assessment
 
-**Entry Criteria:**
+### Entry Criteria
 - Stressors are categorized and user-confirmed.
 
-**Actions:**
-
+### Actions
 1. Introduce the scoring: "Now we'll rate each stressor on two dimensions: Impact (how much does it affect your wellbeing, productivity, relationships?) and Urgency (how time-sensitive is it?). Both on a scale of 1-5, where 1 = minimal and 5 = severe/critical."
 2. For each stressor, ask:
    - "On a scale of 1-5, how much does this stressor affect your life right now? 1 = minimal impact, 5 = severe impact on wellbeing, work, or relationships."
    - "On a scale of 1-5, how urgent is this? 1 = can wait weeks, 5 = needs immediate attention (days)."
 3. Record both scores as integers (1-5).
 4. Calculate a composite priority score: `(impact + urgency) / 2` for ranking later. Record this.
-5. If scores seem inconsistent (e.g., high urgency but low impact), clarify: "You said this is urgent but not very impactful. Help me understand—why is it urgent if it doesn't affect you much?" Rescore if needed.
+5. If scores seem inconsistent (e.g., high urgency but low impact), clarify: "You said this is urgent but not very impactful. Help me understand -- why is it urgent if it doesn't affect you much?" Rescore if needed.
 
-**Output:**
+### Output
 - `scored_stressors` (object[]): Each stressor with `id`, `description`, `category`, `impact_score` (1-5, integer), `urgency_score` (1-5, integer), `composite_priority` (float, (impact+urgency)/2).
 
-**Quality Gate:**
+### Quality Gate
 - Every stressor has both scores recorded as integers (1-5).
 - Scores are internally consistent (if user gives inconsistent scores, clarify and rescore).
 - Composite priority is calculated for all stressors.
@@ -147,21 +143,20 @@
 
 ### Phase 5: Barriers to Action Identification
 
-**Entry Criteria:**
+### Entry Criteria
 - Stressors are scored and prioritized.
 
-**Actions:**
-
+### Actions
 1. Introduce the phase: "Before we build your action plan, let's identify what might get in the way. Common barriers are: time, money, motivation, lack of support, unclear how to start, or conflicting priorities. For each controllable stressor, I'll ask: What might prevent you from taking action?"
 2. For each controllable and partially controllable stressor, ask: "What might get in the way of addressing this? Time? Money? Not knowing how to start? Lack of support? Something else?"
 3. Record the barrier(s) for each stressor.
 4. For each barrier, ask: "How could we work around this?" Brainstorm 1-2 mitigation strategies (e.g., "I don't have time" → "Start with 10 minutes, not 1 hour"; "I don't know how to start" → "Ask a friend for advice or find a tutorial").
 5. Record the mitigation strategy for each barrier.
 
-**Output:**
+### Output
 - `stressors_with_barriers` (object[]): Each controllable/partially controllable stressor with `id`, `description`, `barriers` (string[]), `barrier_mitigations` (object[], each with `barrier`, `mitigation`).
 
-**Quality Gate:**
+### Quality Gate
 - Every controllable/partially controllable stressor has at least one barrier identified.
 - Every barrier has a mitigation strategy.
 - Mitigations are concrete and actionable (not "try harder" or "be more motivated").
@@ -171,26 +166,25 @@
 
 ### Phase 6: Action Plan Generation for Controllable Stressors
 
-**Entry Criteria:**
+### Entry Criteria
 - Stressors are scored and barriers are identified.
 - Controllable and partially controllable stressors are identified.
 
-**Actions:**
-
+### Actions
 1. Filter stressors by category: focus on controllable and partially controllable.
 2. Sort by composite priority score (highest first).
 3. For each controllable/partially controllable stressor, generate 1-3 specific, actionable interventions:
-   - Ask: "What's one concrete step you could take to address this? Be specific—not 'reduce stress' but 'schedule 3 workouts per week'."
+   - Ask: "What's one concrete step you could take to address this? Be specific -- not 'reduce stress' but 'schedule 3 workouts per week'."
    - If user struggles, offer 2-3 suggestions from the Reference section based on stressor type.
    - Ensure each action is: (a) specific (has a concrete deliverable), (b) measurable (has a success metric), (c) time-bound (has a realistic timeline).
 4. For each action, ask: "How long would this take to complete? Days? Weeks?" Assign to timeline: immediate (0-3 days), short-term (1-4 weeks), or ongoing (weekly/daily).
 5. Define a success metric for each action (e.g., "Schedule 3 workouts per week", "Have one boundary-setting conversation with manager", "Set up a filing system for documents").
 6. Include the barrier mitigation from Phase 5 in the action description (e.g., "Start with 10-minute walks, not 1-hour gym sessions").
 
-**Output:**
+### Output
 - `action_items` (object[]): Each with `stressor_id`, `action` (string, specific and concrete), `timeline` (string: "immediate", "short-term", or "ongoing"), `timeline_days` (integer, estimated days to complete), `success_metric` (string, testable), `barrier_mitigation` (string, how to overcome obstacles).
 
-**Quality Gate:**
+### Quality Gate
 - Every controllable/partially controllable stressor has at least one action.
 - Actions are specific and measurable, not vague (e.g., "Schedule 3 workouts per week" not "exercise more").
 - Timelines are realistic and user confirms they can commit.
@@ -201,11 +195,10 @@
 
 ### Phase 7: Coping Strategies for Uncontrollable Stressors
 
-**Entry Criteria:**
+### Entry Criteria
 - Uncontrollable stressors are identified and scored.
 
-**Actions:**
-
+### Actions
 1. Introduce the approach: "For stressors outside your control, we'll focus on resilience, acceptance, and managing your response. You can't change the situation, but you can change how you relate to it and build your ability to cope."
 2. For each uncontrollable stressor, generate 1-2 coping strategies:
    - Ask: "How do you want to relate to this? What would help you cope? (Examples: acceptance practice, talking to someone, physical activity, meaning-making, self-care)"
@@ -216,10 +209,10 @@
 5. Ask: "How does this strategy align with your core values? (1-5, where 1 = not at all, 5 = very much)" Record values alignment score. Prioritize strategies with higher alignment scores.
 6. Sort by impact score (highest first) and values alignment (highest first).
 
-**Output:**
+### Output
 - `coping_strategies` (object[]): Each with `stressor_id`, `strategy` (string, specific and actionable), `frequency` (string: "daily", "weekly", "as-needed"), `expected_benefit` (string), `values_alignment_score` (1-5, integer).
 
-**Quality Gate:**
+### Quality Gate
 - Every uncontrollable stressor has at least one coping strategy.
 - Strategies are concrete and actionable, not vague.
 - Frequency is realistic and sustainable (user confirms).
@@ -230,21 +223,20 @@
 
 ### Phase 8: Quick Wins Identification
 
-**Entry Criteria:**
+### Entry Criteria
 - Action items and coping strategies are generated.
 
-**Actions:**
-
+### Actions
 1. Introduce quick wins: "Before we prioritize everything, let's identify 1-2 actions you can complete in the next 24 hours. These build momentum and confidence."
 2. Review immediate actions (0-3 days). Ask: "Which of these could you start today or tomorrow? Something small that would take 15-60 minutes?"
 3. Examples: "Schedule a 20-minute walk tomorrow", "Send one email setting a boundary", "Write down 3 things you're grateful for", "Call a friend for 15 minutes".
 4. Select 1-2 quick wins. Record with timeline in hours (not days).
 5. Confirm: "Can you commit to doing this in the next 24 hours?"
 
-**Output:**
+### Output
 - `quick_wins` (object[]): Each with `action` (string, specific), `timeline_hours` (integer, 1-24), `success_metric` (string, testable).
 
-**Quality Gate:**
+### Quality Gate
 - 1-2 quick wins identified.
 - Each is completable in 24 hours (user confirms).
 - Success metrics are clear and observable.
@@ -254,11 +246,10 @@
 
 ### Phase 9: Action Plan Prioritization & Structuring
 
-**Entry Criteria:**
+### Entry Criteria
 - Action items, coping strategies, and quick wins are generated.
 
-**Actions:**
-
+### Actions
 1. Combine all actions and strategies into a single list (excluding quick wins, which are separate).
 2. Sort by timeline: immediate (0-3 days), short-term (1-4 weeks), ongoing (weekly/daily).
 3. Within each timeline, sort by composite priority score (impact + urgency, highest first).
@@ -268,7 +259,7 @@
 7. Recommend a review date: 2-4 weeks out, depending on the number of immediate actions. Formula: If >3 immediate actions, review in 2 weeks. If 1-3 immediate actions, review in 3-4 weeks. If 0 immediate actions, review in 4-6 weeks.
 8. Ask user to identify an accountability partner: "Is there someone (friend, family, therapist, coach) you could share this plan with and check in with weekly? Accountability increases follow-through."
 
-**Output:**
+### Output
 - `prioritized_action_plan` (object): Structured with:
   - `immediate_actions` (object[], sorted by priority).
   - `short_term_actions` (object[], sorted by priority).
@@ -276,7 +267,7 @@
 - `next_review_date` (string, ISO 8601).
 - `accountability_partner` (string, optional): Name or role of accountability partner.
 
-**Quality Gate:**
+### Quality Gate
 - Plan is ordered by timeline and priority.
 - User explicitly confirms (yes/no) the prioritization makes sense.
 - User can commit to the timeline (not overwhelmed).
@@ -287,12 +278,11 @@
 
 ### Phase 10: Audit Summary, One-Page Plan & Closure
 
-**Entry Criteria:**
+### Entry Criteria
 - Prioritized action plan is finalized.
 - Accountability partner is identified (optional).
 
-**Actions:**
-
+### Actions
 1. Ask user to rate their stress level now: "On that same 1-10 scale, how would you rate your stress level now, after this audit?" Record as `post_audit_stress_rating`.
 2. Calculate change: `post_audit_stress_rating - baseline_stress_rating`. Interpret: If negative (stress decreased), note shift in perspective or sense of agency. If positive or zero, note that clarity and action plan may help even if stress rating hasn't changed yet.
 3. Generate a narrative summary:
@@ -341,7 +331,7 @@
 8. Provide the complete audit report (stressor list, action plan, summary, one-page plan, review date).
 9. Suggest a follow-up: "Let's reconnect on [review date] to see how it's going and adjust as needed. In the meantime, share this plan with [Accountability Partner] and check in weekly."
 
-**Output:**
+### Output
 - `audit_summary` (string): Narrative summary with overview, key insights, plan overview, and momentum note.
 - `one_page_plan` (string): Printable one-page summary in markdown or plain text.
 - `baseline_to_post_stress_rating` (object): `baseline` (integer, 1-10), `post_audit` (integer, 1-10), `change` (integer, post - baseline), `interpretation` (string, 1-2 sentences).
@@ -349,7 +339,7 @@
 - `next_review_date` (string, ISO 8601): Confirmed review date.
 - `accountability_partner` (string, optional): Name or role.
 
-**Quality Gate:**
+### Quality Gate
 - User rates post-audit stress level (1-10, integer).
 - Baseline-to-post change is calculated and interpreted.
 - Narrative summary is clear and specific (not generic).
@@ -359,6 +349,15 @@
 - All outputs are documented and provided to user.
 
 ---
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Structured stress audit to identify stressors, categorize by controllability, as, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 
@@ -385,7 +384,7 @@ The audit is COMPLETE when:
 | Phase 2 | User is reluctant to share certain stressors | **Adjust** -- Normalize: "Many people find relationship or health stressors hard to discuss. You don't have to share details, but naming it helps." Offer anonymous framing: "You don't have to tell me what it is. Just say 'personal relationship issue' if that's easier." |
 | Phase 3 | User cannot decide if a stressor is controllable | **Adjust** -- Ask: "If you took action on this, would the outcome change?" If uncertain, default to "partially controllable" and proceed. Note: "We can revisit this if it doesn't feel right." |
 | Phase 3 | User wants to change a stressor's category after Phase 4 | **Adjust** -- Allow recategorization. Ask: "What changed your mind?" Rescore if needed. Note: Changing categories mid-audit is normal; flexibility is important. |
-| Phase 4 | User gives inconsistent scores (e.g., high urgency but low impact) | **Adjust** -- Clarify: "You said this is urgent but not very impactful. Help me understand—why is it urgent if it doesn't affect you much?" Rescore based on clarification. |
+| Phase 4 | User gives inconsistent scores (e.g., high urgency but low impact) | **Adjust** -- Clarify: "You said this is urgent but not very impactful. Help me understand -- why is it urgent if it doesn't affect you much?" Rescore based on clarification. |
 | Phase 5 | User cannot identify barriers | **Adjust** -- Ask: "What would make this hard to do? Time? Money? Not knowing how? Motivation? Lack of support?" Offer a menu of common barriers. |
 | Phase 6 | User cannot generate actions for a controllable stressor | **Adjust** -- Offer suggestions from the Reference section (common interventions by stressor type). If still stuck, ask: "What have you tried before? What worked?" Build from past success. If no ideas, mark as "requires expert support" and suggest professional help (therapist, coach, mentor). |
 | Phase 6 | User wants to take action on an uncontrollable stressor | **Adjust** -- Clarify: "This stressor is outside your control. But you can influence how you respond. Would you like a coping strategy instead, or is there a controllable aspect we can address?" |
@@ -593,3 +592,7 @@ Consider linking to or building:
 - **Financial Planning Skill:** For financial stressors (budgeting, debt payoff, emergency fund).
 - **Sleep Optimization Skill:** For sleep-related stressors.
 - **Grief & Loss Skill:** For stressors involving loss or major life transitions.
+
+---
+
+Copyright 2024-present The Wayfinder Trust. All rights reserved.

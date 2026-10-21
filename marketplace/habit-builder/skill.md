@@ -5,35 +5,39 @@ Designs sustainable habit formation plans using behavioral science -- cue-routin
 ## Execution Pattern: ORPA Loop
 
 ## Inputs
-- target_habit: string -- The habit the user wants to build (e.g., "meditate daily," "exercise 4x/week")
-- current_habits: array -- Existing daily routines and habits (used for habit stacking anchors)
-- goals: array -- Why this habit matters (deeper motivation for identity-based framing)
-- available_time: object -- When the habit can realistically occur (morning/evening, weekday/weekend, minutes available)
-- barriers: array -- Past failure modes, obstacles, known friction points
+- `target_habit`: string -- The habit the user wants to build (e.g., "meditate daily," "exercise 4x/week")
+- `current_habits`: array -- Existing daily routines and habits (used for habit stacking anchors)
+- `goals`: array -- Why this habit matters (deeper motivation for identity-based framing)
+- `available_time`: object -- When the habit can realistically occur (morning/evening, weekday/weekend, minutes available)
+- `barriers`: array -- Past failure modes, obstacles, known friction points
 
 ## Outputs
-- habit_stack_design: object -- The cue-routine-reward loop with environment modifications
-- thirty_day_plan: object -- Progressive 30-day plan with weekly phases and micro-milestones
-- daily_checkin: object -- Check-in template with completion tracking and reflection prompts
-- adjustment_recommendations: array -- Adaptive changes based on adherence patterns
+- `habit_stack_design`: object -- The cue-routine-reward loop with environment modifications
+- `thirty_day_plan`: object -- Progressive 30-day plan with weekly phases and micro-milestones
+- `daily_checkin`: object -- Check-in template with completion tracking and reflection prompts
+- `adjustment_recommendations`: array -- Adaptive changes based on adherence patterns
 
 ## Execution
 
 ### OBSERVE: Assess Current State
-**Entry criteria:** Target habit is defined.
-**Actions:**
+### Entry Criteria
+Target habit is defined.
+### Actions
 1. Analyze the target habit: classify as daily vs. intermittent, time-bound vs. open-ended, physical vs. mental vs. creative.
 2. Map existing habits to find stacking anchors -- established routines that happen reliably at consistent times (morning coffee, brushing teeth, commute, lunch).
 3. Identify the "two-minute version" of the target habit -- the smallest possible implementation that still counts (e.g., "meditate" -> "sit and take 3 deep breaths").
 4. Catalog barriers: past attempts and why they failed, environmental friction (equipment access, location, social pressure), competing commitments.
 5. Extract the identity connection: who does the user want to become? (Not "I want to meditate" but "I want to be someone who is calm and present.")
 
-**Output:** Habit profile: classified habit, stacking anchors, two-minute version, barrier map, identity statement.
-**Quality gate:** At least one viable stacking anchor identified. Two-minute version is genuinely achievable in under 2 minutes.
+### Output
+Habit profile: classified habit, stacking anchors, two-minute version, barrier map, identity statement.
+### Quality Gate
+At least one viable stacking anchor identified. Two-minute version is genuinely achievable in under 2 minutes.
 
 ### REASON: Design the Loop
-**Entry criteria:** Habit profile complete with stacking anchors and barriers.
-**Actions:**
+### Entry Criteria
+Habit profile complete with stacking anchors and barriers.
+### Actions
 1. Design the cue-routine-reward loop:
    - **Cue:** Select the strongest stacking anchor. The cue must be specific, visible, and unavoidable. "After I pour my morning coffee" > "in the morning."
    - **Routine:** Start with the two-minute version. This is non-negotiable for weeks 1-2.
@@ -45,12 +49,15 @@ Designs sustainable habit formation plans using behavioral science -- cue-routin
 3. Design the "implementation intention": "After [CUE], I will [ROUTINE] for [MINIMUM DURATION]. My reward is [REWARD]."
 4. Identify the "bright line rule" -- one simple, unambiguous rule that defines success. "Did I sit on the cushion? Yes/no." Not "Did I meditate well?"
 
-**Output:** Complete habit loop design with cue, routine, reward, environment changes, implementation intention, bright line rule.
-**Quality gate:** The implementation intention is specific enough that an observer could verify compliance. The bright line rule is binary (yes/no).
+### Output
+Complete habit loop design with cue, routine, reward, environment changes, implementation intention, bright line rule.
+### Quality Gate
+The implementation intention is specific enough that an observer could verify compliance. The bright line rule is binary (yes/no).
 
 ### PLAN: Build the 30-Day Progression
-**Entry criteria:** Habit loop designed with implementation intention.
-**Actions:**
+### Entry Criteria
+Habit loop designed with implementation intention.
+### Actions
 1. **Week 1 (Days 1-7): Anchor Phase.** Goal: establish the cue-routine connection. Two-minute version only. Success = doing it at all, not doing it well. Focus on never missing.
 2. **Week 2 (Days 8-14): Consistency Phase.** Goal: extend slightly. Increase to 5-minute version. Same cue, same reward. Introduce streak tracking.
 3. **Week 3 (Days 15-21): Growth Phase.** Goal: approach target duration. Increase to 50-75% of target habit. Add variety if applicable. Allow one planned rest day if intermittent habit.
@@ -58,12 +65,15 @@ Designs sustainable habit formation plans using behavioral science -- cue-routin
 5. Set micro-milestones with celebrations: Day 3 (survived the start), Day 7 (first full week), Day 14 (two weeks straight), Day 21 (neurological habit formation threshold), Day 30 (one month identity).
 6. Define the "miss protocol": if you miss one day, do the two-minute version the next day no matter what. Never miss twice. Missing once is an accident; missing twice is the start of a new habit.
 
-**Output:** 30-day plan with weekly phases, daily minimums, micro-milestones, miss protocol.
-**Quality gate:** Each week has a clear, measurable goal. The progression from two-minute to full habit is gradual (no more than 2x increase per week).
+### Output
+30-day plan with weekly phases, daily minimums, micro-milestones, miss protocol.
+### Quality Gate
+Each week has a clear, measurable goal. The progression from two-minute to full habit is gradual (no more than 2x increase per week).
 
 ### ACT: Deliver and Track
-**Entry criteria:** 30-day plan built.
-**Actions:**
+### Entry Criteria
+30-day plan built.
+### Actions
 1. Output the complete habit formation package:
    - Implementation intention (printable/storable)
    - Environment modification checklist
@@ -77,8 +87,10 @@ Designs sustainable habit formation plans using behavioral science -- cue-routin
    - If the same barrier appears 3+ times: redesign the environment modification for that specific friction point.
 3. Generate adjustment recommendations based on patterns.
 
-**Output:** Complete habit formation package, or (on re-entry) adjustment recommendations based on adherence data.
-**Quality gate:** The deliverable includes all components (intention, environment changes, 30-day plan, tracker, check-in template). Adjustments are data-driven (cite specific completion rates or barrier frequencies).
+### Output
+Complete habit formation package, or (on re-entry) adjustment recommendations based on adherence data.
+### Quality Gate
+The deliverable includes all components (intention, environment changes, 30-day plan, tracker, check-in template). Adjustments are data-driven (cite specific completion rates or barrier frequencies).
 
 ## Exit Criteria
 The skill is complete on initial run when the full habit formation package is delivered. On ongoing use, the loop exits when the 30-day plan is complete AND completion rate exceeds 80% in week 4.
@@ -141,3 +153,7 @@ The skill tracks over time:
 - Which habit stacking anchors proved reliable
 - Duration progression (did the user actually scale up as planned?)
 - Streak data (current, longest, total days)
+
+---
+
+Copyright 2024-present The Wayfinder Trust. All rights reserved.

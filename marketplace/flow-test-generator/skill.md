@@ -1,24 +1,25 @@
 # Flow Test Generator
 
-Analyzes a FlowFabric flow definition (flow.md + manifest.json), extracts its execution phases, inputs, outputs, and quality gates, then generates comprehensive test cases that cover all phases, edge cases, and error handling paths, validates test coverage, and predicts shadow validation success probability.
+Analyzes a FlowFabric flow definition (flow.md + manifest.json), extracts its execution phases, inputs, outputs, and quality gates, then generates full test cases that cover all phases, edge cases, and error handling paths, validates test coverage, and predicts shadow validation success probability.
 
 ## Execution Pattern: Phase Pipeline
 
 ## Inputs
-- skill_md_content: string -- Full text content of the flow.md file to generate tests for
-- manifest_json: object -- The flow's manifest.json (name, inputs, outputs, execution_pattern, domain)
-- existing_tests: array -- Any existing test cases (optional, for gap analysis)
+- `skill_md_content`: string -- Full text content of the flow.md file to generate tests for
+- `manifest_json`: object -- The flow's manifest.json (name, inputs, outputs, execution_pattern, domain)
+- `existing_tests`: array -- Any existing test cases (optional, for gap analysis)
 
 ## Outputs
-- test_cases: array -- Generated test cases in SkillChain format [{input, expected_keywords}]
-- coverage_report: object -- Analysis of which phases, inputs, outputs, and error paths are tested
-- validation_prediction: object -- Predicted shadow validation success probability with rationale
+- `test_cases`: array -- Generated test cases in SkillChain format [{input, expected_keywords}]
+- `coverage_report`: object -- Analysis of which phases, inputs, outputs, and error paths are tested
+- `validation_prediction`: object -- Predicted shadow validation success probability with rationale
 
 ## Execution
 
 ### Phase 1: ANALYZE -- Extract Flow Structure
-**Entry criteria:** flow.md content is provided and non-empty.
-**Actions:**
+### Entry Criteria
+flow.md content is provided and non-empty.
+### Actions
 1. Parse the flow.md to extract:
    - **Execution pattern:** ORPA or Phase Pipeline
    - **Phase names and descriptions:** What each phase does
@@ -37,18 +38,21 @@ Analyzes a FlowFabric flow definition (flow.md + manifest.json), extracts its ex
    - For each error handler: what failure should be simulated?
 4. Identify the flow's "core competency" -- the primary thing it does that must be tested most rigorously.
 
-**Output:** Structured flow anatomy: phases with actions/outputs, quality gates, error handlers, core competency identification.
-**Quality gate:** Every phase in the flow.md is identified and extracted. At least one testable behavior per phase is identified. The execution pattern matches between manifest and flow.md.
+### Output
+Structured flow anatomy: phases with actions/outputs, quality gates, error handlers, core competency identification.
+### Quality Gate
+Every phase in the flow.md is identified and extracted. At least one testable behavior per phase is identified. The execution pattern matches between manifest and flow.md.
 
 ### Phase 2: GENERATE -- Create Test Cases
-**Entry criteria:** Flow anatomy extracted with testable behaviors identified.
-**Actions:**
+### Entry Criteria
+Flow anatomy extracted with testable behaviors identified.
+### Actions
 1. Generate one test case per execution phase (minimum coverage):
    - **Phase-specific test:** Input that exercises a specific phase's logic. Expected keywords should be unique to that phase's output.
    - Example: For an OBSERVE phase that gathers metrics, the test input should ask about data gathering, and expected keywords should include metric-specific terms.
 2. Generate one edge case test:
    - **Minimal input:** What happens with the absolute minimum viable input? (Tests whether the flow handles sparse data gracefully.)
-   - **Adversarial input:** What happens with inputs that are technically valid but unusual? (Tests robustness.)
+   - **Adversarial input:** What happens with inputs that are technically valid but unusual? (Tests reliableness.)
 3. Generate one integration test:
    - **Full pipeline test:** Input that exercises all phases end-to-end. Expected keywords should span multiple phases.
 4. For each generated test case:
@@ -61,12 +65,15 @@ Analyzes a FlowFabric flow definition (flow.md + manifest.json), extracts its ex
      - Include at least 2 keywords unique to the correct execution path (wouldn't appear if the flow skipped phases)
 5. Generate at minimum 5 test cases total. More for complex flows (1 per phase + 1 edge + 1 integration as minimum).
 
-**Output:** Array of test cases in SkillChain format: [{input: string, expected_keywords: string[]}].
-**Quality gate:** At least 5 test cases generated. Every execution phase is covered by at least one test. At least one edge case test exists. Expected keywords are specific (not generic). No two tests have identical expected keywords.
+### Output
+Array of test cases in SkillChain format: [{input: string, expected_keywords: string[]}].
+### Quality Gate
+At least 5 test cases generated. Every execution phase is covered by at least one test. At least one edge case test exists. Expected keywords are specific (not generic). No two tests have identical expected keywords.
 
 ### Phase 3: VALIDATE -- Check Coverage
-**Entry criteria:** Test cases generated.
-**Actions:**
+### Entry Criteria
+Test cases generated.
+### Actions
 1. Build a coverage matrix:
    - Rows: execution phases, quality gates, error handlers, inputs, outputs
    - Columns: test cases
@@ -74,7 +81,7 @@ Analyzes a FlowFabric flow definition (flow.md + manifest.json), extracts its ex
 2. Identify gaps:
    - Any phase with no test coverage = critical gap
    - Any declared output not verified by any test = moderate gap
-   - Any error handler not tested = minor gap (but important for robustness)
+   - Any error handler not tested = minor gap (but important for reliableness)
    - Quality gates with no test = moderate gap
 3. Check for test quality issues:
    - **Too-broad keywords:** Keywords that would match any response on the topic (false positives)
@@ -84,12 +91,15 @@ Analyzes a FlowFabric flow definition (flow.md + manifest.json), extracts its ex
 4. If existing tests are provided: merge and deduplicate, checking whether existing tests already cover any of the identified behaviors.
 5. Calculate overall coverage score: (covered elements / total testable elements) x 100%.
 
-**Output:** Coverage matrix, gap list ranked by severity, test quality issues, overall coverage score.
-**Quality gate:** Coverage score is calculated. All critical gaps are identified. No test has fewer than 6 expected keywords.
+### Output
+Coverage matrix, gap list ranked by severity, test quality issues, overall coverage score.
+### Quality Gate
+Coverage score is calculated. All critical gaps are identified. No test has fewer than 6 expected keywords.
 
 ### Phase 4: SCORE -- Predict Validation Success
-**Entry criteria:** Coverage analysis complete.
-**Actions:**
+### Entry Criteria
+Coverage analysis complete.
+### Actions
 1. Evaluate flow quality factors that predict shadow validation success:
    - **Execution clarity (0-25 pts):** Are phases specific and actionable? Vague phases = inconsistent outputs = validation failure.
    - **Output definition (0-25 pts):** Are outputs concrete and typed? "A report" = 5 pts. "A JSON object with severity-ranked findings including file paths and line numbers" = 25 pts.
@@ -104,12 +114,15 @@ Analyzes a FlowFabric flow definition (flow.md + manifest.json), extracts its ex
    - Score 91-100: 85-95% success (excellent flow, high confidence)
 3. Generate specific improvement recommendations for the lowest-scoring factors.
 
-**Output:** Flow quality score breakdown, predicted validation success %, specific improvement recommendations.
-**Quality gate:** Score breakdown covers all 5 factors. Prediction is accompanied by rationale. At least 2 improvement recommendations are provided if score < 80.
+### Output
+Flow quality score breakdown, predicted validation success %, specific improvement recommendations.
+### Quality Gate
+Score breakdown covers all 5 factors. Prediction is accompanied by rationale. At least 2 improvement recommendations are provided if score < 80.
 
 ### Phase 5: OUTPUT -- Deliver Test Suite
-**Entry criteria:** Tests generated, coverage validated, prediction scored.
-**Actions:**
+### Entry Criteria
+Tests generated, coverage validated, prediction scored.
+### Actions
 1. Format the final test_cases.json array for SkillChain compatibility:
    ```json
    [
@@ -121,8 +134,19 @@ Analyzes a FlowFabric flow definition (flow.md + manifest.json), extracts its ex
 3. Include the validation prediction with improvement recommendations.
 4. If existing tests were provided: highlight which new tests were added and which existing tests were kept/modified/removed.
 
-**Output:** Final test_cases.json content, coverage report, validation prediction with recommendations.
-**Quality gate:** test_cases.json is valid JSON. All tests have both "input" and "expected_keywords" fields. Total test count is >= 5.
+### Output
+Final test_cases.json content, coverage report, validation prediction with recommendations.
+### Quality Gate
+test_cases.json is valid JSON. All tests have both "input" and "expected_keywords" fields. Total test count is >= 5.
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Reads a flow.md file, extracts execution phases and expected behaviors, generate, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 Complete when: (1) at least 5 test cases are generated in valid SkillChain format, (2) coverage report shows no critical gaps, (3) validation prediction is delivered with score and recommendations.
@@ -179,3 +203,7 @@ Accumulates over time:
 - Domain-specific keyword effectiveness (which keywords discriminate well)
 - Common coverage gaps by flow domain
 - Prediction accuracy (predicted vs actual validation outcomes)
+
+---
+
+Copyright 2024-present The Wayfinder Trust. All rights reserved.

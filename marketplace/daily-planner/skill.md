@@ -5,34 +5,38 @@ Builds an optimized, energy-aware daily schedule by classifying tasks through th
 ## Execution Pattern: ORPA Loop
 
 ## Inputs
-- calendar_events: array -- Fixed commitments with start/end times (meetings, appointments, deadlines)
-- task_list: array -- Tasks to schedule, each with estimated duration and category (deep work, admin, creative, communication)
-- energy_profile: object -- User's energy curve (peak hours, trough hours, recovery patterns). Defaults to morning-peak if not provided.
-- goals: array -- Active goals with priority ranking (weekly/monthly objectives this day should advance)
+- `calendar_events`: array -- Fixed commitments with start/end times (meetings, appointments, `deadlines`)
+- `task_list`: array -- Tasks to schedule, each with estimated duration and category (deep work, admin, creative, communication)
+- `energy_profile`: object -- User's energy curve (peak hours, trough hours, recovery patterns). Defaults to morning-peak if not provided.
+- `goals`: array -- Active goals with priority ranking (weekly/monthly objectives this day should advance)
 - deadlines: array -- Hard deadlines with dates and consequences of missing them
 
 ## Outputs
-- time_blocked_schedule: object -- Hour-by-hour schedule with task assignments, buffer blocks, and break periods
-- top_priorities: array -- The 3 tasks that matter most today with rationale for each
-- evening_review_prompts: array -- Reflection questions for end-of-day review and next-day prep
+- `time_blocked_schedule`: object -- Hour-by-hour schedule with task assignments, buffer blocks, and break periods
+- `top_priorities`: array -- The 3 tasks that matter most today with rationale for each
+- `evening_review_prompts`: array -- Reflection questions for end-of-day review and next-day prep
 
 ## Execution
 
 ### OBSERVE: Gather and Inventory
-**Entry criteria:** At least one task or calendar event exists for the day.
-**Actions:**
+### Entry Criteria
+At least one task or calendar event exists for the day.
+### Actions
 1. Collect all calendar events and extract available time blocks (gaps between fixed commitments).
 2. Inventory all tasks with estimated durations. Apply historical multiplier if completion data exists (default: 1.3x for new users to counter planning fallacy).
 3. Read energy profile -- identify peak hours (highest cognitive capacity), maintenance hours (moderate), and trough hours (lowest).
 4. Pull active goals and map each task to the goal it advances. Flag orphan tasks (tasks that advance no active goal).
 5. Check deadlines -- identify anything due today or overdue.
 
-**Output:** Structured inventory: available time slots, adjusted task durations, energy map, goal-task linkages, deadline flags.
-**Quality gate:** Total estimated task time calculated. If it exceeds available time by >30%, flag overcommitment before proceeding.
+### Output
+Structured inventory: available time slots, adjusted task durations, energy map, goal-task linkages, deadline flags.
+### Quality Gate
+Total estimated task time calculated. If it exceeds available time by >30%, flag overcommitment before proceeding.
 
 ### REASON: Classify and Prioritize
-**Entry criteria:** Inventory complete with adjusted durations and energy map.
-**Actions:**
+### Entry Criteria
+Inventory complete with adjusted durations and energy map.
+### Actions
 1. Classify every task into Eisenhower quadrants:
    - **Q1 (Urgent + Important):** Due today/overdue, high-consequence if missed. DO FIRST.
    - **Q2 (Important + Not Urgent):** Advances key goals, no immediate deadline. SCHEDULE for peak energy.
@@ -43,12 +47,15 @@ Builds an optimized, energy-aware daily schedule by classifying tasks through th
 4. Identify task dependencies -- what must finish before something else can start.
 5. Select top 3 priorities: the tasks that, if completed, make the day a success regardless of what else happens.
 
-**Output:** Prioritized task list with quadrant assignments, cognitive load ratings, energy cost estimates, dependency graph, top 3 priorities.
-**Quality gate:** Every task has a quadrant assignment. Top 3 priorities are from Q1 or Q2 only. No Q4 tasks are scheduled in peak hours.
+### Output
+Prioritized task list with quadrant assignments, cognitive load ratings, energy cost estimates, dependency graph, top 3 priorities.
+### Quality Gate
+Every task has a quadrant assignment. Top 3 priorities are from Q1 or Q2 only. No Q4 tasks are scheduled in peak hours.
 
 ### PLAN: Build the Schedule
-**Entry criteria:** Prioritized task list with energy mappings exists.
-**Actions:**
+### Entry Criteria
+Prioritized task list with energy mappings exists.
+### Actions
 1. Place fixed calendar events first (immovable anchors).
 2. Assign Q1 tasks to the earliest available slots (urgent = do first).
 3. Assign Q2 deep work to peak energy windows. Protect these blocks -- no meetings, no interruptions, minimum 90-minute chunks.
@@ -59,12 +66,15 @@ Builds an optimized, energy-aware daily schedule by classifying tasks through th
 8. Schedule evening review (15 min at end of day).
 9. If overcommitted: move Q3/Q4 tasks to tomorrow, split large tasks into sub-tasks, or reduce scope.
 
-**Output:** Time-blocked schedule with all tasks placed, buffers included, breaks scheduled.
-**Quality gate:** No time block conflicts. Deep work in peak hours only. Total scheduled time does not exceed available time. At least one break every 2 hours.
+### Output
+Time-blocked schedule with all tasks placed, buffers included, breaks scheduled.
+### Quality Gate
+No time block conflicts. Deep work in peak hours only. Total scheduled time does not exceed available time. At least one break every 2 hours.
 
 ### ACT: Deliver and Prepare Review
-**Entry criteria:** Valid time-blocked schedule with no conflicts.
-**Actions:**
+### Entry Criteria
+Valid time-blocked schedule with no conflicts.
+### Actions
 1. Format the final schedule as a clean, scannable document:
    - Time | Task | Category | Energy Level | Notes
 2. Highlight the top 3 priorities with clear rationale ("This is priority #1 because it advances [goal] and is due [deadline]").
@@ -76,8 +86,10 @@ Builds an optimized, energy-aware daily schedule by classifying tasks through th
    - "What one thing would you do differently tomorrow?"
 4. If state persistence is available: record today's plan for later comparison against actual completion.
 
-**Output:** Final deliverable: time-blocked schedule, top 3 priorities with rationale, evening review prompts.
-**Quality gate:** Schedule is internally consistent (no overlaps, no impossible sequences). All top 3 priorities have assigned time blocks.
+### Output
+Final deliverable: time-blocked schedule, top 3 priorities with rationale, evening review prompts.
+### Quality Gate
+Schedule is internally consistent (no overlaps, no impossible sequences). All top 3 priorities have assigned time blocks.
 
 ## Exit Criteria
 The skill is complete when: (1) a conflict-free time-blocked schedule is produced, (2) exactly 3 priorities are identified with rationale, (3) evening review prompts are generated, and (4) any overcommitment has been resolved by deferring or eliminating tasks.
@@ -138,3 +150,7 @@ Over time, the skill should accumulate:
 - Peak energy window accuracy (does the user actually perform best when they think they do?)
 - Which Q2 tasks consistently get deferred (signals goal misalignment or avoidance)
 - Schedule adherence patterns (where do plans break down?)
+
+---
+
+Copyright 2024-present The Wayfinder Trust. All rights reserved.

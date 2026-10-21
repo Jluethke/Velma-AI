@@ -81,6 +81,15 @@ Function-assigned pin list and draft `schematic_defects`.
 
 ---
 
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Derive the pin map for a board's programmable device from its netlist, with data, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
+
 ## Exit Criteria
 
 DONE when every device pin on a named net has a datasheet-confirmed function and a safe reset state, and every conflict is recorded as a schematic defect for the schematic flow to fix.

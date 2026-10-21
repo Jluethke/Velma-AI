@@ -1,6 +1,6 @@
 # API Test Generator
 
-**One-line description:** Converts an OpenAPI/Swagger specification into a comprehensive integration test suite covering happy paths, edge cases, error scenarios, and load patterns.
+**One-line description:** Converts an OpenAPI/Swagger specification into a full integration test suite covering happy paths, edge cases, error scenarios, and load patterns.
 
 **Execution Pattern:** Phase Pipeline
 
@@ -33,11 +33,11 @@
 
 ### Phase 1: Parse and Validate Specification
 
-**Entry Criteria:**
+### Entry Criteria
 - OpenAPI specification file is provided and accessible
 - File format is valid JSON or YAML
 
-**Actions:**
+### Actions
 1. Parse the OpenAPI specification (JSON or YAML) using a schema-aware parser
 2. Validate against OpenAPI 3.0 or Swagger 2.0 schema; collect all validation errors
 3. Extract base URL, schemes, and global parameters; flag if base URL is missing or a placeholder
@@ -45,24 +45,24 @@
 5. For each endpoint, verify response definitions include status code, content type, and response schema (or note as missing)
 6. Extract security schemes (API key, OAuth 2.0, Bearer token, Basic auth) and map to endpoints
 
-**Output:**
+### Output
 - Validated specification object (parsed and normalized)
 - List of validation errors (if any) and warnings (deprecated fields, missing descriptions, missing examples)
 - Base URL and authentication scheme metadata
 - Specification metadata: OpenAPI version, endpoint count, parameter count, error code count
 
-**Quality Gate:**
+### Quality Gate
 Specification is valid and parseable, verified by: (1) no critical parsing errors, (2) all endpoints have path, method, and at least one response with status code, (3) base URL is present (or documented as placeholder), (4) security schemes are identified for all protected endpoints. If any gate fails, phase exits with Abort.
 
 ---
 
 ### Phase 2: Extract Endpoint Metadata and Detect Dependencies
 
-**Entry Criteria:**
+### Entry Criteria
 - Specification is validated
 - No critical parsing errors
 
-**Actions:**
+### Actions
 1. Enumerate all endpoints: for each path and HTTP method combination, create an endpoint record
 2. For each endpoint, extract: path, HTTP method, operationId, description, parameters (path, query, header, body)
 3. Extract response definitions: status codes, content types, response schemas, and required fields
@@ -71,26 +71,26 @@ Specification is valid and parseable, verified by: (1) no critical parsing error
 6. Build parameter matrix: for each parameter, record name, type, required/optional flag, validation rules (min, max, pattern, enum), and examples
 7. Detect data dependencies: identify cases where an endpoint's response field is used as input to another endpoint (e.g., POST /users returns id, GET /users/{id} requires id). Record as ordered test sequence.
 
-**Output:**
+### Output
 - Endpoint registry (array of endpoint objects with all metadata)
 - Parameter matrix (map of parameter name → type, constraints, examples, required flag)
 - Authentication matrix (endpoint → security scheme)
 - Constraints registry (rate limits, timeouts, documented SLAs)
 - Dependency graph (array of test sequences: [POST /users, GET /users/{id}, PATCH /users/{id}, DELETE /users/{id}])
 
-**Quality Gate:**
+### Quality Gate
 Every endpoint has: (1) path and HTTP method, (2) at least one response definition with status code, (3) parameter matrix entry for all parameters with type and required flag, (4) authentication scheme identified (or marked as public). Dependency graph is acyclic and complete. Verified by: endpoint count matches specification, no missing parameters, no circular dependencies.
 
 ---
 
 ### Phase 3: Generate Happy-Path Test Scenarios
 
-**Entry Criteria:**
+### Entry Criteria
 - Endpoint metadata is extracted
 - Parameter matrix is complete
 - Dependency graph is available
 
-**Actions:**
+### Actions
 1. For each endpoint, construct a valid request using required parameters and example values from specification
 2. If specification provides examples, use them; otherwise, generate realistic defaults using this algorithm:
    - string: non-empty alphanumeric (e.g., "test-value")
@@ -106,24 +106,24 @@ Every endpoint has: (1) path and HTTP method, (2) at least one response definiti
 5. Order happy-path tests by dependency graph: if endpoint B depends on endpoint A, test A before B
 6. For dependent tests, extract output from A and inject into B's input
 
-**Output:**
+### Output
 - Happy-path test cases (array): one per endpoint, ordered by dependency, with valid inputs and expected 2xx response
 - Test setup/teardown requirements (e.g., create resource before testing GET)
 - Test count: number of happy-path scenarios
 - Dependency-ordered test sequence (list of test IDs in execution order)
 
-**Quality Gate:**
+### Quality Gate
 Every endpoint has at least one happy-path test. All happy-path tests use valid, realistic inputs verified by: (1) inputs match parameter types and constraints, (2) examples are from specification or generated by documented algorithm, (3) expected responses match specification success codes. Dependency order is correct: if test B depends on test A, A appears before B in sequence.
 
 ---
 
 ### Phase 4: Generate Edge-Case and Boundary Test Scenarios
 
-**Entry Criteria:**
+### Entry Criteria
 - Happy-path tests are defined
 - Parameter matrix includes type and constraint information
 
-**Actions:**
+### Actions
 1. For each parameter with constraints, generate boundary test cases:
    - **Numeric (integer, number):** minimum value, maximum value, zero, negative (if allowed), decimal precision edge (for numbers)
    - **String:** empty string, minimum length (if specified), maximum length (if specified), special characters (!, @, #, $, %, &), unicode characters (emoji, CJK), whitespace-only
@@ -136,25 +136,24 @@ Every endpoint has at least one happy-path test. All happy-path tests use valid,
 5. Add custom edge cases from `custom_edge_cases` input
 6. Limit edge-case tests to 3-5 per parameter to avoid explosion; prioritize boundary values over combinations
 
-**Output:**
+### Output
 - Edge-case test cases (array): organized by parameter and boundary type, with inputs and expected behavior (success or specific error)
 - Test count: number of edge-case scenarios
 - Coverage matrix: parameter → edge cases covered (boundary values, optional combinations, special characters)
 
-**Quality Gate:**
+### Quality Gate
 Every parameter with documented constraints has at least one boundary test. Edge cases are specific and testable, verified by: (1) each test case has concrete input values (not "various values"), (2) expected behavior is documented (success or specific error code), (3) no duplicate test cases, (4) total edge-case count is reasonable (< 100 for typical API).
 
 ---
 
 ### Phase 5: Generate Error-Path and Security Test Scenarios
 
-**Entry Criteria:**
+### Entry Criteria
 - Endpoint metadata includes documented error responses
 - Parameter matrix is complete
 - Security schemes are identified
 
-**Actions:**
-
+### Actions
 **Error-Path Tests:**
 1. For each documented error response (4xx, 5xx), create a test case that triggers it:
    - **400 Bad Request:** malformed JSON body, missing required parameter, invalid parameter type (e.g., string where number expected), invalid enum value
@@ -177,26 +176,26 @@ Every parameter with documented constraints has at least one boundary test. Edge
 6. **Insecure Deserialization:** for endpoints accepting JSON, inject serialized objects and verify API doesn't deserialize untrusted data
 7. **Rate Limiting:** verify API enforces rate limits and returns 429 when exceeded
 
-**Output:**
+### Output
 - Error-path test cases (array): organized by error code, with inputs that trigger each error and expected error response
 - Security test cases (array): organized by vulnerability type, with payloads and expected safe behavior
 - Test count: number of error and security scenarios
 - Error coverage matrix: error code → test case
 - Security coverage matrix: vulnerability type → test case
 
-**Quality Gate:**
+### Quality Gate
 Every documented error code has at least one test case. Security tests cover at least 5 of 7 vulnerability types (if include_security_tests is true). Error-triggering inputs are specific and testable, verified by: (1) each test has concrete input values, (2) expected error code is documented, (3) error message structure is validated (if applicable), (4) security payloads are standard (OWASP Top 10).
 
 ---
 
 ### Phase 6: Generate Load and Performance Test Scenarios
 
-**Entry Criteria:**
+### Entry Criteria
 - `include_load_tests` is true
 - Endpoint metadata is available
 - Performance SLA is specified (from input or default 5000 ms)
 
-**Actions:**
+### Actions
 1. For each endpoint, define load test scenarios:
    - **Concurrent requests:** 10, 50, 100 simultaneous requests with valid inputs
    - **High-volume data:** maximum-size payloads (e.g., max-length strings, large arrays), large request bodies
@@ -210,24 +209,24 @@ Every documented error code has at least one test case. Security tests cover at 
 5. Define resource cleanup tests: after load test, delete or reset created resources
 6. For endpoints with dependencies, generate load tests on the full sequence (e.g., POST then GET in parallel)
 
-**Output:**
+### Output
 - Load-test scenarios (array): concurrent, high-volume, sustained load, with performance assertions
 - Performance assertions (object): response time thresholds (p50, p95, p99), error rate threshold, throughput targets
 - Test count: number of load scenarios
 - Cleanup procedures (steps to reset state after load tests)
 
-**Quality Gate:**
+### Quality Gate
 Load tests are realistic and safe, verified by: (1) concurrent request counts are reasonable (10-100, not 10000), (2) performance thresholds are based on documented SLA or conservative default (5 seconds), (3) error rate threshold is < 1%, (4) cleanup steps are defined and executable, (5) rate limits are respected (if documented).
 
 ---
 
 ### Phase 7: Compile Test Suite and Generate Code
 
-**Entry Criteria:**
+### Entry Criteria
 - All test scenarios (happy path, edge cases, error paths, security tests, load tests) are generated
 - Test framework is specified and supported
 
-**Actions:**
+### Actions
 1. Organize all test cases into a structured test suite:
    - Group by endpoint
    - Order by phase: happy path → edge cases → error paths → security tests → load tests
@@ -245,23 +244,23 @@ Load tests are realistic and safe, verified by: (1) concurrent request counts ar
 6. Generate a test execution plan: (a) order of test execution, (b) which tests can run in parallel, (c) skip conditions (e.g., skip load tests if performance_sla_ms is not set)
 7. If generated code exceeds 500 lines, split into multiple files by endpoint or test type (happy_path.py, edge_cases.py, error_paths.py, security.py, load.py)
 
-**Output:**
+### Output
 - Test suite object (JSON): all test cases with metadata, dependencies, and execution order
 - Test code (string): executable test file(s) in specified framework, syntactically valid and runnable without modification
 - Test execution plan (string): documentation on how to run tests (full suite, specific test groups, individual tests), parallelization strategy, skip conditions
 
-**Quality Gate:**
+### Quality Gate
 Generated code is syntactically valid and executable, verified by: (1) code parses without syntax errors, (2) all test cases are represented in code, (3) setup/teardown is correct and runs before/after tests, (4) assertions are present and testable, (5) code can be executed without manual edits (e.g., no placeholder values like "YOUR_API_KEY"), (6) if split into multiple files, imports and dependencies are correct.
 
 ---
 
 ### Phase 8: Generate Documentation and Coverage Report
 
-**Entry Criteria:**
+### Entry Criteria
 - Test suite is compiled
 - Test code is generated
 
-**Actions:**
+### Actions
 1. Generate a test plan document:
    - Overview: test scope, strategy, and coverage goals
    - Test case matrix: endpoint × test type (happy path, edge case, error, security, load) with test ID and description
@@ -280,15 +279,24 @@ Generated code is syntactically valid and executable, verified by: (1) code pars
    - How to add new tests: template for adding new test cases, how to update coverage report
    - Performance baseline: expected response times and throughput (from Phase 6)
 
-**Output:**
+### Output
 - Test documentation (string): markdown or HTML with test plan, execution guide, and coverage matrix
 - Coverage report (object): coverage percentages (endpoints %, parameters %, error codes %, security %), gaps, and recommendations
 - Execution guide (string): step-by-step instructions for running tests and interpreting results
 
-**Quality Gate:**
+### Quality Gate
 Documentation is clear and actionable, verified by: (1) test plan is understandable to a developer unfamiliar with the API, (2) coverage report is accurate (counts match test suite), (3) execution guide includes all prerequisites and steps, (4) gaps are specific and actionable (not "improve coverage"), (5) performance baselines are documented.
 
 ---
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Convert an OpenAPI/Swagger specification into a full integration test suite cove, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 
@@ -426,3 +434,7 @@ If the workflow runs repeatedly on evolving APIs:
 - Detect API changes: compare current specification to previous version, identify new endpoints, new parameters, removed endpoints
 - Suggest new tests based on API changes: if new endpoint added, generate tests for it; if parameter added, generate edge-case tests
 - Generate performance regression reports: compare current response times to historical baseline, flag tests that exceed baseline by > 20%
+
+---
+
+Copyright 2024-present The Wayfinder Trust. All rights reserved.

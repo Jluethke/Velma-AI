@@ -67,7 +67,7 @@
            return verdict
    ```
    On Python 3.9 replace `float | None` with `Optional[float]` from `typing`.
-3. Rules the code must keep: compare with `<` and `>` so the boundary value passes (matching the STL hand traces where robustness 0 is satisfied); never clamp the value (a monitor reports, it does not repair); return `invalid_input` for NaN, infinity, wrong type and non-increasing time.
+3. Rules the code must keep: compare with `<` and `>` so the boundary value passes (matching the STL hand traces where reliableness 0 is satisfied); never clamp the value (a monitor reports, it does not repair); return `invalid_input` for NaN, infinity, wrong type and non-increasing time.
 
 ### Output
 `monitor/range_rate.py`.

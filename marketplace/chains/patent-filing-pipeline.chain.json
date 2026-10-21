@@ -1,98 +1,355 @@
 {
   "name": "patent-filing-pipeline",
   "description": "Full end-to-end patent filing pipeline: extract invention details from code and docs, draft claims (system/method/CRM + dependents), write the complete specification with enablement, search prior art and strengthen claims, map boundaries against related patent families, generate USPTO-compliant patent drawings with reference numerals, align all documents for consistency, and produce a filing-ready checklist. Feed it an invention and get back everything needed to file a provisional.",
-  "category": "legal",
-  "version": "1.1.0",
   "steps": [
     {
+      "id": "step_1",
       "skill_name": "data-extractor",
-      "alias": "extract_invention",
-      "depends_on": [],
-      "config": {
-        "instruction": "Read all source content provided in source_contents (loaded from source_paths). This contains the actual source code, patent drafts, and technical documentation for the invention. Extract: (1) The core innovation — what does this system do that nothing else does? (2) All major components/modules and their relationships (data flow, control flow). (3) All configurable parameters, thresholds, and modes. (4) Mathematical functions or algorithms used. (5) All inputs the system receives and outputs it produces. (6) Domain terminology. (7) Any existing prior art mentioned in docs. (8) Any existing figure descriptions or drawing references. Output structured JSON with these fields for downstream claim drafting."
+      "inputs": {
+        "raw_text": "from_user_input",
+        "target_fields": "from_user_input",
+        "source_hint": "from_user_input",
+        "examples": "from_user_input"
       },
-      "phase_filter": null
+      "outputs": {
+        "extracted_data": "extracted_data_data",
+        "confidence_scores": "confidence_scores_data",
+        "extraction_notes": "extraction_notes_data",
+        "raw_matches": "raw_matches_data"
+      },
+      "parallel_group": 1
     },
     {
+      "id": "step_2",
       "skill_name": "patent-claims-drafter",
-      "alias": "draft_claims",
-      "depends_on": ["extract_invention"],
-      "config": {
-        "instruction": "Using the extracted invention data from the extract_invention step (available in your input context as extracted_data), draft a complete patent claim set. Produce 3 independent claims (system, method, computer-readable medium) covering the core novel combination. Draft 15-25 dependent claims narrowing configurable parameters, optional sub-components, specific mathematical functions, modes of operation, and cross-references to related patent families. Ensure ZERO implementation language (no Python, C++, etc.), ZERO product names, and all thresholds expressed as configurable. Output the claim tree showing hierarchy."
+      "inputs": {
+        "invention_description": "step_1.extracted_data",
+        "source_code_paths": "step_1.extracted_data",
+        "technical_docs": "step_1.extracted_data",
+        "prior_art_notes": "step_1.extracted_data",
+        "domain": "step_1.extracted_data"
       },
-      "phase_filter": null
+      "outputs": {
+        "independent_claims": "independent_claims_data",
+        "dependent_claims": "dependent_claims_data",
+        "claim_tree": "claim_tree_data",
+        "novelty_elements": "novelty_elements_data",
+        "red_flags": "red_flags_data"
+      },
+      "parallel_group": 2
     },
     {
+      "id": "step_3",
       "skill_name": "patent-spec-writer",
-      "alias": "write_specification",
-      "depends_on": ["draft_claims", "extract_invention"],
-      "config": {
-        "instruction": "Using the drafted claims (from draft_claims step) and extracted invention data (from extract_invention step), both available in your input context, write a complete patent specification. Include: Title, Field of the Invention, Background with Problem Statement, Summary of the Invention, Brief Description of the Drawings (with formal FIG. descriptions — NOT placeholders), Detailed Description enabling every claim element, and Abstract under 150 words. Every claim element must have a corresponding description in the specification. Include 2-3 example embodiments in different domains. Write in present tense, passive voice. No product names, no implementation language. Add cross-references to related patent families. CRITICAL: You MUST output a figure_descriptions field containing a list of structured figure objects. Each figure object must have: figure_number (e.g. 'FIG. 1'), title, drawing_type_hint (block_diagram/flowchart/state_machine/sequence_diagram/data_flow/graph), description (detailed narrative of every component and connection), and components (list of {name, description} for every element in the figure). Plan at least 5 figures: system architecture, method flowchart, trust computation detail, data flow, and state transitions. These figure_descriptions are consumed directly by the drawing generator downstream — if they are missing or empty, the drawing pipeline will fail."
+      "inputs": {
+        "claims": "step_2.independent_claims",
+        "invention_description": "step_2.independent_claims",
+        "source_code_paths": "step_2.independent_claims",
+        "prior_art": "step_2.independent_claims",
+        "related_families": "step_2.independent_claims",
+        "domain": "step_2.independent_claims"
       },
-      "phase_filter": null
+      "outputs": {
+        "specification": "specification_data",
+        "abstract": "abstract_data",
+        "figure_descriptions": "figure_descriptions_data",
+        "enablement_map": "enablement_map_data",
+        "completeness_report": "completeness_report_data"
+      },
+      "parallel_group": 3
     },
     {
+      "id": "step_4",
       "skill_name": "prior-art-searcher",
-      "alias": "search_prior_art",
-      "depends_on": ["draft_claims"],
-      "config": {
-        "instruction": "Search for prior art relevant to the drafted claims (available in your input context from the draft_claims step). Query Google Patents, USPTO, IEEE, arXiv, and Google Scholar using key terms from the independent claims. For each reference found, analyze overlap with our claims and draft explicit differentiation language. Rate each reference by risk level (HIGH/MEDIUM/LOW/NONE). Determine overall clearance status (CLEARED/AT_RISK/BLOCKED). If AT_RISK, recommend specific claim modifications to strengthen against the found prior art."
+      "inputs": {
+        "claims": "step_2.independent_claims",
+        "invention_summary": "step_2.independent_claims",
+        "domain_keywords": "step_2.independent_claims",
+        "known_references": "step_2.independent_claims",
+        "search_sources": "step_2.independent_claims"
       },
-      "phase_filter": null
+      "outputs": {
+        "prior_art_report": "prior_art_report_data",
+        "clearance_status": "clearance_status_data",
+        "claim_modifications": "claim_modifications_data",
+        "search_log": "search_log_data"
+      },
+      "parallel_group": 3
     },
     {
+      "id": "step_5",
       "skill_name": "patent-boundary-mapper",
-      "alias": "map_boundaries",
-      "depends_on": ["draft_claims"],
-      "config": {
-        "instruction": "Map the boundaries between this patent family and all related families (listed in the related_families field in your input context). Use the drafted claims from the draft_claims step. Ensure no claim elements overlap with other families. For each interface between families, draft cross-reference language. Resolve any scope conflicts by assigning each element to exactly one family. Produce a BoundaryMapping.md document showing scope delineation, pairwise relationships, and cross-reference recommendations."
+      "inputs": {
+        "families": "step_2.independent_claims",
+        "family_claims": "step_2.independent_claims",
+        "known_interfaces": "step_2.independent_claims"
       },
-      "phase_filter": null
+      "outputs": {
+        "boundary_map": "boundary_map_data",
+        "conflicts": "conflicts_data",
+        "cross_references": "cross_references_data",
+        "boundary_document": "boundary_document_data"
+      },
+      "parallel_group": 3
     },
     {
+      "id": "step_6",
       "skill_name": "patent-claims-drafter",
-      "alias": "strengthen_claims",
-      "depends_on": ["search_prior_art", "map_boundaries"],
-      "config": {
-        "instruction": "Revise the claim set based on prior art findings (from search_prior_art step — look for prior_art_report and claim_modifications in your input context) and boundary mapping results (from map_boundaries step — look for conflicts and cross_references). Incorporate differentiation language to strengthen claims against HIGH/MEDIUM risk prior art references. Remove or reassign any claims that conflict with other patent families. Add narrowing dependent claims where needed. Ensure the final claim set is defensible, properly scoped, and ready for filing. Output the complete revised independent_claims and dependent_claims."
+      "inputs": {
+        "invention_description": "step_4.prior_art_report",
+        "source_code_paths": "step_4.prior_art_report",
+        "technical_docs": "step_4.prior_art_report",
+        "prior_art_notes": "step_4.prior_art_report",
+        "domain": "step_4.prior_art_report"
       },
-      "phase_filter": null
+      "outputs": {
+        "independent_claims": "independent_claims_data",
+        "dependent_claims": "dependent_claims_data",
+        "claim_tree": "claim_tree_data",
+        "novelty_elements": "novelty_elements_data",
+        "red_flags": "red_flags_data"
+      },
+      "parallel_group": 4
     },
     {
+      "id": "step_7",
       "skill_name": "patent-spec-writer",
-      "alias": "update_specification",
-      "depends_on": ["strengthen_claims", "search_prior_art", "write_specification"],
-      "config": {
-        "instruction": "Update the specification (from write_specification step — look for the specification field in your input context) to reflect strengthened claims (from strengthen_claims step) and prior art findings (from search_prior_art step — look for prior_art_report). Add a 'Distinction from Prior Art' subsection to the Background section with explicit differentiation from each HIGH/MEDIUM risk reference. Update the Detailed Description to support any new or modified claims. Verify the enablement map shows 100% coverage of the final claim set. CRITICAL: You MUST output a figure_descriptions field. Take the figure_descriptions from the write_specification step's output (available in your input context) and UPDATE them to reflect any new claim elements added during strengthening. If strengthened claims introduced new components, add them to the relevant figures. Each figure in figure_descriptions must have: figure_number, title, drawing_type_hint, description (narrative with every component and connection), and components (list of {name, description}). The drawing generator downstream consumes this output directly — do NOT output empty or placeholder figure descriptions."
+      "inputs": {
+        "claims": "step_6.independent_claims",
+        "invention_description": "step_6.independent_claims",
+        "source_code_paths": "step_6.independent_claims",
+        "prior_art": "step_6.independent_claims",
+        "related_families": "step_6.independent_claims",
+        "domain": "step_6.independent_claims"
       },
-      "phase_filter": null
+      "outputs": {
+        "specification": "specification_data",
+        "abstract": "abstract_data",
+        "figure_descriptions": "figure_descriptions_data",
+        "enablement_map": "enablement_map_data",
+        "completeness_report": "completeness_report_data"
+      },
+      "parallel_group": 5
     },
     {
+      "id": "step_8",
       "skill_name": "patent-drawing-generator",
-      "alias": "generate_drawings",
-      "depends_on": ["update_specification"],
-      "config": {
-        "instruction": "Generate patent drawings from the figure_descriptions provided by the update_specification step. The figure_descriptions list is in your input context — each entry has figure_number, title, drawing_type_hint, description, and components. For EACH figure in figure_descriptions: (1) Use the drawing_type_hint to select the Mermaid diagram type. (2) Use the components list and description to build the diagram. (3) Use EXACT claim terminology for all reference numeral labels — every component label must match the term used in the claims. (4) Assign reference numerals: 100-series for FIG.1, 200-series for FIG.2, etc. (5) Produce mermaid_code, reference_numerals table, and compliance_notes. (6) Verify USPTO 37 CFR 1.84 compliance. Output a figures array with one entry per figure containing: figure_number, mermaid_code, reference_numerals, compliance_notes."
+      "inputs": {
+        "figure_description": "step_7.specification",
+        "figure_number": "step_7.specification",
+        "patent_family": "step_7.specification",
+        "drawing_type": "step_7.specification"
       },
-      "phase_filter": null
+      "outputs": {
+        "mermaid_code": "mermaid_code_data",
+        "drawing_specification": "drawing_specification_data",
+        "compliance_notes": "compliance_notes_data",
+        "reference_numerals": "reference_numerals_data"
+      },
+      "parallel_group": 6
     },
     {
+      "id": "step_9",
       "skill_name": "patent-spec-aligner",
-      "alias": "align_documents",
-      "depends_on": ["generate_drawings", "update_specification"],
-      "config": {
-        "instruction": "Align all patent documents for consistency. Your input context contains: (1) The final specification from update_specification (look for the specification field), (2) The strengthened claims (look for independent_claims and dependent_claims), (3) The generated drawings from generate_drawings (look for the figures array with mermaid_code and reference_numerals). Build a cross-reference table mapping every claim term to its reference numeral and figure. Generate a complete 'Detailed Description of the Drawings' section with inline reference numerals (e.g., 'the trust signal aggregator (104)'). Generate an updated 'Brief Description of the Drawings' section. Flag any consistency violations: terms in claims not in drawings, reference numerals in drawings not in specification, figures referenced in spec that weren't generated. Output: cross_reference_table, detailed_description_of_drawings, brief_description_of_drawings, consistency_violations."
+      "inputs": {
+        "claims_text": "step_8.mermaid_code",
+        "specification_text": "step_8.mermaid_code",
+        "drawings_json": "step_8.mermaid_code",
+        "patent_family": "step_8.mermaid_code"
       },
-      "phase_filter": null
+      "outputs": {
+        "detailed_description_section": "detailed_description_section_data",
+        "alignment_report": "alignment_report_data",
+        "updated_figure_descriptions": "updated_figure_descriptions_data",
+        "consistency_violations": "consistency_violations_data"
+      },
+      "parallel_group": 7
     },
     {
+      "id": "step_10",
       "skill_name": "checklist-builder",
-      "alias": "filing_checklist",
-      "depends_on": ["align_documents", "strengthen_claims", "search_prior_art", "map_boundaries"],
-      "config": {
-        "instruction": "Build a comprehensive patent filing checklist using all upstream results in your input context. Check: (1) Claims: look for independent_claims and dependent_claims — verify 3 independent + N dependent, no implementation language, no product names, all thresholds configurable. (2) Specification: look for specification field — verify all sections present, enablement 100%, abstract under 150 words, prior art differentiated. (3) Drawings: look for figures array — verify all figures have mermaid_code and reference_numerals, verify consistency_violations from align_documents is empty. (4) Boundary mapping: look for boundary_map — verify no cross-family claim conflicts. (5) Prior art: look for clearance_status — verify CLEARED or AT_RISK with mitigations. (6) Filing: inventor declaration, micro-entity eligibility, filing fee ($300 provisional / $320 non-provisional), filing steps. Organize by category with pass/fail status for each item."
+      "inputs": {
+        "goal_or_event": "step_9.detailed_description_section",
+        "deadline": "step_9.detailed_description_section",
+        "constraints": "step_9.detailed_description_section",
+        "experience_level": "step_9.detailed_description_section"
       },
-      "phase_filter": null
+      "outputs": {
+        "checklist": "checklist_data",
+        "timeline": "timeline_data",
+        "dont_forget": "dont_forget_data",
+        "dependencies": "dependencies_data"
+      },
+      "parallel_group": 8
     }
-  ]
+  ],
+  "edges": [
+    {
+      "from_step": "step_1",
+      "to_step": "step_2",
+      "data_type": "extracted_data",
+      "field_mapping": "extracted_data -> invention_description; extracted_data -> source_code_paths; extracted_data -> technical_docs; extracted_data -> prior_art_notes; extracted_data -> domain"
+    },
+    {
+      "from_step": "step_2",
+      "to_step": "step_3",
+      "data_type": "independent_claims",
+      "field_mapping": "independent_claims -> claims; independent_claims -> invention_description; independent_claims -> source_code_paths; independent_claims -> prior_art; independent_claims -> related_families; independent_claims -> domain"
+    },
+    {
+      "from_step": "step_1",
+      "to_step": "step_3",
+      "data_type": "extracted_data",
+      "field_mapping": "extracted_data -> input"
+    },
+    {
+      "from_step": "step_2",
+      "to_step": "step_4",
+      "data_type": "independent_claims",
+      "field_mapping": "independent_claims -> claims; independent_claims -> invention_summary; independent_claims -> domain_keywords; independent_claims -> known_references; independent_claims -> search_sources"
+    },
+    {
+      "from_step": "step_2",
+      "to_step": "step_5",
+      "data_type": "independent_claims",
+      "field_mapping": "independent_claims -> families; independent_claims -> family_claims; independent_claims -> known_interfaces"
+    },
+    {
+      "from_step": "step_4",
+      "to_step": "step_6",
+      "data_type": "prior_art_report",
+      "field_mapping": "prior_art_report -> invention_description; prior_art_report -> source_code_paths; prior_art_report -> technical_docs; prior_art_report -> prior_art_notes; prior_art_report -> domain"
+    },
+    {
+      "from_step": "step_5",
+      "to_step": "step_6",
+      "data_type": "boundary_map",
+      "field_mapping": "boundary_map -> input"
+    },
+    {
+      "from_step": "step_6",
+      "to_step": "step_7",
+      "data_type": "independent_claims",
+      "field_mapping": "independent_claims -> claims; independent_claims -> invention_description; independent_claims -> source_code_paths; independent_claims -> prior_art; independent_claims -> related_families; independent_claims -> domain"
+    },
+    {
+      "from_step": "step_4",
+      "to_step": "step_7",
+      "data_type": "prior_art_report",
+      "field_mapping": "prior_art_report -> input"
+    },
+    {
+      "from_step": "step_3",
+      "to_step": "step_7",
+      "data_type": "specification",
+      "field_mapping": "specification -> input"
+    },
+    {
+      "from_step": "step_7",
+      "to_step": "step_8",
+      "data_type": "specification",
+      "field_mapping": "specification -> figure_description; specification -> figure_number; specification -> patent_family; specification -> drawing_type"
+    },
+    {
+      "from_step": "step_8",
+      "to_step": "step_9",
+      "data_type": "mermaid_code",
+      "field_mapping": "mermaid_code -> claims_text; mermaid_code -> specification_text; mermaid_code -> drawings_json; mermaid_code -> patent_family"
+    },
+    {
+      "from_step": "step_7",
+      "to_step": "step_9",
+      "data_type": "specification",
+      "field_mapping": "specification -> input"
+    },
+    {
+      "from_step": "step_9",
+      "to_step": "step_10",
+      "data_type": "detailed_description_section",
+      "field_mapping": "detailed_description_section -> goal_or_event; detailed_description_section -> deadline; detailed_description_section -> constraints; detailed_description_section -> experience_level"
+    },
+    {
+      "from_step": "step_6",
+      "to_step": "step_10",
+      "data_type": "independent_claims",
+      "field_mapping": "independent_claims -> input"
+    },
+    {
+      "from_step": "step_4",
+      "to_step": "step_10",
+      "data_type": "prior_art_report",
+      "field_mapping": "prior_art_report -> input"
+    },
+    {
+      "from_step": "step_5",
+      "to_step": "step_10",
+      "data_type": "boundary_map",
+      "field_mapping": "boundary_map -> input"
+    }
+  ],
+  "entry_inputs": [
+    "examples",
+    "raw_text",
+    "source_hint",
+    "target_fields"
+  ],
+  "terminal_outputs": [
+    "checklist",
+    "timeline",
+    "dont_forget",
+    "dependencies"
+  ],
+  "parallel_groups": [
+    [
+      "step_1"
+    ],
+    [
+      "step_2"
+    ],
+    [
+      "step_3",
+      "step_4",
+      "step_5"
+    ],
+    [
+      "step_6"
+    ],
+    [
+      "step_7"
+    ],
+    [
+      "step_8"
+    ],
+    [
+      "step_9"
+    ],
+    [
+      "step_10"
+    ]
+  ],
+  "estimated_cost": 0,
+  "critical_path": [
+    "step_1",
+    "step_2",
+    "step_4",
+    "step_6",
+    "step_7",
+    "step_8",
+    "step_9",
+    "step_10"
+  ],
+  "chain_links": {
+    "next_chains": [],
+    "related_chains": [
+      {
+        "chain_name": "patent-drawing-pipeline",
+        "relationship": "complement"
+      },
+      {
+        "chain_name": "trademark-clearance-pipeline",
+        "relationship": "complement"
+      }
+    ],
+    "prerequisites": []
+  }
 }

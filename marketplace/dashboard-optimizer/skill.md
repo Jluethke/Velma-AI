@@ -33,23 +33,23 @@
 
 ### Phase 1: Parse Dashboard and Extract Metrics
 
-**Entry Criteria:**
+### Entry Criteria
 - `dashboard_description` is provided and contains at least 3 metrics or visualizations.
 - `business_context` is provided.
 
-**Actions:**
+### Actions
 1. Read the dashboard description end-to-end and extract all metric names, visualization types, and current layout/grouping.
 2. If `current_kpis` is not provided, infer KPIs from the description (metrics that appear to drive decisions).
 3. Identify data sources, update frequency, and any filters or dimensions mentioned.
 4. Create a structured representation: `{metrics: [...], visualizations: [...], hierarchy: {...}, data_sources: [...]}`.
 5. Document any data quality or latency constraints mentioned in the description or `data_infrastructure_context`.
 
-**Output:**
+### Output
 - `parsed_dashboard` (object): Structured representation of current dashboard.
 - `extracted_kpis` (array): KPIs inferred or provided.
 - `data_constraints` (object): Documented latency, quality, and infrastructure constraints.
 
-**Quality Gate:**
+### Quality Gate
 - Every metric in the description appears in `parsed_dashboard.metrics`.
 - At least 2 KPIs are identified (either from input or inferred).
 - Data hierarchy is explicitly documented.
@@ -59,21 +59,21 @@
 
 ### Phase 2: Identify Vanity Metrics
 
-**Entry Criteria:**
+### Entry Criteria
 - `parsed_dashboard` is complete.
 - `business_context` is available.
 
-**Actions:**
+### Actions
 1. For each metric in `parsed_dashboard.metrics`, assess: Does it drive a decision? Does it correlate with a business outcome? Can a stakeholder act on it?
 2. Classify metrics as: Actionable (drives decisions), Decorative (looks good, no action), or Contextual (supporting information).
 3. Vanity metrics are those classified as Decorative or those that measure activity without outcome (e.g., "total page views" without conversion context).
 4. For each vanity metric, document the specific reason it is problematic and suggest a replacement or removal action.
 5. Verify that at least one metric remains actionable (otherwise the dashboard has no value).
 
-**Output:**
+### Output
 - `vanity_metrics_identified` (array of objects): `{metric_name, classification, reason_vanity, current_location_in_dashboard, recommended_replacement_or_removal_action}`.
 
-**Quality Gate:**
+### Quality Gate
 - Every metric is classified.
 - Each vanity metric has a specific, documented reason (not vague).
 - At least one metric is identified as actionable.
@@ -83,12 +83,12 @@
 
 ### Phase 3: Audit, Validate, and Recommend KPIs
 
-**Entry Criteria:**
+### Entry Criteria
 - `extracted_kpis` is available.
 - `business_context` and `stakeholder_roles` are defined.
 - `data_constraints` are documented.
 
-**Actions:**
+### Actions
 1. For each current KPI, assess: Is it actionable? Does it have a clear owner? Is it measured at the right frequency? Does it align with business outcomes?
 2. Identify gaps: What decisions do stakeholders need to make that aren't supported by current KPIs?
 3. Suggest replacement or new KPIs that are: outcome-focused (not activity-focused), owned by a specific role, measurable, and actionable.
@@ -96,11 +96,11 @@
 5. Validate each recommended KPI against `data_constraints`: Is it measurable with current data infrastructure? What is the latency requirement? Flag KPIs that require data pipeline changes.
 6. Identify experimentation and testing metrics (e.g., "experiment velocity", "statistical significance of changes", "A/B test conversion lift") that are missing from the current dashboard. Add these to recommendations for product and growth teams.
 
-**Output:**
+### Output
 - `recommended_kpis` (array of objects): `{kpi_name, definition, calculation_method, target_audience, business_outcome_measured, rationale, data_feasibility_status, data_latency_requirement}`.
 - `experimentation_metrics_identified` (array of objects): `{metric_name, definition, use_case, target_audience, rationale}`.
 
-**Quality Gate:**
+### Quality Gate
 - Each recommended KPI is outcome-focused (measures a business result, not an activity).
 - Each KPI has a named owner role.
 - Recommendations address gaps identified in the current KPI set.
@@ -112,12 +112,12 @@
 
 ### Phase 4: Analyze and Improve Data Hierarchy
 
-**Entry Criteria:**
+### Entry Criteria
 - `parsed_dashboard.hierarchy` is documented.
 - `recommended_kpis` are finalized.
 - `stakeholder_roles` are defined.
 
-**Actions:**
+### Actions
 1. Assess the current hierarchy: What's at the top level? What's buried? Are related metrics grouped logically?
 2. For each stakeholder role, document their primary decisions and the metrics required to make those decisions. Use this decision workflow to determine metric priority:
    - Executive: Strategic outcomes (revenue, churn, growth rate)
@@ -127,10 +127,10 @@
 4. Suggest visual groupings: related metrics should be adjacent or in the same section. Group by business outcome (e.g., "Revenue Metrics", "Engagement Metrics", "Operational Metrics").
 5. Document the rationale for each hierarchy change, referencing the decision workflows from step 2.
 
-**Output:**
+### Output
 - `hierarchy_improvement` (object): `{current_hierarchy_assessment, proposed_groupings, visual_layout_suggestion, rationale, stakeholder_role_mapping}`.
 
-**Quality Gate:**
+### Quality Gate
 - Proposed hierarchy aligns with stakeholder decision workflows (documented in step 2).
 - Related metrics are grouped together by business outcome.
 - Top-level metrics are outcome-focused, not activity-focused.
@@ -141,13 +141,13 @@
 
 ### Phase 5: Design Drill-Down Paths and Metrics Interdependencies
 
-**Entry Criteria:**
+### Entry Criteria
 - `recommended_kpis` are finalized.
 - `available_data_dimensions` are defined (or defaults applied).
 - `stakeholder_roles` are known.
 - `data_constraints` are documented.
 
-**Actions:**
+### Actions
 1. For each top-level KPI, identify the questions a stakeholder will ask: "Why did this change?" "Which segment is driving this?" "What's the trend over time?" "Who is affected?"
 2. Map drill-down paths: summary metric → detail level 1 (e.g., by segment, geography, or time) → detail level 2 (e.g., by sub-segment or specific cohort).
 3. For each path, specify: filters available, dimensions to break down by, the use case (what question does this path answer?), and implementation feasibility (is the data available?).
@@ -155,11 +155,11 @@
 5. Identify metric interdependencies: For each KPI, document leading indicators (metrics that predict this KPI) and lagging indicators (metrics that result from this KPI). Example: "Feature Adoption" is a leading indicator of "Engagement", which is a leading indicator of "Retention".
 6. Create a metrics interdependency map that shows causality relationships. This helps stakeholders understand which metrics to watch first and how changes propagate through the system.
 
-**Output:**
+### Output
 - `drill_down_paths` (array of objects): `{summary_metric, level_1_detail, level_2_detail, suggested_filters, use_case, implementation_feasibility}`.
 - `metrics_interdependency_map` (object): `{metric_name, leading_indicators, lagging_indicators, causality_description}`.
 
-**Quality Gate:**
+### Quality Gate
 - Every top-level KPI has at least one drill-down path.
 - Each path answers a realistic stakeholder question.
 - Drill-down dimensions are available in the data (or flagged as "requires data enrichment").
@@ -171,12 +171,12 @@
 
 ### Phase 6: Assess Data Quality and Compile Improvement Report
 
-**Entry Criteria:**
+### Entry Criteria
 - All previous phases are complete.
 - `vanity_metrics_identified`, `recommended_kpis`, `hierarchy_improvement`, `drill_down_paths`, and `metrics_interdependency_map` are finalized.
 - `data_constraints` are documented.
 
-**Actions:**
+### Actions
 1. For each recommended KPI, assess data quality, latency, and reliability:
    - Data source: Where does this metric come from?
    - Quality score: What percentage of records are valid and complete? (0-100%)
@@ -194,11 +194,11 @@
 6. Document any dependencies or prerequisites (e.g., "requires data pipeline change", "requires new data source integration").
 7. Include a summary of data infrastructure changes required to support all recommended KPIs.
 
-**Output:**
+### Output
 - `data_quality_assessment` (array of objects): `{kpi_name, data_source, quality_score, latency_hours, reliability_percentage, risk_flags, mitigation_strategy}`.
 - `improvement_report` (object): `{metrics_to_remove, kpis_to_add, hierarchy_changes, drill_down_additions, experimentation_metrics_added, implementation_priority, estimated_impact, dependencies, data_infrastructure_changes_required, phased_rollout}`.
 
-**Quality Gate:**
+### Quality Gate
 - Report is actionable: each recommendation has a specific implementation step.
 - Prioritization is justified by impact and effort.
 - Dependencies are documented and linked to specific recommendations.
@@ -208,6 +208,15 @@
 - A person unfamiliar with the original dashboard could implement these recommendations and produce a more decision-focused dashboard.
 
 ---
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Analyze a dashboard and recommend improvements by removing vanity metrics, addin, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 
@@ -219,7 +228,7 @@ The skill is DONE when:
 5. Drill-down paths are designed for each top-level KPI with documented use cases.
 6. Metrics interdependency map shows leading and lagging indicator relationships.
 7. Data quality assessment flags risks and mitigation strategies for each recommended KPI.
-8. A comprehensive improvement report is compiled with prioritized, actionable recommendations and a phased rollout plan.
+8. A full improvement report is compiled with prioritized, actionable recommendations and a phased rollout plan.
 9. A person unfamiliar with the original dashboard could implement these recommendations and produce a more decision-focused dashboard.
 
 ---

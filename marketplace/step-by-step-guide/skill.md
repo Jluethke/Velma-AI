@@ -1,6 +1,6 @@
 # Step-by-Step Guide Generator
 
-> **Starter Skill** — Free to use. Royalties to original creator on derivatives. Build on this.
+> **Starter Skill**  --  Free to use. Royalties to original creator on derivatives. Build on this.
 
 Foundation pattern for turning any process into a clear, numbered how-to guide. Takes a task description, skill level of the audience, and constraints, then produces a structured guide with prerequisites, steps, common mistakes, troubleshooting, and completion criteria. Fork this to create domain-specific guide generators (recipe writers, DIY tutorials, onboarding docs, assembly instructions, setup guides, etc.).
 
@@ -35,42 +35,49 @@ ACT     --> Output the complete guide with troubleshooting appendix
 
 ### OBSERVE: Understand the Task
 
-**Entry criteria:** A task description is provided.
+### Entry Criteria
+A task description is provided.
 
-**Actions:**
+### Actions
 1. Parse the task into its core goal. Strip away context to find the atomic objective: "Install PostgreSQL on Ubuntu" not "I need a database for my app and was thinking about PostgreSQL."
 2. Assess audience level. Beginner: define all terms, explain why each step matters, include screenshots/examples. Intermediate: skip setup basics, focus on the task-specific steps. Expert: just the commands/actions, no explanations unless non-obvious.
 3. Identify the scope boundary. What is in-scope (this guide covers) vs. out-of-scope (assumed done or covered elsewhere). Explicit scope prevents guides from ballooning.
 4. Inventory prerequisites. What must be true before step 1? Software installed, accounts created, files downloaded, permissions granted, knowledge assumed.
 
-**Output:** Core goal statement, audience calibration, scope boundary, prerequisite list.
+### Output
+Core goal statement, audience calibration, scope boundary, prerequisite list.
 
-**Quality gate:** Goal is a single clear sentence. Prerequisites are concrete and verifiable (not "some experience with X" but "Python 3.8+ installed and on PATH").
+### Quality Gate
+Goal is a single clear sentence. Prerequisites are concrete and verifiable (not "some experience with X" but "Python 3.8+ installed and on PATH").
 
 ---
 
 ### REASON: Decompose into Steps
 
-**Entry criteria:** Goal, audience, and prerequisites are defined.
+### Entry Criteria
+Goal, audience, and prerequisites are defined.
 
-**Actions:**
+### Actions
 1. Break the task into sequential steps. Each step should be one action that produces a visible result. A step is too big if it contains "and" -- split it. A step is too small if it has no observable output -- merge it with the next step.
 2. For each step, define: the action (imperative verb: "Install", "Configure", "Run", "Verify"), the expected result (what should happen if done correctly), and the verification method (how to confirm it worked).
 3. Identify decision points. Where does the user need to choose between options? Provide guidance: "If you're on Windows, do A. If macOS, do B." Never leave a fork without direction.
 4. Flag danger zones. Steps where a mistake could cause data loss, security issues, or hard-to-reverse consequences. These get explicit warnings.
 5. Estimate time. Add a rough time estimate per step. Sum for total. Pad by 50% for beginners, 20% for intermediates.
 
-**Output:** Ordered step list with actions, expected results, verifications, decision points, and danger flags.
+### Output
+Ordered step list with actions, expected results, verifications, decision points, and danger flags.
 
-**Quality gate:** Every step has an imperative verb. Every step has a verification. Danger zones are flagged. No step contains "and" joining two distinct actions.
+### Quality Gate
+Every step has an imperative verb. Every step has a verification. Danger zones are flagged. No step contains "and" joining two distinct actions.
 
 ---
 
 ### PLAN: Structure the Guide
 
-**Entry criteria:** Steps are decomposed and ordered.
+### Entry Criteria
+Steps are decomposed and ordered.
 
-**Actions:**
+### Actions
 1. Write the guide header: title, one-line description, time estimate, difficulty level.
 2. Write the prerequisites section. Bulleted list with verification commands where applicable ("Run `python --version` to confirm").
 3. Write each step with: step number, action title, detailed instruction (calibrated to audience level), expected result, and a checkpoint ("You should now see X").
@@ -79,26 +86,40 @@ ACT     --> Output the complete guide with troubleshooting appendix
 6. Compile common mistakes from the danger zones and decision points. Each: mistake description, symptoms, fix.
 7. Compile troubleshooting. For each step that could fail, an "If X, then Y" entry.
 
-**Output:** Complete structured guide document.
+### Output
+Complete structured guide document.
 
-**Quality gate:** Every step has a checkpoint. Every danger zone has a warning. "You're Done When" criteria are concrete and testable.
+### Quality Gate
+Every step has a checkpoint. Every danger zone has a warning. "You're Done When" criteria are concrete and testable.
 
 ---
 
 ### ACT: Deliver the Guide
 
-**Entry criteria:** Guide is fully structured.
+### Entry Criteria
+Guide is fully structured.
 
-**Actions:**
+### Actions
 1. Output the guide in clean, readable format. Use numbered steps, bold action titles, and indented details.
 2. Output common_mistakes as a separate section.
 3. Output troubleshooting as an appendix.
 4. Include time_estimate at the top.
 5. Check for loop trigger: does re-reading the guide reveal a missing step, an unclear instruction, or an assumed prerequisite? If so, loop back to OBSERVE.
 
-**Output:** Final guide, common mistakes, troubleshooting appendix, time estimate.
+### Output
+Final guide, common mistakes, troubleshooting appendix, time estimate.
 
-**Quality gate:** A person at the stated audience level could follow this guide without external help. No step assumes knowledge not covered in prerequisites.
+### Quality Gate
+A person at the stated audience level could follow this guide without external help. No step assumes knowledge not covered in prerequisites.
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Turn any process into a clear, numbered how-to guide with prerequisites, steps, , the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 
@@ -144,7 +165,7 @@ Between runs, this skill accumulates:
 
 | Level | What to Include | What to Skip |
 |---|---|---|
-| Beginner | Define all terms; explain why each step matters; include examples | Nothing — assume no prior knowledge |
+| Beginner | Define all terms; explain why each step matters; include examples | Nothing  --  assume no prior knowledge |
 | Intermediate | Task-specific steps; skip setup basics | Basic installation, environment setup |
 | Expert | Commands/actions only; no explanations unless non-obvious | Everything obvious to the domain |
 

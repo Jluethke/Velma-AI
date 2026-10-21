@@ -14,7 +14,7 @@ PHASE 5: MONITOR    --> Track ranking changes, suggest ongoing optimizations
 
 ## Inputs
 
-- **current_listing**: object -- The existing product listing:
+- **`current_listing`**: object -- The existing product listing:
   - `title`: string
   - `bullets`: string[] -- Bullet points / feature highlights
   - `description`: string -- Product description or A+ Content text
@@ -22,40 +22,41 @@ PHASE 5: MONITOR    --> Track ranking changes, suggest ongoing optimizations
   - `images`: array of {url: string, type: string} -- Image inventory
   - `price`: number
   - `reviews`: object -- {count: number, avg_rating: number, common_themes: string[]}
-- **product_details**: object -- The actual product specs:
+- **`product_details`**: object -- The actual product specs:
   - `category`: string
   - `brand`: string
   - `key_features`: string[] -- Factual features and specs
   - `materials`: string[]
   - `dimensions`: object
   - `unique_selling_points`: string[]
-- **competitor_listings**: array of objects (optional) -- Top competitor listings for comparison
-- **platform**: string -- "amazon" | "shopify" | "walmart" | "etsy" | "ebay"
+- **`competitor_listings`**: array of objects (optional) -- Top competitor listings for comparison
+- **`platform`**: string -- "amazon" | "shopify" | "walmart" | "etsy" | "ebay"
 
 ## Outputs
 
-- **optimized_listing**: object -- Rewritten listing elements:
+- **`optimized_listing`**: object -- Rewritten listing elements:
   - `title`: string (platform-optimized)
   - `bullets`: string[] (benefit-first with specs)
   - `description`: string (SEO-optimized, formatted)
   - `backend_keywords`: string (deduplicated, platform-compliant)
-- **keyword_report**: object -- Keyword research results:
+- **`keyword_report`**: object -- Keyword research results:
   - `primary_keywords`: array of {keyword: string, search_volume: string, difficulty: string}
   - `secondary_keywords`: array of same
   - `long_tail`: array of same
   - `keywords_added`: string[] -- New keywords now covered
   - `keyword_coverage_before`: number (0-100)
   - `keyword_coverage_after`: number (0-100)
-- **compliance_check**: array of {rule: string, status: string, detail: string}
-- **monitoring_plan**: object -- Ongoing optimization schedule
+- **`compliance_check`**: array of {rule: string, status: string, detail: string}
+- **`monitoring_plan`**: object -- Ongoing optimization schedule
 
 ## Execution
 
 ### Phase 1: AUDIT -- Listing Analysis
 
-**Entry criteria:** current_listing provided with at minimum: title, at least one bullet or description.
+### Entry Criteria
+current_listing provided with at minimum: title, at least one bullet or description.
 
-**Actions:**
+### Actions
 1. Score each listing element on a 0-10 scale:
    - **Title:** Length utilization (chars used / chars allowed), keyword inclusion, readability, brand presence, key feature inclusion.
    - **Bullets:** Count (all slots used?), benefit-vs-feature ratio, specificity, keyword inclusion, formatting, scannability.
@@ -67,15 +68,18 @@ PHASE 5: MONITOR    --> Track ranking changes, suggest ongoing optimizations
 3. Identify the 3 most impactful improvement areas (elements with lowest scores that have the highest impact on search/conversion).
 4. Flag any critical issues: empty required fields, policy violations, broken images.
 
-**Output:** Listing scorecard with per-element scores, overall score, top 3 improvement areas, and critical issues.
+### Output
+Listing scorecard with per-element scores, overall score, top 3 improvement areas, and critical issues.
 
-**Quality gate:** Every element is scored with specific reasoning. Overall score is calculated. At least one improvement area identified. If listing score > 85, the listing may already be well-optimized -- proceed with minor refinements rather than full rewrite.
+### Quality Gate
+Every element is scored with specific reasoning. Overall score is calculated. At least one improvement area identified. If listing score > 85, the listing may already be well-optimized -- proceed with minor refinements rather than full rewrite.
 
 ### Phase 2: RESEARCH -- Competitive and Keyword Analysis
 
-**Entry criteria:** Listing audit completed. Product category and key features known.
+### Entry Criteria
+Listing audit completed. Product category and key features known.
 
-**Actions:**
+### Actions
 1. Conduct keyword research for the product category:
    - Identify primary keywords (highest volume, directly relevant)
    - Identify secondary keywords (moderate volume, related terms)
@@ -94,15 +98,18 @@ PHASE 5: MONITOR    --> Track ranking changes, suggest ongoing optimizations
    - Price range for the top 10
 4. Map each keyword to the listing element where it should appear (title, bullet, description, backend).
 
-**Output:** Keyword matrix with volumes and assignments, competitor gap analysis, category benchmarks.
+### Output
+Keyword matrix with volumes and assignments, competitor gap analysis, category benchmarks.
 
-**Quality gate:** At least 15 keywords identified across primary/secondary/long-tail categories. Each keyword assigned to a specific listing element. Competitor analysis covers at least 3 competitors (or competitor_listings provided).
+### Quality Gate
+At least 15 keywords identified across primary/secondary/long-tail categories. Each keyword assigned to a specific listing element. Competitor analysis covers at least 3 competitors (or competitor_listings provided).
 
 ### Phase 3: OPTIMIZE -- Rewrite Listing Elements
 
-**Entry criteria:** Keyword research and competitor analysis completed. Keyword-to-element mapping defined.
+### Entry Criteria
+Keyword research and competitor analysis completed. Keyword-to-element mapping defined.
 
-**Actions:**
+### Actions
 1. **Rewrite Title** following platform-specific rules:
    - Amazon: `[Brand] + [Primary Keyword] + [Key Feature 1] + [Key Feature 2] + [Size/Variant] + [Secondary Keyword]`, max 200 chars
    - Shopify: Focus on readability and primary keyword in first 60 chars (Google snippet length)
@@ -132,15 +139,18 @@ PHASE 5: MONITOR    --> Track ranking changes, suggest ongoing optimizations
    - Stay within platform byte limits (Amazon: 250 bytes)
    - Include competitor-adjacent terms where policy allows (category terms, not brand names)
 
-**Output:** Complete optimized listing with all elements rewritten.
+### Output
+Complete optimized listing with all elements rewritten.
 
-**Quality gate:** Optimized title includes top 3 primary keywords. All bullet slots utilized. Backend keywords contain zero duplicates with title/bullets. Total keyword coverage improved by at least 30% over original listing. All copy reads naturally (not keyword-stuffed).
+### Quality Gate
+Optimized title includes top 3 primary keywords. All bullet slots utilized. Backend keywords contain zero duplicates with title/bullets. Total keyword coverage improved by at least 30% over original listing. All copy reads naturally (not keyword-stuffed).
 
 ### Phase 4: VALIDATE -- Compliance and Quality Check
 
-**Entry criteria:** Optimized listing elements complete.
+### Entry Criteria
+Optimized listing elements complete.
 
-**Actions:**
+### Actions
 1. Run platform-specific compliance checks:
    - **Amazon:** No health/medical claims without FDA approval. No "best seller" or "top rated" claims. No competitor brand names. No promotional language ("sale," "free shipping," "limited time"). No HTML in bullets. Title under 200 chars. Backend under 250 bytes.
    - **Shopify:** No duplicate meta descriptions. Title tag under 60 chars for Google. Meta description under 155 chars. Alt text on all images.
@@ -160,15 +170,18 @@ PHASE 5: MONITOR    --> Track ranking changes, suggest ongoing optimizations
    - Top positive review themes reinforced in listing copy
    - Top negative review themes addressed or preempted (e.g., if reviews mention "smaller than expected," add dimensions prominently)
 
-**Output:** Compliance report with pass/fail per rule, keyword density analysis, readability scores.
+### Output
+Compliance report with pass/fail per rule, keyword density analysis, readability scores.
 
-**Quality gate:** Zero compliance violations that would risk listing suppression. Keyword density within acceptable ranges. Readability appropriate for target audience. If any violation found, return to Phase 3 to fix before proceeding.
+### Quality Gate
+Zero compliance violations that would risk listing suppression. Keyword density within acceptable ranges. Readability appropriate for target audience. If any violation found, return to Phase 3 to fix before proceeding.
 
 ### Phase 5: MONITOR -- Ongoing Optimization Plan
 
-**Entry criteria:** Optimized listing validated and compliant.
+### Entry Criteria
+Optimized listing validated and compliant.
 
-**Actions:**
+### Actions
 1. Create a 30-day monitoring checklist:
    - Week 1: Verify keyword indexing daily (check if listing appears for target keywords)
    - Week 2: Track BSR/ranking movement vs. pre-optimization baseline
@@ -186,9 +199,20 @@ PHASE 5: MONITOR    --> Track ranking changes, suggest ongoing optimizations
    - Review generation strategy (Vine, follow-up emails)
 4. Store optimization baseline in state for future comparison.
 
-**Output:** 30-day monitoring plan, ongoing optimization cadence, next-level opportunities.
+### Output
+30-day monitoring plan, ongoing optimization cadence, next-level opportunities.
 
-**Quality gate:** Monitoring plan includes specific metrics to track with pre-optimization baselines. At least 2 next-level opportunities identified.
+### Quality Gate
+Monitoring plan includes specific metrics to track with pre-optimization baselines. At least 2 next-level opportunities identified.
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Audits and optimizes e-commerce product listings for search visibility and conve, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 

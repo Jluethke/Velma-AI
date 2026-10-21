@@ -20,7 +20,7 @@ ACT     --> Output: root cause analysis, fix recommendation, regression test, pr
 - `logs`: string (optional) -- Relevant log output around the time of the failure
 - `recent_changes`: string (optional) -- Recent commits, deploys, config changes
 - `environment_info`: string (optional) -- OS, runtime version, dependencies, infra
-- `bug_history`: object (optional) -- Previous bug analyses from this skill for pattern matching
+- `bug_history`: object (optional) -- Previous bug analyzes from this skill for pattern matching
 
 ## Outputs
 
@@ -36,10 +36,10 @@ ACT     --> Output: root cause analysis, fix recommendation, regression test, pr
 
 ### OBSERVE: Gather Evidence
 
-**Entry criteria:** At least an error message or symptom description is provided.
+### Entry Criteria
+At least an error message or symptom description is provided.
 
-**Actions:**
-
+### Actions
 1. **Parse the error signal:**
    - Extract error type/class (e.g., NullPointerException, TypeError, ConnectionRefused, HTTP 500)
    - Extract error message text
@@ -68,18 +68,20 @@ ACT     --> Output: root cause analysis, fix recommendation, regression test, pr
    - **Intermittent failure**: works sometimes, fails sometimes
    - **Silent failure**: code appears to succeed but doesn't do what it should
 
-**Output:** Structured evidence package: error signal, timeline, recent changes, code context, symptom classification.
+### Output
+Structured evidence package: error signal, timeline, recent changes, code context, symptom classification.
 
-**Quality gate:** Error type and location are identified. Timeline has at least two data points (broken state and last known working state or change event). Symptom is classified.
+### Quality Gate
+Error type and location are identified. Timeline has at least two data points (broken state and last known working state or change event). Symptom is classified.
 
 ---
 
 ### REASON: Trace the Causal Chain
 
-**Entry criteria:** Evidence package is complete.
+### Entry Criteria
+Evidence package is complete.
 
-**Actions:**
-
+### Actions
 1. **Apply the 5 Whys for Code:**
    - **Why 1**: Why did the error occur? (immediate cause -- the line that threw)
    - **Why 2**: Why was the state wrong at that point? (upstream data flow)
@@ -117,18 +119,20 @@ ACT     --> Output: root cause analysis, fix recommendation, regression test, pr
    - Composite score = (evidence * 0.5) + (correlation * 0.3) + (pattern * 0.2)
    - Rank by composite score, flag ties
 
-**Output:** Ranked list of root cause hypotheses with 5 Whys chain, fault tree, change correlation evidence, and confidence scores.
+### Output
+Ranked list of root cause hypotheses with 5 Whys chain, fault tree, change correlation evidence, and confidence scores.
 
-**Quality gate:** At least one hypothesis has confidence > 0.6. The 5 Whys chain reaches a systemic cause (not just "the code was wrong"). Change correlation was attempted (even if no relevant changes found). Fault tree has at least 3 levels.
+### Quality Gate
+At least one hypothesis has confidence > 0.6. The 5 Whys chain reaches a systemic cause (not just "the code was wrong"). Change correlation was attempted (even if no relevant changes found). Fault tree has at least 3 levels.
 
 ---
 
 ### PLAN: Design Verification and Fix
 
-**Entry criteria:** Ranked hypotheses with confidence scores are available.
+### Entry Criteria
+Ranked hypotheses with confidence scores are available.
 
-**Actions:**
-
+### Actions
 1. **Design verification test for top hypothesis:**
    - If the root cause is correct, what specific test would prove it?
    - Can you reproduce the bug in isolation? Design a minimal reproduction case.
@@ -158,18 +162,20 @@ ACT     --> Output: root cause analysis, fix recommendation, regression test, pr
    - Options: linting rule, type annotation, input validation, monitoring alert, code review checklist item, architectural change
    - Estimate effort and impact for each prevention measure
 
-**Output:** Verification plan, primary fix with rollback plan, alternative fixes, regression test specification, prevention measures ranked by effort/impact.
+### Output
+Verification plan, primary fix with rollback plan, alternative fixes, regression test specification, prevention measures ranked by effort/impact.
 
-**Quality gate:** Primary fix addresses root cause (not symptom). Regression test would have caught the original bug. At least one prevention measure is systemic (not just "be more careful").
+### Quality Gate
+Primary fix addresses root cause (not symptom). Regression test would have caught the original bug. At least one prevention measure is systemic (not just "be more careful").
 
 ---
 
 ### ACT: Deliver Root Cause Analysis
 
-**Entry criteria:** Fix plan and verification approach are designed.
+### Entry Criteria
+Fix plan and verification approach are designed.
 
-**Actions:**
-
+### Actions
 1. **Write the root cause analysis document:**
    ```
    SYMPTOM:     [What was observed]
@@ -206,9 +212,11 @@ ACT     --> Output: root cause analysis, fix recommendation, regression test, pr
    - Check for recurring patterns: same root cause, same file, same developer, same system
    - If pattern detected: escalate to architectural review
 
-**Output:** Complete root cause analysis with fix, regression test, prevention measures, and pattern update.
+### Output
+Complete root cause analysis with fix, regression test, prevention measures, and pattern update.
 
-**Quality gate:** Root cause analysis explains WHY, not just WHAT. Fix has a rollback plan. Regression test is specific and deterministic. Prevention measures include at least one systemic change.
+### Quality Gate
+Root cause analysis explains WHY, not just WHAT. Fix has a rollback plan. Regression test is specific and deterministic. Prevention measures include at least one systemic change.
 
 ---
 
@@ -335,7 +343,7 @@ Pattern: Time-of-check-to-time-of-use (TOCTOU)
 Pattern: Stale read
   Symptom:  Code uses outdated data, "already processed" errors
   Example:  Read record, do work, update record -- but another worker updated it in between
-  Fix:      Optimistic locking (version column), compare-and-swap, SELECT FOR UPDATE
+  Fix:      Optimiztic locking (version column), compare-and-swap, SELECT FOR UPDATE
 
 Pattern: Connection pool exhaustion
   Symptom:  Periodic timeouts, "cannot acquire connection" errors

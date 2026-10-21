@@ -34,10 +34,10 @@ PHASE 5: VALIDATE   --> Run shadow validation on the generated flow
 
 ### Phase 1: CAPTURE -- Accept and Validate the Prompt
 
-**Entry criteria:** A working prompt is provided. The prompt has been used at least a few times and produces good results.
+### Entry Criteria
+A working prompt is provided. The prompt has been used at least a few times and produces good results.
 
-**Actions:**
-
+### Actions
 1. **Read the complete prompt text:**
    - Identify the instruction sections (what the prompt tells the model to do)
    - Identify the knowledge sections (background information, reference data, domain expertise)
@@ -62,7 +62,8 @@ PHASE 5: VALIDATE   --> Run shadow validation on the generated flow
    - **Decision**: takes situation, produces recommendation (-> likely ORPA)
    - **Workflow**: takes goal, produces multi-step plan (-> likely Phase Pipeline)
 
-**Output:** Prompt decomposition: instruction blocks, knowledge blocks, format blocks, constraints, quality assessment, purpose classification, and examples.
+### Output
+Prompt decomposition: instruction blocks, knowledge blocks, format blocks, constraints, quality assessment, purpose classification, and examples.
 
 **Quality gate:** Prompt has at least one clear instruction block. Purpose is classified. At least 2 examples are available (provided or derived). Quality assessment flags any ambiguity that would cause inconsistent outputs.
 
@@ -70,10 +71,10 @@ PHASE 5: VALIDATE   --> Run shadow validation on the generated flow
 
 ### Phase 2: ANALYZE -- Detect Execution Pattern
 
-**Entry criteria:** Prompt decomposition is complete.
+### Entry Criteria
+Prompt decomposition is complete.
 
-**Actions:**
-
+### Actions
 1. **Test for ORPA pattern indicators:**
    - Does the prompt involve iteration? ("keep checking until...", "if you find X, also look for Y")
    - Is the scope defined by the input? (scope unknown until you observe the input)
@@ -113,7 +114,8 @@ PHASE 5: VALIDATE   --> Run shadow validation on the generated flow
    - What decision criteria are used? (explicit rules or implied heuristics)
    - This knowledge becomes the Reference section of the flow
 
-**Output:** Execution pattern recommendation (ORPA or Phase Pipeline) with justification, phase map with actions/outputs/quality gates, and implicit knowledge inventory.
+### Output
+Execution pattern recommendation (ORPA or Phase Pipeline) with justification, phase map with actions/outputs/quality gates, and implicit knowledge inventory.
 
 **Quality gate:** Pattern choice is justified with specific indicators from the prompt. At least 3 phases are identified with distinct actions. Implicit knowledge areas are listed.
 
@@ -121,10 +123,10 @@ PHASE 5: VALIDATE   --> Run shadow validation on the generated flow
 
 ### Phase 3: STRUCTURE -- Build the Flow Skeleton
 
-**Entry criteria:** Execution pattern and phase map are determined.
+### Entry Criteria
+Execution pattern and phase map are determined.
 
-**Actions:**
-
+### Actions
 1. **Define inputs:**
    - What information does the prompt need to start? (extract from prompt's input requirements)
    - For each input: name, type, description, required/optional
@@ -162,7 +164,8 @@ PHASE 5: VALIDATE   --> Run shadow validation on the generated flow
    - Patterns seen, configurations learned, history of inputs/outputs
    - This is what differentiates a flow from a one-shot prompt
 
-**Output:** Complete flow skeleton: inputs, outputs, phases with full structure, exit criteria, error handling, reference material, state persistence design.
+### Output
+Complete flow skeleton: inputs, outputs, phases with full structure, exit criteria, error handling, reference material, state persistence design.
 
 **Quality gate:** Every input maps to at least one phase action that uses it. Every output is produced by at least one phase. Quality gates are testable (not "make sure it's good"). Exit criteria are concrete.
 
@@ -170,10 +173,10 @@ PHASE 5: VALIDATE   --> Run shadow validation on the generated flow
 
 ### Phase 4: GENERATE -- Create the .skillpack
 
-**Entry criteria:** Flow skeleton is complete and validated.
+### Entry Criteria
+Flow skeleton is complete and validated.
 
-**Actions:**
-
+### Actions
 1. **Generate manifest.json:**
    ```json
    {
@@ -195,7 +198,7 @@ PHASE 5: VALIDATE   --> Run shadow validation on the generated flow
 2. **Generate flow.md:**
    - Follow the Flow.md Template from the SkillChain Execution Standard exactly
    - Include: one-line description, execution pattern declaration, inputs, outputs, execution phases with full structure, exit criteria, error handling, state persistence, reference section
-   - The reference section should be comprehensive -- this is where the prompt's knowledge lives permanently
+   - The reference section should be full -- this is where the prompt's knowledge lives permanently
 
 3. **Generate tests/test_cases.json:**
    - Create 5 test cases from the prompt examples
@@ -218,7 +221,8 @@ PHASE 5: VALIDATE   --> Run shadow validation on the generated flow
    - Moderate (3-5 phases, standard domain): 10-20 credits
    - Complex (5+ phases, deep domain expertise, extensive reference): 20-30 credits
 
-**Output:** Complete .skillpack: all 5 files ready for publishing.
+### Output
+Complete .skillpack: all 5 files ready for publishing.
 
 **Quality gate:** manifest.json passes schema validation. flow.md follows the execution standard template. 5 test cases cover diverse scenarios. Example walks through every phase. Provenance is complete.
 
@@ -226,10 +230,10 @@ PHASE 5: VALIDATE   --> Run shadow validation on the generated flow
 
 ### Phase 5: VALIDATE -- Shadow Execution
 
-**Entry criteria:** .skillpack is fully generated.
+### Entry Criteria
+.skillpack is fully generated.
 
-**Actions:**
-
+### Actions
 1. **Run 5 independent shadow executions:**
    - Take each test case input and execute the flow against it
    - Record the output from each execution
@@ -259,11 +263,21 @@ PHASE 5: VALIDATE   --> Run shadow validation on the generated flow
    - Specific recommendations for improving consistency
    - Comparison to the original prompt's output quality
 
-**Output:** Validation results: pass/fail, consistency score, completeness score, improvement recommendations.
+### Output
+Validation results: pass/fail, consistency score, completeness score, improvement recommendations.
 
 **Quality gate:** Overall consistency score >= 75%. All declared outputs are produced in at least 4/5 executions. No phase is skipped in any execution. If validation fails: loop back to Phase 3 (STRUCTURE) to tighten specifications.
 
 ---
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Convert a working ad-hoc prompt into a publishable FlowFabric flow. Analyzes the, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 

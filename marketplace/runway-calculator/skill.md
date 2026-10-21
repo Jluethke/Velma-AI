@@ -6,7 +6,7 @@ Calculate cash runway under multiple scenarios by establishing financial baselin
 
 ```
 PHASE 1: BASELINE    --> Current cash, monthly burn, revenue, growth rate
-PHASE 2: MODEL       --> Project runway under scenarios (base, optimistic, pessimistic)
+PHASE 2: MODEL       --> Project runway under scenarios (base, optimiztic, pessimistic)
 PHASE 3: SENSITIVITY --> What-if analysis (hire 3 people, lose biggest client, raise prices 20%)
 PHASE 4: ALERTS      --> Flag danger zones (runway < 6 months, burn acceleration)
 PHASE 5: RECOMMEND   --> Actions to extend runway, fundraising timing, cut priorities
@@ -16,13 +16,13 @@ PHASE 5: RECOMMEND   --> Actions to extend runway, fundraising timing, cut prior
 
 - `financial_data`: object -- Cash balance, monthly revenue (MRR/ARR), monthly expenses by category, gross margin, customer count, ARPU, churn rate
 - `growth_assumptions`: object -- Revenue growth rate (MoM/QoQ), expense growth rate, hiring plan, expected customer growth
-- `scenario_parameters`: object -- Variables to model: optimistic/pessimistic growth rates, specific events (new hire batches, client loss, price changes)
+- `scenario_parameters`: object -- Variables to model: optimiztic/pessimistic growth rates, specific events (new hire batches, client loss, price changes)
 - `fundraising_context`: object -- (Optional) Current round stage, target raise, expected timeline, investor pipeline status
 
 ## Outputs
 
 - `runway_projection`: object -- Month-by-month cash forecast under each scenario with cash-zero date and break-even date
-- `scenario_analysis`: object -- Side-by-side comparison of base/optimistic/pessimistic scenarios with key differences highlighted
+- `scenario_analysis`: object -- Side-by-side comparison of base/optimiztic/pessimistic scenarios with key differences highlighted
 - `sensitivity_table`: object -- Impact of each variable change on runway (single and multi-variable)
 - `alert_flags`: array -- Danger zone alerts with severity, threshold crossed, and recommended response
 - `action_plan`: array -- Prioritized recommendations for runway extension, fundraising timing, and contingency plans
@@ -33,10 +33,10 @@ PHASE 5: RECOMMEND   --> Actions to extend runway, fundraising timing, cut prior
 
 ### Phase 1: BASELINE
 
-**Entry criteria:** Cash balance, monthly revenue, and monthly expenses are provided with at least 3 months of history.
+### Entry Criteria
+Cash balance, monthly revenue, and monthly expenses are provided with at least 3 months of history.
 
-**Actions:**
-
+### Actions
 1. **Compute current burn metrics:**
    ```
    Gross burn = Total monthly expenses
@@ -77,18 +77,20 @@ PHASE 5: RECOMMEND   --> Actions to extend runway, fundraising timing, cut prior
    - Revenue should equal customer count * ARPU (within 5%)
    - Expenses should be complete (personnel + infra + tools + other ~ total)
 
-**Output:** Baseline financial snapshot with all metrics computed, trends identified, and data validated.
+### Output
+Baseline financial snapshot with all metrics computed, trends identified, and data validated.
 
-**Quality gate:** Cash balance, revenue, and expenses are internally consistent (within 5% tolerance). At least 3 months of trend data is available. Unit economics are computable.
+### Quality Gate
+Cash balance, revenue, and expenses are internally consistent (within 5% tolerance). At least 3 months of trend data is available. Unit economics are computable.
 
 ---
 
 ### Phase 2: MODEL
 
-**Entry criteria:** Baseline metrics are computed and validated.
+### Entry Criteria
+Baseline metrics are computed and validated.
 
-**Actions:**
-
+### Actions
 1. **Build base case projection (month-by-month for 24 months):**
    ```
    For each month t:
@@ -100,7 +102,7 @@ PHASE 5: RECOMMEND   --> Actions to extend runway, fundraising timing, cut prior
    Step costs: planned hires, known contract changes, one-time expenses
    ```
 
-2. **Build optimistic scenario:**
+2. **Build optimiztic scenario:**
    - Revenue growth rate: base rate * 1.33 (or user-specified)
    - Expense growth: base rate * 1.15 (growth requires some investment)
    - Lower churn: base churn * 0.7
@@ -122,22 +124,24 @@ PHASE 5: RECOMMEND   --> Actions to extend runway, fundraising timing, cut prior
 
 5. **Compute probability-weighted expected runway:**
    ```
-   Expected runway = P(base) * base_runway + P(optimistic) * opt_runway + P(pessimistic) * pess_runway
-   Default weights: P(base)=0.50, P(optimistic)=0.25, P(pessimistic)=0.25
+   Expected runway = P(base) * base_runway + P(optimiztic) * opt_runway + P(pessimistic) * pess_runway
+   Default weights: P(base)=0.50, P(optimiztic)=0.25, P(pessimistic)=0.25
    ```
 
-**Output:** Month-by-month projections for all scenarios, key milestone dates, and probability-weighted expected runway.
+### Output
+Month-by-month projections for all scenarios, key milestone dates, and probability-weighted expected runway.
 
-**Quality gate:** All three scenarios produce complete 24-month projections. Cash-zero dates are identified for each scenario. Break-even feasibility is assessed.
+### Quality Gate
+All three scenarios produce complete 24-month projections. Cash-zero dates are identified for each scenario. Break-even feasibility is assessed.
 
 ---
 
 ### Phase 3: SENSITIVITY
 
-**Entry criteria:** Scenario projections are complete.
+### Entry Criteria
+Scenario projections are complete.
 
-**Actions:**
-
+### Actions
 1. **Single-variable sensitivity analysis:**
    For each key variable, compute runway impact of a meaningful change:
    ```
@@ -176,18 +180,20 @@ PHASE 5: RECOMMEND   --> Actions to extend runway, fundraising timing, cut prior
    Confidence intervals: 5th percentile, median, 95th percentile runway
    ```
 
-**Output:** Sensitivity tables (single and multi-variable), break-even requirements, and optionally Monte Carlo probability distributions.
+### Output
+Sensitivity tables (single and multi-variable), break-even requirements, and optionally Monte Carlo probability distributions.
 
-**Quality gate:** At least 5 variables are tested. The two highest-impact variables are identified. Danger zone combinations (runway < 12 months) are highlighted.
+### Quality Gate
+At least 5 variables are tested. The two highest-impact variables are identified. Danger zone combinations (runway < 12 months) are highlighted.
 
 ---
 
 ### Phase 4: ALERTS
 
-**Entry criteria:** Sensitivity analysis is complete.
+### Entry Criteria
+Sensitivity analysis is complete.
 
-**Actions:**
-
+### Actions
 1. **Evaluate against alert thresholds:**
    ```
    CRITICAL (red):
@@ -223,18 +229,20 @@ PHASE 5: RECOMMEND   --> Actions to extend runway, fundraising timing, cut prior
    - Is revenue growth accelerating or decelerating?
    - Is the gap between actuals and projections widening?
 
-**Output:** Prioritized alert list with severity, descriptions, and recommended immediate responses.
+### Output
+Prioritized alert list with severity, descriptions, and recommended immediate responses.
 
-**Quality gate:** Every alert references a specific metric and threshold. At least one forward-looking alert (fundraising timing or trajectory warning) is included.
+### Quality Gate
+Every alert references a specific metric and threshold. At least one forward-looking alert (fundraising timing or trajectory warning) is included.
 
 ---
 
 ### Phase 5: RECOMMEND
 
-**Entry criteria:** Alerts and full analysis are complete.
+### Entry Criteria
+Alerts and full analysis are complete.
 
-**Actions:**
-
+### Actions
 1. **Runway extension strategies (prioritized):**
    ```
    Revenue-side:
@@ -277,9 +285,20 @@ PHASE 5: RECOMMEND   --> Actions to extend runway, fundraising timing, cut prior
    - If actual revenue growth < projected growth by >3 points for 2 months: trigger Plan B review
    - Quarterly: re-run full runway model with updated actuals
 
-**Output:** Prioritized action plan with specific recommendations, fundraising timeline, contingency plan, and tracking cadence.
+### Output
+Prioritized action plan with specific recommendations, fundraising timeline, contingency plan, and tracking cadence.
 
-**Quality gate:** Recommendations are specific to the company's situation (not generic advice). Fundraising start date is computed. Plan B exists with specific cost-cut targets. Tracking cadence is defined.
+### Quality Gate
+Recommendations are specific to the company's situation (not generic advice). Fundraising start date is computed. Plan B exists with specific cost-cut targets. Tracking cadence is defined.
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Calculates cash runway under multiple scenarios with burn rate analysis, unit ec, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 
@@ -381,7 +400,7 @@ In tight markets (2022-2023 style), add 50% to these timelines.
 
 ```
 1. Base case = your operating plan. This is what you actually expect.
-2. Optimistic = everything goes right. Not fantasy -- plausible upside.
+2. Optimiztic = everything goes right. Not fantasy -- plausible upside.
 3. Pessimistic = specific bad events. Not doomsday -- plausible downside.
 
 Common pessimistic events to model:

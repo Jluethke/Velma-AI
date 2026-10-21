@@ -15,7 +15,7 @@ ACT     --> Output risk report with adjusted forecast, save action plan, and pip
 
 ## Inputs
 
-- **deal_data**: array of objects -- Each deal containing:
+- **`deal_data`**: array of objects -- Each deal containing:
   - `deal_name`: string
   - `account`: string -- Company name
   - `acv`: number -- Annual contract value
@@ -26,31 +26,31 @@ ACT     --> Output risk report with adjusted forecast, save action plan, and pip
   - `next_steps`: string -- Agreed next action
   - `close_date`: string (ISO date) -- Projected close
   - `probability`: number (0-1) -- Current forecast probability
-- **pipeline_history**: object (optional) -- Historical benchmarks:
+- **`pipeline_history`**: object (optional) -- Historical benchmarks:
   - `avg_days_per_stage`: object -- Median days in each stage for won deals
   - `win_rate_by_stage`: object -- Historical win rate from each stage
   - `avg_deal_cycle`: number -- Average days from creation to close
   - `lost_deal_patterns`: array -- Common characteristics of lost deals
-- **stakeholder_map**: array of objects (per deal, optional):
+- **`stakeholder_map`**: array of objects (per deal, optional):
   - `name`: string
   - `title`: string
   - `role`: string ("champion" | "economic_buyer" | "technical_evaluator" | "blocker" | "coach")
   - `engagement_level`: string ("active" | "passive" | "disengaged" | "unknown")
   - `last_interaction`: string (ISO date)
-- **competitive_intel**: object (per deal, optional):
+- **`competitive_intel`**: object (per deal, optional):
   - `competitors_identified`: string[]
   - `competitor_strengths`: string[]
   - `competitive_position`: string ("leading" | "even" | "trailing" | "unknown")
 
 ## Outputs
 
-- **risk_report**: object -- Pipeline-level analysis:
+- **`risk_report`**: object -- Pipeline-level analysis:
   - `pipeline_health_score`: number (0-100)
   - `total_pipeline_value`: number
   - `risk_adjusted_value`: number
   - `forecast_adjustment_pct`: number (how much the forecast shifts after risk analysis)
   - `deals_by_risk_tier`: object -- Count per tier (critical, elevated, moderate, low)
-- **deal_scores**: array of objects -- Per-deal risk breakdown:
+- **`deal_scores`**: array of objects -- Per-deal risk breakdown:
   - `deal_name`: string
   - `risk_score`: number (0-100, higher = more risk)
   - `risk_tier`: string ("critical" | "elevated" | "moderate" | "low")
@@ -59,13 +59,13 @@ ACT     --> Output risk report with adjusted forecast, save action plan, and pip
   - `adjusted_value`: number (acv * adjusted_probability)
   - `recommended_actions`: string[]
   - `timeline_warning`: string (if close date is at risk)
-- **save_actions**: array of objects -- Prioritized action list:
+- **`save_actions`**: array of objects -- Prioritized action list:
   - `deal_name`: string
   - `action`: string
   - `urgency`: string ("immediate" | "this_week" | "this_month")
   - `expected_impact`: string
   - `owner`: string (suggested)
-- **forecast_adjustment**: object -- Revised forecast:
+- **`forecast_adjustment`**: object -- Revised forecast:
   - `original_weighted`: number
   - `risk_adjusted_weighted`: number
   - `commit`: number (deals with risk score < 25)
@@ -76,9 +76,10 @@ ACT     --> Output risk report with adjusted forecast, save action plan, and pip
 
 ### OBSERVE: Gather Deal Data and Context
 
-**Entry criteria:** At least one deal provided with deal_name, stage, and acv.
+### Entry Criteria
+At least one deal provided with deal_name, stage, and acv.
 
-**Actions:**
+### Actions
 1. Parse all deal data and normalize stages to a standard pipeline (Discovery -> Demo/Evaluation -> Proposal -> Negotiation -> Closed Won/Lost).
 2. Load historical benchmarks from state persistence. If no history available, use industry defaults:
    - Discovery: 14 days median, 25% win rate from stage
@@ -89,15 +90,18 @@ ACT     --> Output risk report with adjusted forecast, save action plan, and pip
 4. Map stakeholders per deal -- identify presence or absence of key roles (champion, economic buyer, technical evaluator).
 5. Flag any deals with incomplete data -- missing stakeholder info, no next steps defined, no competitive intel.
 
-**Output:** Normalized deal matrix with computed fields (days since contact, stage velocity ratio, data completeness score).
+### Output
+Normalized deal matrix with computed fields (days since contact, stage velocity ratio, data completeness score).
 
-**Quality gate:** Every deal has at minimum: stage, days_in_stage, acv, last_contact_date. Deals with fewer than these 4 fields are flagged as "insufficient data" and receive a default elevated risk score.
+### Quality Gate
+Every deal has at minimum: stage, days_in_stage, acv, last_contact_date. Deals with fewer than these 4 fields are flagged as "insufficient data" and receive a default elevated risk score.
 
 ### REASON: Score Risk Factors
 
-**Entry criteria:** Normalized deal matrix with all computed fields available.
+### Entry Criteria
+Normalized deal matrix with all computed fields available.
 
-**Actions:**
+### Actions
 1. Score each deal across 6 risk dimensions (each 0-100, weighted to composite):
 
    **Velocity Risk (25% weight):**
@@ -146,15 +150,18 @@ ACT     --> Output risk report with adjusted forecast, save action plan, and pip
 5. Detect compounding risk: if 3+ dimensions score above 50, escalate the risk tier by one level (multiple simultaneous risks are worse than the sum suggests).
 6. Compare current deal state against lost_deal_patterns from historical data -- flag matches.
 
-**Output:** Scored deal array with per-dimension breakdowns, composite scores, tiers, and adjusted probabilities.
+### Output
+Scored deal array with per-dimension breakdowns, composite scores, tiers, and adjusted probabilities.
 
-**Quality gate:** Every deal has a composite score and risk tier. No dimensions left unscored (use defaults for missing data). All adjusted probabilities are between 0 and 1.
+### Quality Gate
+Every deal has a composite score and risk tier. No dimensions left unscored (use defaults for missing data). All adjusted probabilities are between 0 and 1.
 
 ### PLAN: Recommend Save Actions
 
-**Entry criteria:** All deals scored with risk tiers and adjusted probabilities.
+### Entry Criteria
+All deals scored with risk tiers and adjusted probabilities.
 
-**Actions:**
+### Actions
 1. For each deal with risk score >= 25 (moderate or above), generate specific save actions based on the highest-scoring risk dimensions:
 
    | Risk Dimension | Save Action Template |
@@ -171,15 +178,18 @@ ACT     --> Output risk report with adjusted forecast, save action plan, and pip
 4. Generate timeline warnings for deals whose adjusted close date exceeds their projected close date.
 5. Identify "zombie deals" -- deals that have been in the same stage for 3x+ the median with no champion and no recent activity. Recommend moving to Lost.
 
-**Output:** Prioritized save action list with urgency, expected impact, and timeline warnings.
+### Output
+Prioritized save action list with urgency, expected impact, and timeline warnings.
 
-**Quality gate:** Every deal with risk score >= 25 has at least one recommended action. Actions are specific to the deal's highest risk dimension (not generic). Timeline warnings are generated for any deal where adjusted velocity suggests the close date will be missed.
+### Quality Gate
+Every deal with risk score >= 25 has at least one recommended action. Actions are specific to the deal's highest risk dimension (not generic). Timeline warnings are generated for any deal where adjusted velocity suggests the close date will be missed.
 
 ### ACT: Deliver Risk Report
 
-**Entry criteria:** All deals scored, save actions generated, forecast adjusted.
+### Entry Criteria
+All deals scored, save actions generated, forecast adjusted.
 
-**Actions:**
+### Actions
 1. Compile risk report with pipeline-level metrics:
    - Pipeline health score: weighted average of (100 - risk_score) across all deals, weighted by ACV
    - Total pipeline vs. risk-adjusted pipeline value
@@ -192,9 +202,11 @@ ACT     --> Output risk report with adjusted forecast, save action plan, and pip
    - Log risk patterns for trend analysis
 5. Generate executive summary: top 3 risks to the number, top 3 actions that will most impact the forecast.
 
-**Output:** Complete risk report package with pipeline health, deal scores, save actions, and adjusted forecast.
+### Output
+Complete risk report package with pipeline health, deal scores, save actions, and adjusted forecast.
 
-**Quality gate:** Forecast adjustment is clearly explained (what changed and why). Every critical-risk deal has a specific save action with an owner and deadline. Pipeline health score is calculated and contextualized (improving, stable, or declining vs. prior analysis).
+### Quality Gate
+Forecast adjustment is clearly explained (what changed and why). Every critical-risk deal has a specific save action with an owner and deadline. Pipeline health score is calculated and contextualized (improving, stable, or declining vs. prior analysis).
 
 ## Exit Criteria
 
@@ -221,7 +233,7 @@ The skill is DONE when:
 ## State Persistence
 
 This skill maintains persistent state across executions:
-- **deal_snapshots**: Array of timestamped deal states -- enables velocity tracking and trend detection across multiple analyses
+- **deal_snapshots**: Array of timestamped deal states -- enables velocity tracking and trend detection across multiple analyzes
 - **historical_benchmarks**: Rolling averages of days-per-stage and win-rate-per-stage from actual outcomes
 - **lost_deal_patterns**: Characteristics common to deals that were lost -- used for pattern matching on current deals
 - **risk_trends**: Per-deal risk score history -- detects whether deals are improving or deteriorating over time

@@ -80,6 +80,15 @@ Harness and assembly entries.
 
 ---
 
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Run final acceptance: harness tests executed, board fitted in its enclosure, eve, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
+
 ## Exit Criteria
 
 DONE when every interface works against its real far end, every in-scope branch (firmware, enclosure, harness) has passed, and the verdict reflects every item.

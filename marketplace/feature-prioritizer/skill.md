@@ -67,27 +67,30 @@
   - Enables resumption if skill is interrupted.
 
 ---
+- `scored_features`: (from manifest)
+- `dependency_map`: (from manifest)
+- `resource_allocation`: (from manifest)
 
 ## Execution Phases
 
 ### Phase 0: Validate Stakeholder Alignment (Optional)
 
-**Entry Criteria:**
+### Entry Criteria
 - `stakeholder_approval` is true.
 - `features` array is provided.
 - `rice_parameters` are available or will be gathered.
 
-**Actions:**
+### Actions
 1. If `stakeholder_approval` is true, prompt for explicit confirmation: "Do product and engineering leadership agree that this feature list reflects current business priorities?" (yes/no).
 2. If no, abort and request stakeholder alignment before proceeding.
 3. If yes, prompt for RICE parameter agreement: "Do stakeholders agree on the Reach, Impact, and Confidence estimates for each feature?" (yes/no).
 4. If no, request revised RICE parameters and re-confirm.
 5. Document approval timestamp and approver names (if available).
 
-**Output:**
+### Output
 - `stakeholder_approval_record`: object with timestamp, approvers, and confirmation status.
 
-**Quality Gate:**
+### Quality Gate
 - Stakeholder approval is explicitly confirmed (yes/no answer recorded).
 - If approval is not obtained, skill aborts with clear message.
 
@@ -101,12 +104,12 @@
 
 ### Phase 1: Validate and Normalize Feature List
 
-**Entry Criteria:**
+### Entry Criteria
 - `features` array is provided and non-empty.
 - Each feature has at least `name`, `description`, and `estimated_effort_days`.
 - Stakeholder approval (if required) is obtained.
 
-**Actions:**
+### Actions
 1. Check for duplicate feature names (case-insensitive); if found, merge or request user to rename. Merge logic: combine descriptions, use maximum effort estimate, flag for review.
 2. Validate that `estimated_effort_days` is a positive number (>0); if not, reject and request correction.
 3. Validate that `owner_team` is present; if missing, assign to "Unassigned" and flag for review.
@@ -114,11 +117,11 @@
 5. Validate that all feature names referenced in dependencies (Phase 4) exist in the feature list.
 6. Output validated feature list with flags for any issues.
 
-**Output:**
+### Output
 - `validated_features`: array of normalized feature objects with `validation_flags` array (empty if no issues).
 - `validation_report`: object with counts of duplicates merged, missing fields assigned, normalization applied.
 
-**Quality Gate:**
+### Quality Gate
 - No duplicate feature names remain (merged or renamed).
 - All numeric fields are positive numbers.
 - All features have an owner team (assigned or specified).
@@ -137,23 +140,23 @@
 
 ### Phase 2: Gather and Validate RICE Parameters
 
-**Entry Criteria:**
+### Entry Criteria
 - Validated feature list from Phase 1.
 - `rice_parameters` input provided or will be requested.
 
-**Actions:**
+### Actions
 1. If `rice_parameters` not provided, prompt user with structured form: for each feature, request Reach (number of users affected, >0), Impact (1=minimal, 2=medium, 3=major), and Confidence (0-1, where 1=certain). Provide guidance: "Reach: estimated number of users affected. Impact: magnitude of effect on each user. Confidence: certainty of estimates (0=guess, 1=certain)."
 2. Validate that Reach > 0, Impact in [1, 2, 3], Confidence in [0, 1]. If invalid, reject and request correction.
 3. For any missing parameters, use defaults: Reach = 100, Impact = 2, Confidence = 0.8. Log warning for each default used.
 4. Identify features with Confidence < 0.6 and flag for discovery phase (see output `confidence_flag`).
 5. Attach RICE parameters to each feature.
 
-**Output:**
+### Output
 - `features_with_rice`: array of feature objects with R, I, C, E fields.
 - `discovery_phase_candidates`: array of features with Confidence < 0.6 and recommendation to conduct discovery/spike before full development.
 - `rice_validation_report`: object with counts of defaults used, confidence flags, and assumptions.
 
-**Quality Gate:**
+### Quality Gate
 - All RICE parameters are numeric and within valid ranges.
 - No feature lacks a complete RICE tuple.
 - Confidence < 0.6 features are flagged and discovery phase is recommended.
@@ -171,21 +174,21 @@
 
 ### Phase 3: Calculate RICE Scores and Rank
 
-**Entry Criteria:**
+### Entry Criteria
 - Features with complete RICE parameters from Phase 2.
 
-**Actions:**
+### Actions
 1. For each feature, calculate: `RICE_score = (Reach × Impact × Confidence) / Effort`. Ensure Effort > 0 (validated in Phase 1).
 2. Sort features by RICE_score in descending order (highest priority first).
 3. Assign rank (1 = highest priority). For ties (identical RICE_score), maintain original order as tiebreaker and note in output.
 4. Flag any features with RICE_score < 1 (low priority) and RICE_score >= 100 (high priority) for visibility.
 5. Output ranked features with RICE_score, rank, and priority flags.
 
-**Output:**
+### Output
 - `ranked_features`: array sorted by RICE_score (descending) with rank field and priority_flag ("high", "medium", "low").
 - `ranking_report`: object with counts of high/medium/low priority features and tiebreaker notes.
 
-**Quality Gate:**
+### Quality Gate
 - All RICE scores are calculated and non-negative.
 - Ranking is deterministic and reproducible (tiebreaker logic documented).
 - All features are assigned a rank.
@@ -202,10 +205,10 @@
 
 ### Phase 4: Identify and Resolve Dependencies
 
-**Entry Criteria:**
+### Entry Criteria
 - Ranked feature list from Phase 3.
 
-**Actions:**
+### Actions
 1. Request or infer dependency relationships: for each feature, identify which other features must be completed first (hard dependencies) or would benefit from prior completion (soft dependencies). Provide structured form: "Feature [name]: Does this feature depend on any other features? (hard: must complete first, soft: benefits from prior completion)"
 2. For each dependency, classify as "hard" (blocking) or "soft" (beneficial but not blocking).
 3. Build a dependency graph: `{ feature_name: { blocks: [...], blocked_by: [...], dependency_type: "hard" | "soft" } }`.
@@ -214,13 +217,13 @@
 6. Offer dependency resolution: for each hard dependency, ask user if dependency can be eliminated through parallel work, API contracts, or feature decomposition. If yes, update dependency graph and re-sort.
 7. Output dependency graph and critical path.
 
-**Output:**
+### Output
 - `dependency_graph`: object mapping features to dependencies with type classification.
 - `critical_path`: array of features forming the longest hard dependency chain (ordered).
 - `critical_path_length_days`: sum of effort_days for features in critical path.
 - `dependency_resolution_notes`: array of user decisions to eliminate or modify dependencies.
 
-**Quality Gate:**
+### Quality Gate
 - No circular dependencies exist (verified by topological sort).
 - All referenced features in dependencies are in the feature list.
 - All hard dependencies are documented.
@@ -239,11 +242,11 @@
 
 ### Phase 5: Estimate Resource Requirements and Identify Risks
 
-**Entry Criteria:**
+### Entry Criteria
 - Ranked features with dependencies from Phase 4.
 - Optional `resource_constraints` input.
 
-**Actions:**
+### Actions
 1. For each feature, confirm `estimated_effort_days` and `owner_team` (from Phase 1).
 2. If `resource_constraints` provided, extract team capacity per quarter and non-feature allocation percentage (default 20%). Calculate available feature capacity: `available_feature_days = capacity_days_per_quarter × (1 - non_feature_allocation_percent / 100)`.
 3. If `resource_constraints` not provided, assume unlimited capacity and 20% non-feature allocation. Log assumption.
@@ -252,13 +255,13 @@
 6. For each risk, recommend mitigation: start high-risk features early, allocate senior engineers, conduct discovery phase for low-confidence features, parallelize dependencies where possible.
 7. Attach resource estimate and risk flags to each feature.
 
-**Output:**
+### Output
 - `features_with_resources`: array with effort, team assignments, and risk flags.
 - `capacity_analysis`: per-team summary of total effort vs. available capacity per quarter, with over-allocation flag.
 - `risk_register`: array of objects with feature_name, risk_type, description, mitigation_strategy, severity.
 - `resource_planning_report`: object with team utilization summary and recommendations.
 
-**Quality Gate:**
+### Quality Gate
 - All effort estimates are positive numbers.
 - All teams referenced in features are in resource_constraints (or capacity is assumed unlimited and logged).
 - Over-allocation is flagged and documented.
@@ -277,12 +280,12 @@
 
 ### Phase 6: Allocate Features to Quarters
 
-**Entry Criteria:**
+### Entry Criteria
 - Ranked features with dependencies and resource estimates from Phase 5.
 - `planning_horizon_quarters` specified (default 4).
 - Resource constraints and capacity analysis from Phase 5.
 
-**Actions:**
+### Actions
 1. Initialize quarterly buckets: Q1, Q2, ..., Qn (where n = planning_horizon_quarters). For each quarter, initialize team capacity tracking.
 2. Iterate through ranked features in priority order (by RICE_score):
    a. Check if all hard blocking dependencies are scheduled in earlier quarters. If not, defer feature to earliest quarter where all dependencies are complete.
@@ -293,13 +296,13 @@
 4. Resolve conflicts: if a high-priority feature (RICE_score >= 100) cannot fit due to capacity, recommend re-prioritizing lower-priority features (RICE_score < 10) or splitting effort across quarters.
 5. Output quarterly roadmap with assignments, dates, and team allocations.
 
-**Output:**
+### Output
 - `quarterly_roadmap`: object with Q1, Q2, ... keys, each containing assigned features with name, start_date, end_date, team_assignment, effort_days, and dependencies.
 - `backlog`: array of deferred features with reason for deferral and recommendation for resolution.
 - `allocation_notes`: array of decisions made (e.g., "Feature X deferred due to team capacity", "Feature Y split across Q2 and Q3").
 - `capacity_utilization_by_quarter`: object with per-team utilization percentage for each quarter.
 
-**Quality Gate:**
+### Quality Gate
 - All features are assigned to a quarter or explicitly deferred with documented reason.
 - No feature is assigned to a quarter before its hard dependencies are complete.
 - No team exceeds available capacity in any quarter (or over-allocation is documented with recommendation).
@@ -318,12 +321,12 @@
 
 ### Phase 7: Generate Roadmap Document and Risk Summary
 
-**Entry Criteria:**
+### Entry Criteria
 - Quarterly roadmap from Phase 6.
 - Risk register from Phase 5.
 - `output_format` specified (default "json").
 
-**Actions:**
+### Actions
 1. Format the roadmap according to `output_format`:
    - **JSON**: Structured object with quarters, features, dependencies, resource summary, risk register, and assumptions.
    - **Markdown**: Human-readable table with quarters, features, effort, team, dependencies, and risk flags. Include summary section with statistics and assumptions.
@@ -333,12 +336,12 @@
 4. Include risk summary: high-risk features, recommended mitigation strategies, critical path risks.
 5. Validate output format: ensure JSON is parseable, markdown is valid, CSV has correct columns.
 
-**Output:**
+### Output
 - `roadmap_document`: formatted string (JSON, markdown, or CSV).
 - `resource_summary`: object with per-team utilization metrics for each quarter.
 - `roadmap_metadata`: object with generation timestamp, input parameters, and assumptions.
 
-**Quality Gate:**
+### Quality Gate
 - Output is valid in the requested format (parseable JSON, valid markdown, valid CSV).
 - All features from the input appear in the output (assigned or deferred).
 - Summary statistics are accurate and match the quarterly roadmap.
@@ -354,6 +357,15 @@
 | Generated CSV has missing columns | **Abort** -- report as internal error. Ensure all required columns are present. |
 
 ---
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Convert a product feature list into a prioritized quarterly roadmap using RICE s, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 

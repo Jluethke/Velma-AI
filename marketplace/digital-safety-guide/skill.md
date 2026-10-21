@@ -5,27 +5,28 @@ A practical, plain-language guide to staying safe online. Covers passwords (why 
 ## Execution Pattern: ORPA Loop
 
 ## Inputs
-- current_situation: string -- What brought you here: "I just want to be safer online," "I think I might have been hacked," "someone told me my password is bad," "I got a suspicious email," "I want to protect my family," or "I don't know where to start"
-- devices_used: array -- (Optional) What you use regularly: iPhone, Android phone, iPad/tablet, Windows computer, Mac, Chromebook, smart TV, smart home devices (Alexa, Google Home)
-- accounts_that_matter: array -- (Optional) Which accounts are most important to protect: email, banking, social media, Amazon/shopping, medical portal, work accounts, photos/iCloud/Google Photos
-- current_habits: object -- (Optional) Be honest, no judgment: Do you reuse passwords? Use the same password everywhere? Write them on sticky notes? Use your pet's name? Have you ever set up two-factor authentication? Do you click links in emails without checking?
-- technical_comfort: string -- (Optional) "I can barely use my phone," "I manage fine day-to-day," "I'm pretty comfortable with tech," or "I work with computers but security isn't my thing"
-- household: string -- (Optional) Who else uses your devices or network: kids, teenagers, elderly parents, spouse, roommates -- different people create different risks
+- `current_situation`: string -- What brought you here: "I just want to be safer online," "I think I might have been hacked," "someone told me my password is bad," "I got a suspicious email," "I want to protect my family," or "I don't know where to start"
+- `devices_used`: array -- (Optional) What you use regularly: iPhone, Android phone, iPad/tablet, Windows computer, Mac, Chromebook, smart TV, smart home devices (Alexa, Google Home)
+- `accounts_that_matter`: array -- (Optional) Which accounts are most important to protect: email, banking, social media, Amazon/shopping, medical portal, work accounts, photos/iCloud/Google Photos
+- `current_habits`: object -- (Optional) Be honest, no judgment: Do you reuse passwords? Use the same password everywhere? Write them on sticky notes? Use your pet's name? Have you ever set up two-factor authentication? Do you click links in emails without checking?
+- `technical_comfort`: string -- (Optional) "I can barely use my phone," "I manage fine day-to-day," "I'm pretty comfortable with tech," or "I work with computers but security isn't my thing"
+- `household`: string -- (Optional) Who else uses your devices or network: kids, teenagers, elderly parents, spouse, roommates -- different people create different risks
 
 ## Outputs
-- priority_actions: array -- The 5 most important things to do RIGHT NOW, ranked by impact. Each one includes why it matters and step-by-step how to do it.
-- password_guide: object -- A complete, jargon-free explanation of password safety: what makes a strong password, why reusing passwords is dangerous, how to use a password manager (and why it's easier than what you're doing now), and how to change your most critical passwords today
-- two_factor_guide: object -- What two-factor authentication is (in one sentence), why it's the single most effective thing you can do, and step-by-step instructions to turn it on for your email, banking, and social media
-- phishing_guide: object -- How to spot fake emails, texts, and calls. Real examples of what scam messages look like vs. real ones. The one test that catches 90% of phishing attempts.
-- wifi_safety: object -- When public WiFi is dangerous and when it's fine. What a VPN is (in plain English) and whether you need one.
-- social_media_checkup: object -- The 3 privacy settings to change on Facebook, Instagram, and other platforms, with step-by-step instructions
-- emergency_plan: object -- What to do RIGHT NOW if you think you've been hacked, step by step
+- `priority_actions`: array -- The 5 most important things to do RIGHT NOW, ranked by impact. Each one includes why it matters and step-by-step how to do it.
+- `password_guide`: object -- A complete, jargon-free explanation of password safety: what makes a strong password, why reusing passwords is dangerous, how to use a password manager (and why it's easier than what you're doing now), and how to change your most critical passwords today
+- `two_factor_guide`: object -- What two-factor authentication is (in one sentence), why it's the single most effective thing you can do, and step-by-step instructions to turn it on for your email, banking, and social media
+- `phishing_guide`: object -- How to spot fake emails, texts, and calls. Real examples of what scam messages look like vs. real ones. The one test that catches 90% of phishing attempts.
+- `wifi_safety`: object -- When public WiFi is dangerous and when it's fine. What a VPN is (in plain English) and whether you need one.
+- `social_media_checkup`: object -- The 3 privacy settings to change on Facebook, Instagram, and other platforms, with step-by-step instructions
+- `emergency_plan`: object -- What to do RIGHT NOW if you think you've been hacked, step by step
 
 ## Execution
 
 ### OBSERVE: Assess Current Risk and Habits
-**Entry criteria:** Person has shared their situation and at least some information about their habits.
-**Actions:**
+### Entry Criteria
+Person has shared their situation and at least some information about their habits.
+### Actions
 1. Determine urgency level:
    - **Emergency:** "I think I've been hacked" or "there are charges on my account I didn't make" -- skip to emergency plan immediately
    - **Elevated:** "I got a suspicious email" or "someone has my password" -- address the immediate threat, then move to general hardening
@@ -44,12 +45,15 @@ A practical, plain-language guide to staying safe online. Covers passwords (why 
 4. Note their tech comfort level so instructions match their ability. "Go to Settings > Security > Two-Factor Authentication" is meaningless if they don't know where Settings is.
 5. Check for household factors. A teenager on the same WiFi has different risk patterns than a grandparent sharing a tablet.
 
-**Output:** Urgency level, current risk assessment, account priority tiers, instruction detail level needed, household considerations.
-**Quality gate:** Emergency situations are identified immediately. Risk assessment is based on stated habits, not assumptions.
+### Output
+Urgency level, current risk assessment, account priority tiers, instruction detail level needed, household considerations.
+### Quality Gate
+Emergency situations are identified immediately. Risk assessment is based on stated habits, not assumptions.
 
 ### REASON: Build the Protection Plan
-**Entry criteria:** Risk assessment complete.
-**Actions:**
+### Entry Criteria
+Risk assessment complete.
+### Actions
 1. Rank the priority actions by impact. The order almost always is:
    - **#1: Secure your email account.** Email is the skeleton key. If someone gets into your email, they can reset the password on every other account you have. Turn on two-factor authentication for email FIRST.
    - **#2: Stop reusing passwords.** If you use the same password on Amazon and your bank, and Amazon gets breached (it happens), hackers try that password on banks next. This is called credential stuffing and it's how most people get "hacked."
@@ -70,12 +74,15 @@ A practical, plain-language guide to staying safe online. Covers passwords (why 
    - The golden rule: never click links in unexpected messages. Go to the website yourself by typing the address.
 5. Build device-specific instructions for everything recommended based on what they use.
 
-**Output:** Ranked action plan, password guide with manager recommendation, two-factor walkthrough, phishing examples, device-specific instructions.
-**Quality gate:** Actions are in impact order. Password manager recommendation matches their comfort level. Two-factor instructions are specific to their email provider.
+### Output
+Ranked action plan, password guide with manager recommendation, two-factor walkthrough, phishing examples, device-specific instructions.
+### Quality Gate
+Actions are in impact order. Password manager recommendation matches their comfort level. Two-factor instructions are specific to their email provider.
 
 ### PLAN: Make It Doable, Not Overwhelming
-**Entry criteria:** Full protection plan built.
-**Actions:**
+### Entry Criteria
+Full protection plan built.
+### Actions
 1. If emergency (suspected hack), restructure everything:
    - Lead with: Change email password from a clean device RIGHT NOW
    - Then: Check for unauthorized account recovery changes (phone numbers, backup emails added by someone else)
@@ -99,12 +106,15 @@ A practical, plain-language guide to staying safe online. Covers passwords (why 
    - Lock your phone with a PIN or fingerprint
    - When in doubt, go to the website directly
 
-**Output:** Phased action plan (today/this week/this month/ongoing), household-specific guidance, quick-reference card.
-**Quality gate:** No session requires more than 30 minutes. Steps are ordered so the most impactful happen first. Instructions don't require any prior security knowledge.
+### Output
+Phased action plan (today/this week/this month/ongoing), household-specific guidance, quick-reference card.
+### Quality Gate
+No session requires more than 30 minutes. Steps are ordered so the most impactful happen first. Instructions don't require any prior security knowledge.
 
 ### ACT: Deliver the Guide
-**Entry criteria:** Phased plan complete.
-**Actions:**
+### Entry Criteria
+Phased plan complete.
+### Actions
 1. If emergency, lead with the emergency plan in numbered steps. Everything else waits. Use bold for the single most important action: "**Change your email password right now, before reading the rest of this.**"
 2. For preventive cases, open with reassurance: "Online safety doesn't require you to be a tech expert. It comes down to a handful of habits. Let's get the biggest ones in place."
 3. Deliver the priority actions as a numbered list. For each one:
@@ -116,8 +126,19 @@ A practical, plain-language guide to staying safe online. Covers passwords (why 
 6. Present social media privacy settings as a quick checklist, platform by platform, with the exact menu path for each setting.
 7. End with the quick-reference card and: "You don't need to do all of this today. Start with #1 and #2. Those two changes alone make you dramatically safer than most people online."
 
-**Output:** Complete digital safety guide, personalized to situation, devices, and comfort level.
-**Quality gate:** Emergency situations are handled first and fast. Non-emergency guidance is broken into doable chunks. No scare tactics. No jargon without explanation. Every recommendation includes step-by-step instructions.
+### Output
+Complete digital safety guide, personalized to situation, devices, and comfort level.
+### Quality Gate
+Emergency situations are handled first and fast. Non-emergency guidance is broken into doable chunks. No scare tactics. No jargon without explanation. Every recommendation includes step-by-step instructions.
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for A practical, plain-language guide to staying safe online. Covers passwords (why , the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 Done when: (1) current risk is assessed and communicated without panic, (2) priority actions are ranked and explained with step-by-step instructions, (3) password safety is explained with a specific manager recommendation, (4) two-factor authentication is explained and setup instructions are provided for their primary email, (5) phishing awareness is covered with the "one test" framework, (6) if emergency, immediate action steps are provided as the top priority, (7) ongoing habits are simple enough to remember and practice.

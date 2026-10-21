@@ -61,6 +61,15 @@ Objective table.
 
 ---
 
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Compare predicted and measured values for every objective against the convention, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
+
 ## Exit Criteria
 
 DONE when every objective shows baseline, predicted, and measured values, and every claim that the design beats the conventional baseline rests on a measured delta.

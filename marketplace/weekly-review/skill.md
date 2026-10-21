@@ -1,6 +1,6 @@
 # Weekly Review
 
-> **Starter Skill** — Free to use. Royalties to original creator on derivatives. Build on this.
+> **Starter Skill**  --  Free to use. Royalties to original creator on derivatives. Build on this.
 
 Foundation pattern for a structured weekly reflection. Takes last week's goals, what actually happened, wins, frustrations, and next week's priorities, then produces: achievement summary, lessons learned, pattern detection, energy audit, and next week's top 3 priorities with rationale. Fork this for: team retros, sprint reviews, personal journals, project post-mortems.
 
@@ -40,27 +40,27 @@ LOOP     --> Weekly cadence; each review references the prior week's plan
 
 ### OBSERVE -- Gather the Facts
 
-**Actions:**
-
+### Actions
 1. List every planned goal from last_week_goals. For each, determine status:
    - **Completed**: fully done, deliverable shipped or objective met.
    - **Partial**: started but not finished. Note what remains.
    - **Missed**: not started. Identify why (deprioritized, blocked, forgot, overwhelmed).
    - **Pivoted**: replaced by something more important. Note what replaced it and why.
-2. From what_happened, extract concrete events and outcomes. Strip adjectives — focus on what was done, not how it felt.
+2. From what_happened, extract concrete events and outcomes. Strip adjectives  --  focus on what was done, not how it felt.
 3. From wins, identify the root cause of each win: was it skill, effort, luck, or teamwork? This determines if it is repeatable.
 4. From frustrations, identify the root cause of each frustration: was it within your control, partially within your control, or external?
 
-**Output:** Goal scorecard with statuses, event timeline, win analysis, frustration analysis.
+### Output
+Goal scorecard with statuses, event timeline, win analysis, frustration analysis.
 
-**Quality gate:** Every goal has a status. Every win and frustration has a root cause classification. Events are factual, not emotional.
+### Quality Gate
+Every goal has a status. Every win and frustration has a root cause classification. Events are factual, not emotional.
 
 ---
 
 ### REASON -- Find the Patterns
 
-**Actions:**
-
+### Actions
 1. **Goal completion rate**: what percentage of planned goals were completed? Compare to prior weeks if prior_review is available. Is the trend improving, stable, or declining?
 2. **Miss pattern analysis**: are the same types of goals being missed repeatedly? (e.g., always missing deep work goals because meetings take over). If prior_review is available, compare miss reasons.
 3. **Energy audit**: from energy_notes and frustrations, categorize activities as:
@@ -71,16 +71,17 @@ LOOP     --> Weekly cadence; each review references the prior week's plan
 4. **Insight extraction**: from wins and frustrations, identify 2-4 lessons learned. A lesson is actionable: "I learned X, so next time I will Y." Not: "Things were hard."
 5. **Trend detection**: if prior_review exists, identify themes that appear 2+ weeks in a row. Flag them as systemic (needs a structural fix, not more willpower).
 
-**Output:** Completion rate with trend, miss patterns, energy audit with ratio, lessons learned, trend flags.
+### Output
+Completion rate with trend, miss patterns, energy audit with ratio, lessons learned, trend flags.
 
-**Quality gate:** Lessons are actionable (each contains "so I will" or equivalent). Energy ratio is calculated. If prior_review exists, at least one trend is identified or explicitly noted as "no recurring patterns."
+### Quality Gate
+Lessons are actionable (each contains "so I will" or equivalent). Energy ratio is calculated. If prior_review exists, at least one trend is identified or explicitly noted as "no recurring patterns."
 
 ---
 
 ### PLAN -- Set Next Week's Priorities
 
-**Actions:**
-
+### Actions
 1. Review lessons learned and pattern flags. Any structural issue identified should have a priority addressing it.
 2. Select the top 3 priorities for next week. Each priority has:
    - **What**: specific, concrete outcome (not "work on project X" but "ship the login flow and write tests").
@@ -92,26 +93,38 @@ LOOP     --> Weekly cadence; each review references the prior week's plan
 4. Identify one thing to STOP doing: based on the energy audit and pattern analysis, name one activity to eliminate, delegate, or reduce next week.
 5. Write the commitment statement: "This week I will focus on [top priority] because [reason from analysis]."
 
-**Output:** Top 3 priorities with full structure, one thing to stop, commitment statement.
+### Output
+Top 3 priorities with full structure, one thing to stop, commitment statement.
 
-**Quality gate:** Priorities have success criteria, not vague descriptions. Total effort does not exceed 60% of available time. The "stop doing" item is specific and actionable.
+### Quality Gate
+Priorities have success criteria, not vague descriptions. Total effort does not exceed 60% of available time. The "stop doing" item is specific and actionable.
 
 ---
 
 ### ACT -- Produce the Review
 
-**Actions:**
-
+### Actions
 1. Write the achievement summary: 3-5 sentences capturing the week's highlights. Lead with the best win. Mention the completion rate. End with the forward-looking commitment.
 2. Assemble the full review document in order: achievement summary, goal scorecard, lessons learned, pattern report, energy audit, next week priorities, commitment statement.
 3. If prior_review was provided, update the running pattern tracker: add this week's data to the trend analysis.
 4. Format for readability: use bullet points for lists, bold for priority names, and keep the total review under 500 words.
 
-**Output:** Complete weekly review document, updated pattern tracker.
+### Output
+Complete weekly review document, updated pattern tracker.
 
-**Quality gate:** Review is under 500 words. All sections are present. Commitment statement is a single sentence. Priorities are forward-looking, not rehashed goals from last week (unless explicitly carried over with justification).
+### Quality Gate
+Review is under 500 words. All sections are present. Commitment statement is a single sentence. Priorities are forward-looking, not rehashed goals from last week (unless explicitly carried over with justification).
 
 ---
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Structured weekly reflection: achievement summary, goal scorecard, lessons learn, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 
@@ -170,7 +183,7 @@ If priorities sum to more than 60%, either reduce scope or cut the lowest-priori
 
 ### Commitment Statement Formula
 
-"This week I will focus on [top priority] because [reason from analysis — pattern, lesson, or goal]."
+"This week I will focus on [top priority] because [reason from analysis  --  pattern, lesson, or goal]."
 
 Keep it one sentence. Post it somewhere visible.
 

@@ -1,0 +1,199 @@
+{
+  "name": "telescope-photometry-pipeline",
+  "description": "Process photometric observations from raw images through calibration, source detection, photometry, and light curve fitting.",
+  "steps": [
+    {
+      "id": "step_1",
+      "skill_name": "ccd-image-calibrator",
+      "inputs": {
+        "raw-science-frames": "from_user_input",
+        "calibration-frames": "from_user_input"
+      },
+      "outputs": {
+        "calibrated-frames": "calibrated-frames",
+        "calibration-log": "calibration-log"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "step_2",
+      "skill_name": "source-detection-cataloger",
+      "inputs": {
+        "calibrated-frames": "step_1.calibrated-frames",
+        "detection-threshold": "from_context.detection-threshold"
+      },
+      "outputs": {
+        "source-catalog": "source-catalog",
+        "detection-mask": "detection-mask"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "step_3",
+      "skill_name": "aperture-psf-photometer",
+      "inputs": {
+        "calibrated-frames": "step_1.calibrated-frames",
+        "source-catalog": "step_2.source-catalog"
+      },
+      "outputs": {
+        "photometry-table": "photometry-table",
+        "photometry-diagnostics": "photometry-diagnostics"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "step_4",
+      "skill_name": "photometric-calibrator",
+      "inputs": {
+        "photometry-table": "step_3.photometry-table",
+        "standard-catalog": "from_context.standard-catalog"
+      },
+      "outputs": {
+        "calibrated-magnitudes": "calibrated-magnitudes",
+        "calibration-residuals": "calibration-residuals"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "step_5",
+      "skill_name": "light-curve-builder",
+      "inputs": {
+        "calibrated-magnitudes": "step_4.calibrated-magnitudes",
+        "target-coordinates": "from_context.target-coordinates"
+      },
+      "outputs": {
+        "light-curve": "light-curve",
+        "variability-statistics": "variability-statistics"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "step_6",
+      "skill_name": "light-curve-model-fitter",
+      "inputs": {
+        "light-curve": "step_5.light-curve",
+        "model-type": "from_context.model-type"
+      },
+      "outputs": {
+        "best-fit-parameters": "best-fit-parameters",
+        "model-comparison": "model-comparison"
+      },
+      "parallel_group": 6
+    },
+    {
+      "id": "step_7",
+      "skill_name": "photometry-report-writer",
+      "inputs": {
+        "best-fit-parameters": "step_6.best-fit-parameters",
+        "light-curve": "step_5.light-curve",
+        "calibration-residuals": "step_4.calibration-residuals"
+      },
+      "outputs": {
+        "photometry-report": "photometry-report",
+        "data-products": "data-products"
+      },
+      "parallel_group": 7
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "step_1",
+      "to_step": "step_2",
+      "data_type": "object",
+      "field_mapping": {}
+    },
+    {
+      "from_step": "step_2",
+      "to_step": "step_3",
+      "data_type": "object",
+      "field_mapping": {}
+    },
+    {
+      "from_step": "step_3",
+      "to_step": "step_4",
+      "data_type": "object",
+      "field_mapping": {}
+    },
+    {
+      "from_step": "step_4",
+      "to_step": "step_5",
+      "data_type": "object",
+      "field_mapping": {}
+    },
+    {
+      "from_step": "step_5",
+      "to_step": "step_6",
+      "data_type": "object",
+      "field_mapping": {}
+    },
+    {
+      "from_step": "step_6",
+      "to_step": "step_7",
+      "data_type": "object",
+      "field_mapping": {}
+    }
+  ],
+  "entry_inputs": [
+    "raw-science-frames",
+    "calibration-frames"
+  ],
+  "terminal_outputs": [
+    "photometry-report",
+    "data-products"
+  ],
+  "parallel_groups": [
+    [
+      "step_1"
+    ],
+    [
+      "step_2"
+    ],
+    [
+      "step_3"
+    ],
+    [
+      "step_4"
+    ],
+    [
+      "step_5"
+    ],
+    [
+      "step_6"
+    ],
+    [
+      "step_7"
+    ]
+  ],
+  "estimated_cost": "low",
+  "critical_path": [
+    "step_1",
+    "step_2",
+    "step_3",
+    "step_4",
+    "step_5",
+    "step_6",
+    "step_7"
+  ],
+  "chain_links": {
+    "prerequisites": [],
+    "next_chains": [],
+    "related_chains": [
+      {
+        "chain_name": "anomaly-detection-investigation",
+        "relationship": "complement"
+      },
+      {
+        "chain_name": "image-analysis-quantification",
+        "relationship": "complement"
+      },
+      {
+        "chain_name": "spectral-analysis-pipeline",
+        "relationship": "complement"
+      },
+      {
+        "chain_name": "time-series-decomposition",
+        "relationship": "complement"
+      }
+    ]
+  }
+}

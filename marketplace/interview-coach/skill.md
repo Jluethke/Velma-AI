@@ -5,25 +5,26 @@ Prepares you for job interviews by generating likely questions based on the role
 ## Execution Pattern: ORPA Loop
 
 ## Inputs
-- role: object -- Job title, company name, and job posting text (or key responsibilities if no posting available)
-- background: object -- Your resume or work history summary, relevant skills, and years of experience
-- interview_type: string -- Type of interview: "phone screen", "hiring manager", "panel", "technical", "behavioral", "case study", "final round", or "unknown"
-- concerns: array -- (Optional) What you're most nervous about: "I ramble", "I freeze on behavioral questions", "I have an employment gap", "I'm changing careers", "I haven't interviewed in years"
-- company_context: string -- (Optional) Anything you know about the company culture, interviewer names, or team you'd be joining
-- prep_time: string -- (Optional) How much time before the interview: "tomorrow", "this week", "two weeks", "just exploring"
+- `role`: object -- Job title, company name, and job posting text (or key responsibilities if no posting available)
+- `background`: object -- Your resume or work history summary, relevant skills, and years of experience
+- `interview_type`: string -- Type of interview: "phone screen", "hiring manager", "panel", "technical", "behavioral", "case study", "final round", or "unknown"
+- `concerns`: array -- (Optional) What you're most nervous about: "I ramble", "I freeze on behavioral questions", "I have an employment gap", "I'm changing careers", "I haven't interviewed in years"
+- `company_context`: string -- (Optional) Anything you know about the company culture, interviewer names, or team you'd be joining
+- `prep_time`: string -- (Optional) How much time before the interview: "tomorrow", "this week", "two weeks", "just exploring"
 
 ## Outputs
-- question_bank: object -- 20-30 likely interview questions organized by category (behavioral, technical, situational, role-specific, curveball) with difficulty ratings
-- answer_frameworks: array -- Structured answer outlines for the 10 most critical questions, using STAR method for behavioral and direct-answer format for technical
-- mock_interview: object -- A simulated interview with questions, space for your answers, and detailed feedback on each response
-- questions_to_ask: array -- 8-10 thoughtful questions to ask the interviewer, organized by topic (role, team, growth, culture, company direction)
-- interview_day_guide: object -- Logistics checklist, confidence-building tips, body language reminders, and what to do in the first 90 seconds
+- `question_bank`: object -- 20-30 likely interview questions organized by category (behavioral, technical, situational, role-specific, curveball) with difficulty ratings
+- `answer_frameworks`: array -- Structured answer outlines for the 10 most critical questions, using STAR method for behavioral and direct-answer format for technical
+- `mock_interview`: object -- A simulated interview with questions, space for your answers, and detailed feedback on each response
+- `questions_to_ask`: array -- 8-10 thoughtful questions to ask the interviewer, organized by topic (role, team, growth, culture, company direction)
+- `interview_day_guide`: object -- Logistics checklist, confidence-building tips, body language reminders, and what to do in the first 90 seconds
 
 ## Execution
 
 ### OBSERVE: Research and Profile
-**Entry criteria:** Role and at least a summary of user's background provided.
-**Actions:**
+### Entry Criteria
+Role and at least a summary of user's background provided.
+### Actions
 1. Analyze the job posting for interview signals: what will they test? Technical skills mentioned become technical questions. Leadership responsibilities become behavioral questions. "Fast-paced environment" signals stress-test questions.
 2. Research the interview type norms:
    - Phone screen: 30 min, high-level fit check, salary expectations, availability.
@@ -38,12 +39,15 @@ Prepares you for job interviews by generating likely questions based on the role
    - Nervousness: build confidence through rehearsal and positive framing.
 5. If company context is available, research the company's values, recent news, and Glassdoor interview reports to predict company-specific questions.
 
-**Output:** Interview profile with predicted question categories, vulnerability map, coaching priorities, and company-specific intelligence.
-**Quality gate:** At least 5 question categories identified. User's top 3 vulnerabilities have planned responses. Interview type norms documented.
+### Output
+Interview profile with predicted question categories, vulnerability map, coaching priorities, and company-specific intelligence.
+### Quality Gate
+At least 5 question categories identified. User's top 3 vulnerabilities have planned responses. Interview type norms documented.
 
 ### REASON: Build the Question Bank and Strategy
-**Entry criteria:** Interview profile complete.
-**Actions:**
+### Entry Criteria
+Interview profile complete.
+### Actions
 1. Generate questions by category:
    - **Behavioral (8-10):** "Tell me about a time you..." questions mapped to the job's key competencies (leadership, problem-solving, conflict resolution, failure recovery, teamwork).
    - **Technical/Role-specific (5-8):** Direct questions about skills, tools, and domain knowledge listed in the posting.
@@ -67,12 +71,15 @@ Prepares you for job interviews by generating likely questions based on the role
    - Avoid: salary (too early), anything easily Googled, "Did I get the job?"
 5. Rate each question by likelihood (high/medium/low) and difficulty (easy/moderate/hard).
 
-**Output:** Complete question bank with STAR frameworks, curveball strategies, and interviewer questions.
-**Quality gate:** At least 20 questions generated. Every behavioral question has a STAR outline. Curveball answers are honest and strategic. Interviewer questions demonstrate genuine interest.
+### Output
+Complete question bank with STAR frameworks, curveball strategies, and interviewer questions.
+### Quality Gate
+At least 20 questions generated. Every behavioral question has a STAR outline. Curveball answers are honest and strategic. Interviewer questions demonstrate genuine interest.
 
 ### PLAN: Build Mock Interview and Coaching Materials
-**Entry criteria:** Question bank complete.
-**Actions:**
+### Entry Criteria
+Question bank complete.
+### Actions
 1. Design a mock interview sequence: select 8-10 questions that simulate the real interview flow (opening, behavioral, technical, situational, closing). Order them as a real interviewer would.
 2. For each mock question, provide:
    - The question itself.
@@ -93,12 +100,15 @@ Prepares you for job interviews by generating likely questions based on the role
    - After the interview: send a thank-you email within 24 hours referencing something specific from the conversation.
 5. Create a one-page "cheat sheet" the user can review in the parking lot or waiting room: their 3 strongest talking points, their "tell me about yourself" script, and their top 3 questions for the interviewer.
 
-**Output:** Mock interview script, coaching notes per concern, interview-day logistics guide, and parking-lot cheat sheet.
-**Quality gate:** Mock interview simulates realistic timing and flow. Every user concern has a specific coaching strategy. Cheat sheet fits on one page.
+### Output
+Mock interview script, coaching notes per concern, interview-day logistics guide, and parking-lot cheat sheet.
+### Quality Gate
+Mock interview simulates realistic timing and flow. Every user concern has a specific coaching strategy. Cheat sheet fits on one page.
 
 ### ACT: Deliver and Rehearse
-**Entry criteria:** All coaching materials ready.
-**Actions:**
+### Entry Criteria
+All coaching materials ready.
+### Actions
 1. Present the question bank organized by category with likelihood and difficulty ratings.
 2. Walk through the STAR frameworks for the top 5 most likely behavioral questions, explaining the strategy behind each.
 3. Run the mock interview: present questions one at a time, let the user respond, then provide feedback on structure (did they use STAR?), content (did they answer what was actually asked?), and delivery (too long? too vague? strong or weak close?).
@@ -107,8 +117,19 @@ Prepares you for job interviews by generating likely questions based on the role
 6. Hand off the interview-day guide and parking-lot cheat sheet.
 7. Offer to re-run the mock interview with different questions or tougher follow-ups.
 
-**Output:** Complete interview prep package: question bank, answer frameworks, mock interview with feedback, interviewer questions, day-of guide, and cheat sheet.
-**Quality gate:** User has practiced at least 5 questions aloud. STAR method is understood. User has 3+ questions ready to ask. Day-of logistics are clear.
+### Output
+Complete interview prep package: question bank, answer frameworks, mock interview with feedback, interviewer questions, day-of guide, and cheat sheet.
+### Quality Gate
+User has practiced at least 5 questions aloud. STAR method is understood. User has 3+ questions ready to ask. Day-of logistics are clear.
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Prepares you for job interviews by generating likely questions based on the role, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 Done when: (1) question bank covers all likely categories for the interview type, (2) STAR frameworks exist for the top behavioral questions, (3) curveball questions have prepared answers, (4) user has 8+ smart questions to ask the interviewer, (5) mock interview has been offered or completed, (6) interview-day guide and cheat sheet are delivered.

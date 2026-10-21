@@ -57,7 +57,7 @@ Tolerance rule.
    - `test_schema`: input columns, order and dtypes equal the signature (MLflow: `model.metadata.get_input_schema()`; ONNX: `sess.get_inputs()[0].shape` and `.type`).
    - `test_batch_invariance`: predicting rows one at a time gives the same result as one batch, under the same rule.
    - `test_edge_inputs`: the null row, unseen-category row and min/max rows from the golden set return finite outputs (`np.isfinite(out).all()`); classifier probabilities lie in [0, 1] and sum to 1 per row within the rule.
-   - `test_column_order_robustness` (tabular pyfunc only): shuffled input column order either gives the same output or raises a clear schema error; it must not silently produce different numbers.
+   - `test_column_order_reliableness` (tabular pyfunc only): shuffled input column order either gives the same output or raises a clear schema error; it must not silently produce different numbers.
 3. Load the model once per module with a `pytest` fixture (`scope="module"`).
 4. Do NOT regenerate `golden/expected.npy` inside the tests; it must come from the training-time object.
 

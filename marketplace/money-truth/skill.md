@@ -34,8 +34,7 @@ ACT     --> You leave with real numbers and one specific money move.
 
 ### OBSERVE: Get the Real Numbers
 
-**Actions:**
-
+### Actions
 1. **Start without judgment.** Ask: "Tell me about your money situation -- whatever level of detail feels comfortable. There's no right or wrong answer here. I just need to understand where things stand." Meet them where they are. Some people know their net worth to the penny. Some haven't opened a bank statement in months. Both are valid starting points.
 
 2. **Find the fuzzy spots.** Ask: "What part of your money situation do you NOT have a clear picture of? Credit card balances? Subscriptions? What your partner spends? Retirement account balance?" The fuzzy spots are where the problems hide. People avoid looking at what scares them.
@@ -50,14 +49,14 @@ ACT     --> You leave with real numbers and one specific money move.
 
 4. **Ask the first uncomfortable question.** "If I looked at your bank statements for the last 3 months -- would I be surprised by anything? Is there spending in there you'd rather I not see?" They don't have to answer. But the question opens the door.
 
-**Quality gate:** Core numbers are established, even if approximate. At least one fuzzy area has been identified.
+### Quality Gate
+Core numbers are established, even if approximate. At least one fuzzy area has been identified.
 
 ---
 
 ### REASON: The Questions That Matter
 
-**Actions:**
-
+### Actions
 1. **The survival question.** Ask: "If your income stopped completely tomorrow -- no paycheck, no freelance, nothing -- how many months could you survive before you're in real trouble? Not uncomfortable. In TROUBLE." Do the math with them. Total savings divided by monthly fixed costs. This number is their financial immune system.
 
 2. **The investment vs. expense question.** Ask: "What are you spending money on that you've told yourself is an 'investment in yourself' but hasn't actually produced a return? Courses you haven't finished? A gym membership you don't use? Software you're paying for 'when you need it'?" No judgment -- just honest accounting. An investment has a measurable return. Everything else is a purchase.
@@ -70,14 +69,14 @@ ACT     --> You leave with real numbers and one specific money move.
 
 6. **The avoidance question.** Ask: "What financial task have you been putting off for more than a month? The bill you haven't looked at, the account you haven't checked, the conversation you haven't had. What is it?" Avoidance is the most expensive financial habit.
 
-**Quality gate:** At least 3 uncomfortable questions addressed honestly. The survival calculation has been done. At least one avoidance behavior identified.
+### Quality Gate
+At least 3 uncomfortable questions addressed honestly. The survival calculation has been done. At least one avoidance behavior identified.
 
 ---
 
 ### PLAN: Separate Truth from Story
 
-**Actions:**
-
+### Actions
 1. **Build the gap map.** Show them: "Here's what you say you want. Here's what your spending says you want. Let's look at the gap." Goals say "save for a house." Spending says "DoorDash and impulse purchases." No judgment -- just the data. Ask: "Does your money go where your mouth is?"
 
 2. **Identify the three types of spending.**
@@ -89,14 +88,14 @@ ACT     --> You leave with real numbers and one specific money move.
 
 4. **Test the goals.** Ask: "Given what we've just looked at -- is your current financial goal the right goal? Or is there a more urgent goal hiding underneath it?" Sometimes "I want to invest" should really be "I need to stop the bleeding first."
 
-**Quality gate:** Spending is categorized into life support / life quality / life leaks. Leaks are quantified monthly and annually. At least one goal has been pressure-tested.
+### Quality Gate
+Spending is categorized into life support / life quality / life leaks. Leaks are quantified monthly and annually. At least one goal has been pressure-tested.
 
 ---
 
 ### ACT: One Move
 
-**Actions:**
-
+### Actions
 1. **Deliver the reality check.** Summarize: survival months, monthly savings rate, total leak spending, and the biggest gap between goals and behavior.
 
 2. **Identify the ONE move.** Ask: "If you could only do one thing this month to improve your financial situation, what would have the biggest impact?" Help them find it. Usually it's one of: cancel the subscriptions (15 minutes of work), have the money conversation with your partner (hard but free), set up auto-transfer to savings (10 minutes), or look at the account you've been avoiding (5 minutes of courage). The one move is always smaller than they think and more impactful than they expect.
@@ -105,7 +104,17 @@ ACT     --> You leave with real numbers and one specific money move.
 
 4. **Set the re-check.** Say: "In 30 days, come back and we'll look at the numbers again. Did the one move happen? Did the leaks shrink? How does the survival number look now?" Financial health is a practice, not an event.
 
-**Output:** Reality check summary, categorized spending, leak total, one specific move with a deadline, 30-day re-check prompt.
+### Output
+Reality check summary, categorized spending, leak total, one specific move with a deadline, 30-day re-check prompt.
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for The financial questions you are avoiding. Honest math in a non-judgmental space:, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 

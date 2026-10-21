@@ -1,0 +1,1311 @@
+[
+  {
+    "chain_name": "x-ray-diffraction-analysis",
+    "description": "Analyze X-ray diffraction data from raw diffractogram through peak identification, phase matching, Rietveld refinement, and crystallite size estimation to a final XRD report.",
+    "domain": "science",
+    "tags": ["science", "materials", "crystallography", "process"],
+    "steps": [
+      {
+        "flow_name": "xrd-diffractogram-importer",
+        "description": "Import raw XRD data files and convert to a standardized two-theta vs intensity format.",
+        "inputs": [
+          {"name": "raw-data-files", "desc": "Raw diffractometer output files (XRDML, RAW, or CSV)"},
+          {"name": "instrument-parameters", "desc": "Wavelength, slit widths, scan range, step size"}
+        ],
+        "outputs": [
+          {"name": "diffractogram", "desc": "Standardized two-theta vs intensity data"},
+          {"name": "acquisition-metadata", "desc": "Instrument settings and scan conditions"}
+        ],
+        "process": [
+          "Parse the raw data file format and extract intensity vs two-theta values",
+          "Validate angular range, step size, and count statistics",
+          "Normalize intensity units and flag any detector saturation or dropout regions",
+          "Export the clean diffractogram with acquisition metadata attached"
+        ],
+        "tags": ["science", "xrd", "import"]
+      },
+      {
+        "flow_name": "xrd-background-stripper",
+        "description": "Remove background signal from the diffractogram to isolate diffraction peaks.",
+        "inputs": [
+          {"name": "diffractogram", "desc": "Standardized two-theta vs intensity data"},
+          {"name": "background-method", "desc": "Method selection: polynomial, spline, or Sonneveld-Visser"}
+        ],
+        "outputs": [
+          {"name": "stripped-diffractogram", "desc": "Background-subtracted intensity data"},
+          {"name": "background-curve", "desc": "The fitted background for inspection"}
+        ],
+        "process": [
+          "Estimate the background using the selected method with iterative fitting",
+          "Subtract the background curve from the raw diffractogram",
+          "Verify that no negative intensities result and that peak shapes are preserved",
+          "Record the background model parameters for reproducibility"
+        ],
+        "tags": ["science", "xrd", "processing"]
+      },
+      {
+        "flow_name": "xrd-peak-identifier",
+        "description": "Locate and characterize peaks in the background-stripped diffractogram.",
+        "inputs": [
+          {"name": "stripped-diffractogram", "desc": "Background-subtracted intensity data"},
+          {"name": "peak-detection-threshold", "desc": "Minimum intensity or signal-to-noise ratio for peak acceptance"}
+        ],
+        "outputs": [
+          {"name": "peak-list", "desc": "Table of peak positions (two-theta), intensities, and FWHM values"},
+          {"name": "peak-fit-residuals", "desc": "Goodness-of-fit metrics for each peak profile"}
+        ],
+        "process": [
+          "Detect candidate peaks using second-derivative or wavelet methods",
+          "Fit each peak with a Voigt or pseudo-Voigt profile to extract position, intensity, and width",
+          "Filter peaks below the acceptance threshold",
+          "Produce the final peak list sorted by two-theta position"
+        ],
+        "tags": ["science", "xrd", "analysis"]
+      },
+      {
+        "flow_name": "xrd-phase-matcher",
+        "description": "Match observed peaks against crystallographic reference databases to identify phases.",
+        "inputs": [
+          {"name": "peak-list", "desc": "Table of peak positions, intensities, and FWHM values"},
+          {"name": "candidate-phases", "desc": "Optional list of expected phases to prioritize in the search"}
+        ],
+        "outputs": [
+          {"name": "phase-identification", "desc": "Matched phases with confidence scores and reference card numbers"},
+          {"name": "unmatched-peaks", "desc": "Peaks not assigned to any identified phase"}
+        ],
+        "process": [
+          "Search the reference database (ICDD PDF, COD, or AMCSD) by peak position and relative intensity",
+          "Rank candidate phases by figure-of-merit score",
+          "Assign each observed peak to the best matching phase",
+          "Flag unmatched peaks for further investigation"
+        ],
+        "tags": ["science", "xrd", "identification"]
+      },
+      {
+        "flow_name": "xrd-rietveld-refiner",
+        "description": "Refine crystal structure parameters and quantify phase fractions using Rietveld whole-pattern fitting.",
+        "inputs": [
+          {"name": "diffractogram", "desc": "Standardized two-theta vs intensity data"},
+          {"name": "phase-identification", "desc": "Matched phases with starting structural models"}
+        ],
+        "outputs": [
+          {"name": "refined-parameters", "desc": "Lattice parameters, atomic positions, site occupancies, and thermal factors per phase"},
+          {"name": "phase-fractions", "desc": "Weight percent of each phase with uncertainty"}
+        ],
+        "process": [
+          "Load starting structural models for each identified phase",
+          "Refine instrument parameters (zero shift, sample displacement) followed by structural parameters",
+          "Monitor Rwp, Rexp, and chi-squared to assess fit quality",
+          "Extract phase fractions from scale factors and report with uncertainties"
+        ],
+        "tags": ["science", "xrd", "refinement"]
+      },
+      {
+        "flow_name": "xrd-crystallite-sizer",
+        "description": "Estimate average crystallite size and microstrain from peak broadening using the Scherrer equation and Williamson-Hall analysis.",
+        "inputs": [
+          {"name": "peak-list", "desc": "Table of peak positions, intensities, and FWHM values"},
+          {"name": "instrument-broadening", "desc": "Instrumental broadening profile from a standard reference material"}
+        ],
+        "outputs": [
+          {"name": "crystallite-size", "desc": "Estimated crystallite size per phase with uncertainty"},
+          {"name": "microstrain-estimate", "desc": "Microstrain contribution to broadening if resolved"}
+        ],
+        "process": [
+          "Correct observed peak widths for instrumental broadening",
+          "Apply the Scherrer equation to individual peaks for a size estimate",
+          "Construct a Williamson-Hall plot to separate size and strain contributions",
+          "Report average crystallite size and microstrain with confidence intervals"
+        ],
+        "tags": ["science", "xrd", "microstructure"]
+      },
+      {
+        "flow_name": "xrd-report-generator",
+        "description": "Compile all XRD analysis results into a structured report with annotated diffractograms and tables.",
+        "inputs": [
+          {"name": "phase-identification", "desc": "Matched phases with confidence scores"},
+          {"name": "refined-parameters", "desc": "Lattice parameters and phase fractions"},
+          {"name": "crystallite-size", "desc": "Size and microstrain estimates"}
+        ],
+        "outputs": [
+          {"name": "xrd-report", "desc": "Final report with annotated plots, phase table, and conclusions"},
+          {"name": "supplementary-data", "desc": "Rietveld fit plots, residual curves, and raw peak data"}
+        ],
+        "process": [
+          "Assemble the annotated diffractogram showing identified peaks and phases",
+          "Tabulate phase fractions, lattice parameters, and crystallite sizes",
+          "Write the interpretation section linking results to the sample context",
+          "Package the supplementary fit data for archival"
+        ],
+        "tags": ["science", "xrd", "reporting"]
+      }
+    ]
+  },
+  {
+    "chain_name": "tensile-testing-analysis",
+    "description": "Analyze tensile test data from raw stress-strain curves through yield, UTS, elongation, and modulus extraction to a mechanical testing report.",
+    "domain": "science",
+    "tags": ["science", "materials", "mechanical-testing", "process"],
+    "steps": [
+      {
+        "flow_name": "tensile-curve-importer",
+        "description": "Import raw tensile test data and convert force-displacement to engineering stress-strain.",
+        "inputs": [
+          {"name": "raw-test-files", "desc": "Machine output files with force, displacement, and time"},
+          {"name": "specimen-dimensions", "desc": "Gauge length, cross-sectional area, and geometry for each specimen"}
+        ],
+        "outputs": [
+          {"name": "stress-strain-curves", "desc": "Engineering stress vs engineering strain for each specimen"},
+          {"name": "test-metadata", "desc": "Strain rate, temperature, machine compliance correction applied"}
+        ],
+        "process": [
+          "Parse raw force-displacement data from the testing machine format",
+          "Apply machine compliance correction if a compliance calibration is provided",
+          "Convert force to engineering stress and displacement to engineering strain using specimen dimensions",
+          "Align curves to zero stress and zero strain at the origin"
+        ],
+        "tags": ["science", "materials", "import"]
+      },
+      {
+        "flow_name": "tensile-yield-strength-calculator",
+        "description": "Determine yield strength using the 0.2% offset method or other specified criteria.",
+        "inputs": [
+          {"name": "stress-strain-curves", "desc": "Engineering stress vs engineering strain per specimen"},
+          {"name": "yield-method", "desc": "Offset percentage (default 0.2%) or proportional limit criterion"}
+        ],
+        "outputs": [
+          {"name": "yield-strengths", "desc": "Yield strength per specimen with the offset line coordinates"},
+          {"name": "elastic-region-fit", "desc": "Linear fit parameters for the elastic portion of each curve"}
+        ],
+        "process": [
+          "Identify the linear elastic region of each curve by maximum R-squared linear fit",
+          "Construct the offset line parallel to the elastic slope shifted by the specified strain offset",
+          "Find the intersection of the offset line with the stress-strain curve",
+          "Record the yield strength and flag any specimens with ambiguous or discontinuous yielding"
+        ],
+        "tags": ["science", "materials", "analysis"]
+      },
+      {
+        "flow_name": "tensile-uts-elongation-analyzer",
+        "description": "Extract ultimate tensile strength and elongation at break from each stress-strain curve.",
+        "inputs": [
+          {"name": "stress-strain-curves", "desc": "Engineering stress vs engineering strain per specimen"},
+          {"name": "test-metadata", "desc": "Strain rate and temperature for context"}
+        ],
+        "outputs": [
+          {"name": "uts-values", "desc": "Ultimate tensile strength per specimen"},
+          {"name": "elongation-at-break", "desc": "Percent elongation at fracture per specimen"}
+        ],
+        "process": [
+          "Find the maximum stress point on each curve to determine UTS",
+          "Identify the fracture point as the terminal data point or the point of sudden load drop",
+          "Compute total elongation at break as the strain at fracture times 100",
+          "Flag any specimens that fractured outside the gauge section"
+        ],
+        "tags": ["science", "materials", "analysis"]
+      },
+      {
+        "flow_name": "tensile-modulus-extractor",
+        "description": "Compute the elastic modulus from the slope of the linear elastic region of each curve.",
+        "inputs": [
+          {"name": "stress-strain-curves", "desc": "Engineering stress vs engineering strain per specimen"},
+          {"name": "elastic-region-fit", "desc": "Linear fit parameters identifying the elastic region bounds"}
+        ],
+        "outputs": [
+          {"name": "elastic-moduli", "desc": "Young's modulus per specimen with R-squared of the fit"},
+          {"name": "modulus-statistics", "desc": "Mean, standard deviation, and coefficient of variation across specimens"}
+        ],
+        "process": [
+          "Use the previously identified elastic region bounds for each specimen",
+          "Compute the slope of the linear fit within those bounds",
+          "Report the modulus with the fit quality metric",
+          "Compute summary statistics across all specimens"
+        ],
+        "tags": ["science", "materials", "analysis"]
+      },
+      {
+        "flow_name": "tensile-specimen-comparator",
+        "description": "Compare mechanical properties across specimens and test conditions.",
+        "inputs": [
+          {"name": "yield-strengths", "desc": "Yield strength per specimen"},
+          {"name": "uts-values", "desc": "UTS per specimen"},
+          {"name": "elastic-moduli", "desc": "Young's modulus per specimen"}
+        ],
+        "outputs": [
+          {"name": "comparison-table", "desc": "Side-by-side property comparison with statistical tests"},
+          {"name": "property-distributions", "desc": "Histograms and box plots of each property"}
+        ],
+        "process": [
+          "Tabulate all mechanical properties by specimen and group (material, condition, orientation)",
+          "Compute group means, standard deviations, and confidence intervals",
+          "Run statistical comparisons (t-test or ANOVA) between groups if multiple conditions exist",
+          "Generate comparison plots showing property distributions by group"
+        ],
+        "tags": ["science", "materials", "comparison"]
+      },
+      {
+        "flow_name": "tensile-necking-assessor",
+        "description": "Assess necking behavior and ductile-to-brittle failure characteristics from the stress-strain curve shape.",
+        "inputs": [
+          {"name": "stress-strain-curves", "desc": "Engineering stress vs engineering strain per specimen"},
+          {"name": "uts-values", "desc": "UTS per specimen to identify post-UTS region"}
+        ],
+        "outputs": [
+          {"name": "necking-assessment", "desc": "Onset strain, reduction in area if measured, and failure mode classification"},
+          {"name": "true-stress-strain", "desc": "True stress vs true strain curves computed up to necking onset"}
+        ],
+        "process": [
+          "Identify the necking onset as the point where engineering stress begins to decrease after UTS",
+          "Compute the post-UTS elongation as a measure of necking extent",
+          "Convert engineering curves to true stress-strain up to the necking onset",
+          "Classify failure mode as ductile (cup-cone), brittle (flat fracture), or mixed"
+        ],
+        "tags": ["science", "materials", "failure"]
+      },
+      {
+        "flow_name": "tensile-report-generator",
+        "description": "Compile tensile testing results into a structured mechanical testing report.",
+        "inputs": [
+          {"name": "comparison-table", "desc": "Property comparison across specimens"},
+          {"name": "necking-assessment", "desc": "Failure mode classifications"},
+          {"name": "test-metadata", "desc": "Test conditions and specimen information"}
+        ],
+        "outputs": [
+          {"name": "tensile-report", "desc": "Final report with stress-strain plots, property tables, and conclusions"},
+          {"name": "raw-data-archive", "desc": "All computed values in tabular format for further use"}
+        ],
+        "process": [
+          "Assemble overlay stress-strain plots with key properties annotated",
+          "Build the property summary table with statistics and standard reference comparisons",
+          "Write the interpretation section covering material behavior and failure modes",
+          "Package raw data and computed values for archival"
+        ],
+        "tags": ["science", "materials", "reporting"]
+      }
+    ]
+  },
+  {
+    "chain_name": "fluorescence-spectroscopy-analysis",
+    "description": "Analyze fluorescence spectroscopy data from raw spectra through quantum yield calculation, decay fitting, and FRET analysis to a fluorescence report.",
+    "domain": "science",
+    "tags": ["science", "spectroscopy", "photophysics", "process"],
+    "steps": [
+      {
+        "flow_name": "fluorescence-spectrum-acquirer",
+        "description": "Import and organize raw excitation and emission spectra from the fluorimeter.",
+        "inputs": [
+          {"name": "raw-spectra-files", "desc": "Fluorimeter output files with wavelength and intensity"},
+          {"name": "sample-identifiers", "desc": "Sample names, concentrations, and solvent for each measurement"}
+        ],
+        "outputs": [
+          {"name": "excitation-spectra", "desc": "Corrected excitation spectra per sample"},
+          {"name": "emission-spectra", "desc": "Corrected emission spectra per sample"}
+        ],
+        "process": [
+          "Parse fluorimeter output files and separate excitation from emission scans",
+          "Apply excitation source intensity correction using the reference detector signal",
+          "Organize spectra by sample identity and measurement condition",
+          "Flag any spectra with detector saturation or anomalous baselines"
+        ],
+        "tags": ["science", "fluorescence", "import"]
+      },
+      {
+        "flow_name": "fluorescence-instrument-corrector",
+        "description": "Apply instrument response corrections to emission spectra for accurate intensity comparison.",
+        "inputs": [
+          {"name": "emission-spectra", "desc": "Raw emission spectra per sample"},
+          {"name": "instrument-response-function", "desc": "Wavelength-dependent detector and optics sensitivity curve"}
+        ],
+        "outputs": [
+          {"name": "corrected-emission", "desc": "Instrument-corrected emission spectra"},
+          {"name": "correction-factors", "desc": "Applied correction curve for documentation"}
+        ],
+        "process": [
+          "Divide each emission spectrum by the instrument response function",
+          "Verify that the corrected spectrum of a known standard matches the published shape",
+          "Subtract solvent blank emission if measured",
+          "Record the correction factors applied for reproducibility"
+        ],
+        "tags": ["science", "fluorescence", "correction"]
+      },
+      {
+        "flow_name": "fluorescence-quantum-yield-calculator",
+        "description": "Calculate fluorescence quantum yield using the comparative method with a known reference.",
+        "inputs": [
+          {"name": "corrected-emission", "desc": "Instrument-corrected emission spectra for sample and reference"},
+          {"name": "absorbance-values", "desc": "Absorbance at excitation wavelength for sample and reference"}
+        ],
+        "outputs": [
+          {"name": "quantum-yield", "desc": "Absolute quantum yield with uncertainty per sample"},
+          {"name": "calculation-details", "desc": "Integrated emission areas, refractive index corrections, and reference values used"}
+        ],
+        "process": [
+          "Integrate emission spectra over the full emission band for both sample and reference",
+          "Apply the comparative quantum yield formula with refractive index correction",
+          "Verify that absorbance values are in the optically dilute regime (below 0.1)",
+          "Report quantum yield with propagated uncertainty from absorbance and integration"
+        ],
+        "tags": ["science", "fluorescence", "quantification"]
+      },
+      {
+        "flow_name": "fluorescence-decay-fitter",
+        "description": "Fit fluorescence lifetime decay curves to single or multi-exponential models.",
+        "inputs": [
+          {"name": "decay-curves", "desc": "Time-resolved fluorescence intensity data per sample"},
+          {"name": "instrument-response-function", "desc": "IRF measured under the same conditions"}
+        ],
+        "outputs": [
+          {"name": "lifetime-fit-results", "desc": "Fitted lifetimes, amplitudes, and chi-squared per model per sample"},
+          {"name": "residuals", "desc": "Weighted residuals and autocorrelation for fit quality assessment"}
+        ],
+        "process": [
+          "Convolve candidate decay models with the IRF for iterative reconvolution fitting",
+          "Fit one-exponential, two-exponential, and stretched-exponential models",
+          "Select the best model by reduced chi-squared, residual randomness, and Durbin-Watson statistic",
+          "Report lifetimes and fractional amplitudes with confidence intervals"
+        ],
+        "tags": ["science", "fluorescence", "kinetics"]
+      },
+      {
+        "flow_name": "fluorescence-fret-analyzer",
+        "description": "Analyze Forster resonance energy transfer efficiency from donor-acceptor fluorescence data.",
+        "inputs": [
+          {"name": "corrected-emission", "desc": "Emission spectra for donor-only, acceptor-only, and donor-acceptor samples"},
+          {"name": "lifetime-fit-results", "desc": "Donor lifetimes in absence and presence of acceptor"}
+        ],
+        "outputs": [
+          {"name": "fret-efficiency", "desc": "FRET efficiency calculated by intensity ratio and lifetime methods"},
+          {"name": "distance-estimate", "desc": "Donor-acceptor distance from FRET efficiency using the Forster radius"}
+        ],
+        "process": [
+          "Calculate FRET efficiency from donor quenching (intensity-based method)",
+          "Calculate FRET efficiency from donor lifetime shortening (lifetime-based method)",
+          "Estimate the donor-acceptor distance using the known Forster radius for the pair",
+          "Compare intensity and lifetime FRET values and note any discrepancy"
+        ],
+        "tags": ["science", "fluorescence", "fret"]
+      },
+      {
+        "flow_name": "fluorescence-report-generator",
+        "description": "Compile all fluorescence analysis results into a final report with spectra, lifetime plots, and tables.",
+        "inputs": [
+          {"name": "quantum-yield", "desc": "Quantum yield results per sample"},
+          {"name": "lifetime-fit-results", "desc": "Lifetime and decay analysis results"},
+          {"name": "fret-efficiency", "desc": "FRET efficiency and distance estimates if applicable"}
+        ],
+        "outputs": [
+          {"name": "fluorescence-report", "desc": "Structured report with annotated spectra, decay fits, and quantitative summary"},
+          {"name": "data-tables", "desc": "All computed photophysical parameters in tabular format"}
+        ],
+        "process": [
+          "Assemble annotated emission spectra and decay curves for each sample",
+          "Build the summary table of quantum yields, lifetimes, and FRET parameters",
+          "Write the interpretation connecting photophysical behavior to sample properties",
+          "Package all data tables and fit parameters for archival"
+        ],
+        "tags": ["science", "fluorescence", "reporting"]
+      }
+    ]
+  },
+  {
+    "chain_name": "ecological-diversity-metrics",
+    "description": "Compute and compare ecological diversity metrics from species abundance data through alpha and beta diversity, PERMANOVA, and rarefaction to a diversity report.",
+    "domain": "science",
+    "tags": ["science", "ecology", "biodiversity", "process"],
+    "steps": [
+      {
+        "flow_name": "species-abundance-tabulator",
+        "description": "Organize raw species observation data into a site-by-species abundance matrix.",
+        "inputs": [
+          {"name": "observation-records", "desc": "Raw species observation data with site, species, and count"},
+          {"name": "taxonomic-key", "desc": "Accepted species names and synonymy table for standardization"}
+        ],
+        "outputs": [
+          {"name": "abundance-matrix", "desc": "Sites as rows, species as columns, counts as values"},
+          {"name": "sampling-effort", "desc": "Number of samples, area surveyed, or time spent per site"}
+        ],
+        "process": [
+          "Standardize species names using the taxonomic key to resolve synonyms and misspellings",
+          "Aggregate counts by site and species, resolving duplicate entries",
+          "Build the site-by-species abundance matrix",
+          "Record sampling effort per site for rarefaction normalization"
+        ],
+        "tags": ["science", "ecology", "data-prep"]
+      },
+      {
+        "flow_name": "alpha-diversity-calculator",
+        "description": "Calculate within-site diversity metrics: species richness, Shannon index, Simpson index, and evenness.",
+        "inputs": [
+          {"name": "abundance-matrix", "desc": "Site-by-species abundance matrix"},
+          {"name": "diversity-indices", "desc": "Which indices to compute (default: all standard indices)"}
+        ],
+        "outputs": [
+          {"name": "alpha-diversity-table", "desc": "Richness, Shannon H, Simpson D, and Pielou evenness per site"},
+          {"name": "confidence-intervals", "desc": "Bootstrap confidence intervals for each index per site"}
+        ],
+        "process": [
+          "Count species richness (S) at each site",
+          "Compute Shannon entropy H and Simpson concentration D from proportional abundances",
+          "Compute Pielou evenness J = H / ln(S)",
+          "Bootstrap resample each site to generate confidence intervals for all indices"
+        ],
+        "tags": ["science", "ecology", "alpha-diversity"]
+      },
+      {
+        "flow_name": "beta-diversity-calculator",
+        "description": "Compute between-site dissimilarity using Bray-Curtis, Jaccard, and other distance metrics.",
+        "inputs": [
+          {"name": "abundance-matrix", "desc": "Site-by-species abundance matrix"},
+          {"name": "distance-metric", "desc": "Metric selection: Bray-Curtis (abundance) or Jaccard (presence-absence)"}
+        ],
+        "outputs": [
+          {"name": "distance-matrix", "desc": "Pairwise site dissimilarity matrix"},
+          {"name": "ordination-coordinates", "desc": "NMDS or PCoA coordinates for visualization"}
+        ],
+        "process": [
+          "Compute the pairwise distance matrix using the selected metric",
+          "Run non-metric multidimensional scaling (NMDS) or PCoA for ordination",
+          "Report stress (NMDS) or proportion of variance explained (PCoA)",
+          "Generate the ordination plot with sites colored by group"
+        ],
+        "tags": ["science", "ecology", "beta-diversity"]
+      },
+      {
+        "flow_name": "permanova-tester",
+        "description": "Test whether community composition differs among groups using permutational multivariate ANOVA.",
+        "inputs": [
+          {"name": "distance-matrix", "desc": "Pairwise site dissimilarity matrix"},
+          {"name": "group-assignments", "desc": "Categorical grouping variable for each site (treatment, habitat, time)"}
+        ],
+        "outputs": [
+          {"name": "permanova-results", "desc": "F-statistic, R-squared, and p-value from the permutation test"},
+          {"name": "dispersion-test", "desc": "PERMDISP results testing homogeneity of group dispersions"}
+        ],
+        "process": [
+          "Partition the distance matrix sums-of-squares by group using PERMANOVA",
+          "Run the specified number of permutations (default 999) to generate the null distribution",
+          "Test multivariate dispersion homogeneity (PERMDISP) to validate PERMANOVA assumptions",
+          "Report F, R-squared, p-value, and note if dispersion differences complicate interpretation"
+        ],
+        "tags": ["science", "ecology", "statistics"]
+      },
+      {
+        "flow_name": "rarefaction-curve-generator",
+        "description": "Generate rarefaction and extrapolation curves to compare diversity at equal sampling effort.",
+        "inputs": [
+          {"name": "abundance-matrix", "desc": "Site-by-species abundance matrix"},
+          {"name": "sampling-effort", "desc": "Effort data per site for standardization"}
+        ],
+        "outputs": [
+          {"name": "rarefaction-curves", "desc": "Sample-based or individual-based rarefaction curves per site"},
+          {"name": "estimated-richness", "desc": "Chao1 or ACE estimated total species richness per site"}
+        ],
+        "process": [
+          "Compute the rarefaction curve for each site by subsampling without replacement",
+          "Extrapolate beyond observed effort using the Chao1 or iNEXT method",
+          "Plot rarefaction and extrapolation curves with 95% confidence bands",
+          "Report asymptotic richness estimates and sample completeness ratios"
+        ],
+        "tags": ["science", "ecology", "rarefaction"]
+      },
+      {
+        "flow_name": "diversity-report-generator",
+        "description": "Compile all diversity analysis results into a structured ecology report.",
+        "inputs": [
+          {"name": "alpha-diversity-table", "desc": "Within-site diversity indices"},
+          {"name": "permanova-results", "desc": "Between-group composition test results"},
+          {"name": "rarefaction-curves", "desc": "Rarefaction and richness estimation results"}
+        ],
+        "outputs": [
+          {"name": "diversity-report", "desc": "Final report with diversity tables, ordination plots, and rarefaction curves"},
+          {"name": "analysis-archive", "desc": "All matrices, statistics, and computed indices for reproducibility"}
+        ],
+        "process": [
+          "Assemble diversity summary tables and ordination figures",
+          "Present PERMANOVA and dispersion test results with ecological interpretation",
+          "Include rarefaction curves showing sampling adequacy",
+          "Package all computed data for archival and reproducibility"
+        ],
+        "tags": ["science", "ecology", "reporting"]
+      }
+    ]
+  },
+  {
+    "chain_name": "reaction-mechanism-elucidation",
+    "description": "Determine a chemical reaction mechanism through intermediate identification, kinetics measurement, energy profiling, isotope labeling, DFT comparison, and mechanism proposal.",
+    "domain": "science",
+    "tags": ["science", "chemistry", "kinetics", "process"],
+    "steps": [
+      {
+        "flow_name": "reaction-intermediate-identifier",
+        "description": "Identify reaction products and intermediates using spectroscopic and chromatographic techniques.",
+        "inputs": [
+          {"name": "reaction-mixture-samples", "desc": "Time-resolved aliquots from the reaction at various conversions"},
+          {"name": "analytical-methods", "desc": "Available techniques: NMR, MS, IR, UV-Vis, GC, HPLC"}
+        ],
+        "outputs": [
+          {"name": "intermediate-catalog", "desc": "List of detected species with structural assignments and retention times or chemical shifts"},
+          {"name": "temporal-profiles", "desc": "Concentration vs time profiles for each identified species"}
+        ],
+        "process": [
+          "Analyze aliquots by the selected analytical methods at each time point",
+          "Assign molecular structures to detected signals using spectral databases and fragmentation patterns",
+          "Track the appearance and disappearance of each species over time",
+          "Build the temporal concentration profile for starting material, intermediates, and products"
+        ],
+        "tags": ["science", "chemistry", "identification"]
+      },
+      {
+        "flow_name": "reaction-kinetics-measurer",
+        "description": "Measure reaction kinetics under systematically varied conditions to determine rate laws.",
+        "inputs": [
+          {"name": "temporal-profiles", "desc": "Concentration vs time data for reactants and products"},
+          {"name": "experimental-conditions", "desc": "Temperature, solvent, catalyst loading, and reagent concentrations tested"}
+        ],
+        "outputs": [
+          {"name": "rate-law", "desc": "Rate expression with reaction orders for each reactant and the rate constant"},
+          {"name": "activation-parameters", "desc": "Activation energy (Arrhenius) or enthalpy and entropy of activation (Eyring)"}
+        ],
+        "process": [
+          "Fit concentration-time data to integrated rate expressions (zeroth, first, second order)",
+          "Determine reaction order with respect to each reactant by the method of initial rates or excess",
+          "Measure rate constants at multiple temperatures",
+          "Construct Arrhenius or Eyring plots to extract activation parameters"
+        ],
+        "tags": ["science", "chemistry", "kinetics"]
+      },
+      {
+        "flow_name": "reaction-energy-profiler",
+        "description": "Construct the free energy profile of the reaction pathway showing intermediates and transition states.",
+        "inputs": [
+          {"name": "rate-law", "desc": "Rate expression with rate constants"},
+          {"name": "activation-parameters", "desc": "Activation energies or Eyring parameters"}
+        ],
+        "outputs": [
+          {"name": "energy-profile", "desc": "Free energy diagram with barriers, intermediates, and products"},
+          {"name": "rate-determining-step", "desc": "Identification of the highest barrier step"}
+        ],
+        "process": [
+          "Convert rate constants to free energy barriers using transition state theory",
+          "Place intermediates at their relative free energies based on equilibrium data if available",
+          "Construct the energy profile diagram from reactants to products",
+          "Identify the rate-determining step as the highest energy transition state"
+        ],
+        "tags": ["science", "chemistry", "thermodynamics"]
+      },
+      {
+        "flow_name": "isotope-labeling-tester",
+        "description": "Design and interpret isotope labeling experiments to test proposed mechanistic pathways.",
+        "inputs": [
+          {"name": "proposed-mechanism", "desc": "Candidate mechanistic steps to be tested"},
+          {"name": "available-labels", "desc": "Isotopes available: deuterium, 13C, 15N, 18O"}
+        ],
+        "outputs": [
+          {"name": "labeling-predictions", "desc": "Where each label should appear in products for each candidate mechanism"},
+          {"name": "experimental-results", "desc": "Observed label distribution in products compared to predictions"}
+        ],
+        "process": [
+          "For each candidate mechanism, trace where the isotopic label would end up in products",
+          "Design the labeling experiment to distinguish between competing pathways",
+          "Analyze the labeled products by mass spectrometry or NMR to determine label position",
+          "Compare observed labeling pattern against predictions to rule out or support each pathway"
+        ],
+        "tags": ["science", "chemistry", "isotope"]
+      },
+      {
+        "flow_name": "reaction-dft-comparator",
+        "description": "Compare experimental mechanistic findings with DFT computational results for transition states and intermediates.",
+        "inputs": [
+          {"name": "energy-profile", "desc": "Experimental free energy diagram"},
+          {"name": "dft-calculations", "desc": "Computed structures, energies, and vibrational frequencies for intermediates and transition states"}
+        ],
+        "outputs": [
+          {"name": "experiment-theory-comparison", "desc": "Side-by-side comparison of experimental and computed barriers and geometries"},
+          {"name": "agreement-assessment", "desc": "Quantitative agreement metrics and discrepancies noted"}
+        ],
+        "process": [
+          "Align computational and experimental species by structure correspondence",
+          "Compare computed barriers with experimental activation parameters",
+          "Assess whether computed transition state geometries are consistent with observed selectivity",
+          "Note discrepancies and suggest whether the computational level of theory is adequate"
+        ],
+        "tags": ["science", "chemistry", "computation"]
+      },
+      {
+        "flow_name": "mechanism-proposer",
+        "description": "Synthesize all evidence into a coherent proposed mechanism with confidence assessment.",
+        "inputs": [
+          {"name": "intermediate-catalog", "desc": "Detected intermediates and their temporal profiles"},
+          {"name": "rate-law", "desc": "Kinetic rate expression"},
+          {"name": "experimental-results", "desc": "Isotope labeling results"}
+        ],
+        "outputs": [
+          {"name": "proposed-mechanism", "desc": "Arrow-pushing mechanism with elementary steps consistent with all evidence"},
+          {"name": "evidence-summary", "desc": "Which evidence supports each step and what remains ambiguous"}
+        ],
+        "process": [
+          "Write the elementary steps consistent with the rate law and observed intermediates",
+          "Verify that isotope labeling results match the proposed pathway",
+          "Check that the proposed rate-determining step matches the observed activation parameters",
+          "Identify any remaining ambiguities and suggest experiments to resolve them"
+        ],
+        "tags": ["science", "chemistry", "synthesis"]
+      },
+      {
+        "flow_name": "mechanism-report-generator",
+        "description": "Compile the mechanism elucidation study into a final report with energy profiles and evidence tables.",
+        "inputs": [
+          {"name": "proposed-mechanism", "desc": "The proposed reaction mechanism"},
+          {"name": "experiment-theory-comparison", "desc": "Agreement between experimental and computational results"},
+          {"name": "evidence-summary", "desc": "Supporting evidence for each mechanistic step"}
+        ],
+        "outputs": [
+          {"name": "mechanism-report", "desc": "Final report with mechanism scheme, energy profile, and evidence table"},
+          {"name": "supporting-data", "desc": "All kinetic data, spectra, and computational results"}
+        ],
+        "process": [
+          "Draw the complete mechanism scheme with arrow-pushing notation",
+          "Present the energy profile with experimental and computed values overlaid",
+          "Build the evidence table mapping each mechanistic claim to its supporting data",
+          "Package all raw kinetic data, spectra, and DFT output files"
+        ],
+        "tags": ["science", "chemistry", "reporting"]
+      }
+    ]
+  },
+  {
+    "chain_name": "wind-tunnel-data-analysis",
+    "description": "Analyze wind tunnel test data from raw force measurements through corrections, coefficient computation, CFD comparison, and flow feature identification to an aerodynamic report.",
+    "domain": "science",
+    "tags": ["science", "aerodynamics", "fluid-mechanics", "process"],
+    "steps": [
+      {
+        "flow_name": "wind-tunnel-force-importer",
+        "description": "Import raw force and moment balance data from the wind tunnel data acquisition system.",
+        "inputs": [
+          {"name": "balance-data-files", "desc": "Multi-component balance output files with forces, moments, and freestream conditions"},
+          {"name": "model-reference", "desc": "Reference area, length, and moment center coordinates"}
+        ],
+        "outputs": [
+          {"name": "raw-forces-moments", "desc": "Six-component force and moment data at each test point"},
+          {"name": "freestream-conditions", "desc": "Dynamic pressure, Mach number, Reynolds number, and angle of attack per point"}
+        ],
+        "process": [
+          "Parse the data acquisition output and extract force, moment, and tunnel condition channels",
+          "Apply balance calibration matrix to convert raw voltages to engineering units",
+          "Associate each data point with its angle of attack and freestream conditions",
+          "Check for drift by comparing tare runs at the start and end of the test"
+        ],
+        "tags": ["science", "aerodynamics", "import"]
+      },
+      {
+        "flow_name": "wind-tunnel-correction-applier",
+        "description": "Apply standard corrections for wall interference, support tare, blockage, and buoyancy.",
+        "inputs": [
+          {"name": "raw-forces-moments", "desc": "Uncorrected six-component data"},
+          {"name": "tunnel-geometry", "desc": "Test section dimensions, slot or solid walls, support strut geometry"}
+        ],
+        "outputs": [
+          {"name": "corrected-forces-moments", "desc": "Forces and moments with all corrections applied"},
+          {"name": "correction-breakdown", "desc": "Magnitude of each correction for traceability"}
+        ],
+        "process": [
+          "Subtract support strut tare loads measured with the metric part removed",
+          "Apply solid blockage and wake blockage corrections based on model and wake size",
+          "Correct for streamline curvature (wall interference) on lift, pitching moment, and angle of attack",
+          "Apply buoyancy correction for static pressure gradient along the test section"
+        ],
+        "tags": ["science", "aerodynamics", "correction"]
+      },
+      {
+        "flow_name": "aerodynamic-coefficient-calculator",
+        "description": "Compute non-dimensional aerodynamic coefficients from corrected forces and freestream conditions.",
+        "inputs": [
+          {"name": "corrected-forces-moments", "desc": "Corrected six-component data"},
+          {"name": "model-reference", "desc": "Reference area, span, and mean aerodynamic chord"}
+        ],
+        "outputs": [
+          {"name": "aero-coefficients", "desc": "CL, CD, CM, CY, Cl, Cn at each angle of attack"},
+          {"name": "derived-quantities", "desc": "Lift-to-drag ratio, Oswald efficiency, and lift curve slope"}
+        ],
+        "process": [
+          "Non-dimensionalize forces by dynamic pressure and reference area",
+          "Non-dimensionalize moments by dynamic pressure, reference area, and reference length",
+          "Compute derived quantities: L/D, dCL/dalpha, and induced drag factor",
+          "Tabulate all coefficients at each angle of attack"
+        ],
+        "tags": ["science", "aerodynamics", "computation"]
+      },
+      {
+        "flow_name": "polar-plot-generator",
+        "description": "Generate drag polar, lift curve, and moment curve plots from aerodynamic coefficients.",
+        "inputs": [
+          {"name": "aero-coefficients", "desc": "CL, CD, CM at each angle of attack"},
+          {"name": "comparison-data", "desc": "Reference data from previous tests or published results if available"}
+        ],
+        "outputs": [
+          {"name": "aerodynamic-plots", "desc": "Drag polar (CL vs CD), lift curve (CL vs alpha), moment curve (CM vs alpha)"},
+          {"name": "stall-characteristics", "desc": "CLmax, stall angle, and pitching moment break"}
+        ],
+        "process": [
+          "Plot the drag polar (CL vs CD) with the ideal parabolic drag polar overlaid",
+          "Plot the lift curve (CL vs alpha) and determine CLmax and stall angle",
+          "Plot the pitching moment curve and identify the aerodynamic center or neutral point",
+          "Overlay comparison data if provided and annotate differences"
+        ],
+        "tags": ["science", "aerodynamics", "visualization"]
+      },
+      {
+        "flow_name": "cfd-comparison-analyzer",
+        "description": "Compare wind tunnel results with CFD predictions to assess simulation accuracy.",
+        "inputs": [
+          {"name": "aero-coefficients", "desc": "Experimental CL, CD, CM vs alpha"},
+          {"name": "cfd-predictions", "desc": "CFD-computed coefficients at matching conditions"}
+        ],
+        "outputs": [
+          {"name": "comparison-plots", "desc": "Overlay plots of experimental vs CFD coefficients"},
+          {"name": "discrepancy-analysis", "desc": "Quantified differences and likely sources (turbulence model, transition, grid)"}
+        ],
+        "process": [
+          "Interpolate experimental and CFD data to common angle-of-attack points",
+          "Compute absolute and percent differences for CL, CD, and CM",
+          "Plot experimental and CFD predictions on the same axes",
+          "Identify systematic trends in the discrepancies and suggest their likely sources"
+        ],
+        "tags": ["science", "aerodynamics", "validation"]
+      },
+      {
+        "flow_name": "flow-feature-identifier",
+        "description": "Identify key flow features (separation, transition, vortex structures) from force data trends and flow visualization.",
+        "inputs": [
+          {"name": "aero-coefficients", "desc": "CL, CD, CM vs alpha showing inflections or breaks"},
+          {"name": "flow-visualization-data", "desc": "Oil flow, tuft, or PIV images if available"}
+        ],
+        "outputs": [
+          {"name": "flow-features", "desc": "Identified separation onset, transition location, and vortex features"},
+          {"name": "feature-evidence", "desc": "Which data (force break, visualization image) supports each identified feature"}
+        ],
+        "process": [
+          "Examine the lift curve for nonlinearity that indicates flow separation onset",
+          "Look for drag bucket or drag rise that indicates laminar-to-turbulent transition",
+          "Correlate force data features with flow visualization evidence if available",
+          "Catalog each identified feature with its angle-of-attack range and evidence"
+        ],
+        "tags": ["science", "aerodynamics", "analysis"]
+      },
+      {
+        "flow_name": "aerodynamic-report-generator",
+        "description": "Compile all wind tunnel analysis into a final aerodynamic test report.",
+        "inputs": [
+          {"name": "aerodynamic-plots", "desc": "Drag polar, lift curve, and moment plots"},
+          {"name": "discrepancy-analysis", "desc": "Experimental vs CFD comparison"},
+          {"name": "flow-features", "desc": "Identified flow features and their evidence"}
+        ],
+        "outputs": [
+          {"name": "aerodynamic-report", "desc": "Final report with polars, comparison tables, and flow feature analysis"},
+          {"name": "data-package", "desc": "All corrected coefficients and raw data in tabular format"}
+        ],
+        "process": [
+          "Assemble the polars, comparison overlays, and flow visualization figures",
+          "Build the coefficient summary table at key angles of attack",
+          "Write the analysis section covering flow features and CFD agreement",
+          "Package all processed data for archival and future reference"
+        ],
+        "tags": ["science", "aerodynamics", "reporting"]
+      }
+    ]
+  },
+  {
+    "chain_name": "paleoclimate-proxy-calibration",
+    "description": "Calibrate a paleoclimate proxy from modern calibration data through transfer function construction, validation, fossil record application, and uncertainty estimation to a paleoclimate reconstruction.",
+    "domain": "science",
+    "tags": ["science", "paleoclimate", "geoscience", "process"],
+    "steps": [
+      {
+        "flow_name": "proxy-calibration-collector",
+        "description": "Assemble paired modern proxy measurements and instrumental climate data for calibration.",
+        "inputs": [
+          {"name": "modern-proxy-data", "desc": "Proxy measurements from modern samples (e.g., tree ring widths, foram isotopes, pollen counts)"},
+          {"name": "instrumental-climate", "desc": "Corresponding instrumental temperature, precipitation, or other climate variable"}
+        ],
+        "outputs": [
+          {"name": "calibration-dataset", "desc": "Paired proxy-climate values with site metadata"},
+          {"name": "data-coverage-summary", "desc": "Spatial and temporal coverage of the calibration set"}
+        ],
+        "process": [
+          "Match proxy sample locations and times to the nearest instrumental climate station or gridded product",
+          "Screen for outliers and verify that proxy-climate pairings are ecologically plausible",
+          "Document the spatial and temporal coverage of the calibration set",
+          "Split into calibration and verification subsets if the dataset is large enough"
+        ],
+        "tags": ["science", "paleoclimate", "data-prep"]
+      },
+      {
+        "flow_name": "transfer-function-builder",
+        "description": "Build the mathematical relationship between the proxy and the target climate variable.",
+        "inputs": [
+          {"name": "calibration-dataset", "desc": "Paired proxy-climate values"},
+          {"name": "method-choice", "desc": "Regression, weighted averaging (WA), modern analogue technique (MAT), or WA-PLS"}
+        ],
+        "outputs": [
+          {"name": "transfer-function", "desc": "Fitted model relating proxy values to climate variable"},
+          {"name": "calibration-statistics", "desc": "R-squared, RMSE, and number of components or analogues used"}
+        ],
+        "process": [
+          "Fit the selected model using the calibration subset of data",
+          "Optimize model complexity (number of PLS components, number of analogues) using cross-validation",
+          "Report calibration statistics: R-squared, root mean square error of prediction",
+          "Save the fitted model parameters for application to fossil data"
+        ],
+        "tags": ["science", "paleoclimate", "modeling"]
+      },
+      {
+        "flow_name": "proxy-validation-tester",
+        "description": "Validate the transfer function against independent data not used in calibration.",
+        "inputs": [
+          {"name": "transfer-function", "desc": "Fitted proxy-climate model"},
+          {"name": "calibration-dataset", "desc": "Full dataset including the verification subset"}
+        ],
+        "outputs": [
+          {"name": "validation-results", "desc": "Verification R-squared, RMSE, and reduction of error (RE) statistic"},
+          {"name": "residual-diagnostics", "desc": "Spatial and temporal patterns in residuals"}
+        ],
+        "process": [
+          "Apply the transfer function to the withheld verification data",
+          "Compute verification statistics: R-squared, RMSEP, and RE or CE statistics",
+          "Examine residuals for spatial or temporal bias that would indicate model failure",
+          "Determine if the model passes standard validation thresholds (RE > 0)"
+        ],
+        "tags": ["science", "paleoclimate", "validation"]
+      },
+      {
+        "flow_name": "fossil-record-applicator",
+        "description": "Apply the validated transfer function to fossil proxy data to reconstruct past climate.",
+        "inputs": [
+          {"name": "transfer-function", "desc": "Validated proxy-climate model"},
+          {"name": "fossil-proxy-data", "desc": "Down-core or time-series proxy measurements from the geological record"}
+        ],
+        "outputs": [
+          {"name": "climate-reconstruction", "desc": "Reconstructed climate variable through time"},
+          {"name": "analogue-quality", "desc": "Goodness-of-fit or analogue distance at each fossil sample"}
+        ],
+        "process": [
+          "Apply the transfer function to each fossil sample to produce a climate estimate",
+          "Check whether each fossil assemblage has a good modern analogue in the calibration set",
+          "Flag samples with poor analogues or that fall outside the calibration range",
+          "Produce the raw reconstruction time series"
+        ],
+        "tags": ["science", "paleoclimate", "reconstruction"]
+      },
+      {
+        "flow_name": "reconstruction-uncertainty-estimator",
+        "description": "Quantify uncertainty in the paleoclimate reconstruction from calibration error, chronology, and sample-specific analogue quality.",
+        "inputs": [
+          {"name": "climate-reconstruction", "desc": "Raw reconstructed climate time series"},
+          {"name": "calibration-statistics", "desc": "RMSEP and model residual distribution"},
+          {"name": "analogue-quality", "desc": "Per-sample analogue distance or fit metric"}
+        ],
+        "outputs": [
+          {"name": "uncertainty-envelope", "desc": "Confidence bands around the reconstruction at each time point"},
+          {"name": "uncertainty-decomposition", "desc": "Relative contributions of calibration, chronology, and analogue quality to total uncertainty"}
+        ],
+        "process": [
+          "Apply the calibration RMSEP as a baseline uncertainty at every sample",
+          "Inflate uncertainty for samples with poor modern analogues",
+          "Incorporate chronological uncertainty if an age model with error estimates is provided",
+          "Produce the final reconstruction with upper and lower confidence bands"
+        ],
+        "tags": ["science", "paleoclimate", "uncertainty"]
+      },
+      {
+        "flow_name": "paleoclimate-report-generator",
+        "description": "Compile the calibration, validation, and reconstruction into a final paleoclimate report.",
+        "inputs": [
+          {"name": "climate-reconstruction", "desc": "Reconstructed climate with uncertainty envelope"},
+          {"name": "validation-results", "desc": "Transfer function validation statistics"},
+          {"name": "uncertainty-decomposition", "desc": "Sources and magnitudes of uncertainty"}
+        ],
+        "outputs": [
+          {"name": "paleoclimate-report", "desc": "Final report with reconstruction plot, validation summary, and interpretation"},
+          {"name": "reconstruction-data", "desc": "Tabulated reconstruction values with uncertainties for archival"}
+        ],
+        "process": [
+          "Plot the reconstruction time series with confidence bands and modern climate overlay",
+          "Summarize transfer function calibration and validation statistics",
+          "Interpret the reconstruction in the context of known climate events",
+          "Package the reconstruction data and transfer function for archival"
+        ],
+        "tags": ["science", "paleoclimate", "reporting"]
+      }
+    ]
+  },
+  {
+    "chain_name": "cell-viability-assay-analysis",
+    "description": "Analyze cell viability assay data from plate reader import through normalization, dose-response fitting, assay quality assessment, and compound comparison to a viability report.",
+    "domain": "science",
+    "tags": ["science", "cell-biology", "pharmacology", "process"],
+    "steps": [
+      {
+        "flow_name": "plate-reader-importer",
+        "description": "Import plate reader data and map well positions to experimental conditions.",
+        "inputs": [
+          {"name": "plate-reader-files", "desc": "Raw absorbance, fluorescence, or luminescence output from the plate reader"},
+          {"name": "plate-layout", "desc": "Well-to-condition mapping: compound, concentration, and control assignments"}
+        ],
+        "outputs": [
+          {"name": "mapped-readings", "desc": "Signal values linked to compound, concentration, and replicate identifiers"},
+          {"name": "control-wells", "desc": "Identified positive control (100% viable) and negative control (0% viable) wells"}
+        ],
+        "process": [
+          "Parse plate reader output and extract signal values indexed by well position",
+          "Map each well to its experimental condition using the plate layout",
+          "Identify and separate control wells (positive, negative, blank)",
+          "Flag any wells with anomalous readings (air bubbles, edge effects)"
+        ],
+        "tags": ["science", "cell-biology", "import"]
+      },
+      {
+        "flow_name": "viability-normalizer",
+        "description": "Subtract blank, normalize signal to controls, and compute percent viability.",
+        "inputs": [
+          {"name": "mapped-readings", "desc": "Signal values per well with condition labels"},
+          {"name": "control-wells", "desc": "Positive and negative control signal values"}
+        ],
+        "outputs": [
+          {"name": "percent-viability", "desc": "Viability as percentage of positive control per well"},
+          {"name": "replicate-statistics", "desc": "Mean, standard deviation, and CV per concentration per compound"}
+        ],
+        "process": [
+          "Subtract the mean blank (negative control) signal from all wells",
+          "Normalize each treated well to the mean positive control: viability = (treated - neg) / (pos - neg) x 100",
+          "Average replicates and compute standard deviation and coefficient of variation",
+          "Flag any concentration points with CV above 20% for review"
+        ],
+        "tags": ["science", "cell-biology", "normalization"]
+      },
+      {
+        "flow_name": "dose-response-fitter",
+        "description": "Fit dose-response curves and extract IC50 or EC50 values.",
+        "inputs": [
+          {"name": "percent-viability", "desc": "Mean percent viability at each concentration"},
+          {"name": "concentration-series", "desc": "Compound concentrations in molar units"}
+        ],
+        "outputs": [
+          {"name": "dose-response-fit", "desc": "Fitted four-parameter logistic curve with IC50, Hill slope, top, and bottom"},
+          {"name": "fit-quality", "desc": "R-squared, confidence intervals on IC50, and residual plot"}
+        ],
+        "process": [
+          "Plot percent viability vs log concentration for each compound",
+          "Fit a four-parameter logistic (Hill) model to each compound's data",
+          "Extract IC50 (or EC50) with 95% confidence interval from the fit",
+          "Report Hill slope, top plateau, bottom plateau, and goodness of fit"
+        ],
+        "tags": ["science", "pharmacology", "fitting"]
+      },
+      {
+        "flow_name": "assay-quality-assessor",
+        "description": "Assess assay quality using the Z-factor and control signal window.",
+        "inputs": [
+          {"name": "control-wells", "desc": "Positive and negative control signal values"},
+          {"name": "replicate-statistics", "desc": "Within-plate variability metrics"}
+        ],
+        "outputs": [
+          {"name": "z-factor", "desc": "Z-factor score per plate indicating assay quality"},
+          {"name": "quality-classification", "desc": "Pass (Z > 0.5), marginal (0 < Z < 0.5), or fail (Z < 0) per plate"}
+        ],
+        "process": [
+          "Compute Z-factor from positive and negative control means and standard deviations",
+          "Classify each plate as excellent (Z > 0.5), acceptable (Z > 0), or failed",
+          "Check signal-to-background ratio and signal-to-noise ratio",
+          "Flag any plates that should be repeated due to poor assay performance"
+        ],
+        "tags": ["science", "cell-biology", "quality"]
+      },
+      {
+        "flow_name": "compound-comparator",
+        "description": "Compare potency and efficacy across compounds or conditions.",
+        "inputs": [
+          {"name": "dose-response-fit", "desc": "Fitted parameters (IC50, Hill slope, plateaus) per compound"},
+          {"name": "percent-viability", "desc": "Normalized viability data for all compounds"}
+        ],
+        "outputs": [
+          {"name": "potency-ranking", "desc": "Compounds ranked by IC50 with confidence intervals"},
+          {"name": "selectivity-index", "desc": "Ratio of IC50 values between cell types if tested on multiple lines"}
+        ],
+        "process": [
+          "Rank compounds by IC50 from most to least potent",
+          "Compute selectivity indices if data from multiple cell lines is available",
+          "Overlay dose-response curves on a single plot for visual comparison",
+          "Identify the lead compound(s) based on potency, efficacy, and selectivity criteria"
+        ],
+        "tags": ["science", "pharmacology", "comparison"]
+      },
+      {
+        "flow_name": "viability-report-generator",
+        "description": "Compile all viability assay results into a structured pharmacology report.",
+        "inputs": [
+          {"name": "potency-ranking", "desc": "Compound ranking with IC50 values"},
+          {"name": "z-factor", "desc": "Assay quality scores"},
+          {"name": "dose-response-fit", "desc": "Fitted curves and parameters"}
+        ],
+        "outputs": [
+          {"name": "viability-report", "desc": "Final report with dose-response curves, potency table, and quality assessment"},
+          {"name": "data-tables", "desc": "All raw and normalized data with fit parameters for archival"}
+        ],
+        "process": [
+          "Assemble dose-response curve overlays and the potency ranking table",
+          "Include assay quality metrics and any plate exclusions with justification",
+          "Write the results interpretation identifying lead compounds and next steps",
+          "Package all raw plate data, normalized values, and fit parameters"
+        ],
+        "tags": ["science", "pharmacology", "reporting"]
+      }
+    ]
+  },
+  {
+    "chain_name": "rock-mechanics-testing",
+    "description": "Analyze rock mechanics test data from stress-strain import through strength determination, failure envelope construction, and rock mass classification to a geomechanics report.",
+    "domain": "science",
+    "tags": ["science", "geomechanics", "geoscience", "process"],
+    "steps": [
+      {
+        "flow_name": "rock-stress-strain-importer",
+        "description": "Import stress-strain data from uniaxial and triaxial compression tests on rock specimens.",
+        "inputs": [
+          {"name": "test-data-files", "desc": "Load frame output: axial load, axial displacement, confining pressure, and lateral strain"},
+          {"name": "specimen-log", "desc": "Specimen dimensions, lithology, depth, and test conditions"}
+        ],
+        "outputs": [
+          {"name": "stress-strain-data", "desc": "Axial stress vs axial strain and lateral strain for each specimen at each confining pressure"},
+          {"name": "specimen-metadata", "desc": "Specimen identity, dimensions, lithology, and test temperature"}
+        ],
+        "process": [
+          "Parse load frame output and convert force and displacement to stress and strain",
+          "Apply area correction for barreling in unconfined tests if specimen aspect ratio is non-standard",
+          "Organize data by specimen and confining pressure level",
+          "Check for seating artifacts at low loads and trim if necessary"
+        ],
+        "tags": ["science", "geomechanics", "import"]
+      },
+      {
+        "flow_name": "ucs-modulus-calculator",
+        "description": "Determine uniaxial compressive strength, Young's modulus, and Poisson's ratio from unconfined tests.",
+        "inputs": [
+          {"name": "stress-strain-data", "desc": "Axial stress vs axial and lateral strain at zero confining pressure"},
+          {"name": "specimen-metadata", "desc": "Specimen dimensions for correction"}
+        ],
+        "outputs": [
+          {"name": "ucs-values", "desc": "Uniaxial compressive strength per specimen"},
+          {"name": "elastic-properties", "desc": "Young's modulus and Poisson's ratio per specimen with method (tangent, secant, or average)"}
+        ],
+        "process": [
+          "Identify peak axial stress as the uniaxial compressive strength (UCS)",
+          "Compute tangent Young's modulus at 50% of UCS from the axial stress-strain curve",
+          "Compute Poisson's ratio from the ratio of lateral to axial strain at the same stress level",
+          "Report mean and range across specimens"
+        ],
+        "tags": ["science", "geomechanics", "strength"]
+      },
+      {
+        "flow_name": "mohr-coulomb-constructor",
+        "description": "Construct the Mohr-Coulomb failure envelope from triaxial test results at multiple confining pressures.",
+        "inputs": [
+          {"name": "stress-strain-data", "desc": "Peak stress at each confining pressure"},
+          {"name": "ucs-values", "desc": "Unconfined compressive strength as the zero-confinement data point"}
+        ],
+        "outputs": [
+          {"name": "mohr-circles", "desc": "Mohr circle diagram with failure envelope"},
+          {"name": "failure-envelope-fit", "desc": "Linear Mohr-Coulomb fit: cohesion (c) and friction angle (phi)"}
+        ],
+        "process": [
+          "Plot Mohr circles for each test at its sigma-1 (peak axial stress) and sigma-3 (confining pressure)",
+          "Fit a linear failure envelope tangent to the circles",
+          "Extract cohesion (c) and internal friction angle (phi) from the envelope slope and intercept",
+          "Assess the quality of the linear fit and note if curvature suggests Hoek-Brown is more appropriate"
+        ],
+        "tags": ["science", "geomechanics", "failure"]
+      },
+      {
+        "flow_name": "cohesion-friction-computer",
+        "description": "Compute Mohr-Coulomb and Hoek-Brown strength parameters with statistical confidence.",
+        "inputs": [
+          {"name": "failure-envelope-fit", "desc": "Preliminary cohesion and friction angle from Mohr-Coulomb"},
+          {"name": "mohr-circles", "desc": "All test data points for regression"}
+        ],
+        "outputs": [
+          {"name": "strength-parameters", "desc": "Cohesion, friction angle, and Hoek-Brown constants (mi, sigci) with confidence intervals"},
+          {"name": "parameter-comparison", "desc": "Mohr-Coulomb vs Hoek-Brown fit quality comparison"}
+        ],
+        "process": [
+          "Perform least-squares regression on sigma-1 vs sigma-3 data for the linear Mohr-Coulomb fit",
+          "Fit the Hoek-Brown criterion to the same data and extract mi and sigci",
+          "Compare R-squared and residuals for both failure criteria",
+          "Report parameters with 95% confidence intervals from the regression"
+        ],
+        "tags": ["science", "geomechanics", "parameters"]
+      },
+      {
+        "flow_name": "rock-mass-classifier",
+        "description": "Classify the rock mass using standard systems (RMR, Q-system, GSI) from lab and field data.",
+        "inputs": [
+          {"name": "ucs-values", "desc": "Lab UCS and elastic property values"},
+          {"name": "field-observations", "desc": "Joint spacing, condition, groundwater, RQD, and discontinuity data"}
+        ],
+        "outputs": [
+          {"name": "rmr-rating", "desc": "Rock Mass Rating (RMR) score and class"},
+          {"name": "q-value", "desc": "NGI Q-system value and support recommendation"}
+        ],
+        "process": [
+          "Score each RMR parameter: UCS, RQD, joint spacing, joint condition, groundwater, and orientation adjustment",
+          "Sum for total RMR and classify (I through V)",
+          "Compute Q from RQD, Jn, Jr, Ja, Jw, and SRF parameters",
+          "Compare classifications and note any disagreements"
+        ],
+        "tags": ["science", "geomechanics", "classification"]
+      },
+      {
+        "flow_name": "geomechanics-report-generator",
+        "description": "Compile all rock mechanics results into a geomechanics investigation report.",
+        "inputs": [
+          {"name": "strength-parameters", "desc": "Mohr-Coulomb and Hoek-Brown parameters with confidence intervals"},
+          {"name": "rmr-rating", "desc": "Rock mass classification scores"},
+          {"name": "elastic-properties", "desc": "Young's modulus and Poisson's ratio"}
+        ],
+        "outputs": [
+          {"name": "geomechanics-report", "desc": "Final report with Mohr diagrams, strength parameters, and rock mass classification"},
+          {"name": "test-data-archive", "desc": "All stress-strain curves and computed parameters for archival"}
+        ],
+        "process": [
+          "Assemble Mohr circle diagrams with fitted failure envelopes",
+          "Tabulate all strength and elastic parameters with specimen details",
+          "Present rock mass classification results with design implications",
+          "Package all raw test data and computed values"
+        ],
+        "tags": ["science", "geomechanics", "reporting"]
+      }
+    ]
+  },
+  {
+    "chain_name": "receptor-binding-analysis",
+    "description": "Analyze receptor-ligand binding data from raw binding curves through model fitting, Kd and Bmax extraction, competition analysis, and cooperativity testing to a binding report.",
+    "domain": "science",
+    "tags": ["science", "pharmacology", "biochemistry", "process"],
+    "steps": [
+      {
+        "flow_name": "binding-curve-importer",
+        "description": "Import raw radioligand or fluorescent ligand binding data and organize by experiment type.",
+        "inputs": [
+          {"name": "binding-data-files", "desc": "Raw counts (CPM, DPM) or fluorescence values at each ligand concentration"},
+          {"name": "experiment-design", "desc": "Saturation or competition format, nonspecific binding definition, replicate structure"}
+        ],
+        "outputs": [
+          {"name": "specific-binding", "desc": "Total minus nonspecific binding at each concentration"},
+          {"name": "experiment-metadata", "desc": "Ligand identity, receptor source, temperature, and incubation time"}
+        ],
+        "process": [
+          "Parse raw data files and organize by ligand concentration and replicate",
+          "Subtract nonspecific binding (defined by excess cold ligand) from total to get specific binding",
+          "Average replicates and compute standard error",
+          "Check that the highest concentration approaches saturation for saturation experiments"
+        ],
+        "tags": ["science", "pharmacology", "import"]
+      },
+      {
+        "flow_name": "binding-model-fitter",
+        "description": "Fit saturation binding data to one-site, two-site, or Hill models.",
+        "inputs": [
+          {"name": "specific-binding", "desc": "Specific binding vs free ligand concentration"},
+          {"name": "model-candidates", "desc": "Models to test: one-site, two-site, Hill equation"}
+        ],
+        "outputs": [
+          {"name": "fit-results", "desc": "Fitted parameters (Kd, Bmax, Hill coefficient) for each model with standard errors"},
+          {"name": "model-selection", "desc": "Best model by F-test or AIC comparing one-site vs two-site vs Hill"}
+        ],
+        "process": [
+          "Fit the one-site saturation model (B = Bmax * [L] / (Kd + [L])) by nonlinear regression",
+          "Fit the two-site model and the Hill equation as alternatives",
+          "Compare models using the extra sum-of-squares F-test or Akaike information criterion",
+          "Select the simplest model that adequately describes the data"
+        ],
+        "tags": ["science", "pharmacology", "fitting"]
+      },
+      {
+        "flow_name": "kd-bmax-extractor",
+        "description": "Extract equilibrium dissociation constant (Kd) and maximum binding capacity (Bmax) from the best-fit model.",
+        "inputs": [
+          {"name": "fit-results", "desc": "Best model parameters with standard errors"},
+          {"name": "experiment-metadata", "desc": "Protein concentration for Bmax per mg calculation"}
+        ],
+        "outputs": [
+          {"name": "kd-values", "desc": "Kd with 95% confidence interval in appropriate units (nM, uM)"},
+          {"name": "bmax-values", "desc": "Bmax total and per mg protein with confidence intervals"}
+        ],
+        "process": [
+          "Report Kd from the best-fit model with 95% confidence intervals",
+          "Convert Bmax from binding units to fmol/mg or pmol/mg protein using the protein concentration",
+          "Verify that Kd falls within the range testable by the ligand concentrations used",
+          "Compare Kd to published values for the same receptor-ligand pair if available"
+        ],
+        "tags": ["science", "pharmacology", "quantification"]
+      },
+      {
+        "flow_name": "competition-assay-analyzer",
+        "description": "Analyze competition binding data to determine IC50 and compute Ki using the Cheng-Prusoff equation.",
+        "inputs": [
+          {"name": "competition-data", "desc": "Specific binding of radiolabeled ligand vs concentration of competing compound"},
+          {"name": "kd-values", "desc": "Kd of the radiolabeled ligand from saturation analysis"}
+        ],
+        "outputs": [
+          {"name": "ic50-values", "desc": "IC50 for each competing compound with confidence interval"},
+          {"name": "ki-values", "desc": "Ki computed from IC50 using the Cheng-Prusoff equation"}
+        ],
+        "process": [
+          "Fit competition curves to the one-site competition model",
+          "Extract IC50 from each fitted curve with confidence intervals",
+          "Compute Ki = IC50 / (1 + [L]/Kd) using the Cheng-Prusoff equation",
+          "Rank competing compounds by Ki from highest to lowest affinity"
+        ],
+        "tags": ["science", "pharmacology", "competition"]
+      },
+      {
+        "flow_name": "cooperativity-tester",
+        "description": "Test for cooperative binding by analyzing Hill coefficient and Scatchard plot linearity.",
+        "inputs": [
+          {"name": "specific-binding", "desc": "Saturation binding data"},
+          {"name": "fit-results", "desc": "Hill equation fit parameters including Hill coefficient"}
+        ],
+        "outputs": [
+          {"name": "cooperativity-assessment", "desc": "Hill coefficient interpretation: positive cooperativity (nH > 1), negative (nH < 1), or none (nH = 1)"},
+          {"name": "scatchard-plot", "desc": "Scatchard transformation (B/F vs B) showing linearity or curvature"}
+        ],
+        "process": [
+          "Examine the Hill coefficient from the Hill equation fit and its confidence interval",
+          "Determine if nH significantly differs from 1 (indicating cooperativity or multiple sites)",
+          "Construct the Scatchard plot and assess linearity (linear = one site, curved = complex binding)",
+          "Report whether binding is simple, cooperative, or involves heterogeneous sites"
+        ],
+        "tags": ["science", "pharmacology", "cooperativity"]
+      },
+      {
+        "flow_name": "binding-report-generator",
+        "description": "Compile all binding analysis results into a final receptor pharmacology report.",
+        "inputs": [
+          {"name": "kd-values", "desc": "Equilibrium binding parameters"},
+          {"name": "ki-values", "desc": "Competition assay results"},
+          {"name": "cooperativity-assessment", "desc": "Cooperativity and binding mechanism conclusions"}
+        ],
+        "outputs": [
+          {"name": "binding-report", "desc": "Final report with saturation curves, Scatchard plots, competition curves, and parameter tables"},
+          {"name": "pharmacology-data", "desc": "All raw and fitted data for archival"}
+        ],
+        "process": [
+          "Assemble saturation binding curves, Scatchard plots, and competition curves",
+          "Build the parameter summary table (Kd, Bmax, Ki, Hill coefficient) with confidence intervals",
+          "Write the interpretation of binding mechanism and receptor pharmacology",
+          "Package all raw binding data and fitted parameters for archival"
+        ],
+        "tags": ["science", "pharmacology", "reporting"]
+      }
+    ]
+  }
+]

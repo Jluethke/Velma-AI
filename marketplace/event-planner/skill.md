@@ -41,16 +41,19 @@
 - `debrief_report` (object): Post-event analysis with fields: feedback_summary (satisfaction_score_avg, response_rate_percent, key_themes), team_notes (what_went_well, challenges, improvements), vendor_ratings (array with {vendor_name, rating_1_to_5, notes}), budget_reconciliation (final_cost, variance_from_budget_percent), attendance_actual_vs_forecast, lessons_learned (array), recommendations_for_next_event (array)
 
 ---
+- `budget_breakdown`: (from manifest)
+- `vendor_plan`: (from manifest)
+- `day_of_timeline`: (from manifest)
 
 ## Execution Phases
 
 ### PHASE 0: PRE-PLANNING ALIGNMENT (NEW)
 
-**Entry Criteria:**
+### Entry Criteria
 - Event type, target date, and budget ceiling are provided
 - At least one key stakeholder is identified
 
-**Actions:**
+### Actions
 1. Schedule 30-minute stakeholder alignment meeting with decision-makers
 2. Confirm event type, date flexibility, and budget realism: Is the budget sufficient for the scope? Are dates flexible if needed?
 3. Clarify decision-making authority: Who approves budget changes? Who selects venue? Who is final decision-maker?
@@ -58,38 +61,42 @@
 5. Establish communication plan: How will stakeholders, vendors, and team stay informed? (email, Slack, weekly calls, etc.)
 6. Create a risk register: List potential issues (venue unavailability, vendor cancellation, budget overrun, low RSVP rate) with mitigation strategies and owners
 
-**Output:** Stakeholder alignment document with decision-making authority, communication plan, and risk register
+### Output
+Stakeholder alignment document with decision-making authority, communication plan, and risk register
 
-**Quality Gate:** All decision-makers have confirmed their approval authority. Communication plan specifies frequency and channels. Risk register has at least 5 identified risks with owners and mitigation strategies.
+### Quality Gate
+All decision-makers have confirmed their approval authority. Communication plan specifies frequency and channels. Risk register has at least 5 identified risks with owners and mitigation strategies.
 
 ---
 
 ### PHASE 1: DEFINE EVENT SCOPE
 
-**Entry Criteria:**
+### Entry Criteria
 - Stakeholder alignment is complete
 - Event type, target date, guest count, and budget ceiling are confirmed
 
-**Actions:**
+### Actions
 1. Synthesize event brief: document event type, date, location preference, guest count, budget, and key constraints
 2. Define success criteria: What does "successful" look like? Use SMART criteria (Specific, Measurable, Achievable, Relevant, Time-bound). Examples: "On-time start (within 5 minutes)", "Guest satisfaction ≥4/5 average", "On-budget (within ±5%)", "Attendance within ±10% of forecast"
 3. Identify hard constraints: Is date fixed or flexible? Is location fixed or flexible? Is budget immovable?
 4. Map stakeholder roles: Who approves budget? Who makes venue decision? Who is point-of-contact for vendors? Who is day-of event lead?
 5. Document assumptions: What are we assuming about guest count, budget, date, or scope? Flag assumptions that need validation
 
-**Output:** Event brief document (one page) with objectives, constraints, success criteria (SMART), stakeholder map, and assumptions
+### Output
+Event brief document (one page) with objectives, constraints, success criteria (SMART), stakeholder map, and assumptions
 
-**Quality Gate:** Brief is one page or less. Every constraint is explicitly stated (fixed or flexible). Success criteria are SMART and measurable. Stakeholder roles are assigned and confirmed. Assumptions are documented.
+### Quality Gate
+Brief is one page or less. Every constraint is explicitly stated (fixed or flexible). Success criteria are SMART and measurable. Stakeholder roles are assigned and confirmed. Assumptions are documented.
 
 ---
 
 ### PHASE 2: BUILD GUEST LIST AND MANAGE INVITATIONS
 
-**Entry Criteria:**
+### Entry Criteria
 - Event brief is finalized
 - Stakeholders have provided initial invitee list
 
-**Actions:**
+### Actions
 1. Compile master guest list from stakeholder input: name, email, phone, relationship to event, category (VIP, speaker, attendee, vendor, staff)
 2. Set up RSVP tracking system (Eventbrite, Google Forms, Airtable, or spreadsheet) with fields: name, email, RSVP status, dietary restrictions, accessibility needs, plus-ones
 3. Create and send invitation (email or formal invite) with RSVP deadline (typically 2-3 weeks before event) and clear instructions for dietary/accessibility needs
@@ -99,21 +106,23 @@
 7. Finalize headcount 2 weeks before event; confirm final count with all vendors (catering, AV, rentals)
 8. Create final guest list with dietary restrictions and accessibility needs clearly flagged
 
-**Output:** Master guest list (array) with RSVP status, dietary restrictions, accessibility needs, plus-one count, final headcount, and RSVP response rate
+### Output
+Master guest list (array) with RSVP status, dietary restrictions, accessibility needs, plus-one count, final headcount, and RSVP response rate
 
-**Quality Gate:** RSVP response rate is ≥70% by 2 weeks before event (or ≥80% if event is internal/corporate). All dietary and accessibility needs are documented. Final headcount is locked 2 weeks prior and confirmed with vendors. No guest has missing contact information.
+### Quality Gate
+RSVP response rate is ≥70% by 2 weeks before event (or ≥80% if event is internal/corporate). All dietary and accessibility needs are documented. Final headcount is locked 2 weeks prior and confirmed with vendors. No guest has missing contact information.
 
 ---
 
 ### PHASE 3: SELECT AND SECURE VENUE
 
-**Entry Criteria:**
+### Entry Criteria
 - Event brief is finalized
 - Guest count is estimated (within ±10%)
 - Budget ceiling is confirmed
 - Accessibility requirements are documented
 
-**Actions:**
+### Actions
 1. Define venue criteria: capacity (guest count + 10% buffer), layout (theater, classroom, cocktail, banquet, etc.), required amenities (AV, catering kitchen, parking, restrooms, WiFi), accessibility features (wheelchair access, accessible restrooms, accessible parking, elevators), cost per person or flat rate, location preference
 2. Research venues: use online platforms (Eventbrite, The Knot, local CVBs, Google Maps) and direct outreach. Aim for 5-8 initial options
 3. Evaluate shortlist: visit or video tour top 3-5 venues. Score each on: capacity (meets headcount + 10%), cost (within budget), amenities (all required features present), availability (date available), accessibility (meets requirements), logistics (parking, load-in, setup time)
@@ -122,20 +131,22 @@
 6. Secure venue: sign contract, confirm date and time, document cancellation policy (what happens if we cancel? what if venue cancels?), get floor plan and setup timeline, confirm emergency procedures
 7. Confirm accessibility: walk through venue with accessibility checklist; confirm ADA compliance; document any accommodations needed
 
-**Output:** Venue shortlist (3-5 options with scores 0-100) and final venue selection (object with contract, floor plan, logistics, emergency contacts)
+### Output
+Venue shortlist (3-5 options with scores 0-100) and final venue selection (object with contract, floor plan, logistics, emergency contacts)
 
-**Quality Gate:** Selected venue has capacity for final headcount + 10%. Cost per person is within budget (≤budget_ceiling / headcount). Contract is signed and includes cancellation policy. Floor plan and setup timeline are documented. Accessibility features are confirmed to meet requirements. Venue has provided emergency contact and emergency procedures.
+### Quality Gate
+Selected venue has capacity for final headcount + 10%. Cost per person is within budget (≤budget_ceiling / headcount). Contract is signed and includes cancellation policy. Floor plan and setup timeline are documented. Accessibility features are confirmed to meet requirements. Venue has provided emergency contact and emergency procedures.
 
 ---
 
 ### PHASE 4: COORDINATE VENDORS
 
-**Entry Criteria:**
+### Entry Criteria
 - Venue is secured
 - Final guest count is known (or estimated within ±5%)
 - Budget allocation per vendor category is defined
 
-**Actions:**
+### Actions
 1. Identify vendor categories needed: catering (food/beverage), AV (sound, projection, lighting), photography/video, florist, entertainment, transportation, rentals (tables, chairs, linens), signage, etc. Prioritize by criticality (catering and AV are critical)
 2. For each category, research 3-5 vendors. Request proposals with: scope of work, cost, availability on event date, setup/breakdown time, cancellation policy, references
 3. Evaluate vendors: score on quality (references, portfolio), cost (within budget allocation), responsiveness (reply time, communication), flexibility (can they accommodate last-minute changes?)
@@ -145,20 +156,22 @@
 7. Create vendor coordination spreadsheet: vendor name, category, contact person, phone, email, arrival time, setup time, breakdown time, cost, key deliverables, backup vendor contact
 8. Schedule pre-event calls (1 week before) with each vendor to confirm details, address questions, and review contingency procedures
 
-**Output:** Vendor list (array) with quotes, contracts, contact info, backup vendors, and coordination schedule
+### Output
+Vendor list (array) with quotes, contracts, contact info, backup vendors, and coordination schedule
 
-**Quality Gate:** All critical vendors are booked (catering, AV, photography). Contracts are signed and include scope of work and cancellation policy. Backup vendors are identified for critical categories. Vendor arrival times are staggered to avoid conflicts (minimum 30 minutes between arrivals). Total vendor cost is within budget. All vendors have confirmed final headcount and setup requirements.
+### Quality Gate
+All critical vendors are booked (catering, AV, photography). Contracts are signed and include scope of work and cancellation policy. Backup vendors are identified for critical categories. Vendor arrival times are staggered to avoid conflicts (minimum 30 minutes between arrivals). Total vendor cost is within budget. All vendors have confirmed final headcount and setup requirements.
 
 ---
 
 ### PHASE 5: CREATE TIMELINE AND CRITICAL PATH
 
-**Entry Criteria:**
+### Entry Criteria
 - Venue is secured
 - All vendors are booked
 - Event date is fixed
 
-**Actions:**
+### Actions
 1. Map vendor lead times: when must catering final count be confirmed? When must AV be tested? When must signage be printed? (Use reference section for typical lead times)
 2. Identify key milestones: invitations sent (date), RSVP deadline (date), final headcount (date), vendor confirmations (date), setup day (date), event day (date), breakdown (date)
 3. Work backward from event date to create critical path: which tasks have zero slack? Which can slip by a few days? Document dependencies (e.g., "final headcount must be confirmed before catering final count")
@@ -167,20 +180,22 @@
 6. Build in buffer time: add 1-2 days before event for final checks and contingency. Add 1 day after event for vendor breakdown and initial feedback
 7. Share timeline with stakeholders and vendors; confirm all dates are achievable
 
-**Output:** Event timeline (object) with milestones (array), critical path (array), decision points (array), and buffer days
+### Output
+Event timeline (object) with milestones (array), critical path (array), decision points (array), and buffer days
 
-**Quality Gate:** Timeline is realistic and accounts for vendor lead times. Critical path is identified and documented. All tasks have owners and due dates. Timeline is shared with stakeholders and vendors, and all confirm achievability. Buffer time is built in before and after event.
+### Quality Gate
+Timeline is realistic and accounts for vendor lead times. Critical path is identified and documented. All tasks have owners and due dates. Timeline is shared with stakeholders and vendors, and all confirm achievability. Buffer time is built in before and after event.
 
 ---
 
 ### PHASE 6: TRACK BUDGET AND MANAGE COSTS
 
-**Entry Criteria:**
+### Entry Criteria
 - All vendors are booked and quoted
 - Budget ceiling is confirmed
 - Contingency percentage is defined
 
-**Actions:**
+### Actions
 1. Create budget spreadsheet with line items: venue, catering, AV, photography, florist, rentals, signage, contingency, miscellaneous. Include budgeted amount for each (from vendor quotes)
 2. Calculate total budgeted cost; compare to budget ceiling. If over, adjust scope (reduce guest count, simplify catering, etc.) or negotiate with vendors
 3. Reserve contingency: set aside 10-15% of total budget as contingency reserve for unexpected costs. Track contingency spending separately
@@ -188,22 +203,24 @@
 5. Track remaining budget and contingency balance weekly. Update forecast if trends suggest final cost will exceed budget
 6. Final reconciliation (Phase 9): collect all invoices, confirm final costs, settle any outstanding payments, calculate final variance
 
-**Output:** Budget tracker (object) with line items (array), budgeted amounts, actual costs, variance percent, contingency remaining, and total variance
+### Output
+Budget tracker (object) with line items (array), budgeted amounts, actual costs, variance percent, contingency remaining, and total variance
 
-**Quality Gate:** Total budgeted cost is ≤ budget ceiling. Contingency is 10-15% of total. All invoices are logged within 2 days of receipt. Final cost is within ±5% of budget (or within contingency if overrun). Contingency spending is tracked separately.
+### Quality Gate
+Total budgeted cost is ≤ budget ceiling. Contingency is 10-15% of total. All invoices are logged within 2 days of receipt. Final cost is within ±5% of budget (or within contingency if overrun). Contingency spending is tracked separately.
 
 ---
 
 ### PHASE 7: CREATE DAY-OF RUNSHEET
 
-**Entry Criteria:**
+### Entry Criteria
 - Timeline is finalized
 - All vendors are confirmed
 - Final guest count is locked
 - Venue logistics are documented
 - Team roles are assigned
 
-**Actions:**
+### Actions
 1. Create minute-by-minute schedule: doors open (time), welcome remarks (time, speaker), agenda items (times), breaks (times), meals (times), entertainment (times), closing remarks (time), breakdown (time)
 2. For each time block, document: who is responsible (role), what is happening (activity), which vendors are involved, what could go wrong (risk), contingency response
 3. Create vendor arrival schedule: when does each vendor arrive? Where do they set up? Who is the point-of-contact? Confirm all vendors have confirmed arrival times
@@ -217,22 +234,24 @@
 8. Create one-page quick-reference runsheet for day-of team (summary of timeline, vendor contacts, emergency procedures, role assignments)
 9. Walk through event from guest perspective: arrival, check-in, navigation, restrooms, food service, exit. Identify friction points and fix before event day
 
-**Output:** Day-of runsheet (detailed document) with minute-by-minute schedule, vendor details, venue logistics, emergency contacts, contingency procedures (with specific triggers and responses), role assignments, and one-page quick-reference summary
+### Output
+Day-of runsheet (detailed document) with minute-by-minute schedule, vendor details, venue logistics, emergency contacts, contingency procedures (with specific triggers and responses), role assignments, and one-page quick-reference summary
 
-**Quality Gate:** Runsheet is detailed enough that a substitute could execute the event. All vendor arrival times are confirmed and staggered. Emergency contacts are current (verified within 1 week of event). Contingency procedures are specific (not vague) and include trigger conditions and response steps. Role assignments are clear and confirmed with team members. Guest experience checklist is completed and friction points are addressed.
+### Quality Gate
+Runsheet is detailed enough that a substitute could execute the event. All vendor arrival times are confirmed and staggered. Emergency contacts are current (verified within 1 week of event). Contingency procedures are specific (not vague) and include trigger conditions and response steps. Role assignments are clear and confirmed with team members. Guest experience checklist is completed and friction points are addressed.
 
 ---
 
 ### PHASE 8: BRIEF TEAM AND EXECUTE EVENT
 
-**Entry Criteria:**
+### Entry Criteria
 - Runsheet is finalized
 - All vendors are confirmed
 - Team members are assigned and briefed
 - Contingency procedures are documented
 - Backup vendors are on standby
 
-**Actions:**
+### Actions
 1. Schedule pre-event team briefing (1-2 days before event): review runsheet, clarify roles, walk through venue if possible, review contingency procedures, confirm emergency contacts
 2. Distribute runsheet, emergency contact list, and role assignments to all team members. Confirm receipt and understanding
 3. Confirm vendor arrival times and setup: send reminder emails 48 hours before event with arrival time, location, parking, and point-of-contact
@@ -242,20 +261,22 @@
 7. Manage vendor coordination: confirm vendors are on schedule, resolve any delays or issues, activate contingency procedures if needed
 8. Manage breakdown: coordinate vendor breakdown, collect feedback from team and guests (if time permits), ensure venue is left clean
 
-**Output:** Event executed on schedule. Team briefing notes. Vendor coordination log. Guest feedback (if collected). Incident log (any issues that occurred and how they were resolved).
+### Output
+Event executed on schedule. Team briefing notes. Vendor coordination log. Guest feedback (if collected). Incident log (any issues that occurred and how they were resolved).
 
-**Quality Gate:** Event starts within 5 minutes of scheduled time. All vendors are present and performing. No critical issues are unresolved. Guest satisfaction is measured (if survey conducted) and score is ≥4/5 average. Venue is left clean and breakdown is complete within scheduled time.
+### Quality Gate
+Event starts within 5 minutes of scheduled time. All vendors are present and performing. No critical issues are unresolved. Guest satisfaction is measured (if survey conducted) and score is ≥4/5 average. Venue is left clean and breakdown is complete within scheduled time.
 
 ---
 
 ### PHASE 9: POST-EVENT DEBRIEF AND CLOSEOUT
 
-**Entry Criteria:**
+### Entry Criteria
 - Event is complete
 - All vendors have been paid or invoiced
 - Photos/videos are collected
 
-**Actions:**
+### Actions
 1. Collect feedback: send post-event survey to attendees within 24 hours (higher response rate). Ask: overall satisfaction (1-5 scale), specific elements (food, AV, speakers, logistics), what went well, what to improve, additional comments
 2. Debrief with team: within 1 week, conduct debrief meeting. Ask: what went well? What was challenging? What would you do differently? What did we learn?
 3. Debrief with stakeholders: review event against success criteria. Did we meet objectives? Were we on-budget? Was attendance as forecast? What feedback did we receive?
@@ -266,11 +287,22 @@
 8. Thank you notes: send to vendors, speakers, volunteers, key stakeholders within 48 hours
 9. Error handling for Phase 9: If feedback is overwhelmingly negative (satisfaction <3/5 average), conduct root cause analysis and create action plan for next event. If budget variance >10%, analyze causes and identify cost-saving opportunities
 
-**Output:** Debrief report (object) with feedback summary (satisfaction score, response rate, key themes), team notes (what went well, challenges, improvements), vendor ratings (array), budget reconciliation (final cost, variance), attendance analysis (actual vs. forecast), lessons learned (array), and recommendations for next event (array)
+### Output
+Debrief report (object) with feedback summary (satisfaction score, response rate, key themes), team notes (what went well, challenges, improvements), vendor ratings (array), budget reconciliation (final cost, variance), attendance analysis (actual vs. forecast), lessons learned (array), and recommendations for next event (array)
 
-**Quality Gate:** Feedback is collected from ≥50% of attendees (or ≥70% if internal event). Satisfaction score is ≥4/5 average (or documented if lower with root cause analysis). Vendor performance is rated. Final budget is reconciled and variance is documented. Lessons learned are documented for next event. All artifacts are archived. Thank you notes are sent within 48 hours.
+### Quality Gate
+Feedback is collected from ≥50% of attendees (or ≥70% if internal event). Satisfaction score is ≥4/5 average (or documented if lower with root cause analysis). Vendor performance is rated. Final budget is reconciled and variance is documented. Lessons learned are documented for next event. All artifacts are archived. Thank you notes are sent within 48 hours.
 
 ---
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Plan and execute an event end-to-end: scope definition, guest management, venue , the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 

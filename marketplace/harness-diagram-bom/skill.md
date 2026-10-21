@@ -60,6 +60,15 @@
 
 ---
 
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Write the harness as WireViz YAML, render the wiring diagram, and emit a build-r, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
+
 ## Exit Criteria
 
 DONE when the YAML regenerates the diagram, the diagram matches the wiring table, and the BOM covers every part needed to build the harness.

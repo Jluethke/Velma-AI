@@ -33,7 +33,7 @@
    - `SAFE_STOPPED`: safe state or minimal risk condition reached; outputs held at the safe values.
 2. Define events from monitor outputs only:
    - `REGION_EXIT_PREDICTED` (recoverable region test fails)
-   - `PROPERTY_VIOLATED` (any `temporal_properties` robustness below zero)
+   - `PROPERTY_VIOLATED` (any `temporal_properties` reliableness below zero)
    - `INPUT_STALE` (staleness checker trip)
    - `MONITOR_FAULT` (monitor self-check fails, including its own watchdog)
    - `SAFE_REACHED` (safe state measured, for example zero speed measured from a sensor)

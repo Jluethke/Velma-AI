@@ -1,6 +1,6 @@
 # Chain Designer
 
-> **Starter Skill** — Free to use. Royalties to original creator on derivatives. Build on this.
+> **Starter Skill**  --  Free to use. Royalties to original creator on derivatives. Build on this.
 
 Takes a complex goal and a list of available skills, then designs an optimal chain (DAG pipeline) connecting them. Identifies which skills to chain, what order to run them, what data flows between steps, and where parallel execution is possible. Outputs a .chain.json definition ready to execute. The meta-skill for building new chains.
 
@@ -34,46 +34,50 @@ PHASE 5: EXPORT      --> Produce the .chain.json definition
 
 ### Phase 1: INTAKE -- Parse Goal and Inventory Skills
 
-**Entry criteria:** A goal and at least 3 available skills are provided.
+### Entry Criteria
+A goal and at least 3 available skills are provided.
 
-**Actions:**
-
+### Actions
 1. Decompose the goal into discrete requirements. A requirement is a specific thing that must be true or produced for the goal to be met. Example: "Launch a product" decomposes into: market research done, positioning defined, landing page built, pricing set, launch plan written.
 2. For each requirement, identify the type: research (needs information gathered), creation (needs artifact produced), analysis (needs evaluation performed), decision (needs choice made).
 3. Inventory each available skill: list its inputs (what it needs), outputs (what it produces), and domain (what it's for). Build a capability map.
 4. Identify data types in play: what kinds of data flow through this system? (e.g., "customer persona," "risk register," "content draft").
 
-**Output:** Requirements list with types, skill capability map, data type inventory.
+### Output
+Requirements list with types, skill capability map, data type inventory.
 
-**Quality gate:** Every requirement has a type. Every skill has inputs and outputs cataloged. At least one skill matches at least one requirement.
+### Quality Gate
+Every requirement has a type. Every skill has inputs and outputs cataloged. At least one skill matches at least one requirement.
 
 ---
 
 ### Phase 2: MAP -- Match Requirements to Skills
 
-**Entry criteria:** Requirements and skill capabilities are cataloged.
+### Entry Criteria
+Requirements and skill capabilities are cataloged.
 
-**Actions:**
-
+### Actions
 1. For each requirement, find skills whose outputs satisfy it. A skill satisfies a requirement if its output type matches what the requirement needs.
 2. For each match, assess fit: does the skill fully satisfy the requirement, or only partially? Partial matches need supplementation.
-3. Identify requirements with no matching skill. These are gaps — report them as missing_skills.
+3. Identify requirements with no matching skill. These are gaps  --  report them as missing_skills.
 4. Identify skills that satisfy multiple requirements (high-value nodes in the chain).
 5. Identify skills whose outputs serve as inputs to other skills (natural chain links).
 6. If existing_data is provided, mark any requirements already satisfied and skip the skills that would produce that data.
 
-**Output:** Requirement-to-skill mapping, gap list, multi-use skill identification.
+### Output
+Requirement-to-skill mapping, gap list, multi-use skill identification.
 
-**Quality gate:** Every requirement is either mapped to a skill, partially mapped with gap noted, or flagged as unmet. No requirement is silently ignored.
+### Quality Gate
+Every requirement is either mapped to a skill, partially mapped with gap noted, or flagged as unmet. No requirement is silently ignored.
 
 ---
 
 ### Phase 3: CONNECT -- Design the Data Flow Graph
 
-**Entry criteria:** Requirement-to-skill mapping is complete.
+### Entry Criteria
+Requirement-to-skill mapping is complete.
 
-**Actions:**
-
+### Actions
 1. Build the DAG: each skill is a node. Draw an edge from skill A to skill B when A's output is B's input. Label each edge with the data type flowing through it.
 2. Identify the entry nodes: skills that require only the initial inputs (goal description, existing data) and no output from other skills.
 3. Identify the terminal nodes: skills whose outputs are final deliverables, not consumed by other skills.
@@ -81,18 +85,20 @@ PHASE 5: EXPORT      --> Produce the .chain.json definition
 5. Validate the graph: no cycles (it must be a DAG). Every node is reachable from an entry node. Every terminal node produces a goal requirement.
 6. Handle partial matches from Phase 2: insert transform steps or manual review gates where skill outputs need adaptation before feeding the next skill.
 
-**Output:** DAG definition with nodes, edges, data mappings, and transform steps.
+### Output
+DAG definition with nodes, edges, data mappings, and transform steps.
 
-**Quality gate:** The graph is acyclic. Every non-entry node has at least one incoming edge. Every non-terminal node has at least one outgoing edge. All data mappings specify field-level connections.
+### Quality Gate
+The graph is acyclic. Every non-entry node has at least one incoming edge. Every non-terminal node has at least one outgoing edge. All data mappings specify field-level connections.
 
 ---
 
 ### Phase 4: OPTIMIZE -- Parallelize and Simplify
 
-**Entry criteria:** DAG is valid and complete.
+### Entry Criteria
+DAG is valid and complete.
 
-**Actions:**
-
+### Actions
 1. Identify parallel groups: skills with no dependency between them that can run simultaneously. Group them into parallel execution layers.
 2. Calculate the critical path: the longest chain of sequential dependencies. This determines minimum execution time.
 3. Check for redundancy: are any two skills producing the same output? If so, keep the one with fewer dependencies and remove the other.
@@ -100,18 +106,20 @@ PHASE 5: EXPORT      --> Produce the .chain.json definition
 5. Estimate cost: sum the credit cost of all skills in the chain. Note which skills are the most expensive.
 6. Draw the execution plan: layer-by-layer diagram showing what runs in parallel and what runs sequentially, with estimated time per layer.
 
-**Output:** Optimized DAG, parallel groups, critical path, cost estimate, execution diagram.
+### Output
+Optimized DAG, parallel groups, critical path, cost estimate, execution diagram.
 
-**Quality gate:** No constraint is violated. Parallel groups contain only independent skills. Critical path is correctly identified (longest sequential chain).
+### Quality Gate
+No constraint is violated. Parallel groups contain only independent skills. Critical path is correctly identified (longest sequential chain).
 
 ---
 
 ### Phase 5: EXPORT -- Produce .chain.json
 
-**Entry criteria:** Optimized DAG passes all checks.
+### Entry Criteria
+Optimized DAG passes all checks.
 
-**Actions:**
-
+### Actions
 1. Generate the .chain.json with this structure:
    - `name`: chain name derived from the goal
    - `description`: one-line summary of what the chain achieves
@@ -125,11 +133,22 @@ PHASE 5: EXPORT      --> Produce the .chain.json definition
 2. Generate the human-readable execution plan as a companion document.
 3. List missing skills with descriptions of what they would need to do, so the user can find or build them.
 
-**Output:** .chain.json definition, execution plan document, missing skills list.
+### Output
+.chain.json definition, execution plan document, missing skills list.
 
-**Quality gate:** .chain.json references only skills from the available_skills input. Every step has valid input/output mappings. The chain achieves the stated goal (all non-gap requirements are covered).
+### Quality Gate
+.chain.json references only skills from the available_skills input. Every step has valid input/output mappings. The chain achieves the stated goal (all non-gap requirements are covered).
 
 ---
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Design an optimal chain (DAG pipeline) connecting available skills to achieve a , the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 
@@ -159,10 +178,10 @@ The skill is DONE when:
 ### DAG Validity Rules
 
 A valid chain graph must satisfy all of the following:
-1. **No cycles** — every path through the graph has a definite end; no skill can depend on its own output (directly or transitively)
-2. **Reachable nodes** — every skill is reachable from at least one entry node
-3. **Productive terminal nodes** — every terminal (no outgoing edges) produces at least one goal requirement
-4. **Complete data mappings** — every edge specifies which output field from the source skill maps to which input field of the target skill
+1. **No cycles**  --  every path through the graph has a definite end; no skill can depend on its own output (directly or transitively)
+2. **Reachable nodes**  --  every skill is reachable from at least one entry node
+3. **Productive terminal nodes**  --  every terminal (no outgoing edges) produces at least one goal requirement
+4. **Complete data mappings**  --  every edge specifies which output field from the source skill maps to which input field of the target skill
 
 ### Parallelism Decision Rule
 

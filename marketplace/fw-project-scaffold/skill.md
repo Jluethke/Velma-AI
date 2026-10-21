@@ -80,6 +80,15 @@ Final `firmware_source`.
 
 ---
 
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Create a firmware project with one generated board definition from the pin map, , the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
+
 ## Exit Criteria
 
 DONE when the project builds, pin assignments live in one generated file, logic compiles on the host, the watchdog is on, and firmware authority over critical circuits is limited to status and stop requests.

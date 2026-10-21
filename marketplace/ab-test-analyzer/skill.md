@@ -1,6 +1,6 @@
 # A/B Test Analyzer
 
-**One-line description:** Performs comprehensive statistical analysis on A/B test results, including significance testing, confidence intervals, practical significance assessment, power analysis, and actionable recommendations.
+**One-line description:** Performs full statistical analysis on A/B test results, including significance testing, confidence intervals, practical significance assessment, power analysis, and actionable recommendations.
 
 **Execution Pattern:** Phase Pipeline
 
@@ -16,7 +16,7 @@
 - `minimum_detectable_effect`: number (optional) -- Smallest effect size considered practically significant (e.g., 0.05 for 5% improvement). If not provided, practical significance defaults to statistical significance.
 - `test_type`: string (optional, default "auto") -- Type of statistical test: "t-test", "chi-square", "mann-whitney", or "auto" (inferred from data).
 - `business_context`: object (optional) -- Business impact parameters: `implementation_cost` (string: "low", "medium", "high"), `cost_of_false_positive` (string: "low", "medium", "high"), `cost_of_false_negative` (string: "low", "medium", "high"). Used to adjust decision thresholds.
-- `enable_sensitivity_analysis`: boolean (optional, default false) -- If true, re-run analysis with outliers removed and alternative test types to assess robustness.
+- `enable_sensitivity_analysis`: boolean (optional, default false) -- If true, re-run analysis with outliers removed and alternative test types to assess reliableness.
 - `enable_power_analysis`: boolean (optional, default true) -- If true, calculate post-hoc statistical power and recommend sample size if power < 0.80.
 
 ---
@@ -33,7 +33,7 @@
   - `confidence_intervals`: object with `control_ci`, `treatment_ci`, `effect_size_ci` (each with `lower`, `upper`, `confidence_level`)
   - `practical_significance`: object with `is_practically_significant` (boolean), `mde_threshold`, `justification`
   - `power_analysis`: object (if enabled) with `post_hoc_power`, `recommended_sample_size`, `power_interpretation`
-  - `sensitivity_analysis`: object (if enabled) with `outliers_removed_result`, `alternative_test_result`, `robustness_assessment`
+  - `sensitivity_analysis`: object (if enabled) with `outliers_removed_result`, `alternative_test_result`, `reliableness_assessment`
   - `recommendation`: string -- One of: "implement", "reject", "continue_testing", "inconclusive"
   - `recommendation_rationale`: string -- Explanation of the decision
   - `decision_threshold_applied`: string -- Describes which thresholds were used (e.g., "alpha=0.05, MDE=0.05, high implementation cost applied alpha=0.01")
@@ -46,11 +46,11 @@
 
 ### Phase 0: Pre-Flight Assumption Validation (NEW)
 
-**Entry Criteria:**
+### Entry Criteria
 - Inputs are provided
 - User has confirmed this is a randomized A/B test (not observational data)
 
-**Actions:**
+### Actions
 1. Validate that control and treatment groups are independent (no overlap in subjects).
 2. Confirm that assignment to groups was random or quasi-random (not self-selected).
 3. Verify that metric is well-defined and consistently measured across both groups.
@@ -58,12 +58,12 @@
 5. Confirm that control and treatment groups are comparable on known confounders (if user provides demographic data, check balance).
 6. Document any assumption violations as caveats.
 
-**Output:**
+### Output
 - `assumptions_validated`: boolean
 - `assumption_violations`: array of strings
 - `proceed_with_analysis`: boolean (false if critical violations detected)
 
-**Quality Gate:**
+### Quality Gate
 - All assumptions are explicitly checked
 - If any critical violation is detected (e.g., non-random assignment), analysis is flagged for manual review
 - Violations are documented in final caveats
@@ -72,12 +72,12 @@
 
 ### Phase 1: Data Validation and Descriptive Statistics
 
-**Entry Criteria:**
+### Entry Criteria
 - `control_data` and `treatment_data` are provided as arrays of numbers
 - Both arrays contain at least 2 values (minimum for statistical testing)
 - Assumption validation has completed (Phase 0)
 
-**Actions:**
+### Actions
 1. Check for missing or invalid values (NaN, null, non-numeric). Flag and document any removed records.
 2. Calculate descriptive statistics for control group: mean, standard deviation, sample size, min, max, median, IQR.
 3. Calculate descriptive statistics for treatment group: mean, standard deviation, sample size, min, max, median, IQR.
@@ -85,14 +85,14 @@
 5. Assess data distribution shape: test for normality using Shapiro-Wilk test (if n<50) or Kolmogorov-Smirnov test (if n≥50). Report normality p-value.
 6. Check for skewness and kurtosis. Flag if |skewness| > 1 or kurtosis > 3 (indicates non-normal distribution).
 
-**Output:**
+### Output
 - `control_stats`: object with mean, std_dev, sample_size, min, max, median, iqr, outlier_count, outlier_values
 - `treatment_stats`: object with mean, std_dev, sample_size, min, max, median, iqr, outlier_count, outlier_values
 - `normality_test`: object with `control_normality_p_value`, `treatment_normality_p_value`, `is_normal` (boolean)
 - `data_quality_notes`: array of strings documenting any issues found
 - `records_removed`: number
 
-**Quality Gate:**
+### Quality Gate
 - Both groups have valid sample sizes (n ≥ 2, ideally n ≥ 30 for t-test)
 - No more than 5% of records were removed as invalid
 - Data quality notes are explicit about outliers, normality violations, and skewness
@@ -102,12 +102,12 @@
 
 ### Phase 2: Statistical Significance Testing
 
-**Entry Criteria:**
+### Entry Criteria
 - Descriptive statistics are calculated
 - Data quality is acceptable (Phase 1 quality gate passed)
 - Normality assessment is complete
 
-**Actions:**
+### Actions
 1. Determine appropriate test type if `test_type` is "auto" using this decision tree:
    - If both n ≥ 30 AND normality p-value > 0.05 for both groups: use independent samples t-test (Welch's variant if variances differ by >2×)
    - If n < 30 OR normality p-value ≤ 0.05 for either group: use Mann-Whitney U test
@@ -119,7 +119,7 @@
 5. Calculate 95% confidence interval for the test statistic (if applicable).
 6. Document the test assumptions and whether they are met (e.g., equal variances for t-test, independence for all tests).
 
-**Output:**
+### Output
 - `test_type`: string (the test performed)
 - `test_statistic`: number
 - `p_value`: number (to 4 decimals; report as "<0.0001" if p < 0.0001)
@@ -128,7 +128,7 @@
 - `assumption_notes`: string (specific violations if any)
 - `alpha_level_applied`: number
 
-**Quality Gate:**
+### Quality Gate
 - Test type is justified based on data characteristics and documented in assumption_notes
 - P-value is between 0 and 1 (or reported as <0.0001 or >0.9999)
 - Assumptions are explicitly documented with pass/fail status
@@ -138,12 +138,12 @@
 
 ### Phase 3: Confidence Interval Estimation
 
-**Entry Criteria:**
+### Entry Criteria
 - Descriptive statistics are calculated
 - Significance test is complete
 - Test assumptions are documented
 
-**Actions:**
+### Actions
 1. Calculate confidence interval for control group mean using the specified `confidence_level`:
    - For normal data or large samples (n ≥ 30): use t-distribution with df = n-1
    - For non-normal or small samples (n < 30): use bootstrap method (10,000 resamples) or non-parametric percentile method
@@ -153,13 +153,13 @@
 4. Interpret intervals: if effect size CI does not include zero, it is consistent with statistical significance at the same alpha level
 5. Calculate CI width as (upper - lower) and document as measure of precision
 
-**Output:**
+### Output
 - `control_ci`: object with `lower`, `upper`, `confidence_level`, `method` ("t-distribution" or "bootstrap")
 - `treatment_ci`: object with `lower`, `upper`, `confidence_level`, `method`
 - `effect_size_ci`: object with `lower`, `upper`, `confidence_level`, `method`
 - `ci_width`: number (effect_size_ci upper - lower, measure of precision)
 
-**Quality Gate:**
+### Quality Gate
 - All intervals are properly bounded (lower < upper)
 - Confidence level matches input specification
 - Effect size CI interpretation is consistent with significance test result (CI excludes zero iff p < alpha)
@@ -169,13 +169,13 @@
 
 ### Phase 4: Practical Significance Assessment
 
-**Entry Criteria:**
+### Entry Criteria
 - Effect size is calculated
 - Confidence intervals are established
 - `minimum_detectable_effect` is provided (or defaults to statistical significance)
 - Business context is available (optional)
 
-**Actions:**
+### Actions
 1. Calculate effect size as absolute difference: treatment_mean - control_mean
 2. Calculate effect size as percentage: (effect_size / control_mean) × 100 (handle division by zero if control_mean ≈ 0)
 3. Calculate Cohen's d (standardized effect size): effect_size / pooled_std_dev
@@ -194,7 +194,7 @@
    - Document adjusted thresholds in output
 7. Document business context impact if provided
 
-**Output:**
+### Output
 - `effect_size`: number (absolute)
 - `effect_size_percent`: number
 - `cohens_d`: number (standardized effect size)
@@ -205,7 +205,7 @@
 - `business_context_applied`: object with adjusted thresholds if provided
 - `justification`: string explaining the practical significance determination
 
-**Quality Gate:**
+### Quality Gate
 - Effect size is calculated correctly (verified by recalculating from means)
 - Practical significance determination is explicit and justified
 - If MDE is used, the lower bound of CI is compared to threshold (not just point estimate)
@@ -215,13 +215,13 @@
 
 ### Phase 5: Power Analysis (NEW)
 
-**Entry Criteria:**
+### Entry Criteria
 - Significance test is complete
 - Effect size is calculated
 - Sample sizes are known
 - `enable_power_analysis` is true (default)
 
-**Actions:**
+### Actions
 1. Calculate post-hoc statistical power given observed effect size, sample sizes, and alpha level
 2. Use appropriate power calculation method:
    - For t-test: use non-centrality parameter λ = effect_size × sqrt(n/2)
@@ -234,13 +234,13 @@
 4. If power < 0.80 and result is not significant, calculate recommended sample size to achieve 80% power
 5. Provide interpretation: "If the true effect size equals the observed effect size, repeating this study would detect it 80% of the time with n=X per group"
 
-**Output:**
+### Output
 - `post_hoc_power`: number (0-1)
 - `power_interpretation`: string ("adequate", "moderate", "low")
 - `recommended_sample_size`: number or null (if power < 0.80)
 - `power_rationale`: string (explanation of what power means for this result)
 
-**Quality Gate:**
+### Quality Gate
 - Power is calculated using appropriate method for test type
 - Power is between 0 and 1
 - If power < 0.80, recommended sample size is provided
@@ -250,42 +250,42 @@
 
 ### Phase 6: Sensitivity Analysis (NEW, OPTIONAL)
 
-**Entry Criteria:**
+### Entry Criteria
 - All previous phases are complete
 - `enable_sensitivity_analysis` is true
 
-**Actions:**
+### Actions
 1. Re-run Phase 1-5 analysis with outliers removed (using IQR method: remove values outside 1.5×IQR)
 2. Compare results: does removing outliers change the significance decision? By how much does effect size change?
 3. If original test violated normality assumption, re-run Phase 2 with alternative test type (e.g., if t-test was used, also run Mann-Whitney)
-4. Compare p-values and effect sizes across test types. If conclusions are consistent, robustness is high.
-5. Assess robustness: "Conclusions are robust if all sensitivity checks agree on significance decision"
+4. Compare p-values and effect sizes across test types. If conclusions are consistent, reliableness is high.
+5. Assess reliableness: "Conclusions are reliable if all sensitivity checks agree on significance decision"
 6. Document any sensitivity checks that change the conclusion (flag for manual review)
 
-**Output:**
+### Output
 - `outliers_removed_result`: object with `effect_size`, `p_value`, `is_significant`, `conclusion_changed` (boolean)
 - `alternative_test_result`: object with `test_type`, `p_value`, `is_significant`, `conclusion_changed` (boolean)
-- `robustness_assessment`: string ("high", "moderate", "low") based on agreement across sensitivity checks
+- `reliableness_assessment`: string ("high", "moderate", "low") based on agreement across sensitivity checks
 - `sensitivity_notes`: array of strings documenting any concerning findings
 
-**Quality Gate:**
+### Quality Gate
 - Sensitivity analysis is only run if enabled
 - Results are compared to original analysis
-- Robustness assessment is explicit
+- Reliableness assessment is explicit
 - Any conclusion changes are flagged
 
 ---
 
 ### Phase 7: Recommendation Generation
 
-**Entry Criteria:**
+### Entry Criteria
 - Statistical significance is determined
 - Practical significance is assessed
 - Confidence intervals are available
 - Power analysis is complete (if enabled)
 - Business context thresholds are applied (if provided)
 
-**Actions:**
+### Actions
 1. Apply decision logic using this priority order:
    - **Implement:** Statistical significance (p < alpha) AND practical significance (effect ≥ MDE or meets business threshold) AND power ≥ 0.60
    - **Reject:** Statistical significance (p < alpha) BUT NOT practical significance, OR effect is negative and significant, OR power < 0.60 and effect is small
@@ -299,14 +299,14 @@
 4. Generate rationale explaining the recommendation in 2-3 sentences.
 5. List caveats: sample size limitations, assumption violations, external validity concerns, sensitivity analysis findings.
 
-**Output:**
+### Output
 - `recommendation`: string (one of: "implement", "reject", "continue_testing", "inconclusive")
 - `recommendation_rationale`: string (2-3 sentences explaining the decision)
 - `decision_logic_applied`: string (describes which thresholds and criteria were used)
 - `caveats`: array of strings (specific limitations and assumptions)
 - `next_steps`: string (if continue_testing, suggest sample size increase; if inconclusive, suggest clarifying business threshold)
 
-**Quality Gate:**
+### Quality Gate
 - Recommendation is justified by statistical and practical significance results
 - Rationale is clear and actionable
 - Caveats are specific, not generic (e.g., "sample size n=50 is below recommended n=64 for medium effect size" not "small sample size")
@@ -316,11 +316,11 @@
 
 ### Phase 8: Report Compilation
 
-**Entry Criteria:**
+### Entry Criteria
 - All previous phases are complete
 - All outputs are available
 
-**Actions:**
+### Actions
 1. Assemble all results into the `analysis_report` object structure
 2. Verify all required fields are populated
 3. Add summary statistics section: control mean, treatment mean, effect size, p-value, recommendation, power (if available)
@@ -332,17 +332,26 @@
 6. If visualizations are requested, generate descriptions of plots (distribution overlay, effect size with CI, p-value interpretation)
 7. Add decision threshold documentation: which alpha, MDE, and business context adjustments were applied
 
-**Output:**
+### Output
 - `analysis_report`: complete object with all sections
 - `interpretation_guide`: object with plain-language explanations
 
-**Quality Gate:**
+### Quality Gate
 - All fields in analysis_report are populated
 - No contradictions between sections (e.g., significant p-value but inconclusive recommendation must be explained)
 - Report is self-contained and interpretable without external context
 - Interpretation guide uses non-technical language
 
 ---
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Perform full statistical analysis on A/B test results, including significance te, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 
@@ -353,7 +362,7 @@ The skill is complete when:
 4. Confidence intervals are calculated for control, treatment, and effect size with appropriate method
 5. Practical significance is assessed against MDE threshold or business context
 6. Post-hoc power analysis is performed (if enabled) with interpretation
-7. Sensitivity analysis is performed (if enabled) with robustness assessment
+7. Sensitivity analysis is performed (if enabled) with reliableness assessment
 8. A clear recommendation (implement/reject/continue/inconclusive) is provided with rationale and decision logic
 9. All results are compiled into a structured analysis_report object
 10. Caveats and limitations are explicitly documented with specific details
@@ -374,7 +383,7 @@ The skill is complete when:
 | Phase 3 | Confidence interval calculation fails (e.g., bootstrap fails to converge) | **Retry** -- Use alternative CI method (t-distribution if n≥30, percentile bootstrap with more resamples). Document method used. |
 | Phase 4 | MDE is larger than observed effect size range | **Adjust** -- Note that study is underpowered for the specified MDE. Calculate required sample size and recommend larger study. |
 | Phase 5 | Power calculation fails (e.g., effect size is zero) | **Adjust** -- Report power as undefined. Note that effect size is too small to estimate power. Recommend larger study or different metric. |
-| Phase 6 | Sensitivity analysis contradicts main result | **Adjust** -- Flag in robustness_assessment as "low". Highlight in caveats and recommendation_rationale. Recommend manual review before implementation. |
+| Phase 6 | Sensitivity analysis contradicts main result | **Adjust** -- Flag in reliableness_assessment as "low". Highlight in caveats and recommendation_rationale. Recommend manual review before implementation. |
 | Phase 7 | Recommendation conflicts with business context | **Adjust** -- Highlight the conflict in rationale. Recommend stakeholder review before implementation. Document which thresholds were applied. |
 | Phase 8 | Report exceeds 500 lines | **Adjust** -- Summarize detailed statistics in appendix. Keep main report to key findings, recommendation, and interpretation guide. |
 | ACT | User rejects the recommendation or disputes the statistical conclusions | **Adjust** -- Incorporate the user's specific objection (e.g., disagreement with MDE threshold, alpha level, or practical significance definition), update the relevant phase inputs, and regenerate the affected section; do not restart from Phase 0 unless the original data or test design was wrong |
@@ -454,3 +463,7 @@ Use a sample size calculator (e.g., G*Power) for specific scenarios. Always calc
 - **High cost of false positive (e.g., brand damage):** Require p < 0.01 and practical significance. Avoid implementing ineffective changes.
 - **High cost of false negative (e.g., missing revenue opportunity):** Lower threshold to p < 0.10. Accept higher risk of false positive to avoid missing true effects.
 - **Always balance Type I and Type II error costs:** Default alpha=0.05 assumes equal costs. Adjust based on business context.
+
+---
+
+Copyright 2024-present The Wayfinder Trust. All rights reserved.

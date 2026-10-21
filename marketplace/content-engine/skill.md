@@ -18,30 +18,37 @@ PHASE 5: DISTRIBUTE    --> Format final output, generate publishing schedule
 - **content_types**: list[string] -- Target platforms (youtube_shorts, linkedin_posts, twitter_threads, tiktok_hooks, instagram_captions)
 - **tone**: string (optional) -- Content tone: "professional", "casual", "urgent", "curious" (default: "professional")
 - **use_llm**: boolean (optional) -- Use LLM-powered repurposing (StreamShark) vs offline TF-IDF engine
+- `task_description`: (from manifest)
 
 ## Outputs
 
 - **repurposed_content**: dict[string, list[object]] -- Platform-keyed variations with text, char_count, compliant flag
 - **metadata**: object -- Source word count, key sentences extracted, clusters identified
 - **publishing_schedule**: object (optional) -- Optimized 30-day publishing cadence
+- `guidance`: (from manifest)
+- `code_patterns`: (from manifest)
 
 ## Execution
 
 ### Phase 1: INGEST -- Read Source Content
-**Entry criteria:** Source content provided with at least 5 sentences (minimum for reliable TF-IDF).
-**Actions:**
+### Entry Criteria
+Source content provided with at least 5 sentences (minimum for reliable TF-IDF).
+### Actions
 1. Read source content and compute basic statistics (word count, sentence count)
 2. Split on sentence boundaries: `re.split(r'[.!?]+', content)`
 3. Strip whitespace, remove empty strings
 4. Filter sentences < 10 characters (noise)
 5. Identify key themes from sentence content
 6. If StreamShark mode: extract full narration from VideoScript, truncate to 3000 chars (token budget)
-**Output:** Clean sentence list with statistics and theme identification.
-**Quality gate:** At least 5 valid sentences extracted. Sentences are clean (no empty strings, no sub-10-char noise). For StreamShark: narration within 3000 char budget.
+### Output
+Clean sentence list with statistics and theme identification.
+### Quality Gate
+At least 5 valid sentences extracted. Sentences are clean (no empty strings, no sub-10-char noise). For StreamShark: narration within 3000 char budget.
 
 ### Phase 2: ANALYZE -- TF-IDF Ranking & Clustering
-**Entry criteria:** Clean sentence list with 5+ sentences.
-**Actions:**
+### Entry Criteria
+Clean sentence list with 5+ sentences.
+### Actions
 1. **TF-IDF Ranking:**
    - Tokenize: lowercase, split on word boundaries, drop tokens < 3 chars
    - Document frequency: count how many sentences contain each term
@@ -55,12 +62,15 @@ PHASE 5: DISTRIBUTE    --> Format final output, generate publishing schedule
    - Subsequent sentences with >= 1 keyword overlap join that cluster
    - Result: `{cluster_id: [sentences]}`
 3. If StreamShark mode: use LLM for richer analysis instead of TF-IDF
-**Output:** Ranked sentence list (by TF-IDF score) and topic clusters.
-**Quality gate:** Sentences ranked with valid scores. Clusters formed with keyword overlap. With < 5 sentences, TF-IDF scores flagged as unreliable (IDF needs variation).
+### Output
+Ranked sentence list (by TF-IDF score) and topic clusters.
+### Quality Gate
+Sentences ranked with valid scores. Clusters formed with keyword overlap. With < 5 sentences, TF-IDF scores flagged as unreliable (IDF needs variation).
 
 ### Phase 3: GENERATE -- Create Platform Variations
-**Entry criteria:** Ranked sentences and topic clusters available.
-**Actions:**
+### Entry Criteria
+Ranked sentences and topic clusters available.
+### Actions
 1. For each target platform, pick top N sentences from ranked list (N = platform's max_sentences):
    | Platform | Max Chars | Max Sentences | Hook Required | Emoji Density |
    |---|---|---|---|---|
@@ -86,12 +96,15 @@ PHASE 5: DISTRIBUTE    --> Format final output, generate publishing schedule
    ```
 5. Reserve ~20 chars for template overhead (emojis, hashtags)
 6. If StreamShark LLM mode: generate richer formats (blog_post, twitter_thread, linkedin_article, email_newsletter, reddit_post) via LLM
-**Output:** 5 variations per platform per tone = up to 25 content pieces from 1 source.
-**Quality gate:** Each variation has text, char_count, and compliant flag. Truncation at word boundaries. Template overhead accounted for. Content multiplication formula applied: 1 source x 5 platforms x 5 variations = 25 pieces.
+### Output
+5 variations per platform per tone = up to 25 content pieces from 1 source.
+### Quality Gate
+Each variation has text, char_count, and compliant flag. Truncation at word boundaries. Template overhead accounted for. Content multiplication formula applied: 1 source x 5 platforms x 5 variations = 25 pieces.
 
 ### Phase 4: VALIDATE -- Check Platform Constraints
-**Entry criteria:** Variations generated for all target platforms.
-**Actions:**
+### Entry Criteria
+Variations generated for all target platforms.
+### Actions
 1. Check character limits per platform:
    - YouTube Shorts: <= 150 chars
    - LinkedIn Posts: <= 300 chars
@@ -106,12 +119,15 @@ PHASE 5: DISTRIBUTE    --> Format final output, generate publishing schedule
 5. Mark each variation with `compliant: True/False`
 6. For Reddit format: verify no clickbait, mention video only as supplement, end with question
 7. For StreamShark LLM output: validate JSON parsing (find first `{` to last `}`)
-**Output:** Validated variation list with compliance flags.
-**Quality gate:** All compliant variations actually fit within platform limits. Non-compliant variations are flagged (not silently included). Twitter emoji char counting applied.
+### Output
+Validated variation list with compliance flags.
+### Quality Gate
+All compliant variations actually fit within platform limits. Non-compliant variations are flagged (not silently included). Twitter emoji char counting applied.
 
 ### Phase 5: DISTRIBUTE -- Format & Schedule
-**Entry criteria:** Validated variations with compliance flags.
-**Actions:**
+### Entry Criteria
+Validated variations with compliance flags.
+### Actions
 1. Format final output per the contract:
    ```python
    {
@@ -133,8 +149,19 @@ PHASE 5: DISTRIBUTE    --> Format final output, generate publishing schedule
 5. If multi-platform distribution enabled:
    - Handle platform-specific requirements (shorts flag, etc.)
    - Return manifest with per-platform results
-**Output:** Final formatted output with compliant variations, metadata, and optional publishing schedule.
-**Quality gate:** Output matches the contract structure. Only compliant variations included in publishable set. Metadata accurately reflects processing stats.
+### Output
+Final formatted output with compliant variations, metadata, and optional publishing schedule.
+### Quality Gate
+Output matches the contract structure. Only compliant variations included in publishable set. Metadata accurately reflects processing stats.
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for TF-IDF content repurposing and StreamShark video pipeline for multi-platform con, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 
@@ -211,3 +238,7 @@ Research -> Script -> Produce -> Upload -> Track
 6. Offline engine includes non-compliant variations -- always check `compliant` flag
 7. Emojis are multi-byte: Twitter counts emojis as 2 chars
 8. Reddit format must avoid clickbait -- posts get removed by moderators
+
+---
+
+Copyright 2024-present The Wayfinder Trust. All rights reserved.

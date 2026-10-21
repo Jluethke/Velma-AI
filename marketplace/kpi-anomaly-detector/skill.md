@@ -33,9 +33,10 @@ ACT     --> Output alert report with root cause hypotheses, recommended investig
 
 ### OBSERVE: Ingest KPI Data
 
-**Entry criteria:** At least one KPI time series is provided with minimum 14 data points for statistical validity.
+### Entry Criteria
+At least one KPI time series is provided with minimum 14 data points for statistical validity.
 
-**Actions:**
+### Actions
 1. Parse each KPI time series: validate timestamps are ordered, check for missing values, identify frequency
 2. Compute descriptive statistics per KPI:
    - Mean, median, standard deviation, min, max
@@ -48,18 +49,20 @@ ACT     --> Output alert report with root cause hypotheses, recommended investig
 5. Identify the evaluation window: typically the most recent 1-3 data points against the historical baseline
 6. Check data quality: flag if >10% of values are missing, if timestamps have gaps, or if values contain obvious data errors (negative revenue, >100% rates)
 
-**Output:** Cleaned KPI data with descriptive statistics, loaded baselines, and data quality flags.
+### Output
+Cleaned KPI data with descriptive statistics, loaded baselines, and data quality flags.
 
-**Quality gate:** Every KPI has at least 14 valid data points. Data quality issues are flagged but do not block execution (anomalies in data quality are themselves worth reporting).
+### Quality Gate
+Every KPI has at least 14 valid data points. Data quality issues are flagged but do not block execution (anomalies in data quality are themselves worth reporting).
 
 ---
 
 ### REASON: Detect Anomalies
 
-**Entry criteria:** Clean KPI data and baselines are available.
+### Entry Criteria
+Clean KPI data and baselines are available.
 
-**Actions:**
-
+### Actions
 Run all five detection methods on each KPI. Each method votes independently.
 
 1. **Z-Score Detection:**
@@ -72,7 +75,7 @@ Run all five detection methods on each KPI. Each method votes independently.
    - Lower fence = Q1 - (multiplier * IQR)
    - Upper fence = Q3 + (multiplier * IQR)
    - Flag values outside fences
-   - More robust to outliers than z-score; preferred for heavy-tailed distributions
+   - More reliable to outliers than z-score; preferred for heavy-tailed distributions
 
 3. **Moving Average Deviation:**
    - Compute MA over configured window (default 7 periods)
@@ -94,18 +97,20 @@ Run all five detection methods on each KPI. Each method votes independently.
    - Distinguishes point anomalies from structural shifts
    - If CUSUM stays elevated for >5 consecutive periods: classify as regime change
 
-**Output:** Per data point: list of detection methods that fired, raw scores from each method, combined confidence score (percentage of methods that agree).
+### Output
+Per data point: list of detection methods that fired, raw scores from each method, combined confidence score (percentage of methods that agree).
 
-**Quality gate:** At least 2 detection methods must agree for an anomaly to be reported (consensus requirement). Single-method detections are logged but suppressed from alerts.
+### Quality Gate
+At least 2 detection methods must agree for an anomaly to be reported (consensus requirement). Single-method detections are logged but suppressed from alerts.
 
 ---
 
 ### PLAN: Classify and Prioritize
 
-**Entry criteria:** Detection results are available with consensus scores.
+### Entry Criteria
+Detection results are available with consensus scores.
 
-**Actions:**
-
+### Actions
 1. **Classify each anomaly by type:**
    - **Spike:** Single-period increase, z > 2, preceded and followed by normal values
    - **Dip:** Single-period decrease, z < -2, preceded and followed by normal values
@@ -135,18 +140,20 @@ Run all five detection methods on each KPI. Each method votes independently.
    - Sort by: severity (desc), business impact (revenue-affecting first), confidence (desc)
    - Group related anomalies (e.g., multiple KPIs affected simultaneously)
 
-**Output:** Classified, prioritized anomaly list with type, severity, confidence, root cause hypotheses, and suppression decisions.
+### Output
+Classified, prioritized anomaly list with type, severity, confidence, root cause hypotheses, and suppression decisions.
 
-**Quality gate:** Every reported anomaly has a type classification and at least one root cause hypothesis. Severity is justified by specific metric thresholds. False positive check is complete.
+### Quality Gate
+Every reported anomaly has a type classification and at least one root cause hypothesis. Severity is justified by specific metric thresholds. False positive check is complete.
 
 ---
 
 ### ACT: Generate Alert Report
 
-**Entry criteria:** Classified, prioritized anomaly list is ready.
+### Entry Criteria
+Classified, prioritized anomaly list is ready.
 
-**Actions:**
-
+### Actions
 1. **Format alert report per anomaly:**
    ```
    ANOMALY ALERT: [KPI Name]
@@ -179,9 +186,11 @@ Run all five detection methods on each KPI. Each method votes independently.
    - If true anomalies were missed (reported retroactively): decrease threshold by 0.25
    - Clamp thresholds between 1.5 and 4.0
 
-**Output:** Complete alert report, investigation plan, updated baselines, adjusted thresholds.
+### Output
+Complete alert report, investigation plan, updated baselines, adjusted thresholds.
 
-**Quality gate:** Every critical/high alert has at least 3 investigation steps. Alert format is complete (no missing fields). Baseline updates are logged with reasoning.
+### Quality Gate
+Every critical/high alert has at least 3 investigation steps. Alert format is complete (no missing fields). Baseline updates are logged with reasoning.
 
 ---
 
@@ -237,11 +246,11 @@ Standard Z-Score:
   Limitation: assumes normal distribution
   When to avoid: heavy tails, multimodal, small samples (<30)
 
-Modified Z-Score (Robust):
+Modified Z-Score (Reliable):
   M = 0.6745 * (x - median) / MAD
   where MAD = median(|x_i - median(x)|)
   
-  More robust to outliers. Use when:
+  More reliable to outliers. Use when:
     - Distribution is skewed (skewness > 1.0)
     - Existing outliers would inflate std
     - Sample size is small
@@ -262,7 +271,7 @@ Upper extreme = Q3 + 3.0 * IQR  (extreme outlier)
 
 Advantages:
   - No distribution assumption
-  - Robust to existing outliers
+  - Reliable to existing outliers
   - Simple to compute and explain
 
 Limitations:

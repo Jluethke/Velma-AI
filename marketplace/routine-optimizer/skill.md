@@ -31,12 +31,11 @@
 
 ### Phase 1: Parse and Clarify Routine
 
-**Entry Criteria:**
+### Entry Criteria
 - `routine_description` is provided and contains at least 5 distinct activities.
 - User constraints (if any) are clearly stated.
 
-**Actions:**
-
+### Actions
 1. Read the routine description end-to-end. Extract every activity mentioned (e.g., "wake up," "shower," "breakfast," "commute," "work," "dinner," "wind down," "sleep"). List activities in order of occurrence.
 2. For each activity, infer or ask for: start time (HH:MM format), end time (HH:MM format), duration in minutes, purpose (why the user does this activity), and any transitions or delays between activities.
 3. Identify implicit activities the user omitted (e.g., "I shower then breakfast" omits the decision of what to eat, the preparation time, the cleanup). Add these as sub-activities with estimated durations.
@@ -44,9 +43,10 @@
 5. Separate morning routine (wake to work/home start) and evening routine (work end to sleep). Identify the boundary times (e.g., morning ends at 7:30 AM when user leaves for work; evening starts at 6:00 PM when user finishes work).
 6. Flag any ambiguities or missing information for clarification (e.g., "You mentioned breakfast but not how long it takes. Is it 10 minutes or 30 minutes?").
 
-**Output:** `clarified_routine` object with morning and evening timelines, each activity with start/end/duration/purpose/transition notes.
+### Output
+`clarified_routine` object with morning and evening timelines, each activity with start/end/duration/purpose/transition notes.
 
-**Quality Gate:**
+### Quality Gate
 - Every activity has a defined start and end time in HH:MM format (or duration estimate if exact times unknown).
 - No activity is described as "handle it" or "do stuff." All are concrete and observable (e.g., "Shower" not "Get ready").
 - Total morning routine duration is 30-90 minutes. Total evening routine duration is 30-120 minutes. If outside these ranges, flag as unusual and ask for clarification.
@@ -56,11 +56,10 @@
 
 ### Phase 2: Assess Energy Impact
 
-**Entry Criteria:**
+### Entry Criteria
 - Clarified routine is complete with all activities and timings.
 
-**Actions:**
-
+### Actions
 1. For each activity in the routine, assess its energy impact using this framework:
    - **Energy Gain (+):** Activities that increase alertness, motivation, or well-being (e.g., exercise, cold shower, healthy breakfast, sunlight exposure, accomplishment, social connection).
    - **Neutral (0):** Activities that are necessary but neither drain nor gain energy (e.g., getting dressed, commuting, routine tasks, hygiene).
@@ -70,9 +69,10 @@
 4. Create an energy profile: timeline showing estimated cumulative energy level (1-10 scale) throughout the day based on activity sequence. Example: "6:00 AM: 3/10 (just woke) → 6:10 AM: 4/10 (cold shower) → 6:30 AM: 7/10 (breakfast + sunlight) → 7:00 AM: 6/10 (commute) → 7:30 AM: 5/10 (work email check)."
 5. Highlight activities that conflict with sleep quality (evening) or morning alertness (morning). Specifically flag: screens within 1 hour of bedtime, caffeine after 2 PM, intense exercise within 3 hours of bedtime, no morning sunlight exposure, no morning movement.
 
-**Output:** `energy_analysis` object with per-activity impact (+/0/−), reasoning, sequencing effects, energy profile timeline, and sleep-quality assessment.
+### Output
+`energy_analysis` object with per-activity impact (+/0/−), reasoning, sequencing effects, energy profile timeline, and sleep-quality assessment.
 
-**Quality Gate:**
+### Quality Gate
 - Every activity has an explicit energy classification (+, 0, or −). No activity is left unclassified.
 - Reasoning is specific to the user's context, not generic (e.g., "Cold shower before breakfast amplifies energy gain for this user because they report low morning energy" not "Cold showers are energizing").
 - At least 2 sequencing effects are identified (one for morning, one for evening).
@@ -83,25 +83,25 @@
 
 ### Phase 3: Identify Energy Leaks and Inefficiencies
 
-**Entry Criteria:**
+### Entry Criteria
 - Energy analysis is complete.
 
-**Actions:**
-
+### Actions
 1. Scan the energy profile for patterns and categorize leaks:
-   - **Leak Type A: Unnecessary Energy Drains** — Activities that drain energy but are not essential or could be deferred (e.g., checking email first thing, social media, decision fatigue from too many choices, news consumption).
-   - **Leak Type B: Sequencing Inefficiencies** — Activities in suboptimal order (e.g., exercise after breakfast instead of before; difficult decisions when energy is low; screens before bed instead of after dinner).
-   - **Leak Type C: Missing Energy Gains** — Obvious energy-gain activities absent from the routine (e.g., no sunlight exposure, no movement, no hydration, no social connection, no accomplishment/win).
-   - **Leak Type D: Transition Friction** — Unclear or rushed transitions between activities causing stress or decision fatigue (e.g., "I shower then breakfast but don't know what to eat, so I waste 10 minutes deciding").
-   - **Leak Type E: Sleep Sabotage** — Evening activities that undermine sleep quality (e.g., screens before bed, caffeine, stimulating content, no wind-down period).
+   - **Leak Type A: Unnecessary Energy Drains**  --  Activities that drain energy but are not essential or could be deferred (e.g., checking email first thing, social media, decision fatigue from too many choices, news consumption).
+   - **Leak Type B: Sequencing Inefficiencies**  --  Activities in suboptimal order (e.g., exercise after breakfast instead of before; difficult decisions when energy is low; screens before bed instead of after dinner).
+   - **Leak Type C: Missing Energy Gains**  --  Obvious energy-gain activities absent from the routine (e.g., no sunlight exposure, no movement, no hydration, no social connection, no accomplishment/win).
+   - **Leak Type D: Transition Friction**  --  Unclear or rushed transitions between activities causing stress or decision fatigue (e.g., "I shower then breakfast but don't know what to eat, so I waste 10 minutes deciding").
+   - **Leak Type E: Sleep Sabotage**  --  Evening activities that undermine sleep quality (e.g., screens before bed, caffeine, stimulating content, no wind-down period).
 2. For each leak, assess severity using this scale: **High** (significantly impacts energy/productivity, user reports frustration), **Medium** (noticeable impact, user mentions it), **Low** (minor impact, user may not notice).
 3. For each leak, assess addressability: **Micro-habit addressable** (fixable in 1-3 minutes, no structural change needed) or **Structural** (requires changing activity, timing, or constraint). Example: "Email overwhelm is micro-habit addressable (batch email to 2x/day) but 'must check email first thing' is structural if it's a work requirement."
 4. Rank leaks by impact × addressability: (High impact + Micro-habit addressable) > (High impact + Structural) > (Medium impact + Micro-habit addressable) > etc.
 5. For structural leaks, note whether they can be negotiated (see Phase 1.5 Constraint Negotiation) or must be accepted as constraints.
 
-**Output:** `identified_leaks` array with leak type, description, severity, addressability, rank, and negotiability note.
+### Output
+`identified_leaks` array with leak type, description, severity, addressability, rank, and negotiability note.
 
-**Quality Gate:**
+### Quality Gate
 - At least 3 leaks are identified. If fewer than 3, the routine is already optimized; note this and proceed to Phase 4 with focus on fine-tuning and resilience.
 - Each leak has a specific, observable manifestation (not vague). Example: "Email overwhelm: user checks email 15+ times per day, starting immediately after waking, causing decision fatigue" not "User is stressed about email."
 - Severity and addressability are justified with reference to the energy analysis and user's stated constraints.
@@ -111,11 +111,10 @@
 
 ### Phase 3.5: Constraint Negotiation (NEW)
 
-**Entry Criteria:**
+### Entry Criteria
 - Identified leaks include structural issues that conflict with user constraints.
 
-**Actions:**
-
+### Actions
 1. For each structural leak that conflicts with a user constraint, identify the constraint (e.g., "Must check email first thing for work").
 2. Propose mitigation strategies that honor the constraint while reducing the energy drain:
    - **Time-box the activity**: "Check email for 10 minutes only, then move to energy-gain activity."
@@ -126,9 +125,10 @@
 4. Ask user to choose: accept the constraint and use mitigation, or negotiate the constraint (e.g., "Can you check email at 8 AM instead of 6 AM?").
 5. Document the negotiated constraint and mitigation strategy in the routine design phases.
 
-**Output:** Negotiated constraints and mitigation strategies, integrated into Phase 5-6 routine design.
+### Output
+Negotiated constraints and mitigation strategies, integrated into Phase 5-6 routine design.
 
-**Quality Gate:**
+### Quality Gate
 - Every structural leak has a mitigation strategy proposed.
 - Mitigation strategies are specific and actionable (not "reduce the drain somehow").
 - User has explicitly chosen to accept constraint + mitigation, or negotiate constraint.
@@ -137,11 +137,10 @@
 
 ### Phase 4: Generate Micro-Habit Suggestions
 
-**Entry Criteria:**
+### Entry Criteria
 - Identified leaks are ranked and micro-habit-addressable leaks are flagged.
 
-**Actions:**
-
+### Actions
 1. For each micro-habit-addressable leak, brainstorm 2-3 micro-habits (1-3 min each) that target it. Micro-habits must meet these criteria:
    - **Atomic**: One small, concrete action (not a vague goal like "be healthier"). Example: "Drink 8 oz water" not "Stay hydrated."
    - **Triggerable**: Attached to an existing routine activity ("After I pour coffee, I drink a glass of water"). Trigger must be specific and already in the routine.
@@ -163,9 +162,10 @@
    - **Full set**: 8-12 micro-habits, mix of easy/medium/hard, targeting all addressable leaks, total time <10 min/day.
 5. For each set, provide a 4-week implementation plan: Week 1 (starter set), Week 2-3 (add 2-3 medium habits), Week 4+ (add remaining habits or structural changes).
 
-**Output:** `micro_habits_suggested` object with starter set, full set, implementation plan, and rationale for each habit.
+### Output
+`micro_habits_suggested` object with starter set, full set, implementation plan, and rationale for each habit.
 
-**Quality Gate:**
+### Quality Gate
 - Every micro-habit is 1-3 minutes and requires no special equipment.
 - Every micro-habit has a clear trigger attached to an existing routine activity (not "do this sometime during the day").
 - Starter set is achievable (3-5 habits, all "easy" difficulty, <3 min total, targeting top 3 leaks).
@@ -176,13 +176,12 @@
 
 ### Phase 5: Redesign Morning Routine
 
-**Entry Criteria:**
+### Entry Criteria
 - Micro-habits are prioritized.
 - User constraints and negotiated constraints are known.
 - Energy analysis is complete.
 
-**Actions:**
-
+### Actions
 1. Start with the user's current morning routine and constraints (e.g., must leave by 8:00 AM, must exercise, must eat breakfast, work start time 7:30 AM).
 2. Reorder activities to maximize energy gain:
    - Place high-energy activities (sunlight, movement, cold water, healthy nutrition) early, within 30 minutes of waking.
@@ -208,9 +207,10 @@
 6. Add rationale notes explaining the rationale for each change (e.g., "Cold shower before breakfast amplifies energy gain and improves alertness by 2-3 points. Moved from after breakfast to before to maximize effect.").
 7. Calculate total morning duration and verify it fits available time.
 
-**Output:** `optimized_morning_routine` object with timeline (time, activity, duration, micro-habits, rationale), total duration, and constraints_honored flag.
+### Output
+`optimized_morning_routine` object with timeline (time, activity, duration, micro-habits, rationale), total duration, and constraints_honored flag.
 
-**Quality Gate:**
+### Quality Gate
 - Routine fits within user's available time (morning duration ≤ available time before work/home start).
 - All user constraints are honored (work start time, family obligations, commute duration, etc.).
 - At least 2 energy-gain activities are present in the morning routine.
@@ -222,13 +222,12 @@
 
 ### Phase 6: Redesign Evening Routine
 
-**Entry Criteria:**
+### Entry Criteria
 - Micro-habits are prioritized.
 - User constraints and negotiated constraints are known.
 - Energy analysis includes sleep-quality assessment.
 
-**Actions:**
-
+### Actions
 1. Start with the user's current evening routine and constraints (e.g., family dinner at 6:30 PM, work until 6 PM, must be in bed by 11 PM, children's bedtime 8 PM).
 2. Reorder activities to support sleep quality:
    - Remove or defer energy-draining activities (work, stressful news, difficult decisions) to earlier in the evening (before 7 PM if possible).
@@ -255,9 +254,10 @@
 7. Identify wind-down start time (when screens go off and relaxation begins). This should be 30-60 min before target bedtime.
 8. Calculate total evening duration and verify it fits available time.
 
-**Output:** `optimized_evening_routine` object with timeline (time, activity, duration, micro-habits, rationale), total duration, wind-down start time, and constraints_honored flag.
+### Output
+`optimized_evening_routine` object with timeline (time, activity, duration, micro-habits, rationale), total duration, wind-down start time, and constraints_honored flag.
 
-**Quality Gate:**
+### Quality Gate
 - Routine fits within user's available time (evening duration ≤ available time from work end to bedtime).
 - All user constraints are honored (family dinner time, children's bedtime, work obligations, etc.).
 - Sleep saboteurs are identified and removed or deferred to earlier in evening (screens, caffeine, intense exercise).
@@ -270,12 +270,11 @@
 
 ### Phase 7: Compile Optimization Report
 
-**Entry Criteria:**
+### Entry Criteria
 - Optimized morning and evening routines are complete.
 - All analysis phases are finished.
 
-**Actions:**
-
+### Actions
 1. Create a before/after comparison:
    - **Before**: Current routine timeline (morning and evening), energy profile, identified leaks, sleep-quality issues.
    - **After**: Optimized routine timeline (morning and evening), projected energy profile, leaks addressed, sleep-quality improvements.
@@ -313,9 +312,10 @@
    - Tracking Template (daily checklist, energy log, weekly reflection, monthly review).
 7. Ensure report is <5 pages. If exceeds, move detailed micro-habit descriptions to appendix and focus report on key changes and implementation plan.
 
-**Output:** `optimization_report` string with complete analysis, recommendations, and implementation guide in markdown format.
+### Output
+`optimization_report` string with complete analysis, recommendations, and implementation guide in markdown format.
 
-**Quality Gate:**
+### Quality Gate
 - Report is actionable (reader can implement immediately without additional guidance).
 - Before/after comparison is clear and quantified (e.g., "3 energy drains removed, 2 energy gains added, average energy improved from 4/10 to 6.5/10").
 - Implementation plan is realistic (starter set is achievable in 1 week, full set over 4 weeks).
@@ -324,6 +324,15 @@
 - Report is ≤5 pages. If longer, move appendices and focus on key changes.
 
 ---
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Analyze a daily routine, identify energy leaks and inefficiencies, suggest targe, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 

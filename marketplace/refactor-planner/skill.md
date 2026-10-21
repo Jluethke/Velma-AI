@@ -34,10 +34,10 @@ PHASE 5: VERIFY    --> Regression checklist, behavioral equivalence verification
 
 ### Phase 1: ASSESS -- Identify Code Smells and Complexity
 
-**Entry criteria:** Source code is provided and readable. At least one file or module to analyze.
+### Entry Criteria
+Source code is provided and readable. At least one file or module to analyze.
 
-**Actions:**
-
+### Actions
 1. **Scan for code smells** (see Reference: Code Smell Taxonomy):
    - **Bloaters**: Long Method (>30 lines), Large Class (>300 lines), Long Parameter List (>4 params), Primitive Obsession, Data Clumps
    - **Object-Orientation Abusers**: Switch Statements (repeated), Refused Bequest, Alternative Classes with Different Interfaces, Temporary Field
@@ -66,18 +66,20 @@ PHASE 5: VERIFY    --> Regression checklist, behavioral equivalence verification
    - **Medium**: Code smells that slow development (duplicate code, feature envy)
    - **Low**: Style issues, minor naming problems, slightly long methods
 
-**Output:** Smell report: list of findings with category, severity, location (file, line, function/class), description, and impact on maintainability.
+### Output
+Smell report: list of findings with category, severity, location (file, line, function/class), description, and impact on maintainability.
 
-**Quality gate:** Every finding has a specific location (not "the code has some duplication"). Complexity metrics are computed for all functions with >10 lines. At least the top 5 most complex functions are identified.
+### Quality Gate
+Every finding has a specific location (not "the code has some duplication"). Complexity metrics are computed for all functions with >10 lines. At least the top 5 most complex functions are identified.
 
 ---
 
 ### Phase 2: PLAN -- Design Refactoring Strategy
 
-**Entry criteria:** Smell report is complete with prioritized findings.
+### Entry Criteria
+Smell report is complete with prioritized findings.
 
-**Actions:**
-
+### Actions
 1. **Group related smells into refactoring goals:**
    - Example: "Long Method + Duplicate Code in payment_service.py" = goal "Extract Payment Processing Pipeline"
    - Each goal should have a clear outcome: "After this refactoring, payment logic will be in 4 small functions instead of 1 large one"
@@ -105,18 +107,20 @@ PHASE 5: VERIFY    --> Regression checklist, behavioral equivalence verification
    - Qualitative: code is now testable in isolation, responsibilities are clear
    - Behavioral: all existing tests still pass, no change in API behavior
 
-**Output:** Refactoring plan: list of goals with approach, effort estimate, backward compatibility notes, and success criteria.
+### Output
+Refactoring plan: list of goals with approach, effort estimate, backward compatibility notes, and success criteria.
 
-**Quality gate:** Every goal addresses at least one finding from the smell report. No goal is estimated as XL without a justification for why it can't be split. Backward compatibility impact is assessed for every goal.
+### Quality Gate
+Every goal addresses at least one finding from the smell report. No goal is estimated as XL without a justification for why it can't be split. Backward compatibility impact is assessed for every goal.
 
 ---
 
 ### Phase 3: SEQUENCE -- Order Steps to Minimize Risk
 
-**Entry criteria:** Refactoring plan with goals is complete.
+### Entry Criteria
+Refactoring plan with goals is complete.
 
-**Actions:**
-
+### Actions
 1. **Identify dependencies between steps:**
    - Step B depends on Step A if: B modifies code that A also modifies, or B relies on structure that A creates
    - Create a directed acyclic graph of step dependencies
@@ -137,18 +141,20 @@ PHASE 5: VERIFY    --> Regression checklist, behavioral equivalence verification
 4. **Identify parallelizable steps:**
    - Steps that touch different files with no shared dependencies can be done in parallel (by different developers or in parallel branches)
 
-**Output:** Ordered step sequence with dependencies, verification points, rollback points, and parallelization opportunities.
+### Output
+Ordered step sequence with dependencies, verification points, rollback points, and parallelization opportunities.
 
-**Quality gate:** No step depends on a later step (DAG is valid). Every step that changes behavior has a "run tests" verification point. The first step is either "write tests" or "verify existing tests cover the target code."
+### Quality Gate
+No step depends on a later step (DAG is valid). Every step that changes behavior has a "run tests" verification point. The first step is either "write tests" or "verify existing tests cover the target code."
 
 ---
 
 ### Phase 4: EXECUTE -- Generate Instructions Per Step
 
-**Entry criteria:** Step sequence is defined and ordered.
+### Entry Criteria
+Step sequence is defined and ordered.
 
-**Actions:**
-
+### Actions
 1. **For each step, generate:**
 
    a. **What to do** (plain language):
@@ -202,18 +208,20 @@ PHASE 5: VERIFY    --> Regression checklist, behavioral equivalence verification
    - Each instruction references the specific named refactoring being applied
    - Include any mechanical steps that are easy to miss (update imports, adjust tests, rename references)
 
-**Output:** Per-step execution instructions with before/after examples, verification commands, rollback instructions, and commit messages.
+### Output
+Per-step execution instructions with before/after examples, verification commands, rollback instructions, and commit messages.
 
-**Quality gate:** Every step has a before/after code example. Every step has a verification command. Before/after examples are syntactically correct. No step skips the rollback instruction.
+### Quality Gate
+Every step has a before/after code example. Every step has a verification command. Before/after examples are syntactically correct. No step skips the rollback instruction.
 
 ---
 
 ### Phase 5: VERIFY -- Behavioral Equivalence
 
-**Entry criteria:** All execution instructions are generated.
+### Entry Criteria
+All execution instructions are generated.
 
-**Actions:**
-
+### Actions
 1. **Generate regression checklist:**
    - List every public-facing behavior that must be preserved
    - For each behavior: how to test it (automated test name, manual test steps, or API call)
@@ -239,11 +247,22 @@ PHASE 5: VERIFY    --> Regression checklist, behavioral equivalence verification
    - Compare code smell count before and after
    - Track technical debt reduction if `refactoring_history` is provided
 
-**Output:** Regression checklist, behavioral equivalence tests, smoke test sequence, rollback triggers, improvement metrics.
+### Output
+Regression checklist, behavioral equivalence tests, smoke test sequence, rollback triggers, improvement metrics.
 
-**Quality gate:** Every public behavior is listed in the regression checklist. At least one behavioral equivalence test exists per refactored function. Rollback triggers are specific and measurable.
+### Quality Gate
+Every public behavior is listed in the regression checklist. At least one behavioral equivalence test exists per refactored function. Rollback triggers are specific and measurable.
 
 ---
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Assess code for smells and complexity hotspots, design a safe incremental refact, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 

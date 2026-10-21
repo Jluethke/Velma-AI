@@ -75,6 +75,15 @@ Step entries.
 
 ---
 
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Guide a person through bring-up step by step, record each measurement against ex, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
+
 ## Exit Criteria
 
 DONE when every plan step has a recorded measured value and PASS, or the log stops at the first FAIL with the owning flow named.

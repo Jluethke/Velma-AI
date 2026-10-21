@@ -26,28 +26,37 @@
 
 ---
 
+## Outputs
+
+- (none defined)
+
+
+---
+- output: (auto-linked)
+
+- `output`: (auto-linked)
 ## Phases
 
-### Phase 1 — Cross-Audit Pattern Recognition
+### Phase 1  --  Cross-Audit Pattern Recognition
 Read all audit findings and identify themes that appear across multiple disciplines:
-- Issues flagged by 3+ audits are systemic — they indicate a deeper root cause
+- Issues flagged by 3+ audits are systemic  --  they indicate a deeper root cause
 - Issues flagged by only one audit but with critical severity still get full weight
-- Issues that conflict across audits (e.g., UX wants more copy, Content wants less) — note the tension and resolve it
+- Issues that conflict across audits (e.g., UX wants more copy, Content wants less)  --  note the tension and resolve it
 
-Deliverable: Pattern summary — "The same root cause (X) is showing up as Y in UX, Z in performance, and W in engineering."
+Deliverable: Pattern summary  --  "The same root cause (X) is showing up as Y in UX, Z in performance, and W in engineering."
 
-### Phase 2 — Impact × Effort Matrix
+### Phase 2  --  Impact × Effort Matrix
 Score every finding across all audits on two axes:
 - **Business impact** (1–5): How directly does fixing this advance the primary business goal?
 - **Implementation effort** (1–5): How much engineering/design/content time does this require?
 
 Plot into four quadrants:
-- **Q1 (High Impact, Low Effort) — Do immediately:** Quick wins. Highest ROI.
-- **Q2 (High Impact, High Effort) — Plan and execute:** Major initiatives, require sprint planning.
-- **Q3 (Low Impact, Low Effort) — Batch and ship:** Polish items. Do in downtime.
-- **Q4 (Low Impact, High Effort) — Deprioritize:** Defer unless requirements change.
+- **Q1 (High Impact, Low Effort)  --  Do immediately:** Quick wins. Highest ROI.
+- **Q2 (High Impact, High Effort)  --  Plan and execute:** Major initiatives, require sprint planning.
+- **Q3 (Low Impact, Low Effort)  --  Batch and ship:** Polish items. Do in downtime.
+- **Q4 (Low Impact, High Effort)  --  Deprioritize:** Defer unless requirements change.
 
-### Phase 3 — Department Roadmap
+### Phase 3  --  Department Roadmap
 For each professional role, produce a focused improvement list they can own:
 
 **Engineering Lead:**
@@ -74,19 +83,19 @@ Top 5 copy improvements with rewritten versions where applicable.
 **Analytics / Growth:**
 Top 3 CRO experiments with full test briefs.
 
-### Phase 4 — 30 / 60 / 90 Day Roadmap
+### Phase 4  --  30 / 60 / 90 Day Roadmap
 Organize the full improvement backlog into a realistic timeline:
 
-**30 Days — Foundation (no regressions, quick wins live):**
+**30 Days  --  Foundation (no regressions, quick wins live):**
 List of specific items, owner, and estimated hours each.
 
-**60 Days — Impact (major UX, content, and performance improvements):**
+**60 Days  --  Impact (major UX, content, and performance improvements):**
 List of specific items, owner, and estimated hours each.
 
-**90 Days — Growth (CRO experiments, content strategy, SEO gains):**
+**90 Days  --  Growth (CRO experiments, content strategy, SEO gains):**
 List of specific items, owner, and estimated hours each.
 
-### Phase 5 — Executive Summary
+### Phase 5  --  Executive Summary
 A 1-page summary suitable for stakeholders:
 
 - **Current state:** One paragraph honest assessment of where the site is today.
@@ -95,7 +104,7 @@ A 1-page summary suitable for stakeholders:
 - **Investment required:** Rough time estimate to implement the 30-day roadmap.
 - **What's already working:** 3–5 genuine strengths not to disrupt.
 
-### Phase 6 — Audit Score Card
+### Phase 6  --  Audit Score Card
 A department-by-department score (1–10) with one-line commentary:
 
 | Department | Score | One-line verdict |
@@ -109,3 +118,7 @@ A department-by-department score (1–10) with one-line commentary:
 | Content / Copy | X/10 | ... |
 | Analytics / CRO | X/10 | ... |
 | **Overall** | **X/10** | ... |
+
+---
+
+Copyright 2024-present The Wayfinder Trust. All rights reserved.

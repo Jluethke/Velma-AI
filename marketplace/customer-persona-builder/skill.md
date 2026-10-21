@@ -1,6 +1,6 @@
 # Customer Persona Builder
 
-> **Starter Skill** — Free to use. Royalties to original creator on derivatives. Build on this.
+> **Starter Skill**  --  Free to use. Royalties to original creator on derivatives. Build on this.
 
 Takes a business or product description and builds detailed customer personas. Covers demographics, psychographics, pain points, buying triggers, objections, preferred channels, and a "day in the life" narrative. Produces 2-4 distinct personas with scoring for which to target first. Building block for any marketing, sales, or product skill.
 
@@ -34,10 +34,10 @@ PHASE 4: SCORE      --> Rank personas by targeting priority
 
 ### Phase 1: DISCOVER -- Extract Value Propositions
 
-**Entry criteria:** Business description is provided.
+### Entry Criteria
+Business description is provided.
 
-**Actions:**
-
+### Actions
 1. Identify the core value proposition: what problem does this product solve? What outcome does the customer get?
 2. List all features and translate each into a benefit (feature: "real-time analytics"; benefit: "make decisions faster than competitors").
 3. Identify the urgency driver: why would someone buy this NOW vs. later?
@@ -45,37 +45,41 @@ PHASE 4: SCORE      --> Rank personas by targeting priority
 5. If competitors are provided, identify the differentiation angle: what does this product do that competitors do not?
 6. Categorize the product: is it a painkiller (solves acute problem), vitamin (nice to have), or candy (pure desire/status)?
 
-**Output:** Value proposition map with benefits, urgency drivers, switching costs, and differentiation.
+### Output
+Value proposition map with benefits, urgency drivers, switching costs, and differentiation.
 
-**Quality gate:** At least 3 distinct benefits identified. The product is categorized as painkiller/vitamin/candy. Urgency driver is specific, not "they need it."
+### Quality Gate
+At least 3 distinct benefits identified. The product is categorized as painkiller/vitamin/candy. Urgency driver is specific, not "they need it."
 
 ---
 
 ### Phase 2: SEGMENT -- Identify Customer Segments
 
-**Entry criteria:** Value proposition map is complete.
+### Entry Criteria
+Value proposition map is complete.
 
-**Actions:**
-
+### Actions
 1. Generate candidate segments by asking: who experiences the pain this product solves? List 5-8 candidate groups.
 2. For each candidate, assess: how severe is their pain (1-5)? How willing are they to pay (1-5)? How reachable are they (1-5)?
 3. Merge candidates that overlap significantly (similar demographics, same pain, same channel).
 4. Select the top 2-4 segments based on the combined score (pain + willingness + reachability).
-5. Give each segment a memorable name — a specific person archetype, not a demographic label. "Overwhelmed Agency Owner" not "SMB Marketing Professional."
+5. Give each segment a memorable name  --  a specific person archetype, not a demographic label. "Overwhelmed Agency Owner" not "SMB Marketing Professional."
 6. Validate differentiation: each segment must differ on at least 2 of these dimensions: pain severity, buying trigger, budget, decision process, preferred channel.
 
-**Output:** 2-4 named segments with pain/willingness/reachability scores and differentiation notes.
+### Output
+2-4 named segments with pain/willingness/reachability scores and differentiation notes.
 
-**Quality gate:** Each segment has a distinct name. Segments differ on at least 2 dimensions. No segment scores below 3 on pain.
+### Quality Gate
+Each segment has a distinct name. Segments differ on at least 2 dimensions. No segment scores below 3 on pain.
 
 ---
 
 ### Phase 3: BUILD -- Create Full Personas
 
-**Entry criteria:** Segments are selected and named.
+### Entry Criteria
+Segments are selected and named.
 
-**Actions:**
-
+### Actions
 1. For each segment, build the complete persona profile:
    - **Name and photo description**: a realistic first name and brief visual description to make the persona feel human.
    - **Demographics**: age range, location type (urban/suburban/rural), income range, education, job title, company size (if B2B).
@@ -89,20 +93,22 @@ PHASE 4: SCORE      --> Rank personas by targeting priority
    - **Success metric**: how does this person measure whether the product worked? What would make them renew/recommend?
 
 2. Write the "day in the life" narrative in present tense, second person ("You wake up at 6 AM..."). Make it vivid and specific.
-3. Ensure pain points connect directly to the value proposition from Phase 1 — the product must solve at least 2 of each persona's top 3 pains.
+3. Ensure pain points connect directly to the value proposition from Phase 1  --  the product must solve at least 2 of each persona's top 3 pains.
 
-**Output:** 2-4 complete persona profiles with all fields populated.
+### Output
+2-4 complete persona profiles with all fields populated.
 
-**Quality gate:** Every persona has all 10 sections filled. Pain points link to value propositions. Day-in-the-life mentions the product's problem area. Objections have counter-arguments.
+### Quality Gate
+Every persona has all 10 sections filled. Pain points link to value propositions. Day-in-the-life mentions the product's problem area. Objections have counter-arguments.
 
 ---
 
 ### Phase 4: SCORE -- Rank and Finalize
 
-**Entry criteria:** All personas are built.
+### Entry Criteria
+All personas are built.
 
-**Actions:**
-
+### Actions
 1. Score each persona on 5 dimensions (1-10 each):
    - **Pain severity**: how bad is the problem for them?
    - **Willingness to pay**: do they have budget and authority?
@@ -115,11 +121,22 @@ PHASE 4: SCORE      --> Rank personas by targeting priority
 4. For each persona, write the messaging hook: one sentence that would stop them mid-scroll. It must reference their specific pain and imply the product's outcome without naming the product.
 5. Produce the targeting recommendation: which persona to go after first and why, which to defer, which to test.
 
-**Output:** Targeting scorecard, anti-persona, messaging hooks, targeting recommendation.
+### Output
+Targeting scorecard, anti-persona, messaging hooks, targeting recommendation.
 
-**Quality gate:** Personas are ranked with specific scores, not just "high/medium/low." Anti-persona is defined with disqualifying criteria. Every messaging hook references a specific pain point.
+### Quality Gate
+Personas are ranked with specific scores, not just "high/medium/low." Anti-persona is defined with disqualifying criteria. Every messaging hook references a specific pain point.
 
 ---
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Build detailed customer personas with demographics, psychographics, pain points,, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 

@@ -5,35 +5,39 @@ Drafts professional, personal, or difficult emails based on the situation, relat
 ## Execution Pattern: ORPA Loop
 
 ## Inputs
-- situation: string -- What's happening and why you need to send this email (plain language)
-- recipient: object -- Who it's going to: relationship (boss, client, neighbor, customer service, family), name if known, formality level
-- goal: string -- What you want to happen after they read it (get a refund, schedule a meeting, express condolences, resolve a conflict)
-- tone: string -- (Optional) Desired tone: professional, friendly, firm, sympathetic, apologetic, assertive. Auto-detected from situation if not provided.
-- constraints: object -- (Optional) Length preference (short/medium/detailed), things to include or avoid, previous context
+- `situation`: string -- What's happening and why you need to send this email (plain language)
+- `recipient`: object -- Who it's going to: relationship (boss, client, neighbor, customer service, family), name if known, formality level
+- `goal`: string -- What you want to happen after they read it (get a refund, schedule a meeting, express condolences, resolve a conflict)
+- `tone`: string -- (Optional) Desired tone: professional, friendly, firm, sympathetic, apologetic, assertive. Auto-detected from situation if not provided.
+- `constraints`: object -- (Optional) Length preference (short/medium/detailed), things to include or avoid, previous context
 
 ## Outputs
-- email_draft: object -- Subject line + body, ready to copy-paste
-- tone_check: string -- Confirmation of detected tone and why it fits
-- alternatives: array -- 2 alternative versions if the situation is sensitive (e.g., a softer version and a firmer version)
-- follow_up_suggestion: string -- When and how to follow up if no response
+- `email_draft`: object -- Subject line + body, ready to copy-paste
+- `tone_check`: string -- Confirmation of detected tone and why it fits
+- `alternatives`: array -- 2 alternative versions if the situation is sensitive (e.g., a softer version and a firmer version)
+- `follow_up_suggestion`: string -- When and how to follow up if no response
 
 ## Execution
 
 ### OBSERVE: Understand the Situation
-**Entry criteria:** Situation description and recipient info provided.
-**Actions:**
+### Entry Criteria
+Situation description and recipient info provided.
+### Actions
 1. Classify the email type: request, complaint, apology, congratulations, condolences, follow-up, introduction, resignation, negotiation, thank-you, decline/rejection, informational.
 2. Assess relationship dynamics: power dynamic (writing up, down, or laterally), familiarity level, cultural context.
 3. Identify the core ask: what does the sender need the recipient to DO after reading this?
 4. Detect emotional stakes: is this high-emotion (complaint, resignation, condolence) or routine (meeting request, status update)?
 5. Check for landmines: legal implications (termination, harassment), relationship-ending potential, financial stakes.
 
-**Output:** Email classification, relationship assessment, core ask, emotional stakes, and risk flags.
-**Quality gate:** Core ask is identified. Tone is matched to situation. High-risk situations are flagged.
+### Output
+Email classification, relationship assessment, core ask, emotional stakes, and risk flags.
+### Quality Gate
+Core ask is identified. Tone is matched to situation. High-risk situations are flagged.
 
 ### REASON: Draft Strategy
-**Entry criteria:** Situation fully understood.
-**Actions:**
+### Entry Criteria
+Situation fully understood.
+### Actions
 1. Select structure based on email type:
    - **Request:** Context -> Ask -> Why it matters -> Easy next step
    - **Complaint:** Specific issue -> Impact on you -> What you want done -> Deadline
@@ -45,12 +49,15 @@ Drafts professional, personal, or difficult emails based on the situation, relat
 3. Choose opening line: never "I hope this email finds you well" for complaints. Never "Per my last email" ever.
 4. Choose closing: match formality (Best regards / Thanks / Cheers / Warmly / Respectfully).
 
-**Output:** Draft strategy with structure, length target, opening/closing, and key points to include.
-**Quality gate:** Structure matches email type. Tone is consistent throughout. No passive-aggressive language.
+### Output
+Draft strategy with structure, length target, opening/closing, and key points to include.
+### Quality Gate
+Structure matches email type. Tone is consistent throughout. No passive-aggressive language.
 
 ### PLAN: Write the Draft
-**Entry criteria:** Strategy defined.
-**Actions:**
+### Entry Criteria
+Strategy defined.
+### Actions
 1. Write subject line: specific and action-oriented. "Quick question about Thursday's meeting" not "Hello."
 2. Write opening: get to the point in the first sentence. State who you are if they might not know.
 3. Write body: follow the selected structure. One idea per paragraph. Short paragraphs (2-3 sentences max).
@@ -61,20 +68,34 @@ Drafts professional, personal, or difficult emails based on the situation, relat
    - Version C: more direct/assertive
 6. Review for common mistakes: too long, burying the ask, apologizing unnecessarily, passive voice, vague requests.
 
-**Output:** Complete email draft with subject line, body, and closing. Plus alternatives for sensitive situations.
-**Quality gate:** Subject line is specific. Ask is in the first 3 sentences. Total length appropriate. No jargon.
+### Output
+Complete email draft with subject line, body, and closing. Plus alternatives for sensitive situations.
+### Quality Gate
+Subject line is specific. Ask is in the first 3 sentences. Total length appropriate. No jargon.
 
 ### ACT: Deliver and Advise
-**Entry criteria:** Draft complete.
-**Actions:**
+### Entry Criteria
+Draft complete.
+### Actions
 1. Present the draft formatted for easy copy-paste.
 2. Explain the tone choice: "I used a firm but polite tone because you're a customer with leverage."
 3. Suggest timing: best day/time to send for maximum response rate (Tuesday-Thursday, 9-11 AM generally best).
 4. Suggest follow-up plan: "If no response in 3 business days, forward the original with a one-line 'Following up on this' note."
 5. Flag anything the sender should verify: names, dates, account numbers, amounts.
 
-**Output:** Final draft, tone explanation, send timing suggestion, follow-up plan.
-**Quality gate:** Draft is copy-paste ready. Follow-up plan is specific.
+### Output
+Final draft, tone explanation, send timing suggestion, follow-up plan.
+### Quality Gate
+Draft is copy-paste ready. Follow-up plan is specific.
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Drafts professional, personal, or difficult emails based on the situation, relat, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 Done when: (1) email draft has a subject line and body, (2) tone matches the situation, (3) the core ask is clear within the first 3 sentences, (4) alternatives provided for sensitive emails, (5) follow-up suggestion included.

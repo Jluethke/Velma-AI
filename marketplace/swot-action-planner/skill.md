@@ -33,10 +33,10 @@ ACT     --> Output: prioritized action plan with owners, timelines, success metr
 
 ### OBSERVE: Gather and Validate SWOT Inputs
 
-**Entry criteria:** SWOT inputs are provided with at least 2 items per category.
+### Entry Criteria
+SWOT inputs are provided with at least 2 items per category.
 
-**Actions:**
-
+### Actions
 1. **Validate SWOT quality:**
    ```
    Per item, check:
@@ -58,7 +58,7 @@ ACT     --> Output: prioritized action plan with owners, timelines, success metr
    - Multiple dimensions covered (product, team, market, finance, operations)
    
    Common biases to check:
-   - Strengths overweighted (optimism bias)
+   - Strengths overweighted (optimizm bias)
    - Threats underweighted (confirmation bias)
    - Weaknesses framed as external (blame shifting)
    - Opportunities confused with goals
@@ -83,18 +83,20 @@ ACT     --> Output: prioritized action plan with owners, timelines, success metr
    - Which items were previously identified and addressed (or not)?
    - Has the competitive situation changed?
 
-**Output:** Validated, labeled SWOT matrix with quality assessment, gap notes, and comparison to prior SWOT (if available).
+### Output
+Validated, labeled SWOT matrix with quality assessment, gap notes, and comparison to prior SWOT (if available).
 
-**Quality gate:** Each category has at least 2 specific, evidence-based items. Items are correctly categorized (internal vs external). No critical dimensions are missing.
+### Quality Gate
+Each category has at least 2 specific, evidence-based items. Items are correctly categorized (internal vs external). No critical dimensions are missing.
 
 ---
 
 ### REASON: TOWS Cross-Reference Analysis
 
-**Entry criteria:** Validated SWOT matrix is complete.
+### Entry Criteria
+Validated SWOT matrix is complete.
 
-**Actions:**
-
+### Actions
 1. **Build TOWS matrix by crossing each quadrant pair:**
 
    ```
@@ -140,23 +142,25 @@ ACT     --> Output: prioritized action plan with owners, timelines, success metr
    - Risk: what could go wrong
    ```
 
-**Output:** TOWS matrix with 8-15 strategies, each linked to specific SWOT items, with assumptions and risks noted.
+### Output
+TOWS matrix with 8-15 strategies, each linked to specific SWOT items, with assumptions and risks noted.
 
-**Quality gate:** All four quadrants (SO, WO, ST, WT) have at least 2 strategies each. Each strategy has a clear link to specific SWOT items. No strategy is generic ("improve marketing") -- all are specific to the cross-referenced items.
+### Quality Gate
+All four quadrants (SO, WO, ST, WT) have at least 2 strategies each. Each strategy has a clear link to specific SWOT items. No strategy is generic ("improve marketing") -- all are specific to the cross-referenced items.
 
 ---
 
 ### PLAN: Prioritize by Impact x Feasibility x Urgency
 
-**Entry criteria:** TOWS strategies are complete.
+### Entry Criteria
+TOWS strategies are complete.
 
-**Actions:**
-
+### Actions
 1. **Score each strategy on three dimensions (1-10):**
 
    ```
    IMPACT: How much does this move the needle on strategic goals?
-     10: Game-changing (opens new market, 2x revenue potential)
+     10: Notable (opens new market, 2x revenue potential)
      7-9: High impact (significant revenue, market position, or risk reduction)
      4-6: Moderate impact (meaningful improvement)
      1-3: Low impact (marginal improvement)
@@ -215,18 +219,20 @@ ACT     --> Output: prioritized action plan with owners, timelines, success metr
    underrepresented quadrant into Tier 1
    ```
 
-**Output:** All strategies ranked by composite score, tiered into DO NOW / PLAN / LATER, with resource allocation validated and strategic balance checked.
+### Output
+All strategies ranked by composite score, tiered into DO NOW / PLAN / LATER, with resource allocation validated and strategic balance checked.
 
-**Quality gate:** Scoring is justified (not arbitrary). Tier 1 fits within resource constraints. Strategic balance is maintained (mix of offensive and defensive).
+### Quality Gate
+Scoring is justified (not arbitrary). Tier 1 fits within resource constraints. Strategic balance is maintained (mix of offensive and defensive).
 
 ---
 
 ### ACT: Generate Action Plan
 
-**Entry criteria:** Prioritized, tiered strategy list is ready.
+### Entry Criteria
+Prioritized, tiered strategy list is ready.
 
-**Actions:**
-
+### Actions
 1. **For each Tier 1 strategy, build a full action card:**
    ```
    ACTION: [Strategy name]
@@ -299,9 +305,11 @@ ACT     --> Output: prioritized action plan with owners, timelines, success metr
      - Re-run TOWS with updated inputs
    ```
 
-**Output:** Complete action plan with Tier 1 action cards, Tier 2 briefs, summary dashboard, and tracking cadence.
+### Output
+Complete action plan with Tier 1 action cards, Tier 2 briefs, summary dashboard, and tracking cadence.
 
-**Quality gate:** Every Tier 1 action has an owner, timeline, budget, specific steps, and measurable success metrics. Tier 2 actions have trigger conditions for promotion. Review cadence is set.
+### Quality Gate
+Every Tier 1 action has an owner, timeline, budget, specific steps, and measurable success metrics. Tier 2 actions have trigger conditions for promotion. Review cadence is set.
 
 ---
 
@@ -338,7 +346,7 @@ The skill is DONE when:
 ## State Persistence
 
 Between runs, this skill saves:
-- **SWOT history**: previous SWOT analyses with timestamps (track evolution)
+- **SWOT history**: previous SWOT analyzes with timestamps (track evolution)
 - **Strategy outcomes**: which strategies were executed, results achieved, lessons learned
 - **Action status**: Tier 1 actions with progress tracking (pending, in-progress, completed, killed)
 - **Scoring calibration**: historical accuracy of impact/feasibility/urgency scores vs actual outcomes
@@ -426,7 +434,7 @@ Score 7-8: Significantly advances a strategic goal
   Example: "Reduce CAC 30%" when goal is profitability
   
 Score 4-6: Meaningful but incremental improvement
-  Example: "Improve onboarding flow" -- helps retention but not transformative
+  Example: "Improve onboarding flow" -- helps retention but not significant
   
 Score 1-3: Marginal improvement, nice-to-have
   Example: "Update brand colors" -- no strategic impact

@@ -1,0 +1,184 @@
+{
+  "name": "trademark-clearance-pipeline",
+  "description": "End-to-end preliminary trademark clearance for a proposed mark: searches USPTO TESS + common-law uses + international registries, applies the 13-factor DuPont likelihood-of-confusion analysis to every identified conflict, and synthesizes the results into an attorney-ready preliminary clearance opinion brief with overall risk level, per-conflict actions, and attorney-review flags. Not a substitute for a licensed trademark attorney's formal clearance opinion.",
+  "steps": [
+    {
+      "id": "step_1",
+      "skill_name": "trademark-uspto-search",
+      "inputs": {
+        "proposed_mark": "from_user_input",
+        "mark_variants": "from_user_input",
+        "trademark_classes": "from_user_input",
+        "include_dead_marks": "from_user_input"
+      },
+      "outputs": {
+        "exact_matches": "exact_matches_data",
+        "phonetic_neighbors": "phonetic_neighbors_data",
+        "visual_similarities": "visual_similarities_data",
+        "class_filtered_conflicts": "class_filtered_conflicts_data",
+        "search_metadata": "search_metadata_data"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "step_2",
+      "skill_name": "trademark-common-law-search",
+      "inputs": {
+        "proposed_mark": "from_user_input",
+        "mark_variants": "from_user_input",
+        "target_jurisdictions": "from_user_input",
+        "include_social_handles": "from_user_input"
+      },
+      "outputs": {
+        "web_presence_hits": "web_presence_hits_data",
+        "state_business_registrations": "state_business_registrations_data",
+        "social_handle_matches": "social_handle_matches_data",
+        "domain_corroboration": "domain_corroboration_data",
+        "common_law_conflict_candidates": "common_law_conflict_candidates_data"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "step_3",
+      "skill_name": "trademark-international-search",
+      "inputs": {
+        "proposed_mark": "from_user_input",
+        "mark_variants": "from_user_input",
+        "trademark_classes": "from_user_input",
+        "jurisdictions_required": "from_user_input"
+      },
+      "outputs": {
+        "tmview_eu_matches": "tmview_eu_matches_data",
+        "wipo_madrid_matches": "wipo_madrid_matches_data",
+        "jurisdiction_specific_matches": "jurisdiction_specific_matches_data",
+        "international_conflict_candidates": "international_conflict_candidates_data"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "step_4",
+      "skill_name": "trademark-similarity-analysis",
+      "inputs": {
+        "proposed_mark": "step_1.exact_matches",
+        "proposed_goods_services": "step_1.exact_matches",
+        "conflict_candidates": "step_1.exact_matches",
+        "proposed_channels_of_trade": "step_1.exact_matches",
+        "proposed_consumer_sophistication": "step_1.exact_matches"
+      },
+      "outputs": {
+        "mark_similarity_scored": "mark_similarity_scored_data",
+        "goods_services_relatedness": "goods_services_relatedness_data",
+        "channels_of_trade_analysis": "channels_of_trade_analysis_data",
+        "consumer_sophistication_analysis": "consumer_sophistication_analysis_data",
+        "senior_mark_strength": "senior_mark_strength_data",
+        "dupont_factor_table": "dupont_factor_table_data",
+        "likelihood_of_confusion_rating": "likelihood_of_confusion_rating_data"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "step_5",
+      "skill_name": "trademark-risk-report",
+      "inputs": {
+        "exact_matches": "step_4.mark_similarity_scored",
+        "phonetic_neighbors": "step_4.mark_similarity_scored",
+        "visual_similarities": "step_4.mark_similarity_scored",
+        "common_law_conflict_candidates": "step_4.mark_similarity_scored",
+        "international_conflict_candidates": "step_4.mark_similarity_scored",
+        "likelihood_of_confusion_rating": "step_4.likelihood_of_confusion_rating",
+        "dupont_factor_table": "step_4.dupont_factor_table",
+        "proposed_mark": "step_4.mark_similarity_scored",
+        "proposed_goods_services": "step_4.mark_similarity_scored"
+      },
+      "outputs": {
+        "overall_risk_level": "overall_risk_level_data",
+        "per_conflict_risk_breakdown": "per_conflict_risk_breakdown_data",
+        "action_recommendations": "action_recommendations_data",
+        "attorney_review_flags": "attorney_review_flags_data",
+        "clearance_opinion_brief": "clearance_opinion_brief_data",
+        "filing_strategy_notes": "filing_strategy_notes_data"
+      },
+      "parallel_group": 3
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "step_1",
+      "to_step": "step_4",
+      "data_type": "exact_matches",
+      "field_mapping": "exact_matches -> proposed_mark; exact_matches -> proposed_goods_services; exact_matches -> conflict_candidates; exact_matches -> proposed_channels_of_trade; exact_matches -> proposed_consumer_sophistication"
+    },
+    {
+      "from_step": "step_2",
+      "to_step": "step_4",
+      "data_type": "web_presence_hits",
+      "field_mapping": "web_presence_hits -> input"
+    },
+    {
+      "from_step": "step_3",
+      "to_step": "step_4",
+      "data_type": "tmview_eu_matches",
+      "field_mapping": "tmview_eu_matches -> input"
+    },
+    {
+      "from_step": "step_4",
+      "to_step": "step_5",
+      "data_type": "mark_similarity_scored",
+      "field_mapping": "mark_similarity_scored -> exact_matches; mark_similarity_scored -> phonetic_neighbors; mark_similarity_scored -> visual_similarities; mark_similarity_scored -> common_law_conflict_candidates; mark_similarity_scored -> international_conflict_candidates; likelihood_of_confusion_rating -> likelihood_of_confusion_rating; dupont_factor_table -> dupont_factor_table; mark_similarity_scored -> proposed_mark; mark_similarity_scored -> proposed_goods_services"
+    }
+  ],
+  "entry_inputs": [
+    "include_dead_marks",
+    "include_social_handles",
+    "jurisdictions_required",
+    "mark_variants",
+    "proposed_mark",
+    "target_jurisdictions",
+    "trademark_classes"
+  ],
+  "terminal_outputs": [
+    "overall_risk_level",
+    "per_conflict_risk_breakdown",
+    "action_recommendations",
+    "attorney_review_flags",
+    "clearance_opinion_brief",
+    "filing_strategy_notes"
+  ],
+  "parallel_groups": [
+    [
+      "step_1",
+      "step_2",
+      "step_3"
+    ],
+    [
+      "step_4"
+    ],
+    [
+      "step_5"
+    ]
+  ],
+  "estimated_cost": 0,
+  "critical_path": [
+    "step_1",
+    "step_4",
+    "step_5"
+  ],
+  "chain_links": {
+    "prerequisites": [],
+    "next_chains": [],
+    "related_chains": [
+      {
+        "chain_name": "company-naming-pipeline",
+        "relationship": "complement"
+      },
+      {
+        "chain_name": "patent-drawing-pipeline",
+        "relationship": "complement"
+      },
+      {
+        "chain_name": "patent-filing-pipeline",
+        "relationship": "complement"
+      }
+    ]
+  }
+}

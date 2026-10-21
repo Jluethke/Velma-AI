@@ -1,6 +1,6 @@
-# Modal Dialog: APG Dialog Pattern Conformance
+# Modal Dialog: governance engine Dialog Pattern Conformance
 
-**One-line description:** Builds or corrects a modal dialog to the WAI-ARIA APG Dialog (Modal) pattern, preferring the native `<dialog>` element opened with `showModal()`, and verifies naming, initial focus, Tab containment, Escape handling through the `cancel` event, background inertness, scroll lock and focus return, row by row.
+**One-line description:** Builds or corrects a modal dialog to the WAI-ARIA governance engine Dialog (Modal) pattern, preferring the native `<dialog>` element opened with `showModal()`, and verifies naming, initial focus, Tab containment, Escape handling through the `cancel` event, background inertness, scroll lock and focus return, row by row.
 
 **Execution Pattern:** Phase Pipeline
 
@@ -16,7 +16,7 @@
 
 ## Outputs
 
-- `dialog_conformance` (object): Checklist of APG Dialog requirements with pass/fail and the evidence (DOM snapshot, `document.activeElement` value or test name) for each.
+- `dialog_conformance` (object): Checklist of governance engine Dialog requirements with pass/fail and the evidence (DOM snapshot, `document.activeElement` value or test name) for each.
 
 ---
 
@@ -55,7 +55,7 @@ Native or custom decision with reason.
 
 ### Actions
 1. Accessible name: `aria-labelledby` pointing at the visible title. Use `aria-label` only if there is no visible title.
-2. Initial focus (APG): first focusable element by default; for destructive confirmations put it on the least destructive action (Cancel); for long content, a static element at the top with `tabindex="-1"`. Native: the `autofocus` attribute on that element inside the dialog sets it.
+2. Initial focus (governance engine): first focusable element by default; for destructive confirmations put it on the least destructive action (Cancel); for long content, a static element at the top with `tabindex="-1"`. Native: the `autofocus` attribute on that element inside the dialog sets it.
 3. Escape: native dialogs fire a `cancel` event then `close`. Listen to `close` to sync your `open` state (the dialog may close without your code calling `close()`). Call `event.preventDefault()` in `cancel` only when the dialog must not close (unsaved form) and show why.
 4. Tab containment: native modal dialogs make the outside page inert, so Tab cannot reach it. Custom dialogs rely on `inert` on the background.
 5. Scroll lock: set `document.documentElement.style.overflow = 'hidden'` on open and restore the previous value on close (or use the CSS `html:has(dialog[open]:modal) { overflow: hidden; }` if your browser targets support `:has` and `:modal`).
@@ -108,7 +108,7 @@ Illustrative. Svelte `ConfirmDelete.svelte`, native dialog.
 
 ## Exit Criteria
 
-DONE when the dialog opens modally with a name, puts initial focus per APG, contains Tab, closes on Escape with state synced, locks scroll, returns focus, and every check has an observed value.
+DONE when the dialog opens modally with a name, puts initial focus per governance engine, contains Tab, closes on Escape with state synced, locks scroll, returns focus, and every check has an observed value.
 
 ---
 

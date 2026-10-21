@@ -33,26 +33,30 @@ PHASE 5: DOCUMENT      --> Produce API documentation
 
 ### Phase 1: REQUIREMENTS
 
-**Entry criteria:** A project or domain description exists. At least one consumer type is identified.
+### Entry Criteria
+A project or domain description exists. At least one consumer type is identified.
 
-**Actions:**
+### Actions
 1. Identify the domain entities that will become API resources (users, orders, products, etc.)
 2. Identify the consumers and their needs (what data they read, what actions they perform)
 3. Determine authentication requirements (bearer tokens, API keys, OAuth2 flows)
 4. Determine non-functional requirements (rate limits, latency targets, payload size limits)
 5. Identify existing API contracts or conventions the new API must be compatible with
 
-**Output:** A requirements summary listing resources, consumers, auth model, and constraints.
+### Output
+A requirements summary listing resources, consumers, auth model, and constraints.
 
-**Quality gate:** Every identified resource has at least one consumer. Auth model is explicitly chosen (not "TBD").
+### Quality Gate
+Every identified resource has at least one consumer. Auth model is explicitly chosen (not "TBD").
 
 ---
 
 ### Phase 2: DESIGN
 
-**Entry criteria:** Requirements summary is complete and validated.
+### Entry Criteria
+Requirements summary is complete and validated.
 
-**Actions:**
+### Actions
 1. Name resources following REST naming rules (see Reference: RESTful Resource Naming)
 2. Map CRUD and non-CRUD operations to HTTP methods (see Reference: HTTP Method Semantics)
 3. Select status codes for each response scenario (see Reference: Status Code Selection Guide)
@@ -63,17 +67,20 @@ PHASE 5: DOCUMENT      --> Produce API documentation
 8. Design authentication flow (see Reference: Authentication Patterns)
 9. If GraphQL: design queries, mutations, input types, connection pattern, and mutation payloads (see Reference: GraphQL Schema Design)
 
-**Output:** A complete API design document with resource model, endpoint list, status code mapping, error format, pagination, versioning, and auth design.
+### Output
+A complete API design document with resource model, endpoint list, status code mapping, error format, pagination, versioning, and auth design.
 
-**Quality gate:** Every endpoint has a defined method, URL, request schema, response schema, and error responses. No verbs in URLs. No endpoints without auth decisions.
+### Quality Gate
+Every endpoint has a defined method, URL, request schema, response schema, and error responses. No verbs in URLs. No endpoints without auth decisions.
 
 ---
 
 ### Phase 3: SPECIFY
 
-**Entry criteria:** API design document is complete and reviewed.
+### Entry Criteria
+API design document is complete and reviewed.
 
-**Actions:**
+### Actions
 1. Generate an OpenAPI 3.1 spec with all endpoints, schemas, and examples (see Reference: OpenAPI Spec Guidelines)
 2. Ensure every endpoint has an `operationId`
 3. Use `$ref` for shared schemas to avoid duplication
@@ -81,17 +88,20 @@ PHASE 5: DOCUMENT      --> Produce API documentation
 5. Document all possible response codes per endpoint (not just 200)
 6. If GraphQL: generate the SDL schema with input types, connection types, and payload types
 
-**Output:** A complete, valid OpenAPI 3.1 YAML file (or GraphQL SDL).
+### Output
+A complete, valid OpenAPI 3.1 YAML file (or GraphQL SDL).
 
-**Quality gate:** Spec passes OpenAPI linting (e.g., `spectral lint`). Every endpoint has `operationId`. All `$ref` targets resolve.
+### Quality Gate
+Spec passes OpenAPI linting (e.g., `spectral lint`). Every endpoint has `operationId`. All `$ref` targets resolve.
 
 ---
 
 ### Phase 4: VALIDATE
 
-**Entry criteria:** Spec file is generated and passes linting.
+### Entry Criteria
+Spec file is generated and passes linting.
 
-**Actions:**
+### Actions
 1. Check naming consistency: all resources use plural nouns, kebab-case, lowercase
 2. Check method consistency: POST returns 201 + Location, DELETE returns 204, etc.
 3. Check error consistency: all errors follow the same RFC 7807 structure
@@ -100,17 +110,20 @@ PHASE 5: DOCUMENT      --> Produce API documentation
 6. Check pagination: all list endpoints have pagination, limits are capped
 7. Cross-reference spec against requirements to ensure nothing was missed
 
-**Output:** A validation report listing any issues found, categorized by severity (blocking, warning, suggestion).
+### Output
+A validation report listing any issues found, categorized by severity (blocking, warning, suggestion).
 
-**Quality gate:** Zero blocking issues. All warnings have a documented justification or are resolved.
+### Quality Gate
+Zero blocking issues. All warnings have a documented justification or are resolved.
 
 ---
 
 ### Phase 5: DOCUMENT
 
-**Entry criteria:** Validation passes with zero blocking issues.
+### Entry Criteria
+Validation passes with zero blocking issues.
 
-**Actions:**
+### Actions
 1. Generate human-readable API documentation from the spec
 2. Add a getting-started section with authentication setup
 3. Add runnable code examples for common operations (list, create, update, delete)
@@ -118,11 +131,22 @@ PHASE 5: DOCUMENT      --> Produce API documentation
 5. Add a rate limiting section explaining tiers and headers
 6. Add a versioning/migration guide
 
-**Output:** Complete API documentation ready for publishing.
+### Output
+Complete API documentation ready for publishing.
 
-**Quality gate:** Every endpoint has at least one example. Examples are runnable (correct auth, valid payloads). No internal implementation details are exposed.
+### Quality Gate
+Every endpoint has at least one example. Examples are runnable (correct auth, valid payloads). No internal implementation details are exposed.
 
 ---
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Design production-grade REST and GraphQL APIs with proper resource naming, statu, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 
@@ -210,7 +234,7 @@ POST /reports/generate         -- trigger report generation
 
 #### PUT vs PATCH
 ```json
-// PUT /users/123 — replaces the ENTIRE resource
+// PUT /users/123  --  replaces the ENTIRE resource
 // Omitted fields are set to null/default
 {
   "name": "Alice",
@@ -218,7 +242,7 @@ POST /reports/generate         -- trigger report generation
   "role": "admin"
 }
 
-// PATCH /users/123 — updates ONLY specified fields
+// PATCH /users/123  --  updates ONLY specified fields
 // Omitted fields are left unchanged
 {
   "role": "admin"
@@ -245,7 +269,7 @@ POST /reports/generate         -- trigger report generation
 | 403 Forbidden | Authenticated but not authorized for this resource |
 | 404 Not Found | Resource doesn't exist (also use for unauthorized resource to avoid leaking existence) |
 | 405 Method Not Allowed | POST to a read-only endpoint. Include `Allow` header |
-| 409 Conflict | Duplicate creation, optimistic locking version mismatch |
+| 409 Conflict | Duplicate creation, optimiztic locking version mismatch |
 | 410 Gone | Resource was deleted and won't return (permanent 404) |
 | 415 Unsupported Media Type | Sent XML but endpoint only accepts JSON |
 | 422 Unprocessable Entity | JSON is valid but semantically wrong (e.g., end_date before start_date) |
@@ -301,7 +325,7 @@ Response:
 - **Pros**: Supports jumping to page N, simple to implement
 - **Cons**: Skips/duplicates items when data changes between pages. Slow for large offsets (DB scans N rows)
 
-#### Cursor-Based (robust, recommended)
+#### Cursor-Based (reliable, recommended)
 ```
 GET /users?limit=10&cursor=eyJpZCI6MTAwfQ==
 
@@ -623,3 +647,7 @@ const userLoader = new DataLoader(async (ids) => {
 - [ ] OpenAPI spec has operationId on every endpoint
 - [ ] No stack traces or internal details in production error responses
 - [ ] HATEOAS links included where clients need discoverability
+
+---
+
+Copyright 2024-present The Wayfinder Trust. All rights reserved.

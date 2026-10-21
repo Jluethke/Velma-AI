@@ -35,10 +35,10 @@ PHASE 5: DELIVER    --> Executive summary + detailed findings + confidence level
 
 ### Phase 1: SCOPE -- Define the Research Boundaries
 
-**Entry criteria:** A research question is provided.
+### Entry Criteria
+A research question is provided.
 
-**Actions:**
-
+### Actions
 1. **Parse the research question.** Decompose into:
    - **Core question**: The primary thing to answer
    - **Sub-questions**: Component questions that, answered together, answer the core
@@ -62,21 +62,23 @@ PHASE 5: DELIVER    --> Executive summary + detailed findings + confidence level
    - Empirical evidence > expert opinion > anecdote
    - Recent sources > older sources (with domain-specific exceptions)
 
-**Output:** Research plan: core question, sub-questions, scope boundaries, source strategy per sub-question, depth parameters.
+### Output
+Research plan: core question, sub-questions, scope boundaries, source strategy per sub-question, depth parameters.
 
-**Quality gate:** At least 2 sub-questions identified. Scope boundaries explicitly stated. Source strategy maps to available source types.
+### Quality Gate
+At least 2 sub-questions identified. Scope boundaries explicitly stated. Source strategy maps to available source types.
 
 ---
 
 ### Phase 2: GATHER -- Collect Information
 
-**Entry criteria:** Research plan with sub-questions and source strategy is complete.
+### Entry Criteria
+Research plan with sub-questions and source strategy is complete.
 
-**Actions:**
-
+### Actions
 1. **Execute source strategy.** For each sub-question, collect from planned source types:
    - **Documentation**: Official docs, READMEs, changelogs, API references
-   - **Academic**: Papers, surveys, meta-analyses (prefer systematic reviews)
+   - **Academic**: Papers, surveys, meta-analyzes (prefer systematic reviews)
    - **Web**: Blog posts, forum discussions, conference talks (assess credibility carefully)
    - **API**: Live data queries, benchmarks, current-state checks
    - **Database**: Historical records, logs, metrics
@@ -97,18 +99,20 @@ PHASE 5: DELIVER    --> Executive summary + detailed findings + confidence level
 
 4. **Track provenance.** Every claim must link to its source. Unattributed claims are noise. If the same claim appears in multiple sources, record all sources (convergence is a signal of reliability).
 
-**Output:** Claim database: list of extracted claims with source links, credibility scores, and types.
+### Output
+Claim database: list of extracted claims with source links, credibility scores, and types.
 
-**Quality gate:** Minimum claims per sub-question met (survey: 3, review: 8, deep dive: 15). Every claim has at least one source. Every source has a credibility score.
+### Quality Gate
+Minimum claims per sub-question met (survey: 3, review: 8, deep dive: 15). Every claim has at least one source. Every source has a credibility score.
 
 ---
 
 ### Phase 3: ANALYZE -- Evaluate and Cross-Reference
 
-**Entry criteria:** Claim database is populated with credibility-scored sources.
+### Entry Criteria
+Claim database is populated with credibility-scored sources.
 
-**Actions:**
-
+### Actions
 1. **Cluster claims by sub-question.** Group related claims. Identify:
    - **Consensus claims**: Multiple independent sources agree. High confidence.
    - **Contested claims**: Sources disagree. Needs further analysis.
@@ -131,18 +135,20 @@ PHASE 5: DELIVER    --> Executive summary + detailed findings + confidence level
    - Are there contested claims where no credible source tips the balance? (Unresolved)
    - Are there claims that depend on assumptions that haven't been validated? (Assumption risk)
 
-**Output:** Analyzed claim clusters with consensus/contested/singleton labels, contradiction report with conflict scores, knowledge gap inventory.
+### Output
+Analyzed claim clusters with consensus/contested/singleton labels, contradiction report with conflict scores, knowledge gap inventory.
 
-**Quality gate:** Every sub-question has a consensus/contested/gap classification. All contradictions with conflict score >= 0.25 are documented. Knowledge gaps are explicitly listed.
+### Quality Gate
+Every sub-question has a consensus/contested/gap classification. All contradictions with conflict score >= 0.25 are documented. Knowledge gaps are explicitly listed.
 
 ---
 
 ### Phase 4: SYNTHESIZE -- Build the Narrative
 
-**Entry criteria:** Claims are analyzed, contradictions identified, gaps documented.
+### Entry Criteria
+Claims are analyzed, contradictions identified, gaps documented.
 
-**Actions:**
-
+### Actions
 1. **Resolve contradictions.** For each flagged contradiction:
    - **Credibility resolution**: If one side has significantly higher credibility-weighted support, adopt it and note the dissent
    - **Context resolution**: Often contradictions dissolve when context is added ("X is true for small datasets, Y is true for large datasets")
@@ -165,18 +171,20 @@ PHASE 5: DELIVER    --> Executive summary + detailed findings + confidence level
 
 4. **Connect to existing knowledge.** Reference what the requester already knows (from `existing_knowledge` input) to avoid redundancy and build on their mental model.
 
-**Output:** Synthesized narrative answering the core question, confidence-calibrated findings, resolved/unresolved contradiction status.
+### Output
+Synthesized narrative answering the core question, confidence-calibrated findings, resolved/unresolved contradiction status.
 
-**Quality gate:** Core question has a direct answer (even if hedged). Every finding has a confidence level. All contradictions have a resolution status. Narrative is coherent (findings don't contradict each other unless explicitly flagged as unresolved).
+### Quality Gate
+Core question has a direct answer (even if hedged). Every finding has a confidence level. All contradictions have a resolution status. Narrative is coherent (findings don't contradict each other unless explicitly flagged as unresolved).
 
 ---
 
 ### Phase 5: DELIVER -- Format the Report
 
-**Entry criteria:** Synthesis is complete with calibrated findings.
+### Entry Criteria
+Synthesis is complete with calibrated findings.
 
-**Actions:**
-
+### Actions
 1. **Write the executive summary.** 3-5 sentences that directly answer the research question. Include: the answer, the confidence level, the most important caveat. This should stand alone -- a reader who reads only the summary should have a correct (if incomplete) understanding.
 
 2. **Format detailed findings.** For each finding:
@@ -207,9 +215,11 @@ PHASE 5: DELIVER    --> Executive summary + detailed findings + confidence level
    - Previously unknown gaps filled
    - New contradictions surfaced
 
-**Output:** Complete research report: executive summary, detailed findings, source bibliography, knowledge gaps, contradiction report.
+### Output
+Complete research report: executive summary, detailed findings, source bibliography, knowledge gaps, contradiction report.
 
-**Quality gate:** Executive summary answers the core question. Every finding has confidence. Source list is complete. Gaps are actionable (reader knows what to do next).
+### Quality Gate
+Executive summary answers the core question. Every finding has confidence. Source list is complete. Gaps are actionable (reader knows what to do next).
 
 ## Exit Criteria
 

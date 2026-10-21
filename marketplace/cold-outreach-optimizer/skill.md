@@ -14,7 +14,7 @@ PHASE 5: OPTIMIZE   --> Analyze response rates, identify winning patterns, refin
 
 ## Inputs
 
-- **prospect_profile**: object -- Target prospect information:
+- **`prospect_profile`**: object -- Target prospect information:
   - `name`: string -- Full name
   - `title`: string -- Job title
   - `company`: string -- Company name
@@ -23,14 +23,14 @@ PHASE 5: OPTIMIZE   --> Analyze response rates, identify winning patterns, refin
   - `recent_activity`: string[] -- LinkedIn posts, conference talks, blog articles, job changes
   - `pain_points`: string[] -- Known or inferred challenges
   - `tech_stack`: string[] -- Known technologies (optional)
-- **product_context**: object -- What you're selling:
+- **`product_context`**: object -- What you're selling:
   - `product_name`: string
   - `value_proposition`: string
   - `key_differentiators`: string[]
   - `social_proof`: string[] -- Customer names, metrics, case studies
   - `price_range`: string (optional)
-- **outreach_channel**: string[] -- Channels to use: ["email", "linkedin", "phone"]
-- **historical_performance**: object (optional) -- Past campaign data:
+- **`outreach_channel`**: string[] -- Channels to use: ["email", "linkedin", "phone"]
+- **`historical_performance`**: object (optional) -- Past campaign data:
   - `open_rate`: number (0-1)
   - `reply_rate`: number (0-1)
   - `meeting_book_rate`: number (0-1)
@@ -39,25 +39,26 @@ PHASE 5: OPTIMIZE   --> Analyze response rates, identify winning patterns, refin
 
 ## Outputs
 
-- **personalized_outreach**: object -- Channel-specific copy:
+- **`personalized_outreach`**: object -- Channel-specific copy:
   - `email`: {subject: string, body: string, cta: string}
   - `linkedin_connection`: {note: string} (under 300 chars)
   - `linkedin_message`: {body: string}
   - `cold_call_script`: {opener: string, value_prop: string, objection_handles: object[], close: string}
-- **multi_touch_sequence**: array of {day: number, channel: string, action: string, content: string, purpose: string}
-- **ab_variants**: object -- Per element variants with predicted performance:
+- **`multi_touch_sequence`**: array of {day: number, channel: string, action: string, content: string, purpose: string}
+- **`ab_variants`**: object -- Per element variants with predicted performance:
   - `subject_lines`: array of {variant: string, strategy: string, predicted_open_rate: string}
   - `hooks`: array of {variant: string, strategy: string}
   - `ctas`: array of {variant: string, commitment_level: string}
-- **optimization_report**: object -- Analysis and recommendations (when historical data provided)
+- **`optimization_report`**: object -- Analysis and recommendations (when historical data provided)
 
 ## Execution
 
 ### Phase 1: PROFILE -- Prospect Deep Dive
 
-**Entry criteria:** prospect_profile provided with at minimum: name, title, company.
+### Entry Criteria
+prospect_profile provided with at minimum: name, title, company.
 
-**Actions:**
+### Actions
 1. Parse all prospect data points. Identify the strongest personalization anchors -- recent activity items that directly relate to the product's value proposition.
 2. Classify the prospect's likely communication style based on title and seniority:
    - C-level: Brief, ROI-focused, peer-to-peer tone, respect their time
@@ -68,15 +69,18 @@ PHASE 5: OPTIMIZE   --> Analyze response rates, identify winning patterns, refin
 4. Map prospect pain points to product value propositions. Rank by relevance.
 5. Determine timing signals: Is there urgency? (Recent hiring = building team, funding = spending, incident = reactive buying).
 
-**Output:** Prospect brief with: communication style classification, top 3 personalization anchors, connection bridge, pain-to-value mapping, timing assessment.
+### Output
+Prospect brief with: communication style classification, top 3 personalization anchors, connection bridge, pain-to-value mapping, timing assessment.
 
-**Quality gate:** At least one connection bridge identified that is specific and verifiable (not generic). If no connection bridge found, flag for manual research before proceeding.
+### Quality Gate
+At least one connection bridge identified that is specific and verifiable (not generic). If no connection bridge found, flag for manual research before proceeding.
 
 ### Phase 2: CRAFT -- Generate Personalized Copy
 
-**Entry criteria:** Prospect brief completed with connection bridge and pain-to-value mapping.
+### Entry Criteria
+Prospect brief completed with connection bridge and pain-to-value mapping.
 
-**Actions:**
+### Actions
 1. Generate primary email using the CONNECTION-QUESTION-BRIDGE-CTA framework:
    - Line 1: Reference the connection bridge (specific, verifiable, shows genuine research)
    - Line 2-3: Ask a genuine question about their challenge (not a rhetorical question)
@@ -96,15 +100,18 @@ PHASE 5: OPTIMIZE   --> Analyze response rates, identify winning patterns, refin
    - Objection handles for top 3 objections: "Not interested," "Send me an email," "We already use [competitor]"
    - Close: specific ask for 15-minute meeting
 
-**Output:** Complete copy package across all requested channels.
+### Output
+Complete copy package across all requested channels.
 
-**Quality gate:** Every piece of copy references at least one personalization anchor from the prospect brief. No copy contains generic filler ("I hope this email finds you well," "I'd love to pick your brain," "I'm reaching out because"). Email body is under 150 words. LinkedIn note is under 300 characters.
+### Quality Gate
+Every piece of copy references at least one personalization anchor from the prospect brief. No copy contains generic filler ("I hope this email finds you well," "I'd love to pick your brain," "I'm reaching out because"). Email body is under 150 words. LinkedIn note is under 300 characters.
 
 ### Phase 3: SEQUENCE -- Build Multi-Touch Cadence
 
-**Entry criteria:** Personalized copy generated for all requested channels.
+### Entry Criteria
+Personalized copy generated for all requested channels.
 
-**Actions:**
+### Actions
 1. Design a 14-day (or custom duration) multi-touch sequence following the GIVE-GIVE-ASK rhythm:
    - Touch 1 (Day 1): Primary outreach -- open the conversation
    - Touch 2 (Day 2-3): Different channel -- create visibility without asking
@@ -122,15 +129,18 @@ PHASE 5: OPTIMIZE   --> Analyze response rates, identify winning patterns, refin
    - Decreasing length -- touches get shorter as the sequence progresses
 4. Define exit conditions: when to stop the sequence (reply received, meeting booked, explicit opt-out, sequence completed).
 
-**Output:** Complete sequence timeline with channel, content, purpose, and exit conditions per touch.
+### Output
+Complete sequence timeline with channel, content, purpose, and exit conditions per touch.
 
-**Quality gate:** Sequence has minimum 4 touches across at least 2 channels. No two consecutive touches are identical in approach. Break-up email exists as final touch. Every touch has a clear purpose that differs from the previous touch.
+### Quality Gate
+Sequence has minimum 4 touches across at least 2 channels. No two consecutive touches are identical in approach. Break-up email exists as final touch. Every touch has a clear purpose that differs from the previous touch.
 
 ### Phase 4: TEST -- A/B Variant Generation
 
-**Entry criteria:** Primary sequence completed with all touch content.
+### Entry Criteria
+Primary sequence completed with all touch content.
 
-**Actions:**
+### Actions
 1. Generate 2-3 subject line variants per email touch using different strategies:
    - **Reference:** Mentions a specific, verifiable fact about the prospect
    - **Data hook:** Leads with a relevant statistic
@@ -149,15 +159,18 @@ PHASE 5: OPTIMIZE   --> Analyze response rates, identify winning patterns, refin
    - Manager-level: Question + Low CTA typically wins (they want help)
 5. Recommend the test plan: which variant to send to which segment, minimum sample size for statistical significance (typically 50+ per variant).
 
-**Output:** Variant matrix with predicted performance rankings and test plan.
+### Output
+Variant matrix with predicted performance rankings and test plan.
 
-**Quality gate:** At least 2 variants per element (subject, hook, CTA). Each variant uses a distinctly different strategy (not just word swaps). Predicted performance rationale references persona type.
+### Quality Gate
+At least 2 variants per element (subject, hook, CTA). Each variant uses a distinctly different strategy (not just word swaps). Predicted performance rationale references persona type.
 
 ### Phase 5: OPTIMIZE -- Performance Analysis
 
-**Entry criteria:** Historical performance data provided (from previous campaign runs OR industry benchmarks if first run).
+### Entry Criteria
+Historical performance data provided (from previous campaign runs OR industry benchmarks if first run).
 
-**Actions:**
+### Actions
 1. Compare actual performance against benchmarks:
    - Email open rate: B2B average 35-45%, personalized exec 50-60%
    - Email reply rate: B2B average 5-8%, personalized exec 10-15%
@@ -176,9 +189,20 @@ PHASE 5: OPTIMIZE   --> Analyze response rates, identify winning patterns, refin
 4. Generate refined templates incorporating winning patterns.
 5. Update pattern library in state persistence.
 
-**Output:** Optimization report with diagnostic findings, winning patterns, refined templates, and updated benchmarks.
+### Output
+Optimization report with diagnostic findings, winning patterns, refined templates, and updated benchmarks.
 
-**Quality gate:** Every recommendation is tied to a specific metric and has a measurable expected improvement. Pattern library updated with at least 1 new winning or losing pattern.
+### Quality Gate
+Every recommendation is tied to a specific metric and has a measurable expected improvement. Pattern library updated with at least 1 new winning or losing pattern.
+
+
+---
+
+## Worked Example
+
+Illustrative only.
+
+Given typical inputs for Generates hyper-personalized cold outreach sequences across email, LinkedIn, and, the pipeline produces structured outputs through each phase, with quality gates verified at every stage.
 
 ## Exit Criteria
 
