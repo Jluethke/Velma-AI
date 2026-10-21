@@ -1,0 +1,113 @@
+{
+  "name": "feature-flags-rollout-cleanup",
+  "description": "Pay down flag debt: detect stale flags, remove one per pull request, archive it in the provider after zero evaluations, and add a CI gate that blocks expired and unregistered flags.",
+  "steps": [
+    {
+      "id": "s01_ffr_stale_flag_detect",
+      "skill_name": "ffr-stale-flag-detect",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "provider_choice": "from_user_input",
+        "flag_inventory_export": "from_user_input_optional"
+      },
+      "outputs": {
+        "stale_flags": "stale_flags"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_ffr_flag_removal_pr",
+      "skill_name": "ffr-flag-removal-pr",
+      "inputs": {
+        "stale_flags": "s01_ffr_stale_flag_detect.stale_flags",
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "experiment_decision": "from_user_input_optional"
+      },
+      "outputs": {
+        "removal_pr": "removal_pr"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_ffr_flag_archive_in_service",
+      "skill_name": "ffr-flag-archive-in-service",
+      "inputs": {
+        "removal_pr": "s02_ffr_flag_removal_pr.removal_pr",
+        "provider_choice": "from_user_input"
+      },
+      "outputs": {
+        "archive_record": "archive_record"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_ffr_flag_expiry_ci_gate",
+      "skill_name": "ffr-flag-expiry-ci-gate",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "provider_choice": "from_user_input",
+        "stale_flags": "s01_ffr_stale_flag_detect.stale_flags"
+      },
+      "outputs": {
+        "ci_gate_config": "ci_gate_config"
+      },
+      "parallel_group": 2
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_ffr_stale_flag_detect",
+      "to_step": "s02_ffr_flag_removal_pr",
+      "data_type": "ffr-stale-flag-detect",
+      "field_mapping": {
+        "stale_flags": "stale_flags"
+      }
+    },
+    {
+      "from_step": "s02_ffr_flag_removal_pr",
+      "to_step": "s03_ffr_flag_archive_in_service",
+      "data_type": "ffr-flag-removal-pr",
+      "field_mapping": {
+        "removal_pr": "removal_pr"
+      }
+    },
+    {
+      "from_step": "s01_ffr_stale_flag_detect",
+      "to_step": "s04_ffr_flag_expiry_ci_gate",
+      "data_type": "ffr-stale-flag-detect",
+      "field_mapping": {
+        "stale_flags": "stale_flags"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "repo_path",
+    "provider_choice",
+    "flag_inventory_export",
+    "stack",
+    "experiment_decision"
+  ],
+  "terminal_outputs": [
+    "archive_record",
+    "ci_gate_config"
+  ],
+  "parallel_groups": [
+    [
+      "s01_ffr_stale_flag_detect"
+    ],
+    [
+      "s02_ffr_flag_removal_pr",
+      "s04_ffr_flag_expiry_ci_gate"
+    ],
+    [
+      "s03_ffr_flag_archive_in_service"
+    ]
+  ],
+  "estimated_cost": 4,
+  "critical_path": [
+    "s01_ffr_stale_flag_detect",
+    "s02_ffr_flag_removal_pr",
+    "s03_ffr_flag_archive_in_service"
+  ]
+}

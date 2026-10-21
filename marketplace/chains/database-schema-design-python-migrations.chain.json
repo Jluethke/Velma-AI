@@ -1,0 +1,172 @@
+{
+  "name": "database-schema-design-python-migrations",
+  "description": "Run a Python schema change through Alembic or Django migrations with an expand-contract plan, rollback round trips, idempotent seed data, a CI migration job and drift checks.",
+  "steps": [
+    {
+      "id": "s01_dbs_expand_contract_plan",
+      "skill_name": "dbs-expand-contract-plan",
+      "inputs": {
+        "target_ddl": "from_user_input",
+        "current_schema_dump": "from_user_input_optional",
+        "db_engine": "from_user_input"
+      },
+      "outputs": {
+        "migration_plan": "migration_plan",
+        "backfill_specs": "backfill_specs"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_dbs_py_alembic_migration",
+      "skill_name": "dbs-py-alembic-migration",
+      "inputs": {
+        "migration_plan": "s01_dbs_expand_contract_plan.migration_plan",
+        "repo_path": "from_user_input",
+        "scratch_database_url": "from_user_input"
+      },
+      "outputs": {
+        "migration_files": "migration_files"
+      },
+      "condition": "migration_tool == 'alembic'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_dbs_py_django_migration",
+      "skill_name": "dbs-py-django-migration",
+      "inputs": {
+        "migration_plan": "s01_dbs_expand_contract_plan.migration_plan",
+        "repo_path": "from_user_input",
+        "scratch_database_url": "from_user_input"
+      },
+      "outputs": {
+        "migration_files": "migration_files"
+      },
+      "condition": "migration_tool == 'django'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_dbs_rollback_plan",
+      "skill_name": "dbs-rollback-plan",
+      "inputs": {
+        "migration_plan": "s01_dbs_expand_contract_plan.migration_plan",
+        "repo_path": "from_user_input",
+        "migration_tool": "from_user_input",
+        "scratch_database_url": "from_user_input"
+      },
+      "outputs": {
+        "rollback_plan": "rollback_plan"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s05_dbs_seed_data",
+      "skill_name": "dbs-seed-data",
+      "inputs": {
+        "constrained_schema": "from_user_input",
+        "repo_path": "from_user_input",
+        "migration_tool": "from_user_input",
+        "db_engine": "from_user_input",
+        "reference_data": "from_user_input_optional"
+      },
+      "outputs": {
+        "seed_files": "seed_files"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s06_dbs_migration_ci_test",
+      "skill_name": "dbs-migration-ci-test",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "migration_tool": "from_user_input",
+        "db_engine": "from_user_input",
+        "db_version": "from_user_input",
+        "ci_platform": "from_user_input"
+      },
+      "outputs": {
+        "ci_job": "ci_job"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s07_dbs_schema_drift_check",
+      "skill_name": "dbs-schema-drift-check",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "migration_tool": "from_user_input",
+        "db_engine": "from_user_input",
+        "scratch_database_url": "from_user_input",
+        "reference_database_url": "from_user_input"
+      },
+      "outputs": {
+        "drift_report": "drift_report"
+      },
+      "parallel_group": 1
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_dbs_expand_contract_plan",
+      "to_step": "s02_dbs_py_alembic_migration",
+      "data_type": "dbs-expand-contract-plan",
+      "field_mapping": {
+        "migration_plan": "migration_plan"
+      }
+    },
+    {
+      "from_step": "s01_dbs_expand_contract_plan",
+      "to_step": "s03_dbs_py_django_migration",
+      "data_type": "dbs-expand-contract-plan",
+      "field_mapping": {
+        "migration_plan": "migration_plan"
+      }
+    },
+    {
+      "from_step": "s01_dbs_expand_contract_plan",
+      "to_step": "s04_dbs_rollback_plan",
+      "data_type": "dbs-expand-contract-plan",
+      "field_mapping": {
+        "migration_plan": "migration_plan"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "target_ddl",
+    "current_schema_dump",
+    "db_engine",
+    "repo_path",
+    "scratch_database_url",
+    "migration_tool",
+    "constrained_schema",
+    "reference_data",
+    "db_version",
+    "ci_platform",
+    "reference_database_url"
+  ],
+  "terminal_outputs": [
+    "backfill_specs",
+    "migration_files",
+    "rollback_plan",
+    "seed_files",
+    "ci_job",
+    "drift_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_dbs_expand_contract_plan",
+      "s05_dbs_seed_data",
+      "s06_dbs_migration_ci_test",
+      "s07_dbs_schema_drift_check"
+    ],
+    [
+      "s02_dbs_py_alembic_migration",
+      "s03_dbs_py_django_migration",
+      "s04_dbs_rollback_plan"
+    ]
+  ],
+  "estimated_cost": 7,
+  "critical_path": [
+    "s01_dbs_expand_contract_plan",
+    "s02_dbs_py_alembic_migration"
+  ]
+}

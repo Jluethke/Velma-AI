@@ -1,0 +1,234 @@
+{
+  "name": "spec-implementation-requirements",
+  "description": "Turn a spec into an implementer's requirements package: pinned text, errata actions, IANA registry snapshot, BCP 14 keyword scan, numbered requirements table, ambiguity log and state machine.",
+  "steps": [
+    {
+      "id": "s01_s2i_spec_acquire_pin",
+      "skill_name": "s2i-spec-acquire-pin",
+      "inputs": {
+        "spec_id": "from_user_input",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "spec_bundle": "spec_bundle"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_s2i_errata_check",
+      "skill_name": "s2i-errata-check",
+      "inputs": {
+        "spec_bundle": "s01_s2i_spec_acquire_pin.spec_bundle"
+      },
+      "outputs": {
+        "errata_log": "errata_log"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_s2i_iana_registry_check",
+      "skill_name": "s2i-iana-registry-check",
+      "inputs": {
+        "spec_bundle": "s01_s2i_spec_acquire_pin.spec_bundle",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "registry_snapshot": "registry_snapshot"
+      },
+      "condition": "has_iana_registries == true",
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_s2i_bcp14_keyword_scan",
+      "skill_name": "s2i-bcp14-keyword-scan",
+      "inputs": {
+        "spec_bundle": "s01_s2i_spec_acquire_pin.spec_bundle",
+        "errata_log": "s02_s2i_errata_check.errata_log"
+      },
+      "outputs": {
+        "keyword_hits": "keyword_hits",
+        "keyword_convention": "keyword_convention"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s05_s2i_requirements_table",
+      "skill_name": "s2i-requirements-table",
+      "inputs": {
+        "spec_bundle": "s01_s2i_spec_acquire_pin.spec_bundle",
+        "keyword_hits": "s04_s2i_bcp14_keyword_scan.keyword_hits",
+        "keyword_convention": "s04_s2i_bcp14_keyword_scan.keyword_convention",
+        "errata_log": "s02_s2i_errata_check.errata_log",
+        "implementation_role": "from_user_input"
+      },
+      "outputs": {
+        "requirements_table": "requirements_table"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s06_s2i_ambiguity_log",
+      "skill_name": "s2i-ambiguity-log",
+      "inputs": {
+        "requirements_table": "s05_s2i_requirements_table.requirements_table",
+        "spec_bundle": "s01_s2i_spec_acquire_pin.spec_bundle",
+        "errata_log": "s02_s2i_errata_check.errata_log"
+      },
+      "outputs": {
+        "ambiguity_log": "ambiguity_log"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s07_s2i_state_machine_extract",
+      "skill_name": "s2i-state-machine-extract",
+      "inputs": {
+        "spec_bundle": "s01_s2i_spec_acquire_pin.spec_bundle",
+        "requirements_table": "s05_s2i_requirements_table.requirements_table"
+      },
+      "outputs": {
+        "state_machine": "state_machine",
+        "state_gaps": "state_gaps"
+      },
+      "condition": "has_state_machine == true",
+      "parallel_group": 5
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_s2i_spec_acquire_pin",
+      "to_step": "s02_s2i_errata_check",
+      "data_type": "s2i-spec-acquire-pin",
+      "field_mapping": {
+        "spec_bundle": "spec_bundle"
+      }
+    },
+    {
+      "from_step": "s01_s2i_spec_acquire_pin",
+      "to_step": "s03_s2i_iana_registry_check",
+      "data_type": "s2i-spec-acquire-pin",
+      "field_mapping": {
+        "spec_bundle": "spec_bundle"
+      }
+    },
+    {
+      "from_step": "s01_s2i_spec_acquire_pin",
+      "to_step": "s04_s2i_bcp14_keyword_scan",
+      "data_type": "s2i-spec-acquire-pin",
+      "field_mapping": {
+        "spec_bundle": "spec_bundle"
+      }
+    },
+    {
+      "from_step": "s02_s2i_errata_check",
+      "to_step": "s04_s2i_bcp14_keyword_scan",
+      "data_type": "s2i-errata-check",
+      "field_mapping": {
+        "errata_log": "errata_log"
+      }
+    },
+    {
+      "from_step": "s01_s2i_spec_acquire_pin",
+      "to_step": "s05_s2i_requirements_table",
+      "data_type": "s2i-spec-acquire-pin",
+      "field_mapping": {
+        "spec_bundle": "spec_bundle"
+      }
+    },
+    {
+      "from_step": "s02_s2i_errata_check",
+      "to_step": "s05_s2i_requirements_table",
+      "data_type": "s2i-errata-check",
+      "field_mapping": {
+        "errata_log": "errata_log"
+      }
+    },
+    {
+      "from_step": "s04_s2i_bcp14_keyword_scan",
+      "to_step": "s05_s2i_requirements_table",
+      "data_type": "s2i-bcp14-keyword-scan",
+      "field_mapping": {
+        "keyword_hits": "keyword_hits",
+        "keyword_convention": "keyword_convention"
+      }
+    },
+    {
+      "from_step": "s01_s2i_spec_acquire_pin",
+      "to_step": "s06_s2i_ambiguity_log",
+      "data_type": "s2i-spec-acquire-pin",
+      "field_mapping": {
+        "spec_bundle": "spec_bundle"
+      }
+    },
+    {
+      "from_step": "s02_s2i_errata_check",
+      "to_step": "s06_s2i_ambiguity_log",
+      "data_type": "s2i-errata-check",
+      "field_mapping": {
+        "errata_log": "errata_log"
+      }
+    },
+    {
+      "from_step": "s05_s2i_requirements_table",
+      "to_step": "s06_s2i_ambiguity_log",
+      "data_type": "s2i-requirements-table",
+      "field_mapping": {
+        "requirements_table": "requirements_table"
+      }
+    },
+    {
+      "from_step": "s01_s2i_spec_acquire_pin",
+      "to_step": "s07_s2i_state_machine_extract",
+      "data_type": "s2i-spec-acquire-pin",
+      "field_mapping": {
+        "spec_bundle": "spec_bundle"
+      }
+    },
+    {
+      "from_step": "s05_s2i_requirements_table",
+      "to_step": "s07_s2i_state_machine_extract",
+      "data_type": "s2i-requirements-table",
+      "field_mapping": {
+        "requirements_table": "requirements_table"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "spec_id",
+    "project_dir",
+    "implementation_role"
+  ],
+  "terminal_outputs": [
+    "registry_snapshot",
+    "ambiguity_log",
+    "state_machine",
+    "state_gaps"
+  ],
+  "parallel_groups": [
+    [
+      "s01_s2i_spec_acquire_pin"
+    ],
+    [
+      "s02_s2i_errata_check",
+      "s03_s2i_iana_registry_check"
+    ],
+    [
+      "s04_s2i_bcp14_keyword_scan"
+    ],
+    [
+      "s05_s2i_requirements_table"
+    ],
+    [
+      "s06_s2i_ambiguity_log",
+      "s07_s2i_state_machine_extract"
+    ]
+  ],
+  "estimated_cost": 7,
+  "critical_path": [
+    "s01_s2i_spec_acquire_pin",
+    "s02_s2i_errata_check",
+    "s04_s2i_bcp14_keyword_scan",
+    "s05_s2i_requirements_table",
+    "s07_s2i_state_machine_extract"
+  ]
+}

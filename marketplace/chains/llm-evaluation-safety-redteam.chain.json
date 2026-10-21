@@ -1,0 +1,532 @@
+{
+  "name": "llm-evaluation-safety-redteam",
+  "description": "Adversarial and safety evaluation: attack-surface mapping, injection and leakage cases, labeled expectations, versioning, a harness run and critical-item regression gates.",
+  "steps": [
+    {
+      "id": "s01_evh_task_rubric_spec",
+      "skill_name": "evh-task-rubric-spec",
+      "inputs": {
+        "feature_description": "from_user_input",
+        "product_constraints": "from_user_input_optional"
+      },
+      "outputs": {
+        "task_spec": "task_spec",
+        "rubric": "rubric"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_evh_test_set_stratify",
+      "skill_name": "evh-test-set-stratify",
+      "inputs": {
+        "task_spec": "s01_evh_task_rubric_spec.task_spec",
+        "failure_taxonomy": "from_user_input",
+        "trace_source": "from_user_input",
+        "project_dir": "from_user_input",
+        "target_items_per_stratum": "from_user_input_optional"
+      },
+      "outputs": {
+        "test_set": "test_set",
+        "strata_manifest": "strata_manifest"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_evh_adversarial_safety_cases",
+      "skill_name": "evh-adversarial-safety-cases",
+      "inputs": {
+        "task_spec": "s01_evh_task_rubric_spec.task_spec",
+        "test_set": "s02_evh_test_set_stratify.test_set",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "adversarial_set": "adversarial_set"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_evh_golden_labels_annotation",
+      "skill_name": "evh-golden-labels-annotation",
+      "inputs": {
+        "test_set": "s02_evh_test_set_stratify.test_set",
+        "adversarial_set": "s03_evh_adversarial_safety_cases.adversarial_set",
+        "rubric": "s01_evh_task_rubric_spec.rubric",
+        "annotators": "from_user_input"
+      },
+      "outputs": {
+        "golden_set": "golden_set",
+        "human_labels": "human_labels"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s05_evh_prompt_model_versioning",
+      "skill_name": "evh-prompt-model-versioning",
+      "inputs": {
+        "project_dir": "from_user_input",
+        "model_ids": "from_user_input",
+        "golden_set": "s04_evh_golden_labels_annotation.golden_set"
+      },
+      "outputs": {
+        "version_manifest": "version_manifest"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s06_evh_py_programmatic_scorers",
+      "skill_name": "evh-py-programmatic-scorers",
+      "inputs": {
+        "task_spec": "s01_evh_task_rubric_spec.task_spec",
+        "golden_set": "s04_evh_golden_labels_annotation.golden_set",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "scorer_module": "scorer_module",
+        "scorer_tests": "scorer_tests"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 5
+    },
+    {
+      "id": "s07_evh_node_programmatic_scorers",
+      "skill_name": "evh-node-programmatic-scorers",
+      "inputs": {
+        "task_spec": "s01_evh_task_rubric_spec.task_spec",
+        "golden_set": "s04_evh_golden_labels_annotation.golden_set",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "scorer_module": "scorer_module",
+        "scorer_tests": "scorer_tests"
+      },
+      "condition": "stack == 'node'",
+      "parallel_group": 5
+    },
+    {
+      "id": "s08_evh_py_inspect_ai_task",
+      "skill_name": "evh-py-inspect-ai-task",
+      "inputs": {
+        "golden_set": "s04_evh_golden_labels_annotation.golden_set",
+        "adversarial_set": "s03_evh_adversarial_safety_cases.adversarial_set",
+        "scorer_module": "s06_evh_py_programmatic_scorers.scorer_module",
+        "judge_prompt": "from_user_input",
+        "version_manifest": "s05_evh_prompt_model_versioning.version_manifest",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "inspect_task": "inspect_task",
+        "inspect_log": "inspect_log"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 6
+    },
+    {
+      "id": "s09_evh_promptfoo_config",
+      "skill_name": "evh-promptfoo-config",
+      "inputs": {
+        "golden_set": "s04_evh_golden_labels_annotation.golden_set",
+        "adversarial_set": "s03_evh_adversarial_safety_cases.adversarial_set",
+        "scorer_module": "s07_evh_node_programmatic_scorers.scorer_module",
+        "judge_prompt": "from_user_input",
+        "version_manifest": "s05_evh_prompt_model_versioning.version_manifest",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "promptfoo_config": "promptfoo_config",
+        "promptfoo_results": "promptfoo_results"
+      },
+      "condition": "stack == 'node'",
+      "parallel_group": 6
+    },
+    {
+      "id": "s10_evh_results_normalize",
+      "skill_name": "evh-results-normalize",
+      "inputs": {
+        "inspect_log": "s08_evh_py_inspect_ai_task.inspect_log",
+        "promptfoo_results": "s09_evh_promptfoo_config.promptfoo_results",
+        "strata_manifest": "s02_evh_test_set_stratify.strata_manifest",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "scored_results": "scored_results"
+      },
+      "parallel_group": 7
+    },
+    {
+      "id": "s11_evh_sample_size_confidence_intervals",
+      "skill_name": "evh-sample-size-confidence-intervals",
+      "inputs": {
+        "scored_results": "s10_evh_results_normalize.scored_results",
+        "variance_report": "from_user_input",
+        "min_detectable_effect": "from_user_input",
+        "alpha": "from_user_input_optional",
+        "power": "from_user_input_optional"
+      },
+      "outputs": {
+        "ci_report": "ci_report",
+        "required_n": "required_n"
+      },
+      "parallel_group": 8
+    },
+    {
+      "id": "s12_evh_py_pytest_regression_suite",
+      "skill_name": "evh-py-pytest-regression-suite",
+      "inputs": {
+        "golden_set": "s04_evh_golden_labels_annotation.golden_set",
+        "scorer_module": "s06_evh_py_programmatic_scorers.scorer_module",
+        "ci_report": "s11_evh_sample_size_confidence_intervals.ci_report",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "regression_suite": "regression_suite",
+        "baseline_file": "baseline_file"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 9
+    },
+    {
+      "id": "s13_evh_node_vitest_regression_suite",
+      "skill_name": "evh-node-vitest-regression-suite",
+      "inputs": {
+        "golden_set": "s04_evh_golden_labels_annotation.golden_set",
+        "scorer_module": "s07_evh_node_programmatic_scorers.scorer_module",
+        "ci_report": "s11_evh_sample_size_confidence_intervals.ci_report",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "regression_suite": "regression_suite",
+        "baseline_file": "baseline_file"
+      },
+      "condition": "stack == 'node'",
+      "parallel_group": 9
+    },
+    {
+      "id": "s14_evh_regression_diff_triage",
+      "skill_name": "evh-regression-diff-triage",
+      "inputs": {
+        "scored_results": "s10_evh_results_normalize.scored_results",
+        "baseline_results": "from_user_input_optional",
+        "failure_taxonomy": "from_user_input",
+        "alpha": "from_user_input_optional"
+      },
+      "outputs": {
+        "regression_triage": "regression_triage"
+      },
+      "parallel_group": 8
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_evh_task_rubric_spec",
+      "to_step": "s02_evh_test_set_stratify",
+      "data_type": "evh-task-rubric-spec",
+      "field_mapping": {
+        "task_spec": "task_spec"
+      }
+    },
+    {
+      "from_step": "s01_evh_task_rubric_spec",
+      "to_step": "s03_evh_adversarial_safety_cases",
+      "data_type": "evh-task-rubric-spec",
+      "field_mapping": {
+        "task_spec": "task_spec"
+      }
+    },
+    {
+      "from_step": "s02_evh_test_set_stratify",
+      "to_step": "s03_evh_adversarial_safety_cases",
+      "data_type": "evh-test-set-stratify",
+      "field_mapping": {
+        "test_set": "test_set"
+      }
+    },
+    {
+      "from_step": "s02_evh_test_set_stratify",
+      "to_step": "s04_evh_golden_labels_annotation",
+      "data_type": "evh-test-set-stratify",
+      "field_mapping": {
+        "test_set": "test_set"
+      }
+    },
+    {
+      "from_step": "s03_evh_adversarial_safety_cases",
+      "to_step": "s04_evh_golden_labels_annotation",
+      "data_type": "evh-adversarial-safety-cases",
+      "field_mapping": {
+        "adversarial_set": "adversarial_set"
+      }
+    },
+    {
+      "from_step": "s01_evh_task_rubric_spec",
+      "to_step": "s04_evh_golden_labels_annotation",
+      "data_type": "evh-task-rubric-spec",
+      "field_mapping": {
+        "rubric": "rubric"
+      }
+    },
+    {
+      "from_step": "s04_evh_golden_labels_annotation",
+      "to_step": "s05_evh_prompt_model_versioning",
+      "data_type": "evh-golden-labels-annotation",
+      "field_mapping": {
+        "golden_set": "golden_set"
+      }
+    },
+    {
+      "from_step": "s01_evh_task_rubric_spec",
+      "to_step": "s06_evh_py_programmatic_scorers",
+      "data_type": "evh-task-rubric-spec",
+      "field_mapping": {
+        "task_spec": "task_spec"
+      }
+    },
+    {
+      "from_step": "s04_evh_golden_labels_annotation",
+      "to_step": "s06_evh_py_programmatic_scorers",
+      "data_type": "evh-golden-labels-annotation",
+      "field_mapping": {
+        "golden_set": "golden_set"
+      }
+    },
+    {
+      "from_step": "s01_evh_task_rubric_spec",
+      "to_step": "s07_evh_node_programmatic_scorers",
+      "data_type": "evh-task-rubric-spec",
+      "field_mapping": {
+        "task_spec": "task_spec"
+      }
+    },
+    {
+      "from_step": "s04_evh_golden_labels_annotation",
+      "to_step": "s07_evh_node_programmatic_scorers",
+      "data_type": "evh-golden-labels-annotation",
+      "field_mapping": {
+        "golden_set": "golden_set"
+      }
+    },
+    {
+      "from_step": "s04_evh_golden_labels_annotation",
+      "to_step": "s08_evh_py_inspect_ai_task",
+      "data_type": "evh-golden-labels-annotation",
+      "field_mapping": {
+        "golden_set": "golden_set"
+      }
+    },
+    {
+      "from_step": "s03_evh_adversarial_safety_cases",
+      "to_step": "s08_evh_py_inspect_ai_task",
+      "data_type": "evh-adversarial-safety-cases",
+      "field_mapping": {
+        "adversarial_set": "adversarial_set"
+      }
+    },
+    {
+      "from_step": "s06_evh_py_programmatic_scorers",
+      "to_step": "s08_evh_py_inspect_ai_task",
+      "data_type": "evh-py-programmatic-scorers",
+      "field_mapping": {
+        "scorer_module": "scorer_module"
+      }
+    },
+    {
+      "from_step": "s05_evh_prompt_model_versioning",
+      "to_step": "s08_evh_py_inspect_ai_task",
+      "data_type": "evh-prompt-model-versioning",
+      "field_mapping": {
+        "version_manifest": "version_manifest"
+      }
+    },
+    {
+      "from_step": "s04_evh_golden_labels_annotation",
+      "to_step": "s09_evh_promptfoo_config",
+      "data_type": "evh-golden-labels-annotation",
+      "field_mapping": {
+        "golden_set": "golden_set"
+      }
+    },
+    {
+      "from_step": "s03_evh_adversarial_safety_cases",
+      "to_step": "s09_evh_promptfoo_config",
+      "data_type": "evh-adversarial-safety-cases",
+      "field_mapping": {
+        "adversarial_set": "adversarial_set"
+      }
+    },
+    {
+      "from_step": "s07_evh_node_programmatic_scorers",
+      "to_step": "s09_evh_promptfoo_config",
+      "data_type": "evh-node-programmatic-scorers",
+      "field_mapping": {
+        "scorer_module": "scorer_module"
+      }
+    },
+    {
+      "from_step": "s05_evh_prompt_model_versioning",
+      "to_step": "s09_evh_promptfoo_config",
+      "data_type": "evh-prompt-model-versioning",
+      "field_mapping": {
+        "version_manifest": "version_manifest"
+      }
+    },
+    {
+      "from_step": "s08_evh_py_inspect_ai_task",
+      "to_step": "s10_evh_results_normalize",
+      "data_type": "evh-py-inspect-ai-task",
+      "field_mapping": {
+        "inspect_log": "inspect_log"
+      }
+    },
+    {
+      "from_step": "s09_evh_promptfoo_config",
+      "to_step": "s10_evh_results_normalize",
+      "data_type": "evh-promptfoo-config",
+      "field_mapping": {
+        "promptfoo_results": "promptfoo_results"
+      }
+    },
+    {
+      "from_step": "s02_evh_test_set_stratify",
+      "to_step": "s10_evh_results_normalize",
+      "data_type": "evh-test-set-stratify",
+      "field_mapping": {
+        "strata_manifest": "strata_manifest"
+      }
+    },
+    {
+      "from_step": "s10_evh_results_normalize",
+      "to_step": "s11_evh_sample_size_confidence_intervals",
+      "data_type": "evh-results-normalize",
+      "field_mapping": {
+        "scored_results": "scored_results"
+      }
+    },
+    {
+      "from_step": "s04_evh_golden_labels_annotation",
+      "to_step": "s12_evh_py_pytest_regression_suite",
+      "data_type": "evh-golden-labels-annotation",
+      "field_mapping": {
+        "golden_set": "golden_set"
+      }
+    },
+    {
+      "from_step": "s06_evh_py_programmatic_scorers",
+      "to_step": "s12_evh_py_pytest_regression_suite",
+      "data_type": "evh-py-programmatic-scorers",
+      "field_mapping": {
+        "scorer_module": "scorer_module"
+      }
+    },
+    {
+      "from_step": "s11_evh_sample_size_confidence_intervals",
+      "to_step": "s12_evh_py_pytest_regression_suite",
+      "data_type": "evh-sample-size-confidence-intervals",
+      "field_mapping": {
+        "ci_report": "ci_report"
+      }
+    },
+    {
+      "from_step": "s04_evh_golden_labels_annotation",
+      "to_step": "s13_evh_node_vitest_regression_suite",
+      "data_type": "evh-golden-labels-annotation",
+      "field_mapping": {
+        "golden_set": "golden_set"
+      }
+    },
+    {
+      "from_step": "s07_evh_node_programmatic_scorers",
+      "to_step": "s13_evh_node_vitest_regression_suite",
+      "data_type": "evh-node-programmatic-scorers",
+      "field_mapping": {
+        "scorer_module": "scorer_module"
+      }
+    },
+    {
+      "from_step": "s11_evh_sample_size_confidence_intervals",
+      "to_step": "s13_evh_node_vitest_regression_suite",
+      "data_type": "evh-sample-size-confidence-intervals",
+      "field_mapping": {
+        "ci_report": "ci_report"
+      }
+    },
+    {
+      "from_step": "s10_evh_results_normalize",
+      "to_step": "s14_evh_regression_diff_triage",
+      "data_type": "evh-results-normalize",
+      "field_mapping": {
+        "scored_results": "scored_results"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "feature_description",
+    "product_constraints",
+    "failure_taxonomy",
+    "trace_source",
+    "project_dir",
+    "target_items_per_stratum",
+    "annotators",
+    "model_ids",
+    "judge_prompt",
+    "variance_report",
+    "min_detectable_effect",
+    "alpha",
+    "power",
+    "baseline_results"
+  ],
+  "terminal_outputs": [
+    "human_labels",
+    "scorer_tests",
+    "inspect_task",
+    "promptfoo_config",
+    "required_n",
+    "regression_suite",
+    "baseline_file",
+    "regression_triage"
+  ],
+  "parallel_groups": [
+    [
+      "s01_evh_task_rubric_spec"
+    ],
+    [
+      "s02_evh_test_set_stratify"
+    ],
+    [
+      "s03_evh_adversarial_safety_cases"
+    ],
+    [
+      "s04_evh_golden_labels_annotation"
+    ],
+    [
+      "s05_evh_prompt_model_versioning",
+      "s06_evh_py_programmatic_scorers",
+      "s07_evh_node_programmatic_scorers"
+    ],
+    [
+      "s08_evh_py_inspect_ai_task",
+      "s09_evh_promptfoo_config"
+    ],
+    [
+      "s10_evh_results_normalize"
+    ],
+    [
+      "s11_evh_sample_size_confidence_intervals",
+      "s14_evh_regression_diff_triage"
+    ],
+    [
+      "s12_evh_py_pytest_regression_suite",
+      "s13_evh_node_vitest_regression_suite"
+    ]
+  ],
+  "estimated_cost": 14,
+  "critical_path": [
+    "s01_evh_task_rubric_spec",
+    "s02_evh_test_set_stratify",
+    "s03_evh_adversarial_safety_cases",
+    "s04_evh_golden_labels_annotation",
+    "s05_evh_prompt_model_versioning",
+    "s09_evh_promptfoo_config",
+    "s10_evh_results_normalize",
+    "s11_evh_sample_size_confidence_intervals",
+    "s12_evh_py_pytest_regression_suite"
+  ]
+}

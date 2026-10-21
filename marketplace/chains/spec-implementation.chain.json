@@ -1,0 +1,840 @@
+{
+  "name": "spec-implementation",
+  "description": "Implement a protocol or format from its spec: pin the text and errata, extract RFC 2119 requirements, ambiguities, state machine and ABNF, build a stack-specific parser and conformance suite, run public suites, differential and interop tests, then publish a traceability matrix and conformance statement.",
+  "steps": [
+    {
+      "id": "s01_s2i_spec_acquire_pin",
+      "skill_name": "s2i-spec-acquire-pin",
+      "inputs": {
+        "spec_id": "from_user_input",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "spec_bundle": "spec_bundle"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_s2i_errata_check",
+      "skill_name": "s2i-errata-check",
+      "inputs": {
+        "spec_bundle": "s01_s2i_spec_acquire_pin.spec_bundle"
+      },
+      "outputs": {
+        "errata_log": "errata_log"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_s2i_iana_registry_check",
+      "skill_name": "s2i-iana-registry-check",
+      "inputs": {
+        "spec_bundle": "s01_s2i_spec_acquire_pin.spec_bundle",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "registry_snapshot": "registry_snapshot"
+      },
+      "condition": "has_iana_registries == true",
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_s2i_bcp14_keyword_scan",
+      "skill_name": "s2i-bcp14-keyword-scan",
+      "inputs": {
+        "spec_bundle": "s01_s2i_spec_acquire_pin.spec_bundle",
+        "errata_log": "s02_s2i_errata_check.errata_log"
+      },
+      "outputs": {
+        "keyword_hits": "keyword_hits",
+        "keyword_convention": "keyword_convention"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s05_s2i_requirements_table",
+      "skill_name": "s2i-requirements-table",
+      "inputs": {
+        "spec_bundle": "s01_s2i_spec_acquire_pin.spec_bundle",
+        "keyword_hits": "s04_s2i_bcp14_keyword_scan.keyword_hits",
+        "keyword_convention": "s04_s2i_bcp14_keyword_scan.keyword_convention",
+        "errata_log": "s02_s2i_errata_check.errata_log",
+        "implementation_role": "from_user_input"
+      },
+      "outputs": {
+        "requirements_table": "requirements_table"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s06_s2i_ambiguity_log",
+      "skill_name": "s2i-ambiguity-log",
+      "inputs": {
+        "requirements_table": "s05_s2i_requirements_table.requirements_table",
+        "spec_bundle": "s01_s2i_spec_acquire_pin.spec_bundle",
+        "errata_log": "s02_s2i_errata_check.errata_log"
+      },
+      "outputs": {
+        "ambiguity_log": "ambiguity_log"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s07_s2i_state_machine_extract",
+      "skill_name": "s2i-state-machine-extract",
+      "inputs": {
+        "spec_bundle": "s01_s2i_spec_acquire_pin.spec_bundle",
+        "requirements_table": "s05_s2i_requirements_table.requirements_table"
+      },
+      "outputs": {
+        "state_machine": "state_machine",
+        "state_gaps": "state_gaps"
+      },
+      "condition": "has_state_machine == true",
+      "parallel_group": 5
+    },
+    {
+      "id": "s08_s2i_abnf_extract_validate",
+      "skill_name": "s2i-abnf-extract-validate",
+      "inputs": {
+        "spec_bundle": "s01_s2i_spec_acquire_pin.spec_bundle",
+        "errata_log": "s02_s2i_errata_check.errata_log",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "grammar_file": "grammar_file",
+        "grammar_report": "grammar_report"
+      },
+      "condition": "has_grammar == true",
+      "parallel_group": 3
+    },
+    {
+      "id": "s09_s2i_py_abnf_parser",
+      "skill_name": "s2i-py-abnf-parser",
+      "inputs": {
+        "grammar_file": "s08_s2i_abnf_extract_validate.grammar_file",
+        "start_rule": "from_user_input",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "parser_module": "parser_module",
+        "parser_tests": "parser_tests"
+      },
+      "condition": "stack == 'python' && has_grammar == true",
+      "parallel_group": 4
+    },
+    {
+      "id": "s10_s2i_node_abnf_parser",
+      "skill_name": "s2i-node-abnf-parser",
+      "inputs": {
+        "grammar_file": "s08_s2i_abnf_extract_validate.grammar_file",
+        "start_rule": "from_user_input",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "parser_module": "parser_module",
+        "parser_tests": "parser_tests"
+      },
+      "condition": "stack == 'node' && has_grammar == true",
+      "parallel_group": 4
+    },
+    {
+      "id": "s11_s2i_go_abnf_parser",
+      "skill_name": "s2i-go-abnf-parser",
+      "inputs": {
+        "grammar_file": "s08_s2i_abnf_extract_validate.grammar_file",
+        "start_rule": "from_user_input",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "parser_module": "parser_module",
+        "parser_tests": "parser_tests"
+      },
+      "condition": "stack == 'go' && has_grammar == true",
+      "parallel_group": 4
+    },
+    {
+      "id": "s12_s2i_rust_abnf_parser",
+      "skill_name": "s2i-rust-abnf-parser",
+      "inputs": {
+        "grammar_file": "s08_s2i_abnf_extract_validate.grammar_file",
+        "start_rule": "from_user_input",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "parser_module": "parser_module",
+        "parser_tests": "parser_tests"
+      },
+      "condition": "stack == 'rust' && has_grammar == true",
+      "parallel_group": 4
+    },
+    {
+      "id": "s13_s2i_abnfgen_grammar_coverage",
+      "skill_name": "s2i-abnfgen-grammar-coverage",
+      "inputs": {
+        "grammar_file": "s08_s2i_abnf_extract_validate.grammar_file",
+        "start_rule": "from_user_input",
+        "parse_command": "from_user_input"
+      },
+      "outputs": {
+        "grammar_coverage_report": "grammar_coverage_report"
+      },
+      "condition": "has_grammar == true",
+      "parallel_group": 4
+    },
+    {
+      "id": "s14_s2i_test_vectors_extract",
+      "skill_name": "s2i-test-vectors-extract",
+      "inputs": {
+        "spec_bundle": "s01_s2i_spec_acquire_pin.spec_bundle",
+        "errata_log": "s02_s2i_errata_check.errata_log",
+        "requirements_table": "s05_s2i_requirements_table.requirements_table",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "test_vectors": "test_vectors"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s15_s2i_conformance_test_design",
+      "skill_name": "s2i-conformance-test-design",
+      "inputs": {
+        "requirements_table": "s05_s2i_requirements_table.requirements_table",
+        "ambiguity_log": "s06_s2i_ambiguity_log.ambiguity_log",
+        "test_vectors": "s14_s2i_test_vectors_extract.test_vectors",
+        "state_machine": "s07_s2i_state_machine_extract.state_machine",
+        "registry_snapshot": "s03_s2i_iana_registry_check.registry_snapshot"
+      },
+      "outputs": {
+        "conformance_test_plan": "conformance_test_plan"
+      },
+      "parallel_group": 6
+    },
+    {
+      "id": "s16_s2i_py_pytest_conformance",
+      "skill_name": "s2i-py-pytest-conformance",
+      "inputs": {
+        "conformance_test_plan": "s15_s2i_conformance_test_design.conformance_test_plan",
+        "test_vectors": "s14_s2i_test_vectors_extract.test_vectors",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "conformance_tests": "conformance_tests",
+        "junit_report": "junit_report"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 7
+    },
+    {
+      "id": "s17_s2i_node_test_conformance",
+      "skill_name": "s2i-node-test-conformance",
+      "inputs": {
+        "conformance_test_plan": "s15_s2i_conformance_test_design.conformance_test_plan",
+        "test_vectors": "s14_s2i_test_vectors_extract.test_vectors",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "conformance_tests": "conformance_tests",
+        "junit_report": "junit_report"
+      },
+      "condition": "stack == 'node'",
+      "parallel_group": 7
+    },
+    {
+      "id": "s18_s2i_go_test_conformance",
+      "skill_name": "s2i-go-test-conformance",
+      "inputs": {
+        "conformance_test_plan": "s15_s2i_conformance_test_design.conformance_test_plan",
+        "test_vectors": "s14_s2i_test_vectors_extract.test_vectors",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "conformance_tests": "conformance_tests",
+        "junit_report": "junit_report"
+      },
+      "condition": "stack == 'go'",
+      "parallel_group": 7
+    },
+    {
+      "id": "s19_s2i_rust_cargo_conformance",
+      "skill_name": "s2i-rust-cargo-conformance",
+      "inputs": {
+        "conformance_test_plan": "s15_s2i_conformance_test_design.conformance_test_plan",
+        "test_vectors": "s14_s2i_test_vectors_extract.test_vectors",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "conformance_tests": "conformance_tests",
+        "junit_report": "junit_report"
+      },
+      "condition": "stack == 'rust'",
+      "parallel_group": 7
+    },
+    {
+      "id": "s20_s2i_public_test_suite_run",
+      "skill_name": "s2i-public-test-suite-run",
+      "inputs": {
+        "spec_bundle": "s01_s2i_spec_acquire_pin.spec_bundle",
+        "implementation_command": "from_user_input",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "suite_results": "suite_results"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s21_s2i_differential_reference_lib",
+      "skill_name": "s2i-differential-reference-lib",
+      "inputs": {
+        "test_vectors": "s14_s2i_test_vectors_extract.test_vectors",
+        "reference_impl": "from_user_input",
+        "implementation_command": "from_user_input",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "divergence_log": "divergence_log"
+      },
+      "condition": "has_reference_library == true",
+      "parallel_group": 6
+    },
+    {
+      "id": "s22_s2i_interop_reference_impl",
+      "skill_name": "s2i-interop-reference-impl",
+      "inputs": {
+        "requirements_table": "s05_s2i_requirements_table.requirements_table",
+        "reference_impl": "from_user_input",
+        "implementation_command": "from_user_input",
+        "implementation_role": "from_user_input",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "interop_report": "interop_report",
+        "capture_files": "capture_files"
+      },
+      "condition": "is_wire_protocol == true",
+      "parallel_group": 5
+    },
+    {
+      "id": "s23_s2i_tshark_wire_check",
+      "skill_name": "s2i-tshark-wire-check",
+      "inputs": {
+        "capture_files": "s22_s2i_interop_reference_impl.capture_files",
+        "spec_bundle": "s01_s2i_spec_acquire_pin.spec_bundle",
+        "tls_keylog_file": "from_user_input_optional"
+      },
+      "outputs": {
+        "wire_findings": "wire_findings"
+      },
+      "condition": "is_wire_protocol == true",
+      "parallel_group": 6
+    },
+    {
+      "id": "s24_s2i_traceability_matrix",
+      "skill_name": "s2i-traceability-matrix",
+      "inputs": {
+        "requirements_table": "s05_s2i_requirements_table.requirements_table",
+        "junit_report": "from_user_input",
+        "suite_results": "s20_s2i_public_test_suite_run.suite_results",
+        "interop_report": "s22_s2i_interop_reference_impl.interop_report",
+        "divergence_log": "s21_s2i_differential_reference_lib.divergence_log",
+        "ambiguity_log": "s06_s2i_ambiguity_log.ambiguity_log",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "traceability_matrix": "traceability_matrix",
+        "coverage_gaps": "coverage_gaps"
+      },
+      "parallel_group": 7
+    },
+    {
+      "id": "s25_s2i_conformance_statement",
+      "skill_name": "s2i-conformance-statement",
+      "inputs": {
+        "traceability_matrix": "s24_s2i_traceability_matrix.traceability_matrix",
+        "coverage_gaps": "s24_s2i_traceability_matrix.coverage_gaps",
+        "ambiguity_log": "s06_s2i_ambiguity_log.ambiguity_log",
+        "errata_log": "s02_s2i_errata_check.errata_log",
+        "spec_bundle": "s01_s2i_spec_acquire_pin.spec_bundle",
+        "implementation_role": "from_user_input"
+      },
+      "outputs": {
+        "conformance_statement": "conformance_statement"
+      },
+      "parallel_group": 8
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_s2i_spec_acquire_pin",
+      "to_step": "s02_s2i_errata_check",
+      "data_type": "s2i-spec-acquire-pin",
+      "field_mapping": {
+        "spec_bundle": "spec_bundle"
+      }
+    },
+    {
+      "from_step": "s01_s2i_spec_acquire_pin",
+      "to_step": "s03_s2i_iana_registry_check",
+      "data_type": "s2i-spec-acquire-pin",
+      "field_mapping": {
+        "spec_bundle": "spec_bundle"
+      }
+    },
+    {
+      "from_step": "s01_s2i_spec_acquire_pin",
+      "to_step": "s04_s2i_bcp14_keyword_scan",
+      "data_type": "s2i-spec-acquire-pin",
+      "field_mapping": {
+        "spec_bundle": "spec_bundle"
+      }
+    },
+    {
+      "from_step": "s02_s2i_errata_check",
+      "to_step": "s04_s2i_bcp14_keyword_scan",
+      "data_type": "s2i-errata-check",
+      "field_mapping": {
+        "errata_log": "errata_log"
+      }
+    },
+    {
+      "from_step": "s01_s2i_spec_acquire_pin",
+      "to_step": "s05_s2i_requirements_table",
+      "data_type": "s2i-spec-acquire-pin",
+      "field_mapping": {
+        "spec_bundle": "spec_bundle"
+      }
+    },
+    {
+      "from_step": "s02_s2i_errata_check",
+      "to_step": "s05_s2i_requirements_table",
+      "data_type": "s2i-errata-check",
+      "field_mapping": {
+        "errata_log": "errata_log"
+      }
+    },
+    {
+      "from_step": "s04_s2i_bcp14_keyword_scan",
+      "to_step": "s05_s2i_requirements_table",
+      "data_type": "s2i-bcp14-keyword-scan",
+      "field_mapping": {
+        "keyword_hits": "keyword_hits",
+        "keyword_convention": "keyword_convention"
+      }
+    },
+    {
+      "from_step": "s01_s2i_spec_acquire_pin",
+      "to_step": "s06_s2i_ambiguity_log",
+      "data_type": "s2i-spec-acquire-pin",
+      "field_mapping": {
+        "spec_bundle": "spec_bundle"
+      }
+    },
+    {
+      "from_step": "s02_s2i_errata_check",
+      "to_step": "s06_s2i_ambiguity_log",
+      "data_type": "s2i-errata-check",
+      "field_mapping": {
+        "errata_log": "errata_log"
+      }
+    },
+    {
+      "from_step": "s05_s2i_requirements_table",
+      "to_step": "s06_s2i_ambiguity_log",
+      "data_type": "s2i-requirements-table",
+      "field_mapping": {
+        "requirements_table": "requirements_table"
+      }
+    },
+    {
+      "from_step": "s01_s2i_spec_acquire_pin",
+      "to_step": "s07_s2i_state_machine_extract",
+      "data_type": "s2i-spec-acquire-pin",
+      "field_mapping": {
+        "spec_bundle": "spec_bundle"
+      }
+    },
+    {
+      "from_step": "s05_s2i_requirements_table",
+      "to_step": "s07_s2i_state_machine_extract",
+      "data_type": "s2i-requirements-table",
+      "field_mapping": {
+        "requirements_table": "requirements_table"
+      }
+    },
+    {
+      "from_step": "s01_s2i_spec_acquire_pin",
+      "to_step": "s08_s2i_abnf_extract_validate",
+      "data_type": "s2i-spec-acquire-pin",
+      "field_mapping": {
+        "spec_bundle": "spec_bundle"
+      }
+    },
+    {
+      "from_step": "s02_s2i_errata_check",
+      "to_step": "s08_s2i_abnf_extract_validate",
+      "data_type": "s2i-errata-check",
+      "field_mapping": {
+        "errata_log": "errata_log"
+      }
+    },
+    {
+      "from_step": "s08_s2i_abnf_extract_validate",
+      "to_step": "s09_s2i_py_abnf_parser",
+      "data_type": "s2i-abnf-extract-validate",
+      "field_mapping": {
+        "grammar_file": "grammar_file"
+      }
+    },
+    {
+      "from_step": "s08_s2i_abnf_extract_validate",
+      "to_step": "s10_s2i_node_abnf_parser",
+      "data_type": "s2i-abnf-extract-validate",
+      "field_mapping": {
+        "grammar_file": "grammar_file"
+      }
+    },
+    {
+      "from_step": "s08_s2i_abnf_extract_validate",
+      "to_step": "s11_s2i_go_abnf_parser",
+      "data_type": "s2i-abnf-extract-validate",
+      "field_mapping": {
+        "grammar_file": "grammar_file"
+      }
+    },
+    {
+      "from_step": "s08_s2i_abnf_extract_validate",
+      "to_step": "s12_s2i_rust_abnf_parser",
+      "data_type": "s2i-abnf-extract-validate",
+      "field_mapping": {
+        "grammar_file": "grammar_file"
+      }
+    },
+    {
+      "from_step": "s08_s2i_abnf_extract_validate",
+      "to_step": "s13_s2i_abnfgen_grammar_coverage",
+      "data_type": "s2i-abnf-extract-validate",
+      "field_mapping": {
+        "grammar_file": "grammar_file"
+      }
+    },
+    {
+      "from_step": "s01_s2i_spec_acquire_pin",
+      "to_step": "s14_s2i_test_vectors_extract",
+      "data_type": "s2i-spec-acquire-pin",
+      "field_mapping": {
+        "spec_bundle": "spec_bundle"
+      }
+    },
+    {
+      "from_step": "s02_s2i_errata_check",
+      "to_step": "s14_s2i_test_vectors_extract",
+      "data_type": "s2i-errata-check",
+      "field_mapping": {
+        "errata_log": "errata_log"
+      }
+    },
+    {
+      "from_step": "s05_s2i_requirements_table",
+      "to_step": "s14_s2i_test_vectors_extract",
+      "data_type": "s2i-requirements-table",
+      "field_mapping": {
+        "requirements_table": "requirements_table"
+      }
+    },
+    {
+      "from_step": "s03_s2i_iana_registry_check",
+      "to_step": "s15_s2i_conformance_test_design",
+      "data_type": "s2i-iana-registry-check",
+      "field_mapping": {
+        "registry_snapshot": "registry_snapshot"
+      }
+    },
+    {
+      "from_step": "s05_s2i_requirements_table",
+      "to_step": "s15_s2i_conformance_test_design",
+      "data_type": "s2i-requirements-table",
+      "field_mapping": {
+        "requirements_table": "requirements_table"
+      }
+    },
+    {
+      "from_step": "s06_s2i_ambiguity_log",
+      "to_step": "s15_s2i_conformance_test_design",
+      "data_type": "s2i-ambiguity-log",
+      "field_mapping": {
+        "ambiguity_log": "ambiguity_log"
+      }
+    },
+    {
+      "from_step": "s07_s2i_state_machine_extract",
+      "to_step": "s15_s2i_conformance_test_design",
+      "data_type": "s2i-state-machine-extract",
+      "field_mapping": {
+        "state_machine": "state_machine"
+      }
+    },
+    {
+      "from_step": "s14_s2i_test_vectors_extract",
+      "to_step": "s15_s2i_conformance_test_design",
+      "data_type": "s2i-test-vectors-extract",
+      "field_mapping": {
+        "test_vectors": "test_vectors"
+      }
+    },
+    {
+      "from_step": "s14_s2i_test_vectors_extract",
+      "to_step": "s16_s2i_py_pytest_conformance",
+      "data_type": "s2i-test-vectors-extract",
+      "field_mapping": {
+        "test_vectors": "test_vectors"
+      }
+    },
+    {
+      "from_step": "s15_s2i_conformance_test_design",
+      "to_step": "s16_s2i_py_pytest_conformance",
+      "data_type": "s2i-conformance-test-design",
+      "field_mapping": {
+        "conformance_test_plan": "conformance_test_plan"
+      }
+    },
+    {
+      "from_step": "s14_s2i_test_vectors_extract",
+      "to_step": "s17_s2i_node_test_conformance",
+      "data_type": "s2i-test-vectors-extract",
+      "field_mapping": {
+        "test_vectors": "test_vectors"
+      }
+    },
+    {
+      "from_step": "s15_s2i_conformance_test_design",
+      "to_step": "s17_s2i_node_test_conformance",
+      "data_type": "s2i-conformance-test-design",
+      "field_mapping": {
+        "conformance_test_plan": "conformance_test_plan"
+      }
+    },
+    {
+      "from_step": "s14_s2i_test_vectors_extract",
+      "to_step": "s18_s2i_go_test_conformance",
+      "data_type": "s2i-test-vectors-extract",
+      "field_mapping": {
+        "test_vectors": "test_vectors"
+      }
+    },
+    {
+      "from_step": "s15_s2i_conformance_test_design",
+      "to_step": "s18_s2i_go_test_conformance",
+      "data_type": "s2i-conformance-test-design",
+      "field_mapping": {
+        "conformance_test_plan": "conformance_test_plan"
+      }
+    },
+    {
+      "from_step": "s14_s2i_test_vectors_extract",
+      "to_step": "s19_s2i_rust_cargo_conformance",
+      "data_type": "s2i-test-vectors-extract",
+      "field_mapping": {
+        "test_vectors": "test_vectors"
+      }
+    },
+    {
+      "from_step": "s15_s2i_conformance_test_design",
+      "to_step": "s19_s2i_rust_cargo_conformance",
+      "data_type": "s2i-conformance-test-design",
+      "field_mapping": {
+        "conformance_test_plan": "conformance_test_plan"
+      }
+    },
+    {
+      "from_step": "s01_s2i_spec_acquire_pin",
+      "to_step": "s20_s2i_public_test_suite_run",
+      "data_type": "s2i-spec-acquire-pin",
+      "field_mapping": {
+        "spec_bundle": "spec_bundle"
+      }
+    },
+    {
+      "from_step": "s14_s2i_test_vectors_extract",
+      "to_step": "s21_s2i_differential_reference_lib",
+      "data_type": "s2i-test-vectors-extract",
+      "field_mapping": {
+        "test_vectors": "test_vectors"
+      }
+    },
+    {
+      "from_step": "s05_s2i_requirements_table",
+      "to_step": "s22_s2i_interop_reference_impl",
+      "data_type": "s2i-requirements-table",
+      "field_mapping": {
+        "requirements_table": "requirements_table"
+      }
+    },
+    {
+      "from_step": "s01_s2i_spec_acquire_pin",
+      "to_step": "s23_s2i_tshark_wire_check",
+      "data_type": "s2i-spec-acquire-pin",
+      "field_mapping": {
+        "spec_bundle": "spec_bundle"
+      }
+    },
+    {
+      "from_step": "s22_s2i_interop_reference_impl",
+      "to_step": "s23_s2i_tshark_wire_check",
+      "data_type": "s2i-interop-reference-impl",
+      "field_mapping": {
+        "capture_files": "capture_files"
+      }
+    },
+    {
+      "from_step": "s05_s2i_requirements_table",
+      "to_step": "s24_s2i_traceability_matrix",
+      "data_type": "s2i-requirements-table",
+      "field_mapping": {
+        "requirements_table": "requirements_table"
+      }
+    },
+    {
+      "from_step": "s06_s2i_ambiguity_log",
+      "to_step": "s24_s2i_traceability_matrix",
+      "data_type": "s2i-ambiguity-log",
+      "field_mapping": {
+        "ambiguity_log": "ambiguity_log"
+      }
+    },
+    {
+      "from_step": "s20_s2i_public_test_suite_run",
+      "to_step": "s24_s2i_traceability_matrix",
+      "data_type": "s2i-public-test-suite-run",
+      "field_mapping": {
+        "suite_results": "suite_results"
+      }
+    },
+    {
+      "from_step": "s21_s2i_differential_reference_lib",
+      "to_step": "s24_s2i_traceability_matrix",
+      "data_type": "s2i-differential-reference-lib",
+      "field_mapping": {
+        "divergence_log": "divergence_log"
+      }
+    },
+    {
+      "from_step": "s22_s2i_interop_reference_impl",
+      "to_step": "s24_s2i_traceability_matrix",
+      "data_type": "s2i-interop-reference-impl",
+      "field_mapping": {
+        "interop_report": "interop_report"
+      }
+    },
+    {
+      "from_step": "s01_s2i_spec_acquire_pin",
+      "to_step": "s25_s2i_conformance_statement",
+      "data_type": "s2i-spec-acquire-pin",
+      "field_mapping": {
+        "spec_bundle": "spec_bundle"
+      }
+    },
+    {
+      "from_step": "s02_s2i_errata_check",
+      "to_step": "s25_s2i_conformance_statement",
+      "data_type": "s2i-errata-check",
+      "field_mapping": {
+        "errata_log": "errata_log"
+      }
+    },
+    {
+      "from_step": "s06_s2i_ambiguity_log",
+      "to_step": "s25_s2i_conformance_statement",
+      "data_type": "s2i-ambiguity-log",
+      "field_mapping": {
+        "ambiguity_log": "ambiguity_log"
+      }
+    },
+    {
+      "from_step": "s24_s2i_traceability_matrix",
+      "to_step": "s25_s2i_conformance_statement",
+      "data_type": "s2i-traceability-matrix",
+      "field_mapping": {
+        "traceability_matrix": "traceability_matrix",
+        "coverage_gaps": "coverage_gaps"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "spec_id",
+    "project_dir",
+    "implementation_role",
+    "start_rule",
+    "parse_command",
+    "implementation_command",
+    "reference_impl",
+    "tls_keylog_file",
+    "junit_report"
+  ],
+  "terminal_outputs": [
+    "state_gaps",
+    "grammar_report",
+    "parser_module",
+    "parser_tests",
+    "grammar_coverage_report",
+    "conformance_tests",
+    "junit_report",
+    "wire_findings",
+    "conformance_statement"
+  ],
+  "parallel_groups": [
+    [
+      "s01_s2i_spec_acquire_pin"
+    ],
+    [
+      "s02_s2i_errata_check",
+      "s03_s2i_iana_registry_check",
+      "s20_s2i_public_test_suite_run"
+    ],
+    [
+      "s04_s2i_bcp14_keyword_scan",
+      "s08_s2i_abnf_extract_validate"
+    ],
+    [
+      "s05_s2i_requirements_table",
+      "s09_s2i_py_abnf_parser",
+      "s10_s2i_node_abnf_parser",
+      "s11_s2i_go_abnf_parser",
+      "s12_s2i_rust_abnf_parser",
+      "s13_s2i_abnfgen_grammar_coverage"
+    ],
+    [
+      "s06_s2i_ambiguity_log",
+      "s07_s2i_state_machine_extract",
+      "s14_s2i_test_vectors_extract",
+      "s22_s2i_interop_reference_impl"
+    ],
+    [
+      "s15_s2i_conformance_test_design",
+      "s21_s2i_differential_reference_lib",
+      "s23_s2i_tshark_wire_check"
+    ],
+    [
+      "s16_s2i_py_pytest_conformance",
+      "s17_s2i_node_test_conformance",
+      "s18_s2i_go_test_conformance",
+      "s19_s2i_rust_cargo_conformance",
+      "s24_s2i_traceability_matrix"
+    ],
+    [
+      "s25_s2i_conformance_statement"
+    ]
+  ],
+  "estimated_cost": 25,
+  "critical_path": [
+    "s01_s2i_spec_acquire_pin",
+    "s02_s2i_errata_check",
+    "s04_s2i_bcp14_keyword_scan",
+    "s05_s2i_requirements_table",
+    "s14_s2i_test_vectors_extract",
+    "s21_s2i_differential_reference_lib",
+    "s24_s2i_traceability_matrix",
+    "s25_s2i_conformance_statement"
+  ]
+}

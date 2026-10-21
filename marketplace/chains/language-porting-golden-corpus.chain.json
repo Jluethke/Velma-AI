@@ -1,0 +1,390 @@
+{
+  "name": "language-porting-golden-corpus",
+  "description": "Build a frozen cross-language golden test corpus from the original program: behavior and nondeterminism inventories, typed JSON Lines schema, edge-case inputs with coverage closure, capture in the source language, and checksum freeze.",
+  "steps": [
+    {
+      "id": "s01_port_behavior_surface_inventory",
+      "skill_name": "port-behavior-surface-inventory",
+      "inputs": {
+        "source_repo": "from_user_input",
+        "stack": "from_user_input",
+        "entry_points": "from_user_input_optional"
+      },
+      "outputs": {
+        "behavior_inventory": "behavior_inventory"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_port_nondeterminism_inventory",
+      "skill_name": "port-nondeterminism-inventory",
+      "inputs": {
+        "source_repo": "from_user_input",
+        "stack": "from_user_input",
+        "behavior_inventory": "s01_port_behavior_surface_inventory.behavior_inventory"
+      },
+      "outputs": {
+        "nondeterminism_sources": "nondeterminism_sources"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_port_error_model_mapping",
+      "skill_name": "port-error-model-mapping",
+      "inputs": {
+        "source_repo": "from_user_input",
+        "stack": "from_user_input",
+        "behavior_inventory": "s01_port_behavior_surface_inventory.behavior_inventory"
+      },
+      "outputs": {
+        "error_mapping": "error_mapping"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_port_golden_corpus_schema",
+      "skill_name": "port-golden-corpus-schema",
+      "inputs": {
+        "behavior_inventory": "s01_port_behavior_surface_inventory.behavior_inventory",
+        "nondeterminism_sources": "s02_port_nondeterminism_inventory.nondeterminism_sources",
+        "error_mapping": "s03_port_error_model_mapping.error_mapping"
+      },
+      "outputs": {
+        "corpus_schema": "corpus_schema"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s05_port_edge_case_input_set",
+      "skill_name": "port-edge-case-input-set",
+      "inputs": {
+        "behavior_inventory": "s01_port_behavior_surface_inventory.behavior_inventory",
+        "corpus_schema": "s04_port_golden_corpus_schema.corpus_schema",
+        "integer_findings": "from_user_input_optional",
+        "float_findings": "from_user_input_optional",
+        "unicode_findings": "from_user_input_optional",
+        "sample_inputs": "from_user_input_optional"
+      },
+      "outputs": {
+        "case_inputs": "case_inputs"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s06_port_py_golden_capture",
+      "skill_name": "port-py-golden-capture",
+      "inputs": {
+        "source_repo": "from_user_input",
+        "corpus_schema": "s04_port_golden_corpus_schema.corpus_schema",
+        "case_inputs": "s05_port_edge_case_input_set.case_inputs",
+        "nondeterminism_sources": "s02_port_nondeterminism_inventory.nondeterminism_sources"
+      },
+      "outputs": {
+        "py_corpus": "py_corpus"
+      },
+      "condition": "stack == 'py-ts' || stack == 'py-go'",
+      "parallel_group": 5
+    },
+    {
+      "id": "s07_port_js_golden_capture",
+      "skill_name": "port-js-golden-capture",
+      "inputs": {
+        "source_repo": "from_user_input",
+        "corpus_schema": "s04_port_golden_corpus_schema.corpus_schema",
+        "case_inputs": "s05_port_edge_case_input_set.case_inputs",
+        "nondeterminism_sources": "s02_port_nondeterminism_inventory.nondeterminism_sources"
+      },
+      "outputs": {
+        "js_corpus": "js_corpus"
+      },
+      "condition": "stack == 'js-ts'",
+      "parallel_group": 5
+    },
+    {
+      "id": "s08_port_java_golden_capture",
+      "skill_name": "port-java-golden-capture",
+      "inputs": {
+        "source_repo": "from_user_input",
+        "corpus_schema": "s04_port_golden_corpus_schema.corpus_schema",
+        "case_inputs": "s05_port_edge_case_input_set.case_inputs",
+        "nondeterminism_sources": "s02_port_nondeterminism_inventory.nondeterminism_sources"
+      },
+      "outputs": {
+        "java_corpus": "java_corpus"
+      },
+      "condition": "stack == 'java-kotlin'",
+      "parallel_group": 5
+    },
+    {
+      "id": "s09_port_c_golden_capture",
+      "skill_name": "port-c-golden-capture",
+      "inputs": {
+        "source_repo": "from_user_input",
+        "corpus_schema": "s04_port_golden_corpus_schema.corpus_schema",
+        "case_inputs": "s05_port_edge_case_input_set.case_inputs",
+        "nondeterminism_sources": "s02_port_nondeterminism_inventory.nondeterminism_sources"
+      },
+      "outputs": {
+        "c_corpus": "c_corpus"
+      },
+      "condition": "stack == 'c-rust'",
+      "parallel_group": 5
+    },
+    {
+      "id": "s10_port_golden_corpus_freeze",
+      "skill_name": "port-golden-corpus-freeze",
+      "inputs": {
+        "corpus_schema": "s04_port_golden_corpus_schema.corpus_schema",
+        "py_corpus": "s06_port_py_golden_capture.py_corpus",
+        "js_corpus": "s07_port_js_golden_capture.js_corpus",
+        "java_corpus": "s08_port_java_golden_capture.java_corpus",
+        "c_corpus": "s09_port_c_golden_capture.c_corpus"
+      },
+      "outputs": {
+        "golden_corpus": "golden_corpus",
+        "corpus_manifest": "corpus_manifest"
+      },
+      "parallel_group": 6
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_port_behavior_surface_inventory",
+      "to_step": "s02_port_nondeterminism_inventory",
+      "data_type": "port-behavior-surface-inventory",
+      "field_mapping": {
+        "behavior_inventory": "behavior_inventory"
+      }
+    },
+    {
+      "from_step": "s01_port_behavior_surface_inventory",
+      "to_step": "s03_port_error_model_mapping",
+      "data_type": "port-behavior-surface-inventory",
+      "field_mapping": {
+        "behavior_inventory": "behavior_inventory"
+      }
+    },
+    {
+      "from_step": "s01_port_behavior_surface_inventory",
+      "to_step": "s04_port_golden_corpus_schema",
+      "data_type": "port-behavior-surface-inventory",
+      "field_mapping": {
+        "behavior_inventory": "behavior_inventory"
+      }
+    },
+    {
+      "from_step": "s02_port_nondeterminism_inventory",
+      "to_step": "s04_port_golden_corpus_schema",
+      "data_type": "port-nondeterminism-inventory",
+      "field_mapping": {
+        "nondeterminism_sources": "nondeterminism_sources"
+      }
+    },
+    {
+      "from_step": "s03_port_error_model_mapping",
+      "to_step": "s04_port_golden_corpus_schema",
+      "data_type": "port-error-model-mapping",
+      "field_mapping": {
+        "error_mapping": "error_mapping"
+      }
+    },
+    {
+      "from_step": "s01_port_behavior_surface_inventory",
+      "to_step": "s05_port_edge_case_input_set",
+      "data_type": "port-behavior-surface-inventory",
+      "field_mapping": {
+        "behavior_inventory": "behavior_inventory"
+      }
+    },
+    {
+      "from_step": "s04_port_golden_corpus_schema",
+      "to_step": "s05_port_edge_case_input_set",
+      "data_type": "port-golden-corpus-schema",
+      "field_mapping": {
+        "corpus_schema": "corpus_schema"
+      }
+    },
+    {
+      "from_step": "s04_port_golden_corpus_schema",
+      "to_step": "s06_port_py_golden_capture",
+      "data_type": "port-golden-corpus-schema",
+      "field_mapping": {
+        "corpus_schema": "corpus_schema"
+      }
+    },
+    {
+      "from_step": "s05_port_edge_case_input_set",
+      "to_step": "s06_port_py_golden_capture",
+      "data_type": "port-edge-case-input-set",
+      "field_mapping": {
+        "case_inputs": "case_inputs"
+      }
+    },
+    {
+      "from_step": "s02_port_nondeterminism_inventory",
+      "to_step": "s06_port_py_golden_capture",
+      "data_type": "port-nondeterminism-inventory",
+      "field_mapping": {
+        "nondeterminism_sources": "nondeterminism_sources"
+      }
+    },
+    {
+      "from_step": "s04_port_golden_corpus_schema",
+      "to_step": "s07_port_js_golden_capture",
+      "data_type": "port-golden-corpus-schema",
+      "field_mapping": {
+        "corpus_schema": "corpus_schema"
+      }
+    },
+    {
+      "from_step": "s05_port_edge_case_input_set",
+      "to_step": "s07_port_js_golden_capture",
+      "data_type": "port-edge-case-input-set",
+      "field_mapping": {
+        "case_inputs": "case_inputs"
+      }
+    },
+    {
+      "from_step": "s02_port_nondeterminism_inventory",
+      "to_step": "s07_port_js_golden_capture",
+      "data_type": "port-nondeterminism-inventory",
+      "field_mapping": {
+        "nondeterminism_sources": "nondeterminism_sources"
+      }
+    },
+    {
+      "from_step": "s04_port_golden_corpus_schema",
+      "to_step": "s08_port_java_golden_capture",
+      "data_type": "port-golden-corpus-schema",
+      "field_mapping": {
+        "corpus_schema": "corpus_schema"
+      }
+    },
+    {
+      "from_step": "s05_port_edge_case_input_set",
+      "to_step": "s08_port_java_golden_capture",
+      "data_type": "port-edge-case-input-set",
+      "field_mapping": {
+        "case_inputs": "case_inputs"
+      }
+    },
+    {
+      "from_step": "s02_port_nondeterminism_inventory",
+      "to_step": "s08_port_java_golden_capture",
+      "data_type": "port-nondeterminism-inventory",
+      "field_mapping": {
+        "nondeterminism_sources": "nondeterminism_sources"
+      }
+    },
+    {
+      "from_step": "s04_port_golden_corpus_schema",
+      "to_step": "s09_port_c_golden_capture",
+      "data_type": "port-golden-corpus-schema",
+      "field_mapping": {
+        "corpus_schema": "corpus_schema"
+      }
+    },
+    {
+      "from_step": "s05_port_edge_case_input_set",
+      "to_step": "s09_port_c_golden_capture",
+      "data_type": "port-edge-case-input-set",
+      "field_mapping": {
+        "case_inputs": "case_inputs"
+      }
+    },
+    {
+      "from_step": "s02_port_nondeterminism_inventory",
+      "to_step": "s09_port_c_golden_capture",
+      "data_type": "port-nondeterminism-inventory",
+      "field_mapping": {
+        "nondeterminism_sources": "nondeterminism_sources"
+      }
+    },
+    {
+      "from_step": "s04_port_golden_corpus_schema",
+      "to_step": "s10_port_golden_corpus_freeze",
+      "data_type": "port-golden-corpus-schema",
+      "field_mapping": {
+        "corpus_schema": "corpus_schema"
+      }
+    },
+    {
+      "from_step": "s06_port_py_golden_capture",
+      "to_step": "s10_port_golden_corpus_freeze",
+      "data_type": "port-py-golden-capture",
+      "field_mapping": {
+        "py_corpus": "py_corpus"
+      }
+    },
+    {
+      "from_step": "s07_port_js_golden_capture",
+      "to_step": "s10_port_golden_corpus_freeze",
+      "data_type": "port-js-golden-capture",
+      "field_mapping": {
+        "js_corpus": "js_corpus"
+      }
+    },
+    {
+      "from_step": "s08_port_java_golden_capture",
+      "to_step": "s10_port_golden_corpus_freeze",
+      "data_type": "port-java-golden-capture",
+      "field_mapping": {
+        "java_corpus": "java_corpus"
+      }
+    },
+    {
+      "from_step": "s09_port_c_golden_capture",
+      "to_step": "s10_port_golden_corpus_freeze",
+      "data_type": "port-c-golden-capture",
+      "field_mapping": {
+        "c_corpus": "c_corpus"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "source_repo",
+    "stack",
+    "entry_points",
+    "integer_findings",
+    "float_findings",
+    "unicode_findings",
+    "sample_inputs"
+  ],
+  "terminal_outputs": [
+    "golden_corpus",
+    "corpus_manifest"
+  ],
+  "parallel_groups": [
+    [
+      "s01_port_behavior_surface_inventory"
+    ],
+    [
+      "s02_port_nondeterminism_inventory",
+      "s03_port_error_model_mapping"
+    ],
+    [
+      "s04_port_golden_corpus_schema"
+    ],
+    [
+      "s05_port_edge_case_input_set"
+    ],
+    [
+      "s06_port_py_golden_capture",
+      "s07_port_js_golden_capture",
+      "s08_port_java_golden_capture",
+      "s09_port_c_golden_capture"
+    ],
+    [
+      "s10_port_golden_corpus_freeze"
+    ]
+  ],
+  "estimated_cost": 10,
+  "critical_path": [
+    "s01_port_behavior_surface_inventory",
+    "s02_port_nondeterminism_inventory",
+    "s04_port_golden_corpus_schema",
+    "s05_port_edge_case_input_set",
+    "s06_port_py_golden_capture",
+    "s10_port_golden_corpus_freeze"
+  ]
+}

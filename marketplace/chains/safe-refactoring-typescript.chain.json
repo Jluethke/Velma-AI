@@ -1,0 +1,315 @@
+{
+  "name": "safe-refactoring-typescript",
+  "description": "TypeScript refactoring with the language service: baseline, Jest or Vitest characterization, API Extractor report, madge cycle breaking, knip dead code removal, ts-morph rename and move, extract function, jscodeshift codemod, then per-commit verification.",
+  "steps": [
+    {
+      "id": "s01_srf_baseline_green_check",
+      "skill_name": "srf-baseline-green-check",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "test_command": "from_user_input",
+        "refactorings": "from_user_input",
+        "refactor_name": "from_user_input"
+      },
+      "outputs": {
+        "baseline_commit": "baseline_commit",
+        "refactor_branch": "refactor_branch",
+        "baseline_report": "baseline_report"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_srf_node_characterization_tests",
+      "skill_name": "srf-node-characterization-tests",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "target_paths": "from_user_input",
+        "test_command": "from_user_input",
+        "baseline_commit": "s01_srf_baseline_green_check.baseline_commit"
+      },
+      "outputs": {
+        "characterization_tests": "characterization_tests",
+        "target_coverage": "target_coverage"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_srf_ts_api_snapshot_api_extractor",
+      "skill_name": "srf-ts-api-snapshot-api-extractor",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "package_entry_dts": "from_user_input",
+        "baseline_commit": "s01_srf_baseline_green_check.baseline_commit"
+      },
+      "outputs": {
+        "api_snapshot": "api_snapshot",
+        "api_check_command": "api_check_command"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_srf_ts_break_import_cycle_madge",
+      "skill_name": "srf-ts-break-import-cycle-madge",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "test_command": "from_user_input",
+        "characterization_tests": "s02_srf_node_characterization_tests.characterization_tests",
+        "source_root": "from_user_input"
+      },
+      "outputs": {
+        "step_commits": "step_commits",
+        "step_log": "step_log"
+      },
+      "condition": "'import_cycle' in refactorings",
+      "parallel_group": 4
+    },
+    {
+      "id": "s05_srf_ts_dead_code_knip",
+      "skill_name": "srf-ts-dead-code-knip",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "test_command": "from_user_input",
+        "characterization_tests": "s02_srf_node_characterization_tests.characterization_tests",
+        "dead_code_scope": "from_user_input"
+      },
+      "outputs": {
+        "step_commits": "step_commits",
+        "step_log": "step_log"
+      },
+      "condition": "'dead_code' in refactorings",
+      "parallel_group": 5
+    },
+    {
+      "id": "s06_srf_ts_rename_ts_morph",
+      "skill_name": "srf-ts-rename-ts-morph",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "test_command": "from_user_input",
+        "characterization_tests": "s02_srf_node_characterization_tests.characterization_tests",
+        "rename_target": "from_user_input",
+        "new_name": "from_user_input"
+      },
+      "outputs": {
+        "step_commits": "step_commits",
+        "step_log": "step_log"
+      },
+      "condition": "'rename' in refactorings",
+      "parallel_group": 6
+    },
+    {
+      "id": "s07_srf_ts_move_file_ts_morph",
+      "skill_name": "srf-ts-move-file-ts-morph",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "test_command": "from_user_input",
+        "characterization_tests": "s02_srf_node_characterization_tests.characterization_tests",
+        "move_source": "from_user_input",
+        "move_destination": "from_user_input"
+      },
+      "outputs": {
+        "step_commits": "step_commits",
+        "step_log": "step_log"
+      },
+      "condition": "'move_module' in refactorings",
+      "parallel_group": 7
+    },
+    {
+      "id": "s08_srf_ts_extract_function_tsserver",
+      "skill_name": "srf-ts-extract-function-tsserver",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "test_command": "from_user_input",
+        "characterization_tests": "s02_srf_node_characterization_tests.characterization_tests",
+        "extract_file": "from_user_input",
+        "extract_lines": "from_user_input",
+        "new_function_name": "from_user_input"
+      },
+      "outputs": {
+        "step_commits": "step_commits",
+        "step_log": "step_log"
+      },
+      "condition": "'extract_function' in refactorings",
+      "parallel_group": 8
+    },
+    {
+      "id": "s09_srf_js_codemod_jscodeshift",
+      "skill_name": "srf-js-codemod-jscodeshift",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "test_command": "from_user_input",
+        "baseline_commit": "s01_srf_baseline_green_check.baseline_commit",
+        "codemod_spec": "from_user_input",
+        "source_root": "from_user_input"
+      },
+      "outputs": {
+        "step_commits": "step_commits",
+        "step_log": "step_log"
+      },
+      "condition": "'codemod_jscodeshift' in refactorings",
+      "parallel_group": 9
+    },
+    {
+      "id": "s10_srf_verify_step_history",
+      "skill_name": "srf-verify-step-history",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "test_command": "from_user_input",
+        "baseline_commit": "s01_srf_baseline_green_check.baseline_commit",
+        "refactor_branch": "s01_srf_baseline_green_check.refactor_branch",
+        "api_check_command": "from_user_input_optional"
+      },
+      "outputs": {
+        "verification_report": "verification_report",
+        "red_commits": "red_commits"
+      },
+      "parallel_group": 10
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_srf_baseline_green_check",
+      "to_step": "s02_srf_node_characterization_tests",
+      "data_type": "srf-baseline-green-check",
+      "field_mapping": {
+        "baseline_commit": "baseline_commit"
+      }
+    },
+    {
+      "from_step": "s01_srf_baseline_green_check",
+      "to_step": "s03_srf_ts_api_snapshot_api_extractor",
+      "data_type": "srf-baseline-green-check",
+      "field_mapping": {
+        "baseline_commit": "baseline_commit"
+      }
+    },
+    {
+      "from_step": "s02_srf_node_characterization_tests",
+      "to_step": "s04_srf_ts_break_import_cycle_madge",
+      "data_type": "srf-node-characterization-tests",
+      "field_mapping": {
+        "characterization_tests": "characterization_tests"
+      }
+    },
+    {
+      "from_step": "s02_srf_node_characterization_tests",
+      "to_step": "s05_srf_ts_dead_code_knip",
+      "data_type": "srf-node-characterization-tests",
+      "field_mapping": {
+        "characterization_tests": "characterization_tests"
+      }
+    },
+    {
+      "from_step": "s02_srf_node_characterization_tests",
+      "to_step": "s06_srf_ts_rename_ts_morph",
+      "data_type": "srf-node-characterization-tests",
+      "field_mapping": {
+        "characterization_tests": "characterization_tests"
+      }
+    },
+    {
+      "from_step": "s02_srf_node_characterization_tests",
+      "to_step": "s07_srf_ts_move_file_ts_morph",
+      "data_type": "srf-node-characterization-tests",
+      "field_mapping": {
+        "characterization_tests": "characterization_tests"
+      }
+    },
+    {
+      "from_step": "s02_srf_node_characterization_tests",
+      "to_step": "s08_srf_ts_extract_function_tsserver",
+      "data_type": "srf-node-characterization-tests",
+      "field_mapping": {
+        "characterization_tests": "characterization_tests"
+      }
+    },
+    {
+      "from_step": "s01_srf_baseline_green_check",
+      "to_step": "s09_srf_js_codemod_jscodeshift",
+      "data_type": "srf-baseline-green-check",
+      "field_mapping": {
+        "baseline_commit": "baseline_commit"
+      }
+    },
+    {
+      "from_step": "s01_srf_baseline_green_check",
+      "to_step": "s10_srf_verify_step_history",
+      "data_type": "srf-baseline-green-check",
+      "field_mapping": {
+        "baseline_commit": "baseline_commit",
+        "refactor_branch": "refactor_branch"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "repo_path",
+    "stack",
+    "test_command",
+    "refactorings",
+    "refactor_name",
+    "target_paths",
+    "package_entry_dts",
+    "source_root",
+    "dead_code_scope",
+    "rename_target",
+    "new_name",
+    "move_source",
+    "move_destination",
+    "extract_file",
+    "extract_lines",
+    "new_function_name",
+    "codemod_spec",
+    "api_check_command"
+  ],
+  "terminal_outputs": [
+    "baseline_report",
+    "verification_report",
+    "red_commits",
+    "step_log"
+  ],
+  "parallel_groups": [
+    [
+      "s01_srf_baseline_green_check"
+    ],
+    [
+      "s02_srf_node_characterization_tests"
+    ],
+    [
+      "s03_srf_ts_api_snapshot_api_extractor"
+    ],
+    [
+      "s04_srf_ts_break_import_cycle_madge"
+    ],
+    [
+      "s05_srf_ts_dead_code_knip"
+    ],
+    [
+      "s06_srf_ts_rename_ts_morph"
+    ],
+    [
+      "s07_srf_ts_move_file_ts_morph"
+    ],
+    [
+      "s08_srf_ts_extract_function_tsserver"
+    ],
+    [
+      "s09_srf_js_codemod_jscodeshift"
+    ],
+    [
+      "s10_srf_verify_step_history"
+    ]
+  ],
+  "estimated_cost": 10,
+  "critical_path": [
+    "s01_srf_baseline_green_check",
+    "s02_srf_node_characterization_tests",
+    "s03_srf_ts_api_snapshot_api_extractor",
+    "s04_srf_ts_break_import_cycle_madge",
+    "s05_srf_ts_dead_code_knip",
+    "s06_srf_ts_rename_ts_morph",
+    "s07_srf_ts_move_file_ts_morph",
+    "s08_srf_ts_extract_function_tsserver",
+    "s09_srf_js_codemod_jscodeshift",
+    "s10_srf_verify_step_history"
+  ]
+}

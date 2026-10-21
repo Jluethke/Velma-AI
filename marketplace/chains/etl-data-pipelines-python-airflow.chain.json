@@ -1,0 +1,435 @@
+{
+  "name": "etl-data-pipelines-python-airflow",
+  "description": "Build a Python batch pipeline orchestrated by Airflow: watermark extract, warehouse-specific idempotent load, Polars transform, Great Expectations checkpoint and alerts.",
+  "steps": [
+    {
+      "id": "s01_etl_source_profile_sql",
+      "skill_name": "etl-source-profile-sql",
+      "inputs": {
+        "source_connection": "from_user_input",
+        "source_tables": "from_user_input"
+      },
+      "outputs": {
+        "source_profile": "source_profile"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_etl_source_key_watermark_discovery",
+      "skill_name": "etl-source-key-watermark-discovery",
+      "inputs": {
+        "source_connection": "from_user_input",
+        "source_profile": "s01_etl_source_profile_sql.source_profile"
+      },
+      "outputs": {
+        "extraction_keys": "extraction_keys"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_etl_target_schema_contract",
+      "skill_name": "etl-target-schema-contract",
+      "inputs": {
+        "source_profile": "s01_etl_source_profile_sql.source_profile",
+        "extraction_keys": "s02_etl_source_key_watermark_discovery.extraction_keys",
+        "consumer_requirements": "from_user_input"
+      },
+      "outputs": {
+        "data_contract": "data_contract"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_etl_late_arriving_data_policy",
+      "skill_name": "etl-late-arriving-data-policy",
+      "inputs": {
+        "source_connection": "from_user_input",
+        "data_contract": "s03_etl_target_schema_contract.data_contract",
+        "extraction_keys": "s02_etl_source_key_watermark_discovery.extraction_keys"
+      },
+      "outputs": {
+        "lateness_profile": "lateness_profile",
+        "late_data_policy": "late_data_policy"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s05_etl_extract_watermark_incremental",
+      "skill_name": "etl-extract-watermark-incremental",
+      "inputs": {
+        "source_connection": "from_user_input",
+        "extraction_keys": "s02_etl_source_key_watermark_discovery.extraction_keys",
+        "late_data_policy": "s04_etl_late_arriving_data_policy.late_data_policy",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "extract_job": "extract_job",
+        "landing_location": "landing_location"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s06_etl_load_upsert_postgres",
+      "skill_name": "etl-load-upsert-postgres",
+      "inputs": {
+        "landing_location": "s05_etl_extract_watermark_incremental.landing_location",
+        "data_contract": "s03_etl_target_schema_contract.data_contract",
+        "extraction_keys": "s02_etl_source_key_watermark_discovery.extraction_keys",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "load_sql": "load_sql",
+        "load_report": "load_report"
+      },
+      "condition": "warehouse == 'postgres'",
+      "parallel_group": 6
+    },
+    {
+      "id": "s07_etl_load_merge_snowflake",
+      "skill_name": "etl-load-merge-snowflake",
+      "inputs": {
+        "landing_location": "s05_etl_extract_watermark_incremental.landing_location",
+        "data_contract": "s03_etl_target_schema_contract.data_contract",
+        "extraction_keys": "s02_etl_source_key_watermark_discovery.extraction_keys",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "load_sql": "load_sql",
+        "load_report": "load_report"
+      },
+      "condition": "warehouse == 'snowflake'",
+      "parallel_group": 6
+    },
+    {
+      "id": "s08_etl_load_merge_bigquery",
+      "skill_name": "etl-load-merge-bigquery",
+      "inputs": {
+        "landing_location": "s05_etl_extract_watermark_incremental.landing_location",
+        "data_contract": "s03_etl_target_schema_contract.data_contract",
+        "extraction_keys": "s02_etl_source_key_watermark_discovery.extraction_keys",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "load_sql": "load_sql",
+        "load_report": "load_report"
+      },
+      "condition": "warehouse == 'bigquery'",
+      "parallel_group": 6
+    },
+    {
+      "id": "s09_etl_load_replacewhere_delta",
+      "skill_name": "etl-load-replacewhere-delta",
+      "inputs": {
+        "landing_location": "s05_etl_extract_watermark_incremental.landing_location",
+        "data_contract": "s03_etl_target_schema_contract.data_contract",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "load_code": "load_code",
+        "load_report": "load_report"
+      },
+      "condition": "warehouse == 'databricks'",
+      "parallel_group": 6
+    },
+    {
+      "id": "s10_etl_py_polars_transform",
+      "skill_name": "etl-py-polars-transform",
+      "inputs": {
+        "data_contract": "s03_etl_target_schema_contract.data_contract",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "transform_module": "transform_module",
+        "transform_tests": "transform_tests"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s11_etl_gx_sql_checkpoint",
+      "skill_name": "etl-gx-sql-checkpoint",
+      "inputs": {
+        "data_contract": "s03_etl_target_schema_contract.data_contract",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "gx_checkpoint": "gx_checkpoint",
+        "validation_result": "validation_result"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s12_etl_airflow_dag_retries",
+      "skill_name": "etl-airflow-dag-retries",
+      "inputs": {
+        "data_contract": "s03_etl_target_schema_contract.data_contract",
+        "late_data_policy": "s04_etl_late_arriving_data_policy.late_data_policy",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "dag_file": "dag_file",
+        "dag_test_log": "dag_test_log"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s13_etl_freshness_failure_alerts",
+      "skill_name": "etl-freshness-failure-alerts",
+      "inputs": {
+        "data_contract": "s03_etl_target_schema_contract.data_contract",
+        "orchestrator": "from_user_input",
+        "alert_destination": "from_user_input",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "freshness_checks": "freshness_checks",
+        "alert_config": "alert_config"
+      },
+      "parallel_group": 4
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_etl_source_profile_sql",
+      "to_step": "s02_etl_source_key_watermark_discovery",
+      "data_type": "etl-source-profile-sql",
+      "field_mapping": {
+        "source_profile": "source_profile"
+      }
+    },
+    {
+      "from_step": "s01_etl_source_profile_sql",
+      "to_step": "s03_etl_target_schema_contract",
+      "data_type": "etl-source-profile-sql",
+      "field_mapping": {
+        "source_profile": "source_profile"
+      }
+    },
+    {
+      "from_step": "s02_etl_source_key_watermark_discovery",
+      "to_step": "s03_etl_target_schema_contract",
+      "data_type": "etl-source-key-watermark-discovery",
+      "field_mapping": {
+        "extraction_keys": "extraction_keys"
+      }
+    },
+    {
+      "from_step": "s02_etl_source_key_watermark_discovery",
+      "to_step": "s04_etl_late_arriving_data_policy",
+      "data_type": "etl-source-key-watermark-discovery",
+      "field_mapping": {
+        "extraction_keys": "extraction_keys"
+      }
+    },
+    {
+      "from_step": "s03_etl_target_schema_contract",
+      "to_step": "s04_etl_late_arriving_data_policy",
+      "data_type": "etl-target-schema-contract",
+      "field_mapping": {
+        "data_contract": "data_contract"
+      }
+    },
+    {
+      "from_step": "s02_etl_source_key_watermark_discovery",
+      "to_step": "s05_etl_extract_watermark_incremental",
+      "data_type": "etl-source-key-watermark-discovery",
+      "field_mapping": {
+        "extraction_keys": "extraction_keys"
+      }
+    },
+    {
+      "from_step": "s04_etl_late_arriving_data_policy",
+      "to_step": "s05_etl_extract_watermark_incremental",
+      "data_type": "etl-late-arriving-data-policy",
+      "field_mapping": {
+        "late_data_policy": "late_data_policy"
+      }
+    },
+    {
+      "from_step": "s02_etl_source_key_watermark_discovery",
+      "to_step": "s06_etl_load_upsert_postgres",
+      "data_type": "etl-source-key-watermark-discovery",
+      "field_mapping": {
+        "extraction_keys": "extraction_keys"
+      }
+    },
+    {
+      "from_step": "s03_etl_target_schema_contract",
+      "to_step": "s06_etl_load_upsert_postgres",
+      "data_type": "etl-target-schema-contract",
+      "field_mapping": {
+        "data_contract": "data_contract"
+      }
+    },
+    {
+      "from_step": "s05_etl_extract_watermark_incremental",
+      "to_step": "s06_etl_load_upsert_postgres",
+      "data_type": "etl-extract-watermark-incremental",
+      "field_mapping": {
+        "landing_location": "landing_location"
+      }
+    },
+    {
+      "from_step": "s02_etl_source_key_watermark_discovery",
+      "to_step": "s07_etl_load_merge_snowflake",
+      "data_type": "etl-source-key-watermark-discovery",
+      "field_mapping": {
+        "extraction_keys": "extraction_keys"
+      }
+    },
+    {
+      "from_step": "s03_etl_target_schema_contract",
+      "to_step": "s07_etl_load_merge_snowflake",
+      "data_type": "etl-target-schema-contract",
+      "field_mapping": {
+        "data_contract": "data_contract"
+      }
+    },
+    {
+      "from_step": "s05_etl_extract_watermark_incremental",
+      "to_step": "s07_etl_load_merge_snowflake",
+      "data_type": "etl-extract-watermark-incremental",
+      "field_mapping": {
+        "landing_location": "landing_location"
+      }
+    },
+    {
+      "from_step": "s02_etl_source_key_watermark_discovery",
+      "to_step": "s08_etl_load_merge_bigquery",
+      "data_type": "etl-source-key-watermark-discovery",
+      "field_mapping": {
+        "extraction_keys": "extraction_keys"
+      }
+    },
+    {
+      "from_step": "s03_etl_target_schema_contract",
+      "to_step": "s08_etl_load_merge_bigquery",
+      "data_type": "etl-target-schema-contract",
+      "field_mapping": {
+        "data_contract": "data_contract"
+      }
+    },
+    {
+      "from_step": "s05_etl_extract_watermark_incremental",
+      "to_step": "s08_etl_load_merge_bigquery",
+      "data_type": "etl-extract-watermark-incremental",
+      "field_mapping": {
+        "landing_location": "landing_location"
+      }
+    },
+    {
+      "from_step": "s03_etl_target_schema_contract",
+      "to_step": "s09_etl_load_replacewhere_delta",
+      "data_type": "etl-target-schema-contract",
+      "field_mapping": {
+        "data_contract": "data_contract"
+      }
+    },
+    {
+      "from_step": "s05_etl_extract_watermark_incremental",
+      "to_step": "s09_etl_load_replacewhere_delta",
+      "data_type": "etl-extract-watermark-incremental",
+      "field_mapping": {
+        "landing_location": "landing_location"
+      }
+    },
+    {
+      "from_step": "s03_etl_target_schema_contract",
+      "to_step": "s10_etl_py_polars_transform",
+      "data_type": "etl-target-schema-contract",
+      "field_mapping": {
+        "data_contract": "data_contract"
+      }
+    },
+    {
+      "from_step": "s03_etl_target_schema_contract",
+      "to_step": "s11_etl_gx_sql_checkpoint",
+      "data_type": "etl-target-schema-contract",
+      "field_mapping": {
+        "data_contract": "data_contract"
+      }
+    },
+    {
+      "from_step": "s03_etl_target_schema_contract",
+      "to_step": "s12_etl_airflow_dag_retries",
+      "data_type": "etl-target-schema-contract",
+      "field_mapping": {
+        "data_contract": "data_contract"
+      }
+    },
+    {
+      "from_step": "s04_etl_late_arriving_data_policy",
+      "to_step": "s12_etl_airflow_dag_retries",
+      "data_type": "etl-late-arriving-data-policy",
+      "field_mapping": {
+        "late_data_policy": "late_data_policy"
+      }
+    },
+    {
+      "from_step": "s03_etl_target_schema_contract",
+      "to_step": "s13_etl_freshness_failure_alerts",
+      "data_type": "etl-target-schema-contract",
+      "field_mapping": {
+        "data_contract": "data_contract"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "source_connection",
+    "source_tables",
+    "consumer_requirements",
+    "project_dir",
+    "orchestrator",
+    "alert_destination"
+  ],
+  "terminal_outputs": [
+    "lateness_profile",
+    "extract_job",
+    "load_sql",
+    "load_report",
+    "load_code",
+    "transform_module",
+    "transform_tests",
+    "gx_checkpoint",
+    "validation_result",
+    "dag_file",
+    "dag_test_log",
+    "freshness_checks",
+    "alert_config"
+  ],
+  "parallel_groups": [
+    [
+      "s01_etl_source_profile_sql"
+    ],
+    [
+      "s02_etl_source_key_watermark_discovery"
+    ],
+    [
+      "s03_etl_target_schema_contract"
+    ],
+    [
+      "s04_etl_late_arriving_data_policy",
+      "s10_etl_py_polars_transform",
+      "s11_etl_gx_sql_checkpoint",
+      "s13_etl_freshness_failure_alerts"
+    ],
+    [
+      "s05_etl_extract_watermark_incremental",
+      "s12_etl_airflow_dag_retries"
+    ],
+    [
+      "s06_etl_load_upsert_postgres",
+      "s07_etl_load_merge_snowflake",
+      "s08_etl_load_merge_bigquery",
+      "s09_etl_load_replacewhere_delta"
+    ]
+  ],
+  "estimated_cost": 13,
+  "critical_path": [
+    "s01_etl_source_profile_sql",
+    "s02_etl_source_key_watermark_discovery",
+    "s03_etl_target_schema_contract",
+    "s04_etl_late_arriving_data_policy",
+    "s05_etl_extract_watermark_incremental",
+    "s06_etl_load_upsert_postgres"
+  ]
+}

@@ -1,0 +1,749 @@
+{
+  "name": "api-client-sdk-typescript",
+  "description": "Build a TypeScript client SDK from an OpenAPI spec: lint, inventory, TypeScript generation or handwritten mapping, coverage audit, auth, timeouts, retries, idempotency, pagination, errors, typed responses, mock tests and Prism contract tests. Set stack to 'typescript'.",
+  "steps": [
+    {
+      "id": "s01_sdk_spec_spectral_lint",
+      "skill_name": "sdk-spec-spectral-lint",
+      "inputs": {
+        "spec_path": "from_user_input",
+        "spectral_ruleset": "from_user_input_optional"
+      },
+      "outputs": {
+        "lint_report": "lint_report",
+        "validated_spec": "validated_spec"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_sdk_spec_sdk_readiness_rules",
+      "skill_name": "sdk-spec-sdk-readiness-rules",
+      "inputs": {
+        "validated_spec": "s01_sdk_spec_spectral_lint.validated_spec",
+        "lint_report": "s01_sdk_spec_spectral_lint.lint_report"
+      },
+      "outputs": {
+        "readiness_ruleset": "readiness_ruleset",
+        "readiness_report": "readiness_report"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_sdk_spec_inventory",
+      "skill_name": "sdk-spec-inventory",
+      "inputs": {
+        "validated_spec": "s01_sdk_spec_spectral_lint.validated_spec",
+        "readiness_report": "s02_sdk_spec_sdk_readiness_rules.readiness_report"
+      },
+      "outputs": {
+        "api_inventory": "api_inventory"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_sdk_generator_decision",
+      "skill_name": "sdk-generator-decision",
+      "inputs": {
+        "api_inventory": "s03_sdk_spec_inventory.api_inventory",
+        "stack": "from_user_input",
+        "sdk_constraints": "from_user_input_optional"
+      },
+      "outputs": {
+        "generation_plan": "generation_plan"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s05_sdk_model_type_mapping",
+      "skill_name": "sdk-model-type-mapping",
+      "inputs": {
+        "api_inventory": "s03_sdk_spec_inventory.api_inventory",
+        "validated_spec": "s01_sdk_spec_spectral_lint.validated_spec",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "type_mapping": "type_mapping"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s06_sdk_ts_openapi_typescript",
+      "skill_name": "sdk-ts-openapi-typescript",
+      "inputs": {
+        "validated_spec": "s01_sdk_spec_spectral_lint.validated_spec",
+        "generation_plan": "s04_sdk_generator_decision.generation_plan",
+        "type_mapping": "s05_sdk_model_type_mapping.type_mapping",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "ts_client_module": "ts_client_module"
+      },
+      "condition": "generation_plan.approach != 'handwritten'",
+      "parallel_group": 5
+    },
+    {
+      "id": "s07_sdk_handwritten_endpoint_map",
+      "skill_name": "sdk-handwritten-endpoint-map",
+      "inputs": {
+        "api_inventory": "s03_sdk_spec_inventory.api_inventory",
+        "type_mapping": "s05_sdk_model_type_mapping.type_mapping",
+        "generation_plan": "s04_sdk_generator_decision.generation_plan",
+        "stack": "from_user_input",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "endpoint_map": "endpoint_map"
+      },
+      "condition": "generation_plan.approach != 'generated'",
+      "parallel_group": 6
+    },
+    {
+      "id": "s08_sdk_endpoint_coverage_audit",
+      "skill_name": "sdk-endpoint-coverage-audit",
+      "inputs": {
+        "api_inventory": "s03_sdk_spec_inventory.api_inventory",
+        "stack": "from_user_input",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "coverage_report": "coverage_report"
+      },
+      "parallel_group": 7
+    },
+    {
+      "id": "s09_sdk_auth_api_key",
+      "skill_name": "sdk-auth-api-key",
+      "inputs": {
+        "api_inventory": "s03_sdk_spec_inventory.api_inventory",
+        "stack": "from_user_input",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "api_key_auth": "api_key_auth"
+      },
+      "condition": "'apiKey' in api_inventory.auth_schemes",
+      "parallel_group": 8
+    },
+    {
+      "id": "s10_sdk_auth_oauth_client_credentials",
+      "skill_name": "sdk-auth-oauth-client-credentials",
+      "inputs": {
+        "api_inventory": "s03_sdk_spec_inventory.api_inventory",
+        "stack": "from_user_input",
+        "project_dir": "from_user_input",
+        "token_expiry_skew_seconds": "from_user_input_optional"
+      },
+      "outputs": {
+        "token_provider": "token_provider"
+      },
+      "condition": "'oauth2_client_credentials' in api_inventory.auth_schemes || 'oauth2_authorization_code' in api_inventory.auth_schemes || 'oidc' in api_inventory.auth_schemes",
+      "parallel_group": 8
+    },
+    {
+      "id": "s11_sdk_auth_token_refresh",
+      "skill_name": "sdk-auth-token-refresh",
+      "inputs": {
+        "token_provider": "s10_sdk_auth_oauth_client_credentials.token_provider",
+        "api_inventory": "s03_sdk_spec_inventory.api_inventory",
+        "stack": "from_user_input",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "refresh_policy": "refresh_policy"
+      },
+      "condition": "'oauth2_authorization_code' in api_inventory.auth_schemes || 'oidc' in api_inventory.auth_schemes",
+      "parallel_group": 9
+    },
+    {
+      "id": "s12_sdk_node_timeouts",
+      "skill_name": "sdk-node-timeouts",
+      "inputs": {
+        "project_dir": "from_user_input",
+        "timeout_budget": "from_user_input"
+      },
+      "outputs": {
+        "node_timeout_config": "node_timeout_config"
+      },
+      "parallel_group": 8
+    },
+    {
+      "id": "s13_sdk_retry_backoff",
+      "skill_name": "sdk-retry-backoff",
+      "inputs": {
+        "api_inventory": "s03_sdk_spec_inventory.api_inventory",
+        "stack": "from_user_input",
+        "project_dir": "from_user_input",
+        "retry_limits": "from_user_input"
+      },
+      "outputs": {
+        "retry_policy": "retry_policy"
+      },
+      "parallel_group": 9
+    },
+    {
+      "id": "s14_sdk_idempotency_keys",
+      "skill_name": "sdk-idempotency-keys",
+      "inputs": {
+        "retry_policy": "s13_sdk_retry_backoff.retry_policy",
+        "api_inventory": "s03_sdk_spec_inventory.api_inventory",
+        "stack": "from_user_input",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "idempotency_design": "idempotency_design"
+      },
+      "condition": "api_inventory.idempotency_header != 'unknown'",
+      "parallel_group": 10
+    },
+    {
+      "id": "s15_sdk_pagination_cursor",
+      "skill_name": "sdk-pagination-cursor",
+      "inputs": {
+        "api_inventory": "s03_sdk_spec_inventory.api_inventory",
+        "stack": "from_user_input",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "cursor_paginator": "cursor_paginator"
+      },
+      "condition": "'cursor' in api_inventory.pagination_styles",
+      "parallel_group": 8
+    },
+    {
+      "id": "s16_sdk_pagination_offset",
+      "skill_name": "sdk-pagination-offset",
+      "inputs": {
+        "api_inventory": "s03_sdk_spec_inventory.api_inventory",
+        "stack": "from_user_input",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "offset_paginator": "offset_paginator"
+      },
+      "condition": "'offset' in api_inventory.pagination_styles",
+      "parallel_group": 8
+    },
+    {
+      "id": "s17_sdk_pagination_link_header",
+      "skill_name": "sdk-pagination-link-header",
+      "inputs": {
+        "api_inventory": "s03_sdk_spec_inventory.api_inventory",
+        "stack": "from_user_input",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "link_paginator": "link_paginator"
+      },
+      "condition": "'link_header' in api_inventory.pagination_styles",
+      "parallel_group": 8
+    },
+    {
+      "id": "s18_sdk_error_hierarchy",
+      "skill_name": "sdk-error-hierarchy",
+      "inputs": {
+        "api_inventory": "s03_sdk_spec_inventory.api_inventory",
+        "stack": "from_user_input",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "error_hierarchy": "error_hierarchy"
+      },
+      "parallel_group": 8
+    },
+    {
+      "id": "s19_sdk_typed_responses",
+      "skill_name": "sdk-typed-responses",
+      "inputs": {
+        "type_mapping": "s05_sdk_model_type_mapping.type_mapping",
+        "stack": "from_user_input",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "response_validation": "response_validation"
+      },
+      "parallel_group": 8
+    },
+    {
+      "id": "s20_sdk_node_mock_tests_msw",
+      "skill_name": "sdk-node-mock-tests-msw",
+      "inputs": {
+        "project_dir": "from_user_input",
+        "api_inventory": "s03_sdk_spec_inventory.api_inventory",
+        "error_hierarchy": "s18_sdk_error_hierarchy.error_hierarchy",
+        "retry_policy": "s13_sdk_retry_backoff.retry_policy"
+      },
+      "outputs": {
+        "ts_mock_tests": "ts_mock_tests"
+      },
+      "parallel_group": 11
+    },
+    {
+      "id": "s21_sdk_contract_tests_prism",
+      "skill_name": "sdk-contract-tests-prism",
+      "inputs": {
+        "validated_spec": "s01_sdk_spec_spectral_lint.validated_spec",
+        "stack": "from_user_input",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "contract_test_report": "contract_test_report"
+      },
+      "parallel_group": 12
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_sdk_spec_spectral_lint",
+      "to_step": "s02_sdk_spec_sdk_readiness_rules",
+      "data_type": "sdk-spec-spectral-lint",
+      "field_mapping": {
+        "validated_spec": "validated_spec",
+        "lint_report": "lint_report"
+      }
+    },
+    {
+      "from_step": "s01_sdk_spec_spectral_lint",
+      "to_step": "s03_sdk_spec_inventory",
+      "data_type": "sdk-spec-spectral-lint",
+      "field_mapping": {
+        "validated_spec": "validated_spec"
+      }
+    },
+    {
+      "from_step": "s02_sdk_spec_sdk_readiness_rules",
+      "to_step": "s03_sdk_spec_inventory",
+      "data_type": "sdk-spec-sdk-readiness-rules",
+      "field_mapping": {
+        "readiness_report": "readiness_report"
+      }
+    },
+    {
+      "from_step": "s03_sdk_spec_inventory",
+      "to_step": "s04_sdk_generator_decision",
+      "data_type": "sdk-spec-inventory",
+      "field_mapping": {
+        "api_inventory": "api_inventory"
+      }
+    },
+    {
+      "from_step": "s03_sdk_spec_inventory",
+      "to_step": "s05_sdk_model_type_mapping",
+      "data_type": "sdk-spec-inventory",
+      "field_mapping": {
+        "api_inventory": "api_inventory"
+      }
+    },
+    {
+      "from_step": "s01_sdk_spec_spectral_lint",
+      "to_step": "s05_sdk_model_type_mapping",
+      "data_type": "sdk-spec-spectral-lint",
+      "field_mapping": {
+        "validated_spec": "validated_spec"
+      }
+    },
+    {
+      "from_step": "s01_sdk_spec_spectral_lint",
+      "to_step": "s06_sdk_ts_openapi_typescript",
+      "data_type": "sdk-spec-spectral-lint",
+      "field_mapping": {
+        "validated_spec": "validated_spec"
+      }
+    },
+    {
+      "from_step": "s04_sdk_generator_decision",
+      "to_step": "s06_sdk_ts_openapi_typescript",
+      "data_type": "sdk-generator-decision",
+      "field_mapping": {
+        "generation_plan": "generation_plan"
+      }
+    },
+    {
+      "from_step": "s05_sdk_model_type_mapping",
+      "to_step": "s06_sdk_ts_openapi_typescript",
+      "data_type": "sdk-model-type-mapping",
+      "field_mapping": {
+        "type_mapping": "type_mapping"
+      }
+    },
+    {
+      "from_step": "s03_sdk_spec_inventory",
+      "to_step": "s07_sdk_handwritten_endpoint_map",
+      "data_type": "sdk-spec-inventory",
+      "field_mapping": {
+        "api_inventory": "api_inventory"
+      }
+    },
+    {
+      "from_step": "s05_sdk_model_type_mapping",
+      "to_step": "s07_sdk_handwritten_endpoint_map",
+      "data_type": "sdk-model-type-mapping",
+      "field_mapping": {
+        "type_mapping": "type_mapping"
+      }
+    },
+    {
+      "from_step": "s04_sdk_generator_decision",
+      "to_step": "s07_sdk_handwritten_endpoint_map",
+      "data_type": "sdk-generator-decision",
+      "field_mapping": {
+        "generation_plan": "generation_plan"
+      }
+    },
+    {
+      "from_step": "s06_sdk_ts_openapi_typescript",
+      "to_step": "s07_sdk_handwritten_endpoint_map",
+      "data_type": "sdk-ts-openapi-typescript",
+      "field_mapping": {}
+    },
+    {
+      "from_step": "s03_sdk_spec_inventory",
+      "to_step": "s08_sdk_endpoint_coverage_audit",
+      "data_type": "sdk-spec-inventory",
+      "field_mapping": {
+        "api_inventory": "api_inventory"
+      }
+    },
+    {
+      "from_step": "s06_sdk_ts_openapi_typescript",
+      "to_step": "s08_sdk_endpoint_coverage_audit",
+      "data_type": "sdk-ts-openapi-typescript",
+      "field_mapping": {}
+    },
+    {
+      "from_step": "s07_sdk_handwritten_endpoint_map",
+      "to_step": "s08_sdk_endpoint_coverage_audit",
+      "data_type": "sdk-handwritten-endpoint-map",
+      "field_mapping": {}
+    },
+    {
+      "from_step": "s03_sdk_spec_inventory",
+      "to_step": "s09_sdk_auth_api_key",
+      "data_type": "sdk-spec-inventory",
+      "field_mapping": {
+        "api_inventory": "api_inventory"
+      }
+    },
+    {
+      "from_step": "s08_sdk_endpoint_coverage_audit",
+      "to_step": "s09_sdk_auth_api_key",
+      "data_type": "sdk-endpoint-coverage-audit",
+      "field_mapping": {}
+    },
+    {
+      "from_step": "s03_sdk_spec_inventory",
+      "to_step": "s10_sdk_auth_oauth_client_credentials",
+      "data_type": "sdk-spec-inventory",
+      "field_mapping": {
+        "api_inventory": "api_inventory"
+      }
+    },
+    {
+      "from_step": "s08_sdk_endpoint_coverage_audit",
+      "to_step": "s10_sdk_auth_oauth_client_credentials",
+      "data_type": "sdk-endpoint-coverage-audit",
+      "field_mapping": {}
+    },
+    {
+      "from_step": "s10_sdk_auth_oauth_client_credentials",
+      "to_step": "s11_sdk_auth_token_refresh",
+      "data_type": "sdk-auth-oauth-client-credentials",
+      "field_mapping": {
+        "token_provider": "token_provider"
+      }
+    },
+    {
+      "from_step": "s03_sdk_spec_inventory",
+      "to_step": "s11_sdk_auth_token_refresh",
+      "data_type": "sdk-spec-inventory",
+      "field_mapping": {
+        "api_inventory": "api_inventory"
+      }
+    },
+    {
+      "from_step": "s08_sdk_endpoint_coverage_audit",
+      "to_step": "s12_sdk_node_timeouts",
+      "data_type": "sdk-endpoint-coverage-audit",
+      "field_mapping": {}
+    },
+    {
+      "from_step": "s03_sdk_spec_inventory",
+      "to_step": "s13_sdk_retry_backoff",
+      "data_type": "sdk-spec-inventory",
+      "field_mapping": {
+        "api_inventory": "api_inventory"
+      }
+    },
+    {
+      "from_step": "s12_sdk_node_timeouts",
+      "to_step": "s13_sdk_retry_backoff",
+      "data_type": "sdk-node-timeouts",
+      "field_mapping": {}
+    },
+    {
+      "from_step": "s13_sdk_retry_backoff",
+      "to_step": "s14_sdk_idempotency_keys",
+      "data_type": "sdk-retry-backoff",
+      "field_mapping": {
+        "retry_policy": "retry_policy"
+      }
+    },
+    {
+      "from_step": "s03_sdk_spec_inventory",
+      "to_step": "s14_sdk_idempotency_keys",
+      "data_type": "sdk-spec-inventory",
+      "field_mapping": {
+        "api_inventory": "api_inventory"
+      }
+    },
+    {
+      "from_step": "s03_sdk_spec_inventory",
+      "to_step": "s15_sdk_pagination_cursor",
+      "data_type": "sdk-spec-inventory",
+      "field_mapping": {
+        "api_inventory": "api_inventory"
+      }
+    },
+    {
+      "from_step": "s08_sdk_endpoint_coverage_audit",
+      "to_step": "s15_sdk_pagination_cursor",
+      "data_type": "sdk-endpoint-coverage-audit",
+      "field_mapping": {}
+    },
+    {
+      "from_step": "s03_sdk_spec_inventory",
+      "to_step": "s16_sdk_pagination_offset",
+      "data_type": "sdk-spec-inventory",
+      "field_mapping": {
+        "api_inventory": "api_inventory"
+      }
+    },
+    {
+      "from_step": "s08_sdk_endpoint_coverage_audit",
+      "to_step": "s16_sdk_pagination_offset",
+      "data_type": "sdk-endpoint-coverage-audit",
+      "field_mapping": {}
+    },
+    {
+      "from_step": "s03_sdk_spec_inventory",
+      "to_step": "s17_sdk_pagination_link_header",
+      "data_type": "sdk-spec-inventory",
+      "field_mapping": {
+        "api_inventory": "api_inventory"
+      }
+    },
+    {
+      "from_step": "s08_sdk_endpoint_coverage_audit",
+      "to_step": "s17_sdk_pagination_link_header",
+      "data_type": "sdk-endpoint-coverage-audit",
+      "field_mapping": {}
+    },
+    {
+      "from_step": "s03_sdk_spec_inventory",
+      "to_step": "s18_sdk_error_hierarchy",
+      "data_type": "sdk-spec-inventory",
+      "field_mapping": {
+        "api_inventory": "api_inventory"
+      }
+    },
+    {
+      "from_step": "s08_sdk_endpoint_coverage_audit",
+      "to_step": "s18_sdk_error_hierarchy",
+      "data_type": "sdk-endpoint-coverage-audit",
+      "field_mapping": {}
+    },
+    {
+      "from_step": "s05_sdk_model_type_mapping",
+      "to_step": "s19_sdk_typed_responses",
+      "data_type": "sdk-model-type-mapping",
+      "field_mapping": {
+        "type_mapping": "type_mapping"
+      }
+    },
+    {
+      "from_step": "s08_sdk_endpoint_coverage_audit",
+      "to_step": "s19_sdk_typed_responses",
+      "data_type": "sdk-endpoint-coverage-audit",
+      "field_mapping": {}
+    },
+    {
+      "from_step": "s03_sdk_spec_inventory",
+      "to_step": "s20_sdk_node_mock_tests_msw",
+      "data_type": "sdk-spec-inventory",
+      "field_mapping": {
+        "api_inventory": "api_inventory"
+      }
+    },
+    {
+      "from_step": "s18_sdk_error_hierarchy",
+      "to_step": "s20_sdk_node_mock_tests_msw",
+      "data_type": "sdk-error-hierarchy",
+      "field_mapping": {
+        "error_hierarchy": "error_hierarchy"
+      }
+    },
+    {
+      "from_step": "s13_sdk_retry_backoff",
+      "to_step": "s20_sdk_node_mock_tests_msw",
+      "data_type": "sdk-retry-backoff",
+      "field_mapping": {
+        "retry_policy": "retry_policy"
+      }
+    },
+    {
+      "from_step": "s09_sdk_auth_api_key",
+      "to_step": "s20_sdk_node_mock_tests_msw",
+      "data_type": "sdk-auth-api-key",
+      "field_mapping": {}
+    },
+    {
+      "from_step": "s10_sdk_auth_oauth_client_credentials",
+      "to_step": "s20_sdk_node_mock_tests_msw",
+      "data_type": "sdk-auth-oauth-client-credentials",
+      "field_mapping": {}
+    },
+    {
+      "from_step": "s11_sdk_auth_token_refresh",
+      "to_step": "s20_sdk_node_mock_tests_msw",
+      "data_type": "sdk-auth-token-refresh",
+      "field_mapping": {}
+    },
+    {
+      "from_step": "s12_sdk_node_timeouts",
+      "to_step": "s20_sdk_node_mock_tests_msw",
+      "data_type": "sdk-node-timeouts",
+      "field_mapping": {}
+    },
+    {
+      "from_step": "s15_sdk_pagination_cursor",
+      "to_step": "s20_sdk_node_mock_tests_msw",
+      "data_type": "sdk-pagination-cursor",
+      "field_mapping": {}
+    },
+    {
+      "from_step": "s16_sdk_pagination_offset",
+      "to_step": "s20_sdk_node_mock_tests_msw",
+      "data_type": "sdk-pagination-offset",
+      "field_mapping": {}
+    },
+    {
+      "from_step": "s17_sdk_pagination_link_header",
+      "to_step": "s20_sdk_node_mock_tests_msw",
+      "data_type": "sdk-pagination-link-header",
+      "field_mapping": {}
+    },
+    {
+      "from_step": "s14_sdk_idempotency_keys",
+      "to_step": "s20_sdk_node_mock_tests_msw",
+      "data_type": "sdk-idempotency-keys",
+      "field_mapping": {}
+    },
+    {
+      "from_step": "s19_sdk_typed_responses",
+      "to_step": "s20_sdk_node_mock_tests_msw",
+      "data_type": "sdk-typed-responses",
+      "field_mapping": {}
+    },
+    {
+      "from_step": "s01_sdk_spec_spectral_lint",
+      "to_step": "s21_sdk_contract_tests_prism",
+      "data_type": "sdk-spec-spectral-lint",
+      "field_mapping": {
+        "validated_spec": "validated_spec"
+      }
+    },
+    {
+      "from_step": "s20_sdk_node_mock_tests_msw",
+      "to_step": "s21_sdk_contract_tests_prism",
+      "data_type": "sdk-node-mock-tests-msw",
+      "field_mapping": {}
+    }
+  ],
+  "entry_inputs": [
+    "spec_path",
+    "spectral_ruleset",
+    "stack",
+    "sdk_constraints",
+    "project_dir",
+    "token_expiry_skew_seconds",
+    "timeout_budget",
+    "retry_limits"
+  ],
+  "terminal_outputs": [
+    "readiness_ruleset",
+    "ts_client_module",
+    "endpoint_map",
+    "coverage_report",
+    "api_key_auth",
+    "refresh_policy",
+    "node_timeout_config",
+    "idempotency_design",
+    "cursor_paginator",
+    "offset_paginator",
+    "link_paginator",
+    "response_validation",
+    "ts_mock_tests",
+    "contract_test_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_sdk_spec_spectral_lint"
+    ],
+    [
+      "s02_sdk_spec_sdk_readiness_rules"
+    ],
+    [
+      "s03_sdk_spec_inventory"
+    ],
+    [
+      "s04_sdk_generator_decision",
+      "s05_sdk_model_type_mapping"
+    ],
+    [
+      "s06_sdk_ts_openapi_typescript"
+    ],
+    [
+      "s07_sdk_handwritten_endpoint_map"
+    ],
+    [
+      "s08_sdk_endpoint_coverage_audit"
+    ],
+    [
+      "s09_sdk_auth_api_key",
+      "s10_sdk_auth_oauth_client_credentials",
+      "s12_sdk_node_timeouts",
+      "s15_sdk_pagination_cursor",
+      "s16_sdk_pagination_offset",
+      "s17_sdk_pagination_link_header",
+      "s18_sdk_error_hierarchy",
+      "s19_sdk_typed_responses"
+    ],
+    [
+      "s11_sdk_auth_token_refresh",
+      "s13_sdk_retry_backoff"
+    ],
+    [
+      "s14_sdk_idempotency_keys"
+    ],
+    [
+      "s20_sdk_node_mock_tests_msw"
+    ],
+    [
+      "s21_sdk_contract_tests_prism"
+    ]
+  ],
+  "estimated_cost": 21,
+  "critical_path": [
+    "s01_sdk_spec_spectral_lint",
+    "s02_sdk_spec_sdk_readiness_rules",
+    "s03_sdk_spec_inventory",
+    "s05_sdk_model_type_mapping",
+    "s06_sdk_ts_openapi_typescript",
+    "s07_sdk_handwritten_endpoint_map",
+    "s08_sdk_endpoint_coverage_audit",
+    "s12_sdk_node_timeouts",
+    "s13_sdk_retry_backoff",
+    "s14_sdk_idempotency_keys",
+    "s20_sdk_node_mock_tests_msw",
+    "s21_sdk_contract_tests_prism"
+  ]
+}

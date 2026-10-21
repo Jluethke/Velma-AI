@@ -1,0 +1,165 @@
+{
+  "name": "terraform-iac-security-scan",
+  "description": "Security pass over Terraform: secrets in code and state, fmt and validate, TFLint, Checkov and Trivy scans, plan review, and conftest policy on the plan.",
+  "steps": [
+    {
+      "id": "s01_tf_secrets_handling",
+      "skill_name": "tf-secrets-handling",
+      "inputs": {
+        "root_modules": "from_user_input",
+        "cloud": "from_user_input",
+        "secret_inventory": "from_user_input_optional"
+      },
+      "outputs": {
+        "secret_sources": "secret_sources",
+        "secret_findings": "secret_findings"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_tf_fmt_validate",
+      "skill_name": "tf-fmt-validate",
+      "inputs": {
+        "root_modules": "from_user_input"
+      },
+      "outputs": {
+        "fmt_validate_report": "fmt_validate_report"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s03_tf_tflint",
+      "skill_name": "tf-tflint",
+      "inputs": {
+        "root_modules": "from_user_input",
+        "cloud": "from_user_input",
+        "fmt_validate_report": "s02_tf_fmt_validate.fmt_validate_report"
+      },
+      "outputs": {
+        "tflint_findings": "tflint_findings"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_tf_checkov",
+      "skill_name": "tf-checkov",
+      "inputs": {
+        "root_modules": "from_user_input",
+        "fmt_validate_report": "s02_tf_fmt_validate.fmt_validate_report"
+      },
+      "outputs": {
+        "checkov_findings": "checkov_findings"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s05_tf_trivy_config",
+      "skill_name": "tf-trivy-config",
+      "inputs": {
+        "root_modules": "from_user_input",
+        "fmt_validate_report": "s02_tf_fmt_validate.fmt_validate_report"
+      },
+      "outputs": {
+        "trivy_findings": "trivy_findings"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s06_tf_plan_review",
+      "skill_name": "tf-plan-review",
+      "inputs": {
+        "root_modules": "from_user_input",
+        "env_strategy": "from_user_input",
+        "target_environment": "from_user_input"
+      },
+      "outputs": {
+        "plan_file": "plan_file",
+        "plan_json": "plan_json",
+        "plan_review": "plan_review"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s07_tf_plan_policy_conftest",
+      "skill_name": "tf-plan-policy-conftest",
+      "inputs": {
+        "plan_json": "s06_tf_plan_review.plan_json",
+        "policy_dir": "from_user_input_optional"
+      },
+      "outputs": {
+        "policy_results": "policy_results"
+      },
+      "parallel_group": 2
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s02_tf_fmt_validate",
+      "to_step": "s03_tf_tflint",
+      "data_type": "tf-fmt-validate",
+      "field_mapping": {
+        "fmt_validate_report": "fmt_validate_report"
+      }
+    },
+    {
+      "from_step": "s02_tf_fmt_validate",
+      "to_step": "s04_tf_checkov",
+      "data_type": "tf-fmt-validate",
+      "field_mapping": {
+        "fmt_validate_report": "fmt_validate_report"
+      }
+    },
+    {
+      "from_step": "s02_tf_fmt_validate",
+      "to_step": "s05_tf_trivy_config",
+      "data_type": "tf-fmt-validate",
+      "field_mapping": {
+        "fmt_validate_report": "fmt_validate_report"
+      }
+    },
+    {
+      "from_step": "s06_tf_plan_review",
+      "to_step": "s07_tf_plan_policy_conftest",
+      "data_type": "tf-plan-review",
+      "field_mapping": {
+        "plan_json": "plan_json"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "root_modules",
+    "cloud",
+    "secret_inventory",
+    "env_strategy",
+    "target_environment",
+    "policy_dir"
+  ],
+  "terminal_outputs": [
+    "secret_sources",
+    "secret_findings",
+    "tflint_findings",
+    "checkov_findings",
+    "trivy_findings",
+    "plan_file",
+    "plan_review",
+    "policy_results"
+  ],
+  "parallel_groups": [
+    [
+      "s01_tf_secrets_handling",
+      "s02_tf_fmt_validate",
+      "s06_tf_plan_review"
+    ],
+    [
+      "s03_tf_tflint",
+      "s04_tf_checkov",
+      "s05_tf_trivy_config",
+      "s07_tf_plan_policy_conftest"
+    ]
+  ],
+  "estimated_cost": 7,
+  "critical_path": [
+    "s06_tf_plan_review",
+    "s07_tf_plan_policy_conftest"
+  ]
+}

@@ -1,0 +1,494 @@
+{
+  "name": "error-handling-go",
+  "description": "Full Go error-handling pass: audit and triage error checks, define problem types, messages, context and log-once policy, then apply %w wrapping with errors.Is/As, net/http problem details, failure-path tests and the golangci-lint gate.",
+  "steps": [
+    {
+      "id": "s01_errh_boundary_map",
+      "skill_name": "errh-boundary-map",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "framework": "from_user_input_optional"
+      },
+      "outputs": {
+        "boundary_map": "boundary_map"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_errh_rg_swallowed_catch_inventory",
+      "skill_name": "errh-rg-swallowed-catch-inventory",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "boundary_map": "s01_errh_boundary_map.boundary_map"
+      },
+      "outputs": {
+        "catch_inventory": "catch_inventory"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_errh_semgrep_swallowed_catch_scan",
+      "skill_name": "errh-semgrep-swallowed-catch-scan",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "catch_inventory": "s02_errh_rg_swallowed_catch_inventory.catch_inventory"
+      },
+      "outputs": {
+        "semgrep_findings": "semgrep_findings"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_errh_error_taxonomy",
+      "skill_name": "errh-error-taxonomy",
+      "inputs": {
+        "boundary_map": "s01_errh_boundary_map.boundary_map",
+        "catch_inventory": "s02_errh_rg_swallowed_catch_inventory.catch_inventory",
+        "semgrep_findings": "s03_errh_semgrep_swallowed_catch_scan.semgrep_findings"
+      },
+      "outputs": {
+        "error_taxonomy": "error_taxonomy"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s05_errh_retryability_table",
+      "skill_name": "errh-retryability-table",
+      "inputs": {
+        "error_taxonomy": "s04_errh_error_taxonomy.error_taxonomy",
+        "boundary_map": "s01_errh_boundary_map.boundary_map",
+        "max_attempts": "from_user_input_optional"
+      },
+      "outputs": {
+        "retry_policy_table": "retry_policy_table"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s06_errh_catch_site_triage",
+      "skill_name": "errh-catch-site-triage",
+      "inputs": {
+        "catch_inventory": "s02_errh_rg_swallowed_catch_inventory.catch_inventory",
+        "semgrep_findings": "s03_errh_semgrep_swallowed_catch_scan.semgrep_findings",
+        "error_taxonomy": "s04_errh_error_taxonomy.error_taxonomy",
+        "retry_policy_table": "s05_errh_retryability_table.retry_policy_table"
+      },
+      "outputs": {
+        "triage_table": "triage_table"
+      },
+      "parallel_group": 6
+    },
+    {
+      "id": "s07_errh_rfc9457_problem_type_registry",
+      "skill_name": "errh-rfc9457-problem-type-registry",
+      "inputs": {
+        "error_taxonomy": "s04_errh_error_taxonomy.error_taxonomy",
+        "problem_type_base_uri": "from_user_input"
+      },
+      "outputs": {
+        "problem_type_registry": "problem_type_registry"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s08_errh_user_message_catalog",
+      "skill_name": "errh-user-message-catalog",
+      "inputs": {
+        "error_taxonomy": "s04_errh_error_taxonomy.error_taxonomy",
+        "problem_type_registry": "s07_errh_rfc9457_problem_type_registry.problem_type_registry",
+        "locale_policy": "from_user_input_optional"
+      },
+      "outputs": {
+        "message_catalog": "message_catalog"
+      },
+      "parallel_group": 6
+    },
+    {
+      "id": "s09_errh_context_and_correlation_id",
+      "skill_name": "errh-context-and-correlation-id",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "boundary_map": "s01_errh_boundary_map.boundary_map"
+      },
+      "outputs": {
+        "context_plan": "context_plan"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s10_errh_log_once_at_boundary",
+      "skill_name": "errh-log-once-at-boundary",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "boundary_map": "s01_errh_boundary_map.boundary_map",
+        "triage_table": "s06_errh_catch_site_triage.triage_table",
+        "context_plan": "s09_errh_context_and_correlation_id.context_plan"
+      },
+      "outputs": {
+        "logging_policy": "logging_policy"
+      },
+      "parallel_group": 7
+    },
+    {
+      "id": "s11_errh_go_wrap_errors_is_as",
+      "skill_name": "errh-go-wrap-errors-is-as",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "triage_table": "s06_errh_catch_site_triage.triage_table",
+        "error_taxonomy": "s04_errh_error_taxonomy.error_taxonomy",
+        "logging_policy": "s10_errh_log_once_at_boundary.logging_policy",
+        "test_command": "from_user_input"
+      },
+      "outputs": {
+        "go_error_changes": "go_error_changes"
+      },
+      "parallel_group": 8
+    },
+    {
+      "id": "s12_errh_go_http_problem_details",
+      "skill_name": "errh-go-http-problem-details",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "go_error_changes": "s11_errh_go_wrap_errors_is_as.go_error_changes",
+        "problem_type_registry": "s07_errh_rfc9457_problem_type_registry.problem_type_registry",
+        "message_catalog": "s08_errh_user_message_catalog.message_catalog",
+        "test_command": "from_user_input"
+      },
+      "outputs": {
+        "go_http_error_mapping": "go_http_error_mapping"
+      },
+      "parallel_group": 9
+    },
+    {
+      "id": "s13_errh_go_failure_path_tests",
+      "skill_name": "errh-go-failure-path-tests",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "go_error_changes": "s11_errh_go_wrap_errors_is_as.go_error_changes",
+        "go_http_error_mapping": "s12_errh_go_http_problem_details.go_http_error_mapping",
+        "retry_policy_table": "s05_errh_retryability_table.retry_policy_table",
+        "test_command": "from_user_input"
+      },
+      "outputs": {
+        "go_failure_tests": "go_failure_tests"
+      },
+      "parallel_group": 10
+    },
+    {
+      "id": "s14_errh_go_golangci_error_linters",
+      "skill_name": "errh-go-golangci-error-linters",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "go_failure_tests": "s13_errh_go_failure_path_tests.go_failure_tests",
+        "triage_table": "s06_errh_catch_site_triage.triage_table"
+      },
+      "outputs": {
+        "go_lint_gate": "go_lint_gate"
+      },
+      "parallel_group": 11
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_errh_boundary_map",
+      "to_step": "s02_errh_rg_swallowed_catch_inventory",
+      "data_type": "errh-boundary-map",
+      "field_mapping": {
+        "boundary_map": "boundary_map"
+      }
+    },
+    {
+      "from_step": "s02_errh_rg_swallowed_catch_inventory",
+      "to_step": "s03_errh_semgrep_swallowed_catch_scan",
+      "data_type": "errh-rg-swallowed-catch-inventory",
+      "field_mapping": {
+        "catch_inventory": "catch_inventory"
+      }
+    },
+    {
+      "from_step": "s01_errh_boundary_map",
+      "to_step": "s04_errh_error_taxonomy",
+      "data_type": "errh-boundary-map",
+      "field_mapping": {
+        "boundary_map": "boundary_map"
+      }
+    },
+    {
+      "from_step": "s02_errh_rg_swallowed_catch_inventory",
+      "to_step": "s04_errh_error_taxonomy",
+      "data_type": "errh-rg-swallowed-catch-inventory",
+      "field_mapping": {
+        "catch_inventory": "catch_inventory"
+      }
+    },
+    {
+      "from_step": "s03_errh_semgrep_swallowed_catch_scan",
+      "to_step": "s04_errh_error_taxonomy",
+      "data_type": "errh-semgrep-swallowed-catch-scan",
+      "field_mapping": {
+        "semgrep_findings": "semgrep_findings"
+      }
+    },
+    {
+      "from_step": "s04_errh_error_taxonomy",
+      "to_step": "s05_errh_retryability_table",
+      "data_type": "errh-error-taxonomy",
+      "field_mapping": {
+        "error_taxonomy": "error_taxonomy"
+      }
+    },
+    {
+      "from_step": "s01_errh_boundary_map",
+      "to_step": "s05_errh_retryability_table",
+      "data_type": "errh-boundary-map",
+      "field_mapping": {
+        "boundary_map": "boundary_map"
+      }
+    },
+    {
+      "from_step": "s02_errh_rg_swallowed_catch_inventory",
+      "to_step": "s06_errh_catch_site_triage",
+      "data_type": "errh-rg-swallowed-catch-inventory",
+      "field_mapping": {
+        "catch_inventory": "catch_inventory"
+      }
+    },
+    {
+      "from_step": "s03_errh_semgrep_swallowed_catch_scan",
+      "to_step": "s06_errh_catch_site_triage",
+      "data_type": "errh-semgrep-swallowed-catch-scan",
+      "field_mapping": {
+        "semgrep_findings": "semgrep_findings"
+      }
+    },
+    {
+      "from_step": "s04_errh_error_taxonomy",
+      "to_step": "s06_errh_catch_site_triage",
+      "data_type": "errh-error-taxonomy",
+      "field_mapping": {
+        "error_taxonomy": "error_taxonomy"
+      }
+    },
+    {
+      "from_step": "s05_errh_retryability_table",
+      "to_step": "s06_errh_catch_site_triage",
+      "data_type": "errh-retryability-table",
+      "field_mapping": {
+        "retry_policy_table": "retry_policy_table"
+      }
+    },
+    {
+      "from_step": "s04_errh_error_taxonomy",
+      "to_step": "s07_errh_rfc9457_problem_type_registry",
+      "data_type": "errh-error-taxonomy",
+      "field_mapping": {
+        "error_taxonomy": "error_taxonomy"
+      }
+    },
+    {
+      "from_step": "s04_errh_error_taxonomy",
+      "to_step": "s08_errh_user_message_catalog",
+      "data_type": "errh-error-taxonomy",
+      "field_mapping": {
+        "error_taxonomy": "error_taxonomy"
+      }
+    },
+    {
+      "from_step": "s07_errh_rfc9457_problem_type_registry",
+      "to_step": "s08_errh_user_message_catalog",
+      "data_type": "errh-rfc9457-problem-type-registry",
+      "field_mapping": {
+        "problem_type_registry": "problem_type_registry"
+      }
+    },
+    {
+      "from_step": "s01_errh_boundary_map",
+      "to_step": "s09_errh_context_and_correlation_id",
+      "data_type": "errh-boundary-map",
+      "field_mapping": {
+        "boundary_map": "boundary_map"
+      }
+    },
+    {
+      "from_step": "s01_errh_boundary_map",
+      "to_step": "s10_errh_log_once_at_boundary",
+      "data_type": "errh-boundary-map",
+      "field_mapping": {
+        "boundary_map": "boundary_map"
+      }
+    },
+    {
+      "from_step": "s06_errh_catch_site_triage",
+      "to_step": "s10_errh_log_once_at_boundary",
+      "data_type": "errh-catch-site-triage",
+      "field_mapping": {
+        "triage_table": "triage_table"
+      }
+    },
+    {
+      "from_step": "s09_errh_context_and_correlation_id",
+      "to_step": "s10_errh_log_once_at_boundary",
+      "data_type": "errh-context-and-correlation-id",
+      "field_mapping": {
+        "context_plan": "context_plan"
+      }
+    },
+    {
+      "from_step": "s06_errh_catch_site_triage",
+      "to_step": "s11_errh_go_wrap_errors_is_as",
+      "data_type": "errh-catch-site-triage",
+      "field_mapping": {
+        "triage_table": "triage_table"
+      }
+    },
+    {
+      "from_step": "s04_errh_error_taxonomy",
+      "to_step": "s11_errh_go_wrap_errors_is_as",
+      "data_type": "errh-error-taxonomy",
+      "field_mapping": {
+        "error_taxonomy": "error_taxonomy"
+      }
+    },
+    {
+      "from_step": "s10_errh_log_once_at_boundary",
+      "to_step": "s11_errh_go_wrap_errors_is_as",
+      "data_type": "errh-log-once-at-boundary",
+      "field_mapping": {
+        "logging_policy": "logging_policy"
+      }
+    },
+    {
+      "from_step": "s11_errh_go_wrap_errors_is_as",
+      "to_step": "s12_errh_go_http_problem_details",
+      "data_type": "errh-go-wrap-errors-is-as",
+      "field_mapping": {
+        "go_error_changes": "go_error_changes"
+      }
+    },
+    {
+      "from_step": "s07_errh_rfc9457_problem_type_registry",
+      "to_step": "s12_errh_go_http_problem_details",
+      "data_type": "errh-rfc9457-problem-type-registry",
+      "field_mapping": {
+        "problem_type_registry": "problem_type_registry"
+      }
+    },
+    {
+      "from_step": "s08_errh_user_message_catalog",
+      "to_step": "s12_errh_go_http_problem_details",
+      "data_type": "errh-user-message-catalog",
+      "field_mapping": {
+        "message_catalog": "message_catalog"
+      }
+    },
+    {
+      "from_step": "s11_errh_go_wrap_errors_is_as",
+      "to_step": "s13_errh_go_failure_path_tests",
+      "data_type": "errh-go-wrap-errors-is-as",
+      "field_mapping": {
+        "go_error_changes": "go_error_changes"
+      }
+    },
+    {
+      "from_step": "s12_errh_go_http_problem_details",
+      "to_step": "s13_errh_go_failure_path_tests",
+      "data_type": "errh-go-http-problem-details",
+      "field_mapping": {
+        "go_http_error_mapping": "go_http_error_mapping"
+      }
+    },
+    {
+      "from_step": "s05_errh_retryability_table",
+      "to_step": "s13_errh_go_failure_path_tests",
+      "data_type": "errh-retryability-table",
+      "field_mapping": {
+        "retry_policy_table": "retry_policy_table"
+      }
+    },
+    {
+      "from_step": "s13_errh_go_failure_path_tests",
+      "to_step": "s14_errh_go_golangci_error_linters",
+      "data_type": "errh-go-failure-path-tests",
+      "field_mapping": {
+        "go_failure_tests": "go_failure_tests"
+      }
+    },
+    {
+      "from_step": "s06_errh_catch_site_triage",
+      "to_step": "s14_errh_go_golangci_error_linters",
+      "data_type": "errh-catch-site-triage",
+      "field_mapping": {
+        "triage_table": "triage_table"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "repo_path",
+    "stack",
+    "framework",
+    "max_attempts",
+    "problem_type_base_uri",
+    "locale_policy",
+    "test_command"
+  ],
+  "terminal_outputs": [
+    "go_lint_gate"
+  ],
+  "parallel_groups": [
+    [
+      "s01_errh_boundary_map"
+    ],
+    [
+      "s02_errh_rg_swallowed_catch_inventory",
+      "s09_errh_context_and_correlation_id"
+    ],
+    [
+      "s03_errh_semgrep_swallowed_catch_scan"
+    ],
+    [
+      "s04_errh_error_taxonomy"
+    ],
+    [
+      "s05_errh_retryability_table",
+      "s07_errh_rfc9457_problem_type_registry"
+    ],
+    [
+      "s06_errh_catch_site_triage",
+      "s08_errh_user_message_catalog"
+    ],
+    [
+      "s10_errh_log_once_at_boundary"
+    ],
+    [
+      "s11_errh_go_wrap_errors_is_as"
+    ],
+    [
+      "s12_errh_go_http_problem_details"
+    ],
+    [
+      "s13_errh_go_failure_path_tests"
+    ],
+    [
+      "s14_errh_go_golangci_error_linters"
+    ]
+  ],
+  "estimated_cost": 14,
+  "critical_path": [
+    "s01_errh_boundary_map",
+    "s02_errh_rg_swallowed_catch_inventory",
+    "s03_errh_semgrep_swallowed_catch_scan",
+    "s04_errh_error_taxonomy",
+    "s05_errh_retryability_table",
+    "s06_errh_catch_site_triage",
+    "s10_errh_log_once_at_boundary",
+    "s11_errh_go_wrap_errors_is_as",
+    "s12_errh_go_http_problem_details",
+    "s13_errh_go_failure_path_tests",
+    "s14_errh_go_golangci_error_linters"
+  ]
+}

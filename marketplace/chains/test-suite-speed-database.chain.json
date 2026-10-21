@@ -1,0 +1,432 @@
+{
+  "name": "test-suite-speed-database",
+  "description": "Cut database fixture cost in a test suite: measure, classify database hotspots, apply per-stack transaction rollback and PostgreSQL template cloning, then prove coverage parity and report measured gains.",
+  "steps": [
+    {
+      "id": "s01_tsp_baseline_lock",
+      "skill_name": "tsp-baseline-lock",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "test_command": "from_user_input",
+        "run_count": "from_user_input"
+      },
+      "outputs": {
+        "baseline_report": "baseline_report",
+        "coverage_baseline": "coverage_baseline"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_tsp_py_durations_report",
+      "skill_name": "tsp-py-durations-report",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "test_command": "from_user_input",
+        "baseline_report": "s01_tsp_baseline_lock.baseline_report"
+      },
+      "outputs": {
+        "py_duration_report": "py_duration_report"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_tsp_node_durations_report",
+      "skill_name": "tsp-node-durations-report",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "test_command": "from_user_input",
+        "baseline_report": "s01_tsp_baseline_lock.baseline_report"
+      },
+      "outputs": {
+        "node_duration_report": "node_duration_report"
+      },
+      "condition": "stack == 'node'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_tsp_go_test_json_durations",
+      "skill_name": "tsp-go-test-json-durations",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "test_command": "from_user_input",
+        "baseline_report": "s01_tsp_baseline_lock.baseline_report"
+      },
+      "outputs": {
+        "go_duration_report": "go_duration_report"
+      },
+      "condition": "stack == 'go'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s05_tsp_py_setup_import_cost",
+      "skill_name": "tsp-py-setup-import-cost",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "test_command": "from_user_input",
+        "py_duration_report": "s02_tsp_py_durations_report.py_duration_report"
+      },
+      "outputs": {
+        "py_setup_cost": "py_setup_cost"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s06_tsp_node_transform_setup_cost",
+      "skill_name": "tsp-node-transform-setup-cost",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "test_command": "from_user_input",
+        "node_duration_report": "s03_tsp_node_durations_report.node_duration_report"
+      },
+      "outputs": {
+        "node_setup_cost": "node_setup_cost"
+      },
+      "condition": "stack == 'node'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s07_tsp_go_build_init_cost",
+      "skill_name": "tsp-go-build-init-cost",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "go_duration_report": "s04_tsp_go_test_json_durations.go_duration_report"
+      },
+      "outputs": {
+        "go_setup_cost": "go_setup_cost"
+      },
+      "condition": "stack == 'go'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s08_tsp_hotspot_classify",
+      "skill_name": "tsp-hotspot-classify",
+      "inputs": {
+        "stack": "from_user_input",
+        "repo_path": "from_user_input",
+        "baseline_report": "s01_tsp_baseline_lock.baseline_report",
+        "py_duration_report": "s02_tsp_py_durations_report.py_duration_report",
+        "node_duration_report": "s03_tsp_node_durations_report.node_duration_report",
+        "go_duration_report": "s04_tsp_go_test_json_durations.go_duration_report",
+        "py_setup_cost": "s05_tsp_py_setup_import_cost.py_setup_cost",
+        "node_setup_cost": "s06_tsp_node_transform_setup_cost.node_setup_cost",
+        "go_setup_cost": "s07_tsp_go_build_init_cost.go_setup_cost"
+      },
+      "outputs": {
+        "hotspot_plan": "hotspot_plan"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s09_tsp_py_db_transaction_rollback",
+      "skill_name": "tsp-py-db-transaction-rollback",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "hotspot_plan": "s08_tsp_hotspot_classify.hotspot_plan",
+        "db_engine": "from_user_input_optional"
+      },
+      "outputs": {
+        "py_db_fixture": "py_db_fixture"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 5
+    },
+    {
+      "id": "s10_tsp_node_db_transaction_rollback",
+      "skill_name": "tsp-node-db-transaction-rollback",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "hotspot_plan": "s08_tsp_hotspot_classify.hotspot_plan",
+        "db_engine": "from_user_input_optional"
+      },
+      "outputs": {
+        "node_db_fixture": "node_db_fixture"
+      },
+      "condition": "stack == 'node'",
+      "parallel_group": 5
+    },
+    {
+      "id": "s11_tsp_go_db_txdb_rollback",
+      "skill_name": "tsp-go-db-txdb-rollback",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "hotspot_plan": "s08_tsp_hotspot_classify.hotspot_plan",
+        "db_engine": "from_user_input_optional"
+      },
+      "outputs": {
+        "go_db_fixture": "go_db_fixture"
+      },
+      "condition": "stack == 'go'",
+      "parallel_group": 5
+    },
+    {
+      "id": "s12_tsp_pg_template_clone",
+      "skill_name": "tsp-pg-template-clone",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "hotspot_plan": "s08_tsp_hotspot_classify.hotspot_plan",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "pg_template_fixture": "pg_template_fixture"
+      },
+      "condition": "db_engine == 'postgres'",
+      "parallel_group": 5
+    },
+    {
+      "id": "s13_tsp_coverage_parity_gate",
+      "skill_name": "tsp-coverage-parity-gate",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "coverage_baseline": "s01_tsp_baseline_lock.coverage_baseline",
+        "baseline_report": "s01_tsp_baseline_lock.baseline_report",
+        "parallel_command": "from_user_input",
+        "shard_config": "from_user_input_optional"
+      },
+      "outputs": {
+        "coverage_verdict": "coverage_verdict"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s14_tsp_speedup_report",
+      "skill_name": "tsp-speedup-report",
+      "inputs": {
+        "baseline_report": "s01_tsp_baseline_lock.baseline_report",
+        "hotspot_plan": "s08_tsp_hotspot_classify.hotspot_plan",
+        "parallel_command": "from_user_input",
+        "coverage_verdict": "s13_tsp_coverage_parity_gate.coverage_verdict",
+        "run_count": "from_user_input",
+        "test_command": "from_user_input"
+      },
+      "outputs": {
+        "speedup_report": "speedup_report"
+      },
+      "parallel_group": 5
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_tsp_baseline_lock",
+      "to_step": "s02_tsp_py_durations_report",
+      "data_type": "tsp-baseline-lock",
+      "field_mapping": {
+        "baseline_report": "baseline_report"
+      }
+    },
+    {
+      "from_step": "s01_tsp_baseline_lock",
+      "to_step": "s03_tsp_node_durations_report",
+      "data_type": "tsp-baseline-lock",
+      "field_mapping": {
+        "baseline_report": "baseline_report"
+      }
+    },
+    {
+      "from_step": "s01_tsp_baseline_lock",
+      "to_step": "s04_tsp_go_test_json_durations",
+      "data_type": "tsp-baseline-lock",
+      "field_mapping": {
+        "baseline_report": "baseline_report"
+      }
+    },
+    {
+      "from_step": "s02_tsp_py_durations_report",
+      "to_step": "s05_tsp_py_setup_import_cost",
+      "data_type": "tsp-py-durations-report",
+      "field_mapping": {
+        "py_duration_report": "py_duration_report"
+      }
+    },
+    {
+      "from_step": "s03_tsp_node_durations_report",
+      "to_step": "s06_tsp_node_transform_setup_cost",
+      "data_type": "tsp-node-durations-report",
+      "field_mapping": {
+        "node_duration_report": "node_duration_report"
+      }
+    },
+    {
+      "from_step": "s04_tsp_go_test_json_durations",
+      "to_step": "s07_tsp_go_build_init_cost",
+      "data_type": "tsp-go-test-json-durations",
+      "field_mapping": {
+        "go_duration_report": "go_duration_report"
+      }
+    },
+    {
+      "from_step": "s01_tsp_baseline_lock",
+      "to_step": "s08_tsp_hotspot_classify",
+      "data_type": "tsp-baseline-lock",
+      "field_mapping": {
+        "baseline_report": "baseline_report"
+      }
+    },
+    {
+      "from_step": "s02_tsp_py_durations_report",
+      "to_step": "s08_tsp_hotspot_classify",
+      "data_type": "tsp-py-durations-report",
+      "field_mapping": {
+        "py_duration_report": "py_duration_report"
+      }
+    },
+    {
+      "from_step": "s03_tsp_node_durations_report",
+      "to_step": "s08_tsp_hotspot_classify",
+      "data_type": "tsp-node-durations-report",
+      "field_mapping": {
+        "node_duration_report": "node_duration_report"
+      }
+    },
+    {
+      "from_step": "s04_tsp_go_test_json_durations",
+      "to_step": "s08_tsp_hotspot_classify",
+      "data_type": "tsp-go-test-json-durations",
+      "field_mapping": {
+        "go_duration_report": "go_duration_report"
+      }
+    },
+    {
+      "from_step": "s05_tsp_py_setup_import_cost",
+      "to_step": "s08_tsp_hotspot_classify",
+      "data_type": "tsp-py-setup-import-cost",
+      "field_mapping": {
+        "py_setup_cost": "py_setup_cost"
+      }
+    },
+    {
+      "from_step": "s06_tsp_node_transform_setup_cost",
+      "to_step": "s08_tsp_hotspot_classify",
+      "data_type": "tsp-node-transform-setup-cost",
+      "field_mapping": {
+        "node_setup_cost": "node_setup_cost"
+      }
+    },
+    {
+      "from_step": "s07_tsp_go_build_init_cost",
+      "to_step": "s08_tsp_hotspot_classify",
+      "data_type": "tsp-go-build-init-cost",
+      "field_mapping": {
+        "go_setup_cost": "go_setup_cost"
+      }
+    },
+    {
+      "from_step": "s08_tsp_hotspot_classify",
+      "to_step": "s09_tsp_py_db_transaction_rollback",
+      "data_type": "tsp-hotspot-classify",
+      "field_mapping": {
+        "hotspot_plan": "hotspot_plan"
+      }
+    },
+    {
+      "from_step": "s08_tsp_hotspot_classify",
+      "to_step": "s10_tsp_node_db_transaction_rollback",
+      "data_type": "tsp-hotspot-classify",
+      "field_mapping": {
+        "hotspot_plan": "hotspot_plan"
+      }
+    },
+    {
+      "from_step": "s08_tsp_hotspot_classify",
+      "to_step": "s11_tsp_go_db_txdb_rollback",
+      "data_type": "tsp-hotspot-classify",
+      "field_mapping": {
+        "hotspot_plan": "hotspot_plan"
+      }
+    },
+    {
+      "from_step": "s08_tsp_hotspot_classify",
+      "to_step": "s12_tsp_pg_template_clone",
+      "data_type": "tsp-hotspot-classify",
+      "field_mapping": {
+        "hotspot_plan": "hotspot_plan"
+      }
+    },
+    {
+      "from_step": "s01_tsp_baseline_lock",
+      "to_step": "s13_tsp_coverage_parity_gate",
+      "data_type": "tsp-baseline-lock",
+      "field_mapping": {
+        "coverage_baseline": "coverage_baseline",
+        "baseline_report": "baseline_report"
+      }
+    },
+    {
+      "from_step": "s01_tsp_baseline_lock",
+      "to_step": "s14_tsp_speedup_report",
+      "data_type": "tsp-baseline-lock",
+      "field_mapping": {
+        "baseline_report": "baseline_report"
+      }
+    },
+    {
+      "from_step": "s08_tsp_hotspot_classify",
+      "to_step": "s14_tsp_speedup_report",
+      "data_type": "tsp-hotspot-classify",
+      "field_mapping": {
+        "hotspot_plan": "hotspot_plan"
+      }
+    },
+    {
+      "from_step": "s13_tsp_coverage_parity_gate",
+      "to_step": "s14_tsp_speedup_report",
+      "data_type": "tsp-coverage-parity-gate",
+      "field_mapping": {
+        "coverage_verdict": "coverage_verdict"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "repo_path",
+    "stack",
+    "test_command",
+    "run_count",
+    "db_engine",
+    "parallel_command",
+    "shard_config"
+  ],
+  "terminal_outputs": [
+    "py_db_fixture",
+    "node_db_fixture",
+    "go_db_fixture",
+    "pg_template_fixture",
+    "speedup_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_tsp_baseline_lock"
+    ],
+    [
+      "s02_tsp_py_durations_report",
+      "s03_tsp_node_durations_report",
+      "s04_tsp_go_test_json_durations",
+      "s13_tsp_coverage_parity_gate"
+    ],
+    [
+      "s05_tsp_py_setup_import_cost",
+      "s06_tsp_node_transform_setup_cost",
+      "s07_tsp_go_build_init_cost"
+    ],
+    [
+      "s08_tsp_hotspot_classify"
+    ],
+    [
+      "s09_tsp_py_db_transaction_rollback",
+      "s10_tsp_node_db_transaction_rollback",
+      "s11_tsp_go_db_txdb_rollback",
+      "s12_tsp_pg_template_clone",
+      "s14_tsp_speedup_report"
+    ]
+  ],
+  "estimated_cost": 14,
+  "critical_path": [
+    "s01_tsp_baseline_lock",
+    "s04_tsp_go_test_json_durations",
+    "s07_tsp_go_build_init_cost",
+    "s08_tsp_hotspot_classify",
+    "s14_tsp_speedup_report"
+  ]
+}

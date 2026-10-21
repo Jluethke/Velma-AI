@@ -1,0 +1,609 @@
+{
+  "name": "database-schema-design",
+  "description": "Design a relational schema from access patterns through normalization, keys, constraints and indexes, then ship it with tool-specific migrations, expand-contract zero-downtime steps, lock-safe DDL, batched backfills, rollback, seed data, CI and verification.",
+  "steps": [
+    {
+      "id": "s01_dbs_access_pattern_inventory",
+      "skill_name": "dbs-access-pattern-inventory",
+      "inputs": {
+        "feature_spec": "from_user_input",
+        "repo_path": "from_user_input",
+        "query_log": "from_user_input_optional",
+        "stack": "from_user_input_optional"
+      },
+      "outputs": {
+        "access_patterns": "access_patterns",
+        "entity_list": "entity_list"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_dbs_entity_relationship_model",
+      "skill_name": "dbs-entity-relationship-model",
+      "inputs": {
+        "entity_list": "s01_dbs_access_pattern_inventory.entity_list",
+        "access_patterns": "s01_dbs_access_pattern_inventory.access_patterns"
+      },
+      "outputs": {
+        "er_model": "er_model",
+        "er_diagram": "er_diagram"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_dbs_normalize_to_3nf",
+      "skill_name": "dbs-normalize-to-3nf",
+      "inputs": {
+        "er_model": "s02_dbs_entity_relationship_model.er_model",
+        "sample_data_url": "from_user_input_optional"
+      },
+      "outputs": {
+        "normalized_schema": "normalized_schema",
+        "functional_dependencies": "functional_dependencies"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_dbs_denormalize_decision",
+      "skill_name": "dbs-denormalize-decision",
+      "inputs": {
+        "normalized_schema": "s03_dbs_normalize_to_3nf.normalized_schema",
+        "access_patterns": "s01_dbs_access_pattern_inventory.access_patterns",
+        "latency_targets": "from_user_input_optional"
+      },
+      "outputs": {
+        "logical_schema": "logical_schema",
+        "denormalization_log": "denormalization_log"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s05_dbs_primary_key_strategy",
+      "skill_name": "dbs-primary-key-strategy",
+      "inputs": {
+        "logical_schema": "s04_dbs_denormalize_decision.logical_schema",
+        "db_engine": "from_user_input",
+        "db_version": "from_user_input"
+      },
+      "outputs": {
+        "keyed_schema": "keyed_schema",
+        "key_decisions": "key_decisions"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s06_dbs_constraints_foreign_keys",
+      "skill_name": "dbs-constraints-foreign-keys",
+      "inputs": {
+        "keyed_schema": "s05_dbs_primary_key_strategy.keyed_schema",
+        "db_engine": "from_user_input",
+        "db_version": "from_user_input"
+      },
+      "outputs": {
+        "constrained_schema": "constrained_schema",
+        "constraint_ddl": "constraint_ddl"
+      },
+      "parallel_group": 6
+    },
+    {
+      "id": "s07_dbs_index_from_access_patterns",
+      "skill_name": "dbs-index-from-access-patterns",
+      "inputs": {
+        "constrained_schema": "s06_dbs_constraints_foreign_keys.constrained_schema",
+        "access_patterns": "s01_dbs_access_pattern_inventory.access_patterns",
+        "db_engine": "from_user_input"
+      },
+      "outputs": {
+        "index_plan": "index_plan",
+        "target_ddl": "target_ddl"
+      },
+      "parallel_group": 7
+    },
+    {
+      "id": "s08_dbs_expand_contract_plan",
+      "skill_name": "dbs-expand-contract-plan",
+      "inputs": {
+        "target_ddl": "s07_dbs_index_from_access_patterns.target_ddl",
+        "current_schema_dump": "from_user_input_optional",
+        "db_engine": "from_user_input"
+      },
+      "outputs": {
+        "migration_plan": "migration_plan",
+        "backfill_specs": "backfill_specs"
+      },
+      "parallel_group": 8
+    },
+    {
+      "id": "s09_dbs_py_alembic_migration",
+      "skill_name": "dbs-py-alembic-migration",
+      "inputs": {
+        "migration_plan": "s08_dbs_expand_contract_plan.migration_plan",
+        "repo_path": "from_user_input",
+        "scratch_database_url": "from_user_input"
+      },
+      "outputs": {
+        "migration_files": "migration_files"
+      },
+      "condition": "stack == 'python' and migration_tool == 'alembic'",
+      "parallel_group": 9
+    },
+    {
+      "id": "s10_dbs_py_django_migration",
+      "skill_name": "dbs-py-django-migration",
+      "inputs": {
+        "migration_plan": "s08_dbs_expand_contract_plan.migration_plan",
+        "repo_path": "from_user_input",
+        "scratch_database_url": "from_user_input"
+      },
+      "outputs": {
+        "migration_files": "migration_files"
+      },
+      "condition": "stack == 'python' and migration_tool == 'django'",
+      "parallel_group": 9
+    },
+    {
+      "id": "s11_dbs_node_prisma_migration",
+      "skill_name": "dbs-node-prisma-migration",
+      "inputs": {
+        "migration_plan": "s08_dbs_expand_contract_plan.migration_plan",
+        "repo_path": "from_user_input",
+        "scratch_database_url": "from_user_input"
+      },
+      "outputs": {
+        "migration_files": "migration_files"
+      },
+      "condition": "stack == 'node' and migration_tool == 'prisma'",
+      "parallel_group": 9
+    },
+    {
+      "id": "s12_dbs_java_flyway_migration",
+      "skill_name": "dbs-java-flyway-migration",
+      "inputs": {
+        "migration_plan": "s08_dbs_expand_contract_plan.migration_plan",
+        "repo_path": "from_user_input",
+        "scratch_database_url": "from_user_input"
+      },
+      "outputs": {
+        "migration_files": "migration_files"
+      },
+      "condition": "stack == 'java' and migration_tool == 'flyway'",
+      "parallel_group": 9
+    },
+    {
+      "id": "s13_dbs_go_golang_migrate",
+      "skill_name": "dbs-go-golang-migrate",
+      "inputs": {
+        "migration_plan": "s08_dbs_expand_contract_plan.migration_plan",
+        "repo_path": "from_user_input",
+        "scratch_database_url": "from_user_input"
+      },
+      "outputs": {
+        "migration_files": "migration_files"
+      },
+      "condition": "stack == 'go' and migration_tool == 'golang-migrate'",
+      "parallel_group": 9
+    },
+    {
+      "id": "s14_dbs_pg_ddl_lock_safety",
+      "skill_name": "dbs-pg-ddl-lock-safety",
+      "inputs": {
+        "migration_plan": "s08_dbs_expand_contract_plan.migration_plan",
+        "repo_path": "from_user_input",
+        "db_version": "from_user_input"
+      },
+      "outputs": {
+        "lock_review": "lock_review"
+      },
+      "condition": "db_engine == 'postgresql'",
+      "parallel_group": 9
+    },
+    {
+      "id": "s15_dbs_pg_squawk_lint",
+      "skill_name": "dbs-pg-squawk-lint",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "lock_review": "s14_dbs_pg_ddl_lock_safety.lock_review",
+        "db_version": "from_user_input"
+      },
+      "outputs": {
+        "lint_report": "lint_report"
+      },
+      "condition": "db_engine == 'postgresql'",
+      "parallel_group": 10
+    },
+    {
+      "id": "s16_dbs_mysql_online_ddl",
+      "skill_name": "dbs-mysql-online-ddl",
+      "inputs": {
+        "migration_plan": "s08_dbs_expand_contract_plan.migration_plan",
+        "repo_path": "from_user_input",
+        "db_version": "from_user_input"
+      },
+      "outputs": {
+        "online_ddl_review": "online_ddl_review"
+      },
+      "condition": "db_engine == 'mysql'",
+      "parallel_group": 9
+    },
+    {
+      "id": "s17_dbs_rollback_plan",
+      "skill_name": "dbs-rollback-plan",
+      "inputs": {
+        "migration_plan": "s08_dbs_expand_contract_plan.migration_plan",
+        "repo_path": "from_user_input",
+        "migration_tool": "from_user_input",
+        "scratch_database_url": "from_user_input"
+      },
+      "outputs": {
+        "rollback_plan": "rollback_plan"
+      },
+      "parallel_group": 9
+    },
+    {
+      "id": "s18_dbs_seed_data",
+      "skill_name": "dbs-seed-data",
+      "inputs": {
+        "constrained_schema": "s06_dbs_constraints_foreign_keys.constrained_schema",
+        "repo_path": "from_user_input",
+        "migration_tool": "from_user_input",
+        "db_engine": "from_user_input",
+        "reference_data": "from_user_input_optional"
+      },
+      "outputs": {
+        "seed_files": "seed_files"
+      },
+      "parallel_group": 7
+    },
+    {
+      "id": "s19_dbs_migration_ci_test",
+      "skill_name": "dbs-migration-ci-test",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "migration_tool": "from_user_input",
+        "db_engine": "from_user_input",
+        "db_version": "from_user_input",
+        "ci_platform": "from_user_input"
+      },
+      "outputs": {
+        "ci_job": "ci_job"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s20_dbs_pg_batched_backfill",
+      "skill_name": "dbs-pg-batched-backfill",
+      "inputs": {
+        "backfill_specs": "s08_dbs_expand_contract_plan.backfill_specs",
+        "scratch_database_url": "from_user_input",
+        "batch_size": "from_user_input",
+        "max_batch_seconds": "from_user_input"
+      },
+      "outputs": {
+        "backfill_script": "backfill_script",
+        "backfill_report": "backfill_report"
+      },
+      "condition": "db_engine == 'postgresql'",
+      "parallel_group": 9
+    },
+    {
+      "id": "s21_dbs_mysql_batched_backfill",
+      "skill_name": "dbs-mysql-batched-backfill",
+      "inputs": {
+        "backfill_specs": "s08_dbs_expand_contract_plan.backfill_specs",
+        "scratch_database_url": "from_user_input",
+        "batch_size": "from_user_input",
+        "max_batch_seconds": "from_user_input"
+      },
+      "outputs": {
+        "backfill_script": "backfill_script",
+        "backfill_report": "backfill_report"
+      },
+      "condition": "db_engine == 'mysql'",
+      "parallel_group": 9
+    },
+    {
+      "id": "s22_dbs_schema_drift_check",
+      "skill_name": "dbs-schema-drift-check",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "migration_tool": "from_user_input",
+        "db_engine": "from_user_input",
+        "scratch_database_url": "from_user_input",
+        "reference_database_url": "from_user_input"
+      },
+      "outputs": {
+        "drift_report": "drift_report"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s23_dbs_post_migration_verify",
+      "skill_name": "dbs-post-migration-verify",
+      "inputs": {
+        "migration_plan": "s08_dbs_expand_contract_plan.migration_plan",
+        "backfill_specs": "s08_dbs_expand_contract_plan.backfill_specs",
+        "db_engine": "from_user_input",
+        "verify_database_url": "from_user_input"
+      },
+      "outputs": {
+        "verification_report": "verification_report"
+      },
+      "parallel_group": 9
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_dbs_access_pattern_inventory",
+      "to_step": "s02_dbs_entity_relationship_model",
+      "data_type": "dbs-access-pattern-inventory",
+      "field_mapping": {
+        "entity_list": "entity_list",
+        "access_patterns": "access_patterns"
+      }
+    },
+    {
+      "from_step": "s02_dbs_entity_relationship_model",
+      "to_step": "s03_dbs_normalize_to_3nf",
+      "data_type": "dbs-entity-relationship-model",
+      "field_mapping": {
+        "er_model": "er_model"
+      }
+    },
+    {
+      "from_step": "s01_dbs_access_pattern_inventory",
+      "to_step": "s04_dbs_denormalize_decision",
+      "data_type": "dbs-access-pattern-inventory",
+      "field_mapping": {
+        "access_patterns": "access_patterns"
+      }
+    },
+    {
+      "from_step": "s03_dbs_normalize_to_3nf",
+      "to_step": "s04_dbs_denormalize_decision",
+      "data_type": "dbs-normalize-to-3nf",
+      "field_mapping": {
+        "normalized_schema": "normalized_schema"
+      }
+    },
+    {
+      "from_step": "s04_dbs_denormalize_decision",
+      "to_step": "s05_dbs_primary_key_strategy",
+      "data_type": "dbs-denormalize-decision",
+      "field_mapping": {
+        "logical_schema": "logical_schema"
+      }
+    },
+    {
+      "from_step": "s05_dbs_primary_key_strategy",
+      "to_step": "s06_dbs_constraints_foreign_keys",
+      "data_type": "dbs-primary-key-strategy",
+      "field_mapping": {
+        "keyed_schema": "keyed_schema"
+      }
+    },
+    {
+      "from_step": "s01_dbs_access_pattern_inventory",
+      "to_step": "s07_dbs_index_from_access_patterns",
+      "data_type": "dbs-access-pattern-inventory",
+      "field_mapping": {
+        "access_patterns": "access_patterns"
+      }
+    },
+    {
+      "from_step": "s06_dbs_constraints_foreign_keys",
+      "to_step": "s07_dbs_index_from_access_patterns",
+      "data_type": "dbs-constraints-foreign-keys",
+      "field_mapping": {
+        "constrained_schema": "constrained_schema"
+      }
+    },
+    {
+      "from_step": "s07_dbs_index_from_access_patterns",
+      "to_step": "s08_dbs_expand_contract_plan",
+      "data_type": "dbs-index-from-access-patterns",
+      "field_mapping": {
+        "target_ddl": "target_ddl"
+      }
+    },
+    {
+      "from_step": "s08_dbs_expand_contract_plan",
+      "to_step": "s09_dbs_py_alembic_migration",
+      "data_type": "dbs-expand-contract-plan",
+      "field_mapping": {
+        "migration_plan": "migration_plan"
+      }
+    },
+    {
+      "from_step": "s08_dbs_expand_contract_plan",
+      "to_step": "s10_dbs_py_django_migration",
+      "data_type": "dbs-expand-contract-plan",
+      "field_mapping": {
+        "migration_plan": "migration_plan"
+      }
+    },
+    {
+      "from_step": "s08_dbs_expand_contract_plan",
+      "to_step": "s11_dbs_node_prisma_migration",
+      "data_type": "dbs-expand-contract-plan",
+      "field_mapping": {
+        "migration_plan": "migration_plan"
+      }
+    },
+    {
+      "from_step": "s08_dbs_expand_contract_plan",
+      "to_step": "s12_dbs_java_flyway_migration",
+      "data_type": "dbs-expand-contract-plan",
+      "field_mapping": {
+        "migration_plan": "migration_plan"
+      }
+    },
+    {
+      "from_step": "s08_dbs_expand_contract_plan",
+      "to_step": "s13_dbs_go_golang_migrate",
+      "data_type": "dbs-expand-contract-plan",
+      "field_mapping": {
+        "migration_plan": "migration_plan"
+      }
+    },
+    {
+      "from_step": "s08_dbs_expand_contract_plan",
+      "to_step": "s14_dbs_pg_ddl_lock_safety",
+      "data_type": "dbs-expand-contract-plan",
+      "field_mapping": {
+        "migration_plan": "migration_plan"
+      }
+    },
+    {
+      "from_step": "s14_dbs_pg_ddl_lock_safety",
+      "to_step": "s15_dbs_pg_squawk_lint",
+      "data_type": "dbs-pg-ddl-lock-safety",
+      "field_mapping": {
+        "lock_review": "lock_review"
+      }
+    },
+    {
+      "from_step": "s08_dbs_expand_contract_plan",
+      "to_step": "s16_dbs_mysql_online_ddl",
+      "data_type": "dbs-expand-contract-plan",
+      "field_mapping": {
+        "migration_plan": "migration_plan"
+      }
+    },
+    {
+      "from_step": "s08_dbs_expand_contract_plan",
+      "to_step": "s17_dbs_rollback_plan",
+      "data_type": "dbs-expand-contract-plan",
+      "field_mapping": {
+        "migration_plan": "migration_plan"
+      }
+    },
+    {
+      "from_step": "s06_dbs_constraints_foreign_keys",
+      "to_step": "s18_dbs_seed_data",
+      "data_type": "dbs-constraints-foreign-keys",
+      "field_mapping": {
+        "constrained_schema": "constrained_schema"
+      }
+    },
+    {
+      "from_step": "s08_dbs_expand_contract_plan",
+      "to_step": "s20_dbs_pg_batched_backfill",
+      "data_type": "dbs-expand-contract-plan",
+      "field_mapping": {
+        "backfill_specs": "backfill_specs"
+      }
+    },
+    {
+      "from_step": "s08_dbs_expand_contract_plan",
+      "to_step": "s21_dbs_mysql_batched_backfill",
+      "data_type": "dbs-expand-contract-plan",
+      "field_mapping": {
+        "backfill_specs": "backfill_specs"
+      }
+    },
+    {
+      "from_step": "s08_dbs_expand_contract_plan",
+      "to_step": "s23_dbs_post_migration_verify",
+      "data_type": "dbs-expand-contract-plan",
+      "field_mapping": {
+        "migration_plan": "migration_plan",
+        "backfill_specs": "backfill_specs"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "feature_spec",
+    "repo_path",
+    "query_log",
+    "stack",
+    "sample_data_url",
+    "latency_targets",
+    "db_engine",
+    "db_version",
+    "current_schema_dump",
+    "scratch_database_url",
+    "migration_tool",
+    "reference_data",
+    "ci_platform",
+    "batch_size",
+    "max_batch_seconds",
+    "reference_database_url",
+    "verify_database_url"
+  ],
+  "terminal_outputs": [
+    "er_diagram",
+    "functional_dependencies",
+    "denormalization_log",
+    "key_decisions",
+    "constraint_ddl",
+    "index_plan",
+    "migration_files",
+    "lint_report",
+    "online_ddl_review",
+    "rollback_plan",
+    "seed_files",
+    "ci_job",
+    "backfill_script",
+    "backfill_report",
+    "drift_report",
+    "verification_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_dbs_access_pattern_inventory",
+      "s19_dbs_migration_ci_test",
+      "s22_dbs_schema_drift_check"
+    ],
+    [
+      "s02_dbs_entity_relationship_model"
+    ],
+    [
+      "s03_dbs_normalize_to_3nf"
+    ],
+    [
+      "s04_dbs_denormalize_decision"
+    ],
+    [
+      "s05_dbs_primary_key_strategy"
+    ],
+    [
+      "s06_dbs_constraints_foreign_keys"
+    ],
+    [
+      "s07_dbs_index_from_access_patterns",
+      "s18_dbs_seed_data"
+    ],
+    [
+      "s08_dbs_expand_contract_plan"
+    ],
+    [
+      "s09_dbs_py_alembic_migration",
+      "s10_dbs_py_django_migration",
+      "s11_dbs_node_prisma_migration",
+      "s12_dbs_java_flyway_migration",
+      "s13_dbs_go_golang_migrate",
+      "s14_dbs_pg_ddl_lock_safety",
+      "s16_dbs_mysql_online_ddl",
+      "s17_dbs_rollback_plan",
+      "s20_dbs_pg_batched_backfill",
+      "s21_dbs_mysql_batched_backfill",
+      "s23_dbs_post_migration_verify"
+    ],
+    [
+      "s15_dbs_pg_squawk_lint"
+    ]
+  ],
+  "estimated_cost": 23,
+  "critical_path": [
+    "s01_dbs_access_pattern_inventory",
+    "s02_dbs_entity_relationship_model",
+    "s03_dbs_normalize_to_3nf",
+    "s04_dbs_denormalize_decision",
+    "s05_dbs_primary_key_strategy",
+    "s06_dbs_constraints_foreign_keys",
+    "s07_dbs_index_from_access_patterns",
+    "s08_dbs_expand_contract_plan",
+    "s14_dbs_pg_ddl_lock_safety",
+    "s15_dbs_pg_squawk_lint"
+  ]
+}

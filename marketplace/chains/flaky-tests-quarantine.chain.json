@@ -1,0 +1,371 @@
+{
+  "name": "flaky-tests-quarantine",
+  "description": "Confirm and measure a flaky test, classify it, quarantine it into a non-blocking job with an owner and expiry, verify the fix at the same run count, and release it back to the blocking job.",
+  "steps": [
+    {
+      "id": "s01_flk_flake_evidence_intake",
+      "skill_name": "flk-flake-evidence-intake",
+      "inputs": {
+        "test_id": "from_user_input",
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "ci_failure_logs": "from_user_input_optional"
+      },
+      "outputs": {
+        "flake_evidence": "flake_evidence"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_flk_run_count_derive",
+      "skill_name": "flk-run-count-derive",
+      "inputs": {
+        "flake_evidence": "s01_flk_flake_evidence_intake.flake_evidence",
+        "detection_confidence": "from_user_input",
+        "target_flake_rate": "from_user_input_optional"
+      },
+      "outputs": {
+        "repeat_count": "repeat_count",
+        "run_count_derivation": "run_count_derivation"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_flk_py_repeat_measure",
+      "skill_name": "flk-py-repeat-measure",
+      "inputs": {
+        "flake_evidence": "s01_flk_flake_evidence_intake.flake_evidence",
+        "repeat_count": "s02_flk_run_count_derive.repeat_count",
+        "repo_path": "from_user_input"
+      },
+      "outputs": {
+        "py_flake_rate_report": "py_flake_rate_report"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_flk_node_jest_loop_measure",
+      "skill_name": "flk-node-jest-loop-measure",
+      "inputs": {
+        "flake_evidence": "s01_flk_flake_evidence_intake.flake_evidence",
+        "repeat_count": "s02_flk_run_count_derive.repeat_count",
+        "repo_path": "from_user_input"
+      },
+      "outputs": {
+        "node_flake_rate_report": "node_flake_rate_report"
+      },
+      "condition": "stack == 'node'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s05_flk_go_count_measure",
+      "skill_name": "flk-go-count-measure",
+      "inputs": {
+        "flake_evidence": "s01_flk_flake_evidence_intake.flake_evidence",
+        "repeat_count": "s02_flk_run_count_derive.repeat_count",
+        "repo_path": "from_user_input"
+      },
+      "outputs": {
+        "go_flake_rate_report": "go_flake_rate_report"
+      },
+      "condition": "stack == 'go'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s06_flk_classify_root_cause",
+      "skill_name": "flk-classify-root-cause",
+      "inputs": {
+        "flake_evidence": "s01_flk_flake_evidence_intake.flake_evidence",
+        "py_flake_rate_report": "s03_flk_py_repeat_measure.py_flake_rate_report",
+        "node_flake_rate_report": "s04_flk_node_jest_loop_measure.node_flake_rate_report",
+        "go_flake_rate_report": "s05_flk_go_count_measure.go_flake_rate_report",
+        "py_order_report": "from_user_input_optional",
+        "node_order_report": "from_user_input_optional",
+        "go_order_report": "from_user_input_optional",
+        "go_race_report": "from_user_input_optional",
+        "tz_matrix_report": "from_user_input_optional",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "flake_class": "flake_class",
+        "root_cause_evidence": "root_cause_evidence",
+        "baseline_command": "baseline_command",
+        "baseline_rate": "baseline_rate"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s07_flk_quarantine_apply",
+      "skill_name": "flk-quarantine-apply",
+      "inputs": {
+        "flake_evidence": "s01_flk_flake_evidence_intake.flake_evidence",
+        "flake_class": "s06_flk_classify_root_cause.flake_class",
+        "baseline_rate": "s06_flk_classify_root_cause.baseline_rate",
+        "stack": "from_user_input",
+        "repo_path": "from_user_input",
+        "quarantine_owner": "from_user_input_optional",
+        "quarantine_expiry": "from_user_input_optional",
+        "quarantine_now": "from_user_input"
+      },
+      "outputs": {
+        "quarantine_record": "quarantine_record"
+      },
+      "condition": "quarantine_now == true",
+      "parallel_group": 5
+    },
+    {
+      "id": "s08_flk_verify_same_count",
+      "skill_name": "flk-verify-same-count",
+      "inputs": {
+        "py_async_fix_diff": "from_user_input_optional",
+        "node_async_fix_diff": "from_user_input_optional",
+        "go_sync_fix_diff": "from_user_input_optional",
+        "py_fixture_fix_diff": "from_user_input_optional",
+        "py_xdist_fix_diff": "from_user_input_optional",
+        "node_isolation_fix_diff": "from_user_input_optional",
+        "go_isolation_fix_diff": "from_user_input_optional",
+        "py_time_fix_diff": "from_user_input_optional",
+        "node_time_fix_diff": "from_user_input_optional",
+        "go_time_fix_diff": "from_user_input_optional",
+        "seed_fix_diff": "from_user_input_optional",
+        "network_fix_diff": "from_user_input_optional",
+        "py_leak_fix_diff": "from_user_input_optional",
+        "node_leak_fix_diff": "from_user_input_optional",
+        "baseline_command": "s06_flk_classify_root_cause.baseline_command",
+        "baseline_rate": "s06_flk_classify_root_cause.baseline_rate",
+        "repeat_count": "s02_flk_run_count_derive.repeat_count",
+        "detection_confidence": "from_user_input",
+        "repo_path": "from_user_input"
+      },
+      "outputs": {
+        "verification_verdict": "verification_verdict",
+        "post_fix_rate_report": "post_fix_rate_report"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s09_flk_quarantine_release",
+      "skill_name": "flk-quarantine-release",
+      "inputs": {
+        "quarantine_record": "s07_flk_quarantine_apply.quarantine_record",
+        "verification_verdict": "s08_flk_verify_same_count.verification_verdict",
+        "post_fix_rate_report": "s08_flk_verify_same_count.post_fix_rate_report",
+        "repo_path": "from_user_input"
+      },
+      "outputs": {
+        "release_diff": "release_diff"
+      },
+      "condition": "quarantine_record.status == 'quarantined'",
+      "parallel_group": 6
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_flk_flake_evidence_intake",
+      "to_step": "s02_flk_run_count_derive",
+      "data_type": "flk-flake-evidence-intake",
+      "field_mapping": {
+        "flake_evidence": "flake_evidence"
+      }
+    },
+    {
+      "from_step": "s01_flk_flake_evidence_intake",
+      "to_step": "s03_flk_py_repeat_measure",
+      "data_type": "flk-flake-evidence-intake",
+      "field_mapping": {
+        "flake_evidence": "flake_evidence"
+      }
+    },
+    {
+      "from_step": "s02_flk_run_count_derive",
+      "to_step": "s03_flk_py_repeat_measure",
+      "data_type": "flk-run-count-derive",
+      "field_mapping": {
+        "repeat_count": "repeat_count"
+      }
+    },
+    {
+      "from_step": "s01_flk_flake_evidence_intake",
+      "to_step": "s04_flk_node_jest_loop_measure",
+      "data_type": "flk-flake-evidence-intake",
+      "field_mapping": {
+        "flake_evidence": "flake_evidence"
+      }
+    },
+    {
+      "from_step": "s02_flk_run_count_derive",
+      "to_step": "s04_flk_node_jest_loop_measure",
+      "data_type": "flk-run-count-derive",
+      "field_mapping": {
+        "repeat_count": "repeat_count"
+      }
+    },
+    {
+      "from_step": "s01_flk_flake_evidence_intake",
+      "to_step": "s05_flk_go_count_measure",
+      "data_type": "flk-flake-evidence-intake",
+      "field_mapping": {
+        "flake_evidence": "flake_evidence"
+      }
+    },
+    {
+      "from_step": "s02_flk_run_count_derive",
+      "to_step": "s05_flk_go_count_measure",
+      "data_type": "flk-run-count-derive",
+      "field_mapping": {
+        "repeat_count": "repeat_count"
+      }
+    },
+    {
+      "from_step": "s01_flk_flake_evidence_intake",
+      "to_step": "s06_flk_classify_root_cause",
+      "data_type": "flk-flake-evidence-intake",
+      "field_mapping": {
+        "flake_evidence": "flake_evidence"
+      }
+    },
+    {
+      "from_step": "s03_flk_py_repeat_measure",
+      "to_step": "s06_flk_classify_root_cause",
+      "data_type": "flk-py-repeat-measure",
+      "field_mapping": {
+        "py_flake_rate_report": "py_flake_rate_report"
+      }
+    },
+    {
+      "from_step": "s04_flk_node_jest_loop_measure",
+      "to_step": "s06_flk_classify_root_cause",
+      "data_type": "flk-node-jest-loop-measure",
+      "field_mapping": {
+        "node_flake_rate_report": "node_flake_rate_report"
+      }
+    },
+    {
+      "from_step": "s05_flk_go_count_measure",
+      "to_step": "s06_flk_classify_root_cause",
+      "data_type": "flk-go-count-measure",
+      "field_mapping": {
+        "go_flake_rate_report": "go_flake_rate_report"
+      }
+    },
+    {
+      "from_step": "s01_flk_flake_evidence_intake",
+      "to_step": "s07_flk_quarantine_apply",
+      "data_type": "flk-flake-evidence-intake",
+      "field_mapping": {
+        "flake_evidence": "flake_evidence"
+      }
+    },
+    {
+      "from_step": "s06_flk_classify_root_cause",
+      "to_step": "s07_flk_quarantine_apply",
+      "data_type": "flk-classify-root-cause",
+      "field_mapping": {
+        "flake_class": "flake_class",
+        "baseline_rate": "baseline_rate"
+      }
+    },
+    {
+      "from_step": "s06_flk_classify_root_cause",
+      "to_step": "s08_flk_verify_same_count",
+      "data_type": "flk-classify-root-cause",
+      "field_mapping": {
+        "baseline_command": "baseline_command",
+        "baseline_rate": "baseline_rate"
+      }
+    },
+    {
+      "from_step": "s02_flk_run_count_derive",
+      "to_step": "s08_flk_verify_same_count",
+      "data_type": "flk-run-count-derive",
+      "field_mapping": {
+        "repeat_count": "repeat_count"
+      }
+    },
+    {
+      "from_step": "s07_flk_quarantine_apply",
+      "to_step": "s09_flk_quarantine_release",
+      "data_type": "flk-quarantine-apply",
+      "field_mapping": {
+        "quarantine_record": "quarantine_record"
+      }
+    },
+    {
+      "from_step": "s08_flk_verify_same_count",
+      "to_step": "s09_flk_quarantine_release",
+      "data_type": "flk-verify-same-count",
+      "field_mapping": {
+        "verification_verdict": "verification_verdict",
+        "post_fix_rate_report": "post_fix_rate_report"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "test_id",
+    "repo_path",
+    "stack",
+    "ci_failure_logs",
+    "detection_confidence",
+    "target_flake_rate",
+    "py_order_report",
+    "node_order_report",
+    "go_order_report",
+    "go_race_report",
+    "tz_matrix_report",
+    "quarantine_owner",
+    "quarantine_expiry",
+    "quarantine_now",
+    "py_async_fix_diff",
+    "node_async_fix_diff",
+    "go_sync_fix_diff",
+    "py_fixture_fix_diff",
+    "py_xdist_fix_diff",
+    "node_isolation_fix_diff",
+    "go_isolation_fix_diff",
+    "py_time_fix_diff",
+    "node_time_fix_diff",
+    "go_time_fix_diff",
+    "seed_fix_diff",
+    "network_fix_diff",
+    "py_leak_fix_diff",
+    "node_leak_fix_diff"
+  ],
+  "terminal_outputs": [
+    "run_count_derivation",
+    "root_cause_evidence",
+    "release_diff"
+  ],
+  "parallel_groups": [
+    [
+      "s01_flk_flake_evidence_intake"
+    ],
+    [
+      "s02_flk_run_count_derive"
+    ],
+    [
+      "s03_flk_py_repeat_measure",
+      "s04_flk_node_jest_loop_measure",
+      "s05_flk_go_count_measure"
+    ],
+    [
+      "s06_flk_classify_root_cause"
+    ],
+    [
+      "s07_flk_quarantine_apply",
+      "s08_flk_verify_same_count"
+    ],
+    [
+      "s09_flk_quarantine_release"
+    ]
+  ],
+  "estimated_cost": 9,
+  "critical_path": [
+    "s01_flk_flake_evidence_intake",
+    "s02_flk_run_count_derive",
+    "s03_flk_py_repeat_measure",
+    "s06_flk_classify_root_cause",
+    "s07_flk_quarantine_apply",
+    "s09_flk_quarantine_release"
+  ]
+}

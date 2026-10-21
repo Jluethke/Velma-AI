@@ -1,0 +1,415 @@
+{
+  "name": "e2e-testing-python",
+  "description": "Build a pytest-playwright suite in Python from journey selection through fixtures, data, auth state, route mocks, xdist parallelism, containerized CI and flake triage.",
+  "steps": [
+    {
+      "id": "s01_e2e_journey_select",
+      "skill_name": "e2e-journey-select",
+      "inputs": {
+        "repo_dir": "from_user_input",
+        "app_url": "from_user_input",
+        "journey_sources": "from_user_input_optional"
+      },
+      "outputs": {
+        "critical_journeys": "critical_journeys"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_e2e_runner_select",
+      "skill_name": "e2e-runner-select",
+      "inputs": {
+        "repo_dir": "from_user_input",
+        "critical_journeys": "s01_e2e_journey_select.critical_journeys",
+        "stack": "from_user_input_optional"
+      },
+      "outputs": {
+        "runner_decision": "runner_decision"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_e2e_py_pw_setup",
+      "skill_name": "e2e-py-pw-setup",
+      "inputs": {
+        "repo_dir": "from_user_input",
+        "app_url": "from_user_input",
+        "runner_decision": "s02_e2e_runner_select.runner_decision",
+        "start_command": "from_user_input_optional"
+      },
+      "outputs": {
+        "pw_py_config": "pw_py_config"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_e2e_selector_policy",
+      "skill_name": "e2e-selector-policy",
+      "inputs": {
+        "repo_dir": "from_user_input",
+        "stack": "from_user_input",
+        "critical_journeys": "s01_e2e_journey_select.critical_journeys"
+      },
+      "outputs": {
+        "selector_policy": "selector_policy"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s05_e2e_py_pw_fixtures_pom",
+      "skill_name": "e2e-py-pw-fixtures-pom",
+      "inputs": {
+        "repo_dir": "from_user_input",
+        "pw_py_config": "s03_e2e_py_pw_setup.pw_py_config",
+        "selector_policy": "s04_e2e_selector_policy.selector_policy",
+        "critical_journeys": "s01_e2e_journey_select.critical_journeys"
+      },
+      "outputs": {
+        "py_fixture_layer": "py_fixture_layer"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s06_e2e_py_pw_data_seed",
+      "skill_name": "e2e-py-pw-data-seed",
+      "inputs": {
+        "repo_dir": "from_user_input",
+        "py_fixture_layer": "s05_e2e_py_pw_fixtures_pom.py_fixture_layer",
+        "seed_api": "from_user_input_optional"
+      },
+      "outputs": {
+        "py_data_fixtures": "py_data_fixtures"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s07_e2e_py_pw_auth_state",
+      "skill_name": "e2e-py-pw-auth-state",
+      "inputs": {
+        "repo_dir": "from_user_input",
+        "pw_py_config": "s03_e2e_py_pw_setup.pw_py_config",
+        "py_data_fixtures": "s06_e2e_py_pw_data_seed.py_data_fixtures",
+        "test_accounts": "from_user_input"
+      },
+      "outputs": {
+        "py_auth_setup": "py_auth_setup"
+      },
+      "parallel_group": 6
+    },
+    {
+      "id": "s08_e2e_mock_vs_real_decide",
+      "skill_name": "e2e-mock-vs-real-decide",
+      "inputs": {
+        "critical_journeys": "s01_e2e_journey_select.critical_journeys",
+        "repo_dir": "from_user_input"
+      },
+      "outputs": {
+        "backend_plan": "backend_plan"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s09_e2e_pw_network_mock",
+      "skill_name": "e2e-pw-network-mock",
+      "inputs": {
+        "repo_dir": "from_user_input",
+        "stack": "from_user_input",
+        "backend_plan": "s08_e2e_mock_vs_real_decide.backend_plan"
+      },
+      "outputs": {
+        "pw_route_mocks": "pw_route_mocks"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s10_e2e_retries_policy",
+      "skill_name": "e2e-retries-policy",
+      "inputs": {
+        "repo_dir": "from_user_input",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "retry_policy": "retry_policy"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s11_e2e_failure_artifacts",
+      "skill_name": "e2e-failure-artifacts",
+      "inputs": {
+        "repo_dir": "from_user_input",
+        "stack": "from_user_input",
+        "retry_policy": "s10_e2e_retries_policy.retry_policy"
+      },
+      "outputs": {
+        "artifact_config": "artifact_config"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s12_e2e_pw_trace_read",
+      "skill_name": "e2e-pw-trace-read",
+      "inputs": {
+        "trace_path": "from_user_input_optional",
+        "artifact_config": "s11_e2e_failure_artifacts.artifact_config"
+      },
+      "outputs": {
+        "failure_diagnosis": "failure_diagnosis"
+      },
+      "condition": "trace_path != null",
+      "parallel_group": 3
+    },
+    {
+      "id": "s13_e2e_py_pw_xdist",
+      "skill_name": "e2e-py-pw-xdist",
+      "inputs": {
+        "repo_dir": "from_user_input",
+        "pw_py_config": "s03_e2e_py_pw_setup.pw_py_config",
+        "shard_count": "from_user_input_optional"
+      },
+      "outputs": {
+        "py_shard_plan": "py_shard_plan"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s14_e2e_ci_container_run",
+      "skill_name": "e2e-ci-container-run",
+      "inputs": {
+        "repo_dir": "from_user_input",
+        "stack": "from_user_input",
+        "artifact_config": "s11_e2e_failure_artifacts.artifact_config",
+        "node_shard_plan": "from_user_input_optional",
+        "py_shard_plan": "s13_e2e_py_pw_xdist.py_shard_plan",
+        "cypress_shard_plan": "from_user_input_optional",
+        "ci_provider": "from_user_input_optional"
+      },
+      "outputs": {
+        "ci_workflow": "ci_workflow"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s15_e2e_flake_triage",
+      "skill_name": "e2e-flake-triage",
+      "inputs": {
+        "repo_dir": "from_user_input",
+        "stack": "from_user_input",
+        "retry_policy": "s10_e2e_retries_policy.retry_policy",
+        "failure_diagnosis": "s12_e2e_pw_trace_read.failure_diagnosis",
+        "flaky_tests": "from_user_input_optional",
+        "repeat_count": "from_user_input_optional"
+      },
+      "outputs": {
+        "flake_report": "flake_report"
+      },
+      "parallel_group": 4
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_e2e_journey_select",
+      "to_step": "s02_e2e_runner_select",
+      "data_type": "e2e-journey-select",
+      "field_mapping": {
+        "critical_journeys": "critical_journeys"
+      }
+    },
+    {
+      "from_step": "s02_e2e_runner_select",
+      "to_step": "s03_e2e_py_pw_setup",
+      "data_type": "e2e-runner-select",
+      "field_mapping": {
+        "runner_decision": "runner_decision"
+      }
+    },
+    {
+      "from_step": "s01_e2e_journey_select",
+      "to_step": "s04_e2e_selector_policy",
+      "data_type": "e2e-journey-select",
+      "field_mapping": {
+        "critical_journeys": "critical_journeys"
+      }
+    },
+    {
+      "from_step": "s03_e2e_py_pw_setup",
+      "to_step": "s05_e2e_py_pw_fixtures_pom",
+      "data_type": "e2e-py-pw-setup",
+      "field_mapping": {
+        "pw_py_config": "pw_py_config"
+      }
+    },
+    {
+      "from_step": "s04_e2e_selector_policy",
+      "to_step": "s05_e2e_py_pw_fixtures_pom",
+      "data_type": "e2e-selector-policy",
+      "field_mapping": {
+        "selector_policy": "selector_policy"
+      }
+    },
+    {
+      "from_step": "s01_e2e_journey_select",
+      "to_step": "s05_e2e_py_pw_fixtures_pom",
+      "data_type": "e2e-journey-select",
+      "field_mapping": {
+        "critical_journeys": "critical_journeys"
+      }
+    },
+    {
+      "from_step": "s05_e2e_py_pw_fixtures_pom",
+      "to_step": "s06_e2e_py_pw_data_seed",
+      "data_type": "e2e-py-pw-fixtures-pom",
+      "field_mapping": {
+        "py_fixture_layer": "py_fixture_layer"
+      }
+    },
+    {
+      "from_step": "s03_e2e_py_pw_setup",
+      "to_step": "s07_e2e_py_pw_auth_state",
+      "data_type": "e2e-py-pw-setup",
+      "field_mapping": {
+        "pw_py_config": "pw_py_config"
+      }
+    },
+    {
+      "from_step": "s06_e2e_py_pw_data_seed",
+      "to_step": "s07_e2e_py_pw_auth_state",
+      "data_type": "e2e-py-pw-data-seed",
+      "field_mapping": {
+        "py_data_fixtures": "py_data_fixtures"
+      }
+    },
+    {
+      "from_step": "s01_e2e_journey_select",
+      "to_step": "s08_e2e_mock_vs_real_decide",
+      "data_type": "e2e-journey-select",
+      "field_mapping": {
+        "critical_journeys": "critical_journeys"
+      }
+    },
+    {
+      "from_step": "s08_e2e_mock_vs_real_decide",
+      "to_step": "s09_e2e_pw_network_mock",
+      "data_type": "e2e-mock-vs-real-decide",
+      "field_mapping": {
+        "backend_plan": "backend_plan"
+      }
+    },
+    {
+      "from_step": "s10_e2e_retries_policy",
+      "to_step": "s11_e2e_failure_artifacts",
+      "data_type": "e2e-retries-policy",
+      "field_mapping": {
+        "retry_policy": "retry_policy"
+      }
+    },
+    {
+      "from_step": "s11_e2e_failure_artifacts",
+      "to_step": "s12_e2e_pw_trace_read",
+      "data_type": "e2e-failure-artifacts",
+      "field_mapping": {
+        "artifact_config": "artifact_config"
+      }
+    },
+    {
+      "from_step": "s03_e2e_py_pw_setup",
+      "to_step": "s13_e2e_py_pw_xdist",
+      "data_type": "e2e-py-pw-setup",
+      "field_mapping": {
+        "pw_py_config": "pw_py_config"
+      }
+    },
+    {
+      "from_step": "s11_e2e_failure_artifacts",
+      "to_step": "s14_e2e_ci_container_run",
+      "data_type": "e2e-failure-artifacts",
+      "field_mapping": {
+        "artifact_config": "artifact_config"
+      }
+    },
+    {
+      "from_step": "s13_e2e_py_pw_xdist",
+      "to_step": "s14_e2e_ci_container_run",
+      "data_type": "e2e-py-pw-xdist",
+      "field_mapping": {
+        "py_shard_plan": "py_shard_plan"
+      }
+    },
+    {
+      "from_step": "s10_e2e_retries_policy",
+      "to_step": "s15_e2e_flake_triage",
+      "data_type": "e2e-retries-policy",
+      "field_mapping": {
+        "retry_policy": "retry_policy"
+      }
+    },
+    {
+      "from_step": "s12_e2e_pw_trace_read",
+      "to_step": "s15_e2e_flake_triage",
+      "data_type": "e2e-pw-trace-read",
+      "field_mapping": {
+        "failure_diagnosis": "failure_diagnosis"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "repo_dir",
+    "app_url",
+    "journey_sources",
+    "stack",
+    "start_command",
+    "seed_api",
+    "test_accounts",
+    "trace_path",
+    "shard_count",
+    "node_shard_plan",
+    "cypress_shard_plan",
+    "ci_provider",
+    "flaky_tests",
+    "repeat_count"
+  ],
+  "terminal_outputs": [
+    "py_auth_setup",
+    "pw_route_mocks",
+    "ci_workflow",
+    "flake_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_e2e_journey_select",
+      "s10_e2e_retries_policy"
+    ],
+    [
+      "s02_e2e_runner_select",
+      "s04_e2e_selector_policy",
+      "s08_e2e_mock_vs_real_decide",
+      "s11_e2e_failure_artifacts"
+    ],
+    [
+      "s03_e2e_py_pw_setup",
+      "s09_e2e_pw_network_mock",
+      "s12_e2e_pw_trace_read"
+    ],
+    [
+      "s05_e2e_py_pw_fixtures_pom",
+      "s13_e2e_py_pw_xdist",
+      "s15_e2e_flake_triage"
+    ],
+    [
+      "s06_e2e_py_pw_data_seed",
+      "s14_e2e_ci_container_run"
+    ],
+    [
+      "s07_e2e_py_pw_auth_state"
+    ]
+  ],
+  "estimated_cost": 15,
+  "critical_path": [
+    "s01_e2e_journey_select",
+    "s02_e2e_runner_select",
+    "s03_e2e_py_pw_setup",
+    "s05_e2e_py_pw_fixtures_pom",
+    "s06_e2e_py_pw_data_seed",
+    "s07_e2e_py_pw_auth_state"
+  ]
+}

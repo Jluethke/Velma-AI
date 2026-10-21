@@ -1,0 +1,231 @@
+{
+  "name": "input-validation-security-server-injection",
+  "description": "Find and fix server-side injection classes in any stack: command and argument injection, path traversal and zip slip, SSRF, XXE and unsafe deserialization, each proven by payload tests and guarded by Semgrep taint rules.",
+  "steps": [
+    {
+      "id": "s01_ival_entry_point_inventory",
+      "skill_name": "ival-entry-point-inventory",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "entry_point_inventory": "entry_point_inventory"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_ival_sink_class_map",
+      "skill_name": "ival-sink-class-map",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "entry_point_inventory": "s01_ival_entry_point_inventory.entry_point_inventory"
+      },
+      "outputs": {
+        "sink_map": "sink_map"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_ival_command_injection_fix",
+      "skill_name": "ival-command-injection-fix",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "sink_map": "s02_ival_sink_class_map.sink_map"
+      },
+      "outputs": {
+        "command_fixes": "command_fixes"
+      },
+      "condition": "'command' in sink_map.classes",
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_ival_path_traversal_fix",
+      "skill_name": "ival-path-traversal-fix",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "sink_map": "s02_ival_sink_class_map.sink_map"
+      },
+      "outputs": {
+        "path_fixes": "path_fixes"
+      },
+      "condition": "'path' in sink_map.classes",
+      "parallel_group": 3
+    },
+    {
+      "id": "s05_ival_ssrf_egress_guard",
+      "skill_name": "ival-ssrf-egress-guard",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "sink_map": "s02_ival_sink_class_map.sink_map",
+        "allowed_hosts": "from_user_input_optional"
+      },
+      "outputs": {
+        "ssrf_fixes": "ssrf_fixes"
+      },
+      "condition": "'ssrf' in sink_map.classes",
+      "parallel_group": 3
+    },
+    {
+      "id": "s06_ival_xxe_parser_hardening",
+      "skill_name": "ival-xxe-parser-hardening",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "sink_map": "s02_ival_sink_class_map.sink_map"
+      },
+      "outputs": {
+        "xxe_fixes": "xxe_fixes"
+      },
+      "condition": "'xxe' in sink_map.classes",
+      "parallel_group": 3
+    },
+    {
+      "id": "s07_ival_deserialization_fix",
+      "skill_name": "ival-deserialization-fix",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "sink_map": "s02_ival_sink_class_map.sink_map"
+      },
+      "outputs": {
+        "deserialization_fixes": "deserialization_fixes"
+      },
+      "condition": "'deserialization' in sink_map.classes",
+      "parallel_group": 3
+    },
+    {
+      "id": "s08_ival_negative_test_suite",
+      "skill_name": "ival-negative-test-suite",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "sink_map": "s02_ival_sink_class_map.sink_map"
+      },
+      "outputs": {
+        "negative_tests": "negative_tests"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s09_ival_semgrep_taint_rules",
+      "skill_name": "ival-semgrep-taint-rules",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "sink_map": "s02_ival_sink_class_map.sink_map"
+      },
+      "outputs": {
+        "semgrep_rules": "semgrep_rules"
+      },
+      "parallel_group": 3
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_ival_entry_point_inventory",
+      "to_step": "s02_ival_sink_class_map",
+      "data_type": "ival-entry-point-inventory",
+      "field_mapping": {
+        "entry_point_inventory": "entry_point_inventory"
+      }
+    },
+    {
+      "from_step": "s02_ival_sink_class_map",
+      "to_step": "s03_ival_command_injection_fix",
+      "data_type": "ival-sink-class-map",
+      "field_mapping": {
+        "sink_map": "sink_map"
+      }
+    },
+    {
+      "from_step": "s02_ival_sink_class_map",
+      "to_step": "s04_ival_path_traversal_fix",
+      "data_type": "ival-sink-class-map",
+      "field_mapping": {
+        "sink_map": "sink_map"
+      }
+    },
+    {
+      "from_step": "s02_ival_sink_class_map",
+      "to_step": "s05_ival_ssrf_egress_guard",
+      "data_type": "ival-sink-class-map",
+      "field_mapping": {
+        "sink_map": "sink_map"
+      }
+    },
+    {
+      "from_step": "s02_ival_sink_class_map",
+      "to_step": "s06_ival_xxe_parser_hardening",
+      "data_type": "ival-sink-class-map",
+      "field_mapping": {
+        "sink_map": "sink_map"
+      }
+    },
+    {
+      "from_step": "s02_ival_sink_class_map",
+      "to_step": "s07_ival_deserialization_fix",
+      "data_type": "ival-sink-class-map",
+      "field_mapping": {
+        "sink_map": "sink_map"
+      }
+    },
+    {
+      "from_step": "s02_ival_sink_class_map",
+      "to_step": "s08_ival_negative_test_suite",
+      "data_type": "ival-sink-class-map",
+      "field_mapping": {
+        "sink_map": "sink_map"
+      }
+    },
+    {
+      "from_step": "s02_ival_sink_class_map",
+      "to_step": "s09_ival_semgrep_taint_rules",
+      "data_type": "ival-sink-class-map",
+      "field_mapping": {
+        "sink_map": "sink_map"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "repo_path",
+    "stack",
+    "allowed_hosts"
+  ],
+  "terminal_outputs": [
+    "command_fixes",
+    "path_fixes",
+    "ssrf_fixes",
+    "xxe_fixes",
+    "deserialization_fixes",
+    "negative_tests",
+    "semgrep_rules"
+  ],
+  "parallel_groups": [
+    [
+      "s01_ival_entry_point_inventory"
+    ],
+    [
+      "s02_ival_sink_class_map"
+    ],
+    [
+      "s03_ival_command_injection_fix",
+      "s04_ival_path_traversal_fix",
+      "s05_ival_ssrf_egress_guard",
+      "s06_ival_xxe_parser_hardening",
+      "s07_ival_deserialization_fix",
+      "s08_ival_negative_test_suite",
+      "s09_ival_semgrep_taint_rules"
+    ]
+  ],
+  "estimated_cost": 9,
+  "critical_path": [
+    "s01_ival_entry_point_inventory",
+    "s02_ival_sink_class_map",
+    "s09_ival_semgrep_taint_rules"
+  ]
+}

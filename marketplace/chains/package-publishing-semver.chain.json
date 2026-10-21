@@ -1,0 +1,341 @@
+{
+  "name": "package-publishing-semver",
+  "description": "Decide the next release version from measured API differences for Python, npm, Go or Rust, then lock the exact version and tag and write the changelog entry.",
+  "steps": [
+    {
+      "id": "s01_pkg_scope_intake",
+      "skill_name": "pkg-scope-intake",
+      "inputs": {
+        "project_dir": "from_user_input",
+        "stack": "from_user_input",
+        "package_name": "from_user_input"
+      },
+      "outputs": {
+        "package_profile": "package_profile"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_pkg_public_api_inventory",
+      "skill_name": "pkg-public-api-inventory",
+      "inputs": {
+        "package_profile": "s01_pkg_scope_intake.package_profile",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "public_api": "public_api",
+        "api_leaks": "api_leaks"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_pkg_py_dunder_all_exports",
+      "skill_name": "pkg-py-dunder-all-exports",
+      "inputs": {
+        "public_api": "s02_pkg_public_api_inventory.public_api",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "py_export_surface": "py_export_surface"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_pkg_node_exports_map",
+      "skill_name": "pkg-node-exports-map",
+      "inputs": {
+        "public_api": "s02_pkg_public_api_inventory.public_api",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "exports_map": "exports_map"
+      },
+      "condition": "stack == 'node'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s05_pkg_go_internal_packages",
+      "skill_name": "pkg-go-internal-packages",
+      "inputs": {
+        "public_api": "s02_pkg_public_api_inventory.public_api",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "go_export_surface": "go_export_surface"
+      },
+      "condition": "stack == 'go'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s06_pkg_rust_pub_surface",
+      "skill_name": "pkg-rust-pub-surface",
+      "inputs": {
+        "public_api": "s02_pkg_public_api_inventory.public_api",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "rust_export_surface": "rust_export_surface"
+      },
+      "condition": "stack == 'rust'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s07_pkg_py_griffe_api_diff",
+      "skill_name": "pkg-py-griffe-api-diff",
+      "inputs": {
+        "py_export_surface": "s03_pkg_py_dunder_all_exports.py_export_surface",
+        "previous_release_ref": "from_user_input_optional",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "py_change_class": "py_change_class",
+        "py_api_diff": "py_api_diff"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 4
+    },
+    {
+      "id": "s08_pkg_node_api_extractor_diff",
+      "skill_name": "pkg-node-api-extractor-diff",
+      "inputs": {
+        "exports_map": "s04_pkg_node_exports_map.exports_map",
+        "previous_release_ref": "from_user_input_optional",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "node_change_class": "node_change_class",
+        "node_api_diff": "node_api_diff"
+      },
+      "condition": "stack == 'node'",
+      "parallel_group": 4
+    },
+    {
+      "id": "s09_pkg_go_gorelease_diff",
+      "skill_name": "pkg-go-gorelease-diff",
+      "inputs": {
+        "go_export_surface": "s05_pkg_go_internal_packages.go_export_surface",
+        "previous_release_ref": "from_user_input_optional",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "go_change_class": "go_change_class",
+        "go_api_diff": "go_api_diff"
+      },
+      "condition": "stack == 'go'",
+      "parallel_group": 4
+    },
+    {
+      "id": "s10_pkg_rust_semver_checks",
+      "skill_name": "pkg-rust-semver-checks",
+      "inputs": {
+        "rust_export_surface": "s06_pkg_rust_pub_surface.rust_export_surface",
+        "previous_release_ref": "from_user_input_optional",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "rust_change_class": "rust_change_class",
+        "rust_api_diff": "rust_api_diff"
+      },
+      "condition": "stack == 'rust'",
+      "parallel_group": 4
+    },
+    {
+      "id": "s11_pkg_release_version_lock",
+      "skill_name": "pkg-release-version-lock",
+      "inputs": {
+        "stack": "from_user_input",
+        "previous_version": "from_user_input_optional",
+        "prerelease_label": "from_user_input_optional",
+        "py_change_class": "s07_pkg_py_griffe_api_diff.py_change_class",
+        "node_change_class": "s08_pkg_node_api_extractor_diff.node_change_class",
+        "go_change_class": "s09_pkg_go_gorelease_diff.go_change_class",
+        "rust_change_class": "s10_pkg_rust_semver_checks.rust_change_class"
+      },
+      "outputs": {
+        "release_version": "release_version",
+        "release_tag": "release_tag"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s12_pkg_changelog_entry",
+      "skill_name": "pkg-changelog-entry",
+      "inputs": {
+        "release_version": "s11_pkg_release_version_lock.release_version",
+        "previous_release_ref": "from_user_input_optional",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "changelog_entry": "changelog_entry"
+      },
+      "parallel_group": 6
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_pkg_scope_intake",
+      "to_step": "s02_pkg_public_api_inventory",
+      "data_type": "pkg-scope-intake",
+      "field_mapping": {
+        "package_profile": "package_profile"
+      }
+    },
+    {
+      "from_step": "s02_pkg_public_api_inventory",
+      "to_step": "s03_pkg_py_dunder_all_exports",
+      "data_type": "pkg-public-api-inventory",
+      "field_mapping": {
+        "public_api": "public_api"
+      }
+    },
+    {
+      "from_step": "s02_pkg_public_api_inventory",
+      "to_step": "s04_pkg_node_exports_map",
+      "data_type": "pkg-public-api-inventory",
+      "field_mapping": {
+        "public_api": "public_api"
+      }
+    },
+    {
+      "from_step": "s02_pkg_public_api_inventory",
+      "to_step": "s05_pkg_go_internal_packages",
+      "data_type": "pkg-public-api-inventory",
+      "field_mapping": {
+        "public_api": "public_api"
+      }
+    },
+    {
+      "from_step": "s02_pkg_public_api_inventory",
+      "to_step": "s06_pkg_rust_pub_surface",
+      "data_type": "pkg-public-api-inventory",
+      "field_mapping": {
+        "public_api": "public_api"
+      }
+    },
+    {
+      "from_step": "s03_pkg_py_dunder_all_exports",
+      "to_step": "s07_pkg_py_griffe_api_diff",
+      "data_type": "pkg-py-dunder-all-exports",
+      "field_mapping": {
+        "py_export_surface": "py_export_surface"
+      }
+    },
+    {
+      "from_step": "s04_pkg_node_exports_map",
+      "to_step": "s08_pkg_node_api_extractor_diff",
+      "data_type": "pkg-node-exports-map",
+      "field_mapping": {
+        "exports_map": "exports_map"
+      }
+    },
+    {
+      "from_step": "s05_pkg_go_internal_packages",
+      "to_step": "s09_pkg_go_gorelease_diff",
+      "data_type": "pkg-go-internal-packages",
+      "field_mapping": {
+        "go_export_surface": "go_export_surface"
+      }
+    },
+    {
+      "from_step": "s06_pkg_rust_pub_surface",
+      "to_step": "s10_pkg_rust_semver_checks",
+      "data_type": "pkg-rust-pub-surface",
+      "field_mapping": {
+        "rust_export_surface": "rust_export_surface"
+      }
+    },
+    {
+      "from_step": "s07_pkg_py_griffe_api_diff",
+      "to_step": "s11_pkg_release_version_lock",
+      "data_type": "pkg-py-griffe-api-diff",
+      "field_mapping": {
+        "py_change_class": "py_change_class"
+      }
+    },
+    {
+      "from_step": "s08_pkg_node_api_extractor_diff",
+      "to_step": "s11_pkg_release_version_lock",
+      "data_type": "pkg-node-api-extractor-diff",
+      "field_mapping": {
+        "node_change_class": "node_change_class"
+      }
+    },
+    {
+      "from_step": "s09_pkg_go_gorelease_diff",
+      "to_step": "s11_pkg_release_version_lock",
+      "data_type": "pkg-go-gorelease-diff",
+      "field_mapping": {
+        "go_change_class": "go_change_class"
+      }
+    },
+    {
+      "from_step": "s10_pkg_rust_semver_checks",
+      "to_step": "s11_pkg_release_version_lock",
+      "data_type": "pkg-rust-semver-checks",
+      "field_mapping": {
+        "rust_change_class": "rust_change_class"
+      }
+    },
+    {
+      "from_step": "s11_pkg_release_version_lock",
+      "to_step": "s12_pkg_changelog_entry",
+      "data_type": "pkg-release-version-lock",
+      "field_mapping": {
+        "release_version": "release_version"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "project_dir",
+    "stack",
+    "package_name",
+    "previous_release_ref",
+    "previous_version",
+    "prerelease_label"
+  ],
+  "terminal_outputs": [
+    "api_leaks",
+    "py_api_diff",
+    "node_api_diff",
+    "go_api_diff",
+    "rust_api_diff",
+    "release_tag",
+    "changelog_entry"
+  ],
+  "parallel_groups": [
+    [
+      "s01_pkg_scope_intake"
+    ],
+    [
+      "s02_pkg_public_api_inventory"
+    ],
+    [
+      "s03_pkg_py_dunder_all_exports",
+      "s04_pkg_node_exports_map",
+      "s05_pkg_go_internal_packages",
+      "s06_pkg_rust_pub_surface"
+    ],
+    [
+      "s07_pkg_py_griffe_api_diff",
+      "s08_pkg_node_api_extractor_diff",
+      "s09_pkg_go_gorelease_diff",
+      "s10_pkg_rust_semver_checks"
+    ],
+    [
+      "s11_pkg_release_version_lock"
+    ],
+    [
+      "s12_pkg_changelog_entry"
+    ]
+  ],
+  "estimated_cost": 12,
+  "critical_path": [
+    "s01_pkg_scope_intake",
+    "s02_pkg_public_api_inventory",
+    "s03_pkg_py_dunder_all_exports",
+    "s07_pkg_py_griffe_api_diff",
+    "s11_pkg_release_version_lock",
+    "s12_pkg_changelog_entry"
+  ]
+}

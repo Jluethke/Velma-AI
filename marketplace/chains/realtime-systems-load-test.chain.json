@@ -1,0 +1,126 @@
+{
+  "name": "realtime-systems-load-test",
+  "description": "Load-test a realtime server: raise Linux connection limits, run k6 or Artillery WebSocket tests against SLO thresholds, and produce a capacity report.",
+  "steps": [
+    {
+      "id": "s01_rtw_linux_connection_limits",
+      "skill_name": "rtw-linux-connection-limits",
+      "inputs": {
+        "server_hosts": "from_user_input",
+        "target_connections": "from_user_input"
+      },
+      "outputs": {
+        "os_limits_report": "os_limits_report"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_rtw_k6_ws_load_test",
+      "skill_name": "rtw-k6-ws-load-test",
+      "inputs": {
+        "server_url": "from_user_input",
+        "protocol_spec": "from_user_input",
+        "target_connections": "from_user_input",
+        "slo_targets": "from_user_input",
+        "os_limits_report": "s01_rtw_linux_connection_limits.os_limits_report"
+      },
+      "outputs": {
+        "k6_summary": "k6_summary"
+      },
+      "condition": "load_tool == 'k6'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_rtw_artillery_ws_load_test",
+      "skill_name": "rtw-artillery-ws-load-test",
+      "inputs": {
+        "server_url": "from_user_input",
+        "protocol_spec": "from_user_input",
+        "target_connections": "from_user_input",
+        "slo_targets": "from_user_input",
+        "os_limits_report": "s01_rtw_linux_connection_limits.os_limits_report"
+      },
+      "outputs": {
+        "artillery_report": "artillery_report"
+      },
+      "condition": "load_tool == 'artillery'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_rtw_load_test_capacity_report",
+      "skill_name": "rtw-load-test-capacity-report",
+      "inputs": {
+        "k6_summary": "s02_rtw_k6_ws_load_test.k6_summary",
+        "artillery_report": "s03_rtw_artillery_ws_load_test.artillery_report",
+        "slo_targets": "from_user_input",
+        "target_connections": "from_user_input"
+      },
+      "outputs": {
+        "capacity_report": "capacity_report"
+      },
+      "parallel_group": 3
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_rtw_linux_connection_limits",
+      "to_step": "s02_rtw_k6_ws_load_test",
+      "data_type": "rtw-linux-connection-limits",
+      "field_mapping": {
+        "os_limits_report": "os_limits_report"
+      }
+    },
+    {
+      "from_step": "s01_rtw_linux_connection_limits",
+      "to_step": "s03_rtw_artillery_ws_load_test",
+      "data_type": "rtw-linux-connection-limits",
+      "field_mapping": {
+        "os_limits_report": "os_limits_report"
+      }
+    },
+    {
+      "from_step": "s02_rtw_k6_ws_load_test",
+      "to_step": "s04_rtw_load_test_capacity_report",
+      "data_type": "rtw-k6-ws-load-test",
+      "field_mapping": {
+        "k6_summary": "k6_summary"
+      }
+    },
+    {
+      "from_step": "s03_rtw_artillery_ws_load_test",
+      "to_step": "s04_rtw_load_test_capacity_report",
+      "data_type": "rtw-artillery-ws-load-test",
+      "field_mapping": {
+        "artillery_report": "artillery_report"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "server_hosts",
+    "target_connections",
+    "server_url",
+    "protocol_spec",
+    "slo_targets"
+  ],
+  "terminal_outputs": [
+    "capacity_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_rtw_linux_connection_limits"
+    ],
+    [
+      "s02_rtw_k6_ws_load_test",
+      "s03_rtw_artillery_ws_load_test"
+    ],
+    [
+      "s04_rtw_load_test_capacity_report"
+    ]
+  ],
+  "estimated_cost": 4,
+  "critical_path": [
+    "s01_rtw_linux_connection_limits",
+    "s02_rtw_k6_ws_load_test",
+    "s04_rtw_load_test_capacity_report"
+  ]
+}

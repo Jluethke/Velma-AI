@@ -1,0 +1,213 @@
+{
+  "name": "authentication-authorization-browser-session-mfa",
+  "description": "Harden a cookie-based browser login: cookie flags, CSRF defenses, session fixation and logout, then add TOTP and passkey second factors.",
+  "steps": [
+    {
+      "id": "s01_auth_session_vs_token_decision",
+      "skill_name": "auth-session-vs-token-decision",
+      "inputs": {
+        "app_architecture": "from_user_input",
+        "repo_path": "from_user_input"
+      },
+      "outputs": {
+        "auth_inventory": "auth_inventory",
+        "auth_mechanism_decision": "auth_mechanism_decision"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_auth_py_cookie_flags_hardening",
+      "skill_name": "auth-py-cookie-flags-hardening",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "auth_mechanism_decision": "s01_auth_session_vs_token_decision.auth_mechanism_decision",
+        "app_base_url": "from_user_input"
+      },
+      "outputs": {
+        "cookie_audit": "cookie_audit"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_auth_node_cookie_flags_hardening",
+      "skill_name": "auth-node-cookie-flags-hardening",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "auth_mechanism_decision": "s01_auth_session_vs_token_decision.auth_mechanism_decision",
+        "app_base_url": "from_user_input"
+      },
+      "outputs": {
+        "cookie_audit": "cookie_audit"
+      },
+      "condition": "stack == 'node'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_auth_csrf_defense_verification",
+      "skill_name": "auth-csrf-defense-verification",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "auth_mechanism_decision": "s01_auth_session_vs_token_decision.auth_mechanism_decision",
+        "app_base_url": "from_user_input"
+      },
+      "outputs": {
+        "csrf_defense_report": "csrf_defense_report"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s05_auth_session_fixation_logout",
+      "skill_name": "auth-session-fixation-logout",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "auth_mechanism_decision": "s01_auth_session_vs_token_decision.auth_mechanism_decision",
+        "session_timeout_policy": "from_user_input"
+      },
+      "outputs": {
+        "session_lifecycle_report": "session_lifecycle_report"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s06_auth_totp_mfa_enrollment",
+      "skill_name": "auth-totp-mfa-enrollment",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "auth_mechanism_decision": "s01_auth_session_vs_token_decision.auth_mechanism_decision"
+      },
+      "outputs": {
+        "totp_mfa_change": "totp_mfa_change"
+      },
+      "condition": "'totp' in auth_mechanism_decision.mfa_methods",
+      "parallel_group": 2
+    },
+    {
+      "id": "s07_auth_node_webauthn_passkeys",
+      "skill_name": "auth-node-webauthn-passkeys",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "auth_mechanism_decision": "s01_auth_session_vs_token_decision.auth_mechanism_decision",
+        "rp_id": "from_user_input",
+        "rp_origin": "from_user_input"
+      },
+      "outputs": {
+        "passkey_change": "passkey_change"
+      },
+      "condition": "stack == 'node' and 'webauthn' in auth_mechanism_decision.mfa_methods",
+      "parallel_group": 2
+    },
+    {
+      "id": "s08_auth_py_webauthn_passkeys",
+      "skill_name": "auth-py-webauthn-passkeys",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "auth_mechanism_decision": "s01_auth_session_vs_token_decision.auth_mechanism_decision",
+        "rp_id": "from_user_input",
+        "rp_origin": "from_user_input"
+      },
+      "outputs": {
+        "passkey_change": "passkey_change"
+      },
+      "condition": "stack == 'python' and 'webauthn' in auth_mechanism_decision.mfa_methods",
+      "parallel_group": 2
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_auth_session_vs_token_decision",
+      "to_step": "s02_auth_py_cookie_flags_hardening",
+      "data_type": "auth-session-vs-token-decision",
+      "field_mapping": {
+        "auth_mechanism_decision": "auth_mechanism_decision"
+      }
+    },
+    {
+      "from_step": "s01_auth_session_vs_token_decision",
+      "to_step": "s03_auth_node_cookie_flags_hardening",
+      "data_type": "auth-session-vs-token-decision",
+      "field_mapping": {
+        "auth_mechanism_decision": "auth_mechanism_decision"
+      }
+    },
+    {
+      "from_step": "s01_auth_session_vs_token_decision",
+      "to_step": "s04_auth_csrf_defense_verification",
+      "data_type": "auth-session-vs-token-decision",
+      "field_mapping": {
+        "auth_mechanism_decision": "auth_mechanism_decision"
+      }
+    },
+    {
+      "from_step": "s01_auth_session_vs_token_decision",
+      "to_step": "s05_auth_session_fixation_logout",
+      "data_type": "auth-session-vs-token-decision",
+      "field_mapping": {
+        "auth_mechanism_decision": "auth_mechanism_decision"
+      }
+    },
+    {
+      "from_step": "s01_auth_session_vs_token_decision",
+      "to_step": "s06_auth_totp_mfa_enrollment",
+      "data_type": "auth-session-vs-token-decision",
+      "field_mapping": {
+        "auth_mechanism_decision": "auth_mechanism_decision"
+      }
+    },
+    {
+      "from_step": "s01_auth_session_vs_token_decision",
+      "to_step": "s07_auth_node_webauthn_passkeys",
+      "data_type": "auth-session-vs-token-decision",
+      "field_mapping": {
+        "auth_mechanism_decision": "auth_mechanism_decision"
+      }
+    },
+    {
+      "from_step": "s01_auth_session_vs_token_decision",
+      "to_step": "s08_auth_py_webauthn_passkeys",
+      "data_type": "auth-session-vs-token-decision",
+      "field_mapping": {
+        "auth_mechanism_decision": "auth_mechanism_decision"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "app_architecture",
+    "repo_path",
+    "app_base_url",
+    "stack",
+    "session_timeout_policy",
+    "rp_id",
+    "rp_origin"
+  ],
+  "terminal_outputs": [
+    "auth_inventory",
+    "cookie_audit",
+    "csrf_defense_report",
+    "session_lifecycle_report",
+    "totp_mfa_change",
+    "passkey_change"
+  ],
+  "parallel_groups": [
+    [
+      "s01_auth_session_vs_token_decision"
+    ],
+    [
+      "s02_auth_py_cookie_flags_hardening",
+      "s03_auth_node_cookie_flags_hardening",
+      "s04_auth_csrf_defense_verification",
+      "s05_auth_session_fixation_logout",
+      "s06_auth_totp_mfa_enrollment",
+      "s07_auth_node_webauthn_passkeys",
+      "s08_auth_py_webauthn_passkeys"
+    ]
+  ],
+  "estimated_cost": 8,
+  "critical_path": [
+    "s01_auth_session_vs_token_decision",
+    "s04_auth_csrf_defense_verification"
+  ]
+}

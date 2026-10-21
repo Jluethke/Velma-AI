@@ -1,0 +1,124 @@
+{
+  "name": "caching-memory-bounds",
+  "description": "Memory bounds and eviction for an existing shared cache: size Redis maxmemory and eviction policy or Memcached slabs from measured overhead, find big and hot Redis keys, instrument hit and miss counts, and measure against the baseline.",
+  "steps": [
+    {
+      "id": "s01_cache_redis_maxmemory_eviction",
+      "skill_name": "cache-redis-maxmemory-eviction",
+      "inputs": {
+        "redis_url": "from_user_input",
+        "key_schema": "from_user_input",
+        "memory_limit_bytes": "from_user_input"
+      },
+      "outputs": {
+        "redis_memory_config": "redis_memory_config"
+      },
+      "condition": "cache_backend == 'redis'",
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_cache_redis_bigkey_hotkey_scan",
+      "skill_name": "cache-redis-bigkey-hotkey-scan",
+      "inputs": {
+        "redis_url": "from_user_input",
+        "redis_memory_config": "s01_cache_redis_maxmemory_eviction.redis_memory_config"
+      },
+      "outputs": {
+        "key_size_report": "key_size_report"
+      },
+      "condition": "cache_backend == 'redis'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_cache_memcached_slab_eviction",
+      "skill_name": "cache-memcached-slab-eviction",
+      "inputs": {
+        "memcached_addr": "from_user_input",
+        "key_schema": "from_user_input",
+        "memory_limit_bytes": "from_user_input"
+      },
+      "outputs": {
+        "memcached_memory_report": "memcached_memory_report"
+      },
+      "condition": "cache_backend == 'memcached'",
+      "parallel_group": 1
+    },
+    {
+      "id": "s04_cache_hit_miss_instrument",
+      "skill_name": "cache-hit-miss-instrument",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "key_schema": "from_user_input",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "cache_metrics": "cache_metrics"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s05_cache_hit_rate_latency_measure",
+      "skill_name": "cache-hit-rate-latency-measure",
+      "inputs": {
+        "cache_metrics": "s04_cache_hit_miss_instrument.cache_metrics",
+        "baseline_metrics": "from_user_input",
+        "redis_url": "from_user_input_optional"
+      },
+      "outputs": {
+        "cache_effect_report": "cache_effect_report"
+      },
+      "parallel_group": 3
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_cache_redis_maxmemory_eviction",
+      "to_step": "s02_cache_redis_bigkey_hotkey_scan",
+      "data_type": "cache-redis-maxmemory-eviction",
+      "field_mapping": {
+        "redis_memory_config": "redis_memory_config"
+      }
+    },
+    {
+      "from_step": "s04_cache_hit_miss_instrument",
+      "to_step": "s05_cache_hit_rate_latency_measure",
+      "data_type": "cache-hit-miss-instrument",
+      "field_mapping": {
+        "cache_metrics": "cache_metrics"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "redis_url",
+    "key_schema",
+    "memory_limit_bytes",
+    "memcached_addr",
+    "repo_path",
+    "stack",
+    "baseline_metrics"
+  ],
+  "terminal_outputs": [
+    "key_size_report",
+    "memcached_memory_report",
+    "cache_effect_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_cache_redis_maxmemory_eviction",
+      "s03_cache_memcached_slab_eviction",
+      "s04_cache_hit_miss_instrument"
+    ],
+    [
+      "s02_cache_redis_bigkey_hotkey_scan"
+    ],
+    [
+      "s05_cache_hit_rate_latency_measure"
+    ]
+  ],
+  "estimated_cost": 5,
+  "critical_path": [
+    "s01_cache_redis_maxmemory_eviction",
+    "s02_cache_redis_bigkey_hotkey_scan",
+    "s05_cache_hit_rate_latency_measure"
+  ]
+}

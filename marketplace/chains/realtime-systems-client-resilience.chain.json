@@ -1,0 +1,158 @@
+{
+  "name": "realtime-systems-client-resilience",
+  "description": "Make a realtime client survive bad networks: close code map, heartbeat derivation, full-jitter reconnect, snapshot and delta reconciliation, and Toxiproxy fault tests.",
+  "steps": [
+    {
+      "id": "s01_rtw_close_code_map",
+      "skill_name": "rtw-close-code-map",
+      "inputs": {
+        "protocol_spec": "from_user_input",
+        "transport_decision": "from_user_input"
+      },
+      "outputs": {
+        "close_code_map": "close_code_map"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_rtw_heartbeat_config",
+      "skill_name": "rtw-heartbeat-config",
+      "inputs": {
+        "transport_decision": "from_user_input",
+        "network_path": "from_user_input"
+      },
+      "outputs": {
+        "heartbeat_config": "heartbeat_config"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s03_rtw_client_reconnect_backoff",
+      "skill_name": "rtw-client-reconnect-backoff",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "close_code_map": "s01_rtw_close_code_map.close_code_map",
+        "heartbeat_config": "s02_rtw_heartbeat_config.heartbeat_config",
+        "delivery_contract": "from_user_input",
+        "backoff_bounds": "from_user_input"
+      },
+      "outputs": {
+        "reconnect_client": "reconnect_client"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_rtw_client_state_reconciliation",
+      "skill_name": "rtw-client-state-reconciliation",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "delivery_contract": "from_user_input",
+        "reconnect_client": "s03_rtw_client_reconnect_backoff.reconnect_client"
+      },
+      "outputs": {
+        "reconciliation_impl": "reconciliation_impl"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s05_rtw_toxiproxy_disconnect_test",
+      "skill_name": "rtw-toxiproxy-disconnect-test",
+      "inputs": {
+        "server_url": "from_user_input",
+        "backpressure_policy": "from_user_input",
+        "heartbeat_config": "s02_rtw_heartbeat_config.heartbeat_config",
+        "reconnect_client": "s03_rtw_client_reconnect_backoff.reconnect_client",
+        "reconciliation_impl": "s04_rtw_client_state_reconciliation.reconciliation_impl"
+      },
+      "outputs": {
+        "chaos_report": "chaos_report"
+      },
+      "parallel_group": 4
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_rtw_close_code_map",
+      "to_step": "s03_rtw_client_reconnect_backoff",
+      "data_type": "rtw-close-code-map",
+      "field_mapping": {
+        "close_code_map": "close_code_map"
+      }
+    },
+    {
+      "from_step": "s02_rtw_heartbeat_config",
+      "to_step": "s03_rtw_client_reconnect_backoff",
+      "data_type": "rtw-heartbeat-config",
+      "field_mapping": {
+        "heartbeat_config": "heartbeat_config"
+      }
+    },
+    {
+      "from_step": "s03_rtw_client_reconnect_backoff",
+      "to_step": "s04_rtw_client_state_reconciliation",
+      "data_type": "rtw-client-reconnect-backoff",
+      "field_mapping": {
+        "reconnect_client": "reconnect_client"
+      }
+    },
+    {
+      "from_step": "s02_rtw_heartbeat_config",
+      "to_step": "s05_rtw_toxiproxy_disconnect_test",
+      "data_type": "rtw-heartbeat-config",
+      "field_mapping": {
+        "heartbeat_config": "heartbeat_config"
+      }
+    },
+    {
+      "from_step": "s03_rtw_client_reconnect_backoff",
+      "to_step": "s05_rtw_toxiproxy_disconnect_test",
+      "data_type": "rtw-client-reconnect-backoff",
+      "field_mapping": {
+        "reconnect_client": "reconnect_client"
+      }
+    },
+    {
+      "from_step": "s04_rtw_client_state_reconciliation",
+      "to_step": "s05_rtw_toxiproxy_disconnect_test",
+      "data_type": "rtw-client-state-reconciliation",
+      "field_mapping": {
+        "reconciliation_impl": "reconciliation_impl"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "protocol_spec",
+    "transport_decision",
+    "network_path",
+    "repo_path",
+    "delivery_contract",
+    "backoff_bounds",
+    "server_url",
+    "backpressure_policy"
+  ],
+  "terminal_outputs": [
+    "chaos_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_rtw_close_code_map",
+      "s02_rtw_heartbeat_config"
+    ],
+    [
+      "s03_rtw_client_reconnect_backoff"
+    ],
+    [
+      "s04_rtw_client_state_reconciliation"
+    ],
+    [
+      "s05_rtw_toxiproxy_disconnect_test"
+    ]
+  ],
+  "estimated_cost": 5,
+  "critical_path": [
+    "s01_rtw_close_code_map",
+    "s03_rtw_client_reconnect_backoff",
+    "s04_rtw_client_state_reconciliation",
+    "s05_rtw_toxiproxy_disconnect_test"
+  ]
+}

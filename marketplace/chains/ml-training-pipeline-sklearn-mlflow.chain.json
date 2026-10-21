@@ -1,0 +1,367 @@
+{
+  "name": "ml-training-pipeline-sklearn-mlflow",
+  "description": "Tabular scikit-learn modeling on an existing verified split: seeds, baselines, leak-free pipeline, MLflow tracking, Optuna search, optional nested CV, test interval, paired comparison, calibration, MLflow packaging and parity tests.",
+  "steps": [
+    {
+      "id": "s01_mlp_sklearn_seed_determinism",
+      "skill_name": "mlp-sklearn-seed-determinism",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "split_seed": "from_user_input"
+      },
+      "outputs": {
+        "sklearn_determinism": "sklearn_determinism"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_mlp_baseline_models",
+      "skill_name": "mlp-baseline-models",
+      "inputs": {
+        "split_manifest": "from_user_input",
+        "problem_frame": "from_user_input",
+        "primary_metric": "from_user_input",
+        "clean_feature_list": "from_user_input"
+      },
+      "outputs": {
+        "baseline_models": "baseline_models",
+        "baseline_scores": "baseline_scores"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s03_mlp_sklearn_feature_pipeline",
+      "skill_name": "mlp-sklearn-feature-pipeline",
+      "inputs": {
+        "split_manifest": "from_user_input",
+        "clean_feature_list": "from_user_input",
+        "primary_metric": "from_user_input",
+        "repo_path": "from_user_input"
+      },
+      "outputs": {
+        "feature_pipeline": "feature_pipeline",
+        "pipeline_cv_scores": "pipeline_cv_scores"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s04_mlp_mlflow_tracking",
+      "skill_name": "mlp-mlflow-tracking",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "tracking_uri": "from_user_input",
+        "experiment_name": "from_user_input",
+        "data_version": "from_user_input",
+        "sklearn_determinism": "s01_mlp_sklearn_seed_determinism.sklearn_determinism",
+        "torch_determinism": "from_user_input_optional"
+      },
+      "outputs": {
+        "mlflow_run_ref": "mlflow_run_ref"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s05_mlp_optuna_search",
+      "skill_name": "mlp-optuna-search",
+      "inputs": {
+        "feature_pipeline": "s03_mlp_sklearn_feature_pipeline.feature_pipeline",
+        "split_manifest": "from_user_input",
+        "primary_metric": "from_user_input",
+        "baseline_scores": "s02_mlp_baseline_models.baseline_scores",
+        "search_space": "from_user_input",
+        "n_trials": "from_user_input",
+        "stack": "from_user_input",
+        "tracker": "from_user_input",
+        "mlflow_run_ref": "s04_mlp_mlflow_tracking.mlflow_run_ref",
+        "wandb_run_ref": "from_user_input_optional"
+      },
+      "outputs": {
+        "best_params": "best_params",
+        "optuna_study_ref": "optuna_study_ref",
+        "tuned_model": "tuned_model"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s06_mlp_nested_cv_estimate",
+      "skill_name": "mlp-nested-cv-estimate",
+      "inputs": {
+        "feature_pipeline": "s03_mlp_sklearn_feature_pipeline.feature_pipeline",
+        "split_manifest": "from_user_input",
+        "primary_metric": "from_user_input",
+        "search_space": "from_user_input",
+        "run_nested_cv": "from_user_input"
+      },
+      "outputs": {
+        "nested_cv_scores": "nested_cv_scores"
+      },
+      "condition": "run_nested_cv == true",
+      "parallel_group": 2
+    },
+    {
+      "id": "s07_mlp_bootstrap_metric_ci",
+      "skill_name": "mlp-bootstrap-metric-ci",
+      "inputs": {
+        "tuned_model": "s05_mlp_optuna_search.tuned_model",
+        "split_manifest": "from_user_input",
+        "primary_metric": "from_user_input",
+        "confidence_level": "from_user_input"
+      },
+      "outputs": {
+        "test_predictions": "test_predictions",
+        "metric_ci": "metric_ci"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s08_mlp_paired_model_comparison",
+      "skill_name": "mlp-paired-model-comparison",
+      "inputs": {
+        "test_predictions": "s07_mlp_bootstrap_metric_ci.test_predictions",
+        "baseline_models": "s02_mlp_baseline_models.baseline_models",
+        "split_manifest": "from_user_input",
+        "primary_metric": "from_user_input",
+        "confidence_level": "from_user_input"
+      },
+      "outputs": {
+        "comparison_result": "comparison_result"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s09_mlp_calibration_diagnose",
+      "skill_name": "mlp-calibration-diagnose",
+      "inputs": {
+        "tuned_model": "s05_mlp_optuna_search.tuned_model",
+        "split_manifest": "from_user_input",
+        "problem_frame": "from_user_input"
+      },
+      "outputs": {
+        "calibration_report": "calibration_report"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s10_mlp_sklearn_calibrate_probabilities",
+      "skill_name": "mlp-sklearn-calibrate-probabilities",
+      "inputs": {
+        "tuned_model": "s05_mlp_optuna_search.tuned_model",
+        "split_manifest": "from_user_input",
+        "calibration_report": "s09_mlp_calibration_diagnose.calibration_report"
+      },
+      "outputs": {
+        "sklearn_calibrated_model": "sklearn_calibrated_model"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s11_mlp_sklearn_mlflow_model_package",
+      "skill_name": "mlp-sklearn-mlflow-model-package",
+      "inputs": {
+        "sklearn_calibrated_model": "s10_mlp_sklearn_calibrate_probabilities.sklearn_calibrated_model",
+        "tuned_model": "s05_mlp_optuna_search.tuned_model",
+        "split_manifest": "from_user_input"
+      },
+      "outputs": {
+        "sklearn_model_package": "sklearn_model_package"
+      },
+      "parallel_group": 6
+    },
+    {
+      "id": "s12_mlp_inference_parity_test",
+      "skill_name": "mlp-inference-parity-test",
+      "inputs": {
+        "sklearn_model_package": "s11_mlp_sklearn_mlflow_model_package.sklearn_model_package",
+        "onnx_model_package": "from_user_input_optional",
+        "tolerance_spec": "from_user_input_optional",
+        "repo_path": "from_user_input"
+      },
+      "outputs": {
+        "parity_report": "parity_report"
+      },
+      "parallel_group": 7
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_mlp_sklearn_seed_determinism",
+      "to_step": "s04_mlp_mlflow_tracking",
+      "data_type": "mlp-sklearn-seed-determinism",
+      "field_mapping": {
+        "sklearn_determinism": "sklearn_determinism"
+      }
+    },
+    {
+      "from_step": "s03_mlp_sklearn_feature_pipeline",
+      "to_step": "s05_mlp_optuna_search",
+      "data_type": "mlp-sklearn-feature-pipeline",
+      "field_mapping": {
+        "feature_pipeline": "feature_pipeline"
+      }
+    },
+    {
+      "from_step": "s02_mlp_baseline_models",
+      "to_step": "s05_mlp_optuna_search",
+      "data_type": "mlp-baseline-models",
+      "field_mapping": {
+        "baseline_scores": "baseline_scores"
+      }
+    },
+    {
+      "from_step": "s04_mlp_mlflow_tracking",
+      "to_step": "s05_mlp_optuna_search",
+      "data_type": "mlp-mlflow-tracking",
+      "field_mapping": {
+        "mlflow_run_ref": "mlflow_run_ref"
+      }
+    },
+    {
+      "from_step": "s03_mlp_sklearn_feature_pipeline",
+      "to_step": "s06_mlp_nested_cv_estimate",
+      "data_type": "mlp-sklearn-feature-pipeline",
+      "field_mapping": {
+        "feature_pipeline": "feature_pipeline"
+      }
+    },
+    {
+      "from_step": "s05_mlp_optuna_search",
+      "to_step": "s07_mlp_bootstrap_metric_ci",
+      "data_type": "mlp-optuna-search",
+      "field_mapping": {
+        "tuned_model": "tuned_model"
+      }
+    },
+    {
+      "from_step": "s07_mlp_bootstrap_metric_ci",
+      "to_step": "s08_mlp_paired_model_comparison",
+      "data_type": "mlp-bootstrap-metric-ci",
+      "field_mapping": {
+        "test_predictions": "test_predictions"
+      }
+    },
+    {
+      "from_step": "s02_mlp_baseline_models",
+      "to_step": "s08_mlp_paired_model_comparison",
+      "data_type": "mlp-baseline-models",
+      "field_mapping": {
+        "baseline_models": "baseline_models"
+      }
+    },
+    {
+      "from_step": "s05_mlp_optuna_search",
+      "to_step": "s09_mlp_calibration_diagnose",
+      "data_type": "mlp-optuna-search",
+      "field_mapping": {
+        "tuned_model": "tuned_model"
+      }
+    },
+    {
+      "from_step": "s05_mlp_optuna_search",
+      "to_step": "s10_mlp_sklearn_calibrate_probabilities",
+      "data_type": "mlp-optuna-search",
+      "field_mapping": {
+        "tuned_model": "tuned_model"
+      }
+    },
+    {
+      "from_step": "s09_mlp_calibration_diagnose",
+      "to_step": "s10_mlp_sklearn_calibrate_probabilities",
+      "data_type": "mlp-calibration-diagnose",
+      "field_mapping": {
+        "calibration_report": "calibration_report"
+      }
+    },
+    {
+      "from_step": "s10_mlp_sklearn_calibrate_probabilities",
+      "to_step": "s11_mlp_sklearn_mlflow_model_package",
+      "data_type": "mlp-sklearn-calibrate-probabilities",
+      "field_mapping": {
+        "sklearn_calibrated_model": "sklearn_calibrated_model"
+      }
+    },
+    {
+      "from_step": "s05_mlp_optuna_search",
+      "to_step": "s11_mlp_sklearn_mlflow_model_package",
+      "data_type": "mlp-optuna-search",
+      "field_mapping": {
+        "tuned_model": "tuned_model"
+      }
+    },
+    {
+      "from_step": "s11_mlp_sklearn_mlflow_model_package",
+      "to_step": "s12_mlp_inference_parity_test",
+      "data_type": "mlp-sklearn-mlflow-model-package",
+      "field_mapping": {
+        "sklearn_model_package": "sklearn_model_package"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "repo_path",
+    "split_seed",
+    "split_manifest",
+    "problem_frame",
+    "primary_metric",
+    "clean_feature_list",
+    "tracking_uri",
+    "experiment_name",
+    "data_version",
+    "torch_determinism",
+    "search_space",
+    "n_trials",
+    "stack",
+    "tracker",
+    "wandb_run_ref",
+    "run_nested_cv",
+    "confidence_level",
+    "onnx_model_package",
+    "tolerance_spec"
+  ],
+  "terminal_outputs": [
+    "pipeline_cv_scores",
+    "best_params",
+    "optuna_study_ref",
+    "nested_cv_scores",
+    "metric_ci",
+    "comparison_result",
+    "parity_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_mlp_sklearn_seed_determinism",
+      "s02_mlp_baseline_models",
+      "s03_mlp_sklearn_feature_pipeline"
+    ],
+    [
+      "s04_mlp_mlflow_tracking",
+      "s06_mlp_nested_cv_estimate"
+    ],
+    [
+      "s05_mlp_optuna_search"
+    ],
+    [
+      "s07_mlp_bootstrap_metric_ci",
+      "s09_mlp_calibration_diagnose"
+    ],
+    [
+      "s08_mlp_paired_model_comparison",
+      "s10_mlp_sklearn_calibrate_probabilities"
+    ],
+    [
+      "s11_mlp_sklearn_mlflow_model_package"
+    ],
+    [
+      "s12_mlp_inference_parity_test"
+    ]
+  ],
+  "estimated_cost": 12,
+  "critical_path": [
+    "s01_mlp_sklearn_seed_determinism",
+    "s04_mlp_mlflow_tracking",
+    "s05_mlp_optuna_search",
+    "s09_mlp_calibration_diagnose",
+    "s10_mlp_sklearn_calibrate_probabilities",
+    "s11_mlp_sklearn_mlflow_model_package",
+    "s12_mlp_inference_parity_test"
+  ]
+}

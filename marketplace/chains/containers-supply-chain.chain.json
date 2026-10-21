@@ -1,0 +1,127 @@
+{
+  "name": "containers-supply-chain",
+  "description": "Supply-chain checks for an existing image: Syft SBOM, Trivy and Grype scans, vulnerability triage with expiring suppressions, and a reproducible build comparison.",
+  "steps": [
+    {
+      "id": "s01_ctr_syft_sbom",
+      "skill_name": "ctr-syft-sbom",
+      "inputs": {
+        "image_name": "from_user_input",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "sbom_file": "sbom_file"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_ctr_trivy_scan",
+      "skill_name": "ctr-trivy-scan",
+      "inputs": {
+        "image_name": "from_user_input",
+        "project_dir": "from_user_input",
+        "severity_threshold": "from_user_input"
+      },
+      "outputs": {
+        "trivy_report": "trivy_report"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s03_ctr_grype_scan",
+      "skill_name": "ctr-grype-scan",
+      "inputs": {
+        "sbom_file": "s01_ctr_syft_sbom.sbom_file",
+        "image_name": "from_user_input",
+        "severity_threshold": "from_user_input"
+      },
+      "outputs": {
+        "grype_report": "grype_report"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_ctr_vuln_triage",
+      "skill_name": "ctr-vuln-triage",
+      "inputs": {
+        "trivy_report": "s02_ctr_trivy_scan.trivy_report",
+        "grype_report": "s03_ctr_grype_scan.grype_report",
+        "pinned_bases": "from_user_input",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "vuln_triage": "vuln_triage"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s05_ctr_reproducible_build",
+      "skill_name": "ctr-reproducible-build",
+      "inputs": {
+        "project_dir": "from_user_input",
+        "image_name": "from_user_input",
+        "build_profile": "from_user_input"
+      },
+      "outputs": {
+        "repro_report": "repro_report"
+      },
+      "parallel_group": 1
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_ctr_syft_sbom",
+      "to_step": "s03_ctr_grype_scan",
+      "data_type": "ctr-syft-sbom",
+      "field_mapping": {
+        "sbom_file": "sbom_file"
+      }
+    },
+    {
+      "from_step": "s02_ctr_trivy_scan",
+      "to_step": "s04_ctr_vuln_triage",
+      "data_type": "ctr-trivy-scan",
+      "field_mapping": {
+        "trivy_report": "trivy_report"
+      }
+    },
+    {
+      "from_step": "s03_ctr_grype_scan",
+      "to_step": "s04_ctr_vuln_triage",
+      "data_type": "ctr-grype-scan",
+      "field_mapping": {
+        "grype_report": "grype_report"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "image_name",
+    "project_dir",
+    "severity_threshold",
+    "pinned_bases",
+    "build_profile"
+  ],
+  "terminal_outputs": [
+    "vuln_triage",
+    "repro_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_ctr_syft_sbom",
+      "s02_ctr_trivy_scan",
+      "s05_ctr_reproducible_build"
+    ],
+    [
+      "s03_ctr_grype_scan"
+    ],
+    [
+      "s04_ctr_vuln_triage"
+    ]
+  ],
+  "estimated_cost": 5,
+  "critical_path": [
+    "s01_ctr_syft_sbom",
+    "s03_ctr_grype_scan",
+    "s04_ctr_vuln_triage"
+  ]
+}

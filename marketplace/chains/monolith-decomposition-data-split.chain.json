@@ -1,0 +1,226 @@
+{
+  "name": "monolith-decomposition-data-split",
+  "description": "Split the candidate's data: move owned tables into their own schema with revoked grants, choose outbox or CDC per stage, stand up the PostgreSQL or MySQL Debezium pipeline or the outbox, then backfill and reconcile.",
+  "steps": [
+    {
+      "id": "s01_mex_schema_ownership_split",
+      "skill_name": "mex-schema-ownership-split",
+      "inputs": {
+        "table_ownership": "from_user_input",
+        "shared_tables": "from_user_input",
+        "database_engine": "from_user_input",
+        "module_interface": "from_user_input",
+        "deployment_decision": "from_user_input"
+      },
+      "outputs": {
+        "schema_split_plan": "schema_split_plan",
+        "migration_scripts": "migration_scripts"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_mex_dual_write_or_cdc_decision",
+      "skill_name": "mex-dual-write-or-cdc-decision",
+      "inputs": {
+        "schema_split_plan": "s01_mex_schema_ownership_split.schema_split_plan",
+        "database_engine": "from_user_input",
+        "deployment_decision": "from_user_input"
+      },
+      "outputs": {
+        "sync_strategy": "sync_strategy"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_mex_transactional_outbox",
+      "skill_name": "mex-transactional-outbox",
+      "inputs": {
+        "schema_split_plan": "s01_mex_schema_ownership_split.schema_split_plan",
+        "sync_strategy": "s02_mex_dual_write_or_cdc_decision.sync_strategy",
+        "stack": "from_user_input",
+        "database_engine": "from_user_input"
+      },
+      "outputs": {
+        "outbox_implementation": "outbox_implementation"
+      },
+      "condition": "sync_strategy == 'outbox'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_mex_cdc_debezium_postgres",
+      "skill_name": "mex-cdc-debezium-postgres",
+      "inputs": {
+        "schema_split_plan": "s01_mex_schema_ownership_split.schema_split_plan",
+        "sync_strategy": "s02_mex_dual_write_or_cdc_decision.sync_strategy"
+      },
+      "outputs": {
+        "pg_cdc_pipeline": "pg_cdc_pipeline"
+      },
+      "condition": "database_engine == 'postgres' && sync_strategy == 'cdc'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s05_mex_cdc_debezium_mysql",
+      "skill_name": "mex-cdc-debezium-mysql",
+      "inputs": {
+        "schema_split_plan": "s01_mex_schema_ownership_split.schema_split_plan",
+        "sync_strategy": "s02_mex_dual_write_or_cdc_decision.sync_strategy"
+      },
+      "outputs": {
+        "mysql_cdc_pipeline": "mysql_cdc_pipeline"
+      },
+      "condition": "database_engine == 'mysql' && sync_strategy == 'cdc'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s06_mex_backfill_and_reconcile",
+      "skill_name": "mex-backfill-and-reconcile",
+      "inputs": {
+        "schema_split_plan": "s01_mex_schema_ownership_split.schema_split_plan",
+        "sync_strategy": "s02_mex_dual_write_or_cdc_decision.sync_strategy",
+        "database_engine": "from_user_input",
+        "outbox_implementation": "s03_mex_transactional_outbox.outbox_implementation",
+        "pg_cdc_pipeline": "s04_mex_cdc_debezium_postgres.pg_cdc_pipeline",
+        "mysql_cdc_pipeline": "s05_mex_cdc_debezium_mysql.mysql_cdc_pipeline"
+      },
+      "outputs": {
+        "reconciliation_report": "reconciliation_report"
+      },
+      "condition": "sync_strategy != 'none'",
+      "parallel_group": 4
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_mex_schema_ownership_split",
+      "to_step": "s02_mex_dual_write_or_cdc_decision",
+      "data_type": "mex-schema-ownership-split",
+      "field_mapping": {
+        "schema_split_plan": "schema_split_plan"
+      }
+    },
+    {
+      "from_step": "s01_mex_schema_ownership_split",
+      "to_step": "s03_mex_transactional_outbox",
+      "data_type": "mex-schema-ownership-split",
+      "field_mapping": {
+        "schema_split_plan": "schema_split_plan"
+      }
+    },
+    {
+      "from_step": "s02_mex_dual_write_or_cdc_decision",
+      "to_step": "s03_mex_transactional_outbox",
+      "data_type": "mex-dual-write-or-cdc-decision",
+      "field_mapping": {
+        "sync_strategy": "sync_strategy"
+      }
+    },
+    {
+      "from_step": "s01_mex_schema_ownership_split",
+      "to_step": "s04_mex_cdc_debezium_postgres",
+      "data_type": "mex-schema-ownership-split",
+      "field_mapping": {
+        "schema_split_plan": "schema_split_plan"
+      }
+    },
+    {
+      "from_step": "s02_mex_dual_write_or_cdc_decision",
+      "to_step": "s04_mex_cdc_debezium_postgres",
+      "data_type": "mex-dual-write-or-cdc-decision",
+      "field_mapping": {
+        "sync_strategy": "sync_strategy"
+      }
+    },
+    {
+      "from_step": "s01_mex_schema_ownership_split",
+      "to_step": "s05_mex_cdc_debezium_mysql",
+      "data_type": "mex-schema-ownership-split",
+      "field_mapping": {
+        "schema_split_plan": "schema_split_plan"
+      }
+    },
+    {
+      "from_step": "s02_mex_dual_write_or_cdc_decision",
+      "to_step": "s05_mex_cdc_debezium_mysql",
+      "data_type": "mex-dual-write-or-cdc-decision",
+      "field_mapping": {
+        "sync_strategy": "sync_strategy"
+      }
+    },
+    {
+      "from_step": "s01_mex_schema_ownership_split",
+      "to_step": "s06_mex_backfill_and_reconcile",
+      "data_type": "mex-schema-ownership-split",
+      "field_mapping": {
+        "schema_split_plan": "schema_split_plan"
+      }
+    },
+    {
+      "from_step": "s02_mex_dual_write_or_cdc_decision",
+      "to_step": "s06_mex_backfill_and_reconcile",
+      "data_type": "mex-dual-write-or-cdc-decision",
+      "field_mapping": {
+        "sync_strategy": "sync_strategy"
+      }
+    },
+    {
+      "from_step": "s03_mex_transactional_outbox",
+      "to_step": "s06_mex_backfill_and_reconcile",
+      "data_type": "mex-transactional-outbox",
+      "field_mapping": {
+        "outbox_implementation": "outbox_implementation"
+      }
+    },
+    {
+      "from_step": "s04_mex_cdc_debezium_postgres",
+      "to_step": "s06_mex_backfill_and_reconcile",
+      "data_type": "mex-cdc-debezium-postgres",
+      "field_mapping": {
+        "pg_cdc_pipeline": "pg_cdc_pipeline"
+      }
+    },
+    {
+      "from_step": "s05_mex_cdc_debezium_mysql",
+      "to_step": "s06_mex_backfill_and_reconcile",
+      "data_type": "mex-cdc-debezium-mysql",
+      "field_mapping": {
+        "mysql_cdc_pipeline": "mysql_cdc_pipeline"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "table_ownership",
+    "shared_tables",
+    "database_engine",
+    "module_interface",
+    "deployment_decision",
+    "stack"
+  ],
+  "terminal_outputs": [
+    "migration_scripts",
+    "reconciliation_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_mex_schema_ownership_split"
+    ],
+    [
+      "s02_mex_dual_write_or_cdc_decision"
+    ],
+    [
+      "s03_mex_transactional_outbox",
+      "s04_mex_cdc_debezium_postgres",
+      "s05_mex_cdc_debezium_mysql"
+    ],
+    [
+      "s06_mex_backfill_and_reconcile"
+    ]
+  ],
+  "estimated_cost": 6,
+  "critical_path": [
+    "s01_mex_schema_ownership_split",
+    "s02_mex_dual_write_or_cdc_decision",
+    "s03_mex_transactional_outbox",
+    "s06_mex_backfill_and_reconcile"
+  ]
+}

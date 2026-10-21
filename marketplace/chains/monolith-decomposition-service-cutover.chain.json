@@ -1,0 +1,182 @@
+{
+  "name": "monolith-decomposition-service-cutover",
+  "description": "Cut traffic over to an extracted service: strangler routing at the proxy, shadow diff for parity, latency comparison against the SLO, flag-driven ramp with rollback rules and writer flip, then decommission the legacy path.",
+  "steps": [
+    {
+      "id": "s01_mex_strangler_proxy_routing",
+      "skill_name": "mex-strangler-proxy-routing",
+      "inputs": {
+        "module_interface": "from_user_input",
+        "deployment_decision": "from_user_input",
+        "traffic_entry": "from_user_input"
+      },
+      "outputs": {
+        "routing_config": "routing_config"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_mex_shadow_traffic_diff",
+      "skill_name": "mex-shadow-traffic-diff",
+      "inputs": {
+        "routing_config": "s01_mex_strangler_proxy_routing.routing_config",
+        "characterization_suite": "from_user_input",
+        "baseline_outputs": "from_user_input",
+        "deployment_decision": "from_user_input"
+      },
+      "outputs": {
+        "parity_report": "parity_report"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_mex_latency_comparison",
+      "skill_name": "mex-latency-comparison",
+      "inputs": {
+        "routing_config": "s01_mex_strangler_proxy_routing.routing_config",
+        "deployment_decision": "from_user_input",
+        "parity_report": "s02_mex_shadow_traffic_diff.parity_report",
+        "latency_slo": "from_user_input_optional",
+        "load_profile": "from_user_input_optional"
+      },
+      "outputs": {
+        "latency_report": "latency_report"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_mex_flag_cutover",
+      "skill_name": "mex-flag-cutover",
+      "inputs": {
+        "routing_config": "s01_mex_strangler_proxy_routing.routing_config",
+        "acl_adapter": "from_user_input",
+        "parity_report": "s02_mex_shadow_traffic_diff.parity_report",
+        "latency_report": "s03_mex_latency_comparison.latency_report",
+        "reconciliation_report": "from_user_input_optional",
+        "flag_provider": "from_user_input_optional",
+        "ramp_plan": "from_user_input_optional"
+      },
+      "outputs": {
+        "cutover_flag": "cutover_flag",
+        "rollout_log": "rollout_log"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s05_mex_decommission_legacy_path",
+      "skill_name": "mex-decommission-legacy-path",
+      "inputs": {
+        "cutover_flag": "s04_mex_flag_cutover.cutover_flag",
+        "rollout_log": "s04_mex_flag_cutover.rollout_log",
+        "schema_split_plan": "from_user_input",
+        "seam_map": "from_user_input"
+      },
+      "outputs": {
+        "decommission_record": "decommission_record"
+      },
+      "parallel_group": 5
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_mex_strangler_proxy_routing",
+      "to_step": "s02_mex_shadow_traffic_diff",
+      "data_type": "mex-strangler-proxy-routing",
+      "field_mapping": {
+        "routing_config": "routing_config"
+      }
+    },
+    {
+      "from_step": "s01_mex_strangler_proxy_routing",
+      "to_step": "s03_mex_latency_comparison",
+      "data_type": "mex-strangler-proxy-routing",
+      "field_mapping": {
+        "routing_config": "routing_config"
+      }
+    },
+    {
+      "from_step": "s02_mex_shadow_traffic_diff",
+      "to_step": "s03_mex_latency_comparison",
+      "data_type": "mex-shadow-traffic-diff",
+      "field_mapping": {
+        "parity_report": "parity_report"
+      }
+    },
+    {
+      "from_step": "s01_mex_strangler_proxy_routing",
+      "to_step": "s04_mex_flag_cutover",
+      "data_type": "mex-strangler-proxy-routing",
+      "field_mapping": {
+        "routing_config": "routing_config"
+      }
+    },
+    {
+      "from_step": "s02_mex_shadow_traffic_diff",
+      "to_step": "s04_mex_flag_cutover",
+      "data_type": "mex-shadow-traffic-diff",
+      "field_mapping": {
+        "parity_report": "parity_report"
+      }
+    },
+    {
+      "from_step": "s03_mex_latency_comparison",
+      "to_step": "s04_mex_flag_cutover",
+      "data_type": "mex-latency-comparison",
+      "field_mapping": {
+        "latency_report": "latency_report"
+      }
+    },
+    {
+      "from_step": "s04_mex_flag_cutover",
+      "to_step": "s05_mex_decommission_legacy_path",
+      "data_type": "mex-flag-cutover",
+      "field_mapping": {
+        "cutover_flag": "cutover_flag",
+        "rollout_log": "rollout_log"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "module_interface",
+    "deployment_decision",
+    "traffic_entry",
+    "characterization_suite",
+    "baseline_outputs",
+    "latency_slo",
+    "load_profile",
+    "acl_adapter",
+    "reconciliation_report",
+    "flag_provider",
+    "ramp_plan",
+    "schema_split_plan",
+    "seam_map"
+  ],
+  "terminal_outputs": [
+    "decommission_record"
+  ],
+  "parallel_groups": [
+    [
+      "s01_mex_strangler_proxy_routing"
+    ],
+    [
+      "s02_mex_shadow_traffic_diff"
+    ],
+    [
+      "s03_mex_latency_comparison"
+    ],
+    [
+      "s04_mex_flag_cutover"
+    ],
+    [
+      "s05_mex_decommission_legacy_path"
+    ]
+  ],
+  "estimated_cost": 5,
+  "critical_path": [
+    "s01_mex_strangler_proxy_routing",
+    "s02_mex_shadow_traffic_diff",
+    "s03_mex_latency_comparison",
+    "s04_mex_flag_cutover",
+    "s05_mex_decommission_legacy_path"
+  ]
+}

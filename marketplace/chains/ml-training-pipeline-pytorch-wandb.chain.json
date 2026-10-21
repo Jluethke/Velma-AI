@@ -1,0 +1,259 @@
+{
+  "name": "ml-training-pipeline-pytorch-wandb",
+  "description": "PyTorch training on an existing verified split: deterministic seeding, W&B tracking, Optuna search with pruning, test interval, calibration diagnosis, temperature scaling, ONNX export and inference parity tests.",
+  "steps": [
+    {
+      "id": "s01_mlp_torch_seed_determinism",
+      "skill_name": "mlp-torch-seed-determinism",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "split_seed": "from_user_input"
+      },
+      "outputs": {
+        "torch_determinism": "torch_determinism"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_mlp_wandb_tracking",
+      "skill_name": "mlp-wandb-tracking",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "wandb_project": "from_user_input",
+        "data_version": "from_user_input",
+        "sklearn_determinism": "from_user_input_optional",
+        "torch_determinism": "s01_mlp_torch_seed_determinism.torch_determinism"
+      },
+      "outputs": {
+        "wandb_run_ref": "wandb_run_ref"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_mlp_optuna_search",
+      "skill_name": "mlp-optuna-search",
+      "inputs": {
+        "feature_pipeline": "from_user_input",
+        "split_manifest": "from_user_input",
+        "primary_metric": "from_user_input",
+        "baseline_scores": "from_user_input",
+        "search_space": "from_user_input",
+        "n_trials": "from_user_input",
+        "stack": "from_user_input",
+        "tracker": "from_user_input",
+        "mlflow_run_ref": "from_user_input_optional",
+        "wandb_run_ref": "s02_mlp_wandb_tracking.wandb_run_ref"
+      },
+      "outputs": {
+        "best_params": "best_params",
+        "optuna_study_ref": "optuna_study_ref",
+        "tuned_model": "tuned_model"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_mlp_bootstrap_metric_ci",
+      "skill_name": "mlp-bootstrap-metric-ci",
+      "inputs": {
+        "tuned_model": "s03_mlp_optuna_search.tuned_model",
+        "split_manifest": "from_user_input",
+        "primary_metric": "from_user_input",
+        "confidence_level": "from_user_input"
+      },
+      "outputs": {
+        "test_predictions": "test_predictions",
+        "metric_ci": "metric_ci"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s05_mlp_calibration_diagnose",
+      "skill_name": "mlp-calibration-diagnose",
+      "inputs": {
+        "tuned_model": "s03_mlp_optuna_search.tuned_model",
+        "split_manifest": "from_user_input",
+        "problem_frame": "from_user_input"
+      },
+      "outputs": {
+        "calibration_report": "calibration_report"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s06_mlp_torch_temperature_scaling",
+      "skill_name": "mlp-torch-temperature-scaling",
+      "inputs": {
+        "tuned_model": "s03_mlp_optuna_search.tuned_model",
+        "split_manifest": "from_user_input",
+        "calibration_report": "s05_mlp_calibration_diagnose.calibration_report"
+      },
+      "outputs": {
+        "torch_calibrated_model": "torch_calibrated_model"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s07_mlp_torch_onnx_export",
+      "skill_name": "mlp-torch-onnx-export",
+      "inputs": {
+        "torch_calibrated_model": "s06_mlp_torch_temperature_scaling.torch_calibrated_model",
+        "tuned_model": "s03_mlp_optuna_search.tuned_model",
+        "feature_pipeline": "from_user_input",
+        "split_manifest": "from_user_input"
+      },
+      "outputs": {
+        "onnx_model_package": "onnx_model_package"
+      },
+      "parallel_group": 6
+    },
+    {
+      "id": "s08_mlp_inference_parity_test",
+      "skill_name": "mlp-inference-parity-test",
+      "inputs": {
+        "sklearn_model_package": "from_user_input_optional",
+        "onnx_model_package": "s07_mlp_torch_onnx_export.onnx_model_package",
+        "tolerance_spec": "from_user_input_optional",
+        "repo_path": "from_user_input"
+      },
+      "outputs": {
+        "parity_report": "parity_report"
+      },
+      "parallel_group": 7
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_mlp_torch_seed_determinism",
+      "to_step": "s02_mlp_wandb_tracking",
+      "data_type": "mlp-torch-seed-determinism",
+      "field_mapping": {
+        "torch_determinism": "torch_determinism"
+      }
+    },
+    {
+      "from_step": "s02_mlp_wandb_tracking",
+      "to_step": "s03_mlp_optuna_search",
+      "data_type": "mlp-wandb-tracking",
+      "field_mapping": {
+        "wandb_run_ref": "wandb_run_ref"
+      }
+    },
+    {
+      "from_step": "s03_mlp_optuna_search",
+      "to_step": "s04_mlp_bootstrap_metric_ci",
+      "data_type": "mlp-optuna-search",
+      "field_mapping": {
+        "tuned_model": "tuned_model"
+      }
+    },
+    {
+      "from_step": "s03_mlp_optuna_search",
+      "to_step": "s05_mlp_calibration_diagnose",
+      "data_type": "mlp-optuna-search",
+      "field_mapping": {
+        "tuned_model": "tuned_model"
+      }
+    },
+    {
+      "from_step": "s03_mlp_optuna_search",
+      "to_step": "s06_mlp_torch_temperature_scaling",
+      "data_type": "mlp-optuna-search",
+      "field_mapping": {
+        "tuned_model": "tuned_model"
+      }
+    },
+    {
+      "from_step": "s05_mlp_calibration_diagnose",
+      "to_step": "s06_mlp_torch_temperature_scaling",
+      "data_type": "mlp-calibration-diagnose",
+      "field_mapping": {
+        "calibration_report": "calibration_report"
+      }
+    },
+    {
+      "from_step": "s06_mlp_torch_temperature_scaling",
+      "to_step": "s07_mlp_torch_onnx_export",
+      "data_type": "mlp-torch-temperature-scaling",
+      "field_mapping": {
+        "torch_calibrated_model": "torch_calibrated_model"
+      }
+    },
+    {
+      "from_step": "s03_mlp_optuna_search",
+      "to_step": "s07_mlp_torch_onnx_export",
+      "data_type": "mlp-optuna-search",
+      "field_mapping": {
+        "tuned_model": "tuned_model"
+      }
+    },
+    {
+      "from_step": "s07_mlp_torch_onnx_export",
+      "to_step": "s08_mlp_inference_parity_test",
+      "data_type": "mlp-torch-onnx-export",
+      "field_mapping": {
+        "onnx_model_package": "onnx_model_package"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "repo_path",
+    "split_seed",
+    "wandb_project",
+    "data_version",
+    "sklearn_determinism",
+    "feature_pipeline",
+    "split_manifest",
+    "primary_metric",
+    "baseline_scores",
+    "search_space",
+    "n_trials",
+    "stack",
+    "tracker",
+    "mlflow_run_ref",
+    "confidence_level",
+    "problem_frame",
+    "sklearn_model_package",
+    "tolerance_spec"
+  ],
+  "terminal_outputs": [
+    "best_params",
+    "optuna_study_ref",
+    "test_predictions",
+    "metric_ci",
+    "parity_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_mlp_torch_seed_determinism"
+    ],
+    [
+      "s02_mlp_wandb_tracking"
+    ],
+    [
+      "s03_mlp_optuna_search"
+    ],
+    [
+      "s04_mlp_bootstrap_metric_ci",
+      "s05_mlp_calibration_diagnose"
+    ],
+    [
+      "s06_mlp_torch_temperature_scaling"
+    ],
+    [
+      "s07_mlp_torch_onnx_export"
+    ],
+    [
+      "s08_mlp_inference_parity_test"
+    ]
+  ],
+  "estimated_cost": 8,
+  "critical_path": [
+    "s01_mlp_torch_seed_determinism",
+    "s02_mlp_wandb_tracking",
+    "s03_mlp_optuna_search",
+    "s05_mlp_calibration_diagnose",
+    "s06_mlp_torch_temperature_scaling",
+    "s07_mlp_torch_onnx_export",
+    "s08_mlp_inference_parity_test"
+  ]
+}

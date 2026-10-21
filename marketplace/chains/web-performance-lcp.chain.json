@@ -1,0 +1,306 @@
+{
+  "name": "web-performance-lcp",
+  "description": "Diagnose a failing LCP from field and lab data down to its dominant sub-part and fix TTFB, caching, image priority, image bytes, fonts or render-blocking resources, then verify in the field.",
+  "steps": [
+    {
+      "id": "s01_cwv_field_crux_baseline",
+      "skill_name": "cwv-field-crux-baseline",
+      "inputs": {
+        "site_url": "from_user_input",
+        "page_urls": "from_user_input",
+        "crux_api_key": "from_user_input"
+      },
+      "outputs": {
+        "field_baseline": "field_baseline",
+        "failing_metrics": "failing_metrics"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_cwv_lab_lighthouse_run",
+      "skill_name": "cwv-lab-lighthouse-run",
+      "inputs": {
+        "page_urls": "from_user_input",
+        "form_factor": "from_user_input_optional"
+      },
+      "outputs": {
+        "lab_report": "lab_report",
+        "lab_lcp_element": "lab_lcp_element"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s03_cwv_lcp_subparts_breakdown",
+      "skill_name": "cwv-lcp-subparts-breakdown",
+      "inputs": {
+        "page_urls": "from_user_input",
+        "diagnosis_plan": "from_user_input",
+        "lab_lcp_element": "s02_cwv_lab_lighthouse_run.lab_lcp_element",
+        "rum_p75_report": "from_user_input"
+      },
+      "outputs": {
+        "lcp_subparts": "lcp_subparts",
+        "lcp_bottleneck": "lcp_bottleneck"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_cwv_lcp_ttfb_reduce",
+      "skill_name": "cwv-lcp-ttfb-reduce",
+      "inputs": {
+        "page_urls": "from_user_input",
+        "stack": "from_user_input",
+        "lcp_subparts": "s03_cwv_lcp_subparts_breakdown.lcp_subparts",
+        "lcp_bottleneck": "s03_cwv_lcp_subparts_breakdown.lcp_bottleneck"
+      },
+      "outputs": {
+        "ttfb_findings": "ttfb_findings",
+        "ttfb_patch": "ttfb_patch"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s05_cwv_cache_headers_cdn",
+      "skill_name": "cwv-cache-headers-cdn",
+      "inputs": {
+        "site_url": "from_user_input",
+        "page_urls": "from_user_input",
+        "cdn_provider": "from_user_input_optional"
+      },
+      "outputs": {
+        "cache_header_audit": "cache_header_audit",
+        "cache_header_patch": "cache_header_patch"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s06_cwv_lcp_priority_hints",
+      "skill_name": "cwv-lcp-priority-hints",
+      "inputs": {
+        "repo_dir": "from_user_input",
+        "lab_lcp_element": "s02_cwv_lab_lighthouse_run.lab_lcp_element",
+        "lcp_bottleneck": "s03_cwv_lcp_subparts_breakdown.lcp_bottleneck"
+      },
+      "outputs": {
+        "lcp_priority_patch": "lcp_priority_patch"
+      },
+      "condition": "stack != 'nextjs'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s07_cwv_nextjs_image_font",
+      "skill_name": "cwv-nextjs-image-font",
+      "inputs": {
+        "repo_dir": "from_user_input",
+        "lab_lcp_element": "s02_cwv_lab_lighthouse_run.lab_lcp_element",
+        "lcp_bottleneck": "s03_cwv_lcp_subparts_breakdown.lcp_bottleneck"
+      },
+      "outputs": {
+        "nextjs_media_patch": "nextjs_media_patch"
+      },
+      "condition": "stack == 'nextjs'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s08_cwv_image_encode_responsive",
+      "skill_name": "cwv-image-encode-responsive",
+      "inputs": {
+        "repo_dir": "from_user_input",
+        "lab_lcp_element": "s02_cwv_lab_lighthouse_run.lab_lcp_element",
+        "image_quality": "from_user_input_optional"
+      },
+      "outputs": {
+        "image_patch": "image_patch",
+        "image_bytes_report": "image_bytes_report"
+      },
+      "condition": "stack != 'nextjs'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s09_cwv_font_loading_subset",
+      "skill_name": "cwv-font-loading-subset",
+      "inputs": {
+        "repo_dir": "from_user_input",
+        "lab_report": "s02_cwv_lab_lighthouse_run.lab_report"
+      },
+      "outputs": {
+        "font_patch": "font_patch"
+      },
+      "condition": "stack != 'nextjs'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s10_cwv_render_blocking_resources",
+      "skill_name": "cwv-render-blocking-resources",
+      "inputs": {
+        "repo_dir": "from_user_input",
+        "stack": "from_user_input",
+        "lab_report": "s02_cwv_lab_lighthouse_run.lab_report",
+        "lcp_bottleneck": "s03_cwv_lcp_subparts_breakdown.lcp_bottleneck"
+      },
+      "outputs": {
+        "render_blocking_patch": "render_blocking_patch"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s11_cwv_verify_field_improvement",
+      "skill_name": "cwv-verify-field-improvement",
+      "inputs": {
+        "field_baseline": "s01_cwv_field_crux_baseline.field_baseline",
+        "rum_p75_report": "from_user_input",
+        "post_deploy_rum_export": "from_user_input",
+        "crux_api_key": "from_user_input",
+        "deploy_date": "from_user_input"
+      },
+      "outputs": {
+        "improvement_report": "improvement_report"
+      },
+      "parallel_group": 2
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s02_cwv_lab_lighthouse_run",
+      "to_step": "s03_cwv_lcp_subparts_breakdown",
+      "data_type": "cwv-lab-lighthouse-run",
+      "field_mapping": {
+        "lab_lcp_element": "lab_lcp_element"
+      }
+    },
+    {
+      "from_step": "s03_cwv_lcp_subparts_breakdown",
+      "to_step": "s04_cwv_lcp_ttfb_reduce",
+      "data_type": "cwv-lcp-subparts-breakdown",
+      "field_mapping": {
+        "lcp_subparts": "lcp_subparts",
+        "lcp_bottleneck": "lcp_bottleneck"
+      }
+    },
+    {
+      "from_step": "s02_cwv_lab_lighthouse_run",
+      "to_step": "s06_cwv_lcp_priority_hints",
+      "data_type": "cwv-lab-lighthouse-run",
+      "field_mapping": {
+        "lab_lcp_element": "lab_lcp_element"
+      }
+    },
+    {
+      "from_step": "s03_cwv_lcp_subparts_breakdown",
+      "to_step": "s06_cwv_lcp_priority_hints",
+      "data_type": "cwv-lcp-subparts-breakdown",
+      "field_mapping": {
+        "lcp_bottleneck": "lcp_bottleneck"
+      }
+    },
+    {
+      "from_step": "s02_cwv_lab_lighthouse_run",
+      "to_step": "s07_cwv_nextjs_image_font",
+      "data_type": "cwv-lab-lighthouse-run",
+      "field_mapping": {
+        "lab_lcp_element": "lab_lcp_element"
+      }
+    },
+    {
+      "from_step": "s03_cwv_lcp_subparts_breakdown",
+      "to_step": "s07_cwv_nextjs_image_font",
+      "data_type": "cwv-lcp-subparts-breakdown",
+      "field_mapping": {
+        "lcp_bottleneck": "lcp_bottleneck"
+      }
+    },
+    {
+      "from_step": "s02_cwv_lab_lighthouse_run",
+      "to_step": "s08_cwv_image_encode_responsive",
+      "data_type": "cwv-lab-lighthouse-run",
+      "field_mapping": {
+        "lab_lcp_element": "lab_lcp_element"
+      }
+    },
+    {
+      "from_step": "s02_cwv_lab_lighthouse_run",
+      "to_step": "s09_cwv_font_loading_subset",
+      "data_type": "cwv-lab-lighthouse-run",
+      "field_mapping": {
+        "lab_report": "lab_report"
+      }
+    },
+    {
+      "from_step": "s02_cwv_lab_lighthouse_run",
+      "to_step": "s10_cwv_render_blocking_resources",
+      "data_type": "cwv-lab-lighthouse-run",
+      "field_mapping": {
+        "lab_report": "lab_report"
+      }
+    },
+    {
+      "from_step": "s03_cwv_lcp_subparts_breakdown",
+      "to_step": "s10_cwv_render_blocking_resources",
+      "data_type": "cwv-lcp-subparts-breakdown",
+      "field_mapping": {
+        "lcp_bottleneck": "lcp_bottleneck"
+      }
+    },
+    {
+      "from_step": "s01_cwv_field_crux_baseline",
+      "to_step": "s11_cwv_verify_field_improvement",
+      "data_type": "cwv-field-crux-baseline",
+      "field_mapping": {
+        "field_baseline": "field_baseline"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "site_url",
+    "page_urls",
+    "crux_api_key",
+    "form_factor",
+    "diagnosis_plan",
+    "rum_p75_report",
+    "stack",
+    "cdn_provider",
+    "repo_dir",
+    "image_quality",
+    "post_deploy_rum_export",
+    "deploy_date"
+  ],
+  "terminal_outputs": [
+    "failing_metrics",
+    "ttfb_findings",
+    "ttfb_patch",
+    "cache_header_audit",
+    "cache_header_patch",
+    "lcp_priority_patch",
+    "nextjs_media_patch",
+    "image_patch",
+    "image_bytes_report",
+    "font_patch",
+    "render_blocking_patch",
+    "improvement_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_cwv_field_crux_baseline",
+      "s02_cwv_lab_lighthouse_run",
+      "s05_cwv_cache_headers_cdn"
+    ],
+    [
+      "s03_cwv_lcp_subparts_breakdown",
+      "s08_cwv_image_encode_responsive",
+      "s09_cwv_font_loading_subset",
+      "s11_cwv_verify_field_improvement"
+    ],
+    [
+      "s04_cwv_lcp_ttfb_reduce",
+      "s06_cwv_lcp_priority_hints",
+      "s07_cwv_nextjs_image_font",
+      "s10_cwv_render_blocking_resources"
+    ]
+  ],
+  "estimated_cost": 11,
+  "critical_path": [
+    "s02_cwv_lab_lighthouse_run",
+    "s03_cwv_lcp_subparts_breakdown",
+    "s10_cwv_render_blocking_resources"
+  ]
+}

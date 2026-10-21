@@ -1,0 +1,664 @@
+{
+  "name": "containers",
+  "description": "Containerize a Python, Node, Go or Java service end to end: inventory, .dockerignore, base selection and digest pinning, stack-specific multi-stage Dockerfile, cache order, secrets, non-root, healthcheck, in-image tests, hardened smoke run, size, SBOM, Trivy and Grype scans, triage, reproducibility, Compose and a release gate.",
+  "steps": [
+    {
+      "id": "s01_ctr_stack_inventory",
+      "skill_name": "ctr-stack-inventory",
+      "inputs": {
+        "project_dir": "from_user_input",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "build_profile": "build_profile"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_ctr_dockerignore",
+      "skill_name": "ctr-dockerignore",
+      "inputs": {
+        "project_dir": "from_user_input",
+        "build_profile": "s01_ctr_stack_inventory.build_profile"
+      },
+      "outputs": {
+        "dockerignore_report": "dockerignore_report"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_ctr_base_image_select",
+      "skill_name": "ctr-base-image-select",
+      "inputs": {
+        "build_profile": "s01_ctr_stack_inventory.build_profile",
+        "base_preference": "from_user_input_optional"
+      },
+      "outputs": {
+        "base_image_plan": "base_image_plan"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_ctr_alpine_musl_check",
+      "skill_name": "ctr-alpine-musl-check",
+      "inputs": {
+        "project_dir": "from_user_input",
+        "build_profile": "s01_ctr_stack_inventory.build_profile",
+        "base_image_plan": "s03_ctr_base_image_select.base_image_plan"
+      },
+      "outputs": {
+        "libc_verdict": "libc_verdict"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s05_ctr_pin_base_digest",
+      "skill_name": "ctr-pin-base-digest",
+      "inputs": {
+        "base_image_plan": "s03_ctr_base_image_select.base_image_plan",
+        "libc_verdict": "s04_ctr_alpine_musl_check.libc_verdict"
+      },
+      "outputs": {
+        "pinned_bases": "pinned_bases"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s06_ctr_py_dockerfile",
+      "skill_name": "ctr-py-dockerfile",
+      "inputs": {
+        "project_dir": "from_user_input",
+        "build_profile": "s01_ctr_stack_inventory.build_profile",
+        "pinned_bases": "s05_ctr_pin_base_digest.pinned_bases"
+      },
+      "outputs": {
+        "py_dockerfile": "py_dockerfile"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 5
+    },
+    {
+      "id": "s07_ctr_node_dockerfile",
+      "skill_name": "ctr-node-dockerfile",
+      "inputs": {
+        "project_dir": "from_user_input",
+        "build_profile": "s01_ctr_stack_inventory.build_profile",
+        "pinned_bases": "s05_ctr_pin_base_digest.pinned_bases"
+      },
+      "outputs": {
+        "node_dockerfile": "node_dockerfile"
+      },
+      "condition": "stack == 'node'",
+      "parallel_group": 5
+    },
+    {
+      "id": "s08_ctr_go_dockerfile",
+      "skill_name": "ctr-go-dockerfile",
+      "inputs": {
+        "project_dir": "from_user_input",
+        "build_profile": "s01_ctr_stack_inventory.build_profile",
+        "pinned_bases": "s05_ctr_pin_base_digest.pinned_bases"
+      },
+      "outputs": {
+        "go_dockerfile": "go_dockerfile"
+      },
+      "condition": "stack == 'go'",
+      "parallel_group": 5
+    },
+    {
+      "id": "s09_ctr_java_dockerfile",
+      "skill_name": "ctr-java-dockerfile",
+      "inputs": {
+        "project_dir": "from_user_input",
+        "build_profile": "s01_ctr_stack_inventory.build_profile",
+        "pinned_bases": "s05_ctr_pin_base_digest.pinned_bases",
+        "jvm_max_ram_percentage": "from_user_input_optional"
+      },
+      "outputs": {
+        "java_dockerfile": "java_dockerfile"
+      },
+      "condition": "stack == 'java'",
+      "parallel_group": 5
+    },
+    {
+      "id": "s10_ctr_layer_cache_order",
+      "skill_name": "ctr-layer-cache-order",
+      "inputs": {
+        "project_dir": "from_user_input",
+        "build_profile": "s01_ctr_stack_inventory.build_profile",
+        "image_name": "from_user_input"
+      },
+      "outputs": {
+        "cache_report": "cache_report"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s11_ctr_build_args_secrets",
+      "skill_name": "ctr-build-args-secrets",
+      "inputs": {
+        "project_dir": "from_user_input",
+        "image_name": "from_user_input",
+        "build_secrets": "from_user_input_optional"
+      },
+      "outputs": {
+        "build_config_report": "build_config_report"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s12_ctr_nonroot_user",
+      "skill_name": "ctr-nonroot-user",
+      "inputs": {
+        "project_dir": "from_user_input",
+        "image_name": "from_user_input",
+        "pinned_bases": "s05_ctr_pin_base_digest.pinned_bases",
+        "app_port": "from_user_input_optional"
+      },
+      "outputs": {
+        "user_report": "user_report"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s13_ctr_healthcheck",
+      "skill_name": "ctr-healthcheck",
+      "inputs": {
+        "project_dir": "from_user_input",
+        "image_name": "from_user_input",
+        "build_profile": "s01_ctr_stack_inventory.build_profile",
+        "healthcheck_path": "from_user_input_optional",
+        "app_port": "from_user_input_optional"
+      },
+      "outputs": {
+        "healthcheck_report": "healthcheck_report"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s14_ctr_test_in_image",
+      "skill_name": "ctr-test-in-image",
+      "inputs": {
+        "project_dir": "from_user_input",
+        "image_name": "from_user_input",
+        "build_profile": "s01_ctr_stack_inventory.build_profile"
+      },
+      "outputs": {
+        "image_test_report": "image_test_report"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s15_ctr_hardened_run_smoke",
+      "skill_name": "ctr-hardened-run-smoke",
+      "inputs": {
+        "image_name": "from_user_input",
+        "build_profile": "s01_ctr_stack_inventory.build_profile",
+        "app_port": "from_user_input_optional",
+        "user_report": "s12_ctr_nonroot_user.user_report",
+        "healthcheck_report": "s13_ctr_healthcheck.healthcheck_report"
+      },
+      "outputs": {
+        "smoke_report": "smoke_report"
+      },
+      "parallel_group": 6
+    },
+    {
+      "id": "s16_ctr_image_size_measure",
+      "skill_name": "ctr-image-size-measure",
+      "inputs": {
+        "image_name": "from_user_input",
+        "project_dir": "from_user_input",
+        "size_limits": "from_user_input_optional"
+      },
+      "outputs": {
+        "size_report": "size_report"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s17_ctr_syft_sbom",
+      "skill_name": "ctr-syft-sbom",
+      "inputs": {
+        "image_name": "from_user_input",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "sbom_file": "sbom_file"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s18_ctr_trivy_scan",
+      "skill_name": "ctr-trivy-scan",
+      "inputs": {
+        "image_name": "from_user_input",
+        "project_dir": "from_user_input",
+        "severity_threshold": "from_user_input"
+      },
+      "outputs": {
+        "trivy_report": "trivy_report"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s19_ctr_grype_scan",
+      "skill_name": "ctr-grype-scan",
+      "inputs": {
+        "sbom_file": "s17_ctr_syft_sbom.sbom_file",
+        "image_name": "from_user_input",
+        "severity_threshold": "from_user_input"
+      },
+      "outputs": {
+        "grype_report": "grype_report"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s20_ctr_vuln_triage",
+      "skill_name": "ctr-vuln-triage",
+      "inputs": {
+        "trivy_report": "s18_ctr_trivy_scan.trivy_report",
+        "grype_report": "s19_ctr_grype_scan.grype_report",
+        "pinned_bases": "s05_ctr_pin_base_digest.pinned_bases",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "vuln_triage": "vuln_triage"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s21_ctr_reproducible_build",
+      "skill_name": "ctr-reproducible-build",
+      "inputs": {
+        "project_dir": "from_user_input",
+        "image_name": "from_user_input",
+        "build_profile": "s01_ctr_stack_inventory.build_profile"
+      },
+      "outputs": {
+        "repro_report": "repro_report"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s22_ctr_compose_local_dev",
+      "skill_name": "ctr-compose-local-dev",
+      "inputs": {
+        "project_dir": "from_user_input",
+        "image_name": "from_user_input",
+        "build_profile": "s01_ctr_stack_inventory.build_profile",
+        "compose_services": "from_user_input_optional",
+        "app_port": "from_user_input_optional"
+      },
+      "outputs": {
+        "compose_file": "compose_file"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s23_ctr_image_release_gate",
+      "skill_name": "ctr-image-release-gate",
+      "inputs": {
+        "image_name": "from_user_input",
+        "image_test_report": "s14_ctr_test_in_image.image_test_report",
+        "smoke_report": "s15_ctr_hardened_run_smoke.smoke_report",
+        "size_report": "s16_ctr_image_size_measure.size_report",
+        "sbom_file": "s17_ctr_syft_sbom.sbom_file",
+        "vuln_triage": "s20_ctr_vuln_triage.vuln_triage",
+        "repro_report": "s21_ctr_reproducible_build.repro_report",
+        "build_config_report": "s11_ctr_build_args_secrets.build_config_report"
+      },
+      "outputs": {
+        "release_verdict": "release_verdict"
+      },
+      "parallel_group": 7
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_ctr_stack_inventory",
+      "to_step": "s02_ctr_dockerignore",
+      "data_type": "ctr-stack-inventory",
+      "field_mapping": {
+        "build_profile": "build_profile"
+      }
+    },
+    {
+      "from_step": "s01_ctr_stack_inventory",
+      "to_step": "s03_ctr_base_image_select",
+      "data_type": "ctr-stack-inventory",
+      "field_mapping": {
+        "build_profile": "build_profile"
+      }
+    },
+    {
+      "from_step": "s01_ctr_stack_inventory",
+      "to_step": "s04_ctr_alpine_musl_check",
+      "data_type": "ctr-stack-inventory",
+      "field_mapping": {
+        "build_profile": "build_profile"
+      }
+    },
+    {
+      "from_step": "s03_ctr_base_image_select",
+      "to_step": "s04_ctr_alpine_musl_check",
+      "data_type": "ctr-base-image-select",
+      "field_mapping": {
+        "base_image_plan": "base_image_plan"
+      }
+    },
+    {
+      "from_step": "s03_ctr_base_image_select",
+      "to_step": "s05_ctr_pin_base_digest",
+      "data_type": "ctr-base-image-select",
+      "field_mapping": {
+        "base_image_plan": "base_image_plan"
+      }
+    },
+    {
+      "from_step": "s04_ctr_alpine_musl_check",
+      "to_step": "s05_ctr_pin_base_digest",
+      "data_type": "ctr-alpine-musl-check",
+      "field_mapping": {
+        "libc_verdict": "libc_verdict"
+      }
+    },
+    {
+      "from_step": "s01_ctr_stack_inventory",
+      "to_step": "s06_ctr_py_dockerfile",
+      "data_type": "ctr-stack-inventory",
+      "field_mapping": {
+        "build_profile": "build_profile"
+      }
+    },
+    {
+      "from_step": "s05_ctr_pin_base_digest",
+      "to_step": "s06_ctr_py_dockerfile",
+      "data_type": "ctr-pin-base-digest",
+      "field_mapping": {
+        "pinned_bases": "pinned_bases"
+      }
+    },
+    {
+      "from_step": "s01_ctr_stack_inventory",
+      "to_step": "s07_ctr_node_dockerfile",
+      "data_type": "ctr-stack-inventory",
+      "field_mapping": {
+        "build_profile": "build_profile"
+      }
+    },
+    {
+      "from_step": "s05_ctr_pin_base_digest",
+      "to_step": "s07_ctr_node_dockerfile",
+      "data_type": "ctr-pin-base-digest",
+      "field_mapping": {
+        "pinned_bases": "pinned_bases"
+      }
+    },
+    {
+      "from_step": "s01_ctr_stack_inventory",
+      "to_step": "s08_ctr_go_dockerfile",
+      "data_type": "ctr-stack-inventory",
+      "field_mapping": {
+        "build_profile": "build_profile"
+      }
+    },
+    {
+      "from_step": "s05_ctr_pin_base_digest",
+      "to_step": "s08_ctr_go_dockerfile",
+      "data_type": "ctr-pin-base-digest",
+      "field_mapping": {
+        "pinned_bases": "pinned_bases"
+      }
+    },
+    {
+      "from_step": "s01_ctr_stack_inventory",
+      "to_step": "s09_ctr_java_dockerfile",
+      "data_type": "ctr-stack-inventory",
+      "field_mapping": {
+        "build_profile": "build_profile"
+      }
+    },
+    {
+      "from_step": "s05_ctr_pin_base_digest",
+      "to_step": "s09_ctr_java_dockerfile",
+      "data_type": "ctr-pin-base-digest",
+      "field_mapping": {
+        "pinned_bases": "pinned_bases"
+      }
+    },
+    {
+      "from_step": "s01_ctr_stack_inventory",
+      "to_step": "s10_ctr_layer_cache_order",
+      "data_type": "ctr-stack-inventory",
+      "field_mapping": {
+        "build_profile": "build_profile"
+      }
+    },
+    {
+      "from_step": "s05_ctr_pin_base_digest",
+      "to_step": "s12_ctr_nonroot_user",
+      "data_type": "ctr-pin-base-digest",
+      "field_mapping": {
+        "pinned_bases": "pinned_bases"
+      }
+    },
+    {
+      "from_step": "s01_ctr_stack_inventory",
+      "to_step": "s13_ctr_healthcheck",
+      "data_type": "ctr-stack-inventory",
+      "field_mapping": {
+        "build_profile": "build_profile"
+      }
+    },
+    {
+      "from_step": "s01_ctr_stack_inventory",
+      "to_step": "s14_ctr_test_in_image",
+      "data_type": "ctr-stack-inventory",
+      "field_mapping": {
+        "build_profile": "build_profile"
+      }
+    },
+    {
+      "from_step": "s01_ctr_stack_inventory",
+      "to_step": "s15_ctr_hardened_run_smoke",
+      "data_type": "ctr-stack-inventory",
+      "field_mapping": {
+        "build_profile": "build_profile"
+      }
+    },
+    {
+      "from_step": "s12_ctr_nonroot_user",
+      "to_step": "s15_ctr_hardened_run_smoke",
+      "data_type": "ctr-nonroot-user",
+      "field_mapping": {
+        "user_report": "user_report"
+      }
+    },
+    {
+      "from_step": "s13_ctr_healthcheck",
+      "to_step": "s15_ctr_hardened_run_smoke",
+      "data_type": "ctr-healthcheck",
+      "field_mapping": {
+        "healthcheck_report": "healthcheck_report"
+      }
+    },
+    {
+      "from_step": "s17_ctr_syft_sbom",
+      "to_step": "s19_ctr_grype_scan",
+      "data_type": "ctr-syft-sbom",
+      "field_mapping": {
+        "sbom_file": "sbom_file"
+      }
+    },
+    {
+      "from_step": "s18_ctr_trivy_scan",
+      "to_step": "s20_ctr_vuln_triage",
+      "data_type": "ctr-trivy-scan",
+      "field_mapping": {
+        "trivy_report": "trivy_report"
+      }
+    },
+    {
+      "from_step": "s19_ctr_grype_scan",
+      "to_step": "s20_ctr_vuln_triage",
+      "data_type": "ctr-grype-scan",
+      "field_mapping": {
+        "grype_report": "grype_report"
+      }
+    },
+    {
+      "from_step": "s05_ctr_pin_base_digest",
+      "to_step": "s20_ctr_vuln_triage",
+      "data_type": "ctr-pin-base-digest",
+      "field_mapping": {
+        "pinned_bases": "pinned_bases"
+      }
+    },
+    {
+      "from_step": "s01_ctr_stack_inventory",
+      "to_step": "s21_ctr_reproducible_build",
+      "data_type": "ctr-stack-inventory",
+      "field_mapping": {
+        "build_profile": "build_profile"
+      }
+    },
+    {
+      "from_step": "s01_ctr_stack_inventory",
+      "to_step": "s22_ctr_compose_local_dev",
+      "data_type": "ctr-stack-inventory",
+      "field_mapping": {
+        "build_profile": "build_profile"
+      }
+    },
+    {
+      "from_step": "s14_ctr_test_in_image",
+      "to_step": "s23_ctr_image_release_gate",
+      "data_type": "ctr-test-in-image",
+      "field_mapping": {
+        "image_test_report": "image_test_report"
+      }
+    },
+    {
+      "from_step": "s15_ctr_hardened_run_smoke",
+      "to_step": "s23_ctr_image_release_gate",
+      "data_type": "ctr-hardened-run-smoke",
+      "field_mapping": {
+        "smoke_report": "smoke_report"
+      }
+    },
+    {
+      "from_step": "s16_ctr_image_size_measure",
+      "to_step": "s23_ctr_image_release_gate",
+      "data_type": "ctr-image-size-measure",
+      "field_mapping": {
+        "size_report": "size_report"
+      }
+    },
+    {
+      "from_step": "s17_ctr_syft_sbom",
+      "to_step": "s23_ctr_image_release_gate",
+      "data_type": "ctr-syft-sbom",
+      "field_mapping": {
+        "sbom_file": "sbom_file"
+      }
+    },
+    {
+      "from_step": "s20_ctr_vuln_triage",
+      "to_step": "s23_ctr_image_release_gate",
+      "data_type": "ctr-vuln-triage",
+      "field_mapping": {
+        "vuln_triage": "vuln_triage"
+      }
+    },
+    {
+      "from_step": "s21_ctr_reproducible_build",
+      "to_step": "s23_ctr_image_release_gate",
+      "data_type": "ctr-reproducible-build",
+      "field_mapping": {
+        "repro_report": "repro_report"
+      }
+    },
+    {
+      "from_step": "s11_ctr_build_args_secrets",
+      "to_step": "s23_ctr_image_release_gate",
+      "data_type": "ctr-build-args-secrets",
+      "field_mapping": {
+        "build_config_report": "build_config_report"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "project_dir",
+    "stack",
+    "base_preference",
+    "jvm_max_ram_percentage",
+    "image_name",
+    "build_secrets",
+    "app_port",
+    "healthcheck_path",
+    "size_limits",
+    "severity_threshold",
+    "compose_services"
+  ],
+  "terminal_outputs": [
+    "dockerignore_report",
+    "py_dockerfile",
+    "node_dockerfile",
+    "go_dockerfile",
+    "java_dockerfile",
+    "cache_report",
+    "compose_file",
+    "release_verdict"
+  ],
+  "parallel_groups": [
+    [
+      "s01_ctr_stack_inventory",
+      "s11_ctr_build_args_secrets",
+      "s16_ctr_image_size_measure",
+      "s17_ctr_syft_sbom",
+      "s18_ctr_trivy_scan"
+    ],
+    [
+      "s02_ctr_dockerignore",
+      "s03_ctr_base_image_select",
+      "s10_ctr_layer_cache_order",
+      "s13_ctr_healthcheck",
+      "s14_ctr_test_in_image",
+      "s19_ctr_grype_scan",
+      "s21_ctr_reproducible_build",
+      "s22_ctr_compose_local_dev"
+    ],
+    [
+      "s04_ctr_alpine_musl_check"
+    ],
+    [
+      "s05_ctr_pin_base_digest"
+    ],
+    [
+      "s06_ctr_py_dockerfile",
+      "s07_ctr_node_dockerfile",
+      "s08_ctr_go_dockerfile",
+      "s09_ctr_java_dockerfile",
+      "s12_ctr_nonroot_user",
+      "s20_ctr_vuln_triage"
+    ],
+    [
+      "s15_ctr_hardened_run_smoke"
+    ],
+    [
+      "s23_ctr_image_release_gate"
+    ]
+  ],
+  "estimated_cost": 23,
+  "critical_path": [
+    "s01_ctr_stack_inventory",
+    "s03_ctr_base_image_select",
+    "s04_ctr_alpine_musl_check",
+    "s05_ctr_pin_base_digest",
+    "s12_ctr_nonroot_user",
+    "s15_ctr_hardened_run_smoke",
+    "s23_ctr_image_release_gate"
+  ]
+}

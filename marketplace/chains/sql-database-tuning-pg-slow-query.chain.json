@@ -1,0 +1,467 @@
+{
+  "name": "sql-database-tuning-pg-slow-query",
+  "description": "PostgreSQL slow query path: capture with pg_stat_statements and auto_explain, read EXPLAIN ANALYZE, fix statistics, rewrite predicates and pagination, design B-tree, partial, covering and GIN indexes, measure write cost, build with CREATE INDEX CONCURRENTLY and verify.",
+  "steps": [
+    {
+      "id": "s01_sqlo_baseline_scope",
+      "skill_name": "sqlo-baseline-scope",
+      "inputs": {
+        "db_engine": "from_user_input",
+        "db_version": "from_user_input_optional",
+        "stack": "from_user_input",
+        "orm": "from_user_input_optional",
+        "symptom": "from_user_input",
+        "target_environment": "from_user_input",
+        "acceptance_criteria": "from_user_input_optional"
+      },
+      "outputs": {
+        "tuning_scope": "tuning_scope"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_sqlo_pg_stat_statements_capture",
+      "skill_name": "sqlo-pg-stat-statements-capture",
+      "inputs": {
+        "tuning_scope": "s01_sqlo_baseline_scope.tuning_scope",
+        "capture_window": "from_user_input"
+      },
+      "outputs": {
+        "slow_query_list": "slow_query_list"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_sqlo_pg_auto_explain_capture",
+      "skill_name": "sqlo-pg-auto-explain-capture",
+      "inputs": {
+        "tuning_scope": "s01_sqlo_baseline_scope.tuning_scope",
+        "slow_query_list": "s02_sqlo_pg_stat_statements_capture.slow_query_list"
+      },
+      "outputs": {
+        "captured_plans": "captured_plans"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_sqlo_pg_explain_analyze_read",
+      "skill_name": "sqlo-pg-explain-analyze-read",
+      "inputs": {
+        "tuning_scope": "s01_sqlo_baseline_scope.tuning_scope",
+        "slow_query_list": "s02_sqlo_pg_stat_statements_capture.slow_query_list",
+        "captured_plans": "s03_sqlo_pg_auto_explain_capture.captured_plans"
+      },
+      "outputs": {
+        "plan_findings": "plan_findings"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s05_sqlo_pg_statistics_analyze",
+      "skill_name": "sqlo-pg-statistics-analyze",
+      "inputs": {
+        "tuning_scope": "s01_sqlo_baseline_scope.tuning_scope",
+        "plan_findings": "s04_sqlo_pg_explain_analyze_read.plan_findings"
+      },
+      "outputs": {
+        "stats_actions": "stats_actions"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s06_sqlo_sargable_rewrite",
+      "skill_name": "sqlo-sargable-rewrite",
+      "inputs": {
+        "tuning_scope": "s01_sqlo_baseline_scope.tuning_scope",
+        "plan_findings": "s04_sqlo_pg_explain_analyze_read.plan_findings",
+        "schema_ddl": "from_user_input"
+      },
+      "outputs": {
+        "rewritten_queries": "rewritten_queries"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s07_sqlo_keyset_pagination",
+      "skill_name": "sqlo-keyset-pagination",
+      "inputs": {
+        "tuning_scope": "s01_sqlo_baseline_scope.tuning_scope",
+        "rewritten_queries": "s06_sqlo_sargable_rewrite.rewritten_queries",
+        "schema_ddl": "from_user_input"
+      },
+      "outputs": {
+        "query_rewrites": "query_rewrites"
+      },
+      "parallel_group": 6
+    },
+    {
+      "id": "s08_sqlo_btree_composite_order",
+      "skill_name": "sqlo-btree-composite-order",
+      "inputs": {
+        "plan_findings": "s04_sqlo_pg_explain_analyze_read.plan_findings",
+        "query_rewrites": "s07_sqlo_keyset_pagination.query_rewrites",
+        "schema_ddl": "from_user_input"
+      },
+      "outputs": {
+        "btree_index_proposal": "btree_index_proposal"
+      },
+      "parallel_group": 7
+    },
+    {
+      "id": "s09_sqlo_pg_partial_covering_index",
+      "skill_name": "sqlo-pg-partial-covering-index",
+      "inputs": {
+        "plan_findings": "s04_sqlo_pg_explain_analyze_read.plan_findings",
+        "btree_index_proposal": "s08_sqlo_btree_composite_order.btree_index_proposal",
+        "schema_ddl": "from_user_input"
+      },
+      "outputs": {
+        "pg_index_proposal": "pg_index_proposal"
+      },
+      "parallel_group": 8
+    },
+    {
+      "id": "s10_sqlo_pg_gin_index_select",
+      "skill_name": "sqlo-pg-gin-index-select",
+      "inputs": {
+        "plan_findings": "s04_sqlo_pg_explain_analyze_read.plan_findings",
+        "pg_index_proposal": "s09_sqlo_pg_partial_covering_index.pg_index_proposal",
+        "schema_ddl": "from_user_input"
+      },
+      "outputs": {
+        "index_candidates": "index_candidates"
+      },
+      "parallel_group": 9
+    },
+    {
+      "id": "s11_sqlo_index_write_cost",
+      "skill_name": "sqlo-index-write-cost",
+      "inputs": {
+        "tuning_scope": "s01_sqlo_baseline_scope.tuning_scope",
+        "index_candidates": "s10_sqlo_pg_gin_index_select.index_candidates",
+        "schema_ddl": "from_user_input"
+      },
+      "outputs": {
+        "write_cost_report": "write_cost_report",
+        "approved_indexes": "approved_indexes"
+      },
+      "parallel_group": 10
+    },
+    {
+      "id": "s12_sqlo_pg_create_index_concurrently",
+      "skill_name": "sqlo-pg-create-index-concurrently",
+      "inputs": {
+        "tuning_scope": "s01_sqlo_baseline_scope.tuning_scope",
+        "approved_indexes": "s11_sqlo_index_write_cost.approved_indexes",
+        "migration_tool": "from_user_input"
+      },
+      "outputs": {
+        "index_migration": "index_migration"
+      },
+      "parallel_group": 11
+    },
+    {
+      "id": "s13_sqlo_prod_like_verify",
+      "skill_name": "sqlo-prod-like-verify",
+      "inputs": {
+        "tuning_scope": "s01_sqlo_baseline_scope.tuning_scope",
+        "slow_query_list": "s02_sqlo_pg_stat_statements_capture.slow_query_list",
+        "query_rewrites": "s07_sqlo_keyset_pagination.query_rewrites",
+        "index_migration": "s12_sqlo_pg_create_index_concurrently.index_migration",
+        "stats_actions": "s05_sqlo_pg_statistics_analyze.stats_actions"
+      },
+      "outputs": {
+        "verification_report": "verification_report"
+      },
+      "parallel_group": 12
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_sqlo_baseline_scope",
+      "to_step": "s02_sqlo_pg_stat_statements_capture",
+      "data_type": "sqlo-baseline-scope",
+      "field_mapping": {
+        "tuning_scope": "tuning_scope"
+      }
+    },
+    {
+      "from_step": "s01_sqlo_baseline_scope",
+      "to_step": "s03_sqlo_pg_auto_explain_capture",
+      "data_type": "sqlo-baseline-scope",
+      "field_mapping": {
+        "tuning_scope": "tuning_scope"
+      }
+    },
+    {
+      "from_step": "s02_sqlo_pg_stat_statements_capture",
+      "to_step": "s03_sqlo_pg_auto_explain_capture",
+      "data_type": "sqlo-pg-stat-statements-capture",
+      "field_mapping": {
+        "slow_query_list": "slow_query_list"
+      }
+    },
+    {
+      "from_step": "s01_sqlo_baseline_scope",
+      "to_step": "s04_sqlo_pg_explain_analyze_read",
+      "data_type": "sqlo-baseline-scope",
+      "field_mapping": {
+        "tuning_scope": "tuning_scope"
+      }
+    },
+    {
+      "from_step": "s02_sqlo_pg_stat_statements_capture",
+      "to_step": "s04_sqlo_pg_explain_analyze_read",
+      "data_type": "sqlo-pg-stat-statements-capture",
+      "field_mapping": {
+        "slow_query_list": "slow_query_list"
+      }
+    },
+    {
+      "from_step": "s03_sqlo_pg_auto_explain_capture",
+      "to_step": "s04_sqlo_pg_explain_analyze_read",
+      "data_type": "sqlo-pg-auto-explain-capture",
+      "field_mapping": {
+        "captured_plans": "captured_plans"
+      }
+    },
+    {
+      "from_step": "s01_sqlo_baseline_scope",
+      "to_step": "s05_sqlo_pg_statistics_analyze",
+      "data_type": "sqlo-baseline-scope",
+      "field_mapping": {
+        "tuning_scope": "tuning_scope"
+      }
+    },
+    {
+      "from_step": "s04_sqlo_pg_explain_analyze_read",
+      "to_step": "s05_sqlo_pg_statistics_analyze",
+      "data_type": "sqlo-pg-explain-analyze-read",
+      "field_mapping": {
+        "plan_findings": "plan_findings"
+      }
+    },
+    {
+      "from_step": "s01_sqlo_baseline_scope",
+      "to_step": "s06_sqlo_sargable_rewrite",
+      "data_type": "sqlo-baseline-scope",
+      "field_mapping": {
+        "tuning_scope": "tuning_scope"
+      }
+    },
+    {
+      "from_step": "s04_sqlo_pg_explain_analyze_read",
+      "to_step": "s06_sqlo_sargable_rewrite",
+      "data_type": "sqlo-pg-explain-analyze-read",
+      "field_mapping": {
+        "plan_findings": "plan_findings"
+      }
+    },
+    {
+      "from_step": "s01_sqlo_baseline_scope",
+      "to_step": "s07_sqlo_keyset_pagination",
+      "data_type": "sqlo-baseline-scope",
+      "field_mapping": {
+        "tuning_scope": "tuning_scope"
+      }
+    },
+    {
+      "from_step": "s06_sqlo_sargable_rewrite",
+      "to_step": "s07_sqlo_keyset_pagination",
+      "data_type": "sqlo-sargable-rewrite",
+      "field_mapping": {
+        "rewritten_queries": "rewritten_queries"
+      }
+    },
+    {
+      "from_step": "s04_sqlo_pg_explain_analyze_read",
+      "to_step": "s08_sqlo_btree_composite_order",
+      "data_type": "sqlo-pg-explain-analyze-read",
+      "field_mapping": {
+        "plan_findings": "plan_findings"
+      }
+    },
+    {
+      "from_step": "s07_sqlo_keyset_pagination",
+      "to_step": "s08_sqlo_btree_composite_order",
+      "data_type": "sqlo-keyset-pagination",
+      "field_mapping": {
+        "query_rewrites": "query_rewrites"
+      }
+    },
+    {
+      "from_step": "s04_sqlo_pg_explain_analyze_read",
+      "to_step": "s09_sqlo_pg_partial_covering_index",
+      "data_type": "sqlo-pg-explain-analyze-read",
+      "field_mapping": {
+        "plan_findings": "plan_findings"
+      }
+    },
+    {
+      "from_step": "s08_sqlo_btree_composite_order",
+      "to_step": "s09_sqlo_pg_partial_covering_index",
+      "data_type": "sqlo-btree-composite-order",
+      "field_mapping": {
+        "btree_index_proposal": "btree_index_proposal"
+      }
+    },
+    {
+      "from_step": "s04_sqlo_pg_explain_analyze_read",
+      "to_step": "s10_sqlo_pg_gin_index_select",
+      "data_type": "sqlo-pg-explain-analyze-read",
+      "field_mapping": {
+        "plan_findings": "plan_findings"
+      }
+    },
+    {
+      "from_step": "s09_sqlo_pg_partial_covering_index",
+      "to_step": "s10_sqlo_pg_gin_index_select",
+      "data_type": "sqlo-pg-partial-covering-index",
+      "field_mapping": {
+        "pg_index_proposal": "pg_index_proposal"
+      }
+    },
+    {
+      "from_step": "s01_sqlo_baseline_scope",
+      "to_step": "s11_sqlo_index_write_cost",
+      "data_type": "sqlo-baseline-scope",
+      "field_mapping": {
+        "tuning_scope": "tuning_scope"
+      }
+    },
+    {
+      "from_step": "s10_sqlo_pg_gin_index_select",
+      "to_step": "s11_sqlo_index_write_cost",
+      "data_type": "sqlo-pg-gin-index-select",
+      "field_mapping": {
+        "index_candidates": "index_candidates"
+      }
+    },
+    {
+      "from_step": "s01_sqlo_baseline_scope",
+      "to_step": "s12_sqlo_pg_create_index_concurrently",
+      "data_type": "sqlo-baseline-scope",
+      "field_mapping": {
+        "tuning_scope": "tuning_scope"
+      }
+    },
+    {
+      "from_step": "s11_sqlo_index_write_cost",
+      "to_step": "s12_sqlo_pg_create_index_concurrently",
+      "data_type": "sqlo-index-write-cost",
+      "field_mapping": {
+        "approved_indexes": "approved_indexes"
+      }
+    },
+    {
+      "from_step": "s01_sqlo_baseline_scope",
+      "to_step": "s13_sqlo_prod_like_verify",
+      "data_type": "sqlo-baseline-scope",
+      "field_mapping": {
+        "tuning_scope": "tuning_scope"
+      }
+    },
+    {
+      "from_step": "s02_sqlo_pg_stat_statements_capture",
+      "to_step": "s13_sqlo_prod_like_verify",
+      "data_type": "sqlo-pg-stat-statements-capture",
+      "field_mapping": {
+        "slow_query_list": "slow_query_list"
+      }
+    },
+    {
+      "from_step": "s07_sqlo_keyset_pagination",
+      "to_step": "s13_sqlo_prod_like_verify",
+      "data_type": "sqlo-keyset-pagination",
+      "field_mapping": {
+        "query_rewrites": "query_rewrites"
+      }
+    },
+    {
+      "from_step": "s12_sqlo_pg_create_index_concurrently",
+      "to_step": "s13_sqlo_prod_like_verify",
+      "data_type": "sqlo-pg-create-index-concurrently",
+      "field_mapping": {
+        "index_migration": "index_migration"
+      }
+    },
+    {
+      "from_step": "s05_sqlo_pg_statistics_analyze",
+      "to_step": "s13_sqlo_prod_like_verify",
+      "data_type": "sqlo-pg-statistics-analyze",
+      "field_mapping": {
+        "stats_actions": "stats_actions"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "db_engine",
+    "db_version",
+    "stack",
+    "orm",
+    "symptom",
+    "target_environment",
+    "acceptance_criteria",
+    "capture_window",
+    "schema_ddl",
+    "migration_tool"
+  ],
+  "terminal_outputs": [
+    "write_cost_report",
+    "verification_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_sqlo_baseline_scope"
+    ],
+    [
+      "s02_sqlo_pg_stat_statements_capture"
+    ],
+    [
+      "s03_sqlo_pg_auto_explain_capture"
+    ],
+    [
+      "s04_sqlo_pg_explain_analyze_read"
+    ],
+    [
+      "s05_sqlo_pg_statistics_analyze",
+      "s06_sqlo_sargable_rewrite"
+    ],
+    [
+      "s07_sqlo_keyset_pagination"
+    ],
+    [
+      "s08_sqlo_btree_composite_order"
+    ],
+    [
+      "s09_sqlo_pg_partial_covering_index"
+    ],
+    [
+      "s10_sqlo_pg_gin_index_select"
+    ],
+    [
+      "s11_sqlo_index_write_cost"
+    ],
+    [
+      "s12_sqlo_pg_create_index_concurrently"
+    ],
+    [
+      "s13_sqlo_prod_like_verify"
+    ]
+  ],
+  "estimated_cost": 13,
+  "critical_path": [
+    "s01_sqlo_baseline_scope",
+    "s02_sqlo_pg_stat_statements_capture",
+    "s03_sqlo_pg_auto_explain_capture",
+    "s04_sqlo_pg_explain_analyze_read",
+    "s06_sqlo_sargable_rewrite",
+    "s07_sqlo_keyset_pagination",
+    "s08_sqlo_btree_composite_order",
+    "s09_sqlo_pg_partial_covering_index",
+    "s10_sqlo_pg_gin_index_select",
+    "s11_sqlo_index_write_cost",
+    "s12_sqlo_pg_create_index_concurrently",
+    "s13_sqlo_prod_like_verify"
+  ]
+}

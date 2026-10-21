@@ -1,0 +1,171 @@
+{
+  "name": "incident-response-database-locks",
+  "description": "Database-led incident: find the metric onset, draft hypotheses, read PostgreSQL or MySQL blocking chains and kill root blockers by approved rules, and reach a verdict. Set database to postgres or mysql.",
+  "steps": [
+    {
+      "id": "s01_inc_promql_red_triage",
+      "skill_name": "inc-promql-red-triage",
+      "inputs": {
+        "incident_record": "from_user_input",
+        "prometheus_url": "from_user_input",
+        "sli_queries": "from_user_input_optional"
+      },
+      "outputs": {
+        "metric_findings": "metric_findings"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_inc_hypothesis_draft",
+      "skill_name": "inc-hypothesis-draft",
+      "inputs": {
+        "metric_findings": "s01_inc_promql_red_triage.metric_findings",
+        "change_correlation": "from_user_input",
+        "loki_log_findings": "from_user_input_optional",
+        "cloudwatch_log_findings": "from_user_input_optional",
+        "trace_findings": "from_user_input_optional",
+        "stabilization_status": "from_user_input"
+      },
+      "outputs": {
+        "hypothesis_table": "hypothesis_table"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_inc_pg_blocking_queries",
+      "skill_name": "inc-pg-blocking-queries",
+      "inputs": {
+        "hypothesis_table": "s02_inc_hypothesis_draft.hypothesis_table",
+        "pg_connection": "from_user_input"
+      },
+      "outputs": {
+        "postgres_evidence": "postgres_evidence"
+      },
+      "condition": "database == 'postgres'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_inc_mysql_lock_waits",
+      "skill_name": "inc-mysql-lock-waits",
+      "inputs": {
+        "hypothesis_table": "s02_inc_hypothesis_draft.hypothesis_table",
+        "mysql_connection": "from_user_input"
+      },
+      "outputs": {
+        "mysql_evidence": "mysql_evidence"
+      },
+      "condition": "database == 'mysql'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s05_inc_hypothesis_verdict",
+      "skill_name": "inc-hypothesis-verdict",
+      "inputs": {
+        "hypothesis_table": "s02_inc_hypothesis_draft.hypothesis_table",
+        "python_runtime_evidence": "from_user_input_optional",
+        "node_runtime_evidence": "from_user_input_optional",
+        "go_runtime_evidence": "from_user_input_optional",
+        "jvm_runtime_evidence": "from_user_input_optional",
+        "postgres_evidence": "s03_inc_pg_blocking_queries.postgres_evidence",
+        "mysql_evidence": "s04_inc_mysql_lock_waits.mysql_evidence",
+        "timeline_log": "from_user_input"
+      },
+      "outputs": {
+        "confirmed_cause": "confirmed_cause"
+      },
+      "parallel_group": 4
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_inc_promql_red_triage",
+      "to_step": "s02_inc_hypothesis_draft",
+      "data_type": "inc-promql-red-triage",
+      "field_mapping": {
+        "metric_findings": "metric_findings"
+      }
+    },
+    {
+      "from_step": "s02_inc_hypothesis_draft",
+      "to_step": "s03_inc_pg_blocking_queries",
+      "data_type": "inc-hypothesis-draft",
+      "field_mapping": {
+        "hypothesis_table": "hypothesis_table"
+      }
+    },
+    {
+      "from_step": "s02_inc_hypothesis_draft",
+      "to_step": "s04_inc_mysql_lock_waits",
+      "data_type": "inc-hypothesis-draft",
+      "field_mapping": {
+        "hypothesis_table": "hypothesis_table"
+      }
+    },
+    {
+      "from_step": "s02_inc_hypothesis_draft",
+      "to_step": "s05_inc_hypothesis_verdict",
+      "data_type": "inc-hypothesis-draft",
+      "field_mapping": {
+        "hypothesis_table": "hypothesis_table"
+      }
+    },
+    {
+      "from_step": "s03_inc_pg_blocking_queries",
+      "to_step": "s05_inc_hypothesis_verdict",
+      "data_type": "inc-pg-blocking-queries",
+      "field_mapping": {
+        "postgres_evidence": "postgres_evidence"
+      }
+    },
+    {
+      "from_step": "s04_inc_mysql_lock_waits",
+      "to_step": "s05_inc_hypothesis_verdict",
+      "data_type": "inc-mysql-lock-waits",
+      "field_mapping": {
+        "mysql_evidence": "mysql_evidence"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "incident_record",
+    "prometheus_url",
+    "sli_queries",
+    "change_correlation",
+    "loki_log_findings",
+    "cloudwatch_log_findings",
+    "trace_findings",
+    "stabilization_status",
+    "pg_connection",
+    "mysql_connection",
+    "python_runtime_evidence",
+    "node_runtime_evidence",
+    "go_runtime_evidence",
+    "jvm_runtime_evidence",
+    "timeline_log"
+  ],
+  "terminal_outputs": [
+    "confirmed_cause"
+  ],
+  "parallel_groups": [
+    [
+      "s01_inc_promql_red_triage"
+    ],
+    [
+      "s02_inc_hypothesis_draft"
+    ],
+    [
+      "s03_inc_pg_blocking_queries",
+      "s04_inc_mysql_lock_waits"
+    ],
+    [
+      "s05_inc_hypothesis_verdict"
+    ]
+  ],
+  "estimated_cost": 5,
+  "critical_path": [
+    "s01_inc_promql_red_triage",
+    "s02_inc_hypothesis_draft",
+    "s03_inc_pg_blocking_queries",
+    "s05_inc_hypothesis_verdict"
+  ]
+}

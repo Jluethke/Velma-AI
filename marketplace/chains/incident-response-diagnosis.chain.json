@@ -1,0 +1,499 @@
+{
+  "name": "incident-response-diagnosis",
+  "description": "Find the cause after stabilization: metric onset, change correlation, Loki or CloudWatch logs, Tempo traces, a falsifiable hypothesis table, safe pod access, Python, Node.js, Go or JVM runtime evidence, PostgreSQL or MySQL lock evidence, and a verdict. Set stack, database, log_backend and trace_backend to route conditional steps.",
+  "steps": [
+    {
+      "id": "s01_inc_promql_red_triage",
+      "skill_name": "inc-promql-red-triage",
+      "inputs": {
+        "incident_record": "from_user_input",
+        "prometheus_url": "from_user_input",
+        "sli_queries": "from_user_input_optional"
+      },
+      "outputs": {
+        "metric_findings": "metric_findings"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_inc_change_correlation",
+      "skill_name": "inc-change-correlation",
+      "inputs": {
+        "incident_record": "from_user_input",
+        "timeline_log": "from_user_input",
+        "metric_findings": "s01_inc_promql_red_triage.metric_findings",
+        "platform": "from_user_input",
+        "recent_changes": "from_user_input_optional"
+      },
+      "outputs": {
+        "change_correlation": "change_correlation"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_inc_loki_logql_slice",
+      "skill_name": "inc-loki-logql-slice",
+      "inputs": {
+        "incident_record": "from_user_input",
+        "metric_findings": "s01_inc_promql_red_triage.metric_findings",
+        "loki_selector": "from_user_input"
+      },
+      "outputs": {
+        "loki_log_findings": "loki_log_findings"
+      },
+      "condition": "log_backend == 'loki'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_inc_cloudwatch_insights_slice",
+      "skill_name": "inc-cloudwatch-insights-slice",
+      "inputs": {
+        "incident_record": "from_user_input",
+        "metric_findings": "s01_inc_promql_red_triage.metric_findings",
+        "log_group_names": "from_user_input"
+      },
+      "outputs": {
+        "cloudwatch_log_findings": "cloudwatch_log_findings"
+      },
+      "condition": "log_backend == 'cloudwatch'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s05_inc_trace_tempo_traceql",
+      "skill_name": "inc-trace-tempo-traceql",
+      "inputs": {
+        "incident_record": "from_user_input",
+        "metric_findings": "s01_inc_promql_red_triage.metric_findings",
+        "loki_log_findings": "s03_inc_loki_logql_slice.loki_log_findings",
+        "cloudwatch_log_findings": "s04_inc_cloudwatch_insights_slice.cloudwatch_log_findings",
+        "tempo_url": "from_user_input",
+        "service_name": "from_user_input"
+      },
+      "outputs": {
+        "trace_findings": "trace_findings"
+      },
+      "condition": "trace_backend == 'tempo'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s06_inc_hypothesis_draft",
+      "skill_name": "inc-hypothesis-draft",
+      "inputs": {
+        "metric_findings": "s01_inc_promql_red_triage.metric_findings",
+        "change_correlation": "s02_inc_change_correlation.change_correlation",
+        "loki_log_findings": "s03_inc_loki_logql_slice.loki_log_findings",
+        "cloudwatch_log_findings": "s04_inc_cloudwatch_insights_slice.cloudwatch_log_findings",
+        "trace_findings": "s05_inc_trace_tempo_traceql.trace_findings",
+        "stabilization_status": "from_user_input"
+      },
+      "outputs": {
+        "hypothesis_table": "hypothesis_table"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s07_inc_k8s_safe_debug_access",
+      "skill_name": "inc-k8s-safe-debug-access",
+      "inputs": {
+        "hypothesis_table": "s06_inc_hypothesis_draft.hypothesis_table",
+        "k8s_namespace": "from_user_input",
+        "target_pod": "from_user_input"
+      },
+      "outputs": {
+        "debug_access": "debug_access"
+      },
+      "condition": "platform == 'kubernetes'",
+      "parallel_group": 5
+    },
+    {
+      "id": "s08_inc_py_spy_dump",
+      "skill_name": "inc-py-spy-dump",
+      "inputs": {
+        "debug_access": "s07_inc_k8s_safe_debug_access.debug_access",
+        "hypothesis_table": "s06_inc_hypothesis_draft.hypothesis_table"
+      },
+      "outputs": {
+        "python_runtime_evidence": "python_runtime_evidence"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 6
+    },
+    {
+      "id": "s09_inc_node_diagnostic_report",
+      "skill_name": "inc-node-diagnostic-report",
+      "inputs": {
+        "debug_access": "s07_inc_k8s_safe_debug_access.debug_access",
+        "hypothesis_table": "s06_inc_hypothesis_draft.hypothesis_table"
+      },
+      "outputs": {
+        "node_runtime_evidence": "node_runtime_evidence"
+      },
+      "condition": "stack == 'node'",
+      "parallel_group": 6
+    },
+    {
+      "id": "s10_inc_go_pprof_capture",
+      "skill_name": "inc-go-pprof-capture",
+      "inputs": {
+        "debug_access": "s07_inc_k8s_safe_debug_access.debug_access",
+        "hypothesis_table": "s06_inc_hypothesis_draft.hypothesis_table"
+      },
+      "outputs": {
+        "go_runtime_evidence": "go_runtime_evidence"
+      },
+      "condition": "stack == 'go'",
+      "parallel_group": 6
+    },
+    {
+      "id": "s11_inc_jvm_jcmd_capture",
+      "skill_name": "inc-jvm-jcmd-capture",
+      "inputs": {
+        "debug_access": "s07_inc_k8s_safe_debug_access.debug_access",
+        "hypothesis_table": "s06_inc_hypothesis_draft.hypothesis_table"
+      },
+      "outputs": {
+        "jvm_runtime_evidence": "jvm_runtime_evidence"
+      },
+      "condition": "stack == 'java'",
+      "parallel_group": 6
+    },
+    {
+      "id": "s12_inc_pg_blocking_queries",
+      "skill_name": "inc-pg-blocking-queries",
+      "inputs": {
+        "hypothesis_table": "s06_inc_hypothesis_draft.hypothesis_table",
+        "pg_connection": "from_user_input"
+      },
+      "outputs": {
+        "postgres_evidence": "postgres_evidence"
+      },
+      "condition": "database == 'postgres'",
+      "parallel_group": 5
+    },
+    {
+      "id": "s13_inc_mysql_lock_waits",
+      "skill_name": "inc-mysql-lock-waits",
+      "inputs": {
+        "hypothesis_table": "s06_inc_hypothesis_draft.hypothesis_table",
+        "mysql_connection": "from_user_input"
+      },
+      "outputs": {
+        "mysql_evidence": "mysql_evidence"
+      },
+      "condition": "database == 'mysql'",
+      "parallel_group": 5
+    },
+    {
+      "id": "s14_inc_hypothesis_verdict",
+      "skill_name": "inc-hypothesis-verdict",
+      "inputs": {
+        "hypothesis_table": "s06_inc_hypothesis_draft.hypothesis_table",
+        "python_runtime_evidence": "s08_inc_py_spy_dump.python_runtime_evidence",
+        "node_runtime_evidence": "s09_inc_node_diagnostic_report.node_runtime_evidence",
+        "go_runtime_evidence": "s10_inc_go_pprof_capture.go_runtime_evidence",
+        "jvm_runtime_evidence": "s11_inc_jvm_jcmd_capture.jvm_runtime_evidence",
+        "postgres_evidence": "s12_inc_pg_blocking_queries.postgres_evidence",
+        "mysql_evidence": "s13_inc_mysql_lock_waits.mysql_evidence",
+        "timeline_log": "from_user_input"
+      },
+      "outputs": {
+        "confirmed_cause": "confirmed_cause"
+      },
+      "parallel_group": 7
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_inc_promql_red_triage",
+      "to_step": "s02_inc_change_correlation",
+      "data_type": "inc-promql-red-triage",
+      "field_mapping": {
+        "metric_findings": "metric_findings"
+      }
+    },
+    {
+      "from_step": "s01_inc_promql_red_triage",
+      "to_step": "s03_inc_loki_logql_slice",
+      "data_type": "inc-promql-red-triage",
+      "field_mapping": {
+        "metric_findings": "metric_findings"
+      }
+    },
+    {
+      "from_step": "s01_inc_promql_red_triage",
+      "to_step": "s04_inc_cloudwatch_insights_slice",
+      "data_type": "inc-promql-red-triage",
+      "field_mapping": {
+        "metric_findings": "metric_findings"
+      }
+    },
+    {
+      "from_step": "s01_inc_promql_red_triage",
+      "to_step": "s05_inc_trace_tempo_traceql",
+      "data_type": "inc-promql-red-triage",
+      "field_mapping": {
+        "metric_findings": "metric_findings"
+      }
+    },
+    {
+      "from_step": "s03_inc_loki_logql_slice",
+      "to_step": "s05_inc_trace_tempo_traceql",
+      "data_type": "inc-loki-logql-slice",
+      "field_mapping": {
+        "loki_log_findings": "loki_log_findings"
+      }
+    },
+    {
+      "from_step": "s04_inc_cloudwatch_insights_slice",
+      "to_step": "s05_inc_trace_tempo_traceql",
+      "data_type": "inc-cloudwatch-insights-slice",
+      "field_mapping": {
+        "cloudwatch_log_findings": "cloudwatch_log_findings"
+      }
+    },
+    {
+      "from_step": "s01_inc_promql_red_triage",
+      "to_step": "s06_inc_hypothesis_draft",
+      "data_type": "inc-promql-red-triage",
+      "field_mapping": {
+        "metric_findings": "metric_findings"
+      }
+    },
+    {
+      "from_step": "s02_inc_change_correlation",
+      "to_step": "s06_inc_hypothesis_draft",
+      "data_type": "inc-change-correlation",
+      "field_mapping": {
+        "change_correlation": "change_correlation"
+      }
+    },
+    {
+      "from_step": "s03_inc_loki_logql_slice",
+      "to_step": "s06_inc_hypothesis_draft",
+      "data_type": "inc-loki-logql-slice",
+      "field_mapping": {
+        "loki_log_findings": "loki_log_findings"
+      }
+    },
+    {
+      "from_step": "s04_inc_cloudwatch_insights_slice",
+      "to_step": "s06_inc_hypothesis_draft",
+      "data_type": "inc-cloudwatch-insights-slice",
+      "field_mapping": {
+        "cloudwatch_log_findings": "cloudwatch_log_findings"
+      }
+    },
+    {
+      "from_step": "s05_inc_trace_tempo_traceql",
+      "to_step": "s06_inc_hypothesis_draft",
+      "data_type": "inc-trace-tempo-traceql",
+      "field_mapping": {
+        "trace_findings": "trace_findings"
+      }
+    },
+    {
+      "from_step": "s06_inc_hypothesis_draft",
+      "to_step": "s07_inc_k8s_safe_debug_access",
+      "data_type": "inc-hypothesis-draft",
+      "field_mapping": {
+        "hypothesis_table": "hypothesis_table"
+      }
+    },
+    {
+      "from_step": "s07_inc_k8s_safe_debug_access",
+      "to_step": "s08_inc_py_spy_dump",
+      "data_type": "inc-k8s-safe-debug-access",
+      "field_mapping": {
+        "debug_access": "debug_access"
+      }
+    },
+    {
+      "from_step": "s06_inc_hypothesis_draft",
+      "to_step": "s08_inc_py_spy_dump",
+      "data_type": "inc-hypothesis-draft",
+      "field_mapping": {
+        "hypothesis_table": "hypothesis_table"
+      }
+    },
+    {
+      "from_step": "s07_inc_k8s_safe_debug_access",
+      "to_step": "s09_inc_node_diagnostic_report",
+      "data_type": "inc-k8s-safe-debug-access",
+      "field_mapping": {
+        "debug_access": "debug_access"
+      }
+    },
+    {
+      "from_step": "s06_inc_hypothesis_draft",
+      "to_step": "s09_inc_node_diagnostic_report",
+      "data_type": "inc-hypothesis-draft",
+      "field_mapping": {
+        "hypothesis_table": "hypothesis_table"
+      }
+    },
+    {
+      "from_step": "s07_inc_k8s_safe_debug_access",
+      "to_step": "s10_inc_go_pprof_capture",
+      "data_type": "inc-k8s-safe-debug-access",
+      "field_mapping": {
+        "debug_access": "debug_access"
+      }
+    },
+    {
+      "from_step": "s06_inc_hypothesis_draft",
+      "to_step": "s10_inc_go_pprof_capture",
+      "data_type": "inc-hypothesis-draft",
+      "field_mapping": {
+        "hypothesis_table": "hypothesis_table"
+      }
+    },
+    {
+      "from_step": "s07_inc_k8s_safe_debug_access",
+      "to_step": "s11_inc_jvm_jcmd_capture",
+      "data_type": "inc-k8s-safe-debug-access",
+      "field_mapping": {
+        "debug_access": "debug_access"
+      }
+    },
+    {
+      "from_step": "s06_inc_hypothesis_draft",
+      "to_step": "s11_inc_jvm_jcmd_capture",
+      "data_type": "inc-hypothesis-draft",
+      "field_mapping": {
+        "hypothesis_table": "hypothesis_table"
+      }
+    },
+    {
+      "from_step": "s06_inc_hypothesis_draft",
+      "to_step": "s12_inc_pg_blocking_queries",
+      "data_type": "inc-hypothesis-draft",
+      "field_mapping": {
+        "hypothesis_table": "hypothesis_table"
+      }
+    },
+    {
+      "from_step": "s06_inc_hypothesis_draft",
+      "to_step": "s13_inc_mysql_lock_waits",
+      "data_type": "inc-hypothesis-draft",
+      "field_mapping": {
+        "hypothesis_table": "hypothesis_table"
+      }
+    },
+    {
+      "from_step": "s06_inc_hypothesis_draft",
+      "to_step": "s14_inc_hypothesis_verdict",
+      "data_type": "inc-hypothesis-draft",
+      "field_mapping": {
+        "hypothesis_table": "hypothesis_table"
+      }
+    },
+    {
+      "from_step": "s08_inc_py_spy_dump",
+      "to_step": "s14_inc_hypothesis_verdict",
+      "data_type": "inc-py-spy-dump",
+      "field_mapping": {
+        "python_runtime_evidence": "python_runtime_evidence"
+      }
+    },
+    {
+      "from_step": "s09_inc_node_diagnostic_report",
+      "to_step": "s14_inc_hypothesis_verdict",
+      "data_type": "inc-node-diagnostic-report",
+      "field_mapping": {
+        "node_runtime_evidence": "node_runtime_evidence"
+      }
+    },
+    {
+      "from_step": "s10_inc_go_pprof_capture",
+      "to_step": "s14_inc_hypothesis_verdict",
+      "data_type": "inc-go-pprof-capture",
+      "field_mapping": {
+        "go_runtime_evidence": "go_runtime_evidence"
+      }
+    },
+    {
+      "from_step": "s11_inc_jvm_jcmd_capture",
+      "to_step": "s14_inc_hypothesis_verdict",
+      "data_type": "inc-jvm-jcmd-capture",
+      "field_mapping": {
+        "jvm_runtime_evidence": "jvm_runtime_evidence"
+      }
+    },
+    {
+      "from_step": "s12_inc_pg_blocking_queries",
+      "to_step": "s14_inc_hypothesis_verdict",
+      "data_type": "inc-pg-blocking-queries",
+      "field_mapping": {
+        "postgres_evidence": "postgres_evidence"
+      }
+    },
+    {
+      "from_step": "s13_inc_mysql_lock_waits",
+      "to_step": "s14_inc_hypothesis_verdict",
+      "data_type": "inc-mysql-lock-waits",
+      "field_mapping": {
+        "mysql_evidence": "mysql_evidence"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "incident_record",
+    "prometheus_url",
+    "sli_queries",
+    "timeline_log",
+    "platform",
+    "recent_changes",
+    "loki_selector",
+    "log_group_names",
+    "tempo_url",
+    "service_name",
+    "stabilization_status",
+    "k8s_namespace",
+    "target_pod",
+    "pg_connection",
+    "mysql_connection"
+  ],
+  "terminal_outputs": [
+    "confirmed_cause"
+  ],
+  "parallel_groups": [
+    [
+      "s01_inc_promql_red_triage"
+    ],
+    [
+      "s02_inc_change_correlation",
+      "s03_inc_loki_logql_slice",
+      "s04_inc_cloudwatch_insights_slice"
+    ],
+    [
+      "s05_inc_trace_tempo_traceql"
+    ],
+    [
+      "s06_inc_hypothesis_draft"
+    ],
+    [
+      "s07_inc_k8s_safe_debug_access",
+      "s12_inc_pg_blocking_queries",
+      "s13_inc_mysql_lock_waits"
+    ],
+    [
+      "s08_inc_py_spy_dump",
+      "s09_inc_node_diagnostic_report",
+      "s10_inc_go_pprof_capture",
+      "s11_inc_jvm_jcmd_capture"
+    ],
+    [
+      "s14_inc_hypothesis_verdict"
+    ]
+  ],
+  "estimated_cost": 14,
+  "critical_path": [
+    "s01_inc_promql_red_triage",
+    "s03_inc_loki_logql_slice",
+    "s05_inc_trace_tempo_traceql",
+    "s06_inc_hypothesis_draft",
+    "s07_inc_k8s_safe_debug_access",
+    "s08_inc_py_spy_dump",
+    "s14_inc_hypothesis_verdict"
+  ]
+}

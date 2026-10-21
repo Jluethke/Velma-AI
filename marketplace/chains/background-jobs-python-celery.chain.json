@@ -1,0 +1,338 @@
+{
+  "name": "background-jobs-python-celery",
+  "description": "Harden a Python Celery job system: audit, payloads, idempotency, outbox, measured runtimes, retry policy, Celery reliability settings, dead-letter runbook, graceful shutdown, pytest failure paths and a kill drill.",
+  "steps": [
+    {
+      "id": "s01_bjq_handler_side_effect_audit",
+      "skill_name": "bjq-handler-side-effect-audit",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "queue_choice": "from_user_input"
+      },
+      "outputs": {
+        "job_inventory": "job_inventory",
+        "unsafe_handlers": "unsafe_handlers"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_bjq_job_payload_design",
+      "skill_name": "bjq-job-payload-design",
+      "inputs": {
+        "job_inventory": "s01_bjq_handler_side_effect_audit.job_inventory",
+        "queue_choice": "from_user_input"
+      },
+      "outputs": {
+        "payload_schema": "payload_schema",
+        "payload_violations": "payload_violations"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_bjq_idempotency_key_store",
+      "skill_name": "bjq-idempotency-key-store",
+      "inputs": {
+        "job_inventory": "s01_bjq_handler_side_effect_audit.job_inventory",
+        "payload_schema": "s02_bjq_job_payload_design.payload_schema",
+        "stack": "from_user_input",
+        "database": "from_user_input"
+      },
+      "outputs": {
+        "idempotency_design": "idempotency_design",
+        "idempotency_patch": "idempotency_patch"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_bjq_transactional_outbox_enqueue",
+      "skill_name": "bjq-transactional-outbox-enqueue",
+      "inputs": {
+        "job_inventory": "s01_bjq_handler_side_effect_audit.job_inventory",
+        "payload_schema": "s02_bjq_job_payload_design.payload_schema",
+        "stack": "from_user_input",
+        "database": "from_user_input"
+      },
+      "outputs": {
+        "outbox_design": "outbox_design",
+        "outbox_patch": "outbox_patch"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s05_bjq_job_duration_profile",
+      "skill_name": "bjq-job-duration-profile",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "queue_choice": "from_user_input",
+        "job_inventory": "s01_bjq_handler_side_effect_audit.job_inventory",
+        "log_source": "from_user_input"
+      },
+      "outputs": {
+        "job_duration_profile": "job_duration_profile"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s06_bjq_retry_backoff_jitter_policy",
+      "skill_name": "bjq-retry-backoff-jitter-policy",
+      "inputs": {
+        "job_inventory": "s01_bjq_handler_side_effect_audit.job_inventory",
+        "job_duration_profile": "s05_bjq_job_duration_profile.job_duration_profile",
+        "queue_choice": "from_user_input",
+        "outage_tolerance": "from_user_input_optional"
+      },
+      "outputs": {
+        "retry_policy": "retry_policy"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s07_bjq_py_celery_reliability_config",
+      "skill_name": "bjq-py-celery-reliability-config",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "retry_policy": "s06_bjq_retry_backoff_jitter_policy.retry_policy",
+        "job_duration_profile": "s05_bjq_job_duration_profile.job_duration_profile"
+      },
+      "outputs": {
+        "celery_config": "celery_config"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s08_bjq_dead_letter_redrive_runbook",
+      "skill_name": "bjq-dead-letter-redrive-runbook",
+      "inputs": {
+        "queue_choice": "from_user_input",
+        "retry_policy": "s06_bjq_retry_backoff_jitter_policy.retry_policy",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "dlq_runbook": "dlq_runbook"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s09_bjq_py_graceful_shutdown",
+      "skill_name": "bjq-py-graceful-shutdown",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "queue_choice": "from_user_input",
+        "job_duration_profile": "s05_bjq_job_duration_profile.job_duration_profile",
+        "deploy_platform": "from_user_input"
+      },
+      "outputs": {
+        "py_shutdown_config": "py_shutdown_config"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s10_bjq_py_failure_path_tests",
+      "skill_name": "bjq-py-failure-path-tests",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "queue_choice": "from_user_input",
+        "retry_policy": "s06_bjq_retry_backoff_jitter_policy.retry_policy",
+        "idempotency_design": "s03_bjq_idempotency_key_store.idempotency_design"
+      },
+      "outputs": {
+        "py_failure_tests": "py_failure_tests"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s11_bjq_worker_kill_redelivery_drill",
+      "skill_name": "bjq-worker-kill-redelivery-drill",
+      "inputs": {
+        "queue_choice": "from_user_input",
+        "idempotency_design": "s03_bjq_idempotency_key_store.idempotency_design",
+        "job_duration_profile": "s05_bjq_job_duration_profile.job_duration_profile",
+        "staging_environment": "from_user_input"
+      },
+      "outputs": {
+        "drill_report": "drill_report"
+      },
+      "parallel_group": 4
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_bjq_handler_side_effect_audit",
+      "to_step": "s02_bjq_job_payload_design",
+      "data_type": "bjq-handler-side-effect-audit",
+      "field_mapping": {
+        "job_inventory": "job_inventory"
+      }
+    },
+    {
+      "from_step": "s01_bjq_handler_side_effect_audit",
+      "to_step": "s03_bjq_idempotency_key_store",
+      "data_type": "bjq-handler-side-effect-audit",
+      "field_mapping": {
+        "job_inventory": "job_inventory"
+      }
+    },
+    {
+      "from_step": "s02_bjq_job_payload_design",
+      "to_step": "s03_bjq_idempotency_key_store",
+      "data_type": "bjq-job-payload-design",
+      "field_mapping": {
+        "payload_schema": "payload_schema"
+      }
+    },
+    {
+      "from_step": "s01_bjq_handler_side_effect_audit",
+      "to_step": "s04_bjq_transactional_outbox_enqueue",
+      "data_type": "bjq-handler-side-effect-audit",
+      "field_mapping": {
+        "job_inventory": "job_inventory"
+      }
+    },
+    {
+      "from_step": "s02_bjq_job_payload_design",
+      "to_step": "s04_bjq_transactional_outbox_enqueue",
+      "data_type": "bjq-job-payload-design",
+      "field_mapping": {
+        "payload_schema": "payload_schema"
+      }
+    },
+    {
+      "from_step": "s01_bjq_handler_side_effect_audit",
+      "to_step": "s05_bjq_job_duration_profile",
+      "data_type": "bjq-handler-side-effect-audit",
+      "field_mapping": {
+        "job_inventory": "job_inventory"
+      }
+    },
+    {
+      "from_step": "s01_bjq_handler_side_effect_audit",
+      "to_step": "s06_bjq_retry_backoff_jitter_policy",
+      "data_type": "bjq-handler-side-effect-audit",
+      "field_mapping": {
+        "job_inventory": "job_inventory"
+      }
+    },
+    {
+      "from_step": "s05_bjq_job_duration_profile",
+      "to_step": "s06_bjq_retry_backoff_jitter_policy",
+      "data_type": "bjq-job-duration-profile",
+      "field_mapping": {
+        "job_duration_profile": "job_duration_profile"
+      }
+    },
+    {
+      "from_step": "s06_bjq_retry_backoff_jitter_policy",
+      "to_step": "s07_bjq_py_celery_reliability_config",
+      "data_type": "bjq-retry-backoff-jitter-policy",
+      "field_mapping": {
+        "retry_policy": "retry_policy"
+      }
+    },
+    {
+      "from_step": "s05_bjq_job_duration_profile",
+      "to_step": "s07_bjq_py_celery_reliability_config",
+      "data_type": "bjq-job-duration-profile",
+      "field_mapping": {
+        "job_duration_profile": "job_duration_profile"
+      }
+    },
+    {
+      "from_step": "s06_bjq_retry_backoff_jitter_policy",
+      "to_step": "s08_bjq_dead_letter_redrive_runbook",
+      "data_type": "bjq-retry-backoff-jitter-policy",
+      "field_mapping": {
+        "retry_policy": "retry_policy"
+      }
+    },
+    {
+      "from_step": "s05_bjq_job_duration_profile",
+      "to_step": "s09_bjq_py_graceful_shutdown",
+      "data_type": "bjq-job-duration-profile",
+      "field_mapping": {
+        "job_duration_profile": "job_duration_profile"
+      }
+    },
+    {
+      "from_step": "s06_bjq_retry_backoff_jitter_policy",
+      "to_step": "s10_bjq_py_failure_path_tests",
+      "data_type": "bjq-retry-backoff-jitter-policy",
+      "field_mapping": {
+        "retry_policy": "retry_policy"
+      }
+    },
+    {
+      "from_step": "s03_bjq_idempotency_key_store",
+      "to_step": "s10_bjq_py_failure_path_tests",
+      "data_type": "bjq-idempotency-key-store",
+      "field_mapping": {
+        "idempotency_design": "idempotency_design"
+      }
+    },
+    {
+      "from_step": "s03_bjq_idempotency_key_store",
+      "to_step": "s11_bjq_worker_kill_redelivery_drill",
+      "data_type": "bjq-idempotency-key-store",
+      "field_mapping": {
+        "idempotency_design": "idempotency_design"
+      }
+    },
+    {
+      "from_step": "s05_bjq_job_duration_profile",
+      "to_step": "s11_bjq_worker_kill_redelivery_drill",
+      "data_type": "bjq-job-duration-profile",
+      "field_mapping": {
+        "job_duration_profile": "job_duration_profile"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "repo_path",
+    "queue_choice",
+    "stack",
+    "database",
+    "log_source",
+    "outage_tolerance",
+    "deploy_platform",
+    "staging_environment"
+  ],
+  "terminal_outputs": [
+    "unsafe_handlers",
+    "payload_violations",
+    "idempotency_patch",
+    "outbox_design",
+    "outbox_patch",
+    "celery_config",
+    "dlq_runbook",
+    "py_shutdown_config",
+    "py_failure_tests",
+    "drill_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_bjq_handler_side_effect_audit"
+    ],
+    [
+      "s02_bjq_job_payload_design",
+      "s05_bjq_job_duration_profile"
+    ],
+    [
+      "s03_bjq_idempotency_key_store",
+      "s04_bjq_transactional_outbox_enqueue",
+      "s06_bjq_retry_backoff_jitter_policy",
+      "s09_bjq_py_graceful_shutdown"
+    ],
+    [
+      "s07_bjq_py_celery_reliability_config",
+      "s08_bjq_dead_letter_redrive_runbook",
+      "s10_bjq_py_failure_path_tests",
+      "s11_bjq_worker_kill_redelivery_drill"
+    ]
+  ],
+  "estimated_cost": 11,
+  "critical_path": [
+    "s01_bjq_handler_side_effect_audit",
+    "s02_bjq_job_payload_design",
+    "s03_bjq_idempotency_key_store",
+    "s11_bjq_worker_kill_redelivery_drill"
+  ]
+}

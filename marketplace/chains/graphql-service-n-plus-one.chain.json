@@ -1,0 +1,133 @@
+{
+  "name": "graphql-service-n-plus-one",
+  "description": "Find N+1 query fields by counting SQL statements at two result sizes, batch them with the DataLoader for the stack, and confirm the fix in an OpenTelemetry trace.",
+  "steps": [
+    {
+      "id": "s01_gql_n_plus_one_detect",
+      "skill_name": "gql-n-plus-one-detect",
+      "inputs": {
+        "project_dir": "from_user_input",
+        "stack": "from_user_input",
+        "operation_documents": "from_user_input"
+      },
+      "outputs": {
+        "query_count_report": "query_count_report",
+        "n_plus_one_fields": "n_plus_one_fields"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_gql_node_dataloader",
+      "skill_name": "gql-node-dataloader",
+      "inputs": {
+        "n_plus_one_fields": "s01_gql_n_plus_one_detect.n_plus_one_fields",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "loader_code": "loader_code",
+        "query_count_after": "query_count_after"
+      },
+      "condition": "stack == 'apollo' || stack == 'yoga'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_gql_py_strawberry_dataloader",
+      "skill_name": "gql-py-strawberry-dataloader",
+      "inputs": {
+        "n_plus_one_fields": "s01_gql_n_plus_one_detect.n_plus_one_fields",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "loader_code": "loader_code",
+        "query_count_after": "query_count_after"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_gql_go_dataloadgen",
+      "skill_name": "gql-go-dataloadgen",
+      "inputs": {
+        "n_plus_one_fields": "s01_gql_n_plus_one_detect.n_plus_one_fields",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "loader_code": "loader_code",
+        "query_count_after": "query_count_after"
+      },
+      "condition": "stack == 'go'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s05_gql_otel_resolver_tracing",
+      "skill_name": "gql-otel-resolver-tracing",
+      "inputs": {
+        "project_dir": "from_user_input",
+        "stack": "from_user_input",
+        "operation_documents": "from_user_input"
+      },
+      "outputs": {
+        "tracing_setup": "tracing_setup",
+        "slow_resolver_report": "slow_resolver_report"
+      },
+      "parallel_group": 3
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_gql_n_plus_one_detect",
+      "to_step": "s02_gql_node_dataloader",
+      "data_type": "gql-n-plus-one-detect",
+      "field_mapping": {
+        "n_plus_one_fields": "n_plus_one_fields"
+      }
+    },
+    {
+      "from_step": "s01_gql_n_plus_one_detect",
+      "to_step": "s03_gql_py_strawberry_dataloader",
+      "data_type": "gql-n-plus-one-detect",
+      "field_mapping": {
+        "n_plus_one_fields": "n_plus_one_fields"
+      }
+    },
+    {
+      "from_step": "s01_gql_n_plus_one_detect",
+      "to_step": "s04_gql_go_dataloadgen",
+      "data_type": "gql-n-plus-one-detect",
+      "field_mapping": {
+        "n_plus_one_fields": "n_plus_one_fields"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "project_dir",
+    "stack",
+    "operation_documents"
+  ],
+  "terminal_outputs": [
+    "query_count_report",
+    "loader_code",
+    "query_count_after",
+    "tracing_setup",
+    "slow_resolver_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_gql_n_plus_one_detect"
+    ],
+    [
+      "s02_gql_node_dataloader",
+      "s03_gql_py_strawberry_dataloader",
+      "s04_gql_go_dataloadgen"
+    ],
+    [
+      "s05_gql_otel_resolver_tracing"
+    ]
+  ],
+  "estimated_cost": 5,
+  "critical_path": [
+    "s01_gql_n_plus_one_detect",
+    "s02_gql_node_dataloader",
+    "s05_gql_otel_resolver_tracing"
+  ]
+}

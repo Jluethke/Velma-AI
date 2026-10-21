@@ -1,0 +1,164 @@
+{
+  "name": "test-suite-speed-ci",
+  "description": "Speed up test runs in GitHub Actions: baseline, persist test-tool caches, shard by recorded timing with merged coverage, select changed tests on pull requests, then prove coverage parity and report.",
+  "steps": [
+    {
+      "id": "s01_tsp_baseline_lock",
+      "skill_name": "tsp-baseline-lock",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "test_command": "from_user_input",
+        "run_count": "from_user_input"
+      },
+      "outputs": {
+        "baseline_report": "baseline_report",
+        "coverage_baseline": "coverage_baseline"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_tsp_ci_test_tool_cache",
+      "skill_name": "tsp-ci-test-tool-cache",
+      "inputs": {
+        "ci_config_path": "from_user_input",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "ci_cache_config": "ci_cache_config"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s03_tsp_ci_shard_by_timing",
+      "skill_name": "tsp-ci-shard-by-timing",
+      "inputs": {
+        "ci_config_path": "from_user_input",
+        "stack": "from_user_input",
+        "parallel_command": "from_user_input",
+        "shard_count": "from_user_input"
+      },
+      "outputs": {
+        "shard_config": "shard_config"
+      },
+      "condition": "shard_count > 1",
+      "parallel_group": 1
+    },
+    {
+      "id": "s04_tsp_changed_test_selection",
+      "skill_name": "tsp-changed-test-selection",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "base_ref": "from_user_input_optional"
+      },
+      "outputs": {
+        "selection_config": "selection_config"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s05_tsp_coverage_parity_gate",
+      "skill_name": "tsp-coverage-parity-gate",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "coverage_baseline": "s01_tsp_baseline_lock.coverage_baseline",
+        "baseline_report": "s01_tsp_baseline_lock.baseline_report",
+        "parallel_command": "from_user_input",
+        "shard_config": "s03_tsp_ci_shard_by_timing.shard_config"
+      },
+      "outputs": {
+        "coverage_verdict": "coverage_verdict"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s06_tsp_speedup_report",
+      "skill_name": "tsp-speedup-report",
+      "inputs": {
+        "baseline_report": "s01_tsp_baseline_lock.baseline_report",
+        "hotspot_plan": "from_user_input_optional",
+        "parallel_command": "from_user_input",
+        "coverage_verdict": "s05_tsp_coverage_parity_gate.coverage_verdict",
+        "run_count": "from_user_input",
+        "test_command": "from_user_input"
+      },
+      "outputs": {
+        "speedup_report": "speedup_report"
+      },
+      "parallel_group": 3
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_tsp_baseline_lock",
+      "to_step": "s05_tsp_coverage_parity_gate",
+      "data_type": "tsp-baseline-lock",
+      "field_mapping": {
+        "coverage_baseline": "coverage_baseline",
+        "baseline_report": "baseline_report"
+      }
+    },
+    {
+      "from_step": "s03_tsp_ci_shard_by_timing",
+      "to_step": "s05_tsp_coverage_parity_gate",
+      "data_type": "tsp-ci-shard-by-timing",
+      "field_mapping": {
+        "shard_config": "shard_config"
+      }
+    },
+    {
+      "from_step": "s01_tsp_baseline_lock",
+      "to_step": "s06_tsp_speedup_report",
+      "data_type": "tsp-baseline-lock",
+      "field_mapping": {
+        "baseline_report": "baseline_report"
+      }
+    },
+    {
+      "from_step": "s05_tsp_coverage_parity_gate",
+      "to_step": "s06_tsp_speedup_report",
+      "data_type": "tsp-coverage-parity-gate",
+      "field_mapping": {
+        "coverage_verdict": "coverage_verdict"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "repo_path",
+    "stack",
+    "test_command",
+    "run_count",
+    "ci_config_path",
+    "parallel_command",
+    "shard_count",
+    "base_ref",
+    "hotspot_plan"
+  ],
+  "terminal_outputs": [
+    "ci_cache_config",
+    "selection_config",
+    "speedup_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_tsp_baseline_lock",
+      "s02_tsp_ci_test_tool_cache",
+      "s03_tsp_ci_shard_by_timing",
+      "s04_tsp_changed_test_selection"
+    ],
+    [
+      "s05_tsp_coverage_parity_gate"
+    ],
+    [
+      "s06_tsp_speedup_report"
+    ]
+  ],
+  "estimated_cost": 6,
+  "critical_path": [
+    "s03_tsp_ci_shard_by_timing",
+    "s05_tsp_coverage_parity_gate",
+    "s06_tsp_speedup_report"
+  ]
+}

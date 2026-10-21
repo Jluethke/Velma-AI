@@ -1,0 +1,250 @@
+{
+  "name": "safe-refactoring-go",
+  "description": "Go refactoring with gopls: baseline, golden master tests, apidiff snapshot, deadcode removal, gopls rename and inline, gofmt -r rewrites, then per-commit verification.",
+  "steps": [
+    {
+      "id": "s01_srf_baseline_green_check",
+      "skill_name": "srf-baseline-green-check",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "test_command": "from_user_input",
+        "refactorings": "from_user_input",
+        "refactor_name": "from_user_input"
+      },
+      "outputs": {
+        "baseline_commit": "baseline_commit",
+        "refactor_branch": "refactor_branch",
+        "baseline_report": "baseline_report"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_srf_go_golden_master_tests",
+      "skill_name": "srf-go-golden-master-tests",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "target_paths": "from_user_input",
+        "test_command": "from_user_input",
+        "baseline_commit": "s01_srf_baseline_green_check.baseline_commit"
+      },
+      "outputs": {
+        "characterization_tests": "characterization_tests",
+        "target_coverage": "target_coverage"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_srf_go_api_snapshot_apidiff",
+      "skill_name": "srf-go-api-snapshot-apidiff",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "go_packages": "from_user_input",
+        "baseline_commit": "s01_srf_baseline_green_check.baseline_commit"
+      },
+      "outputs": {
+        "api_snapshot": "api_snapshot",
+        "api_check_command": "api_check_command"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_srf_go_dead_code_deadcode",
+      "skill_name": "srf-go-dead-code-deadcode",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "test_command": "from_user_input",
+        "characterization_tests": "s02_srf_go_golden_master_tests.characterization_tests",
+        "dead_code_scope": "from_user_input"
+      },
+      "outputs": {
+        "step_commits": "step_commits",
+        "step_log": "step_log"
+      },
+      "condition": "'dead_code' in refactorings",
+      "parallel_group": 4
+    },
+    {
+      "id": "s05_srf_go_rename_gopls",
+      "skill_name": "srf-go-rename-gopls",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "test_command": "from_user_input",
+        "characterization_tests": "s02_srf_go_golden_master_tests.characterization_tests",
+        "rename_target": "from_user_input",
+        "new_name": "from_user_input"
+      },
+      "outputs": {
+        "step_commits": "step_commits",
+        "step_log": "step_log"
+      },
+      "condition": "'rename' in refactorings",
+      "parallel_group": 5
+    },
+    {
+      "id": "s06_srf_go_inline_call_gopls",
+      "skill_name": "srf-go-inline-call-gopls",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "test_command": "from_user_input",
+        "characterization_tests": "s02_srf_go_golden_master_tests.characterization_tests",
+        "inline_target": "from_user_input"
+      },
+      "outputs": {
+        "step_commits": "step_commits",
+        "step_log": "step_log"
+      },
+      "condition": "'inline' in refactorings",
+      "parallel_group": 6
+    },
+    {
+      "id": "s07_srf_go_rewrite_gofmt_r",
+      "skill_name": "srf-go-rewrite-gofmt-r",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "test_command": "from_user_input",
+        "baseline_commit": "s01_srf_baseline_green_check.baseline_commit",
+        "codemod_spec": "from_user_input"
+      },
+      "outputs": {
+        "step_commits": "step_commits",
+        "step_log": "step_log"
+      },
+      "condition": "'codemod_gofmt' in refactorings",
+      "parallel_group": 7
+    },
+    {
+      "id": "s08_srf_verify_step_history",
+      "skill_name": "srf-verify-step-history",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "test_command": "from_user_input",
+        "baseline_commit": "s01_srf_baseline_green_check.baseline_commit",
+        "refactor_branch": "s01_srf_baseline_green_check.refactor_branch",
+        "api_check_command": "from_user_input_optional"
+      },
+      "outputs": {
+        "verification_report": "verification_report",
+        "red_commits": "red_commits"
+      },
+      "parallel_group": 8
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_srf_baseline_green_check",
+      "to_step": "s02_srf_go_golden_master_tests",
+      "data_type": "srf-baseline-green-check",
+      "field_mapping": {
+        "baseline_commit": "baseline_commit"
+      }
+    },
+    {
+      "from_step": "s01_srf_baseline_green_check",
+      "to_step": "s03_srf_go_api_snapshot_apidiff",
+      "data_type": "srf-baseline-green-check",
+      "field_mapping": {
+        "baseline_commit": "baseline_commit"
+      }
+    },
+    {
+      "from_step": "s02_srf_go_golden_master_tests",
+      "to_step": "s04_srf_go_dead_code_deadcode",
+      "data_type": "srf-go-golden-master-tests",
+      "field_mapping": {
+        "characterization_tests": "characterization_tests"
+      }
+    },
+    {
+      "from_step": "s02_srf_go_golden_master_tests",
+      "to_step": "s05_srf_go_rename_gopls",
+      "data_type": "srf-go-golden-master-tests",
+      "field_mapping": {
+        "characterization_tests": "characterization_tests"
+      }
+    },
+    {
+      "from_step": "s02_srf_go_golden_master_tests",
+      "to_step": "s06_srf_go_inline_call_gopls",
+      "data_type": "srf-go-golden-master-tests",
+      "field_mapping": {
+        "characterization_tests": "characterization_tests"
+      }
+    },
+    {
+      "from_step": "s01_srf_baseline_green_check",
+      "to_step": "s07_srf_go_rewrite_gofmt_r",
+      "data_type": "srf-baseline-green-check",
+      "field_mapping": {
+        "baseline_commit": "baseline_commit"
+      }
+    },
+    {
+      "from_step": "s01_srf_baseline_green_check",
+      "to_step": "s08_srf_verify_step_history",
+      "data_type": "srf-baseline-green-check",
+      "field_mapping": {
+        "baseline_commit": "baseline_commit",
+        "refactor_branch": "refactor_branch"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "repo_path",
+    "stack",
+    "test_command",
+    "refactorings",
+    "refactor_name",
+    "target_paths",
+    "go_packages",
+    "dead_code_scope",
+    "rename_target",
+    "new_name",
+    "inline_target",
+    "codemod_spec",
+    "api_check_command"
+  ],
+  "terminal_outputs": [
+    "baseline_report",
+    "verification_report",
+    "red_commits",
+    "step_log"
+  ],
+  "parallel_groups": [
+    [
+      "s01_srf_baseline_green_check"
+    ],
+    [
+      "s02_srf_go_golden_master_tests"
+    ],
+    [
+      "s03_srf_go_api_snapshot_apidiff"
+    ],
+    [
+      "s04_srf_go_dead_code_deadcode"
+    ],
+    [
+      "s05_srf_go_rename_gopls"
+    ],
+    [
+      "s06_srf_go_inline_call_gopls"
+    ],
+    [
+      "s07_srf_go_rewrite_gofmt_r"
+    ],
+    [
+      "s08_srf_verify_step_history"
+    ]
+  ],
+  "estimated_cost": 8,
+  "critical_path": [
+    "s01_srf_baseline_green_check",
+    "s02_srf_go_golden_master_tests",
+    "s03_srf_go_api_snapshot_apidiff",
+    "s04_srf_go_dead_code_deadcode",
+    "s05_srf_go_rename_gopls",
+    "s06_srf_go_inline_call_gopls",
+    "s07_srf_go_rewrite_gofmt_r",
+    "s08_srf_verify_step_history"
+  ]
+}

@@ -1,0 +1,206 @@
+{
+  "name": "type-safety-measure-gate",
+  "description": "Measure where a repository stands (error baseline and type coverage for TypeScript or Python) and install a CI gate that stops regressions while the migration proceeds.",
+  "steps": [
+    {
+      "id": "s01_tsm_migration_intake",
+      "skill_name": "tsm-migration-intake",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "python_checker": "from_user_input_optional",
+        "test_command": "from_user_input_optional"
+      },
+      "outputs": {
+        "migration_profile": "migration_profile"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_tsm_ts_error_baseline",
+      "skill_name": "tsm-ts-error-baseline",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "migration_profile": "s01_tsm_migration_intake.migration_profile"
+      },
+      "outputs": {
+        "ts_error_baseline": "ts_error_baseline"
+      },
+      "condition": "stack == 'typescript'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_tsm_ts_type_coverage",
+      "skill_name": "tsm-ts-type-coverage",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "migration_profile": "s01_tsm_migration_intake.migration_profile"
+      },
+      "outputs": {
+        "ts_type_coverage": "ts_type_coverage"
+      },
+      "condition": "stack == 'typescript'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_tsm_py_error_baseline",
+      "skill_name": "tsm-py-error-baseline",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "migration_profile": "s01_tsm_migration_intake.migration_profile"
+      },
+      "outputs": {
+        "py_error_baseline": "py_error_baseline"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s05_tsm_py_type_coverage",
+      "skill_name": "tsm-py-type-coverage",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "migration_profile": "s01_tsm_migration_intake.migration_profile"
+      },
+      "outputs": {
+        "py_type_coverage": "py_type_coverage"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s06_tsm_ts_ci_gate",
+      "skill_name": "tsm-ts-ci-gate",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "migration_profile": "s01_tsm_migration_intake.migration_profile",
+        "ts_type_coverage": "s03_tsm_ts_type_coverage.ts_type_coverage",
+        "ts_boundary_validators": "from_user_input_optional",
+        "ci_platform": "from_user_input_optional"
+      },
+      "outputs": {
+        "ts_ci_gate": "ts_ci_gate"
+      },
+      "condition": "stack == 'typescript'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s07_tsm_py_ci_gate",
+      "skill_name": "tsm-py-ci-gate",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "migration_profile": "s01_tsm_migration_intake.migration_profile",
+        "py_type_coverage": "s05_tsm_py_type_coverage.py_type_coverage",
+        "py_boundary_validators": "from_user_input_optional",
+        "ci_platform": "from_user_input_optional"
+      },
+      "outputs": {
+        "py_ci_gate": "py_ci_gate"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 3
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_tsm_migration_intake",
+      "to_step": "s02_tsm_ts_error_baseline",
+      "data_type": "tsm-migration-intake",
+      "field_mapping": {
+        "migration_profile": "migration_profile"
+      }
+    },
+    {
+      "from_step": "s01_tsm_migration_intake",
+      "to_step": "s03_tsm_ts_type_coverage",
+      "data_type": "tsm-migration-intake",
+      "field_mapping": {
+        "migration_profile": "migration_profile"
+      }
+    },
+    {
+      "from_step": "s01_tsm_migration_intake",
+      "to_step": "s04_tsm_py_error_baseline",
+      "data_type": "tsm-migration-intake",
+      "field_mapping": {
+        "migration_profile": "migration_profile"
+      }
+    },
+    {
+      "from_step": "s01_tsm_migration_intake",
+      "to_step": "s05_tsm_py_type_coverage",
+      "data_type": "tsm-migration-intake",
+      "field_mapping": {
+        "migration_profile": "migration_profile"
+      }
+    },
+    {
+      "from_step": "s01_tsm_migration_intake",
+      "to_step": "s06_tsm_ts_ci_gate",
+      "data_type": "tsm-migration-intake",
+      "field_mapping": {
+        "migration_profile": "migration_profile"
+      }
+    },
+    {
+      "from_step": "s03_tsm_ts_type_coverage",
+      "to_step": "s06_tsm_ts_ci_gate",
+      "data_type": "tsm-ts-type-coverage",
+      "field_mapping": {
+        "ts_type_coverage": "ts_type_coverage"
+      }
+    },
+    {
+      "from_step": "s01_tsm_migration_intake",
+      "to_step": "s07_tsm_py_ci_gate",
+      "data_type": "tsm-migration-intake",
+      "field_mapping": {
+        "migration_profile": "migration_profile"
+      }
+    },
+    {
+      "from_step": "s05_tsm_py_type_coverage",
+      "to_step": "s07_tsm_py_ci_gate",
+      "data_type": "tsm-py-type-coverage",
+      "field_mapping": {
+        "py_type_coverage": "py_type_coverage"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "repo_path",
+    "stack",
+    "python_checker",
+    "test_command",
+    "ts_boundary_validators",
+    "ci_platform",
+    "py_boundary_validators"
+  ],
+  "terminal_outputs": [
+    "ts_error_baseline",
+    "py_error_baseline",
+    "ts_ci_gate",
+    "py_ci_gate"
+  ],
+  "parallel_groups": [
+    [
+      "s01_tsm_migration_intake"
+    ],
+    [
+      "s02_tsm_ts_error_baseline",
+      "s03_tsm_ts_type_coverage",
+      "s04_tsm_py_error_baseline",
+      "s05_tsm_py_type_coverage"
+    ],
+    [
+      "s06_tsm_ts_ci_gate",
+      "s07_tsm_py_ci_gate"
+    ]
+  ],
+  "estimated_cost": 7,
+  "critical_path": [
+    "s01_tsm_migration_intake",
+    "s05_tsm_py_type_coverage",
+    "s07_tsm_py_ci_gate"
+  ]
+}

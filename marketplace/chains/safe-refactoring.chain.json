@@ -1,0 +1,898 @@
+{
+  "name": "safe-refactoring",
+  "description": "Full behavior-preserving refactoring catalog: green baseline, stack-specific characterization and public API snapshots, then each selected named refactoring or codemod as tested single-purpose commits, ending with a per-commit verification of the branch.",
+  "steps": [
+    {
+      "id": "s01_srf_baseline_green_check",
+      "skill_name": "srf-baseline-green-check",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "test_command": "from_user_input",
+        "refactorings": "from_user_input",
+        "refactor_name": "from_user_input"
+      },
+      "outputs": {
+        "baseline_commit": "baseline_commit",
+        "refactor_branch": "refactor_branch",
+        "baseline_report": "baseline_report"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_srf_py_characterization_tests",
+      "skill_name": "srf-py-characterization-tests",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "target_paths": "from_user_input",
+        "test_command": "from_user_input",
+        "baseline_commit": "s01_srf_baseline_green_check.baseline_commit"
+      },
+      "outputs": {
+        "characterization_tests": "characterization_tests",
+        "target_coverage": "target_coverage"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_srf_node_characterization_tests",
+      "skill_name": "srf-node-characterization-tests",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "target_paths": "from_user_input",
+        "test_command": "from_user_input",
+        "baseline_commit": "s01_srf_baseline_green_check.baseline_commit"
+      },
+      "outputs": {
+        "characterization_tests": "characterization_tests",
+        "target_coverage": "target_coverage"
+      },
+      "condition": "stack in ['typescript', 'javascript']",
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_srf_go_golden_master_tests",
+      "skill_name": "srf-go-golden-master-tests",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "target_paths": "from_user_input",
+        "test_command": "from_user_input",
+        "baseline_commit": "s01_srf_baseline_green_check.baseline_commit"
+      },
+      "outputs": {
+        "characterization_tests": "characterization_tests",
+        "target_coverage": "target_coverage"
+      },
+      "condition": "stack == 'go'",
+      "parallel_group": 4
+    },
+    {
+      "id": "s05_srf_py_approval_tests_combinations",
+      "skill_name": "srf-py-approval-tests-combinations",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "approval_function": "from_user_input",
+        "input_domains": "from_user_input",
+        "test_command": "from_user_input",
+        "characterization_tests": "s02_srf_py_characterization_tests.characterization_tests"
+      },
+      "outputs": {
+        "approval_tests": "approval_tests"
+      },
+      "condition": "stack == 'python' and 'approval_tests' in refactorings",
+      "parallel_group": 5
+    },
+    {
+      "id": "s06_srf_py_api_snapshot_griffe",
+      "skill_name": "srf-py-api-snapshot-griffe",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "package_name": "from_user_input",
+        "baseline_commit": "s01_srf_baseline_green_check.baseline_commit"
+      },
+      "outputs": {
+        "api_snapshot": "api_snapshot",
+        "api_check_command": "api_check_command"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 6
+    },
+    {
+      "id": "s07_srf_ts_api_snapshot_api_extractor",
+      "skill_name": "srf-ts-api-snapshot-api-extractor",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "package_entry_dts": "from_user_input",
+        "baseline_commit": "s01_srf_baseline_green_check.baseline_commit"
+      },
+      "outputs": {
+        "api_snapshot": "api_snapshot",
+        "api_check_command": "api_check_command"
+      },
+      "condition": "stack == 'typescript'",
+      "parallel_group": 7
+    },
+    {
+      "id": "s08_srf_go_api_snapshot_apidiff",
+      "skill_name": "srf-go-api-snapshot-apidiff",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "go_packages": "from_user_input",
+        "baseline_commit": "s01_srf_baseline_green_check.baseline_commit"
+      },
+      "outputs": {
+        "api_snapshot": "api_snapshot",
+        "api_check_command": "api_check_command"
+      },
+      "condition": "stack == 'go'",
+      "parallel_group": 8
+    },
+    {
+      "id": "s09_srf_py_break_import_cycle",
+      "skill_name": "srf-py-break-import-cycle",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "test_command": "from_user_input",
+        "characterization_tests": "s02_srf_py_characterization_tests.characterization_tests",
+        "package_name": "from_user_input"
+      },
+      "outputs": {
+        "step_commits": "step_commits",
+        "step_log": "step_log"
+      },
+      "condition": "stack == 'python' and 'import_cycle' in refactorings",
+      "parallel_group": 9
+    },
+    {
+      "id": "s10_srf_ts_break_import_cycle_madge",
+      "skill_name": "srf-ts-break-import-cycle-madge",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "test_command": "from_user_input",
+        "characterization_tests": "s03_srf_node_characterization_tests.characterization_tests",
+        "source_root": "from_user_input"
+      },
+      "outputs": {
+        "step_commits": "step_commits",
+        "step_log": "step_log"
+      },
+      "condition": "stack in ['typescript', 'javascript'] and 'import_cycle' in refactorings",
+      "parallel_group": 10
+    },
+    {
+      "id": "s11_srf_py_dead_code_vulture_coverage",
+      "skill_name": "srf-py-dead-code-vulture-coverage",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "test_command": "from_user_input",
+        "characterization_tests": "s02_srf_py_characterization_tests.characterization_tests",
+        "dead_code_scope": "from_user_input"
+      },
+      "outputs": {
+        "step_commits": "step_commits",
+        "step_log": "step_log"
+      },
+      "condition": "stack == 'python' and 'dead_code' in refactorings",
+      "parallel_group": 11
+    },
+    {
+      "id": "s12_srf_ts_dead_code_knip",
+      "skill_name": "srf-ts-dead-code-knip",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "test_command": "from_user_input",
+        "characterization_tests": "s03_srf_node_characterization_tests.characterization_tests",
+        "dead_code_scope": "from_user_input"
+      },
+      "outputs": {
+        "step_commits": "step_commits",
+        "step_log": "step_log"
+      },
+      "condition": "stack in ['typescript', 'javascript'] and 'dead_code' in refactorings",
+      "parallel_group": 12
+    },
+    {
+      "id": "s13_srf_go_dead_code_deadcode",
+      "skill_name": "srf-go-dead-code-deadcode",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "test_command": "from_user_input",
+        "characterization_tests": "s04_srf_go_golden_master_tests.characterization_tests",
+        "dead_code_scope": "from_user_input"
+      },
+      "outputs": {
+        "step_commits": "step_commits",
+        "step_log": "step_log"
+      },
+      "condition": "stack == 'go' and 'dead_code' in refactorings",
+      "parallel_group": 13
+    },
+    {
+      "id": "s14_srf_py_rename_rope",
+      "skill_name": "srf-py-rename-rope",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "test_command": "from_user_input",
+        "characterization_tests": "s02_srf_py_characterization_tests.characterization_tests",
+        "rename_target": "from_user_input",
+        "new_name": "from_user_input"
+      },
+      "outputs": {
+        "step_commits": "step_commits",
+        "step_log": "step_log"
+      },
+      "condition": "stack == 'python' and 'rename' in refactorings",
+      "parallel_group": 14
+    },
+    {
+      "id": "s15_srf_ts_rename_ts_morph",
+      "skill_name": "srf-ts-rename-ts-morph",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "test_command": "from_user_input",
+        "characterization_tests": "s03_srf_node_characterization_tests.characterization_tests",
+        "rename_target": "from_user_input",
+        "new_name": "from_user_input"
+      },
+      "outputs": {
+        "step_commits": "step_commits",
+        "step_log": "step_log"
+      },
+      "condition": "stack in ['typescript', 'javascript'] and 'rename' in refactorings",
+      "parallel_group": 15
+    },
+    {
+      "id": "s16_srf_go_rename_gopls",
+      "skill_name": "srf-go-rename-gopls",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "test_command": "from_user_input",
+        "characterization_tests": "s04_srf_go_golden_master_tests.characterization_tests",
+        "rename_target": "from_user_input",
+        "new_name": "from_user_input"
+      },
+      "outputs": {
+        "step_commits": "step_commits",
+        "step_log": "step_log"
+      },
+      "condition": "stack == 'go' and 'rename' in refactorings",
+      "parallel_group": 16
+    },
+    {
+      "id": "s17_srf_py_move_module_rope",
+      "skill_name": "srf-py-move-module-rope",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "test_command": "from_user_input",
+        "characterization_tests": "s02_srf_py_characterization_tests.characterization_tests",
+        "move_source": "from_user_input",
+        "move_destination": "from_user_input"
+      },
+      "outputs": {
+        "step_commits": "step_commits",
+        "step_log": "step_log"
+      },
+      "condition": "stack == 'python' and 'move_module' in refactorings",
+      "parallel_group": 17
+    },
+    {
+      "id": "s18_srf_ts_move_file_ts_morph",
+      "skill_name": "srf-ts-move-file-ts-morph",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "test_command": "from_user_input",
+        "characterization_tests": "s03_srf_node_characterization_tests.characterization_tests",
+        "move_source": "from_user_input",
+        "move_destination": "from_user_input"
+      },
+      "outputs": {
+        "step_commits": "step_commits",
+        "step_log": "step_log"
+      },
+      "condition": "stack in ['typescript', 'javascript'] and 'move_module' in refactorings",
+      "parallel_group": 18
+    },
+    {
+      "id": "s19_srf_py_extract_function_rope",
+      "skill_name": "srf-py-extract-function-rope",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "test_command": "from_user_input",
+        "characterization_tests": "s02_srf_py_characterization_tests.characterization_tests",
+        "extract_file": "from_user_input",
+        "extract_lines": "from_user_input",
+        "new_function_name": "from_user_input"
+      },
+      "outputs": {
+        "step_commits": "step_commits",
+        "step_log": "step_log"
+      },
+      "condition": "stack == 'python' and 'extract_function' in refactorings",
+      "parallel_group": 19
+    },
+    {
+      "id": "s20_srf_ts_extract_function_tsserver",
+      "skill_name": "srf-ts-extract-function-tsserver",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "test_command": "from_user_input",
+        "characterization_tests": "s03_srf_node_characterization_tests.characterization_tests",
+        "extract_file": "from_user_input",
+        "extract_lines": "from_user_input",
+        "new_function_name": "from_user_input"
+      },
+      "outputs": {
+        "step_commits": "step_commits",
+        "step_log": "step_log"
+      },
+      "condition": "stack == 'typescript' and 'extract_function' in refactorings",
+      "parallel_group": 20
+    },
+    {
+      "id": "s21_srf_py_inline_rope",
+      "skill_name": "srf-py-inline-rope",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "test_command": "from_user_input",
+        "characterization_tests": "s02_srf_py_characterization_tests.characterization_tests",
+        "inline_target": "from_user_input"
+      },
+      "outputs": {
+        "step_commits": "step_commits",
+        "step_log": "step_log"
+      },
+      "condition": "stack == 'python' and 'inline' in refactorings",
+      "parallel_group": 21
+    },
+    {
+      "id": "s22_srf_go_inline_call_gopls",
+      "skill_name": "srf-go-inline-call-gopls",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "test_command": "from_user_input",
+        "characterization_tests": "s04_srf_go_golden_master_tests.characterization_tests",
+        "inline_target": "from_user_input"
+      },
+      "outputs": {
+        "step_commits": "step_commits",
+        "step_log": "step_log"
+      },
+      "condition": "stack == 'go' and 'inline' in refactorings",
+      "parallel_group": 22
+    },
+    {
+      "id": "s23_srf_split_phase",
+      "skill_name": "srf-split-phase",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "test_command": "from_user_input",
+        "baseline_commit": "s01_srf_baseline_green_check.baseline_commit",
+        "split_function": "from_user_input"
+      },
+      "outputs": {
+        "step_commits": "step_commits",
+        "step_log": "step_log"
+      },
+      "condition": "'split_phase' in refactorings",
+      "parallel_group": 23
+    },
+    {
+      "id": "s24_srf_introduce_parameter_object",
+      "skill_name": "srf-introduce-parameter-object",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "test_command": "from_user_input",
+        "baseline_commit": "s01_srf_baseline_green_check.baseline_commit",
+        "param_object_function": "from_user_input",
+        "parameter_group": "from_user_input",
+        "new_type_name": "from_user_input"
+      },
+      "outputs": {
+        "step_commits": "step_commits",
+        "step_log": "step_log"
+      },
+      "condition": "'parameter_object' in refactorings",
+      "parallel_group": 24
+    },
+    {
+      "id": "s25_srf_replace_conditional_with_polymorphism",
+      "skill_name": "srf-replace-conditional-with-polymorphism",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "test_command": "from_user_input",
+        "baseline_commit": "s01_srf_baseline_green_check.baseline_commit",
+        "conditional_location": "from_user_input",
+        "type_code_name": "from_user_input"
+      },
+      "outputs": {
+        "step_commits": "step_commits",
+        "step_log": "step_log"
+      },
+      "condition": "'polymorphism' in refactorings",
+      "parallel_group": 25
+    },
+    {
+      "id": "s26_srf_js_codemod_jscodeshift",
+      "skill_name": "srf-js-codemod-jscodeshift",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "test_command": "from_user_input",
+        "baseline_commit": "s01_srf_baseline_green_check.baseline_commit",
+        "codemod_spec": "from_user_input",
+        "source_root": "from_user_input"
+      },
+      "outputs": {
+        "step_commits": "step_commits",
+        "step_log": "step_log"
+      },
+      "condition": "stack in ['typescript', 'javascript'] and 'codemod_jscodeshift' in refactorings",
+      "parallel_group": 26
+    },
+    {
+      "id": "s27_srf_go_rewrite_gofmt_r",
+      "skill_name": "srf-go-rewrite-gofmt-r",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "test_command": "from_user_input",
+        "baseline_commit": "s01_srf_baseline_green_check.baseline_commit",
+        "codemod_spec": "from_user_input"
+      },
+      "outputs": {
+        "step_commits": "step_commits",
+        "step_log": "step_log"
+      },
+      "condition": "stack == 'go' and 'codemod_gofmt' in refactorings",
+      "parallel_group": 27
+    },
+    {
+      "id": "s28_srf_comby_structural_rewrite",
+      "skill_name": "srf-comby-structural-rewrite",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "test_command": "from_user_input",
+        "baseline_commit": "s01_srf_baseline_green_check.baseline_commit",
+        "codemod_spec": "from_user_input",
+        "file_extension": "from_user_input"
+      },
+      "outputs": {
+        "step_commits": "step_commits",
+        "step_log": "step_log"
+      },
+      "condition": "'codemod_comby' in refactorings",
+      "parallel_group": 28
+    },
+    {
+      "id": "s29_srf_semgrep_autofix_rewrite",
+      "skill_name": "srf-semgrep-autofix-rewrite",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "test_command": "from_user_input",
+        "baseline_commit": "s01_srf_baseline_green_check.baseline_commit",
+        "codemod_spec": "from_user_input",
+        "semgrep_language": "from_user_input"
+      },
+      "outputs": {
+        "step_commits": "step_commits",
+        "step_log": "step_log"
+      },
+      "condition": "'codemod_semgrep' in refactorings",
+      "parallel_group": 29
+    },
+    {
+      "id": "s30_srf_verify_step_history",
+      "skill_name": "srf-verify-step-history",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "test_command": "from_user_input",
+        "baseline_commit": "s01_srf_baseline_green_check.baseline_commit",
+        "refactor_branch": "s01_srf_baseline_green_check.refactor_branch",
+        "api_check_command": "from_user_input_optional"
+      },
+      "outputs": {
+        "verification_report": "verification_report",
+        "red_commits": "red_commits"
+      },
+      "parallel_group": 30
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_srf_baseline_green_check",
+      "to_step": "s02_srf_py_characterization_tests",
+      "data_type": "srf-baseline-green-check",
+      "field_mapping": {
+        "baseline_commit": "baseline_commit"
+      }
+    },
+    {
+      "from_step": "s01_srf_baseline_green_check",
+      "to_step": "s03_srf_node_characterization_tests",
+      "data_type": "srf-baseline-green-check",
+      "field_mapping": {
+        "baseline_commit": "baseline_commit"
+      }
+    },
+    {
+      "from_step": "s01_srf_baseline_green_check",
+      "to_step": "s04_srf_go_golden_master_tests",
+      "data_type": "srf-baseline-green-check",
+      "field_mapping": {
+        "baseline_commit": "baseline_commit"
+      }
+    },
+    {
+      "from_step": "s02_srf_py_characterization_tests",
+      "to_step": "s05_srf_py_approval_tests_combinations",
+      "data_type": "srf-py-characterization-tests",
+      "field_mapping": {
+        "characterization_tests": "characterization_tests"
+      }
+    },
+    {
+      "from_step": "s01_srf_baseline_green_check",
+      "to_step": "s06_srf_py_api_snapshot_griffe",
+      "data_type": "srf-baseline-green-check",
+      "field_mapping": {
+        "baseline_commit": "baseline_commit"
+      }
+    },
+    {
+      "from_step": "s01_srf_baseline_green_check",
+      "to_step": "s07_srf_ts_api_snapshot_api_extractor",
+      "data_type": "srf-baseline-green-check",
+      "field_mapping": {
+        "baseline_commit": "baseline_commit"
+      }
+    },
+    {
+      "from_step": "s01_srf_baseline_green_check",
+      "to_step": "s08_srf_go_api_snapshot_apidiff",
+      "data_type": "srf-baseline-green-check",
+      "field_mapping": {
+        "baseline_commit": "baseline_commit"
+      }
+    },
+    {
+      "from_step": "s02_srf_py_characterization_tests",
+      "to_step": "s09_srf_py_break_import_cycle",
+      "data_type": "srf-py-characterization-tests",
+      "field_mapping": {
+        "characterization_tests": "characterization_tests"
+      }
+    },
+    {
+      "from_step": "s03_srf_node_characterization_tests",
+      "to_step": "s10_srf_ts_break_import_cycle_madge",
+      "data_type": "srf-node-characterization-tests",
+      "field_mapping": {
+        "characterization_tests": "characterization_tests"
+      }
+    },
+    {
+      "from_step": "s02_srf_py_characterization_tests",
+      "to_step": "s11_srf_py_dead_code_vulture_coverage",
+      "data_type": "srf-py-characterization-tests",
+      "field_mapping": {
+        "characterization_tests": "characterization_tests"
+      }
+    },
+    {
+      "from_step": "s03_srf_node_characterization_tests",
+      "to_step": "s12_srf_ts_dead_code_knip",
+      "data_type": "srf-node-characterization-tests",
+      "field_mapping": {
+        "characterization_tests": "characterization_tests"
+      }
+    },
+    {
+      "from_step": "s04_srf_go_golden_master_tests",
+      "to_step": "s13_srf_go_dead_code_deadcode",
+      "data_type": "srf-go-golden-master-tests",
+      "field_mapping": {
+        "characterization_tests": "characterization_tests"
+      }
+    },
+    {
+      "from_step": "s02_srf_py_characterization_tests",
+      "to_step": "s14_srf_py_rename_rope",
+      "data_type": "srf-py-characterization-tests",
+      "field_mapping": {
+        "characterization_tests": "characterization_tests"
+      }
+    },
+    {
+      "from_step": "s03_srf_node_characterization_tests",
+      "to_step": "s15_srf_ts_rename_ts_morph",
+      "data_type": "srf-node-characterization-tests",
+      "field_mapping": {
+        "characterization_tests": "characterization_tests"
+      }
+    },
+    {
+      "from_step": "s04_srf_go_golden_master_tests",
+      "to_step": "s16_srf_go_rename_gopls",
+      "data_type": "srf-go-golden-master-tests",
+      "field_mapping": {
+        "characterization_tests": "characterization_tests"
+      }
+    },
+    {
+      "from_step": "s02_srf_py_characterization_tests",
+      "to_step": "s17_srf_py_move_module_rope",
+      "data_type": "srf-py-characterization-tests",
+      "field_mapping": {
+        "characterization_tests": "characterization_tests"
+      }
+    },
+    {
+      "from_step": "s03_srf_node_characterization_tests",
+      "to_step": "s18_srf_ts_move_file_ts_morph",
+      "data_type": "srf-node-characterization-tests",
+      "field_mapping": {
+        "characterization_tests": "characterization_tests"
+      }
+    },
+    {
+      "from_step": "s02_srf_py_characterization_tests",
+      "to_step": "s19_srf_py_extract_function_rope",
+      "data_type": "srf-py-characterization-tests",
+      "field_mapping": {
+        "characterization_tests": "characterization_tests"
+      }
+    },
+    {
+      "from_step": "s03_srf_node_characterization_tests",
+      "to_step": "s20_srf_ts_extract_function_tsserver",
+      "data_type": "srf-node-characterization-tests",
+      "field_mapping": {
+        "characterization_tests": "characterization_tests"
+      }
+    },
+    {
+      "from_step": "s02_srf_py_characterization_tests",
+      "to_step": "s21_srf_py_inline_rope",
+      "data_type": "srf-py-characterization-tests",
+      "field_mapping": {
+        "characterization_tests": "characterization_tests"
+      }
+    },
+    {
+      "from_step": "s04_srf_go_golden_master_tests",
+      "to_step": "s22_srf_go_inline_call_gopls",
+      "data_type": "srf-go-golden-master-tests",
+      "field_mapping": {
+        "characterization_tests": "characterization_tests"
+      }
+    },
+    {
+      "from_step": "s01_srf_baseline_green_check",
+      "to_step": "s23_srf_split_phase",
+      "data_type": "srf-baseline-green-check",
+      "field_mapping": {
+        "baseline_commit": "baseline_commit"
+      }
+    },
+    {
+      "from_step": "s01_srf_baseline_green_check",
+      "to_step": "s24_srf_introduce_parameter_object",
+      "data_type": "srf-baseline-green-check",
+      "field_mapping": {
+        "baseline_commit": "baseline_commit"
+      }
+    },
+    {
+      "from_step": "s01_srf_baseline_green_check",
+      "to_step": "s25_srf_replace_conditional_with_polymorphism",
+      "data_type": "srf-baseline-green-check",
+      "field_mapping": {
+        "baseline_commit": "baseline_commit"
+      }
+    },
+    {
+      "from_step": "s01_srf_baseline_green_check",
+      "to_step": "s26_srf_js_codemod_jscodeshift",
+      "data_type": "srf-baseline-green-check",
+      "field_mapping": {
+        "baseline_commit": "baseline_commit"
+      }
+    },
+    {
+      "from_step": "s01_srf_baseline_green_check",
+      "to_step": "s27_srf_go_rewrite_gofmt_r",
+      "data_type": "srf-baseline-green-check",
+      "field_mapping": {
+        "baseline_commit": "baseline_commit"
+      }
+    },
+    {
+      "from_step": "s01_srf_baseline_green_check",
+      "to_step": "s28_srf_comby_structural_rewrite",
+      "data_type": "srf-baseline-green-check",
+      "field_mapping": {
+        "baseline_commit": "baseline_commit"
+      }
+    },
+    {
+      "from_step": "s01_srf_baseline_green_check",
+      "to_step": "s29_srf_semgrep_autofix_rewrite",
+      "data_type": "srf-baseline-green-check",
+      "field_mapping": {
+        "baseline_commit": "baseline_commit"
+      }
+    },
+    {
+      "from_step": "s01_srf_baseline_green_check",
+      "to_step": "s30_srf_verify_step_history",
+      "data_type": "srf-baseline-green-check",
+      "field_mapping": {
+        "baseline_commit": "baseline_commit",
+        "refactor_branch": "refactor_branch"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "repo_path",
+    "stack",
+    "test_command",
+    "refactorings",
+    "refactor_name",
+    "target_paths",
+    "approval_function",
+    "input_domains",
+    "package_name",
+    "package_entry_dts",
+    "go_packages",
+    "source_root",
+    "dead_code_scope",
+    "rename_target",
+    "new_name",
+    "move_source",
+    "move_destination",
+    "extract_file",
+    "extract_lines",
+    "new_function_name",
+    "inline_target",
+    "split_function",
+    "param_object_function",
+    "parameter_group",
+    "new_type_name",
+    "conditional_location",
+    "type_code_name",
+    "codemod_spec",
+    "file_extension",
+    "semgrep_language",
+    "api_check_command"
+  ],
+  "terminal_outputs": [
+    "baseline_report",
+    "verification_report",
+    "red_commits",
+    "step_log"
+  ],
+  "parallel_groups": [
+    [
+      "s01_srf_baseline_green_check"
+    ],
+    [
+      "s02_srf_py_characterization_tests"
+    ],
+    [
+      "s03_srf_node_characterization_tests"
+    ],
+    [
+      "s04_srf_go_golden_master_tests"
+    ],
+    [
+      "s05_srf_py_approval_tests_combinations"
+    ],
+    [
+      "s06_srf_py_api_snapshot_griffe"
+    ],
+    [
+      "s07_srf_ts_api_snapshot_api_extractor"
+    ],
+    [
+      "s08_srf_go_api_snapshot_apidiff"
+    ],
+    [
+      "s09_srf_py_break_import_cycle"
+    ],
+    [
+      "s10_srf_ts_break_import_cycle_madge"
+    ],
+    [
+      "s11_srf_py_dead_code_vulture_coverage"
+    ],
+    [
+      "s12_srf_ts_dead_code_knip"
+    ],
+    [
+      "s13_srf_go_dead_code_deadcode"
+    ],
+    [
+      "s14_srf_py_rename_rope"
+    ],
+    [
+      "s15_srf_ts_rename_ts_morph"
+    ],
+    [
+      "s16_srf_go_rename_gopls"
+    ],
+    [
+      "s17_srf_py_move_module_rope"
+    ],
+    [
+      "s18_srf_ts_move_file_ts_morph"
+    ],
+    [
+      "s19_srf_py_extract_function_rope"
+    ],
+    [
+      "s20_srf_ts_extract_function_tsserver"
+    ],
+    [
+      "s21_srf_py_inline_rope"
+    ],
+    [
+      "s22_srf_go_inline_call_gopls"
+    ],
+    [
+      "s23_srf_split_phase"
+    ],
+    [
+      "s24_srf_introduce_parameter_object"
+    ],
+    [
+      "s25_srf_replace_conditional_with_polymorphism"
+    ],
+    [
+      "s26_srf_js_codemod_jscodeshift"
+    ],
+    [
+      "s27_srf_go_rewrite_gofmt_r"
+    ],
+    [
+      "s28_srf_comby_structural_rewrite"
+    ],
+    [
+      "s29_srf_semgrep_autofix_rewrite"
+    ],
+    [
+      "s30_srf_verify_step_history"
+    ]
+  ],
+  "estimated_cost": 30,
+  "critical_path": [
+    "s01_srf_baseline_green_check",
+    "s02_srf_py_characterization_tests",
+    "s03_srf_node_characterization_tests",
+    "s04_srf_go_golden_master_tests",
+    "s05_srf_py_approval_tests_combinations",
+    "s06_srf_py_api_snapshot_griffe",
+    "s07_srf_ts_api_snapshot_api_extractor",
+    "s08_srf_go_api_snapshot_apidiff",
+    "s09_srf_py_break_import_cycle",
+    "s10_srf_ts_break_import_cycle_madge",
+    "s11_srf_py_dead_code_vulture_coverage",
+    "s12_srf_ts_dead_code_knip",
+    "s13_srf_go_dead_code_deadcode",
+    "s14_srf_py_rename_rope",
+    "s15_srf_ts_rename_ts_morph",
+    "s16_srf_go_rename_gopls",
+    "s17_srf_py_move_module_rope",
+    "s18_srf_ts_move_file_ts_morph",
+    "s19_srf_py_extract_function_rope",
+    "s20_srf_ts_extract_function_tsserver",
+    "s21_srf_py_inline_rope",
+    "s22_srf_go_inline_call_gopls",
+    "s23_srf_split_phase",
+    "s24_srf_introduce_parameter_object",
+    "s25_srf_replace_conditional_with_polymorphism",
+    "s26_srf_js_codemod_jscodeshift",
+    "s27_srf_go_rewrite_gofmt_r",
+    "s28_srf_comby_structural_rewrite",
+    "s29_srf_semgrep_autofix_rewrite",
+    "s30_srf_verify_step_history"
+  ]
+}

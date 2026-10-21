@@ -1,0 +1,325 @@
+{
+  "name": "monolith-decomposition-python-boundary",
+  "description": "For a python monolith: map dependencies and change coupling, identify seams and table ownership, pin behavior, define the interface with contract tests, enforce the boundary in CI and decide in-process or service.",
+  "steps": [
+    {
+      "id": "s01_mex_extraction_candidate_brief",
+      "skill_name": "mex-extraction-candidate-brief",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "candidate_module": "from_user_input",
+        "extraction_goal": "from_user_input",
+        "stack": "from_user_input",
+        "database_engine": "from_user_input"
+      },
+      "outputs": {
+        "extraction_brief": "extraction_brief"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_mex_py_import_graph_pydeps",
+      "skill_name": "mex-py-import-graph-pydeps",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "extraction_brief": "s01_mex_extraction_candidate_brief.extraction_brief"
+      },
+      "outputs": {
+        "py_import_graph": "py_import_graph"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_mex_change_coupling_git_log",
+      "skill_name": "mex-change-coupling-git-log",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "extraction_brief": "s01_mex_extraction_candidate_brief.extraction_brief",
+        "history_window": "from_user_input_optional"
+      },
+      "outputs": {
+        "change_coupling": "change_coupling"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_mex_seam_identification",
+      "skill_name": "mex-seam-identification",
+      "inputs": {
+        "extraction_brief": "s01_mex_extraction_candidate_brief.extraction_brief",
+        "py_import_graph": "s02_mex_py_import_graph_pydeps.py_import_graph",
+        "node_import_graph": "from_user_input_optional",
+        "go_package_graph": "from_user_input_optional",
+        "java_dependency_graph": "from_user_input_optional",
+        "change_coupling": "s03_mex_change_coupling_git_log.change_coupling"
+      },
+      "outputs": {
+        "seam_map": "seam_map",
+        "boundary_violations": "boundary_violations"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s05_mex_table_ownership_map",
+      "skill_name": "mex-table-ownership-map",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "extraction_brief": "s01_mex_extraction_candidate_brief.extraction_brief",
+        "seam_map": "s04_mex_seam_identification.seam_map",
+        "database_engine": "from_user_input"
+      },
+      "outputs": {
+        "table_ownership": "table_ownership",
+        "shared_tables": "shared_tables"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s06_mex_characterization_tests",
+      "skill_name": "mex-characterization-tests",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "seam_map": "s04_mex_seam_identification.seam_map",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "characterization_suite": "characterization_suite",
+        "baseline_outputs": "baseline_outputs"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s07_mex_interface_boundary_contract",
+      "skill_name": "mex-interface-boundary-contract",
+      "inputs": {
+        "seam_map": "s04_mex_seam_identification.seam_map",
+        "table_ownership": "s05_mex_table_ownership_map.table_ownership",
+        "boundary_violations": "s04_mex_seam_identification.boundary_violations",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "module_interface": "module_interface",
+        "interface_contract_tests": "interface_contract_tests"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s08_mex_py_boundary_import_linter",
+      "skill_name": "mex-py-boundary-import-linter",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "module_interface": "s07_mex_interface_boundary_contract.module_interface"
+      },
+      "outputs": {
+        "py_boundary_rules": "py_boundary_rules"
+      },
+      "parallel_group": 6
+    },
+    {
+      "id": "s09_mex_in_process_or_service_decision",
+      "skill_name": "mex-in-process-or-service-decision",
+      "inputs": {
+        "extraction_brief": "s01_mex_extraction_candidate_brief.extraction_brief",
+        "module_interface": "s07_mex_interface_boundary_contract.module_interface",
+        "change_coupling": "s03_mex_change_coupling_git_log.change_coupling",
+        "shared_tables": "s05_mex_table_ownership_map.shared_tables",
+        "py_boundary_rules": "s08_mex_py_boundary_import_linter.py_boundary_rules",
+        "node_boundary_rules": "from_user_input_optional",
+        "go_boundary_rules": "from_user_input_optional",
+        "java_boundary_rules": "from_user_input_optional"
+      },
+      "outputs": {
+        "deployment_decision": "deployment_decision",
+        "decision_evidence": "decision_evidence"
+      },
+      "parallel_group": 7
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_mex_extraction_candidate_brief",
+      "to_step": "s02_mex_py_import_graph_pydeps",
+      "data_type": "mex-extraction-candidate-brief",
+      "field_mapping": {
+        "extraction_brief": "extraction_brief"
+      }
+    },
+    {
+      "from_step": "s01_mex_extraction_candidate_brief",
+      "to_step": "s03_mex_change_coupling_git_log",
+      "data_type": "mex-extraction-candidate-brief",
+      "field_mapping": {
+        "extraction_brief": "extraction_brief"
+      }
+    },
+    {
+      "from_step": "s01_mex_extraction_candidate_brief",
+      "to_step": "s04_mex_seam_identification",
+      "data_type": "mex-extraction-candidate-brief",
+      "field_mapping": {
+        "extraction_brief": "extraction_brief"
+      }
+    },
+    {
+      "from_step": "s02_mex_py_import_graph_pydeps",
+      "to_step": "s04_mex_seam_identification",
+      "data_type": "mex-py-import-graph-pydeps",
+      "field_mapping": {
+        "py_import_graph": "py_import_graph"
+      }
+    },
+    {
+      "from_step": "s03_mex_change_coupling_git_log",
+      "to_step": "s04_mex_seam_identification",
+      "data_type": "mex-change-coupling-git-log",
+      "field_mapping": {
+        "change_coupling": "change_coupling"
+      }
+    },
+    {
+      "from_step": "s01_mex_extraction_candidate_brief",
+      "to_step": "s05_mex_table_ownership_map",
+      "data_type": "mex-extraction-candidate-brief",
+      "field_mapping": {
+        "extraction_brief": "extraction_brief"
+      }
+    },
+    {
+      "from_step": "s04_mex_seam_identification",
+      "to_step": "s05_mex_table_ownership_map",
+      "data_type": "mex-seam-identification",
+      "field_mapping": {
+        "seam_map": "seam_map"
+      }
+    },
+    {
+      "from_step": "s04_mex_seam_identification",
+      "to_step": "s06_mex_characterization_tests",
+      "data_type": "mex-seam-identification",
+      "field_mapping": {
+        "seam_map": "seam_map"
+      }
+    },
+    {
+      "from_step": "s04_mex_seam_identification",
+      "to_step": "s07_mex_interface_boundary_contract",
+      "data_type": "mex-seam-identification",
+      "field_mapping": {
+        "seam_map": "seam_map",
+        "boundary_violations": "boundary_violations"
+      }
+    },
+    {
+      "from_step": "s05_mex_table_ownership_map",
+      "to_step": "s07_mex_interface_boundary_contract",
+      "data_type": "mex-table-ownership-map",
+      "field_mapping": {
+        "table_ownership": "table_ownership"
+      }
+    },
+    {
+      "from_step": "s07_mex_interface_boundary_contract",
+      "to_step": "s08_mex_py_boundary_import_linter",
+      "data_type": "mex-interface-boundary-contract",
+      "field_mapping": {
+        "module_interface": "module_interface"
+      }
+    },
+    {
+      "from_step": "s01_mex_extraction_candidate_brief",
+      "to_step": "s09_mex_in_process_or_service_decision",
+      "data_type": "mex-extraction-candidate-brief",
+      "field_mapping": {
+        "extraction_brief": "extraction_brief"
+      }
+    },
+    {
+      "from_step": "s03_mex_change_coupling_git_log",
+      "to_step": "s09_mex_in_process_or_service_decision",
+      "data_type": "mex-change-coupling-git-log",
+      "field_mapping": {
+        "change_coupling": "change_coupling"
+      }
+    },
+    {
+      "from_step": "s05_mex_table_ownership_map",
+      "to_step": "s09_mex_in_process_or_service_decision",
+      "data_type": "mex-table-ownership-map",
+      "field_mapping": {
+        "shared_tables": "shared_tables"
+      }
+    },
+    {
+      "from_step": "s07_mex_interface_boundary_contract",
+      "to_step": "s09_mex_in_process_or_service_decision",
+      "data_type": "mex-interface-boundary-contract",
+      "field_mapping": {
+        "module_interface": "module_interface"
+      }
+    },
+    {
+      "from_step": "s08_mex_py_boundary_import_linter",
+      "to_step": "s09_mex_in_process_or_service_decision",
+      "data_type": "mex-py-boundary-import-linter",
+      "field_mapping": {
+        "py_boundary_rules": "py_boundary_rules"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "repo_path",
+    "candidate_module",
+    "extraction_goal",
+    "stack",
+    "database_engine",
+    "history_window",
+    "node_import_graph",
+    "go_package_graph",
+    "java_dependency_graph",
+    "node_boundary_rules",
+    "go_boundary_rules",
+    "java_boundary_rules"
+  ],
+  "terminal_outputs": [
+    "characterization_suite",
+    "baseline_outputs",
+    "interface_contract_tests",
+    "deployment_decision",
+    "decision_evidence"
+  ],
+  "parallel_groups": [
+    [
+      "s01_mex_extraction_candidate_brief"
+    ],
+    [
+      "s02_mex_py_import_graph_pydeps",
+      "s03_mex_change_coupling_git_log"
+    ],
+    [
+      "s04_mex_seam_identification"
+    ],
+    [
+      "s05_mex_table_ownership_map",
+      "s06_mex_characterization_tests"
+    ],
+    [
+      "s07_mex_interface_boundary_contract"
+    ],
+    [
+      "s08_mex_py_boundary_import_linter"
+    ],
+    [
+      "s09_mex_in_process_or_service_decision"
+    ]
+  ],
+  "estimated_cost": 9,
+  "critical_path": [
+    "s01_mex_extraction_candidate_brief",
+    "s03_mex_change_coupling_git_log",
+    "s04_mex_seam_identification",
+    "s05_mex_table_ownership_map",
+    "s07_mex_interface_boundary_contract",
+    "s08_mex_py_boundary_import_linter",
+    "s09_mex_in_process_or_service_decision"
+  ]
+}

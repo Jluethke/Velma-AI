@@ -1,0 +1,612 @@
+{
+  "name": "authentication-authorization",
+  "description": "Decide sessions vs tokens, then harden password storage, login, MFA, OAuth and OIDC, JWTs, refresh rotation, cookies, CSRF, session lifecycle, authorization and password reset, ending in a mutation-checked abuse-case suite.",
+  "steps": [
+    {
+      "id": "s01_auth_session_vs_token_decision",
+      "skill_name": "auth-session-vs-token-decision",
+      "inputs": {
+        "app_architecture": "from_user_input",
+        "repo_path": "from_user_input"
+      },
+      "outputs": {
+        "auth_inventory": "auth_inventory",
+        "auth_mechanism_decision": "auth_mechanism_decision"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_auth_py_argon2id_password_hashing",
+      "skill_name": "auth-py-argon2id-password-hashing",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "auth_inventory": "s01_auth_session_vs_token_decision.auth_inventory"
+      },
+      "outputs": {
+        "password_hashing_change": "password_hashing_change"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_auth_node_argon2id_password_hashing",
+      "skill_name": "auth-node-argon2id-password-hashing",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "auth_inventory": "s01_auth_session_vs_token_decision.auth_inventory"
+      },
+      "outputs": {
+        "password_hashing_change": "password_hashing_change"
+      },
+      "condition": "stack == 'node'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_auth_go_argon2id_password_hashing",
+      "skill_name": "auth-go-argon2id-password-hashing",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "auth_inventory": "s01_auth_session_vs_token_decision.auth_inventory"
+      },
+      "outputs": {
+        "password_hashing_change": "password_hashing_change"
+      },
+      "condition": "stack == 'go'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s05_auth_bcrypt_to_argon2id_migration",
+      "skill_name": "auth-bcrypt-to-argon2id-migration",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "auth_inventory": "s01_auth_session_vs_token_decision.auth_inventory",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "hash_migration_plan": "hash_migration_plan"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s06_auth_login_enumeration_timing_defense",
+      "skill_name": "auth-login-enumeration-timing-defense",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "auth_inventory": "s01_auth_session_vs_token_decision.auth_inventory",
+        "app_base_url": "from_user_input"
+      },
+      "outputs": {
+        "login_handler_findings": "login_handler_findings"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s07_auth_py_login_rate_limiting",
+      "skill_name": "auth-py-login-rate-limiting",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "login_handler_findings": "s06_auth_login_enumeration_timing_defense.login_handler_findings",
+        "rate_limit_policy": "from_user_input",
+        "app_base_url": "from_user_input"
+      },
+      "outputs": {
+        "rate_limit_config": "rate_limit_config"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s08_auth_node_login_rate_limiting",
+      "skill_name": "auth-node-login-rate-limiting",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "login_handler_findings": "s06_auth_login_enumeration_timing_defense.login_handler_findings",
+        "rate_limit_policy": "from_user_input",
+        "app_base_url": "from_user_input"
+      },
+      "outputs": {
+        "rate_limit_config": "rate_limit_config"
+      },
+      "condition": "stack == 'node'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s09_auth_totp_mfa_enrollment",
+      "skill_name": "auth-totp-mfa-enrollment",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "auth_mechanism_decision": "s01_auth_session_vs_token_decision.auth_mechanism_decision"
+      },
+      "outputs": {
+        "totp_mfa_change": "totp_mfa_change"
+      },
+      "condition": "'totp' in auth_mechanism_decision.mfa_methods",
+      "parallel_group": 2
+    },
+    {
+      "id": "s10_auth_node_webauthn_passkeys",
+      "skill_name": "auth-node-webauthn-passkeys",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "auth_mechanism_decision": "s01_auth_session_vs_token_decision.auth_mechanism_decision",
+        "rp_id": "from_user_input_optional",
+        "rp_origin": "from_user_input_optional"
+      },
+      "outputs": {
+        "passkey_change": "passkey_change"
+      },
+      "condition": "stack == 'node' and 'webauthn' in auth_mechanism_decision.mfa_methods",
+      "parallel_group": 2
+    },
+    {
+      "id": "s11_auth_py_webauthn_passkeys",
+      "skill_name": "auth-py-webauthn-passkeys",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "auth_mechanism_decision": "s01_auth_session_vs_token_decision.auth_mechanism_decision",
+        "rp_id": "from_user_input_optional",
+        "rp_origin": "from_user_input_optional"
+      },
+      "outputs": {
+        "passkey_change": "passkey_change"
+      },
+      "condition": "stack == 'python' and 'webauthn' in auth_mechanism_decision.mfa_methods",
+      "parallel_group": 2
+    },
+    {
+      "id": "s12_auth_oauth_pkce_authorization_code",
+      "skill_name": "auth-oauth-pkce-authorization-code",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "idp_issuer_url": "from_user_input_optional",
+        "auth_mechanism_decision": "s01_auth_session_vs_token_decision.auth_mechanism_decision"
+      },
+      "outputs": {
+        "oauth_client_config": "oauth_client_config"
+      },
+      "condition": "auth_mechanism_decision.external_idp == true",
+      "parallel_group": 2
+    },
+    {
+      "id": "s13_auth_oidc_id_token_validation",
+      "skill_name": "auth-oidc-id-token-validation",
+      "inputs": {
+        "oauth_client_config": "s12_auth_oauth_pkce_authorization_code.oauth_client_config",
+        "stack": "from_user_input",
+        "idp_issuer_url": "from_user_input_optional"
+      },
+      "outputs": {
+        "id_token_validation_report": "id_token_validation_report"
+      },
+      "condition": "auth_mechanism_decision.external_idp == true",
+      "parallel_group": 3
+    },
+    {
+      "id": "s14_auth_jwt_verification_audit",
+      "skill_name": "auth-jwt-verification-audit",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "auth_mechanism_decision": "s01_auth_session_vs_token_decision.auth_mechanism_decision"
+      },
+      "outputs": {
+        "jwt_findings": "jwt_findings"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s15_auth_refresh_token_rotation",
+      "skill_name": "auth-refresh-token-rotation",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "auth_mechanism_decision": "s01_auth_session_vs_token_decision.auth_mechanism_decision",
+        "jwt_findings": "s14_auth_jwt_verification_audit.jwt_findings"
+      },
+      "outputs": {
+        "refresh_rotation_design": "refresh_rotation_design"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s16_auth_py_cookie_flags_hardening",
+      "skill_name": "auth-py-cookie-flags-hardening",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "auth_mechanism_decision": "s01_auth_session_vs_token_decision.auth_mechanism_decision",
+        "app_base_url": "from_user_input"
+      },
+      "outputs": {
+        "cookie_audit": "cookie_audit"
+      },
+      "condition": "stack == 'python' and auth_mechanism_decision.cookie_based == true",
+      "parallel_group": 2
+    },
+    {
+      "id": "s17_auth_node_cookie_flags_hardening",
+      "skill_name": "auth-node-cookie-flags-hardening",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "auth_mechanism_decision": "s01_auth_session_vs_token_decision.auth_mechanism_decision",
+        "app_base_url": "from_user_input"
+      },
+      "outputs": {
+        "cookie_audit": "cookie_audit"
+      },
+      "condition": "stack == 'node' and auth_mechanism_decision.cookie_based == true",
+      "parallel_group": 2
+    },
+    {
+      "id": "s18_auth_csrf_defense_verification",
+      "skill_name": "auth-csrf-defense-verification",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "auth_mechanism_decision": "s01_auth_session_vs_token_decision.auth_mechanism_decision",
+        "app_base_url": "from_user_input"
+      },
+      "outputs": {
+        "csrf_defense_report": "csrf_defense_report"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s19_auth_session_fixation_logout",
+      "skill_name": "auth-session-fixation-logout",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "auth_mechanism_decision": "s01_auth_session_vs_token_decision.auth_mechanism_decision",
+        "session_timeout_policy": "from_user_input"
+      },
+      "outputs": {
+        "session_lifecycle_report": "session_lifecycle_report"
+      },
+      "condition": "auth_mechanism_decision.cookie_based == true",
+      "parallel_group": 2
+    },
+    {
+      "id": "s20_auth_rbac_vs_abac_decision",
+      "skill_name": "auth-rbac-vs-abac-decision",
+      "inputs": {
+        "authorization_requirements": "from_user_input",
+        "auth_inventory": "s01_auth_session_vs_token_decision.auth_inventory",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "authz_model_decision": "authz_model_decision"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s21_auth_idor_object_access_checks",
+      "skill_name": "auth-idor-object-access-checks",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "authz_model_decision": "s20_auth_rbac_vs_abac_decision.authz_model_decision"
+      },
+      "outputs": {
+        "object_access_findings": "object_access_findings"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s22_auth_password_reset_flow",
+      "skill_name": "auth-password-reset-flow",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "login_handler_findings": "s06_auth_login_enumeration_timing_defense.login_handler_findings",
+        "reset_token_lifetime": "from_user_input"
+      },
+      "outputs": {
+        "password_reset_report": "password_reset_report"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s23_auth_abuse_case_tests",
+      "skill_name": "auth-abuse-case-tests",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "login_handler_findings": "s06_auth_login_enumeration_timing_defense.login_handler_findings",
+        "jwt_findings": "s14_auth_jwt_verification_audit.jwt_findings",
+        "csrf_defense_report": "s18_auth_csrf_defense_verification.csrf_defense_report",
+        "object_access_findings": "s21_auth_idor_object_access_checks.object_access_findings",
+        "password_reset_report": "s22_auth_password_reset_flow.password_reset_report"
+      },
+      "outputs": {
+        "abuse_case_tests": "abuse_case_tests"
+      },
+      "parallel_group": 4
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_auth_session_vs_token_decision",
+      "to_step": "s02_auth_py_argon2id_password_hashing",
+      "data_type": "auth-session-vs-token-decision",
+      "field_mapping": {
+        "auth_inventory": "auth_inventory"
+      }
+    },
+    {
+      "from_step": "s01_auth_session_vs_token_decision",
+      "to_step": "s03_auth_node_argon2id_password_hashing",
+      "data_type": "auth-session-vs-token-decision",
+      "field_mapping": {
+        "auth_inventory": "auth_inventory"
+      }
+    },
+    {
+      "from_step": "s01_auth_session_vs_token_decision",
+      "to_step": "s04_auth_go_argon2id_password_hashing",
+      "data_type": "auth-session-vs-token-decision",
+      "field_mapping": {
+        "auth_inventory": "auth_inventory"
+      }
+    },
+    {
+      "from_step": "s01_auth_session_vs_token_decision",
+      "to_step": "s05_auth_bcrypt_to_argon2id_migration",
+      "data_type": "auth-session-vs-token-decision",
+      "field_mapping": {
+        "auth_inventory": "auth_inventory"
+      }
+    },
+    {
+      "from_step": "s01_auth_session_vs_token_decision",
+      "to_step": "s06_auth_login_enumeration_timing_defense",
+      "data_type": "auth-session-vs-token-decision",
+      "field_mapping": {
+        "auth_inventory": "auth_inventory"
+      }
+    },
+    {
+      "from_step": "s06_auth_login_enumeration_timing_defense",
+      "to_step": "s07_auth_py_login_rate_limiting",
+      "data_type": "auth-login-enumeration-timing-defense",
+      "field_mapping": {
+        "login_handler_findings": "login_handler_findings"
+      }
+    },
+    {
+      "from_step": "s06_auth_login_enumeration_timing_defense",
+      "to_step": "s08_auth_node_login_rate_limiting",
+      "data_type": "auth-login-enumeration-timing-defense",
+      "field_mapping": {
+        "login_handler_findings": "login_handler_findings"
+      }
+    },
+    {
+      "from_step": "s01_auth_session_vs_token_decision",
+      "to_step": "s09_auth_totp_mfa_enrollment",
+      "data_type": "auth-session-vs-token-decision",
+      "field_mapping": {
+        "auth_mechanism_decision": "auth_mechanism_decision"
+      }
+    },
+    {
+      "from_step": "s01_auth_session_vs_token_decision",
+      "to_step": "s10_auth_node_webauthn_passkeys",
+      "data_type": "auth-session-vs-token-decision",
+      "field_mapping": {
+        "auth_mechanism_decision": "auth_mechanism_decision"
+      }
+    },
+    {
+      "from_step": "s01_auth_session_vs_token_decision",
+      "to_step": "s11_auth_py_webauthn_passkeys",
+      "data_type": "auth-session-vs-token-decision",
+      "field_mapping": {
+        "auth_mechanism_decision": "auth_mechanism_decision"
+      }
+    },
+    {
+      "from_step": "s01_auth_session_vs_token_decision",
+      "to_step": "s12_auth_oauth_pkce_authorization_code",
+      "data_type": "auth-session-vs-token-decision",
+      "field_mapping": {
+        "auth_mechanism_decision": "auth_mechanism_decision"
+      }
+    },
+    {
+      "from_step": "s12_auth_oauth_pkce_authorization_code",
+      "to_step": "s13_auth_oidc_id_token_validation",
+      "data_type": "auth-oauth-pkce-authorization-code",
+      "field_mapping": {
+        "oauth_client_config": "oauth_client_config"
+      }
+    },
+    {
+      "from_step": "s01_auth_session_vs_token_decision",
+      "to_step": "s14_auth_jwt_verification_audit",
+      "data_type": "auth-session-vs-token-decision",
+      "field_mapping": {
+        "auth_mechanism_decision": "auth_mechanism_decision"
+      }
+    },
+    {
+      "from_step": "s01_auth_session_vs_token_decision",
+      "to_step": "s15_auth_refresh_token_rotation",
+      "data_type": "auth-session-vs-token-decision",
+      "field_mapping": {
+        "auth_mechanism_decision": "auth_mechanism_decision"
+      }
+    },
+    {
+      "from_step": "s14_auth_jwt_verification_audit",
+      "to_step": "s15_auth_refresh_token_rotation",
+      "data_type": "auth-jwt-verification-audit",
+      "field_mapping": {
+        "jwt_findings": "jwt_findings"
+      }
+    },
+    {
+      "from_step": "s01_auth_session_vs_token_decision",
+      "to_step": "s16_auth_py_cookie_flags_hardening",
+      "data_type": "auth-session-vs-token-decision",
+      "field_mapping": {
+        "auth_mechanism_decision": "auth_mechanism_decision"
+      }
+    },
+    {
+      "from_step": "s01_auth_session_vs_token_decision",
+      "to_step": "s17_auth_node_cookie_flags_hardening",
+      "data_type": "auth-session-vs-token-decision",
+      "field_mapping": {
+        "auth_mechanism_decision": "auth_mechanism_decision"
+      }
+    },
+    {
+      "from_step": "s01_auth_session_vs_token_decision",
+      "to_step": "s18_auth_csrf_defense_verification",
+      "data_type": "auth-session-vs-token-decision",
+      "field_mapping": {
+        "auth_mechanism_decision": "auth_mechanism_decision"
+      }
+    },
+    {
+      "from_step": "s01_auth_session_vs_token_decision",
+      "to_step": "s19_auth_session_fixation_logout",
+      "data_type": "auth-session-vs-token-decision",
+      "field_mapping": {
+        "auth_mechanism_decision": "auth_mechanism_decision"
+      }
+    },
+    {
+      "from_step": "s01_auth_session_vs_token_decision",
+      "to_step": "s20_auth_rbac_vs_abac_decision",
+      "data_type": "auth-session-vs-token-decision",
+      "field_mapping": {
+        "auth_inventory": "auth_inventory"
+      }
+    },
+    {
+      "from_step": "s20_auth_rbac_vs_abac_decision",
+      "to_step": "s21_auth_idor_object_access_checks",
+      "data_type": "auth-rbac-vs-abac-decision",
+      "field_mapping": {
+        "authz_model_decision": "authz_model_decision"
+      }
+    },
+    {
+      "from_step": "s06_auth_login_enumeration_timing_defense",
+      "to_step": "s22_auth_password_reset_flow",
+      "data_type": "auth-login-enumeration-timing-defense",
+      "field_mapping": {
+        "login_handler_findings": "login_handler_findings"
+      }
+    },
+    {
+      "from_step": "s06_auth_login_enumeration_timing_defense",
+      "to_step": "s23_auth_abuse_case_tests",
+      "data_type": "auth-login-enumeration-timing-defense",
+      "field_mapping": {
+        "login_handler_findings": "login_handler_findings"
+      }
+    },
+    {
+      "from_step": "s14_auth_jwt_verification_audit",
+      "to_step": "s23_auth_abuse_case_tests",
+      "data_type": "auth-jwt-verification-audit",
+      "field_mapping": {
+        "jwt_findings": "jwt_findings"
+      }
+    },
+    {
+      "from_step": "s18_auth_csrf_defense_verification",
+      "to_step": "s23_auth_abuse_case_tests",
+      "data_type": "auth-csrf-defense-verification",
+      "field_mapping": {
+        "csrf_defense_report": "csrf_defense_report"
+      }
+    },
+    {
+      "from_step": "s21_auth_idor_object_access_checks",
+      "to_step": "s23_auth_abuse_case_tests",
+      "data_type": "auth-idor-object-access-checks",
+      "field_mapping": {
+        "object_access_findings": "object_access_findings"
+      }
+    },
+    {
+      "from_step": "s22_auth_password_reset_flow",
+      "to_step": "s23_auth_abuse_case_tests",
+      "data_type": "auth-password-reset-flow",
+      "field_mapping": {
+        "password_reset_report": "password_reset_report"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "app_architecture",
+    "repo_path",
+    "stack",
+    "app_base_url",
+    "rate_limit_policy",
+    "rp_id",
+    "rp_origin",
+    "idp_issuer_url",
+    "session_timeout_policy",
+    "authorization_requirements",
+    "reset_token_lifetime"
+  ],
+  "terminal_outputs": [
+    "password_hashing_change",
+    "hash_migration_plan",
+    "rate_limit_config",
+    "totp_mfa_change",
+    "passkey_change",
+    "id_token_validation_report",
+    "refresh_rotation_design",
+    "cookie_audit",
+    "session_lifecycle_report",
+    "abuse_case_tests"
+  ],
+  "parallel_groups": [
+    [
+      "s01_auth_session_vs_token_decision"
+    ],
+    [
+      "s02_auth_py_argon2id_password_hashing",
+      "s03_auth_node_argon2id_password_hashing",
+      "s04_auth_go_argon2id_password_hashing",
+      "s05_auth_bcrypt_to_argon2id_migration",
+      "s06_auth_login_enumeration_timing_defense",
+      "s09_auth_totp_mfa_enrollment",
+      "s10_auth_node_webauthn_passkeys",
+      "s11_auth_py_webauthn_passkeys",
+      "s12_auth_oauth_pkce_authorization_code",
+      "s14_auth_jwt_verification_audit",
+      "s16_auth_py_cookie_flags_hardening",
+      "s17_auth_node_cookie_flags_hardening",
+      "s18_auth_csrf_defense_verification",
+      "s19_auth_session_fixation_logout",
+      "s20_auth_rbac_vs_abac_decision"
+    ],
+    [
+      "s07_auth_py_login_rate_limiting",
+      "s08_auth_node_login_rate_limiting",
+      "s13_auth_oidc_id_token_validation",
+      "s15_auth_refresh_token_rotation",
+      "s21_auth_idor_object_access_checks",
+      "s22_auth_password_reset_flow"
+    ],
+    [
+      "s23_auth_abuse_case_tests"
+    ]
+  ],
+  "estimated_cost": 23,
+  "critical_path": [
+    "s01_auth_session_vs_token_decision",
+    "s20_auth_rbac_vs_abac_decision",
+    "s21_auth_idor_object_access_checks",
+    "s23_auth_abuse_case_tests"
+  ]
+}

@@ -1,0 +1,342 @@
+{
+  "name": "stepwise-small-model-coding-api-guard",
+  "description": "From goal to locked plan without hallucinated APIs: search, read slices, decompose into single-hunk edits, write exact old and new text, and prove every external name and CLI flag in the installed versions before any edit is applied.",
+  "steps": [
+    {
+      "id": "s01_stp_rg_symbol_search",
+      "skill_name": "stp-rg-symbol-search",
+      "inputs": {
+        "goal_check": "from_user_input",
+        "repo_path": "from_user_input",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "symbol_hits": "symbol_hits"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_stp_context_read_budget",
+      "skill_name": "stp-context-read-budget",
+      "inputs": {
+        "symbol_hits": "s01_stp_rg_symbol_search.symbol_hits",
+        "goal_check": "from_user_input",
+        "scratch_log": "from_user_input"
+      },
+      "outputs": {
+        "context_notes": "context_notes",
+        "target_files": "target_files"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_stp_decompose_small_edits",
+      "skill_name": "stp-decompose-small-edits",
+      "inputs": {
+        "goal_check": "from_user_input",
+        "context_notes": "s02_stp_context_read_budget.context_notes",
+        "target_files": "s02_stp_context_read_budget.target_files",
+        "scope_limits": "from_user_input"
+      },
+      "outputs": {
+        "edit_list": "edit_list"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_stp_edit_plan_write",
+      "skill_name": "stp-edit-plan-write",
+      "inputs": {
+        "edit_list": "s03_stp_decompose_small_edits.edit_list",
+        "context_notes": "s02_stp_context_read_budget.context_notes",
+        "verify_card": "from_user_input",
+        "scratch_log": "from_user_input"
+      },
+      "outputs": {
+        "edit_plan": "edit_plan"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s05_stp_py_api_exists_check",
+      "skill_name": "stp-py-api-exists-check",
+      "inputs": {
+        "edit_plan": "s04_stp_edit_plan_write.edit_plan",
+        "repo_path": "from_user_input"
+      },
+      "outputs": {
+        "py_api_evidence": "py_api_evidence"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 5
+    },
+    {
+      "id": "s06_stp_node_api_exists_check",
+      "skill_name": "stp-node-api-exists-check",
+      "inputs": {
+        "edit_plan": "s04_stp_edit_plan_write.edit_plan",
+        "repo_path": "from_user_input"
+      },
+      "outputs": {
+        "node_api_evidence": "node_api_evidence"
+      },
+      "condition": "stack == 'node'",
+      "parallel_group": 5
+    },
+    {
+      "id": "s07_stp_go_api_exists_check",
+      "skill_name": "stp-go-api-exists-check",
+      "inputs": {
+        "edit_plan": "s04_stp_edit_plan_write.edit_plan",
+        "repo_path": "from_user_input"
+      },
+      "outputs": {
+        "go_api_evidence": "go_api_evidence"
+      },
+      "condition": "stack == 'go'",
+      "parallel_group": 5
+    },
+    {
+      "id": "s08_stp_rust_api_exists_check",
+      "skill_name": "stp-rust-api-exists-check",
+      "inputs": {
+        "edit_plan": "s04_stp_edit_plan_write.edit_plan",
+        "repo_path": "from_user_input"
+      },
+      "outputs": {
+        "rust_api_evidence": "rust_api_evidence"
+      },
+      "condition": "stack == 'rust'",
+      "parallel_group": 5
+    },
+    {
+      "id": "s09_stp_java_api_exists_check",
+      "skill_name": "stp-java-api-exists-check",
+      "inputs": {
+        "edit_plan": "s04_stp_edit_plan_write.edit_plan",
+        "repo_path": "from_user_input"
+      },
+      "outputs": {
+        "java_api_evidence": "java_api_evidence"
+      },
+      "condition": "stack == 'java'",
+      "parallel_group": 5
+    },
+    {
+      "id": "s10_stp_cli_flag_exists_check",
+      "skill_name": "stp-cli-flag-exists-check",
+      "inputs": {
+        "edit_plan": "s04_stp_edit_plan_write.edit_plan",
+        "verify_card": "from_user_input"
+      },
+      "outputs": {
+        "flag_evidence": "flag_evidence"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s11_stp_edit_plan_lock",
+      "skill_name": "stp-edit-plan-lock",
+      "inputs": {
+        "edit_plan": "s04_stp_edit_plan_write.edit_plan",
+        "py_api_evidence": "s05_stp_py_api_exists_check.py_api_evidence",
+        "node_api_evidence": "s06_stp_node_api_exists_check.node_api_evidence",
+        "go_api_evidence": "s07_stp_go_api_exists_check.go_api_evidence",
+        "rust_api_evidence": "s08_stp_rust_api_exists_check.rust_api_evidence",
+        "java_api_evidence": "s09_stp_java_api_exists_check.java_api_evidence",
+        "flag_evidence": "s10_stp_cli_flag_exists_check.flag_evidence",
+        "scratch_log": "from_user_input"
+      },
+      "outputs": {
+        "locked_plan": "locked_plan",
+        "unverified_items": "unverified_items"
+      },
+      "parallel_group": 6
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_stp_rg_symbol_search",
+      "to_step": "s02_stp_context_read_budget",
+      "data_type": "stp-rg-symbol-search",
+      "field_mapping": {
+        "symbol_hits": "symbol_hits"
+      }
+    },
+    {
+      "from_step": "s02_stp_context_read_budget",
+      "to_step": "s03_stp_decompose_small_edits",
+      "data_type": "stp-context-read-budget",
+      "field_mapping": {
+        "context_notes": "context_notes",
+        "target_files": "target_files"
+      }
+    },
+    {
+      "from_step": "s03_stp_decompose_small_edits",
+      "to_step": "s04_stp_edit_plan_write",
+      "data_type": "stp-decompose-small-edits",
+      "field_mapping": {
+        "edit_list": "edit_list"
+      }
+    },
+    {
+      "from_step": "s02_stp_context_read_budget",
+      "to_step": "s04_stp_edit_plan_write",
+      "data_type": "stp-context-read-budget",
+      "field_mapping": {
+        "context_notes": "context_notes"
+      }
+    },
+    {
+      "from_step": "s04_stp_edit_plan_write",
+      "to_step": "s05_stp_py_api_exists_check",
+      "data_type": "stp-edit-plan-write",
+      "field_mapping": {
+        "edit_plan": "edit_plan"
+      }
+    },
+    {
+      "from_step": "s04_stp_edit_plan_write",
+      "to_step": "s06_stp_node_api_exists_check",
+      "data_type": "stp-edit-plan-write",
+      "field_mapping": {
+        "edit_plan": "edit_plan"
+      }
+    },
+    {
+      "from_step": "s04_stp_edit_plan_write",
+      "to_step": "s07_stp_go_api_exists_check",
+      "data_type": "stp-edit-plan-write",
+      "field_mapping": {
+        "edit_plan": "edit_plan"
+      }
+    },
+    {
+      "from_step": "s04_stp_edit_plan_write",
+      "to_step": "s08_stp_rust_api_exists_check",
+      "data_type": "stp-edit-plan-write",
+      "field_mapping": {
+        "edit_plan": "edit_plan"
+      }
+    },
+    {
+      "from_step": "s04_stp_edit_plan_write",
+      "to_step": "s09_stp_java_api_exists_check",
+      "data_type": "stp-edit-plan-write",
+      "field_mapping": {
+        "edit_plan": "edit_plan"
+      }
+    },
+    {
+      "from_step": "s04_stp_edit_plan_write",
+      "to_step": "s10_stp_cli_flag_exists_check",
+      "data_type": "stp-edit-plan-write",
+      "field_mapping": {
+        "edit_plan": "edit_plan"
+      }
+    },
+    {
+      "from_step": "s04_stp_edit_plan_write",
+      "to_step": "s11_stp_edit_plan_lock",
+      "data_type": "stp-edit-plan-write",
+      "field_mapping": {
+        "edit_plan": "edit_plan"
+      }
+    },
+    {
+      "from_step": "s05_stp_py_api_exists_check",
+      "to_step": "s11_stp_edit_plan_lock",
+      "data_type": "stp-py-api-exists-check",
+      "field_mapping": {
+        "py_api_evidence": "py_api_evidence"
+      }
+    },
+    {
+      "from_step": "s06_stp_node_api_exists_check",
+      "to_step": "s11_stp_edit_plan_lock",
+      "data_type": "stp-node-api-exists-check",
+      "field_mapping": {
+        "node_api_evidence": "node_api_evidence"
+      }
+    },
+    {
+      "from_step": "s07_stp_go_api_exists_check",
+      "to_step": "s11_stp_edit_plan_lock",
+      "data_type": "stp-go-api-exists-check",
+      "field_mapping": {
+        "go_api_evidence": "go_api_evidence"
+      }
+    },
+    {
+      "from_step": "s08_stp_rust_api_exists_check",
+      "to_step": "s11_stp_edit_plan_lock",
+      "data_type": "stp-rust-api-exists-check",
+      "field_mapping": {
+        "rust_api_evidence": "rust_api_evidence"
+      }
+    },
+    {
+      "from_step": "s09_stp_java_api_exists_check",
+      "to_step": "s11_stp_edit_plan_lock",
+      "data_type": "stp-java-api-exists-check",
+      "field_mapping": {
+        "java_api_evidence": "java_api_evidence"
+      }
+    },
+    {
+      "from_step": "s10_stp_cli_flag_exists_check",
+      "to_step": "s11_stp_edit_plan_lock",
+      "data_type": "stp-cli-flag-exists-check",
+      "field_mapping": {
+        "flag_evidence": "flag_evidence"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "goal_check",
+    "repo_path",
+    "stack",
+    "scratch_log",
+    "scope_limits",
+    "verify_card"
+  ],
+  "terminal_outputs": [
+    "locked_plan",
+    "unverified_items"
+  ],
+  "parallel_groups": [
+    [
+      "s01_stp_rg_symbol_search"
+    ],
+    [
+      "s02_stp_context_read_budget"
+    ],
+    [
+      "s03_stp_decompose_small_edits"
+    ],
+    [
+      "s04_stp_edit_plan_write"
+    ],
+    [
+      "s05_stp_py_api_exists_check",
+      "s06_stp_node_api_exists_check",
+      "s07_stp_go_api_exists_check",
+      "s08_stp_rust_api_exists_check",
+      "s09_stp_java_api_exists_check",
+      "s10_stp_cli_flag_exists_check"
+    ],
+    [
+      "s11_stp_edit_plan_lock"
+    ]
+  ],
+  "estimated_cost": 11,
+  "critical_path": [
+    "s01_stp_rg_symbol_search",
+    "s02_stp_context_read_budget",
+    "s03_stp_decompose_small_edits",
+    "s04_stp_edit_plan_write",
+    "s10_stp_cli_flag_exists_check",
+    "s11_stp_edit_plan_lock"
+  ]
+}

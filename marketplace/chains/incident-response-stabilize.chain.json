@@ -1,0 +1,420 @@
+{
+  "name": "incident-response-stabilize",
+  "description": "First hour of an incident: declare, assign roles, start the timeline and status updates, triage metrics and recent changes, pick one mitigation from the decision table, apply it on Kubernetes, flags or traffic controllers, and confirm customer impact stopped.",
+  "steps": [
+    {
+      "id": "s01_inc_declare_severity",
+      "skill_name": "inc-declare-severity",
+      "inputs": {
+        "alert_summary": "from_user_input",
+        "impact_signals": "from_user_input",
+        "severity_matrix": "from_user_input_optional"
+      },
+      "outputs": {
+        "severity": "severity",
+        "incident_record": "incident_record"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_inc_assign_incident_roles",
+      "skill_name": "inc-assign-incident-roles",
+      "inputs": {
+        "incident_record": "s01_inc_declare_severity.incident_record",
+        "severity": "s01_inc_declare_severity.severity",
+        "responder_roster": "from_user_input"
+      },
+      "outputs": {
+        "role_assignments": "role_assignments"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_inc_timeline_capture",
+      "skill_name": "inc-timeline-capture",
+      "inputs": {
+        "incident_record": "s01_inc_declare_severity.incident_record",
+        "role_assignments": "s02_inc_assign_incident_roles.role_assignments"
+      },
+      "outputs": {
+        "timeline_log": "timeline_log"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_inc_status_page_update",
+      "skill_name": "inc-status-page-update",
+      "inputs": {
+        "incident_record": "s01_inc_declare_severity.incident_record",
+        "severity": "s01_inc_declare_severity.severity",
+        "timeline_log": "s03_inc_timeline_capture.timeline_log",
+        "status_page_id": "from_user_input_optional"
+      },
+      "outputs": {
+        "status_updates": "status_updates"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s05_inc_promql_red_triage",
+      "skill_name": "inc-promql-red-triage",
+      "inputs": {
+        "incident_record": "s01_inc_declare_severity.incident_record",
+        "prometheus_url": "from_user_input",
+        "sli_queries": "from_user_input_optional"
+      },
+      "outputs": {
+        "metric_findings": "metric_findings"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s06_inc_change_correlation",
+      "skill_name": "inc-change-correlation",
+      "inputs": {
+        "incident_record": "s01_inc_declare_severity.incident_record",
+        "timeline_log": "s03_inc_timeline_capture.timeline_log",
+        "metric_findings": "s05_inc_promql_red_triage.metric_findings",
+        "platform": "from_user_input",
+        "recent_changes": "from_user_input_optional"
+      },
+      "outputs": {
+        "change_correlation": "change_correlation"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s07_inc_stabilize_decision_table",
+      "skill_name": "inc-stabilize-decision-table",
+      "inputs": {
+        "incident_record": "s01_inc_declare_severity.incident_record",
+        "severity": "s01_inc_declare_severity.severity",
+        "metric_findings": "s05_inc_promql_red_triage.metric_findings",
+        "change_correlation": "s06_inc_change_correlation.change_correlation"
+      },
+      "outputs": {
+        "mitigation_choice": "mitigation_choice"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s08_inc_k8s_rollout_undo",
+      "skill_name": "inc-k8s-rollout-undo",
+      "inputs": {
+        "mitigation_choice": "s07_inc_stabilize_decision_table.mitigation_choice",
+        "k8s_namespace": "from_user_input",
+        "deployment_name": "from_user_input",
+        "gitops_tool": "from_user_input_optional"
+      },
+      "outputs": {
+        "rollback_result": "rollback_result"
+      },
+      "condition": "platform == 'kubernetes' and mitigation_choice.action == 'rollback'",
+      "parallel_group": 6
+    },
+    {
+      "id": "s09_inc_feature_flag_off",
+      "skill_name": "inc-feature-flag-off",
+      "inputs": {
+        "mitigation_choice": "s07_inc_stabilize_decision_table.mitigation_choice",
+        "flag_provider": "from_user_input",
+        "flag_key": "from_user_input",
+        "flag_environment": "from_user_input"
+      },
+      "outputs": {
+        "flag_change_result": "flag_change_result"
+      },
+      "condition": "mitigation_choice.action in ['flag_off', 'shed_load']",
+      "parallel_group": 6
+    },
+    {
+      "id": "s10_inc_k8s_scale_out",
+      "skill_name": "inc-k8s-scale-out",
+      "inputs": {
+        "mitigation_choice": "s07_inc_stabilize_decision_table.mitigation_choice",
+        "k8s_namespace": "from_user_input",
+        "deployment_name": "from_user_input",
+        "target_replicas": "from_user_input_optional"
+      },
+      "outputs": {
+        "scale_result": "scale_result"
+      },
+      "condition": "platform == 'kubernetes' and mitigation_choice.action == 'scale_out'",
+      "parallel_group": 6
+    },
+    {
+      "id": "s11_inc_traffic_shift",
+      "skill_name": "inc-traffic-shift",
+      "inputs": {
+        "mitigation_choice": "s07_inc_stabilize_decision_table.mitigation_choice",
+        "traffic_controller": "from_user_input",
+        "traffic_target": "from_user_input"
+      },
+      "outputs": {
+        "traffic_shift_result": "traffic_shift_result"
+      },
+      "condition": "mitigation_choice.action == 'traffic_shift'",
+      "parallel_group": 6
+    },
+    {
+      "id": "s12_inc_confirm_stabilization",
+      "skill_name": "inc-confirm-stabilization",
+      "inputs": {
+        "mitigation_choice": "s07_inc_stabilize_decision_table.mitigation_choice",
+        "rollback_result": "s08_inc_k8s_rollout_undo.rollback_result",
+        "flag_change_result": "s09_inc_feature_flag_off.flag_change_result",
+        "scale_result": "s10_inc_k8s_scale_out.scale_result",
+        "traffic_shift_result": "s11_inc_traffic_shift.traffic_shift_result",
+        "metric_findings": "s05_inc_promql_red_triage.metric_findings",
+        "prometheus_url": "from_user_input"
+      },
+      "outputs": {
+        "stabilization_status": "stabilization_status"
+      },
+      "parallel_group": 7
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_inc_declare_severity",
+      "to_step": "s02_inc_assign_incident_roles",
+      "data_type": "inc-declare-severity",
+      "field_mapping": {
+        "incident_record": "incident_record",
+        "severity": "severity"
+      }
+    },
+    {
+      "from_step": "s01_inc_declare_severity",
+      "to_step": "s03_inc_timeline_capture",
+      "data_type": "inc-declare-severity",
+      "field_mapping": {
+        "incident_record": "incident_record"
+      }
+    },
+    {
+      "from_step": "s02_inc_assign_incident_roles",
+      "to_step": "s03_inc_timeline_capture",
+      "data_type": "inc-assign-incident-roles",
+      "field_mapping": {
+        "role_assignments": "role_assignments"
+      }
+    },
+    {
+      "from_step": "s01_inc_declare_severity",
+      "to_step": "s04_inc_status_page_update",
+      "data_type": "inc-declare-severity",
+      "field_mapping": {
+        "incident_record": "incident_record",
+        "severity": "severity"
+      }
+    },
+    {
+      "from_step": "s03_inc_timeline_capture",
+      "to_step": "s04_inc_status_page_update",
+      "data_type": "inc-timeline-capture",
+      "field_mapping": {
+        "timeline_log": "timeline_log"
+      }
+    },
+    {
+      "from_step": "s01_inc_declare_severity",
+      "to_step": "s05_inc_promql_red_triage",
+      "data_type": "inc-declare-severity",
+      "field_mapping": {
+        "incident_record": "incident_record"
+      }
+    },
+    {
+      "from_step": "s01_inc_declare_severity",
+      "to_step": "s06_inc_change_correlation",
+      "data_type": "inc-declare-severity",
+      "field_mapping": {
+        "incident_record": "incident_record"
+      }
+    },
+    {
+      "from_step": "s03_inc_timeline_capture",
+      "to_step": "s06_inc_change_correlation",
+      "data_type": "inc-timeline-capture",
+      "field_mapping": {
+        "timeline_log": "timeline_log"
+      }
+    },
+    {
+      "from_step": "s05_inc_promql_red_triage",
+      "to_step": "s06_inc_change_correlation",
+      "data_type": "inc-promql-red-triage",
+      "field_mapping": {
+        "metric_findings": "metric_findings"
+      }
+    },
+    {
+      "from_step": "s01_inc_declare_severity",
+      "to_step": "s07_inc_stabilize_decision_table",
+      "data_type": "inc-declare-severity",
+      "field_mapping": {
+        "incident_record": "incident_record",
+        "severity": "severity"
+      }
+    },
+    {
+      "from_step": "s05_inc_promql_red_triage",
+      "to_step": "s07_inc_stabilize_decision_table",
+      "data_type": "inc-promql-red-triage",
+      "field_mapping": {
+        "metric_findings": "metric_findings"
+      }
+    },
+    {
+      "from_step": "s06_inc_change_correlation",
+      "to_step": "s07_inc_stabilize_decision_table",
+      "data_type": "inc-change-correlation",
+      "field_mapping": {
+        "change_correlation": "change_correlation"
+      }
+    },
+    {
+      "from_step": "s07_inc_stabilize_decision_table",
+      "to_step": "s08_inc_k8s_rollout_undo",
+      "data_type": "inc-stabilize-decision-table",
+      "field_mapping": {
+        "mitigation_choice": "mitigation_choice"
+      }
+    },
+    {
+      "from_step": "s07_inc_stabilize_decision_table",
+      "to_step": "s09_inc_feature_flag_off",
+      "data_type": "inc-stabilize-decision-table",
+      "field_mapping": {
+        "mitigation_choice": "mitigation_choice"
+      }
+    },
+    {
+      "from_step": "s07_inc_stabilize_decision_table",
+      "to_step": "s10_inc_k8s_scale_out",
+      "data_type": "inc-stabilize-decision-table",
+      "field_mapping": {
+        "mitigation_choice": "mitigation_choice"
+      }
+    },
+    {
+      "from_step": "s07_inc_stabilize_decision_table",
+      "to_step": "s11_inc_traffic_shift",
+      "data_type": "inc-stabilize-decision-table",
+      "field_mapping": {
+        "mitigation_choice": "mitigation_choice"
+      }
+    },
+    {
+      "from_step": "s07_inc_stabilize_decision_table",
+      "to_step": "s12_inc_confirm_stabilization",
+      "data_type": "inc-stabilize-decision-table",
+      "field_mapping": {
+        "mitigation_choice": "mitigation_choice"
+      }
+    },
+    {
+      "from_step": "s08_inc_k8s_rollout_undo",
+      "to_step": "s12_inc_confirm_stabilization",
+      "data_type": "inc-k8s-rollout-undo",
+      "field_mapping": {
+        "rollback_result": "rollback_result"
+      }
+    },
+    {
+      "from_step": "s09_inc_feature_flag_off",
+      "to_step": "s12_inc_confirm_stabilization",
+      "data_type": "inc-feature-flag-off",
+      "field_mapping": {
+        "flag_change_result": "flag_change_result"
+      }
+    },
+    {
+      "from_step": "s10_inc_k8s_scale_out",
+      "to_step": "s12_inc_confirm_stabilization",
+      "data_type": "inc-k8s-scale-out",
+      "field_mapping": {
+        "scale_result": "scale_result"
+      }
+    },
+    {
+      "from_step": "s11_inc_traffic_shift",
+      "to_step": "s12_inc_confirm_stabilization",
+      "data_type": "inc-traffic-shift",
+      "field_mapping": {
+        "traffic_shift_result": "traffic_shift_result"
+      }
+    },
+    {
+      "from_step": "s05_inc_promql_red_triage",
+      "to_step": "s12_inc_confirm_stabilization",
+      "data_type": "inc-promql-red-triage",
+      "field_mapping": {
+        "metric_findings": "metric_findings"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "alert_summary",
+    "impact_signals",
+    "severity_matrix",
+    "responder_roster",
+    "status_page_id",
+    "prometheus_url",
+    "sli_queries",
+    "platform",
+    "recent_changes",
+    "k8s_namespace",
+    "deployment_name",
+    "gitops_tool",
+    "flag_provider",
+    "flag_key",
+    "flag_environment",
+    "target_replicas",
+    "traffic_controller",
+    "traffic_target"
+  ],
+  "terminal_outputs": [
+    "status_updates",
+    "stabilization_status"
+  ],
+  "parallel_groups": [
+    [
+      "s01_inc_declare_severity"
+    ],
+    [
+      "s02_inc_assign_incident_roles",
+      "s05_inc_promql_red_triage"
+    ],
+    [
+      "s03_inc_timeline_capture"
+    ],
+    [
+      "s04_inc_status_page_update",
+      "s06_inc_change_correlation"
+    ],
+    [
+      "s07_inc_stabilize_decision_table"
+    ],
+    [
+      "s08_inc_k8s_rollout_undo",
+      "s09_inc_feature_flag_off",
+      "s10_inc_k8s_scale_out",
+      "s11_inc_traffic_shift"
+    ],
+    [
+      "s12_inc_confirm_stabilization"
+    ]
+  ],
+  "estimated_cost": 12,
+  "critical_path": [
+    "s01_inc_declare_severity",
+    "s02_inc_assign_incident_roles",
+    "s03_inc_timeline_capture",
+    "s06_inc_change_correlation",
+    "s07_inc_stabilize_decision_table",
+    "s08_inc_k8s_rollout_undo",
+    "s12_inc_confirm_stabilization"
+  ]
+}

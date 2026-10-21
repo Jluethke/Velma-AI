@@ -1,0 +1,235 @@
+{
+  "name": "etl-data-pipelines-cdc",
+  "description": "Capture changes from PostgreSQL or MySQL with Debezium, apply them with an order-safe MERGE, reconcile against the source and alert on failure and staleness.",
+  "steps": [
+    {
+      "id": "s01_etl_source_profile_sql",
+      "skill_name": "etl-source-profile-sql",
+      "inputs": {
+        "source_connection": "from_user_input",
+        "source_tables": "from_user_input"
+      },
+      "outputs": {
+        "source_profile": "source_profile"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_etl_source_key_watermark_discovery",
+      "skill_name": "etl-source-key-watermark-discovery",
+      "inputs": {
+        "source_connection": "from_user_input",
+        "source_profile": "s01_etl_source_profile_sql.source_profile"
+      },
+      "outputs": {
+        "extraction_keys": "extraction_keys"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_etl_target_schema_contract",
+      "skill_name": "etl-target-schema-contract",
+      "inputs": {
+        "source_profile": "s01_etl_source_profile_sql.source_profile",
+        "extraction_keys": "s02_etl_source_key_watermark_discovery.extraction_keys",
+        "consumer_requirements": "from_user_input"
+      },
+      "outputs": {
+        "data_contract": "data_contract"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_etl_cdc_debezium_postgres",
+      "skill_name": "etl-cdc-debezium-postgres",
+      "inputs": {
+        "source_connection": "from_user_input",
+        "data_contract": "s03_etl_target_schema_contract.data_contract",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "cdc_connector_config": "cdc_connector_config",
+        "cdc_topics": "cdc_topics"
+      },
+      "condition": "source_db == 'postgres'",
+      "parallel_group": 4
+    },
+    {
+      "id": "s05_etl_cdc_debezium_mysql",
+      "skill_name": "etl-cdc-debezium-mysql",
+      "inputs": {
+        "source_connection": "from_user_input",
+        "data_contract": "s03_etl_target_schema_contract.data_contract",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "cdc_connector_config": "cdc_connector_config",
+        "cdc_topics": "cdc_topics"
+      },
+      "condition": "source_db == 'mysql'",
+      "parallel_group": 4
+    },
+    {
+      "id": "s06_etl_cdc_merge_apply",
+      "skill_name": "etl-cdc-merge-apply",
+      "inputs": {
+        "cdc_landing_table": "from_user_input",
+        "data_contract": "s03_etl_target_schema_contract.data_contract",
+        "extraction_keys": "s02_etl_source_key_watermark_discovery.extraction_keys",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "cdc_merge_sql": "cdc_merge_sql",
+        "load_report": "load_report"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s07_etl_reconcile_source_target",
+      "skill_name": "etl-reconcile-source-target",
+      "inputs": {
+        "source_connection": "from_user_input",
+        "data_contract": "s03_etl_target_schema_contract.data_contract",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "reconciliation_queries": "reconciliation_queries",
+        "reconciliation_report": "reconciliation_report"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s08_etl_freshness_failure_alerts",
+      "skill_name": "etl-freshness-failure-alerts",
+      "inputs": {
+        "data_contract": "s03_etl_target_schema_contract.data_contract",
+        "orchestrator": "from_user_input",
+        "alert_destination": "from_user_input",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "freshness_checks": "freshness_checks",
+        "alert_config": "alert_config"
+      },
+      "parallel_group": 4
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_etl_source_profile_sql",
+      "to_step": "s02_etl_source_key_watermark_discovery",
+      "data_type": "etl-source-profile-sql",
+      "field_mapping": {
+        "source_profile": "source_profile"
+      }
+    },
+    {
+      "from_step": "s01_etl_source_profile_sql",
+      "to_step": "s03_etl_target_schema_contract",
+      "data_type": "etl-source-profile-sql",
+      "field_mapping": {
+        "source_profile": "source_profile"
+      }
+    },
+    {
+      "from_step": "s02_etl_source_key_watermark_discovery",
+      "to_step": "s03_etl_target_schema_contract",
+      "data_type": "etl-source-key-watermark-discovery",
+      "field_mapping": {
+        "extraction_keys": "extraction_keys"
+      }
+    },
+    {
+      "from_step": "s03_etl_target_schema_contract",
+      "to_step": "s04_etl_cdc_debezium_postgres",
+      "data_type": "etl-target-schema-contract",
+      "field_mapping": {
+        "data_contract": "data_contract"
+      }
+    },
+    {
+      "from_step": "s03_etl_target_schema_contract",
+      "to_step": "s05_etl_cdc_debezium_mysql",
+      "data_type": "etl-target-schema-contract",
+      "field_mapping": {
+        "data_contract": "data_contract"
+      }
+    },
+    {
+      "from_step": "s02_etl_source_key_watermark_discovery",
+      "to_step": "s06_etl_cdc_merge_apply",
+      "data_type": "etl-source-key-watermark-discovery",
+      "field_mapping": {
+        "extraction_keys": "extraction_keys"
+      }
+    },
+    {
+      "from_step": "s03_etl_target_schema_contract",
+      "to_step": "s06_etl_cdc_merge_apply",
+      "data_type": "etl-target-schema-contract",
+      "field_mapping": {
+        "data_contract": "data_contract"
+      }
+    },
+    {
+      "from_step": "s03_etl_target_schema_contract",
+      "to_step": "s07_etl_reconcile_source_target",
+      "data_type": "etl-target-schema-contract",
+      "field_mapping": {
+        "data_contract": "data_contract"
+      }
+    },
+    {
+      "from_step": "s03_etl_target_schema_contract",
+      "to_step": "s08_etl_freshness_failure_alerts",
+      "data_type": "etl-target-schema-contract",
+      "field_mapping": {
+        "data_contract": "data_contract"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "source_connection",
+    "source_tables",
+    "consumer_requirements",
+    "project_dir",
+    "cdc_landing_table",
+    "orchestrator",
+    "alert_destination"
+  ],
+  "terminal_outputs": [
+    "cdc_connector_config",
+    "cdc_topics",
+    "cdc_merge_sql",
+    "load_report",
+    "reconciliation_queries",
+    "reconciliation_report",
+    "freshness_checks",
+    "alert_config"
+  ],
+  "parallel_groups": [
+    [
+      "s01_etl_source_profile_sql"
+    ],
+    [
+      "s02_etl_source_key_watermark_discovery"
+    ],
+    [
+      "s03_etl_target_schema_contract"
+    ],
+    [
+      "s04_etl_cdc_debezium_postgres",
+      "s05_etl_cdc_debezium_mysql",
+      "s06_etl_cdc_merge_apply",
+      "s07_etl_reconcile_source_target",
+      "s08_etl_freshness_failure_alerts"
+    ]
+  ],
+  "estimated_cost": 8,
+  "critical_path": [
+    "s01_etl_source_profile_sql",
+    "s02_etl_source_key_watermark_discovery",
+    "s03_etl_target_schema_contract",
+    "s04_etl_cdc_debezium_postgres"
+  ]
+}

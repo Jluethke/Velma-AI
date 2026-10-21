@@ -1,0 +1,172 @@
+{
+  "name": "graphql-service-node-hardening",
+  "description": "Harden an Apollo Server or Yoga GraphQL API: resolver authorization, input validation, error codes and masking, graphql-armor limits, persisted operations, and in-process operation tests.",
+  "steps": [
+    {
+      "id": "s01_gql_node_resolver_authorization",
+      "skill_name": "gql-node-resolver-authorization",
+      "inputs": {
+        "validated_schema": "from_user_input",
+        "project_dir": "from_user_input",
+        "access_rules": "from_user_input"
+      },
+      "outputs": {
+        "authz_code": "authz_code",
+        "authz_tests": "authz_tests"
+      },
+      "condition": "stack == 'apollo' || stack == 'yoga'",
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_gql_input_validation_rules",
+      "skill_name": "gql-input-validation-rules",
+      "inputs": {
+        "validated_schema": "from_user_input",
+        "project_dir": "from_user_input",
+        "stack": "from_user_input",
+        "validation_rules": "from_user_input"
+      },
+      "outputs": {
+        "validation_code": "validation_code",
+        "validation_tests": "validation_tests"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s03_gql_error_extensions",
+      "skill_name": "gql-error-extensions",
+      "inputs": {
+        "validation_code": "s02_gql_input_validation_rules.validation_code",
+        "project_dir": "from_user_input",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "error_code_catalog": "error_code_catalog",
+        "error_presenter_code": "error_presenter_code"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_gql_node_graphql_armor_limits",
+      "skill_name": "gql-node-graphql-armor-limits",
+      "inputs": {
+        "operation_documents": "from_user_input",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "limit_config": "limit_config",
+        "limit_tests": "limit_tests"
+      },
+      "condition": "stack == 'apollo' || stack == 'yoga'",
+      "parallel_group": 1
+    },
+    {
+      "id": "s05_gql_persisted_documents_manifest",
+      "skill_name": "gql-persisted-documents-manifest",
+      "inputs": {
+        "operation_documents": "from_user_input",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "persisted_manifest": "persisted_manifest"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s06_gql_persisted_operations_server",
+      "skill_name": "gql-persisted-operations-server",
+      "inputs": {
+        "persisted_manifest": "s05_gql_persisted_documents_manifest.persisted_manifest",
+        "project_dir": "from_user_input",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "persisted_enforcement": "persisted_enforcement",
+        "persisted_tests": "persisted_tests"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s07_gql_node_operation_tests",
+      "skill_name": "gql-node-operation-tests",
+      "inputs": {
+        "operation_documents": "from_user_input",
+        "project_dir": "from_user_input",
+        "error_code_catalog": "s03_gql_error_extensions.error_code_catalog"
+      },
+      "outputs": {
+        "operation_test_suite": "operation_test_suite",
+        "test_run_log": "test_run_log"
+      },
+      "condition": "stack == 'apollo' || stack == 'yoga'",
+      "parallel_group": 3
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s02_gql_input_validation_rules",
+      "to_step": "s03_gql_error_extensions",
+      "data_type": "gql-input-validation-rules",
+      "field_mapping": {
+        "validation_code": "validation_code"
+      }
+    },
+    {
+      "from_step": "s05_gql_persisted_documents_manifest",
+      "to_step": "s06_gql_persisted_operations_server",
+      "data_type": "gql-persisted-documents-manifest",
+      "field_mapping": {
+        "persisted_manifest": "persisted_manifest"
+      }
+    },
+    {
+      "from_step": "s03_gql_error_extensions",
+      "to_step": "s07_gql_node_operation_tests",
+      "data_type": "gql-error-extensions",
+      "field_mapping": {
+        "error_code_catalog": "error_code_catalog"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "validated_schema",
+    "project_dir",
+    "access_rules",
+    "stack",
+    "validation_rules",
+    "operation_documents"
+  ],
+  "terminal_outputs": [
+    "authz_code",
+    "authz_tests",
+    "validation_tests",
+    "error_presenter_code",
+    "limit_config",
+    "limit_tests",
+    "persisted_enforcement",
+    "persisted_tests",
+    "operation_test_suite",
+    "test_run_log"
+  ],
+  "parallel_groups": [
+    [
+      "s01_gql_node_resolver_authorization",
+      "s02_gql_input_validation_rules",
+      "s04_gql_node_graphql_armor_limits",
+      "s05_gql_persisted_documents_manifest"
+    ],
+    [
+      "s03_gql_error_extensions",
+      "s06_gql_persisted_operations_server"
+    ],
+    [
+      "s07_gql_node_operation_tests"
+    ]
+  ],
+  "estimated_cost": 7,
+  "critical_path": [
+    "s02_gql_input_validation_rules",
+    "s03_gql_error_extensions",
+    "s07_gql_node_operation_tests"
+  ]
+}

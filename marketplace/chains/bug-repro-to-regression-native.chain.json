@@ -1,0 +1,291 @@
+{
+  "name": "bug-repro-to-regression-native",
+  "description": "Native C, C++ or Rust crash from a minimal repro: sanitizer-built failing test, red gate, gdb or lldb root cause with watchpoints, probes, prediction check, minimal fix, revert proof and neighbor sweep.",
+  "steps": [
+    {
+      "id": "s01_repro_cpp_gtest_ctest_regression_test",
+      "skill_name": "repro-cpp-gtest-ctest-regression-test",
+      "inputs": {
+        "minimal_repro": "from_user_input",
+        "minimal_input": "from_user_input",
+        "repo_path": "from_user_input"
+      },
+      "outputs": {
+        "cpp_regression_test": "cpp_regression_test"
+      },
+      "condition": "stack == 'cpp'",
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_repro_rust_cargo_regression_test",
+      "skill_name": "repro-rust-cargo-regression-test",
+      "inputs": {
+        "minimal_repro": "from_user_input",
+        "minimal_input": "from_user_input",
+        "repo_path": "from_user_input"
+      },
+      "outputs": {
+        "rust_regression_test": "rust_regression_test"
+      },
+      "condition": "stack == 'rust'",
+      "parallel_group": 1
+    },
+    {
+      "id": "s03_repro_red_test_gate",
+      "skill_name": "repro-red-test-gate",
+      "inputs": {
+        "py_regression_test": "from_user_input_optional",
+        "node_regression_test": "from_user_input_optional",
+        "go_regression_test": "from_user_input_optional",
+        "java_regression_test": "from_user_input_optional",
+        "rust_regression_test": "s02_repro_rust_cargo_regression_test.rust_regression_test",
+        "cpp_regression_test": "s01_repro_cpp_gtest_ctest_regression_test.cpp_regression_test",
+        "stack": "from_user_input",
+        "confirm_runs": "from_user_input"
+      },
+      "outputs": {
+        "regression_test": "regression_test",
+        "red_run_log": "red_run_log"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_repro_native_gdb_lldb_root_cause",
+      "skill_name": "repro-native-gdb-lldb-root-cause",
+      "inputs": {
+        "regression_test": "s03_repro_red_test_gate.regression_test",
+        "repo_path": "from_user_input"
+      },
+      "outputs": {
+        "native_debug_trace": "native_debug_trace"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s05_repro_log_assert_instrumentation",
+      "skill_name": "repro-log-assert-instrumentation",
+      "inputs": {
+        "regression_test": "s03_repro_red_test_gate.regression_test",
+        "repo_path": "from_user_input",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "instrumentation_findings": "instrumentation_findings"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s06_repro_root_cause_confirm",
+      "skill_name": "repro-root-cause-confirm",
+      "inputs": {
+        "py_debug_trace": "from_user_input_optional",
+        "node_debug_trace": "from_user_input_optional",
+        "go_debug_trace": "from_user_input_optional",
+        "jvm_debug_trace": "from_user_input_optional",
+        "native_debug_trace": "s04_repro_native_gdb_lldb_root_cause.native_debug_trace",
+        "instrumentation_findings": "s05_repro_log_assert_instrumentation.instrumentation_findings",
+        "first_bad_commit": "from_user_input_optional"
+      },
+      "outputs": {
+        "root_cause": "root_cause"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s07_repro_minimal_fix",
+      "skill_name": "repro-minimal-fix",
+      "inputs": {
+        "root_cause": "s06_repro_root_cause_confirm.root_cause",
+        "regression_test": "s03_repro_red_test_gate.regression_test",
+        "repo_path": "from_user_input",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "fix_diff": "fix_diff",
+        "green_run_log": "green_run_log"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s08_repro_fix_revert_proof",
+      "skill_name": "repro-fix-revert-proof",
+      "inputs": {
+        "fix_diff": "s07_repro_minimal_fix.fix_diff",
+        "regression_test": "s03_repro_red_test_gate.regression_test",
+        "confirm_runs": "from_user_input"
+      },
+      "outputs": {
+        "revert_proof": "revert_proof"
+      },
+      "parallel_group": 6
+    },
+    {
+      "id": "s09_repro_neighbor_regression_sweep",
+      "skill_name": "repro-neighbor-regression-sweep",
+      "inputs": {
+        "fix_diff": "s07_repro_minimal_fix.fix_diff",
+        "regression_test": "s03_repro_red_test_gate.regression_test",
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "base_ref": "from_user_input"
+      },
+      "outputs": {
+        "neighbor_report": "neighbor_report"
+      },
+      "parallel_group": 6
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s02_repro_rust_cargo_regression_test",
+      "to_step": "s03_repro_red_test_gate",
+      "data_type": "repro-rust-cargo-regression-test",
+      "field_mapping": {
+        "rust_regression_test": "rust_regression_test"
+      }
+    },
+    {
+      "from_step": "s01_repro_cpp_gtest_ctest_regression_test",
+      "to_step": "s03_repro_red_test_gate",
+      "data_type": "repro-cpp-gtest-ctest-regression-test",
+      "field_mapping": {
+        "cpp_regression_test": "cpp_regression_test"
+      }
+    },
+    {
+      "from_step": "s03_repro_red_test_gate",
+      "to_step": "s04_repro_native_gdb_lldb_root_cause",
+      "data_type": "repro-red-test-gate",
+      "field_mapping": {
+        "regression_test": "regression_test"
+      }
+    },
+    {
+      "from_step": "s03_repro_red_test_gate",
+      "to_step": "s05_repro_log_assert_instrumentation",
+      "data_type": "repro-red-test-gate",
+      "field_mapping": {
+        "regression_test": "regression_test"
+      }
+    },
+    {
+      "from_step": "s04_repro_native_gdb_lldb_root_cause",
+      "to_step": "s06_repro_root_cause_confirm",
+      "data_type": "repro-native-gdb-lldb-root-cause",
+      "field_mapping": {
+        "native_debug_trace": "native_debug_trace"
+      }
+    },
+    {
+      "from_step": "s05_repro_log_assert_instrumentation",
+      "to_step": "s06_repro_root_cause_confirm",
+      "data_type": "repro-log-assert-instrumentation",
+      "field_mapping": {
+        "instrumentation_findings": "instrumentation_findings"
+      }
+    },
+    {
+      "from_step": "s06_repro_root_cause_confirm",
+      "to_step": "s07_repro_minimal_fix",
+      "data_type": "repro-root-cause-confirm",
+      "field_mapping": {
+        "root_cause": "root_cause"
+      }
+    },
+    {
+      "from_step": "s03_repro_red_test_gate",
+      "to_step": "s07_repro_minimal_fix",
+      "data_type": "repro-red-test-gate",
+      "field_mapping": {
+        "regression_test": "regression_test"
+      }
+    },
+    {
+      "from_step": "s07_repro_minimal_fix",
+      "to_step": "s08_repro_fix_revert_proof",
+      "data_type": "repro-minimal-fix",
+      "field_mapping": {
+        "fix_diff": "fix_diff"
+      }
+    },
+    {
+      "from_step": "s03_repro_red_test_gate",
+      "to_step": "s08_repro_fix_revert_proof",
+      "data_type": "repro-red-test-gate",
+      "field_mapping": {
+        "regression_test": "regression_test"
+      }
+    },
+    {
+      "from_step": "s07_repro_minimal_fix",
+      "to_step": "s09_repro_neighbor_regression_sweep",
+      "data_type": "repro-minimal-fix",
+      "field_mapping": {
+        "fix_diff": "fix_diff"
+      }
+    },
+    {
+      "from_step": "s03_repro_red_test_gate",
+      "to_step": "s09_repro_neighbor_regression_sweep",
+      "data_type": "repro-red-test-gate",
+      "field_mapping": {
+        "regression_test": "regression_test"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "minimal_repro",
+    "minimal_input",
+    "repo_path",
+    "py_regression_test",
+    "node_regression_test",
+    "go_regression_test",
+    "java_regression_test",
+    "stack",
+    "confirm_runs",
+    "py_debug_trace",
+    "node_debug_trace",
+    "go_debug_trace",
+    "jvm_debug_trace",
+    "first_bad_commit",
+    "base_ref"
+  ],
+  "terminal_outputs": [
+    "red_run_log",
+    "green_run_log",
+    "revert_proof",
+    "neighbor_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_repro_cpp_gtest_ctest_regression_test",
+      "s02_repro_rust_cargo_regression_test"
+    ],
+    [
+      "s03_repro_red_test_gate"
+    ],
+    [
+      "s04_repro_native_gdb_lldb_root_cause",
+      "s05_repro_log_assert_instrumentation"
+    ],
+    [
+      "s06_repro_root_cause_confirm"
+    ],
+    [
+      "s07_repro_minimal_fix"
+    ],
+    [
+      "s08_repro_fix_revert_proof",
+      "s09_repro_neighbor_regression_sweep"
+    ]
+  ],
+  "estimated_cost": 9,
+  "critical_path": [
+    "s02_repro_rust_cargo_regression_test",
+    "s03_repro_red_test_gate",
+    "s04_repro_native_gdb_lldb_root_cause",
+    "s06_repro_root_cause_confirm",
+    "s07_repro_minimal_fix",
+    "s09_repro_neighbor_regression_sweep"
+  ]
+}

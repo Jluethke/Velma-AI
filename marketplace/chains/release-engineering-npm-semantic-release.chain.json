@@ -1,0 +1,271 @@
+{
+  "name": "release-engineering-npm-semantic-release",
+  "description": "Release an npm package with semantic-release: commitlint gate, commit audit, API Extractor diff, version decision, semantic-release config, reproducible pack, provenance, npm publish and install check.",
+  "steps": [
+    {
+      "id": "s01_rel_commitlint_gate",
+      "skill_name": "rel-commitlint-gate",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "ci_platform": "from_user_input"
+      },
+      "outputs": {
+        "commitlint_config": "commitlint_config",
+        "commit_gate_check": "commit_gate_check"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_rel_commit_history_audit",
+      "skill_name": "rel-commit-history-audit",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "last_tag": "from_user_input_optional"
+      },
+      "outputs": {
+        "commit_list": "commit_list",
+        "noncompliant_commits": "noncompliant_commits"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s03_rel_node_api_break_extractor",
+      "skill_name": "rel-node-api-break-extractor",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "last_tag": "from_user_input_optional",
+        "package_name": "from_user_input"
+      },
+      "outputs": {
+        "node_api_breaks": "node_api_breaks"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s04_rel_semver_bump_decision",
+      "skill_name": "rel-semver-bump-decision",
+      "inputs": {
+        "commit_list": "s02_rel_commit_history_audit.commit_list",
+        "noncompliant_commits": "s02_rel_commit_history_audit.noncompliant_commits",
+        "current_version": "from_user_input",
+        "prerelease_id": "from_user_input_optional",
+        "py_api_breaks": "from_user_input_optional",
+        "node_api_breaks": "s03_rel_node_api_break_extractor.node_api_breaks",
+        "go_api_breaks": "from_user_input_optional",
+        "rust_api_breaks": "from_user_input_optional",
+        "deprecation_notices": "from_user_input_optional"
+      },
+      "outputs": {
+        "next_version": "next_version",
+        "bump_level": "bump_level",
+        "bump_rationale": "bump_rationale"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s05_rel_changelog_semantic_release",
+      "skill_name": "rel-changelog-semantic-release",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "branching_model": "from_user_input",
+        "next_version": "s04_rel_semver_bump_decision.next_version"
+      },
+      "outputs": {
+        "semantic_release_config": "semantic_release_config",
+        "sr_changelog": "sr_changelog"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s06_rel_node_reproducible_pack",
+      "skill_name": "rel-node-reproducible-pack",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "release_tag": "from_user_input"
+      },
+      "outputs": {
+        "node_dist": "node_dist",
+        "node_repro_report": "node_repro_report"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s07_rel_slsa_provenance_attest",
+      "skill_name": "rel-slsa-provenance-attest",
+      "inputs": {
+        "repo_slug": "from_user_input",
+        "slsa_build_level": "from_user_input_optional",
+        "py_dist": "from_user_input_optional",
+        "node_dist": "s06_rel_node_reproducible_pack.node_dist",
+        "go_dist": "from_user_input_optional",
+        "rust_dist": "from_user_input_optional",
+        "image_digest": "from_user_input_optional"
+      },
+      "outputs": {
+        "provenance_attestation": "provenance_attestation",
+        "provenance_verification": "provenance_verification"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s08_rel_node_publish_npm_provenance",
+      "skill_name": "rel-node-publish-npm-provenance",
+      "inputs": {
+        "node_dist": "s06_rel_node_reproducible_pack.node_dist",
+        "package_name": "from_user_input",
+        "next_version": "s04_rel_semver_bump_decision.next_version",
+        "prerelease_id": "from_user_input_optional",
+        "provenance_verification": "s07_rel_slsa_provenance_attest.provenance_verification"
+      },
+      "outputs": {
+        "npm_release_url": "npm_release_url"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s09_rel_node_verify_install",
+      "skill_name": "rel-node-verify-install",
+      "inputs": {
+        "package_name": "from_user_input",
+        "next_version": "s04_rel_semver_bump_decision.next_version",
+        "npm_release_url": "s08_rel_node_publish_npm_provenance.npm_release_url"
+      },
+      "outputs": {
+        "node_install_report": "node_install_report"
+      },
+      "parallel_group": 4
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s02_rel_commit_history_audit",
+      "to_step": "s04_rel_semver_bump_decision",
+      "data_type": "rel-commit-history-audit",
+      "field_mapping": {
+        "commit_list": "commit_list",
+        "noncompliant_commits": "noncompliant_commits"
+      }
+    },
+    {
+      "from_step": "s03_rel_node_api_break_extractor",
+      "to_step": "s04_rel_semver_bump_decision",
+      "data_type": "rel-node-api-break-extractor",
+      "field_mapping": {
+        "node_api_breaks": "node_api_breaks"
+      }
+    },
+    {
+      "from_step": "s04_rel_semver_bump_decision",
+      "to_step": "s05_rel_changelog_semantic_release",
+      "data_type": "rel-semver-bump-decision",
+      "field_mapping": {
+        "next_version": "next_version"
+      }
+    },
+    {
+      "from_step": "s06_rel_node_reproducible_pack",
+      "to_step": "s07_rel_slsa_provenance_attest",
+      "data_type": "rel-node-reproducible-pack",
+      "field_mapping": {
+        "node_dist": "node_dist"
+      }
+    },
+    {
+      "from_step": "s06_rel_node_reproducible_pack",
+      "to_step": "s08_rel_node_publish_npm_provenance",
+      "data_type": "rel-node-reproducible-pack",
+      "field_mapping": {
+        "node_dist": "node_dist"
+      }
+    },
+    {
+      "from_step": "s04_rel_semver_bump_decision",
+      "to_step": "s08_rel_node_publish_npm_provenance",
+      "data_type": "rel-semver-bump-decision",
+      "field_mapping": {
+        "next_version": "next_version"
+      }
+    },
+    {
+      "from_step": "s07_rel_slsa_provenance_attest",
+      "to_step": "s08_rel_node_publish_npm_provenance",
+      "data_type": "rel-slsa-provenance-attest",
+      "field_mapping": {
+        "provenance_verification": "provenance_verification"
+      }
+    },
+    {
+      "from_step": "s04_rel_semver_bump_decision",
+      "to_step": "s09_rel_node_verify_install",
+      "data_type": "rel-semver-bump-decision",
+      "field_mapping": {
+        "next_version": "next_version"
+      }
+    },
+    {
+      "from_step": "s08_rel_node_publish_npm_provenance",
+      "to_step": "s09_rel_node_verify_install",
+      "data_type": "rel-node-publish-npm-provenance",
+      "field_mapping": {
+        "npm_release_url": "npm_release_url"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "repo_path",
+    "ci_platform",
+    "last_tag",
+    "package_name",
+    "current_version",
+    "prerelease_id",
+    "py_api_breaks",
+    "go_api_breaks",
+    "rust_api_breaks",
+    "deprecation_notices",
+    "branching_model",
+    "release_tag",
+    "repo_slug",
+    "slsa_build_level",
+    "py_dist",
+    "go_dist",
+    "rust_dist",
+    "image_digest"
+  ],
+  "terminal_outputs": [
+    "commitlint_config",
+    "commit_gate_check",
+    "bump_level",
+    "bump_rationale",
+    "semantic_release_config",
+    "sr_changelog",
+    "node_repro_report",
+    "provenance_attestation",
+    "node_install_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_rel_commitlint_gate",
+      "s02_rel_commit_history_audit",
+      "s03_rel_node_api_break_extractor",
+      "s06_rel_node_reproducible_pack"
+    ],
+    [
+      "s04_rel_semver_bump_decision",
+      "s07_rel_slsa_provenance_attest"
+    ],
+    [
+      "s05_rel_changelog_semantic_release",
+      "s08_rel_node_publish_npm_provenance"
+    ],
+    [
+      "s09_rel_node_verify_install"
+    ]
+  ],
+  "estimated_cost": 9,
+  "critical_path": [
+    "s03_rel_node_api_break_extractor",
+    "s04_rel_semver_bump_decision",
+    "s08_rel_node_publish_npm_provenance",
+    "s09_rel_node_verify_install"
+  ]
+}

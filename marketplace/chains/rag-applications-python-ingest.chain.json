@@ -1,0 +1,197 @@
+{
+  "name": "rag-applications-python-ingest",
+  "description": "Python ingestion of a PDF and HTML corpus into normalized, deduplicated records with exact offsets, then a gold question set labeled on those offsets.",
+  "steps": [
+    {
+      "id": "s01_rag_corpus_inventory",
+      "skill_name": "rag-corpus-inventory",
+      "inputs": {
+        "source_dir": "from_user_input",
+        "work_dir": "from_user_input"
+      },
+      "outputs": {
+        "corpus_manifest": "corpus_manifest",
+        "record_schema": "record_schema"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_rag_py_pdf_extract_pymupdf",
+      "skill_name": "rag-py-pdf-extract-pymupdf",
+      "inputs": {
+        "corpus_manifest": "s01_rag_corpus_inventory.corpus_manifest",
+        "record_schema": "s01_rag_corpus_inventory.record_schema",
+        "work_dir": "from_user_input"
+      },
+      "outputs": {
+        "pdf_records": "pdf_records",
+        "pdf_extract_log": "pdf_extract_log"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_rag_ocr_scanned_pdf_ocrmypdf",
+      "skill_name": "rag-ocr-scanned-pdf-ocrmypdf",
+      "inputs": {
+        "corpus_manifest": "s01_rag_corpus_inventory.corpus_manifest",
+        "record_schema": "s01_rag_corpus_inventory.record_schema",
+        "work_dir": "from_user_input",
+        "ocr_language": "from_user_input"
+      },
+      "outputs": {
+        "ocr_records": "ocr_records",
+        "ocr_log": "ocr_log"
+      },
+      "condition": "has_scanned_pdfs == true",
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_rag_py_html_extract_trafilatura",
+      "skill_name": "rag-py-html-extract-trafilatura",
+      "inputs": {
+        "corpus_manifest": "s01_rag_corpus_inventory.corpus_manifest",
+        "record_schema": "s01_rag_corpus_inventory.record_schema",
+        "work_dir": "from_user_input"
+      },
+      "outputs": {
+        "html_records": "html_records",
+        "html_extract_log": "html_extract_log"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s05_rag_corpus_normalize_dedupe",
+      "skill_name": "rag-corpus-normalize-dedupe",
+      "inputs": {
+        "corpus_manifest": "s01_rag_corpus_inventory.corpus_manifest",
+        "record_schema": "s01_rag_corpus_inventory.record_schema",
+        "work_dir": "from_user_input",
+        "near_dup_threshold": "from_user_input"
+      },
+      "outputs": {
+        "clean_records": "clean_records",
+        "dedupe_report": "dedupe_report"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s06_rag_gold_question_set_label",
+      "skill_name": "rag-gold-question-set-label",
+      "inputs": {
+        "clean_records": "s05_rag_corpus_normalize_dedupe.clean_records",
+        "seed_questions": "from_user_input_optional",
+        "work_dir": "from_user_input"
+      },
+      "outputs": {
+        "question_set": "question_set",
+        "qrels_spans": "qrels_spans"
+      },
+      "parallel_group": 4
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_rag_corpus_inventory",
+      "to_step": "s02_rag_py_pdf_extract_pymupdf",
+      "data_type": "rag-corpus-inventory",
+      "field_mapping": {
+        "corpus_manifest": "corpus_manifest",
+        "record_schema": "record_schema"
+      }
+    },
+    {
+      "from_step": "s01_rag_corpus_inventory",
+      "to_step": "s03_rag_ocr_scanned_pdf_ocrmypdf",
+      "data_type": "rag-corpus-inventory",
+      "field_mapping": {
+        "corpus_manifest": "corpus_manifest",
+        "record_schema": "record_schema"
+      }
+    },
+    {
+      "from_step": "s01_rag_corpus_inventory",
+      "to_step": "s04_rag_py_html_extract_trafilatura",
+      "data_type": "rag-corpus-inventory",
+      "field_mapping": {
+        "corpus_manifest": "corpus_manifest",
+        "record_schema": "record_schema"
+      }
+    },
+    {
+      "from_step": "s01_rag_corpus_inventory",
+      "to_step": "s05_rag_corpus_normalize_dedupe",
+      "data_type": "rag-corpus-inventory",
+      "field_mapping": {
+        "corpus_manifest": "corpus_manifest",
+        "record_schema": "record_schema"
+      }
+    },
+    {
+      "from_step": "s02_rag_py_pdf_extract_pymupdf",
+      "to_step": "s05_rag_corpus_normalize_dedupe",
+      "data_type": "rag-py-pdf-extract-pymupdf",
+      "field_mapping": {}
+    },
+    {
+      "from_step": "s03_rag_ocr_scanned_pdf_ocrmypdf",
+      "to_step": "s05_rag_corpus_normalize_dedupe",
+      "data_type": "rag-ocr-scanned-pdf-ocrmypdf",
+      "field_mapping": {}
+    },
+    {
+      "from_step": "s04_rag_py_html_extract_trafilatura",
+      "to_step": "s05_rag_corpus_normalize_dedupe",
+      "data_type": "rag-py-html-extract-trafilatura",
+      "field_mapping": {}
+    },
+    {
+      "from_step": "s05_rag_corpus_normalize_dedupe",
+      "to_step": "s06_rag_gold_question_set_label",
+      "data_type": "rag-corpus-normalize-dedupe",
+      "field_mapping": {
+        "clean_records": "clean_records"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "source_dir",
+    "work_dir",
+    "ocr_language",
+    "near_dup_threshold",
+    "seed_questions"
+  ],
+  "terminal_outputs": [
+    "pdf_records",
+    "pdf_extract_log",
+    "ocr_records",
+    "ocr_log",
+    "html_records",
+    "html_extract_log",
+    "dedupe_report",
+    "question_set",
+    "qrels_spans"
+  ],
+  "parallel_groups": [
+    [
+      "s01_rag_corpus_inventory"
+    ],
+    [
+      "s02_rag_py_pdf_extract_pymupdf",
+      "s03_rag_ocr_scanned_pdf_ocrmypdf",
+      "s04_rag_py_html_extract_trafilatura"
+    ],
+    [
+      "s05_rag_corpus_normalize_dedupe"
+    ],
+    [
+      "s06_rag_gold_question_set_label"
+    ]
+  ],
+  "estimated_cost": 6,
+  "critical_path": [
+    "s01_rag_corpus_inventory",
+    "s02_rag_py_pdf_extract_pymupdf",
+    "s05_rag_corpus_normalize_dedupe",
+    "s06_rag_gold_question_set_label"
+  ]
+}

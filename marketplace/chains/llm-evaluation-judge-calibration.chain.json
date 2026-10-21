@@ -1,0 +1,229 @@
+{
+  "name": "llm-evaluation-judge-calibration",
+  "description": "Build and validate an LLM-as-judge: rubric, human labels with agreement, judge prompt, runner, calibration against humans, and pairwise comparison.",
+  "steps": [
+    {
+      "id": "s01_evh_task_rubric_spec",
+      "skill_name": "evh-task-rubric-spec",
+      "inputs": {
+        "feature_description": "from_user_input",
+        "product_constraints": "from_user_input_optional"
+      },
+      "outputs": {
+        "task_spec": "task_spec",
+        "rubric": "rubric"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_evh_golden_labels_annotation",
+      "skill_name": "evh-golden-labels-annotation",
+      "inputs": {
+        "test_set": "from_user_input",
+        "adversarial_set": "from_user_input",
+        "rubric": "s01_evh_task_rubric_spec.rubric",
+        "annotators": "from_user_input"
+      },
+      "outputs": {
+        "golden_set": "golden_set",
+        "human_labels": "human_labels"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_evh_judge_prompt_design",
+      "skill_name": "evh-judge-prompt-design",
+      "inputs": {
+        "rubric": "s01_evh_task_rubric_spec.rubric",
+        "golden_set": "s02_evh_golden_labels_annotation.golden_set",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "judge_prompt": "judge_prompt"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_evh_py_judge_runner",
+      "skill_name": "evh-py-judge-runner",
+      "inputs": {
+        "judge_prompt": "s03_evh_judge_prompt_design.judge_prompt",
+        "model_ids": "from_user_input",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "judge_runner": "judge_runner"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 4
+    },
+    {
+      "id": "s05_evh_node_judge_runner",
+      "skill_name": "evh-node-judge-runner",
+      "inputs": {
+        "judge_prompt": "s03_evh_judge_prompt_design.judge_prompt",
+        "model_ids": "from_user_input",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "judge_runner": "judge_runner"
+      },
+      "condition": "stack == 'node'",
+      "parallel_group": 4
+    },
+    {
+      "id": "s06_evh_judge_calibration",
+      "skill_name": "evh-judge-calibration",
+      "inputs": {
+        "judge_prompt": "s03_evh_judge_prompt_design.judge_prompt",
+        "human_labels": "s02_evh_golden_labels_annotation.human_labels",
+        "project_dir": "from_user_input",
+        "stack": "from_user_input",
+        "min_judge_agreement": "from_user_input_optional"
+      },
+      "outputs": {
+        "calibration_report": "calibration_report",
+        "judge_approved": "judge_approved"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s07_evh_pairwise_comparison",
+      "skill_name": "evh-pairwise-comparison",
+      "inputs": {
+        "golden_set": "s02_evh_golden_labels_annotation.golden_set",
+        "judge_prompt": "s03_evh_judge_prompt_design.judge_prompt",
+        "baseline_outputs": "from_user_input",
+        "candidate_outputs": "from_user_input",
+        "compare_mode": "from_user_input",
+        "project_dir": "from_user_input",
+        "alpha": "from_user_input_optional"
+      },
+      "outputs": {
+        "pairwise_report": "pairwise_report"
+      },
+      "condition": "compare_mode == 'pairwise'",
+      "parallel_group": 4
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_evh_task_rubric_spec",
+      "to_step": "s02_evh_golden_labels_annotation",
+      "data_type": "evh-task-rubric-spec",
+      "field_mapping": {
+        "rubric": "rubric"
+      }
+    },
+    {
+      "from_step": "s01_evh_task_rubric_spec",
+      "to_step": "s03_evh_judge_prompt_design",
+      "data_type": "evh-task-rubric-spec",
+      "field_mapping": {
+        "rubric": "rubric"
+      }
+    },
+    {
+      "from_step": "s02_evh_golden_labels_annotation",
+      "to_step": "s03_evh_judge_prompt_design",
+      "data_type": "evh-golden-labels-annotation",
+      "field_mapping": {
+        "golden_set": "golden_set"
+      }
+    },
+    {
+      "from_step": "s03_evh_judge_prompt_design",
+      "to_step": "s04_evh_py_judge_runner",
+      "data_type": "evh-judge-prompt-design",
+      "field_mapping": {
+        "judge_prompt": "judge_prompt"
+      }
+    },
+    {
+      "from_step": "s03_evh_judge_prompt_design",
+      "to_step": "s05_evh_node_judge_runner",
+      "data_type": "evh-judge-prompt-design",
+      "field_mapping": {
+        "judge_prompt": "judge_prompt"
+      }
+    },
+    {
+      "from_step": "s03_evh_judge_prompt_design",
+      "to_step": "s06_evh_judge_calibration",
+      "data_type": "evh-judge-prompt-design",
+      "field_mapping": {
+        "judge_prompt": "judge_prompt"
+      }
+    },
+    {
+      "from_step": "s02_evh_golden_labels_annotation",
+      "to_step": "s06_evh_judge_calibration",
+      "data_type": "evh-golden-labels-annotation",
+      "field_mapping": {
+        "human_labels": "human_labels"
+      }
+    },
+    {
+      "from_step": "s02_evh_golden_labels_annotation",
+      "to_step": "s07_evh_pairwise_comparison",
+      "data_type": "evh-golden-labels-annotation",
+      "field_mapping": {
+        "golden_set": "golden_set"
+      }
+    },
+    {
+      "from_step": "s03_evh_judge_prompt_design",
+      "to_step": "s07_evh_pairwise_comparison",
+      "data_type": "evh-judge-prompt-design",
+      "field_mapping": {
+        "judge_prompt": "judge_prompt"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "feature_description",
+    "product_constraints",
+    "test_set",
+    "adversarial_set",
+    "annotators",
+    "project_dir",
+    "model_ids",
+    "stack",
+    "min_judge_agreement",
+    "baseline_outputs",
+    "candidate_outputs",
+    "compare_mode",
+    "alpha"
+  ],
+  "terminal_outputs": [
+    "task_spec",
+    "judge_runner",
+    "calibration_report",
+    "judge_approved",
+    "pairwise_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_evh_task_rubric_spec"
+    ],
+    [
+      "s02_evh_golden_labels_annotation"
+    ],
+    [
+      "s03_evh_judge_prompt_design"
+    ],
+    [
+      "s04_evh_py_judge_runner",
+      "s05_evh_node_judge_runner",
+      "s06_evh_judge_calibration",
+      "s07_evh_pairwise_comparison"
+    ]
+  ],
+  "estimated_cost": 7,
+  "critical_path": [
+    "s01_evh_task_rubric_spec",
+    "s02_evh_golden_labels_annotation",
+    "s03_evh_judge_prompt_design",
+    "s04_evh_py_judge_runner"
+  ]
+}

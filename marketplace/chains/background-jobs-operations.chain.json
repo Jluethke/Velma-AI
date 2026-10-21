@@ -1,0 +1,141 @@
+{
+  "name": "background-jobs-operations",
+  "description": "Operate an existing job system: measure runtimes, set retry policy, write the dead-letter runbook, size concurrency against downstream limits, and alert on queue age against the latency SLO.",
+  "steps": [
+    {
+      "id": "s01_bjq_job_duration_profile",
+      "skill_name": "bjq-job-duration-profile",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "queue_choice": "from_user_input",
+        "job_inventory": "from_user_input",
+        "log_source": "from_user_input"
+      },
+      "outputs": {
+        "job_duration_profile": "job_duration_profile"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_bjq_retry_backoff_jitter_policy",
+      "skill_name": "bjq-retry-backoff-jitter-policy",
+      "inputs": {
+        "job_inventory": "from_user_input",
+        "job_duration_profile": "s01_bjq_job_duration_profile.job_duration_profile",
+        "queue_choice": "from_user_input",
+        "outage_tolerance": "from_user_input_optional"
+      },
+      "outputs": {
+        "retry_policy": "retry_policy"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_bjq_dead_letter_redrive_runbook",
+      "skill_name": "bjq-dead-letter-redrive-runbook",
+      "inputs": {
+        "queue_choice": "from_user_input",
+        "retry_policy": "s02_bjq_retry_backoff_jitter_policy.retry_policy",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "dlq_runbook": "dlq_runbook"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_bjq_concurrency_limit_sizing",
+      "skill_name": "bjq-concurrency-limit-sizing",
+      "inputs": {
+        "queue_choice": "from_user_input",
+        "job_inventory": "from_user_input",
+        "job_duration_profile": "s01_bjq_job_duration_profile.job_duration_profile",
+        "downstream_limits": "from_user_input"
+      },
+      "outputs": {
+        "concurrency_plan": "concurrency_plan"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s05_bjq_queue_depth_age_alerts",
+      "skill_name": "bjq-queue-depth-age-alerts",
+      "inputs": {
+        "queue_choice": "from_user_input",
+        "latency_slo": "from_user_input",
+        "concurrency_plan": "s04_bjq_concurrency_limit_sizing.concurrency_plan"
+      },
+      "outputs": {
+        "monitoring_config": "monitoring_config"
+      },
+      "parallel_group": 3
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_bjq_job_duration_profile",
+      "to_step": "s02_bjq_retry_backoff_jitter_policy",
+      "data_type": "bjq-job-duration-profile",
+      "field_mapping": {
+        "job_duration_profile": "job_duration_profile"
+      }
+    },
+    {
+      "from_step": "s02_bjq_retry_backoff_jitter_policy",
+      "to_step": "s03_bjq_dead_letter_redrive_runbook",
+      "data_type": "bjq-retry-backoff-jitter-policy",
+      "field_mapping": {
+        "retry_policy": "retry_policy"
+      }
+    },
+    {
+      "from_step": "s01_bjq_job_duration_profile",
+      "to_step": "s04_bjq_concurrency_limit_sizing",
+      "data_type": "bjq-job-duration-profile",
+      "field_mapping": {
+        "job_duration_profile": "job_duration_profile"
+      }
+    },
+    {
+      "from_step": "s04_bjq_concurrency_limit_sizing",
+      "to_step": "s05_bjq_queue_depth_age_alerts",
+      "data_type": "bjq-concurrency-limit-sizing",
+      "field_mapping": {
+        "concurrency_plan": "concurrency_plan"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "repo_path",
+    "queue_choice",
+    "job_inventory",
+    "log_source",
+    "outage_tolerance",
+    "stack",
+    "downstream_limits",
+    "latency_slo"
+  ],
+  "terminal_outputs": [
+    "dlq_runbook",
+    "monitoring_config"
+  ],
+  "parallel_groups": [
+    [
+      "s01_bjq_job_duration_profile"
+    ],
+    [
+      "s02_bjq_retry_backoff_jitter_policy",
+      "s04_bjq_concurrency_limit_sizing"
+    ],
+    [
+      "s03_bjq_dead_letter_redrive_runbook",
+      "s05_bjq_queue_depth_age_alerts"
+    ]
+  ],
+  "estimated_cost": 5,
+  "critical_path": [
+    "s01_bjq_job_duration_profile",
+    "s04_bjq_concurrency_limit_sizing",
+    "s05_bjq_queue_depth_age_alerts"
+  ]
+}

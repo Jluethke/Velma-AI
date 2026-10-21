@@ -1,0 +1,242 @@
+{
+  "name": "accessibility-remediation-automated-scan",
+  "description": "Run axe-core, Lighthouse and Pa11y over a WCAG-EM page sample, merge and deduplicate the results, resolve contrast items the scanners could not decide, and rank the confirmed issues by user impact.",
+  "steps": [
+    {
+      "id": "s01_a11y_scope_inventory",
+      "skill_name": "a11y-scope-inventory",
+      "inputs": {
+        "site_url": "from_user_input",
+        "repo_dir": "from_user_input",
+        "stack": "from_user_input",
+        "scope_notes": "from_user_input_optional"
+      },
+      "outputs": {
+        "page_inventory": "page_inventory",
+        "component_inventory": "component_inventory"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_a11y_axe_playwright_scan",
+      "skill_name": "a11y-axe-playwright-scan",
+      "inputs": {
+        "page_inventory": "s01_a11y_scope_inventory.page_inventory",
+        "site_url": "from_user_input",
+        "auth_state": "from_user_input_optional"
+      },
+      "outputs": {
+        "axe_findings": "axe_findings"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_a11y_lighthouse_audit",
+      "skill_name": "a11y-lighthouse-audit",
+      "inputs": {
+        "page_inventory": "s01_a11y_scope_inventory.page_inventory",
+        "site_url": "from_user_input"
+      },
+      "outputs": {
+        "lighthouse_findings": "lighthouse_findings"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_a11y_pa11y_ci_scan",
+      "skill_name": "a11y-pa11y-ci-scan",
+      "inputs": {
+        "page_inventory": "s01_a11y_scope_inventory.page_inventory",
+        "site_url": "from_user_input"
+      },
+      "outputs": {
+        "pa11y_findings": "pa11y_findings"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s05_a11y_scan_merge_dedupe",
+      "skill_name": "a11y-scan-merge-dedupe",
+      "inputs": {
+        "axe_findings": "s02_a11y_axe_playwright_scan.axe_findings",
+        "lighthouse_findings": "s03_a11y_lighthouse_audit.lighthouse_findings",
+        "pa11y_findings": "s04_a11y_pa11y_ci_scan.pa11y_findings"
+      },
+      "outputs": {
+        "automated_issues": "automated_issues",
+        "needs_review_items": "needs_review_items"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s06_a11y_color_contrast_measure",
+      "skill_name": "a11y-color-contrast-measure",
+      "inputs": {
+        "page_inventory": "s01_a11y_scope_inventory.page_inventory",
+        "needs_review_items": "s05_a11y_scan_merge_dedupe.needs_review_items"
+      },
+      "outputs": {
+        "contrast_issues": "contrast_issues"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s07_a11y_impact_ranking",
+      "skill_name": "a11y-impact-ranking",
+      "inputs": {
+        "critical_journeys": "from_user_input",
+        "automated_issues": "s05_a11y_scan_merge_dedupe.automated_issues",
+        "keyboard_issues": "from_user_input_optional",
+        "focus_issues": "from_user_input_optional",
+        "nvda_issues": "from_user_input_optional",
+        "voiceover_macos_issues": "from_user_input_optional",
+        "voiceover_ios_issues": "from_user_input_optional",
+        "contrast_issues": "s06_a11y_color_contrast_measure.contrast_issues",
+        "form_issues": "from_user_input_optional",
+        "image_issues": "from_user_input_optional",
+        "structure_issues": "from_user_input_optional",
+        "motion_issues": "from_user_input_optional",
+        "target_size_issues": "from_user_input_optional",
+        "reflow_issues": "from_user_input_optional",
+        "pointer_help_issues": "from_user_input_optional"
+      },
+      "outputs": {
+        "ranked_issues": "ranked_issues"
+      },
+      "parallel_group": 5
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_a11y_scope_inventory",
+      "to_step": "s02_a11y_axe_playwright_scan",
+      "data_type": "a11y-scope-inventory",
+      "field_mapping": {
+        "page_inventory": "page_inventory"
+      }
+    },
+    {
+      "from_step": "s01_a11y_scope_inventory",
+      "to_step": "s03_a11y_lighthouse_audit",
+      "data_type": "a11y-scope-inventory",
+      "field_mapping": {
+        "page_inventory": "page_inventory"
+      }
+    },
+    {
+      "from_step": "s01_a11y_scope_inventory",
+      "to_step": "s04_a11y_pa11y_ci_scan",
+      "data_type": "a11y-scope-inventory",
+      "field_mapping": {
+        "page_inventory": "page_inventory"
+      }
+    },
+    {
+      "from_step": "s02_a11y_axe_playwright_scan",
+      "to_step": "s05_a11y_scan_merge_dedupe",
+      "data_type": "a11y-axe-playwright-scan",
+      "field_mapping": {
+        "axe_findings": "axe_findings"
+      }
+    },
+    {
+      "from_step": "s03_a11y_lighthouse_audit",
+      "to_step": "s05_a11y_scan_merge_dedupe",
+      "data_type": "a11y-lighthouse-audit",
+      "field_mapping": {
+        "lighthouse_findings": "lighthouse_findings"
+      }
+    },
+    {
+      "from_step": "s04_a11y_pa11y_ci_scan",
+      "to_step": "s05_a11y_scan_merge_dedupe",
+      "data_type": "a11y-pa11y-ci-scan",
+      "field_mapping": {
+        "pa11y_findings": "pa11y_findings"
+      }
+    },
+    {
+      "from_step": "s01_a11y_scope_inventory",
+      "to_step": "s06_a11y_color_contrast_measure",
+      "data_type": "a11y-scope-inventory",
+      "field_mapping": {
+        "page_inventory": "page_inventory"
+      }
+    },
+    {
+      "from_step": "s05_a11y_scan_merge_dedupe",
+      "to_step": "s06_a11y_color_contrast_measure",
+      "data_type": "a11y-scan-merge-dedupe",
+      "field_mapping": {
+        "needs_review_items": "needs_review_items"
+      }
+    },
+    {
+      "from_step": "s05_a11y_scan_merge_dedupe",
+      "to_step": "s07_a11y_impact_ranking",
+      "data_type": "a11y-scan-merge-dedupe",
+      "field_mapping": {
+        "automated_issues": "automated_issues"
+      }
+    },
+    {
+      "from_step": "s06_a11y_color_contrast_measure",
+      "to_step": "s07_a11y_impact_ranking",
+      "data_type": "a11y-color-contrast-measure",
+      "field_mapping": {
+        "contrast_issues": "contrast_issues"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "site_url",
+    "repo_dir",
+    "stack",
+    "scope_notes",
+    "auth_state",
+    "critical_journeys",
+    "keyboard_issues",
+    "focus_issues",
+    "nvda_issues",
+    "voiceover_macos_issues",
+    "voiceover_ios_issues",
+    "form_issues",
+    "image_issues",
+    "structure_issues",
+    "motion_issues",
+    "target_size_issues",
+    "reflow_issues",
+    "pointer_help_issues"
+  ],
+  "terminal_outputs": [
+    "component_inventory",
+    "ranked_issues"
+  ],
+  "parallel_groups": [
+    [
+      "s01_a11y_scope_inventory"
+    ],
+    [
+      "s02_a11y_axe_playwright_scan",
+      "s03_a11y_lighthouse_audit",
+      "s04_a11y_pa11y_ci_scan"
+    ],
+    [
+      "s05_a11y_scan_merge_dedupe"
+    ],
+    [
+      "s06_a11y_color_contrast_measure"
+    ],
+    [
+      "s07_a11y_impact_ranking"
+    ]
+  ],
+  "estimated_cost": 7,
+  "critical_path": [
+    "s01_a11y_scope_inventory",
+    "s04_a11y_pa11y_ci_scan",
+    "s05_a11y_scan_merge_dedupe",
+    "s06_a11y_color_contrast_measure",
+    "s07_a11y_impact_ranking"
+  ]
+}

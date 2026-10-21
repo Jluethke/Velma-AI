@@ -1,0 +1,301 @@
+{
+  "name": "ci-pipelines-github-actions-python",
+  "description": "Build a hardened GitHub Actions CI for a Python project: commands, clean-room check, workflow, cache, version matrix, JUnit artifacts, SHA pins, secrets audit, workflow lint and required checks.",
+  "steps": [
+    {
+      "id": "s01_ci0_detect_stack",
+      "skill_name": "ci0-detect-stack",
+      "inputs": {
+        "repo_dir": "from_user_input",
+        "stack": "from_user_input_optional"
+      },
+      "outputs": {
+        "stack_profile": "stack_profile",
+        "existing_ci_files": "existing_ci_files"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_ci0_py_ci_commands",
+      "skill_name": "ci0-py-ci-commands",
+      "inputs": {
+        "repo_dir": "from_user_input",
+        "stack_profile": "s01_ci0_detect_stack.stack_profile"
+      },
+      "outputs": {
+        "py_ci_commands": "py_ci_commands"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_ci0_clean_room_command_check",
+      "skill_name": "ci0-clean-room-command-check",
+      "inputs": {
+        "repo_dir": "from_user_input",
+        "py_ci_commands": "s02_ci0_py_ci_commands.py_ci_commands",
+        "node_ci_commands": "from_user_input_optional",
+        "go_ci_commands": "from_user_input_optional",
+        "jvm_ci_commands": "from_user_input_optional",
+        "runner_image": "from_user_input_optional"
+      },
+      "outputs": {
+        "verified_commands": "verified_commands",
+        "junit_report_globs": "junit_report_globs"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_ci0_gha_workflow_baseline",
+      "skill_name": "ci0-gha-workflow-baseline",
+      "inputs": {
+        "repo_dir": "from_user_input",
+        "verified_commands": "s03_ci0_clean_room_command_check.verified_commands",
+        "default_branch": "from_user_input"
+      },
+      "outputs": {
+        "gha_workflow_path": "gha_workflow_path",
+        "gha_job_ids": "gha_job_ids"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s05_ci0_gha_dependency_cache",
+      "skill_name": "ci0-gha-dependency-cache",
+      "inputs": {
+        "gha_workflow_path": "s04_ci0_gha_workflow_baseline.gha_workflow_path",
+        "stack_profile": "s01_ci0_detect_stack.stack_profile"
+      },
+      "outputs": {
+        "gha_cache_diff": "gha_cache_diff"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s06_ci0_gha_test_matrix",
+      "skill_name": "ci0-gha-test-matrix",
+      "inputs": {
+        "gha_workflow_path": "s04_ci0_gha_workflow_baseline.gha_workflow_path",
+        "matrix_versions": "from_user_input",
+        "matrix_os": "from_user_input_optional"
+      },
+      "outputs": {
+        "gha_matrix_diff": "gha_matrix_diff",
+        "check_run_names": "check_run_names"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s07_ci0_gha_junit_artifacts",
+      "skill_name": "ci0-gha-junit-artifacts",
+      "inputs": {
+        "gha_workflow_path": "s04_ci0_gha_workflow_baseline.gha_workflow_path",
+        "junit_report_globs": "s03_ci0_clean_room_command_check.junit_report_globs"
+      },
+      "outputs": {
+        "gha_report_diff": "gha_report_diff"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s08_ci0_gha_pin_actions_sha",
+      "skill_name": "ci0-gha-pin-actions-sha",
+      "inputs": {
+        "gha_workflow_path": "s04_ci0_gha_workflow_baseline.gha_workflow_path"
+      },
+      "outputs": {
+        "pinned_actions_table": "pinned_actions_table"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s09_ci0_gha_secrets_permissions",
+      "skill_name": "ci0-gha-secrets-permissions",
+      "inputs": {
+        "gha_workflow_path": "s04_ci0_gha_workflow_baseline.gha_workflow_path"
+      },
+      "outputs": {
+        "secrets_findings": "secrets_findings"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s10_ci0_gha_lint_workflows",
+      "skill_name": "ci0-gha-lint-workflows",
+      "inputs": {
+        "gha_workflow_path": "s04_ci0_gha_workflow_baseline.gha_workflow_path"
+      },
+      "outputs": {
+        "lint_report": "lint_report"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s11_ci0_gha_required_checks",
+      "skill_name": "ci0-gha-required-checks",
+      "inputs": {
+        "repo_slug": "from_user_input",
+        "default_branch": "from_user_input",
+        "check_run_names": "s06_ci0_gha_test_matrix.check_run_names"
+      },
+      "outputs": {
+        "protection_record": "protection_record"
+      },
+      "parallel_group": 6
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_ci0_detect_stack",
+      "to_step": "s02_ci0_py_ci_commands",
+      "data_type": "ci0-detect-stack",
+      "field_mapping": {
+        "stack_profile": "stack_profile"
+      }
+    },
+    {
+      "from_step": "s02_ci0_py_ci_commands",
+      "to_step": "s03_ci0_clean_room_command_check",
+      "data_type": "ci0-py-ci-commands",
+      "field_mapping": {
+        "py_ci_commands": "py_ci_commands"
+      }
+    },
+    {
+      "from_step": "s03_ci0_clean_room_command_check",
+      "to_step": "s04_ci0_gha_workflow_baseline",
+      "data_type": "ci0-clean-room-command-check",
+      "field_mapping": {
+        "verified_commands": "verified_commands"
+      }
+    },
+    {
+      "from_step": "s04_ci0_gha_workflow_baseline",
+      "to_step": "s05_ci0_gha_dependency_cache",
+      "data_type": "ci0-gha-workflow-baseline",
+      "field_mapping": {
+        "gha_workflow_path": "gha_workflow_path"
+      }
+    },
+    {
+      "from_step": "s01_ci0_detect_stack",
+      "to_step": "s05_ci0_gha_dependency_cache",
+      "data_type": "ci0-detect-stack",
+      "field_mapping": {
+        "stack_profile": "stack_profile"
+      }
+    },
+    {
+      "from_step": "s04_ci0_gha_workflow_baseline",
+      "to_step": "s06_ci0_gha_test_matrix",
+      "data_type": "ci0-gha-workflow-baseline",
+      "field_mapping": {
+        "gha_workflow_path": "gha_workflow_path"
+      }
+    },
+    {
+      "from_step": "s04_ci0_gha_workflow_baseline",
+      "to_step": "s07_ci0_gha_junit_artifacts",
+      "data_type": "ci0-gha-workflow-baseline",
+      "field_mapping": {
+        "gha_workflow_path": "gha_workflow_path"
+      }
+    },
+    {
+      "from_step": "s03_ci0_clean_room_command_check",
+      "to_step": "s07_ci0_gha_junit_artifacts",
+      "data_type": "ci0-clean-room-command-check",
+      "field_mapping": {
+        "junit_report_globs": "junit_report_globs"
+      }
+    },
+    {
+      "from_step": "s04_ci0_gha_workflow_baseline",
+      "to_step": "s08_ci0_gha_pin_actions_sha",
+      "data_type": "ci0-gha-workflow-baseline",
+      "field_mapping": {
+        "gha_workflow_path": "gha_workflow_path"
+      }
+    },
+    {
+      "from_step": "s04_ci0_gha_workflow_baseline",
+      "to_step": "s09_ci0_gha_secrets_permissions",
+      "data_type": "ci0-gha-workflow-baseline",
+      "field_mapping": {
+        "gha_workflow_path": "gha_workflow_path"
+      }
+    },
+    {
+      "from_step": "s04_ci0_gha_workflow_baseline",
+      "to_step": "s10_ci0_gha_lint_workflows",
+      "data_type": "ci0-gha-workflow-baseline",
+      "field_mapping": {
+        "gha_workflow_path": "gha_workflow_path"
+      }
+    },
+    {
+      "from_step": "s06_ci0_gha_test_matrix",
+      "to_step": "s11_ci0_gha_required_checks",
+      "data_type": "ci0-gha-test-matrix",
+      "field_mapping": {
+        "check_run_names": "check_run_names"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "repo_dir",
+    "stack",
+    "node_ci_commands",
+    "go_ci_commands",
+    "jvm_ci_commands",
+    "runner_image",
+    "default_branch",
+    "matrix_versions",
+    "matrix_os",
+    "repo_slug"
+  ],
+  "terminal_outputs": [
+    "existing_ci_files",
+    "gha_job_ids",
+    "gha_cache_diff",
+    "gha_matrix_diff",
+    "gha_report_diff",
+    "pinned_actions_table",
+    "secrets_findings",
+    "lint_report",
+    "protection_record"
+  ],
+  "parallel_groups": [
+    [
+      "s01_ci0_detect_stack"
+    ],
+    [
+      "s02_ci0_py_ci_commands"
+    ],
+    [
+      "s03_ci0_clean_room_command_check"
+    ],
+    [
+      "s04_ci0_gha_workflow_baseline"
+    ],
+    [
+      "s05_ci0_gha_dependency_cache",
+      "s06_ci0_gha_test_matrix",
+      "s07_ci0_gha_junit_artifacts",
+      "s08_ci0_gha_pin_actions_sha",
+      "s09_ci0_gha_secrets_permissions",
+      "s10_ci0_gha_lint_workflows"
+    ],
+    [
+      "s11_ci0_gha_required_checks"
+    ]
+  ],
+  "estimated_cost": 11,
+  "critical_path": [
+    "s01_ci0_detect_stack",
+    "s02_ci0_py_ci_commands",
+    "s03_ci0_clean_room_command_check",
+    "s04_ci0_gha_workflow_baseline",
+    "s06_ci0_gha_test_matrix",
+    "s11_ci0_gha_required_checks"
+  ]
+}

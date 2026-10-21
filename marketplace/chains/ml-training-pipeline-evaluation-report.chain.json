@@ -1,0 +1,168 @@
+{
+  "name": "ml-training-pipeline-evaluation-report",
+  "description": "Evaluate a finished model honestly and document it: test score with bootstrap interval, paired comparison with the baseline, slice error analysis, calibration diagnosis and a traced model card.",
+  "steps": [
+    {
+      "id": "s01_mlp_bootstrap_metric_ci",
+      "skill_name": "mlp-bootstrap-metric-ci",
+      "inputs": {
+        "tuned_model": "from_user_input",
+        "split_manifest": "from_user_input",
+        "primary_metric": "from_user_input",
+        "confidence_level": "from_user_input"
+      },
+      "outputs": {
+        "test_predictions": "test_predictions",
+        "metric_ci": "metric_ci"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_mlp_paired_model_comparison",
+      "skill_name": "mlp-paired-model-comparison",
+      "inputs": {
+        "test_predictions": "s01_mlp_bootstrap_metric_ci.test_predictions",
+        "baseline_models": "from_user_input",
+        "split_manifest": "from_user_input",
+        "primary_metric": "from_user_input",
+        "confidence_level": "from_user_input"
+      },
+      "outputs": {
+        "comparison_result": "comparison_result"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_mlp_slice_error_analysis",
+      "skill_name": "mlp-slice-error-analysis",
+      "inputs": {
+        "test_predictions": "s01_mlp_bootstrap_metric_ci.test_predictions",
+        "slice_columns": "from_user_input",
+        "primary_metric": "from_user_input",
+        "min_slice_size": "from_user_input"
+      },
+      "outputs": {
+        "slice_report": "slice_report"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_mlp_calibration_diagnose",
+      "skill_name": "mlp-calibration-diagnose",
+      "inputs": {
+        "tuned_model": "from_user_input",
+        "split_manifest": "from_user_input",
+        "problem_frame": "from_user_input"
+      },
+      "outputs": {
+        "calibration_report": "calibration_report"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s05_mlp_model_card",
+      "skill_name": "mlp-model-card",
+      "inputs": {
+        "problem_frame": "from_user_input",
+        "data_version": "from_user_input",
+        "metric_ci": "s01_mlp_bootstrap_metric_ci.metric_ci",
+        "comparison_result": "s02_mlp_paired_model_comparison.comparison_result",
+        "slice_report": "s03_mlp_slice_error_analysis.slice_report",
+        "calibration_report": "s04_mlp_calibration_diagnose.calibration_report",
+        "parity_report": "from_user_input",
+        "sklearn_model_package": "from_user_input_optional",
+        "onnx_model_package": "from_user_input_optional"
+      },
+      "outputs": {
+        "model_card": "model_card"
+      },
+      "parallel_group": 3
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_mlp_bootstrap_metric_ci",
+      "to_step": "s02_mlp_paired_model_comparison",
+      "data_type": "mlp-bootstrap-metric-ci",
+      "field_mapping": {
+        "test_predictions": "test_predictions"
+      }
+    },
+    {
+      "from_step": "s01_mlp_bootstrap_metric_ci",
+      "to_step": "s03_mlp_slice_error_analysis",
+      "data_type": "mlp-bootstrap-metric-ci",
+      "field_mapping": {
+        "test_predictions": "test_predictions"
+      }
+    },
+    {
+      "from_step": "s01_mlp_bootstrap_metric_ci",
+      "to_step": "s05_mlp_model_card",
+      "data_type": "mlp-bootstrap-metric-ci",
+      "field_mapping": {
+        "metric_ci": "metric_ci"
+      }
+    },
+    {
+      "from_step": "s02_mlp_paired_model_comparison",
+      "to_step": "s05_mlp_model_card",
+      "data_type": "mlp-paired-model-comparison",
+      "field_mapping": {
+        "comparison_result": "comparison_result"
+      }
+    },
+    {
+      "from_step": "s03_mlp_slice_error_analysis",
+      "to_step": "s05_mlp_model_card",
+      "data_type": "mlp-slice-error-analysis",
+      "field_mapping": {
+        "slice_report": "slice_report"
+      }
+    },
+    {
+      "from_step": "s04_mlp_calibration_diagnose",
+      "to_step": "s05_mlp_model_card",
+      "data_type": "mlp-calibration-diagnose",
+      "field_mapping": {
+        "calibration_report": "calibration_report"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "tuned_model",
+    "split_manifest",
+    "primary_metric",
+    "confidence_level",
+    "baseline_models",
+    "slice_columns",
+    "min_slice_size",
+    "problem_frame",
+    "data_version",
+    "parity_report",
+    "sklearn_model_package",
+    "onnx_model_package"
+  ],
+  "terminal_outputs": [
+    "model_card"
+  ],
+  "parallel_groups": [
+    [
+      "s01_mlp_bootstrap_metric_ci",
+      "s04_mlp_calibration_diagnose"
+    ],
+    [
+      "s02_mlp_paired_model_comparison",
+      "s03_mlp_slice_error_analysis"
+    ],
+    [
+      "s05_mlp_model_card"
+    ]
+  ],
+  "estimated_cost": 5,
+  "critical_path": [
+    "s01_mlp_bootstrap_metric_ci",
+    "s02_mlp_paired_model_comparison",
+    "s05_mlp_model_card"
+  ]
+}

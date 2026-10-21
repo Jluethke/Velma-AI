@@ -1,0 +1,864 @@
+{
+  "name": "ticket-to-merged-pr",
+  "description": "Take one ticket from ambiguous text to a verified merge: closed clarification questions, Given/When/Then criteria, stack detection and per-stack test baseline (stack = python, node, go or rust), ripgrep and LSP call tracing, impact listing, branch, failing tests first, single-file edit loop, per-stack lint and typecheck, Conventional Commits, PR description, CI triage, review responses, rebase or merge sync, and post-merge verification.",
+  "steps": [
+    {
+      "id": "s01_tkt_ticket_ambiguity_extract",
+      "skill_name": "tkt-ticket-ambiguity-extract",
+      "inputs": {
+        "ticket_text": "from_user_input",
+        "ticket_id": "from_user_input"
+      },
+      "outputs": {
+        "ambiguity_list": "ambiguity_list",
+        "clarification_questions": "clarification_questions",
+        "working_requirements": "working_requirements"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_tkt_acceptance_criteria_gwt",
+      "skill_name": "tkt-acceptance-criteria-gwt",
+      "inputs": {
+        "working_requirements": "s01_tkt_ticket_ambiguity_extract.working_requirements",
+        "ambiguity_list": "s01_tkt_ticket_ambiguity_extract.ambiguity_list"
+      },
+      "outputs": {
+        "acceptance_criteria": "acceptance_criteria"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_tkt_repo_orient_detect",
+      "skill_name": "tkt-repo-orient-detect",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "repo_profile": "repo_profile"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s04_tkt_py_env_baseline",
+      "skill_name": "tkt-py-env-baseline",
+      "inputs": {
+        "repo_profile": "s03_tkt_repo_orient_detect.repo_profile"
+      },
+      "outputs": {
+        "py_baseline_report": "py_baseline_report"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s05_tkt_node_env_baseline",
+      "skill_name": "tkt-node-env-baseline",
+      "inputs": {
+        "repo_profile": "s03_tkt_repo_orient_detect.repo_profile"
+      },
+      "outputs": {
+        "node_baseline_report": "node_baseline_report"
+      },
+      "condition": "stack == 'node'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s06_tkt_go_env_baseline",
+      "skill_name": "tkt-go-env-baseline",
+      "inputs": {
+        "repo_profile": "s03_tkt_repo_orient_detect.repo_profile"
+      },
+      "outputs": {
+        "go_baseline_report": "go_baseline_report"
+      },
+      "condition": "stack == 'go'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s07_tkt_rust_env_baseline",
+      "skill_name": "tkt-rust-env-baseline",
+      "inputs": {
+        "repo_profile": "s03_tkt_repo_orient_detect.repo_profile"
+      },
+      "outputs": {
+        "rust_baseline_report": "rust_baseline_report"
+      },
+      "condition": "stack == 'rust'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s08_tkt_rg_call_trace",
+      "skill_name": "tkt-rg-call-trace",
+      "inputs": {
+        "repo_profile": "s03_tkt_repo_orient_detect.repo_profile",
+        "acceptance_criteria": "s02_tkt_acceptance_criteria_gwt.acceptance_criteria"
+      },
+      "outputs": {
+        "symbol_trace": "symbol_trace"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s09_tkt_lsp_reference_trace",
+      "skill_name": "tkt-lsp-reference-trace",
+      "inputs": {
+        "symbol_trace": "s08_tkt_rg_call_trace.symbol_trace",
+        "repo_profile": "s03_tkt_repo_orient_detect.repo_profile"
+      },
+      "outputs": {
+        "confirmed_call_graph": "confirmed_call_graph"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s10_tkt_change_impact_list",
+      "skill_name": "tkt-change-impact-list",
+      "inputs": {
+        "confirmed_call_graph": "s09_tkt_lsp_reference_trace.confirmed_call_graph",
+        "acceptance_criteria": "s02_tkt_acceptance_criteria_gwt.acceptance_criteria",
+        "repo_profile": "s03_tkt_repo_orient_detect.repo_profile"
+      },
+      "outputs": {
+        "impact_list": "impact_list",
+        "edit_plan": "edit_plan"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s11_tkt_branch_create",
+      "skill_name": "tkt-branch-create",
+      "inputs": {
+        "ticket_id": "from_user_input",
+        "working_requirements": "s01_tkt_ticket_ambiguity_extract.working_requirements",
+        "repo_profile": "s03_tkt_repo_orient_detect.repo_profile",
+        "base_branch": "from_user_input_optional"
+      },
+      "outputs": {
+        "branch_name": "branch_name"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s12_tkt_test_level_choose",
+      "skill_name": "tkt-test-level-choose",
+      "inputs": {
+        "acceptance_criteria": "s02_tkt_acceptance_criteria_gwt.acceptance_criteria",
+        "impact_list": "s10_tkt_change_impact_list.impact_list"
+      },
+      "outputs": {
+        "test_plan": "test_plan"
+      },
+      "parallel_group": 6
+    },
+    {
+      "id": "s13_tkt_failing_test_first",
+      "skill_name": "tkt-failing-test-first",
+      "inputs": {
+        "test_plan": "s12_tkt_test_level_choose.test_plan",
+        "repo_profile": "s03_tkt_repo_orient_detect.repo_profile",
+        "branch_name": "s11_tkt_branch_create.branch_name"
+      },
+      "outputs": {
+        "failing_test_evidence": "failing_test_evidence"
+      },
+      "parallel_group": 7
+    },
+    {
+      "id": "s14_tkt_small_edit_loop",
+      "skill_name": "tkt-small-edit-loop",
+      "inputs": {
+        "edit_plan": "s10_tkt_change_impact_list.edit_plan",
+        "failing_test_evidence": "s13_tkt_failing_test_first.failing_test_evidence",
+        "repo_profile": "s03_tkt_repo_orient_detect.repo_profile"
+      },
+      "outputs": {
+        "change_diff": "change_diff",
+        "verification_log": "verification_log"
+      },
+      "parallel_group": 8
+    },
+    {
+      "id": "s15_tkt_py_ruff_mypy",
+      "skill_name": "tkt-py-ruff-mypy",
+      "inputs": {
+        "change_diff": "s14_tkt_small_edit_loop.change_diff",
+        "repo_profile": "s03_tkt_repo_orient_detect.repo_profile"
+      },
+      "outputs": {
+        "py_static_report": "py_static_report"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 9
+    },
+    {
+      "id": "s16_tkt_node_eslint_tsc",
+      "skill_name": "tkt-node-eslint-tsc",
+      "inputs": {
+        "change_diff": "s14_tkt_small_edit_loop.change_diff",
+        "repo_profile": "s03_tkt_repo_orient_detect.repo_profile"
+      },
+      "outputs": {
+        "node_static_report": "node_static_report"
+      },
+      "condition": "stack == 'node'",
+      "parallel_group": 9
+    },
+    {
+      "id": "s17_tkt_go_vet_golangci",
+      "skill_name": "tkt-go-vet-golangci",
+      "inputs": {
+        "change_diff": "s14_tkt_small_edit_loop.change_diff",
+        "repo_profile": "s03_tkt_repo_orient_detect.repo_profile"
+      },
+      "outputs": {
+        "go_static_report": "go_static_report"
+      },
+      "condition": "stack == 'go'",
+      "parallel_group": 9
+    },
+    {
+      "id": "s18_tkt_rust_fmt_clippy",
+      "skill_name": "tkt-rust-fmt-clippy",
+      "inputs": {
+        "change_diff": "s14_tkt_small_edit_loop.change_diff",
+        "repo_profile": "s03_tkt_repo_orient_detect.repo_profile"
+      },
+      "outputs": {
+        "rust_static_report": "rust_static_report"
+      },
+      "condition": "stack == 'rust'",
+      "parallel_group": 9
+    },
+    {
+      "id": "s19_tkt_conventional_commit",
+      "skill_name": "tkt-conventional-commit",
+      "inputs": {
+        "change_diff": "s14_tkt_small_edit_loop.change_diff",
+        "ticket_id": "from_user_input",
+        "working_requirements": "s01_tkt_ticket_ambiguity_extract.working_requirements"
+      },
+      "outputs": {
+        "commit_log": "commit_log"
+      },
+      "parallel_group": 9
+    },
+    {
+      "id": "s20_tkt_pr_description",
+      "skill_name": "tkt-pr-description",
+      "inputs": {
+        "commit_log": "s19_tkt_conventional_commit.commit_log",
+        "acceptance_criteria": "s02_tkt_acceptance_criteria_gwt.acceptance_criteria",
+        "verification_log": "s14_tkt_small_edit_loop.verification_log",
+        "impact_list": "s10_tkt_change_impact_list.impact_list",
+        "ticket_id": "from_user_input",
+        "branch_name": "s11_tkt_branch_create.branch_name"
+      },
+      "outputs": {
+        "pr_url": "pr_url",
+        "pr_body": "pr_body"
+      },
+      "parallel_group": 10
+    },
+    {
+      "id": "s21_tkt_ci_check_triage",
+      "skill_name": "tkt-ci-check-triage",
+      "inputs": {
+        "pr_url": "s20_tkt_pr_description.pr_url",
+        "repo_profile": "s03_tkt_repo_orient_detect.repo_profile"
+      },
+      "outputs": {
+        "ci_status": "ci_status"
+      },
+      "parallel_group": 11
+    },
+    {
+      "id": "s22_tkt_review_comment_response",
+      "skill_name": "tkt-review-comment-response",
+      "inputs": {
+        "pr_url": "s20_tkt_pr_description.pr_url",
+        "acceptance_criteria": "s02_tkt_acceptance_criteria_gwt.acceptance_criteria"
+      },
+      "outputs": {
+        "review_resolution": "review_resolution"
+      },
+      "parallel_group": 11
+    },
+    {
+      "id": "s23_tkt_sync_strategy_choose",
+      "skill_name": "tkt-sync-strategy-choose",
+      "inputs": {
+        "branch_name": "s11_tkt_branch_create.branch_name",
+        "base_branch": "from_user_input_optional",
+        "pr_url": "s20_tkt_pr_description.pr_url"
+      },
+      "outputs": {
+        "sync_strategy": "sync_strategy"
+      },
+      "parallel_group": 11
+    },
+    {
+      "id": "s24_tkt_rebase_conflict_resolve",
+      "skill_name": "tkt-rebase-conflict-resolve",
+      "inputs": {
+        "sync_strategy": "s23_tkt_sync_strategy_choose.sync_strategy",
+        "branch_name": "s11_tkt_branch_create.branch_name",
+        "base_branch": "from_user_input_optional",
+        "repo_profile": "s03_tkt_repo_orient_detect.repo_profile"
+      },
+      "outputs": {
+        "rebase_result": "rebase_result"
+      },
+      "condition": "sync_strategy.strategy == 'rebase'",
+      "parallel_group": 12
+    },
+    {
+      "id": "s25_tkt_merge_conflict_resolve",
+      "skill_name": "tkt-merge-conflict-resolve",
+      "inputs": {
+        "sync_strategy": "s23_tkt_sync_strategy_choose.sync_strategy",
+        "branch_name": "s11_tkt_branch_create.branch_name",
+        "base_branch": "from_user_input_optional",
+        "repo_profile": "s03_tkt_repo_orient_detect.repo_profile"
+      },
+      "outputs": {
+        "merge_result": "merge_result"
+      },
+      "condition": "sync_strategy.strategy == 'merge'",
+      "parallel_group": 12
+    },
+    {
+      "id": "s26_tkt_post_merge_verify",
+      "skill_name": "tkt-post-merge-verify",
+      "inputs": {
+        "pr_url": "s20_tkt_pr_description.pr_url",
+        "base_branch": "from_user_input_optional",
+        "acceptance_criteria": "s02_tkt_acceptance_criteria_gwt.acceptance_criteria",
+        "ticket_id": "from_user_input",
+        "ci_status": "s21_tkt_ci_check_triage.ci_status",
+        "review_resolution": "s22_tkt_review_comment_response.review_resolution"
+      },
+      "outputs": {
+        "post_merge_report": "post_merge_report"
+      },
+      "parallel_group": 12
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_tkt_ticket_ambiguity_extract",
+      "to_step": "s02_tkt_acceptance_criteria_gwt",
+      "data_type": "tkt-ticket-ambiguity-extract",
+      "field_mapping": {
+        "working_requirements": "working_requirements",
+        "ambiguity_list": "ambiguity_list"
+      }
+    },
+    {
+      "from_step": "s03_tkt_repo_orient_detect",
+      "to_step": "s04_tkt_py_env_baseline",
+      "data_type": "tkt-repo-orient-detect",
+      "field_mapping": {
+        "repo_profile": "repo_profile"
+      }
+    },
+    {
+      "from_step": "s03_tkt_repo_orient_detect",
+      "to_step": "s05_tkt_node_env_baseline",
+      "data_type": "tkt-repo-orient-detect",
+      "field_mapping": {
+        "repo_profile": "repo_profile"
+      }
+    },
+    {
+      "from_step": "s03_tkt_repo_orient_detect",
+      "to_step": "s06_tkt_go_env_baseline",
+      "data_type": "tkt-repo-orient-detect",
+      "field_mapping": {
+        "repo_profile": "repo_profile"
+      }
+    },
+    {
+      "from_step": "s03_tkt_repo_orient_detect",
+      "to_step": "s07_tkt_rust_env_baseline",
+      "data_type": "tkt-repo-orient-detect",
+      "field_mapping": {
+        "repo_profile": "repo_profile"
+      }
+    },
+    {
+      "from_step": "s02_tkt_acceptance_criteria_gwt",
+      "to_step": "s08_tkt_rg_call_trace",
+      "data_type": "tkt-acceptance-criteria-gwt",
+      "field_mapping": {
+        "acceptance_criteria": "acceptance_criteria"
+      }
+    },
+    {
+      "from_step": "s03_tkt_repo_orient_detect",
+      "to_step": "s08_tkt_rg_call_trace",
+      "data_type": "tkt-repo-orient-detect",
+      "field_mapping": {
+        "repo_profile": "repo_profile"
+      }
+    },
+    {
+      "from_step": "s03_tkt_repo_orient_detect",
+      "to_step": "s09_tkt_lsp_reference_trace",
+      "data_type": "tkt-repo-orient-detect",
+      "field_mapping": {
+        "repo_profile": "repo_profile"
+      }
+    },
+    {
+      "from_step": "s08_tkt_rg_call_trace",
+      "to_step": "s09_tkt_lsp_reference_trace",
+      "data_type": "tkt-rg-call-trace",
+      "field_mapping": {
+        "symbol_trace": "symbol_trace"
+      }
+    },
+    {
+      "from_step": "s02_tkt_acceptance_criteria_gwt",
+      "to_step": "s10_tkt_change_impact_list",
+      "data_type": "tkt-acceptance-criteria-gwt",
+      "field_mapping": {
+        "acceptance_criteria": "acceptance_criteria"
+      }
+    },
+    {
+      "from_step": "s03_tkt_repo_orient_detect",
+      "to_step": "s10_tkt_change_impact_list",
+      "data_type": "tkt-repo-orient-detect",
+      "field_mapping": {
+        "repo_profile": "repo_profile"
+      }
+    },
+    {
+      "from_step": "s09_tkt_lsp_reference_trace",
+      "to_step": "s10_tkt_change_impact_list",
+      "data_type": "tkt-lsp-reference-trace",
+      "field_mapping": {
+        "confirmed_call_graph": "confirmed_call_graph"
+      }
+    },
+    {
+      "from_step": "s01_tkt_ticket_ambiguity_extract",
+      "to_step": "s11_tkt_branch_create",
+      "data_type": "tkt-ticket-ambiguity-extract",
+      "field_mapping": {
+        "working_requirements": "working_requirements"
+      }
+    },
+    {
+      "from_step": "s03_tkt_repo_orient_detect",
+      "to_step": "s11_tkt_branch_create",
+      "data_type": "tkt-repo-orient-detect",
+      "field_mapping": {
+        "repo_profile": "repo_profile"
+      }
+    },
+    {
+      "from_step": "s02_tkt_acceptance_criteria_gwt",
+      "to_step": "s12_tkt_test_level_choose",
+      "data_type": "tkt-acceptance-criteria-gwt",
+      "field_mapping": {
+        "acceptance_criteria": "acceptance_criteria"
+      }
+    },
+    {
+      "from_step": "s10_tkt_change_impact_list",
+      "to_step": "s12_tkt_test_level_choose",
+      "data_type": "tkt-change-impact-list",
+      "field_mapping": {
+        "impact_list": "impact_list"
+      }
+    },
+    {
+      "from_step": "s03_tkt_repo_orient_detect",
+      "to_step": "s13_tkt_failing_test_first",
+      "data_type": "tkt-repo-orient-detect",
+      "field_mapping": {
+        "repo_profile": "repo_profile"
+      }
+    },
+    {
+      "from_step": "s11_tkt_branch_create",
+      "to_step": "s13_tkt_failing_test_first",
+      "data_type": "tkt-branch-create",
+      "field_mapping": {
+        "branch_name": "branch_name"
+      }
+    },
+    {
+      "from_step": "s12_tkt_test_level_choose",
+      "to_step": "s13_tkt_failing_test_first",
+      "data_type": "tkt-test-level-choose",
+      "field_mapping": {
+        "test_plan": "test_plan"
+      }
+    },
+    {
+      "from_step": "s03_tkt_repo_orient_detect",
+      "to_step": "s14_tkt_small_edit_loop",
+      "data_type": "tkt-repo-orient-detect",
+      "field_mapping": {
+        "repo_profile": "repo_profile"
+      }
+    },
+    {
+      "from_step": "s10_tkt_change_impact_list",
+      "to_step": "s14_tkt_small_edit_loop",
+      "data_type": "tkt-change-impact-list",
+      "field_mapping": {
+        "edit_plan": "edit_plan"
+      }
+    },
+    {
+      "from_step": "s13_tkt_failing_test_first",
+      "to_step": "s14_tkt_small_edit_loop",
+      "data_type": "tkt-failing-test-first",
+      "field_mapping": {
+        "failing_test_evidence": "failing_test_evidence"
+      }
+    },
+    {
+      "from_step": "s03_tkt_repo_orient_detect",
+      "to_step": "s15_tkt_py_ruff_mypy",
+      "data_type": "tkt-repo-orient-detect",
+      "field_mapping": {
+        "repo_profile": "repo_profile"
+      }
+    },
+    {
+      "from_step": "s14_tkt_small_edit_loop",
+      "to_step": "s15_tkt_py_ruff_mypy",
+      "data_type": "tkt-small-edit-loop",
+      "field_mapping": {
+        "change_diff": "change_diff"
+      }
+    },
+    {
+      "from_step": "s03_tkt_repo_orient_detect",
+      "to_step": "s16_tkt_node_eslint_tsc",
+      "data_type": "tkt-repo-orient-detect",
+      "field_mapping": {
+        "repo_profile": "repo_profile"
+      }
+    },
+    {
+      "from_step": "s14_tkt_small_edit_loop",
+      "to_step": "s16_tkt_node_eslint_tsc",
+      "data_type": "tkt-small-edit-loop",
+      "field_mapping": {
+        "change_diff": "change_diff"
+      }
+    },
+    {
+      "from_step": "s03_tkt_repo_orient_detect",
+      "to_step": "s17_tkt_go_vet_golangci",
+      "data_type": "tkt-repo-orient-detect",
+      "field_mapping": {
+        "repo_profile": "repo_profile"
+      }
+    },
+    {
+      "from_step": "s14_tkt_small_edit_loop",
+      "to_step": "s17_tkt_go_vet_golangci",
+      "data_type": "tkt-small-edit-loop",
+      "field_mapping": {
+        "change_diff": "change_diff"
+      }
+    },
+    {
+      "from_step": "s03_tkt_repo_orient_detect",
+      "to_step": "s18_tkt_rust_fmt_clippy",
+      "data_type": "tkt-repo-orient-detect",
+      "field_mapping": {
+        "repo_profile": "repo_profile"
+      }
+    },
+    {
+      "from_step": "s14_tkt_small_edit_loop",
+      "to_step": "s18_tkt_rust_fmt_clippy",
+      "data_type": "tkt-small-edit-loop",
+      "field_mapping": {
+        "change_diff": "change_diff"
+      }
+    },
+    {
+      "from_step": "s01_tkt_ticket_ambiguity_extract",
+      "to_step": "s19_tkt_conventional_commit",
+      "data_type": "tkt-ticket-ambiguity-extract",
+      "field_mapping": {
+        "working_requirements": "working_requirements"
+      }
+    },
+    {
+      "from_step": "s14_tkt_small_edit_loop",
+      "to_step": "s19_tkt_conventional_commit",
+      "data_type": "tkt-small-edit-loop",
+      "field_mapping": {
+        "change_diff": "change_diff"
+      }
+    },
+    {
+      "from_step": "s02_tkt_acceptance_criteria_gwt",
+      "to_step": "s20_tkt_pr_description",
+      "data_type": "tkt-acceptance-criteria-gwt",
+      "field_mapping": {
+        "acceptance_criteria": "acceptance_criteria"
+      }
+    },
+    {
+      "from_step": "s10_tkt_change_impact_list",
+      "to_step": "s20_tkt_pr_description",
+      "data_type": "tkt-change-impact-list",
+      "field_mapping": {
+        "impact_list": "impact_list"
+      }
+    },
+    {
+      "from_step": "s11_tkt_branch_create",
+      "to_step": "s20_tkt_pr_description",
+      "data_type": "tkt-branch-create",
+      "field_mapping": {
+        "branch_name": "branch_name"
+      }
+    },
+    {
+      "from_step": "s14_tkt_small_edit_loop",
+      "to_step": "s20_tkt_pr_description",
+      "data_type": "tkt-small-edit-loop",
+      "field_mapping": {
+        "verification_log": "verification_log"
+      }
+    },
+    {
+      "from_step": "s19_tkt_conventional_commit",
+      "to_step": "s20_tkt_pr_description",
+      "data_type": "tkt-conventional-commit",
+      "field_mapping": {
+        "commit_log": "commit_log"
+      }
+    },
+    {
+      "from_step": "s03_tkt_repo_orient_detect",
+      "to_step": "s21_tkt_ci_check_triage",
+      "data_type": "tkt-repo-orient-detect",
+      "field_mapping": {
+        "repo_profile": "repo_profile"
+      }
+    },
+    {
+      "from_step": "s20_tkt_pr_description",
+      "to_step": "s21_tkt_ci_check_triage",
+      "data_type": "tkt-pr-description",
+      "field_mapping": {
+        "pr_url": "pr_url"
+      }
+    },
+    {
+      "from_step": "s02_tkt_acceptance_criteria_gwt",
+      "to_step": "s22_tkt_review_comment_response",
+      "data_type": "tkt-acceptance-criteria-gwt",
+      "field_mapping": {
+        "acceptance_criteria": "acceptance_criteria"
+      }
+    },
+    {
+      "from_step": "s20_tkt_pr_description",
+      "to_step": "s22_tkt_review_comment_response",
+      "data_type": "tkt-pr-description",
+      "field_mapping": {
+        "pr_url": "pr_url"
+      }
+    },
+    {
+      "from_step": "s11_tkt_branch_create",
+      "to_step": "s23_tkt_sync_strategy_choose",
+      "data_type": "tkt-branch-create",
+      "field_mapping": {
+        "branch_name": "branch_name"
+      }
+    },
+    {
+      "from_step": "s20_tkt_pr_description",
+      "to_step": "s23_tkt_sync_strategy_choose",
+      "data_type": "tkt-pr-description",
+      "field_mapping": {
+        "pr_url": "pr_url"
+      }
+    },
+    {
+      "from_step": "s03_tkt_repo_orient_detect",
+      "to_step": "s24_tkt_rebase_conflict_resolve",
+      "data_type": "tkt-repo-orient-detect",
+      "field_mapping": {
+        "repo_profile": "repo_profile"
+      }
+    },
+    {
+      "from_step": "s11_tkt_branch_create",
+      "to_step": "s24_tkt_rebase_conflict_resolve",
+      "data_type": "tkt-branch-create",
+      "field_mapping": {
+        "branch_name": "branch_name"
+      }
+    },
+    {
+      "from_step": "s23_tkt_sync_strategy_choose",
+      "to_step": "s24_tkt_rebase_conflict_resolve",
+      "data_type": "tkt-sync-strategy-choose",
+      "field_mapping": {
+        "sync_strategy": "sync_strategy"
+      }
+    },
+    {
+      "from_step": "s03_tkt_repo_orient_detect",
+      "to_step": "s25_tkt_merge_conflict_resolve",
+      "data_type": "tkt-repo-orient-detect",
+      "field_mapping": {
+        "repo_profile": "repo_profile"
+      }
+    },
+    {
+      "from_step": "s11_tkt_branch_create",
+      "to_step": "s25_tkt_merge_conflict_resolve",
+      "data_type": "tkt-branch-create",
+      "field_mapping": {
+        "branch_name": "branch_name"
+      }
+    },
+    {
+      "from_step": "s23_tkt_sync_strategy_choose",
+      "to_step": "s25_tkt_merge_conflict_resolve",
+      "data_type": "tkt-sync-strategy-choose",
+      "field_mapping": {
+        "sync_strategy": "sync_strategy"
+      }
+    },
+    {
+      "from_step": "s02_tkt_acceptance_criteria_gwt",
+      "to_step": "s26_tkt_post_merge_verify",
+      "data_type": "tkt-acceptance-criteria-gwt",
+      "field_mapping": {
+        "acceptance_criteria": "acceptance_criteria"
+      }
+    },
+    {
+      "from_step": "s20_tkt_pr_description",
+      "to_step": "s26_tkt_post_merge_verify",
+      "data_type": "tkt-pr-description",
+      "field_mapping": {
+        "pr_url": "pr_url"
+      }
+    },
+    {
+      "from_step": "s21_tkt_ci_check_triage",
+      "to_step": "s26_tkt_post_merge_verify",
+      "data_type": "tkt-ci-check-triage",
+      "field_mapping": {
+        "ci_status": "ci_status"
+      }
+    },
+    {
+      "from_step": "s22_tkt_review_comment_response",
+      "to_step": "s26_tkt_post_merge_verify",
+      "data_type": "tkt-review-comment-response",
+      "field_mapping": {
+        "review_resolution": "review_resolution"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "ticket_text",
+    "ticket_id",
+    "repo_path",
+    "stack",
+    "base_branch"
+  ],
+  "terminal_outputs": [
+    "clarification_questions",
+    "py_baseline_report",
+    "node_baseline_report",
+    "go_baseline_report",
+    "rust_baseline_report",
+    "py_static_report",
+    "node_static_report",
+    "go_static_report",
+    "rust_static_report",
+    "pr_body",
+    "rebase_result",
+    "merge_result",
+    "post_merge_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_tkt_ticket_ambiguity_extract",
+      "s03_tkt_repo_orient_detect"
+    ],
+    [
+      "s02_tkt_acceptance_criteria_gwt",
+      "s04_tkt_py_env_baseline",
+      "s05_tkt_node_env_baseline",
+      "s06_tkt_go_env_baseline",
+      "s07_tkt_rust_env_baseline",
+      "s11_tkt_branch_create"
+    ],
+    [
+      "s08_tkt_rg_call_trace"
+    ],
+    [
+      "s09_tkt_lsp_reference_trace"
+    ],
+    [
+      "s10_tkt_change_impact_list"
+    ],
+    [
+      "s12_tkt_test_level_choose"
+    ],
+    [
+      "s13_tkt_failing_test_first"
+    ],
+    [
+      "s14_tkt_small_edit_loop"
+    ],
+    [
+      "s15_tkt_py_ruff_mypy",
+      "s16_tkt_node_eslint_tsc",
+      "s17_tkt_go_vet_golangci",
+      "s18_tkt_rust_fmt_clippy",
+      "s19_tkt_conventional_commit"
+    ],
+    [
+      "s20_tkt_pr_description"
+    ],
+    [
+      "s21_tkt_ci_check_triage",
+      "s22_tkt_review_comment_response",
+      "s23_tkt_sync_strategy_choose"
+    ],
+    [
+      "s24_tkt_rebase_conflict_resolve",
+      "s25_tkt_merge_conflict_resolve",
+      "s26_tkt_post_merge_verify"
+    ]
+  ],
+  "estimated_cost": 26,
+  "critical_path": [
+    "s01_tkt_ticket_ambiguity_extract",
+    "s02_tkt_acceptance_criteria_gwt",
+    "s08_tkt_rg_call_trace",
+    "s09_tkt_lsp_reference_trace",
+    "s10_tkt_change_impact_list",
+    "s12_tkt_test_level_choose",
+    "s13_tkt_failing_test_first",
+    "s14_tkt_small_edit_loop",
+    "s19_tkt_conventional_commit",
+    "s20_tkt_pr_description",
+    "s23_tkt_sync_strategy_choose",
+    "s24_tkt_rebase_conflict_resolve"
+  ]
+}

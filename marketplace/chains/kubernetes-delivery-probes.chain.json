@@ -1,0 +1,217 @@
+{
+  "name": "kubernetes-delivery-probes",
+  "description": "Add stack-specific liveness and readiness endpoints with clean SIGTERM handling, tune startup, readiness and liveness probes from measured startup time, and watch the rollout.",
+  "steps": [
+    {
+      "id": "s01_k8s_workload_inventory",
+      "skill_name": "k8s-workload-inventory",
+      "inputs": {
+        "repo_dir": "from_user_input",
+        "app_name": "from_user_input",
+        "image_ref": "from_user_input",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "workload_profile": "workload_profile"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_k8s_py_health_endpoints",
+      "skill_name": "k8s-py-health-endpoints",
+      "inputs": {
+        "repo_dir": "from_user_input",
+        "workload_profile": "s01_k8s_workload_inventory.workload_profile"
+      },
+      "outputs": {
+        "py_health_endpoints": "py_health_endpoints"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_k8s_node_health_endpoints",
+      "skill_name": "k8s-node-health-endpoints",
+      "inputs": {
+        "repo_dir": "from_user_input",
+        "workload_profile": "s01_k8s_workload_inventory.workload_profile"
+      },
+      "outputs": {
+        "node_health_endpoints": "node_health_endpoints"
+      },
+      "condition": "stack == 'node'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_k8s_go_health_endpoints",
+      "skill_name": "k8s-go-health-endpoints",
+      "inputs": {
+        "repo_dir": "from_user_input",
+        "workload_profile": "s01_k8s_workload_inventory.workload_profile"
+      },
+      "outputs": {
+        "go_health_endpoints": "go_health_endpoints"
+      },
+      "condition": "stack == 'go'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s05_k8s_jvm_health_endpoints",
+      "skill_name": "k8s-jvm-health-endpoints",
+      "inputs": {
+        "repo_dir": "from_user_input",
+        "workload_profile": "s01_k8s_workload_inventory.workload_profile"
+      },
+      "outputs": {
+        "jvm_health_endpoints": "jvm_health_endpoints"
+      },
+      "condition": "stack == 'java'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s06_k8s_probe_tuning",
+      "skill_name": "k8s-probe-tuning",
+      "inputs": {
+        "wired_deployment": "from_user_input",
+        "image_ref": "from_user_input",
+        "py_health_endpoints": "s02_k8s_py_health_endpoints.py_health_endpoints",
+        "node_health_endpoints": "s03_k8s_node_health_endpoints.node_health_endpoints",
+        "go_health_endpoints": "s04_k8s_go_health_endpoints.go_health_endpoints",
+        "jvm_health_endpoints": "s05_k8s_jvm_health_endpoints.jvm_health_endpoints"
+      },
+      "outputs": {
+        "probed_deployment": "probed_deployment"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s07_k8s_rollout_status_watch",
+      "skill_name": "k8s-rollout-status-watch",
+      "inputs": {
+        "cluster_context": "from_user_input",
+        "namespace": "from_user_input",
+        "app_name": "from_user_input",
+        "lint_report": "from_user_input",
+        "helm_rendered_manifests": "from_user_input_optional",
+        "kustomize_rendered_manifests": "from_user_input_optional",
+        "argocd_application": "from_user_input_optional",
+        "flux_resources": "from_user_input_optional",
+        "gitops_tool": "from_user_input",
+        "change_cause": "from_user_input_optional"
+      },
+      "outputs": {
+        "rollout_result": "rollout_result",
+        "deployed_revision": "deployed_revision"
+      },
+      "parallel_group": 1
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_k8s_workload_inventory",
+      "to_step": "s02_k8s_py_health_endpoints",
+      "data_type": "k8s-workload-inventory",
+      "field_mapping": {
+        "workload_profile": "workload_profile"
+      }
+    },
+    {
+      "from_step": "s01_k8s_workload_inventory",
+      "to_step": "s03_k8s_node_health_endpoints",
+      "data_type": "k8s-workload-inventory",
+      "field_mapping": {
+        "workload_profile": "workload_profile"
+      }
+    },
+    {
+      "from_step": "s01_k8s_workload_inventory",
+      "to_step": "s04_k8s_go_health_endpoints",
+      "data_type": "k8s-workload-inventory",
+      "field_mapping": {
+        "workload_profile": "workload_profile"
+      }
+    },
+    {
+      "from_step": "s01_k8s_workload_inventory",
+      "to_step": "s05_k8s_jvm_health_endpoints",
+      "data_type": "k8s-workload-inventory",
+      "field_mapping": {
+        "workload_profile": "workload_profile"
+      }
+    },
+    {
+      "from_step": "s02_k8s_py_health_endpoints",
+      "to_step": "s06_k8s_probe_tuning",
+      "data_type": "k8s-py-health-endpoints",
+      "field_mapping": {
+        "py_health_endpoints": "py_health_endpoints"
+      }
+    },
+    {
+      "from_step": "s03_k8s_node_health_endpoints",
+      "to_step": "s06_k8s_probe_tuning",
+      "data_type": "k8s-node-health-endpoints",
+      "field_mapping": {
+        "node_health_endpoints": "node_health_endpoints"
+      }
+    },
+    {
+      "from_step": "s04_k8s_go_health_endpoints",
+      "to_step": "s06_k8s_probe_tuning",
+      "data_type": "k8s-go-health-endpoints",
+      "field_mapping": {
+        "go_health_endpoints": "go_health_endpoints"
+      }
+    },
+    {
+      "from_step": "s05_k8s_jvm_health_endpoints",
+      "to_step": "s06_k8s_probe_tuning",
+      "data_type": "k8s-jvm-health-endpoints",
+      "field_mapping": {
+        "jvm_health_endpoints": "jvm_health_endpoints"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "repo_dir",
+    "app_name",
+    "image_ref",
+    "stack",
+    "wired_deployment",
+    "cluster_context",
+    "namespace",
+    "lint_report",
+    "helm_rendered_manifests",
+    "kustomize_rendered_manifests",
+    "argocd_application",
+    "flux_resources",
+    "gitops_tool",
+    "change_cause"
+  ],
+  "terminal_outputs": [
+    "probed_deployment",
+    "rollout_result",
+    "deployed_revision"
+  ],
+  "parallel_groups": [
+    [
+      "s01_k8s_workload_inventory",
+      "s07_k8s_rollout_status_watch"
+    ],
+    [
+      "s02_k8s_py_health_endpoints",
+      "s03_k8s_node_health_endpoints",
+      "s04_k8s_go_health_endpoints",
+      "s05_k8s_jvm_health_endpoints"
+    ],
+    [
+      "s06_k8s_probe_tuning"
+    ]
+  ],
+  "estimated_cost": 7,
+  "critical_path": [
+    "s01_k8s_workload_inventory",
+    "s05_k8s_jvm_health_endpoints",
+    "s06_k8s_probe_tuning"
+  ]
+}

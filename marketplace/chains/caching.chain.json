@@ -1,0 +1,854 @@
+{
+  "name": "caching",
+  "description": "Measure repeated expensive reads, choose cache location, keys, TTLs and invalidation, implement cache-aside or in-process caching per stack, close the stale-set race, add event or write-behind paths, protect against stampedes, cache negative results, set HTTP and CDN caching, bound memory, instrument, and measure the effect against the baseline.",
+  "steps": [
+    {
+      "id": "s01_cache_read_hotspot_measure",
+      "skill_name": "cache-read-hotspot-measure",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "read_source": "from_user_input",
+        "db_engine": "from_user_input_optional"
+      },
+      "outputs": {
+        "read_hotspots": "read_hotspots",
+        "baseline_metrics": "baseline_metrics"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_cache_location_decide",
+      "skill_name": "cache-location-decide",
+      "inputs": {
+        "read_hotspots": "s01_cache_read_hotspot_measure.read_hotspots",
+        "deployment_topology": "from_user_input",
+        "consistency_requirement": "from_user_input"
+      },
+      "outputs": {
+        "cache_plan": "cache_plan",
+        "cache_backend": "cache_backend"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_cache_key_schema_design",
+      "skill_name": "cache-key-schema-design",
+      "inputs": {
+        "cache_plan": "s02_cache_location_decide.cache_plan",
+        "repo_path": "from_user_input"
+      },
+      "outputs": {
+        "key_schema": "key_schema"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_cache_ttl_from_change_rate",
+      "skill_name": "cache-ttl-from-change-rate",
+      "inputs": {
+        "cache_plan": "s02_cache_location_decide.cache_plan",
+        "staleness_tolerance": "from_user_input",
+        "db_engine": "from_user_input_optional"
+      },
+      "outputs": {
+        "ttl_table": "ttl_table"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s05_cache_invalidation_strategy_select",
+      "skill_name": "cache-invalidation-strategy-select",
+      "inputs": {
+        "cache_plan": "s02_cache_location_decide.cache_plan",
+        "ttl_table": "s04_cache_ttl_from_change_rate.ttl_table",
+        "consistency_requirement": "from_user_input"
+      },
+      "outputs": {
+        "invalidation_plan": "invalidation_plan"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s06_cache_py_cache_aside_redis",
+      "skill_name": "cache-py-cache-aside-redis",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "key_schema": "s03_cache_key_schema_design.key_schema",
+        "ttl_table": "s04_cache_ttl_from_change_rate.ttl_table",
+        "invalidation_plan": "s05_cache_invalidation_strategy_select.invalidation_plan"
+      },
+      "outputs": {
+        "cache_aside_change": "cache_aside_change"
+      },
+      "condition": "stack == 'python' and cache_backend == 'redis'",
+      "parallel_group": 5
+    },
+    {
+      "id": "s07_cache_node_cache_aside_redis",
+      "skill_name": "cache-node-cache-aside-redis",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "key_schema": "s03_cache_key_schema_design.key_schema",
+        "ttl_table": "s04_cache_ttl_from_change_rate.ttl_table",
+        "invalidation_plan": "s05_cache_invalidation_strategy_select.invalidation_plan"
+      },
+      "outputs": {
+        "cache_aside_change": "cache_aside_change"
+      },
+      "condition": "stack == 'node' and cache_backend == 'redis'",
+      "parallel_group": 5
+    },
+    {
+      "id": "s08_cache_go_cache_aside_redis",
+      "skill_name": "cache-go-cache-aside-redis",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "key_schema": "s03_cache_key_schema_design.key_schema",
+        "ttl_table": "s04_cache_ttl_from_change_rate.ttl_table",
+        "invalidation_plan": "s05_cache_invalidation_strategy_select.invalidation_plan"
+      },
+      "outputs": {
+        "cache_aside_change": "cache_aside_change"
+      },
+      "condition": "stack == 'go' and cache_backend == 'redis'",
+      "parallel_group": 5
+    },
+    {
+      "id": "s09_cache_java_spring_cacheable",
+      "skill_name": "cache-java-spring-cacheable",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "key_schema": "s03_cache_key_schema_design.key_schema",
+        "ttl_table": "s04_cache_ttl_from_change_rate.ttl_table",
+        "invalidation_plan": "s05_cache_invalidation_strategy_select.invalidation_plan"
+      },
+      "outputs": {
+        "cache_aside_change": "cache_aside_change"
+      },
+      "condition": "stack == 'java'",
+      "parallel_group": 5
+    },
+    {
+      "id": "s10_cache_py_inprocess_bounded",
+      "skill_name": "cache-py-inprocess-bounded",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "cache_plan": "s02_cache_location_decide.cache_plan",
+        "ttl_table": "s04_cache_ttl_from_change_rate.ttl_table"
+      },
+      "outputs": {
+        "inprocess_cache_change": "inprocess_cache_change"
+      },
+      "condition": "stack == 'python' and cache_plan.has_in_process == true",
+      "parallel_group": 4
+    },
+    {
+      "id": "s11_cache_node_inprocess_lru",
+      "skill_name": "cache-node-inprocess-lru",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "cache_plan": "s02_cache_location_decide.cache_plan",
+        "ttl_table": "s04_cache_ttl_from_change_rate.ttl_table"
+      },
+      "outputs": {
+        "inprocess_cache_change": "inprocess_cache_change"
+      },
+      "condition": "stack == 'node' and cache_plan.has_in_process == true",
+      "parallel_group": 4
+    },
+    {
+      "id": "s12_cache_go_inprocess_bounded",
+      "skill_name": "cache-go-inprocess-bounded",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "cache_plan": "s02_cache_location_decide.cache_plan",
+        "ttl_table": "s04_cache_ttl_from_change_rate.ttl_table"
+      },
+      "outputs": {
+        "inprocess_cache_change": "inprocess_cache_change"
+      },
+      "condition": "stack == 'go' and cache_plan.has_in_process == true",
+      "parallel_group": 4
+    },
+    {
+      "id": "s13_cache_stale_set_race_fix",
+      "skill_name": "cache-stale-set-race-fix",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "invalidation_plan": "s05_cache_invalidation_strategy_select.invalidation_plan",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "race_test": "race_test",
+        "race_fix": "race_fix"
+      },
+      "condition": "cache_backend != 'none'",
+      "parallel_group": 5
+    },
+    {
+      "id": "s14_cache_event_invalidation_pubsub",
+      "skill_name": "cache-event-invalidation-pubsub",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "key_schema": "s03_cache_key_schema_design.key_schema",
+        "invalidation_plan": "s05_cache_invalidation_strategy_select.invalidation_plan",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "invalidation_consumer": "invalidation_consumer"
+      },
+      "condition": "invalidation_plan.uses_event_based == true",
+      "parallel_group": 5
+    },
+    {
+      "id": "s15_cache_write_behind_buffer",
+      "skill_name": "cache-write-behind-buffer",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "invalidation_plan": "s05_cache_invalidation_strategy_select.invalidation_plan",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "write_behind_change": "write_behind_change"
+      },
+      "condition": "invalidation_plan.uses_write_behind == true",
+      "parallel_group": 5
+    },
+    {
+      "id": "s16_cache_stampede_risk_assess",
+      "skill_name": "cache-stampede-risk-assess",
+      "inputs": {
+        "read_hotspots": "s01_cache_read_hotspot_measure.read_hotspots",
+        "ttl_table": "s04_cache_ttl_from_change_rate.ttl_table",
+        "deployment_topology": "from_user_input"
+      },
+      "outputs": {
+        "stampede_plan": "stampede_plan"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s17_cache_stampede_redis_lock",
+      "skill_name": "cache-stampede-redis-lock",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "key_schema": "s03_cache_key_schema_design.key_schema",
+        "stampede_plan": "s16_cache_stampede_risk_assess.stampede_plan",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "lock_guard_change": "lock_guard_change"
+      },
+      "condition": "'lock' in stampede_plan.techniques and cache_backend == 'redis'",
+      "parallel_group": 5
+    },
+    {
+      "id": "s18_cache_stampede_xfetch_early_expiry",
+      "skill_name": "cache-stampede-xfetch-early-expiry",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "ttl_table": "s04_cache_ttl_from_change_rate.ttl_table",
+        "stampede_plan": "s16_cache_stampede_risk_assess.stampede_plan",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "early_expiry_change": "early_expiry_change"
+      },
+      "condition": "'early_expiry' in stampede_plan.techniques",
+      "parallel_group": 5
+    },
+    {
+      "id": "s19_cache_stampede_request_coalescing",
+      "skill_name": "cache-stampede-request-coalescing",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stampede_plan": "s16_cache_stampede_risk_assess.stampede_plan",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "coalescing_change": "coalescing_change"
+      },
+      "condition": "'coalescing' in stampede_plan.techniques",
+      "parallel_group": 5
+    },
+    {
+      "id": "s20_cache_negative_result_caching",
+      "skill_name": "cache-negative-result-caching",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "key_schema": "s03_cache_key_schema_design.key_schema",
+        "ttl_table": "s04_cache_ttl_from_change_rate.ttl_table",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "negative_cache_change": "negative_cache_change"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s21_cache_http_cache_control_policy",
+      "skill_name": "cache-http-cache-control-policy",
+      "inputs": {
+        "cache_plan": "s02_cache_location_decide.cache_plan",
+        "ttl_table": "s04_cache_ttl_from_change_rate.ttl_table",
+        "repo_path": "from_user_input"
+      },
+      "outputs": {
+        "header_policy": "header_policy"
+      },
+      "condition": "cache_plan.has_http_layer == true",
+      "parallel_group": 4
+    },
+    {
+      "id": "s22_cache_http_etag_conditional_get",
+      "skill_name": "cache-http-etag-conditional-get",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "header_policy": "s21_cache_http_cache_control_policy.header_policy",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "etag_change": "etag_change"
+      },
+      "condition": "cache_plan.has_http_layer == true",
+      "parallel_group": 5
+    },
+    {
+      "id": "s23_cache_cdn_header_verify_purge",
+      "skill_name": "cache-cdn-header-verify-purge",
+      "inputs": {
+        "header_policy": "s21_cache_http_cache_control_policy.header_policy",
+        "public_url": "from_user_input",
+        "cdn_provider": "from_user_input"
+      },
+      "outputs": {
+        "cdn_report": "cdn_report"
+      },
+      "condition": "cache_plan.has_http_layer == true and public_url != ''",
+      "parallel_group": 5
+    },
+    {
+      "id": "s24_cache_redis_maxmemory_eviction",
+      "skill_name": "cache-redis-maxmemory-eviction",
+      "inputs": {
+        "redis_url": "from_user_input",
+        "key_schema": "s03_cache_key_schema_design.key_schema",
+        "memory_limit_bytes": "from_user_input"
+      },
+      "outputs": {
+        "redis_memory_config": "redis_memory_config"
+      },
+      "condition": "cache_backend == 'redis'",
+      "parallel_group": 4
+    },
+    {
+      "id": "s25_cache_redis_bigkey_hotkey_scan",
+      "skill_name": "cache-redis-bigkey-hotkey-scan",
+      "inputs": {
+        "redis_url": "from_user_input",
+        "redis_memory_config": "s24_cache_redis_maxmemory_eviction.redis_memory_config"
+      },
+      "outputs": {
+        "key_size_report": "key_size_report"
+      },
+      "condition": "cache_backend == 'redis'",
+      "parallel_group": 5
+    },
+    {
+      "id": "s26_cache_memcached_slab_eviction",
+      "skill_name": "cache-memcached-slab-eviction",
+      "inputs": {
+        "memcached_addr": "from_user_input",
+        "key_schema": "s03_cache_key_schema_design.key_schema",
+        "memory_limit_bytes": "from_user_input"
+      },
+      "outputs": {
+        "memcached_memory_report": "memcached_memory_report"
+      },
+      "condition": "cache_backend == 'memcached'",
+      "parallel_group": 4
+    },
+    {
+      "id": "s27_cache_hit_miss_instrument",
+      "skill_name": "cache-hit-miss-instrument",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "key_schema": "s03_cache_key_schema_design.key_schema",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "cache_metrics": "cache_metrics"
+      },
+      "parallel_group": 6
+    },
+    {
+      "id": "s28_cache_hit_rate_latency_measure",
+      "skill_name": "cache-hit-rate-latency-measure",
+      "inputs": {
+        "cache_metrics": "s27_cache_hit_miss_instrument.cache_metrics",
+        "baseline_metrics": "s01_cache_read_hotspot_measure.baseline_metrics",
+        "redis_url": "from_user_input_optional"
+      },
+      "outputs": {
+        "cache_effect_report": "cache_effect_report"
+      },
+      "parallel_group": 7
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_cache_read_hotspot_measure",
+      "to_step": "s02_cache_location_decide",
+      "data_type": "cache-read-hotspot-measure",
+      "field_mapping": {
+        "read_hotspots": "read_hotspots"
+      }
+    },
+    {
+      "from_step": "s02_cache_location_decide",
+      "to_step": "s03_cache_key_schema_design",
+      "data_type": "cache-location-decide",
+      "field_mapping": {
+        "cache_plan": "cache_plan"
+      }
+    },
+    {
+      "from_step": "s02_cache_location_decide",
+      "to_step": "s04_cache_ttl_from_change_rate",
+      "data_type": "cache-location-decide",
+      "field_mapping": {
+        "cache_plan": "cache_plan"
+      }
+    },
+    {
+      "from_step": "s02_cache_location_decide",
+      "to_step": "s05_cache_invalidation_strategy_select",
+      "data_type": "cache-location-decide",
+      "field_mapping": {
+        "cache_plan": "cache_plan"
+      }
+    },
+    {
+      "from_step": "s04_cache_ttl_from_change_rate",
+      "to_step": "s05_cache_invalidation_strategy_select",
+      "data_type": "cache-ttl-from-change-rate",
+      "field_mapping": {
+        "ttl_table": "ttl_table"
+      }
+    },
+    {
+      "from_step": "s03_cache_key_schema_design",
+      "to_step": "s06_cache_py_cache_aside_redis",
+      "data_type": "cache-key-schema-design",
+      "field_mapping": {
+        "key_schema": "key_schema"
+      }
+    },
+    {
+      "from_step": "s04_cache_ttl_from_change_rate",
+      "to_step": "s06_cache_py_cache_aside_redis",
+      "data_type": "cache-ttl-from-change-rate",
+      "field_mapping": {
+        "ttl_table": "ttl_table"
+      }
+    },
+    {
+      "from_step": "s05_cache_invalidation_strategy_select",
+      "to_step": "s06_cache_py_cache_aside_redis",
+      "data_type": "cache-invalidation-strategy-select",
+      "field_mapping": {
+        "invalidation_plan": "invalidation_plan"
+      }
+    },
+    {
+      "from_step": "s03_cache_key_schema_design",
+      "to_step": "s07_cache_node_cache_aside_redis",
+      "data_type": "cache-key-schema-design",
+      "field_mapping": {
+        "key_schema": "key_schema"
+      }
+    },
+    {
+      "from_step": "s04_cache_ttl_from_change_rate",
+      "to_step": "s07_cache_node_cache_aside_redis",
+      "data_type": "cache-ttl-from-change-rate",
+      "field_mapping": {
+        "ttl_table": "ttl_table"
+      }
+    },
+    {
+      "from_step": "s05_cache_invalidation_strategy_select",
+      "to_step": "s07_cache_node_cache_aside_redis",
+      "data_type": "cache-invalidation-strategy-select",
+      "field_mapping": {
+        "invalidation_plan": "invalidation_plan"
+      }
+    },
+    {
+      "from_step": "s03_cache_key_schema_design",
+      "to_step": "s08_cache_go_cache_aside_redis",
+      "data_type": "cache-key-schema-design",
+      "field_mapping": {
+        "key_schema": "key_schema"
+      }
+    },
+    {
+      "from_step": "s04_cache_ttl_from_change_rate",
+      "to_step": "s08_cache_go_cache_aside_redis",
+      "data_type": "cache-ttl-from-change-rate",
+      "field_mapping": {
+        "ttl_table": "ttl_table"
+      }
+    },
+    {
+      "from_step": "s05_cache_invalidation_strategy_select",
+      "to_step": "s08_cache_go_cache_aside_redis",
+      "data_type": "cache-invalidation-strategy-select",
+      "field_mapping": {
+        "invalidation_plan": "invalidation_plan"
+      }
+    },
+    {
+      "from_step": "s03_cache_key_schema_design",
+      "to_step": "s09_cache_java_spring_cacheable",
+      "data_type": "cache-key-schema-design",
+      "field_mapping": {
+        "key_schema": "key_schema"
+      }
+    },
+    {
+      "from_step": "s04_cache_ttl_from_change_rate",
+      "to_step": "s09_cache_java_spring_cacheable",
+      "data_type": "cache-ttl-from-change-rate",
+      "field_mapping": {
+        "ttl_table": "ttl_table"
+      }
+    },
+    {
+      "from_step": "s05_cache_invalidation_strategy_select",
+      "to_step": "s09_cache_java_spring_cacheable",
+      "data_type": "cache-invalidation-strategy-select",
+      "field_mapping": {
+        "invalidation_plan": "invalidation_plan"
+      }
+    },
+    {
+      "from_step": "s02_cache_location_decide",
+      "to_step": "s10_cache_py_inprocess_bounded",
+      "data_type": "cache-location-decide",
+      "field_mapping": {
+        "cache_plan": "cache_plan"
+      }
+    },
+    {
+      "from_step": "s04_cache_ttl_from_change_rate",
+      "to_step": "s10_cache_py_inprocess_bounded",
+      "data_type": "cache-ttl-from-change-rate",
+      "field_mapping": {
+        "ttl_table": "ttl_table"
+      }
+    },
+    {
+      "from_step": "s02_cache_location_decide",
+      "to_step": "s11_cache_node_inprocess_lru",
+      "data_type": "cache-location-decide",
+      "field_mapping": {
+        "cache_plan": "cache_plan"
+      }
+    },
+    {
+      "from_step": "s04_cache_ttl_from_change_rate",
+      "to_step": "s11_cache_node_inprocess_lru",
+      "data_type": "cache-ttl-from-change-rate",
+      "field_mapping": {
+        "ttl_table": "ttl_table"
+      }
+    },
+    {
+      "from_step": "s02_cache_location_decide",
+      "to_step": "s12_cache_go_inprocess_bounded",
+      "data_type": "cache-location-decide",
+      "field_mapping": {
+        "cache_plan": "cache_plan"
+      }
+    },
+    {
+      "from_step": "s04_cache_ttl_from_change_rate",
+      "to_step": "s12_cache_go_inprocess_bounded",
+      "data_type": "cache-ttl-from-change-rate",
+      "field_mapping": {
+        "ttl_table": "ttl_table"
+      }
+    },
+    {
+      "from_step": "s05_cache_invalidation_strategy_select",
+      "to_step": "s13_cache_stale_set_race_fix",
+      "data_type": "cache-invalidation-strategy-select",
+      "field_mapping": {
+        "invalidation_plan": "invalidation_plan"
+      }
+    },
+    {
+      "from_step": "s03_cache_key_schema_design",
+      "to_step": "s14_cache_event_invalidation_pubsub",
+      "data_type": "cache-key-schema-design",
+      "field_mapping": {
+        "key_schema": "key_schema"
+      }
+    },
+    {
+      "from_step": "s05_cache_invalidation_strategy_select",
+      "to_step": "s14_cache_event_invalidation_pubsub",
+      "data_type": "cache-invalidation-strategy-select",
+      "field_mapping": {
+        "invalidation_plan": "invalidation_plan"
+      }
+    },
+    {
+      "from_step": "s05_cache_invalidation_strategy_select",
+      "to_step": "s15_cache_write_behind_buffer",
+      "data_type": "cache-invalidation-strategy-select",
+      "field_mapping": {
+        "invalidation_plan": "invalidation_plan"
+      }
+    },
+    {
+      "from_step": "s01_cache_read_hotspot_measure",
+      "to_step": "s16_cache_stampede_risk_assess",
+      "data_type": "cache-read-hotspot-measure",
+      "field_mapping": {
+        "read_hotspots": "read_hotspots"
+      }
+    },
+    {
+      "from_step": "s04_cache_ttl_from_change_rate",
+      "to_step": "s16_cache_stampede_risk_assess",
+      "data_type": "cache-ttl-from-change-rate",
+      "field_mapping": {
+        "ttl_table": "ttl_table"
+      }
+    },
+    {
+      "from_step": "s03_cache_key_schema_design",
+      "to_step": "s17_cache_stampede_redis_lock",
+      "data_type": "cache-key-schema-design",
+      "field_mapping": {
+        "key_schema": "key_schema"
+      }
+    },
+    {
+      "from_step": "s16_cache_stampede_risk_assess",
+      "to_step": "s17_cache_stampede_redis_lock",
+      "data_type": "cache-stampede-risk-assess",
+      "field_mapping": {
+        "stampede_plan": "stampede_plan"
+      }
+    },
+    {
+      "from_step": "s04_cache_ttl_from_change_rate",
+      "to_step": "s18_cache_stampede_xfetch_early_expiry",
+      "data_type": "cache-ttl-from-change-rate",
+      "field_mapping": {
+        "ttl_table": "ttl_table"
+      }
+    },
+    {
+      "from_step": "s16_cache_stampede_risk_assess",
+      "to_step": "s18_cache_stampede_xfetch_early_expiry",
+      "data_type": "cache-stampede-risk-assess",
+      "field_mapping": {
+        "stampede_plan": "stampede_plan"
+      }
+    },
+    {
+      "from_step": "s16_cache_stampede_risk_assess",
+      "to_step": "s19_cache_stampede_request_coalescing",
+      "data_type": "cache-stampede-risk-assess",
+      "field_mapping": {
+        "stampede_plan": "stampede_plan"
+      }
+    },
+    {
+      "from_step": "s03_cache_key_schema_design",
+      "to_step": "s20_cache_negative_result_caching",
+      "data_type": "cache-key-schema-design",
+      "field_mapping": {
+        "key_schema": "key_schema"
+      }
+    },
+    {
+      "from_step": "s04_cache_ttl_from_change_rate",
+      "to_step": "s20_cache_negative_result_caching",
+      "data_type": "cache-ttl-from-change-rate",
+      "field_mapping": {
+        "ttl_table": "ttl_table"
+      }
+    },
+    {
+      "from_step": "s02_cache_location_decide",
+      "to_step": "s21_cache_http_cache_control_policy",
+      "data_type": "cache-location-decide",
+      "field_mapping": {
+        "cache_plan": "cache_plan"
+      }
+    },
+    {
+      "from_step": "s04_cache_ttl_from_change_rate",
+      "to_step": "s21_cache_http_cache_control_policy",
+      "data_type": "cache-ttl-from-change-rate",
+      "field_mapping": {
+        "ttl_table": "ttl_table"
+      }
+    },
+    {
+      "from_step": "s21_cache_http_cache_control_policy",
+      "to_step": "s22_cache_http_etag_conditional_get",
+      "data_type": "cache-http-cache-control-policy",
+      "field_mapping": {
+        "header_policy": "header_policy"
+      }
+    },
+    {
+      "from_step": "s21_cache_http_cache_control_policy",
+      "to_step": "s23_cache_cdn_header_verify_purge",
+      "data_type": "cache-http-cache-control-policy",
+      "field_mapping": {
+        "header_policy": "header_policy"
+      }
+    },
+    {
+      "from_step": "s03_cache_key_schema_design",
+      "to_step": "s24_cache_redis_maxmemory_eviction",
+      "data_type": "cache-key-schema-design",
+      "field_mapping": {
+        "key_schema": "key_schema"
+      }
+    },
+    {
+      "from_step": "s24_cache_redis_maxmemory_eviction",
+      "to_step": "s25_cache_redis_bigkey_hotkey_scan",
+      "data_type": "cache-redis-maxmemory-eviction",
+      "field_mapping": {
+        "redis_memory_config": "redis_memory_config"
+      }
+    },
+    {
+      "from_step": "s03_cache_key_schema_design",
+      "to_step": "s26_cache_memcached_slab_eviction",
+      "data_type": "cache-key-schema-design",
+      "field_mapping": {
+        "key_schema": "key_schema"
+      }
+    },
+    {
+      "from_step": "s03_cache_key_schema_design",
+      "to_step": "s27_cache_hit_miss_instrument",
+      "data_type": "cache-key-schema-design",
+      "field_mapping": {
+        "key_schema": "key_schema"
+      }
+    },
+    {
+      "from_step": "s27_cache_hit_miss_instrument",
+      "to_step": "s28_cache_hit_rate_latency_measure",
+      "data_type": "cache-hit-miss-instrument",
+      "field_mapping": {
+        "cache_metrics": "cache_metrics"
+      }
+    },
+    {
+      "from_step": "s01_cache_read_hotspot_measure",
+      "to_step": "s28_cache_hit_rate_latency_measure",
+      "data_type": "cache-read-hotspot-measure",
+      "field_mapping": {
+        "baseline_metrics": "baseline_metrics"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "repo_path",
+    "read_source",
+    "db_engine",
+    "deployment_topology",
+    "consistency_requirement",
+    "staleness_tolerance",
+    "stack",
+    "public_url",
+    "cdn_provider",
+    "redis_url",
+    "memory_limit_bytes",
+    "memcached_addr"
+  ],
+  "terminal_outputs": [
+    "cache_backend",
+    "cache_aside_change",
+    "inprocess_cache_change",
+    "race_test",
+    "race_fix",
+    "invalidation_consumer",
+    "write_behind_change",
+    "lock_guard_change",
+    "early_expiry_change",
+    "coalescing_change",
+    "negative_cache_change",
+    "etag_change",
+    "cdn_report",
+    "key_size_report",
+    "memcached_memory_report",
+    "cache_effect_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_cache_read_hotspot_measure"
+    ],
+    [
+      "s02_cache_location_decide"
+    ],
+    [
+      "s03_cache_key_schema_design",
+      "s04_cache_ttl_from_change_rate"
+    ],
+    [
+      "s05_cache_invalidation_strategy_select",
+      "s10_cache_py_inprocess_bounded",
+      "s11_cache_node_inprocess_lru",
+      "s12_cache_go_inprocess_bounded",
+      "s16_cache_stampede_risk_assess",
+      "s20_cache_negative_result_caching",
+      "s21_cache_http_cache_control_policy",
+      "s24_cache_redis_maxmemory_eviction",
+      "s26_cache_memcached_slab_eviction"
+    ],
+    [
+      "s06_cache_py_cache_aside_redis",
+      "s07_cache_node_cache_aside_redis",
+      "s08_cache_go_cache_aside_redis",
+      "s09_cache_java_spring_cacheable",
+      "s13_cache_stale_set_race_fix",
+      "s14_cache_event_invalidation_pubsub",
+      "s15_cache_write_behind_buffer",
+      "s17_cache_stampede_redis_lock",
+      "s18_cache_stampede_xfetch_early_expiry",
+      "s19_cache_stampede_request_coalescing",
+      "s22_cache_http_etag_conditional_get",
+      "s23_cache_cdn_header_verify_purge",
+      "s25_cache_redis_bigkey_hotkey_scan"
+    ],
+    [
+      "s27_cache_hit_miss_instrument"
+    ],
+    [
+      "s28_cache_hit_rate_latency_measure"
+    ]
+  ],
+  "estimated_cost": 28,
+  "critical_path": [
+    "s01_cache_read_hotspot_measure",
+    "s02_cache_location_decide",
+    "s04_cache_ttl_from_change_rate",
+    "s05_cache_invalidation_strategy_select",
+    "s06_cache_py_cache_aside_redis",
+    "s27_cache_hit_miss_instrument",
+    "s28_cache_hit_rate_latency_measure"
+  ]
+}

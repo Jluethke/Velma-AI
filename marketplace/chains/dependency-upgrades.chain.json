@@ -1,0 +1,1338 @@
+{
+  "name": "dependency-upgrades",
+  "description": "Full dependency upgrade run for Python, Node, Go, Rust or JVM projects: scope, baseline, lockfile hygiene, outdated and vulnerability inventory, changelog triage, graph-ordered plan, rollback plan, deprecation sweeps, one-bump-per-commit apply, codemods, Django, React, Spring Boot and Node LTS majors, bot configuration, and verification against the baseline.",
+  "steps": [
+    {
+      "id": "s01_dup_scope_intake",
+      "skill_name": "dup-scope-intake",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "upgrade_goal": "from_user_input",
+        "framework": "from_user_input_optional",
+        "bot": "from_user_input_optional",
+        "target_packages": "from_user_input_optional",
+        "test_command": "from_user_input_optional"
+      },
+      "outputs": {
+        "upgrade_scope": "upgrade_scope"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_dup_baseline_snapshot",
+      "skill_name": "dup-baseline-snapshot",
+      "inputs": {
+        "upgrade_scope": "s01_dup_scope_intake.upgrade_scope"
+      },
+      "outputs": {
+        "baseline_report": "baseline_report"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_dup_py_lockfile_hygiene",
+      "skill_name": "dup-py-lockfile-hygiene",
+      "inputs": {
+        "upgrade_scope": "s01_dup_scope_intake.upgrade_scope",
+        "baseline_report": "s02_dup_baseline_snapshot.baseline_report"
+      },
+      "outputs": {
+        "lockfile_status": "lockfile_status"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_dup_node_lockfile_hygiene",
+      "skill_name": "dup-node-lockfile-hygiene",
+      "inputs": {
+        "upgrade_scope": "s01_dup_scope_intake.upgrade_scope",
+        "baseline_report": "s02_dup_baseline_snapshot.baseline_report"
+      },
+      "outputs": {
+        "lockfile_status": "lockfile_status"
+      },
+      "condition": "stack == 'node'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s05_dup_go_module_hygiene",
+      "skill_name": "dup-go-module-hygiene",
+      "inputs": {
+        "upgrade_scope": "s01_dup_scope_intake.upgrade_scope",
+        "baseline_report": "s02_dup_baseline_snapshot.baseline_report"
+      },
+      "outputs": {
+        "lockfile_status": "lockfile_status"
+      },
+      "condition": "stack == 'go'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s06_dup_rust_lockfile_hygiene",
+      "skill_name": "dup-rust-lockfile-hygiene",
+      "inputs": {
+        "upgrade_scope": "s01_dup_scope_intake.upgrade_scope",
+        "baseline_report": "s02_dup_baseline_snapshot.baseline_report"
+      },
+      "outputs": {
+        "lockfile_status": "lockfile_status"
+      },
+      "condition": "stack == 'rust'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s07_dup_py_outdated_inventory",
+      "skill_name": "dup-py-outdated-inventory",
+      "inputs": {
+        "upgrade_scope": "s01_dup_scope_intake.upgrade_scope",
+        "lockfile_status": "s03_dup_py_lockfile_hygiene.lockfile_status"
+      },
+      "outputs": {
+        "outdated_inventory": "outdated_inventory"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 4
+    },
+    {
+      "id": "s08_dup_node_outdated_inventory",
+      "skill_name": "dup-node-outdated-inventory",
+      "inputs": {
+        "upgrade_scope": "s01_dup_scope_intake.upgrade_scope",
+        "lockfile_status": "s04_dup_node_lockfile_hygiene.lockfile_status"
+      },
+      "outputs": {
+        "outdated_inventory": "outdated_inventory"
+      },
+      "condition": "stack == 'node'",
+      "parallel_group": 4
+    },
+    {
+      "id": "s09_dup_go_outdated_inventory",
+      "skill_name": "dup-go-outdated-inventory",
+      "inputs": {
+        "upgrade_scope": "s01_dup_scope_intake.upgrade_scope",
+        "lockfile_status": "s05_dup_go_module_hygiene.lockfile_status"
+      },
+      "outputs": {
+        "outdated_inventory": "outdated_inventory"
+      },
+      "condition": "stack == 'go'",
+      "parallel_group": 4
+    },
+    {
+      "id": "s10_dup_rust_outdated_inventory",
+      "skill_name": "dup-rust-outdated-inventory",
+      "inputs": {
+        "upgrade_scope": "s01_dup_scope_intake.upgrade_scope",
+        "lockfile_status": "s06_dup_rust_lockfile_hygiene.lockfile_status"
+      },
+      "outputs": {
+        "outdated_inventory": "outdated_inventory"
+      },
+      "condition": "stack == 'rust'",
+      "parallel_group": 4
+    },
+    {
+      "id": "s11_dup_jvm_outdated_inventory",
+      "skill_name": "dup-jvm-outdated-inventory",
+      "inputs": {
+        "upgrade_scope": "s01_dup_scope_intake.upgrade_scope",
+        "baseline_report": "s02_dup_baseline_snapshot.baseline_report"
+      },
+      "outputs": {
+        "outdated_inventory": "outdated_inventory"
+      },
+      "condition": "stack == 'jvm'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s12_dup_py_vuln_scan",
+      "skill_name": "dup-py-vuln-scan",
+      "inputs": {
+        "upgrade_scope": "s01_dup_scope_intake.upgrade_scope",
+        "lockfile_status": "s03_dup_py_lockfile_hygiene.lockfile_status"
+      },
+      "outputs": {
+        "vuln_findings": "vuln_findings"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 4
+    },
+    {
+      "id": "s13_dup_node_vuln_scan",
+      "skill_name": "dup-node-vuln-scan",
+      "inputs": {
+        "upgrade_scope": "s01_dup_scope_intake.upgrade_scope",
+        "lockfile_status": "s04_dup_node_lockfile_hygiene.lockfile_status"
+      },
+      "outputs": {
+        "vuln_findings": "vuln_findings"
+      },
+      "condition": "stack == 'node'",
+      "parallel_group": 4
+    },
+    {
+      "id": "s14_dup_go_vuln_scan",
+      "skill_name": "dup-go-vuln-scan",
+      "inputs": {
+        "upgrade_scope": "s01_dup_scope_intake.upgrade_scope",
+        "lockfile_status": "s05_dup_go_module_hygiene.lockfile_status"
+      },
+      "outputs": {
+        "vuln_findings": "vuln_findings"
+      },
+      "condition": "stack == 'go'",
+      "parallel_group": 4
+    },
+    {
+      "id": "s15_dup_rust_vuln_scan",
+      "skill_name": "dup-rust-vuln-scan",
+      "inputs": {
+        "upgrade_scope": "s01_dup_scope_intake.upgrade_scope",
+        "lockfile_status": "s06_dup_rust_lockfile_hygiene.lockfile_status"
+      },
+      "outputs": {
+        "vuln_findings": "vuln_findings"
+      },
+      "condition": "stack == 'rust'",
+      "parallel_group": 4
+    },
+    {
+      "id": "s16_dup_changelog_triage",
+      "skill_name": "dup-changelog-triage",
+      "inputs": {
+        "upgrade_scope": "s01_dup_scope_intake.upgrade_scope",
+        "baseline_report": "s02_dup_baseline_snapshot.baseline_report"
+      },
+      "outputs": {
+        "breaking_changes": "breaking_changes"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s17_dup_upgrade_order_plan",
+      "skill_name": "dup-upgrade-order-plan",
+      "inputs": {
+        "upgrade_scope": "s01_dup_scope_intake.upgrade_scope",
+        "breaking_changes": "s16_dup_changelog_triage.breaking_changes"
+      },
+      "outputs": {
+        "upgrade_plan": "upgrade_plan"
+      },
+      "parallel_group": 6
+    },
+    {
+      "id": "s18_dup_rollback_plan",
+      "skill_name": "dup-rollback-plan",
+      "inputs": {
+        "upgrade_scope": "s01_dup_scope_intake.upgrade_scope",
+        "baseline_report": "s02_dup_baseline_snapshot.baseline_report",
+        "upgrade_plan": "s17_dup_upgrade_order_plan.upgrade_plan"
+      },
+      "outputs": {
+        "rollback_plan": "rollback_plan"
+      },
+      "parallel_group": 7
+    },
+    {
+      "id": "s19_dup_py_deprecation_sweep",
+      "skill_name": "dup-py-deprecation-sweep",
+      "inputs": {
+        "upgrade_scope": "s01_dup_scope_intake.upgrade_scope",
+        "baseline_report": "s02_dup_baseline_snapshot.baseline_report",
+        "upgrade_plan": "s17_dup_upgrade_order_plan.upgrade_plan"
+      },
+      "outputs": {
+        "deprecation_report": "deprecation_report"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 8
+    },
+    {
+      "id": "s20_dup_node_deprecation_sweep",
+      "skill_name": "dup-node-deprecation-sweep",
+      "inputs": {
+        "upgrade_scope": "s01_dup_scope_intake.upgrade_scope",
+        "baseline_report": "s02_dup_baseline_snapshot.baseline_report",
+        "upgrade_plan": "s17_dup_upgrade_order_plan.upgrade_plan"
+      },
+      "outputs": {
+        "deprecation_report": "deprecation_report"
+      },
+      "condition": "stack == 'node'",
+      "parallel_group": 8
+    },
+    {
+      "id": "s21_dup_node_lts_upgrade",
+      "skill_name": "dup-node-lts-upgrade",
+      "inputs": {
+        "upgrade_scope": "s01_dup_scope_intake.upgrade_scope",
+        "rollback_plan": "s18_dup_rollback_plan.rollback_plan",
+        "node_target_version": "from_user_input_optional"
+      },
+      "outputs": {
+        "runtime_upgrade_log": "runtime_upgrade_log"
+      },
+      "condition": "stack == 'node' and upgrade_goal in ['node-lts', 'all']",
+      "parallel_group": 9
+    },
+    {
+      "id": "s22_dup_apply_one_bump",
+      "skill_name": "dup-apply-one-bump",
+      "inputs": {
+        "upgrade_scope": "s01_dup_scope_intake.upgrade_scope",
+        "upgrade_plan": "s17_dup_upgrade_order_plan.upgrade_plan",
+        "rollback_plan": "s18_dup_rollback_plan.rollback_plan"
+      },
+      "outputs": {
+        "applied_bumps": "applied_bumps",
+        "blocked_bumps": "blocked_bumps"
+      },
+      "parallel_group": 10
+    },
+    {
+      "id": "s23_dup_codemod_run",
+      "skill_name": "dup-codemod-run",
+      "inputs": {
+        "upgrade_scope": "s01_dup_scope_intake.upgrade_scope",
+        "upgrade_plan": "s17_dup_upgrade_order_plan.upgrade_plan",
+        "breaking_changes": "s16_dup_changelog_triage.breaking_changes",
+        "applied_bumps": "s22_dup_apply_one_bump.applied_bumps"
+      },
+      "outputs": {
+        "codemod_log": "codemod_log"
+      },
+      "parallel_group": 11
+    },
+    {
+      "id": "s24_dup_django_major_upgrade",
+      "skill_name": "dup-django-major-upgrade",
+      "inputs": {
+        "upgrade_scope": "s01_dup_scope_intake.upgrade_scope",
+        "upgrade_plan": "s17_dup_upgrade_order_plan.upgrade_plan",
+        "codemod_log": "s23_dup_codemod_run.codemod_log",
+        "framework_target_version": "from_user_input_optional"
+      },
+      "outputs": {
+        "framework_upgrade_log": "framework_upgrade_log"
+      },
+      "condition": "stack == 'python' and framework == 'django'",
+      "parallel_group": 12
+    },
+    {
+      "id": "s25_dup_react_major_upgrade",
+      "skill_name": "dup-react-major-upgrade",
+      "inputs": {
+        "upgrade_scope": "s01_dup_scope_intake.upgrade_scope",
+        "upgrade_plan": "s17_dup_upgrade_order_plan.upgrade_plan",
+        "codemod_log": "s23_dup_codemod_run.codemod_log",
+        "framework_target_version": "from_user_input_optional"
+      },
+      "outputs": {
+        "framework_upgrade_log": "framework_upgrade_log"
+      },
+      "condition": "stack == 'node' and framework == 'react'",
+      "parallel_group": 12
+    },
+    {
+      "id": "s26_dup_spring_boot_major_upgrade",
+      "skill_name": "dup-spring-boot-major-upgrade",
+      "inputs": {
+        "upgrade_scope": "s01_dup_scope_intake.upgrade_scope",
+        "upgrade_plan": "s17_dup_upgrade_order_plan.upgrade_plan",
+        "codemod_log": "s23_dup_codemod_run.codemod_log",
+        "framework_target_version": "from_user_input_optional"
+      },
+      "outputs": {
+        "framework_upgrade_log": "framework_upgrade_log"
+      },
+      "condition": "stack == 'jvm' and framework == 'spring-boot'",
+      "parallel_group": 12
+    },
+    {
+      "id": "s27_dup_renovate_config",
+      "skill_name": "dup-renovate-config",
+      "inputs": {
+        "upgrade_scope": "s01_dup_scope_intake.upgrade_scope",
+        "baseline_report": "s02_dup_baseline_snapshot.baseline_report",
+        "upgrade_plan": "s17_dup_upgrade_order_plan.upgrade_plan"
+      },
+      "outputs": {
+        "bot_config": "bot_config"
+      },
+      "condition": "bot == 'renovate'",
+      "parallel_group": 13
+    },
+    {
+      "id": "s28_dup_dependabot_config",
+      "skill_name": "dup-dependabot-config",
+      "inputs": {
+        "upgrade_scope": "s01_dup_scope_intake.upgrade_scope",
+        "baseline_report": "s02_dup_baseline_snapshot.baseline_report",
+        "upgrade_plan": "s17_dup_upgrade_order_plan.upgrade_plan"
+      },
+      "outputs": {
+        "bot_config": "bot_config"
+      },
+      "condition": "bot == 'dependabot'",
+      "parallel_group": 13
+    },
+    {
+      "id": "s29_dup_verify_and_pr",
+      "skill_name": "dup-verify-and-pr",
+      "inputs": {
+        "upgrade_scope": "s01_dup_scope_intake.upgrade_scope",
+        "baseline_report": "s02_dup_baseline_snapshot.baseline_report",
+        "rollback_plan": "s18_dup_rollback_plan.rollback_plan",
+        "applied_bumps": "s22_dup_apply_one_bump.applied_bumps"
+      },
+      "outputs": {
+        "verification_report": "verification_report",
+        "pr_description": "pr_description"
+      },
+      "parallel_group": 14
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_dup_scope_intake",
+      "to_step": "s02_dup_baseline_snapshot",
+      "data_type": "dup-scope-intake",
+      "field_mapping": {
+        "upgrade_scope": "upgrade_scope"
+      }
+    },
+    {
+      "from_step": "s01_dup_scope_intake",
+      "to_step": "s03_dup_py_lockfile_hygiene",
+      "data_type": "dup-scope-intake",
+      "field_mapping": {
+        "upgrade_scope": "upgrade_scope"
+      }
+    },
+    {
+      "from_step": "s02_dup_baseline_snapshot",
+      "to_step": "s03_dup_py_lockfile_hygiene",
+      "data_type": "dup-baseline-snapshot",
+      "field_mapping": {
+        "baseline_report": "baseline_report"
+      }
+    },
+    {
+      "from_step": "s01_dup_scope_intake",
+      "to_step": "s04_dup_node_lockfile_hygiene",
+      "data_type": "dup-scope-intake",
+      "field_mapping": {
+        "upgrade_scope": "upgrade_scope"
+      }
+    },
+    {
+      "from_step": "s02_dup_baseline_snapshot",
+      "to_step": "s04_dup_node_lockfile_hygiene",
+      "data_type": "dup-baseline-snapshot",
+      "field_mapping": {
+        "baseline_report": "baseline_report"
+      }
+    },
+    {
+      "from_step": "s01_dup_scope_intake",
+      "to_step": "s05_dup_go_module_hygiene",
+      "data_type": "dup-scope-intake",
+      "field_mapping": {
+        "upgrade_scope": "upgrade_scope"
+      }
+    },
+    {
+      "from_step": "s02_dup_baseline_snapshot",
+      "to_step": "s05_dup_go_module_hygiene",
+      "data_type": "dup-baseline-snapshot",
+      "field_mapping": {
+        "baseline_report": "baseline_report"
+      }
+    },
+    {
+      "from_step": "s01_dup_scope_intake",
+      "to_step": "s06_dup_rust_lockfile_hygiene",
+      "data_type": "dup-scope-intake",
+      "field_mapping": {
+        "upgrade_scope": "upgrade_scope"
+      }
+    },
+    {
+      "from_step": "s02_dup_baseline_snapshot",
+      "to_step": "s06_dup_rust_lockfile_hygiene",
+      "data_type": "dup-baseline-snapshot",
+      "field_mapping": {
+        "baseline_report": "baseline_report"
+      }
+    },
+    {
+      "from_step": "s01_dup_scope_intake",
+      "to_step": "s07_dup_py_outdated_inventory",
+      "data_type": "dup-scope-intake",
+      "field_mapping": {
+        "upgrade_scope": "upgrade_scope"
+      }
+    },
+    {
+      "from_step": "s03_dup_py_lockfile_hygiene",
+      "to_step": "s07_dup_py_outdated_inventory",
+      "data_type": "dup-py-lockfile-hygiene",
+      "field_mapping": {
+        "lockfile_status": "lockfile_status"
+      }
+    },
+    {
+      "from_step": "s01_dup_scope_intake",
+      "to_step": "s08_dup_node_outdated_inventory",
+      "data_type": "dup-scope-intake",
+      "field_mapping": {
+        "upgrade_scope": "upgrade_scope"
+      }
+    },
+    {
+      "from_step": "s04_dup_node_lockfile_hygiene",
+      "to_step": "s08_dup_node_outdated_inventory",
+      "data_type": "dup-node-lockfile-hygiene",
+      "field_mapping": {
+        "lockfile_status": "lockfile_status"
+      }
+    },
+    {
+      "from_step": "s01_dup_scope_intake",
+      "to_step": "s09_dup_go_outdated_inventory",
+      "data_type": "dup-scope-intake",
+      "field_mapping": {
+        "upgrade_scope": "upgrade_scope"
+      }
+    },
+    {
+      "from_step": "s05_dup_go_module_hygiene",
+      "to_step": "s09_dup_go_outdated_inventory",
+      "data_type": "dup-go-module-hygiene",
+      "field_mapping": {
+        "lockfile_status": "lockfile_status"
+      }
+    },
+    {
+      "from_step": "s01_dup_scope_intake",
+      "to_step": "s10_dup_rust_outdated_inventory",
+      "data_type": "dup-scope-intake",
+      "field_mapping": {
+        "upgrade_scope": "upgrade_scope"
+      }
+    },
+    {
+      "from_step": "s06_dup_rust_lockfile_hygiene",
+      "to_step": "s10_dup_rust_outdated_inventory",
+      "data_type": "dup-rust-lockfile-hygiene",
+      "field_mapping": {
+        "lockfile_status": "lockfile_status"
+      }
+    },
+    {
+      "from_step": "s01_dup_scope_intake",
+      "to_step": "s11_dup_jvm_outdated_inventory",
+      "data_type": "dup-scope-intake",
+      "field_mapping": {
+        "upgrade_scope": "upgrade_scope"
+      }
+    },
+    {
+      "from_step": "s02_dup_baseline_snapshot",
+      "to_step": "s11_dup_jvm_outdated_inventory",
+      "data_type": "dup-baseline-snapshot",
+      "field_mapping": {
+        "baseline_report": "baseline_report"
+      }
+    },
+    {
+      "from_step": "s01_dup_scope_intake",
+      "to_step": "s12_dup_py_vuln_scan",
+      "data_type": "dup-scope-intake",
+      "field_mapping": {
+        "upgrade_scope": "upgrade_scope"
+      }
+    },
+    {
+      "from_step": "s03_dup_py_lockfile_hygiene",
+      "to_step": "s12_dup_py_vuln_scan",
+      "data_type": "dup-py-lockfile-hygiene",
+      "field_mapping": {
+        "lockfile_status": "lockfile_status"
+      }
+    },
+    {
+      "from_step": "s01_dup_scope_intake",
+      "to_step": "s13_dup_node_vuln_scan",
+      "data_type": "dup-scope-intake",
+      "field_mapping": {
+        "upgrade_scope": "upgrade_scope"
+      }
+    },
+    {
+      "from_step": "s04_dup_node_lockfile_hygiene",
+      "to_step": "s13_dup_node_vuln_scan",
+      "data_type": "dup-node-lockfile-hygiene",
+      "field_mapping": {
+        "lockfile_status": "lockfile_status"
+      }
+    },
+    {
+      "from_step": "s01_dup_scope_intake",
+      "to_step": "s14_dup_go_vuln_scan",
+      "data_type": "dup-scope-intake",
+      "field_mapping": {
+        "upgrade_scope": "upgrade_scope"
+      }
+    },
+    {
+      "from_step": "s05_dup_go_module_hygiene",
+      "to_step": "s14_dup_go_vuln_scan",
+      "data_type": "dup-go-module-hygiene",
+      "field_mapping": {
+        "lockfile_status": "lockfile_status"
+      }
+    },
+    {
+      "from_step": "s01_dup_scope_intake",
+      "to_step": "s15_dup_rust_vuln_scan",
+      "data_type": "dup-scope-intake",
+      "field_mapping": {
+        "upgrade_scope": "upgrade_scope"
+      }
+    },
+    {
+      "from_step": "s06_dup_rust_lockfile_hygiene",
+      "to_step": "s15_dup_rust_vuln_scan",
+      "data_type": "dup-rust-lockfile-hygiene",
+      "field_mapping": {
+        "lockfile_status": "lockfile_status"
+      }
+    },
+    {
+      "from_step": "s01_dup_scope_intake",
+      "to_step": "s16_dup_changelog_triage",
+      "data_type": "dup-scope-intake",
+      "field_mapping": {
+        "upgrade_scope": "upgrade_scope"
+      }
+    },
+    {
+      "from_step": "s02_dup_baseline_snapshot",
+      "to_step": "s16_dup_changelog_triage",
+      "data_type": "dup-baseline-snapshot",
+      "field_mapping": {
+        "baseline_report": "baseline_report"
+      }
+    },
+    {
+      "from_step": "s07_dup_py_outdated_inventory",
+      "to_step": "s16_dup_changelog_triage",
+      "data_type": "dup-py-outdated-inventory",
+      "field_mapping": {
+        "outdated_inventory": "outdated_inventory"
+      }
+    },
+    {
+      "from_step": "s08_dup_node_outdated_inventory",
+      "to_step": "s16_dup_changelog_triage",
+      "data_type": "dup-node-outdated-inventory",
+      "field_mapping": {
+        "outdated_inventory": "outdated_inventory"
+      }
+    },
+    {
+      "from_step": "s09_dup_go_outdated_inventory",
+      "to_step": "s16_dup_changelog_triage",
+      "data_type": "dup-go-outdated-inventory",
+      "field_mapping": {
+        "outdated_inventory": "outdated_inventory"
+      }
+    },
+    {
+      "from_step": "s10_dup_rust_outdated_inventory",
+      "to_step": "s16_dup_changelog_triage",
+      "data_type": "dup-rust-outdated-inventory",
+      "field_mapping": {
+        "outdated_inventory": "outdated_inventory"
+      }
+    },
+    {
+      "from_step": "s11_dup_jvm_outdated_inventory",
+      "to_step": "s16_dup_changelog_triage",
+      "data_type": "dup-jvm-outdated-inventory",
+      "field_mapping": {
+        "outdated_inventory": "outdated_inventory"
+      }
+    },
+    {
+      "from_step": "s12_dup_py_vuln_scan",
+      "to_step": "s16_dup_changelog_triage",
+      "data_type": "dup-py-vuln-scan",
+      "field_mapping": {
+        "vuln_findings": "vuln_findings"
+      }
+    },
+    {
+      "from_step": "s13_dup_node_vuln_scan",
+      "to_step": "s16_dup_changelog_triage",
+      "data_type": "dup-node-vuln-scan",
+      "field_mapping": {
+        "vuln_findings": "vuln_findings"
+      }
+    },
+    {
+      "from_step": "s14_dup_go_vuln_scan",
+      "to_step": "s16_dup_changelog_triage",
+      "data_type": "dup-go-vuln-scan",
+      "field_mapping": {
+        "vuln_findings": "vuln_findings"
+      }
+    },
+    {
+      "from_step": "s15_dup_rust_vuln_scan",
+      "to_step": "s16_dup_changelog_triage",
+      "data_type": "dup-rust-vuln-scan",
+      "field_mapping": {
+        "vuln_findings": "vuln_findings"
+      }
+    },
+    {
+      "from_step": "s01_dup_scope_intake",
+      "to_step": "s17_dup_upgrade_order_plan",
+      "data_type": "dup-scope-intake",
+      "field_mapping": {
+        "upgrade_scope": "upgrade_scope"
+      }
+    },
+    {
+      "from_step": "s16_dup_changelog_triage",
+      "to_step": "s17_dup_upgrade_order_plan",
+      "data_type": "dup-changelog-triage",
+      "field_mapping": {
+        "breaking_changes": "breaking_changes"
+      }
+    },
+    {
+      "from_step": "s07_dup_py_outdated_inventory",
+      "to_step": "s17_dup_upgrade_order_plan",
+      "data_type": "dup-py-outdated-inventory",
+      "field_mapping": {
+        "outdated_inventory": "outdated_inventory"
+      }
+    },
+    {
+      "from_step": "s08_dup_node_outdated_inventory",
+      "to_step": "s17_dup_upgrade_order_plan",
+      "data_type": "dup-node-outdated-inventory",
+      "field_mapping": {
+        "outdated_inventory": "outdated_inventory"
+      }
+    },
+    {
+      "from_step": "s09_dup_go_outdated_inventory",
+      "to_step": "s17_dup_upgrade_order_plan",
+      "data_type": "dup-go-outdated-inventory",
+      "field_mapping": {
+        "outdated_inventory": "outdated_inventory"
+      }
+    },
+    {
+      "from_step": "s10_dup_rust_outdated_inventory",
+      "to_step": "s17_dup_upgrade_order_plan",
+      "data_type": "dup-rust-outdated-inventory",
+      "field_mapping": {
+        "outdated_inventory": "outdated_inventory"
+      }
+    },
+    {
+      "from_step": "s11_dup_jvm_outdated_inventory",
+      "to_step": "s17_dup_upgrade_order_plan",
+      "data_type": "dup-jvm-outdated-inventory",
+      "field_mapping": {
+        "outdated_inventory": "outdated_inventory"
+      }
+    },
+    {
+      "from_step": "s12_dup_py_vuln_scan",
+      "to_step": "s17_dup_upgrade_order_plan",
+      "data_type": "dup-py-vuln-scan",
+      "field_mapping": {
+        "vuln_findings": "vuln_findings"
+      }
+    },
+    {
+      "from_step": "s13_dup_node_vuln_scan",
+      "to_step": "s17_dup_upgrade_order_plan",
+      "data_type": "dup-node-vuln-scan",
+      "field_mapping": {
+        "vuln_findings": "vuln_findings"
+      }
+    },
+    {
+      "from_step": "s14_dup_go_vuln_scan",
+      "to_step": "s17_dup_upgrade_order_plan",
+      "data_type": "dup-go-vuln-scan",
+      "field_mapping": {
+        "vuln_findings": "vuln_findings"
+      }
+    },
+    {
+      "from_step": "s15_dup_rust_vuln_scan",
+      "to_step": "s17_dup_upgrade_order_plan",
+      "data_type": "dup-rust-vuln-scan",
+      "field_mapping": {
+        "vuln_findings": "vuln_findings"
+      }
+    },
+    {
+      "from_step": "s01_dup_scope_intake",
+      "to_step": "s18_dup_rollback_plan",
+      "data_type": "dup-scope-intake",
+      "field_mapping": {
+        "upgrade_scope": "upgrade_scope"
+      }
+    },
+    {
+      "from_step": "s02_dup_baseline_snapshot",
+      "to_step": "s18_dup_rollback_plan",
+      "data_type": "dup-baseline-snapshot",
+      "field_mapping": {
+        "baseline_report": "baseline_report"
+      }
+    },
+    {
+      "from_step": "s17_dup_upgrade_order_plan",
+      "to_step": "s18_dup_rollback_plan",
+      "data_type": "dup-upgrade-order-plan",
+      "field_mapping": {
+        "upgrade_plan": "upgrade_plan"
+      }
+    },
+    {
+      "from_step": "s01_dup_scope_intake",
+      "to_step": "s19_dup_py_deprecation_sweep",
+      "data_type": "dup-scope-intake",
+      "field_mapping": {
+        "upgrade_scope": "upgrade_scope"
+      }
+    },
+    {
+      "from_step": "s02_dup_baseline_snapshot",
+      "to_step": "s19_dup_py_deprecation_sweep",
+      "data_type": "dup-baseline-snapshot",
+      "field_mapping": {
+        "baseline_report": "baseline_report"
+      }
+    },
+    {
+      "from_step": "s17_dup_upgrade_order_plan",
+      "to_step": "s19_dup_py_deprecation_sweep",
+      "data_type": "dup-upgrade-order-plan",
+      "field_mapping": {
+        "upgrade_plan": "upgrade_plan"
+      }
+    },
+    {
+      "from_step": "s18_dup_rollback_plan",
+      "to_step": "s19_dup_py_deprecation_sweep",
+      "data_type": "dup-rollback-plan",
+      "field_mapping": {
+        "rollback_plan": "rollback_plan"
+      }
+    },
+    {
+      "from_step": "s01_dup_scope_intake",
+      "to_step": "s20_dup_node_deprecation_sweep",
+      "data_type": "dup-scope-intake",
+      "field_mapping": {
+        "upgrade_scope": "upgrade_scope"
+      }
+    },
+    {
+      "from_step": "s02_dup_baseline_snapshot",
+      "to_step": "s20_dup_node_deprecation_sweep",
+      "data_type": "dup-baseline-snapshot",
+      "field_mapping": {
+        "baseline_report": "baseline_report"
+      }
+    },
+    {
+      "from_step": "s17_dup_upgrade_order_plan",
+      "to_step": "s20_dup_node_deprecation_sweep",
+      "data_type": "dup-upgrade-order-plan",
+      "field_mapping": {
+        "upgrade_plan": "upgrade_plan"
+      }
+    },
+    {
+      "from_step": "s18_dup_rollback_plan",
+      "to_step": "s20_dup_node_deprecation_sweep",
+      "data_type": "dup-rollback-plan",
+      "field_mapping": {
+        "rollback_plan": "rollback_plan"
+      }
+    },
+    {
+      "from_step": "s01_dup_scope_intake",
+      "to_step": "s21_dup_node_lts_upgrade",
+      "data_type": "dup-scope-intake",
+      "field_mapping": {
+        "upgrade_scope": "upgrade_scope"
+      }
+    },
+    {
+      "from_step": "s18_dup_rollback_plan",
+      "to_step": "s21_dup_node_lts_upgrade",
+      "data_type": "dup-rollback-plan",
+      "field_mapping": {
+        "rollback_plan": "rollback_plan"
+      }
+    },
+    {
+      "from_step": "s20_dup_node_deprecation_sweep",
+      "to_step": "s21_dup_node_lts_upgrade",
+      "data_type": "dup-node-deprecation-sweep",
+      "field_mapping": {
+        "deprecation_report": "deprecation_report"
+      }
+    },
+    {
+      "from_step": "s01_dup_scope_intake",
+      "to_step": "s22_dup_apply_one_bump",
+      "data_type": "dup-scope-intake",
+      "field_mapping": {
+        "upgrade_scope": "upgrade_scope"
+      }
+    },
+    {
+      "from_step": "s17_dup_upgrade_order_plan",
+      "to_step": "s22_dup_apply_one_bump",
+      "data_type": "dup-upgrade-order-plan",
+      "field_mapping": {
+        "upgrade_plan": "upgrade_plan"
+      }
+    },
+    {
+      "from_step": "s18_dup_rollback_plan",
+      "to_step": "s22_dup_apply_one_bump",
+      "data_type": "dup-rollback-plan",
+      "field_mapping": {
+        "rollback_plan": "rollback_plan"
+      }
+    },
+    {
+      "from_step": "s19_dup_py_deprecation_sweep",
+      "to_step": "s22_dup_apply_one_bump",
+      "data_type": "dup-py-deprecation-sweep",
+      "field_mapping": {
+        "deprecation_report": "deprecation_report"
+      }
+    },
+    {
+      "from_step": "s20_dup_node_deprecation_sweep",
+      "to_step": "s22_dup_apply_one_bump",
+      "data_type": "dup-node-deprecation-sweep",
+      "field_mapping": {
+        "deprecation_report": "deprecation_report"
+      }
+    },
+    {
+      "from_step": "s21_dup_node_lts_upgrade",
+      "to_step": "s22_dup_apply_one_bump",
+      "data_type": "dup-node-lts-upgrade",
+      "field_mapping": {
+        "runtime_upgrade_log": "runtime_upgrade_log"
+      }
+    },
+    {
+      "from_step": "s01_dup_scope_intake",
+      "to_step": "s23_dup_codemod_run",
+      "data_type": "dup-scope-intake",
+      "field_mapping": {
+        "upgrade_scope": "upgrade_scope"
+      }
+    },
+    {
+      "from_step": "s17_dup_upgrade_order_plan",
+      "to_step": "s23_dup_codemod_run",
+      "data_type": "dup-upgrade-order-plan",
+      "field_mapping": {
+        "upgrade_plan": "upgrade_plan"
+      }
+    },
+    {
+      "from_step": "s16_dup_changelog_triage",
+      "to_step": "s23_dup_codemod_run",
+      "data_type": "dup-changelog-triage",
+      "field_mapping": {
+        "breaking_changes": "breaking_changes"
+      }
+    },
+    {
+      "from_step": "s22_dup_apply_one_bump",
+      "to_step": "s23_dup_codemod_run",
+      "data_type": "dup-apply-one-bump",
+      "field_mapping": {
+        "applied_bumps": "applied_bumps"
+      }
+    },
+    {
+      "from_step": "s01_dup_scope_intake",
+      "to_step": "s24_dup_django_major_upgrade",
+      "data_type": "dup-scope-intake",
+      "field_mapping": {
+        "upgrade_scope": "upgrade_scope"
+      }
+    },
+    {
+      "from_step": "s17_dup_upgrade_order_plan",
+      "to_step": "s24_dup_django_major_upgrade",
+      "data_type": "dup-upgrade-order-plan",
+      "field_mapping": {
+        "upgrade_plan": "upgrade_plan"
+      }
+    },
+    {
+      "from_step": "s23_dup_codemod_run",
+      "to_step": "s24_dup_django_major_upgrade",
+      "data_type": "dup-codemod-run",
+      "field_mapping": {
+        "codemod_log": "codemod_log"
+      }
+    },
+    {
+      "from_step": "s01_dup_scope_intake",
+      "to_step": "s25_dup_react_major_upgrade",
+      "data_type": "dup-scope-intake",
+      "field_mapping": {
+        "upgrade_scope": "upgrade_scope"
+      }
+    },
+    {
+      "from_step": "s17_dup_upgrade_order_plan",
+      "to_step": "s25_dup_react_major_upgrade",
+      "data_type": "dup-upgrade-order-plan",
+      "field_mapping": {
+        "upgrade_plan": "upgrade_plan"
+      }
+    },
+    {
+      "from_step": "s23_dup_codemod_run",
+      "to_step": "s25_dup_react_major_upgrade",
+      "data_type": "dup-codemod-run",
+      "field_mapping": {
+        "codemod_log": "codemod_log"
+      }
+    },
+    {
+      "from_step": "s01_dup_scope_intake",
+      "to_step": "s26_dup_spring_boot_major_upgrade",
+      "data_type": "dup-scope-intake",
+      "field_mapping": {
+        "upgrade_scope": "upgrade_scope"
+      }
+    },
+    {
+      "from_step": "s17_dup_upgrade_order_plan",
+      "to_step": "s26_dup_spring_boot_major_upgrade",
+      "data_type": "dup-upgrade-order-plan",
+      "field_mapping": {
+        "upgrade_plan": "upgrade_plan"
+      }
+    },
+    {
+      "from_step": "s23_dup_codemod_run",
+      "to_step": "s26_dup_spring_boot_major_upgrade",
+      "data_type": "dup-codemod-run",
+      "field_mapping": {
+        "codemod_log": "codemod_log"
+      }
+    },
+    {
+      "from_step": "s01_dup_scope_intake",
+      "to_step": "s27_dup_renovate_config",
+      "data_type": "dup-scope-intake",
+      "field_mapping": {
+        "upgrade_scope": "upgrade_scope"
+      }
+    },
+    {
+      "from_step": "s02_dup_baseline_snapshot",
+      "to_step": "s27_dup_renovate_config",
+      "data_type": "dup-baseline-snapshot",
+      "field_mapping": {
+        "baseline_report": "baseline_report"
+      }
+    },
+    {
+      "from_step": "s17_dup_upgrade_order_plan",
+      "to_step": "s27_dup_renovate_config",
+      "data_type": "dup-upgrade-order-plan",
+      "field_mapping": {
+        "upgrade_plan": "upgrade_plan"
+      }
+    },
+    {
+      "from_step": "s24_dup_django_major_upgrade",
+      "to_step": "s27_dup_renovate_config",
+      "data_type": "dup-django-major-upgrade",
+      "field_mapping": {
+        "framework_upgrade_log": "framework_upgrade_log"
+      }
+    },
+    {
+      "from_step": "s25_dup_react_major_upgrade",
+      "to_step": "s27_dup_renovate_config",
+      "data_type": "dup-react-major-upgrade",
+      "field_mapping": {
+        "framework_upgrade_log": "framework_upgrade_log"
+      }
+    },
+    {
+      "from_step": "s26_dup_spring_boot_major_upgrade",
+      "to_step": "s27_dup_renovate_config",
+      "data_type": "dup-spring-boot-major-upgrade",
+      "field_mapping": {
+        "framework_upgrade_log": "framework_upgrade_log"
+      }
+    },
+    {
+      "from_step": "s01_dup_scope_intake",
+      "to_step": "s28_dup_dependabot_config",
+      "data_type": "dup-scope-intake",
+      "field_mapping": {
+        "upgrade_scope": "upgrade_scope"
+      }
+    },
+    {
+      "from_step": "s02_dup_baseline_snapshot",
+      "to_step": "s28_dup_dependabot_config",
+      "data_type": "dup-baseline-snapshot",
+      "field_mapping": {
+        "baseline_report": "baseline_report"
+      }
+    },
+    {
+      "from_step": "s17_dup_upgrade_order_plan",
+      "to_step": "s28_dup_dependabot_config",
+      "data_type": "dup-upgrade-order-plan",
+      "field_mapping": {
+        "upgrade_plan": "upgrade_plan"
+      }
+    },
+    {
+      "from_step": "s24_dup_django_major_upgrade",
+      "to_step": "s28_dup_dependabot_config",
+      "data_type": "dup-django-major-upgrade",
+      "field_mapping": {
+        "framework_upgrade_log": "framework_upgrade_log"
+      }
+    },
+    {
+      "from_step": "s25_dup_react_major_upgrade",
+      "to_step": "s28_dup_dependabot_config",
+      "data_type": "dup-react-major-upgrade",
+      "field_mapping": {
+        "framework_upgrade_log": "framework_upgrade_log"
+      }
+    },
+    {
+      "from_step": "s26_dup_spring_boot_major_upgrade",
+      "to_step": "s28_dup_dependabot_config",
+      "data_type": "dup-spring-boot-major-upgrade",
+      "field_mapping": {
+        "framework_upgrade_log": "framework_upgrade_log"
+      }
+    },
+    {
+      "from_step": "s01_dup_scope_intake",
+      "to_step": "s29_dup_verify_and_pr",
+      "data_type": "dup-scope-intake",
+      "field_mapping": {
+        "upgrade_scope": "upgrade_scope"
+      }
+    },
+    {
+      "from_step": "s02_dup_baseline_snapshot",
+      "to_step": "s29_dup_verify_and_pr",
+      "data_type": "dup-baseline-snapshot",
+      "field_mapping": {
+        "baseline_report": "baseline_report"
+      }
+    },
+    {
+      "from_step": "s18_dup_rollback_plan",
+      "to_step": "s29_dup_verify_and_pr",
+      "data_type": "dup-rollback-plan",
+      "field_mapping": {
+        "rollback_plan": "rollback_plan"
+      }
+    },
+    {
+      "from_step": "s22_dup_apply_one_bump",
+      "to_step": "s29_dup_verify_and_pr",
+      "data_type": "dup-apply-one-bump",
+      "field_mapping": {
+        "applied_bumps": "applied_bumps"
+      }
+    },
+    {
+      "from_step": "s23_dup_codemod_run",
+      "to_step": "s29_dup_verify_and_pr",
+      "data_type": "dup-codemod-run",
+      "field_mapping": {
+        "codemod_log": "codemod_log"
+      }
+    },
+    {
+      "from_step": "s24_dup_django_major_upgrade",
+      "to_step": "s29_dup_verify_and_pr",
+      "data_type": "dup-django-major-upgrade",
+      "field_mapping": {
+        "framework_upgrade_log": "framework_upgrade_log"
+      }
+    },
+    {
+      "from_step": "s25_dup_react_major_upgrade",
+      "to_step": "s29_dup_verify_and_pr",
+      "data_type": "dup-react-major-upgrade",
+      "field_mapping": {
+        "framework_upgrade_log": "framework_upgrade_log"
+      }
+    },
+    {
+      "from_step": "s26_dup_spring_boot_major_upgrade",
+      "to_step": "s29_dup_verify_and_pr",
+      "data_type": "dup-spring-boot-major-upgrade",
+      "field_mapping": {
+        "framework_upgrade_log": "framework_upgrade_log"
+      }
+    },
+    {
+      "from_step": "s21_dup_node_lts_upgrade",
+      "to_step": "s29_dup_verify_and_pr",
+      "data_type": "dup-node-lts-upgrade",
+      "field_mapping": {
+        "runtime_upgrade_log": "runtime_upgrade_log"
+      }
+    },
+    {
+      "from_step": "s27_dup_renovate_config",
+      "to_step": "s29_dup_verify_and_pr",
+      "data_type": "dup-renovate-config",
+      "field_mapping": {
+        "bot_config": "bot_config"
+      }
+    },
+    {
+      "from_step": "s28_dup_dependabot_config",
+      "to_step": "s29_dup_verify_and_pr",
+      "data_type": "dup-dependabot-config",
+      "field_mapping": {
+        "bot_config": "bot_config"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "repo_path",
+    "stack",
+    "upgrade_goal",
+    "framework",
+    "bot",
+    "target_packages",
+    "test_command",
+    "node_target_version",
+    "framework_target_version"
+  ],
+  "terminal_outputs": [
+    "outdated_inventory",
+    "vuln_findings",
+    "deprecation_report",
+    "runtime_upgrade_log",
+    "blocked_bumps",
+    "framework_upgrade_log",
+    "bot_config",
+    "verification_report",
+    "pr_description"
+  ],
+  "parallel_groups": [
+    [
+      "s01_dup_scope_intake"
+    ],
+    [
+      "s02_dup_baseline_snapshot"
+    ],
+    [
+      "s03_dup_py_lockfile_hygiene",
+      "s04_dup_node_lockfile_hygiene",
+      "s05_dup_go_module_hygiene",
+      "s06_dup_rust_lockfile_hygiene",
+      "s11_dup_jvm_outdated_inventory"
+    ],
+    [
+      "s07_dup_py_outdated_inventory",
+      "s08_dup_node_outdated_inventory",
+      "s09_dup_go_outdated_inventory",
+      "s10_dup_rust_outdated_inventory",
+      "s12_dup_py_vuln_scan",
+      "s13_dup_node_vuln_scan",
+      "s14_dup_go_vuln_scan",
+      "s15_dup_rust_vuln_scan"
+    ],
+    [
+      "s16_dup_changelog_triage"
+    ],
+    [
+      "s17_dup_upgrade_order_plan"
+    ],
+    [
+      "s18_dup_rollback_plan"
+    ],
+    [
+      "s19_dup_py_deprecation_sweep",
+      "s20_dup_node_deprecation_sweep"
+    ],
+    [
+      "s21_dup_node_lts_upgrade"
+    ],
+    [
+      "s22_dup_apply_one_bump"
+    ],
+    [
+      "s23_dup_codemod_run"
+    ],
+    [
+      "s24_dup_django_major_upgrade",
+      "s25_dup_react_major_upgrade",
+      "s26_dup_spring_boot_major_upgrade"
+    ],
+    [
+      "s27_dup_renovate_config",
+      "s28_dup_dependabot_config"
+    ],
+    [
+      "s29_dup_verify_and_pr"
+    ]
+  ],
+  "estimated_cost": 29,
+  "critical_path": [
+    "s01_dup_scope_intake",
+    "s02_dup_baseline_snapshot",
+    "s04_dup_node_lockfile_hygiene",
+    "s08_dup_node_outdated_inventory",
+    "s16_dup_changelog_triage",
+    "s17_dup_upgrade_order_plan",
+    "s18_dup_rollback_plan",
+    "s20_dup_node_deprecation_sweep",
+    "s21_dup_node_lts_upgrade",
+    "s22_dup_apply_one_bump",
+    "s23_dup_codemod_run",
+    "s25_dup_react_major_upgrade",
+    "s27_dup_renovate_config",
+    "s29_dup_verify_and_pr"
+  ]
+}

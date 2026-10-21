@@ -1,0 +1,353 @@
+{
+  "name": "containers-go",
+  "description": "Containerize a Go service as a static binary on distroless or scratch: inventory, .dockerignore, base selection, digest pinning, cross-compiling Dockerfile, cache order, secrets, non-root user, healthcheck, in-image tests, hardened smoke run and size measurement.",
+  "steps": [
+    {
+      "id": "s01_ctr_stack_inventory",
+      "skill_name": "ctr-stack-inventory",
+      "inputs": {
+        "project_dir": "from_user_input",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "build_profile": "build_profile"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_ctr_dockerignore",
+      "skill_name": "ctr-dockerignore",
+      "inputs": {
+        "project_dir": "from_user_input",
+        "build_profile": "s01_ctr_stack_inventory.build_profile"
+      },
+      "outputs": {
+        "dockerignore_report": "dockerignore_report"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_ctr_base_image_select",
+      "skill_name": "ctr-base-image-select",
+      "inputs": {
+        "build_profile": "s01_ctr_stack_inventory.build_profile",
+        "base_preference": "from_user_input_optional"
+      },
+      "outputs": {
+        "base_image_plan": "base_image_plan"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_ctr_alpine_musl_check",
+      "skill_name": "ctr-alpine-musl-check",
+      "inputs": {
+        "project_dir": "from_user_input",
+        "build_profile": "s01_ctr_stack_inventory.build_profile",
+        "base_image_plan": "s03_ctr_base_image_select.base_image_plan"
+      },
+      "outputs": {
+        "libc_verdict": "libc_verdict"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s05_ctr_pin_base_digest",
+      "skill_name": "ctr-pin-base-digest",
+      "inputs": {
+        "base_image_plan": "s03_ctr_base_image_select.base_image_plan",
+        "libc_verdict": "s04_ctr_alpine_musl_check.libc_verdict"
+      },
+      "outputs": {
+        "pinned_bases": "pinned_bases"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s06_ctr_go_dockerfile",
+      "skill_name": "ctr-go-dockerfile",
+      "inputs": {
+        "project_dir": "from_user_input",
+        "build_profile": "s01_ctr_stack_inventory.build_profile",
+        "pinned_bases": "s05_ctr_pin_base_digest.pinned_bases"
+      },
+      "outputs": {
+        "go_dockerfile": "go_dockerfile"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s07_ctr_layer_cache_order",
+      "skill_name": "ctr-layer-cache-order",
+      "inputs": {
+        "project_dir": "from_user_input",
+        "build_profile": "s01_ctr_stack_inventory.build_profile",
+        "image_name": "from_user_input"
+      },
+      "outputs": {
+        "cache_report": "cache_report"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s08_ctr_build_args_secrets",
+      "skill_name": "ctr-build-args-secrets",
+      "inputs": {
+        "project_dir": "from_user_input",
+        "image_name": "from_user_input",
+        "build_secrets": "from_user_input_optional"
+      },
+      "outputs": {
+        "build_config_report": "build_config_report"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s09_ctr_nonroot_user",
+      "skill_name": "ctr-nonroot-user",
+      "inputs": {
+        "project_dir": "from_user_input",
+        "image_name": "from_user_input",
+        "pinned_bases": "s05_ctr_pin_base_digest.pinned_bases",
+        "app_port": "from_user_input_optional"
+      },
+      "outputs": {
+        "user_report": "user_report"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s10_ctr_healthcheck",
+      "skill_name": "ctr-healthcheck",
+      "inputs": {
+        "project_dir": "from_user_input",
+        "image_name": "from_user_input",
+        "build_profile": "s01_ctr_stack_inventory.build_profile",
+        "healthcheck_path": "from_user_input_optional",
+        "app_port": "from_user_input_optional"
+      },
+      "outputs": {
+        "healthcheck_report": "healthcheck_report"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s11_ctr_test_in_image",
+      "skill_name": "ctr-test-in-image",
+      "inputs": {
+        "project_dir": "from_user_input",
+        "image_name": "from_user_input",
+        "build_profile": "s01_ctr_stack_inventory.build_profile"
+      },
+      "outputs": {
+        "image_test_report": "image_test_report"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s12_ctr_hardened_run_smoke",
+      "skill_name": "ctr-hardened-run-smoke",
+      "inputs": {
+        "image_name": "from_user_input",
+        "build_profile": "s01_ctr_stack_inventory.build_profile",
+        "app_port": "from_user_input_optional",
+        "user_report": "s09_ctr_nonroot_user.user_report",
+        "healthcheck_report": "s10_ctr_healthcheck.healthcheck_report"
+      },
+      "outputs": {
+        "smoke_report": "smoke_report"
+      },
+      "parallel_group": 6
+    },
+    {
+      "id": "s13_ctr_image_size_measure",
+      "skill_name": "ctr-image-size-measure",
+      "inputs": {
+        "image_name": "from_user_input",
+        "project_dir": "from_user_input",
+        "size_limits": "from_user_input_optional"
+      },
+      "outputs": {
+        "size_report": "size_report"
+      },
+      "parallel_group": 1
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_ctr_stack_inventory",
+      "to_step": "s02_ctr_dockerignore",
+      "data_type": "ctr-stack-inventory",
+      "field_mapping": {
+        "build_profile": "build_profile"
+      }
+    },
+    {
+      "from_step": "s01_ctr_stack_inventory",
+      "to_step": "s03_ctr_base_image_select",
+      "data_type": "ctr-stack-inventory",
+      "field_mapping": {
+        "build_profile": "build_profile"
+      }
+    },
+    {
+      "from_step": "s01_ctr_stack_inventory",
+      "to_step": "s04_ctr_alpine_musl_check",
+      "data_type": "ctr-stack-inventory",
+      "field_mapping": {
+        "build_profile": "build_profile"
+      }
+    },
+    {
+      "from_step": "s03_ctr_base_image_select",
+      "to_step": "s04_ctr_alpine_musl_check",
+      "data_type": "ctr-base-image-select",
+      "field_mapping": {
+        "base_image_plan": "base_image_plan"
+      }
+    },
+    {
+      "from_step": "s03_ctr_base_image_select",
+      "to_step": "s05_ctr_pin_base_digest",
+      "data_type": "ctr-base-image-select",
+      "field_mapping": {
+        "base_image_plan": "base_image_plan"
+      }
+    },
+    {
+      "from_step": "s04_ctr_alpine_musl_check",
+      "to_step": "s05_ctr_pin_base_digest",
+      "data_type": "ctr-alpine-musl-check",
+      "field_mapping": {
+        "libc_verdict": "libc_verdict"
+      }
+    },
+    {
+      "from_step": "s01_ctr_stack_inventory",
+      "to_step": "s06_ctr_go_dockerfile",
+      "data_type": "ctr-stack-inventory",
+      "field_mapping": {
+        "build_profile": "build_profile"
+      }
+    },
+    {
+      "from_step": "s05_ctr_pin_base_digest",
+      "to_step": "s06_ctr_go_dockerfile",
+      "data_type": "ctr-pin-base-digest",
+      "field_mapping": {
+        "pinned_bases": "pinned_bases"
+      }
+    },
+    {
+      "from_step": "s01_ctr_stack_inventory",
+      "to_step": "s07_ctr_layer_cache_order",
+      "data_type": "ctr-stack-inventory",
+      "field_mapping": {
+        "build_profile": "build_profile"
+      }
+    },
+    {
+      "from_step": "s05_ctr_pin_base_digest",
+      "to_step": "s09_ctr_nonroot_user",
+      "data_type": "ctr-pin-base-digest",
+      "field_mapping": {
+        "pinned_bases": "pinned_bases"
+      }
+    },
+    {
+      "from_step": "s01_ctr_stack_inventory",
+      "to_step": "s10_ctr_healthcheck",
+      "data_type": "ctr-stack-inventory",
+      "field_mapping": {
+        "build_profile": "build_profile"
+      }
+    },
+    {
+      "from_step": "s01_ctr_stack_inventory",
+      "to_step": "s11_ctr_test_in_image",
+      "data_type": "ctr-stack-inventory",
+      "field_mapping": {
+        "build_profile": "build_profile"
+      }
+    },
+    {
+      "from_step": "s01_ctr_stack_inventory",
+      "to_step": "s12_ctr_hardened_run_smoke",
+      "data_type": "ctr-stack-inventory",
+      "field_mapping": {
+        "build_profile": "build_profile"
+      }
+    },
+    {
+      "from_step": "s09_ctr_nonroot_user",
+      "to_step": "s12_ctr_hardened_run_smoke",
+      "data_type": "ctr-nonroot-user",
+      "field_mapping": {
+        "user_report": "user_report"
+      }
+    },
+    {
+      "from_step": "s10_ctr_healthcheck",
+      "to_step": "s12_ctr_hardened_run_smoke",
+      "data_type": "ctr-healthcheck",
+      "field_mapping": {
+        "healthcheck_report": "healthcheck_report"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "project_dir",
+    "stack",
+    "base_preference",
+    "image_name",
+    "build_secrets",
+    "app_port",
+    "healthcheck_path",
+    "size_limits"
+  ],
+  "terminal_outputs": [
+    "dockerignore_report",
+    "go_dockerfile",
+    "cache_report",
+    "build_config_report",
+    "image_test_report",
+    "smoke_report",
+    "size_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_ctr_stack_inventory",
+      "s08_ctr_build_args_secrets",
+      "s13_ctr_image_size_measure"
+    ],
+    [
+      "s02_ctr_dockerignore",
+      "s03_ctr_base_image_select",
+      "s07_ctr_layer_cache_order",
+      "s10_ctr_healthcheck",
+      "s11_ctr_test_in_image"
+    ],
+    [
+      "s04_ctr_alpine_musl_check"
+    ],
+    [
+      "s05_ctr_pin_base_digest"
+    ],
+    [
+      "s06_ctr_go_dockerfile",
+      "s09_ctr_nonroot_user"
+    ],
+    [
+      "s12_ctr_hardened_run_smoke"
+    ]
+  ],
+  "estimated_cost": 13,
+  "critical_path": [
+    "s01_ctr_stack_inventory",
+    "s03_ctr_base_image_select",
+    "s04_ctr_alpine_musl_check",
+    "s05_ctr_pin_base_digest",
+    "s09_ctr_nonroot_user",
+    "s12_ctr_hardened_run_smoke"
+  ]
+}

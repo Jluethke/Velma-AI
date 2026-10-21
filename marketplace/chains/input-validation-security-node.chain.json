@@ -1,0 +1,298 @@
+{
+  "name": "input-validation-security-node",
+  "description": "Harden a Node.js service: inventory entry points, map sinks, add strict Zod schemas, use SQL placeholders, fix XSS with a strict CSP, guard SSRF and ReDoS, log rejections safely, then lock it in with negative tests, Semgrep rules and a CI gate.",
+  "steps": [
+    {
+      "id": "s01_ival_entry_point_inventory",
+      "skill_name": "ival-entry-point-inventory",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "entry_point_inventory": "entry_point_inventory"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_ival_sink_class_map",
+      "skill_name": "ival-sink-class-map",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "entry_point_inventory": "s01_ival_entry_point_inventory.entry_point_inventory"
+      },
+      "outputs": {
+        "sink_map": "sink_map"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_ival_node_zod_schemas",
+      "skill_name": "ival-node-zod-schemas",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "entry_point_inventory": "s01_ival_entry_point_inventory.entry_point_inventory",
+        "field_rules": "from_user_input_optional"
+      },
+      "outputs": {
+        "zod_changes": "zod_changes"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_ival_node_sql_parameterize",
+      "skill_name": "ival-node-sql-parameterize",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "sink_map": "s02_ival_sink_class_map.sink_map"
+      },
+      "outputs": {
+        "node_sql_fixes": "node_sql_fixes"
+      },
+      "condition": "'sql' in sink_map.classes",
+      "parallel_group": 3
+    },
+    {
+      "id": "s05_ival_xss_output_encoding",
+      "skill_name": "ival-xss-output-encoding",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "sink_map": "s02_ival_sink_class_map.sink_map"
+      },
+      "outputs": {
+        "xss_fixes": "xss_fixes"
+      },
+      "condition": "'xss' in sink_map.classes",
+      "parallel_group": 3
+    },
+    {
+      "id": "s06_ival_csp_header_rollout",
+      "skill_name": "ival-csp-header-rollout",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "app_base_url": "from_user_input",
+        "csp_report_endpoint": "from_user_input_optional"
+      },
+      "outputs": {
+        "csp_policy": "csp_policy"
+      },
+      "condition": "serves_html == true",
+      "parallel_group": 1
+    },
+    {
+      "id": "s07_ival_ssrf_egress_guard",
+      "skill_name": "ival-ssrf-egress-guard",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "sink_map": "s02_ival_sink_class_map.sink_map",
+        "allowed_hosts": "from_user_input_optional"
+      },
+      "outputs": {
+        "ssrf_fixes": "ssrf_fixes"
+      },
+      "condition": "'ssrf' in sink_map.classes",
+      "parallel_group": 3
+    },
+    {
+      "id": "s08_ival_redos_regex_audit",
+      "skill_name": "ival-redos-regex-audit",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "sink_map": "s02_ival_sink_class_map.sink_map"
+      },
+      "outputs": {
+        "redos_fixes": "redos_fixes"
+      },
+      "condition": "'redos' in sink_map.classes",
+      "parallel_group": 3
+    },
+    {
+      "id": "s09_ival_rejected_input_logging",
+      "skill_name": "ival-rejected-input-logging",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "logging_changes": "logging_changes"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s10_ival_negative_test_suite",
+      "skill_name": "ival-negative-test-suite",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "sink_map": "s02_ival_sink_class_map.sink_map"
+      },
+      "outputs": {
+        "negative_tests": "negative_tests"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s11_ival_semgrep_taint_rules",
+      "skill_name": "ival-semgrep-taint-rules",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "sink_map": "s02_ival_sink_class_map.sink_map"
+      },
+      "outputs": {
+        "semgrep_rules": "semgrep_rules"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s12_ival_ci_security_gate",
+      "skill_name": "ival-ci-security-gate",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "semgrep_rules": "s11_ival_semgrep_taint_rules.semgrep_rules",
+        "negative_tests": "s10_ival_negative_test_suite.negative_tests",
+        "ci_platform": "from_user_input_optional"
+      },
+      "outputs": {
+        "ci_gate": "ci_gate"
+      },
+      "parallel_group": 4
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_ival_entry_point_inventory",
+      "to_step": "s02_ival_sink_class_map",
+      "data_type": "ival-entry-point-inventory",
+      "field_mapping": {
+        "entry_point_inventory": "entry_point_inventory"
+      }
+    },
+    {
+      "from_step": "s01_ival_entry_point_inventory",
+      "to_step": "s03_ival_node_zod_schemas",
+      "data_type": "ival-entry-point-inventory",
+      "field_mapping": {
+        "entry_point_inventory": "entry_point_inventory"
+      }
+    },
+    {
+      "from_step": "s02_ival_sink_class_map",
+      "to_step": "s04_ival_node_sql_parameterize",
+      "data_type": "ival-sink-class-map",
+      "field_mapping": {
+        "sink_map": "sink_map"
+      }
+    },
+    {
+      "from_step": "s02_ival_sink_class_map",
+      "to_step": "s05_ival_xss_output_encoding",
+      "data_type": "ival-sink-class-map",
+      "field_mapping": {
+        "sink_map": "sink_map"
+      }
+    },
+    {
+      "from_step": "s02_ival_sink_class_map",
+      "to_step": "s07_ival_ssrf_egress_guard",
+      "data_type": "ival-sink-class-map",
+      "field_mapping": {
+        "sink_map": "sink_map"
+      }
+    },
+    {
+      "from_step": "s02_ival_sink_class_map",
+      "to_step": "s08_ival_redos_regex_audit",
+      "data_type": "ival-sink-class-map",
+      "field_mapping": {
+        "sink_map": "sink_map"
+      }
+    },
+    {
+      "from_step": "s02_ival_sink_class_map",
+      "to_step": "s10_ival_negative_test_suite",
+      "data_type": "ival-sink-class-map",
+      "field_mapping": {
+        "sink_map": "sink_map"
+      }
+    },
+    {
+      "from_step": "s02_ival_sink_class_map",
+      "to_step": "s11_ival_semgrep_taint_rules",
+      "data_type": "ival-sink-class-map",
+      "field_mapping": {
+        "sink_map": "sink_map"
+      }
+    },
+    {
+      "from_step": "s11_ival_semgrep_taint_rules",
+      "to_step": "s12_ival_ci_security_gate",
+      "data_type": "ival-semgrep-taint-rules",
+      "field_mapping": {
+        "semgrep_rules": "semgrep_rules"
+      }
+    },
+    {
+      "from_step": "s10_ival_negative_test_suite",
+      "to_step": "s12_ival_ci_security_gate",
+      "data_type": "ival-negative-test-suite",
+      "field_mapping": {
+        "negative_tests": "negative_tests"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "repo_path",
+    "stack",
+    "field_rules",
+    "app_base_url",
+    "csp_report_endpoint",
+    "allowed_hosts",
+    "ci_platform"
+  ],
+  "terminal_outputs": [
+    "zod_changes",
+    "node_sql_fixes",
+    "xss_fixes",
+    "csp_policy",
+    "ssrf_fixes",
+    "redos_fixes",
+    "logging_changes",
+    "ci_gate"
+  ],
+  "parallel_groups": [
+    [
+      "s01_ival_entry_point_inventory",
+      "s06_ival_csp_header_rollout",
+      "s09_ival_rejected_input_logging"
+    ],
+    [
+      "s02_ival_sink_class_map",
+      "s03_ival_node_zod_schemas"
+    ],
+    [
+      "s04_ival_node_sql_parameterize",
+      "s05_ival_xss_output_encoding",
+      "s07_ival_ssrf_egress_guard",
+      "s08_ival_redos_regex_audit",
+      "s10_ival_negative_test_suite",
+      "s11_ival_semgrep_taint_rules"
+    ],
+    [
+      "s12_ival_ci_security_gate"
+    ]
+  ],
+  "estimated_cost": 12,
+  "critical_path": [
+    "s01_ival_entry_point_inventory",
+    "s02_ival_sink_class_map",
+    "s11_ival_semgrep_taint_rules",
+    "s12_ival_ci_security_gate"
+  ]
+}

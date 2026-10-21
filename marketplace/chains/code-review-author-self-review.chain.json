@@ -1,0 +1,229 @@
+{
+  "name": "code-review-author-self-review",
+  "description": "Author-side preparation before requesting review: self-review and CI checks, intent and scope from the drafted description, size split, secrets scan, revert test check, compatibility pass and docs check.",
+  "steps": [
+    {
+      "id": "s01_prr_self_review_before_request",
+      "skill_name": "prr-self-review-before-request",
+      "inputs": {
+        "repo_dir": "from_user_input",
+        "base_branch": "from_user_input",
+        "test_command": "from_user_input"
+      },
+      "outputs": {
+        "self_review_report": "self_review_report",
+        "pr_description_draft": "pr_description_draft",
+        "diff_file": "diff_file",
+        "changed_files": "changed_files",
+        "diff_stat": "diff_stat"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_prr_intent_scope_check",
+      "skill_name": "prr-intent-scope-check",
+      "inputs": {
+        "pr_description": "s01_prr_self_review_before_request.pr_description_draft",
+        "changed_files": "s01_prr_self_review_before_request.changed_files",
+        "findings_dir": "from_user_input",
+        "linked_issue": "from_user_input_optional",
+        "role": "from_user_input_optional"
+      },
+      "outputs": {
+        "intent_statement": "intent_statement",
+        "scope_findings": "scope_findings"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_prr_large_pr_split",
+      "skill_name": "prr-large-pr-split",
+      "inputs": {
+        "repo_dir": "from_user_input",
+        "base_branch": "from_user_input",
+        "head_sha": "from_user_input",
+        "diff_stat": "s01_prr_self_review_before_request.diff_stat",
+        "intent_statement": "s02_prr_intent_scope_check.intent_statement",
+        "max_review_lines": "from_user_input",
+        "findings_dir": "from_user_input"
+      },
+      "outputs": {
+        "review_units": "review_units",
+        "split_findings": "split_findings"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_prr_gitleaks_secrets_scan",
+      "skill_name": "prr-gitleaks-secrets-scan",
+      "inputs": {
+        "repo_dir": "from_user_input",
+        "base_branch": "from_user_input",
+        "head_sha": "from_user_input",
+        "findings_dir": "from_user_input"
+      },
+      "outputs": {
+        "secret_findings": "secret_findings"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s05_prr_test_revert_check",
+      "skill_name": "prr-test-revert-check",
+      "inputs": {
+        "repo_dir": "from_user_input",
+        "base_branch": "from_user_input",
+        "head_sha": "from_user_input",
+        "changed_files": "s01_prr_self_review_before_request.changed_files",
+        "test_command": "from_user_input",
+        "findings_dir": "from_user_input"
+      },
+      "outputs": {
+        "test_meaning_findings": "test_meaning_findings"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s06_prr_api_compat_pass",
+      "skill_name": "prr-api-compat-pass",
+      "inputs": {
+        "diff_file": "s01_prr_self_review_before_request.diff_file",
+        "changed_files": "s01_prr_self_review_before_request.changed_files",
+        "intent_statement": "s02_prr_intent_scope_check.intent_statement",
+        "findings_dir": "from_user_input"
+      },
+      "outputs": {
+        "compat_findings": "compat_findings",
+        "openapi_specs": "openapi_specs"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s07_prr_docs_check",
+      "skill_name": "prr-docs-check",
+      "inputs": {
+        "diff_file": "s01_prr_self_review_before_request.diff_file",
+        "changed_files": "s01_prr_self_review_before_request.changed_files",
+        "compat_findings": "s06_prr_api_compat_pass.compat_findings",
+        "findings_dir": "from_user_input"
+      },
+      "outputs": {
+        "docs_findings": "docs_findings"
+      },
+      "parallel_group": 4
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_prr_self_review_before_request",
+      "to_step": "s02_prr_intent_scope_check",
+      "data_type": "prr-self-review-before-request",
+      "field_mapping": {
+        "pr_description_draft": "pr_description",
+        "changed_files": "changed_files"
+      }
+    },
+    {
+      "from_step": "s01_prr_self_review_before_request",
+      "to_step": "s03_prr_large_pr_split",
+      "data_type": "prr-self-review-before-request",
+      "field_mapping": {
+        "diff_stat": "diff_stat"
+      }
+    },
+    {
+      "from_step": "s02_prr_intent_scope_check",
+      "to_step": "s03_prr_large_pr_split",
+      "data_type": "prr-intent-scope-check",
+      "field_mapping": {
+        "intent_statement": "intent_statement"
+      }
+    },
+    {
+      "from_step": "s01_prr_self_review_before_request",
+      "to_step": "s05_prr_test_revert_check",
+      "data_type": "prr-self-review-before-request",
+      "field_mapping": {
+        "changed_files": "changed_files"
+      }
+    },
+    {
+      "from_step": "s01_prr_self_review_before_request",
+      "to_step": "s06_prr_api_compat_pass",
+      "data_type": "prr-self-review-before-request",
+      "field_mapping": {
+        "diff_file": "diff_file",
+        "changed_files": "changed_files"
+      }
+    },
+    {
+      "from_step": "s02_prr_intent_scope_check",
+      "to_step": "s06_prr_api_compat_pass",
+      "data_type": "prr-intent-scope-check",
+      "field_mapping": {
+        "intent_statement": "intent_statement"
+      }
+    },
+    {
+      "from_step": "s01_prr_self_review_before_request",
+      "to_step": "s07_prr_docs_check",
+      "data_type": "prr-self-review-before-request",
+      "field_mapping": {
+        "diff_file": "diff_file",
+        "changed_files": "changed_files"
+      }
+    },
+    {
+      "from_step": "s06_prr_api_compat_pass",
+      "to_step": "s07_prr_docs_check",
+      "data_type": "prr-api-compat-pass",
+      "field_mapping": {
+        "compat_findings": "compat_findings"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "repo_dir",
+    "base_branch",
+    "test_command",
+    "findings_dir",
+    "linked_issue",
+    "role",
+    "head_sha",
+    "max_review_lines"
+  ],
+  "terminal_outputs": [
+    "self_review_report",
+    "pr_description_draft",
+    "scope_findings",
+    "split_findings",
+    "secret_findings",
+    "test_meaning_findings",
+    "compat_findings",
+    "docs_findings"
+  ],
+  "parallel_groups": [
+    [
+      "s01_prr_self_review_before_request"
+    ],
+    [
+      "s02_prr_intent_scope_check",
+      "s04_prr_gitleaks_secrets_scan",
+      "s05_prr_test_revert_check"
+    ],
+    [
+      "s03_prr_large_pr_split",
+      "s06_prr_api_compat_pass"
+    ],
+    [
+      "s07_prr_docs_check"
+    ]
+  ],
+  "estimated_cost": 7,
+  "critical_path": [
+    "s01_prr_self_review_before_request",
+    "s02_prr_intent_scope_check",
+    "s06_prr_api_compat_pass",
+    "s07_prr_docs_check"
+  ]
+}

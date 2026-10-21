@@ -1,0 +1,443 @@
+{
+  "name": "sql-database-tuning-mysql-slow-query",
+  "description": "MySQL slow query path: capture with the slow log and performance_schema, read EXPLAIN ANALYZE, fix InnoDB statistics and histograms, rewrite predicates and pagination, design InnoDB indexes, measure write cost, add indexes online and verify.",
+  "steps": [
+    {
+      "id": "s01_sqlo_baseline_scope",
+      "skill_name": "sqlo-baseline-scope",
+      "inputs": {
+        "db_engine": "from_user_input",
+        "db_version": "from_user_input_optional",
+        "stack": "from_user_input",
+        "orm": "from_user_input_optional",
+        "symptom": "from_user_input",
+        "target_environment": "from_user_input",
+        "acceptance_criteria": "from_user_input_optional"
+      },
+      "outputs": {
+        "tuning_scope": "tuning_scope"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_sqlo_mysql_slow_log_capture",
+      "skill_name": "sqlo-mysql-slow-log-capture",
+      "inputs": {
+        "tuning_scope": "s01_sqlo_baseline_scope.tuning_scope",
+        "capture_window": "from_user_input"
+      },
+      "outputs": {
+        "slow_query_list": "slow_query_list"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_sqlo_mysql_perf_schema_digest",
+      "skill_name": "sqlo-mysql-perf-schema-digest",
+      "inputs": {
+        "tuning_scope": "s01_sqlo_baseline_scope.tuning_scope",
+        "slow_query_list": "s02_sqlo_mysql_slow_log_capture.slow_query_list"
+      },
+      "outputs": {
+        "digest_findings": "digest_findings"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_sqlo_mysql_explain_analyze_read",
+      "skill_name": "sqlo-mysql-explain-analyze-read",
+      "inputs": {
+        "tuning_scope": "s01_sqlo_baseline_scope.tuning_scope",
+        "slow_query_list": "s02_sqlo_mysql_slow_log_capture.slow_query_list",
+        "digest_findings": "s03_sqlo_mysql_perf_schema_digest.digest_findings"
+      },
+      "outputs": {
+        "plan_findings": "plan_findings"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s05_sqlo_mysql_statistics_histograms",
+      "skill_name": "sqlo-mysql-statistics-histograms",
+      "inputs": {
+        "tuning_scope": "s01_sqlo_baseline_scope.tuning_scope",
+        "plan_findings": "s04_sqlo_mysql_explain_analyze_read.plan_findings"
+      },
+      "outputs": {
+        "stats_actions": "stats_actions"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s06_sqlo_sargable_rewrite",
+      "skill_name": "sqlo-sargable-rewrite",
+      "inputs": {
+        "tuning_scope": "s01_sqlo_baseline_scope.tuning_scope",
+        "plan_findings": "s04_sqlo_mysql_explain_analyze_read.plan_findings",
+        "schema_ddl": "from_user_input"
+      },
+      "outputs": {
+        "rewritten_queries": "rewritten_queries"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s07_sqlo_keyset_pagination",
+      "skill_name": "sqlo-keyset-pagination",
+      "inputs": {
+        "tuning_scope": "s01_sqlo_baseline_scope.tuning_scope",
+        "rewritten_queries": "s06_sqlo_sargable_rewrite.rewritten_queries",
+        "schema_ddl": "from_user_input"
+      },
+      "outputs": {
+        "query_rewrites": "query_rewrites"
+      },
+      "parallel_group": 6
+    },
+    {
+      "id": "s08_sqlo_btree_composite_order",
+      "skill_name": "sqlo-btree-composite-order",
+      "inputs": {
+        "plan_findings": "s04_sqlo_mysql_explain_analyze_read.plan_findings",
+        "query_rewrites": "s07_sqlo_keyset_pagination.query_rewrites",
+        "schema_ddl": "from_user_input"
+      },
+      "outputs": {
+        "btree_index_proposal": "btree_index_proposal"
+      },
+      "parallel_group": 7
+    },
+    {
+      "id": "s09_sqlo_mysql_innodb_index_design",
+      "skill_name": "sqlo-mysql-innodb-index-design",
+      "inputs": {
+        "plan_findings": "s04_sqlo_mysql_explain_analyze_read.plan_findings",
+        "btree_index_proposal": "s08_sqlo_btree_composite_order.btree_index_proposal",
+        "digest_findings": "s03_sqlo_mysql_perf_schema_digest.digest_findings",
+        "schema_ddl": "from_user_input"
+      },
+      "outputs": {
+        "index_candidates": "index_candidates"
+      },
+      "parallel_group": 8
+    },
+    {
+      "id": "s10_sqlo_index_write_cost",
+      "skill_name": "sqlo-index-write-cost",
+      "inputs": {
+        "tuning_scope": "s01_sqlo_baseline_scope.tuning_scope",
+        "index_candidates": "s09_sqlo_mysql_innodb_index_design.index_candidates",
+        "schema_ddl": "from_user_input"
+      },
+      "outputs": {
+        "write_cost_report": "write_cost_report",
+        "approved_indexes": "approved_indexes"
+      },
+      "parallel_group": 9
+    },
+    {
+      "id": "s11_sqlo_mysql_online_index_ddl",
+      "skill_name": "sqlo-mysql-online-index-ddl",
+      "inputs": {
+        "tuning_scope": "s01_sqlo_baseline_scope.tuning_scope",
+        "approved_indexes": "s10_sqlo_index_write_cost.approved_indexes",
+        "migration_tool": "from_user_input"
+      },
+      "outputs": {
+        "index_migration": "index_migration"
+      },
+      "parallel_group": 10
+    },
+    {
+      "id": "s12_sqlo_prod_like_verify",
+      "skill_name": "sqlo-prod-like-verify",
+      "inputs": {
+        "tuning_scope": "s01_sqlo_baseline_scope.tuning_scope",
+        "slow_query_list": "s02_sqlo_mysql_slow_log_capture.slow_query_list",
+        "query_rewrites": "s07_sqlo_keyset_pagination.query_rewrites",
+        "index_migration": "s11_sqlo_mysql_online_index_ddl.index_migration",
+        "stats_actions": "s05_sqlo_mysql_statistics_histograms.stats_actions"
+      },
+      "outputs": {
+        "verification_report": "verification_report"
+      },
+      "parallel_group": 11
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_sqlo_baseline_scope",
+      "to_step": "s02_sqlo_mysql_slow_log_capture",
+      "data_type": "sqlo-baseline-scope",
+      "field_mapping": {
+        "tuning_scope": "tuning_scope"
+      }
+    },
+    {
+      "from_step": "s01_sqlo_baseline_scope",
+      "to_step": "s03_sqlo_mysql_perf_schema_digest",
+      "data_type": "sqlo-baseline-scope",
+      "field_mapping": {
+        "tuning_scope": "tuning_scope"
+      }
+    },
+    {
+      "from_step": "s02_sqlo_mysql_slow_log_capture",
+      "to_step": "s03_sqlo_mysql_perf_schema_digest",
+      "data_type": "sqlo-mysql-slow-log-capture",
+      "field_mapping": {
+        "slow_query_list": "slow_query_list"
+      }
+    },
+    {
+      "from_step": "s01_sqlo_baseline_scope",
+      "to_step": "s04_sqlo_mysql_explain_analyze_read",
+      "data_type": "sqlo-baseline-scope",
+      "field_mapping": {
+        "tuning_scope": "tuning_scope"
+      }
+    },
+    {
+      "from_step": "s02_sqlo_mysql_slow_log_capture",
+      "to_step": "s04_sqlo_mysql_explain_analyze_read",
+      "data_type": "sqlo-mysql-slow-log-capture",
+      "field_mapping": {
+        "slow_query_list": "slow_query_list"
+      }
+    },
+    {
+      "from_step": "s03_sqlo_mysql_perf_schema_digest",
+      "to_step": "s04_sqlo_mysql_explain_analyze_read",
+      "data_type": "sqlo-mysql-perf-schema-digest",
+      "field_mapping": {
+        "digest_findings": "digest_findings"
+      }
+    },
+    {
+      "from_step": "s01_sqlo_baseline_scope",
+      "to_step": "s05_sqlo_mysql_statistics_histograms",
+      "data_type": "sqlo-baseline-scope",
+      "field_mapping": {
+        "tuning_scope": "tuning_scope"
+      }
+    },
+    {
+      "from_step": "s04_sqlo_mysql_explain_analyze_read",
+      "to_step": "s05_sqlo_mysql_statistics_histograms",
+      "data_type": "sqlo-mysql-explain-analyze-read",
+      "field_mapping": {
+        "plan_findings": "plan_findings"
+      }
+    },
+    {
+      "from_step": "s01_sqlo_baseline_scope",
+      "to_step": "s06_sqlo_sargable_rewrite",
+      "data_type": "sqlo-baseline-scope",
+      "field_mapping": {
+        "tuning_scope": "tuning_scope"
+      }
+    },
+    {
+      "from_step": "s04_sqlo_mysql_explain_analyze_read",
+      "to_step": "s06_sqlo_sargable_rewrite",
+      "data_type": "sqlo-mysql-explain-analyze-read",
+      "field_mapping": {
+        "plan_findings": "plan_findings"
+      }
+    },
+    {
+      "from_step": "s01_sqlo_baseline_scope",
+      "to_step": "s07_sqlo_keyset_pagination",
+      "data_type": "sqlo-baseline-scope",
+      "field_mapping": {
+        "tuning_scope": "tuning_scope"
+      }
+    },
+    {
+      "from_step": "s06_sqlo_sargable_rewrite",
+      "to_step": "s07_sqlo_keyset_pagination",
+      "data_type": "sqlo-sargable-rewrite",
+      "field_mapping": {
+        "rewritten_queries": "rewritten_queries"
+      }
+    },
+    {
+      "from_step": "s04_sqlo_mysql_explain_analyze_read",
+      "to_step": "s08_sqlo_btree_composite_order",
+      "data_type": "sqlo-mysql-explain-analyze-read",
+      "field_mapping": {
+        "plan_findings": "plan_findings"
+      }
+    },
+    {
+      "from_step": "s07_sqlo_keyset_pagination",
+      "to_step": "s08_sqlo_btree_composite_order",
+      "data_type": "sqlo-keyset-pagination",
+      "field_mapping": {
+        "query_rewrites": "query_rewrites"
+      }
+    },
+    {
+      "from_step": "s04_sqlo_mysql_explain_analyze_read",
+      "to_step": "s09_sqlo_mysql_innodb_index_design",
+      "data_type": "sqlo-mysql-explain-analyze-read",
+      "field_mapping": {
+        "plan_findings": "plan_findings"
+      }
+    },
+    {
+      "from_step": "s08_sqlo_btree_composite_order",
+      "to_step": "s09_sqlo_mysql_innodb_index_design",
+      "data_type": "sqlo-btree-composite-order",
+      "field_mapping": {
+        "btree_index_proposal": "btree_index_proposal"
+      }
+    },
+    {
+      "from_step": "s03_sqlo_mysql_perf_schema_digest",
+      "to_step": "s09_sqlo_mysql_innodb_index_design",
+      "data_type": "sqlo-mysql-perf-schema-digest",
+      "field_mapping": {
+        "digest_findings": "digest_findings"
+      }
+    },
+    {
+      "from_step": "s01_sqlo_baseline_scope",
+      "to_step": "s10_sqlo_index_write_cost",
+      "data_type": "sqlo-baseline-scope",
+      "field_mapping": {
+        "tuning_scope": "tuning_scope"
+      }
+    },
+    {
+      "from_step": "s09_sqlo_mysql_innodb_index_design",
+      "to_step": "s10_sqlo_index_write_cost",
+      "data_type": "sqlo-mysql-innodb-index-design",
+      "field_mapping": {
+        "index_candidates": "index_candidates"
+      }
+    },
+    {
+      "from_step": "s01_sqlo_baseline_scope",
+      "to_step": "s11_sqlo_mysql_online_index_ddl",
+      "data_type": "sqlo-baseline-scope",
+      "field_mapping": {
+        "tuning_scope": "tuning_scope"
+      }
+    },
+    {
+      "from_step": "s10_sqlo_index_write_cost",
+      "to_step": "s11_sqlo_mysql_online_index_ddl",
+      "data_type": "sqlo-index-write-cost",
+      "field_mapping": {
+        "approved_indexes": "approved_indexes"
+      }
+    },
+    {
+      "from_step": "s01_sqlo_baseline_scope",
+      "to_step": "s12_sqlo_prod_like_verify",
+      "data_type": "sqlo-baseline-scope",
+      "field_mapping": {
+        "tuning_scope": "tuning_scope"
+      }
+    },
+    {
+      "from_step": "s02_sqlo_mysql_slow_log_capture",
+      "to_step": "s12_sqlo_prod_like_verify",
+      "data_type": "sqlo-mysql-slow-log-capture",
+      "field_mapping": {
+        "slow_query_list": "slow_query_list"
+      }
+    },
+    {
+      "from_step": "s07_sqlo_keyset_pagination",
+      "to_step": "s12_sqlo_prod_like_verify",
+      "data_type": "sqlo-keyset-pagination",
+      "field_mapping": {
+        "query_rewrites": "query_rewrites"
+      }
+    },
+    {
+      "from_step": "s11_sqlo_mysql_online_index_ddl",
+      "to_step": "s12_sqlo_prod_like_verify",
+      "data_type": "sqlo-mysql-online-index-ddl",
+      "field_mapping": {
+        "index_migration": "index_migration"
+      }
+    },
+    {
+      "from_step": "s05_sqlo_mysql_statistics_histograms",
+      "to_step": "s12_sqlo_prod_like_verify",
+      "data_type": "sqlo-mysql-statistics-histograms",
+      "field_mapping": {
+        "stats_actions": "stats_actions"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "db_engine",
+    "db_version",
+    "stack",
+    "orm",
+    "symptom",
+    "target_environment",
+    "acceptance_criteria",
+    "capture_window",
+    "schema_ddl",
+    "migration_tool"
+  ],
+  "terminal_outputs": [
+    "write_cost_report",
+    "verification_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_sqlo_baseline_scope"
+    ],
+    [
+      "s02_sqlo_mysql_slow_log_capture"
+    ],
+    [
+      "s03_sqlo_mysql_perf_schema_digest"
+    ],
+    [
+      "s04_sqlo_mysql_explain_analyze_read"
+    ],
+    [
+      "s05_sqlo_mysql_statistics_histograms",
+      "s06_sqlo_sargable_rewrite"
+    ],
+    [
+      "s07_sqlo_keyset_pagination"
+    ],
+    [
+      "s08_sqlo_btree_composite_order"
+    ],
+    [
+      "s09_sqlo_mysql_innodb_index_design"
+    ],
+    [
+      "s10_sqlo_index_write_cost"
+    ],
+    [
+      "s11_sqlo_mysql_online_index_ddl"
+    ],
+    [
+      "s12_sqlo_prod_like_verify"
+    ]
+  ],
+  "estimated_cost": 12,
+  "critical_path": [
+    "s01_sqlo_baseline_scope",
+    "s02_sqlo_mysql_slow_log_capture",
+    "s03_sqlo_mysql_perf_schema_digest",
+    "s04_sqlo_mysql_explain_analyze_read",
+    "s06_sqlo_sargable_rewrite",
+    "s07_sqlo_keyset_pagination",
+    "s08_sqlo_btree_composite_order",
+    "s09_sqlo_mysql_innodb_index_design",
+    "s10_sqlo_index_write_cost",
+    "s11_sqlo_mysql_online_index_ddl",
+    "s12_sqlo_prod_like_verify"
+  ]
+}

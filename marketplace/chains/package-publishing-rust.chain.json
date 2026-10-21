@@ -1,0 +1,158 @@
+{
+  "name": "package-publishing-rust",
+  "description": "Prepare and publish a Rust crate: public surface, license, Cargo.toml metadata and packaged file list, dry-run then real cargo publish.",
+  "steps": [
+    {
+      "id": "s01_pkg_scope_intake",
+      "skill_name": "pkg-scope-intake",
+      "inputs": {
+        "project_dir": "from_user_input",
+        "stack": "from_user_input",
+        "package_name": "from_user_input"
+      },
+      "outputs": {
+        "package_profile": "package_profile"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_pkg_public_api_inventory",
+      "skill_name": "pkg-public-api-inventory",
+      "inputs": {
+        "package_profile": "s01_pkg_scope_intake.package_profile",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "public_api": "public_api",
+        "api_leaks": "api_leaks"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_pkg_rust_pub_surface",
+      "skill_name": "pkg-rust-pub-surface",
+      "inputs": {
+        "public_api": "s02_pkg_public_api_inventory.public_api",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "rust_export_surface": "rust_export_surface"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_pkg_license_metadata",
+      "skill_name": "pkg-license-metadata",
+      "inputs": {
+        "package_profile": "s01_pkg_scope_intake.package_profile",
+        "license_spdx": "from_user_input_optional"
+      },
+      "outputs": {
+        "license_report": "license_report"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s05_pkg_rust_cargo_manifest",
+      "skill_name": "pkg-rust-cargo-manifest",
+      "inputs": {
+        "license_report": "s04_pkg_license_metadata.license_report",
+        "release_version": "from_user_input",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "cargo_manifest_report": "cargo_manifest_report"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s06_pkg_rust_cargo_publish",
+      "skill_name": "pkg-rust-cargo-publish",
+      "inputs": {
+        "cargo_manifest_report": "s05_pkg_rust_cargo_manifest.cargo_manifest_report",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "crate_publish_record": "crate_publish_record"
+      },
+      "parallel_group": 4
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_pkg_scope_intake",
+      "to_step": "s02_pkg_public_api_inventory",
+      "data_type": "pkg-scope-intake",
+      "field_mapping": {
+        "package_profile": "package_profile"
+      }
+    },
+    {
+      "from_step": "s02_pkg_public_api_inventory",
+      "to_step": "s03_pkg_rust_pub_surface",
+      "data_type": "pkg-public-api-inventory",
+      "field_mapping": {
+        "public_api": "public_api"
+      }
+    },
+    {
+      "from_step": "s01_pkg_scope_intake",
+      "to_step": "s04_pkg_license_metadata",
+      "data_type": "pkg-scope-intake",
+      "field_mapping": {
+        "package_profile": "package_profile"
+      }
+    },
+    {
+      "from_step": "s04_pkg_license_metadata",
+      "to_step": "s05_pkg_rust_cargo_manifest",
+      "data_type": "pkg-license-metadata",
+      "field_mapping": {
+        "license_report": "license_report"
+      }
+    },
+    {
+      "from_step": "s05_pkg_rust_cargo_manifest",
+      "to_step": "s06_pkg_rust_cargo_publish",
+      "data_type": "pkg-rust-cargo-manifest",
+      "field_mapping": {
+        "cargo_manifest_report": "cargo_manifest_report"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "project_dir",
+    "stack",
+    "package_name",
+    "license_spdx",
+    "release_version"
+  ],
+  "terminal_outputs": [
+    "api_leaks",
+    "rust_export_surface",
+    "crate_publish_record"
+  ],
+  "parallel_groups": [
+    [
+      "s01_pkg_scope_intake"
+    ],
+    [
+      "s02_pkg_public_api_inventory",
+      "s04_pkg_license_metadata"
+    ],
+    [
+      "s03_pkg_rust_pub_surface",
+      "s05_pkg_rust_cargo_manifest"
+    ],
+    [
+      "s06_pkg_rust_cargo_publish"
+    ]
+  ],
+  "estimated_cost": 6,
+  "critical_path": [
+    "s01_pkg_scope_intake",
+    "s04_pkg_license_metadata",
+    "s05_pkg_rust_cargo_manifest",
+    "s06_pkg_rust_cargo_publish"
+  ]
+}

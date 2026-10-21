@@ -1,0 +1,147 @@
+{
+  "name": "release-engineering-hotfix",
+  "description": "Pull a bad release and ship the fix: registry-correct withdrawal, cherry-pick hotfix from the release tag, changelog entry and signed patch tag.",
+  "steps": [
+    {
+      "id": "s01_rel_yank_bad_release",
+      "skill_name": "rel-yank-bad-release",
+      "inputs": {
+        "package_name": "from_user_input",
+        "bad_version": "from_user_input",
+        "registry": "from_user_input",
+        "py_install_report": "from_user_input_optional",
+        "node_install_report": "from_user_input_optional",
+        "go_install_report": "from_user_input_optional",
+        "rust_install_report": "from_user_input_optional"
+      },
+      "outputs": {
+        "withdrawal_actions": "withdrawal_actions"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_rel_hotfix_from_tag",
+      "skill_name": "rel-hotfix-from-tag",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "branching_model": "from_user_input",
+        "bad_version": "from_user_input",
+        "fix_commit": "from_user_input",
+        "withdrawal_actions": "s01_rel_yank_bad_release.withdrawal_actions"
+      },
+      "outputs": {
+        "hotfix_branch": "hotfix_branch",
+        "hotfix_version": "hotfix_version"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_rel_changelog_git_cliff",
+      "skill_name": "rel-changelog-git-cliff",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "next_version": "s02_rel_hotfix_from_tag.hotfix_version",
+        "last_tag": "from_user_input_optional"
+      },
+      "outputs": {
+        "cliff_config": "cliff_config",
+        "cliff_changelog": "cliff_changelog"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_rel_tag_sign_git",
+      "skill_name": "rel-tag-sign-git",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "next_version": "s02_rel_hotfix_from_tag.hotfix_version",
+        "signing_method": "from_user_input",
+        "rp_changelog": "from_user_input_optional",
+        "sr_changelog": "from_user_input_optional",
+        "cliff_changelog": "s03_rel_changelog_git_cliff.cliff_changelog"
+      },
+      "outputs": {
+        "release_tag": "release_tag",
+        "tag_verification": "tag_verification"
+      },
+      "parallel_group": 4
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_rel_yank_bad_release",
+      "to_step": "s02_rel_hotfix_from_tag",
+      "data_type": "rel-yank-bad-release",
+      "field_mapping": {
+        "withdrawal_actions": "withdrawal_actions"
+      }
+    },
+    {
+      "from_step": "s02_rel_hotfix_from_tag",
+      "to_step": "s03_rel_changelog_git_cliff",
+      "data_type": "rel-hotfix-from-tag",
+      "field_mapping": {
+        "hotfix_version": "next_version"
+      }
+    },
+    {
+      "from_step": "s02_rel_hotfix_from_tag",
+      "to_step": "s04_rel_tag_sign_git",
+      "data_type": "rel-hotfix-from-tag",
+      "field_mapping": {
+        "hotfix_version": "next_version"
+      }
+    },
+    {
+      "from_step": "s03_rel_changelog_git_cliff",
+      "to_step": "s04_rel_tag_sign_git",
+      "data_type": "rel-changelog-git-cliff",
+      "field_mapping": {
+        "cliff_changelog": "cliff_changelog"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "package_name",
+    "bad_version",
+    "registry",
+    "py_install_report",
+    "node_install_report",
+    "go_install_report",
+    "rust_install_report",
+    "repo_path",
+    "branching_model",
+    "fix_commit",
+    "last_tag",
+    "signing_method",
+    "rp_changelog",
+    "sr_changelog"
+  ],
+  "terminal_outputs": [
+    "hotfix_branch",
+    "cliff_config",
+    "release_tag",
+    "tag_verification"
+  ],
+  "parallel_groups": [
+    [
+      "s01_rel_yank_bad_release"
+    ],
+    [
+      "s02_rel_hotfix_from_tag"
+    ],
+    [
+      "s03_rel_changelog_git_cliff"
+    ],
+    [
+      "s04_rel_tag_sign_git"
+    ]
+  ],
+  "estimated_cost": 4,
+  "critical_path": [
+    "s01_rel_yank_bad_release",
+    "s02_rel_hotfix_from_tag",
+    "s03_rel_changelog_git_cliff",
+    "s04_rel_tag_sign_git"
+  ]
+}

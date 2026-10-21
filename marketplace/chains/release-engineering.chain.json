@@ -1,0 +1,1024 @@
+{
+  "name": "release-engineering",
+  "description": "Full release pipeline: branching model, deprecations, Conventional Commits gate and audit, stack-specific API break detection, SemVer decision, changelog tool, signed tag, reproducible stack build, container image, SLSA provenance, cosign signing, registry publish, clean install verification, and the withdrawal and hotfix path.",
+  "steps": [
+    {
+      "id": "s01_rel_branching_model_select",
+      "skill_name": "rel-branching-model-select",
+      "inputs": {
+        "supported_lines": "from_user_input",
+        "release_cadence": "from_user_input",
+        "artifact_kind": "from_user_input_optional"
+      },
+      "outputs": {
+        "branching_model": "branching_model",
+        "branch_protection_rules": "branch_protection_rules"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_rel_deprecation_policy_notice",
+      "skill_name": "rel-deprecation-policy-notice",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "deprecated_symbols": "from_user_input_optional",
+        "support_window": "from_user_input_optional"
+      },
+      "outputs": {
+        "deprecation_policy": "deprecation_policy",
+        "deprecation_notices": "deprecation_notices"
+      },
+      "condition": "deprecated_symbols != null",
+      "parallel_group": 1
+    },
+    {
+      "id": "s03_rel_commitlint_gate",
+      "skill_name": "rel-commitlint-gate",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "ci_platform": "from_user_input"
+      },
+      "outputs": {
+        "commitlint_config": "commitlint_config",
+        "commit_gate_check": "commit_gate_check"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s04_rel_commit_history_audit",
+      "skill_name": "rel-commit-history-audit",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "last_tag": "from_user_input_optional"
+      },
+      "outputs": {
+        "commit_list": "commit_list",
+        "noncompliant_commits": "noncompliant_commits"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s05_rel_py_api_break_griffe",
+      "skill_name": "rel-py-api-break-griffe",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "last_tag": "from_user_input_optional",
+        "package_name": "from_user_input"
+      },
+      "outputs": {
+        "py_api_breaks": "py_api_breaks"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 1
+    },
+    {
+      "id": "s06_rel_node_api_break_extractor",
+      "skill_name": "rel-node-api-break-extractor",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "last_tag": "from_user_input_optional",
+        "package_name": "from_user_input"
+      },
+      "outputs": {
+        "node_api_breaks": "node_api_breaks"
+      },
+      "condition": "stack == 'node'",
+      "parallel_group": 1
+    },
+    {
+      "id": "s07_rel_go_api_break_gorelease",
+      "skill_name": "rel-go-api-break-gorelease",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "last_tag": "from_user_input_optional"
+      },
+      "outputs": {
+        "go_api_breaks": "go_api_breaks"
+      },
+      "condition": "stack == 'go'",
+      "parallel_group": 1
+    },
+    {
+      "id": "s08_rel_rust_api_break_semver_checks",
+      "skill_name": "rel-rust-api-break-semver-checks",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "last_tag": "from_user_input_optional",
+        "package_name": "from_user_input"
+      },
+      "outputs": {
+        "rust_api_breaks": "rust_api_breaks"
+      },
+      "condition": "stack == 'rust'",
+      "parallel_group": 1
+    },
+    {
+      "id": "s09_rel_semver_bump_decision",
+      "skill_name": "rel-semver-bump-decision",
+      "inputs": {
+        "commit_list": "s04_rel_commit_history_audit.commit_list",
+        "noncompliant_commits": "s04_rel_commit_history_audit.noncompliant_commits",
+        "current_version": "from_user_input",
+        "prerelease_id": "from_user_input_optional",
+        "py_api_breaks": "s05_rel_py_api_break_griffe.py_api_breaks",
+        "node_api_breaks": "s06_rel_node_api_break_extractor.node_api_breaks",
+        "go_api_breaks": "s07_rel_go_api_break_gorelease.go_api_breaks",
+        "rust_api_breaks": "s08_rel_rust_api_break_semver_checks.rust_api_breaks",
+        "deprecation_notices": "s02_rel_deprecation_policy_notice.deprecation_notices"
+      },
+      "outputs": {
+        "next_version": "next_version",
+        "bump_level": "bump_level",
+        "bump_rationale": "bump_rationale"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s10_rel_changelog_release_please",
+      "skill_name": "rel-changelog-release-please",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "branching_model": "s01_rel_branching_model_select.branching_model",
+        "next_version": "s09_rel_semver_bump_decision.next_version",
+        "release_type": "from_user_input"
+      },
+      "outputs": {
+        "release_please_config": "release_please_config",
+        "rp_changelog": "rp_changelog"
+      },
+      "condition": "changelog_tool == 'release-please'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s11_rel_changelog_semantic_release",
+      "skill_name": "rel-changelog-semantic-release",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "branching_model": "s01_rel_branching_model_select.branching_model",
+        "next_version": "s09_rel_semver_bump_decision.next_version"
+      },
+      "outputs": {
+        "semantic_release_config": "semantic_release_config",
+        "sr_changelog": "sr_changelog"
+      },
+      "condition": "changelog_tool == 'semantic-release'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s12_rel_changelog_git_cliff",
+      "skill_name": "rel-changelog-git-cliff",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "next_version": "s09_rel_semver_bump_decision.next_version",
+        "last_tag": "from_user_input_optional"
+      },
+      "outputs": {
+        "cliff_config": "cliff_config",
+        "cliff_changelog": "cliff_changelog"
+      },
+      "condition": "changelog_tool == 'git-cliff'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s13_rel_tag_sign_git",
+      "skill_name": "rel-tag-sign-git",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "next_version": "s09_rel_semver_bump_decision.next_version",
+        "signing_method": "from_user_input",
+        "rp_changelog": "s10_rel_changelog_release_please.rp_changelog",
+        "sr_changelog": "s11_rel_changelog_semantic_release.sr_changelog",
+        "cliff_changelog": "s12_rel_changelog_git_cliff.cliff_changelog"
+      },
+      "outputs": {
+        "release_tag": "release_tag",
+        "tag_verification": "tag_verification"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s14_rel_py_reproducible_build",
+      "skill_name": "rel-py-reproducible-build",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "release_tag": "s13_rel_tag_sign_git.release_tag"
+      },
+      "outputs": {
+        "py_dist": "py_dist",
+        "py_repro_report": "py_repro_report"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 5
+    },
+    {
+      "id": "s15_rel_node_reproducible_pack",
+      "skill_name": "rel-node-reproducible-pack",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "release_tag": "s13_rel_tag_sign_git.release_tag"
+      },
+      "outputs": {
+        "node_dist": "node_dist",
+        "node_repro_report": "node_repro_report"
+      },
+      "condition": "stack == 'node'",
+      "parallel_group": 5
+    },
+    {
+      "id": "s16_rel_go_reproducible_build",
+      "skill_name": "rel-go-reproducible-build",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "release_tag": "s13_rel_tag_sign_git.release_tag",
+        "target_platforms": "from_user_input_optional"
+      },
+      "outputs": {
+        "go_dist": "go_dist",
+        "go_repro_report": "go_repro_report"
+      },
+      "condition": "stack == 'go'",
+      "parallel_group": 5
+    },
+    {
+      "id": "s17_rel_rust_reproducible_build",
+      "skill_name": "rel-rust-reproducible-build",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "release_tag": "s13_rel_tag_sign_git.release_tag"
+      },
+      "outputs": {
+        "rust_dist": "rust_dist",
+        "rust_repro_report": "rust_repro_report"
+      },
+      "condition": "stack == 'rust'",
+      "parallel_group": 5
+    },
+    {
+      "id": "s18_rel_container_image_build_push",
+      "skill_name": "rel-container-image-build-push",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "release_tag": "s13_rel_tag_sign_git.release_tag",
+        "image_repository": "from_user_input"
+      },
+      "outputs": {
+        "image_digest": "image_digest",
+        "container_repro_report": "container_repro_report"
+      },
+      "condition": "publish_container == true",
+      "parallel_group": 5
+    },
+    {
+      "id": "s19_rel_slsa_provenance_attest",
+      "skill_name": "rel-slsa-provenance-attest",
+      "inputs": {
+        "repo_slug": "from_user_input",
+        "slsa_build_level": "from_user_input_optional",
+        "py_dist": "s14_rel_py_reproducible_build.py_dist",
+        "node_dist": "s15_rel_node_reproducible_pack.node_dist",
+        "go_dist": "s16_rel_go_reproducible_build.go_dist",
+        "rust_dist": "s17_rel_rust_reproducible_build.rust_dist",
+        "image_digest": "s18_rel_container_image_build_push.image_digest"
+      },
+      "outputs": {
+        "provenance_attestation": "provenance_attestation",
+        "provenance_verification": "provenance_verification"
+      },
+      "parallel_group": 6
+    },
+    {
+      "id": "s20_rel_cosign_sign_verify",
+      "skill_name": "rel-cosign-sign-verify",
+      "inputs": {
+        "repo_slug": "from_user_input",
+        "py_dist": "s14_rel_py_reproducible_build.py_dist",
+        "node_dist": "s15_rel_node_reproducible_pack.node_dist",
+        "go_dist": "s16_rel_go_reproducible_build.go_dist",
+        "rust_dist": "s17_rel_rust_reproducible_build.rust_dist",
+        "image_digest": "s18_rel_container_image_build_push.image_digest"
+      },
+      "outputs": {
+        "signature_bundles": "signature_bundles",
+        "signature_verification": "signature_verification"
+      },
+      "condition": "sign_with_cosign == true",
+      "parallel_group": 6
+    },
+    {
+      "id": "s21_rel_py_publish_pypi_trusted",
+      "skill_name": "rel-py-publish-pypi-trusted",
+      "inputs": {
+        "py_dist": "s14_rel_py_reproducible_build.py_dist",
+        "package_name": "from_user_input",
+        "next_version": "s09_rel_semver_bump_decision.next_version",
+        "provenance_verification": "s19_rel_slsa_provenance_attest.provenance_verification"
+      },
+      "outputs": {
+        "pypi_release_url": "pypi_release_url"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 7
+    },
+    {
+      "id": "s22_rel_node_publish_npm_provenance",
+      "skill_name": "rel-node-publish-npm-provenance",
+      "inputs": {
+        "node_dist": "s15_rel_node_reproducible_pack.node_dist",
+        "package_name": "from_user_input",
+        "next_version": "s09_rel_semver_bump_decision.next_version",
+        "prerelease_id": "from_user_input_optional",
+        "provenance_verification": "s19_rel_slsa_provenance_attest.provenance_verification"
+      },
+      "outputs": {
+        "npm_release_url": "npm_release_url"
+      },
+      "condition": "stack == 'node'",
+      "parallel_group": 7
+    },
+    {
+      "id": "s23_rel_go_publish_module_proxy",
+      "skill_name": "rel-go-publish-module-proxy",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "release_tag": "s13_rel_tag_sign_git.release_tag",
+        "go_dist": "s16_rel_go_reproducible_build.go_dist",
+        "provenance_verification": "s19_rel_slsa_provenance_attest.provenance_verification"
+      },
+      "outputs": {
+        "go_module_version_check": "go_module_version_check"
+      },
+      "condition": "stack == 'go'",
+      "parallel_group": 7
+    },
+    {
+      "id": "s24_rel_rust_publish_crates",
+      "skill_name": "rel-rust-publish-crates",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "package_name": "from_user_input",
+        "next_version": "s09_rel_semver_bump_decision.next_version",
+        "rust_dist": "s17_rel_rust_reproducible_build.rust_dist",
+        "provenance_verification": "s19_rel_slsa_provenance_attest.provenance_verification"
+      },
+      "outputs": {
+        "crates_release_url": "crates_release_url"
+      },
+      "condition": "stack == 'rust'",
+      "parallel_group": 7
+    },
+    {
+      "id": "s25_rel_py_verify_install",
+      "skill_name": "rel-py-verify-install",
+      "inputs": {
+        "package_name": "from_user_input",
+        "next_version": "s09_rel_semver_bump_decision.next_version",
+        "pypi_release_url": "s21_rel_py_publish_pypi_trusted.pypi_release_url",
+        "smoke_import": "from_user_input_optional"
+      },
+      "outputs": {
+        "py_install_report": "py_install_report"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 8
+    },
+    {
+      "id": "s26_rel_node_verify_install",
+      "skill_name": "rel-node-verify-install",
+      "inputs": {
+        "package_name": "from_user_input",
+        "next_version": "s09_rel_semver_bump_decision.next_version",
+        "npm_release_url": "s22_rel_node_publish_npm_provenance.npm_release_url"
+      },
+      "outputs": {
+        "node_install_report": "node_install_report"
+      },
+      "condition": "stack == 'node'",
+      "parallel_group": 8
+    },
+    {
+      "id": "s27_rel_go_verify_install",
+      "skill_name": "rel-go-verify-install",
+      "inputs": {
+        "go_module_version_check": "s23_rel_go_publish_module_proxy.go_module_version_check",
+        "release_tag": "s13_rel_tag_sign_git.release_tag"
+      },
+      "outputs": {
+        "go_install_report": "go_install_report"
+      },
+      "condition": "stack == 'go'",
+      "parallel_group": 8
+    },
+    {
+      "id": "s28_rel_rust_verify_install",
+      "skill_name": "rel-rust-verify-install",
+      "inputs": {
+        "package_name": "from_user_input",
+        "next_version": "s09_rel_semver_bump_decision.next_version",
+        "crates_release_url": "s24_rel_rust_publish_crates.crates_release_url"
+      },
+      "outputs": {
+        "rust_install_report": "rust_install_report"
+      },
+      "condition": "stack == 'rust'",
+      "parallel_group": 8
+    },
+    {
+      "id": "s29_rel_yank_bad_release",
+      "skill_name": "rel-yank-bad-release",
+      "inputs": {
+        "package_name": "from_user_input",
+        "bad_version": "from_user_input_optional",
+        "registry": "from_user_input",
+        "py_install_report": "s25_rel_py_verify_install.py_install_report",
+        "node_install_report": "s26_rel_node_verify_install.node_install_report",
+        "go_install_report": "s27_rel_go_verify_install.go_install_report",
+        "rust_install_report": "s28_rel_rust_verify_install.rust_install_report"
+      },
+      "outputs": {
+        "withdrawal_actions": "withdrawal_actions"
+      },
+      "condition": "bad_version != null",
+      "parallel_group": 9
+    },
+    {
+      "id": "s30_rel_hotfix_from_tag",
+      "skill_name": "rel-hotfix-from-tag",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "branching_model": "s01_rel_branching_model_select.branching_model",
+        "bad_version": "from_user_input_optional",
+        "fix_commit": "from_user_input_optional",
+        "withdrawal_actions": "s29_rel_yank_bad_release.withdrawal_actions"
+      },
+      "outputs": {
+        "hotfix_branch": "hotfix_branch",
+        "hotfix_version": "hotfix_version"
+      },
+      "condition": "fix_commit != null",
+      "parallel_group": 10
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s04_rel_commit_history_audit",
+      "to_step": "s09_rel_semver_bump_decision",
+      "data_type": "rel-commit-history-audit",
+      "field_mapping": {
+        "commit_list": "commit_list",
+        "noncompliant_commits": "noncompliant_commits"
+      }
+    },
+    {
+      "from_step": "s05_rel_py_api_break_griffe",
+      "to_step": "s09_rel_semver_bump_decision",
+      "data_type": "rel-py-api-break-griffe",
+      "field_mapping": {
+        "py_api_breaks": "py_api_breaks"
+      }
+    },
+    {
+      "from_step": "s06_rel_node_api_break_extractor",
+      "to_step": "s09_rel_semver_bump_decision",
+      "data_type": "rel-node-api-break-extractor",
+      "field_mapping": {
+        "node_api_breaks": "node_api_breaks"
+      }
+    },
+    {
+      "from_step": "s07_rel_go_api_break_gorelease",
+      "to_step": "s09_rel_semver_bump_decision",
+      "data_type": "rel-go-api-break-gorelease",
+      "field_mapping": {
+        "go_api_breaks": "go_api_breaks"
+      }
+    },
+    {
+      "from_step": "s08_rel_rust_api_break_semver_checks",
+      "to_step": "s09_rel_semver_bump_decision",
+      "data_type": "rel-rust-api-break-semver-checks",
+      "field_mapping": {
+        "rust_api_breaks": "rust_api_breaks"
+      }
+    },
+    {
+      "from_step": "s02_rel_deprecation_policy_notice",
+      "to_step": "s09_rel_semver_bump_decision",
+      "data_type": "rel-deprecation-policy-notice",
+      "field_mapping": {
+        "deprecation_notices": "deprecation_notices"
+      }
+    },
+    {
+      "from_step": "s01_rel_branching_model_select",
+      "to_step": "s10_rel_changelog_release_please",
+      "data_type": "rel-branching-model-select",
+      "field_mapping": {
+        "branching_model": "branching_model"
+      }
+    },
+    {
+      "from_step": "s09_rel_semver_bump_decision",
+      "to_step": "s10_rel_changelog_release_please",
+      "data_type": "rel-semver-bump-decision",
+      "field_mapping": {
+        "next_version": "next_version"
+      }
+    },
+    {
+      "from_step": "s01_rel_branching_model_select",
+      "to_step": "s11_rel_changelog_semantic_release",
+      "data_type": "rel-branching-model-select",
+      "field_mapping": {
+        "branching_model": "branching_model"
+      }
+    },
+    {
+      "from_step": "s09_rel_semver_bump_decision",
+      "to_step": "s11_rel_changelog_semantic_release",
+      "data_type": "rel-semver-bump-decision",
+      "field_mapping": {
+        "next_version": "next_version"
+      }
+    },
+    {
+      "from_step": "s09_rel_semver_bump_decision",
+      "to_step": "s12_rel_changelog_git_cliff",
+      "data_type": "rel-semver-bump-decision",
+      "field_mapping": {
+        "next_version": "next_version"
+      }
+    },
+    {
+      "from_step": "s09_rel_semver_bump_decision",
+      "to_step": "s13_rel_tag_sign_git",
+      "data_type": "rel-semver-bump-decision",
+      "field_mapping": {
+        "next_version": "next_version"
+      }
+    },
+    {
+      "from_step": "s10_rel_changelog_release_please",
+      "to_step": "s13_rel_tag_sign_git",
+      "data_type": "rel-changelog-release-please",
+      "field_mapping": {
+        "rp_changelog": "rp_changelog"
+      }
+    },
+    {
+      "from_step": "s11_rel_changelog_semantic_release",
+      "to_step": "s13_rel_tag_sign_git",
+      "data_type": "rel-changelog-semantic-release",
+      "field_mapping": {
+        "sr_changelog": "sr_changelog"
+      }
+    },
+    {
+      "from_step": "s12_rel_changelog_git_cliff",
+      "to_step": "s13_rel_tag_sign_git",
+      "data_type": "rel-changelog-git-cliff",
+      "field_mapping": {
+        "cliff_changelog": "cliff_changelog"
+      }
+    },
+    {
+      "from_step": "s13_rel_tag_sign_git",
+      "to_step": "s14_rel_py_reproducible_build",
+      "data_type": "rel-tag-sign-git",
+      "field_mapping": {
+        "release_tag": "release_tag"
+      }
+    },
+    {
+      "from_step": "s13_rel_tag_sign_git",
+      "to_step": "s15_rel_node_reproducible_pack",
+      "data_type": "rel-tag-sign-git",
+      "field_mapping": {
+        "release_tag": "release_tag"
+      }
+    },
+    {
+      "from_step": "s13_rel_tag_sign_git",
+      "to_step": "s16_rel_go_reproducible_build",
+      "data_type": "rel-tag-sign-git",
+      "field_mapping": {
+        "release_tag": "release_tag"
+      }
+    },
+    {
+      "from_step": "s13_rel_tag_sign_git",
+      "to_step": "s17_rel_rust_reproducible_build",
+      "data_type": "rel-tag-sign-git",
+      "field_mapping": {
+        "release_tag": "release_tag"
+      }
+    },
+    {
+      "from_step": "s13_rel_tag_sign_git",
+      "to_step": "s18_rel_container_image_build_push",
+      "data_type": "rel-tag-sign-git",
+      "field_mapping": {
+        "release_tag": "release_tag"
+      }
+    },
+    {
+      "from_step": "s14_rel_py_reproducible_build",
+      "to_step": "s19_rel_slsa_provenance_attest",
+      "data_type": "rel-py-reproducible-build",
+      "field_mapping": {
+        "py_dist": "py_dist"
+      }
+    },
+    {
+      "from_step": "s15_rel_node_reproducible_pack",
+      "to_step": "s19_rel_slsa_provenance_attest",
+      "data_type": "rel-node-reproducible-pack",
+      "field_mapping": {
+        "node_dist": "node_dist"
+      }
+    },
+    {
+      "from_step": "s16_rel_go_reproducible_build",
+      "to_step": "s19_rel_slsa_provenance_attest",
+      "data_type": "rel-go-reproducible-build",
+      "field_mapping": {
+        "go_dist": "go_dist"
+      }
+    },
+    {
+      "from_step": "s17_rel_rust_reproducible_build",
+      "to_step": "s19_rel_slsa_provenance_attest",
+      "data_type": "rel-rust-reproducible-build",
+      "field_mapping": {
+        "rust_dist": "rust_dist"
+      }
+    },
+    {
+      "from_step": "s18_rel_container_image_build_push",
+      "to_step": "s19_rel_slsa_provenance_attest",
+      "data_type": "rel-container-image-build-push",
+      "field_mapping": {
+        "image_digest": "image_digest"
+      }
+    },
+    {
+      "from_step": "s14_rel_py_reproducible_build",
+      "to_step": "s20_rel_cosign_sign_verify",
+      "data_type": "rel-py-reproducible-build",
+      "field_mapping": {
+        "py_dist": "py_dist"
+      }
+    },
+    {
+      "from_step": "s15_rel_node_reproducible_pack",
+      "to_step": "s20_rel_cosign_sign_verify",
+      "data_type": "rel-node-reproducible-pack",
+      "field_mapping": {
+        "node_dist": "node_dist"
+      }
+    },
+    {
+      "from_step": "s16_rel_go_reproducible_build",
+      "to_step": "s20_rel_cosign_sign_verify",
+      "data_type": "rel-go-reproducible-build",
+      "field_mapping": {
+        "go_dist": "go_dist"
+      }
+    },
+    {
+      "from_step": "s17_rel_rust_reproducible_build",
+      "to_step": "s20_rel_cosign_sign_verify",
+      "data_type": "rel-rust-reproducible-build",
+      "field_mapping": {
+        "rust_dist": "rust_dist"
+      }
+    },
+    {
+      "from_step": "s18_rel_container_image_build_push",
+      "to_step": "s20_rel_cosign_sign_verify",
+      "data_type": "rel-container-image-build-push",
+      "field_mapping": {
+        "image_digest": "image_digest"
+      }
+    },
+    {
+      "from_step": "s14_rel_py_reproducible_build",
+      "to_step": "s21_rel_py_publish_pypi_trusted",
+      "data_type": "rel-py-reproducible-build",
+      "field_mapping": {
+        "py_dist": "py_dist"
+      }
+    },
+    {
+      "from_step": "s09_rel_semver_bump_decision",
+      "to_step": "s21_rel_py_publish_pypi_trusted",
+      "data_type": "rel-semver-bump-decision",
+      "field_mapping": {
+        "next_version": "next_version"
+      }
+    },
+    {
+      "from_step": "s19_rel_slsa_provenance_attest",
+      "to_step": "s21_rel_py_publish_pypi_trusted",
+      "data_type": "rel-slsa-provenance-attest",
+      "field_mapping": {
+        "provenance_verification": "provenance_verification"
+      }
+    },
+    {
+      "from_step": "s15_rel_node_reproducible_pack",
+      "to_step": "s22_rel_node_publish_npm_provenance",
+      "data_type": "rel-node-reproducible-pack",
+      "field_mapping": {
+        "node_dist": "node_dist"
+      }
+    },
+    {
+      "from_step": "s09_rel_semver_bump_decision",
+      "to_step": "s22_rel_node_publish_npm_provenance",
+      "data_type": "rel-semver-bump-decision",
+      "field_mapping": {
+        "next_version": "next_version"
+      }
+    },
+    {
+      "from_step": "s19_rel_slsa_provenance_attest",
+      "to_step": "s22_rel_node_publish_npm_provenance",
+      "data_type": "rel-slsa-provenance-attest",
+      "field_mapping": {
+        "provenance_verification": "provenance_verification"
+      }
+    },
+    {
+      "from_step": "s13_rel_tag_sign_git",
+      "to_step": "s23_rel_go_publish_module_proxy",
+      "data_type": "rel-tag-sign-git",
+      "field_mapping": {
+        "release_tag": "release_tag"
+      }
+    },
+    {
+      "from_step": "s16_rel_go_reproducible_build",
+      "to_step": "s23_rel_go_publish_module_proxy",
+      "data_type": "rel-go-reproducible-build",
+      "field_mapping": {
+        "go_dist": "go_dist"
+      }
+    },
+    {
+      "from_step": "s19_rel_slsa_provenance_attest",
+      "to_step": "s23_rel_go_publish_module_proxy",
+      "data_type": "rel-slsa-provenance-attest",
+      "field_mapping": {
+        "provenance_verification": "provenance_verification"
+      }
+    },
+    {
+      "from_step": "s09_rel_semver_bump_decision",
+      "to_step": "s24_rel_rust_publish_crates",
+      "data_type": "rel-semver-bump-decision",
+      "field_mapping": {
+        "next_version": "next_version"
+      }
+    },
+    {
+      "from_step": "s17_rel_rust_reproducible_build",
+      "to_step": "s24_rel_rust_publish_crates",
+      "data_type": "rel-rust-reproducible-build",
+      "field_mapping": {
+        "rust_dist": "rust_dist"
+      }
+    },
+    {
+      "from_step": "s19_rel_slsa_provenance_attest",
+      "to_step": "s24_rel_rust_publish_crates",
+      "data_type": "rel-slsa-provenance-attest",
+      "field_mapping": {
+        "provenance_verification": "provenance_verification"
+      }
+    },
+    {
+      "from_step": "s09_rel_semver_bump_decision",
+      "to_step": "s25_rel_py_verify_install",
+      "data_type": "rel-semver-bump-decision",
+      "field_mapping": {
+        "next_version": "next_version"
+      }
+    },
+    {
+      "from_step": "s21_rel_py_publish_pypi_trusted",
+      "to_step": "s25_rel_py_verify_install",
+      "data_type": "rel-py-publish-pypi-trusted",
+      "field_mapping": {
+        "pypi_release_url": "pypi_release_url"
+      }
+    },
+    {
+      "from_step": "s09_rel_semver_bump_decision",
+      "to_step": "s26_rel_node_verify_install",
+      "data_type": "rel-semver-bump-decision",
+      "field_mapping": {
+        "next_version": "next_version"
+      }
+    },
+    {
+      "from_step": "s22_rel_node_publish_npm_provenance",
+      "to_step": "s26_rel_node_verify_install",
+      "data_type": "rel-node-publish-npm-provenance",
+      "field_mapping": {
+        "npm_release_url": "npm_release_url"
+      }
+    },
+    {
+      "from_step": "s23_rel_go_publish_module_proxy",
+      "to_step": "s27_rel_go_verify_install",
+      "data_type": "rel-go-publish-module-proxy",
+      "field_mapping": {
+        "go_module_version_check": "go_module_version_check"
+      }
+    },
+    {
+      "from_step": "s13_rel_tag_sign_git",
+      "to_step": "s27_rel_go_verify_install",
+      "data_type": "rel-tag-sign-git",
+      "field_mapping": {
+        "release_tag": "release_tag"
+      }
+    },
+    {
+      "from_step": "s09_rel_semver_bump_decision",
+      "to_step": "s28_rel_rust_verify_install",
+      "data_type": "rel-semver-bump-decision",
+      "field_mapping": {
+        "next_version": "next_version"
+      }
+    },
+    {
+      "from_step": "s24_rel_rust_publish_crates",
+      "to_step": "s28_rel_rust_verify_install",
+      "data_type": "rel-rust-publish-crates",
+      "field_mapping": {
+        "crates_release_url": "crates_release_url"
+      }
+    },
+    {
+      "from_step": "s25_rel_py_verify_install",
+      "to_step": "s29_rel_yank_bad_release",
+      "data_type": "rel-py-verify-install",
+      "field_mapping": {
+        "py_install_report": "py_install_report"
+      }
+    },
+    {
+      "from_step": "s26_rel_node_verify_install",
+      "to_step": "s29_rel_yank_bad_release",
+      "data_type": "rel-node-verify-install",
+      "field_mapping": {
+        "node_install_report": "node_install_report"
+      }
+    },
+    {
+      "from_step": "s27_rel_go_verify_install",
+      "to_step": "s29_rel_yank_bad_release",
+      "data_type": "rel-go-verify-install",
+      "field_mapping": {
+        "go_install_report": "go_install_report"
+      }
+    },
+    {
+      "from_step": "s28_rel_rust_verify_install",
+      "to_step": "s29_rel_yank_bad_release",
+      "data_type": "rel-rust-verify-install",
+      "field_mapping": {
+        "rust_install_report": "rust_install_report"
+      }
+    },
+    {
+      "from_step": "s01_rel_branching_model_select",
+      "to_step": "s30_rel_hotfix_from_tag",
+      "data_type": "rel-branching-model-select",
+      "field_mapping": {
+        "branching_model": "branching_model"
+      }
+    },
+    {
+      "from_step": "s29_rel_yank_bad_release",
+      "to_step": "s30_rel_hotfix_from_tag",
+      "data_type": "rel-yank-bad-release",
+      "field_mapping": {
+        "withdrawal_actions": "withdrawal_actions"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "supported_lines",
+    "release_cadence",
+    "artifact_kind",
+    "repo_path",
+    "stack",
+    "deprecated_symbols",
+    "support_window",
+    "ci_platform",
+    "last_tag",
+    "package_name",
+    "current_version",
+    "prerelease_id",
+    "release_type",
+    "signing_method",
+    "target_platforms",
+    "image_repository",
+    "repo_slug",
+    "slsa_build_level",
+    "smoke_import",
+    "bad_version",
+    "registry",
+    "fix_commit"
+  ],
+  "terminal_outputs": [
+    "branch_protection_rules",
+    "deprecation_policy",
+    "commitlint_config",
+    "commit_gate_check",
+    "bump_level",
+    "bump_rationale",
+    "release_please_config",
+    "semantic_release_config",
+    "cliff_config",
+    "tag_verification",
+    "py_repro_report",
+    "node_repro_report",
+    "go_repro_report",
+    "rust_repro_report",
+    "container_repro_report",
+    "provenance_attestation",
+    "signature_bundles",
+    "signature_verification",
+    "hotfix_branch",
+    "hotfix_version"
+  ],
+  "parallel_groups": [
+    [
+      "s01_rel_branching_model_select",
+      "s02_rel_deprecation_policy_notice",
+      "s03_rel_commitlint_gate",
+      "s04_rel_commit_history_audit",
+      "s05_rel_py_api_break_griffe",
+      "s06_rel_node_api_break_extractor",
+      "s07_rel_go_api_break_gorelease",
+      "s08_rel_rust_api_break_semver_checks"
+    ],
+    [
+      "s09_rel_semver_bump_decision"
+    ],
+    [
+      "s10_rel_changelog_release_please",
+      "s11_rel_changelog_semantic_release",
+      "s12_rel_changelog_git_cliff"
+    ],
+    [
+      "s13_rel_tag_sign_git"
+    ],
+    [
+      "s14_rel_py_reproducible_build",
+      "s15_rel_node_reproducible_pack",
+      "s16_rel_go_reproducible_build",
+      "s17_rel_rust_reproducible_build",
+      "s18_rel_container_image_build_push"
+    ],
+    [
+      "s19_rel_slsa_provenance_attest",
+      "s20_rel_cosign_sign_verify"
+    ],
+    [
+      "s21_rel_py_publish_pypi_trusted",
+      "s22_rel_node_publish_npm_provenance",
+      "s23_rel_go_publish_module_proxy",
+      "s24_rel_rust_publish_crates"
+    ],
+    [
+      "s25_rel_py_verify_install",
+      "s26_rel_node_verify_install",
+      "s27_rel_go_verify_install",
+      "s28_rel_rust_verify_install"
+    ],
+    [
+      "s29_rel_yank_bad_release"
+    ],
+    [
+      "s30_rel_hotfix_from_tag"
+    ]
+  ],
+  "estimated_cost": 30,
+  "critical_path": [
+    "s05_rel_py_api_break_griffe",
+    "s09_rel_semver_bump_decision",
+    "s11_rel_changelog_semantic_release",
+    "s13_rel_tag_sign_git",
+    "s18_rel_container_image_build_push",
+    "s19_rel_slsa_provenance_attest",
+    "s21_rel_py_publish_pypi_trusted",
+    "s25_rel_py_verify_install",
+    "s29_rel_yank_bad_release",
+    "s30_rel_hotfix_from_tag"
+  ]
+}

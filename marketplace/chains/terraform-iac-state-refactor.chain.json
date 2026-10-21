@@ -1,0 +1,122 @@
+{
+  "name": "terraform-iac-state-refactor",
+  "description": "Change what Terraform manages without recreating anything: import existing resources, move addresses with moved blocks, perform state surgery, then review the plan and protect stateful resources.",
+  "steps": [
+    {
+      "id": "s01_tf_import_existing",
+      "skill_name": "tf-import-existing",
+      "inputs": {
+        "root_modules": "from_user_input",
+        "cloud": "from_user_input",
+        "import_targets": "from_user_input"
+      },
+      "outputs": {
+        "import_blocks": "import_blocks",
+        "import_plan_summary": "import_plan_summary"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_tf_moved_refactor",
+      "skill_name": "tf-moved-refactor",
+      "inputs": {
+        "root_modules": "from_user_input",
+        "refactor_map": "from_user_input"
+      },
+      "outputs": {
+        "moved_blocks": "moved_blocks",
+        "refactor_plan_summary": "refactor_plan_summary"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s03_tf_state_surgery",
+      "skill_name": "tf-state-surgery",
+      "inputs": {
+        "root_modules": "from_user_input",
+        "state_operations": "from_user_input"
+      },
+      "outputs": {
+        "state_backup_path": "state_backup_path",
+        "state_change_log": "state_change_log"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s04_tf_plan_review",
+      "skill_name": "tf-plan-review",
+      "inputs": {
+        "root_modules": "from_user_input",
+        "env_strategy": "from_user_input",
+        "target_environment": "from_user_input"
+      },
+      "outputs": {
+        "plan_file": "plan_file",
+        "plan_json": "plan_json",
+        "plan_review": "plan_review"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s05_tf_destroy_safeguards",
+      "skill_name": "tf-destroy-safeguards",
+      "inputs": {
+        "root_modules": "from_user_input",
+        "cloud": "from_user_input",
+        "plan_review": "s04_tf_plan_review.plan_review"
+      },
+      "outputs": {
+        "protected_resources": "protected_resources",
+        "destroy_guard_config": "destroy_guard_config"
+      },
+      "parallel_group": 2
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s04_tf_plan_review",
+      "to_step": "s05_tf_destroy_safeguards",
+      "data_type": "tf-plan-review",
+      "field_mapping": {
+        "plan_review": "plan_review"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "root_modules",
+    "cloud",
+    "import_targets",
+    "refactor_map",
+    "state_operations",
+    "env_strategy",
+    "target_environment"
+  ],
+  "terminal_outputs": [
+    "import_blocks",
+    "import_plan_summary",
+    "moved_blocks",
+    "refactor_plan_summary",
+    "state_backup_path",
+    "state_change_log",
+    "plan_file",
+    "plan_json",
+    "protected_resources",
+    "destroy_guard_config"
+  ],
+  "parallel_groups": [
+    [
+      "s01_tf_import_existing",
+      "s02_tf_moved_refactor",
+      "s03_tf_state_surgery",
+      "s04_tf_plan_review"
+    ],
+    [
+      "s05_tf_destroy_safeguards"
+    ]
+  ],
+  "estimated_cost": 5,
+  "critical_path": [
+    "s04_tf_plan_review",
+    "s05_tf_destroy_safeguards"
+  ]
+}

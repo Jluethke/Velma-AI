@@ -1,0 +1,361 @@
+{
+  "name": "ci-pipelines-gitlab",
+  "description": "Build a GitLab CI pipeline for any supported stack: verified commands, baseline pipeline, caches and needs graph, parallel tests, JUnit reports, protected merge gate and tag releases.",
+  "steps": [
+    {
+      "id": "s01_ci0_detect_stack",
+      "skill_name": "ci0-detect-stack",
+      "inputs": {
+        "repo_dir": "from_user_input",
+        "stack": "from_user_input_optional"
+      },
+      "outputs": {
+        "stack_profile": "stack_profile",
+        "existing_ci_files": "existing_ci_files"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_ci0_py_ci_commands",
+      "skill_name": "ci0-py-ci-commands",
+      "inputs": {
+        "repo_dir": "from_user_input",
+        "stack_profile": "s01_ci0_detect_stack.stack_profile"
+      },
+      "outputs": {
+        "py_ci_commands": "py_ci_commands"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_ci0_node_ci_commands",
+      "skill_name": "ci0-node-ci-commands",
+      "inputs": {
+        "repo_dir": "from_user_input",
+        "stack_profile": "s01_ci0_detect_stack.stack_profile"
+      },
+      "outputs": {
+        "node_ci_commands": "node_ci_commands"
+      },
+      "condition": "stack == 'node'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_ci0_go_ci_commands",
+      "skill_name": "ci0-go-ci-commands",
+      "inputs": {
+        "repo_dir": "from_user_input",
+        "stack_profile": "s01_ci0_detect_stack.stack_profile"
+      },
+      "outputs": {
+        "go_ci_commands": "go_ci_commands"
+      },
+      "condition": "stack == 'go'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s05_ci0_jvm_ci_commands",
+      "skill_name": "ci0-jvm-ci-commands",
+      "inputs": {
+        "repo_dir": "from_user_input",
+        "stack_profile": "s01_ci0_detect_stack.stack_profile"
+      },
+      "outputs": {
+        "jvm_ci_commands": "jvm_ci_commands"
+      },
+      "condition": "stack == 'jvm'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s06_ci0_clean_room_command_check",
+      "skill_name": "ci0-clean-room-command-check",
+      "inputs": {
+        "repo_dir": "from_user_input",
+        "py_ci_commands": "s02_ci0_py_ci_commands.py_ci_commands",
+        "node_ci_commands": "s03_ci0_node_ci_commands.node_ci_commands",
+        "go_ci_commands": "s04_ci0_go_ci_commands.go_ci_commands",
+        "jvm_ci_commands": "s05_ci0_jvm_ci_commands.jvm_ci_commands",
+        "runner_image": "from_user_input_optional"
+      },
+      "outputs": {
+        "verified_commands": "verified_commands",
+        "junit_report_globs": "junit_report_globs"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s07_ci0_gitlab_ci_baseline",
+      "skill_name": "ci0-gitlab-ci-baseline",
+      "inputs": {
+        "repo_dir": "from_user_input",
+        "verified_commands": "s06_ci0_clean_room_command_check.verified_commands",
+        "default_branch": "from_user_input"
+      },
+      "outputs": {
+        "gitlab_ci_path": "gitlab_ci_path"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s08_ci0_gitlab_cache_needs",
+      "skill_name": "ci0-gitlab-cache-needs",
+      "inputs": {
+        "gitlab_ci_path": "s07_ci0_gitlab_ci_baseline.gitlab_ci_path",
+        "stack_profile": "s01_ci0_detect_stack.stack_profile"
+      },
+      "outputs": {
+        "gitlab_cache_diff": "gitlab_cache_diff"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s09_ci0_gitlab_parallel_matrix",
+      "skill_name": "ci0-gitlab-parallel-matrix",
+      "inputs": {
+        "gitlab_ci_path": "s07_ci0_gitlab_ci_baseline.gitlab_ci_path",
+        "stack_profile": "s01_ci0_detect_stack.stack_profile",
+        "shard_count": "from_user_input",
+        "matrix_versions": "from_user_input_optional"
+      },
+      "outputs": {
+        "gitlab_parallel_diff": "gitlab_parallel_diff"
+      },
+      "condition": "shard_count > 1",
+      "parallel_group": 5
+    },
+    {
+      "id": "s10_ci0_gitlab_junit_reports",
+      "skill_name": "ci0-gitlab-junit-reports",
+      "inputs": {
+        "gitlab_ci_path": "s07_ci0_gitlab_ci_baseline.gitlab_ci_path",
+        "junit_report_globs": "s06_ci0_clean_room_command_check.junit_report_globs"
+      },
+      "outputs": {
+        "gitlab_report_diff": "gitlab_report_diff"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s11_ci0_gitlab_protected_pipeline",
+      "skill_name": "ci0-gitlab-protected-pipeline",
+      "inputs": {
+        "gitlab_project_path": "from_user_input",
+        "default_branch": "from_user_input",
+        "gitlab_ci_path": "s07_ci0_gitlab_ci_baseline.gitlab_ci_path"
+      },
+      "outputs": {
+        "gitlab_protection_record": "gitlab_protection_record"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s12_ci0_gitlab_release_job",
+      "skill_name": "ci0-gitlab-release-job",
+      "inputs": {
+        "gitlab_ci_path": "s07_ci0_gitlab_ci_baseline.gitlab_ci_path",
+        "verified_commands": "s06_ci0_clean_room_command_check.verified_commands"
+      },
+      "outputs": {
+        "gitlab_release_diff": "gitlab_release_diff"
+      },
+      "condition": "release_trigger != null",
+      "parallel_group": 5
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_ci0_detect_stack",
+      "to_step": "s02_ci0_py_ci_commands",
+      "data_type": "ci0-detect-stack",
+      "field_mapping": {
+        "stack_profile": "stack_profile"
+      }
+    },
+    {
+      "from_step": "s01_ci0_detect_stack",
+      "to_step": "s03_ci0_node_ci_commands",
+      "data_type": "ci0-detect-stack",
+      "field_mapping": {
+        "stack_profile": "stack_profile"
+      }
+    },
+    {
+      "from_step": "s01_ci0_detect_stack",
+      "to_step": "s04_ci0_go_ci_commands",
+      "data_type": "ci0-detect-stack",
+      "field_mapping": {
+        "stack_profile": "stack_profile"
+      }
+    },
+    {
+      "from_step": "s01_ci0_detect_stack",
+      "to_step": "s05_ci0_jvm_ci_commands",
+      "data_type": "ci0-detect-stack",
+      "field_mapping": {
+        "stack_profile": "stack_profile"
+      }
+    },
+    {
+      "from_step": "s02_ci0_py_ci_commands",
+      "to_step": "s06_ci0_clean_room_command_check",
+      "data_type": "ci0-py-ci-commands",
+      "field_mapping": {
+        "py_ci_commands": "py_ci_commands"
+      }
+    },
+    {
+      "from_step": "s03_ci0_node_ci_commands",
+      "to_step": "s06_ci0_clean_room_command_check",
+      "data_type": "ci0-node-ci-commands",
+      "field_mapping": {
+        "node_ci_commands": "node_ci_commands"
+      }
+    },
+    {
+      "from_step": "s04_ci0_go_ci_commands",
+      "to_step": "s06_ci0_clean_room_command_check",
+      "data_type": "ci0-go-ci-commands",
+      "field_mapping": {
+        "go_ci_commands": "go_ci_commands"
+      }
+    },
+    {
+      "from_step": "s05_ci0_jvm_ci_commands",
+      "to_step": "s06_ci0_clean_room_command_check",
+      "data_type": "ci0-jvm-ci-commands",
+      "field_mapping": {
+        "jvm_ci_commands": "jvm_ci_commands"
+      }
+    },
+    {
+      "from_step": "s06_ci0_clean_room_command_check",
+      "to_step": "s07_ci0_gitlab_ci_baseline",
+      "data_type": "ci0-clean-room-command-check",
+      "field_mapping": {
+        "verified_commands": "verified_commands"
+      }
+    },
+    {
+      "from_step": "s07_ci0_gitlab_ci_baseline",
+      "to_step": "s08_ci0_gitlab_cache_needs",
+      "data_type": "ci0-gitlab-ci-baseline",
+      "field_mapping": {
+        "gitlab_ci_path": "gitlab_ci_path"
+      }
+    },
+    {
+      "from_step": "s01_ci0_detect_stack",
+      "to_step": "s08_ci0_gitlab_cache_needs",
+      "data_type": "ci0-detect-stack",
+      "field_mapping": {
+        "stack_profile": "stack_profile"
+      }
+    },
+    {
+      "from_step": "s07_ci0_gitlab_ci_baseline",
+      "to_step": "s09_ci0_gitlab_parallel_matrix",
+      "data_type": "ci0-gitlab-ci-baseline",
+      "field_mapping": {
+        "gitlab_ci_path": "gitlab_ci_path"
+      }
+    },
+    {
+      "from_step": "s01_ci0_detect_stack",
+      "to_step": "s09_ci0_gitlab_parallel_matrix",
+      "data_type": "ci0-detect-stack",
+      "field_mapping": {
+        "stack_profile": "stack_profile"
+      }
+    },
+    {
+      "from_step": "s07_ci0_gitlab_ci_baseline",
+      "to_step": "s10_ci0_gitlab_junit_reports",
+      "data_type": "ci0-gitlab-ci-baseline",
+      "field_mapping": {
+        "gitlab_ci_path": "gitlab_ci_path"
+      }
+    },
+    {
+      "from_step": "s06_ci0_clean_room_command_check",
+      "to_step": "s10_ci0_gitlab_junit_reports",
+      "data_type": "ci0-clean-room-command-check",
+      "field_mapping": {
+        "junit_report_globs": "junit_report_globs"
+      }
+    },
+    {
+      "from_step": "s07_ci0_gitlab_ci_baseline",
+      "to_step": "s11_ci0_gitlab_protected_pipeline",
+      "data_type": "ci0-gitlab-ci-baseline",
+      "field_mapping": {
+        "gitlab_ci_path": "gitlab_ci_path"
+      }
+    },
+    {
+      "from_step": "s07_ci0_gitlab_ci_baseline",
+      "to_step": "s12_ci0_gitlab_release_job",
+      "data_type": "ci0-gitlab-ci-baseline",
+      "field_mapping": {
+        "gitlab_ci_path": "gitlab_ci_path"
+      }
+    },
+    {
+      "from_step": "s06_ci0_clean_room_command_check",
+      "to_step": "s12_ci0_gitlab_release_job",
+      "data_type": "ci0-clean-room-command-check",
+      "field_mapping": {
+        "verified_commands": "verified_commands"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "repo_dir",
+    "stack",
+    "runner_image",
+    "default_branch",
+    "shard_count",
+    "matrix_versions",
+    "gitlab_project_path"
+  ],
+  "terminal_outputs": [
+    "existing_ci_files",
+    "gitlab_cache_diff",
+    "gitlab_parallel_diff",
+    "gitlab_report_diff",
+    "gitlab_protection_record",
+    "gitlab_release_diff"
+  ],
+  "parallel_groups": [
+    [
+      "s01_ci0_detect_stack"
+    ],
+    [
+      "s02_ci0_py_ci_commands",
+      "s03_ci0_node_ci_commands",
+      "s04_ci0_go_ci_commands",
+      "s05_ci0_jvm_ci_commands"
+    ],
+    [
+      "s06_ci0_clean_room_command_check"
+    ],
+    [
+      "s07_ci0_gitlab_ci_baseline"
+    ],
+    [
+      "s08_ci0_gitlab_cache_needs",
+      "s09_ci0_gitlab_parallel_matrix",
+      "s10_ci0_gitlab_junit_reports",
+      "s11_ci0_gitlab_protected_pipeline",
+      "s12_ci0_gitlab_release_job"
+    ]
+  ],
+  "estimated_cost": 12,
+  "critical_path": [
+    "s01_ci0_detect_stack",
+    "s02_ci0_py_ci_commands",
+    "s06_ci0_clean_room_command_check",
+    "s07_ci0_gitlab_ci_baseline",
+    "s08_ci0_gitlab_cache_needs"
+  ]
+}

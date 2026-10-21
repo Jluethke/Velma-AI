@@ -1,0 +1,697 @@
+{
+  "name": "shell-scripting",
+  "description": "Reliable shell scripts end to end: requirements, shell or Python decision, bash or POSIX sh skeleton, strict mode pitfalls, quoting, safe loops, getopts, exit codes, stderr logging, mktemp and traps, idempotency, locking, GNU/BSD portability, line endings, ShellCheck, shfmt, bats-core tests and CI, with a PowerShell branch for Windows and a Python port branch.",
+  "steps": [
+    {
+      "id": "s01_shs_script_requirements_intake",
+      "skill_name": "shs-script-requirements-intake",
+      "inputs": {
+        "script_goal": "from_user_input",
+        "target_platforms": "from_user_input",
+        "existing_script": "from_user_input_optional"
+      },
+      "outputs": {
+        "script_requirements": "script_requirements"
+      }
+    },
+    {
+      "id": "s02_shs_real_language_decision",
+      "skill_name": "shs-real-language-decision",
+      "inputs": {
+        "script_requirements": "s01_shs_script_requirements_intake.script_requirements"
+      },
+      "outputs": {
+        "language_decision": "language_decision",
+        "decision_evidence": "decision_evidence"
+      }
+    },
+    {
+      "id": "s03_shs_bash_vs_posix_decision",
+      "skill_name": "shs-bash-vs-posix-decision",
+      "inputs": {
+        "script_requirements": "s01_shs_script_requirements_intake.script_requirements",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "shell_dialect": "shell_dialect",
+        "bash_min_version": "bash_min_version"
+      },
+      "condition": "language_decision == 'shell' && stack != 'pwsh'"
+    },
+    {
+      "id": "s04_shs_bash_strict_skeleton",
+      "skill_name": "shs-bash-strict-skeleton",
+      "inputs": {
+        "script_path": "from_user_input",
+        "script_requirements": "s01_shs_script_requirements_intake.script_requirements",
+        "bash_min_version": "s03_shs_bash_vs_posix_decision.bash_min_version"
+      },
+      "outputs": {
+        "skeleton_report": "skeleton_report"
+      },
+      "condition": "language_decision == 'shell' && stack == 'bash'"
+    },
+    {
+      "id": "s05_shs_posix_sh_skeleton",
+      "skill_name": "shs-posix-sh-skeleton",
+      "inputs": {
+        "script_path": "from_user_input",
+        "script_requirements": "s01_shs_script_requirements_intake.script_requirements"
+      },
+      "outputs": {
+        "skeleton_report": "skeleton_report"
+      },
+      "condition": "language_decision == 'shell' && stack == 'posix'"
+    },
+    {
+      "id": "s06_shs_bash_errexit_pitfalls",
+      "skill_name": "shs-bash-errexit-pitfalls",
+      "inputs": {
+        "script_path": "from_user_input",
+        "bash_min_version": "s03_shs_bash_vs_posix_decision.bash_min_version"
+      },
+      "outputs": {
+        "errexit_fixes": "errexit_fixes"
+      },
+      "condition": "language_decision == 'shell' && stack == 'bash'"
+    },
+    {
+      "id": "s07_shs_posix_bashism_removal",
+      "skill_name": "shs-posix-bashism-removal",
+      "inputs": {
+        "script_path": "from_user_input"
+      },
+      "outputs": {
+        "bashism_fixes": "bashism_fixes"
+      },
+      "condition": "language_decision == 'shell' && stack == 'posix'"
+    },
+    {
+      "id": "s08_shs_quoting_audit",
+      "skill_name": "shs-quoting-audit",
+      "inputs": {
+        "script_path": "from_user_input",
+        "shell_dialect": "s03_shs_bash_vs_posix_decision.shell_dialect"
+      },
+      "outputs": {
+        "quoting_fixes": "quoting_fixes"
+      },
+      "condition": "language_decision == 'shell' && stack != 'pwsh'"
+    },
+    {
+      "id": "s09_shs_safe_filename_iteration",
+      "skill_name": "shs-safe-filename-iteration",
+      "inputs": {
+        "script_path": "from_user_input",
+        "shell_dialect": "s03_shs_bash_vs_posix_decision.shell_dialect"
+      },
+      "outputs": {
+        "iteration_fixes": "iteration_fixes"
+      },
+      "condition": "language_decision == 'shell' && stack != 'pwsh'"
+    },
+    {
+      "id": "s10_shs_getopts_arg_parsing",
+      "skill_name": "shs-getopts-arg-parsing",
+      "inputs": {
+        "script_path": "from_user_input",
+        "script_requirements": "s01_shs_script_requirements_intake.script_requirements",
+        "shell_dialect": "s03_shs_bash_vs_posix_decision.shell_dialect"
+      },
+      "outputs": {
+        "cli_interface": "cli_interface"
+      },
+      "condition": "language_decision == 'shell' && stack != 'pwsh'"
+    },
+    {
+      "id": "s11_shs_exit_status_contract",
+      "skill_name": "shs-exit-status-contract",
+      "inputs": {
+        "script_path": "from_user_input",
+        "cli_interface": "s10_shs_getopts_arg_parsing.cli_interface"
+      },
+      "outputs": {
+        "exit_code_table": "exit_code_table"
+      },
+      "condition": "language_decision == 'shell' && stack != 'pwsh'"
+    },
+    {
+      "id": "s12_shs_stderr_logging",
+      "skill_name": "shs-stderr-logging",
+      "inputs": {
+        "script_path": "from_user_input",
+        "shell_dialect": "s03_shs_bash_vs_posix_decision.shell_dialect"
+      },
+      "outputs": {
+        "logging_contract": "logging_contract"
+      },
+      "condition": "language_decision == 'shell' && stack != 'pwsh'"
+    },
+    {
+      "id": "s13_shs_mktemp_trap_cleanup",
+      "skill_name": "shs-mktemp-trap-cleanup",
+      "inputs": {
+        "script_path": "from_user_input",
+        "shell_dialect": "s03_shs_bash_vs_posix_decision.shell_dialect"
+      },
+      "outputs": {
+        "cleanup_contract": "cleanup_contract"
+      },
+      "condition": "language_decision == 'shell' && stack != 'pwsh'"
+    },
+    {
+      "id": "s14_shs_idempotent_operations",
+      "skill_name": "shs-idempotent-operations",
+      "inputs": {
+        "script_path": "from_user_input",
+        "script_requirements": "s01_shs_script_requirements_intake.script_requirements"
+      },
+      "outputs": {
+        "idempotency_report": "idempotency_report"
+      },
+      "condition": "language_decision == 'shell' && stack != 'pwsh'"
+    },
+    {
+      "id": "s15_shs_single_instance_lock",
+      "skill_name": "shs-single-instance-lock",
+      "inputs": {
+        "script_path": "from_user_input",
+        "target_platforms": "from_user_input"
+      },
+      "outputs": {
+        "lock_contract": "lock_contract"
+      },
+      "condition": "language_decision == 'shell' && stack != 'pwsh'"
+    },
+    {
+      "id": "s16_shs_gnu_bsd_portability",
+      "skill_name": "shs-gnu-bsd-portability",
+      "inputs": {
+        "script_path": "from_user_input",
+        "target_platforms": "from_user_input"
+      },
+      "outputs": {
+        "portability_fixes": "portability_fixes"
+      },
+      "condition": "language_decision == 'shell' && stack != 'pwsh'"
+    },
+    {
+      "id": "s17_shs_line_endings_exec_bit",
+      "skill_name": "shs-line-endings-exec-bit",
+      "inputs": {
+        "script_path": "from_user_input",
+        "repo_dir": "from_user_input"
+      },
+      "outputs": {
+        "repo_hygiene_report": "repo_hygiene_report"
+      },
+      "condition": "language_decision == 'shell'"
+    },
+    {
+      "id": "s18_shs_shellcheck_gate",
+      "skill_name": "shs-shellcheck-gate",
+      "inputs": {
+        "script_path": "from_user_input",
+        "shell_dialect": "s03_shs_bash_vs_posix_decision.shell_dialect"
+      },
+      "outputs": {
+        "shellcheck_report": "shellcheck_report"
+      },
+      "condition": "language_decision == 'shell' && stack != 'pwsh'"
+    },
+    {
+      "id": "s19_shs_shfmt_format",
+      "skill_name": "shs-shfmt-format",
+      "inputs": {
+        "script_path": "from_user_input",
+        "shell_dialect": "s03_shs_bash_vs_posix_decision.shell_dialect"
+      },
+      "outputs": {
+        "format_report": "format_report"
+      },
+      "condition": "language_decision == 'shell' && stack != 'pwsh'"
+    },
+    {
+      "id": "s20_shs_bats_harness_setup",
+      "skill_name": "shs-bats-harness-setup",
+      "inputs": {
+        "repo_dir": "from_user_input",
+        "script_path": "from_user_input"
+      },
+      "outputs": {
+        "bats_harness": "bats_harness"
+      },
+      "condition": "language_decision == 'shell' && stack != 'pwsh'"
+    },
+    {
+      "id": "s21_shs_bats_cli_tests",
+      "skill_name": "shs-bats-cli-tests",
+      "inputs": {
+        "script_path": "from_user_input",
+        "bats_harness": "s20_shs_bats_harness_setup.bats_harness",
+        "cli_interface": "s10_shs_getopts_arg_parsing.cli_interface",
+        "exit_code_table": "s11_shs_exit_status_contract.exit_code_table"
+      },
+      "outputs": {
+        "bats_tests": "bats_tests"
+      },
+      "condition": "language_decision == 'shell' && stack != 'pwsh'"
+    },
+    {
+      "id": "s22_shs_bats_command_stubs",
+      "skill_name": "shs-bats-command-stubs",
+      "inputs": {
+        "script_path": "from_user_input",
+        "bats_harness": "s20_shs_bats_harness_setup.bats_harness"
+      },
+      "outputs": {
+        "command_stubs": "command_stubs"
+      },
+      "condition": "language_decision == 'shell' && stack != 'pwsh'"
+    },
+    {
+      "id": "s23_shs_ci_shell_matrix",
+      "skill_name": "shs-ci-shell-matrix",
+      "inputs": {
+        "repo_dir": "from_user_input",
+        "target_platforms": "from_user_input",
+        "shellcheck_report": "s18_shs_shellcheck_gate.shellcheck_report",
+        "bats_tests": "s21_shs_bats_cli_tests.bats_tests"
+      },
+      "outputs": {
+        "ci_workflow": "ci_workflow"
+      },
+      "condition": "language_decision == 'shell' && stack != 'pwsh'"
+    },
+    {
+      "id": "s24_shs_pwsh_strict_param_skeleton",
+      "skill_name": "shs-pwsh-strict-param-skeleton",
+      "inputs": {
+        "script_path": "from_user_input",
+        "script_requirements": "s01_shs_script_requirements_intake.script_requirements"
+      },
+      "outputs": {
+        "pwsh_skeleton_report": "pwsh_skeleton_report"
+      },
+      "condition": "language_decision == 'shell' && stack == 'pwsh'"
+    },
+    {
+      "id": "s25_shs_pwsh_native_exit_codes",
+      "skill_name": "shs-pwsh-native-exit-codes",
+      "inputs": {
+        "script_path": "from_user_input"
+      },
+      "outputs": {
+        "native_call_fixes": "native_call_fixes"
+      },
+      "condition": "language_decision == 'shell' && stack == 'pwsh'"
+    },
+    {
+      "id": "s26_shs_pwsh_tempfile_finally_cleanup",
+      "skill_name": "shs-pwsh-tempfile-finally-cleanup",
+      "inputs": {
+        "script_path": "from_user_input"
+      },
+      "outputs": {
+        "pwsh_cleanup_contract": "pwsh_cleanup_contract"
+      },
+      "condition": "language_decision == 'shell' && stack == 'pwsh'"
+    },
+    {
+      "id": "s27_shs_pwsh_scriptanalyzer_gate",
+      "skill_name": "shs-pwsh-scriptanalyzer-gate",
+      "inputs": {
+        "script_path": "from_user_input"
+      },
+      "outputs": {
+        "analyzer_report": "analyzer_report"
+      },
+      "condition": "language_decision == 'shell' && stack == 'pwsh'"
+    },
+    {
+      "id": "s28_shs_pwsh_pester_tests",
+      "skill_name": "shs-pwsh-pester-tests",
+      "inputs": {
+        "script_path": "from_user_input",
+        "repo_dir": "from_user_input"
+      },
+      "outputs": {
+        "pester_tests": "pester_tests"
+      },
+      "condition": "language_decision == 'shell' && stack == 'pwsh'"
+    },
+    {
+      "id": "s29_shs_port_to_python",
+      "skill_name": "shs-port-to-python",
+      "inputs": {
+        "existing_script": "from_user_input_optional",
+        "script_requirements": "s01_shs_script_requirements_intake.script_requirements",
+        "decision_evidence": "s02_shs_real_language_decision.decision_evidence"
+      },
+      "outputs": {
+        "python_port": "python_port"
+      },
+      "condition": "language_decision == 'python'"
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_shs_script_requirements_intake",
+      "to_step": "s02_shs_real_language_decision",
+      "data_type": "shs-script-requirements-intake",
+      "field_mapping": {
+        "script_requirements": "script_requirements"
+      }
+    },
+    {
+      "from_step": "s01_shs_script_requirements_intake",
+      "to_step": "s03_shs_bash_vs_posix_decision",
+      "data_type": "shs-script-requirements-intake",
+      "field_mapping": {
+        "script_requirements": "script_requirements"
+      }
+    },
+    {
+      "from_step": "s01_shs_script_requirements_intake",
+      "to_step": "s04_shs_bash_strict_skeleton",
+      "data_type": "shs-script-requirements-intake",
+      "field_mapping": {
+        "script_requirements": "script_requirements"
+      }
+    },
+    {
+      "from_step": "s03_shs_bash_vs_posix_decision",
+      "to_step": "s04_shs_bash_strict_skeleton",
+      "data_type": "shs-bash-vs-posix-decision",
+      "field_mapping": {
+        "bash_min_version": "bash_min_version"
+      }
+    },
+    {
+      "from_step": "s01_shs_script_requirements_intake",
+      "to_step": "s05_shs_posix_sh_skeleton",
+      "data_type": "shs-script-requirements-intake",
+      "field_mapping": {
+        "script_requirements": "script_requirements"
+      }
+    },
+    {
+      "from_step": "s03_shs_bash_vs_posix_decision",
+      "to_step": "s06_shs_bash_errexit_pitfalls",
+      "data_type": "shs-bash-vs-posix-decision",
+      "field_mapping": {
+        "bash_min_version": "bash_min_version"
+      }
+    },
+    {
+      "from_step": "s03_shs_bash_vs_posix_decision",
+      "to_step": "s08_shs_quoting_audit",
+      "data_type": "shs-bash-vs-posix-decision",
+      "field_mapping": {
+        "shell_dialect": "shell_dialect"
+      }
+    },
+    {
+      "from_step": "s03_shs_bash_vs_posix_decision",
+      "to_step": "s09_shs_safe_filename_iteration",
+      "data_type": "shs-bash-vs-posix-decision",
+      "field_mapping": {
+        "shell_dialect": "shell_dialect"
+      }
+    },
+    {
+      "from_step": "s01_shs_script_requirements_intake",
+      "to_step": "s10_shs_getopts_arg_parsing",
+      "data_type": "shs-script-requirements-intake",
+      "field_mapping": {
+        "script_requirements": "script_requirements"
+      }
+    },
+    {
+      "from_step": "s03_shs_bash_vs_posix_decision",
+      "to_step": "s10_shs_getopts_arg_parsing",
+      "data_type": "shs-bash-vs-posix-decision",
+      "field_mapping": {
+        "shell_dialect": "shell_dialect"
+      }
+    },
+    {
+      "from_step": "s10_shs_getopts_arg_parsing",
+      "to_step": "s11_shs_exit_status_contract",
+      "data_type": "shs-getopts-arg-parsing",
+      "field_mapping": {
+        "cli_interface": "cli_interface"
+      }
+    },
+    {
+      "from_step": "s03_shs_bash_vs_posix_decision",
+      "to_step": "s12_shs_stderr_logging",
+      "data_type": "shs-bash-vs-posix-decision",
+      "field_mapping": {
+        "shell_dialect": "shell_dialect"
+      }
+    },
+    {
+      "from_step": "s03_shs_bash_vs_posix_decision",
+      "to_step": "s13_shs_mktemp_trap_cleanup",
+      "data_type": "shs-bash-vs-posix-decision",
+      "field_mapping": {
+        "shell_dialect": "shell_dialect"
+      }
+    },
+    {
+      "from_step": "s01_shs_script_requirements_intake",
+      "to_step": "s14_shs_idempotent_operations",
+      "data_type": "shs-script-requirements-intake",
+      "field_mapping": {
+        "script_requirements": "script_requirements"
+      }
+    },
+    {
+      "from_step": "s03_shs_bash_vs_posix_decision",
+      "to_step": "s18_shs_shellcheck_gate",
+      "data_type": "shs-bash-vs-posix-decision",
+      "field_mapping": {
+        "shell_dialect": "shell_dialect"
+      }
+    },
+    {
+      "from_step": "s03_shs_bash_vs_posix_decision",
+      "to_step": "s19_shs_shfmt_format",
+      "data_type": "shs-bash-vs-posix-decision",
+      "field_mapping": {
+        "shell_dialect": "shell_dialect"
+      }
+    },
+    {
+      "from_step": "s20_shs_bats_harness_setup",
+      "to_step": "s21_shs_bats_cli_tests",
+      "data_type": "shs-bats-harness-setup",
+      "field_mapping": {
+        "bats_harness": "bats_harness"
+      }
+    },
+    {
+      "from_step": "s10_shs_getopts_arg_parsing",
+      "to_step": "s21_shs_bats_cli_tests",
+      "data_type": "shs-getopts-arg-parsing",
+      "field_mapping": {
+        "cli_interface": "cli_interface"
+      }
+    },
+    {
+      "from_step": "s11_shs_exit_status_contract",
+      "to_step": "s21_shs_bats_cli_tests",
+      "data_type": "shs-exit-status-contract",
+      "field_mapping": {
+        "exit_code_table": "exit_code_table"
+      }
+    },
+    {
+      "from_step": "s20_shs_bats_harness_setup",
+      "to_step": "s22_shs_bats_command_stubs",
+      "data_type": "shs-bats-harness-setup",
+      "field_mapping": {
+        "bats_harness": "bats_harness"
+      }
+    },
+    {
+      "from_step": "s18_shs_shellcheck_gate",
+      "to_step": "s23_shs_ci_shell_matrix",
+      "data_type": "shs-shellcheck-gate",
+      "field_mapping": {
+        "shellcheck_report": "shellcheck_report"
+      }
+    },
+    {
+      "from_step": "s21_shs_bats_cli_tests",
+      "to_step": "s23_shs_ci_shell_matrix",
+      "data_type": "shs-bats-cli-tests",
+      "field_mapping": {
+        "bats_tests": "bats_tests"
+      }
+    },
+    {
+      "from_step": "s01_shs_script_requirements_intake",
+      "to_step": "s24_shs_pwsh_strict_param_skeleton",
+      "data_type": "shs-script-requirements-intake",
+      "field_mapping": {
+        "script_requirements": "script_requirements"
+      }
+    },
+    {
+      "from_step": "s01_shs_script_requirements_intake",
+      "to_step": "s29_shs_port_to_python",
+      "data_type": "shs-script-requirements-intake",
+      "field_mapping": {
+        "script_requirements": "script_requirements"
+      }
+    },
+    {
+      "from_step": "s02_shs_real_language_decision",
+      "to_step": "s29_shs_port_to_python",
+      "data_type": "shs-real-language-decision",
+      "field_mapping": {
+        "decision_evidence": "decision_evidence"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "script_goal",
+    "target_platforms",
+    "existing_script",
+    "stack",
+    "script_path",
+    "repo_dir"
+  ],
+  "terminal_outputs": [
+    "language_decision",
+    "skeleton_report",
+    "errexit_fixes",
+    "bashism_fixes",
+    "quoting_fixes",
+    "iteration_fixes",
+    "logging_contract",
+    "cleanup_contract",
+    "idempotency_report",
+    "lock_contract",
+    "portability_fixes",
+    "repo_hygiene_report",
+    "format_report",
+    "command_stubs",
+    "ci_workflow",
+    "pwsh_skeleton_report",
+    "native_call_fixes",
+    "pwsh_cleanup_contract",
+    "analyzer_report",
+    "pester_tests",
+    "python_port"
+  ],
+  "parallel_groups": [
+    [
+      "s01_shs_script_requirements_intake"
+    ],
+    [
+      "s02_shs_real_language_decision"
+    ],
+    [
+      "s03_shs_bash_vs_posix_decision"
+    ],
+    [
+      "s04_shs_bash_strict_skeleton",
+      "s05_shs_posix_sh_skeleton"
+    ],
+    [
+      "s06_shs_bash_errexit_pitfalls",
+      "s07_shs_posix_bashism_removal"
+    ],
+    [
+      "s08_shs_quoting_audit"
+    ],
+    [
+      "s09_shs_safe_filename_iteration"
+    ],
+    [
+      "s10_shs_getopts_arg_parsing"
+    ],
+    [
+      "s11_shs_exit_status_contract"
+    ],
+    [
+      "s12_shs_stderr_logging"
+    ],
+    [
+      "s13_shs_mktemp_trap_cleanup"
+    ],
+    [
+      "s14_shs_idempotent_operations"
+    ],
+    [
+      "s15_shs_single_instance_lock"
+    ],
+    [
+      "s16_shs_gnu_bsd_portability"
+    ],
+    [
+      "s17_shs_line_endings_exec_bit"
+    ],
+    [
+      "s18_shs_shellcheck_gate"
+    ],
+    [
+      "s19_shs_shfmt_format"
+    ],
+    [
+      "s20_shs_bats_harness_setup"
+    ],
+    [
+      "s21_shs_bats_cli_tests"
+    ],
+    [
+      "s22_shs_bats_command_stubs"
+    ],
+    [
+      "s23_shs_ci_shell_matrix"
+    ],
+    [
+      "s24_shs_pwsh_strict_param_skeleton",
+      "s29_shs_port_to_python"
+    ],
+    [
+      "s25_shs_pwsh_native_exit_codes"
+    ],
+    [
+      "s26_shs_pwsh_tempfile_finally_cleanup"
+    ],
+    [
+      "s27_shs_pwsh_scriptanalyzer_gate"
+    ],
+    [
+      "s28_shs_pwsh_pester_tests"
+    ]
+  ],
+  "estimated_cost": 29,
+  "critical_path": [
+    "s01_shs_script_requirements_intake",
+    "s02_shs_real_language_decision",
+    "s03_shs_bash_vs_posix_decision",
+    "s04_shs_bash_strict_skeleton",
+    "s06_shs_bash_errexit_pitfalls",
+    "s08_shs_quoting_audit",
+    "s09_shs_safe_filename_iteration",
+    "s10_shs_getopts_arg_parsing",
+    "s11_shs_exit_status_contract",
+    "s12_shs_stderr_logging",
+    "s13_shs_mktemp_trap_cleanup",
+    "s14_shs_idempotent_operations",
+    "s15_shs_single_instance_lock",
+    "s16_shs_gnu_bsd_portability",
+    "s17_shs_line_endings_exec_bit",
+    "s18_shs_shellcheck_gate",
+    "s19_shs_shfmt_format",
+    "s20_shs_bats_harness_setup",
+    "s21_shs_bats_cli_tests",
+    "s22_shs_bats_command_stubs",
+    "s23_shs_ci_shell_matrix"
+  ]
+}

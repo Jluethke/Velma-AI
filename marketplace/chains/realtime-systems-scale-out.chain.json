@@ -1,0 +1,158 @@
+{
+  "name": "realtime-systems-scale-out",
+  "description": "Scale an existing realtime server horizontally: Redis Pub/Sub fan-out, Redis Streams replay, presence, load balancer or proxy configuration and graceful drain on deploy.",
+  "steps": [
+    {
+      "id": "s01_rtw_redis_pubsub_fanout",
+      "skill_name": "rtw-redis-pubsub-fanout",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "delivery_contract": "from_user_input",
+        "redis_url": "from_user_input"
+      },
+      "outputs": {
+        "fanout_impl": "fanout_impl"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_rtw_redis_streams_replay",
+      "skill_name": "rtw-redis-streams-replay",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "delivery_contract": "from_user_input",
+        "fanout_impl": "s01_rtw_redis_pubsub_fanout.fanout_impl",
+        "redis_url": "from_user_input"
+      },
+      "outputs": {
+        "replay_impl": "replay_impl"
+      },
+      "condition": "delivery_contract.replay_required == true",
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_rtw_presence_redis",
+      "skill_name": "rtw-presence-redis",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "heartbeat_config": "from_user_input",
+        "redis_url": "from_user_input"
+      },
+      "outputs": {
+        "presence_impl": "presence_impl"
+      },
+      "condition": "needs_presence == true",
+      "parallel_group": 1
+    },
+    {
+      "id": "s04_rtw_nginx_ws_proxy",
+      "skill_name": "rtw-nginx-ws-proxy",
+      "inputs": {
+        "nginx_conf_path": "from_user_input",
+        "transport_decision": "from_user_input",
+        "heartbeat_config": "from_user_input"
+      },
+      "outputs": {
+        "nginx_proxy_config": "nginx_proxy_config"
+      },
+      "condition": "proxy == 'nginx'",
+      "parallel_group": 1
+    },
+    {
+      "id": "s05_rtw_haproxy_ws_proxy",
+      "skill_name": "rtw-haproxy-ws-proxy",
+      "inputs": {
+        "haproxy_cfg_path": "from_user_input",
+        "transport_decision": "from_user_input",
+        "heartbeat_config": "from_user_input"
+      },
+      "outputs": {
+        "haproxy_proxy_config": "haproxy_proxy_config"
+      },
+      "condition": "proxy == 'haproxy'",
+      "parallel_group": 1
+    },
+    {
+      "id": "s06_rtw_aws_alb_ws",
+      "skill_name": "rtw-aws-alb-ws",
+      "inputs": {
+        "alb_arn": "from_user_input",
+        "target_group_arn": "from_user_input",
+        "transport_decision": "from_user_input",
+        "heartbeat_config": "from_user_input"
+      },
+      "outputs": {
+        "alb_config": "alb_config"
+      },
+      "condition": "proxy == 'aws-alb'",
+      "parallel_group": 1
+    },
+    {
+      "id": "s07_rtw_graceful_drain",
+      "skill_name": "rtw-graceful-drain",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "close_code_map": "from_user_input",
+        "deploy_platform": "from_user_input"
+      },
+      "outputs": {
+        "drain_impl": "drain_impl"
+      },
+      "parallel_group": 1
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_rtw_redis_pubsub_fanout",
+      "to_step": "s02_rtw_redis_streams_replay",
+      "data_type": "rtw-redis-pubsub-fanout",
+      "field_mapping": {
+        "fanout_impl": "fanout_impl"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "repo_path",
+    "stack",
+    "delivery_contract",
+    "redis_url",
+    "heartbeat_config",
+    "nginx_conf_path",
+    "transport_decision",
+    "haproxy_cfg_path",
+    "alb_arn",
+    "target_group_arn",
+    "close_code_map",
+    "deploy_platform"
+  ],
+  "terminal_outputs": [
+    "replay_impl",
+    "presence_impl",
+    "nginx_proxy_config",
+    "haproxy_proxy_config",
+    "alb_config",
+    "drain_impl"
+  ],
+  "parallel_groups": [
+    [
+      "s01_rtw_redis_pubsub_fanout",
+      "s03_rtw_presence_redis",
+      "s04_rtw_nginx_ws_proxy",
+      "s05_rtw_haproxy_ws_proxy",
+      "s06_rtw_aws_alb_ws",
+      "s07_rtw_graceful_drain"
+    ],
+    [
+      "s02_rtw_redis_streams_replay"
+    ]
+  ],
+  "estimated_cost": 7,
+  "critical_path": [
+    "s01_rtw_redis_pubsub_fanout",
+    "s02_rtw_redis_streams_replay"
+  ]
+}

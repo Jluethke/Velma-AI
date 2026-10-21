@@ -1,0 +1,476 @@
+{
+  "name": "concurrency-bugs-deadlock",
+  "description": "Deadlock and hang diagnosis across stacks: stack dumps for Go, Java and Python, TSan lock-order reports for C/C++, wait-for graph, lock order specification, then gated regression test, fix and stress verification.",
+  "steps": [
+    {
+      "id": "s01_race_symptom_triage",
+      "skill_name": "race-symptom-triage",
+      "inputs": {
+        "symptom": "from_user_input",
+        "stack": "from_user_input",
+        "concurrency_model": "from_user_input",
+        "repo_path": "from_user_input",
+        "target_test": "from_user_input"
+      },
+      "outputs": {
+        "failure_class": "failure_class",
+        "suspect_paths": "suspect_paths"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_race_shared_state_inventory",
+      "skill_name": "race-shared-state-inventory",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "suspect_paths": "s01_race_symptom_triage.suspect_paths"
+      },
+      "outputs": {
+        "shared_state_inventory": "shared_state_inventory"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_race_stress_harness",
+      "skill_name": "race-stress-harness",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "target_test": "from_user_input",
+        "failure_class": "s01_race_symptom_triage.failure_class",
+        "stress_runs": "from_user_input"
+      },
+      "outputs": {
+        "stress_command": "stress_command",
+        "baseline_failure_rate": "baseline_failure_rate"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_race_go_goroutine_dump",
+      "skill_name": "race-go-goroutine-dump",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stress_command": "s03_race_stress_harness.stress_command",
+        "failure_class": "s01_race_symptom_triage.failure_class"
+      },
+      "outputs": {
+        "go_hang_report": "go_hang_report"
+      },
+      "condition": "stack == 'go'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s05_race_java_thread_dump",
+      "skill_name": "race-java-thread-dump",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stress_command": "s03_race_stress_harness.stress_command",
+        "failure_class": "s01_race_symptom_triage.failure_class"
+      },
+      "outputs": {
+        "java_thread_dump_report": "java_thread_dump_report"
+      },
+      "condition": "stack == 'java'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s06_race_py_hang_dump",
+      "skill_name": "race-py-hang-dump",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stress_command": "s03_race_stress_harness.stress_command",
+        "failure_class": "s01_race_symptom_triage.failure_class"
+      },
+      "outputs": {
+        "py_hang_report": "py_hang_report"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s07_race_cpp_tsan",
+      "skill_name": "race-cpp-tsan",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stress_command": "s03_race_stress_harness.stress_command"
+      },
+      "outputs": {
+        "cpp_tsan_reports": "cpp_tsan_reports"
+      },
+      "condition": "stack == 'cpp'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s08_race_findings_consolidate",
+      "skill_name": "race-findings-consolidate",
+      "inputs": {
+        "failure_class": "s01_race_symptom_triage.failure_class",
+        "shared_state_inventory": "s02_race_shared_state_inventory.shared_state_inventory",
+        "go_race_reports": "from_user_input_optional",
+        "go_hang_report": "s04_race_go_goroutine_dump.go_hang_report",
+        "cpp_tsan_reports": "s07_race_cpp_tsan.cpp_tsan_reports",
+        "cpp_helgrind_reports": "from_user_input_optional",
+        "rust_tsan_reports": "from_user_input_optional",
+        "loom_results": "from_user_input_optional",
+        "java_thread_dump_report": "s05_race_java_thread_dump.java_thread_dump_report",
+        "jcstress_results": "from_user_input_optional",
+        "py_thread_findings": "from_user_input_optional",
+        "py_hang_report": "s06_race_py_hang_dump.py_hang_report",
+        "py_asyncio_debug_findings": "from_user_input_optional",
+        "py_blocking_calls": "from_user_input_optional",
+        "py_cancellation_findings": "from_user_input_optional",
+        "node_rejection_findings": "from_user_input_optional",
+        "node_interleaving_findings": "from_user_input_optional",
+        "pg_anomaly_report": "from_user_input_optional",
+        "mysql_anomaly_report": "from_user_input_optional",
+        "idempotency_gaps": "from_user_input_optional"
+      },
+      "outputs": {
+        "race_sites": "race_sites",
+        "root_cause": "root_cause"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s09_race_lock_ordering",
+      "skill_name": "race-lock-ordering",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "race_sites": "s08_race_findings_consolidate.race_sites"
+      },
+      "outputs": {
+        "lock_order_spec": "lock_order_spec"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s10_race_sync_primitive_choice",
+      "skill_name": "race-sync-primitive-choice",
+      "inputs": {
+        "stack": "from_user_input",
+        "race_sites": "s08_race_findings_consolidate.race_sites",
+        "shared_state_inventory": "s02_race_shared_state_inventory.shared_state_inventory"
+      },
+      "outputs": {
+        "sync_design": "sync_design"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s11_race_deterministic_regression_test",
+      "skill_name": "race-deterministic-regression-test",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "race_sites": "s08_race_findings_consolidate.race_sites",
+        "root_cause": "s08_race_findings_consolidate.root_cause"
+      },
+      "outputs": {
+        "regression_test": "regression_test"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s12_race_apply_fix",
+      "skill_name": "race-apply-fix",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "sync_design": "s10_race_sync_primitive_choice.sync_design",
+        "lock_order_spec": "s09_race_lock_ordering.lock_order_spec",
+        "regression_test": "s11_race_deterministic_regression_test.regression_test"
+      },
+      "outputs": {
+        "fix_patch": "fix_patch"
+      },
+      "parallel_group": 6
+    },
+    {
+      "id": "s13_race_stress_verify",
+      "skill_name": "race-stress-verify",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stress_command": "s03_race_stress_harness.stress_command",
+        "baseline_failure_rate": "s03_race_stress_harness.baseline_failure_rate",
+        "stress_runs": "from_user_input",
+        "regression_test": "s11_race_deterministic_regression_test.regression_test",
+        "fix_patch": "s12_race_apply_fix.fix_patch"
+      },
+      "outputs": {
+        "verification_report": "verification_report"
+      },
+      "parallel_group": 7
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_race_symptom_triage",
+      "to_step": "s02_race_shared_state_inventory",
+      "data_type": "race-symptom-triage",
+      "field_mapping": {
+        "suspect_paths": "suspect_paths"
+      }
+    },
+    {
+      "from_step": "s01_race_symptom_triage",
+      "to_step": "s03_race_stress_harness",
+      "data_type": "race-symptom-triage",
+      "field_mapping": {
+        "failure_class": "failure_class"
+      }
+    },
+    {
+      "from_step": "s03_race_stress_harness",
+      "to_step": "s04_race_go_goroutine_dump",
+      "data_type": "race-stress-harness",
+      "field_mapping": {
+        "stress_command": "stress_command"
+      }
+    },
+    {
+      "from_step": "s01_race_symptom_triage",
+      "to_step": "s04_race_go_goroutine_dump",
+      "data_type": "race-symptom-triage",
+      "field_mapping": {
+        "failure_class": "failure_class"
+      }
+    },
+    {
+      "from_step": "s03_race_stress_harness",
+      "to_step": "s05_race_java_thread_dump",
+      "data_type": "race-stress-harness",
+      "field_mapping": {
+        "stress_command": "stress_command"
+      }
+    },
+    {
+      "from_step": "s01_race_symptom_triage",
+      "to_step": "s05_race_java_thread_dump",
+      "data_type": "race-symptom-triage",
+      "field_mapping": {
+        "failure_class": "failure_class"
+      }
+    },
+    {
+      "from_step": "s03_race_stress_harness",
+      "to_step": "s06_race_py_hang_dump",
+      "data_type": "race-stress-harness",
+      "field_mapping": {
+        "stress_command": "stress_command"
+      }
+    },
+    {
+      "from_step": "s01_race_symptom_triage",
+      "to_step": "s06_race_py_hang_dump",
+      "data_type": "race-symptom-triage",
+      "field_mapping": {
+        "failure_class": "failure_class"
+      }
+    },
+    {
+      "from_step": "s03_race_stress_harness",
+      "to_step": "s07_race_cpp_tsan",
+      "data_type": "race-stress-harness",
+      "field_mapping": {
+        "stress_command": "stress_command"
+      }
+    },
+    {
+      "from_step": "s01_race_symptom_triage",
+      "to_step": "s08_race_findings_consolidate",
+      "data_type": "race-symptom-triage",
+      "field_mapping": {
+        "failure_class": "failure_class"
+      }
+    },
+    {
+      "from_step": "s02_race_shared_state_inventory",
+      "to_step": "s08_race_findings_consolidate",
+      "data_type": "race-shared-state-inventory",
+      "field_mapping": {
+        "shared_state_inventory": "shared_state_inventory"
+      }
+    },
+    {
+      "from_step": "s04_race_go_goroutine_dump",
+      "to_step": "s08_race_findings_consolidate",
+      "data_type": "race-go-goroutine-dump",
+      "field_mapping": {
+        "go_hang_report": "go_hang_report"
+      }
+    },
+    {
+      "from_step": "s07_race_cpp_tsan",
+      "to_step": "s08_race_findings_consolidate",
+      "data_type": "race-cpp-tsan",
+      "field_mapping": {
+        "cpp_tsan_reports": "cpp_tsan_reports"
+      }
+    },
+    {
+      "from_step": "s05_race_java_thread_dump",
+      "to_step": "s08_race_findings_consolidate",
+      "data_type": "race-java-thread-dump",
+      "field_mapping": {
+        "java_thread_dump_report": "java_thread_dump_report"
+      }
+    },
+    {
+      "from_step": "s06_race_py_hang_dump",
+      "to_step": "s08_race_findings_consolidate",
+      "data_type": "race-py-hang-dump",
+      "field_mapping": {
+        "py_hang_report": "py_hang_report"
+      }
+    },
+    {
+      "from_step": "s08_race_findings_consolidate",
+      "to_step": "s09_race_lock_ordering",
+      "data_type": "race-findings-consolidate",
+      "field_mapping": {
+        "race_sites": "race_sites"
+      }
+    },
+    {
+      "from_step": "s08_race_findings_consolidate",
+      "to_step": "s10_race_sync_primitive_choice",
+      "data_type": "race-findings-consolidate",
+      "field_mapping": {
+        "race_sites": "race_sites"
+      }
+    },
+    {
+      "from_step": "s02_race_shared_state_inventory",
+      "to_step": "s10_race_sync_primitive_choice",
+      "data_type": "race-shared-state-inventory",
+      "field_mapping": {
+        "shared_state_inventory": "shared_state_inventory"
+      }
+    },
+    {
+      "from_step": "s08_race_findings_consolidate",
+      "to_step": "s11_race_deterministic_regression_test",
+      "data_type": "race-findings-consolidate",
+      "field_mapping": {
+        "race_sites": "race_sites",
+        "root_cause": "root_cause"
+      }
+    },
+    {
+      "from_step": "s10_race_sync_primitive_choice",
+      "to_step": "s12_race_apply_fix",
+      "data_type": "race-sync-primitive-choice",
+      "field_mapping": {
+        "sync_design": "sync_design"
+      }
+    },
+    {
+      "from_step": "s09_race_lock_ordering",
+      "to_step": "s12_race_apply_fix",
+      "data_type": "race-lock-ordering",
+      "field_mapping": {
+        "lock_order_spec": "lock_order_spec"
+      }
+    },
+    {
+      "from_step": "s11_race_deterministic_regression_test",
+      "to_step": "s12_race_apply_fix",
+      "data_type": "race-deterministic-regression-test",
+      "field_mapping": {
+        "regression_test": "regression_test"
+      }
+    },
+    {
+      "from_step": "s03_race_stress_harness",
+      "to_step": "s13_race_stress_verify",
+      "data_type": "race-stress-harness",
+      "field_mapping": {
+        "stress_command": "stress_command",
+        "baseline_failure_rate": "baseline_failure_rate"
+      }
+    },
+    {
+      "from_step": "s11_race_deterministic_regression_test",
+      "to_step": "s13_race_stress_verify",
+      "data_type": "race-deterministic-regression-test",
+      "field_mapping": {
+        "regression_test": "regression_test"
+      }
+    },
+    {
+      "from_step": "s12_race_apply_fix",
+      "to_step": "s13_race_stress_verify",
+      "data_type": "race-apply-fix",
+      "field_mapping": {
+        "fix_patch": "fix_patch"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "symptom",
+    "stack",
+    "concurrency_model",
+    "repo_path",
+    "target_test",
+    "stress_runs",
+    "go_race_reports",
+    "cpp_helgrind_reports",
+    "rust_tsan_reports",
+    "loom_results",
+    "jcstress_results",
+    "py_thread_findings",
+    "py_asyncio_debug_findings",
+    "py_blocking_calls",
+    "py_cancellation_findings",
+    "node_rejection_findings",
+    "node_interleaving_findings",
+    "pg_anomaly_report",
+    "mysql_anomaly_report",
+    "idempotency_gaps"
+  ],
+  "terminal_outputs": [
+    "verification_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_race_symptom_triage"
+    ],
+    [
+      "s02_race_shared_state_inventory",
+      "s03_race_stress_harness"
+    ],
+    [
+      "s04_race_go_goroutine_dump",
+      "s05_race_java_thread_dump",
+      "s06_race_py_hang_dump",
+      "s07_race_cpp_tsan"
+    ],
+    [
+      "s08_race_findings_consolidate"
+    ],
+    [
+      "s09_race_lock_ordering",
+      "s10_race_sync_primitive_choice",
+      "s11_race_deterministic_regression_test"
+    ],
+    [
+      "s12_race_apply_fix"
+    ],
+    [
+      "s13_race_stress_verify"
+    ]
+  ],
+  "estimated_cost": 13,
+  "critical_path": [
+    "s01_race_symptom_triage",
+    "s03_race_stress_harness",
+    "s07_race_cpp_tsan",
+    "s08_race_findings_consolidate",
+    "s11_race_deterministic_regression_test",
+    "s12_race_apply_fix",
+    "s13_race_stress_verify"
+  ]
+}

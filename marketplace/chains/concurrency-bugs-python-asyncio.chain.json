@@ -1,0 +1,428 @@
+{
+  "name": "concurrency-bugs-python-asyncio",
+  "description": "Python asyncio bugs: debug mode sweep, blocking calls on the event loop, cancellation and task lifetime, task dumps, then a gated regression test, fix and stress verification.",
+  "steps": [
+    {
+      "id": "s01_race_symptom_triage",
+      "skill_name": "race-symptom-triage",
+      "inputs": {
+        "symptom": "from_user_input",
+        "stack": "from_user_input",
+        "concurrency_model": "from_user_input",
+        "repo_path": "from_user_input",
+        "target_test": "from_user_input"
+      },
+      "outputs": {
+        "failure_class": "failure_class",
+        "suspect_paths": "suspect_paths"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_race_shared_state_inventory",
+      "skill_name": "race-shared-state-inventory",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "suspect_paths": "s01_race_symptom_triage.suspect_paths"
+      },
+      "outputs": {
+        "shared_state_inventory": "shared_state_inventory"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_race_stress_harness",
+      "skill_name": "race-stress-harness",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "target_test": "from_user_input",
+        "failure_class": "s01_race_symptom_triage.failure_class",
+        "stress_runs": "from_user_input"
+      },
+      "outputs": {
+        "stress_command": "stress_command",
+        "baseline_failure_rate": "baseline_failure_rate"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_race_py_asyncio_debug",
+      "skill_name": "race-py-asyncio-debug",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stress_command": "s03_race_stress_harness.stress_command"
+      },
+      "outputs": {
+        "py_asyncio_debug_findings": "py_asyncio_debug_findings"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s05_race_py_asyncio_blocking",
+      "skill_name": "race-py-asyncio-blocking",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "py_asyncio_debug_findings": "s04_race_py_asyncio_debug.py_asyncio_debug_findings"
+      },
+      "outputs": {
+        "py_blocking_calls": "py_blocking_calls"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s06_race_py_asyncio_cancellation",
+      "skill_name": "race-py-asyncio-cancellation",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "py_asyncio_debug_findings": "s04_race_py_asyncio_debug.py_asyncio_debug_findings"
+      },
+      "outputs": {
+        "py_cancellation_findings": "py_cancellation_findings"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s07_race_py_hang_dump",
+      "skill_name": "race-py-hang-dump",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stress_command": "s03_race_stress_harness.stress_command",
+        "failure_class": "s01_race_symptom_triage.failure_class"
+      },
+      "outputs": {
+        "py_hang_report": "py_hang_report"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s08_race_findings_consolidate",
+      "skill_name": "race-findings-consolidate",
+      "inputs": {
+        "failure_class": "s01_race_symptom_triage.failure_class",
+        "shared_state_inventory": "s02_race_shared_state_inventory.shared_state_inventory",
+        "go_race_reports": "from_user_input_optional",
+        "go_hang_report": "from_user_input_optional",
+        "cpp_tsan_reports": "from_user_input_optional",
+        "cpp_helgrind_reports": "from_user_input_optional",
+        "rust_tsan_reports": "from_user_input_optional",
+        "loom_results": "from_user_input_optional",
+        "java_thread_dump_report": "from_user_input_optional",
+        "jcstress_results": "from_user_input_optional",
+        "py_thread_findings": "from_user_input_optional",
+        "py_hang_report": "s07_race_py_hang_dump.py_hang_report",
+        "py_asyncio_debug_findings": "s04_race_py_asyncio_debug.py_asyncio_debug_findings",
+        "py_blocking_calls": "s05_race_py_asyncio_blocking.py_blocking_calls",
+        "py_cancellation_findings": "s06_race_py_asyncio_cancellation.py_cancellation_findings",
+        "node_rejection_findings": "from_user_input_optional",
+        "node_interleaving_findings": "from_user_input_optional",
+        "pg_anomaly_report": "from_user_input_optional",
+        "mysql_anomaly_report": "from_user_input_optional",
+        "idempotency_gaps": "from_user_input_optional"
+      },
+      "outputs": {
+        "race_sites": "race_sites",
+        "root_cause": "root_cause"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s09_race_sync_primitive_choice",
+      "skill_name": "race-sync-primitive-choice",
+      "inputs": {
+        "stack": "from_user_input",
+        "race_sites": "s08_race_findings_consolidate.race_sites",
+        "shared_state_inventory": "s02_race_shared_state_inventory.shared_state_inventory"
+      },
+      "outputs": {
+        "sync_design": "sync_design"
+      },
+      "parallel_group": 6
+    },
+    {
+      "id": "s10_race_deterministic_regression_test",
+      "skill_name": "race-deterministic-regression-test",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "race_sites": "s08_race_findings_consolidate.race_sites",
+        "root_cause": "s08_race_findings_consolidate.root_cause"
+      },
+      "outputs": {
+        "regression_test": "regression_test"
+      },
+      "parallel_group": 6
+    },
+    {
+      "id": "s11_race_apply_fix",
+      "skill_name": "race-apply-fix",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "sync_design": "s09_race_sync_primitive_choice.sync_design",
+        "lock_order_spec": "from_user_input_optional",
+        "regression_test": "s10_race_deterministic_regression_test.regression_test"
+      },
+      "outputs": {
+        "fix_patch": "fix_patch"
+      },
+      "parallel_group": 7
+    },
+    {
+      "id": "s12_race_stress_verify",
+      "skill_name": "race-stress-verify",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stress_command": "s03_race_stress_harness.stress_command",
+        "baseline_failure_rate": "s03_race_stress_harness.baseline_failure_rate",
+        "stress_runs": "from_user_input",
+        "regression_test": "s10_race_deterministic_regression_test.regression_test",
+        "fix_patch": "s11_race_apply_fix.fix_patch"
+      },
+      "outputs": {
+        "verification_report": "verification_report"
+      },
+      "parallel_group": 8
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_race_symptom_triage",
+      "to_step": "s02_race_shared_state_inventory",
+      "data_type": "race-symptom-triage",
+      "field_mapping": {
+        "suspect_paths": "suspect_paths"
+      }
+    },
+    {
+      "from_step": "s01_race_symptom_triage",
+      "to_step": "s03_race_stress_harness",
+      "data_type": "race-symptom-triage",
+      "field_mapping": {
+        "failure_class": "failure_class"
+      }
+    },
+    {
+      "from_step": "s03_race_stress_harness",
+      "to_step": "s04_race_py_asyncio_debug",
+      "data_type": "race-stress-harness",
+      "field_mapping": {
+        "stress_command": "stress_command"
+      }
+    },
+    {
+      "from_step": "s04_race_py_asyncio_debug",
+      "to_step": "s05_race_py_asyncio_blocking",
+      "data_type": "race-py-asyncio-debug",
+      "field_mapping": {
+        "py_asyncio_debug_findings": "py_asyncio_debug_findings"
+      }
+    },
+    {
+      "from_step": "s04_race_py_asyncio_debug",
+      "to_step": "s06_race_py_asyncio_cancellation",
+      "data_type": "race-py-asyncio-debug",
+      "field_mapping": {
+        "py_asyncio_debug_findings": "py_asyncio_debug_findings"
+      }
+    },
+    {
+      "from_step": "s03_race_stress_harness",
+      "to_step": "s07_race_py_hang_dump",
+      "data_type": "race-stress-harness",
+      "field_mapping": {
+        "stress_command": "stress_command"
+      }
+    },
+    {
+      "from_step": "s01_race_symptom_triage",
+      "to_step": "s07_race_py_hang_dump",
+      "data_type": "race-symptom-triage",
+      "field_mapping": {
+        "failure_class": "failure_class"
+      }
+    },
+    {
+      "from_step": "s01_race_symptom_triage",
+      "to_step": "s08_race_findings_consolidate",
+      "data_type": "race-symptom-triage",
+      "field_mapping": {
+        "failure_class": "failure_class"
+      }
+    },
+    {
+      "from_step": "s02_race_shared_state_inventory",
+      "to_step": "s08_race_findings_consolidate",
+      "data_type": "race-shared-state-inventory",
+      "field_mapping": {
+        "shared_state_inventory": "shared_state_inventory"
+      }
+    },
+    {
+      "from_step": "s07_race_py_hang_dump",
+      "to_step": "s08_race_findings_consolidate",
+      "data_type": "race-py-hang-dump",
+      "field_mapping": {
+        "py_hang_report": "py_hang_report"
+      }
+    },
+    {
+      "from_step": "s04_race_py_asyncio_debug",
+      "to_step": "s08_race_findings_consolidate",
+      "data_type": "race-py-asyncio-debug",
+      "field_mapping": {
+        "py_asyncio_debug_findings": "py_asyncio_debug_findings"
+      }
+    },
+    {
+      "from_step": "s05_race_py_asyncio_blocking",
+      "to_step": "s08_race_findings_consolidate",
+      "data_type": "race-py-asyncio-blocking",
+      "field_mapping": {
+        "py_blocking_calls": "py_blocking_calls"
+      }
+    },
+    {
+      "from_step": "s06_race_py_asyncio_cancellation",
+      "to_step": "s08_race_findings_consolidate",
+      "data_type": "race-py-asyncio-cancellation",
+      "field_mapping": {
+        "py_cancellation_findings": "py_cancellation_findings"
+      }
+    },
+    {
+      "from_step": "s08_race_findings_consolidate",
+      "to_step": "s09_race_sync_primitive_choice",
+      "data_type": "race-findings-consolidate",
+      "field_mapping": {
+        "race_sites": "race_sites"
+      }
+    },
+    {
+      "from_step": "s02_race_shared_state_inventory",
+      "to_step": "s09_race_sync_primitive_choice",
+      "data_type": "race-shared-state-inventory",
+      "field_mapping": {
+        "shared_state_inventory": "shared_state_inventory"
+      }
+    },
+    {
+      "from_step": "s08_race_findings_consolidate",
+      "to_step": "s10_race_deterministic_regression_test",
+      "data_type": "race-findings-consolidate",
+      "field_mapping": {
+        "race_sites": "race_sites",
+        "root_cause": "root_cause"
+      }
+    },
+    {
+      "from_step": "s09_race_sync_primitive_choice",
+      "to_step": "s11_race_apply_fix",
+      "data_type": "race-sync-primitive-choice",
+      "field_mapping": {
+        "sync_design": "sync_design"
+      }
+    },
+    {
+      "from_step": "s10_race_deterministic_regression_test",
+      "to_step": "s11_race_apply_fix",
+      "data_type": "race-deterministic-regression-test",
+      "field_mapping": {
+        "regression_test": "regression_test"
+      }
+    },
+    {
+      "from_step": "s03_race_stress_harness",
+      "to_step": "s12_race_stress_verify",
+      "data_type": "race-stress-harness",
+      "field_mapping": {
+        "stress_command": "stress_command",
+        "baseline_failure_rate": "baseline_failure_rate"
+      }
+    },
+    {
+      "from_step": "s10_race_deterministic_regression_test",
+      "to_step": "s12_race_stress_verify",
+      "data_type": "race-deterministic-regression-test",
+      "field_mapping": {
+        "regression_test": "regression_test"
+      }
+    },
+    {
+      "from_step": "s11_race_apply_fix",
+      "to_step": "s12_race_stress_verify",
+      "data_type": "race-apply-fix",
+      "field_mapping": {
+        "fix_patch": "fix_patch"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "symptom",
+    "stack",
+    "concurrency_model",
+    "repo_path",
+    "target_test",
+    "stress_runs",
+    "go_race_reports",
+    "go_hang_report",
+    "cpp_tsan_reports",
+    "cpp_helgrind_reports",
+    "rust_tsan_reports",
+    "loom_results",
+    "java_thread_dump_report",
+    "jcstress_results",
+    "py_thread_findings",
+    "node_rejection_findings",
+    "node_interleaving_findings",
+    "pg_anomaly_report",
+    "mysql_anomaly_report",
+    "idempotency_gaps",
+    "lock_order_spec"
+  ],
+  "terminal_outputs": [
+    "verification_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_race_symptom_triage"
+    ],
+    [
+      "s02_race_shared_state_inventory",
+      "s03_race_stress_harness"
+    ],
+    [
+      "s04_race_py_asyncio_debug",
+      "s07_race_py_hang_dump"
+    ],
+    [
+      "s05_race_py_asyncio_blocking",
+      "s06_race_py_asyncio_cancellation"
+    ],
+    [
+      "s08_race_findings_consolidate"
+    ],
+    [
+      "s09_race_sync_primitive_choice",
+      "s10_race_deterministic_regression_test"
+    ],
+    [
+      "s11_race_apply_fix"
+    ],
+    [
+      "s12_race_stress_verify"
+    ]
+  ],
+  "estimated_cost": 12,
+  "critical_path": [
+    "s01_race_symptom_triage",
+    "s03_race_stress_harness",
+    "s04_race_py_asyncio_debug",
+    "s06_race_py_asyncio_cancellation",
+    "s08_race_findings_consolidate",
+    "s10_race_deterministic_regression_test",
+    "s11_race_apply_fix",
+    "s12_race_stress_verify"
+  ]
+}

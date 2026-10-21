@@ -1,0 +1,351 @@
+{
+  "name": "kubernetes-delivery-gitops",
+  "description": "Package verified manifests with Helm or Kustomize, validate them, deliver them through Argo CD or Flux, and watch the rollout.",
+  "steps": [
+    {
+      "id": "s01_k8s_helm_vs_kustomize_decision",
+      "skill_name": "k8s-helm-vs-kustomize-decision",
+      "inputs": {
+        "workload_profile": "from_user_input",
+        "environments": "from_user_input",
+        "repo_dir": "from_user_input"
+      },
+      "outputs": {
+        "packaging_choice": "packaging_choice",
+        "manifest_layout": "manifest_layout"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_k8s_helm_chart_build",
+      "skill_name": "k8s-helm-chart-build",
+      "inputs": {
+        "packaging_choice": "s01_k8s_helm_vs_kustomize_decision.packaging_choice",
+        "manifest_layout": "s01_k8s_helm_vs_kustomize_decision.manifest_layout",
+        "rollout_deployment": "from_user_input",
+        "pdb_manifest": "from_user_input",
+        "service_manifest": "from_user_input",
+        "ingress_manifest": "from_user_input",
+        "config_manifests": "from_user_input",
+        "hpa_manifest": "from_user_input_optional",
+        "network_policies": "from_user_input",
+        "namespace_manifest": "from_user_input",
+        "environments": "from_user_input"
+      },
+      "outputs": {
+        "chart_dir": "chart_dir",
+        "helm_rendered_manifests": "helm_rendered_manifests"
+      },
+      "condition": "s01_k8s_helm_vs_kustomize_decision.packaging_choice == 'helm'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_k8s_kustomize_overlays",
+      "skill_name": "k8s-kustomize-overlays",
+      "inputs": {
+        "packaging_choice": "s01_k8s_helm_vs_kustomize_decision.packaging_choice",
+        "manifest_layout": "s01_k8s_helm_vs_kustomize_decision.manifest_layout",
+        "rollout_deployment": "from_user_input",
+        "pdb_manifest": "from_user_input",
+        "service_manifest": "from_user_input",
+        "ingress_manifest": "from_user_input",
+        "config_manifests": "from_user_input",
+        "hpa_manifest": "from_user_input_optional",
+        "network_policies": "from_user_input",
+        "namespace_manifest": "from_user_input",
+        "environments": "from_user_input"
+      },
+      "outputs": {
+        "kustomize_dir": "kustomize_dir",
+        "kustomize_rendered_manifests": "kustomize_rendered_manifests"
+      },
+      "condition": "s01_k8s_helm_vs_kustomize_decision.packaging_choice == 'kustomize'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_k8s_kubeconform_validate",
+      "skill_name": "k8s-kubeconform-validate",
+      "inputs": {
+        "helm_rendered_manifests": "s02_k8s_helm_chart_build.helm_rendered_manifests",
+        "kustomize_rendered_manifests": "s03_k8s_kustomize_overlays.kustomize_rendered_manifests",
+        "kubernetes_version": "from_user_input"
+      },
+      "outputs": {
+        "schema_report": "schema_report"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s05_k8s_kube_linter_check",
+      "skill_name": "k8s-kube-linter-check",
+      "inputs": {
+        "helm_rendered_manifests": "s02_k8s_helm_chart_build.helm_rendered_manifests",
+        "kustomize_rendered_manifests": "s03_k8s_kustomize_overlays.kustomize_rendered_manifests",
+        "schema_report": "s04_k8s_kubeconform_validate.schema_report",
+        "repo_dir": "from_user_input"
+      },
+      "outputs": {
+        "lint_report": "lint_report"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s06_k8s_argocd_application",
+      "skill_name": "k8s-argocd-application",
+      "inputs": {
+        "chart_dir": "s02_k8s_helm_chart_build.chart_dir",
+        "kustomize_dir": "s03_k8s_kustomize_overlays.kustomize_dir",
+        "gitops_repo_url": "from_user_input",
+        "namespace": "from_user_input",
+        "app_name": "from_user_input",
+        "lint_report": "s05_k8s_kube_linter_check.lint_report"
+      },
+      "outputs": {
+        "argocd_application": "argocd_application"
+      },
+      "condition": "gitops_tool == 'argocd'",
+      "parallel_group": 5
+    },
+    {
+      "id": "s07_k8s_flux_kustomization",
+      "skill_name": "k8s-flux-kustomization",
+      "inputs": {
+        "chart_dir": "s02_k8s_helm_chart_build.chart_dir",
+        "kustomize_dir": "s03_k8s_kustomize_overlays.kustomize_dir",
+        "gitops_repo_url": "from_user_input",
+        "namespace": "from_user_input",
+        "app_name": "from_user_input",
+        "lint_report": "s05_k8s_kube_linter_check.lint_report"
+      },
+      "outputs": {
+        "flux_resources": "flux_resources"
+      },
+      "condition": "gitops_tool == 'flux'",
+      "parallel_group": 5
+    },
+    {
+      "id": "s08_k8s_rollout_status_watch",
+      "skill_name": "k8s-rollout-status-watch",
+      "inputs": {
+        "cluster_context": "from_user_input",
+        "namespace": "from_user_input",
+        "app_name": "from_user_input",
+        "lint_report": "s05_k8s_kube_linter_check.lint_report",
+        "helm_rendered_manifests": "s02_k8s_helm_chart_build.helm_rendered_manifests",
+        "kustomize_rendered_manifests": "s03_k8s_kustomize_overlays.kustomize_rendered_manifests",
+        "argocd_application": "s06_k8s_argocd_application.argocd_application",
+        "flux_resources": "s07_k8s_flux_kustomization.flux_resources",
+        "gitops_tool": "from_user_input",
+        "change_cause": "from_user_input_optional"
+      },
+      "outputs": {
+        "rollout_result": "rollout_result",
+        "deployed_revision": "deployed_revision"
+      },
+      "parallel_group": 6
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_k8s_helm_vs_kustomize_decision",
+      "to_step": "s02_k8s_helm_chart_build",
+      "data_type": "k8s-helm-vs-kustomize-decision",
+      "field_mapping": {
+        "packaging_choice": "packaging_choice",
+        "manifest_layout": "manifest_layout"
+      }
+    },
+    {
+      "from_step": "s01_k8s_helm_vs_kustomize_decision",
+      "to_step": "s03_k8s_kustomize_overlays",
+      "data_type": "k8s-helm-vs-kustomize-decision",
+      "field_mapping": {
+        "packaging_choice": "packaging_choice",
+        "manifest_layout": "manifest_layout"
+      }
+    },
+    {
+      "from_step": "s02_k8s_helm_chart_build",
+      "to_step": "s04_k8s_kubeconform_validate",
+      "data_type": "k8s-helm-chart-build",
+      "field_mapping": {
+        "helm_rendered_manifests": "helm_rendered_manifests"
+      }
+    },
+    {
+      "from_step": "s03_k8s_kustomize_overlays",
+      "to_step": "s04_k8s_kubeconform_validate",
+      "data_type": "k8s-kustomize-overlays",
+      "field_mapping": {
+        "kustomize_rendered_manifests": "kustomize_rendered_manifests"
+      }
+    },
+    {
+      "from_step": "s02_k8s_helm_chart_build",
+      "to_step": "s05_k8s_kube_linter_check",
+      "data_type": "k8s-helm-chart-build",
+      "field_mapping": {
+        "helm_rendered_manifests": "helm_rendered_manifests"
+      }
+    },
+    {
+      "from_step": "s03_k8s_kustomize_overlays",
+      "to_step": "s05_k8s_kube_linter_check",
+      "data_type": "k8s-kustomize-overlays",
+      "field_mapping": {
+        "kustomize_rendered_manifests": "kustomize_rendered_manifests"
+      }
+    },
+    {
+      "from_step": "s04_k8s_kubeconform_validate",
+      "to_step": "s05_k8s_kube_linter_check",
+      "data_type": "k8s-kubeconform-validate",
+      "field_mapping": {
+        "schema_report": "schema_report"
+      }
+    },
+    {
+      "from_step": "s02_k8s_helm_chart_build",
+      "to_step": "s06_k8s_argocd_application",
+      "data_type": "k8s-helm-chart-build",
+      "field_mapping": {
+        "chart_dir": "chart_dir"
+      }
+    },
+    {
+      "from_step": "s03_k8s_kustomize_overlays",
+      "to_step": "s06_k8s_argocd_application",
+      "data_type": "k8s-kustomize-overlays",
+      "field_mapping": {
+        "kustomize_dir": "kustomize_dir"
+      }
+    },
+    {
+      "from_step": "s05_k8s_kube_linter_check",
+      "to_step": "s06_k8s_argocd_application",
+      "data_type": "k8s-kube-linter-check",
+      "field_mapping": {
+        "lint_report": "lint_report"
+      }
+    },
+    {
+      "from_step": "s02_k8s_helm_chart_build",
+      "to_step": "s07_k8s_flux_kustomization",
+      "data_type": "k8s-helm-chart-build",
+      "field_mapping": {
+        "chart_dir": "chart_dir"
+      }
+    },
+    {
+      "from_step": "s03_k8s_kustomize_overlays",
+      "to_step": "s07_k8s_flux_kustomization",
+      "data_type": "k8s-kustomize-overlays",
+      "field_mapping": {
+        "kustomize_dir": "kustomize_dir"
+      }
+    },
+    {
+      "from_step": "s05_k8s_kube_linter_check",
+      "to_step": "s07_k8s_flux_kustomization",
+      "data_type": "k8s-kube-linter-check",
+      "field_mapping": {
+        "lint_report": "lint_report"
+      }
+    },
+    {
+      "from_step": "s05_k8s_kube_linter_check",
+      "to_step": "s08_k8s_rollout_status_watch",
+      "data_type": "k8s-kube-linter-check",
+      "field_mapping": {
+        "lint_report": "lint_report"
+      }
+    },
+    {
+      "from_step": "s02_k8s_helm_chart_build",
+      "to_step": "s08_k8s_rollout_status_watch",
+      "data_type": "k8s-helm-chart-build",
+      "field_mapping": {
+        "helm_rendered_manifests": "helm_rendered_manifests"
+      }
+    },
+    {
+      "from_step": "s03_k8s_kustomize_overlays",
+      "to_step": "s08_k8s_rollout_status_watch",
+      "data_type": "k8s-kustomize-overlays",
+      "field_mapping": {
+        "kustomize_rendered_manifests": "kustomize_rendered_manifests"
+      }
+    },
+    {
+      "from_step": "s06_k8s_argocd_application",
+      "to_step": "s08_k8s_rollout_status_watch",
+      "data_type": "k8s-argocd-application",
+      "field_mapping": {
+        "argocd_application": "argocd_application"
+      }
+    },
+    {
+      "from_step": "s07_k8s_flux_kustomization",
+      "to_step": "s08_k8s_rollout_status_watch",
+      "data_type": "k8s-flux-kustomization",
+      "field_mapping": {
+        "flux_resources": "flux_resources"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "workload_profile",
+    "environments",
+    "repo_dir",
+    "rollout_deployment",
+    "pdb_manifest",
+    "service_manifest",
+    "ingress_manifest",
+    "config_manifests",
+    "hpa_manifest",
+    "network_policies",
+    "namespace_manifest",
+    "kubernetes_version",
+    "gitops_repo_url",
+    "namespace",
+    "app_name",
+    "cluster_context",
+    "gitops_tool",
+    "change_cause"
+  ],
+  "terminal_outputs": [
+    "rollout_result",
+    "deployed_revision"
+  ],
+  "parallel_groups": [
+    [
+      "s01_k8s_helm_vs_kustomize_decision"
+    ],
+    [
+      "s02_k8s_helm_chart_build",
+      "s03_k8s_kustomize_overlays"
+    ],
+    [
+      "s04_k8s_kubeconform_validate"
+    ],
+    [
+      "s05_k8s_kube_linter_check"
+    ],
+    [
+      "s06_k8s_argocd_application",
+      "s07_k8s_flux_kustomization"
+    ],
+    [
+      "s08_k8s_rollout_status_watch"
+    ]
+  ],
+  "estimated_cost": 8,
+  "critical_path": [
+    "s01_k8s_helm_vs_kustomize_decision",
+    "s03_k8s_kustomize_overlays",
+    "s04_k8s_kubeconform_validate",
+    "s05_k8s_kube_linter_check",
+    "s07_k8s_flux_kustomization",
+    "s08_k8s_rollout_status_watch"
+  ]
+}

@@ -1,0 +1,196 @@
+{
+  "name": "input-validation-security-browser-output",
+  "description": "Close browser-facing input handling gaps: context-aware output encoding, a nonce-based strict CSP, header, redirect and Host injection, safe file uploads, then payload tests and a ZAP baseline scan of the running app.",
+  "steps": [
+    {
+      "id": "s01_ival_entry_point_inventory",
+      "skill_name": "ival-entry-point-inventory",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "entry_point_inventory": "entry_point_inventory"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_ival_sink_class_map",
+      "skill_name": "ival-sink-class-map",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "entry_point_inventory": "s01_ival_entry_point_inventory.entry_point_inventory"
+      },
+      "outputs": {
+        "sink_map": "sink_map"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_ival_xss_output_encoding",
+      "skill_name": "ival-xss-output-encoding",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "sink_map": "s02_ival_sink_class_map.sink_map"
+      },
+      "outputs": {
+        "xss_fixes": "xss_fixes"
+      },
+      "condition": "'xss' in sink_map.classes",
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_ival_csp_header_rollout",
+      "skill_name": "ival-csp-header-rollout",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "app_base_url": "from_user_input",
+        "csp_report_endpoint": "from_user_input_optional"
+      },
+      "outputs": {
+        "csp_policy": "csp_policy"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s05_ival_header_injection_fix",
+      "skill_name": "ival-header-injection-fix",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "sink_map": "s02_ival_sink_class_map.sink_map"
+      },
+      "outputs": {
+        "header_fixes": "header_fixes"
+      },
+      "condition": "'header' in sink_map.classes",
+      "parallel_group": 3
+    },
+    {
+      "id": "s06_ival_file_upload_validation",
+      "skill_name": "ival-file-upload-validation",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "sink_map": "s02_ival_sink_class_map.sink_map",
+        "max_upload_bytes": "from_user_input",
+        "allowed_file_types": "from_user_input"
+      },
+      "outputs": {
+        "upload_fixes": "upload_fixes"
+      },
+      "condition": "'upload' in sink_map.classes",
+      "parallel_group": 3
+    },
+    {
+      "id": "s07_ival_negative_test_suite",
+      "skill_name": "ival-negative-test-suite",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "sink_map": "s02_ival_sink_class_map.sink_map"
+      },
+      "outputs": {
+        "negative_tests": "negative_tests"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s08_ival_zap_baseline_scan",
+      "skill_name": "ival-zap-baseline-scan",
+      "inputs": {
+        "app_base_url": "from_user_input",
+        "repo_path": "from_user_input",
+        "openapi_url": "from_user_input_optional"
+      },
+      "outputs": {
+        "zap_findings": "zap_findings"
+      },
+      "parallel_group": 1
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_ival_entry_point_inventory",
+      "to_step": "s02_ival_sink_class_map",
+      "data_type": "ival-entry-point-inventory",
+      "field_mapping": {
+        "entry_point_inventory": "entry_point_inventory"
+      }
+    },
+    {
+      "from_step": "s02_ival_sink_class_map",
+      "to_step": "s03_ival_xss_output_encoding",
+      "data_type": "ival-sink-class-map",
+      "field_mapping": {
+        "sink_map": "sink_map"
+      }
+    },
+    {
+      "from_step": "s02_ival_sink_class_map",
+      "to_step": "s05_ival_header_injection_fix",
+      "data_type": "ival-sink-class-map",
+      "field_mapping": {
+        "sink_map": "sink_map"
+      }
+    },
+    {
+      "from_step": "s02_ival_sink_class_map",
+      "to_step": "s06_ival_file_upload_validation",
+      "data_type": "ival-sink-class-map",
+      "field_mapping": {
+        "sink_map": "sink_map"
+      }
+    },
+    {
+      "from_step": "s02_ival_sink_class_map",
+      "to_step": "s07_ival_negative_test_suite",
+      "data_type": "ival-sink-class-map",
+      "field_mapping": {
+        "sink_map": "sink_map"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "repo_path",
+    "stack",
+    "app_base_url",
+    "csp_report_endpoint",
+    "max_upload_bytes",
+    "allowed_file_types",
+    "openapi_url"
+  ],
+  "terminal_outputs": [
+    "xss_fixes",
+    "csp_policy",
+    "header_fixes",
+    "upload_fixes",
+    "negative_tests",
+    "zap_findings"
+  ],
+  "parallel_groups": [
+    [
+      "s01_ival_entry_point_inventory",
+      "s04_ival_csp_header_rollout",
+      "s08_ival_zap_baseline_scan"
+    ],
+    [
+      "s02_ival_sink_class_map"
+    ],
+    [
+      "s03_ival_xss_output_encoding",
+      "s05_ival_header_injection_fix",
+      "s06_ival_file_upload_validation",
+      "s07_ival_negative_test_suite"
+    ]
+  ],
+  "estimated_cost": 8,
+  "critical_path": [
+    "s01_ival_entry_point_inventory",
+    "s02_ival_sink_class_map",
+    "s07_ival_negative_test_suite"
+  ]
+}

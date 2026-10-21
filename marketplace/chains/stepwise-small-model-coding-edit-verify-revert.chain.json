@@ -1,0 +1,418 @@
+{
+  "name": "stepwise-small-model-coding-edit-verify-revert",
+  "description": "The inner loop for an already locked plan: apply one edit, run the verify card with honest exit codes, read the error per stack, keep or revert to the git-index checkpoint, guard test integrity, decide next, retry or stop, and report with evidence.",
+  "steps": [
+    {
+      "id": "s01_stp_apply_one_edit",
+      "skill_name": "stp-apply-one-edit",
+      "inputs": {
+        "locked_plan": "from_user_input",
+        "stop_decision": "s10_stp_stop_or_continue.stop_decision",
+        "start_commit": "from_user_input",
+        "scratch_log": "from_user_input",
+        "repo_path": "from_user_input"
+      },
+      "outputs": {
+        "applied_edit": "applied_edit"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_stp_run_verify_capture",
+      "skill_name": "stp-run-verify-capture",
+      "inputs": {
+        "applied_edit": "s01_stp_apply_one_edit.applied_edit",
+        "verify_card": "from_user_input",
+        "scratch_log": "from_user_input"
+      },
+      "outputs": {
+        "verify_result": "verify_result"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_stp_py_read_traceback",
+      "skill_name": "stp-py-read-traceback",
+      "inputs": {
+        "verify_result": "s02_stp_run_verify_capture.verify_result",
+        "applied_edit": "s01_stp_apply_one_edit.applied_edit"
+      },
+      "outputs": {
+        "py_error_diagnosis": "py_error_diagnosis"
+      },
+      "condition": "stack == 'python' && verify_result.all_passed == false",
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_stp_node_read_errors",
+      "skill_name": "stp-node-read-errors",
+      "inputs": {
+        "verify_result": "s02_stp_run_verify_capture.verify_result",
+        "applied_edit": "s01_stp_apply_one_edit.applied_edit"
+      },
+      "outputs": {
+        "node_error_diagnosis": "node_error_diagnosis"
+      },
+      "condition": "stack == 'node' && verify_result.all_passed == false",
+      "parallel_group": 3
+    },
+    {
+      "id": "s05_stp_go_read_errors",
+      "skill_name": "stp-go-read-errors",
+      "inputs": {
+        "verify_result": "s02_stp_run_verify_capture.verify_result",
+        "applied_edit": "s01_stp_apply_one_edit.applied_edit"
+      },
+      "outputs": {
+        "go_error_diagnosis": "go_error_diagnosis"
+      },
+      "condition": "stack == 'go' && verify_result.all_passed == false",
+      "parallel_group": 3
+    },
+    {
+      "id": "s06_stp_rust_read_errors",
+      "skill_name": "stp-rust-read-errors",
+      "inputs": {
+        "verify_result": "s02_stp_run_verify_capture.verify_result",
+        "applied_edit": "s01_stp_apply_one_edit.applied_edit"
+      },
+      "outputs": {
+        "rust_error_diagnosis": "rust_error_diagnosis"
+      },
+      "condition": "stack == 'rust' && verify_result.all_passed == false",
+      "parallel_group": 3
+    },
+    {
+      "id": "s07_stp_java_read_errors",
+      "skill_name": "stp-java-read-errors",
+      "inputs": {
+        "verify_result": "s02_stp_run_verify_capture.verify_result",
+        "applied_edit": "s01_stp_apply_one_edit.applied_edit"
+      },
+      "outputs": {
+        "java_error_diagnosis": "java_error_diagnosis"
+      },
+      "condition": "stack == 'java' && verify_result.all_passed == false",
+      "parallel_group": 3
+    },
+    {
+      "id": "s08_stp_keep_or_revert_edit",
+      "skill_name": "stp-keep-or-revert-edit",
+      "inputs": {
+        "verify_result": "s02_stp_run_verify_capture.verify_result",
+        "applied_edit": "s01_stp_apply_one_edit.applied_edit",
+        "py_error_diagnosis": "s03_stp_py_read_traceback.py_error_diagnosis",
+        "node_error_diagnosis": "s04_stp_node_read_errors.node_error_diagnosis",
+        "go_error_diagnosis": "s05_stp_go_read_errors.go_error_diagnosis",
+        "rust_error_diagnosis": "s06_stp_rust_read_errors.rust_error_diagnosis",
+        "java_error_diagnosis": "s07_stp_java_read_errors.java_error_diagnosis",
+        "baseline_report": "from_user_input",
+        "start_commit": "from_user_input",
+        "scratch_log": "from_user_input",
+        "repo_path": "from_user_input"
+      },
+      "outputs": {
+        "edit_outcome": "edit_outcome"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s09_stp_test_integrity_guard",
+      "skill_name": "stp-test-integrity-guard",
+      "inputs": {
+        "edit_outcome": "s08_stp_keep_or_revert_edit.edit_outcome",
+        "start_commit": "from_user_input",
+        "baseline_report": "from_user_input",
+        "verify_card": "from_user_input",
+        "scratch_log": "from_user_input",
+        "repo_path": "from_user_input"
+      },
+      "outputs": {
+        "integrity_report": "integrity_report"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s10_stp_stop_or_continue",
+      "skill_name": "stp-stop-or-continue",
+      "inputs": {
+        "edit_outcome": "s08_stp_keep_or_revert_edit.edit_outcome",
+        "locked_plan": "from_user_input",
+        "scratch_log": "from_user_input",
+        "integrity_report": "s09_stp_test_integrity_guard.integrity_report",
+        "max_attempts": "from_user_input_optional"
+      },
+      "outputs": {
+        "stop_decision": "stop_decision"
+      },
+      "parallel_group": 6
+    },
+    {
+      "id": "s11_stp_final_evidence_report",
+      "skill_name": "stp-final-evidence-report",
+      "inputs": {
+        "stop_decision": "s10_stp_stop_or_continue.stop_decision",
+        "goal_check": "from_user_input",
+        "start_commit": "from_user_input",
+        "verify_card": "from_user_input",
+        "baseline_report": "from_user_input",
+        "integrity_report": "s09_stp_test_integrity_guard.integrity_report",
+        "unverified_items": "from_user_input",
+        "scratch_log": "from_user_input",
+        "repo_path": "from_user_input"
+      },
+      "outputs": {
+        "final_report": "final_report"
+      },
+      "condition": "stop_decision.action == 'DONE' || stop_decision.action == 'STOP'",
+      "parallel_group": 7
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s10_stp_stop_or_continue",
+      "to_step": "s01_stp_apply_one_edit",
+      "data_type": "stp-stop-or-continue",
+      "field_mapping": {
+        "stop_decision": "stop_decision"
+      },
+      "condition": "stop_decision.action == 'NEXT_EDIT' || stop_decision.action == 'RETRY_EDIT'",
+      "max_loops": 3
+    },
+    {
+      "from_step": "s01_stp_apply_one_edit",
+      "to_step": "s02_stp_run_verify_capture",
+      "data_type": "stp-apply-one-edit",
+      "field_mapping": {
+        "applied_edit": "applied_edit"
+      }
+    },
+    {
+      "from_step": "s02_stp_run_verify_capture",
+      "to_step": "s03_stp_py_read_traceback",
+      "data_type": "stp-run-verify-capture",
+      "field_mapping": {
+        "verify_result": "verify_result"
+      }
+    },
+    {
+      "from_step": "s01_stp_apply_one_edit",
+      "to_step": "s03_stp_py_read_traceback",
+      "data_type": "stp-apply-one-edit",
+      "field_mapping": {
+        "applied_edit": "applied_edit"
+      }
+    },
+    {
+      "from_step": "s02_stp_run_verify_capture",
+      "to_step": "s04_stp_node_read_errors",
+      "data_type": "stp-run-verify-capture",
+      "field_mapping": {
+        "verify_result": "verify_result"
+      }
+    },
+    {
+      "from_step": "s01_stp_apply_one_edit",
+      "to_step": "s04_stp_node_read_errors",
+      "data_type": "stp-apply-one-edit",
+      "field_mapping": {
+        "applied_edit": "applied_edit"
+      }
+    },
+    {
+      "from_step": "s02_stp_run_verify_capture",
+      "to_step": "s05_stp_go_read_errors",
+      "data_type": "stp-run-verify-capture",
+      "field_mapping": {
+        "verify_result": "verify_result"
+      }
+    },
+    {
+      "from_step": "s01_stp_apply_one_edit",
+      "to_step": "s05_stp_go_read_errors",
+      "data_type": "stp-apply-one-edit",
+      "field_mapping": {
+        "applied_edit": "applied_edit"
+      }
+    },
+    {
+      "from_step": "s02_stp_run_verify_capture",
+      "to_step": "s06_stp_rust_read_errors",
+      "data_type": "stp-run-verify-capture",
+      "field_mapping": {
+        "verify_result": "verify_result"
+      }
+    },
+    {
+      "from_step": "s01_stp_apply_one_edit",
+      "to_step": "s06_stp_rust_read_errors",
+      "data_type": "stp-apply-one-edit",
+      "field_mapping": {
+        "applied_edit": "applied_edit"
+      }
+    },
+    {
+      "from_step": "s02_stp_run_verify_capture",
+      "to_step": "s07_stp_java_read_errors",
+      "data_type": "stp-run-verify-capture",
+      "field_mapping": {
+        "verify_result": "verify_result"
+      }
+    },
+    {
+      "from_step": "s01_stp_apply_one_edit",
+      "to_step": "s07_stp_java_read_errors",
+      "data_type": "stp-apply-one-edit",
+      "field_mapping": {
+        "applied_edit": "applied_edit"
+      }
+    },
+    {
+      "from_step": "s02_stp_run_verify_capture",
+      "to_step": "s08_stp_keep_or_revert_edit",
+      "data_type": "stp-run-verify-capture",
+      "field_mapping": {
+        "verify_result": "verify_result"
+      }
+    },
+    {
+      "from_step": "s01_stp_apply_one_edit",
+      "to_step": "s08_stp_keep_or_revert_edit",
+      "data_type": "stp-apply-one-edit",
+      "field_mapping": {
+        "applied_edit": "applied_edit"
+      }
+    },
+    {
+      "from_step": "s03_stp_py_read_traceback",
+      "to_step": "s08_stp_keep_or_revert_edit",
+      "data_type": "stp-py-read-traceback",
+      "field_mapping": {
+        "py_error_diagnosis": "py_error_diagnosis"
+      }
+    },
+    {
+      "from_step": "s04_stp_node_read_errors",
+      "to_step": "s08_stp_keep_or_revert_edit",
+      "data_type": "stp-node-read-errors",
+      "field_mapping": {
+        "node_error_diagnosis": "node_error_diagnosis"
+      }
+    },
+    {
+      "from_step": "s05_stp_go_read_errors",
+      "to_step": "s08_stp_keep_or_revert_edit",
+      "data_type": "stp-go-read-errors",
+      "field_mapping": {
+        "go_error_diagnosis": "go_error_diagnosis"
+      }
+    },
+    {
+      "from_step": "s06_stp_rust_read_errors",
+      "to_step": "s08_stp_keep_or_revert_edit",
+      "data_type": "stp-rust-read-errors",
+      "field_mapping": {
+        "rust_error_diagnosis": "rust_error_diagnosis"
+      }
+    },
+    {
+      "from_step": "s07_stp_java_read_errors",
+      "to_step": "s08_stp_keep_or_revert_edit",
+      "data_type": "stp-java-read-errors",
+      "field_mapping": {
+        "java_error_diagnosis": "java_error_diagnosis"
+      }
+    },
+    {
+      "from_step": "s08_stp_keep_or_revert_edit",
+      "to_step": "s09_stp_test_integrity_guard",
+      "data_type": "stp-keep-or-revert-edit",
+      "field_mapping": {
+        "edit_outcome": "edit_outcome"
+      }
+    },
+    {
+      "from_step": "s08_stp_keep_or_revert_edit",
+      "to_step": "s10_stp_stop_or_continue",
+      "data_type": "stp-keep-or-revert-edit",
+      "field_mapping": {
+        "edit_outcome": "edit_outcome"
+      }
+    },
+    {
+      "from_step": "s09_stp_test_integrity_guard",
+      "to_step": "s10_stp_stop_or_continue",
+      "data_type": "stp-test-integrity-guard",
+      "field_mapping": {
+        "integrity_report": "integrity_report"
+      }
+    },
+    {
+      "from_step": "s10_stp_stop_or_continue",
+      "to_step": "s11_stp_final_evidence_report",
+      "data_type": "stp-stop-or-continue",
+      "field_mapping": {
+        "stop_decision": "stop_decision"
+      }
+    },
+    {
+      "from_step": "s09_stp_test_integrity_guard",
+      "to_step": "s11_stp_final_evidence_report",
+      "data_type": "stp-test-integrity-guard",
+      "field_mapping": {
+        "integrity_report": "integrity_report"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "locked_plan",
+    "start_commit",
+    "scratch_log",
+    "repo_path",
+    "verify_card",
+    "baseline_report",
+    "max_attempts",
+    "goal_check",
+    "unverified_items"
+  ],
+  "terminal_outputs": [
+    "final_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_stp_apply_one_edit"
+    ],
+    [
+      "s02_stp_run_verify_capture"
+    ],
+    [
+      "s03_stp_py_read_traceback",
+      "s04_stp_node_read_errors",
+      "s05_stp_go_read_errors",
+      "s06_stp_rust_read_errors",
+      "s07_stp_java_read_errors"
+    ],
+    [
+      "s08_stp_keep_or_revert_edit"
+    ],
+    [
+      "s09_stp_test_integrity_guard"
+    ],
+    [
+      "s10_stp_stop_or_continue"
+    ],
+    [
+      "s11_stp_final_evidence_report"
+    ]
+  ],
+  "estimated_cost": 11,
+  "critical_path": [
+    "s01_stp_apply_one_edit",
+    "s02_stp_run_verify_capture",
+    "s07_stp_java_read_errors",
+    "s08_stp_keep_or_revert_edit",
+    "s09_stp_test_integrity_guard",
+    "s10_stp_stop_or_continue",
+    "s11_stp_final_evidence_report"
+  ]
+}

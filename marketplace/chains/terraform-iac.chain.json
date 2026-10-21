@@ -1,0 +1,780 @@
+{
+  "name": "terraform-iac",
+  "description": "Lay out a Terraform repo, pick an environment pattern, pin versions, set up remote state with locking on S3, GCS, Azure or HCP Terraform, design modules and variables, handle secrets, lint and scan, test modules, import, refactor and repair state, review and policy-gate plans, guard against destroys, gate CI plan and apply, and detect drift.",
+  "steps": [
+    {
+      "id": "s01_tf_repo_layout",
+      "skill_name": "tf-repo-layout",
+      "inputs": {
+        "repo_dir": "from_user_input",
+        "cloud": "from_user_input",
+        "environments": "from_user_input",
+        "components": "from_user_input"
+      },
+      "outputs": {
+        "repo_layout": "repo_layout",
+        "root_modules": "root_modules"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_tf_env_strategy",
+      "skill_name": "tf-env-strategy",
+      "inputs": {
+        "repo_layout": "s01_tf_repo_layout.repo_layout",
+        "environments": "from_user_input",
+        "isolation_requirements": "from_user_input_optional"
+      },
+      "outputs": {
+        "env_strategy": "env_strategy"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_tf_version_pinning",
+      "skill_name": "tf-version-pinning",
+      "inputs": {
+        "root_modules": "s01_tf_repo_layout.root_modules",
+        "terraform_version": "from_user_input_optional",
+        "lock_platforms": "from_user_input_optional"
+      },
+      "outputs": {
+        "version_constraints": "version_constraints",
+        "lock_file_report": "lock_file_report"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_tf_state_s3_backend",
+      "skill_name": "tf-state-s3-backend",
+      "inputs": {
+        "root_modules": "s01_tf_repo_layout.root_modules",
+        "env_strategy": "s02_tf_env_strategy.env_strategy",
+        "aws_region": "from_user_input_optional",
+        "state_bucket_name": "from_user_input_optional"
+      },
+      "outputs": {
+        "backend_config": "backend_config",
+        "state_migration_report": "state_migration_report"
+      },
+      "condition": "state_backend == 's3'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s05_tf_state_gcs_backend",
+      "skill_name": "tf-state-gcs-backend",
+      "inputs": {
+        "root_modules": "s01_tf_repo_layout.root_modules",
+        "env_strategy": "s02_tf_env_strategy.env_strategy",
+        "gcp_project": "from_user_input_optional",
+        "state_bucket_name": "from_user_input_optional"
+      },
+      "outputs": {
+        "backend_config": "backend_config",
+        "state_migration_report": "state_migration_report"
+      },
+      "condition": "state_backend == 'gcs'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s06_tf_state_azurerm_backend",
+      "skill_name": "tf-state-azurerm-backend",
+      "inputs": {
+        "root_modules": "s01_tf_repo_layout.root_modules",
+        "env_strategy": "s02_tf_env_strategy.env_strategy",
+        "azure_subscription_id": "from_user_input_optional",
+        "state_storage_account": "from_user_input_optional"
+      },
+      "outputs": {
+        "backend_config": "backend_config",
+        "state_migration_report": "state_migration_report"
+      },
+      "condition": "state_backend == 'azurerm'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s07_tf_state_hcp_terraform",
+      "skill_name": "tf-state-hcp-terraform",
+      "inputs": {
+        "root_modules": "s01_tf_repo_layout.root_modules",
+        "env_strategy": "s02_tf_env_strategy.env_strategy",
+        "hcp_organization": "from_user_input_optional"
+      },
+      "outputs": {
+        "backend_config": "backend_config",
+        "state_migration_report": "state_migration_report"
+      },
+      "condition": "state_backend == 'hcp'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s08_tf_module_interface",
+      "skill_name": "tf-module-interface",
+      "inputs": {
+        "repo_layout": "s01_tf_repo_layout.repo_layout",
+        "module_name": "from_user_input_optional",
+        "module_purpose": "from_user_input_optional"
+      },
+      "outputs": {
+        "module_interface": "module_interface",
+        "module_files": "module_files"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s09_tf_variables_outputs",
+      "skill_name": "tf-variables-outputs",
+      "inputs": {
+        "root_modules": "s01_tf_repo_layout.root_modules",
+        "module_interface": "s08_tf_module_interface.module_interface"
+      },
+      "outputs": {
+        "variable_definitions": "variable_definitions",
+        "output_definitions": "output_definitions"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s10_tf_secrets_handling",
+      "skill_name": "tf-secrets-handling",
+      "inputs": {
+        "root_modules": "s01_tf_repo_layout.root_modules",
+        "cloud": "from_user_input",
+        "secret_inventory": "from_user_input_optional"
+      },
+      "outputs": {
+        "secret_sources": "secret_sources",
+        "secret_findings": "secret_findings"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s11_tf_fmt_validate",
+      "skill_name": "tf-fmt-validate",
+      "inputs": {
+        "root_modules": "s01_tf_repo_layout.root_modules"
+      },
+      "outputs": {
+        "fmt_validate_report": "fmt_validate_report"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s12_tf_tflint",
+      "skill_name": "tf-tflint",
+      "inputs": {
+        "root_modules": "s01_tf_repo_layout.root_modules",
+        "cloud": "from_user_input",
+        "fmt_validate_report": "s11_tf_fmt_validate.fmt_validate_report"
+      },
+      "outputs": {
+        "tflint_findings": "tflint_findings"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s13_tf_checkov",
+      "skill_name": "tf-checkov",
+      "inputs": {
+        "root_modules": "s01_tf_repo_layout.root_modules",
+        "fmt_validate_report": "s11_tf_fmt_validate.fmt_validate_report"
+      },
+      "outputs": {
+        "checkov_findings": "checkov_findings"
+      },
+      "condition": "security_scanner in ['checkov', 'both']",
+      "parallel_group": 3
+    },
+    {
+      "id": "s14_tf_trivy_config",
+      "skill_name": "tf-trivy-config",
+      "inputs": {
+        "root_modules": "s01_tf_repo_layout.root_modules",
+        "fmt_validate_report": "s11_tf_fmt_validate.fmt_validate_report"
+      },
+      "outputs": {
+        "trivy_findings": "trivy_findings"
+      },
+      "condition": "security_scanner in ['trivy', 'both']",
+      "parallel_group": 3
+    },
+    {
+      "id": "s15_tf_module_test",
+      "skill_name": "tf-module-test",
+      "inputs": {
+        "module_interface": "s08_tf_module_interface.module_interface",
+        "module_files": "s08_tf_module_interface.module_files"
+      },
+      "outputs": {
+        "module_test_results": "module_test_results"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s16_tf_provider_upgrade",
+      "skill_name": "tf-provider-upgrade",
+      "inputs": {
+        "root_modules": "s01_tf_repo_layout.root_modules",
+        "version_constraints": "s03_tf_version_pinning.version_constraints",
+        "provider_source": "from_user_input_optional",
+        "target_provider_version": "from_user_input_optional"
+      },
+      "outputs": {
+        "provider_upgrade_report": "provider_upgrade_report"
+      },
+      "condition": "target_provider_version != ''",
+      "parallel_group": 3
+    },
+    {
+      "id": "s17_tf_import_existing",
+      "skill_name": "tf-import-existing",
+      "inputs": {
+        "root_modules": "s01_tf_repo_layout.root_modules",
+        "cloud": "from_user_input",
+        "import_targets": "from_user_input_optional"
+      },
+      "outputs": {
+        "import_blocks": "import_blocks",
+        "import_plan_summary": "import_plan_summary"
+      },
+      "condition": "import_targets != []",
+      "parallel_group": 2
+    },
+    {
+      "id": "s18_tf_moved_refactor",
+      "skill_name": "tf-moved-refactor",
+      "inputs": {
+        "root_modules": "s01_tf_repo_layout.root_modules",
+        "refactor_map": "from_user_input_optional"
+      },
+      "outputs": {
+        "moved_blocks": "moved_blocks",
+        "refactor_plan_summary": "refactor_plan_summary"
+      },
+      "condition": "refactor_map != []",
+      "parallel_group": 2
+    },
+    {
+      "id": "s19_tf_state_surgery",
+      "skill_name": "tf-state-surgery",
+      "inputs": {
+        "root_modules": "s01_tf_repo_layout.root_modules",
+        "state_operations": "from_user_input_optional"
+      },
+      "outputs": {
+        "state_backup_path": "state_backup_path",
+        "state_change_log": "state_change_log"
+      },
+      "condition": "state_operations != []",
+      "parallel_group": 2
+    },
+    {
+      "id": "s20_tf_plan_review",
+      "skill_name": "tf-plan-review",
+      "inputs": {
+        "root_modules": "s01_tf_repo_layout.root_modules",
+        "env_strategy": "s02_tf_env_strategy.env_strategy",
+        "target_environment": "from_user_input"
+      },
+      "outputs": {
+        "plan_file": "plan_file",
+        "plan_json": "plan_json",
+        "plan_review": "plan_review"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s21_tf_plan_policy_conftest",
+      "skill_name": "tf-plan-policy-conftest",
+      "inputs": {
+        "plan_json": "s20_tf_plan_review.plan_json",
+        "policy_dir": "from_user_input_optional"
+      },
+      "outputs": {
+        "policy_results": "policy_results"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s22_tf_destroy_safeguards",
+      "skill_name": "tf-destroy-safeguards",
+      "inputs": {
+        "root_modules": "s01_tf_repo_layout.root_modules",
+        "cloud": "from_user_input",
+        "plan_review": "s20_tf_plan_review.plan_review"
+      },
+      "outputs": {
+        "protected_resources": "protected_resources",
+        "destroy_guard_config": "destroy_guard_config"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s23_tf_ci_github_actions",
+      "skill_name": "tf-ci-github-actions",
+      "inputs": {
+        "root_modules": "s01_tf_repo_layout.root_modules",
+        "env_strategy": "s02_tf_env_strategy.env_strategy",
+        "cloud": "from_user_input",
+        "destroy_guard_config": "s22_tf_destroy_safeguards.destroy_guard_config"
+      },
+      "outputs": {
+        "ci_workflow_files": "ci_workflow_files",
+        "ci_gate_matrix": "ci_gate_matrix"
+      },
+      "condition": "ci_platform == 'github'",
+      "parallel_group": 5
+    },
+    {
+      "id": "s24_tf_ci_gitlab",
+      "skill_name": "tf-ci-gitlab",
+      "inputs": {
+        "root_modules": "s01_tf_repo_layout.root_modules",
+        "env_strategy": "s02_tf_env_strategy.env_strategy",
+        "cloud": "from_user_input",
+        "destroy_guard_config": "s22_tf_destroy_safeguards.destroy_guard_config"
+      },
+      "outputs": {
+        "ci_workflow_files": "ci_workflow_files",
+        "ci_gate_matrix": "ci_gate_matrix"
+      },
+      "condition": "ci_platform == 'gitlab'",
+      "parallel_group": 5
+    },
+    {
+      "id": "s25_tf_drift_detect",
+      "skill_name": "tf-drift-detect",
+      "inputs": {
+        "root_modules": "s01_tf_repo_layout.root_modules",
+        "env_strategy": "s02_tf_env_strategy.env_strategy",
+        "ci_platform": "from_user_input"
+      },
+      "outputs": {
+        "drift_report": "drift_report",
+        "drift_schedule": "drift_schedule"
+      },
+      "parallel_group": 3
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_tf_repo_layout",
+      "to_step": "s02_tf_env_strategy",
+      "data_type": "tf-repo-layout",
+      "field_mapping": {
+        "repo_layout": "repo_layout"
+      }
+    },
+    {
+      "from_step": "s01_tf_repo_layout",
+      "to_step": "s03_tf_version_pinning",
+      "data_type": "tf-repo-layout",
+      "field_mapping": {
+        "root_modules": "root_modules"
+      }
+    },
+    {
+      "from_step": "s01_tf_repo_layout",
+      "to_step": "s04_tf_state_s3_backend",
+      "data_type": "tf-repo-layout",
+      "field_mapping": {
+        "root_modules": "root_modules"
+      }
+    },
+    {
+      "from_step": "s02_tf_env_strategy",
+      "to_step": "s04_tf_state_s3_backend",
+      "data_type": "tf-env-strategy",
+      "field_mapping": {
+        "env_strategy": "env_strategy"
+      }
+    },
+    {
+      "from_step": "s01_tf_repo_layout",
+      "to_step": "s05_tf_state_gcs_backend",
+      "data_type": "tf-repo-layout",
+      "field_mapping": {
+        "root_modules": "root_modules"
+      }
+    },
+    {
+      "from_step": "s02_tf_env_strategy",
+      "to_step": "s05_tf_state_gcs_backend",
+      "data_type": "tf-env-strategy",
+      "field_mapping": {
+        "env_strategy": "env_strategy"
+      }
+    },
+    {
+      "from_step": "s01_tf_repo_layout",
+      "to_step": "s06_tf_state_azurerm_backend",
+      "data_type": "tf-repo-layout",
+      "field_mapping": {
+        "root_modules": "root_modules"
+      }
+    },
+    {
+      "from_step": "s02_tf_env_strategy",
+      "to_step": "s06_tf_state_azurerm_backend",
+      "data_type": "tf-env-strategy",
+      "field_mapping": {
+        "env_strategy": "env_strategy"
+      }
+    },
+    {
+      "from_step": "s01_tf_repo_layout",
+      "to_step": "s07_tf_state_hcp_terraform",
+      "data_type": "tf-repo-layout",
+      "field_mapping": {
+        "root_modules": "root_modules"
+      }
+    },
+    {
+      "from_step": "s02_tf_env_strategy",
+      "to_step": "s07_tf_state_hcp_terraform",
+      "data_type": "tf-env-strategy",
+      "field_mapping": {
+        "env_strategy": "env_strategy"
+      }
+    },
+    {
+      "from_step": "s01_tf_repo_layout",
+      "to_step": "s08_tf_module_interface",
+      "data_type": "tf-repo-layout",
+      "field_mapping": {
+        "repo_layout": "repo_layout"
+      }
+    },
+    {
+      "from_step": "s01_tf_repo_layout",
+      "to_step": "s09_tf_variables_outputs",
+      "data_type": "tf-repo-layout",
+      "field_mapping": {
+        "root_modules": "root_modules"
+      }
+    },
+    {
+      "from_step": "s08_tf_module_interface",
+      "to_step": "s09_tf_variables_outputs",
+      "data_type": "tf-module-interface",
+      "field_mapping": {
+        "module_interface": "module_interface"
+      }
+    },
+    {
+      "from_step": "s01_tf_repo_layout",
+      "to_step": "s10_tf_secrets_handling",
+      "data_type": "tf-repo-layout",
+      "field_mapping": {
+        "root_modules": "root_modules"
+      }
+    },
+    {
+      "from_step": "s01_tf_repo_layout",
+      "to_step": "s11_tf_fmt_validate",
+      "data_type": "tf-repo-layout",
+      "field_mapping": {
+        "root_modules": "root_modules"
+      }
+    },
+    {
+      "from_step": "s01_tf_repo_layout",
+      "to_step": "s12_tf_tflint",
+      "data_type": "tf-repo-layout",
+      "field_mapping": {
+        "root_modules": "root_modules"
+      }
+    },
+    {
+      "from_step": "s11_tf_fmt_validate",
+      "to_step": "s12_tf_tflint",
+      "data_type": "tf-fmt-validate",
+      "field_mapping": {
+        "fmt_validate_report": "fmt_validate_report"
+      }
+    },
+    {
+      "from_step": "s01_tf_repo_layout",
+      "to_step": "s13_tf_checkov",
+      "data_type": "tf-repo-layout",
+      "field_mapping": {
+        "root_modules": "root_modules"
+      }
+    },
+    {
+      "from_step": "s11_tf_fmt_validate",
+      "to_step": "s13_tf_checkov",
+      "data_type": "tf-fmt-validate",
+      "field_mapping": {
+        "fmt_validate_report": "fmt_validate_report"
+      }
+    },
+    {
+      "from_step": "s01_tf_repo_layout",
+      "to_step": "s14_tf_trivy_config",
+      "data_type": "tf-repo-layout",
+      "field_mapping": {
+        "root_modules": "root_modules"
+      }
+    },
+    {
+      "from_step": "s11_tf_fmt_validate",
+      "to_step": "s14_tf_trivy_config",
+      "data_type": "tf-fmt-validate",
+      "field_mapping": {
+        "fmt_validate_report": "fmt_validate_report"
+      }
+    },
+    {
+      "from_step": "s08_tf_module_interface",
+      "to_step": "s15_tf_module_test",
+      "data_type": "tf-module-interface",
+      "field_mapping": {
+        "module_interface": "module_interface",
+        "module_files": "module_files"
+      }
+    },
+    {
+      "from_step": "s01_tf_repo_layout",
+      "to_step": "s16_tf_provider_upgrade",
+      "data_type": "tf-repo-layout",
+      "field_mapping": {
+        "root_modules": "root_modules"
+      }
+    },
+    {
+      "from_step": "s03_tf_version_pinning",
+      "to_step": "s16_tf_provider_upgrade",
+      "data_type": "tf-version-pinning",
+      "field_mapping": {
+        "version_constraints": "version_constraints"
+      }
+    },
+    {
+      "from_step": "s01_tf_repo_layout",
+      "to_step": "s17_tf_import_existing",
+      "data_type": "tf-repo-layout",
+      "field_mapping": {
+        "root_modules": "root_modules"
+      }
+    },
+    {
+      "from_step": "s01_tf_repo_layout",
+      "to_step": "s18_tf_moved_refactor",
+      "data_type": "tf-repo-layout",
+      "field_mapping": {
+        "root_modules": "root_modules"
+      }
+    },
+    {
+      "from_step": "s01_tf_repo_layout",
+      "to_step": "s19_tf_state_surgery",
+      "data_type": "tf-repo-layout",
+      "field_mapping": {
+        "root_modules": "root_modules"
+      }
+    },
+    {
+      "from_step": "s01_tf_repo_layout",
+      "to_step": "s20_tf_plan_review",
+      "data_type": "tf-repo-layout",
+      "field_mapping": {
+        "root_modules": "root_modules"
+      }
+    },
+    {
+      "from_step": "s02_tf_env_strategy",
+      "to_step": "s20_tf_plan_review",
+      "data_type": "tf-env-strategy",
+      "field_mapping": {
+        "env_strategy": "env_strategy"
+      }
+    },
+    {
+      "from_step": "s20_tf_plan_review",
+      "to_step": "s21_tf_plan_policy_conftest",
+      "data_type": "tf-plan-review",
+      "field_mapping": {
+        "plan_json": "plan_json"
+      }
+    },
+    {
+      "from_step": "s01_tf_repo_layout",
+      "to_step": "s22_tf_destroy_safeguards",
+      "data_type": "tf-repo-layout",
+      "field_mapping": {
+        "root_modules": "root_modules"
+      }
+    },
+    {
+      "from_step": "s20_tf_plan_review",
+      "to_step": "s22_tf_destroy_safeguards",
+      "data_type": "tf-plan-review",
+      "field_mapping": {
+        "plan_review": "plan_review"
+      }
+    },
+    {
+      "from_step": "s01_tf_repo_layout",
+      "to_step": "s23_tf_ci_github_actions",
+      "data_type": "tf-repo-layout",
+      "field_mapping": {
+        "root_modules": "root_modules"
+      }
+    },
+    {
+      "from_step": "s02_tf_env_strategy",
+      "to_step": "s23_tf_ci_github_actions",
+      "data_type": "tf-env-strategy",
+      "field_mapping": {
+        "env_strategy": "env_strategy"
+      }
+    },
+    {
+      "from_step": "s22_tf_destroy_safeguards",
+      "to_step": "s23_tf_ci_github_actions",
+      "data_type": "tf-destroy-safeguards",
+      "field_mapping": {
+        "destroy_guard_config": "destroy_guard_config"
+      }
+    },
+    {
+      "from_step": "s01_tf_repo_layout",
+      "to_step": "s24_tf_ci_gitlab",
+      "data_type": "tf-repo-layout",
+      "field_mapping": {
+        "root_modules": "root_modules"
+      }
+    },
+    {
+      "from_step": "s02_tf_env_strategy",
+      "to_step": "s24_tf_ci_gitlab",
+      "data_type": "tf-env-strategy",
+      "field_mapping": {
+        "env_strategy": "env_strategy"
+      }
+    },
+    {
+      "from_step": "s22_tf_destroy_safeguards",
+      "to_step": "s24_tf_ci_gitlab",
+      "data_type": "tf-destroy-safeguards",
+      "field_mapping": {
+        "destroy_guard_config": "destroy_guard_config"
+      }
+    },
+    {
+      "from_step": "s01_tf_repo_layout",
+      "to_step": "s25_tf_drift_detect",
+      "data_type": "tf-repo-layout",
+      "field_mapping": {
+        "root_modules": "root_modules"
+      }
+    },
+    {
+      "from_step": "s02_tf_env_strategy",
+      "to_step": "s25_tf_drift_detect",
+      "data_type": "tf-env-strategy",
+      "field_mapping": {
+        "env_strategy": "env_strategy"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "repo_dir",
+    "cloud",
+    "environments",
+    "components",
+    "isolation_requirements",
+    "terraform_version",
+    "lock_platforms",
+    "aws_region",
+    "state_bucket_name",
+    "gcp_project",
+    "azure_subscription_id",
+    "state_storage_account",
+    "hcp_organization",
+    "module_name",
+    "module_purpose",
+    "secret_inventory",
+    "provider_source",
+    "target_provider_version",
+    "import_targets",
+    "refactor_map",
+    "state_operations",
+    "target_environment",
+    "policy_dir",
+    "ci_platform"
+  ],
+  "terminal_outputs": [
+    "lock_file_report",
+    "backend_config",
+    "state_migration_report",
+    "variable_definitions",
+    "output_definitions",
+    "secret_sources",
+    "secret_findings",
+    "tflint_findings",
+    "checkov_findings",
+    "trivy_findings",
+    "module_test_results",
+    "provider_upgrade_report",
+    "import_blocks",
+    "import_plan_summary",
+    "moved_blocks",
+    "refactor_plan_summary",
+    "state_backup_path",
+    "state_change_log",
+    "plan_file",
+    "policy_results",
+    "protected_resources",
+    "ci_workflow_files",
+    "ci_gate_matrix",
+    "drift_report",
+    "drift_schedule"
+  ],
+  "parallel_groups": [
+    [
+      "s01_tf_repo_layout"
+    ],
+    [
+      "s02_tf_env_strategy",
+      "s03_tf_version_pinning",
+      "s08_tf_module_interface",
+      "s10_tf_secrets_handling",
+      "s11_tf_fmt_validate",
+      "s17_tf_import_existing",
+      "s18_tf_moved_refactor",
+      "s19_tf_state_surgery"
+    ],
+    [
+      "s04_tf_state_s3_backend",
+      "s05_tf_state_gcs_backend",
+      "s06_tf_state_azurerm_backend",
+      "s07_tf_state_hcp_terraform",
+      "s09_tf_variables_outputs",
+      "s12_tf_tflint",
+      "s13_tf_checkov",
+      "s14_tf_trivy_config",
+      "s15_tf_module_test",
+      "s16_tf_provider_upgrade",
+      "s20_tf_plan_review",
+      "s25_tf_drift_detect"
+    ],
+    [
+      "s21_tf_plan_policy_conftest",
+      "s22_tf_destroy_safeguards"
+    ],
+    [
+      "s23_tf_ci_github_actions",
+      "s24_tf_ci_gitlab"
+    ]
+  ],
+  "estimated_cost": 25,
+  "critical_path": [
+    "s01_tf_repo_layout",
+    "s02_tf_env_strategy",
+    "s20_tf_plan_review",
+    "s22_tf_destroy_safeguards",
+    "s24_tf_ci_gitlab"
+  ]
+}

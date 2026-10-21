@@ -1,0 +1,218 @@
+{
+  "name": "rag-applications-retrieval-tuning",
+  "description": "Measure and tune retrieval on a labeled question set: evaluation harness, chunk candidates, embedding model selection, chunk size selection, reranking, and failure triage.",
+  "steps": [
+    {
+      "id": "s01_rag_retrieval_eval_harness",
+      "skill_name": "rag-retrieval-eval-harness",
+      "inputs": {
+        "question_set": "from_user_input",
+        "qrels_spans": "from_user_input",
+        "k_values": "from_user_input",
+        "significance_alpha": "from_user_input",
+        "work_dir": "from_user_input"
+      },
+      "outputs": {
+        "eval_harness": "eval_harness",
+        "harness_sanity_report": "harness_sanity_report"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_rag_chunk_candidates_build",
+      "skill_name": "rag-chunk-candidates-build",
+      "inputs": {
+        "clean_records": "from_user_input",
+        "chunk_sizes": "from_user_input",
+        "tokenizer_name": "from_user_input",
+        "work_dir": "from_user_input"
+      },
+      "outputs": {
+        "chunk_sets": "chunk_sets"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s03_rag_embedding_model_select",
+      "skill_name": "rag-embedding-model-select",
+      "inputs": {
+        "chunk_sets": "s02_rag_chunk_candidates_build.chunk_sets",
+        "eval_harness": "s01_rag_retrieval_eval_harness.eval_harness",
+        "candidate_models": "from_user_input",
+        "work_dir": "from_user_input"
+      },
+      "outputs": {
+        "embedding_choice": "embedding_choice",
+        "embedding_eval_report": "embedding_eval_report"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_rag_chunk_size_select",
+      "skill_name": "rag-chunk-size-select",
+      "inputs": {
+        "chunk_sets": "s02_rag_chunk_candidates_build.chunk_sets",
+        "embedding_choice": "s03_rag_embedding_model_select.embedding_choice",
+        "eval_harness": "s01_rag_retrieval_eval_harness.eval_harness",
+        "context_token_budget": "from_user_input",
+        "work_dir": "from_user_input"
+      },
+      "outputs": {
+        "chunk_config": "chunk_config",
+        "chunk_eval_report": "chunk_eval_report"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s05_rag_cross_encoder_rerank",
+      "skill_name": "rag-cross-encoder-rerank",
+      "inputs": {
+        "eval_harness": "s01_rag_retrieval_eval_harness.eval_harness",
+        "rerank_models": "from_user_input",
+        "rerank_depths": "from_user_input",
+        "work_dir": "from_user_input",
+        "rerank_latency_budget_ms": "from_user_input_optional"
+      },
+      "outputs": {
+        "rerank_config": "rerank_config",
+        "rerank_eval_report": "rerank_eval_report"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s06_rag_failure_analysis_triage",
+      "skill_name": "rag-failure-analysis-triage",
+      "inputs": {
+        "question_set": "from_user_input",
+        "eval_harness": "s01_rag_retrieval_eval_harness.eval_harness",
+        "faithfulness_report": "from_user_input",
+        "work_dir": "from_user_input"
+      },
+      "outputs": {
+        "failure_report": "failure_report"
+      },
+      "parallel_group": 5
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s02_rag_chunk_candidates_build",
+      "to_step": "s03_rag_embedding_model_select",
+      "data_type": "rag-chunk-candidates-build",
+      "field_mapping": {
+        "chunk_sets": "chunk_sets"
+      }
+    },
+    {
+      "from_step": "s01_rag_retrieval_eval_harness",
+      "to_step": "s03_rag_embedding_model_select",
+      "data_type": "rag-retrieval-eval-harness",
+      "field_mapping": {
+        "eval_harness": "eval_harness"
+      }
+    },
+    {
+      "from_step": "s02_rag_chunk_candidates_build",
+      "to_step": "s04_rag_chunk_size_select",
+      "data_type": "rag-chunk-candidates-build",
+      "field_mapping": {
+        "chunk_sets": "chunk_sets"
+      }
+    },
+    {
+      "from_step": "s03_rag_embedding_model_select",
+      "to_step": "s04_rag_chunk_size_select",
+      "data_type": "rag-embedding-model-select",
+      "field_mapping": {
+        "embedding_choice": "embedding_choice"
+      }
+    },
+    {
+      "from_step": "s01_rag_retrieval_eval_harness",
+      "to_step": "s04_rag_chunk_size_select",
+      "data_type": "rag-retrieval-eval-harness",
+      "field_mapping": {
+        "eval_harness": "eval_harness"
+      }
+    },
+    {
+      "from_step": "s01_rag_retrieval_eval_harness",
+      "to_step": "s05_rag_cross_encoder_rerank",
+      "data_type": "rag-retrieval-eval-harness",
+      "field_mapping": {
+        "eval_harness": "eval_harness"
+      }
+    },
+    {
+      "from_step": "s04_rag_chunk_size_select",
+      "to_step": "s05_rag_cross_encoder_rerank",
+      "data_type": "rag-chunk-size-select",
+      "field_mapping": {}
+    },
+    {
+      "from_step": "s01_rag_retrieval_eval_harness",
+      "to_step": "s06_rag_failure_analysis_triage",
+      "data_type": "rag-retrieval-eval-harness",
+      "field_mapping": {
+        "eval_harness": "eval_harness"
+      }
+    },
+    {
+      "from_step": "s05_rag_cross_encoder_rerank",
+      "to_step": "s06_rag_failure_analysis_triage",
+      "data_type": "rag-cross-encoder-rerank",
+      "field_mapping": {}
+    }
+  ],
+  "entry_inputs": [
+    "question_set",
+    "qrels_spans",
+    "k_values",
+    "significance_alpha",
+    "work_dir",
+    "clean_records",
+    "chunk_sizes",
+    "tokenizer_name",
+    "candidate_models",
+    "context_token_budget",
+    "rerank_models",
+    "rerank_depths",
+    "rerank_latency_budget_ms",
+    "faithfulness_report"
+  ],
+  "terminal_outputs": [
+    "harness_sanity_report",
+    "embedding_eval_report",
+    "chunk_config",
+    "chunk_eval_report",
+    "rerank_config",
+    "rerank_eval_report",
+    "failure_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_rag_retrieval_eval_harness",
+      "s02_rag_chunk_candidates_build"
+    ],
+    [
+      "s03_rag_embedding_model_select"
+    ],
+    [
+      "s04_rag_chunk_size_select"
+    ],
+    [
+      "s05_rag_cross_encoder_rerank"
+    ],
+    [
+      "s06_rag_failure_analysis_triage"
+    ]
+  ],
+  "estimated_cost": 6,
+  "critical_path": [
+    "s02_rag_chunk_candidates_build",
+    "s03_rag_embedding_model_select",
+    "s04_rag_chunk_size_select",
+    "s05_rag_cross_encoder_rerank",
+    "s06_rag_failure_analysis_triage"
+  ]
+}

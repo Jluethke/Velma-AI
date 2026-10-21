@@ -1,0 +1,990 @@
+{
+  "name": "performance-profiling",
+  "description": "Define the metric and workload, stabilize the machine, benchmark with the stack's harness, profile with the stack's CPU profiler, read and classify hotspots, propose algorithmic, allocation or I/O fixes, apply one change at a time with A/B measurement and a significance test, and guard against regressions in CI.",
+  "steps": [
+    {
+      "id": "s01_perf_metric_workload_define",
+      "skill_name": "perf-metric-workload-define",
+      "inputs": {
+        "target_description": "from_user_input",
+        "stack": "from_user_input",
+        "workload_kind": "from_user_input",
+        "run_command": "from_user_input",
+        "perf_goal": "from_user_input_optional"
+      },
+      "outputs": {
+        "perf_spec": "perf_spec",
+        "workload_spec": "workload_spec"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_perf_bench_env_stabilize",
+      "skill_name": "perf-bench-env-stabilize",
+      "inputs": {
+        "perf_spec": "s01_perf_metric_workload_define.perf_spec",
+        "repo_path": "from_user_input"
+      },
+      "outputs": {
+        "bench_env_report": "bench_env_report"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_perf_py_pytest_benchmark_harness",
+      "skill_name": "perf-py-pytest-benchmark-harness",
+      "inputs": {
+        "perf_spec": "s01_perf_metric_workload_define.perf_spec",
+        "workload_spec": "s01_perf_metric_workload_define.workload_spec",
+        "bench_env_report": "s02_perf_bench_env_stabilize.bench_env_report",
+        "repo_path": "from_user_input"
+      },
+      "outputs": {
+        "py_bench_raw": "py_bench_raw"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_perf_node_tinybench_harness",
+      "skill_name": "perf-node-tinybench-harness",
+      "inputs": {
+        "perf_spec": "s01_perf_metric_workload_define.perf_spec",
+        "workload_spec": "s01_perf_metric_workload_define.workload_spec",
+        "bench_env_report": "s02_perf_bench_env_stabilize.bench_env_report",
+        "repo_path": "from_user_input"
+      },
+      "outputs": {
+        "node_bench_raw": "node_bench_raw"
+      },
+      "condition": "stack == 'node'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s05_perf_go_bench_benchstat_harness",
+      "skill_name": "perf-go-bench-benchstat-harness",
+      "inputs": {
+        "perf_spec": "s01_perf_metric_workload_define.perf_spec",
+        "workload_spec": "s01_perf_metric_workload_define.workload_spec",
+        "bench_env_report": "s02_perf_bench_env_stabilize.bench_env_report",
+        "repo_path": "from_user_input"
+      },
+      "outputs": {
+        "go_bench_raw": "go_bench_raw"
+      },
+      "condition": "stack == 'go'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s06_perf_rust_criterion_harness",
+      "skill_name": "perf-rust-criterion-harness",
+      "inputs": {
+        "perf_spec": "s01_perf_metric_workload_define.perf_spec",
+        "workload_spec": "s01_perf_metric_workload_define.workload_spec",
+        "bench_env_report": "s02_perf_bench_env_stabilize.bench_env_report",
+        "repo_path": "from_user_input"
+      },
+      "outputs": {
+        "rust_bench_raw": "rust_bench_raw"
+      },
+      "condition": "stack == 'rust'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s07_perf_jvm_jmh_harness",
+      "skill_name": "perf-jvm-jmh-harness",
+      "inputs": {
+        "perf_spec": "s01_perf_metric_workload_define.perf_spec",
+        "workload_spec": "s01_perf_metric_workload_define.workload_spec",
+        "bench_env_report": "s02_perf_bench_env_stabilize.bench_env_report",
+        "repo_path": "from_user_input"
+      },
+      "outputs": {
+        "jvm_bench_raw": "jvm_bench_raw"
+      },
+      "condition": "stack == 'jvm'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s08_perf_hyperfine_cli_harness",
+      "skill_name": "perf-hyperfine-cli-harness",
+      "inputs": {
+        "perf_spec": "s01_perf_metric_workload_define.perf_spec",
+        "workload_spec": "s01_perf_metric_workload_define.workload_spec",
+        "bench_env_report": "s02_perf_bench_env_stabilize.bench_env_report",
+        "repo_path": "from_user_input"
+      },
+      "outputs": {
+        "cli_bench_raw": "cli_bench_raw"
+      },
+      "condition": "workload_kind in ['cli', 'batch'] or stack in ['c', 'cpp']",
+      "parallel_group": 3
+    },
+    {
+      "id": "s09_perf_bench_baseline_normalize",
+      "skill_name": "perf-bench-baseline-normalize",
+      "inputs": {
+        "py_bench_raw": "s03_perf_py_pytest_benchmark_harness.py_bench_raw",
+        "node_bench_raw": "s04_perf_node_tinybench_harness.node_bench_raw",
+        "go_bench_raw": "s05_perf_go_bench_benchstat_harness.go_bench_raw",
+        "rust_bench_raw": "s06_perf_rust_criterion_harness.rust_bench_raw",
+        "jvm_bench_raw": "s07_perf_jvm_jmh_harness.jvm_bench_raw",
+        "cli_bench_raw": "s08_perf_hyperfine_cli_harness.cli_bench_raw",
+        "perf_spec": "s01_perf_metric_workload_define.perf_spec"
+      },
+      "outputs": {
+        "baseline_results": "baseline_results",
+        "bench_command": "bench_command"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s10_perf_py_cprofile_capture",
+      "skill_name": "perf-py-cprofile-capture",
+      "inputs": {
+        "workload_spec": "s01_perf_metric_workload_define.workload_spec",
+        "repo_path": "from_user_input"
+      },
+      "outputs": {
+        "py_cprofile_stats": "py_cprofile_stats"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s11_perf_py_spy_flamegraph",
+      "skill_name": "perf-py-spy-flamegraph",
+      "inputs": {
+        "workload_spec": "s01_perf_metric_workload_define.workload_spec",
+        "repo_path": "from_user_input"
+      },
+      "outputs": {
+        "py_spy_profile": "py_spy_profile"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s12_perf_node_cpu_prof_devtools",
+      "skill_name": "perf-node-cpu-prof-devtools",
+      "inputs": {
+        "workload_spec": "s01_perf_metric_workload_define.workload_spec",
+        "repo_path": "from_user_input"
+      },
+      "outputs": {
+        "node_cpu_profile": "node_cpu_profile"
+      },
+      "condition": "stack == 'node'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s13_perf_node_clinic_0x_flame",
+      "skill_name": "perf-node-clinic-0x-flame",
+      "inputs": {
+        "workload_spec": "s01_perf_metric_workload_define.workload_spec",
+        "repo_path": "from_user_input"
+      },
+      "outputs": {
+        "node_flame_profile": "node_flame_profile"
+      },
+      "condition": "stack == 'node' and workload_kind == 'server'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s14_perf_go_pprof_cpu",
+      "skill_name": "perf-go-pprof-cpu",
+      "inputs": {
+        "workload_spec": "s01_perf_metric_workload_define.workload_spec",
+        "repo_path": "from_user_input",
+        "bench_command": "s09_perf_bench_baseline_normalize.bench_command"
+      },
+      "outputs": {
+        "go_cpu_profile": "go_cpu_profile"
+      },
+      "condition": "stack == 'go'",
+      "parallel_group": 5
+    },
+    {
+      "id": "s15_perf_linux_perf_flamegraph",
+      "skill_name": "perf-linux-perf-flamegraph",
+      "inputs": {
+        "workload_spec": "s01_perf_metric_workload_define.workload_spec",
+        "repo_path": "from_user_input"
+      },
+      "outputs": {
+        "native_perf_profile": "native_perf_profile"
+      },
+      "condition": "stack in ['rust', 'c', 'cpp']",
+      "parallel_group": 2
+    },
+    {
+      "id": "s16_perf_jvm_async_profiler_cpu",
+      "skill_name": "perf-jvm-async-profiler-cpu",
+      "inputs": {
+        "workload_spec": "s01_perf_metric_workload_define.workload_spec",
+        "repo_path": "from_user_input"
+      },
+      "outputs": {
+        "jvm_cpu_profile": "jvm_cpu_profile"
+      },
+      "condition": "stack == 'jvm'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s17_perf_flame_graph_read",
+      "skill_name": "perf-flame-graph-read",
+      "inputs": {
+        "py_cprofile_stats": "s10_perf_py_cprofile_capture.py_cprofile_stats",
+        "py_spy_profile": "s11_perf_py_spy_flamegraph.py_spy_profile",
+        "node_cpu_profile": "s12_perf_node_cpu_prof_devtools.node_cpu_profile",
+        "node_flame_profile": "s13_perf_node_clinic_0x_flame.node_flame_profile",
+        "go_cpu_profile": "s14_perf_go_pprof_cpu.go_cpu_profile",
+        "native_perf_profile": "s15_perf_linux_perf_flamegraph.native_perf_profile",
+        "jvm_cpu_profile": "s16_perf_jvm_async_profiler_cpu.jvm_cpu_profile",
+        "perf_spec": "s01_perf_metric_workload_define.perf_spec"
+      },
+      "outputs": {
+        "hotspot_list": "hotspot_list"
+      },
+      "parallel_group": 6
+    },
+    {
+      "id": "s18_perf_hotspot_classify",
+      "skill_name": "perf-hotspot-classify",
+      "inputs": {
+        "hotspot_list": "s17_perf_flame_graph_read.hotspot_list",
+        "stack": "from_user_input",
+        "baseline_results": "s09_perf_bench_baseline_normalize.baseline_results"
+      },
+      "outputs": {
+        "bottleneck_class": "bottleneck_class",
+        "classified_hotspots": "classified_hotspots"
+      },
+      "parallel_group": 7
+    },
+    {
+      "id": "s19_perf_fix_algorithmic_complexity",
+      "skill_name": "perf-fix-algorithmic-complexity",
+      "inputs": {
+        "classified_hotspots": "s18_perf_hotspot_classify.classified_hotspots",
+        "repo_path": "from_user_input"
+      },
+      "outputs": {
+        "algo_candidates": "algo_candidates"
+      },
+      "condition": "bottleneck_class == 'algorithmic'",
+      "parallel_group": 8
+    },
+    {
+      "id": "s20_perf_py_tracemalloc_alloc",
+      "skill_name": "perf-py-tracemalloc-alloc",
+      "inputs": {
+        "classified_hotspots": "s18_perf_hotspot_classify.classified_hotspots",
+        "workload_spec": "s01_perf_metric_workload_define.workload_spec",
+        "repo_path": "from_user_input"
+      },
+      "outputs": {
+        "py_alloc_profile": "py_alloc_profile"
+      },
+      "condition": "stack == 'python' and bottleneck_class == 'allocation'",
+      "parallel_group": 8
+    },
+    {
+      "id": "s21_perf_go_alloc_escape_analysis",
+      "skill_name": "perf-go-alloc-escape-analysis",
+      "inputs": {
+        "classified_hotspots": "s18_perf_hotspot_classify.classified_hotspots",
+        "bench_command": "s09_perf_bench_baseline_normalize.bench_command",
+        "repo_path": "from_user_input"
+      },
+      "outputs": {
+        "go_alloc_profile": "go_alloc_profile"
+      },
+      "condition": "stack == 'go' and bottleneck_class == 'allocation'",
+      "parallel_group": 8
+    },
+    {
+      "id": "s22_perf_jvm_alloc_profile",
+      "skill_name": "perf-jvm-alloc-profile",
+      "inputs": {
+        "classified_hotspots": "s18_perf_hotspot_classify.classified_hotspots",
+        "workload_spec": "s01_perf_metric_workload_define.workload_spec",
+        "repo_path": "from_user_input"
+      },
+      "outputs": {
+        "jvm_alloc_profile": "jvm_alloc_profile"
+      },
+      "condition": "stack == 'jvm' and bottleneck_class == 'allocation'",
+      "parallel_group": 8
+    },
+    {
+      "id": "s23_perf_fix_allocation_reduction",
+      "skill_name": "perf-fix-allocation-reduction",
+      "inputs": {
+        "classified_hotspots": "s18_perf_hotspot_classify.classified_hotspots",
+        "py_alloc_profile": "s20_perf_py_tracemalloc_alloc.py_alloc_profile",
+        "go_alloc_profile": "s21_perf_go_alloc_escape_analysis.go_alloc_profile",
+        "jvm_alloc_profile": "s22_perf_jvm_alloc_profile.jvm_alloc_profile",
+        "stack": "from_user_input",
+        "repo_path": "from_user_input"
+      },
+      "outputs": {
+        "alloc_candidates": "alloc_candidates"
+      },
+      "condition": "bottleneck_class == 'allocation'",
+      "parallel_group": 9
+    },
+    {
+      "id": "s24_perf_fix_io_batching",
+      "skill_name": "perf-fix-io-batching",
+      "inputs": {
+        "classified_hotspots": "s18_perf_hotspot_classify.classified_hotspots",
+        "stack": "from_user_input",
+        "repo_path": "from_user_input"
+      },
+      "outputs": {
+        "io_candidates": "io_candidates"
+      },
+      "condition": "bottleneck_class == 'io'",
+      "parallel_group": 8
+    },
+    {
+      "id": "s25_perf_one_change_apply",
+      "skill_name": "perf-one-change-apply",
+      "inputs": {
+        "algo_candidates": "s19_perf_fix_algorithmic_complexity.algo_candidates",
+        "alloc_candidates": "s23_perf_fix_allocation_reduction.alloc_candidates",
+        "io_candidates": "s24_perf_fix_io_batching.io_candidates",
+        "repo_path": "from_user_input",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "applied_change": "applied_change"
+      },
+      "parallel_group": 10
+    },
+    {
+      "id": "s26_perf_bench_ab_rerun",
+      "skill_name": "perf-bench-ab-rerun",
+      "inputs": {
+        "applied_change": "s25_perf_one_change_apply.applied_change",
+        "baseline_results": "s09_perf_bench_baseline_normalize.baseline_results",
+        "bench_command": "s09_perf_bench_baseline_normalize.bench_command",
+        "bench_env_report": "s02_perf_bench_env_stabilize.bench_env_report"
+      },
+      "outputs": {
+        "ab_samples": "ab_samples"
+      },
+      "parallel_group": 11
+    },
+    {
+      "id": "s27_perf_significance_check",
+      "skill_name": "perf-significance-check",
+      "inputs": {
+        "ab_samples": "s26_perf_bench_ab_rerun.ab_samples",
+        "perf_spec": "s01_perf_metric_workload_define.perf_spec",
+        "applied_change": "s25_perf_one_change_apply.applied_change",
+        "significance_alpha": "from_user_input_optional"
+      },
+      "outputs": {
+        "significance_verdict": "significance_verdict",
+        "change_log": "change_log"
+      },
+      "parallel_group": 12
+    },
+    {
+      "id": "s28_perf_ci_regression_guard",
+      "skill_name": "perf-ci-regression-guard",
+      "inputs": {
+        "bench_command": "s09_perf_bench_baseline_normalize.bench_command",
+        "baseline_results": "s09_perf_bench_baseline_normalize.baseline_results",
+        "stack": "from_user_input",
+        "repo_path": "from_user_input",
+        "ci_platform": "from_user_input_optional",
+        "significance_alpha": "from_user_input_optional"
+      },
+      "outputs": {
+        "ci_guard_config": "ci_guard_config"
+      },
+      "parallel_group": 5
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_perf_metric_workload_define",
+      "to_step": "s02_perf_bench_env_stabilize",
+      "data_type": "perf-metric-workload-define",
+      "field_mapping": {
+        "perf_spec": "perf_spec"
+      }
+    },
+    {
+      "from_step": "s01_perf_metric_workload_define",
+      "to_step": "s03_perf_py_pytest_benchmark_harness",
+      "data_type": "perf-metric-workload-define",
+      "field_mapping": {
+        "perf_spec": "perf_spec",
+        "workload_spec": "workload_spec"
+      }
+    },
+    {
+      "from_step": "s02_perf_bench_env_stabilize",
+      "to_step": "s03_perf_py_pytest_benchmark_harness",
+      "data_type": "perf-bench-env-stabilize",
+      "field_mapping": {
+        "bench_env_report": "bench_env_report"
+      }
+    },
+    {
+      "from_step": "s01_perf_metric_workload_define",
+      "to_step": "s04_perf_node_tinybench_harness",
+      "data_type": "perf-metric-workload-define",
+      "field_mapping": {
+        "perf_spec": "perf_spec",
+        "workload_spec": "workload_spec"
+      }
+    },
+    {
+      "from_step": "s02_perf_bench_env_stabilize",
+      "to_step": "s04_perf_node_tinybench_harness",
+      "data_type": "perf-bench-env-stabilize",
+      "field_mapping": {
+        "bench_env_report": "bench_env_report"
+      }
+    },
+    {
+      "from_step": "s01_perf_metric_workload_define",
+      "to_step": "s05_perf_go_bench_benchstat_harness",
+      "data_type": "perf-metric-workload-define",
+      "field_mapping": {
+        "perf_spec": "perf_spec",
+        "workload_spec": "workload_spec"
+      }
+    },
+    {
+      "from_step": "s02_perf_bench_env_stabilize",
+      "to_step": "s05_perf_go_bench_benchstat_harness",
+      "data_type": "perf-bench-env-stabilize",
+      "field_mapping": {
+        "bench_env_report": "bench_env_report"
+      }
+    },
+    {
+      "from_step": "s01_perf_metric_workload_define",
+      "to_step": "s06_perf_rust_criterion_harness",
+      "data_type": "perf-metric-workload-define",
+      "field_mapping": {
+        "perf_spec": "perf_spec",
+        "workload_spec": "workload_spec"
+      }
+    },
+    {
+      "from_step": "s02_perf_bench_env_stabilize",
+      "to_step": "s06_perf_rust_criterion_harness",
+      "data_type": "perf-bench-env-stabilize",
+      "field_mapping": {
+        "bench_env_report": "bench_env_report"
+      }
+    },
+    {
+      "from_step": "s01_perf_metric_workload_define",
+      "to_step": "s07_perf_jvm_jmh_harness",
+      "data_type": "perf-metric-workload-define",
+      "field_mapping": {
+        "perf_spec": "perf_spec",
+        "workload_spec": "workload_spec"
+      }
+    },
+    {
+      "from_step": "s02_perf_bench_env_stabilize",
+      "to_step": "s07_perf_jvm_jmh_harness",
+      "data_type": "perf-bench-env-stabilize",
+      "field_mapping": {
+        "bench_env_report": "bench_env_report"
+      }
+    },
+    {
+      "from_step": "s01_perf_metric_workload_define",
+      "to_step": "s08_perf_hyperfine_cli_harness",
+      "data_type": "perf-metric-workload-define",
+      "field_mapping": {
+        "perf_spec": "perf_spec",
+        "workload_spec": "workload_spec"
+      }
+    },
+    {
+      "from_step": "s02_perf_bench_env_stabilize",
+      "to_step": "s08_perf_hyperfine_cli_harness",
+      "data_type": "perf-bench-env-stabilize",
+      "field_mapping": {
+        "bench_env_report": "bench_env_report"
+      }
+    },
+    {
+      "from_step": "s03_perf_py_pytest_benchmark_harness",
+      "to_step": "s09_perf_bench_baseline_normalize",
+      "data_type": "perf-py-pytest-benchmark-harness",
+      "field_mapping": {
+        "py_bench_raw": "py_bench_raw"
+      }
+    },
+    {
+      "from_step": "s04_perf_node_tinybench_harness",
+      "to_step": "s09_perf_bench_baseline_normalize",
+      "data_type": "perf-node-tinybench-harness",
+      "field_mapping": {
+        "node_bench_raw": "node_bench_raw"
+      }
+    },
+    {
+      "from_step": "s05_perf_go_bench_benchstat_harness",
+      "to_step": "s09_perf_bench_baseline_normalize",
+      "data_type": "perf-go-bench-benchstat-harness",
+      "field_mapping": {
+        "go_bench_raw": "go_bench_raw"
+      }
+    },
+    {
+      "from_step": "s06_perf_rust_criterion_harness",
+      "to_step": "s09_perf_bench_baseline_normalize",
+      "data_type": "perf-rust-criterion-harness",
+      "field_mapping": {
+        "rust_bench_raw": "rust_bench_raw"
+      }
+    },
+    {
+      "from_step": "s07_perf_jvm_jmh_harness",
+      "to_step": "s09_perf_bench_baseline_normalize",
+      "data_type": "perf-jvm-jmh-harness",
+      "field_mapping": {
+        "jvm_bench_raw": "jvm_bench_raw"
+      }
+    },
+    {
+      "from_step": "s08_perf_hyperfine_cli_harness",
+      "to_step": "s09_perf_bench_baseline_normalize",
+      "data_type": "perf-hyperfine-cli-harness",
+      "field_mapping": {
+        "cli_bench_raw": "cli_bench_raw"
+      }
+    },
+    {
+      "from_step": "s01_perf_metric_workload_define",
+      "to_step": "s09_perf_bench_baseline_normalize",
+      "data_type": "perf-metric-workload-define",
+      "field_mapping": {
+        "perf_spec": "perf_spec"
+      }
+    },
+    {
+      "from_step": "s01_perf_metric_workload_define",
+      "to_step": "s10_perf_py_cprofile_capture",
+      "data_type": "perf-metric-workload-define",
+      "field_mapping": {
+        "workload_spec": "workload_spec"
+      }
+    },
+    {
+      "from_step": "s01_perf_metric_workload_define",
+      "to_step": "s11_perf_py_spy_flamegraph",
+      "data_type": "perf-metric-workload-define",
+      "field_mapping": {
+        "workload_spec": "workload_spec"
+      }
+    },
+    {
+      "from_step": "s01_perf_metric_workload_define",
+      "to_step": "s12_perf_node_cpu_prof_devtools",
+      "data_type": "perf-metric-workload-define",
+      "field_mapping": {
+        "workload_spec": "workload_spec"
+      }
+    },
+    {
+      "from_step": "s01_perf_metric_workload_define",
+      "to_step": "s13_perf_node_clinic_0x_flame",
+      "data_type": "perf-metric-workload-define",
+      "field_mapping": {
+        "workload_spec": "workload_spec"
+      }
+    },
+    {
+      "from_step": "s01_perf_metric_workload_define",
+      "to_step": "s14_perf_go_pprof_cpu",
+      "data_type": "perf-metric-workload-define",
+      "field_mapping": {
+        "workload_spec": "workload_spec"
+      }
+    },
+    {
+      "from_step": "s09_perf_bench_baseline_normalize",
+      "to_step": "s14_perf_go_pprof_cpu",
+      "data_type": "perf-bench-baseline-normalize",
+      "field_mapping": {
+        "bench_command": "bench_command"
+      }
+    },
+    {
+      "from_step": "s01_perf_metric_workload_define",
+      "to_step": "s15_perf_linux_perf_flamegraph",
+      "data_type": "perf-metric-workload-define",
+      "field_mapping": {
+        "workload_spec": "workload_spec"
+      }
+    },
+    {
+      "from_step": "s01_perf_metric_workload_define",
+      "to_step": "s16_perf_jvm_async_profiler_cpu",
+      "data_type": "perf-metric-workload-define",
+      "field_mapping": {
+        "workload_spec": "workload_spec"
+      }
+    },
+    {
+      "from_step": "s10_perf_py_cprofile_capture",
+      "to_step": "s17_perf_flame_graph_read",
+      "data_type": "perf-py-cprofile-capture",
+      "field_mapping": {
+        "py_cprofile_stats": "py_cprofile_stats"
+      }
+    },
+    {
+      "from_step": "s11_perf_py_spy_flamegraph",
+      "to_step": "s17_perf_flame_graph_read",
+      "data_type": "perf-py-spy-flamegraph",
+      "field_mapping": {
+        "py_spy_profile": "py_spy_profile"
+      }
+    },
+    {
+      "from_step": "s12_perf_node_cpu_prof_devtools",
+      "to_step": "s17_perf_flame_graph_read",
+      "data_type": "perf-node-cpu-prof-devtools",
+      "field_mapping": {
+        "node_cpu_profile": "node_cpu_profile"
+      }
+    },
+    {
+      "from_step": "s13_perf_node_clinic_0x_flame",
+      "to_step": "s17_perf_flame_graph_read",
+      "data_type": "perf-node-clinic-0x-flame",
+      "field_mapping": {
+        "node_flame_profile": "node_flame_profile"
+      }
+    },
+    {
+      "from_step": "s14_perf_go_pprof_cpu",
+      "to_step": "s17_perf_flame_graph_read",
+      "data_type": "perf-go-pprof-cpu",
+      "field_mapping": {
+        "go_cpu_profile": "go_cpu_profile"
+      }
+    },
+    {
+      "from_step": "s15_perf_linux_perf_flamegraph",
+      "to_step": "s17_perf_flame_graph_read",
+      "data_type": "perf-linux-perf-flamegraph",
+      "field_mapping": {
+        "native_perf_profile": "native_perf_profile"
+      }
+    },
+    {
+      "from_step": "s16_perf_jvm_async_profiler_cpu",
+      "to_step": "s17_perf_flame_graph_read",
+      "data_type": "perf-jvm-async-profiler-cpu",
+      "field_mapping": {
+        "jvm_cpu_profile": "jvm_cpu_profile"
+      }
+    },
+    {
+      "from_step": "s01_perf_metric_workload_define",
+      "to_step": "s17_perf_flame_graph_read",
+      "data_type": "perf-metric-workload-define",
+      "field_mapping": {
+        "perf_spec": "perf_spec"
+      }
+    },
+    {
+      "from_step": "s17_perf_flame_graph_read",
+      "to_step": "s18_perf_hotspot_classify",
+      "data_type": "perf-flame-graph-read",
+      "field_mapping": {
+        "hotspot_list": "hotspot_list"
+      }
+    },
+    {
+      "from_step": "s09_perf_bench_baseline_normalize",
+      "to_step": "s18_perf_hotspot_classify",
+      "data_type": "perf-bench-baseline-normalize",
+      "field_mapping": {
+        "baseline_results": "baseline_results"
+      }
+    },
+    {
+      "from_step": "s18_perf_hotspot_classify",
+      "to_step": "s19_perf_fix_algorithmic_complexity",
+      "data_type": "perf-hotspot-classify",
+      "field_mapping": {
+        "classified_hotspots": "classified_hotspots"
+      }
+    },
+    {
+      "from_step": "s18_perf_hotspot_classify",
+      "to_step": "s20_perf_py_tracemalloc_alloc",
+      "data_type": "perf-hotspot-classify",
+      "field_mapping": {
+        "classified_hotspots": "classified_hotspots"
+      }
+    },
+    {
+      "from_step": "s01_perf_metric_workload_define",
+      "to_step": "s20_perf_py_tracemalloc_alloc",
+      "data_type": "perf-metric-workload-define",
+      "field_mapping": {
+        "workload_spec": "workload_spec"
+      }
+    },
+    {
+      "from_step": "s18_perf_hotspot_classify",
+      "to_step": "s21_perf_go_alloc_escape_analysis",
+      "data_type": "perf-hotspot-classify",
+      "field_mapping": {
+        "classified_hotspots": "classified_hotspots"
+      }
+    },
+    {
+      "from_step": "s09_perf_bench_baseline_normalize",
+      "to_step": "s21_perf_go_alloc_escape_analysis",
+      "data_type": "perf-bench-baseline-normalize",
+      "field_mapping": {
+        "bench_command": "bench_command"
+      }
+    },
+    {
+      "from_step": "s18_perf_hotspot_classify",
+      "to_step": "s22_perf_jvm_alloc_profile",
+      "data_type": "perf-hotspot-classify",
+      "field_mapping": {
+        "classified_hotspots": "classified_hotspots"
+      }
+    },
+    {
+      "from_step": "s01_perf_metric_workload_define",
+      "to_step": "s22_perf_jvm_alloc_profile",
+      "data_type": "perf-metric-workload-define",
+      "field_mapping": {
+        "workload_spec": "workload_spec"
+      }
+    },
+    {
+      "from_step": "s18_perf_hotspot_classify",
+      "to_step": "s23_perf_fix_allocation_reduction",
+      "data_type": "perf-hotspot-classify",
+      "field_mapping": {
+        "classified_hotspots": "classified_hotspots"
+      }
+    },
+    {
+      "from_step": "s20_perf_py_tracemalloc_alloc",
+      "to_step": "s23_perf_fix_allocation_reduction",
+      "data_type": "perf-py-tracemalloc-alloc",
+      "field_mapping": {
+        "py_alloc_profile": "py_alloc_profile"
+      }
+    },
+    {
+      "from_step": "s21_perf_go_alloc_escape_analysis",
+      "to_step": "s23_perf_fix_allocation_reduction",
+      "data_type": "perf-go-alloc-escape-analysis",
+      "field_mapping": {
+        "go_alloc_profile": "go_alloc_profile"
+      }
+    },
+    {
+      "from_step": "s22_perf_jvm_alloc_profile",
+      "to_step": "s23_perf_fix_allocation_reduction",
+      "data_type": "perf-jvm-alloc-profile",
+      "field_mapping": {
+        "jvm_alloc_profile": "jvm_alloc_profile"
+      }
+    },
+    {
+      "from_step": "s18_perf_hotspot_classify",
+      "to_step": "s24_perf_fix_io_batching",
+      "data_type": "perf-hotspot-classify",
+      "field_mapping": {
+        "classified_hotspots": "classified_hotspots"
+      }
+    },
+    {
+      "from_step": "s19_perf_fix_algorithmic_complexity",
+      "to_step": "s25_perf_one_change_apply",
+      "data_type": "perf-fix-algorithmic-complexity",
+      "field_mapping": {
+        "algo_candidates": "algo_candidates"
+      }
+    },
+    {
+      "from_step": "s23_perf_fix_allocation_reduction",
+      "to_step": "s25_perf_one_change_apply",
+      "data_type": "perf-fix-allocation-reduction",
+      "field_mapping": {
+        "alloc_candidates": "alloc_candidates"
+      }
+    },
+    {
+      "from_step": "s24_perf_fix_io_batching",
+      "to_step": "s25_perf_one_change_apply",
+      "data_type": "perf-fix-io-batching",
+      "field_mapping": {
+        "io_candidates": "io_candidates"
+      }
+    },
+    {
+      "from_step": "s25_perf_one_change_apply",
+      "to_step": "s26_perf_bench_ab_rerun",
+      "data_type": "perf-one-change-apply",
+      "field_mapping": {
+        "applied_change": "applied_change"
+      }
+    },
+    {
+      "from_step": "s09_perf_bench_baseline_normalize",
+      "to_step": "s26_perf_bench_ab_rerun",
+      "data_type": "perf-bench-baseline-normalize",
+      "field_mapping": {
+        "baseline_results": "baseline_results",
+        "bench_command": "bench_command"
+      }
+    },
+    {
+      "from_step": "s02_perf_bench_env_stabilize",
+      "to_step": "s26_perf_bench_ab_rerun",
+      "data_type": "perf-bench-env-stabilize",
+      "field_mapping": {
+        "bench_env_report": "bench_env_report"
+      }
+    },
+    {
+      "from_step": "s26_perf_bench_ab_rerun",
+      "to_step": "s27_perf_significance_check",
+      "data_type": "perf-bench-ab-rerun",
+      "field_mapping": {
+        "ab_samples": "ab_samples"
+      }
+    },
+    {
+      "from_step": "s01_perf_metric_workload_define",
+      "to_step": "s27_perf_significance_check",
+      "data_type": "perf-metric-workload-define",
+      "field_mapping": {
+        "perf_spec": "perf_spec"
+      }
+    },
+    {
+      "from_step": "s25_perf_one_change_apply",
+      "to_step": "s27_perf_significance_check",
+      "data_type": "perf-one-change-apply",
+      "field_mapping": {
+        "applied_change": "applied_change"
+      }
+    },
+    {
+      "from_step": "s09_perf_bench_baseline_normalize",
+      "to_step": "s28_perf_ci_regression_guard",
+      "data_type": "perf-bench-baseline-normalize",
+      "field_mapping": {
+        "bench_command": "bench_command",
+        "baseline_results": "baseline_results"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "target_description",
+    "stack",
+    "workload_kind",
+    "run_command",
+    "perf_goal",
+    "repo_path",
+    "significance_alpha",
+    "ci_platform"
+  ],
+  "terminal_outputs": [
+    "perf_spec",
+    "hotspot_list",
+    "bottleneck_class",
+    "applied_change",
+    "significance_verdict",
+    "change_log",
+    "ci_guard_config"
+  ],
+  "parallel_groups": [
+    [
+      "s01_perf_metric_workload_define"
+    ],
+    [
+      "s02_perf_bench_env_stabilize",
+      "s10_perf_py_cprofile_capture",
+      "s11_perf_py_spy_flamegraph",
+      "s12_perf_node_cpu_prof_devtools",
+      "s13_perf_node_clinic_0x_flame",
+      "s15_perf_linux_perf_flamegraph",
+      "s16_perf_jvm_async_profiler_cpu"
+    ],
+    [
+      "s03_perf_py_pytest_benchmark_harness",
+      "s04_perf_node_tinybench_harness",
+      "s05_perf_go_bench_benchstat_harness",
+      "s06_perf_rust_criterion_harness",
+      "s07_perf_jvm_jmh_harness",
+      "s08_perf_hyperfine_cli_harness"
+    ],
+    [
+      "s09_perf_bench_baseline_normalize"
+    ],
+    [
+      "s14_perf_go_pprof_cpu",
+      "s28_perf_ci_regression_guard"
+    ],
+    [
+      "s17_perf_flame_graph_read"
+    ],
+    [
+      "s18_perf_hotspot_classify"
+    ],
+    [
+      "s19_perf_fix_algorithmic_complexity",
+      "s20_perf_py_tracemalloc_alloc",
+      "s21_perf_go_alloc_escape_analysis",
+      "s22_perf_jvm_alloc_profile",
+      "s24_perf_fix_io_batching"
+    ],
+    [
+      "s23_perf_fix_allocation_reduction"
+    ],
+    [
+      "s25_perf_one_change_apply"
+    ],
+    [
+      "s26_perf_bench_ab_rerun"
+    ],
+    [
+      "s27_perf_significance_check"
+    ]
+  ],
+  "estimated_cost": 28,
+  "critical_path": [
+    "s01_perf_metric_workload_define",
+    "s02_perf_bench_env_stabilize",
+    "s03_perf_py_pytest_benchmark_harness",
+    "s09_perf_bench_baseline_normalize",
+    "s14_perf_go_pprof_cpu",
+    "s17_perf_flame_graph_read",
+    "s18_perf_hotspot_classify",
+    "s20_perf_py_tracemalloc_alloc",
+    "s23_perf_fix_allocation_reduction",
+    "s25_perf_one_change_apply",
+    "s26_perf_bench_ab_rerun",
+    "s27_perf_significance_check"
+  ]
+}

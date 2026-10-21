@@ -1,0 +1,1004 @@
+{
+  "name": "realtime-systems",
+  "description": "Build a realtime feature end to end: choose the transport, define protocol, versioning, close codes, auth, heartbeat, backpressure and delivery guarantees, implement the server for the chosen stack, scale out with Redis, configure the proxy, drain on deploy, build the reconnecting reconciling client, fault-test it and load-test it to a capacity report.",
+  "steps": [
+    {
+      "id": "s01_rtw_transport_decision",
+      "skill_name": "rtw-transport-decision",
+      "inputs": {
+        "feature_spec": "from_user_input",
+        "client_platforms": "from_user_input"
+      },
+      "outputs": {
+        "transport_decision": "transport_decision"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_rtw_message_envelope",
+      "skill_name": "rtw-message-envelope",
+      "inputs": {
+        "feature_spec": "from_user_input",
+        "transport_decision": "s01_rtw_transport_decision.transport_decision"
+      },
+      "outputs": {
+        "protocol_spec": "protocol_spec"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_rtw_protocol_version_negotiation",
+      "skill_name": "rtw-protocol-version-negotiation",
+      "inputs": {
+        "protocol_spec": "s02_rtw_message_envelope.protocol_spec",
+        "transport_decision": "s01_rtw_transport_decision.transport_decision"
+      },
+      "outputs": {
+        "version_policy": "version_policy"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_rtw_close_code_map",
+      "skill_name": "rtw-close-code-map",
+      "inputs": {
+        "protocol_spec": "s02_rtw_message_envelope.protocol_spec",
+        "transport_decision": "s01_rtw_transport_decision.transport_decision"
+      },
+      "outputs": {
+        "close_code_map": "close_code_map"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s05_rtw_connection_auth",
+      "skill_name": "rtw-connection-auth",
+      "inputs": {
+        "transport_decision": "s01_rtw_transport_decision.transport_decision",
+        "auth_provider": "from_user_input",
+        "client_platforms": "from_user_input"
+      },
+      "outputs": {
+        "auth_design": "auth_design"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s06_rtw_heartbeat_config",
+      "skill_name": "rtw-heartbeat-config",
+      "inputs": {
+        "transport_decision": "s01_rtw_transport_decision.transport_decision",
+        "network_path": "from_user_input"
+      },
+      "outputs": {
+        "heartbeat_config": "heartbeat_config"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s07_rtw_backpressure_policy",
+      "skill_name": "rtw-backpressure-policy",
+      "inputs": {
+        "protocol_spec": "s02_rtw_message_envelope.protocol_spec",
+        "feature_spec": "from_user_input"
+      },
+      "outputs": {
+        "backpressure_policy": "backpressure_policy"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s08_rtw_delivery_contract",
+      "skill_name": "rtw-delivery-contract",
+      "inputs": {
+        "protocol_spec": "s02_rtw_message_envelope.protocol_spec",
+        "backpressure_policy": "s07_rtw_backpressure_policy.backpressure_policy"
+      },
+      "outputs": {
+        "delivery_contract": "delivery_contract"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s09_rtw_node_ws_server",
+      "skill_name": "rtw-node-ws-server",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "protocol_spec": "s02_rtw_message_envelope.protocol_spec",
+        "version_policy": "s03_rtw_protocol_version_negotiation.version_policy",
+        "auth_design": "s05_rtw_connection_auth.auth_design",
+        "heartbeat_config": "s06_rtw_heartbeat_config.heartbeat_config",
+        "backpressure_policy": "s07_rtw_backpressure_policy.backpressure_policy",
+        "close_code_map": "s04_rtw_close_code_map.close_code_map"
+      },
+      "outputs": {
+        "server_impl": "server_impl"
+      },
+      "condition": "transport_decision.transport == 'websocket' and stack == 'node'",
+      "parallel_group": 4
+    },
+    {
+      "id": "s10_rtw_py_ws_server",
+      "skill_name": "rtw-py-ws-server",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "protocol_spec": "s02_rtw_message_envelope.protocol_spec",
+        "version_policy": "s03_rtw_protocol_version_negotiation.version_policy",
+        "auth_design": "s05_rtw_connection_auth.auth_design",
+        "heartbeat_config": "s06_rtw_heartbeat_config.heartbeat_config",
+        "backpressure_policy": "s07_rtw_backpressure_policy.backpressure_policy",
+        "close_code_map": "s04_rtw_close_code_map.close_code_map"
+      },
+      "outputs": {
+        "server_impl": "server_impl"
+      },
+      "condition": "transport_decision.transport == 'websocket' and stack == 'python'",
+      "parallel_group": 4
+    },
+    {
+      "id": "s11_rtw_go_ws_server",
+      "skill_name": "rtw-go-ws-server",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "protocol_spec": "s02_rtw_message_envelope.protocol_spec",
+        "version_policy": "s03_rtw_protocol_version_negotiation.version_policy",
+        "auth_design": "s05_rtw_connection_auth.auth_design",
+        "heartbeat_config": "s06_rtw_heartbeat_config.heartbeat_config",
+        "backpressure_policy": "s07_rtw_backpressure_policy.backpressure_policy",
+        "close_code_map": "s04_rtw_close_code_map.close_code_map"
+      },
+      "outputs": {
+        "server_impl": "server_impl"
+      },
+      "condition": "transport_decision.transport == 'websocket' and stack == 'go'",
+      "parallel_group": 4
+    },
+    {
+      "id": "s12_rtw_node_socketio_redis_adapter",
+      "skill_name": "rtw-node-socketio-redis-adapter",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "transport_decision": "s01_rtw_transport_decision.transport_decision",
+        "heartbeat_config": "s06_rtw_heartbeat_config.heartbeat_config",
+        "redis_url": "from_user_input"
+      },
+      "outputs": {
+        "socketio_impl": "socketio_impl"
+      },
+      "condition": "stack == 'node-socketio'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s13_rtw_sse_endpoint",
+      "skill_name": "rtw-sse-endpoint",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "protocol_spec": "s02_rtw_message_envelope.protocol_spec",
+        "auth_design": "s05_rtw_connection_auth.auth_design",
+        "heartbeat_config": "s06_rtw_heartbeat_config.heartbeat_config",
+        "delivery_contract": "s08_rtw_delivery_contract.delivery_contract"
+      },
+      "outputs": {
+        "sse_impl": "sse_impl"
+      },
+      "condition": "transport_decision.transport == 'sse' or transport_decision.fallback == 'sse'",
+      "parallel_group": 5
+    },
+    {
+      "id": "s14_rtw_long_polling_endpoint",
+      "skill_name": "rtw-long-polling-endpoint",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "protocol_spec": "s02_rtw_message_envelope.protocol_spec",
+        "auth_design": "s05_rtw_connection_auth.auth_design",
+        "network_path": "from_user_input",
+        "delivery_contract": "s08_rtw_delivery_contract.delivery_contract"
+      },
+      "outputs": {
+        "long_poll_impl": "long_poll_impl"
+      },
+      "condition": "transport_decision.transport == 'long-polling' or transport_decision.fallback == 'long-polling'",
+      "parallel_group": 5
+    },
+    {
+      "id": "s15_rtw_redis_pubsub_fanout",
+      "skill_name": "rtw-redis-pubsub-fanout",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "delivery_contract": "s08_rtw_delivery_contract.delivery_contract",
+        "redis_url": "from_user_input"
+      },
+      "outputs": {
+        "fanout_impl": "fanout_impl"
+      },
+      "condition": "stack != 'node-socketio'",
+      "parallel_group": 5
+    },
+    {
+      "id": "s16_rtw_redis_streams_replay",
+      "skill_name": "rtw-redis-streams-replay",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "delivery_contract": "s08_rtw_delivery_contract.delivery_contract",
+        "fanout_impl": "s15_rtw_redis_pubsub_fanout.fanout_impl",
+        "redis_url": "from_user_input"
+      },
+      "outputs": {
+        "replay_impl": "replay_impl"
+      },
+      "condition": "delivery_contract.replay_required == true and stack != 'node-socketio'",
+      "parallel_group": 6
+    },
+    {
+      "id": "s17_rtw_presence_redis",
+      "skill_name": "rtw-presence-redis",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "heartbeat_config": "s06_rtw_heartbeat_config.heartbeat_config",
+        "redis_url": "from_user_input"
+      },
+      "outputs": {
+        "presence_impl": "presence_impl"
+      },
+      "condition": "needs_presence == true",
+      "parallel_group": 3
+    },
+    {
+      "id": "s18_rtw_nginx_ws_proxy",
+      "skill_name": "rtw-nginx-ws-proxy",
+      "inputs": {
+        "nginx_conf_path": "from_user_input",
+        "transport_decision": "s01_rtw_transport_decision.transport_decision",
+        "heartbeat_config": "s06_rtw_heartbeat_config.heartbeat_config"
+      },
+      "outputs": {
+        "nginx_proxy_config": "nginx_proxy_config"
+      },
+      "condition": "proxy == 'nginx'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s19_rtw_haproxy_ws_proxy",
+      "skill_name": "rtw-haproxy-ws-proxy",
+      "inputs": {
+        "haproxy_cfg_path": "from_user_input",
+        "transport_decision": "s01_rtw_transport_decision.transport_decision",
+        "heartbeat_config": "s06_rtw_heartbeat_config.heartbeat_config"
+      },
+      "outputs": {
+        "haproxy_proxy_config": "haproxy_proxy_config"
+      },
+      "condition": "proxy == 'haproxy'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s20_rtw_aws_alb_ws",
+      "skill_name": "rtw-aws-alb-ws",
+      "inputs": {
+        "alb_arn": "from_user_input",
+        "target_group_arn": "from_user_input",
+        "transport_decision": "s01_rtw_transport_decision.transport_decision",
+        "heartbeat_config": "s06_rtw_heartbeat_config.heartbeat_config"
+      },
+      "outputs": {
+        "alb_config": "alb_config"
+      },
+      "condition": "proxy == 'aws-alb'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s21_rtw_graceful_drain",
+      "skill_name": "rtw-graceful-drain",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "close_code_map": "s04_rtw_close_code_map.close_code_map",
+        "deploy_platform": "from_user_input"
+      },
+      "outputs": {
+        "drain_impl": "drain_impl"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s22_rtw_client_reconnect_backoff",
+      "skill_name": "rtw-client-reconnect-backoff",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "close_code_map": "s04_rtw_close_code_map.close_code_map",
+        "heartbeat_config": "s06_rtw_heartbeat_config.heartbeat_config",
+        "delivery_contract": "s08_rtw_delivery_contract.delivery_contract",
+        "backoff_bounds": "from_user_input"
+      },
+      "outputs": {
+        "reconnect_client": "reconnect_client"
+      },
+      "condition": "transport_decision.transport == 'websocket'",
+      "parallel_group": 5
+    },
+    {
+      "id": "s23_rtw_client_state_reconciliation",
+      "skill_name": "rtw-client-state-reconciliation",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "delivery_contract": "s08_rtw_delivery_contract.delivery_contract",
+        "reconnect_client": "s22_rtw_client_reconnect_backoff.reconnect_client"
+      },
+      "outputs": {
+        "reconciliation_impl": "reconciliation_impl"
+      },
+      "parallel_group": 6
+    },
+    {
+      "id": "s24_rtw_toxiproxy_disconnect_test",
+      "skill_name": "rtw-toxiproxy-disconnect-test",
+      "inputs": {
+        "server_url": "from_user_input",
+        "backpressure_policy": "s07_rtw_backpressure_policy.backpressure_policy",
+        "heartbeat_config": "s06_rtw_heartbeat_config.heartbeat_config",
+        "reconnect_client": "s22_rtw_client_reconnect_backoff.reconnect_client",
+        "reconciliation_impl": "s23_rtw_client_state_reconciliation.reconciliation_impl"
+      },
+      "outputs": {
+        "chaos_report": "chaos_report"
+      },
+      "parallel_group": 7
+    },
+    {
+      "id": "s25_rtw_linux_connection_limits",
+      "skill_name": "rtw-linux-connection-limits",
+      "inputs": {
+        "server_hosts": "from_user_input",
+        "target_connections": "from_user_input"
+      },
+      "outputs": {
+        "os_limits_report": "os_limits_report"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s26_rtw_k6_ws_load_test",
+      "skill_name": "rtw-k6-ws-load-test",
+      "inputs": {
+        "server_url": "from_user_input",
+        "protocol_spec": "s02_rtw_message_envelope.protocol_spec",
+        "target_connections": "from_user_input",
+        "slo_targets": "from_user_input",
+        "os_limits_report": "s25_rtw_linux_connection_limits.os_limits_report"
+      },
+      "outputs": {
+        "k6_summary": "k6_summary"
+      },
+      "condition": "load_tool == 'k6'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s27_rtw_artillery_ws_load_test",
+      "skill_name": "rtw-artillery-ws-load-test",
+      "inputs": {
+        "server_url": "from_user_input",
+        "protocol_spec": "s02_rtw_message_envelope.protocol_spec",
+        "target_connections": "from_user_input",
+        "slo_targets": "from_user_input",
+        "os_limits_report": "s25_rtw_linux_connection_limits.os_limits_report"
+      },
+      "outputs": {
+        "artillery_report": "artillery_report"
+      },
+      "condition": "load_tool == 'artillery'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s28_rtw_load_test_capacity_report",
+      "skill_name": "rtw-load-test-capacity-report",
+      "inputs": {
+        "k6_summary": "s26_rtw_k6_ws_load_test.k6_summary",
+        "artillery_report": "s27_rtw_artillery_ws_load_test.artillery_report",
+        "slo_targets": "from_user_input",
+        "target_connections": "from_user_input"
+      },
+      "outputs": {
+        "capacity_report": "capacity_report"
+      },
+      "parallel_group": 4
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_rtw_transport_decision",
+      "to_step": "s02_rtw_message_envelope",
+      "data_type": "rtw-transport-decision",
+      "field_mapping": {
+        "transport_decision": "transport_decision"
+      }
+    },
+    {
+      "from_step": "s02_rtw_message_envelope",
+      "to_step": "s03_rtw_protocol_version_negotiation",
+      "data_type": "rtw-message-envelope",
+      "field_mapping": {
+        "protocol_spec": "protocol_spec"
+      }
+    },
+    {
+      "from_step": "s01_rtw_transport_decision",
+      "to_step": "s03_rtw_protocol_version_negotiation",
+      "data_type": "rtw-transport-decision",
+      "field_mapping": {
+        "transport_decision": "transport_decision"
+      }
+    },
+    {
+      "from_step": "s02_rtw_message_envelope",
+      "to_step": "s04_rtw_close_code_map",
+      "data_type": "rtw-message-envelope",
+      "field_mapping": {
+        "protocol_spec": "protocol_spec"
+      }
+    },
+    {
+      "from_step": "s01_rtw_transport_decision",
+      "to_step": "s04_rtw_close_code_map",
+      "data_type": "rtw-transport-decision",
+      "field_mapping": {
+        "transport_decision": "transport_decision"
+      }
+    },
+    {
+      "from_step": "s01_rtw_transport_decision",
+      "to_step": "s05_rtw_connection_auth",
+      "data_type": "rtw-transport-decision",
+      "field_mapping": {
+        "transport_decision": "transport_decision"
+      }
+    },
+    {
+      "from_step": "s01_rtw_transport_decision",
+      "to_step": "s06_rtw_heartbeat_config",
+      "data_type": "rtw-transport-decision",
+      "field_mapping": {
+        "transport_decision": "transport_decision"
+      }
+    },
+    {
+      "from_step": "s02_rtw_message_envelope",
+      "to_step": "s07_rtw_backpressure_policy",
+      "data_type": "rtw-message-envelope",
+      "field_mapping": {
+        "protocol_spec": "protocol_spec"
+      }
+    },
+    {
+      "from_step": "s02_rtw_message_envelope",
+      "to_step": "s08_rtw_delivery_contract",
+      "data_type": "rtw-message-envelope",
+      "field_mapping": {
+        "protocol_spec": "protocol_spec"
+      }
+    },
+    {
+      "from_step": "s07_rtw_backpressure_policy",
+      "to_step": "s08_rtw_delivery_contract",
+      "data_type": "rtw-backpressure-policy",
+      "field_mapping": {
+        "backpressure_policy": "backpressure_policy"
+      }
+    },
+    {
+      "from_step": "s02_rtw_message_envelope",
+      "to_step": "s09_rtw_node_ws_server",
+      "data_type": "rtw-message-envelope",
+      "field_mapping": {
+        "protocol_spec": "protocol_spec"
+      }
+    },
+    {
+      "from_step": "s03_rtw_protocol_version_negotiation",
+      "to_step": "s09_rtw_node_ws_server",
+      "data_type": "rtw-protocol-version-negotiation",
+      "field_mapping": {
+        "version_policy": "version_policy"
+      }
+    },
+    {
+      "from_step": "s05_rtw_connection_auth",
+      "to_step": "s09_rtw_node_ws_server",
+      "data_type": "rtw-connection-auth",
+      "field_mapping": {
+        "auth_design": "auth_design"
+      }
+    },
+    {
+      "from_step": "s06_rtw_heartbeat_config",
+      "to_step": "s09_rtw_node_ws_server",
+      "data_type": "rtw-heartbeat-config",
+      "field_mapping": {
+        "heartbeat_config": "heartbeat_config"
+      }
+    },
+    {
+      "from_step": "s07_rtw_backpressure_policy",
+      "to_step": "s09_rtw_node_ws_server",
+      "data_type": "rtw-backpressure-policy",
+      "field_mapping": {
+        "backpressure_policy": "backpressure_policy"
+      }
+    },
+    {
+      "from_step": "s04_rtw_close_code_map",
+      "to_step": "s09_rtw_node_ws_server",
+      "data_type": "rtw-close-code-map",
+      "field_mapping": {
+        "close_code_map": "close_code_map"
+      }
+    },
+    {
+      "from_step": "s02_rtw_message_envelope",
+      "to_step": "s10_rtw_py_ws_server",
+      "data_type": "rtw-message-envelope",
+      "field_mapping": {
+        "protocol_spec": "protocol_spec"
+      }
+    },
+    {
+      "from_step": "s03_rtw_protocol_version_negotiation",
+      "to_step": "s10_rtw_py_ws_server",
+      "data_type": "rtw-protocol-version-negotiation",
+      "field_mapping": {
+        "version_policy": "version_policy"
+      }
+    },
+    {
+      "from_step": "s05_rtw_connection_auth",
+      "to_step": "s10_rtw_py_ws_server",
+      "data_type": "rtw-connection-auth",
+      "field_mapping": {
+        "auth_design": "auth_design"
+      }
+    },
+    {
+      "from_step": "s06_rtw_heartbeat_config",
+      "to_step": "s10_rtw_py_ws_server",
+      "data_type": "rtw-heartbeat-config",
+      "field_mapping": {
+        "heartbeat_config": "heartbeat_config"
+      }
+    },
+    {
+      "from_step": "s07_rtw_backpressure_policy",
+      "to_step": "s10_rtw_py_ws_server",
+      "data_type": "rtw-backpressure-policy",
+      "field_mapping": {
+        "backpressure_policy": "backpressure_policy"
+      }
+    },
+    {
+      "from_step": "s04_rtw_close_code_map",
+      "to_step": "s10_rtw_py_ws_server",
+      "data_type": "rtw-close-code-map",
+      "field_mapping": {
+        "close_code_map": "close_code_map"
+      }
+    },
+    {
+      "from_step": "s02_rtw_message_envelope",
+      "to_step": "s11_rtw_go_ws_server",
+      "data_type": "rtw-message-envelope",
+      "field_mapping": {
+        "protocol_spec": "protocol_spec"
+      }
+    },
+    {
+      "from_step": "s03_rtw_protocol_version_negotiation",
+      "to_step": "s11_rtw_go_ws_server",
+      "data_type": "rtw-protocol-version-negotiation",
+      "field_mapping": {
+        "version_policy": "version_policy"
+      }
+    },
+    {
+      "from_step": "s05_rtw_connection_auth",
+      "to_step": "s11_rtw_go_ws_server",
+      "data_type": "rtw-connection-auth",
+      "field_mapping": {
+        "auth_design": "auth_design"
+      }
+    },
+    {
+      "from_step": "s06_rtw_heartbeat_config",
+      "to_step": "s11_rtw_go_ws_server",
+      "data_type": "rtw-heartbeat-config",
+      "field_mapping": {
+        "heartbeat_config": "heartbeat_config"
+      }
+    },
+    {
+      "from_step": "s07_rtw_backpressure_policy",
+      "to_step": "s11_rtw_go_ws_server",
+      "data_type": "rtw-backpressure-policy",
+      "field_mapping": {
+        "backpressure_policy": "backpressure_policy"
+      }
+    },
+    {
+      "from_step": "s04_rtw_close_code_map",
+      "to_step": "s11_rtw_go_ws_server",
+      "data_type": "rtw-close-code-map",
+      "field_mapping": {
+        "close_code_map": "close_code_map"
+      }
+    },
+    {
+      "from_step": "s01_rtw_transport_decision",
+      "to_step": "s12_rtw_node_socketio_redis_adapter",
+      "data_type": "rtw-transport-decision",
+      "field_mapping": {
+        "transport_decision": "transport_decision"
+      }
+    },
+    {
+      "from_step": "s06_rtw_heartbeat_config",
+      "to_step": "s12_rtw_node_socketio_redis_adapter",
+      "data_type": "rtw-heartbeat-config",
+      "field_mapping": {
+        "heartbeat_config": "heartbeat_config"
+      }
+    },
+    {
+      "from_step": "s02_rtw_message_envelope",
+      "to_step": "s13_rtw_sse_endpoint",
+      "data_type": "rtw-message-envelope",
+      "field_mapping": {
+        "protocol_spec": "protocol_spec"
+      }
+    },
+    {
+      "from_step": "s05_rtw_connection_auth",
+      "to_step": "s13_rtw_sse_endpoint",
+      "data_type": "rtw-connection-auth",
+      "field_mapping": {
+        "auth_design": "auth_design"
+      }
+    },
+    {
+      "from_step": "s06_rtw_heartbeat_config",
+      "to_step": "s13_rtw_sse_endpoint",
+      "data_type": "rtw-heartbeat-config",
+      "field_mapping": {
+        "heartbeat_config": "heartbeat_config"
+      }
+    },
+    {
+      "from_step": "s08_rtw_delivery_contract",
+      "to_step": "s13_rtw_sse_endpoint",
+      "data_type": "rtw-delivery-contract",
+      "field_mapping": {
+        "delivery_contract": "delivery_contract"
+      }
+    },
+    {
+      "from_step": "s02_rtw_message_envelope",
+      "to_step": "s14_rtw_long_polling_endpoint",
+      "data_type": "rtw-message-envelope",
+      "field_mapping": {
+        "protocol_spec": "protocol_spec"
+      }
+    },
+    {
+      "from_step": "s05_rtw_connection_auth",
+      "to_step": "s14_rtw_long_polling_endpoint",
+      "data_type": "rtw-connection-auth",
+      "field_mapping": {
+        "auth_design": "auth_design"
+      }
+    },
+    {
+      "from_step": "s08_rtw_delivery_contract",
+      "to_step": "s14_rtw_long_polling_endpoint",
+      "data_type": "rtw-delivery-contract",
+      "field_mapping": {
+        "delivery_contract": "delivery_contract"
+      }
+    },
+    {
+      "from_step": "s08_rtw_delivery_contract",
+      "to_step": "s15_rtw_redis_pubsub_fanout",
+      "data_type": "rtw-delivery-contract",
+      "field_mapping": {
+        "delivery_contract": "delivery_contract"
+      }
+    },
+    {
+      "from_step": "s08_rtw_delivery_contract",
+      "to_step": "s16_rtw_redis_streams_replay",
+      "data_type": "rtw-delivery-contract",
+      "field_mapping": {
+        "delivery_contract": "delivery_contract"
+      }
+    },
+    {
+      "from_step": "s15_rtw_redis_pubsub_fanout",
+      "to_step": "s16_rtw_redis_streams_replay",
+      "data_type": "rtw-redis-pubsub-fanout",
+      "field_mapping": {
+        "fanout_impl": "fanout_impl"
+      }
+    },
+    {
+      "from_step": "s06_rtw_heartbeat_config",
+      "to_step": "s17_rtw_presence_redis",
+      "data_type": "rtw-heartbeat-config",
+      "field_mapping": {
+        "heartbeat_config": "heartbeat_config"
+      }
+    },
+    {
+      "from_step": "s01_rtw_transport_decision",
+      "to_step": "s18_rtw_nginx_ws_proxy",
+      "data_type": "rtw-transport-decision",
+      "field_mapping": {
+        "transport_decision": "transport_decision"
+      }
+    },
+    {
+      "from_step": "s06_rtw_heartbeat_config",
+      "to_step": "s18_rtw_nginx_ws_proxy",
+      "data_type": "rtw-heartbeat-config",
+      "field_mapping": {
+        "heartbeat_config": "heartbeat_config"
+      }
+    },
+    {
+      "from_step": "s01_rtw_transport_decision",
+      "to_step": "s19_rtw_haproxy_ws_proxy",
+      "data_type": "rtw-transport-decision",
+      "field_mapping": {
+        "transport_decision": "transport_decision"
+      }
+    },
+    {
+      "from_step": "s06_rtw_heartbeat_config",
+      "to_step": "s19_rtw_haproxy_ws_proxy",
+      "data_type": "rtw-heartbeat-config",
+      "field_mapping": {
+        "heartbeat_config": "heartbeat_config"
+      }
+    },
+    {
+      "from_step": "s01_rtw_transport_decision",
+      "to_step": "s20_rtw_aws_alb_ws",
+      "data_type": "rtw-transport-decision",
+      "field_mapping": {
+        "transport_decision": "transport_decision"
+      }
+    },
+    {
+      "from_step": "s06_rtw_heartbeat_config",
+      "to_step": "s20_rtw_aws_alb_ws",
+      "data_type": "rtw-heartbeat-config",
+      "field_mapping": {
+        "heartbeat_config": "heartbeat_config"
+      }
+    },
+    {
+      "from_step": "s04_rtw_close_code_map",
+      "to_step": "s21_rtw_graceful_drain",
+      "data_type": "rtw-close-code-map",
+      "field_mapping": {
+        "close_code_map": "close_code_map"
+      }
+    },
+    {
+      "from_step": "s04_rtw_close_code_map",
+      "to_step": "s22_rtw_client_reconnect_backoff",
+      "data_type": "rtw-close-code-map",
+      "field_mapping": {
+        "close_code_map": "close_code_map"
+      }
+    },
+    {
+      "from_step": "s06_rtw_heartbeat_config",
+      "to_step": "s22_rtw_client_reconnect_backoff",
+      "data_type": "rtw-heartbeat-config",
+      "field_mapping": {
+        "heartbeat_config": "heartbeat_config"
+      }
+    },
+    {
+      "from_step": "s08_rtw_delivery_contract",
+      "to_step": "s22_rtw_client_reconnect_backoff",
+      "data_type": "rtw-delivery-contract",
+      "field_mapping": {
+        "delivery_contract": "delivery_contract"
+      }
+    },
+    {
+      "from_step": "s08_rtw_delivery_contract",
+      "to_step": "s23_rtw_client_state_reconciliation",
+      "data_type": "rtw-delivery-contract",
+      "field_mapping": {
+        "delivery_contract": "delivery_contract"
+      }
+    },
+    {
+      "from_step": "s22_rtw_client_reconnect_backoff",
+      "to_step": "s23_rtw_client_state_reconciliation",
+      "data_type": "rtw-client-reconnect-backoff",
+      "field_mapping": {
+        "reconnect_client": "reconnect_client"
+      }
+    },
+    {
+      "from_step": "s07_rtw_backpressure_policy",
+      "to_step": "s24_rtw_toxiproxy_disconnect_test",
+      "data_type": "rtw-backpressure-policy",
+      "field_mapping": {
+        "backpressure_policy": "backpressure_policy"
+      }
+    },
+    {
+      "from_step": "s06_rtw_heartbeat_config",
+      "to_step": "s24_rtw_toxiproxy_disconnect_test",
+      "data_type": "rtw-heartbeat-config",
+      "field_mapping": {
+        "heartbeat_config": "heartbeat_config"
+      }
+    },
+    {
+      "from_step": "s22_rtw_client_reconnect_backoff",
+      "to_step": "s24_rtw_toxiproxy_disconnect_test",
+      "data_type": "rtw-client-reconnect-backoff",
+      "field_mapping": {
+        "reconnect_client": "reconnect_client"
+      }
+    },
+    {
+      "from_step": "s23_rtw_client_state_reconciliation",
+      "to_step": "s24_rtw_toxiproxy_disconnect_test",
+      "data_type": "rtw-client-state-reconciliation",
+      "field_mapping": {
+        "reconciliation_impl": "reconciliation_impl"
+      }
+    },
+    {
+      "from_step": "s02_rtw_message_envelope",
+      "to_step": "s26_rtw_k6_ws_load_test",
+      "data_type": "rtw-message-envelope",
+      "field_mapping": {
+        "protocol_spec": "protocol_spec"
+      }
+    },
+    {
+      "from_step": "s25_rtw_linux_connection_limits",
+      "to_step": "s26_rtw_k6_ws_load_test",
+      "data_type": "rtw-linux-connection-limits",
+      "field_mapping": {
+        "os_limits_report": "os_limits_report"
+      }
+    },
+    {
+      "from_step": "s02_rtw_message_envelope",
+      "to_step": "s27_rtw_artillery_ws_load_test",
+      "data_type": "rtw-message-envelope",
+      "field_mapping": {
+        "protocol_spec": "protocol_spec"
+      }
+    },
+    {
+      "from_step": "s25_rtw_linux_connection_limits",
+      "to_step": "s27_rtw_artillery_ws_load_test",
+      "data_type": "rtw-linux-connection-limits",
+      "field_mapping": {
+        "os_limits_report": "os_limits_report"
+      }
+    },
+    {
+      "from_step": "s26_rtw_k6_ws_load_test",
+      "to_step": "s28_rtw_load_test_capacity_report",
+      "data_type": "rtw-k6-ws-load-test",
+      "field_mapping": {
+        "k6_summary": "k6_summary"
+      }
+    },
+    {
+      "from_step": "s27_rtw_artillery_ws_load_test",
+      "to_step": "s28_rtw_load_test_capacity_report",
+      "data_type": "rtw-artillery-ws-load-test",
+      "field_mapping": {
+        "artillery_report": "artillery_report"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "feature_spec",
+    "client_platforms",
+    "auth_provider",
+    "network_path",
+    "repo_path",
+    "redis_url",
+    "stack",
+    "nginx_conf_path",
+    "haproxy_cfg_path",
+    "alb_arn",
+    "target_group_arn",
+    "deploy_platform",
+    "backoff_bounds",
+    "server_url",
+    "server_hosts",
+    "target_connections",
+    "slo_targets"
+  ],
+  "terminal_outputs": [
+    "server_impl",
+    "socketio_impl",
+    "sse_impl",
+    "long_poll_impl",
+    "replay_impl",
+    "presence_impl",
+    "nginx_proxy_config",
+    "haproxy_proxy_config",
+    "alb_config",
+    "drain_impl",
+    "chaos_report",
+    "capacity_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_rtw_transport_decision",
+      "s25_rtw_linux_connection_limits"
+    ],
+    [
+      "s02_rtw_message_envelope",
+      "s05_rtw_connection_auth",
+      "s06_rtw_heartbeat_config"
+    ],
+    [
+      "s03_rtw_protocol_version_negotiation",
+      "s04_rtw_close_code_map",
+      "s07_rtw_backpressure_policy",
+      "s12_rtw_node_socketio_redis_adapter",
+      "s17_rtw_presence_redis",
+      "s18_rtw_nginx_ws_proxy",
+      "s19_rtw_haproxy_ws_proxy",
+      "s20_rtw_aws_alb_ws",
+      "s26_rtw_k6_ws_load_test",
+      "s27_rtw_artillery_ws_load_test"
+    ],
+    [
+      "s08_rtw_delivery_contract",
+      "s09_rtw_node_ws_server",
+      "s10_rtw_py_ws_server",
+      "s11_rtw_go_ws_server",
+      "s21_rtw_graceful_drain",
+      "s28_rtw_load_test_capacity_report"
+    ],
+    [
+      "s13_rtw_sse_endpoint",
+      "s14_rtw_long_polling_endpoint",
+      "s15_rtw_redis_pubsub_fanout",
+      "s22_rtw_client_reconnect_backoff"
+    ],
+    [
+      "s16_rtw_redis_streams_replay",
+      "s23_rtw_client_state_reconciliation"
+    ],
+    [
+      "s24_rtw_toxiproxy_disconnect_test"
+    ]
+  ],
+  "estimated_cost": 28,
+  "critical_path": [
+    "s01_rtw_transport_decision",
+    "s02_rtw_message_envelope",
+    "s07_rtw_backpressure_policy",
+    "s08_rtw_delivery_contract",
+    "s22_rtw_client_reconnect_backoff",
+    "s23_rtw_client_state_reconciliation",
+    "s24_rtw_toxiproxy_disconnect_test"
+  ]
+}

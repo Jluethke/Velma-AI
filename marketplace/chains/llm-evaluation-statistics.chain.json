@@ -1,0 +1,200 @@
+{
+  "name": "llm-evaluation-statistics",
+  "description": "Turn existing eval logs into defensible numbers: normalize results, measure variance, intervals and power, cost and latency, regression triage and a report.",
+  "steps": [
+    {
+      "id": "s01_evh_results_normalize",
+      "skill_name": "evh-results-normalize",
+      "inputs": {
+        "inspect_log": "from_user_input_optional",
+        "promptfoo_results": "from_user_input_optional",
+        "strata_manifest": "from_user_input",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "scored_results": "scored_results"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_evh_repeat_variance_epochs",
+      "skill_name": "evh-repeat-variance-epochs",
+      "inputs": {
+        "scored_results": "s01_evh_results_normalize.scored_results",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "variance_report": "variance_report"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_evh_sample_size_confidence_intervals",
+      "skill_name": "evh-sample-size-confidence-intervals",
+      "inputs": {
+        "scored_results": "s01_evh_results_normalize.scored_results",
+        "variance_report": "s02_evh_repeat_variance_epochs.variance_report",
+        "min_detectable_effect": "from_user_input",
+        "alpha": "from_user_input_optional",
+        "power": "from_user_input_optional"
+      },
+      "outputs": {
+        "ci_report": "ci_report",
+        "required_n": "required_n"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_evh_cost_latency_tracking",
+      "skill_name": "evh-cost-latency-tracking",
+      "inputs": {
+        "scored_results": "s01_evh_results_normalize.scored_results",
+        "price_table": "from_user_input",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "cost_latency_report": "cost_latency_report"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s05_evh_regression_diff_triage",
+      "skill_name": "evh-regression-diff-triage",
+      "inputs": {
+        "scored_results": "s01_evh_results_normalize.scored_results",
+        "baseline_results": "from_user_input_optional",
+        "failure_taxonomy": "from_user_input",
+        "alpha": "from_user_input_optional"
+      },
+      "outputs": {
+        "regression_triage": "regression_triage"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s06_evh_eval_report",
+      "skill_name": "evh-eval-report",
+      "inputs": {
+        "ci_report": "s03_evh_sample_size_confidence_intervals.ci_report",
+        "cost_latency_report": "s04_evh_cost_latency_tracking.cost_latency_report",
+        "regression_triage": "s05_evh_regression_diff_triage.regression_triage",
+        "calibration_report": "from_user_input",
+        "version_manifest": "from_user_input",
+        "pairwise_report": "from_user_input_optional",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "eval_report": "eval_report"
+      },
+      "parallel_group": 4
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_evh_results_normalize",
+      "to_step": "s02_evh_repeat_variance_epochs",
+      "data_type": "evh-results-normalize",
+      "field_mapping": {
+        "scored_results": "scored_results"
+      }
+    },
+    {
+      "from_step": "s01_evh_results_normalize",
+      "to_step": "s03_evh_sample_size_confidence_intervals",
+      "data_type": "evh-results-normalize",
+      "field_mapping": {
+        "scored_results": "scored_results"
+      }
+    },
+    {
+      "from_step": "s02_evh_repeat_variance_epochs",
+      "to_step": "s03_evh_sample_size_confidence_intervals",
+      "data_type": "evh-repeat-variance-epochs",
+      "field_mapping": {
+        "variance_report": "variance_report"
+      }
+    },
+    {
+      "from_step": "s01_evh_results_normalize",
+      "to_step": "s04_evh_cost_latency_tracking",
+      "data_type": "evh-results-normalize",
+      "field_mapping": {
+        "scored_results": "scored_results"
+      }
+    },
+    {
+      "from_step": "s01_evh_results_normalize",
+      "to_step": "s05_evh_regression_diff_triage",
+      "data_type": "evh-results-normalize",
+      "field_mapping": {
+        "scored_results": "scored_results"
+      }
+    },
+    {
+      "from_step": "s03_evh_sample_size_confidence_intervals",
+      "to_step": "s06_evh_eval_report",
+      "data_type": "evh-sample-size-confidence-intervals",
+      "field_mapping": {
+        "ci_report": "ci_report"
+      }
+    },
+    {
+      "from_step": "s04_evh_cost_latency_tracking",
+      "to_step": "s06_evh_eval_report",
+      "data_type": "evh-cost-latency-tracking",
+      "field_mapping": {
+        "cost_latency_report": "cost_latency_report"
+      }
+    },
+    {
+      "from_step": "s05_evh_regression_diff_triage",
+      "to_step": "s06_evh_eval_report",
+      "data_type": "evh-regression-diff-triage",
+      "field_mapping": {
+        "regression_triage": "regression_triage"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "inspect_log",
+    "promptfoo_results",
+    "strata_manifest",
+    "project_dir",
+    "min_detectable_effect",
+    "alpha",
+    "power",
+    "price_table",
+    "baseline_results",
+    "failure_taxonomy",
+    "calibration_report",
+    "version_manifest",
+    "pairwise_report"
+  ],
+  "terminal_outputs": [
+    "required_n",
+    "eval_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_evh_results_normalize"
+    ],
+    [
+      "s02_evh_repeat_variance_epochs",
+      "s04_evh_cost_latency_tracking",
+      "s05_evh_regression_diff_triage"
+    ],
+    [
+      "s03_evh_sample_size_confidence_intervals"
+    ],
+    [
+      "s06_evh_eval_report"
+    ]
+  ],
+  "estimated_cost": 6,
+  "critical_path": [
+    "s01_evh_results_normalize",
+    "s02_evh_repeat_variance_epochs",
+    "s03_evh_sample_size_confidence_intervals",
+    "s06_evh_eval_report"
+  ]
+}

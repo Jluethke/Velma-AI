@@ -1,0 +1,219 @@
+{
+  "name": "authentication-authorization-oauth-oidc-tokens",
+  "description": "Implement OAuth code flow with PKCE, validate OIDC ID tokens, audit JWT verification, rotate refresh tokens, and harden the session cookies and lifecycle of the resulting login.",
+  "steps": [
+    {
+      "id": "s01_auth_session_vs_token_decision",
+      "skill_name": "auth-session-vs-token-decision",
+      "inputs": {
+        "app_architecture": "from_user_input",
+        "repo_path": "from_user_input"
+      },
+      "outputs": {
+        "auth_inventory": "auth_inventory",
+        "auth_mechanism_decision": "auth_mechanism_decision"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_auth_oauth_pkce_authorization_code",
+      "skill_name": "auth-oauth-pkce-authorization-code",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "idp_issuer_url": "from_user_input",
+        "auth_mechanism_decision": "s01_auth_session_vs_token_decision.auth_mechanism_decision"
+      },
+      "outputs": {
+        "oauth_client_config": "oauth_client_config"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_auth_oidc_id_token_validation",
+      "skill_name": "auth-oidc-id-token-validation",
+      "inputs": {
+        "oauth_client_config": "s02_auth_oauth_pkce_authorization_code.oauth_client_config",
+        "stack": "from_user_input",
+        "idp_issuer_url": "from_user_input"
+      },
+      "outputs": {
+        "id_token_validation_report": "id_token_validation_report"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_auth_jwt_verification_audit",
+      "skill_name": "auth-jwt-verification-audit",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "auth_mechanism_decision": "s01_auth_session_vs_token_decision.auth_mechanism_decision"
+      },
+      "outputs": {
+        "jwt_findings": "jwt_findings"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s05_auth_refresh_token_rotation",
+      "skill_name": "auth-refresh-token-rotation",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "auth_mechanism_decision": "s01_auth_session_vs_token_decision.auth_mechanism_decision",
+        "jwt_findings": "s04_auth_jwt_verification_audit.jwt_findings"
+      },
+      "outputs": {
+        "refresh_rotation_design": "refresh_rotation_design"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s06_auth_py_cookie_flags_hardening",
+      "skill_name": "auth-py-cookie-flags-hardening",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "auth_mechanism_decision": "s01_auth_session_vs_token_decision.auth_mechanism_decision",
+        "app_base_url": "from_user_input"
+      },
+      "outputs": {
+        "cookie_audit": "cookie_audit"
+      },
+      "condition": "stack == 'python' and auth_mechanism_decision.cookie_based == true",
+      "parallel_group": 2
+    },
+    {
+      "id": "s07_auth_node_cookie_flags_hardening",
+      "skill_name": "auth-node-cookie-flags-hardening",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "auth_mechanism_decision": "s01_auth_session_vs_token_decision.auth_mechanism_decision",
+        "app_base_url": "from_user_input"
+      },
+      "outputs": {
+        "cookie_audit": "cookie_audit"
+      },
+      "condition": "stack == 'node' and auth_mechanism_decision.cookie_based == true",
+      "parallel_group": 2
+    },
+    {
+      "id": "s08_auth_session_fixation_logout",
+      "skill_name": "auth-session-fixation-logout",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "auth_mechanism_decision": "s01_auth_session_vs_token_decision.auth_mechanism_decision",
+        "session_timeout_policy": "from_user_input"
+      },
+      "outputs": {
+        "session_lifecycle_report": "session_lifecycle_report"
+      },
+      "condition": "auth_mechanism_decision.cookie_based == true",
+      "parallel_group": 2
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_auth_session_vs_token_decision",
+      "to_step": "s02_auth_oauth_pkce_authorization_code",
+      "data_type": "auth-session-vs-token-decision",
+      "field_mapping": {
+        "auth_mechanism_decision": "auth_mechanism_decision"
+      }
+    },
+    {
+      "from_step": "s02_auth_oauth_pkce_authorization_code",
+      "to_step": "s03_auth_oidc_id_token_validation",
+      "data_type": "auth-oauth-pkce-authorization-code",
+      "field_mapping": {
+        "oauth_client_config": "oauth_client_config"
+      }
+    },
+    {
+      "from_step": "s01_auth_session_vs_token_decision",
+      "to_step": "s04_auth_jwt_verification_audit",
+      "data_type": "auth-session-vs-token-decision",
+      "field_mapping": {
+        "auth_mechanism_decision": "auth_mechanism_decision"
+      }
+    },
+    {
+      "from_step": "s01_auth_session_vs_token_decision",
+      "to_step": "s05_auth_refresh_token_rotation",
+      "data_type": "auth-session-vs-token-decision",
+      "field_mapping": {
+        "auth_mechanism_decision": "auth_mechanism_decision"
+      }
+    },
+    {
+      "from_step": "s04_auth_jwt_verification_audit",
+      "to_step": "s05_auth_refresh_token_rotation",
+      "data_type": "auth-jwt-verification-audit",
+      "field_mapping": {
+        "jwt_findings": "jwt_findings"
+      }
+    },
+    {
+      "from_step": "s01_auth_session_vs_token_decision",
+      "to_step": "s06_auth_py_cookie_flags_hardening",
+      "data_type": "auth-session-vs-token-decision",
+      "field_mapping": {
+        "auth_mechanism_decision": "auth_mechanism_decision"
+      }
+    },
+    {
+      "from_step": "s01_auth_session_vs_token_decision",
+      "to_step": "s07_auth_node_cookie_flags_hardening",
+      "data_type": "auth-session-vs-token-decision",
+      "field_mapping": {
+        "auth_mechanism_decision": "auth_mechanism_decision"
+      }
+    },
+    {
+      "from_step": "s01_auth_session_vs_token_decision",
+      "to_step": "s08_auth_session_fixation_logout",
+      "data_type": "auth-session-vs-token-decision",
+      "field_mapping": {
+        "auth_mechanism_decision": "auth_mechanism_decision"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "app_architecture",
+    "repo_path",
+    "stack",
+    "idp_issuer_url",
+    "app_base_url",
+    "session_timeout_policy"
+  ],
+  "terminal_outputs": [
+    "auth_inventory",
+    "id_token_validation_report",
+    "refresh_rotation_design",
+    "cookie_audit",
+    "session_lifecycle_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_auth_session_vs_token_decision"
+    ],
+    [
+      "s02_auth_oauth_pkce_authorization_code",
+      "s04_auth_jwt_verification_audit",
+      "s06_auth_py_cookie_flags_hardening",
+      "s07_auth_node_cookie_flags_hardening",
+      "s08_auth_session_fixation_logout"
+    ],
+    [
+      "s03_auth_oidc_id_token_validation",
+      "s05_auth_refresh_token_rotation"
+    ]
+  ],
+  "estimated_cost": 8,
+  "critical_path": [
+    "s01_auth_session_vs_token_decision",
+    "s02_auth_oauth_pkce_authorization_code",
+    "s03_auth_oidc_id_token_validation"
+  ]
+}

@@ -1,0 +1,179 @@
+{
+  "name": "release-engineering-supply-chain",
+  "description": "Supply-chain hardening for a release: signed tag, reproducible Go binaries, reproducible container image, SLSA provenance and cosign signatures, each verified.",
+  "steps": [
+    {
+      "id": "s01_rel_tag_sign_git",
+      "skill_name": "rel-tag-sign-git",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "next_version": "from_user_input",
+        "signing_method": "from_user_input",
+        "rp_changelog": "from_user_input_optional",
+        "sr_changelog": "from_user_input_optional",
+        "cliff_changelog": "from_user_input_optional"
+      },
+      "outputs": {
+        "release_tag": "release_tag",
+        "tag_verification": "tag_verification"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_rel_go_reproducible_build",
+      "skill_name": "rel-go-reproducible-build",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "release_tag": "s01_rel_tag_sign_git.release_tag",
+        "target_platforms": "from_user_input_optional"
+      },
+      "outputs": {
+        "go_dist": "go_dist",
+        "go_repro_report": "go_repro_report"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_rel_container_image_build_push",
+      "skill_name": "rel-container-image-build-push",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "release_tag": "s01_rel_tag_sign_git.release_tag",
+        "image_repository": "from_user_input"
+      },
+      "outputs": {
+        "image_digest": "image_digest",
+        "container_repro_report": "container_repro_report"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_rel_slsa_provenance_attest",
+      "skill_name": "rel-slsa-provenance-attest",
+      "inputs": {
+        "repo_slug": "from_user_input",
+        "slsa_build_level": "from_user_input_optional",
+        "py_dist": "from_user_input_optional",
+        "node_dist": "from_user_input_optional",
+        "go_dist": "s02_rel_go_reproducible_build.go_dist",
+        "rust_dist": "from_user_input_optional",
+        "image_digest": "s03_rel_container_image_build_push.image_digest"
+      },
+      "outputs": {
+        "provenance_attestation": "provenance_attestation",
+        "provenance_verification": "provenance_verification"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s05_rel_cosign_sign_verify",
+      "skill_name": "rel-cosign-sign-verify",
+      "inputs": {
+        "repo_slug": "from_user_input",
+        "py_dist": "from_user_input_optional",
+        "node_dist": "from_user_input_optional",
+        "go_dist": "s02_rel_go_reproducible_build.go_dist",
+        "rust_dist": "from_user_input_optional",
+        "image_digest": "s03_rel_container_image_build_push.image_digest"
+      },
+      "outputs": {
+        "signature_bundles": "signature_bundles",
+        "signature_verification": "signature_verification"
+      },
+      "parallel_group": 3
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_rel_tag_sign_git",
+      "to_step": "s02_rel_go_reproducible_build",
+      "data_type": "rel-tag-sign-git",
+      "field_mapping": {
+        "release_tag": "release_tag"
+      }
+    },
+    {
+      "from_step": "s01_rel_tag_sign_git",
+      "to_step": "s03_rel_container_image_build_push",
+      "data_type": "rel-tag-sign-git",
+      "field_mapping": {
+        "release_tag": "release_tag"
+      }
+    },
+    {
+      "from_step": "s02_rel_go_reproducible_build",
+      "to_step": "s04_rel_slsa_provenance_attest",
+      "data_type": "rel-go-reproducible-build",
+      "field_mapping": {
+        "go_dist": "go_dist"
+      }
+    },
+    {
+      "from_step": "s03_rel_container_image_build_push",
+      "to_step": "s04_rel_slsa_provenance_attest",
+      "data_type": "rel-container-image-build-push",
+      "field_mapping": {
+        "image_digest": "image_digest"
+      }
+    },
+    {
+      "from_step": "s02_rel_go_reproducible_build",
+      "to_step": "s05_rel_cosign_sign_verify",
+      "data_type": "rel-go-reproducible-build",
+      "field_mapping": {
+        "go_dist": "go_dist"
+      }
+    },
+    {
+      "from_step": "s03_rel_container_image_build_push",
+      "to_step": "s05_rel_cosign_sign_verify",
+      "data_type": "rel-container-image-build-push",
+      "field_mapping": {
+        "image_digest": "image_digest"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "repo_path",
+    "next_version",
+    "signing_method",
+    "rp_changelog",
+    "sr_changelog",
+    "cliff_changelog",
+    "target_platforms",
+    "image_repository",
+    "repo_slug",
+    "slsa_build_level",
+    "py_dist",
+    "node_dist",
+    "rust_dist"
+  ],
+  "terminal_outputs": [
+    "tag_verification",
+    "go_repro_report",
+    "container_repro_report",
+    "provenance_attestation",
+    "provenance_verification",
+    "signature_bundles",
+    "signature_verification"
+  ],
+  "parallel_groups": [
+    [
+      "s01_rel_tag_sign_git"
+    ],
+    [
+      "s02_rel_go_reproducible_build",
+      "s03_rel_container_image_build_push"
+    ],
+    [
+      "s04_rel_slsa_provenance_attest",
+      "s05_rel_cosign_sign_verify"
+    ]
+  ],
+  "estimated_cost": 5,
+  "critical_path": [
+    "s01_rel_tag_sign_git",
+    "s03_rel_container_image_build_push",
+    "s04_rel_slsa_provenance_attest"
+  ]
+}

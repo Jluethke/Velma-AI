@@ -1,0 +1,435 @@
+{
+  "name": "test-suite-speed-go",
+  "description": "Speed up a Go test suite: baseline, go test -json durations and build and init cost, hotspot plan, sleep removal, httptest boundaries, go-txdb rollback, pyramid push-down, t.Parallel and -p tuning with shuffle verification, coverage parity and a measured report.",
+  "steps": [
+    {
+      "id": "s01_tsp_baseline_lock",
+      "skill_name": "tsp-baseline-lock",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "test_command": "from_user_input",
+        "run_count": "from_user_input"
+      },
+      "outputs": {
+        "baseline_report": "baseline_report",
+        "coverage_baseline": "coverage_baseline"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_tsp_go_test_json_durations",
+      "skill_name": "tsp-go-test-json-durations",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "test_command": "from_user_input",
+        "baseline_report": "s01_tsp_baseline_lock.baseline_report"
+      },
+      "outputs": {
+        "go_duration_report": "go_duration_report"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_tsp_go_build_init_cost",
+      "skill_name": "tsp-go-build-init-cost",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "go_duration_report": "s02_tsp_go_test_json_durations.go_duration_report"
+      },
+      "outputs": {
+        "go_setup_cost": "go_setup_cost"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_tsp_hotspot_classify",
+      "skill_name": "tsp-hotspot-classify",
+      "inputs": {
+        "stack": "from_user_input",
+        "repo_path": "from_user_input",
+        "baseline_report": "s01_tsp_baseline_lock.baseline_report",
+        "py_duration_report": "from_user_input_optional",
+        "node_duration_report": "from_user_input_optional",
+        "go_duration_report": "s02_tsp_go_test_json_durations.go_duration_report",
+        "py_setup_cost": "from_user_input_optional",
+        "node_setup_cost": "from_user_input_optional",
+        "go_setup_cost": "s03_tsp_go_build_init_cost.go_setup_cost"
+      },
+      "outputs": {
+        "hotspot_plan": "hotspot_plan"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s05_tsp_go_replace_sleeps",
+      "skill_name": "tsp-go-replace-sleeps",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "hotspot_plan": "s04_tsp_hotspot_classify.hotspot_plan"
+      },
+      "outputs": {
+        "go_sleep_fixes": "go_sleep_fixes"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s06_tsp_go_httptest_boundary",
+      "skill_name": "tsp-go-httptest-boundary",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "hotspot_plan": "s04_tsp_hotspot_classify.hotspot_plan"
+      },
+      "outputs": {
+        "go_boundary_mocks": "go_boundary_mocks"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s07_tsp_go_db_txdb_rollback",
+      "skill_name": "tsp-go-db-txdb-rollback",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "hotspot_plan": "s04_tsp_hotspot_classify.hotspot_plan",
+        "db_engine": "from_user_input_optional"
+      },
+      "outputs": {
+        "go_db_fixture": "go_db_fixture"
+      },
+      "condition": "db_engine != null",
+      "parallel_group": 5
+    },
+    {
+      "id": "s08_tsp_pg_template_clone",
+      "skill_name": "tsp-pg-template-clone",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "hotspot_plan": "s04_tsp_hotspot_classify.hotspot_plan",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "pg_template_fixture": "pg_template_fixture"
+      },
+      "condition": "db_engine == 'postgres'",
+      "parallel_group": 5
+    },
+    {
+      "id": "s09_tsp_pyramid_inventory",
+      "skill_name": "tsp-pyramid-inventory",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "baseline_report": "s01_tsp_baseline_lock.baseline_report",
+        "hotspot_plan": "s04_tsp_hotspot_classify.hotspot_plan"
+      },
+      "outputs": {
+        "pyramid_inventory": "pyramid_inventory"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s10_tsp_pyramid_push_down",
+      "skill_name": "tsp-pyramid-push-down",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "pyramid_inventory": "s09_tsp_pyramid_inventory.pyramid_inventory"
+      },
+      "outputs": {
+        "pushdown_record": "pushdown_record"
+      },
+      "parallel_group": 6
+    },
+    {
+      "id": "s11_tsp_go_parallel_flags",
+      "skill_name": "tsp-go-parallel-flags",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "test_command": "from_user_input",
+        "hotspot_plan": "s04_tsp_hotspot_classify.hotspot_plan"
+      },
+      "outputs": {
+        "go_parallel_command": "go_parallel_command"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s12_tsp_order_isolation_check",
+      "skill_name": "tsp-order-isolation-check",
+      "inputs": {
+        "stack": "from_user_input",
+        "repo_path": "from_user_input",
+        "run_count": "from_user_input",
+        "py_parallel_command": "from_user_input_optional",
+        "node_parallel_command": "from_user_input_optional",
+        "go_parallel_command": "s11_tsp_go_parallel_flags.go_parallel_command"
+      },
+      "outputs": {
+        "parallel_command": "parallel_command",
+        "isolation_report": "isolation_report"
+      },
+      "parallel_group": 6
+    },
+    {
+      "id": "s13_tsp_coverage_parity_gate",
+      "skill_name": "tsp-coverage-parity-gate",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "coverage_baseline": "s01_tsp_baseline_lock.coverage_baseline",
+        "baseline_report": "s01_tsp_baseline_lock.baseline_report",
+        "parallel_command": "s12_tsp_order_isolation_check.parallel_command",
+        "shard_config": "from_user_input_optional"
+      },
+      "outputs": {
+        "coverage_verdict": "coverage_verdict"
+      },
+      "parallel_group": 7
+    },
+    {
+      "id": "s14_tsp_speedup_report",
+      "skill_name": "tsp-speedup-report",
+      "inputs": {
+        "baseline_report": "s01_tsp_baseline_lock.baseline_report",
+        "hotspot_plan": "s04_tsp_hotspot_classify.hotspot_plan",
+        "parallel_command": "s12_tsp_order_isolation_check.parallel_command",
+        "coverage_verdict": "s13_tsp_coverage_parity_gate.coverage_verdict",
+        "run_count": "from_user_input",
+        "test_command": "from_user_input"
+      },
+      "outputs": {
+        "speedup_report": "speedup_report"
+      },
+      "parallel_group": 8
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_tsp_baseline_lock",
+      "to_step": "s02_tsp_go_test_json_durations",
+      "data_type": "tsp-baseline-lock",
+      "field_mapping": {
+        "baseline_report": "baseline_report"
+      }
+    },
+    {
+      "from_step": "s02_tsp_go_test_json_durations",
+      "to_step": "s03_tsp_go_build_init_cost",
+      "data_type": "tsp-go-test-json-durations",
+      "field_mapping": {
+        "go_duration_report": "go_duration_report"
+      }
+    },
+    {
+      "from_step": "s01_tsp_baseline_lock",
+      "to_step": "s04_tsp_hotspot_classify",
+      "data_type": "tsp-baseline-lock",
+      "field_mapping": {
+        "baseline_report": "baseline_report"
+      }
+    },
+    {
+      "from_step": "s02_tsp_go_test_json_durations",
+      "to_step": "s04_tsp_hotspot_classify",
+      "data_type": "tsp-go-test-json-durations",
+      "field_mapping": {
+        "go_duration_report": "go_duration_report"
+      }
+    },
+    {
+      "from_step": "s03_tsp_go_build_init_cost",
+      "to_step": "s04_tsp_hotspot_classify",
+      "data_type": "tsp-go-build-init-cost",
+      "field_mapping": {
+        "go_setup_cost": "go_setup_cost"
+      }
+    },
+    {
+      "from_step": "s04_tsp_hotspot_classify",
+      "to_step": "s05_tsp_go_replace_sleeps",
+      "data_type": "tsp-hotspot-classify",
+      "field_mapping": {
+        "hotspot_plan": "hotspot_plan"
+      }
+    },
+    {
+      "from_step": "s04_tsp_hotspot_classify",
+      "to_step": "s06_tsp_go_httptest_boundary",
+      "data_type": "tsp-hotspot-classify",
+      "field_mapping": {
+        "hotspot_plan": "hotspot_plan"
+      }
+    },
+    {
+      "from_step": "s04_tsp_hotspot_classify",
+      "to_step": "s07_tsp_go_db_txdb_rollback",
+      "data_type": "tsp-hotspot-classify",
+      "field_mapping": {
+        "hotspot_plan": "hotspot_plan"
+      }
+    },
+    {
+      "from_step": "s04_tsp_hotspot_classify",
+      "to_step": "s08_tsp_pg_template_clone",
+      "data_type": "tsp-hotspot-classify",
+      "field_mapping": {
+        "hotspot_plan": "hotspot_plan"
+      }
+    },
+    {
+      "from_step": "s01_tsp_baseline_lock",
+      "to_step": "s09_tsp_pyramid_inventory",
+      "data_type": "tsp-baseline-lock",
+      "field_mapping": {
+        "baseline_report": "baseline_report"
+      }
+    },
+    {
+      "from_step": "s04_tsp_hotspot_classify",
+      "to_step": "s09_tsp_pyramid_inventory",
+      "data_type": "tsp-hotspot-classify",
+      "field_mapping": {
+        "hotspot_plan": "hotspot_plan"
+      }
+    },
+    {
+      "from_step": "s09_tsp_pyramid_inventory",
+      "to_step": "s10_tsp_pyramid_push_down",
+      "data_type": "tsp-pyramid-inventory",
+      "field_mapping": {
+        "pyramid_inventory": "pyramid_inventory"
+      }
+    },
+    {
+      "from_step": "s04_tsp_hotspot_classify",
+      "to_step": "s11_tsp_go_parallel_flags",
+      "data_type": "tsp-hotspot-classify",
+      "field_mapping": {
+        "hotspot_plan": "hotspot_plan"
+      }
+    },
+    {
+      "from_step": "s11_tsp_go_parallel_flags",
+      "to_step": "s12_tsp_order_isolation_check",
+      "data_type": "tsp-go-parallel-flags",
+      "field_mapping": {
+        "go_parallel_command": "go_parallel_command"
+      }
+    },
+    {
+      "from_step": "s01_tsp_baseline_lock",
+      "to_step": "s13_tsp_coverage_parity_gate",
+      "data_type": "tsp-baseline-lock",
+      "field_mapping": {
+        "coverage_baseline": "coverage_baseline",
+        "baseline_report": "baseline_report"
+      }
+    },
+    {
+      "from_step": "s12_tsp_order_isolation_check",
+      "to_step": "s13_tsp_coverage_parity_gate",
+      "data_type": "tsp-order-isolation-check",
+      "field_mapping": {
+        "parallel_command": "parallel_command"
+      }
+    },
+    {
+      "from_step": "s01_tsp_baseline_lock",
+      "to_step": "s14_tsp_speedup_report",
+      "data_type": "tsp-baseline-lock",
+      "field_mapping": {
+        "baseline_report": "baseline_report"
+      }
+    },
+    {
+      "from_step": "s04_tsp_hotspot_classify",
+      "to_step": "s14_tsp_speedup_report",
+      "data_type": "tsp-hotspot-classify",
+      "field_mapping": {
+        "hotspot_plan": "hotspot_plan"
+      }
+    },
+    {
+      "from_step": "s12_tsp_order_isolation_check",
+      "to_step": "s14_tsp_speedup_report",
+      "data_type": "tsp-order-isolation-check",
+      "field_mapping": {
+        "parallel_command": "parallel_command"
+      }
+    },
+    {
+      "from_step": "s13_tsp_coverage_parity_gate",
+      "to_step": "s14_tsp_speedup_report",
+      "data_type": "tsp-coverage-parity-gate",
+      "field_mapping": {
+        "coverage_verdict": "coverage_verdict"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "repo_path",
+    "stack",
+    "test_command",
+    "run_count",
+    "py_duration_report",
+    "node_duration_report",
+    "py_setup_cost",
+    "node_setup_cost",
+    "db_engine",
+    "py_parallel_command",
+    "node_parallel_command",
+    "shard_config"
+  ],
+  "terminal_outputs": [
+    "go_sleep_fixes",
+    "go_boundary_mocks",
+    "go_db_fixture",
+    "pg_template_fixture",
+    "pushdown_record",
+    "isolation_report",
+    "speedup_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_tsp_baseline_lock"
+    ],
+    [
+      "s02_tsp_go_test_json_durations"
+    ],
+    [
+      "s03_tsp_go_build_init_cost"
+    ],
+    [
+      "s04_tsp_hotspot_classify"
+    ],
+    [
+      "s05_tsp_go_replace_sleeps",
+      "s06_tsp_go_httptest_boundary",
+      "s07_tsp_go_db_txdb_rollback",
+      "s08_tsp_pg_template_clone",
+      "s09_tsp_pyramid_inventory",
+      "s11_tsp_go_parallel_flags"
+    ],
+    [
+      "s10_tsp_pyramid_push_down",
+      "s12_tsp_order_isolation_check"
+    ],
+    [
+      "s13_tsp_coverage_parity_gate"
+    ],
+    [
+      "s14_tsp_speedup_report"
+    ]
+  ],
+  "estimated_cost": 14,
+  "critical_path": [
+    "s01_tsp_baseline_lock",
+    "s02_tsp_go_test_json_durations",
+    "s03_tsp_go_build_init_cost",
+    "s04_tsp_hotspot_classify",
+    "s11_tsp_go_parallel_flags",
+    "s12_tsp_order_isolation_check",
+    "s13_tsp_coverage_parity_gate",
+    "s14_tsp_speedup_report"
+  ]
+}

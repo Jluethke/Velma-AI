@@ -1,0 +1,230 @@
+{
+  "name": "bug-repro-to-regression-bisect",
+  "description": "Find the commit that broke a feature: intake, environment, replica, deterministic repro, nondeterminism pinning, input minimization and git bisect run.",
+  "steps": [
+    {
+      "id": "s01_repro_intake_checklist",
+      "skill_name": "repro-intake-checklist",
+      "inputs": {
+        "bug_report": "from_user_input",
+        "repo_path": "from_user_input"
+      },
+      "outputs": {
+        "bug_brief": "bug_brief",
+        "missing_info": "missing_info"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_repro_env_capture",
+      "skill_name": "repro-env-capture",
+      "inputs": {
+        "bug_brief": "s01_repro_intake_checklist.bug_brief",
+        "stack": "from_user_input",
+        "repo_path": "from_user_input"
+      },
+      "outputs": {
+        "env_snapshot": "env_snapshot",
+        "env_diff": "env_diff"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_repro_container_env_replica",
+      "skill_name": "repro-container-env-replica",
+      "inputs": {
+        "env_snapshot": "s02_repro_env_capture.env_snapshot",
+        "env_diff": "s02_repro_env_capture.env_diff",
+        "stack": "from_user_input",
+        "repo_path": "from_user_input"
+      },
+      "outputs": {
+        "replica_recipe": "replica_recipe"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_repro_deterministic_script",
+      "skill_name": "repro-deterministic-script",
+      "inputs": {
+        "bug_brief": "s01_repro_intake_checklist.bug_brief",
+        "env_snapshot": "s02_repro_env_capture.env_snapshot",
+        "replica_recipe": "s03_repro_container_env_replica.replica_recipe",
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "confirm_runs": "from_user_input"
+      },
+      "outputs": {
+        "repro_script": "repro_script",
+        "repro_rate": "repro_rate"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s05_repro_nondeterminism_pin",
+      "skill_name": "repro-nondeterminism-pin",
+      "inputs": {
+        "repro_script": "s04_repro_deterministic_script.repro_script",
+        "repro_rate": "s04_repro_deterministic_script.repro_rate",
+        "stack": "from_user_input",
+        "confirm_runs": "from_user_input"
+      },
+      "outputs": {
+        "deterministic_repro": "deterministic_repro"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s06_repro_ddmin_minimize",
+      "skill_name": "repro-ddmin-minimize",
+      "inputs": {
+        "deterministic_repro": "s05_repro_nondeterminism_pin.deterministic_repro",
+        "bug_brief": "s01_repro_intake_checklist.bug_brief",
+        "confirm_runs": "from_user_input"
+      },
+      "outputs": {
+        "minimal_input": "minimal_input",
+        "minimal_repro": "minimal_repro"
+      },
+      "parallel_group": 6
+    },
+    {
+      "id": "s07_repro_git_bisect_run",
+      "skill_name": "repro-git-bisect-run",
+      "inputs": {
+        "minimal_repro": "s06_repro_ddmin_minimize.minimal_repro",
+        "repo_path": "from_user_input",
+        "good_ref": "from_user_input",
+        "bad_ref": "from_user_input"
+      },
+      "outputs": {
+        "first_bad_commit": "first_bad_commit",
+        "bisect_log": "bisect_log"
+      },
+      "parallel_group": 7
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_repro_intake_checklist",
+      "to_step": "s02_repro_env_capture",
+      "data_type": "repro-intake-checklist",
+      "field_mapping": {
+        "bug_brief": "bug_brief"
+      }
+    },
+    {
+      "from_step": "s02_repro_env_capture",
+      "to_step": "s03_repro_container_env_replica",
+      "data_type": "repro-env-capture",
+      "field_mapping": {
+        "env_snapshot": "env_snapshot",
+        "env_diff": "env_diff"
+      }
+    },
+    {
+      "from_step": "s01_repro_intake_checklist",
+      "to_step": "s04_repro_deterministic_script",
+      "data_type": "repro-intake-checklist",
+      "field_mapping": {
+        "bug_brief": "bug_brief"
+      }
+    },
+    {
+      "from_step": "s02_repro_env_capture",
+      "to_step": "s04_repro_deterministic_script",
+      "data_type": "repro-env-capture",
+      "field_mapping": {
+        "env_snapshot": "env_snapshot"
+      }
+    },
+    {
+      "from_step": "s03_repro_container_env_replica",
+      "to_step": "s04_repro_deterministic_script",
+      "data_type": "repro-container-env-replica",
+      "field_mapping": {
+        "replica_recipe": "replica_recipe"
+      }
+    },
+    {
+      "from_step": "s04_repro_deterministic_script",
+      "to_step": "s05_repro_nondeterminism_pin",
+      "data_type": "repro-deterministic-script",
+      "field_mapping": {
+        "repro_script": "repro_script",
+        "repro_rate": "repro_rate"
+      }
+    },
+    {
+      "from_step": "s05_repro_nondeterminism_pin",
+      "to_step": "s06_repro_ddmin_minimize",
+      "data_type": "repro-nondeterminism-pin",
+      "field_mapping": {
+        "deterministic_repro": "deterministic_repro"
+      }
+    },
+    {
+      "from_step": "s01_repro_intake_checklist",
+      "to_step": "s06_repro_ddmin_minimize",
+      "data_type": "repro-intake-checklist",
+      "field_mapping": {
+        "bug_brief": "bug_brief"
+      }
+    },
+    {
+      "from_step": "s06_repro_ddmin_minimize",
+      "to_step": "s07_repro_git_bisect_run",
+      "data_type": "repro-ddmin-minimize",
+      "field_mapping": {
+        "minimal_repro": "minimal_repro"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "bug_report",
+    "repo_path",
+    "stack",
+    "confirm_runs",
+    "good_ref",
+    "bad_ref"
+  ],
+  "terminal_outputs": [
+    "missing_info",
+    "minimal_input",
+    "first_bad_commit",
+    "bisect_log"
+  ],
+  "parallel_groups": [
+    [
+      "s01_repro_intake_checklist"
+    ],
+    [
+      "s02_repro_env_capture"
+    ],
+    [
+      "s03_repro_container_env_replica"
+    ],
+    [
+      "s04_repro_deterministic_script"
+    ],
+    [
+      "s05_repro_nondeterminism_pin"
+    ],
+    [
+      "s06_repro_ddmin_minimize"
+    ],
+    [
+      "s07_repro_git_bisect_run"
+    ]
+  ],
+  "estimated_cost": 7,
+  "critical_path": [
+    "s01_repro_intake_checklist",
+    "s02_repro_env_capture",
+    "s03_repro_container_env_replica",
+    "s04_repro_deterministic_script",
+    "s05_repro_nondeterminism_pin",
+    "s06_repro_ddmin_minimize",
+    "s07_repro_git_bisect_run"
+  ]
+}

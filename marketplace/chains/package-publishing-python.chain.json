@@ -1,0 +1,287 @@
+{
+  "name": "package-publishing-python",
+  "description": "Package and publish a Python library: exports and py.typed, PEP 621 pyproject.toml, wheel and sdist build, file-level inspection, clean venv install, TestPyPI rehearsal and trusted publishing to PyPI.",
+  "steps": [
+    {
+      "id": "s01_pkg_scope_intake",
+      "skill_name": "pkg-scope-intake",
+      "inputs": {
+        "project_dir": "from_user_input",
+        "stack": "from_user_input",
+        "package_name": "from_user_input"
+      },
+      "outputs": {
+        "package_profile": "package_profile"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_pkg_public_api_inventory",
+      "skill_name": "pkg-public-api-inventory",
+      "inputs": {
+        "package_profile": "s01_pkg_scope_intake.package_profile",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "public_api": "public_api",
+        "api_leaks": "api_leaks"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_pkg_license_metadata",
+      "skill_name": "pkg-license-metadata",
+      "inputs": {
+        "package_profile": "s01_pkg_scope_intake.package_profile",
+        "license_spdx": "from_user_input_optional"
+      },
+      "outputs": {
+        "license_report": "license_report"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_pkg_py_dunder_all_exports",
+      "skill_name": "pkg-py-dunder-all-exports",
+      "inputs": {
+        "public_api": "s02_pkg_public_api_inventory.public_api",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "py_export_surface": "py_export_surface"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s05_pkg_py_pyproject_metadata",
+      "skill_name": "pkg-py-pyproject-metadata",
+      "inputs": {
+        "package_profile": "s01_pkg_scope_intake.package_profile",
+        "license_report": "s03_pkg_license_metadata.license_report",
+        "release_version": "from_user_input"
+      },
+      "outputs": {
+        "pyproject_config": "pyproject_config"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s06_pkg_py_build_wheel_sdist",
+      "skill_name": "pkg-py-build-wheel-sdist",
+      "inputs": {
+        "pyproject_config": "s05_pkg_py_pyproject_metadata.pyproject_config",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "py_dist_files": "py_dist_files"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s07_pkg_py_dist_inspect",
+      "skill_name": "pkg-py-dist-inspect",
+      "inputs": {
+        "py_dist_files": "s06_pkg_py_build_wheel_sdist.py_dist_files",
+        "py_export_surface": "s04_pkg_py_dunder_all_exports.py_export_surface"
+      },
+      "outputs": {
+        "py_dist_report": "py_dist_report"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s08_pkg_py_clean_venv_install",
+      "skill_name": "pkg-py-clean-venv-install",
+      "inputs": {
+        "py_dist_files": "s06_pkg_py_build_wheel_sdist.py_dist_files",
+        "py_export_surface": "s04_pkg_py_dunder_all_exports.py_export_surface"
+      },
+      "outputs": {
+        "py_install_report": "py_install_report"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s09_pkg_py_testpypi_upload",
+      "skill_name": "pkg-py-testpypi-upload",
+      "inputs": {
+        "py_dist_report": "s07_pkg_py_dist_inspect.py_dist_report",
+        "py_install_report": "s08_pkg_py_clean_venv_install.py_install_report",
+        "package_name": "from_user_input"
+      },
+      "outputs": {
+        "testpypi_record": "testpypi_record"
+      },
+      "parallel_group": 6
+    },
+    {
+      "id": "s10_pkg_py_trusted_publishing",
+      "skill_name": "pkg-py-trusted-publishing",
+      "inputs": {
+        "testpypi_record": "s09_pkg_py_testpypi_upload.testpypi_record",
+        "package_name": "from_user_input",
+        "repo_slug": "from_user_input",
+        "release_tag": "from_user_input"
+      },
+      "outputs": {
+        "py_publish_record": "py_publish_record"
+      },
+      "parallel_group": 7
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_pkg_scope_intake",
+      "to_step": "s02_pkg_public_api_inventory",
+      "data_type": "pkg-scope-intake",
+      "field_mapping": {
+        "package_profile": "package_profile"
+      }
+    },
+    {
+      "from_step": "s01_pkg_scope_intake",
+      "to_step": "s03_pkg_license_metadata",
+      "data_type": "pkg-scope-intake",
+      "field_mapping": {
+        "package_profile": "package_profile"
+      }
+    },
+    {
+      "from_step": "s02_pkg_public_api_inventory",
+      "to_step": "s04_pkg_py_dunder_all_exports",
+      "data_type": "pkg-public-api-inventory",
+      "field_mapping": {
+        "public_api": "public_api"
+      }
+    },
+    {
+      "from_step": "s01_pkg_scope_intake",
+      "to_step": "s05_pkg_py_pyproject_metadata",
+      "data_type": "pkg-scope-intake",
+      "field_mapping": {
+        "package_profile": "package_profile"
+      }
+    },
+    {
+      "from_step": "s03_pkg_license_metadata",
+      "to_step": "s05_pkg_py_pyproject_metadata",
+      "data_type": "pkg-license-metadata",
+      "field_mapping": {
+        "license_report": "license_report"
+      }
+    },
+    {
+      "from_step": "s05_pkg_py_pyproject_metadata",
+      "to_step": "s06_pkg_py_build_wheel_sdist",
+      "data_type": "pkg-py-pyproject-metadata",
+      "field_mapping": {
+        "pyproject_config": "pyproject_config"
+      }
+    },
+    {
+      "from_step": "s06_pkg_py_build_wheel_sdist",
+      "to_step": "s07_pkg_py_dist_inspect",
+      "data_type": "pkg-py-build-wheel-sdist",
+      "field_mapping": {
+        "py_dist_files": "py_dist_files"
+      }
+    },
+    {
+      "from_step": "s04_pkg_py_dunder_all_exports",
+      "to_step": "s07_pkg_py_dist_inspect",
+      "data_type": "pkg-py-dunder-all-exports",
+      "field_mapping": {
+        "py_export_surface": "py_export_surface"
+      }
+    },
+    {
+      "from_step": "s06_pkg_py_build_wheel_sdist",
+      "to_step": "s08_pkg_py_clean_venv_install",
+      "data_type": "pkg-py-build-wheel-sdist",
+      "field_mapping": {
+        "py_dist_files": "py_dist_files"
+      }
+    },
+    {
+      "from_step": "s04_pkg_py_dunder_all_exports",
+      "to_step": "s08_pkg_py_clean_venv_install",
+      "data_type": "pkg-py-dunder-all-exports",
+      "field_mapping": {
+        "py_export_surface": "py_export_surface"
+      }
+    },
+    {
+      "from_step": "s07_pkg_py_dist_inspect",
+      "to_step": "s09_pkg_py_testpypi_upload",
+      "data_type": "pkg-py-dist-inspect",
+      "field_mapping": {
+        "py_dist_report": "py_dist_report"
+      }
+    },
+    {
+      "from_step": "s08_pkg_py_clean_venv_install",
+      "to_step": "s09_pkg_py_testpypi_upload",
+      "data_type": "pkg-py-clean-venv-install",
+      "field_mapping": {
+        "py_install_report": "py_install_report"
+      }
+    },
+    {
+      "from_step": "s09_pkg_py_testpypi_upload",
+      "to_step": "s10_pkg_py_trusted_publishing",
+      "data_type": "pkg-py-testpypi-upload",
+      "field_mapping": {
+        "testpypi_record": "testpypi_record"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "project_dir",
+    "stack",
+    "package_name",
+    "license_spdx",
+    "release_version",
+    "repo_slug",
+    "release_tag"
+  ],
+  "terminal_outputs": [
+    "api_leaks",
+    "py_publish_record"
+  ],
+  "parallel_groups": [
+    [
+      "s01_pkg_scope_intake"
+    ],
+    [
+      "s02_pkg_public_api_inventory",
+      "s03_pkg_license_metadata"
+    ],
+    [
+      "s04_pkg_py_dunder_all_exports",
+      "s05_pkg_py_pyproject_metadata"
+    ],
+    [
+      "s06_pkg_py_build_wheel_sdist"
+    ],
+    [
+      "s07_pkg_py_dist_inspect",
+      "s08_pkg_py_clean_venv_install"
+    ],
+    [
+      "s09_pkg_py_testpypi_upload"
+    ],
+    [
+      "s10_pkg_py_trusted_publishing"
+    ]
+  ],
+  "estimated_cost": 10,
+  "critical_path": [
+    "s01_pkg_scope_intake",
+    "s03_pkg_license_metadata",
+    "s05_pkg_py_pyproject_metadata",
+    "s06_pkg_py_build_wheel_sdist",
+    "s07_pkg_py_dist_inspect",
+    "s09_pkg_py_testpypi_upload",
+    "s10_pkg_py_trusted_publishing"
+  ]
+}

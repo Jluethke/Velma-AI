@@ -1,0 +1,507 @@
+{
+  "name": "code-review-python",
+  "description": "Python pull request review: fetch, intent, split, reading order, correctness, Ruff and mypy, revert test check, diff coverage, mutmut, Bandit and Semgrep, concurrency, labeled comments, approval and posting.",
+  "steps": [
+    {
+      "id": "s01_prr_fetch_pr_diff",
+      "skill_name": "prr-fetch-pr-diff",
+      "inputs": {
+        "repo_dir": "from_user_input",
+        "pr_number": "from_user_input",
+        "forge": "from_user_input",
+        "base_branch": "from_user_input"
+      },
+      "outputs": {
+        "diff_file": "diff_file",
+        "changed_files": "changed_files",
+        "diff_stat": "diff_stat",
+        "head_sha": "head_sha",
+        "pr_description": "pr_description"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_prr_intent_scope_check",
+      "skill_name": "prr-intent-scope-check",
+      "inputs": {
+        "pr_description": "s01_prr_fetch_pr_diff.pr_description",
+        "changed_files": "s01_prr_fetch_pr_diff.changed_files",
+        "findings_dir": "from_user_input",
+        "linked_issue": "from_user_input_optional",
+        "role": "from_user_input_optional"
+      },
+      "outputs": {
+        "intent_statement": "intent_statement",
+        "scope_findings": "scope_findings"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_prr_large_pr_split",
+      "skill_name": "prr-large-pr-split",
+      "inputs": {
+        "repo_dir": "from_user_input",
+        "base_branch": "from_user_input",
+        "head_sha": "s01_prr_fetch_pr_diff.head_sha",
+        "diff_stat": "s01_prr_fetch_pr_diff.diff_stat",
+        "intent_statement": "s02_prr_intent_scope_check.intent_statement",
+        "max_review_lines": "from_user_input",
+        "findings_dir": "from_user_input"
+      },
+      "outputs": {
+        "review_units": "review_units",
+        "split_findings": "split_findings"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_prr_diff_reading_order",
+      "skill_name": "prr-diff-reading-order",
+      "inputs": {
+        "changed_files": "s01_prr_fetch_pr_diff.changed_files",
+        "review_units": "s03_prr_large_pr_split.review_units",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "reading_plan": "reading_plan"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s05_prr_correctness_pass",
+      "skill_name": "prr-correctness-pass",
+      "inputs": {
+        "repo_dir": "from_user_input",
+        "diff_file": "s01_prr_fetch_pr_diff.diff_file",
+        "reading_plan": "s04_prr_diff_reading_order.reading_plan",
+        "intent_statement": "s02_prr_intent_scope_check.intent_statement",
+        "findings_dir": "from_user_input"
+      },
+      "outputs": {
+        "correctness_findings": "correctness_findings"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s06_prr_py_static_checks",
+      "skill_name": "prr-py-static-checks",
+      "inputs": {
+        "repo_dir": "from_user_input",
+        "base_branch": "from_user_input",
+        "changed_files": "s01_prr_fetch_pr_diff.changed_files",
+        "findings_dir": "from_user_input"
+      },
+      "outputs": {
+        "py_static_findings": "py_static_findings"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s07_prr_test_revert_check",
+      "skill_name": "prr-test-revert-check",
+      "inputs": {
+        "repo_dir": "from_user_input",
+        "base_branch": "from_user_input",
+        "head_sha": "s01_prr_fetch_pr_diff.head_sha",
+        "changed_files": "s01_prr_fetch_pr_diff.changed_files",
+        "test_command": "from_user_input",
+        "findings_dir": "from_user_input"
+      },
+      "outputs": {
+        "test_meaning_findings": "test_meaning_findings"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s08_prr_py_diff_coverage",
+      "skill_name": "prr-py-diff-coverage",
+      "inputs": {
+        "repo_dir": "from_user_input",
+        "base_branch": "from_user_input",
+        "coverage_package": "from_user_input",
+        "findings_dir": "from_user_input",
+        "min_diff_coverage": "from_user_input_optional"
+      },
+      "outputs": {
+        "diff_coverage_report": "diff_coverage_report",
+        "coverage_findings": "coverage_findings"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s09_prr_py_mutmut_check",
+      "skill_name": "prr-py-mutmut-check",
+      "inputs": {
+        "repo_dir": "from_user_input",
+        "changed_files": "s01_prr_fetch_pr_diff.changed_files",
+        "findings_dir": "from_user_input"
+      },
+      "outputs": {
+        "mutation_findings": "mutation_findings"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s10_prr_py_bandit_semgrep",
+      "skill_name": "prr-py-bandit-semgrep",
+      "inputs": {
+        "repo_dir": "from_user_input",
+        "base_branch": "from_user_input",
+        "changed_files": "s01_prr_fetch_pr_diff.changed_files",
+        "findings_dir": "from_user_input"
+      },
+      "outputs": {
+        "py_sast_findings": "py_sast_findings"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s11_prr_concurrency_pass",
+      "skill_name": "prr-concurrency-pass",
+      "inputs": {
+        "diff_file": "s01_prr_fetch_pr_diff.diff_file",
+        "reading_plan": "s04_prr_diff_reading_order.reading_plan",
+        "stack": "from_user_input",
+        "findings_dir": "from_user_input"
+      },
+      "outputs": {
+        "concurrency_findings": "concurrency_findings"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s12_prr_severity_comments",
+      "skill_name": "prr-severity-comments",
+      "inputs": {
+        "findings_dir": "from_user_input",
+        "diff_file": "s01_prr_fetch_pr_diff.diff_file",
+        "head_sha": "s01_prr_fetch_pr_diff.head_sha"
+      },
+      "outputs": {
+        "review_comments": "review_comments",
+        "blocking_count": "blocking_count"
+      },
+      "parallel_group": 6
+    },
+    {
+      "id": "s13_prr_approval_decision",
+      "skill_name": "prr-approval-decision",
+      "inputs": {
+        "repo_dir": "from_user_input",
+        "pr_number": "from_user_input",
+        "forge": "from_user_input",
+        "head_sha": "s01_prr_fetch_pr_diff.head_sha",
+        "review_comments": "s12_prr_severity_comments.review_comments",
+        "blocking_count": "s12_prr_severity_comments.blocking_count",
+        "review_units": "s03_prr_large_pr_split.review_units",
+        "findings_dir": "from_user_input"
+      },
+      "outputs": {
+        "review_verdict": "review_verdict",
+        "verdict_rationale": "verdict_rationale"
+      },
+      "parallel_group": 7
+    },
+    {
+      "id": "s14_prr_gh_post_review",
+      "skill_name": "prr-gh-post-review",
+      "inputs": {
+        "repo_dir": "from_user_input",
+        "pr_number": "from_user_input",
+        "head_sha": "s01_prr_fetch_pr_diff.head_sha",
+        "review_comments": "s12_prr_severity_comments.review_comments",
+        "review_verdict": "s13_prr_approval_decision.review_verdict",
+        "verdict_rationale": "s13_prr_approval_decision.verdict_rationale"
+      },
+      "outputs": {
+        "posted_review_url": "posted_review_url"
+      },
+      "condition": "forge == 'github'",
+      "parallel_group": 8
+    },
+    {
+      "id": "s15_prr_glab_post_review",
+      "skill_name": "prr-glab-post-review",
+      "inputs": {
+        "repo_dir": "from_user_input",
+        "pr_number": "from_user_input",
+        "head_sha": "s01_prr_fetch_pr_diff.head_sha",
+        "review_comments": "s12_prr_severity_comments.review_comments",
+        "review_verdict": "s13_prr_approval_decision.review_verdict",
+        "verdict_rationale": "s13_prr_approval_decision.verdict_rationale"
+      },
+      "outputs": {
+        "posted_review_url": "posted_review_url"
+      },
+      "condition": "forge == 'gitlab'",
+      "parallel_group": 8
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_prr_fetch_pr_diff",
+      "to_step": "s02_prr_intent_scope_check",
+      "data_type": "prr-fetch-pr-diff",
+      "field_mapping": {
+        "pr_description": "pr_description",
+        "changed_files": "changed_files"
+      }
+    },
+    {
+      "from_step": "s01_prr_fetch_pr_diff",
+      "to_step": "s03_prr_large_pr_split",
+      "data_type": "prr-fetch-pr-diff",
+      "field_mapping": {
+        "head_sha": "head_sha",
+        "diff_stat": "diff_stat"
+      }
+    },
+    {
+      "from_step": "s02_prr_intent_scope_check",
+      "to_step": "s03_prr_large_pr_split",
+      "data_type": "prr-intent-scope-check",
+      "field_mapping": {
+        "intent_statement": "intent_statement"
+      }
+    },
+    {
+      "from_step": "s01_prr_fetch_pr_diff",
+      "to_step": "s04_prr_diff_reading_order",
+      "data_type": "prr-fetch-pr-diff",
+      "field_mapping": {
+        "changed_files": "changed_files"
+      }
+    },
+    {
+      "from_step": "s03_prr_large_pr_split",
+      "to_step": "s04_prr_diff_reading_order",
+      "data_type": "prr-large-pr-split",
+      "field_mapping": {
+        "review_units": "review_units"
+      }
+    },
+    {
+      "from_step": "s01_prr_fetch_pr_diff",
+      "to_step": "s05_prr_correctness_pass",
+      "data_type": "prr-fetch-pr-diff",
+      "field_mapping": {
+        "diff_file": "diff_file"
+      }
+    },
+    {
+      "from_step": "s04_prr_diff_reading_order",
+      "to_step": "s05_prr_correctness_pass",
+      "data_type": "prr-diff-reading-order",
+      "field_mapping": {
+        "reading_plan": "reading_plan"
+      }
+    },
+    {
+      "from_step": "s02_prr_intent_scope_check",
+      "to_step": "s05_prr_correctness_pass",
+      "data_type": "prr-intent-scope-check",
+      "field_mapping": {
+        "intent_statement": "intent_statement"
+      }
+    },
+    {
+      "from_step": "s01_prr_fetch_pr_diff",
+      "to_step": "s06_prr_py_static_checks",
+      "data_type": "prr-fetch-pr-diff",
+      "field_mapping": {
+        "changed_files": "changed_files"
+      }
+    },
+    {
+      "from_step": "s01_prr_fetch_pr_diff",
+      "to_step": "s07_prr_test_revert_check",
+      "data_type": "prr-fetch-pr-diff",
+      "field_mapping": {
+        "head_sha": "head_sha",
+        "changed_files": "changed_files"
+      }
+    },
+    {
+      "from_step": "s01_prr_fetch_pr_diff",
+      "to_step": "s09_prr_py_mutmut_check",
+      "data_type": "prr-fetch-pr-diff",
+      "field_mapping": {
+        "changed_files": "changed_files"
+      }
+    },
+    {
+      "from_step": "s01_prr_fetch_pr_diff",
+      "to_step": "s10_prr_py_bandit_semgrep",
+      "data_type": "prr-fetch-pr-diff",
+      "field_mapping": {
+        "changed_files": "changed_files"
+      }
+    },
+    {
+      "from_step": "s01_prr_fetch_pr_diff",
+      "to_step": "s11_prr_concurrency_pass",
+      "data_type": "prr-fetch-pr-diff",
+      "field_mapping": {
+        "diff_file": "diff_file"
+      }
+    },
+    {
+      "from_step": "s04_prr_diff_reading_order",
+      "to_step": "s11_prr_concurrency_pass",
+      "data_type": "prr-diff-reading-order",
+      "field_mapping": {
+        "reading_plan": "reading_plan"
+      }
+    },
+    {
+      "from_step": "s01_prr_fetch_pr_diff",
+      "to_step": "s12_prr_severity_comments",
+      "data_type": "prr-fetch-pr-diff",
+      "field_mapping": {
+        "diff_file": "diff_file",
+        "head_sha": "head_sha"
+      }
+    },
+    {
+      "from_step": "s01_prr_fetch_pr_diff",
+      "to_step": "s13_prr_approval_decision",
+      "data_type": "prr-fetch-pr-diff",
+      "field_mapping": {
+        "head_sha": "head_sha"
+      }
+    },
+    {
+      "from_step": "s12_prr_severity_comments",
+      "to_step": "s13_prr_approval_decision",
+      "data_type": "prr-severity-comments",
+      "field_mapping": {
+        "review_comments": "review_comments",
+        "blocking_count": "blocking_count"
+      }
+    },
+    {
+      "from_step": "s03_prr_large_pr_split",
+      "to_step": "s13_prr_approval_decision",
+      "data_type": "prr-large-pr-split",
+      "field_mapping": {
+        "review_units": "review_units"
+      }
+    },
+    {
+      "from_step": "s01_prr_fetch_pr_diff",
+      "to_step": "s14_prr_gh_post_review",
+      "data_type": "prr-fetch-pr-diff",
+      "field_mapping": {
+        "head_sha": "head_sha"
+      }
+    },
+    {
+      "from_step": "s12_prr_severity_comments",
+      "to_step": "s14_prr_gh_post_review",
+      "data_type": "prr-severity-comments",
+      "field_mapping": {
+        "review_comments": "review_comments"
+      }
+    },
+    {
+      "from_step": "s13_prr_approval_decision",
+      "to_step": "s14_prr_gh_post_review",
+      "data_type": "prr-approval-decision",
+      "field_mapping": {
+        "review_verdict": "review_verdict",
+        "verdict_rationale": "verdict_rationale"
+      }
+    },
+    {
+      "from_step": "s01_prr_fetch_pr_diff",
+      "to_step": "s15_prr_glab_post_review",
+      "data_type": "prr-fetch-pr-diff",
+      "field_mapping": {
+        "head_sha": "head_sha"
+      }
+    },
+    {
+      "from_step": "s12_prr_severity_comments",
+      "to_step": "s15_prr_glab_post_review",
+      "data_type": "prr-severity-comments",
+      "field_mapping": {
+        "review_comments": "review_comments"
+      }
+    },
+    {
+      "from_step": "s13_prr_approval_decision",
+      "to_step": "s15_prr_glab_post_review",
+      "data_type": "prr-approval-decision",
+      "field_mapping": {
+        "review_verdict": "review_verdict",
+        "verdict_rationale": "verdict_rationale"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "repo_dir",
+    "pr_number",
+    "forge",
+    "base_branch",
+    "findings_dir",
+    "linked_issue",
+    "role",
+    "max_review_lines",
+    "stack",
+    "test_command",
+    "coverage_package",
+    "min_diff_coverage"
+  ],
+  "terminal_outputs": [
+    "diff_coverage_report",
+    "review_comments",
+    "blocking_count",
+    "review_verdict",
+    "verdict_rationale",
+    "posted_review_url"
+  ],
+  "parallel_groups": [
+    [
+      "s01_prr_fetch_pr_diff"
+    ],
+    [
+      "s02_prr_intent_scope_check",
+      "s06_prr_py_static_checks",
+      "s07_prr_test_revert_check",
+      "s08_prr_py_diff_coverage",
+      "s09_prr_py_mutmut_check",
+      "s10_prr_py_bandit_semgrep"
+    ],
+    [
+      "s03_prr_large_pr_split"
+    ],
+    [
+      "s04_prr_diff_reading_order"
+    ],
+    [
+      "s05_prr_correctness_pass",
+      "s11_prr_concurrency_pass"
+    ],
+    [
+      "s12_prr_severity_comments"
+    ],
+    [
+      "s13_prr_approval_decision"
+    ],
+    [
+      "s14_prr_gh_post_review",
+      "s15_prr_glab_post_review"
+    ]
+  ],
+  "estimated_cost": 15,
+  "critical_path": [
+    "s01_prr_fetch_pr_diff",
+    "s02_prr_intent_scope_check",
+    "s03_prr_large_pr_split",
+    "s04_prr_diff_reading_order",
+    "s11_prr_concurrency_pass",
+    "s12_prr_severity_comments",
+    "s13_prr_approval_decision",
+    "s14_prr_gh_post_review"
+  ]
+}

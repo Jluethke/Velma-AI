@@ -1,0 +1,243 @@
+{
+  "name": "feature-flags-rollout-experiment",
+  "description": "Run an A/B experiment on a feature flag: classify, target with sticky bucketing, instrument variants, define guardrails, size the sample, check sample ratio mismatch, read out once, and remove the losing branch.",
+  "steps": [
+    {
+      "id": "s01_ffr_flag_type_classify",
+      "skill_name": "ffr-flag-type-classify",
+      "inputs": {
+        "change_description": "from_user_input",
+        "team_conventions": "from_user_input_optional"
+      },
+      "outputs": {
+        "flag_spec": "flag_spec"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_ffr_targeting_rules",
+      "skill_name": "ffr-targeting-rules",
+      "inputs": {
+        "flag_spec": "s01_ffr_flag_type_classify.flag_spec",
+        "provider_choice": "from_user_input",
+        "audience_definition": "from_user_input"
+      },
+      "outputs": {
+        "targeting_rules": "targeting_rules"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_ffr_otel_flag_telemetry",
+      "skill_name": "ffr-otel-flag-telemetry",
+      "inputs": {
+        "stack": "from_user_input",
+        "repo_path": "from_user_input",
+        "provider_choice": "from_user_input"
+      },
+      "outputs": {
+        "flag_telemetry": "flag_telemetry"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s04_ffr_guardrail_metrics",
+      "skill_name": "ffr-guardrail-metrics",
+      "inputs": {
+        "flag_telemetry": "s03_ffr_otel_flag_telemetry.flag_telemetry",
+        "slo_definitions": "from_user_input",
+        "metrics_backend": "from_user_input"
+      },
+      "outputs": {
+        "guardrail_metrics": "guardrail_metrics"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s05_ffr_ab_sample_size",
+      "skill_name": "ffr-ab-sample-size",
+      "inputs": {
+        "flag_spec": "s01_ffr_flag_type_classify.flag_spec",
+        "baseline_rate": "from_user_input",
+        "minimum_detectable_effect": "from_user_input",
+        "alpha": "from_user_input_optional",
+        "power": "from_user_input_optional",
+        "daily_traffic": "from_user_input"
+      },
+      "outputs": {
+        "sample_size_plan": "sample_size_plan"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s06_ffr_srm_check",
+      "skill_name": "ffr-srm-check",
+      "inputs": {
+        "sample_size_plan": "s05_ffr_ab_sample_size.sample_size_plan",
+        "assignment_counts": "from_user_input"
+      },
+      "outputs": {
+        "srm_result": "srm_result"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s07_ffr_experiment_readout",
+      "skill_name": "ffr-experiment-readout",
+      "inputs": {
+        "sample_size_plan": "s05_ffr_ab_sample_size.sample_size_plan",
+        "srm_result": "s06_ffr_srm_check.srm_result",
+        "experiment_results": "from_user_input"
+      },
+      "outputs": {
+        "experiment_decision": "experiment_decision"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s08_ffr_stale_flag_detect",
+      "skill_name": "ffr-stale-flag-detect",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "provider_choice": "from_user_input",
+        "flag_inventory_export": "from_user_input_optional"
+      },
+      "outputs": {
+        "stale_flags": "stale_flags"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s09_ffr_flag_removal_pr",
+      "skill_name": "ffr-flag-removal-pr",
+      "inputs": {
+        "stale_flags": "s08_ffr_stale_flag_detect.stale_flags",
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "experiment_decision": "s07_ffr_experiment_readout.experiment_decision"
+      },
+      "outputs": {
+        "removal_pr": "removal_pr"
+      },
+      "parallel_group": 5
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_ffr_flag_type_classify",
+      "to_step": "s02_ffr_targeting_rules",
+      "data_type": "ffr-flag-type-classify",
+      "field_mapping": {
+        "flag_spec": "flag_spec"
+      }
+    },
+    {
+      "from_step": "s03_ffr_otel_flag_telemetry",
+      "to_step": "s04_ffr_guardrail_metrics",
+      "data_type": "ffr-otel-flag-telemetry",
+      "field_mapping": {
+        "flag_telemetry": "flag_telemetry"
+      }
+    },
+    {
+      "from_step": "s01_ffr_flag_type_classify",
+      "to_step": "s05_ffr_ab_sample_size",
+      "data_type": "ffr-flag-type-classify",
+      "field_mapping": {
+        "flag_spec": "flag_spec"
+      }
+    },
+    {
+      "from_step": "s05_ffr_ab_sample_size",
+      "to_step": "s06_ffr_srm_check",
+      "data_type": "ffr-ab-sample-size",
+      "field_mapping": {
+        "sample_size_plan": "sample_size_plan"
+      }
+    },
+    {
+      "from_step": "s05_ffr_ab_sample_size",
+      "to_step": "s07_ffr_experiment_readout",
+      "data_type": "ffr-ab-sample-size",
+      "field_mapping": {
+        "sample_size_plan": "sample_size_plan"
+      }
+    },
+    {
+      "from_step": "s06_ffr_srm_check",
+      "to_step": "s07_ffr_experiment_readout",
+      "data_type": "ffr-srm-check",
+      "field_mapping": {
+        "srm_result": "srm_result"
+      }
+    },
+    {
+      "from_step": "s08_ffr_stale_flag_detect",
+      "to_step": "s09_ffr_flag_removal_pr",
+      "data_type": "ffr-stale-flag-detect",
+      "field_mapping": {
+        "stale_flags": "stale_flags"
+      }
+    },
+    {
+      "from_step": "s07_ffr_experiment_readout",
+      "to_step": "s09_ffr_flag_removal_pr",
+      "data_type": "ffr-experiment-readout",
+      "field_mapping": {
+        "experiment_decision": "experiment_decision"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "change_description",
+    "team_conventions",
+    "provider_choice",
+    "audience_definition",
+    "stack",
+    "repo_path",
+    "slo_definitions",
+    "metrics_backend",
+    "baseline_rate",
+    "minimum_detectable_effect",
+    "alpha",
+    "power",
+    "daily_traffic",
+    "assignment_counts",
+    "experiment_results",
+    "flag_inventory_export"
+  ],
+  "terminal_outputs": [
+    "targeting_rules",
+    "guardrail_metrics",
+    "removal_pr"
+  ],
+  "parallel_groups": [
+    [
+      "s01_ffr_flag_type_classify",
+      "s03_ffr_otel_flag_telemetry",
+      "s08_ffr_stale_flag_detect"
+    ],
+    [
+      "s02_ffr_targeting_rules",
+      "s04_ffr_guardrail_metrics",
+      "s05_ffr_ab_sample_size"
+    ],
+    [
+      "s06_ffr_srm_check"
+    ],
+    [
+      "s07_ffr_experiment_readout"
+    ],
+    [
+      "s09_ffr_flag_removal_pr"
+    ]
+  ],
+  "estimated_cost": 9,
+  "critical_path": [
+    "s01_ffr_flag_type_classify",
+    "s05_ffr_ab_sample_size",
+    "s06_ffr_srm_check",
+    "s07_ffr_experiment_readout",
+    "s09_ffr_flag_removal_pr"
+  ]
+}

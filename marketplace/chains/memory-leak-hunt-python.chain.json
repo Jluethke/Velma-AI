@@ -1,0 +1,460 @@
+{
+  "name": "memory-leak-hunt-python",
+  "description": "Python leak hunt: confirm growth, split managed from native, then tracemalloc diff, objgraph back-references, gc referrers and memray for C extensions, followed by fix, regression test and soak proof.",
+  "steps": [
+    {
+      "id": "s01_leak_intake_load_recipe",
+      "skill_name": "leak-intake-load-recipe",
+      "inputs": {
+        "symptom_report": "from_user_input",
+        "stack": "from_user_input",
+        "target_process": "from_user_input",
+        "load_driver": "from_user_input_optional"
+      },
+      "outputs": {
+        "leak_brief": "leak_brief",
+        "load_recipe": "load_recipe"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_leak_rss_growth_confirm",
+      "skill_name": "leak-rss-growth-confirm",
+      "inputs": {
+        "leak_brief": "s01_leak_intake_load_recipe.leak_brief",
+        "load_recipe": "s01_leak_intake_load_recipe.load_recipe",
+        "sample_interval_s": "from_user_input_optional"
+      },
+      "outputs": {
+        "growth_series": "growth_series",
+        "growth_verdict": "growth_verdict",
+        "bytes_per_op": "bytes_per_op"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_leak_managed_vs_native_split",
+      "skill_name": "leak-managed-vs-native-split",
+      "inputs": {
+        "growth_series": "s02_leak_rss_growth_confirm.growth_series",
+        "growth_verdict": "s02_leak_rss_growth_confirm.growth_verdict",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "leak_layer": "leak_layer",
+        "split_evidence": "split_evidence"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_leak_classic_causes_triage",
+      "skill_name": "leak-classic-causes-triage",
+      "inputs": {
+        "leak_brief": "s01_leak_intake_load_recipe.leak_brief",
+        "leak_layer": "s03_leak_managed_vs_native_split.leak_layer",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "cause_hypotheses": "cause_hypotheses"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s05_leak_py_tracemalloc_diff",
+      "skill_name": "leak-py-tracemalloc-diff",
+      "inputs": {
+        "leak_brief": "s01_leak_intake_load_recipe.leak_brief",
+        "load_recipe": "s01_leak_intake_load_recipe.load_recipe",
+        "cause_hypotheses": "s04_leak_classic_causes_triage.cause_hypotheses"
+      },
+      "outputs": {
+        "py_alloc_diff": "py_alloc_diff",
+        "py_suspect_sites": "py_suspect_sites"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s06_leak_py_objgraph_backrefs",
+      "skill_name": "leak-py-objgraph-backrefs",
+      "inputs": {
+        "py_suspect_sites": "s05_leak_py_tracemalloc_diff.py_suspect_sites",
+        "leak_brief": "s01_leak_intake_load_recipe.leak_brief"
+      },
+      "outputs": {
+        "py_retention_chain": "py_retention_chain"
+      },
+      "parallel_group": 6
+    },
+    {
+      "id": "s07_leak_py_gc_referrers",
+      "skill_name": "leak-py-gc-referrers",
+      "inputs": {
+        "py_suspect_sites": "s05_leak_py_tracemalloc_diff.py_suspect_sites",
+        "py_retention_chain": "s06_leak_py_objgraph_backrefs.py_retention_chain"
+      },
+      "outputs": {
+        "py_referrer_report": "py_referrer_report"
+      },
+      "parallel_group": 7
+    },
+    {
+      "id": "s08_leak_py_memray_native",
+      "skill_name": "leak-py-memray-native",
+      "inputs": {
+        "leak_brief": "s01_leak_intake_load_recipe.leak_brief",
+        "load_recipe": "s01_leak_intake_load_recipe.load_recipe",
+        "leak_layer": "s03_leak_managed_vs_native_split.leak_layer"
+      },
+      "outputs": {
+        "py_native_leak_report": "py_native_leak_report"
+      },
+      "condition": "leak_layer != 'managed'",
+      "parallel_group": 4
+    },
+    {
+      "id": "s09_leak_root_cause_confirm",
+      "skill_name": "leak-root-cause-confirm",
+      "inputs": {
+        "cause_hypotheses": "s04_leak_classic_causes_triage.cause_hypotheses",
+        "load_recipe": "s01_leak_intake_load_recipe.load_recipe",
+        "py_referrer_report": "s07_leak_py_gc_referrers.py_referrer_report",
+        "py_native_leak_report": "s08_leak_py_memray_native.py_native_leak_report",
+        "node_retainer_paths": "from_user_input_optional",
+        "node_listener_report": "from_user_input_optional",
+        "detached_dom_report": "from_user_input_optional",
+        "jvm_retention_report": "from_user_input_optional",
+        "jvm_native_report": "from_user_input_optional",
+        "go_heap_diff": "from_user_input_optional",
+        "go_goroutine_report": "from_user_input_optional",
+        "memcheck_report": "from_user_input_optional",
+        "lsan_report": "from_user_input_optional",
+        "heaptrack_report": "from_user_input_optional",
+        "allocator_report": "from_user_input_optional"
+      },
+      "outputs": {
+        "root_cause": "root_cause",
+        "confirm_experiment": "confirm_experiment"
+      },
+      "parallel_group": 8
+    },
+    {
+      "id": "s10_leak_fix_minimal_change",
+      "skill_name": "leak-fix-minimal-change",
+      "inputs": {
+        "root_cause": "s09_leak_root_cause_confirm.root_cause",
+        "confirm_experiment": "s09_leak_root_cause_confirm.confirm_experiment",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "leak_fix": "leak_fix",
+        "fix_rationale": "fix_rationale"
+      },
+      "parallel_group": 9
+    },
+    {
+      "id": "s11_leak_regression_guard_test",
+      "skill_name": "leak-regression-guard-test",
+      "inputs": {
+        "root_cause": "s09_leak_root_cause_confirm.root_cause",
+        "leak_fix": "s10_leak_fix_minimal_change.leak_fix",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "leak_regression_test": "leak_regression_test"
+      },
+      "parallel_group": 10
+    },
+    {
+      "id": "s12_leak_soak_flat_proof",
+      "skill_name": "leak-soak-flat-proof",
+      "inputs": {
+        "load_recipe": "s01_leak_intake_load_recipe.load_recipe",
+        "bytes_per_op": "s02_leak_rss_growth_confirm.bytes_per_op",
+        "leak_fix": "s10_leak_fix_minimal_change.leak_fix",
+        "leak_regression_test": "s11_leak_regression_guard_test.leak_regression_test",
+        "acceptable_growth_rate": "from_user_input_optional"
+      },
+      "outputs": {
+        "soak_series": "soak_series",
+        "leak_verdict": "leak_verdict"
+      },
+      "parallel_group": 11
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_leak_intake_load_recipe",
+      "to_step": "s02_leak_rss_growth_confirm",
+      "data_type": "leak-intake-load-recipe",
+      "field_mapping": {
+        "leak_brief": "leak_brief",
+        "load_recipe": "load_recipe"
+      }
+    },
+    {
+      "from_step": "s02_leak_rss_growth_confirm",
+      "to_step": "s03_leak_managed_vs_native_split",
+      "data_type": "leak-rss-growth-confirm",
+      "field_mapping": {
+        "growth_series": "growth_series",
+        "growth_verdict": "growth_verdict"
+      }
+    },
+    {
+      "from_step": "s01_leak_intake_load_recipe",
+      "to_step": "s04_leak_classic_causes_triage",
+      "data_type": "leak-intake-load-recipe",
+      "field_mapping": {
+        "leak_brief": "leak_brief"
+      }
+    },
+    {
+      "from_step": "s03_leak_managed_vs_native_split",
+      "to_step": "s04_leak_classic_causes_triage",
+      "data_type": "leak-managed-vs-native-split",
+      "field_mapping": {
+        "leak_layer": "leak_layer"
+      }
+    },
+    {
+      "from_step": "s01_leak_intake_load_recipe",
+      "to_step": "s05_leak_py_tracemalloc_diff",
+      "data_type": "leak-intake-load-recipe",
+      "field_mapping": {
+        "leak_brief": "leak_brief",
+        "load_recipe": "load_recipe"
+      }
+    },
+    {
+      "from_step": "s04_leak_classic_causes_triage",
+      "to_step": "s05_leak_py_tracemalloc_diff",
+      "data_type": "leak-classic-causes-triage",
+      "field_mapping": {
+        "cause_hypotheses": "cause_hypotheses"
+      }
+    },
+    {
+      "from_step": "s05_leak_py_tracemalloc_diff",
+      "to_step": "s06_leak_py_objgraph_backrefs",
+      "data_type": "leak-py-tracemalloc-diff",
+      "field_mapping": {
+        "py_suspect_sites": "py_suspect_sites"
+      }
+    },
+    {
+      "from_step": "s01_leak_intake_load_recipe",
+      "to_step": "s06_leak_py_objgraph_backrefs",
+      "data_type": "leak-intake-load-recipe",
+      "field_mapping": {
+        "leak_brief": "leak_brief"
+      }
+    },
+    {
+      "from_step": "s05_leak_py_tracemalloc_diff",
+      "to_step": "s07_leak_py_gc_referrers",
+      "data_type": "leak-py-tracemalloc-diff",
+      "field_mapping": {
+        "py_suspect_sites": "py_suspect_sites"
+      }
+    },
+    {
+      "from_step": "s06_leak_py_objgraph_backrefs",
+      "to_step": "s07_leak_py_gc_referrers",
+      "data_type": "leak-py-objgraph-backrefs",
+      "field_mapping": {
+        "py_retention_chain": "py_retention_chain"
+      }
+    },
+    {
+      "from_step": "s01_leak_intake_load_recipe",
+      "to_step": "s08_leak_py_memray_native",
+      "data_type": "leak-intake-load-recipe",
+      "field_mapping": {
+        "leak_brief": "leak_brief",
+        "load_recipe": "load_recipe"
+      }
+    },
+    {
+      "from_step": "s03_leak_managed_vs_native_split",
+      "to_step": "s08_leak_py_memray_native",
+      "data_type": "leak-managed-vs-native-split",
+      "field_mapping": {
+        "leak_layer": "leak_layer"
+      }
+    },
+    {
+      "from_step": "s04_leak_classic_causes_triage",
+      "to_step": "s09_leak_root_cause_confirm",
+      "data_type": "leak-classic-causes-triage",
+      "field_mapping": {
+        "cause_hypotheses": "cause_hypotheses"
+      }
+    },
+    {
+      "from_step": "s01_leak_intake_load_recipe",
+      "to_step": "s09_leak_root_cause_confirm",
+      "data_type": "leak-intake-load-recipe",
+      "field_mapping": {
+        "load_recipe": "load_recipe"
+      }
+    },
+    {
+      "from_step": "s07_leak_py_gc_referrers",
+      "to_step": "s09_leak_root_cause_confirm",
+      "data_type": "leak-py-gc-referrers",
+      "field_mapping": {
+        "py_referrer_report": "py_referrer_report"
+      }
+    },
+    {
+      "from_step": "s08_leak_py_memray_native",
+      "to_step": "s09_leak_root_cause_confirm",
+      "data_type": "leak-py-memray-native",
+      "field_mapping": {
+        "py_native_leak_report": "py_native_leak_report"
+      }
+    },
+    {
+      "from_step": "s09_leak_root_cause_confirm",
+      "to_step": "s10_leak_fix_minimal_change",
+      "data_type": "leak-root-cause-confirm",
+      "field_mapping": {
+        "root_cause": "root_cause",
+        "confirm_experiment": "confirm_experiment"
+      }
+    },
+    {
+      "from_step": "s09_leak_root_cause_confirm",
+      "to_step": "s11_leak_regression_guard_test",
+      "data_type": "leak-root-cause-confirm",
+      "field_mapping": {
+        "root_cause": "root_cause"
+      }
+    },
+    {
+      "from_step": "s10_leak_fix_minimal_change",
+      "to_step": "s11_leak_regression_guard_test",
+      "data_type": "leak-fix-minimal-change",
+      "field_mapping": {
+        "leak_fix": "leak_fix"
+      }
+    },
+    {
+      "from_step": "s01_leak_intake_load_recipe",
+      "to_step": "s12_leak_soak_flat_proof",
+      "data_type": "leak-intake-load-recipe",
+      "field_mapping": {
+        "load_recipe": "load_recipe"
+      }
+    },
+    {
+      "from_step": "s02_leak_rss_growth_confirm",
+      "to_step": "s12_leak_soak_flat_proof",
+      "data_type": "leak-rss-growth-confirm",
+      "field_mapping": {
+        "bytes_per_op": "bytes_per_op"
+      }
+    },
+    {
+      "from_step": "s10_leak_fix_minimal_change",
+      "to_step": "s12_leak_soak_flat_proof",
+      "data_type": "leak-fix-minimal-change",
+      "field_mapping": {
+        "leak_fix": "leak_fix"
+      }
+    },
+    {
+      "from_step": "s11_leak_regression_guard_test",
+      "to_step": "s12_leak_soak_flat_proof",
+      "data_type": "leak-regression-guard-test",
+      "field_mapping": {
+        "leak_regression_test": "leak_regression_test"
+      }
+    },
+    {
+      "from_step": "s12_leak_soak_flat_proof",
+      "to_step": "s09_leak_root_cause_confirm",
+      "data_type": "leak-soak-flat-proof",
+      "field_mapping": {
+        "leak_verdict": "leak_verdict"
+      },
+      "condition": "leak_verdict.verdict == 'NOT_FIXED'",
+      "max_loops": 3
+    }
+  ],
+  "entry_inputs": [
+    "symptom_report",
+    "stack",
+    "target_process",
+    "load_driver",
+    "sample_interval_s",
+    "node_retainer_paths",
+    "node_listener_report",
+    "detached_dom_report",
+    "jvm_retention_report",
+    "jvm_native_report",
+    "go_heap_diff",
+    "go_goroutine_report",
+    "memcheck_report",
+    "lsan_report",
+    "heaptrack_report",
+    "allocator_report",
+    "acceptable_growth_rate"
+  ],
+  "terminal_outputs": [
+    "root_cause",
+    "leak_fix",
+    "leak_regression_test",
+    "leak_verdict"
+  ],
+  "parallel_groups": [
+    [
+      "s01_leak_intake_load_recipe"
+    ],
+    [
+      "s02_leak_rss_growth_confirm"
+    ],
+    [
+      "s03_leak_managed_vs_native_split"
+    ],
+    [
+      "s04_leak_classic_causes_triage",
+      "s08_leak_py_memray_native"
+    ],
+    [
+      "s05_leak_py_tracemalloc_diff"
+    ],
+    [
+      "s06_leak_py_objgraph_backrefs"
+    ],
+    [
+      "s07_leak_py_gc_referrers"
+    ],
+    [
+      "s09_leak_root_cause_confirm"
+    ],
+    [
+      "s10_leak_fix_minimal_change"
+    ],
+    [
+      "s11_leak_regression_guard_test"
+    ],
+    [
+      "s12_leak_soak_flat_proof"
+    ]
+  ],
+  "estimated_cost": 12,
+  "critical_path": [
+    "s01_leak_intake_load_recipe",
+    "s02_leak_rss_growth_confirm",
+    "s03_leak_managed_vs_native_split",
+    "s04_leak_classic_causes_triage",
+    "s05_leak_py_tracemalloc_diff",
+    "s06_leak_py_objgraph_backrefs",
+    "s07_leak_py_gc_referrers",
+    "s09_leak_root_cause_confirm",
+    "s10_leak_fix_minimal_change",
+    "s11_leak_regression_guard_test",
+    "s12_leak_soak_flat_proof"
+  ]
+}

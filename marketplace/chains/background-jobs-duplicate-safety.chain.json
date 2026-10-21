@@ -1,0 +1,195 @@
+{
+  "name": "background-jobs-duplicate-safety",
+  "description": "Stop duplicate and lost job effects on any queue: audit side effects, design keyed payloads, add the idempotency store and transactional outbox, then prove it with a worker kill drill.",
+  "steps": [
+    {
+      "id": "s01_bjq_handler_side_effect_audit",
+      "skill_name": "bjq-handler-side-effect-audit",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "queue_choice": "from_user_input"
+      },
+      "outputs": {
+        "job_inventory": "job_inventory",
+        "unsafe_handlers": "unsafe_handlers"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_bjq_job_payload_design",
+      "skill_name": "bjq-job-payload-design",
+      "inputs": {
+        "job_inventory": "s01_bjq_handler_side_effect_audit.job_inventory",
+        "queue_choice": "from_user_input"
+      },
+      "outputs": {
+        "payload_schema": "payload_schema",
+        "payload_violations": "payload_violations"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_bjq_idempotency_key_store",
+      "skill_name": "bjq-idempotency-key-store",
+      "inputs": {
+        "job_inventory": "s01_bjq_handler_side_effect_audit.job_inventory",
+        "payload_schema": "s02_bjq_job_payload_design.payload_schema",
+        "stack": "from_user_input",
+        "database": "from_user_input"
+      },
+      "outputs": {
+        "idempotency_design": "idempotency_design",
+        "idempotency_patch": "idempotency_patch"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_bjq_transactional_outbox_enqueue",
+      "skill_name": "bjq-transactional-outbox-enqueue",
+      "inputs": {
+        "job_inventory": "s01_bjq_handler_side_effect_audit.job_inventory",
+        "payload_schema": "s02_bjq_job_payload_design.payload_schema",
+        "stack": "from_user_input",
+        "database": "from_user_input"
+      },
+      "outputs": {
+        "outbox_design": "outbox_design",
+        "outbox_patch": "outbox_patch"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s05_bjq_job_duration_profile",
+      "skill_name": "bjq-job-duration-profile",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "queue_choice": "from_user_input",
+        "job_inventory": "s01_bjq_handler_side_effect_audit.job_inventory",
+        "log_source": "from_user_input"
+      },
+      "outputs": {
+        "job_duration_profile": "job_duration_profile"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s06_bjq_worker_kill_redelivery_drill",
+      "skill_name": "bjq-worker-kill-redelivery-drill",
+      "inputs": {
+        "queue_choice": "from_user_input",
+        "idempotency_design": "s03_bjq_idempotency_key_store.idempotency_design",
+        "job_duration_profile": "s05_bjq_job_duration_profile.job_duration_profile",
+        "staging_environment": "from_user_input"
+      },
+      "outputs": {
+        "drill_report": "drill_report"
+      },
+      "parallel_group": 4
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_bjq_handler_side_effect_audit",
+      "to_step": "s02_bjq_job_payload_design",
+      "data_type": "bjq-handler-side-effect-audit",
+      "field_mapping": {
+        "job_inventory": "job_inventory"
+      }
+    },
+    {
+      "from_step": "s01_bjq_handler_side_effect_audit",
+      "to_step": "s03_bjq_idempotency_key_store",
+      "data_type": "bjq-handler-side-effect-audit",
+      "field_mapping": {
+        "job_inventory": "job_inventory"
+      }
+    },
+    {
+      "from_step": "s02_bjq_job_payload_design",
+      "to_step": "s03_bjq_idempotency_key_store",
+      "data_type": "bjq-job-payload-design",
+      "field_mapping": {
+        "payload_schema": "payload_schema"
+      }
+    },
+    {
+      "from_step": "s01_bjq_handler_side_effect_audit",
+      "to_step": "s04_bjq_transactional_outbox_enqueue",
+      "data_type": "bjq-handler-side-effect-audit",
+      "field_mapping": {
+        "job_inventory": "job_inventory"
+      }
+    },
+    {
+      "from_step": "s02_bjq_job_payload_design",
+      "to_step": "s04_bjq_transactional_outbox_enqueue",
+      "data_type": "bjq-job-payload-design",
+      "field_mapping": {
+        "payload_schema": "payload_schema"
+      }
+    },
+    {
+      "from_step": "s01_bjq_handler_side_effect_audit",
+      "to_step": "s05_bjq_job_duration_profile",
+      "data_type": "bjq-handler-side-effect-audit",
+      "field_mapping": {
+        "job_inventory": "job_inventory"
+      }
+    },
+    {
+      "from_step": "s03_bjq_idempotency_key_store",
+      "to_step": "s06_bjq_worker_kill_redelivery_drill",
+      "data_type": "bjq-idempotency-key-store",
+      "field_mapping": {
+        "idempotency_design": "idempotency_design"
+      }
+    },
+    {
+      "from_step": "s05_bjq_job_duration_profile",
+      "to_step": "s06_bjq_worker_kill_redelivery_drill",
+      "data_type": "bjq-job-duration-profile",
+      "field_mapping": {
+        "job_duration_profile": "job_duration_profile"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "repo_path",
+    "queue_choice",
+    "stack",
+    "database",
+    "log_source",
+    "staging_environment"
+  ],
+  "terminal_outputs": [
+    "unsafe_handlers",
+    "payload_violations",
+    "idempotency_patch",
+    "outbox_design",
+    "outbox_patch",
+    "drill_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_bjq_handler_side_effect_audit"
+    ],
+    [
+      "s02_bjq_job_payload_design",
+      "s05_bjq_job_duration_profile"
+    ],
+    [
+      "s03_bjq_idempotency_key_store",
+      "s04_bjq_transactional_outbox_enqueue"
+    ],
+    [
+      "s06_bjq_worker_kill_redelivery_drill"
+    ]
+  ],
+  "estimated_cost": 6,
+  "critical_path": [
+    "s01_bjq_handler_side_effect_audit",
+    "s02_bjq_job_payload_design",
+    "s03_bjq_idempotency_key_store",
+    "s06_bjq_worker_kill_redelivery_drill"
+  ]
+}

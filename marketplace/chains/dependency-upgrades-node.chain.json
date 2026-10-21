@@ -1,0 +1,625 @@
+{
+  "name": "dependency-upgrades-node",
+  "description": "Node dependency upgrade: npm, pnpm or yarn lockfile hygiene, npm outdated and npm audit inventory, changelog triage, ordered plan with peer lockstep groups, rollback, deprecation sweep, optional Node LTS move, one-bump-per-commit apply, codemods and an optional React 19 upgrade.",
+  "steps": [
+    {
+      "id": "s01_dup_scope_intake",
+      "skill_name": "dup-scope-intake",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "upgrade_goal": "from_user_input",
+        "framework": "from_user_input_optional",
+        "bot": "from_user_input_optional",
+        "target_packages": "from_user_input_optional",
+        "test_command": "from_user_input_optional"
+      },
+      "outputs": {
+        "upgrade_scope": "upgrade_scope"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_dup_baseline_snapshot",
+      "skill_name": "dup-baseline-snapshot",
+      "inputs": {
+        "upgrade_scope": "s01_dup_scope_intake.upgrade_scope"
+      },
+      "outputs": {
+        "baseline_report": "baseline_report"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_dup_node_lockfile_hygiene",
+      "skill_name": "dup-node-lockfile-hygiene",
+      "inputs": {
+        "upgrade_scope": "s01_dup_scope_intake.upgrade_scope",
+        "baseline_report": "s02_dup_baseline_snapshot.baseline_report"
+      },
+      "outputs": {
+        "lockfile_status": "lockfile_status"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_dup_node_outdated_inventory",
+      "skill_name": "dup-node-outdated-inventory",
+      "inputs": {
+        "upgrade_scope": "s01_dup_scope_intake.upgrade_scope",
+        "lockfile_status": "s03_dup_node_lockfile_hygiene.lockfile_status"
+      },
+      "outputs": {
+        "outdated_inventory": "outdated_inventory"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s05_dup_node_vuln_scan",
+      "skill_name": "dup-node-vuln-scan",
+      "inputs": {
+        "upgrade_scope": "s01_dup_scope_intake.upgrade_scope",
+        "lockfile_status": "s03_dup_node_lockfile_hygiene.lockfile_status"
+      },
+      "outputs": {
+        "vuln_findings": "vuln_findings"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s06_dup_changelog_triage",
+      "skill_name": "dup-changelog-triage",
+      "inputs": {
+        "upgrade_scope": "s01_dup_scope_intake.upgrade_scope",
+        "baseline_report": "s02_dup_baseline_snapshot.baseline_report"
+      },
+      "outputs": {
+        "breaking_changes": "breaking_changes"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s07_dup_upgrade_order_plan",
+      "skill_name": "dup-upgrade-order-plan",
+      "inputs": {
+        "upgrade_scope": "s01_dup_scope_intake.upgrade_scope",
+        "breaking_changes": "s06_dup_changelog_triage.breaking_changes"
+      },
+      "outputs": {
+        "upgrade_plan": "upgrade_plan"
+      },
+      "parallel_group": 6
+    },
+    {
+      "id": "s08_dup_rollback_plan",
+      "skill_name": "dup-rollback-plan",
+      "inputs": {
+        "upgrade_scope": "s01_dup_scope_intake.upgrade_scope",
+        "baseline_report": "s02_dup_baseline_snapshot.baseline_report",
+        "upgrade_plan": "s07_dup_upgrade_order_plan.upgrade_plan"
+      },
+      "outputs": {
+        "rollback_plan": "rollback_plan"
+      },
+      "parallel_group": 7
+    },
+    {
+      "id": "s09_dup_node_deprecation_sweep",
+      "skill_name": "dup-node-deprecation-sweep",
+      "inputs": {
+        "upgrade_scope": "s01_dup_scope_intake.upgrade_scope",
+        "baseline_report": "s02_dup_baseline_snapshot.baseline_report",
+        "upgrade_plan": "s07_dup_upgrade_order_plan.upgrade_plan"
+      },
+      "outputs": {
+        "deprecation_report": "deprecation_report"
+      },
+      "parallel_group": 8
+    },
+    {
+      "id": "s10_dup_node_lts_upgrade",
+      "skill_name": "dup-node-lts-upgrade",
+      "inputs": {
+        "upgrade_scope": "s01_dup_scope_intake.upgrade_scope",
+        "rollback_plan": "s08_dup_rollback_plan.rollback_plan",
+        "node_target_version": "from_user_input_optional"
+      },
+      "outputs": {
+        "runtime_upgrade_log": "runtime_upgrade_log"
+      },
+      "condition": "upgrade_goal in ['node-lts', 'all']",
+      "parallel_group": 9
+    },
+    {
+      "id": "s11_dup_apply_one_bump",
+      "skill_name": "dup-apply-one-bump",
+      "inputs": {
+        "upgrade_scope": "s01_dup_scope_intake.upgrade_scope",
+        "upgrade_plan": "s07_dup_upgrade_order_plan.upgrade_plan",
+        "rollback_plan": "s08_dup_rollback_plan.rollback_plan"
+      },
+      "outputs": {
+        "applied_bumps": "applied_bumps",
+        "blocked_bumps": "blocked_bumps"
+      },
+      "parallel_group": 10
+    },
+    {
+      "id": "s12_dup_codemod_run",
+      "skill_name": "dup-codemod-run",
+      "inputs": {
+        "upgrade_scope": "s01_dup_scope_intake.upgrade_scope",
+        "upgrade_plan": "s07_dup_upgrade_order_plan.upgrade_plan",
+        "breaking_changes": "s06_dup_changelog_triage.breaking_changes",
+        "applied_bumps": "s11_dup_apply_one_bump.applied_bumps"
+      },
+      "outputs": {
+        "codemod_log": "codemod_log"
+      },
+      "parallel_group": 11
+    },
+    {
+      "id": "s13_dup_react_major_upgrade",
+      "skill_name": "dup-react-major-upgrade",
+      "inputs": {
+        "upgrade_scope": "s01_dup_scope_intake.upgrade_scope",
+        "upgrade_plan": "s07_dup_upgrade_order_plan.upgrade_plan",
+        "codemod_log": "s12_dup_codemod_run.codemod_log",
+        "framework_target_version": "from_user_input_optional"
+      },
+      "outputs": {
+        "framework_upgrade_log": "framework_upgrade_log"
+      },
+      "condition": "framework == 'react'",
+      "parallel_group": 12
+    },
+    {
+      "id": "s14_dup_verify_and_pr",
+      "skill_name": "dup-verify-and-pr",
+      "inputs": {
+        "upgrade_scope": "s01_dup_scope_intake.upgrade_scope",
+        "baseline_report": "s02_dup_baseline_snapshot.baseline_report",
+        "rollback_plan": "s08_dup_rollback_plan.rollback_plan",
+        "applied_bumps": "s11_dup_apply_one_bump.applied_bumps"
+      },
+      "outputs": {
+        "verification_report": "verification_report",
+        "pr_description": "pr_description"
+      },
+      "parallel_group": 13
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_dup_scope_intake",
+      "to_step": "s02_dup_baseline_snapshot",
+      "data_type": "dup-scope-intake",
+      "field_mapping": {
+        "upgrade_scope": "upgrade_scope"
+      }
+    },
+    {
+      "from_step": "s01_dup_scope_intake",
+      "to_step": "s03_dup_node_lockfile_hygiene",
+      "data_type": "dup-scope-intake",
+      "field_mapping": {
+        "upgrade_scope": "upgrade_scope"
+      }
+    },
+    {
+      "from_step": "s02_dup_baseline_snapshot",
+      "to_step": "s03_dup_node_lockfile_hygiene",
+      "data_type": "dup-baseline-snapshot",
+      "field_mapping": {
+        "baseline_report": "baseline_report"
+      }
+    },
+    {
+      "from_step": "s01_dup_scope_intake",
+      "to_step": "s04_dup_node_outdated_inventory",
+      "data_type": "dup-scope-intake",
+      "field_mapping": {
+        "upgrade_scope": "upgrade_scope"
+      }
+    },
+    {
+      "from_step": "s03_dup_node_lockfile_hygiene",
+      "to_step": "s04_dup_node_outdated_inventory",
+      "data_type": "dup-node-lockfile-hygiene",
+      "field_mapping": {
+        "lockfile_status": "lockfile_status"
+      }
+    },
+    {
+      "from_step": "s01_dup_scope_intake",
+      "to_step": "s05_dup_node_vuln_scan",
+      "data_type": "dup-scope-intake",
+      "field_mapping": {
+        "upgrade_scope": "upgrade_scope"
+      }
+    },
+    {
+      "from_step": "s03_dup_node_lockfile_hygiene",
+      "to_step": "s05_dup_node_vuln_scan",
+      "data_type": "dup-node-lockfile-hygiene",
+      "field_mapping": {
+        "lockfile_status": "lockfile_status"
+      }
+    },
+    {
+      "from_step": "s01_dup_scope_intake",
+      "to_step": "s06_dup_changelog_triage",
+      "data_type": "dup-scope-intake",
+      "field_mapping": {
+        "upgrade_scope": "upgrade_scope"
+      }
+    },
+    {
+      "from_step": "s02_dup_baseline_snapshot",
+      "to_step": "s06_dup_changelog_triage",
+      "data_type": "dup-baseline-snapshot",
+      "field_mapping": {
+        "baseline_report": "baseline_report"
+      }
+    },
+    {
+      "from_step": "s04_dup_node_outdated_inventory",
+      "to_step": "s06_dup_changelog_triage",
+      "data_type": "dup-node-outdated-inventory",
+      "field_mapping": {
+        "outdated_inventory": "outdated_inventory"
+      }
+    },
+    {
+      "from_step": "s05_dup_node_vuln_scan",
+      "to_step": "s06_dup_changelog_triage",
+      "data_type": "dup-node-vuln-scan",
+      "field_mapping": {
+        "vuln_findings": "vuln_findings"
+      }
+    },
+    {
+      "from_step": "s01_dup_scope_intake",
+      "to_step": "s07_dup_upgrade_order_plan",
+      "data_type": "dup-scope-intake",
+      "field_mapping": {
+        "upgrade_scope": "upgrade_scope"
+      }
+    },
+    {
+      "from_step": "s06_dup_changelog_triage",
+      "to_step": "s07_dup_upgrade_order_plan",
+      "data_type": "dup-changelog-triage",
+      "field_mapping": {
+        "breaking_changes": "breaking_changes"
+      }
+    },
+    {
+      "from_step": "s04_dup_node_outdated_inventory",
+      "to_step": "s07_dup_upgrade_order_plan",
+      "data_type": "dup-node-outdated-inventory",
+      "field_mapping": {
+        "outdated_inventory": "outdated_inventory"
+      }
+    },
+    {
+      "from_step": "s05_dup_node_vuln_scan",
+      "to_step": "s07_dup_upgrade_order_plan",
+      "data_type": "dup-node-vuln-scan",
+      "field_mapping": {
+        "vuln_findings": "vuln_findings"
+      }
+    },
+    {
+      "from_step": "s01_dup_scope_intake",
+      "to_step": "s08_dup_rollback_plan",
+      "data_type": "dup-scope-intake",
+      "field_mapping": {
+        "upgrade_scope": "upgrade_scope"
+      }
+    },
+    {
+      "from_step": "s02_dup_baseline_snapshot",
+      "to_step": "s08_dup_rollback_plan",
+      "data_type": "dup-baseline-snapshot",
+      "field_mapping": {
+        "baseline_report": "baseline_report"
+      }
+    },
+    {
+      "from_step": "s07_dup_upgrade_order_plan",
+      "to_step": "s08_dup_rollback_plan",
+      "data_type": "dup-upgrade-order-plan",
+      "field_mapping": {
+        "upgrade_plan": "upgrade_plan"
+      }
+    },
+    {
+      "from_step": "s01_dup_scope_intake",
+      "to_step": "s09_dup_node_deprecation_sweep",
+      "data_type": "dup-scope-intake",
+      "field_mapping": {
+        "upgrade_scope": "upgrade_scope"
+      }
+    },
+    {
+      "from_step": "s02_dup_baseline_snapshot",
+      "to_step": "s09_dup_node_deprecation_sweep",
+      "data_type": "dup-baseline-snapshot",
+      "field_mapping": {
+        "baseline_report": "baseline_report"
+      }
+    },
+    {
+      "from_step": "s07_dup_upgrade_order_plan",
+      "to_step": "s09_dup_node_deprecation_sweep",
+      "data_type": "dup-upgrade-order-plan",
+      "field_mapping": {
+        "upgrade_plan": "upgrade_plan"
+      }
+    },
+    {
+      "from_step": "s08_dup_rollback_plan",
+      "to_step": "s09_dup_node_deprecation_sweep",
+      "data_type": "dup-rollback-plan",
+      "field_mapping": {
+        "rollback_plan": "rollback_plan"
+      }
+    },
+    {
+      "from_step": "s01_dup_scope_intake",
+      "to_step": "s10_dup_node_lts_upgrade",
+      "data_type": "dup-scope-intake",
+      "field_mapping": {
+        "upgrade_scope": "upgrade_scope"
+      }
+    },
+    {
+      "from_step": "s08_dup_rollback_plan",
+      "to_step": "s10_dup_node_lts_upgrade",
+      "data_type": "dup-rollback-plan",
+      "field_mapping": {
+        "rollback_plan": "rollback_plan"
+      }
+    },
+    {
+      "from_step": "s09_dup_node_deprecation_sweep",
+      "to_step": "s10_dup_node_lts_upgrade",
+      "data_type": "dup-node-deprecation-sweep",
+      "field_mapping": {
+        "deprecation_report": "deprecation_report"
+      }
+    },
+    {
+      "from_step": "s01_dup_scope_intake",
+      "to_step": "s11_dup_apply_one_bump",
+      "data_type": "dup-scope-intake",
+      "field_mapping": {
+        "upgrade_scope": "upgrade_scope"
+      }
+    },
+    {
+      "from_step": "s07_dup_upgrade_order_plan",
+      "to_step": "s11_dup_apply_one_bump",
+      "data_type": "dup-upgrade-order-plan",
+      "field_mapping": {
+        "upgrade_plan": "upgrade_plan"
+      }
+    },
+    {
+      "from_step": "s08_dup_rollback_plan",
+      "to_step": "s11_dup_apply_one_bump",
+      "data_type": "dup-rollback-plan",
+      "field_mapping": {
+        "rollback_plan": "rollback_plan"
+      }
+    },
+    {
+      "from_step": "s09_dup_node_deprecation_sweep",
+      "to_step": "s11_dup_apply_one_bump",
+      "data_type": "dup-node-deprecation-sweep",
+      "field_mapping": {
+        "deprecation_report": "deprecation_report"
+      }
+    },
+    {
+      "from_step": "s10_dup_node_lts_upgrade",
+      "to_step": "s11_dup_apply_one_bump",
+      "data_type": "dup-node-lts-upgrade",
+      "field_mapping": {
+        "runtime_upgrade_log": "runtime_upgrade_log"
+      }
+    },
+    {
+      "from_step": "s01_dup_scope_intake",
+      "to_step": "s12_dup_codemod_run",
+      "data_type": "dup-scope-intake",
+      "field_mapping": {
+        "upgrade_scope": "upgrade_scope"
+      }
+    },
+    {
+      "from_step": "s07_dup_upgrade_order_plan",
+      "to_step": "s12_dup_codemod_run",
+      "data_type": "dup-upgrade-order-plan",
+      "field_mapping": {
+        "upgrade_plan": "upgrade_plan"
+      }
+    },
+    {
+      "from_step": "s06_dup_changelog_triage",
+      "to_step": "s12_dup_codemod_run",
+      "data_type": "dup-changelog-triage",
+      "field_mapping": {
+        "breaking_changes": "breaking_changes"
+      }
+    },
+    {
+      "from_step": "s11_dup_apply_one_bump",
+      "to_step": "s12_dup_codemod_run",
+      "data_type": "dup-apply-one-bump",
+      "field_mapping": {
+        "applied_bumps": "applied_bumps"
+      }
+    },
+    {
+      "from_step": "s01_dup_scope_intake",
+      "to_step": "s13_dup_react_major_upgrade",
+      "data_type": "dup-scope-intake",
+      "field_mapping": {
+        "upgrade_scope": "upgrade_scope"
+      }
+    },
+    {
+      "from_step": "s07_dup_upgrade_order_plan",
+      "to_step": "s13_dup_react_major_upgrade",
+      "data_type": "dup-upgrade-order-plan",
+      "field_mapping": {
+        "upgrade_plan": "upgrade_plan"
+      }
+    },
+    {
+      "from_step": "s12_dup_codemod_run",
+      "to_step": "s13_dup_react_major_upgrade",
+      "data_type": "dup-codemod-run",
+      "field_mapping": {
+        "codemod_log": "codemod_log"
+      }
+    },
+    {
+      "from_step": "s01_dup_scope_intake",
+      "to_step": "s14_dup_verify_and_pr",
+      "data_type": "dup-scope-intake",
+      "field_mapping": {
+        "upgrade_scope": "upgrade_scope"
+      }
+    },
+    {
+      "from_step": "s02_dup_baseline_snapshot",
+      "to_step": "s14_dup_verify_and_pr",
+      "data_type": "dup-baseline-snapshot",
+      "field_mapping": {
+        "baseline_report": "baseline_report"
+      }
+    },
+    {
+      "from_step": "s08_dup_rollback_plan",
+      "to_step": "s14_dup_verify_and_pr",
+      "data_type": "dup-rollback-plan",
+      "field_mapping": {
+        "rollback_plan": "rollback_plan"
+      }
+    },
+    {
+      "from_step": "s11_dup_apply_one_bump",
+      "to_step": "s14_dup_verify_and_pr",
+      "data_type": "dup-apply-one-bump",
+      "field_mapping": {
+        "applied_bumps": "applied_bumps"
+      }
+    },
+    {
+      "from_step": "s12_dup_codemod_run",
+      "to_step": "s14_dup_verify_and_pr",
+      "data_type": "dup-codemod-run",
+      "field_mapping": {
+        "codemod_log": "codemod_log"
+      }
+    },
+    {
+      "from_step": "s13_dup_react_major_upgrade",
+      "to_step": "s14_dup_verify_and_pr",
+      "data_type": "dup-react-major-upgrade",
+      "field_mapping": {
+        "framework_upgrade_log": "framework_upgrade_log"
+      }
+    },
+    {
+      "from_step": "s10_dup_node_lts_upgrade",
+      "to_step": "s14_dup_verify_and_pr",
+      "data_type": "dup-node-lts-upgrade",
+      "field_mapping": {
+        "runtime_upgrade_log": "runtime_upgrade_log"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "repo_path",
+    "stack",
+    "upgrade_goal",
+    "framework",
+    "bot",
+    "target_packages",
+    "test_command",
+    "node_target_version",
+    "framework_target_version"
+  ],
+  "terminal_outputs": [
+    "outdated_inventory",
+    "vuln_findings",
+    "deprecation_report",
+    "runtime_upgrade_log",
+    "blocked_bumps",
+    "framework_upgrade_log",
+    "verification_report",
+    "pr_description"
+  ],
+  "parallel_groups": [
+    [
+      "s01_dup_scope_intake"
+    ],
+    [
+      "s02_dup_baseline_snapshot"
+    ],
+    [
+      "s03_dup_node_lockfile_hygiene"
+    ],
+    [
+      "s04_dup_node_outdated_inventory",
+      "s05_dup_node_vuln_scan"
+    ],
+    [
+      "s06_dup_changelog_triage"
+    ],
+    [
+      "s07_dup_upgrade_order_plan"
+    ],
+    [
+      "s08_dup_rollback_plan"
+    ],
+    [
+      "s09_dup_node_deprecation_sweep"
+    ],
+    [
+      "s10_dup_node_lts_upgrade"
+    ],
+    [
+      "s11_dup_apply_one_bump"
+    ],
+    [
+      "s12_dup_codemod_run"
+    ],
+    [
+      "s13_dup_react_major_upgrade"
+    ],
+    [
+      "s14_dup_verify_and_pr"
+    ]
+  ],
+  "estimated_cost": 14,
+  "critical_path": [
+    "s01_dup_scope_intake",
+    "s02_dup_baseline_snapshot",
+    "s03_dup_node_lockfile_hygiene",
+    "s04_dup_node_outdated_inventory",
+    "s06_dup_changelog_triage",
+    "s07_dup_upgrade_order_plan",
+    "s08_dup_rollback_plan",
+    "s09_dup_node_deprecation_sweep",
+    "s10_dup_node_lts_upgrade",
+    "s11_dup_apply_one_bump",
+    "s12_dup_codemod_run",
+    "s13_dup_react_major_upgrade",
+    "s14_dup_verify_and_pr"
+  ]
+}

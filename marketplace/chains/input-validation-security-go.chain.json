@@ -1,0 +1,279 @@
+{
+  "name": "input-validation-security-go",
+  "description": "Harden a Go service: inventory entry points, map sinks, decode strictly with go-playground/validator, use database/sql placeholders, fix path traversal, SSRF and header injection, log rejections with slog, then lock it in with negative tests, Semgrep rules and a CI gate.",
+  "steps": [
+    {
+      "id": "s01_ival_entry_point_inventory",
+      "skill_name": "ival-entry-point-inventory",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "entry_point_inventory": "entry_point_inventory"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_ival_sink_class_map",
+      "skill_name": "ival-sink-class-map",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "entry_point_inventory": "s01_ival_entry_point_inventory.entry_point_inventory"
+      },
+      "outputs": {
+        "sink_map": "sink_map"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_ival_go_validator_tags",
+      "skill_name": "ival-go-validator-tags",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "entry_point_inventory": "s01_ival_entry_point_inventory.entry_point_inventory",
+        "field_rules": "from_user_input_optional"
+      },
+      "outputs": {
+        "go_validator_changes": "go_validator_changes"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_ival_go_sql_parameterize",
+      "skill_name": "ival-go-sql-parameterize",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "sink_map": "s02_ival_sink_class_map.sink_map"
+      },
+      "outputs": {
+        "go_sql_fixes": "go_sql_fixes"
+      },
+      "condition": "'sql' in sink_map.classes",
+      "parallel_group": 3
+    },
+    {
+      "id": "s05_ival_path_traversal_fix",
+      "skill_name": "ival-path-traversal-fix",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "sink_map": "s02_ival_sink_class_map.sink_map"
+      },
+      "outputs": {
+        "path_fixes": "path_fixes"
+      },
+      "condition": "'path' in sink_map.classes",
+      "parallel_group": 3
+    },
+    {
+      "id": "s06_ival_ssrf_egress_guard",
+      "skill_name": "ival-ssrf-egress-guard",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "sink_map": "s02_ival_sink_class_map.sink_map",
+        "allowed_hosts": "from_user_input_optional"
+      },
+      "outputs": {
+        "ssrf_fixes": "ssrf_fixes"
+      },
+      "condition": "'ssrf' in sink_map.classes",
+      "parallel_group": 3
+    },
+    {
+      "id": "s07_ival_header_injection_fix",
+      "skill_name": "ival-header-injection-fix",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "sink_map": "s02_ival_sink_class_map.sink_map"
+      },
+      "outputs": {
+        "header_fixes": "header_fixes"
+      },
+      "condition": "'header' in sink_map.classes",
+      "parallel_group": 3
+    },
+    {
+      "id": "s08_ival_rejected_input_logging",
+      "skill_name": "ival-rejected-input-logging",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "logging_changes": "logging_changes"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s09_ival_negative_test_suite",
+      "skill_name": "ival-negative-test-suite",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "sink_map": "s02_ival_sink_class_map.sink_map"
+      },
+      "outputs": {
+        "negative_tests": "negative_tests"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s10_ival_semgrep_taint_rules",
+      "skill_name": "ival-semgrep-taint-rules",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "sink_map": "s02_ival_sink_class_map.sink_map"
+      },
+      "outputs": {
+        "semgrep_rules": "semgrep_rules"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s11_ival_ci_security_gate",
+      "skill_name": "ival-ci-security-gate",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "semgrep_rules": "s10_ival_semgrep_taint_rules.semgrep_rules",
+        "negative_tests": "s09_ival_negative_test_suite.negative_tests",
+        "ci_platform": "from_user_input_optional"
+      },
+      "outputs": {
+        "ci_gate": "ci_gate"
+      },
+      "parallel_group": 4
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_ival_entry_point_inventory",
+      "to_step": "s02_ival_sink_class_map",
+      "data_type": "ival-entry-point-inventory",
+      "field_mapping": {
+        "entry_point_inventory": "entry_point_inventory"
+      }
+    },
+    {
+      "from_step": "s01_ival_entry_point_inventory",
+      "to_step": "s03_ival_go_validator_tags",
+      "data_type": "ival-entry-point-inventory",
+      "field_mapping": {
+        "entry_point_inventory": "entry_point_inventory"
+      }
+    },
+    {
+      "from_step": "s02_ival_sink_class_map",
+      "to_step": "s04_ival_go_sql_parameterize",
+      "data_type": "ival-sink-class-map",
+      "field_mapping": {
+        "sink_map": "sink_map"
+      }
+    },
+    {
+      "from_step": "s02_ival_sink_class_map",
+      "to_step": "s05_ival_path_traversal_fix",
+      "data_type": "ival-sink-class-map",
+      "field_mapping": {
+        "sink_map": "sink_map"
+      }
+    },
+    {
+      "from_step": "s02_ival_sink_class_map",
+      "to_step": "s06_ival_ssrf_egress_guard",
+      "data_type": "ival-sink-class-map",
+      "field_mapping": {
+        "sink_map": "sink_map"
+      }
+    },
+    {
+      "from_step": "s02_ival_sink_class_map",
+      "to_step": "s07_ival_header_injection_fix",
+      "data_type": "ival-sink-class-map",
+      "field_mapping": {
+        "sink_map": "sink_map"
+      }
+    },
+    {
+      "from_step": "s02_ival_sink_class_map",
+      "to_step": "s09_ival_negative_test_suite",
+      "data_type": "ival-sink-class-map",
+      "field_mapping": {
+        "sink_map": "sink_map"
+      }
+    },
+    {
+      "from_step": "s02_ival_sink_class_map",
+      "to_step": "s10_ival_semgrep_taint_rules",
+      "data_type": "ival-sink-class-map",
+      "field_mapping": {
+        "sink_map": "sink_map"
+      }
+    },
+    {
+      "from_step": "s10_ival_semgrep_taint_rules",
+      "to_step": "s11_ival_ci_security_gate",
+      "data_type": "ival-semgrep-taint-rules",
+      "field_mapping": {
+        "semgrep_rules": "semgrep_rules"
+      }
+    },
+    {
+      "from_step": "s09_ival_negative_test_suite",
+      "to_step": "s11_ival_ci_security_gate",
+      "data_type": "ival-negative-test-suite",
+      "field_mapping": {
+        "negative_tests": "negative_tests"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "repo_path",
+    "stack",
+    "field_rules",
+    "allowed_hosts",
+    "ci_platform"
+  ],
+  "terminal_outputs": [
+    "go_validator_changes",
+    "go_sql_fixes",
+    "path_fixes",
+    "ssrf_fixes",
+    "header_fixes",
+    "logging_changes",
+    "ci_gate"
+  ],
+  "parallel_groups": [
+    [
+      "s01_ival_entry_point_inventory",
+      "s08_ival_rejected_input_logging"
+    ],
+    [
+      "s02_ival_sink_class_map",
+      "s03_ival_go_validator_tags"
+    ],
+    [
+      "s04_ival_go_sql_parameterize",
+      "s05_ival_path_traversal_fix",
+      "s06_ival_ssrf_egress_guard",
+      "s07_ival_header_injection_fix",
+      "s09_ival_negative_test_suite",
+      "s10_ival_semgrep_taint_rules"
+    ],
+    [
+      "s11_ival_ci_security_gate"
+    ]
+  ],
+  "estimated_cost": 11,
+  "critical_path": [
+    "s01_ival_entry_point_inventory",
+    "s02_ival_sink_class_map",
+    "s10_ival_semgrep_taint_rules",
+    "s11_ival_ci_security_gate"
+  ]
+}

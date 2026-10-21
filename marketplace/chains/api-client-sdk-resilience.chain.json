@@ -1,0 +1,204 @@
+{
+  "name": "api-client-sdk-resilience",
+  "description": "Harden an existing client SDK's failure behavior: error hierarchy, stack-specific timeouts, retries with backoff and Retry-After, idempotency keys, and WireMock fault-injection verification.",
+  "steps": [
+    {
+      "id": "s01_sdk_error_hierarchy",
+      "skill_name": "sdk-error-hierarchy",
+      "inputs": {
+        "api_inventory": "from_user_input",
+        "stack": "from_user_input",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "error_hierarchy": "error_hierarchy"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_sdk_py_timeouts",
+      "skill_name": "sdk-py-timeouts",
+      "inputs": {
+        "project_dir": "from_user_input",
+        "timeout_budget": "from_user_input"
+      },
+      "outputs": {
+        "py_timeout_config": "py_timeout_config"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_sdk_node_timeouts",
+      "skill_name": "sdk-node-timeouts",
+      "inputs": {
+        "project_dir": "from_user_input",
+        "timeout_budget": "from_user_input"
+      },
+      "outputs": {
+        "node_timeout_config": "node_timeout_config"
+      },
+      "condition": "stack == 'typescript'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_sdk_go_timeouts",
+      "skill_name": "sdk-go-timeouts",
+      "inputs": {
+        "project_dir": "from_user_input",
+        "timeout_budget": "from_user_input"
+      },
+      "outputs": {
+        "go_timeout_config": "go_timeout_config"
+      },
+      "condition": "stack == 'go'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s05_sdk_retry_backoff",
+      "skill_name": "sdk-retry-backoff",
+      "inputs": {
+        "api_inventory": "from_user_input",
+        "stack": "from_user_input",
+        "project_dir": "from_user_input",
+        "retry_limits": "from_user_input"
+      },
+      "outputs": {
+        "retry_policy": "retry_policy"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s06_sdk_idempotency_keys",
+      "skill_name": "sdk-idempotency-keys",
+      "inputs": {
+        "retry_policy": "s05_sdk_retry_backoff.retry_policy",
+        "api_inventory": "from_user_input",
+        "stack": "from_user_input",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "idempotency_design": "idempotency_design"
+      },
+      "condition": "api_inventory.idempotency_header != 'unknown'",
+      "parallel_group": 4
+    },
+    {
+      "id": "s07_sdk_wiremock_fault_tests",
+      "skill_name": "sdk-wiremock-fault-tests",
+      "inputs": {
+        "api_inventory": "from_user_input",
+        "retry_policy": "s05_sdk_retry_backoff.retry_policy",
+        "idempotency_design": "s06_sdk_idempotency_keys.idempotency_design",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "fault_test_report": "fault_test_report"
+      },
+      "parallel_group": 5
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_sdk_error_hierarchy",
+      "to_step": "s02_sdk_py_timeouts",
+      "data_type": "sdk-error-hierarchy",
+      "field_mapping": {}
+    },
+    {
+      "from_step": "s01_sdk_error_hierarchy",
+      "to_step": "s03_sdk_node_timeouts",
+      "data_type": "sdk-error-hierarchy",
+      "field_mapping": {}
+    },
+    {
+      "from_step": "s01_sdk_error_hierarchy",
+      "to_step": "s04_sdk_go_timeouts",
+      "data_type": "sdk-error-hierarchy",
+      "field_mapping": {}
+    },
+    {
+      "from_step": "s02_sdk_py_timeouts",
+      "to_step": "s05_sdk_retry_backoff",
+      "data_type": "sdk-py-timeouts",
+      "field_mapping": {}
+    },
+    {
+      "from_step": "s03_sdk_node_timeouts",
+      "to_step": "s05_sdk_retry_backoff",
+      "data_type": "sdk-node-timeouts",
+      "field_mapping": {}
+    },
+    {
+      "from_step": "s04_sdk_go_timeouts",
+      "to_step": "s05_sdk_retry_backoff",
+      "data_type": "sdk-go-timeouts",
+      "field_mapping": {}
+    },
+    {
+      "from_step": "s05_sdk_retry_backoff",
+      "to_step": "s06_sdk_idempotency_keys",
+      "data_type": "sdk-retry-backoff",
+      "field_mapping": {
+        "retry_policy": "retry_policy"
+      }
+    },
+    {
+      "from_step": "s05_sdk_retry_backoff",
+      "to_step": "s07_sdk_wiremock_fault_tests",
+      "data_type": "sdk-retry-backoff",
+      "field_mapping": {
+        "retry_policy": "retry_policy"
+      }
+    },
+    {
+      "from_step": "s06_sdk_idempotency_keys",
+      "to_step": "s07_sdk_wiremock_fault_tests",
+      "data_type": "sdk-idempotency-keys",
+      "field_mapping": {
+        "idempotency_design": "idempotency_design"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "api_inventory",
+    "stack",
+    "project_dir",
+    "timeout_budget",
+    "retry_limits"
+  ],
+  "terminal_outputs": [
+    "error_hierarchy",
+    "py_timeout_config",
+    "node_timeout_config",
+    "go_timeout_config",
+    "fault_test_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_sdk_error_hierarchy"
+    ],
+    [
+      "s02_sdk_py_timeouts",
+      "s03_sdk_node_timeouts",
+      "s04_sdk_go_timeouts"
+    ],
+    [
+      "s05_sdk_retry_backoff"
+    ],
+    [
+      "s06_sdk_idempotency_keys"
+    ],
+    [
+      "s07_sdk_wiremock_fault_tests"
+    ]
+  ],
+  "estimated_cost": 7,
+  "critical_path": [
+    "s01_sdk_error_hierarchy",
+    "s03_sdk_node_timeouts",
+    "s05_sdk_retry_backoff",
+    "s06_sdk_idempotency_keys",
+    "s07_sdk_wiremock_fault_tests"
+  ]
+}

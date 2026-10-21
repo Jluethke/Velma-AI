@@ -1,0 +1,363 @@
+{
+  "name": "caching-python-redis",
+  "description": "Python service with Redis: measure hot reads, decide location, design keys and TTLs, choose invalidation, implement cache-aside with redis-py, close the stale-set race, guard stampedes with a Redis lock, bound Redis memory, instrument and measure.",
+  "steps": [
+    {
+      "id": "s01_cache_read_hotspot_measure",
+      "skill_name": "cache-read-hotspot-measure",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "read_source": "from_user_input",
+        "db_engine": "from_user_input_optional"
+      },
+      "outputs": {
+        "read_hotspots": "read_hotspots",
+        "baseline_metrics": "baseline_metrics"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_cache_location_decide",
+      "skill_name": "cache-location-decide",
+      "inputs": {
+        "read_hotspots": "s01_cache_read_hotspot_measure.read_hotspots",
+        "deployment_topology": "from_user_input",
+        "consistency_requirement": "from_user_input"
+      },
+      "outputs": {
+        "cache_plan": "cache_plan",
+        "cache_backend": "cache_backend"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_cache_key_schema_design",
+      "skill_name": "cache-key-schema-design",
+      "inputs": {
+        "cache_plan": "s02_cache_location_decide.cache_plan",
+        "repo_path": "from_user_input"
+      },
+      "outputs": {
+        "key_schema": "key_schema"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_cache_ttl_from_change_rate",
+      "skill_name": "cache-ttl-from-change-rate",
+      "inputs": {
+        "cache_plan": "s02_cache_location_decide.cache_plan",
+        "staleness_tolerance": "from_user_input",
+        "db_engine": "from_user_input_optional"
+      },
+      "outputs": {
+        "ttl_table": "ttl_table"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s05_cache_invalidation_strategy_select",
+      "skill_name": "cache-invalidation-strategy-select",
+      "inputs": {
+        "cache_plan": "s02_cache_location_decide.cache_plan",
+        "ttl_table": "s04_cache_ttl_from_change_rate.ttl_table",
+        "consistency_requirement": "from_user_input"
+      },
+      "outputs": {
+        "invalidation_plan": "invalidation_plan"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s06_cache_py_cache_aside_redis",
+      "skill_name": "cache-py-cache-aside-redis",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "key_schema": "s03_cache_key_schema_design.key_schema",
+        "ttl_table": "s04_cache_ttl_from_change_rate.ttl_table",
+        "invalidation_plan": "s05_cache_invalidation_strategy_select.invalidation_plan"
+      },
+      "outputs": {
+        "cache_aside_change": "cache_aside_change"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s07_cache_stale_set_race_fix",
+      "skill_name": "cache-stale-set-race-fix",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "invalidation_plan": "s05_cache_invalidation_strategy_select.invalidation_plan",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "race_test": "race_test",
+        "race_fix": "race_fix"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s08_cache_stampede_risk_assess",
+      "skill_name": "cache-stampede-risk-assess",
+      "inputs": {
+        "read_hotspots": "s01_cache_read_hotspot_measure.read_hotspots",
+        "ttl_table": "s04_cache_ttl_from_change_rate.ttl_table",
+        "deployment_topology": "from_user_input"
+      },
+      "outputs": {
+        "stampede_plan": "stampede_plan"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s09_cache_stampede_redis_lock",
+      "skill_name": "cache-stampede-redis-lock",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "key_schema": "s03_cache_key_schema_design.key_schema",
+        "stampede_plan": "s08_cache_stampede_risk_assess.stampede_plan",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "lock_guard_change": "lock_guard_change"
+      },
+      "condition": "'lock' in stampede_plan.techniques",
+      "parallel_group": 5
+    },
+    {
+      "id": "s10_cache_redis_maxmemory_eviction",
+      "skill_name": "cache-redis-maxmemory-eviction",
+      "inputs": {
+        "redis_url": "from_user_input",
+        "key_schema": "s03_cache_key_schema_design.key_schema",
+        "memory_limit_bytes": "from_user_input"
+      },
+      "outputs": {
+        "redis_memory_config": "redis_memory_config"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s11_cache_hit_miss_instrument",
+      "skill_name": "cache-hit-miss-instrument",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "key_schema": "s03_cache_key_schema_design.key_schema",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "cache_metrics": "cache_metrics"
+      },
+      "parallel_group": 6
+    },
+    {
+      "id": "s12_cache_hit_rate_latency_measure",
+      "skill_name": "cache-hit-rate-latency-measure",
+      "inputs": {
+        "cache_metrics": "s11_cache_hit_miss_instrument.cache_metrics",
+        "baseline_metrics": "s01_cache_read_hotspot_measure.baseline_metrics",
+        "redis_url": "from_user_input"
+      },
+      "outputs": {
+        "cache_effect_report": "cache_effect_report"
+      },
+      "parallel_group": 7
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_cache_read_hotspot_measure",
+      "to_step": "s02_cache_location_decide",
+      "data_type": "cache-read-hotspot-measure",
+      "field_mapping": {
+        "read_hotspots": "read_hotspots"
+      }
+    },
+    {
+      "from_step": "s02_cache_location_decide",
+      "to_step": "s03_cache_key_schema_design",
+      "data_type": "cache-location-decide",
+      "field_mapping": {
+        "cache_plan": "cache_plan"
+      }
+    },
+    {
+      "from_step": "s02_cache_location_decide",
+      "to_step": "s04_cache_ttl_from_change_rate",
+      "data_type": "cache-location-decide",
+      "field_mapping": {
+        "cache_plan": "cache_plan"
+      }
+    },
+    {
+      "from_step": "s02_cache_location_decide",
+      "to_step": "s05_cache_invalidation_strategy_select",
+      "data_type": "cache-location-decide",
+      "field_mapping": {
+        "cache_plan": "cache_plan"
+      }
+    },
+    {
+      "from_step": "s04_cache_ttl_from_change_rate",
+      "to_step": "s05_cache_invalidation_strategy_select",
+      "data_type": "cache-ttl-from-change-rate",
+      "field_mapping": {
+        "ttl_table": "ttl_table"
+      }
+    },
+    {
+      "from_step": "s03_cache_key_schema_design",
+      "to_step": "s06_cache_py_cache_aside_redis",
+      "data_type": "cache-key-schema-design",
+      "field_mapping": {
+        "key_schema": "key_schema"
+      }
+    },
+    {
+      "from_step": "s04_cache_ttl_from_change_rate",
+      "to_step": "s06_cache_py_cache_aside_redis",
+      "data_type": "cache-ttl-from-change-rate",
+      "field_mapping": {
+        "ttl_table": "ttl_table"
+      }
+    },
+    {
+      "from_step": "s05_cache_invalidation_strategy_select",
+      "to_step": "s06_cache_py_cache_aside_redis",
+      "data_type": "cache-invalidation-strategy-select",
+      "field_mapping": {
+        "invalidation_plan": "invalidation_plan"
+      }
+    },
+    {
+      "from_step": "s05_cache_invalidation_strategy_select",
+      "to_step": "s07_cache_stale_set_race_fix",
+      "data_type": "cache-invalidation-strategy-select",
+      "field_mapping": {
+        "invalidation_plan": "invalidation_plan"
+      }
+    },
+    {
+      "from_step": "s01_cache_read_hotspot_measure",
+      "to_step": "s08_cache_stampede_risk_assess",
+      "data_type": "cache-read-hotspot-measure",
+      "field_mapping": {
+        "read_hotspots": "read_hotspots"
+      }
+    },
+    {
+      "from_step": "s04_cache_ttl_from_change_rate",
+      "to_step": "s08_cache_stampede_risk_assess",
+      "data_type": "cache-ttl-from-change-rate",
+      "field_mapping": {
+        "ttl_table": "ttl_table"
+      }
+    },
+    {
+      "from_step": "s03_cache_key_schema_design",
+      "to_step": "s09_cache_stampede_redis_lock",
+      "data_type": "cache-key-schema-design",
+      "field_mapping": {
+        "key_schema": "key_schema"
+      }
+    },
+    {
+      "from_step": "s08_cache_stampede_risk_assess",
+      "to_step": "s09_cache_stampede_redis_lock",
+      "data_type": "cache-stampede-risk-assess",
+      "field_mapping": {
+        "stampede_plan": "stampede_plan"
+      }
+    },
+    {
+      "from_step": "s03_cache_key_schema_design",
+      "to_step": "s10_cache_redis_maxmemory_eviction",
+      "data_type": "cache-key-schema-design",
+      "field_mapping": {
+        "key_schema": "key_schema"
+      }
+    },
+    {
+      "from_step": "s03_cache_key_schema_design",
+      "to_step": "s11_cache_hit_miss_instrument",
+      "data_type": "cache-key-schema-design",
+      "field_mapping": {
+        "key_schema": "key_schema"
+      }
+    },
+    {
+      "from_step": "s11_cache_hit_miss_instrument",
+      "to_step": "s12_cache_hit_rate_latency_measure",
+      "data_type": "cache-hit-miss-instrument",
+      "field_mapping": {
+        "cache_metrics": "cache_metrics"
+      }
+    },
+    {
+      "from_step": "s01_cache_read_hotspot_measure",
+      "to_step": "s12_cache_hit_rate_latency_measure",
+      "data_type": "cache-read-hotspot-measure",
+      "field_mapping": {
+        "baseline_metrics": "baseline_metrics"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "repo_path",
+    "read_source",
+    "db_engine",
+    "deployment_topology",
+    "consistency_requirement",
+    "staleness_tolerance",
+    "stack",
+    "redis_url",
+    "memory_limit_bytes"
+  ],
+  "terminal_outputs": [
+    "cache_backend",
+    "cache_aside_change",
+    "race_test",
+    "race_fix",
+    "lock_guard_change",
+    "redis_memory_config",
+    "cache_effect_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_cache_read_hotspot_measure"
+    ],
+    [
+      "s02_cache_location_decide"
+    ],
+    [
+      "s03_cache_key_schema_design",
+      "s04_cache_ttl_from_change_rate"
+    ],
+    [
+      "s05_cache_invalidation_strategy_select",
+      "s08_cache_stampede_risk_assess",
+      "s10_cache_redis_maxmemory_eviction"
+    ],
+    [
+      "s06_cache_py_cache_aside_redis",
+      "s07_cache_stale_set_race_fix",
+      "s09_cache_stampede_redis_lock"
+    ],
+    [
+      "s11_cache_hit_miss_instrument"
+    ],
+    [
+      "s12_cache_hit_rate_latency_measure"
+    ]
+  ],
+  "estimated_cost": 12,
+  "critical_path": [
+    "s01_cache_read_hotspot_measure",
+    "s02_cache_location_decide",
+    "s04_cache_ttl_from_change_rate",
+    "s05_cache_invalidation_strategy_select",
+    "s06_cache_py_cache_aside_redis",
+    "s11_cache_hit_miss_instrument",
+    "s12_cache_hit_rate_latency_measure"
+  ]
+}

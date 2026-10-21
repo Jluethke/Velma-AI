@@ -1,0 +1,179 @@
+{
+  "name": "caching-http-cdn",
+  "description": "HTTP-layer caching: measure hot routes, decide which are public or per-user, derive TTLs, write Cache-Control and Vary policy, add ETag validators with 304 handling, and verify CDN hits and targeted purge.",
+  "steps": [
+    {
+      "id": "s01_cache_read_hotspot_measure",
+      "skill_name": "cache-read-hotspot-measure",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "read_source": "from_user_input",
+        "db_engine": "from_user_input_optional"
+      },
+      "outputs": {
+        "read_hotspots": "read_hotspots",
+        "baseline_metrics": "baseline_metrics"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_cache_location_decide",
+      "skill_name": "cache-location-decide",
+      "inputs": {
+        "read_hotspots": "s01_cache_read_hotspot_measure.read_hotspots",
+        "deployment_topology": "from_user_input",
+        "consistency_requirement": "from_user_input"
+      },
+      "outputs": {
+        "cache_plan": "cache_plan",
+        "cache_backend": "cache_backend"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_cache_ttl_from_change_rate",
+      "skill_name": "cache-ttl-from-change-rate",
+      "inputs": {
+        "cache_plan": "s02_cache_location_decide.cache_plan",
+        "staleness_tolerance": "from_user_input",
+        "db_engine": "from_user_input_optional"
+      },
+      "outputs": {
+        "ttl_table": "ttl_table"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_cache_http_cache_control_policy",
+      "skill_name": "cache-http-cache-control-policy",
+      "inputs": {
+        "cache_plan": "s02_cache_location_decide.cache_plan",
+        "ttl_table": "s03_cache_ttl_from_change_rate.ttl_table",
+        "repo_path": "from_user_input"
+      },
+      "outputs": {
+        "header_policy": "header_policy"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s05_cache_http_etag_conditional_get",
+      "skill_name": "cache-http-etag-conditional-get",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "header_policy": "s04_cache_http_cache_control_policy.header_policy",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "etag_change": "etag_change"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s06_cache_cdn_header_verify_purge",
+      "skill_name": "cache-cdn-header-verify-purge",
+      "inputs": {
+        "header_policy": "s04_cache_http_cache_control_policy.header_policy",
+        "public_url": "from_user_input",
+        "cdn_provider": "from_user_input"
+      },
+      "outputs": {
+        "cdn_report": "cdn_report"
+      },
+      "parallel_group": 5
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_cache_read_hotspot_measure",
+      "to_step": "s02_cache_location_decide",
+      "data_type": "cache-read-hotspot-measure",
+      "field_mapping": {
+        "read_hotspots": "read_hotspots"
+      }
+    },
+    {
+      "from_step": "s02_cache_location_decide",
+      "to_step": "s03_cache_ttl_from_change_rate",
+      "data_type": "cache-location-decide",
+      "field_mapping": {
+        "cache_plan": "cache_plan"
+      }
+    },
+    {
+      "from_step": "s02_cache_location_decide",
+      "to_step": "s04_cache_http_cache_control_policy",
+      "data_type": "cache-location-decide",
+      "field_mapping": {
+        "cache_plan": "cache_plan"
+      }
+    },
+    {
+      "from_step": "s03_cache_ttl_from_change_rate",
+      "to_step": "s04_cache_http_cache_control_policy",
+      "data_type": "cache-ttl-from-change-rate",
+      "field_mapping": {
+        "ttl_table": "ttl_table"
+      }
+    },
+    {
+      "from_step": "s04_cache_http_cache_control_policy",
+      "to_step": "s05_cache_http_etag_conditional_get",
+      "data_type": "cache-http-cache-control-policy",
+      "field_mapping": {
+        "header_policy": "header_policy"
+      }
+    },
+    {
+      "from_step": "s04_cache_http_cache_control_policy",
+      "to_step": "s06_cache_cdn_header_verify_purge",
+      "data_type": "cache-http-cache-control-policy",
+      "field_mapping": {
+        "header_policy": "header_policy"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "repo_path",
+    "read_source",
+    "db_engine",
+    "deployment_topology",
+    "consistency_requirement",
+    "staleness_tolerance",
+    "stack",
+    "public_url",
+    "cdn_provider"
+  ],
+  "terminal_outputs": [
+    "baseline_metrics",
+    "cache_backend",
+    "etag_change",
+    "cdn_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_cache_read_hotspot_measure"
+    ],
+    [
+      "s02_cache_location_decide"
+    ],
+    [
+      "s03_cache_ttl_from_change_rate"
+    ],
+    [
+      "s04_cache_http_cache_control_policy"
+    ],
+    [
+      "s05_cache_http_etag_conditional_get",
+      "s06_cache_cdn_header_verify_purge"
+    ]
+  ],
+  "estimated_cost": 6,
+  "critical_path": [
+    "s01_cache_read_hotspot_measure",
+    "s02_cache_location_decide",
+    "s03_cache_ttl_from_change_rate",
+    "s04_cache_http_cache_control_policy",
+    "s05_cache_http_etag_conditional_get"
+  ]
+}

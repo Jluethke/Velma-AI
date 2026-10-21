@@ -1,0 +1,163 @@
+{
+  "name": "observability-prometheus-hygiene",
+  "description": "Bring a service's Prometheus metrics into shape: scrape job, RED specification, histogram bucket design, promtool naming lint, cardinality audit and fixes, and the USE query table.",
+  "steps": [
+    {
+      "id": "s01_obs_signal_inventory",
+      "skill_name": "obs-signal-inventory",
+      "inputs": {
+        "service_repo": "from_user_input",
+        "stack": "from_user_input",
+        "service_name": "from_user_input"
+      },
+      "outputs": {
+        "signal_plan": "signal_plan"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_obs_red_metrics_spec",
+      "skill_name": "obs-red-metrics-spec",
+      "inputs": {
+        "signal_plan": "s01_obs_signal_inventory.signal_plan"
+      },
+      "outputs": {
+        "red_metric_spec": "red_metric_spec"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_obs_prometheus_scrape_config",
+      "skill_name": "obs-prometheus-scrape-config",
+      "inputs": {
+        "service_name": "from_user_input",
+        "service_metrics_url": "from_user_input",
+        "prometheus_url": "from_user_input"
+      },
+      "outputs": {
+        "scrape_config": "scrape_config"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s04_obs_histogram_bucket_design",
+      "skill_name": "obs-histogram-bucket-design",
+      "inputs": {
+        "red_metric_spec": "s02_obs_red_metrics_spec.red_metric_spec",
+        "latency_threshold_seconds": "from_user_input"
+      },
+      "outputs": {
+        "histogram_config": "histogram_config"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s05_obs_prometheus_naming_lint",
+      "skill_name": "obs-prometheus-naming-lint",
+      "inputs": {
+        "service_metrics_url": "from_user_input",
+        "red_metric_spec": "s02_obs_red_metrics_spec.red_metric_spec"
+      },
+      "outputs": {
+        "naming_report": "naming_report"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s06_obs_cardinality_audit",
+      "skill_name": "obs-cardinality-audit",
+      "inputs": {
+        "prometheus_url": "from_user_input",
+        "service_name": "from_user_input",
+        "series_limit": "from_user_input_optional"
+      },
+      "outputs": {
+        "cardinality_report": "cardinality_report"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s07_obs_use_metrics_node_exporter",
+      "skill_name": "obs-use-metrics-node-exporter",
+      "inputs": {
+        "signal_plan": "s01_obs_signal_inventory.signal_plan",
+        "prometheus_url": "from_user_input"
+      },
+      "outputs": {
+        "use_queries": "use_queries"
+      },
+      "parallel_group": 2
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_obs_signal_inventory",
+      "to_step": "s02_obs_red_metrics_spec",
+      "data_type": "obs-signal-inventory",
+      "field_mapping": {
+        "signal_plan": "signal_plan"
+      }
+    },
+    {
+      "from_step": "s02_obs_red_metrics_spec",
+      "to_step": "s04_obs_histogram_bucket_design",
+      "data_type": "obs-red-metrics-spec",
+      "field_mapping": {
+        "red_metric_spec": "red_metric_spec"
+      }
+    },
+    {
+      "from_step": "s02_obs_red_metrics_spec",
+      "to_step": "s05_obs_prometheus_naming_lint",
+      "data_type": "obs-red-metrics-spec",
+      "field_mapping": {
+        "red_metric_spec": "red_metric_spec"
+      }
+    },
+    {
+      "from_step": "s01_obs_signal_inventory",
+      "to_step": "s07_obs_use_metrics_node_exporter",
+      "data_type": "obs-signal-inventory",
+      "field_mapping": {
+        "signal_plan": "signal_plan"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "service_repo",
+    "stack",
+    "service_name",
+    "service_metrics_url",
+    "prometheus_url",
+    "latency_threshold_seconds",
+    "series_limit"
+  ],
+  "terminal_outputs": [
+    "scrape_config",
+    "histogram_config",
+    "naming_report",
+    "cardinality_report",
+    "use_queries"
+  ],
+  "parallel_groups": [
+    [
+      "s01_obs_signal_inventory",
+      "s03_obs_prometheus_scrape_config",
+      "s06_obs_cardinality_audit"
+    ],
+    [
+      "s02_obs_red_metrics_spec",
+      "s07_obs_use_metrics_node_exporter"
+    ],
+    [
+      "s04_obs_histogram_bucket_design",
+      "s05_obs_prometheus_naming_lint"
+    ]
+  ],
+  "estimated_cost": 7,
+  "critical_path": [
+    "s01_obs_signal_inventory",
+    "s02_obs_red_metrics_spec",
+    "s05_obs_prometheus_naming_lint"
+  ]
+}

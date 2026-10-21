@@ -1,0 +1,302 @@
+{
+  "name": "etl-data-pipelines-dbt",
+  "description": "Profile the source, fix keys, contract and lookback, then build dbt sources, staging, an incremental model, optional SCD2 snapshot, enforced tests and freshness alerts.",
+  "steps": [
+    {
+      "id": "s01_etl_source_profile_sql",
+      "skill_name": "etl-source-profile-sql",
+      "inputs": {
+        "source_connection": "from_user_input",
+        "source_tables": "from_user_input"
+      },
+      "outputs": {
+        "source_profile": "source_profile"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_etl_source_key_watermark_discovery",
+      "skill_name": "etl-source-key-watermark-discovery",
+      "inputs": {
+        "source_connection": "from_user_input",
+        "source_profile": "s01_etl_source_profile_sql.source_profile"
+      },
+      "outputs": {
+        "extraction_keys": "extraction_keys"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_etl_target_schema_contract",
+      "skill_name": "etl-target-schema-contract",
+      "inputs": {
+        "source_profile": "s01_etl_source_profile_sql.source_profile",
+        "extraction_keys": "s02_etl_source_key_watermark_discovery.extraction_keys",
+        "consumer_requirements": "from_user_input"
+      },
+      "outputs": {
+        "data_contract": "data_contract"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_etl_late_arriving_data_policy",
+      "skill_name": "etl-late-arriving-data-policy",
+      "inputs": {
+        "source_connection": "from_user_input",
+        "data_contract": "s03_etl_target_schema_contract.data_contract",
+        "extraction_keys": "s02_etl_source_key_watermark_discovery.extraction_keys"
+      },
+      "outputs": {
+        "lateness_profile": "lateness_profile",
+        "late_data_policy": "late_data_policy"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s05_etl_dbt_sources_staging",
+      "skill_name": "etl-dbt-sources-staging",
+      "inputs": {
+        "data_contract": "s03_etl_target_schema_contract.data_contract",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "sources_yml": "sources_yml",
+        "staging_models": "staging_models"
+      },
+      "condition": "stack == 'dbt'",
+      "parallel_group": 4
+    },
+    {
+      "id": "s06_etl_dbt_incremental_model",
+      "skill_name": "etl-dbt-incremental-model",
+      "inputs": {
+        "staging_models": "s05_etl_dbt_sources_staging.staging_models",
+        "data_contract": "s03_etl_target_schema_contract.data_contract",
+        "extraction_keys": "s02_etl_source_key_watermark_discovery.extraction_keys",
+        "late_data_policy": "s04_etl_late_arriving_data_policy.late_data_policy",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "incremental_model": "incremental_model"
+      },
+      "condition": "stack == 'dbt'",
+      "parallel_group": 5
+    },
+    {
+      "id": "s07_etl_dbt_snapshot_scd2",
+      "skill_name": "etl-dbt-snapshot-scd2",
+      "inputs": {
+        "staging_models": "s05_etl_dbt_sources_staging.staging_models",
+        "data_contract": "s03_etl_target_schema_contract.data_contract",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "snapshot_config": "snapshot_config"
+      },
+      "condition": "stack == 'dbt' && needs_history == true",
+      "parallel_group": 5
+    },
+    {
+      "id": "s08_etl_dbt_tests_contracts",
+      "skill_name": "etl-dbt-tests-contracts",
+      "inputs": {
+        "incremental_model": "s06_etl_dbt_incremental_model.incremental_model",
+        "data_contract": "s03_etl_target_schema_contract.data_contract",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "dbt_test_config": "dbt_test_config",
+        "dbt_build_result": "dbt_build_result"
+      },
+      "condition": "stack == 'dbt'",
+      "parallel_group": 6
+    },
+    {
+      "id": "s09_etl_freshness_failure_alerts",
+      "skill_name": "etl-freshness-failure-alerts",
+      "inputs": {
+        "data_contract": "s03_etl_target_schema_contract.data_contract",
+        "orchestrator": "from_user_input",
+        "alert_destination": "from_user_input",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "freshness_checks": "freshness_checks",
+        "alert_config": "alert_config"
+      },
+      "parallel_group": 4
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_etl_source_profile_sql",
+      "to_step": "s02_etl_source_key_watermark_discovery",
+      "data_type": "etl-source-profile-sql",
+      "field_mapping": {
+        "source_profile": "source_profile"
+      }
+    },
+    {
+      "from_step": "s01_etl_source_profile_sql",
+      "to_step": "s03_etl_target_schema_contract",
+      "data_type": "etl-source-profile-sql",
+      "field_mapping": {
+        "source_profile": "source_profile"
+      }
+    },
+    {
+      "from_step": "s02_etl_source_key_watermark_discovery",
+      "to_step": "s03_etl_target_schema_contract",
+      "data_type": "etl-source-key-watermark-discovery",
+      "field_mapping": {
+        "extraction_keys": "extraction_keys"
+      }
+    },
+    {
+      "from_step": "s02_etl_source_key_watermark_discovery",
+      "to_step": "s04_etl_late_arriving_data_policy",
+      "data_type": "etl-source-key-watermark-discovery",
+      "field_mapping": {
+        "extraction_keys": "extraction_keys"
+      }
+    },
+    {
+      "from_step": "s03_etl_target_schema_contract",
+      "to_step": "s04_etl_late_arriving_data_policy",
+      "data_type": "etl-target-schema-contract",
+      "field_mapping": {
+        "data_contract": "data_contract"
+      }
+    },
+    {
+      "from_step": "s03_etl_target_schema_contract",
+      "to_step": "s05_etl_dbt_sources_staging",
+      "data_type": "etl-target-schema-contract",
+      "field_mapping": {
+        "data_contract": "data_contract"
+      }
+    },
+    {
+      "from_step": "s02_etl_source_key_watermark_discovery",
+      "to_step": "s06_etl_dbt_incremental_model",
+      "data_type": "etl-source-key-watermark-discovery",
+      "field_mapping": {
+        "extraction_keys": "extraction_keys"
+      }
+    },
+    {
+      "from_step": "s03_etl_target_schema_contract",
+      "to_step": "s06_etl_dbt_incremental_model",
+      "data_type": "etl-target-schema-contract",
+      "field_mapping": {
+        "data_contract": "data_contract"
+      }
+    },
+    {
+      "from_step": "s04_etl_late_arriving_data_policy",
+      "to_step": "s06_etl_dbt_incremental_model",
+      "data_type": "etl-late-arriving-data-policy",
+      "field_mapping": {
+        "late_data_policy": "late_data_policy"
+      }
+    },
+    {
+      "from_step": "s05_etl_dbt_sources_staging",
+      "to_step": "s06_etl_dbt_incremental_model",
+      "data_type": "etl-dbt-sources-staging",
+      "field_mapping": {
+        "staging_models": "staging_models"
+      }
+    },
+    {
+      "from_step": "s03_etl_target_schema_contract",
+      "to_step": "s07_etl_dbt_snapshot_scd2",
+      "data_type": "etl-target-schema-contract",
+      "field_mapping": {
+        "data_contract": "data_contract"
+      }
+    },
+    {
+      "from_step": "s05_etl_dbt_sources_staging",
+      "to_step": "s07_etl_dbt_snapshot_scd2",
+      "data_type": "etl-dbt-sources-staging",
+      "field_mapping": {
+        "staging_models": "staging_models"
+      }
+    },
+    {
+      "from_step": "s03_etl_target_schema_contract",
+      "to_step": "s08_etl_dbt_tests_contracts",
+      "data_type": "etl-target-schema-contract",
+      "field_mapping": {
+        "data_contract": "data_contract"
+      }
+    },
+    {
+      "from_step": "s06_etl_dbt_incremental_model",
+      "to_step": "s08_etl_dbt_tests_contracts",
+      "data_type": "etl-dbt-incremental-model",
+      "field_mapping": {
+        "incremental_model": "incremental_model"
+      }
+    },
+    {
+      "from_step": "s03_etl_target_schema_contract",
+      "to_step": "s09_etl_freshness_failure_alerts",
+      "data_type": "etl-target-schema-contract",
+      "field_mapping": {
+        "data_contract": "data_contract"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "source_connection",
+    "source_tables",
+    "consumer_requirements",
+    "project_dir",
+    "orchestrator",
+    "alert_destination"
+  ],
+  "terminal_outputs": [
+    "lateness_profile",
+    "sources_yml",
+    "snapshot_config",
+    "dbt_test_config",
+    "dbt_build_result",
+    "freshness_checks",
+    "alert_config"
+  ],
+  "parallel_groups": [
+    [
+      "s01_etl_source_profile_sql"
+    ],
+    [
+      "s02_etl_source_key_watermark_discovery"
+    ],
+    [
+      "s03_etl_target_schema_contract"
+    ],
+    [
+      "s04_etl_late_arriving_data_policy",
+      "s05_etl_dbt_sources_staging",
+      "s09_etl_freshness_failure_alerts"
+    ],
+    [
+      "s06_etl_dbt_incremental_model",
+      "s07_etl_dbt_snapshot_scd2"
+    ],
+    [
+      "s08_etl_dbt_tests_contracts"
+    ]
+  ],
+  "estimated_cost": 9,
+  "critical_path": [
+    "s01_etl_source_profile_sql",
+    "s02_etl_source_key_watermark_discovery",
+    "s03_etl_target_schema_contract",
+    "s04_etl_late_arriving_data_policy",
+    "s06_etl_dbt_incremental_model",
+    "s08_etl_dbt_tests_contracts"
+  ]
+}

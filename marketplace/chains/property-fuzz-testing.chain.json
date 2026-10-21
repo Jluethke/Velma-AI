@@ -1,0 +1,939 @@
+{
+  "name": "property-fuzz-testing",
+  "description": "Property-based and fuzz testing end to end: derive invariants, write stack-specific property and stateful tests, shrink and replay failures, then select targets, build sanitizers, seed corpora, fuzz per stack, analyze coverage, triage crashes, commit regression tests and wire CI.",
+  "steps": [
+    {
+      "id": "s01_pft_invariant_discovery",
+      "skill_name": "pft-invariant-discovery",
+      "inputs": {
+        "target_code": "from_user_input",
+        "stack": "from_user_input",
+        "technique": "from_user_input",
+        "has_stateful_api": "from_user_input",
+        "spec_notes": "from_user_input_optional"
+      },
+      "outputs": {
+        "property_catalog": "property_catalog"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_pft_py_hypothesis_setup",
+      "skill_name": "pft-py-hypothesis-setup",
+      "inputs": {
+        "repo_path": "from_user_input"
+      },
+      "outputs": {
+        "hypothesis_config": "hypothesis_config"
+      },
+      "condition": "stack == 'python' && technique != 'fuzz'",
+      "parallel_group": 1
+    },
+    {
+      "id": "s03_pft_py_hypothesis_strategies",
+      "skill_name": "pft-py-hypothesis-strategies",
+      "inputs": {
+        "property_catalog": "s01_pft_invariant_discovery.property_catalog",
+        "hypothesis_config": "s02_pft_py_hypothesis_setup.hypothesis_config",
+        "repo_path": "from_user_input"
+      },
+      "outputs": {
+        "py_property_tests": "py_property_tests"
+      },
+      "condition": "stack == 'python' && technique != 'fuzz'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_pft_py_hypothesis_stateful",
+      "skill_name": "pft-py-hypothesis-stateful",
+      "inputs": {
+        "property_catalog": "s01_pft_invariant_discovery.property_catalog",
+        "hypothesis_config": "s02_pft_py_hypothesis_setup.hypothesis_config",
+        "repo_path": "from_user_input"
+      },
+      "outputs": {
+        "py_state_machine_tests": "py_state_machine_tests"
+      },
+      "condition": "stack == 'python' && technique != 'fuzz' && has_stateful_api == true",
+      "parallel_group": 2
+    },
+    {
+      "id": "s05_pft_py_hypothesis_health_checks",
+      "skill_name": "pft-py-hypothesis-health-checks",
+      "inputs": {
+        "py_property_tests": "s03_pft_py_hypothesis_strategies.py_property_tests",
+        "py_state_machine_tests": "s04_pft_py_hypothesis_stateful.py_state_machine_tests",
+        "hypothesis_config": "s02_pft_py_hypothesis_setup.hypothesis_config"
+      },
+      "outputs": {
+        "py_health_report": "py_health_report"
+      },
+      "condition": "stack == 'python' && technique != 'fuzz'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s06_pft_node_fastcheck_properties",
+      "skill_name": "pft-node-fastcheck-properties",
+      "inputs": {
+        "property_catalog": "s01_pft_invariant_discovery.property_catalog",
+        "repo_path": "from_user_input"
+      },
+      "outputs": {
+        "node_property_tests": "node_property_tests"
+      },
+      "condition": "stack == 'node' && technique != 'fuzz'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s07_pft_node_fastcheck_model_based",
+      "skill_name": "pft-node-fastcheck-model-based",
+      "inputs": {
+        "property_catalog": "s01_pft_invariant_discovery.property_catalog",
+        "repo_path": "from_user_input"
+      },
+      "outputs": {
+        "node_model_tests": "node_model_tests"
+      },
+      "condition": "stack == 'node' && technique != 'fuzz' && has_stateful_api == true",
+      "parallel_group": 2
+    },
+    {
+      "id": "s08_pft_rust_proptest_properties",
+      "skill_name": "pft-rust-proptest-properties",
+      "inputs": {
+        "property_catalog": "s01_pft_invariant_discovery.property_catalog",
+        "repo_path": "from_user_input"
+      },
+      "outputs": {
+        "rust_property_tests": "rust_property_tests"
+      },
+      "condition": "stack == 'rust' && technique != 'fuzz'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s09_pft_rust_proptest_state_machine",
+      "skill_name": "pft-rust-proptest-state-machine",
+      "inputs": {
+        "property_catalog": "s01_pft_invariant_discovery.property_catalog",
+        "repo_path": "from_user_input"
+      },
+      "outputs": {
+        "rust_state_machine_tests": "rust_state_machine_tests"
+      },
+      "condition": "stack == 'rust' && technique != 'fuzz' && has_stateful_api == true",
+      "parallel_group": 2
+    },
+    {
+      "id": "s10_pft_go_rapid_properties",
+      "skill_name": "pft-go-rapid-properties",
+      "inputs": {
+        "property_catalog": "s01_pft_invariant_discovery.property_catalog",
+        "repo_path": "from_user_input"
+      },
+      "outputs": {
+        "go_property_tests": "go_property_tests"
+      },
+      "condition": "stack == 'go' && technique != 'fuzz'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s11_pft_hs_quickcheck_properties",
+      "skill_name": "pft-hs-quickcheck-properties",
+      "inputs": {
+        "property_catalog": "s01_pft_invariant_discovery.property_catalog",
+        "repo_path": "from_user_input"
+      },
+      "outputs": {
+        "hs_property_tests": "hs_property_tests"
+      },
+      "condition": "stack == 'haskell' && technique != 'fuzz'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s12_pft_jvm_jqwik_properties",
+      "skill_name": "pft-jvm-jqwik-properties",
+      "inputs": {
+        "property_catalog": "s01_pft_invariant_discovery.property_catalog",
+        "repo_path": "from_user_input"
+      },
+      "outputs": {
+        "jvm_property_tests": "jvm_property_tests"
+      },
+      "condition": "stack == 'jvm' && technique != 'fuzz'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s13_pft_differential_oracle_testing",
+      "skill_name": "pft-differential-oracle-testing",
+      "inputs": {
+        "property_catalog": "s01_pft_invariant_discovery.property_catalog",
+        "reference_impl": "from_user_input_optional",
+        "stack": "from_user_input",
+        "repo_path": "from_user_input"
+      },
+      "outputs": {
+        "differential_tests": "differential_tests"
+      },
+      "condition": "technique != 'fuzz' && reference_impl != ''",
+      "parallel_group": 2
+    },
+    {
+      "id": "s14_pft_shrinking_reproduction",
+      "skill_name": "pft-shrinking-reproduction",
+      "inputs": {
+        "py_property_tests": "s03_pft_py_hypothesis_strategies.py_property_tests",
+        "py_state_machine_tests": "s04_pft_py_hypothesis_stateful.py_state_machine_tests",
+        "py_health_report": "s05_pft_py_hypothesis_health_checks.py_health_report",
+        "node_property_tests": "s06_pft_node_fastcheck_properties.node_property_tests",
+        "node_model_tests": "s07_pft_node_fastcheck_model_based.node_model_tests",
+        "rust_property_tests": "s08_pft_rust_proptest_properties.rust_property_tests",
+        "rust_state_machine_tests": "s09_pft_rust_proptest_state_machine.rust_state_machine_tests",
+        "go_property_tests": "s10_pft_go_rapid_properties.go_property_tests",
+        "hs_property_tests": "s11_pft_hs_quickcheck_properties.hs_property_tests",
+        "jvm_property_tests": "s12_pft_jvm_jqwik_properties.jvm_property_tests",
+        "differential_tests": "s13_pft_differential_oracle_testing.differential_tests",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "property_failures": "property_failures"
+      },
+      "condition": "technique != 'fuzz'",
+      "parallel_group": 4
+    },
+    {
+      "id": "s15_pft_fuzz_target_selection",
+      "skill_name": "pft-fuzz-target-selection",
+      "inputs": {
+        "target_code": "from_user_input",
+        "property_catalog": "s01_pft_invariant_discovery.property_catalog",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "fuzz_targets": "fuzz_targets"
+      },
+      "condition": "technique != 'property'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s16_pft_sanitizer_builds",
+      "skill_name": "pft-sanitizer-builds",
+      "inputs": {
+        "fuzz_targets": "s15_pft_fuzz_target_selection.fuzz_targets",
+        "stack": "from_user_input",
+        "repo_path": "from_user_input"
+      },
+      "outputs": {
+        "sanitizer_build_config": "sanitizer_build_config"
+      },
+      "condition": "technique != 'property'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s17_pft_corpus_seeding",
+      "skill_name": "pft-corpus-seeding",
+      "inputs": {
+        "fuzz_targets": "s15_pft_fuzz_target_selection.fuzz_targets",
+        "stack": "from_user_input",
+        "repo_path": "from_user_input",
+        "sample_inputs": "from_user_input_optional"
+      },
+      "outputs": {
+        "seed_corpus": "seed_corpus",
+        "fuzz_dictionary": "fuzz_dictionary"
+      },
+      "condition": "technique != 'property'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s18_pft_go_native_fuzz",
+      "skill_name": "pft-go-native-fuzz",
+      "inputs": {
+        "fuzz_targets": "s15_pft_fuzz_target_selection.fuzz_targets",
+        "seed_corpus": "s17_pft_corpus_seeding.seed_corpus",
+        "repo_path": "from_user_input",
+        "fuzz_time": "from_user_input"
+      },
+      "outputs": {
+        "go_fuzz_findings": "go_fuzz_findings"
+      },
+      "condition": "stack == 'go' && technique != 'property'",
+      "parallel_group": 4
+    },
+    {
+      "id": "s19_pft_rust_cargo_fuzz",
+      "skill_name": "pft-rust-cargo-fuzz",
+      "inputs": {
+        "fuzz_targets": "s15_pft_fuzz_target_selection.fuzz_targets",
+        "seed_corpus": "s17_pft_corpus_seeding.seed_corpus",
+        "fuzz_dictionary": "s17_pft_corpus_seeding.fuzz_dictionary",
+        "sanitizer_build_config": "s16_pft_sanitizer_builds.sanitizer_build_config",
+        "repo_path": "from_user_input",
+        "fuzz_time": "from_user_input"
+      },
+      "outputs": {
+        "rust_fuzz_findings": "rust_fuzz_findings"
+      },
+      "condition": "stack == 'rust' && technique != 'property'",
+      "parallel_group": 4
+    },
+    {
+      "id": "s20_pft_cpp_libfuzzer_harness",
+      "skill_name": "pft-cpp-libfuzzer-harness",
+      "inputs": {
+        "fuzz_targets": "s15_pft_fuzz_target_selection.fuzz_targets",
+        "seed_corpus": "s17_pft_corpus_seeding.seed_corpus",
+        "fuzz_dictionary": "s17_pft_corpus_seeding.fuzz_dictionary",
+        "sanitizer_build_config": "s16_pft_sanitizer_builds.sanitizer_build_config",
+        "repo_path": "from_user_input",
+        "fuzz_time": "from_user_input"
+      },
+      "outputs": {
+        "cpp_fuzz_findings": "cpp_fuzz_findings"
+      },
+      "condition": "stack == 'cpp' && technique != 'property'",
+      "parallel_group": 4
+    },
+    {
+      "id": "s21_pft_py_atheris_fuzz",
+      "skill_name": "pft-py-atheris-fuzz",
+      "inputs": {
+        "fuzz_targets": "s15_pft_fuzz_target_selection.fuzz_targets",
+        "seed_corpus": "s17_pft_corpus_seeding.seed_corpus",
+        "fuzz_dictionary": "s17_pft_corpus_seeding.fuzz_dictionary",
+        "sanitizer_build_config": "s16_pft_sanitizer_builds.sanitizer_build_config",
+        "repo_path": "from_user_input",
+        "fuzz_time": "from_user_input"
+      },
+      "outputs": {
+        "py_fuzz_findings": "py_fuzz_findings"
+      },
+      "condition": "stack == 'python' && technique != 'property'",
+      "parallel_group": 4
+    },
+    {
+      "id": "s22_pft_jvm_jazzer_fuzz",
+      "skill_name": "pft-jvm-jazzer-fuzz",
+      "inputs": {
+        "fuzz_targets": "s15_pft_fuzz_target_selection.fuzz_targets",
+        "seed_corpus": "s17_pft_corpus_seeding.seed_corpus",
+        "fuzz_dictionary": "s17_pft_corpus_seeding.fuzz_dictionary",
+        "repo_path": "from_user_input",
+        "fuzz_time": "from_user_input"
+      },
+      "outputs": {
+        "jvm_fuzz_findings": "jvm_fuzz_findings"
+      },
+      "condition": "stack == 'jvm' && technique != 'property'",
+      "parallel_group": 4
+    },
+    {
+      "id": "s23_pft_coverage_plateau_analysis",
+      "skill_name": "pft-coverage-plateau-analysis",
+      "inputs": {
+        "go_fuzz_findings": "s18_pft_go_native_fuzz.go_fuzz_findings",
+        "rust_fuzz_findings": "s19_pft_rust_cargo_fuzz.rust_fuzz_findings",
+        "cpp_fuzz_findings": "s20_pft_cpp_libfuzzer_harness.cpp_fuzz_findings",
+        "py_fuzz_findings": "s21_pft_py_atheris_fuzz.py_fuzz_findings",
+        "jvm_fuzz_findings": "s22_pft_jvm_jazzer_fuzz.jvm_fuzz_findings",
+        "seed_corpus": "s17_pft_corpus_seeding.seed_corpus",
+        "stack": "from_user_input",
+        "repo_path": "from_user_input"
+      },
+      "outputs": {
+        "coverage_report": "coverage_report",
+        "harness_improvements": "harness_improvements"
+      },
+      "condition": "technique != 'property'",
+      "parallel_group": 5
+    },
+    {
+      "id": "s24_pft_crash_triage_dedup",
+      "skill_name": "pft-crash-triage-dedup",
+      "inputs": {
+        "go_fuzz_findings": "s18_pft_go_native_fuzz.go_fuzz_findings",
+        "rust_fuzz_findings": "s19_pft_rust_cargo_fuzz.rust_fuzz_findings",
+        "cpp_fuzz_findings": "s20_pft_cpp_libfuzzer_harness.cpp_fuzz_findings",
+        "py_fuzz_findings": "s21_pft_py_atheris_fuzz.py_fuzz_findings",
+        "jvm_fuzz_findings": "s22_pft_jvm_jazzer_fuzz.jvm_fuzz_findings",
+        "stack": "from_user_input",
+        "repo_path": "from_user_input"
+      },
+      "outputs": {
+        "crash_clusters": "crash_clusters"
+      },
+      "condition": "technique != 'property'",
+      "parallel_group": 5
+    },
+    {
+      "id": "s25_pft_crash_regression_test",
+      "skill_name": "pft-crash-regression-test",
+      "inputs": {
+        "crash_clusters": "s24_pft_crash_triage_dedup.crash_clusters",
+        "property_failures": "s14_pft_shrinking_reproduction.property_failures",
+        "stack": "from_user_input",
+        "repo_path": "from_user_input"
+      },
+      "outputs": {
+        "regression_tests": "regression_tests",
+        "fix_verification": "fix_verification"
+      },
+      "parallel_group": 6
+    },
+    {
+      "id": "s26_pft_ci_fuzz_integration",
+      "skill_name": "pft-ci-fuzz-integration",
+      "inputs": {
+        "regression_tests": "s25_pft_crash_regression_test.regression_tests",
+        "fuzz_targets": "s15_pft_fuzz_target_selection.fuzz_targets",
+        "hypothesis_config": "s02_pft_py_hypothesis_setup.hypothesis_config",
+        "stack": "from_user_input",
+        "repo_path": "from_user_input",
+        "ci_platform": "from_user_input"
+      },
+      "outputs": {
+        "ci_config": "ci_config"
+      },
+      "parallel_group": 7
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_pft_invariant_discovery",
+      "to_step": "s03_pft_py_hypothesis_strategies",
+      "data_type": "pft-invariant-discovery",
+      "field_mapping": {
+        "property_catalog": "property_catalog"
+      }
+    },
+    {
+      "from_step": "s02_pft_py_hypothesis_setup",
+      "to_step": "s03_pft_py_hypothesis_strategies",
+      "data_type": "pft-py-hypothesis-setup",
+      "field_mapping": {
+        "hypothesis_config": "hypothesis_config"
+      }
+    },
+    {
+      "from_step": "s01_pft_invariant_discovery",
+      "to_step": "s04_pft_py_hypothesis_stateful",
+      "data_type": "pft-invariant-discovery",
+      "field_mapping": {
+        "property_catalog": "property_catalog"
+      }
+    },
+    {
+      "from_step": "s02_pft_py_hypothesis_setup",
+      "to_step": "s04_pft_py_hypothesis_stateful",
+      "data_type": "pft-py-hypothesis-setup",
+      "field_mapping": {
+        "hypothesis_config": "hypothesis_config"
+      }
+    },
+    {
+      "from_step": "s03_pft_py_hypothesis_strategies",
+      "to_step": "s05_pft_py_hypothesis_health_checks",
+      "data_type": "pft-py-hypothesis-strategies",
+      "field_mapping": {
+        "py_property_tests": "py_property_tests"
+      }
+    },
+    {
+      "from_step": "s04_pft_py_hypothesis_stateful",
+      "to_step": "s05_pft_py_hypothesis_health_checks",
+      "data_type": "pft-py-hypothesis-stateful",
+      "field_mapping": {
+        "py_state_machine_tests": "py_state_machine_tests"
+      }
+    },
+    {
+      "from_step": "s02_pft_py_hypothesis_setup",
+      "to_step": "s05_pft_py_hypothesis_health_checks",
+      "data_type": "pft-py-hypothesis-setup",
+      "field_mapping": {
+        "hypothesis_config": "hypothesis_config"
+      }
+    },
+    {
+      "from_step": "s01_pft_invariant_discovery",
+      "to_step": "s06_pft_node_fastcheck_properties",
+      "data_type": "pft-invariant-discovery",
+      "field_mapping": {
+        "property_catalog": "property_catalog"
+      }
+    },
+    {
+      "from_step": "s01_pft_invariant_discovery",
+      "to_step": "s07_pft_node_fastcheck_model_based",
+      "data_type": "pft-invariant-discovery",
+      "field_mapping": {
+        "property_catalog": "property_catalog"
+      }
+    },
+    {
+      "from_step": "s01_pft_invariant_discovery",
+      "to_step": "s08_pft_rust_proptest_properties",
+      "data_type": "pft-invariant-discovery",
+      "field_mapping": {
+        "property_catalog": "property_catalog"
+      }
+    },
+    {
+      "from_step": "s01_pft_invariant_discovery",
+      "to_step": "s09_pft_rust_proptest_state_machine",
+      "data_type": "pft-invariant-discovery",
+      "field_mapping": {
+        "property_catalog": "property_catalog"
+      }
+    },
+    {
+      "from_step": "s01_pft_invariant_discovery",
+      "to_step": "s10_pft_go_rapid_properties",
+      "data_type": "pft-invariant-discovery",
+      "field_mapping": {
+        "property_catalog": "property_catalog"
+      }
+    },
+    {
+      "from_step": "s01_pft_invariant_discovery",
+      "to_step": "s11_pft_hs_quickcheck_properties",
+      "data_type": "pft-invariant-discovery",
+      "field_mapping": {
+        "property_catalog": "property_catalog"
+      }
+    },
+    {
+      "from_step": "s01_pft_invariant_discovery",
+      "to_step": "s12_pft_jvm_jqwik_properties",
+      "data_type": "pft-invariant-discovery",
+      "field_mapping": {
+        "property_catalog": "property_catalog"
+      }
+    },
+    {
+      "from_step": "s01_pft_invariant_discovery",
+      "to_step": "s13_pft_differential_oracle_testing",
+      "data_type": "pft-invariant-discovery",
+      "field_mapping": {
+        "property_catalog": "property_catalog"
+      }
+    },
+    {
+      "from_step": "s03_pft_py_hypothesis_strategies",
+      "to_step": "s14_pft_shrinking_reproduction",
+      "data_type": "pft-py-hypothesis-strategies",
+      "field_mapping": {
+        "py_property_tests": "py_property_tests"
+      }
+    },
+    {
+      "from_step": "s04_pft_py_hypothesis_stateful",
+      "to_step": "s14_pft_shrinking_reproduction",
+      "data_type": "pft-py-hypothesis-stateful",
+      "field_mapping": {
+        "py_state_machine_tests": "py_state_machine_tests"
+      }
+    },
+    {
+      "from_step": "s05_pft_py_hypothesis_health_checks",
+      "to_step": "s14_pft_shrinking_reproduction",
+      "data_type": "pft-py-hypothesis-health-checks",
+      "field_mapping": {
+        "py_health_report": "py_health_report"
+      }
+    },
+    {
+      "from_step": "s06_pft_node_fastcheck_properties",
+      "to_step": "s14_pft_shrinking_reproduction",
+      "data_type": "pft-node-fastcheck-properties",
+      "field_mapping": {
+        "node_property_tests": "node_property_tests"
+      }
+    },
+    {
+      "from_step": "s07_pft_node_fastcheck_model_based",
+      "to_step": "s14_pft_shrinking_reproduction",
+      "data_type": "pft-node-fastcheck-model-based",
+      "field_mapping": {
+        "node_model_tests": "node_model_tests"
+      }
+    },
+    {
+      "from_step": "s08_pft_rust_proptest_properties",
+      "to_step": "s14_pft_shrinking_reproduction",
+      "data_type": "pft-rust-proptest-properties",
+      "field_mapping": {
+        "rust_property_tests": "rust_property_tests"
+      }
+    },
+    {
+      "from_step": "s09_pft_rust_proptest_state_machine",
+      "to_step": "s14_pft_shrinking_reproduction",
+      "data_type": "pft-rust-proptest-state-machine",
+      "field_mapping": {
+        "rust_state_machine_tests": "rust_state_machine_tests"
+      }
+    },
+    {
+      "from_step": "s10_pft_go_rapid_properties",
+      "to_step": "s14_pft_shrinking_reproduction",
+      "data_type": "pft-go-rapid-properties",
+      "field_mapping": {
+        "go_property_tests": "go_property_tests"
+      }
+    },
+    {
+      "from_step": "s11_pft_hs_quickcheck_properties",
+      "to_step": "s14_pft_shrinking_reproduction",
+      "data_type": "pft-hs-quickcheck-properties",
+      "field_mapping": {
+        "hs_property_tests": "hs_property_tests"
+      }
+    },
+    {
+      "from_step": "s12_pft_jvm_jqwik_properties",
+      "to_step": "s14_pft_shrinking_reproduction",
+      "data_type": "pft-jvm-jqwik-properties",
+      "field_mapping": {
+        "jvm_property_tests": "jvm_property_tests"
+      }
+    },
+    {
+      "from_step": "s13_pft_differential_oracle_testing",
+      "to_step": "s14_pft_shrinking_reproduction",
+      "data_type": "pft-differential-oracle-testing",
+      "field_mapping": {
+        "differential_tests": "differential_tests"
+      }
+    },
+    {
+      "from_step": "s01_pft_invariant_discovery",
+      "to_step": "s15_pft_fuzz_target_selection",
+      "data_type": "pft-invariant-discovery",
+      "field_mapping": {
+        "property_catalog": "property_catalog"
+      }
+    },
+    {
+      "from_step": "s15_pft_fuzz_target_selection",
+      "to_step": "s16_pft_sanitizer_builds",
+      "data_type": "pft-fuzz-target-selection",
+      "field_mapping": {
+        "fuzz_targets": "fuzz_targets"
+      }
+    },
+    {
+      "from_step": "s15_pft_fuzz_target_selection",
+      "to_step": "s17_pft_corpus_seeding",
+      "data_type": "pft-fuzz-target-selection",
+      "field_mapping": {
+        "fuzz_targets": "fuzz_targets"
+      }
+    },
+    {
+      "from_step": "s15_pft_fuzz_target_selection",
+      "to_step": "s18_pft_go_native_fuzz",
+      "data_type": "pft-fuzz-target-selection",
+      "field_mapping": {
+        "fuzz_targets": "fuzz_targets"
+      }
+    },
+    {
+      "from_step": "s17_pft_corpus_seeding",
+      "to_step": "s18_pft_go_native_fuzz",
+      "data_type": "pft-corpus-seeding",
+      "field_mapping": {
+        "seed_corpus": "seed_corpus"
+      }
+    },
+    {
+      "from_step": "s15_pft_fuzz_target_selection",
+      "to_step": "s19_pft_rust_cargo_fuzz",
+      "data_type": "pft-fuzz-target-selection",
+      "field_mapping": {
+        "fuzz_targets": "fuzz_targets"
+      }
+    },
+    {
+      "from_step": "s17_pft_corpus_seeding",
+      "to_step": "s19_pft_rust_cargo_fuzz",
+      "data_type": "pft-corpus-seeding",
+      "field_mapping": {
+        "seed_corpus": "seed_corpus",
+        "fuzz_dictionary": "fuzz_dictionary"
+      }
+    },
+    {
+      "from_step": "s16_pft_sanitizer_builds",
+      "to_step": "s19_pft_rust_cargo_fuzz",
+      "data_type": "pft-sanitizer-builds",
+      "field_mapping": {
+        "sanitizer_build_config": "sanitizer_build_config"
+      }
+    },
+    {
+      "from_step": "s15_pft_fuzz_target_selection",
+      "to_step": "s20_pft_cpp_libfuzzer_harness",
+      "data_type": "pft-fuzz-target-selection",
+      "field_mapping": {
+        "fuzz_targets": "fuzz_targets"
+      }
+    },
+    {
+      "from_step": "s17_pft_corpus_seeding",
+      "to_step": "s20_pft_cpp_libfuzzer_harness",
+      "data_type": "pft-corpus-seeding",
+      "field_mapping": {
+        "seed_corpus": "seed_corpus",
+        "fuzz_dictionary": "fuzz_dictionary"
+      }
+    },
+    {
+      "from_step": "s16_pft_sanitizer_builds",
+      "to_step": "s20_pft_cpp_libfuzzer_harness",
+      "data_type": "pft-sanitizer-builds",
+      "field_mapping": {
+        "sanitizer_build_config": "sanitizer_build_config"
+      }
+    },
+    {
+      "from_step": "s15_pft_fuzz_target_selection",
+      "to_step": "s21_pft_py_atheris_fuzz",
+      "data_type": "pft-fuzz-target-selection",
+      "field_mapping": {
+        "fuzz_targets": "fuzz_targets"
+      }
+    },
+    {
+      "from_step": "s17_pft_corpus_seeding",
+      "to_step": "s21_pft_py_atheris_fuzz",
+      "data_type": "pft-corpus-seeding",
+      "field_mapping": {
+        "seed_corpus": "seed_corpus",
+        "fuzz_dictionary": "fuzz_dictionary"
+      }
+    },
+    {
+      "from_step": "s16_pft_sanitizer_builds",
+      "to_step": "s21_pft_py_atheris_fuzz",
+      "data_type": "pft-sanitizer-builds",
+      "field_mapping": {
+        "sanitizer_build_config": "sanitizer_build_config"
+      }
+    },
+    {
+      "from_step": "s15_pft_fuzz_target_selection",
+      "to_step": "s22_pft_jvm_jazzer_fuzz",
+      "data_type": "pft-fuzz-target-selection",
+      "field_mapping": {
+        "fuzz_targets": "fuzz_targets"
+      }
+    },
+    {
+      "from_step": "s17_pft_corpus_seeding",
+      "to_step": "s22_pft_jvm_jazzer_fuzz",
+      "data_type": "pft-corpus-seeding",
+      "field_mapping": {
+        "seed_corpus": "seed_corpus",
+        "fuzz_dictionary": "fuzz_dictionary"
+      }
+    },
+    {
+      "from_step": "s18_pft_go_native_fuzz",
+      "to_step": "s23_pft_coverage_plateau_analysis",
+      "data_type": "pft-go-native-fuzz",
+      "field_mapping": {
+        "go_fuzz_findings": "go_fuzz_findings"
+      }
+    },
+    {
+      "from_step": "s19_pft_rust_cargo_fuzz",
+      "to_step": "s23_pft_coverage_plateau_analysis",
+      "data_type": "pft-rust-cargo-fuzz",
+      "field_mapping": {
+        "rust_fuzz_findings": "rust_fuzz_findings"
+      }
+    },
+    {
+      "from_step": "s20_pft_cpp_libfuzzer_harness",
+      "to_step": "s23_pft_coverage_plateau_analysis",
+      "data_type": "pft-cpp-libfuzzer-harness",
+      "field_mapping": {
+        "cpp_fuzz_findings": "cpp_fuzz_findings"
+      }
+    },
+    {
+      "from_step": "s21_pft_py_atheris_fuzz",
+      "to_step": "s23_pft_coverage_plateau_analysis",
+      "data_type": "pft-py-atheris-fuzz",
+      "field_mapping": {
+        "py_fuzz_findings": "py_fuzz_findings"
+      }
+    },
+    {
+      "from_step": "s22_pft_jvm_jazzer_fuzz",
+      "to_step": "s23_pft_coverage_plateau_analysis",
+      "data_type": "pft-jvm-jazzer-fuzz",
+      "field_mapping": {
+        "jvm_fuzz_findings": "jvm_fuzz_findings"
+      }
+    },
+    {
+      "from_step": "s17_pft_corpus_seeding",
+      "to_step": "s23_pft_coverage_plateau_analysis",
+      "data_type": "pft-corpus-seeding",
+      "field_mapping": {
+        "seed_corpus": "seed_corpus"
+      }
+    },
+    {
+      "from_step": "s18_pft_go_native_fuzz",
+      "to_step": "s24_pft_crash_triage_dedup",
+      "data_type": "pft-go-native-fuzz",
+      "field_mapping": {
+        "go_fuzz_findings": "go_fuzz_findings"
+      }
+    },
+    {
+      "from_step": "s19_pft_rust_cargo_fuzz",
+      "to_step": "s24_pft_crash_triage_dedup",
+      "data_type": "pft-rust-cargo-fuzz",
+      "field_mapping": {
+        "rust_fuzz_findings": "rust_fuzz_findings"
+      }
+    },
+    {
+      "from_step": "s20_pft_cpp_libfuzzer_harness",
+      "to_step": "s24_pft_crash_triage_dedup",
+      "data_type": "pft-cpp-libfuzzer-harness",
+      "field_mapping": {
+        "cpp_fuzz_findings": "cpp_fuzz_findings"
+      }
+    },
+    {
+      "from_step": "s21_pft_py_atheris_fuzz",
+      "to_step": "s24_pft_crash_triage_dedup",
+      "data_type": "pft-py-atheris-fuzz",
+      "field_mapping": {
+        "py_fuzz_findings": "py_fuzz_findings"
+      }
+    },
+    {
+      "from_step": "s22_pft_jvm_jazzer_fuzz",
+      "to_step": "s24_pft_crash_triage_dedup",
+      "data_type": "pft-jvm-jazzer-fuzz",
+      "field_mapping": {
+        "jvm_fuzz_findings": "jvm_fuzz_findings"
+      }
+    },
+    {
+      "from_step": "s24_pft_crash_triage_dedup",
+      "to_step": "s25_pft_crash_regression_test",
+      "data_type": "pft-crash-triage-dedup",
+      "field_mapping": {
+        "crash_clusters": "crash_clusters"
+      }
+    },
+    {
+      "from_step": "s14_pft_shrinking_reproduction",
+      "to_step": "s25_pft_crash_regression_test",
+      "data_type": "pft-shrinking-reproduction",
+      "field_mapping": {
+        "property_failures": "property_failures"
+      }
+    },
+    {
+      "from_step": "s25_pft_crash_regression_test",
+      "to_step": "s26_pft_ci_fuzz_integration",
+      "data_type": "pft-crash-regression-test",
+      "field_mapping": {
+        "regression_tests": "regression_tests"
+      }
+    },
+    {
+      "from_step": "s15_pft_fuzz_target_selection",
+      "to_step": "s26_pft_ci_fuzz_integration",
+      "data_type": "pft-fuzz-target-selection",
+      "field_mapping": {
+        "fuzz_targets": "fuzz_targets"
+      }
+    },
+    {
+      "from_step": "s02_pft_py_hypothesis_setup",
+      "to_step": "s26_pft_ci_fuzz_integration",
+      "data_type": "pft-py-hypothesis-setup",
+      "field_mapping": {
+        "hypothesis_config": "hypothesis_config"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "target_code",
+    "stack",
+    "technique",
+    "has_stateful_api",
+    "spec_notes",
+    "repo_path",
+    "reference_impl",
+    "sample_inputs",
+    "fuzz_time",
+    "ci_platform"
+  ],
+  "terminal_outputs": [
+    "coverage_report",
+    "harness_improvements",
+    "fix_verification",
+    "ci_config"
+  ],
+  "parallel_groups": [
+    [
+      "s01_pft_invariant_discovery",
+      "s02_pft_py_hypothesis_setup"
+    ],
+    [
+      "s03_pft_py_hypothesis_strategies",
+      "s04_pft_py_hypothesis_stateful",
+      "s06_pft_node_fastcheck_properties",
+      "s07_pft_node_fastcheck_model_based",
+      "s08_pft_rust_proptest_properties",
+      "s09_pft_rust_proptest_state_machine",
+      "s10_pft_go_rapid_properties",
+      "s11_pft_hs_quickcheck_properties",
+      "s12_pft_jvm_jqwik_properties",
+      "s13_pft_differential_oracle_testing",
+      "s15_pft_fuzz_target_selection"
+    ],
+    [
+      "s05_pft_py_hypothesis_health_checks",
+      "s16_pft_sanitizer_builds",
+      "s17_pft_corpus_seeding"
+    ],
+    [
+      "s14_pft_shrinking_reproduction",
+      "s18_pft_go_native_fuzz",
+      "s19_pft_rust_cargo_fuzz",
+      "s20_pft_cpp_libfuzzer_harness",
+      "s21_pft_py_atheris_fuzz",
+      "s22_pft_jvm_jazzer_fuzz"
+    ],
+    [
+      "s23_pft_coverage_plateau_analysis",
+      "s24_pft_crash_triage_dedup"
+    ],
+    [
+      "s25_pft_crash_regression_test"
+    ],
+    [
+      "s26_pft_ci_fuzz_integration"
+    ]
+  ],
+  "estimated_cost": 26,
+  "critical_path": [
+    "s01_pft_invariant_discovery",
+    "s15_pft_fuzz_target_selection",
+    "s17_pft_corpus_seeding",
+    "s18_pft_go_native_fuzz",
+    "s24_pft_crash_triage_dedup",
+    "s25_pft_crash_regression_test",
+    "s26_pft_ci_fuzz_integration"
+  ]
+}

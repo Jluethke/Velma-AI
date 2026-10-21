@@ -1,0 +1,171 @@
+{
+  "name": "database-schema-design-pg-zero-downtime",
+  "description": "Ship a PostgreSQL schema change without downtime: expand-contract plan, lock-safe DDL with lock_timeout, Squawk lint, rollback plan, batched backfill and post-migration verification.",
+  "steps": [
+    {
+      "id": "s01_dbs_expand_contract_plan",
+      "skill_name": "dbs-expand-contract-plan",
+      "inputs": {
+        "target_ddl": "from_user_input",
+        "current_schema_dump": "from_user_input_optional",
+        "db_engine": "from_user_input"
+      },
+      "outputs": {
+        "migration_plan": "migration_plan",
+        "backfill_specs": "backfill_specs"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_dbs_pg_ddl_lock_safety",
+      "skill_name": "dbs-pg-ddl-lock-safety",
+      "inputs": {
+        "migration_plan": "s01_dbs_expand_contract_plan.migration_plan",
+        "repo_path": "from_user_input",
+        "db_version": "from_user_input"
+      },
+      "outputs": {
+        "lock_review": "lock_review"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_dbs_pg_squawk_lint",
+      "skill_name": "dbs-pg-squawk-lint",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "lock_review": "s02_dbs_pg_ddl_lock_safety.lock_review",
+        "db_version": "from_user_input"
+      },
+      "outputs": {
+        "lint_report": "lint_report"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_dbs_rollback_plan",
+      "skill_name": "dbs-rollback-plan",
+      "inputs": {
+        "migration_plan": "s01_dbs_expand_contract_plan.migration_plan",
+        "repo_path": "from_user_input",
+        "migration_tool": "from_user_input",
+        "scratch_database_url": "from_user_input"
+      },
+      "outputs": {
+        "rollback_plan": "rollback_plan"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s05_dbs_pg_batched_backfill",
+      "skill_name": "dbs-pg-batched-backfill",
+      "inputs": {
+        "backfill_specs": "s01_dbs_expand_contract_plan.backfill_specs",
+        "scratch_database_url": "from_user_input",
+        "batch_size": "from_user_input",
+        "max_batch_seconds": "from_user_input"
+      },
+      "outputs": {
+        "backfill_script": "backfill_script",
+        "backfill_report": "backfill_report"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s06_dbs_post_migration_verify",
+      "skill_name": "dbs-post-migration-verify",
+      "inputs": {
+        "migration_plan": "s01_dbs_expand_contract_plan.migration_plan",
+        "backfill_specs": "s01_dbs_expand_contract_plan.backfill_specs",
+        "db_engine": "from_user_input",
+        "verify_database_url": "from_user_input"
+      },
+      "outputs": {
+        "verification_report": "verification_report"
+      },
+      "parallel_group": 2
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_dbs_expand_contract_plan",
+      "to_step": "s02_dbs_pg_ddl_lock_safety",
+      "data_type": "dbs-expand-contract-plan",
+      "field_mapping": {
+        "migration_plan": "migration_plan"
+      }
+    },
+    {
+      "from_step": "s02_dbs_pg_ddl_lock_safety",
+      "to_step": "s03_dbs_pg_squawk_lint",
+      "data_type": "dbs-pg-ddl-lock-safety",
+      "field_mapping": {
+        "lock_review": "lock_review"
+      }
+    },
+    {
+      "from_step": "s01_dbs_expand_contract_plan",
+      "to_step": "s04_dbs_rollback_plan",
+      "data_type": "dbs-expand-contract-plan",
+      "field_mapping": {
+        "migration_plan": "migration_plan"
+      }
+    },
+    {
+      "from_step": "s01_dbs_expand_contract_plan",
+      "to_step": "s05_dbs_pg_batched_backfill",
+      "data_type": "dbs-expand-contract-plan",
+      "field_mapping": {
+        "backfill_specs": "backfill_specs"
+      }
+    },
+    {
+      "from_step": "s01_dbs_expand_contract_plan",
+      "to_step": "s06_dbs_post_migration_verify",
+      "data_type": "dbs-expand-contract-plan",
+      "field_mapping": {
+        "migration_plan": "migration_plan",
+        "backfill_specs": "backfill_specs"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "target_ddl",
+    "current_schema_dump",
+    "db_engine",
+    "repo_path",
+    "db_version",
+    "migration_tool",
+    "scratch_database_url",
+    "batch_size",
+    "max_batch_seconds",
+    "verify_database_url"
+  ],
+  "terminal_outputs": [
+    "lint_report",
+    "rollback_plan",
+    "backfill_script",
+    "backfill_report",
+    "verification_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_dbs_expand_contract_plan"
+    ],
+    [
+      "s02_dbs_pg_ddl_lock_safety",
+      "s04_dbs_rollback_plan",
+      "s05_dbs_pg_batched_backfill",
+      "s06_dbs_post_migration_verify"
+    ],
+    [
+      "s03_dbs_pg_squawk_lint"
+    ]
+  ],
+  "estimated_cost": 6,
+  "critical_path": [
+    "s01_dbs_expand_contract_plan",
+    "s02_dbs_pg_ddl_lock_safety",
+    "s03_dbs_pg_squawk_lint"
+  ]
+}

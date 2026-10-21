@@ -1,0 +1,822 @@
+{
+  "name": "background-jobs",
+  "description": "Background jobs end to end: choose a queue, audit handlers, design payloads, add idempotency and an outbox, size leases and retries, configure the chosen library, run dead-letter, concurrency, scheduling, shutdown, monitoring and failure-path tests, then a kill drill.",
+  "steps": [
+    {
+      "id": "s01_bjq_queue_selection_matrix",
+      "skill_name": "bjq-queue-selection-matrix",
+      "inputs": {
+        "workload_requirements": "from_user_input",
+        "stack": "from_user_input",
+        "existing_infrastructure": "from_user_input_optional"
+      },
+      "outputs": {
+        "queue_choice": "queue_choice",
+        "selection_matrix": "selection_matrix"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_bjq_handler_side_effect_audit",
+      "skill_name": "bjq-handler-side-effect-audit",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "queue_choice": "s01_bjq_queue_selection_matrix.queue_choice"
+      },
+      "outputs": {
+        "job_inventory": "job_inventory",
+        "unsafe_handlers": "unsafe_handlers"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_bjq_job_payload_design",
+      "skill_name": "bjq-job-payload-design",
+      "inputs": {
+        "job_inventory": "s02_bjq_handler_side_effect_audit.job_inventory",
+        "queue_choice": "s01_bjq_queue_selection_matrix.queue_choice"
+      },
+      "outputs": {
+        "payload_schema": "payload_schema",
+        "payload_violations": "payload_violations"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_bjq_idempotency_key_store",
+      "skill_name": "bjq-idempotency-key-store",
+      "inputs": {
+        "job_inventory": "s02_bjq_handler_side_effect_audit.job_inventory",
+        "payload_schema": "s03_bjq_job_payload_design.payload_schema",
+        "stack": "from_user_input",
+        "database": "from_user_input"
+      },
+      "outputs": {
+        "idempotency_design": "idempotency_design",
+        "idempotency_patch": "idempotency_patch"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s05_bjq_transactional_outbox_enqueue",
+      "skill_name": "bjq-transactional-outbox-enqueue",
+      "inputs": {
+        "job_inventory": "s02_bjq_handler_side_effect_audit.job_inventory",
+        "payload_schema": "s03_bjq_job_payload_design.payload_schema",
+        "stack": "from_user_input",
+        "database": "from_user_input"
+      },
+      "outputs": {
+        "outbox_design": "outbox_design",
+        "outbox_patch": "outbox_patch"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s06_bjq_job_duration_profile",
+      "skill_name": "bjq-job-duration-profile",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "queue_choice": "s01_bjq_queue_selection_matrix.queue_choice",
+        "job_inventory": "s02_bjq_handler_side_effect_audit.job_inventory",
+        "log_source": "from_user_input"
+      },
+      "outputs": {
+        "job_duration_profile": "job_duration_profile"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s07_bjq_retry_backoff_jitter_policy",
+      "skill_name": "bjq-retry-backoff-jitter-policy",
+      "inputs": {
+        "job_inventory": "s02_bjq_handler_side_effect_audit.job_inventory",
+        "job_duration_profile": "s06_bjq_job_duration_profile.job_duration_profile",
+        "queue_choice": "s01_bjq_queue_selection_matrix.queue_choice",
+        "outage_tolerance": "from_user_input_optional"
+      },
+      "outputs": {
+        "retry_policy": "retry_policy"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s08_bjq_py_celery_reliability_config",
+      "skill_name": "bjq-py-celery-reliability-config",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "retry_policy": "s07_bjq_retry_backoff_jitter_policy.retry_policy",
+        "job_duration_profile": "s06_bjq_job_duration_profile.job_duration_profile"
+      },
+      "outputs": {
+        "celery_config": "celery_config"
+      },
+      "condition": "s01_bjq_queue_selection_matrix.queue_choice == 'celery'",
+      "parallel_group": 5
+    },
+    {
+      "id": "s09_bjq_py_rq_reliability_config",
+      "skill_name": "bjq-py-rq-reliability-config",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "retry_policy": "s07_bjq_retry_backoff_jitter_policy.retry_policy",
+        "job_duration_profile": "s06_bjq_job_duration_profile.job_duration_profile"
+      },
+      "outputs": {
+        "rq_config": "rq_config"
+      },
+      "condition": "s01_bjq_queue_selection_matrix.queue_choice == 'rq'",
+      "parallel_group": 5
+    },
+    {
+      "id": "s10_bjq_node_bullmq_reliability_config",
+      "skill_name": "bjq-node-bullmq-reliability-config",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "retry_policy": "s07_bjq_retry_backoff_jitter_policy.retry_policy",
+        "job_duration_profile": "s06_bjq_job_duration_profile.job_duration_profile"
+      },
+      "outputs": {
+        "bullmq_config": "bullmq_config"
+      },
+      "condition": "s01_bjq_queue_selection_matrix.queue_choice == 'bullmq'",
+      "parallel_group": 5
+    },
+    {
+      "id": "s11_bjq_ruby_sidekiq_reliability_config",
+      "skill_name": "bjq-ruby-sidekiq-reliability-config",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "retry_policy": "s07_bjq_retry_backoff_jitter_policy.retry_policy",
+        "job_duration_profile": "s06_bjq_job_duration_profile.job_duration_profile"
+      },
+      "outputs": {
+        "sidekiq_config": "sidekiq_config"
+      },
+      "condition": "s01_bjq_queue_selection_matrix.queue_choice == 'sidekiq'",
+      "parallel_group": 5
+    },
+    {
+      "id": "s12_bjq_sqs_visibility_redrive_config",
+      "skill_name": "bjq-sqs-visibility-redrive-config",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "retry_policy": "s07_bjq_retry_backoff_jitter_policy.retry_policy",
+        "job_duration_profile": "s06_bjq_job_duration_profile.job_duration_profile",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "sqs_config": "sqs_config"
+      },
+      "condition": "s01_bjq_queue_selection_matrix.queue_choice == 'sqs'",
+      "parallel_group": 5
+    },
+    {
+      "id": "s13_bjq_rabbitmq_quorum_ack_config",
+      "skill_name": "bjq-rabbitmq-quorum-ack-config",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "retry_policy": "s07_bjq_retry_backoff_jitter_policy.retry_policy",
+        "job_duration_profile": "s06_bjq_job_duration_profile.job_duration_profile",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "rabbitmq_config": "rabbitmq_config"
+      },
+      "condition": "s01_bjq_queue_selection_matrix.queue_choice == 'rabbitmq'",
+      "parallel_group": 5
+    },
+    {
+      "id": "s14_bjq_dead_letter_redrive_runbook",
+      "skill_name": "bjq-dead-letter-redrive-runbook",
+      "inputs": {
+        "queue_choice": "s01_bjq_queue_selection_matrix.queue_choice",
+        "retry_policy": "s07_bjq_retry_backoff_jitter_policy.retry_policy",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "dlq_runbook": "dlq_runbook"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s15_bjq_concurrency_limit_sizing",
+      "skill_name": "bjq-concurrency-limit-sizing",
+      "inputs": {
+        "queue_choice": "s01_bjq_queue_selection_matrix.queue_choice",
+        "job_inventory": "s02_bjq_handler_side_effect_audit.job_inventory",
+        "job_duration_profile": "s06_bjq_job_duration_profile.job_duration_profile",
+        "downstream_limits": "from_user_input"
+      },
+      "outputs": {
+        "concurrency_plan": "concurrency_plan"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s16_bjq_scheduled_cron_jobs",
+      "skill_name": "bjq-scheduled-cron-jobs",
+      "inputs": {
+        "queue_choice": "s01_bjq_queue_selection_matrix.queue_choice",
+        "schedule_requirements": "from_user_input_optional",
+        "idempotency_design": "s04_bjq_idempotency_key_store.idempotency_design"
+      },
+      "outputs": {
+        "schedule_config": "schedule_config"
+      },
+      "condition": "schedule_requirements != null",
+      "parallel_group": 5
+    },
+    {
+      "id": "s17_bjq_py_graceful_shutdown",
+      "skill_name": "bjq-py-graceful-shutdown",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "queue_choice": "s01_bjq_queue_selection_matrix.queue_choice",
+        "job_duration_profile": "s06_bjq_job_duration_profile.job_duration_profile",
+        "deploy_platform": "from_user_input"
+      },
+      "outputs": {
+        "py_shutdown_config": "py_shutdown_config"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 4
+    },
+    {
+      "id": "s18_bjq_node_graceful_shutdown",
+      "skill_name": "bjq-node-graceful-shutdown",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "queue_choice": "s01_bjq_queue_selection_matrix.queue_choice",
+        "job_duration_profile": "s06_bjq_job_duration_profile.job_duration_profile",
+        "deploy_platform": "from_user_input"
+      },
+      "outputs": {
+        "node_shutdown_config": "node_shutdown_config"
+      },
+      "condition": "stack == 'node'",
+      "parallel_group": 4
+    },
+    {
+      "id": "s19_bjq_ruby_graceful_shutdown",
+      "skill_name": "bjq-ruby-graceful-shutdown",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "queue_choice": "s01_bjq_queue_selection_matrix.queue_choice",
+        "job_duration_profile": "s06_bjq_job_duration_profile.job_duration_profile",
+        "deploy_platform": "from_user_input"
+      },
+      "outputs": {
+        "ruby_shutdown_config": "ruby_shutdown_config"
+      },
+      "condition": "stack == 'ruby'",
+      "parallel_group": 4
+    },
+    {
+      "id": "s20_bjq_queue_depth_age_alerts",
+      "skill_name": "bjq-queue-depth-age-alerts",
+      "inputs": {
+        "queue_choice": "s01_bjq_queue_selection_matrix.queue_choice",
+        "latency_slo": "from_user_input",
+        "concurrency_plan": "s15_bjq_concurrency_limit_sizing.concurrency_plan"
+      },
+      "outputs": {
+        "monitoring_config": "monitoring_config"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s21_bjq_py_failure_path_tests",
+      "skill_name": "bjq-py-failure-path-tests",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "queue_choice": "s01_bjq_queue_selection_matrix.queue_choice",
+        "retry_policy": "s07_bjq_retry_backoff_jitter_policy.retry_policy",
+        "idempotency_design": "s04_bjq_idempotency_key_store.idempotency_design"
+      },
+      "outputs": {
+        "py_failure_tests": "py_failure_tests"
+      },
+      "condition": "stack == 'python' and s01_bjq_queue_selection_matrix.queue_choice in ['celery', 'rq']",
+      "parallel_group": 5
+    },
+    {
+      "id": "s22_bjq_node_failure_path_tests",
+      "skill_name": "bjq-node-failure-path-tests",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "retry_policy": "s07_bjq_retry_backoff_jitter_policy.retry_policy",
+        "idempotency_design": "s04_bjq_idempotency_key_store.idempotency_design"
+      },
+      "outputs": {
+        "node_failure_tests": "node_failure_tests"
+      },
+      "condition": "stack == 'node' and s01_bjq_queue_selection_matrix.queue_choice == 'bullmq'",
+      "parallel_group": 5
+    },
+    {
+      "id": "s23_bjq_ruby_failure_path_tests",
+      "skill_name": "bjq-ruby-failure-path-tests",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "retry_policy": "s07_bjq_retry_backoff_jitter_policy.retry_policy",
+        "idempotency_design": "s04_bjq_idempotency_key_store.idempotency_design"
+      },
+      "outputs": {
+        "ruby_failure_tests": "ruby_failure_tests"
+      },
+      "condition": "stack == 'ruby' and s01_bjq_queue_selection_matrix.queue_choice == 'sidekiq'",
+      "parallel_group": 5
+    },
+    {
+      "id": "s24_bjq_worker_kill_redelivery_drill",
+      "skill_name": "bjq-worker-kill-redelivery-drill",
+      "inputs": {
+        "queue_choice": "s01_bjq_queue_selection_matrix.queue_choice",
+        "idempotency_design": "s04_bjq_idempotency_key_store.idempotency_design",
+        "job_duration_profile": "s06_bjq_job_duration_profile.job_duration_profile",
+        "staging_environment": "from_user_input"
+      },
+      "outputs": {
+        "drill_report": "drill_report"
+      },
+      "parallel_group": 5
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_bjq_queue_selection_matrix",
+      "to_step": "s02_bjq_handler_side_effect_audit",
+      "data_type": "bjq-queue-selection-matrix",
+      "field_mapping": {
+        "queue_choice": "queue_choice"
+      }
+    },
+    {
+      "from_step": "s02_bjq_handler_side_effect_audit",
+      "to_step": "s03_bjq_job_payload_design",
+      "data_type": "bjq-handler-side-effect-audit",
+      "field_mapping": {
+        "job_inventory": "job_inventory"
+      }
+    },
+    {
+      "from_step": "s01_bjq_queue_selection_matrix",
+      "to_step": "s03_bjq_job_payload_design",
+      "data_type": "bjq-queue-selection-matrix",
+      "field_mapping": {
+        "queue_choice": "queue_choice"
+      }
+    },
+    {
+      "from_step": "s02_bjq_handler_side_effect_audit",
+      "to_step": "s04_bjq_idempotency_key_store",
+      "data_type": "bjq-handler-side-effect-audit",
+      "field_mapping": {
+        "job_inventory": "job_inventory"
+      }
+    },
+    {
+      "from_step": "s03_bjq_job_payload_design",
+      "to_step": "s04_bjq_idempotency_key_store",
+      "data_type": "bjq-job-payload-design",
+      "field_mapping": {
+        "payload_schema": "payload_schema"
+      }
+    },
+    {
+      "from_step": "s02_bjq_handler_side_effect_audit",
+      "to_step": "s05_bjq_transactional_outbox_enqueue",
+      "data_type": "bjq-handler-side-effect-audit",
+      "field_mapping": {
+        "job_inventory": "job_inventory"
+      }
+    },
+    {
+      "from_step": "s03_bjq_job_payload_design",
+      "to_step": "s05_bjq_transactional_outbox_enqueue",
+      "data_type": "bjq-job-payload-design",
+      "field_mapping": {
+        "payload_schema": "payload_schema"
+      }
+    },
+    {
+      "from_step": "s01_bjq_queue_selection_matrix",
+      "to_step": "s06_bjq_job_duration_profile",
+      "data_type": "bjq-queue-selection-matrix",
+      "field_mapping": {
+        "queue_choice": "queue_choice"
+      }
+    },
+    {
+      "from_step": "s02_bjq_handler_side_effect_audit",
+      "to_step": "s06_bjq_job_duration_profile",
+      "data_type": "bjq-handler-side-effect-audit",
+      "field_mapping": {
+        "job_inventory": "job_inventory"
+      }
+    },
+    {
+      "from_step": "s02_bjq_handler_side_effect_audit",
+      "to_step": "s07_bjq_retry_backoff_jitter_policy",
+      "data_type": "bjq-handler-side-effect-audit",
+      "field_mapping": {
+        "job_inventory": "job_inventory"
+      }
+    },
+    {
+      "from_step": "s06_bjq_job_duration_profile",
+      "to_step": "s07_bjq_retry_backoff_jitter_policy",
+      "data_type": "bjq-job-duration-profile",
+      "field_mapping": {
+        "job_duration_profile": "job_duration_profile"
+      }
+    },
+    {
+      "from_step": "s01_bjq_queue_selection_matrix",
+      "to_step": "s07_bjq_retry_backoff_jitter_policy",
+      "data_type": "bjq-queue-selection-matrix",
+      "field_mapping": {
+        "queue_choice": "queue_choice"
+      }
+    },
+    {
+      "from_step": "s07_bjq_retry_backoff_jitter_policy",
+      "to_step": "s08_bjq_py_celery_reliability_config",
+      "data_type": "bjq-retry-backoff-jitter-policy",
+      "field_mapping": {
+        "retry_policy": "retry_policy"
+      }
+    },
+    {
+      "from_step": "s06_bjq_job_duration_profile",
+      "to_step": "s08_bjq_py_celery_reliability_config",
+      "data_type": "bjq-job-duration-profile",
+      "field_mapping": {
+        "job_duration_profile": "job_duration_profile"
+      }
+    },
+    {
+      "from_step": "s07_bjq_retry_backoff_jitter_policy",
+      "to_step": "s09_bjq_py_rq_reliability_config",
+      "data_type": "bjq-retry-backoff-jitter-policy",
+      "field_mapping": {
+        "retry_policy": "retry_policy"
+      }
+    },
+    {
+      "from_step": "s06_bjq_job_duration_profile",
+      "to_step": "s09_bjq_py_rq_reliability_config",
+      "data_type": "bjq-job-duration-profile",
+      "field_mapping": {
+        "job_duration_profile": "job_duration_profile"
+      }
+    },
+    {
+      "from_step": "s07_bjq_retry_backoff_jitter_policy",
+      "to_step": "s10_bjq_node_bullmq_reliability_config",
+      "data_type": "bjq-retry-backoff-jitter-policy",
+      "field_mapping": {
+        "retry_policy": "retry_policy"
+      }
+    },
+    {
+      "from_step": "s06_bjq_job_duration_profile",
+      "to_step": "s10_bjq_node_bullmq_reliability_config",
+      "data_type": "bjq-job-duration-profile",
+      "field_mapping": {
+        "job_duration_profile": "job_duration_profile"
+      }
+    },
+    {
+      "from_step": "s07_bjq_retry_backoff_jitter_policy",
+      "to_step": "s11_bjq_ruby_sidekiq_reliability_config",
+      "data_type": "bjq-retry-backoff-jitter-policy",
+      "field_mapping": {
+        "retry_policy": "retry_policy"
+      }
+    },
+    {
+      "from_step": "s06_bjq_job_duration_profile",
+      "to_step": "s11_bjq_ruby_sidekiq_reliability_config",
+      "data_type": "bjq-job-duration-profile",
+      "field_mapping": {
+        "job_duration_profile": "job_duration_profile"
+      }
+    },
+    {
+      "from_step": "s07_bjq_retry_backoff_jitter_policy",
+      "to_step": "s12_bjq_sqs_visibility_redrive_config",
+      "data_type": "bjq-retry-backoff-jitter-policy",
+      "field_mapping": {
+        "retry_policy": "retry_policy"
+      }
+    },
+    {
+      "from_step": "s06_bjq_job_duration_profile",
+      "to_step": "s12_bjq_sqs_visibility_redrive_config",
+      "data_type": "bjq-job-duration-profile",
+      "field_mapping": {
+        "job_duration_profile": "job_duration_profile"
+      }
+    },
+    {
+      "from_step": "s07_bjq_retry_backoff_jitter_policy",
+      "to_step": "s13_bjq_rabbitmq_quorum_ack_config",
+      "data_type": "bjq-retry-backoff-jitter-policy",
+      "field_mapping": {
+        "retry_policy": "retry_policy"
+      }
+    },
+    {
+      "from_step": "s06_bjq_job_duration_profile",
+      "to_step": "s13_bjq_rabbitmq_quorum_ack_config",
+      "data_type": "bjq-job-duration-profile",
+      "field_mapping": {
+        "job_duration_profile": "job_duration_profile"
+      }
+    },
+    {
+      "from_step": "s01_bjq_queue_selection_matrix",
+      "to_step": "s14_bjq_dead_letter_redrive_runbook",
+      "data_type": "bjq-queue-selection-matrix",
+      "field_mapping": {
+        "queue_choice": "queue_choice"
+      }
+    },
+    {
+      "from_step": "s07_bjq_retry_backoff_jitter_policy",
+      "to_step": "s14_bjq_dead_letter_redrive_runbook",
+      "data_type": "bjq-retry-backoff-jitter-policy",
+      "field_mapping": {
+        "retry_policy": "retry_policy"
+      }
+    },
+    {
+      "from_step": "s01_bjq_queue_selection_matrix",
+      "to_step": "s15_bjq_concurrency_limit_sizing",
+      "data_type": "bjq-queue-selection-matrix",
+      "field_mapping": {
+        "queue_choice": "queue_choice"
+      }
+    },
+    {
+      "from_step": "s02_bjq_handler_side_effect_audit",
+      "to_step": "s15_bjq_concurrency_limit_sizing",
+      "data_type": "bjq-handler-side-effect-audit",
+      "field_mapping": {
+        "job_inventory": "job_inventory"
+      }
+    },
+    {
+      "from_step": "s06_bjq_job_duration_profile",
+      "to_step": "s15_bjq_concurrency_limit_sizing",
+      "data_type": "bjq-job-duration-profile",
+      "field_mapping": {
+        "job_duration_profile": "job_duration_profile"
+      }
+    },
+    {
+      "from_step": "s01_bjq_queue_selection_matrix",
+      "to_step": "s16_bjq_scheduled_cron_jobs",
+      "data_type": "bjq-queue-selection-matrix",
+      "field_mapping": {
+        "queue_choice": "queue_choice"
+      }
+    },
+    {
+      "from_step": "s04_bjq_idempotency_key_store",
+      "to_step": "s16_bjq_scheduled_cron_jobs",
+      "data_type": "bjq-idempotency-key-store",
+      "field_mapping": {
+        "idempotency_design": "idempotency_design"
+      }
+    },
+    {
+      "from_step": "s01_bjq_queue_selection_matrix",
+      "to_step": "s17_bjq_py_graceful_shutdown",
+      "data_type": "bjq-queue-selection-matrix",
+      "field_mapping": {
+        "queue_choice": "queue_choice"
+      }
+    },
+    {
+      "from_step": "s06_bjq_job_duration_profile",
+      "to_step": "s17_bjq_py_graceful_shutdown",
+      "data_type": "bjq-job-duration-profile",
+      "field_mapping": {
+        "job_duration_profile": "job_duration_profile"
+      }
+    },
+    {
+      "from_step": "s01_bjq_queue_selection_matrix",
+      "to_step": "s18_bjq_node_graceful_shutdown",
+      "data_type": "bjq-queue-selection-matrix",
+      "field_mapping": {
+        "queue_choice": "queue_choice"
+      }
+    },
+    {
+      "from_step": "s06_bjq_job_duration_profile",
+      "to_step": "s18_bjq_node_graceful_shutdown",
+      "data_type": "bjq-job-duration-profile",
+      "field_mapping": {
+        "job_duration_profile": "job_duration_profile"
+      }
+    },
+    {
+      "from_step": "s01_bjq_queue_selection_matrix",
+      "to_step": "s19_bjq_ruby_graceful_shutdown",
+      "data_type": "bjq-queue-selection-matrix",
+      "field_mapping": {
+        "queue_choice": "queue_choice"
+      }
+    },
+    {
+      "from_step": "s06_bjq_job_duration_profile",
+      "to_step": "s19_bjq_ruby_graceful_shutdown",
+      "data_type": "bjq-job-duration-profile",
+      "field_mapping": {
+        "job_duration_profile": "job_duration_profile"
+      }
+    },
+    {
+      "from_step": "s01_bjq_queue_selection_matrix",
+      "to_step": "s20_bjq_queue_depth_age_alerts",
+      "data_type": "bjq-queue-selection-matrix",
+      "field_mapping": {
+        "queue_choice": "queue_choice"
+      }
+    },
+    {
+      "from_step": "s15_bjq_concurrency_limit_sizing",
+      "to_step": "s20_bjq_queue_depth_age_alerts",
+      "data_type": "bjq-concurrency-limit-sizing",
+      "field_mapping": {
+        "concurrency_plan": "concurrency_plan"
+      }
+    },
+    {
+      "from_step": "s01_bjq_queue_selection_matrix",
+      "to_step": "s21_bjq_py_failure_path_tests",
+      "data_type": "bjq-queue-selection-matrix",
+      "field_mapping": {
+        "queue_choice": "queue_choice"
+      }
+    },
+    {
+      "from_step": "s07_bjq_retry_backoff_jitter_policy",
+      "to_step": "s21_bjq_py_failure_path_tests",
+      "data_type": "bjq-retry-backoff-jitter-policy",
+      "field_mapping": {
+        "retry_policy": "retry_policy"
+      }
+    },
+    {
+      "from_step": "s04_bjq_idempotency_key_store",
+      "to_step": "s21_bjq_py_failure_path_tests",
+      "data_type": "bjq-idempotency-key-store",
+      "field_mapping": {
+        "idempotency_design": "idempotency_design"
+      }
+    },
+    {
+      "from_step": "s07_bjq_retry_backoff_jitter_policy",
+      "to_step": "s22_bjq_node_failure_path_tests",
+      "data_type": "bjq-retry-backoff-jitter-policy",
+      "field_mapping": {
+        "retry_policy": "retry_policy"
+      }
+    },
+    {
+      "from_step": "s04_bjq_idempotency_key_store",
+      "to_step": "s22_bjq_node_failure_path_tests",
+      "data_type": "bjq-idempotency-key-store",
+      "field_mapping": {
+        "idempotency_design": "idempotency_design"
+      }
+    },
+    {
+      "from_step": "s07_bjq_retry_backoff_jitter_policy",
+      "to_step": "s23_bjq_ruby_failure_path_tests",
+      "data_type": "bjq-retry-backoff-jitter-policy",
+      "field_mapping": {
+        "retry_policy": "retry_policy"
+      }
+    },
+    {
+      "from_step": "s04_bjq_idempotency_key_store",
+      "to_step": "s23_bjq_ruby_failure_path_tests",
+      "data_type": "bjq-idempotency-key-store",
+      "field_mapping": {
+        "idempotency_design": "idempotency_design"
+      }
+    },
+    {
+      "from_step": "s01_bjq_queue_selection_matrix",
+      "to_step": "s24_bjq_worker_kill_redelivery_drill",
+      "data_type": "bjq-queue-selection-matrix",
+      "field_mapping": {
+        "queue_choice": "queue_choice"
+      }
+    },
+    {
+      "from_step": "s04_bjq_idempotency_key_store",
+      "to_step": "s24_bjq_worker_kill_redelivery_drill",
+      "data_type": "bjq-idempotency-key-store",
+      "field_mapping": {
+        "idempotency_design": "idempotency_design"
+      }
+    },
+    {
+      "from_step": "s06_bjq_job_duration_profile",
+      "to_step": "s24_bjq_worker_kill_redelivery_drill",
+      "data_type": "bjq-job-duration-profile",
+      "field_mapping": {
+        "job_duration_profile": "job_duration_profile"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "workload_requirements",
+    "stack",
+    "existing_infrastructure",
+    "repo_path",
+    "database",
+    "log_source",
+    "outage_tolerance",
+    "downstream_limits",
+    "schedule_requirements",
+    "deploy_platform",
+    "latency_slo",
+    "staging_environment"
+  ],
+  "terminal_outputs": [
+    "selection_matrix",
+    "unsafe_handlers",
+    "payload_violations",
+    "idempotency_patch",
+    "outbox_design",
+    "outbox_patch",
+    "celery_config",
+    "rq_config",
+    "bullmq_config",
+    "sidekiq_config",
+    "sqs_config",
+    "rabbitmq_config",
+    "dlq_runbook",
+    "schedule_config",
+    "py_shutdown_config",
+    "node_shutdown_config",
+    "ruby_shutdown_config",
+    "monitoring_config",
+    "py_failure_tests",
+    "node_failure_tests",
+    "ruby_failure_tests",
+    "drill_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_bjq_queue_selection_matrix"
+    ],
+    [
+      "s02_bjq_handler_side_effect_audit"
+    ],
+    [
+      "s03_bjq_job_payload_design",
+      "s06_bjq_job_duration_profile"
+    ],
+    [
+      "s04_bjq_idempotency_key_store",
+      "s05_bjq_transactional_outbox_enqueue",
+      "s07_bjq_retry_backoff_jitter_policy",
+      "s15_bjq_concurrency_limit_sizing",
+      "s17_bjq_py_graceful_shutdown",
+      "s18_bjq_node_graceful_shutdown",
+      "s19_bjq_ruby_graceful_shutdown"
+    ],
+    [
+      "s08_bjq_py_celery_reliability_config",
+      "s09_bjq_py_rq_reliability_config",
+      "s10_bjq_node_bullmq_reliability_config",
+      "s11_bjq_ruby_sidekiq_reliability_config",
+      "s12_bjq_sqs_visibility_redrive_config",
+      "s13_bjq_rabbitmq_quorum_ack_config",
+      "s14_bjq_dead_letter_redrive_runbook",
+      "s16_bjq_scheduled_cron_jobs",
+      "s20_bjq_queue_depth_age_alerts",
+      "s21_bjq_py_failure_path_tests",
+      "s22_bjq_node_failure_path_tests",
+      "s23_bjq_ruby_failure_path_tests",
+      "s24_bjq_worker_kill_redelivery_drill"
+    ]
+  ],
+  "estimated_cost": 24,
+  "critical_path": [
+    "s01_bjq_queue_selection_matrix",
+    "s02_bjq_handler_side_effect_audit",
+    "s03_bjq_job_payload_design",
+    "s04_bjq_idempotency_key_store",
+    "s24_bjq_worker_kill_redelivery_drill"
+  ]
+}

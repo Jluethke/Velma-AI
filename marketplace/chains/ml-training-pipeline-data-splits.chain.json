@@ -1,0 +1,284 @@
+{
+  "name": "ml-training-pipeline-data-splits",
+  "description": "From a raw dataset to a verified, versioned split: frame the problem, version data with DVC, audit leakage, split randomly, by time or by group, verify integrity with tests, and encode the pipeline as DVC stages.",
+  "steps": [
+    {
+      "id": "s01_mlp_frame_problem_metric",
+      "skill_name": "mlp-frame-problem-metric",
+      "inputs": {
+        "problem_statement": "from_user_input",
+        "label_definition": "from_user_input",
+        "decision_costs": "from_user_input_optional"
+      },
+      "outputs": {
+        "problem_frame": "problem_frame",
+        "primary_metric": "primary_metric",
+        "recommended_split": "recommended_split"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_mlp_dvc_version_raw_data",
+      "skill_name": "mlp-dvc-version-raw-data",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "raw_data_paths": "from_user_input",
+        "dvc_remote_url": "from_user_input"
+      },
+      "outputs": {
+        "data_version": "data_version"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s03_mlp_leakage_audit",
+      "skill_name": "mlp-leakage-audit",
+      "inputs": {
+        "data_version": "s02_mlp_dvc_version_raw_data.data_version",
+        "problem_frame": "s01_mlp_frame_problem_metric.problem_frame",
+        "primary_metric": "s01_mlp_frame_problem_metric.primary_metric"
+      },
+      "outputs": {
+        "leakage_findings": "leakage_findings",
+        "clean_feature_list": "clean_feature_list"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_mlp_split_random_stratified",
+      "skill_name": "mlp-split-random-stratified",
+      "inputs": {
+        "data_version": "s02_mlp_dvc_version_raw_data.data_version",
+        "problem_frame": "s01_mlp_frame_problem_metric.problem_frame",
+        "split_seed": "from_user_input",
+        "test_fraction": "from_user_input"
+      },
+      "outputs": {
+        "random_split": "random_split"
+      },
+      "condition": "split_strategy == 'random'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s05_mlp_split_time_based",
+      "skill_name": "mlp-split-time-based",
+      "inputs": {
+        "data_version": "s02_mlp_dvc_version_raw_data.data_version",
+        "problem_frame": "s01_mlp_frame_problem_metric.problem_frame",
+        "time_column": "from_user_input",
+        "cutoff_dates": "from_user_input"
+      },
+      "outputs": {
+        "time_split": "time_split"
+      },
+      "condition": "split_strategy == 'time'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s06_mlp_split_grouped",
+      "skill_name": "mlp-split-grouped",
+      "inputs": {
+        "data_version": "s02_mlp_dvc_version_raw_data.data_version",
+        "problem_frame": "s01_mlp_frame_problem_metric.problem_frame",
+        "group_column": "from_user_input",
+        "split_seed": "from_user_input",
+        "test_fraction": "from_user_input"
+      },
+      "outputs": {
+        "group_split": "group_split"
+      },
+      "condition": "split_strategy == 'group'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s07_mlp_split_integrity_check",
+      "skill_name": "mlp-split-integrity-check",
+      "inputs": {
+        "random_split": "s04_mlp_split_random_stratified.random_split",
+        "time_split": "s05_mlp_split_time_based.time_split",
+        "group_split": "s06_mlp_split_grouped.group_split",
+        "data_version": "s02_mlp_dvc_version_raw_data.data_version",
+        "split_strategy": "from_user_input"
+      },
+      "outputs": {
+        "split_manifest": "split_manifest",
+        "split_violations": "split_violations"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s08_mlp_dvc_pipeline_stages",
+      "skill_name": "mlp-dvc-pipeline-stages",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "data_version": "s02_mlp_dvc_version_raw_data.data_version",
+        "split_manifest": "s07_mlp_split_integrity_check.split_manifest"
+      },
+      "outputs": {
+        "dvc_pipeline": "dvc_pipeline"
+      },
+      "parallel_group": 4
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s02_mlp_dvc_version_raw_data",
+      "to_step": "s03_mlp_leakage_audit",
+      "data_type": "mlp-dvc-version-raw-data",
+      "field_mapping": {
+        "data_version": "data_version"
+      }
+    },
+    {
+      "from_step": "s01_mlp_frame_problem_metric",
+      "to_step": "s03_mlp_leakage_audit",
+      "data_type": "mlp-frame-problem-metric",
+      "field_mapping": {
+        "problem_frame": "problem_frame",
+        "primary_metric": "primary_metric"
+      }
+    },
+    {
+      "from_step": "s02_mlp_dvc_version_raw_data",
+      "to_step": "s04_mlp_split_random_stratified",
+      "data_type": "mlp-dvc-version-raw-data",
+      "field_mapping": {
+        "data_version": "data_version"
+      }
+    },
+    {
+      "from_step": "s01_mlp_frame_problem_metric",
+      "to_step": "s04_mlp_split_random_stratified",
+      "data_type": "mlp-frame-problem-metric",
+      "field_mapping": {
+        "problem_frame": "problem_frame"
+      }
+    },
+    {
+      "from_step": "s02_mlp_dvc_version_raw_data",
+      "to_step": "s05_mlp_split_time_based",
+      "data_type": "mlp-dvc-version-raw-data",
+      "field_mapping": {
+        "data_version": "data_version"
+      }
+    },
+    {
+      "from_step": "s01_mlp_frame_problem_metric",
+      "to_step": "s05_mlp_split_time_based",
+      "data_type": "mlp-frame-problem-metric",
+      "field_mapping": {
+        "problem_frame": "problem_frame"
+      }
+    },
+    {
+      "from_step": "s02_mlp_dvc_version_raw_data",
+      "to_step": "s06_mlp_split_grouped",
+      "data_type": "mlp-dvc-version-raw-data",
+      "field_mapping": {
+        "data_version": "data_version"
+      }
+    },
+    {
+      "from_step": "s01_mlp_frame_problem_metric",
+      "to_step": "s06_mlp_split_grouped",
+      "data_type": "mlp-frame-problem-metric",
+      "field_mapping": {
+        "problem_frame": "problem_frame"
+      }
+    },
+    {
+      "from_step": "s04_mlp_split_random_stratified",
+      "to_step": "s07_mlp_split_integrity_check",
+      "data_type": "mlp-split-random-stratified",
+      "field_mapping": {
+        "random_split": "random_split"
+      }
+    },
+    {
+      "from_step": "s05_mlp_split_time_based",
+      "to_step": "s07_mlp_split_integrity_check",
+      "data_type": "mlp-split-time-based",
+      "field_mapping": {
+        "time_split": "time_split"
+      }
+    },
+    {
+      "from_step": "s06_mlp_split_grouped",
+      "to_step": "s07_mlp_split_integrity_check",
+      "data_type": "mlp-split-grouped",
+      "field_mapping": {
+        "group_split": "group_split"
+      }
+    },
+    {
+      "from_step": "s02_mlp_dvc_version_raw_data",
+      "to_step": "s07_mlp_split_integrity_check",
+      "data_type": "mlp-dvc-version-raw-data",
+      "field_mapping": {
+        "data_version": "data_version"
+      }
+    },
+    {
+      "from_step": "s02_mlp_dvc_version_raw_data",
+      "to_step": "s08_mlp_dvc_pipeline_stages",
+      "data_type": "mlp-dvc-version-raw-data",
+      "field_mapping": {
+        "data_version": "data_version"
+      }
+    },
+    {
+      "from_step": "s07_mlp_split_integrity_check",
+      "to_step": "s08_mlp_dvc_pipeline_stages",
+      "data_type": "mlp-split-integrity-check",
+      "field_mapping": {
+        "split_manifest": "split_manifest"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "problem_statement",
+    "label_definition",
+    "decision_costs",
+    "repo_path",
+    "raw_data_paths",
+    "dvc_remote_url",
+    "split_seed",
+    "test_fraction",
+    "time_column",
+    "cutoff_dates",
+    "group_column",
+    "split_strategy"
+  ],
+  "terminal_outputs": [
+    "recommended_split",
+    "leakage_findings",
+    "clean_feature_list",
+    "split_violations",
+    "dvc_pipeline"
+  ],
+  "parallel_groups": [
+    [
+      "s01_mlp_frame_problem_metric",
+      "s02_mlp_dvc_version_raw_data"
+    ],
+    [
+      "s03_mlp_leakage_audit",
+      "s04_mlp_split_random_stratified",
+      "s05_mlp_split_time_based",
+      "s06_mlp_split_grouped"
+    ],
+    [
+      "s07_mlp_split_integrity_check"
+    ],
+    [
+      "s08_mlp_dvc_pipeline_stages"
+    ]
+  ],
+  "estimated_cost": 8,
+  "critical_path": [
+    "s02_mlp_dvc_version_raw_data",
+    "s04_mlp_split_random_stratified",
+    "s07_mlp_split_integrity_check",
+    "s08_mlp_dvc_pipeline_stages"
+  ]
+}

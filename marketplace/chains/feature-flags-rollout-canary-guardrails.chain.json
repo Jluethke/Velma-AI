@@ -1,0 +1,244 @@
+{
+  "name": "feature-flags-rollout-canary-guardrails",
+  "description": "Guard a progressive rollout on Kubernetes: instrument flag variants, define SLO burn-rate guardrails, plan stages, run an Argo Rollouts or Flagger canary, judge it statistically, and wire automatic flag rollback.",
+  "steps": [
+    {
+      "id": "s01_ffr_otel_flag_telemetry",
+      "skill_name": "ffr-otel-flag-telemetry",
+      "inputs": {
+        "stack": "from_user_input",
+        "repo_path": "from_user_input",
+        "provider_choice": "from_user_input"
+      },
+      "outputs": {
+        "flag_telemetry": "flag_telemetry"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_ffr_guardrail_metrics",
+      "skill_name": "ffr-guardrail-metrics",
+      "inputs": {
+        "flag_telemetry": "s01_ffr_otel_flag_telemetry.flag_telemetry",
+        "slo_definitions": "from_user_input",
+        "metrics_backend": "from_user_input"
+      },
+      "outputs": {
+        "guardrail_metrics": "guardrail_metrics"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_ffr_rollout_stage_plan",
+      "skill_name": "ffr-rollout-stage-plan",
+      "inputs": {
+        "flag_spec": "from_user_input",
+        "targeting_rules": "from_user_input",
+        "guardrail_metrics": "s02_ffr_guardrail_metrics.guardrail_metrics",
+        "stage_percentages": "from_user_input_optional"
+      },
+      "outputs": {
+        "rollout_plan": "rollout_plan"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_ffr_argo_rollouts_canary",
+      "skill_name": "ffr-argo-rollouts-canary",
+      "inputs": {
+        "rollout_plan": "s03_ffr_rollout_stage_plan.rollout_plan",
+        "guardrail_metrics": "s02_ffr_guardrail_metrics.guardrail_metrics",
+        "k8s_manifests": "from_user_input"
+      },
+      "outputs": {
+        "argo_canary_config": "argo_canary_config"
+      },
+      "condition": "deploy_platform == 'argo-rollouts'",
+      "parallel_group": 4
+    },
+    {
+      "id": "s05_ffr_flagger_canary",
+      "skill_name": "ffr-flagger-canary",
+      "inputs": {
+        "rollout_plan": "s03_ffr_rollout_stage_plan.rollout_plan",
+        "guardrail_metrics": "s02_ffr_guardrail_metrics.guardrail_metrics",
+        "k8s_manifests": "from_user_input"
+      },
+      "outputs": {
+        "flagger_canary_config": "flagger_canary_config"
+      },
+      "condition": "deploy_platform == 'flagger'",
+      "parallel_group": 4
+    },
+    {
+      "id": "s06_ffr_canary_mann_whitney_judge",
+      "skill_name": "ffr-canary-mann-whitney-judge",
+      "inputs": {
+        "guardrail_metrics": "s02_ffr_guardrail_metrics.guardrail_metrics",
+        "canary_metric_samples": "from_user_input",
+        "significance_level": "from_user_input_optional"
+      },
+      "outputs": {
+        "canary_verdict": "canary_verdict"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s07_ffr_auto_rollback_trigger",
+      "skill_name": "ffr-auto-rollback-trigger",
+      "inputs": {
+        "rollout_plan": "s03_ffr_rollout_stage_plan.rollout_plan",
+        "guardrail_metrics": "s02_ffr_guardrail_metrics.guardrail_metrics",
+        "provider_choice": "from_user_input",
+        "alerting_stack": "from_user_input"
+      },
+      "outputs": {
+        "rollback_automation": "rollback_automation"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s08_ffr_kill_switch_drill",
+      "skill_name": "ffr-kill-switch-drill",
+      "inputs": {
+        "rollback_automation": "s07_ffr_auto_rollback_trigger.rollback_automation",
+        "flag_spec": "from_user_input",
+        "provider_choice": "from_user_input"
+      },
+      "outputs": {
+        "drill_report": "drill_report"
+      },
+      "parallel_group": 5
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_ffr_otel_flag_telemetry",
+      "to_step": "s02_ffr_guardrail_metrics",
+      "data_type": "ffr-otel-flag-telemetry",
+      "field_mapping": {
+        "flag_telemetry": "flag_telemetry"
+      }
+    },
+    {
+      "from_step": "s02_ffr_guardrail_metrics",
+      "to_step": "s03_ffr_rollout_stage_plan",
+      "data_type": "ffr-guardrail-metrics",
+      "field_mapping": {
+        "guardrail_metrics": "guardrail_metrics"
+      }
+    },
+    {
+      "from_step": "s03_ffr_rollout_stage_plan",
+      "to_step": "s04_ffr_argo_rollouts_canary",
+      "data_type": "ffr-rollout-stage-plan",
+      "field_mapping": {
+        "rollout_plan": "rollout_plan"
+      }
+    },
+    {
+      "from_step": "s02_ffr_guardrail_metrics",
+      "to_step": "s04_ffr_argo_rollouts_canary",
+      "data_type": "ffr-guardrail-metrics",
+      "field_mapping": {
+        "guardrail_metrics": "guardrail_metrics"
+      }
+    },
+    {
+      "from_step": "s03_ffr_rollout_stage_plan",
+      "to_step": "s05_ffr_flagger_canary",
+      "data_type": "ffr-rollout-stage-plan",
+      "field_mapping": {
+        "rollout_plan": "rollout_plan"
+      }
+    },
+    {
+      "from_step": "s02_ffr_guardrail_metrics",
+      "to_step": "s05_ffr_flagger_canary",
+      "data_type": "ffr-guardrail-metrics",
+      "field_mapping": {
+        "guardrail_metrics": "guardrail_metrics"
+      }
+    },
+    {
+      "from_step": "s02_ffr_guardrail_metrics",
+      "to_step": "s06_ffr_canary_mann_whitney_judge",
+      "data_type": "ffr-guardrail-metrics",
+      "field_mapping": {
+        "guardrail_metrics": "guardrail_metrics"
+      }
+    },
+    {
+      "from_step": "s03_ffr_rollout_stage_plan",
+      "to_step": "s07_ffr_auto_rollback_trigger",
+      "data_type": "ffr-rollout-stage-plan",
+      "field_mapping": {
+        "rollout_plan": "rollout_plan"
+      }
+    },
+    {
+      "from_step": "s02_ffr_guardrail_metrics",
+      "to_step": "s07_ffr_auto_rollback_trigger",
+      "data_type": "ffr-guardrail-metrics",
+      "field_mapping": {
+        "guardrail_metrics": "guardrail_metrics"
+      }
+    },
+    {
+      "from_step": "s07_ffr_auto_rollback_trigger",
+      "to_step": "s08_ffr_kill_switch_drill",
+      "data_type": "ffr-auto-rollback-trigger",
+      "field_mapping": {
+        "rollback_automation": "rollback_automation"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "stack",
+    "repo_path",
+    "provider_choice",
+    "slo_definitions",
+    "metrics_backend",
+    "flag_spec",
+    "targeting_rules",
+    "stage_percentages",
+    "k8s_manifests",
+    "canary_metric_samples",
+    "significance_level",
+    "alerting_stack"
+  ],
+  "terminal_outputs": [
+    "argo_canary_config",
+    "flagger_canary_config",
+    "canary_verdict",
+    "drill_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_ffr_otel_flag_telemetry"
+    ],
+    [
+      "s02_ffr_guardrail_metrics"
+    ],
+    [
+      "s03_ffr_rollout_stage_plan",
+      "s06_ffr_canary_mann_whitney_judge"
+    ],
+    [
+      "s04_ffr_argo_rollouts_canary",
+      "s05_ffr_flagger_canary",
+      "s07_ffr_auto_rollback_trigger"
+    ],
+    [
+      "s08_ffr_kill_switch_drill"
+    ]
+  ],
+  "estimated_cost": 8,
+  "critical_path": [
+    "s01_ffr_otel_flag_telemetry",
+    "s02_ffr_guardrail_metrics",
+    "s03_ffr_rollout_stage_plan",
+    "s07_ffr_auto_rollback_trigger",
+    "s08_ffr_kill_switch_drill"
+  ]
+}

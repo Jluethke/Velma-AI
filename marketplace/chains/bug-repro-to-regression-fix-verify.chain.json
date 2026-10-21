@@ -1,0 +1,143 @@
+{
+  "name": "bug-repro-to-regression-fix-verify",
+  "description": "From a confirmed root cause and a red regression test: minimal fix, revert proof that the test guards it, neighbor regression sweep against the base commit, and the root-cause note.",
+  "steps": [
+    {
+      "id": "s01_repro_minimal_fix",
+      "skill_name": "repro-minimal-fix",
+      "inputs": {
+        "root_cause": "from_user_input",
+        "regression_test": "from_user_input",
+        "repo_path": "from_user_input",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "fix_diff": "fix_diff",
+        "green_run_log": "green_run_log"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_repro_fix_revert_proof",
+      "skill_name": "repro-fix-revert-proof",
+      "inputs": {
+        "fix_diff": "s01_repro_minimal_fix.fix_diff",
+        "regression_test": "from_user_input",
+        "confirm_runs": "from_user_input"
+      },
+      "outputs": {
+        "revert_proof": "revert_proof"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_repro_neighbor_regression_sweep",
+      "skill_name": "repro-neighbor-regression-sweep",
+      "inputs": {
+        "fix_diff": "s01_repro_minimal_fix.fix_diff",
+        "regression_test": "from_user_input",
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "base_ref": "from_user_input"
+      },
+      "outputs": {
+        "neighbor_report": "neighbor_report"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_repro_root_cause_note",
+      "skill_name": "repro-root-cause-note",
+      "inputs": {
+        "bug_brief": "from_user_input",
+        "env_snapshot": "from_user_input",
+        "root_cause": "from_user_input",
+        "first_bad_commit": "from_user_input_optional",
+        "fix_diff": "s01_repro_minimal_fix.fix_diff",
+        "revert_proof": "s02_repro_fix_revert_proof.revert_proof",
+        "neighbor_report": "s03_repro_neighbor_regression_sweep.neighbor_report"
+      },
+      "outputs": {
+        "root_cause_note": "root_cause_note"
+      },
+      "parallel_group": 3
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_repro_minimal_fix",
+      "to_step": "s02_repro_fix_revert_proof",
+      "data_type": "repro-minimal-fix",
+      "field_mapping": {
+        "fix_diff": "fix_diff"
+      }
+    },
+    {
+      "from_step": "s01_repro_minimal_fix",
+      "to_step": "s03_repro_neighbor_regression_sweep",
+      "data_type": "repro-minimal-fix",
+      "field_mapping": {
+        "fix_diff": "fix_diff"
+      }
+    },
+    {
+      "from_step": "s01_repro_minimal_fix",
+      "to_step": "s04_repro_root_cause_note",
+      "data_type": "repro-minimal-fix",
+      "field_mapping": {
+        "fix_diff": "fix_diff"
+      }
+    },
+    {
+      "from_step": "s02_repro_fix_revert_proof",
+      "to_step": "s04_repro_root_cause_note",
+      "data_type": "repro-fix-revert-proof",
+      "field_mapping": {
+        "revert_proof": "revert_proof"
+      }
+    },
+    {
+      "from_step": "s03_repro_neighbor_regression_sweep",
+      "to_step": "s04_repro_root_cause_note",
+      "data_type": "repro-neighbor-regression-sweep",
+      "field_mapping": {
+        "neighbor_report": "neighbor_report"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "root_cause",
+    "regression_test",
+    "repo_path",
+    "stack",
+    "confirm_runs",
+    "base_ref",
+    "bug_brief",
+    "env_snapshot",
+    "first_bad_commit"
+  ],
+  "terminal_outputs": [
+    "green_run_log",
+    "revert_proof",
+    "neighbor_report",
+    "root_cause_note"
+  ],
+  "parallel_groups": [
+    [
+      "s01_repro_minimal_fix"
+    ],
+    [
+      "s02_repro_fix_revert_proof",
+      "s03_repro_neighbor_regression_sweep"
+    ],
+    [
+      "s04_repro_root_cause_note"
+    ]
+  ],
+  "estimated_cost": 4,
+  "critical_path": [
+    "s01_repro_minimal_fix",
+    "s02_repro_fix_revert_proof",
+    "s04_repro_root_cause_note"
+  ]
+}

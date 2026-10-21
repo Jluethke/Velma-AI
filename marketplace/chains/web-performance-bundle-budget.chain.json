@@ -1,0 +1,142 @@
+{
+  "name": "web-performance-bundle-budget",
+  "description": "Analyze the JavaScript bundle for the build tool in use, split the offenders out of the initial chunk, and lock the result in with size-limit and Lighthouse CI budgets.",
+  "steps": [
+    {
+      "id": "s01_cwv_bundle_webpack_analyzer",
+      "skill_name": "cwv-bundle-webpack-analyzer",
+      "inputs": {
+        "repo_dir": "from_user_input",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "webpack_bundle_report": "webpack_bundle_report",
+        "webpack_offenders": "webpack_offenders"
+      },
+      "condition": "stack == 'nextjs' or stack == 'webpack'",
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_cwv_bundle_source_map_explorer",
+      "skill_name": "cwv-bundle-source-map-explorer",
+      "inputs": {
+        "repo_dir": "from_user_input"
+      },
+      "outputs": {
+        "sme_bundle_report": "sme_bundle_report",
+        "sme_offenders": "sme_offenders"
+      },
+      "condition": "stack == 'vite'",
+      "parallel_group": 1
+    },
+    {
+      "id": "s03_cwv_code_split_webpack_next",
+      "skill_name": "cwv-code-split-webpack-next",
+      "inputs": {
+        "repo_dir": "from_user_input",
+        "stack": "from_user_input",
+        "webpack_offenders": "s01_cwv_bundle_webpack_analyzer.webpack_offenders"
+      },
+      "outputs": {
+        "webpack_split_patch": "webpack_split_patch"
+      },
+      "condition": "stack == 'nextjs' or stack == 'webpack'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_cwv_code_split_vite_rollup",
+      "skill_name": "cwv-code-split-vite-rollup",
+      "inputs": {
+        "repo_dir": "from_user_input",
+        "sme_offenders": "s02_cwv_bundle_source_map_explorer.sme_offenders"
+      },
+      "outputs": {
+        "vite_split_patch": "vite_split_patch"
+      },
+      "condition": "stack == 'vite'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s05_cwv_ci_size_limit_budget",
+      "skill_name": "cwv-ci-size-limit-budget",
+      "inputs": {
+        "repo_dir": "from_user_input",
+        "ci_platform": "from_user_input",
+        "size_headroom": "from_user_input_optional"
+      },
+      "outputs": {
+        "size_limit_config": "size_limit_config",
+        "size_ci_job": "size_ci_job"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s06_cwv_ci_lighthouse_budget",
+      "skill_name": "cwv-ci-lighthouse-budget",
+      "inputs": {
+        "repo_dir": "from_user_input",
+        "ci_platform": "from_user_input",
+        "page_urls": "from_user_input",
+        "field_baseline": "from_user_input"
+      },
+      "outputs": {
+        "lhci_config": "lhci_config",
+        "lhci_ci_job": "lhci_ci_job"
+      },
+      "parallel_group": 1
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_cwv_bundle_webpack_analyzer",
+      "to_step": "s03_cwv_code_split_webpack_next",
+      "data_type": "cwv-bundle-webpack-analyzer",
+      "field_mapping": {
+        "webpack_offenders": "webpack_offenders"
+      }
+    },
+    {
+      "from_step": "s02_cwv_bundle_source_map_explorer",
+      "to_step": "s04_cwv_code_split_vite_rollup",
+      "data_type": "cwv-bundle-source-map-explorer",
+      "field_mapping": {
+        "sme_offenders": "sme_offenders"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "repo_dir",
+    "stack",
+    "ci_platform",
+    "size_headroom",
+    "page_urls",
+    "field_baseline"
+  ],
+  "terminal_outputs": [
+    "webpack_bundle_report",
+    "sme_bundle_report",
+    "webpack_split_patch",
+    "vite_split_patch",
+    "size_limit_config",
+    "size_ci_job",
+    "lhci_config",
+    "lhci_ci_job"
+  ],
+  "parallel_groups": [
+    [
+      "s01_cwv_bundle_webpack_analyzer",
+      "s02_cwv_bundle_source_map_explorer",
+      "s05_cwv_ci_size_limit_budget",
+      "s06_cwv_ci_lighthouse_budget"
+    ],
+    [
+      "s03_cwv_code_split_webpack_next",
+      "s04_cwv_code_split_vite_rollup"
+    ]
+  ],
+  "estimated_cost": 6,
+  "critical_path": [
+    "s02_cwv_bundle_source_map_explorer",
+    "s04_cwv_code_split_vite_rollup"
+  ]
+}

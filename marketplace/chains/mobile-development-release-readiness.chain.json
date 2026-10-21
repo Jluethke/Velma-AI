@@ -1,0 +1,193 @@
+{
+  "name": "mobile-development-release-readiness",
+  "description": "Get an existing mobile app ready to ship: build and run the device and OS matrix, wire and prove crash reporting with symbols, and run the App Store and Google Play release checklists with staged rollout stop conditions.",
+  "steps": [
+    {
+      "id": "s01_mob_app_profile",
+      "skill_name": "mob-app-profile",
+      "inputs": {
+        "project_dir": "from_user_input",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "app_profile": "app_profile"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_mob_device_os_matrix",
+      "skill_name": "mob-device-os-matrix",
+      "inputs": {
+        "app_profile": "s01_mob_app_profile.app_profile",
+        "usage_analytics": "from_user_input_optional"
+      },
+      "outputs": {
+        "device_matrix": "device_matrix",
+        "matrix_run_report": "matrix_run_report"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_mob_ios_crash_reporting",
+      "skill_name": "mob-ios-crash-reporting",
+      "inputs": {
+        "app_profile": "s01_mob_app_profile.app_profile",
+        "crash_backend": "from_user_input"
+      },
+      "outputs": {
+        "ios_crash_setup": "ios_crash_setup"
+      },
+      "condition": "stack != 'android'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_mob_android_crash_reporting",
+      "skill_name": "mob-android-crash-reporting",
+      "inputs": {
+        "app_profile": "s01_mob_app_profile.app_profile",
+        "crash_backend": "from_user_input"
+      },
+      "outputs": {
+        "android_crash_setup": "android_crash_setup"
+      },
+      "condition": "stack != 'ios'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s05_mob_ios_app_store_release",
+      "skill_name": "mob-ios-app-store-release",
+      "inputs": {
+        "app_profile": "s01_mob_app_profile.app_profile",
+        "matrix_run_report": "s02_mob_device_os_matrix.matrix_run_report",
+        "ios_crash_setup": "s03_mob_ios_crash_reporting.ios_crash_setup",
+        "release_version": "from_user_input"
+      },
+      "outputs": {
+        "ios_release_checklist": "ios_release_checklist"
+      },
+      "condition": "stack != 'android'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s06_mob_android_play_release",
+      "skill_name": "mob-android-play-release",
+      "inputs": {
+        "app_profile": "s01_mob_app_profile.app_profile",
+        "matrix_run_report": "s02_mob_device_os_matrix.matrix_run_report",
+        "android_crash_setup": "s04_mob_android_crash_reporting.android_crash_setup",
+        "release_version": "from_user_input"
+      },
+      "outputs": {
+        "android_release_checklist": "android_release_checklist"
+      },
+      "condition": "stack != 'ios'",
+      "parallel_group": 3
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_mob_app_profile",
+      "to_step": "s02_mob_device_os_matrix",
+      "data_type": "mob-app-profile",
+      "field_mapping": {
+        "app_profile": "app_profile"
+      }
+    },
+    {
+      "from_step": "s01_mob_app_profile",
+      "to_step": "s03_mob_ios_crash_reporting",
+      "data_type": "mob-app-profile",
+      "field_mapping": {
+        "app_profile": "app_profile"
+      }
+    },
+    {
+      "from_step": "s01_mob_app_profile",
+      "to_step": "s04_mob_android_crash_reporting",
+      "data_type": "mob-app-profile",
+      "field_mapping": {
+        "app_profile": "app_profile"
+      }
+    },
+    {
+      "from_step": "s01_mob_app_profile",
+      "to_step": "s05_mob_ios_app_store_release",
+      "data_type": "mob-app-profile",
+      "field_mapping": {
+        "app_profile": "app_profile"
+      }
+    },
+    {
+      "from_step": "s02_mob_device_os_matrix",
+      "to_step": "s05_mob_ios_app_store_release",
+      "data_type": "mob-device-os-matrix",
+      "field_mapping": {
+        "matrix_run_report": "matrix_run_report"
+      }
+    },
+    {
+      "from_step": "s03_mob_ios_crash_reporting",
+      "to_step": "s05_mob_ios_app_store_release",
+      "data_type": "mob-ios-crash-reporting",
+      "field_mapping": {
+        "ios_crash_setup": "ios_crash_setup"
+      }
+    },
+    {
+      "from_step": "s01_mob_app_profile",
+      "to_step": "s06_mob_android_play_release",
+      "data_type": "mob-app-profile",
+      "field_mapping": {
+        "app_profile": "app_profile"
+      }
+    },
+    {
+      "from_step": "s02_mob_device_os_matrix",
+      "to_step": "s06_mob_android_play_release",
+      "data_type": "mob-device-os-matrix",
+      "field_mapping": {
+        "matrix_run_report": "matrix_run_report"
+      }
+    },
+    {
+      "from_step": "s04_mob_android_crash_reporting",
+      "to_step": "s06_mob_android_play_release",
+      "data_type": "mob-android-crash-reporting",
+      "field_mapping": {
+        "android_crash_setup": "android_crash_setup"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "project_dir",
+    "stack",
+    "usage_analytics",
+    "crash_backend",
+    "release_version"
+  ],
+  "terminal_outputs": [
+    "device_matrix",
+    "ios_release_checklist",
+    "android_release_checklist"
+  ],
+  "parallel_groups": [
+    [
+      "s01_mob_app_profile"
+    ],
+    [
+      "s02_mob_device_os_matrix",
+      "s03_mob_ios_crash_reporting",
+      "s04_mob_android_crash_reporting"
+    ],
+    [
+      "s05_mob_ios_app_store_release",
+      "s06_mob_android_play_release"
+    ]
+  ],
+  "estimated_cost": 6,
+  "critical_path": [
+    "s01_mob_app_profile",
+    "s02_mob_device_os_matrix",
+    "s05_mob_ios_app_store_release"
+  ]
+}

@@ -1,0 +1,189 @@
+{
+  "name": "web-performance-cls",
+  "description": "Find the nodes and causes behind field CLS, reserve space for each source, restore back/forward cache eligibility, then verify in the field.",
+  "steps": [
+    {
+      "id": "s01_cwv_field_crux_baseline",
+      "skill_name": "cwv-field-crux-baseline",
+      "inputs": {
+        "site_url": "from_user_input",
+        "page_urls": "from_user_input",
+        "crux_api_key": "from_user_input"
+      },
+      "outputs": {
+        "field_baseline": "field_baseline",
+        "failing_metrics": "failing_metrics"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_cwv_rum_web_vitals_setup",
+      "skill_name": "cwv-rum-web-vitals-setup",
+      "inputs": {
+        "repo_dir": "from_user_input",
+        "stack": "from_user_input",
+        "rum_endpoint": "from_user_input"
+      },
+      "outputs": {
+        "rum_instrumentation": "rum_instrumentation",
+        "rum_attribution_schema": "rum_attribution_schema"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s03_cwv_rum_p75_analysis",
+      "skill_name": "cwv-rum-p75-analysis",
+      "inputs": {
+        "rum_data_export": "from_user_input",
+        "rum_attribution_schema": "s02_cwv_rum_web_vitals_setup.rum_attribution_schema",
+        "rum_min_samples": "from_user_input_optional"
+      },
+      "outputs": {
+        "rum_p75_report": "rum_p75_report",
+        "top_offenders": "top_offenders"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_cwv_cls_shift_sources",
+      "skill_name": "cwv-cls-shift-sources",
+      "inputs": {
+        "page_urls": "from_user_input",
+        "diagnosis_plan": "from_user_input",
+        "rum_p75_report": "s03_cwv_rum_p75_analysis.rum_p75_report"
+      },
+      "outputs": {
+        "cls_sources": "cls_sources"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s05_cwv_cls_reserve_space_fixes",
+      "skill_name": "cwv-cls-reserve-space-fixes",
+      "inputs": {
+        "repo_dir": "from_user_input",
+        "cls_sources": "s04_cwv_cls_shift_sources.cls_sources"
+      },
+      "outputs": {
+        "cls_patch": "cls_patch"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s06_cwv_bfcache_eligibility",
+      "skill_name": "cwv-bfcache-eligibility",
+      "inputs": {
+        "page_urls": "from_user_input",
+        "repo_dir": "from_user_input"
+      },
+      "outputs": {
+        "bfcache_blockers": "bfcache_blockers",
+        "bfcache_patch": "bfcache_patch"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s07_cwv_verify_field_improvement",
+      "skill_name": "cwv-verify-field-improvement",
+      "inputs": {
+        "field_baseline": "s01_cwv_field_crux_baseline.field_baseline",
+        "rum_p75_report": "s03_cwv_rum_p75_analysis.rum_p75_report",
+        "post_deploy_rum_export": "from_user_input",
+        "crux_api_key": "from_user_input",
+        "deploy_date": "from_user_input"
+      },
+      "outputs": {
+        "improvement_report": "improvement_report"
+      },
+      "parallel_group": 3
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s02_cwv_rum_web_vitals_setup",
+      "to_step": "s03_cwv_rum_p75_analysis",
+      "data_type": "cwv-rum-web-vitals-setup",
+      "field_mapping": {
+        "rum_attribution_schema": "rum_attribution_schema"
+      }
+    },
+    {
+      "from_step": "s03_cwv_rum_p75_analysis",
+      "to_step": "s04_cwv_cls_shift_sources",
+      "data_type": "cwv-rum-p75-analysis",
+      "field_mapping": {
+        "rum_p75_report": "rum_p75_report"
+      }
+    },
+    {
+      "from_step": "s04_cwv_cls_shift_sources",
+      "to_step": "s05_cwv_cls_reserve_space_fixes",
+      "data_type": "cwv-cls-shift-sources",
+      "field_mapping": {
+        "cls_sources": "cls_sources"
+      }
+    },
+    {
+      "from_step": "s01_cwv_field_crux_baseline",
+      "to_step": "s07_cwv_verify_field_improvement",
+      "data_type": "cwv-field-crux-baseline",
+      "field_mapping": {
+        "field_baseline": "field_baseline"
+      }
+    },
+    {
+      "from_step": "s03_cwv_rum_p75_analysis",
+      "to_step": "s07_cwv_verify_field_improvement",
+      "data_type": "cwv-rum-p75-analysis",
+      "field_mapping": {
+        "rum_p75_report": "rum_p75_report"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "site_url",
+    "page_urls",
+    "crux_api_key",
+    "repo_dir",
+    "stack",
+    "rum_endpoint",
+    "rum_data_export",
+    "rum_min_samples",
+    "diagnosis_plan",
+    "post_deploy_rum_export",
+    "deploy_date"
+  ],
+  "terminal_outputs": [
+    "failing_metrics",
+    "rum_instrumentation",
+    "top_offenders",
+    "cls_patch",
+    "bfcache_blockers",
+    "bfcache_patch",
+    "improvement_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_cwv_field_crux_baseline",
+      "s02_cwv_rum_web_vitals_setup",
+      "s06_cwv_bfcache_eligibility"
+    ],
+    [
+      "s03_cwv_rum_p75_analysis"
+    ],
+    [
+      "s04_cwv_cls_shift_sources",
+      "s07_cwv_verify_field_improvement"
+    ],
+    [
+      "s05_cwv_cls_reserve_space_fixes"
+    ]
+  ],
+  "estimated_cost": 7,
+  "critical_path": [
+    "s02_cwv_rum_web_vitals_setup",
+    "s03_cwv_rum_p75_analysis",
+    "s04_cwv_cls_shift_sources",
+    "s05_cwv_cls_reserve_space_fixes"
+  ]
+}

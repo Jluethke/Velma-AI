@@ -1,0 +1,113 @@
+{
+  "name": "sql-database-tuning-pg-contention",
+  "description": "PostgreSQL contention path: record scope, diagnose lock blocking trees and deadlocks, find vacuum xmin holders and dead tuple buildup, and size PgBouncer pooling.",
+  "steps": [
+    {
+      "id": "s01_sqlo_baseline_scope",
+      "skill_name": "sqlo-baseline-scope",
+      "inputs": {
+        "db_engine": "from_user_input",
+        "db_version": "from_user_input_optional",
+        "stack": "from_user_input",
+        "orm": "from_user_input_optional",
+        "symptom": "from_user_input",
+        "target_environment": "from_user_input",
+        "acceptance_criteria": "from_user_input_optional"
+      },
+      "outputs": {
+        "tuning_scope": "tuning_scope"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_sqlo_pg_lock_contention",
+      "skill_name": "sqlo-pg-lock-contention",
+      "inputs": {
+        "tuning_scope": "s01_sqlo_baseline_scope.tuning_scope"
+      },
+      "outputs": {
+        "lock_report": "lock_report"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_sqlo_pg_vacuum_bloat",
+      "skill_name": "sqlo-pg-vacuum-bloat",
+      "inputs": {
+        "tuning_scope": "s01_sqlo_baseline_scope.tuning_scope"
+      },
+      "outputs": {
+        "vacuum_actions": "vacuum_actions"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_sqlo_pgbouncer_pooling",
+      "skill_name": "sqlo-pgbouncer-pooling",
+      "inputs": {
+        "tuning_scope": "s01_sqlo_baseline_scope.tuning_scope",
+        "app_connection_settings": "from_user_input"
+      },
+      "outputs": {
+        "pooler_config": "pooler_config"
+      },
+      "parallel_group": 2
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_sqlo_baseline_scope",
+      "to_step": "s02_sqlo_pg_lock_contention",
+      "data_type": "sqlo-baseline-scope",
+      "field_mapping": {
+        "tuning_scope": "tuning_scope"
+      }
+    },
+    {
+      "from_step": "s01_sqlo_baseline_scope",
+      "to_step": "s03_sqlo_pg_vacuum_bloat",
+      "data_type": "sqlo-baseline-scope",
+      "field_mapping": {
+        "tuning_scope": "tuning_scope"
+      }
+    },
+    {
+      "from_step": "s01_sqlo_baseline_scope",
+      "to_step": "s04_sqlo_pgbouncer_pooling",
+      "data_type": "sqlo-baseline-scope",
+      "field_mapping": {
+        "tuning_scope": "tuning_scope"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "db_engine",
+    "db_version",
+    "stack",
+    "orm",
+    "symptom",
+    "target_environment",
+    "acceptance_criteria",
+    "app_connection_settings"
+  ],
+  "terminal_outputs": [
+    "lock_report",
+    "vacuum_actions",
+    "pooler_config"
+  ],
+  "parallel_groups": [
+    [
+      "s01_sqlo_baseline_scope"
+    ],
+    [
+      "s02_sqlo_pg_lock_contention",
+      "s03_sqlo_pg_vacuum_bloat",
+      "s04_sqlo_pgbouncer_pooling"
+    ]
+  ],
+  "estimated_cost": 4,
+  "critical_path": [
+    "s01_sqlo_baseline_scope",
+    "s02_sqlo_pg_lock_contention"
+  ]
+}

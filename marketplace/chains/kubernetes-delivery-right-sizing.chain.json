@@ -1,0 +1,236 @@
+{
+  "name": "kubernetes-delivery-right-sizing",
+  "description": "Measure real CPU and memory usage, set requests and limits from it, align the language runtime with the limits, and add an HPA.",
+  "steps": [
+    {
+      "id": "s01_k8s_resource_usage_measure",
+      "skill_name": "k8s-resource-usage-measure",
+      "inputs": {
+        "cluster_context": "from_user_input",
+        "namespace": "from_user_input",
+        "app_name": "from_user_input",
+        "measurement_window": "from_user_input",
+        "load_test_command": "from_user_input_optional",
+        "probed_deployment": "from_user_input"
+      },
+      "outputs": {
+        "usage_report": "usage_report"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_k8s_requests_limits_from_usage",
+      "skill_name": "k8s-requests-limits-from-usage",
+      "inputs": {
+        "probed_deployment": "from_user_input",
+        "usage_report": "s01_k8s_resource_usage_measure.usage_report",
+        "request_percentile": "from_user_input",
+        "qos_target": "from_user_input",
+        "memory_headroom": "from_user_input",
+        "namespace": "from_user_input"
+      },
+      "outputs": {
+        "resourced_deployment": "resourced_deployment"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_k8s_py_gunicorn_worker_sizing",
+      "skill_name": "k8s-py-gunicorn-worker-sizing",
+      "inputs": {
+        "repo_dir": "from_user_input",
+        "resourced_deployment": "s02_k8s_requests_limits_from_usage.resourced_deployment",
+        "usage_report": "s01_k8s_resource_usage_measure.usage_report"
+      },
+      "outputs": {
+        "py_runtime_settings": "py_runtime_settings"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_k8s_node_heap_sizing",
+      "skill_name": "k8s-node-heap-sizing",
+      "inputs": {
+        "repo_dir": "from_user_input",
+        "resourced_deployment": "s02_k8s_requests_limits_from_usage.resourced_deployment",
+        "usage_report": "s01_k8s_resource_usage_measure.usage_report"
+      },
+      "outputs": {
+        "node_runtime_settings": "node_runtime_settings"
+      },
+      "condition": "stack == 'node'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s05_k8s_go_gomaxprocs_gomemlimit",
+      "skill_name": "k8s-go-gomaxprocs-gomemlimit",
+      "inputs": {
+        "repo_dir": "from_user_input",
+        "resourced_deployment": "s02_k8s_requests_limits_from_usage.resourced_deployment",
+        "usage_report": "s01_k8s_resource_usage_measure.usage_report"
+      },
+      "outputs": {
+        "go_runtime_settings": "go_runtime_settings"
+      },
+      "condition": "stack == 'go'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s06_k8s_jvm_container_heap",
+      "skill_name": "k8s-jvm-container-heap",
+      "inputs": {
+        "repo_dir": "from_user_input",
+        "resourced_deployment": "s02_k8s_requests_limits_from_usage.resourced_deployment",
+        "usage_report": "s01_k8s_resource_usage_measure.usage_report"
+      },
+      "outputs": {
+        "jvm_runtime_settings": "jvm_runtime_settings"
+      },
+      "condition": "stack == 'java'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s07_k8s_hpa_autoscaling",
+      "skill_name": "k8s-hpa-autoscaling",
+      "inputs": {
+        "rollout_deployment": "from_user_input",
+        "usage_report": "s01_k8s_resource_usage_measure.usage_report",
+        "min_replicas": "from_user_input",
+        "max_replicas": "from_user_input",
+        "target_cpu_utilization": "from_user_input"
+      },
+      "outputs": {
+        "hpa_manifest": "hpa_manifest"
+      },
+      "condition": "max_replicas > min_replicas",
+      "parallel_group": 2
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_k8s_resource_usage_measure",
+      "to_step": "s02_k8s_requests_limits_from_usage",
+      "data_type": "k8s-resource-usage-measure",
+      "field_mapping": {
+        "usage_report": "usage_report"
+      }
+    },
+    {
+      "from_step": "s02_k8s_requests_limits_from_usage",
+      "to_step": "s03_k8s_py_gunicorn_worker_sizing",
+      "data_type": "k8s-requests-limits-from-usage",
+      "field_mapping": {
+        "resourced_deployment": "resourced_deployment"
+      }
+    },
+    {
+      "from_step": "s01_k8s_resource_usage_measure",
+      "to_step": "s03_k8s_py_gunicorn_worker_sizing",
+      "data_type": "k8s-resource-usage-measure",
+      "field_mapping": {
+        "usage_report": "usage_report"
+      }
+    },
+    {
+      "from_step": "s02_k8s_requests_limits_from_usage",
+      "to_step": "s04_k8s_node_heap_sizing",
+      "data_type": "k8s-requests-limits-from-usage",
+      "field_mapping": {
+        "resourced_deployment": "resourced_deployment"
+      }
+    },
+    {
+      "from_step": "s01_k8s_resource_usage_measure",
+      "to_step": "s04_k8s_node_heap_sizing",
+      "data_type": "k8s-resource-usage-measure",
+      "field_mapping": {
+        "usage_report": "usage_report"
+      }
+    },
+    {
+      "from_step": "s02_k8s_requests_limits_from_usage",
+      "to_step": "s05_k8s_go_gomaxprocs_gomemlimit",
+      "data_type": "k8s-requests-limits-from-usage",
+      "field_mapping": {
+        "resourced_deployment": "resourced_deployment"
+      }
+    },
+    {
+      "from_step": "s01_k8s_resource_usage_measure",
+      "to_step": "s05_k8s_go_gomaxprocs_gomemlimit",
+      "data_type": "k8s-resource-usage-measure",
+      "field_mapping": {
+        "usage_report": "usage_report"
+      }
+    },
+    {
+      "from_step": "s02_k8s_requests_limits_from_usage",
+      "to_step": "s06_k8s_jvm_container_heap",
+      "data_type": "k8s-requests-limits-from-usage",
+      "field_mapping": {
+        "resourced_deployment": "resourced_deployment"
+      }
+    },
+    {
+      "from_step": "s01_k8s_resource_usage_measure",
+      "to_step": "s06_k8s_jvm_container_heap",
+      "data_type": "k8s-resource-usage-measure",
+      "field_mapping": {
+        "usage_report": "usage_report"
+      }
+    },
+    {
+      "from_step": "s01_k8s_resource_usage_measure",
+      "to_step": "s07_k8s_hpa_autoscaling",
+      "data_type": "k8s-resource-usage-measure",
+      "field_mapping": {
+        "usage_report": "usage_report"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "cluster_context",
+    "namespace",
+    "app_name",
+    "measurement_window",
+    "load_test_command",
+    "probed_deployment",
+    "request_percentile",
+    "qos_target",
+    "memory_headroom",
+    "repo_dir",
+    "rollout_deployment",
+    "min_replicas",
+    "max_replicas",
+    "target_cpu_utilization"
+  ],
+  "terminal_outputs": [
+    "py_runtime_settings",
+    "node_runtime_settings",
+    "go_runtime_settings",
+    "jvm_runtime_settings",
+    "hpa_manifest"
+  ],
+  "parallel_groups": [
+    [
+      "s01_k8s_resource_usage_measure"
+    ],
+    [
+      "s02_k8s_requests_limits_from_usage",
+      "s07_k8s_hpa_autoscaling"
+    ],
+    [
+      "s03_k8s_py_gunicorn_worker_sizing",
+      "s04_k8s_node_heap_sizing",
+      "s05_k8s_go_gomaxprocs_gomemlimit",
+      "s06_k8s_jvm_container_heap"
+    ]
+  ],
+  "estimated_cost": 7,
+  "critical_path": [
+    "s01_k8s_resource_usage_measure",
+    "s02_k8s_requests_limits_from_usage",
+    "s06_k8s_jvm_container_heap"
+  ]
+}

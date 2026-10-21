@@ -1,0 +1,319 @@
+{
+  "name": "service-resilience-fault-injection",
+  "description": "Plan timeouts, retries and breakers from measurements, then prove them with a Toxiproxy fault matrix, a Chaos Mesh experiment and a verification report.",
+  "steps": [
+    {
+      "id": "s01_res_dependency_map",
+      "skill_name": "res-dependency-map",
+      "inputs": {
+        "service_repo": "from_user_input",
+        "stack": "from_user_input",
+        "trace_source": "from_user_input_optional"
+      },
+      "outputs": {
+        "dependency_map": "dependency_map"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_res_latency_percentiles",
+      "skill_name": "res-latency-percentiles",
+      "inputs": {
+        "dependency_map": "s01_res_dependency_map.dependency_map",
+        "metrics_source": "from_user_input",
+        "measurement_window": "from_user_input"
+      },
+      "outputs": {
+        "latency_profile": "latency_profile"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_res_timeout_budget",
+      "skill_name": "res-timeout-budget",
+      "inputs": {
+        "dependency_map": "s01_res_dependency_map.dependency_map",
+        "latency_profile": "s02_res_latency_percentiles.latency_profile",
+        "request_deadline_ms": "from_user_input",
+        "false_timeout_rate": "from_user_input"
+      },
+      "outputs": {
+        "timeout_plan": "timeout_plan"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_res_retry_policy",
+      "skill_name": "res-retry-policy",
+      "inputs": {
+        "dependency_map": "s01_res_dependency_map.dependency_map",
+        "timeout_plan": "s03_res_timeout_budget.timeout_plan"
+      },
+      "outputs": {
+        "retry_policy": "retry_policy"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s05_res_breaker_policy",
+      "skill_name": "res-breaker-policy",
+      "inputs": {
+        "dependency_map": "s01_res_dependency_map.dependency_map",
+        "latency_profile": "s02_res_latency_percentiles.latency_profile",
+        "retry_policy": "s04_res_retry_policy.retry_policy"
+      },
+      "outputs": {
+        "breaker_policy": "breaker_policy"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s06_res_toxiproxy_faults",
+      "skill_name": "res-toxiproxy-faults",
+      "inputs": {
+        "dependency_map": "s01_res_dependency_map.dependency_map",
+        "timeout_plan": "s03_res_timeout_budget.timeout_plan",
+        "breaker_policy": "s05_res_breaker_policy.breaker_policy"
+      },
+      "outputs": {
+        "fault_results": "fault_results"
+      },
+      "parallel_group": 6
+    },
+    {
+      "id": "s07_res_chaos_experiment",
+      "skill_name": "res-chaos-experiment",
+      "inputs": {
+        "dependency_map": "s01_res_dependency_map.dependency_map",
+        "fault_results": "s06_res_toxiproxy_faults.fault_results",
+        "steady_state_slo": "from_user_input_optional"
+      },
+      "outputs": {
+        "chaos_journal": "chaos_journal"
+      },
+      "condition": "steady_state_slo != null",
+      "parallel_group": 7
+    },
+    {
+      "id": "s08_res_resilience_verify",
+      "skill_name": "res-resilience-verify",
+      "inputs": {
+        "dependency_map": "s01_res_dependency_map.dependency_map",
+        "timeout_plan": "s03_res_timeout_budget.timeout_plan",
+        "retry_policy": "s04_res_retry_policy.retry_policy",
+        "breaker_policy": "s05_res_breaker_policy.breaker_policy",
+        "fault_results": "s06_res_toxiproxy_faults.fault_results",
+        "chaos_journal": "s07_res_chaos_experiment.chaos_journal",
+        "request_deadline_ms": "from_user_input"
+      },
+      "outputs": {
+        "verification_report": "verification_report"
+      },
+      "parallel_group": 8
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_res_dependency_map",
+      "to_step": "s02_res_latency_percentiles",
+      "data_type": "res-dependency-map",
+      "field_mapping": {
+        "dependency_map": "dependency_map"
+      }
+    },
+    {
+      "from_step": "s01_res_dependency_map",
+      "to_step": "s03_res_timeout_budget",
+      "data_type": "res-dependency-map",
+      "field_mapping": {
+        "dependency_map": "dependency_map"
+      }
+    },
+    {
+      "from_step": "s02_res_latency_percentiles",
+      "to_step": "s03_res_timeout_budget",
+      "data_type": "res-latency-percentiles",
+      "field_mapping": {
+        "latency_profile": "latency_profile"
+      }
+    },
+    {
+      "from_step": "s01_res_dependency_map",
+      "to_step": "s04_res_retry_policy",
+      "data_type": "res-dependency-map",
+      "field_mapping": {
+        "dependency_map": "dependency_map"
+      }
+    },
+    {
+      "from_step": "s03_res_timeout_budget",
+      "to_step": "s04_res_retry_policy",
+      "data_type": "res-timeout-budget",
+      "field_mapping": {
+        "timeout_plan": "timeout_plan"
+      }
+    },
+    {
+      "from_step": "s01_res_dependency_map",
+      "to_step": "s05_res_breaker_policy",
+      "data_type": "res-dependency-map",
+      "field_mapping": {
+        "dependency_map": "dependency_map"
+      }
+    },
+    {
+      "from_step": "s02_res_latency_percentiles",
+      "to_step": "s05_res_breaker_policy",
+      "data_type": "res-latency-percentiles",
+      "field_mapping": {
+        "latency_profile": "latency_profile"
+      }
+    },
+    {
+      "from_step": "s04_res_retry_policy",
+      "to_step": "s05_res_breaker_policy",
+      "data_type": "res-retry-policy",
+      "field_mapping": {
+        "retry_policy": "retry_policy"
+      }
+    },
+    {
+      "from_step": "s01_res_dependency_map",
+      "to_step": "s06_res_toxiproxy_faults",
+      "data_type": "res-dependency-map",
+      "field_mapping": {
+        "dependency_map": "dependency_map"
+      }
+    },
+    {
+      "from_step": "s03_res_timeout_budget",
+      "to_step": "s06_res_toxiproxy_faults",
+      "data_type": "res-timeout-budget",
+      "field_mapping": {
+        "timeout_plan": "timeout_plan"
+      }
+    },
+    {
+      "from_step": "s05_res_breaker_policy",
+      "to_step": "s06_res_toxiproxy_faults",
+      "data_type": "res-breaker-policy",
+      "field_mapping": {
+        "breaker_policy": "breaker_policy"
+      }
+    },
+    {
+      "from_step": "s01_res_dependency_map",
+      "to_step": "s07_res_chaos_experiment",
+      "data_type": "res-dependency-map",
+      "field_mapping": {
+        "dependency_map": "dependency_map"
+      }
+    },
+    {
+      "from_step": "s06_res_toxiproxy_faults",
+      "to_step": "s07_res_chaos_experiment",
+      "data_type": "res-toxiproxy-faults",
+      "field_mapping": {
+        "fault_results": "fault_results"
+      }
+    },
+    {
+      "from_step": "s01_res_dependency_map",
+      "to_step": "s08_res_resilience_verify",
+      "data_type": "res-dependency-map",
+      "field_mapping": {
+        "dependency_map": "dependency_map"
+      }
+    },
+    {
+      "from_step": "s03_res_timeout_budget",
+      "to_step": "s08_res_resilience_verify",
+      "data_type": "res-timeout-budget",
+      "field_mapping": {
+        "timeout_plan": "timeout_plan"
+      }
+    },
+    {
+      "from_step": "s04_res_retry_policy",
+      "to_step": "s08_res_resilience_verify",
+      "data_type": "res-retry-policy",
+      "field_mapping": {
+        "retry_policy": "retry_policy"
+      }
+    },
+    {
+      "from_step": "s05_res_breaker_policy",
+      "to_step": "s08_res_resilience_verify",
+      "data_type": "res-breaker-policy",
+      "field_mapping": {
+        "breaker_policy": "breaker_policy"
+      }
+    },
+    {
+      "from_step": "s06_res_toxiproxy_faults",
+      "to_step": "s08_res_resilience_verify",
+      "data_type": "res-toxiproxy-faults",
+      "field_mapping": {
+        "fault_results": "fault_results"
+      }
+    },
+    {
+      "from_step": "s07_res_chaos_experiment",
+      "to_step": "s08_res_resilience_verify",
+      "data_type": "res-chaos-experiment",
+      "field_mapping": {
+        "chaos_journal": "chaos_journal"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "service_repo",
+    "stack",
+    "trace_source",
+    "metrics_source",
+    "measurement_window",
+    "request_deadline_ms",
+    "false_timeout_rate",
+    "steady_state_slo"
+  ],
+  "terminal_outputs": [
+    "verification_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_res_dependency_map"
+    ],
+    [
+      "s02_res_latency_percentiles"
+    ],
+    [
+      "s03_res_timeout_budget"
+    ],
+    [
+      "s04_res_retry_policy"
+    ],
+    [
+      "s05_res_breaker_policy"
+    ],
+    [
+      "s06_res_toxiproxy_faults"
+    ],
+    [
+      "s07_res_chaos_experiment"
+    ],
+    [
+      "s08_res_resilience_verify"
+    ]
+  ],
+  "estimated_cost": 8,
+  "critical_path": [
+    "s01_res_dependency_map",
+    "s02_res_latency_percentiles",
+    "s03_res_timeout_budget",
+    "s04_res_retry_policy",
+    "s05_res_breaker_policy",
+    "s06_res_toxiproxy_faults",
+    "s07_res_chaos_experiment",
+    "s08_res_resilience_verify"
+  ]
+}

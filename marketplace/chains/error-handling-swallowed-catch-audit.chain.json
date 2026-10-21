@@ -1,0 +1,213 @@
+{
+  "name": "error-handling-swallowed-catch-audit",
+  "description": "Find swallowed, broad and cause-dropping catches with ripgrep and Semgrep, classify the errors and their retryability, and assign every catch site one fix action, without changing code.",
+  "steps": [
+    {
+      "id": "s01_errh_boundary_map",
+      "skill_name": "errh-boundary-map",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "framework": "from_user_input_optional"
+      },
+      "outputs": {
+        "boundary_map": "boundary_map"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_errh_rg_swallowed_catch_inventory",
+      "skill_name": "errh-rg-swallowed-catch-inventory",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "boundary_map": "s01_errh_boundary_map.boundary_map"
+      },
+      "outputs": {
+        "catch_inventory": "catch_inventory"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_errh_semgrep_swallowed_catch_scan",
+      "skill_name": "errh-semgrep-swallowed-catch-scan",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "catch_inventory": "s02_errh_rg_swallowed_catch_inventory.catch_inventory"
+      },
+      "outputs": {
+        "semgrep_findings": "semgrep_findings"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_errh_error_taxonomy",
+      "skill_name": "errh-error-taxonomy",
+      "inputs": {
+        "boundary_map": "s01_errh_boundary_map.boundary_map",
+        "catch_inventory": "s02_errh_rg_swallowed_catch_inventory.catch_inventory",
+        "semgrep_findings": "s03_errh_semgrep_swallowed_catch_scan.semgrep_findings"
+      },
+      "outputs": {
+        "error_taxonomy": "error_taxonomy"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s05_errh_retryability_table",
+      "skill_name": "errh-retryability-table",
+      "inputs": {
+        "error_taxonomy": "s04_errh_error_taxonomy.error_taxonomy",
+        "boundary_map": "s01_errh_boundary_map.boundary_map",
+        "max_attempts": "from_user_input_optional"
+      },
+      "outputs": {
+        "retry_policy_table": "retry_policy_table"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s06_errh_catch_site_triage",
+      "skill_name": "errh-catch-site-triage",
+      "inputs": {
+        "catch_inventory": "s02_errh_rg_swallowed_catch_inventory.catch_inventory",
+        "semgrep_findings": "s03_errh_semgrep_swallowed_catch_scan.semgrep_findings",
+        "error_taxonomy": "s04_errh_error_taxonomy.error_taxonomy",
+        "retry_policy_table": "s05_errh_retryability_table.retry_policy_table"
+      },
+      "outputs": {
+        "triage_table": "triage_table"
+      },
+      "parallel_group": 6
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_errh_boundary_map",
+      "to_step": "s02_errh_rg_swallowed_catch_inventory",
+      "data_type": "errh-boundary-map",
+      "field_mapping": {
+        "boundary_map": "boundary_map"
+      }
+    },
+    {
+      "from_step": "s02_errh_rg_swallowed_catch_inventory",
+      "to_step": "s03_errh_semgrep_swallowed_catch_scan",
+      "data_type": "errh-rg-swallowed-catch-inventory",
+      "field_mapping": {
+        "catch_inventory": "catch_inventory"
+      }
+    },
+    {
+      "from_step": "s01_errh_boundary_map",
+      "to_step": "s04_errh_error_taxonomy",
+      "data_type": "errh-boundary-map",
+      "field_mapping": {
+        "boundary_map": "boundary_map"
+      }
+    },
+    {
+      "from_step": "s02_errh_rg_swallowed_catch_inventory",
+      "to_step": "s04_errh_error_taxonomy",
+      "data_type": "errh-rg-swallowed-catch-inventory",
+      "field_mapping": {
+        "catch_inventory": "catch_inventory"
+      }
+    },
+    {
+      "from_step": "s03_errh_semgrep_swallowed_catch_scan",
+      "to_step": "s04_errh_error_taxonomy",
+      "data_type": "errh-semgrep-swallowed-catch-scan",
+      "field_mapping": {
+        "semgrep_findings": "semgrep_findings"
+      }
+    },
+    {
+      "from_step": "s04_errh_error_taxonomy",
+      "to_step": "s05_errh_retryability_table",
+      "data_type": "errh-error-taxonomy",
+      "field_mapping": {
+        "error_taxonomy": "error_taxonomy"
+      }
+    },
+    {
+      "from_step": "s01_errh_boundary_map",
+      "to_step": "s05_errh_retryability_table",
+      "data_type": "errh-boundary-map",
+      "field_mapping": {
+        "boundary_map": "boundary_map"
+      }
+    },
+    {
+      "from_step": "s02_errh_rg_swallowed_catch_inventory",
+      "to_step": "s06_errh_catch_site_triage",
+      "data_type": "errh-rg-swallowed-catch-inventory",
+      "field_mapping": {
+        "catch_inventory": "catch_inventory"
+      }
+    },
+    {
+      "from_step": "s03_errh_semgrep_swallowed_catch_scan",
+      "to_step": "s06_errh_catch_site_triage",
+      "data_type": "errh-semgrep-swallowed-catch-scan",
+      "field_mapping": {
+        "semgrep_findings": "semgrep_findings"
+      }
+    },
+    {
+      "from_step": "s04_errh_error_taxonomy",
+      "to_step": "s06_errh_catch_site_triage",
+      "data_type": "errh-error-taxonomy",
+      "field_mapping": {
+        "error_taxonomy": "error_taxonomy"
+      }
+    },
+    {
+      "from_step": "s05_errh_retryability_table",
+      "to_step": "s06_errh_catch_site_triage",
+      "data_type": "errh-retryability-table",
+      "field_mapping": {
+        "retry_policy_table": "retry_policy_table"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "repo_path",
+    "stack",
+    "framework",
+    "max_attempts"
+  ],
+  "terminal_outputs": [
+    "triage_table"
+  ],
+  "parallel_groups": [
+    [
+      "s01_errh_boundary_map"
+    ],
+    [
+      "s02_errh_rg_swallowed_catch_inventory"
+    ],
+    [
+      "s03_errh_semgrep_swallowed_catch_scan"
+    ],
+    [
+      "s04_errh_error_taxonomy"
+    ],
+    [
+      "s05_errh_retryability_table"
+    ],
+    [
+      "s06_errh_catch_site_triage"
+    ]
+  ],
+  "estimated_cost": 6,
+  "critical_path": [
+    "s01_errh_boundary_map",
+    "s02_errh_rg_swallowed_catch_inventory",
+    "s03_errh_semgrep_swallowed_catch_scan",
+    "s04_errh_error_taxonomy",
+    "s05_errh_retryability_table",
+    "s06_errh_catch_site_triage"
+  ]
+}

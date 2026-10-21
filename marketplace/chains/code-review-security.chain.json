@@ -1,0 +1,446 @@
+{
+  "name": "code-review-security",
+  "description": "Security-focused pull request review: fetch, intent, split, reading order, OWASP Top 10 pass, Gitleaks over every PR commit, the stack SAST and dependency audit, labeled comments, approval and posting.",
+  "steps": [
+    {
+      "id": "s01_prr_fetch_pr_diff",
+      "skill_name": "prr-fetch-pr-diff",
+      "inputs": {
+        "repo_dir": "from_user_input",
+        "pr_number": "from_user_input",
+        "forge": "from_user_input",
+        "base_branch": "from_user_input"
+      },
+      "outputs": {
+        "diff_file": "diff_file",
+        "changed_files": "changed_files",
+        "diff_stat": "diff_stat",
+        "head_sha": "head_sha",
+        "pr_description": "pr_description"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_prr_intent_scope_check",
+      "skill_name": "prr-intent-scope-check",
+      "inputs": {
+        "pr_description": "s01_prr_fetch_pr_diff.pr_description",
+        "changed_files": "s01_prr_fetch_pr_diff.changed_files",
+        "findings_dir": "from_user_input",
+        "linked_issue": "from_user_input_optional",
+        "role": "from_user_input_optional"
+      },
+      "outputs": {
+        "intent_statement": "intent_statement",
+        "scope_findings": "scope_findings"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_prr_large_pr_split",
+      "skill_name": "prr-large-pr-split",
+      "inputs": {
+        "repo_dir": "from_user_input",
+        "base_branch": "from_user_input",
+        "head_sha": "s01_prr_fetch_pr_diff.head_sha",
+        "diff_stat": "s01_prr_fetch_pr_diff.diff_stat",
+        "intent_statement": "s02_prr_intent_scope_check.intent_statement",
+        "max_review_lines": "from_user_input",
+        "findings_dir": "from_user_input"
+      },
+      "outputs": {
+        "review_units": "review_units",
+        "split_findings": "split_findings"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_prr_diff_reading_order",
+      "skill_name": "prr-diff-reading-order",
+      "inputs": {
+        "changed_files": "s01_prr_fetch_pr_diff.changed_files",
+        "review_units": "s03_prr_large_pr_split.review_units",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "reading_plan": "reading_plan"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s05_prr_owasp_security_pass",
+      "skill_name": "prr-owasp-security-pass",
+      "inputs": {
+        "diff_file": "s01_prr_fetch_pr_diff.diff_file",
+        "reading_plan": "s04_prr_diff_reading_order.reading_plan",
+        "findings_dir": "from_user_input"
+      },
+      "outputs": {
+        "security_findings": "security_findings"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s06_prr_gitleaks_secrets_scan",
+      "skill_name": "prr-gitleaks-secrets-scan",
+      "inputs": {
+        "repo_dir": "from_user_input",
+        "base_branch": "from_user_input",
+        "head_sha": "s01_prr_fetch_pr_diff.head_sha",
+        "findings_dir": "from_user_input"
+      },
+      "outputs": {
+        "secret_findings": "secret_findings"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s07_prr_py_bandit_semgrep",
+      "skill_name": "prr-py-bandit-semgrep",
+      "inputs": {
+        "repo_dir": "from_user_input",
+        "base_branch": "from_user_input",
+        "changed_files": "s01_prr_fetch_pr_diff.changed_files",
+        "findings_dir": "from_user_input"
+      },
+      "outputs": {
+        "py_sast_findings": "py_sast_findings"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s08_prr_node_audit_semgrep",
+      "skill_name": "prr-node-audit-semgrep",
+      "inputs": {
+        "repo_dir": "from_user_input",
+        "base_branch": "from_user_input",
+        "changed_files": "s01_prr_fetch_pr_diff.changed_files",
+        "findings_dir": "from_user_input"
+      },
+      "outputs": {
+        "node_sast_findings": "node_sast_findings"
+      },
+      "condition": "stack == 'typescript' or stack == 'javascript'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s09_prr_go_gosec_govulncheck",
+      "skill_name": "prr-go-gosec-govulncheck",
+      "inputs": {
+        "repo_dir": "from_user_input",
+        "base_branch": "from_user_input",
+        "changed_files": "s01_prr_fetch_pr_diff.changed_files",
+        "findings_dir": "from_user_input"
+      },
+      "outputs": {
+        "go_sast_findings": "go_sast_findings"
+      },
+      "condition": "stack == 'go'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s10_prr_severity_comments",
+      "skill_name": "prr-severity-comments",
+      "inputs": {
+        "findings_dir": "from_user_input",
+        "diff_file": "s01_prr_fetch_pr_diff.diff_file",
+        "head_sha": "s01_prr_fetch_pr_diff.head_sha"
+      },
+      "outputs": {
+        "review_comments": "review_comments",
+        "blocking_count": "blocking_count"
+      },
+      "parallel_group": 6
+    },
+    {
+      "id": "s11_prr_approval_decision",
+      "skill_name": "prr-approval-decision",
+      "inputs": {
+        "repo_dir": "from_user_input",
+        "pr_number": "from_user_input",
+        "forge": "from_user_input",
+        "head_sha": "s01_prr_fetch_pr_diff.head_sha",
+        "review_comments": "s10_prr_severity_comments.review_comments",
+        "blocking_count": "s10_prr_severity_comments.blocking_count",
+        "review_units": "s03_prr_large_pr_split.review_units",
+        "findings_dir": "from_user_input"
+      },
+      "outputs": {
+        "review_verdict": "review_verdict",
+        "verdict_rationale": "verdict_rationale"
+      },
+      "parallel_group": 7
+    },
+    {
+      "id": "s12_prr_gh_post_review",
+      "skill_name": "prr-gh-post-review",
+      "inputs": {
+        "repo_dir": "from_user_input",
+        "pr_number": "from_user_input",
+        "head_sha": "s01_prr_fetch_pr_diff.head_sha",
+        "review_comments": "s10_prr_severity_comments.review_comments",
+        "review_verdict": "s11_prr_approval_decision.review_verdict",
+        "verdict_rationale": "s11_prr_approval_decision.verdict_rationale"
+      },
+      "outputs": {
+        "posted_review_url": "posted_review_url"
+      },
+      "condition": "forge == 'github'",
+      "parallel_group": 8
+    },
+    {
+      "id": "s13_prr_glab_post_review",
+      "skill_name": "prr-glab-post-review",
+      "inputs": {
+        "repo_dir": "from_user_input",
+        "pr_number": "from_user_input",
+        "head_sha": "s01_prr_fetch_pr_diff.head_sha",
+        "review_comments": "s10_prr_severity_comments.review_comments",
+        "review_verdict": "s11_prr_approval_decision.review_verdict",
+        "verdict_rationale": "s11_prr_approval_decision.verdict_rationale"
+      },
+      "outputs": {
+        "posted_review_url": "posted_review_url"
+      },
+      "condition": "forge == 'gitlab'",
+      "parallel_group": 8
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_prr_fetch_pr_diff",
+      "to_step": "s02_prr_intent_scope_check",
+      "data_type": "prr-fetch-pr-diff",
+      "field_mapping": {
+        "pr_description": "pr_description",
+        "changed_files": "changed_files"
+      }
+    },
+    {
+      "from_step": "s01_prr_fetch_pr_diff",
+      "to_step": "s03_prr_large_pr_split",
+      "data_type": "prr-fetch-pr-diff",
+      "field_mapping": {
+        "head_sha": "head_sha",
+        "diff_stat": "diff_stat"
+      }
+    },
+    {
+      "from_step": "s02_prr_intent_scope_check",
+      "to_step": "s03_prr_large_pr_split",
+      "data_type": "prr-intent-scope-check",
+      "field_mapping": {
+        "intent_statement": "intent_statement"
+      }
+    },
+    {
+      "from_step": "s01_prr_fetch_pr_diff",
+      "to_step": "s04_prr_diff_reading_order",
+      "data_type": "prr-fetch-pr-diff",
+      "field_mapping": {
+        "changed_files": "changed_files"
+      }
+    },
+    {
+      "from_step": "s03_prr_large_pr_split",
+      "to_step": "s04_prr_diff_reading_order",
+      "data_type": "prr-large-pr-split",
+      "field_mapping": {
+        "review_units": "review_units"
+      }
+    },
+    {
+      "from_step": "s01_prr_fetch_pr_diff",
+      "to_step": "s05_prr_owasp_security_pass",
+      "data_type": "prr-fetch-pr-diff",
+      "field_mapping": {
+        "diff_file": "diff_file"
+      }
+    },
+    {
+      "from_step": "s04_prr_diff_reading_order",
+      "to_step": "s05_prr_owasp_security_pass",
+      "data_type": "prr-diff-reading-order",
+      "field_mapping": {
+        "reading_plan": "reading_plan"
+      }
+    },
+    {
+      "from_step": "s01_prr_fetch_pr_diff",
+      "to_step": "s06_prr_gitleaks_secrets_scan",
+      "data_type": "prr-fetch-pr-diff",
+      "field_mapping": {
+        "head_sha": "head_sha"
+      }
+    },
+    {
+      "from_step": "s01_prr_fetch_pr_diff",
+      "to_step": "s07_prr_py_bandit_semgrep",
+      "data_type": "prr-fetch-pr-diff",
+      "field_mapping": {
+        "changed_files": "changed_files"
+      }
+    },
+    {
+      "from_step": "s01_prr_fetch_pr_diff",
+      "to_step": "s08_prr_node_audit_semgrep",
+      "data_type": "prr-fetch-pr-diff",
+      "field_mapping": {
+        "changed_files": "changed_files"
+      }
+    },
+    {
+      "from_step": "s01_prr_fetch_pr_diff",
+      "to_step": "s09_prr_go_gosec_govulncheck",
+      "data_type": "prr-fetch-pr-diff",
+      "field_mapping": {
+        "changed_files": "changed_files"
+      }
+    },
+    {
+      "from_step": "s01_prr_fetch_pr_diff",
+      "to_step": "s10_prr_severity_comments",
+      "data_type": "prr-fetch-pr-diff",
+      "field_mapping": {
+        "diff_file": "diff_file",
+        "head_sha": "head_sha"
+      }
+    },
+    {
+      "from_step": "s01_prr_fetch_pr_diff",
+      "to_step": "s11_prr_approval_decision",
+      "data_type": "prr-fetch-pr-diff",
+      "field_mapping": {
+        "head_sha": "head_sha"
+      }
+    },
+    {
+      "from_step": "s10_prr_severity_comments",
+      "to_step": "s11_prr_approval_decision",
+      "data_type": "prr-severity-comments",
+      "field_mapping": {
+        "review_comments": "review_comments",
+        "blocking_count": "blocking_count"
+      }
+    },
+    {
+      "from_step": "s03_prr_large_pr_split",
+      "to_step": "s11_prr_approval_decision",
+      "data_type": "prr-large-pr-split",
+      "field_mapping": {
+        "review_units": "review_units"
+      }
+    },
+    {
+      "from_step": "s01_prr_fetch_pr_diff",
+      "to_step": "s12_prr_gh_post_review",
+      "data_type": "prr-fetch-pr-diff",
+      "field_mapping": {
+        "head_sha": "head_sha"
+      }
+    },
+    {
+      "from_step": "s10_prr_severity_comments",
+      "to_step": "s12_prr_gh_post_review",
+      "data_type": "prr-severity-comments",
+      "field_mapping": {
+        "review_comments": "review_comments"
+      }
+    },
+    {
+      "from_step": "s11_prr_approval_decision",
+      "to_step": "s12_prr_gh_post_review",
+      "data_type": "prr-approval-decision",
+      "field_mapping": {
+        "review_verdict": "review_verdict",
+        "verdict_rationale": "verdict_rationale"
+      }
+    },
+    {
+      "from_step": "s01_prr_fetch_pr_diff",
+      "to_step": "s13_prr_glab_post_review",
+      "data_type": "prr-fetch-pr-diff",
+      "field_mapping": {
+        "head_sha": "head_sha"
+      }
+    },
+    {
+      "from_step": "s10_prr_severity_comments",
+      "to_step": "s13_prr_glab_post_review",
+      "data_type": "prr-severity-comments",
+      "field_mapping": {
+        "review_comments": "review_comments"
+      }
+    },
+    {
+      "from_step": "s11_prr_approval_decision",
+      "to_step": "s13_prr_glab_post_review",
+      "data_type": "prr-approval-decision",
+      "field_mapping": {
+        "review_verdict": "review_verdict",
+        "verdict_rationale": "verdict_rationale"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "repo_dir",
+    "pr_number",
+    "forge",
+    "base_branch",
+    "findings_dir",
+    "linked_issue",
+    "role",
+    "max_review_lines",
+    "stack"
+  ],
+  "terminal_outputs": [
+    "review_comments",
+    "blocking_count",
+    "review_verdict",
+    "verdict_rationale",
+    "posted_review_url"
+  ],
+  "parallel_groups": [
+    [
+      "s01_prr_fetch_pr_diff"
+    ],
+    [
+      "s02_prr_intent_scope_check",
+      "s06_prr_gitleaks_secrets_scan",
+      "s07_prr_py_bandit_semgrep",
+      "s08_prr_node_audit_semgrep",
+      "s09_prr_go_gosec_govulncheck"
+    ],
+    [
+      "s03_prr_large_pr_split"
+    ],
+    [
+      "s04_prr_diff_reading_order"
+    ],
+    [
+      "s05_prr_owasp_security_pass"
+    ],
+    [
+      "s10_prr_severity_comments"
+    ],
+    [
+      "s11_prr_approval_decision"
+    ],
+    [
+      "s12_prr_gh_post_review",
+      "s13_prr_glab_post_review"
+    ]
+  ],
+  "estimated_cost": 13,
+  "critical_path": [
+    "s01_prr_fetch_pr_diff",
+    "s02_prr_intent_scope_check",
+    "s03_prr_large_pr_split",
+    "s04_prr_diff_reading_order",
+    "s05_prr_owasp_security_pass",
+    "s10_prr_severity_comments",
+    "s11_prr_approval_decision",
+    "s12_prr_gh_post_review"
+  ]
+}

@@ -1,0 +1,154 @@
+{
+  "name": "rag-applications-answer-safety",
+  "description": "Answer-side quality and safety: cited prompt assembly, retrieved-content injection defenses, claim-level faithfulness scoring, failure triage, and a tenant-safe answer cache.",
+  "steps": [
+    {
+      "id": "s01_rag_prompt_citation_assembly",
+      "skill_name": "rag-prompt-citation-assembly",
+      "inputs": {
+        "rerank_config": "from_user_input",
+        "context_token_budget": "from_user_input",
+        "generator_model": "from_user_input",
+        "work_dir": "from_user_input"
+      },
+      "outputs": {
+        "prompt_template": "prompt_template",
+        "citation_validator": "citation_validator"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_rag_retrieved_injection_defense",
+      "skill_name": "rag-retrieved-injection-defense",
+      "inputs": {
+        "prompt_template": "s01_rag_prompt_citation_assembly.prompt_template",
+        "clean_records": "from_user_input",
+        "work_dir": "from_user_input"
+      },
+      "outputs": {
+        "injection_defenses": "injection_defenses",
+        "injection_test_report": "injection_test_report"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_rag_answer_faithfulness_score",
+      "skill_name": "rag-answer-faithfulness-score",
+      "inputs": {
+        "question_set": "from_user_input",
+        "prompt_template": "s01_rag_prompt_citation_assembly.prompt_template",
+        "judge_model": "from_user_input",
+        "work_dir": "from_user_input"
+      },
+      "outputs": {
+        "faithfulness_report": "faithfulness_report",
+        "judge_agreement": "judge_agreement"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_rag_failure_analysis_triage",
+      "skill_name": "rag-failure-analysis-triage",
+      "inputs": {
+        "question_set": "from_user_input",
+        "eval_harness": "from_user_input",
+        "faithfulness_report": "s03_rag_answer_faithfulness_score.faithfulness_report",
+        "work_dir": "from_user_input"
+      },
+      "outputs": {
+        "failure_report": "failure_report"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s05_rag_answer_cache_redis",
+      "skill_name": "rag-answer-cache-redis",
+      "inputs": {
+        "prompt_template": "s01_rag_prompt_citation_assembly.prompt_template",
+        "redis_url": "from_user_input",
+        "cache_ttl_seconds": "from_user_input",
+        "work_dir": "from_user_input"
+      },
+      "outputs": {
+        "answer_cache": "answer_cache",
+        "cache_test_report": "cache_test_report"
+      },
+      "condition": "use_answer_cache == true",
+      "parallel_group": 2
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_rag_prompt_citation_assembly",
+      "to_step": "s02_rag_retrieved_injection_defense",
+      "data_type": "rag-prompt-citation-assembly",
+      "field_mapping": {
+        "prompt_template": "prompt_template"
+      }
+    },
+    {
+      "from_step": "s01_rag_prompt_citation_assembly",
+      "to_step": "s03_rag_answer_faithfulness_score",
+      "data_type": "rag-prompt-citation-assembly",
+      "field_mapping": {
+        "prompt_template": "prompt_template"
+      }
+    },
+    {
+      "from_step": "s03_rag_answer_faithfulness_score",
+      "to_step": "s04_rag_failure_analysis_triage",
+      "data_type": "rag-answer-faithfulness-score",
+      "field_mapping": {
+        "faithfulness_report": "faithfulness_report"
+      }
+    },
+    {
+      "from_step": "s01_rag_prompt_citation_assembly",
+      "to_step": "s05_rag_answer_cache_redis",
+      "data_type": "rag-prompt-citation-assembly",
+      "field_mapping": {
+        "prompt_template": "prompt_template"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "rerank_config",
+    "context_token_budget",
+    "generator_model",
+    "work_dir",
+    "clean_records",
+    "question_set",
+    "judge_model",
+    "eval_harness",
+    "redis_url",
+    "cache_ttl_seconds"
+  ],
+  "terminal_outputs": [
+    "citation_validator",
+    "injection_defenses",
+    "injection_test_report",
+    "judge_agreement",
+    "failure_report",
+    "answer_cache",
+    "cache_test_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_rag_prompt_citation_assembly"
+    ],
+    [
+      "s02_rag_retrieved_injection_defense",
+      "s03_rag_answer_faithfulness_score",
+      "s05_rag_answer_cache_redis"
+    ],
+    [
+      "s04_rag_failure_analysis_triage"
+    ]
+  ],
+  "estimated_cost": 5,
+  "critical_path": [
+    "s01_rag_prompt_citation_assembly",
+    "s03_rag_answer_faithfulness_score",
+    "s04_rag_failure_analysis_triage"
+  ]
+}

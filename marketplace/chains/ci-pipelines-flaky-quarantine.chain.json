@@ -1,0 +1,138 @@
+{
+  "name": "ci-pipelines-flaky-quarantine",
+  "description": "Detect flaky tests from same-commit CI history with isolated reruns, then quarantine them with the stack's own mechanism in a non-blocking job.",
+  "steps": [
+    {
+      "id": "s01_ci0_flaky_detect_junit",
+      "skill_name": "ci0-flaky-detect-junit",
+      "inputs": {
+        "ci_platform": "from_user_input",
+        "repo_slug": "from_user_input_optional",
+        "gitlab_project_path": "from_user_input_optional",
+        "junit_report_globs": "from_user_input",
+        "rerun_count": "from_user_input"
+      },
+      "outputs": {
+        "flaky_tests": "flaky_tests"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_ci0_py_flaky_quarantine",
+      "skill_name": "ci0-py-flaky-quarantine",
+      "inputs": {
+        "repo_dir": "from_user_input",
+        "flaky_tests": "s01_ci0_flaky_detect_junit.flaky_tests",
+        "ci_platform": "from_user_input"
+      },
+      "outputs": {
+        "quarantine_record": "quarantine_record"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_ci0_node_flaky_quarantine",
+      "skill_name": "ci0-node-flaky-quarantine",
+      "inputs": {
+        "repo_dir": "from_user_input",
+        "flaky_tests": "s01_ci0_flaky_detect_junit.flaky_tests",
+        "ci_platform": "from_user_input"
+      },
+      "outputs": {
+        "quarantine_record": "quarantine_record"
+      },
+      "condition": "stack == 'node'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_ci0_go_flaky_quarantine",
+      "skill_name": "ci0-go-flaky-quarantine",
+      "inputs": {
+        "repo_dir": "from_user_input",
+        "flaky_tests": "s01_ci0_flaky_detect_junit.flaky_tests",
+        "ci_platform": "from_user_input"
+      },
+      "outputs": {
+        "quarantine_record": "quarantine_record"
+      },
+      "condition": "stack == 'go'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s05_ci0_jvm_flaky_quarantine",
+      "skill_name": "ci0-jvm-flaky-quarantine",
+      "inputs": {
+        "repo_dir": "from_user_input",
+        "flaky_tests": "s01_ci0_flaky_detect_junit.flaky_tests",
+        "ci_platform": "from_user_input"
+      },
+      "outputs": {
+        "quarantine_record": "quarantine_record"
+      },
+      "condition": "stack == 'jvm'",
+      "parallel_group": 2
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_ci0_flaky_detect_junit",
+      "to_step": "s02_ci0_py_flaky_quarantine",
+      "data_type": "ci0-flaky-detect-junit",
+      "field_mapping": {
+        "flaky_tests": "flaky_tests"
+      }
+    },
+    {
+      "from_step": "s01_ci0_flaky_detect_junit",
+      "to_step": "s03_ci0_node_flaky_quarantine",
+      "data_type": "ci0-flaky-detect-junit",
+      "field_mapping": {
+        "flaky_tests": "flaky_tests"
+      }
+    },
+    {
+      "from_step": "s01_ci0_flaky_detect_junit",
+      "to_step": "s04_ci0_go_flaky_quarantine",
+      "data_type": "ci0-flaky-detect-junit",
+      "field_mapping": {
+        "flaky_tests": "flaky_tests"
+      }
+    },
+    {
+      "from_step": "s01_ci0_flaky_detect_junit",
+      "to_step": "s05_ci0_jvm_flaky_quarantine",
+      "data_type": "ci0-flaky-detect-junit",
+      "field_mapping": {
+        "flaky_tests": "flaky_tests"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "ci_platform",
+    "repo_slug",
+    "gitlab_project_path",
+    "junit_report_globs",
+    "rerun_count",
+    "repo_dir"
+  ],
+  "terminal_outputs": [
+    "quarantine_record"
+  ],
+  "parallel_groups": [
+    [
+      "s01_ci0_flaky_detect_junit"
+    ],
+    [
+      "s02_ci0_py_flaky_quarantine",
+      "s03_ci0_node_flaky_quarantine",
+      "s04_ci0_go_flaky_quarantine",
+      "s05_ci0_jvm_flaky_quarantine"
+    ]
+  ],
+  "estimated_cost": 5,
+  "critical_path": [
+    "s01_ci0_flaky_detect_junit",
+    "s02_ci0_py_flaky_quarantine"
+  ]
+}

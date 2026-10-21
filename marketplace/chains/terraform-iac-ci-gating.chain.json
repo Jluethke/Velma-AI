@@ -1,0 +1,195 @@
+{
+  "name": "terraform-iac-ci-gating",
+  "description": "Gate Terraform changes in CI: fmt and validate, TFLint, Checkov, plan review, conftest policy, destroy guards, GitHub Actions plan and apply, and scheduled drift detection.",
+  "steps": [
+    {
+      "id": "s01_tf_fmt_validate",
+      "skill_name": "tf-fmt-validate",
+      "inputs": {
+        "root_modules": "from_user_input"
+      },
+      "outputs": {
+        "fmt_validate_report": "fmt_validate_report"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_tf_tflint",
+      "skill_name": "tf-tflint",
+      "inputs": {
+        "root_modules": "from_user_input",
+        "cloud": "from_user_input",
+        "fmt_validate_report": "s01_tf_fmt_validate.fmt_validate_report"
+      },
+      "outputs": {
+        "tflint_findings": "tflint_findings"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_tf_checkov",
+      "skill_name": "tf-checkov",
+      "inputs": {
+        "root_modules": "from_user_input",
+        "fmt_validate_report": "s01_tf_fmt_validate.fmt_validate_report"
+      },
+      "outputs": {
+        "checkov_findings": "checkov_findings"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_tf_plan_review",
+      "skill_name": "tf-plan-review",
+      "inputs": {
+        "root_modules": "from_user_input",
+        "env_strategy": "from_user_input",
+        "target_environment": "from_user_input"
+      },
+      "outputs": {
+        "plan_file": "plan_file",
+        "plan_json": "plan_json",
+        "plan_review": "plan_review"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s05_tf_plan_policy_conftest",
+      "skill_name": "tf-plan-policy-conftest",
+      "inputs": {
+        "plan_json": "s04_tf_plan_review.plan_json",
+        "policy_dir": "from_user_input_optional"
+      },
+      "outputs": {
+        "policy_results": "policy_results"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s06_tf_destroy_safeguards",
+      "skill_name": "tf-destroy-safeguards",
+      "inputs": {
+        "root_modules": "from_user_input",
+        "cloud": "from_user_input",
+        "plan_review": "s04_tf_plan_review.plan_review"
+      },
+      "outputs": {
+        "protected_resources": "protected_resources",
+        "destroy_guard_config": "destroy_guard_config"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s07_tf_ci_github_actions",
+      "skill_name": "tf-ci-github-actions",
+      "inputs": {
+        "root_modules": "from_user_input",
+        "env_strategy": "from_user_input",
+        "cloud": "from_user_input",
+        "destroy_guard_config": "s06_tf_destroy_safeguards.destroy_guard_config"
+      },
+      "outputs": {
+        "ci_workflow_files": "ci_workflow_files",
+        "ci_gate_matrix": "ci_gate_matrix"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s08_tf_drift_detect",
+      "skill_name": "tf-drift-detect",
+      "inputs": {
+        "root_modules": "from_user_input",
+        "env_strategy": "from_user_input",
+        "ci_platform": "from_user_input"
+      },
+      "outputs": {
+        "drift_report": "drift_report",
+        "drift_schedule": "drift_schedule"
+      },
+      "parallel_group": 1
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_tf_fmt_validate",
+      "to_step": "s02_tf_tflint",
+      "data_type": "tf-fmt-validate",
+      "field_mapping": {
+        "fmt_validate_report": "fmt_validate_report"
+      }
+    },
+    {
+      "from_step": "s01_tf_fmt_validate",
+      "to_step": "s03_tf_checkov",
+      "data_type": "tf-fmt-validate",
+      "field_mapping": {
+        "fmt_validate_report": "fmt_validate_report"
+      }
+    },
+    {
+      "from_step": "s04_tf_plan_review",
+      "to_step": "s05_tf_plan_policy_conftest",
+      "data_type": "tf-plan-review",
+      "field_mapping": {
+        "plan_json": "plan_json"
+      }
+    },
+    {
+      "from_step": "s04_tf_plan_review",
+      "to_step": "s06_tf_destroy_safeguards",
+      "data_type": "tf-plan-review",
+      "field_mapping": {
+        "plan_review": "plan_review"
+      }
+    },
+    {
+      "from_step": "s06_tf_destroy_safeguards",
+      "to_step": "s07_tf_ci_github_actions",
+      "data_type": "tf-destroy-safeguards",
+      "field_mapping": {
+        "destroy_guard_config": "destroy_guard_config"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "root_modules",
+    "cloud",
+    "env_strategy",
+    "target_environment",
+    "policy_dir",
+    "ci_platform"
+  ],
+  "terminal_outputs": [
+    "tflint_findings",
+    "checkov_findings",
+    "plan_file",
+    "policy_results",
+    "protected_resources",
+    "ci_workflow_files",
+    "ci_gate_matrix",
+    "drift_report",
+    "drift_schedule"
+  ],
+  "parallel_groups": [
+    [
+      "s01_tf_fmt_validate",
+      "s04_tf_plan_review",
+      "s08_tf_drift_detect"
+    ],
+    [
+      "s02_tf_tflint",
+      "s03_tf_checkov",
+      "s05_tf_plan_policy_conftest",
+      "s06_tf_destroy_safeguards"
+    ],
+    [
+      "s07_tf_ci_github_actions"
+    ]
+  ],
+  "estimated_cost": 8,
+  "critical_path": [
+    "s04_tf_plan_review",
+    "s06_tf_destroy_safeguards",
+    "s07_tf_ci_github_actions"
+  ]
+}

@@ -1,0 +1,194 @@
+{
+  "name": "observability-tracing",
+  "description": "Distributed tracing for one service: stack-specific OpenTelemetry SDK or agent setup, collector pipeline, head or tail sampling with measured kept ratio, and trace emission proof.",
+  "steps": [
+    {
+      "id": "s01_obs_signal_inventory",
+      "skill_name": "obs-signal-inventory",
+      "inputs": {
+        "service_repo": "from_user_input",
+        "stack": "from_user_input",
+        "service_name": "from_user_input"
+      },
+      "outputs": {
+        "signal_plan": "signal_plan"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_obs_py_otel_sdk_setup",
+      "skill_name": "obs-py-otel-sdk-setup",
+      "inputs": {
+        "service_repo": "from_user_input",
+        "service_name": "from_user_input",
+        "otlp_endpoint": "from_user_input"
+      },
+      "outputs": {
+        "otel_setup": "otel_setup"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 1
+    },
+    {
+      "id": "s03_obs_node_otel_sdk_setup",
+      "skill_name": "obs-node-otel-sdk-setup",
+      "inputs": {
+        "service_repo": "from_user_input",
+        "service_name": "from_user_input",
+        "otlp_endpoint": "from_user_input"
+      },
+      "outputs": {
+        "otel_setup": "otel_setup"
+      },
+      "condition": "stack == 'node'",
+      "parallel_group": 1
+    },
+    {
+      "id": "s04_obs_go_otel_sdk_setup",
+      "skill_name": "obs-go-otel-sdk-setup",
+      "inputs": {
+        "service_repo": "from_user_input",
+        "service_name": "from_user_input",
+        "otlp_endpoint": "from_user_input"
+      },
+      "outputs": {
+        "otel_setup": "otel_setup"
+      },
+      "condition": "stack == 'go'",
+      "parallel_group": 1
+    },
+    {
+      "id": "s05_obs_java_otel_agent_setup",
+      "skill_name": "obs-java-otel-agent-setup",
+      "inputs": {
+        "service_repo": "from_user_input",
+        "service_name": "from_user_input",
+        "otlp_endpoint": "from_user_input"
+      },
+      "outputs": {
+        "otel_setup": "otel_setup"
+      },
+      "condition": "stack == 'java'",
+      "parallel_group": 1
+    },
+    {
+      "id": "s06_obs_otel_collector_pipeline",
+      "skill_name": "obs-otel-collector-pipeline",
+      "inputs": {
+        "signal_plan": "s01_obs_signal_inventory.signal_plan",
+        "collector_config_path": "from_user_input",
+        "trace_backend_endpoint": "from_user_input"
+      },
+      "outputs": {
+        "collector_config": "collector_config"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s07_obs_trace_sampling_config",
+      "skill_name": "obs-trace-sampling-config",
+      "inputs": {
+        "collector_config": "s06_obs_otel_collector_pipeline.collector_config",
+        "sampling_ratio": "from_user_input",
+        "tail_latency_threshold_ms": "from_user_input_optional"
+      },
+      "outputs": {
+        "sampling_config": "sampling_config"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s08_obs_signal_emission_verify",
+      "skill_name": "obs-signal-emission-verify",
+      "inputs": {
+        "signal_plan": "s01_obs_signal_inventory.signal_plan",
+        "service_metrics_url": "from_user_input",
+        "prometheus_url": "from_user_input",
+        "collector_config": "s06_obs_otel_collector_pipeline.collector_config",
+        "trace_query_url": "from_user_input_optional",
+        "alert_rules": "from_user_input_optional",
+        "dashboard_json": "from_user_input_optional"
+      },
+      "outputs": {
+        "emission_report": "emission_report"
+      },
+      "parallel_group": 3
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_obs_signal_inventory",
+      "to_step": "s06_obs_otel_collector_pipeline",
+      "data_type": "obs-signal-inventory",
+      "field_mapping": {
+        "signal_plan": "signal_plan"
+      }
+    },
+    {
+      "from_step": "s06_obs_otel_collector_pipeline",
+      "to_step": "s07_obs_trace_sampling_config",
+      "data_type": "obs-otel-collector-pipeline",
+      "field_mapping": {
+        "collector_config": "collector_config"
+      }
+    },
+    {
+      "from_step": "s01_obs_signal_inventory",
+      "to_step": "s08_obs_signal_emission_verify",
+      "data_type": "obs-signal-inventory",
+      "field_mapping": {
+        "signal_plan": "signal_plan"
+      }
+    },
+    {
+      "from_step": "s06_obs_otel_collector_pipeline",
+      "to_step": "s08_obs_signal_emission_verify",
+      "data_type": "obs-otel-collector-pipeline",
+      "field_mapping": {
+        "collector_config": "collector_config"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "service_repo",
+    "stack",
+    "service_name",
+    "otlp_endpoint",
+    "collector_config_path",
+    "trace_backend_endpoint",
+    "sampling_ratio",
+    "tail_latency_threshold_ms",
+    "service_metrics_url",
+    "prometheus_url",
+    "trace_query_url",
+    "alert_rules",
+    "dashboard_json"
+  ],
+  "terminal_outputs": [
+    "otel_setup",
+    "sampling_config",
+    "emission_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_obs_signal_inventory",
+      "s02_obs_py_otel_sdk_setup",
+      "s03_obs_node_otel_sdk_setup",
+      "s04_obs_go_otel_sdk_setup",
+      "s05_obs_java_otel_agent_setup"
+    ],
+    [
+      "s06_obs_otel_collector_pipeline"
+    ],
+    [
+      "s07_obs_trace_sampling_config",
+      "s08_obs_signal_emission_verify"
+    ]
+  ],
+  "estimated_cost": 8,
+  "critical_path": [
+    "s01_obs_signal_inventory",
+    "s06_obs_otel_collector_pipeline",
+    "s08_obs_signal_emission_verify"
+  ]
+}

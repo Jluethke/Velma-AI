@@ -1,0 +1,143 @@
+{
+  "name": "kubernetes-delivery-crashloop-debug",
+  "description": "Watch a rollout, capture evidence when it fails, roll back with the method that matches the delivery tool, and map a crash loop to one root cause and fix.",
+  "steps": [
+    {
+      "id": "s01_k8s_rollout_status_watch",
+      "skill_name": "k8s-rollout-status-watch",
+      "inputs": {
+        "cluster_context": "from_user_input",
+        "namespace": "from_user_input",
+        "app_name": "from_user_input",
+        "lint_report": "from_user_input",
+        "helm_rendered_manifests": "from_user_input_optional",
+        "kustomize_rendered_manifests": "from_user_input_optional",
+        "argocd_application": "from_user_input_optional",
+        "flux_resources": "from_user_input_optional",
+        "gitops_tool": "from_user_input",
+        "change_cause": "from_user_input_optional"
+      },
+      "outputs": {
+        "rollout_result": "rollout_result",
+        "deployed_revision": "deployed_revision"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_k8s_pod_debug_triage",
+      "skill_name": "k8s-pod-debug-triage",
+      "inputs": {
+        "cluster_context": "from_user_input",
+        "namespace": "from_user_input",
+        "app_name": "from_user_input",
+        "rollout_result": "s01_k8s_rollout_status_watch.rollout_result"
+      },
+      "outputs": {
+        "triage_report": "triage_report"
+      },
+      "condition": "s01_k8s_rollout_status_watch.rollout_result != 'complete'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_k8s_rollout_undo",
+      "skill_name": "k8s-rollout-undo",
+      "inputs": {
+        "cluster_context": "from_user_input",
+        "namespace": "from_user_input",
+        "app_name": "from_user_input",
+        "deployed_revision": "s01_k8s_rollout_status_watch.deployed_revision",
+        "triage_report": "s02_k8s_pod_debug_triage.triage_report",
+        "gitops_tool": "from_user_input"
+      },
+      "outputs": {
+        "undo_result": "undo_result"
+      },
+      "condition": "s01_k8s_rollout_status_watch.rollout_result != 'complete'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_k8s_crashloopbackoff_decision",
+      "skill_name": "k8s-crashloopbackoff-decision",
+      "inputs": {
+        "triage_report": "s02_k8s_pod_debug_triage.triage_report",
+        "workload_profile": "from_user_input"
+      },
+      "outputs": {
+        "crash_cause": "crash_cause",
+        "fix_plan": "fix_plan"
+      },
+      "condition": "s02_k8s_pod_debug_triage.triage_report.waiting_reason == 'CrashLoopBackOff'",
+      "parallel_group": 3
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_k8s_rollout_status_watch",
+      "to_step": "s02_k8s_pod_debug_triage",
+      "data_type": "k8s-rollout-status-watch",
+      "field_mapping": {
+        "rollout_result": "rollout_result"
+      }
+    },
+    {
+      "from_step": "s01_k8s_rollout_status_watch",
+      "to_step": "s03_k8s_rollout_undo",
+      "data_type": "k8s-rollout-status-watch",
+      "field_mapping": {
+        "deployed_revision": "deployed_revision"
+      }
+    },
+    {
+      "from_step": "s02_k8s_pod_debug_triage",
+      "to_step": "s03_k8s_rollout_undo",
+      "data_type": "k8s-pod-debug-triage",
+      "field_mapping": {
+        "triage_report": "triage_report"
+      }
+    },
+    {
+      "from_step": "s02_k8s_pod_debug_triage",
+      "to_step": "s04_k8s_crashloopbackoff_decision",
+      "data_type": "k8s-pod-debug-triage",
+      "field_mapping": {
+        "triage_report": "triage_report"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "cluster_context",
+    "namespace",
+    "app_name",
+    "lint_report",
+    "helm_rendered_manifests",
+    "kustomize_rendered_manifests",
+    "argocd_application",
+    "flux_resources",
+    "gitops_tool",
+    "change_cause",
+    "workload_profile"
+  ],
+  "terminal_outputs": [
+    "undo_result",
+    "crash_cause",
+    "fix_plan"
+  ],
+  "parallel_groups": [
+    [
+      "s01_k8s_rollout_status_watch"
+    ],
+    [
+      "s02_k8s_pod_debug_triage"
+    ],
+    [
+      "s03_k8s_rollout_undo",
+      "s04_k8s_crashloopbackoff_decision"
+    ]
+  ],
+  "estimated_cost": 4,
+  "critical_path": [
+    "s01_k8s_rollout_status_watch",
+    "s02_k8s_pod_debug_triage",
+    "s04_k8s_crashloopbackoff_decision"
+  ]
+}

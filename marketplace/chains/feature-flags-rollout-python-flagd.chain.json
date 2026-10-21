@@ -1,0 +1,219 @@
+{
+  "name": "feature-flags-rollout-python-flagd",
+  "description": "Ship one new Python feature behind a flagd flag through OpenFeature: classify, choose provider, run flagd, wire the Python SDK, audit safe defaults, and test both paths.",
+  "steps": [
+    {
+      "id": "s01_ffr_flag_type_classify",
+      "skill_name": "ffr-flag-type-classify",
+      "inputs": {
+        "change_description": "from_user_input",
+        "team_conventions": "from_user_input_optional"
+      },
+      "outputs": {
+        "flag_spec": "flag_spec"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_ffr_provider_select",
+      "skill_name": "ffr-provider-select",
+      "inputs": {
+        "flag_spec": "s01_ffr_flag_type_classify.flag_spec",
+        "platform_constraints": "from_user_input",
+        "existing_flag_system": "from_user_input_optional"
+      },
+      "outputs": {
+        "provider_choice": "provider_choice"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_ffr_flagd_local_setup",
+      "skill_name": "ffr-flagd-local-setup",
+      "inputs": {
+        "flag_spec": "s01_ffr_flag_type_classify.flag_spec",
+        "provider_choice": "s02_ffr_provider_select.provider_choice",
+        "repo_path": "from_user_input"
+      },
+      "outputs": {
+        "flagd_config": "flagd_config"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_ffr_py_openfeature_wire",
+      "skill_name": "ffr-py-openfeature-wire",
+      "inputs": {
+        "flag_spec": "s01_ffr_flag_type_classify.flag_spec",
+        "provider_choice": "s02_ffr_provider_select.provider_choice",
+        "flagd_config": "s03_ffr_flagd_local_setup.flagd_config",
+        "unleash_config": "from_user_input_optional",
+        "launchdarkly_config": "from_user_input_optional",
+        "repo_path": "from_user_input"
+      },
+      "outputs": {
+        "py_flag_wiring": "py_flag_wiring"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s05_ffr_safe_default_audit",
+      "skill_name": "ffr-safe-default-audit",
+      "inputs": {
+        "flag_spec": "s01_ffr_flag_type_classify.flag_spec",
+        "repo_path": "from_user_input",
+        "py_flag_wiring": "s04_ffr_py_openfeature_wire.py_flag_wiring",
+        "node_flag_wiring": "from_user_input_optional",
+        "go_flag_wiring": "from_user_input_optional",
+        "java_flag_wiring": "from_user_input_optional",
+        "react_flag_wiring": "from_user_input_optional"
+      },
+      "outputs": {
+        "default_audit": "default_audit"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s06_ffr_both_paths_test",
+      "skill_name": "ffr-both-paths-test",
+      "inputs": {
+        "flag_spec": "s01_ffr_flag_type_classify.flag_spec",
+        "default_audit": "s05_ffr_safe_default_audit.default_audit",
+        "repo_path": "from_user_input",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "flag_test_report": "flag_test_report"
+      },
+      "parallel_group": 6
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_ffr_flag_type_classify",
+      "to_step": "s02_ffr_provider_select",
+      "data_type": "ffr-flag-type-classify",
+      "field_mapping": {
+        "flag_spec": "flag_spec"
+      }
+    },
+    {
+      "from_step": "s01_ffr_flag_type_classify",
+      "to_step": "s03_ffr_flagd_local_setup",
+      "data_type": "ffr-flag-type-classify",
+      "field_mapping": {
+        "flag_spec": "flag_spec"
+      }
+    },
+    {
+      "from_step": "s02_ffr_provider_select",
+      "to_step": "s03_ffr_flagd_local_setup",
+      "data_type": "ffr-provider-select",
+      "field_mapping": {
+        "provider_choice": "provider_choice"
+      }
+    },
+    {
+      "from_step": "s01_ffr_flag_type_classify",
+      "to_step": "s04_ffr_py_openfeature_wire",
+      "data_type": "ffr-flag-type-classify",
+      "field_mapping": {
+        "flag_spec": "flag_spec"
+      }
+    },
+    {
+      "from_step": "s02_ffr_provider_select",
+      "to_step": "s04_ffr_py_openfeature_wire",
+      "data_type": "ffr-provider-select",
+      "field_mapping": {
+        "provider_choice": "provider_choice"
+      }
+    },
+    {
+      "from_step": "s03_ffr_flagd_local_setup",
+      "to_step": "s04_ffr_py_openfeature_wire",
+      "data_type": "ffr-flagd-local-setup",
+      "field_mapping": {
+        "flagd_config": "flagd_config"
+      }
+    },
+    {
+      "from_step": "s01_ffr_flag_type_classify",
+      "to_step": "s05_ffr_safe_default_audit",
+      "data_type": "ffr-flag-type-classify",
+      "field_mapping": {
+        "flag_spec": "flag_spec"
+      }
+    },
+    {
+      "from_step": "s04_ffr_py_openfeature_wire",
+      "to_step": "s05_ffr_safe_default_audit",
+      "data_type": "ffr-py-openfeature-wire",
+      "field_mapping": {
+        "py_flag_wiring": "py_flag_wiring"
+      }
+    },
+    {
+      "from_step": "s01_ffr_flag_type_classify",
+      "to_step": "s06_ffr_both_paths_test",
+      "data_type": "ffr-flag-type-classify",
+      "field_mapping": {
+        "flag_spec": "flag_spec"
+      }
+    },
+    {
+      "from_step": "s05_ffr_safe_default_audit",
+      "to_step": "s06_ffr_both_paths_test",
+      "data_type": "ffr-safe-default-audit",
+      "field_mapping": {
+        "default_audit": "default_audit"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "change_description",
+    "team_conventions",
+    "platform_constraints",
+    "existing_flag_system",
+    "repo_path",
+    "unleash_config",
+    "launchdarkly_config",
+    "node_flag_wiring",
+    "go_flag_wiring",
+    "java_flag_wiring",
+    "react_flag_wiring",
+    "stack"
+  ],
+  "terminal_outputs": [
+    "flag_test_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_ffr_flag_type_classify"
+    ],
+    [
+      "s02_ffr_provider_select"
+    ],
+    [
+      "s03_ffr_flagd_local_setup"
+    ],
+    [
+      "s04_ffr_py_openfeature_wire"
+    ],
+    [
+      "s05_ffr_safe_default_audit"
+    ],
+    [
+      "s06_ffr_both_paths_test"
+    ]
+  ],
+  "estimated_cost": 6,
+  "critical_path": [
+    "s01_ffr_flag_type_classify",
+    "s02_ffr_provider_select",
+    "s03_ffr_flagd_local_setup",
+    "s04_ffr_py_openfeature_wire",
+    "s05_ffr_safe_default_audit",
+    "s06_ffr_both_paths_test"
+  ]
+}

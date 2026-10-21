@@ -1,0 +1,153 @@
+{
+  "name": "ticket-to-merged-pr-review-to-merge",
+  "description": "Carry an open pull request to a verified merge: triage CI failures, answer every review thread with evidence, choose rebase or merge to sync with the base branch, resolve conflicts, and verify the change on the base branch and deployment before closing the ticket.",
+  "steps": [
+    {
+      "id": "s01_tkt_ci_check_triage",
+      "skill_name": "tkt-ci-check-triage",
+      "inputs": {
+        "pr_url": "from_user_input",
+        "repo_profile": "from_user_input"
+      },
+      "outputs": {
+        "ci_status": "ci_status"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_tkt_review_comment_response",
+      "skill_name": "tkt-review-comment-response",
+      "inputs": {
+        "pr_url": "from_user_input",
+        "acceptance_criteria": "from_user_input"
+      },
+      "outputs": {
+        "review_resolution": "review_resolution"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s03_tkt_sync_strategy_choose",
+      "skill_name": "tkt-sync-strategy-choose",
+      "inputs": {
+        "branch_name": "from_user_input",
+        "base_branch": "from_user_input_optional",
+        "pr_url": "from_user_input"
+      },
+      "outputs": {
+        "sync_strategy": "sync_strategy"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s04_tkt_rebase_conflict_resolve",
+      "skill_name": "tkt-rebase-conflict-resolve",
+      "inputs": {
+        "sync_strategy": "s03_tkt_sync_strategy_choose.sync_strategy",
+        "branch_name": "from_user_input",
+        "base_branch": "from_user_input_optional",
+        "repo_profile": "from_user_input"
+      },
+      "outputs": {
+        "rebase_result": "rebase_result"
+      },
+      "condition": "sync_strategy.strategy == 'rebase'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s05_tkt_merge_conflict_resolve",
+      "skill_name": "tkt-merge-conflict-resolve",
+      "inputs": {
+        "sync_strategy": "s03_tkt_sync_strategy_choose.sync_strategy",
+        "branch_name": "from_user_input",
+        "base_branch": "from_user_input_optional",
+        "repo_profile": "from_user_input"
+      },
+      "outputs": {
+        "merge_result": "merge_result"
+      },
+      "condition": "sync_strategy.strategy == 'merge'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s06_tkt_post_merge_verify",
+      "skill_name": "tkt-post-merge-verify",
+      "inputs": {
+        "pr_url": "from_user_input",
+        "base_branch": "from_user_input_optional",
+        "acceptance_criteria": "from_user_input",
+        "ticket_id": "from_user_input",
+        "ci_status": "s01_tkt_ci_check_triage.ci_status",
+        "review_resolution": "s02_tkt_review_comment_response.review_resolution"
+      },
+      "outputs": {
+        "post_merge_report": "post_merge_report"
+      },
+      "parallel_group": 2
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s03_tkt_sync_strategy_choose",
+      "to_step": "s04_tkt_rebase_conflict_resolve",
+      "data_type": "tkt-sync-strategy-choose",
+      "field_mapping": {
+        "sync_strategy": "sync_strategy"
+      }
+    },
+    {
+      "from_step": "s03_tkt_sync_strategy_choose",
+      "to_step": "s05_tkt_merge_conflict_resolve",
+      "data_type": "tkt-sync-strategy-choose",
+      "field_mapping": {
+        "sync_strategy": "sync_strategy"
+      }
+    },
+    {
+      "from_step": "s01_tkt_ci_check_triage",
+      "to_step": "s06_tkt_post_merge_verify",
+      "data_type": "tkt-ci-check-triage",
+      "field_mapping": {
+        "ci_status": "ci_status"
+      }
+    },
+    {
+      "from_step": "s02_tkt_review_comment_response",
+      "to_step": "s06_tkt_post_merge_verify",
+      "data_type": "tkt-review-comment-response",
+      "field_mapping": {
+        "review_resolution": "review_resolution"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "pr_url",
+    "repo_profile",
+    "acceptance_criteria",
+    "branch_name",
+    "base_branch",
+    "ticket_id"
+  ],
+  "terminal_outputs": [
+    "rebase_result",
+    "merge_result",
+    "post_merge_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_tkt_ci_check_triage",
+      "s02_tkt_review_comment_response",
+      "s03_tkt_sync_strategy_choose"
+    ],
+    [
+      "s04_tkt_rebase_conflict_resolve",
+      "s05_tkt_merge_conflict_resolve",
+      "s06_tkt_post_merge_verify"
+    ]
+  ],
+  "estimated_cost": 6,
+  "critical_path": [
+    "s03_tkt_sync_strategy_choose",
+    "s04_tkt_rebase_conflict_resolve"
+  ]
+}

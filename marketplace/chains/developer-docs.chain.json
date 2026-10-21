@@ -1,0 +1,567 @@
+{
+  "name": "developer-docs",
+  "description": "Full developer documentation pipeline: audience and Diataxis plan, README and clean-machine quickstart, lint, stack-specific docstrings, API reference and tested samples, CLI reference, architecture and ADRs, site build, link check and CI gate.",
+  "steps": [
+    {
+      "id": "s01_dfc_audience_doctype_plan",
+      "skill_name": "dfc-audience-doctype-plan",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "product_summary": "from_user_input",
+        "audience_notes": "from_user_input_optional"
+      },
+      "outputs": {
+        "audience_profile": "audience_profile",
+        "doc_plan": "doc_plan"
+      }
+    },
+    {
+      "id": "s02_dfc_docs_staleness_audit",
+      "skill_name": "dfc-docs-staleness-audit",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "doc_plan": "s01_dfc_audience_doctype_plan.doc_plan"
+      },
+      "outputs": {
+        "stale_references": "stale_references",
+        "docs_gaps": "docs_gaps"
+      }
+    },
+    {
+      "id": "s03_dfc_readme_structure",
+      "skill_name": "dfc-readme-structure",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "audience_profile": "s01_dfc_audience_doctype_plan.audience_profile",
+        "doc_plan": "s01_dfc_audience_doctype_plan.doc_plan"
+      },
+      "outputs": {
+        "readme_path": "readme_path",
+        "readme_commands": "readme_commands"
+      }
+    },
+    {
+      "id": "s04_dfc_quickstart_clean_container_verify",
+      "skill_name": "dfc-quickstart-clean-container-verify",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "readme_commands": "s03_dfc_readme_structure.readme_commands",
+        "base_image": "from_user_input_optional"
+      },
+      "outputs": {
+        "quickstart_report": "quickstart_report",
+        "quickstart_fixes": "quickstart_fixes"
+      }
+    },
+    {
+      "id": "s05_dfc_markdownlint_config",
+      "skill_name": "dfc-markdownlint-config",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "readme_path": "s03_dfc_readme_structure.readme_path"
+      },
+      "outputs": {
+        "markdownlint_config": "markdownlint_config",
+        "markdownlint_report": "markdownlint_report"
+      }
+    },
+    {
+      "id": "s06_dfc_vale_prose_lint",
+      "skill_name": "dfc-vale-prose-lint",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "audience_profile": "s01_dfc_audience_doctype_plan.audience_profile"
+      },
+      "outputs": {
+        "vale_config": "vale_config",
+        "vale_report": "vale_report"
+      },
+      "condition": "run_prose_lint == true"
+    },
+    {
+      "id": "s07_dfc_py_docstring_conventions",
+      "skill_name": "dfc-py-docstring-conventions",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "docstring_style": "from_user_input_optional"
+      },
+      "outputs": {
+        "docstring_config": "docstring_config",
+        "docstring_report": "docstring_report"
+      },
+      "condition": "stack == 'python'"
+    },
+    {
+      "id": "s08_dfc_node_tsdoc_conventions",
+      "skill_name": "dfc-node-tsdoc-conventions",
+      "inputs": {
+        "repo_path": "from_user_input"
+      },
+      "outputs": {
+        "docstring_config": "docstring_config",
+        "docstring_report": "docstring_report"
+      },
+      "condition": "stack == 'node'"
+    },
+    {
+      "id": "s09_dfc_go_doc_comments",
+      "skill_name": "dfc-go-doc-comments",
+      "inputs": {
+        "repo_path": "from_user_input"
+      },
+      "outputs": {
+        "docstring_config": "docstring_config",
+        "docstring_report": "docstring_report"
+      },
+      "condition": "stack == 'go'"
+    },
+    {
+      "id": "s10_dfc_rust_doc_comments",
+      "skill_name": "dfc-rust-doc-comments",
+      "inputs": {
+        "repo_path": "from_user_input"
+      },
+      "outputs": {
+        "docstring_config": "docstring_config",
+        "docstring_report": "docstring_report"
+      },
+      "condition": "stack == 'rust'"
+    },
+    {
+      "id": "s11_dfc_py_sphinx_autodoc",
+      "skill_name": "dfc-py-sphinx-autodoc",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "docstring_report": "s07_dfc_py_docstring_conventions.docstring_report"
+      },
+      "outputs": {
+        "api_reference_dir": "api_reference_dir",
+        "api_build_log": "api_build_log"
+      },
+      "condition": "stack == 'python'"
+    },
+    {
+      "id": "s12_dfc_node_typedoc_reference",
+      "skill_name": "dfc-node-typedoc-reference",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "docstring_report": "s08_dfc_node_tsdoc_conventions.docstring_report"
+      },
+      "outputs": {
+        "api_reference_dir": "api_reference_dir",
+        "api_build_log": "api_build_log"
+      },
+      "condition": "stack == 'node'"
+    },
+    {
+      "id": "s13_dfc_go_pkgsite_reference",
+      "skill_name": "dfc-go-pkgsite-reference",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "docstring_report": "s09_dfc_go_doc_comments.docstring_report"
+      },
+      "outputs": {
+        "api_reference_dir": "api_reference_dir",
+        "api_build_log": "api_build_log"
+      },
+      "condition": "stack == 'go'"
+    },
+    {
+      "id": "s14_dfc_rust_cargo_doc_reference",
+      "skill_name": "dfc-rust-cargo-doc-reference",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "docstring_report": "s10_dfc_rust_doc_comments.docstring_report"
+      },
+      "outputs": {
+        "api_reference_dir": "api_reference_dir",
+        "api_build_log": "api_build_log"
+      },
+      "condition": "stack == 'rust'"
+    },
+    {
+      "id": "s15_dfc_py_doctest_samples",
+      "skill_name": "dfc-py-doctest-samples",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "docstring_report": "s07_dfc_py_docstring_conventions.docstring_report"
+      },
+      "outputs": {
+        "sample_test_command": "sample_test_command",
+        "sample_test_report": "sample_test_report"
+      },
+      "condition": "stack == 'python'"
+    },
+    {
+      "id": "s16_dfc_node_mdx_tested_samples",
+      "skill_name": "dfc-node-mdx-tested-samples",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "readme_path": "s03_dfc_readme_structure.readme_path"
+      },
+      "outputs": {
+        "sample_test_command": "sample_test_command",
+        "sample_test_report": "sample_test_report"
+      },
+      "condition": "stack == 'node'"
+    },
+    {
+      "id": "s17_dfc_go_example_tests",
+      "skill_name": "dfc-go-example-tests",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "docstring_report": "s09_dfc_go_doc_comments.docstring_report"
+      },
+      "outputs": {
+        "sample_test_command": "sample_test_command",
+        "sample_test_report": "sample_test_report"
+      },
+      "condition": "stack == 'go'"
+    },
+    {
+      "id": "s18_dfc_rust_doctest_samples",
+      "skill_name": "dfc-rust-doctest-samples",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "docstring_report": "s10_dfc_rust_doc_comments.docstring_report"
+      },
+      "outputs": {
+        "sample_test_command": "sample_test_command",
+        "sample_test_report": "sample_test_report"
+      },
+      "condition": "stack == 'rust'"
+    },
+    {
+      "id": "s19_dfc_cli_reference_from_parser",
+      "skill_name": "dfc-cli-reference-from-parser",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "doc_plan": "s01_dfc_audience_doctype_plan.doc_plan"
+      },
+      "outputs": {
+        "cli_reference_path": "cli_reference_path",
+        "cli_drift_check": "cli_drift_check"
+      },
+      "condition": "has_cli == true"
+    },
+    {
+      "id": "s20_dfc_mermaid_architecture_overview",
+      "skill_name": "dfc-mermaid-architecture-overview",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "audience_profile": "s01_dfc_audience_doctype_plan.audience_profile"
+      },
+      "outputs": {
+        "architecture_doc_path": "architecture_doc_path",
+        "diagram_sources": "diagram_sources"
+      }
+    },
+    {
+      "id": "s21_dfc_adr_record",
+      "skill_name": "dfc-adr-record",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "decision_context": "from_user_input_optional"
+      },
+      "outputs": {
+        "adr_path": "adr_path",
+        "adr_index": "adr_index"
+      }
+    },
+    {
+      "id": "s22_dfc_mkdocs_strict_build",
+      "skill_name": "dfc-mkdocs-strict-build",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "doc_plan": "s01_dfc_audience_doctype_plan.doc_plan"
+      },
+      "outputs": {
+        "site_dir": "site_dir",
+        "site_build_log": "site_build_log"
+      },
+      "condition": "site_generator == 'mkdocs'"
+    },
+    {
+      "id": "s23_dfc_docusaurus_build",
+      "skill_name": "dfc-docusaurus-build",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "doc_plan": "s01_dfc_audience_doctype_plan.doc_plan"
+      },
+      "outputs": {
+        "site_dir": "site_dir",
+        "site_build_log": "site_build_log"
+      },
+      "condition": "site_generator == 'docusaurus'"
+    },
+    {
+      "id": "s24_dfc_lychee_link_check",
+      "skill_name": "dfc-lychee-link-check",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "readme_path": "s03_dfc_readme_structure.readme_path",
+        "site_dir": "from_user_input_optional"
+      },
+      "outputs": {
+        "link_report": "link_report",
+        "link_fixes": "link_fixes"
+      }
+    },
+    {
+      "id": "s25_dfc_docs_ci_workflow",
+      "skill_name": "dfc-docs-ci-workflow",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "site_generator": "from_user_input",
+        "link_report": "s24_dfc_lychee_link_check.link_report",
+        "markdownlint_config": "s05_dfc_markdownlint_config.markdownlint_config"
+      },
+      "outputs": {
+        "docs_workflow_path": "docs_workflow_path",
+        "docs_ci_run": "docs_ci_run"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_dfc_audience_doctype_plan",
+      "to_step": "s02_dfc_docs_staleness_audit",
+      "data_type": "dfc-audience-doctype-plan",
+      "field_mapping": {
+        "doc_plan": "doc_plan"
+      }
+    },
+    {
+      "from_step": "s01_dfc_audience_doctype_plan",
+      "to_step": "s03_dfc_readme_structure",
+      "data_type": "dfc-audience-doctype-plan",
+      "field_mapping": {
+        "audience_profile": "audience_profile",
+        "doc_plan": "doc_plan"
+      }
+    },
+    {
+      "from_step": "s03_dfc_readme_structure",
+      "to_step": "s04_dfc_quickstart_clean_container_verify",
+      "data_type": "dfc-readme-structure",
+      "field_mapping": {
+        "readme_commands": "readme_commands"
+      }
+    },
+    {
+      "from_step": "s03_dfc_readme_structure",
+      "to_step": "s05_dfc_markdownlint_config",
+      "data_type": "dfc-readme-structure",
+      "field_mapping": {
+        "readme_path": "readme_path"
+      }
+    },
+    {
+      "from_step": "s01_dfc_audience_doctype_plan",
+      "to_step": "s06_dfc_vale_prose_lint",
+      "data_type": "dfc-audience-doctype-plan",
+      "field_mapping": {
+        "audience_profile": "audience_profile"
+      }
+    },
+    {
+      "from_step": "s07_dfc_py_docstring_conventions",
+      "to_step": "s11_dfc_py_sphinx_autodoc",
+      "data_type": "dfc-py-docstring-conventions",
+      "field_mapping": {
+        "docstring_report": "docstring_report"
+      }
+    },
+    {
+      "from_step": "s08_dfc_node_tsdoc_conventions",
+      "to_step": "s12_dfc_node_typedoc_reference",
+      "data_type": "dfc-node-tsdoc-conventions",
+      "field_mapping": {
+        "docstring_report": "docstring_report"
+      }
+    },
+    {
+      "from_step": "s09_dfc_go_doc_comments",
+      "to_step": "s13_dfc_go_pkgsite_reference",
+      "data_type": "dfc-go-doc-comments",
+      "field_mapping": {
+        "docstring_report": "docstring_report"
+      }
+    },
+    {
+      "from_step": "s10_dfc_rust_doc_comments",
+      "to_step": "s14_dfc_rust_cargo_doc_reference",
+      "data_type": "dfc-rust-doc-comments",
+      "field_mapping": {
+        "docstring_report": "docstring_report"
+      }
+    },
+    {
+      "from_step": "s07_dfc_py_docstring_conventions",
+      "to_step": "s15_dfc_py_doctest_samples",
+      "data_type": "dfc-py-docstring-conventions",
+      "field_mapping": {
+        "docstring_report": "docstring_report"
+      }
+    },
+    {
+      "from_step": "s03_dfc_readme_structure",
+      "to_step": "s16_dfc_node_mdx_tested_samples",
+      "data_type": "dfc-readme-structure",
+      "field_mapping": {
+        "readme_path": "readme_path"
+      }
+    },
+    {
+      "from_step": "s09_dfc_go_doc_comments",
+      "to_step": "s17_dfc_go_example_tests",
+      "data_type": "dfc-go-doc-comments",
+      "field_mapping": {
+        "docstring_report": "docstring_report"
+      }
+    },
+    {
+      "from_step": "s10_dfc_rust_doc_comments",
+      "to_step": "s18_dfc_rust_doctest_samples",
+      "data_type": "dfc-rust-doc-comments",
+      "field_mapping": {
+        "docstring_report": "docstring_report"
+      }
+    },
+    {
+      "from_step": "s01_dfc_audience_doctype_plan",
+      "to_step": "s19_dfc_cli_reference_from_parser",
+      "data_type": "dfc-audience-doctype-plan",
+      "field_mapping": {
+        "doc_plan": "doc_plan"
+      }
+    },
+    {
+      "from_step": "s01_dfc_audience_doctype_plan",
+      "to_step": "s20_dfc_mermaid_architecture_overview",
+      "data_type": "dfc-audience-doctype-plan",
+      "field_mapping": {
+        "audience_profile": "audience_profile"
+      }
+    },
+    {
+      "from_step": "s01_dfc_audience_doctype_plan",
+      "to_step": "s22_dfc_mkdocs_strict_build",
+      "data_type": "dfc-audience-doctype-plan",
+      "field_mapping": {
+        "doc_plan": "doc_plan"
+      }
+    },
+    {
+      "from_step": "s01_dfc_audience_doctype_plan",
+      "to_step": "s23_dfc_docusaurus_build",
+      "data_type": "dfc-audience-doctype-plan",
+      "field_mapping": {
+        "doc_plan": "doc_plan"
+      }
+    },
+    {
+      "from_step": "s03_dfc_readme_structure",
+      "to_step": "s24_dfc_lychee_link_check",
+      "data_type": "dfc-readme-structure",
+      "field_mapping": {
+        "readme_path": "readme_path"
+      }
+    },
+    {
+      "from_step": "s24_dfc_lychee_link_check",
+      "to_step": "s25_dfc_docs_ci_workflow",
+      "data_type": "dfc-lychee-link-check",
+      "field_mapping": {
+        "link_report": "link_report"
+      }
+    },
+    {
+      "from_step": "s05_dfc_markdownlint_config",
+      "to_step": "s25_dfc_docs_ci_workflow",
+      "data_type": "dfc-markdownlint-config",
+      "field_mapping": {
+        "markdownlint_config": "markdownlint_config"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "repo_path",
+    "product_summary",
+    "audience_notes",
+    "base_image",
+    "docstring_style",
+    "decision_context",
+    "site_dir",
+    "stack",
+    "site_generator"
+  ],
+  "terminal_outputs": [
+    "stale_references",
+    "docs_gaps",
+    "quickstart_report",
+    "quickstart_fixes",
+    "markdownlint_report",
+    "vale_config",
+    "vale_report",
+    "docstring_config",
+    "api_reference_dir",
+    "api_build_log",
+    "sample_test_command",
+    "sample_test_report",
+    "cli_reference_path",
+    "cli_drift_check",
+    "architecture_doc_path",
+    "diagram_sources",
+    "adr_path",
+    "adr_index",
+    "site_dir",
+    "site_build_log",
+    "link_fixes",
+    "docs_workflow_path",
+    "docs_ci_run"
+  ],
+  "parallel_groups": [
+    [
+      "s01_dfc_audience_doctype_plan",
+      "s07_dfc_py_docstring_conventions",
+      "s08_dfc_node_tsdoc_conventions",
+      "s09_dfc_go_doc_comments",
+      "s10_dfc_rust_doc_comments",
+      "s21_dfc_adr_record"
+    ],
+    [
+      "s02_dfc_docs_staleness_audit",
+      "s03_dfc_readme_structure",
+      "s06_dfc_vale_prose_lint",
+      "s11_dfc_py_sphinx_autodoc",
+      "s12_dfc_node_typedoc_reference",
+      "s13_dfc_go_pkgsite_reference",
+      "s14_dfc_rust_cargo_doc_reference",
+      "s15_dfc_py_doctest_samples",
+      "s17_dfc_go_example_tests",
+      "s18_dfc_rust_doctest_samples",
+      "s19_dfc_cli_reference_from_parser",
+      "s20_dfc_mermaid_architecture_overview",
+      "s22_dfc_mkdocs_strict_build",
+      "s23_dfc_docusaurus_build"
+    ],
+    [
+      "s04_dfc_quickstart_clean_container_verify",
+      "s05_dfc_markdownlint_config",
+      "s16_dfc_node_mdx_tested_samples",
+      "s24_dfc_lychee_link_check"
+    ],
+    [
+      "s25_dfc_docs_ci_workflow"
+    ]
+  ],
+  "estimated_cost": 25,
+  "critical_path": [
+    "s01_dfc_audience_doctype_plan",
+    "s03_dfc_readme_structure",
+    "s24_dfc_lychee_link_check",
+    "s25_dfc_docs_ci_workflow"
+  ]
+}

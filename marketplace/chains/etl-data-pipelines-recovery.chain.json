@@ -1,0 +1,113 @@
+{
+  "name": "etl-data-pipelines-recovery",
+  "description": "Recover an existing pipeline: detect schema drift, re-measure lateness, run a watermark-safe backfill, reconcile the backfilled windows and confirm alerting.",
+  "steps": [
+    {
+      "id": "s01_etl_schema_drift_snapshot_diff",
+      "skill_name": "etl-schema-drift-snapshot-diff",
+      "inputs": {
+        "source_connection": "from_user_input",
+        "data_contract": "from_user_input",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "schema_snapshot": "schema_snapshot",
+        "schema_change_report": "schema_change_report"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_etl_late_arriving_data_policy",
+      "skill_name": "etl-late-arriving-data-policy",
+      "inputs": {
+        "source_connection": "from_user_input",
+        "data_contract": "from_user_input",
+        "extraction_keys": "from_user_input"
+      },
+      "outputs": {
+        "lateness_profile": "lateness_profile",
+        "late_data_policy": "late_data_policy"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s03_etl_backfill_partition_runner",
+      "skill_name": "etl-backfill-partition-runner",
+      "inputs": {
+        "orchestrator": "from_user_input",
+        "backfill_range": "from_user_input",
+        "data_contract": "from_user_input",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "backfill_plan": "backfill_plan",
+        "backfill_report": "backfill_report"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s04_etl_reconcile_source_target",
+      "skill_name": "etl-reconcile-source-target",
+      "inputs": {
+        "source_connection": "from_user_input",
+        "data_contract": "from_user_input",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "reconciliation_queries": "reconciliation_queries",
+        "reconciliation_report": "reconciliation_report"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s05_etl_freshness_failure_alerts",
+      "skill_name": "etl-freshness-failure-alerts",
+      "inputs": {
+        "data_contract": "from_user_input",
+        "orchestrator": "from_user_input",
+        "alert_destination": "from_user_input",
+        "project_dir": "from_user_input"
+      },
+      "outputs": {
+        "freshness_checks": "freshness_checks",
+        "alert_config": "alert_config"
+      },
+      "parallel_group": 1
+    }
+  ],
+  "edges": [],
+  "entry_inputs": [
+    "source_connection",
+    "data_contract",
+    "project_dir",
+    "extraction_keys",
+    "orchestrator",
+    "backfill_range",
+    "alert_destination"
+  ],
+  "terminal_outputs": [
+    "schema_snapshot",
+    "schema_change_report",
+    "lateness_profile",
+    "late_data_policy",
+    "backfill_plan",
+    "backfill_report",
+    "reconciliation_queries",
+    "reconciliation_report",
+    "freshness_checks",
+    "alert_config"
+  ],
+  "parallel_groups": [
+    [
+      "s01_etl_schema_drift_snapshot_diff",
+      "s02_etl_late_arriving_data_policy",
+      "s03_etl_backfill_partition_runner",
+      "s04_etl_reconcile_source_target",
+      "s05_etl_freshness_failure_alerts"
+    ]
+  ],
+  "estimated_cost": 5,
+  "critical_path": [
+    "s01_etl_schema_drift_snapshot_diff"
+  ]
+}

@@ -1,0 +1,215 @@
+{
+  "name": "rag-applications-pgvector-hybrid",
+  "description": "PostgreSQL retrieval stack: embedding cache, pgvector HNSW index tuned by recall, full-text plus vector RRF hybrid, verified metadata filters, and cross-encoder reranking.",
+  "steps": [
+    {
+      "id": "s01_rag_retrieval_eval_harness",
+      "skill_name": "rag-retrieval-eval-harness",
+      "inputs": {
+        "question_set": "from_user_input",
+        "qrels_spans": "from_user_input",
+        "k_values": "from_user_input",
+        "significance_alpha": "from_user_input",
+        "work_dir": "from_user_input"
+      },
+      "outputs": {
+        "eval_harness": "eval_harness",
+        "harness_sanity_report": "harness_sanity_report"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_rag_embedding_cache_content_hash",
+      "skill_name": "rag-embedding-cache-content-hash",
+      "inputs": {
+        "embedding_choice": "from_user_input",
+        "chunk_config": "from_user_input",
+        "work_dir": "from_user_input"
+      },
+      "outputs": {
+        "embedding_cache": "embedding_cache"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s03_rag_pgvector_hnsw_index",
+      "skill_name": "rag-pgvector-hnsw-index",
+      "inputs": {
+        "chunk_config": "from_user_input",
+        "embedding_choice": "from_user_input",
+        "eval_harness": "s01_rag_retrieval_eval_harness.eval_harness",
+        "database_url": "from_user_input",
+        "target_ann_recall": "from_user_input"
+      },
+      "outputs": {
+        "vector_index": "vector_index",
+        "ann_recall_report": "ann_recall_report"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_rag_pg_fts_rrf_hybrid",
+      "skill_name": "rag-pg-fts-rrf-hybrid",
+      "inputs": {
+        "vector_index": "s03_rag_pgvector_hnsw_index.vector_index",
+        "eval_harness": "s01_rag_retrieval_eval_harness.eval_harness",
+        "database_url": "from_user_input",
+        "fts_config": "from_user_input"
+      },
+      "outputs": {
+        "hybrid_run": "hybrid_run",
+        "hybrid_eval_report": "hybrid_eval_report"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s05_rag_metadata_filter_verify",
+      "skill_name": "rag-metadata-filter-verify",
+      "inputs": {
+        "eval_harness": "s01_rag_retrieval_eval_harness.eval_harness",
+        "metadata_fields": "from_user_input",
+        "store": "from_user_input",
+        "work_dir": "from_user_input"
+      },
+      "outputs": {
+        "filter_report": "filter_report"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s06_rag_cross_encoder_rerank",
+      "skill_name": "rag-cross-encoder-rerank",
+      "inputs": {
+        "eval_harness": "s01_rag_retrieval_eval_harness.eval_harness",
+        "rerank_models": "from_user_input",
+        "rerank_depths": "from_user_input",
+        "work_dir": "from_user_input",
+        "rerank_latency_budget_ms": "from_user_input_optional"
+      },
+      "outputs": {
+        "rerank_config": "rerank_config",
+        "rerank_eval_report": "rerank_eval_report"
+      },
+      "parallel_group": 5
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_rag_retrieval_eval_harness",
+      "to_step": "s03_rag_pgvector_hnsw_index",
+      "data_type": "rag-retrieval-eval-harness",
+      "field_mapping": {
+        "eval_harness": "eval_harness"
+      }
+    },
+    {
+      "from_step": "s03_rag_pgvector_hnsw_index",
+      "to_step": "s04_rag_pg_fts_rrf_hybrid",
+      "data_type": "rag-pgvector-hnsw-index",
+      "field_mapping": {
+        "vector_index": "vector_index"
+      }
+    },
+    {
+      "from_step": "s01_rag_retrieval_eval_harness",
+      "to_step": "s04_rag_pg_fts_rrf_hybrid",
+      "data_type": "rag-retrieval-eval-harness",
+      "field_mapping": {
+        "eval_harness": "eval_harness"
+      }
+    },
+    {
+      "from_step": "s01_rag_retrieval_eval_harness",
+      "to_step": "s05_rag_metadata_filter_verify",
+      "data_type": "rag-retrieval-eval-harness",
+      "field_mapping": {
+        "eval_harness": "eval_harness"
+      }
+    },
+    {
+      "from_step": "s03_rag_pgvector_hnsw_index",
+      "to_step": "s05_rag_metadata_filter_verify",
+      "data_type": "rag-pgvector-hnsw-index",
+      "field_mapping": {}
+    },
+    {
+      "from_step": "s04_rag_pg_fts_rrf_hybrid",
+      "to_step": "s05_rag_metadata_filter_verify",
+      "data_type": "rag-pg-fts-rrf-hybrid",
+      "field_mapping": {}
+    },
+    {
+      "from_step": "s01_rag_retrieval_eval_harness",
+      "to_step": "s06_rag_cross_encoder_rerank",
+      "data_type": "rag-retrieval-eval-harness",
+      "field_mapping": {
+        "eval_harness": "eval_harness"
+      }
+    },
+    {
+      "from_step": "s04_rag_pg_fts_rrf_hybrid",
+      "to_step": "s06_rag_cross_encoder_rerank",
+      "data_type": "rag-pg-fts-rrf-hybrid",
+      "field_mapping": {}
+    },
+    {
+      "from_step": "s05_rag_metadata_filter_verify",
+      "to_step": "s06_rag_cross_encoder_rerank",
+      "data_type": "rag-metadata-filter-verify",
+      "field_mapping": {}
+    }
+  ],
+  "entry_inputs": [
+    "question_set",
+    "qrels_spans",
+    "k_values",
+    "significance_alpha",
+    "work_dir",
+    "embedding_choice",
+    "chunk_config",
+    "database_url",
+    "target_ann_recall",
+    "fts_config",
+    "metadata_fields",
+    "store",
+    "rerank_models",
+    "rerank_depths",
+    "rerank_latency_budget_ms"
+  ],
+  "terminal_outputs": [
+    "harness_sanity_report",
+    "embedding_cache",
+    "ann_recall_report",
+    "hybrid_run",
+    "hybrid_eval_report",
+    "filter_report",
+    "rerank_config",
+    "rerank_eval_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_rag_retrieval_eval_harness",
+      "s02_rag_embedding_cache_content_hash"
+    ],
+    [
+      "s03_rag_pgvector_hnsw_index"
+    ],
+    [
+      "s04_rag_pg_fts_rrf_hybrid"
+    ],
+    [
+      "s05_rag_metadata_filter_verify"
+    ],
+    [
+      "s06_rag_cross_encoder_rerank"
+    ]
+  ],
+  "estimated_cost": 6,
+  "critical_path": [
+    "s01_rag_retrieval_eval_harness",
+    "s03_rag_pgvector_hnsw_index",
+    "s04_rag_pg_fts_rrf_hybrid",
+    "s05_rag_metadata_filter_verify",
+    "s06_rag_cross_encoder_rerank"
+  ]
+}

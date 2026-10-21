@@ -1,0 +1,145 @@
+{
+  "name": "kubernetes-delivery-hardening",
+  "description": "Harden an existing Deployment: restricted securityContext, default-deny NetworkPolicy, drain-safe rollout and PDB, then kubeconform and kube-linter validation.",
+  "steps": [
+    {
+      "id": "s01_k8s_security_context_hardening",
+      "skill_name": "k8s-security-context-hardening",
+      "inputs": {
+        "resourced_deployment": "from_user_input",
+        "py_runtime_settings": "from_user_input_optional",
+        "node_runtime_settings": "from_user_input_optional",
+        "go_runtime_settings": "from_user_input_optional",
+        "jvm_runtime_settings": "from_user_input_optional",
+        "namespace": "from_user_input",
+        "image_ref": "from_user_input"
+      },
+      "outputs": {
+        "hardened_deployment": "hardened_deployment",
+        "namespace_manifest": "namespace_manifest"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_k8s_network_policy_default_deny",
+      "skill_name": "k8s-network-policy-default-deny",
+      "inputs": {
+        "workload_profile": "from_user_input",
+        "namespace": "from_user_input",
+        "ingress_manifest": "from_user_input",
+        "cluster_context": "from_user_input"
+      },
+      "outputs": {
+        "network_policies": "network_policies"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s03_k8s_rolling_update_pdb",
+      "skill_name": "k8s-rolling-update-pdb",
+      "inputs": {
+        "hardened_deployment": "s01_k8s_security_context_hardening.hardened_deployment",
+        "replica_count": "from_user_input",
+        "namespace": "from_user_input",
+        "py_health_endpoints": "from_user_input_optional",
+        "node_health_endpoints": "from_user_input_optional",
+        "go_health_endpoints": "from_user_input_optional",
+        "jvm_health_endpoints": "from_user_input_optional"
+      },
+      "outputs": {
+        "rollout_deployment": "rollout_deployment",
+        "pdb_manifest": "pdb_manifest"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_k8s_kubeconform_validate",
+      "skill_name": "k8s-kubeconform-validate",
+      "inputs": {
+        "helm_rendered_manifests": "from_user_input_optional",
+        "kustomize_rendered_manifests": "from_user_input_optional",
+        "kubernetes_version": "from_user_input"
+      },
+      "outputs": {
+        "schema_report": "schema_report"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s05_k8s_kube_linter_check",
+      "skill_name": "k8s-kube-linter-check",
+      "inputs": {
+        "helm_rendered_manifests": "from_user_input_optional",
+        "kustomize_rendered_manifests": "from_user_input_optional",
+        "schema_report": "s04_k8s_kubeconform_validate.schema_report",
+        "repo_dir": "from_user_input"
+      },
+      "outputs": {
+        "lint_report": "lint_report"
+      },
+      "parallel_group": 2
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_k8s_security_context_hardening",
+      "to_step": "s03_k8s_rolling_update_pdb",
+      "data_type": "k8s-security-context-hardening",
+      "field_mapping": {
+        "hardened_deployment": "hardened_deployment"
+      }
+    },
+    {
+      "from_step": "s04_k8s_kubeconform_validate",
+      "to_step": "s05_k8s_kube_linter_check",
+      "data_type": "k8s-kubeconform-validate",
+      "field_mapping": {
+        "schema_report": "schema_report"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "resourced_deployment",
+    "py_runtime_settings",
+    "node_runtime_settings",
+    "go_runtime_settings",
+    "jvm_runtime_settings",
+    "namespace",
+    "image_ref",
+    "workload_profile",
+    "ingress_manifest",
+    "cluster_context",
+    "replica_count",
+    "py_health_endpoints",
+    "node_health_endpoints",
+    "go_health_endpoints",
+    "jvm_health_endpoints",
+    "helm_rendered_manifests",
+    "kustomize_rendered_manifests",
+    "kubernetes_version",
+    "repo_dir"
+  ],
+  "terminal_outputs": [
+    "namespace_manifest",
+    "network_policies",
+    "rollout_deployment",
+    "pdb_manifest",
+    "lint_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_k8s_security_context_hardening",
+      "s02_k8s_network_policy_default_deny",
+      "s04_k8s_kubeconform_validate"
+    ],
+    [
+      "s03_k8s_rolling_update_pdb",
+      "s05_k8s_kube_linter_check"
+    ]
+  ],
+  "estimated_cost": 5,
+  "critical_path": [
+    "s04_k8s_kubeconform_validate",
+    "s05_k8s_kube_linter_check"
+  ]
+}

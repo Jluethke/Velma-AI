@@ -1,0 +1,162 @@
+{
+  "name": "caching-stampede",
+  "description": "Stampede protection for hot keys that already have a cache: assess concurrent recomputes with Little's law, then apply in-process coalescing, a Redis lock and XFetch early expiry as the plan selects, and measure the result.",
+  "steps": [
+    {
+      "id": "s01_cache_stampede_risk_assess",
+      "skill_name": "cache-stampede-risk-assess",
+      "inputs": {
+        "read_hotspots": "from_user_input",
+        "ttl_table": "from_user_input",
+        "deployment_topology": "from_user_input"
+      },
+      "outputs": {
+        "stampede_plan": "stampede_plan"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_cache_stampede_request_coalescing",
+      "skill_name": "cache-stampede-request-coalescing",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stampede_plan": "s01_cache_stampede_risk_assess.stampede_plan",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "coalescing_change": "coalescing_change"
+      },
+      "condition": "'coalescing' in stampede_plan.techniques",
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_cache_stampede_redis_lock",
+      "skill_name": "cache-stampede-redis-lock",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "key_schema": "from_user_input",
+        "stampede_plan": "s01_cache_stampede_risk_assess.stampede_plan",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "lock_guard_change": "lock_guard_change"
+      },
+      "condition": "'lock' in stampede_plan.techniques",
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_cache_stampede_xfetch_early_expiry",
+      "skill_name": "cache-stampede-xfetch-early-expiry",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "ttl_table": "from_user_input",
+        "stampede_plan": "s01_cache_stampede_risk_assess.stampede_plan",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "early_expiry_change": "early_expiry_change"
+      },
+      "condition": "'early_expiry' in stampede_plan.techniques",
+      "parallel_group": 2
+    },
+    {
+      "id": "s05_cache_hit_miss_instrument",
+      "skill_name": "cache-hit-miss-instrument",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "key_schema": "from_user_input",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "cache_metrics": "cache_metrics"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s06_cache_hit_rate_latency_measure",
+      "skill_name": "cache-hit-rate-latency-measure",
+      "inputs": {
+        "cache_metrics": "s05_cache_hit_miss_instrument.cache_metrics",
+        "baseline_metrics": "from_user_input",
+        "redis_url": "from_user_input_optional"
+      },
+      "outputs": {
+        "cache_effect_report": "cache_effect_report"
+      },
+      "parallel_group": 4
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_cache_stampede_risk_assess",
+      "to_step": "s02_cache_stampede_request_coalescing",
+      "data_type": "cache-stampede-risk-assess",
+      "field_mapping": {
+        "stampede_plan": "stampede_plan"
+      }
+    },
+    {
+      "from_step": "s01_cache_stampede_risk_assess",
+      "to_step": "s03_cache_stampede_redis_lock",
+      "data_type": "cache-stampede-risk-assess",
+      "field_mapping": {
+        "stampede_plan": "stampede_plan"
+      }
+    },
+    {
+      "from_step": "s01_cache_stampede_risk_assess",
+      "to_step": "s04_cache_stampede_xfetch_early_expiry",
+      "data_type": "cache-stampede-risk-assess",
+      "field_mapping": {
+        "stampede_plan": "stampede_plan"
+      }
+    },
+    {
+      "from_step": "s05_cache_hit_miss_instrument",
+      "to_step": "s06_cache_hit_rate_latency_measure",
+      "data_type": "cache-hit-miss-instrument",
+      "field_mapping": {
+        "cache_metrics": "cache_metrics"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "read_hotspots",
+    "ttl_table",
+    "deployment_topology",
+    "repo_path",
+    "stack",
+    "key_schema",
+    "baseline_metrics",
+    "redis_url"
+  ],
+  "terminal_outputs": [
+    "coalescing_change",
+    "lock_guard_change",
+    "early_expiry_change",
+    "cache_effect_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_cache_stampede_risk_assess"
+    ],
+    [
+      "s02_cache_stampede_request_coalescing",
+      "s03_cache_stampede_redis_lock",
+      "s04_cache_stampede_xfetch_early_expiry"
+    ],
+    [
+      "s05_cache_hit_miss_instrument"
+    ],
+    [
+      "s06_cache_hit_rate_latency_measure"
+    ]
+  ],
+  "estimated_cost": 6,
+  "critical_path": [
+    "s01_cache_stampede_risk_assess",
+    "s02_cache_stampede_request_coalescing",
+    "s05_cache_hit_miss_instrument",
+    "s06_cache_hit_rate_latency_measure"
+  ]
+}

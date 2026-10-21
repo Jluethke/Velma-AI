@@ -1,0 +1,478 @@
+{
+  "name": "ticket-to-merged-pr-go",
+  "description": "Ticket to pull request for a Go module: clarify, write Given/When/Then criteria, verify modules and record a go test baseline, trace calls with ripgrep and gopls, plan, branch, write failing tests, implement in single-file steps, pass gofmt, go vet and golangci-lint, commit, and open the PR.",
+  "steps": [
+    {
+      "id": "s01_tkt_ticket_ambiguity_extract",
+      "skill_name": "tkt-ticket-ambiguity-extract",
+      "inputs": {
+        "ticket_text": "from_user_input",
+        "ticket_id": "from_user_input"
+      },
+      "outputs": {
+        "ambiguity_list": "ambiguity_list",
+        "clarification_questions": "clarification_questions",
+        "working_requirements": "working_requirements"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_tkt_acceptance_criteria_gwt",
+      "skill_name": "tkt-acceptance-criteria-gwt",
+      "inputs": {
+        "working_requirements": "s01_tkt_ticket_ambiguity_extract.working_requirements",
+        "ambiguity_list": "s01_tkt_ticket_ambiguity_extract.ambiguity_list"
+      },
+      "outputs": {
+        "acceptance_criteria": "acceptance_criteria"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_tkt_repo_orient_detect",
+      "skill_name": "tkt-repo-orient-detect",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "repo_profile": "repo_profile"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s04_tkt_go_env_baseline",
+      "skill_name": "tkt-go-env-baseline",
+      "inputs": {
+        "repo_profile": "s03_tkt_repo_orient_detect.repo_profile"
+      },
+      "outputs": {
+        "go_baseline_report": "go_baseline_report"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s05_tkt_rg_call_trace",
+      "skill_name": "tkt-rg-call-trace",
+      "inputs": {
+        "repo_profile": "s03_tkt_repo_orient_detect.repo_profile",
+        "acceptance_criteria": "s02_tkt_acceptance_criteria_gwt.acceptance_criteria"
+      },
+      "outputs": {
+        "symbol_trace": "symbol_trace"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s06_tkt_lsp_reference_trace",
+      "skill_name": "tkt-lsp-reference-trace",
+      "inputs": {
+        "symbol_trace": "s05_tkt_rg_call_trace.symbol_trace",
+        "repo_profile": "s03_tkt_repo_orient_detect.repo_profile"
+      },
+      "outputs": {
+        "confirmed_call_graph": "confirmed_call_graph"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s07_tkt_change_impact_list",
+      "skill_name": "tkt-change-impact-list",
+      "inputs": {
+        "confirmed_call_graph": "s06_tkt_lsp_reference_trace.confirmed_call_graph",
+        "acceptance_criteria": "s02_tkt_acceptance_criteria_gwt.acceptance_criteria",
+        "repo_profile": "s03_tkt_repo_orient_detect.repo_profile"
+      },
+      "outputs": {
+        "impact_list": "impact_list",
+        "edit_plan": "edit_plan"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s08_tkt_branch_create",
+      "skill_name": "tkt-branch-create",
+      "inputs": {
+        "ticket_id": "from_user_input",
+        "working_requirements": "s01_tkt_ticket_ambiguity_extract.working_requirements",
+        "repo_profile": "s03_tkt_repo_orient_detect.repo_profile",
+        "base_branch": "from_user_input_optional"
+      },
+      "outputs": {
+        "branch_name": "branch_name"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s09_tkt_test_level_choose",
+      "skill_name": "tkt-test-level-choose",
+      "inputs": {
+        "acceptance_criteria": "s02_tkt_acceptance_criteria_gwt.acceptance_criteria",
+        "impact_list": "s07_tkt_change_impact_list.impact_list"
+      },
+      "outputs": {
+        "test_plan": "test_plan"
+      },
+      "parallel_group": 6
+    },
+    {
+      "id": "s10_tkt_failing_test_first",
+      "skill_name": "tkt-failing-test-first",
+      "inputs": {
+        "test_plan": "s09_tkt_test_level_choose.test_plan",
+        "repo_profile": "s03_tkt_repo_orient_detect.repo_profile",
+        "branch_name": "s08_tkt_branch_create.branch_name"
+      },
+      "outputs": {
+        "failing_test_evidence": "failing_test_evidence"
+      },
+      "parallel_group": 7
+    },
+    {
+      "id": "s11_tkt_small_edit_loop",
+      "skill_name": "tkt-small-edit-loop",
+      "inputs": {
+        "edit_plan": "s07_tkt_change_impact_list.edit_plan",
+        "failing_test_evidence": "s10_tkt_failing_test_first.failing_test_evidence",
+        "repo_profile": "s03_tkt_repo_orient_detect.repo_profile"
+      },
+      "outputs": {
+        "change_diff": "change_diff",
+        "verification_log": "verification_log"
+      },
+      "parallel_group": 8
+    },
+    {
+      "id": "s12_tkt_go_vet_golangci",
+      "skill_name": "tkt-go-vet-golangci",
+      "inputs": {
+        "change_diff": "s11_tkt_small_edit_loop.change_diff",
+        "repo_profile": "s03_tkt_repo_orient_detect.repo_profile"
+      },
+      "outputs": {
+        "go_static_report": "go_static_report"
+      },
+      "parallel_group": 9
+    },
+    {
+      "id": "s13_tkt_conventional_commit",
+      "skill_name": "tkt-conventional-commit",
+      "inputs": {
+        "change_diff": "s11_tkt_small_edit_loop.change_diff",
+        "ticket_id": "from_user_input",
+        "working_requirements": "s01_tkt_ticket_ambiguity_extract.working_requirements"
+      },
+      "outputs": {
+        "commit_log": "commit_log"
+      },
+      "parallel_group": 9
+    },
+    {
+      "id": "s14_tkt_pr_description",
+      "skill_name": "tkt-pr-description",
+      "inputs": {
+        "commit_log": "s13_tkt_conventional_commit.commit_log",
+        "acceptance_criteria": "s02_tkt_acceptance_criteria_gwt.acceptance_criteria",
+        "verification_log": "s11_tkt_small_edit_loop.verification_log",
+        "impact_list": "s07_tkt_change_impact_list.impact_list",
+        "ticket_id": "from_user_input",
+        "branch_name": "s08_tkt_branch_create.branch_name"
+      },
+      "outputs": {
+        "pr_url": "pr_url",
+        "pr_body": "pr_body"
+      },
+      "parallel_group": 10
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_tkt_ticket_ambiguity_extract",
+      "to_step": "s02_tkt_acceptance_criteria_gwt",
+      "data_type": "tkt-ticket-ambiguity-extract",
+      "field_mapping": {
+        "working_requirements": "working_requirements",
+        "ambiguity_list": "ambiguity_list"
+      }
+    },
+    {
+      "from_step": "s03_tkt_repo_orient_detect",
+      "to_step": "s04_tkt_go_env_baseline",
+      "data_type": "tkt-repo-orient-detect",
+      "field_mapping": {
+        "repo_profile": "repo_profile"
+      }
+    },
+    {
+      "from_step": "s02_tkt_acceptance_criteria_gwt",
+      "to_step": "s05_tkt_rg_call_trace",
+      "data_type": "tkt-acceptance-criteria-gwt",
+      "field_mapping": {
+        "acceptance_criteria": "acceptance_criteria"
+      }
+    },
+    {
+      "from_step": "s03_tkt_repo_orient_detect",
+      "to_step": "s05_tkt_rg_call_trace",
+      "data_type": "tkt-repo-orient-detect",
+      "field_mapping": {
+        "repo_profile": "repo_profile"
+      }
+    },
+    {
+      "from_step": "s03_tkt_repo_orient_detect",
+      "to_step": "s06_tkt_lsp_reference_trace",
+      "data_type": "tkt-repo-orient-detect",
+      "field_mapping": {
+        "repo_profile": "repo_profile"
+      }
+    },
+    {
+      "from_step": "s05_tkt_rg_call_trace",
+      "to_step": "s06_tkt_lsp_reference_trace",
+      "data_type": "tkt-rg-call-trace",
+      "field_mapping": {
+        "symbol_trace": "symbol_trace"
+      }
+    },
+    {
+      "from_step": "s02_tkt_acceptance_criteria_gwt",
+      "to_step": "s07_tkt_change_impact_list",
+      "data_type": "tkt-acceptance-criteria-gwt",
+      "field_mapping": {
+        "acceptance_criteria": "acceptance_criteria"
+      }
+    },
+    {
+      "from_step": "s03_tkt_repo_orient_detect",
+      "to_step": "s07_tkt_change_impact_list",
+      "data_type": "tkt-repo-orient-detect",
+      "field_mapping": {
+        "repo_profile": "repo_profile"
+      }
+    },
+    {
+      "from_step": "s06_tkt_lsp_reference_trace",
+      "to_step": "s07_tkt_change_impact_list",
+      "data_type": "tkt-lsp-reference-trace",
+      "field_mapping": {
+        "confirmed_call_graph": "confirmed_call_graph"
+      }
+    },
+    {
+      "from_step": "s01_tkt_ticket_ambiguity_extract",
+      "to_step": "s08_tkt_branch_create",
+      "data_type": "tkt-ticket-ambiguity-extract",
+      "field_mapping": {
+        "working_requirements": "working_requirements"
+      }
+    },
+    {
+      "from_step": "s03_tkt_repo_orient_detect",
+      "to_step": "s08_tkt_branch_create",
+      "data_type": "tkt-repo-orient-detect",
+      "field_mapping": {
+        "repo_profile": "repo_profile"
+      }
+    },
+    {
+      "from_step": "s02_tkt_acceptance_criteria_gwt",
+      "to_step": "s09_tkt_test_level_choose",
+      "data_type": "tkt-acceptance-criteria-gwt",
+      "field_mapping": {
+        "acceptance_criteria": "acceptance_criteria"
+      }
+    },
+    {
+      "from_step": "s07_tkt_change_impact_list",
+      "to_step": "s09_tkt_test_level_choose",
+      "data_type": "tkt-change-impact-list",
+      "field_mapping": {
+        "impact_list": "impact_list"
+      }
+    },
+    {
+      "from_step": "s03_tkt_repo_orient_detect",
+      "to_step": "s10_tkt_failing_test_first",
+      "data_type": "tkt-repo-orient-detect",
+      "field_mapping": {
+        "repo_profile": "repo_profile"
+      }
+    },
+    {
+      "from_step": "s08_tkt_branch_create",
+      "to_step": "s10_tkt_failing_test_first",
+      "data_type": "tkt-branch-create",
+      "field_mapping": {
+        "branch_name": "branch_name"
+      }
+    },
+    {
+      "from_step": "s09_tkt_test_level_choose",
+      "to_step": "s10_tkt_failing_test_first",
+      "data_type": "tkt-test-level-choose",
+      "field_mapping": {
+        "test_plan": "test_plan"
+      }
+    },
+    {
+      "from_step": "s03_tkt_repo_orient_detect",
+      "to_step": "s11_tkt_small_edit_loop",
+      "data_type": "tkt-repo-orient-detect",
+      "field_mapping": {
+        "repo_profile": "repo_profile"
+      }
+    },
+    {
+      "from_step": "s07_tkt_change_impact_list",
+      "to_step": "s11_tkt_small_edit_loop",
+      "data_type": "tkt-change-impact-list",
+      "field_mapping": {
+        "edit_plan": "edit_plan"
+      }
+    },
+    {
+      "from_step": "s10_tkt_failing_test_first",
+      "to_step": "s11_tkt_small_edit_loop",
+      "data_type": "tkt-failing-test-first",
+      "field_mapping": {
+        "failing_test_evidence": "failing_test_evidence"
+      }
+    },
+    {
+      "from_step": "s03_tkt_repo_orient_detect",
+      "to_step": "s12_tkt_go_vet_golangci",
+      "data_type": "tkt-repo-orient-detect",
+      "field_mapping": {
+        "repo_profile": "repo_profile"
+      }
+    },
+    {
+      "from_step": "s11_tkt_small_edit_loop",
+      "to_step": "s12_tkt_go_vet_golangci",
+      "data_type": "tkt-small-edit-loop",
+      "field_mapping": {
+        "change_diff": "change_diff"
+      }
+    },
+    {
+      "from_step": "s01_tkt_ticket_ambiguity_extract",
+      "to_step": "s13_tkt_conventional_commit",
+      "data_type": "tkt-ticket-ambiguity-extract",
+      "field_mapping": {
+        "working_requirements": "working_requirements"
+      }
+    },
+    {
+      "from_step": "s11_tkt_small_edit_loop",
+      "to_step": "s13_tkt_conventional_commit",
+      "data_type": "tkt-small-edit-loop",
+      "field_mapping": {
+        "change_diff": "change_diff"
+      }
+    },
+    {
+      "from_step": "s02_tkt_acceptance_criteria_gwt",
+      "to_step": "s14_tkt_pr_description",
+      "data_type": "tkt-acceptance-criteria-gwt",
+      "field_mapping": {
+        "acceptance_criteria": "acceptance_criteria"
+      }
+    },
+    {
+      "from_step": "s07_tkt_change_impact_list",
+      "to_step": "s14_tkt_pr_description",
+      "data_type": "tkt-change-impact-list",
+      "field_mapping": {
+        "impact_list": "impact_list"
+      }
+    },
+    {
+      "from_step": "s08_tkt_branch_create",
+      "to_step": "s14_tkt_pr_description",
+      "data_type": "tkt-branch-create",
+      "field_mapping": {
+        "branch_name": "branch_name"
+      }
+    },
+    {
+      "from_step": "s11_tkt_small_edit_loop",
+      "to_step": "s14_tkt_pr_description",
+      "data_type": "tkt-small-edit-loop",
+      "field_mapping": {
+        "verification_log": "verification_log"
+      }
+    },
+    {
+      "from_step": "s13_tkt_conventional_commit",
+      "to_step": "s14_tkt_pr_description",
+      "data_type": "tkt-conventional-commit",
+      "field_mapping": {
+        "commit_log": "commit_log"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "ticket_text",
+    "ticket_id",
+    "repo_path",
+    "stack",
+    "base_branch"
+  ],
+  "terminal_outputs": [
+    "clarification_questions",
+    "go_baseline_report",
+    "go_static_report",
+    "pr_url",
+    "pr_body"
+  ],
+  "parallel_groups": [
+    [
+      "s01_tkt_ticket_ambiguity_extract",
+      "s03_tkt_repo_orient_detect"
+    ],
+    [
+      "s02_tkt_acceptance_criteria_gwt",
+      "s04_tkt_go_env_baseline",
+      "s08_tkt_branch_create"
+    ],
+    [
+      "s05_tkt_rg_call_trace"
+    ],
+    [
+      "s06_tkt_lsp_reference_trace"
+    ],
+    [
+      "s07_tkt_change_impact_list"
+    ],
+    [
+      "s09_tkt_test_level_choose"
+    ],
+    [
+      "s10_tkt_failing_test_first"
+    ],
+    [
+      "s11_tkt_small_edit_loop"
+    ],
+    [
+      "s12_tkt_go_vet_golangci",
+      "s13_tkt_conventional_commit"
+    ],
+    [
+      "s14_tkt_pr_description"
+    ]
+  ],
+  "estimated_cost": 14,
+  "critical_path": [
+    "s01_tkt_ticket_ambiguity_extract",
+    "s02_tkt_acceptance_criteria_gwt",
+    "s05_tkt_rg_call_trace",
+    "s06_tkt_lsp_reference_trace",
+    "s07_tkt_change_impact_list",
+    "s09_tkt_test_level_choose",
+    "s10_tkt_failing_test_first",
+    "s11_tkt_small_edit_loop",
+    "s13_tkt_conventional_commit",
+    "s14_tkt_pr_description"
+  ]
+}

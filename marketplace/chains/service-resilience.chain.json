@@ -1,0 +1,797 @@
+{
+  "name": "service-resilience",
+  "description": "Map dependencies, measure latency, derive timeouts, retries, breakers and bulkheads per stack, add rate limiting, load shedding, fallbacks, idempotency and health probes, then inject faults and verify every control.",
+  "steps": [
+    {
+      "id": "s01_res_dependency_map",
+      "skill_name": "res-dependency-map",
+      "inputs": {
+        "service_repo": "from_user_input",
+        "stack": "from_user_input",
+        "trace_source": "from_user_input_optional"
+      },
+      "outputs": {
+        "dependency_map": "dependency_map"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_res_latency_percentiles",
+      "skill_name": "res-latency-percentiles",
+      "inputs": {
+        "dependency_map": "s01_res_dependency_map.dependency_map",
+        "metrics_source": "from_user_input",
+        "measurement_window": "from_user_input"
+      },
+      "outputs": {
+        "latency_profile": "latency_profile"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_res_timeout_budget",
+      "skill_name": "res-timeout-budget",
+      "inputs": {
+        "dependency_map": "s01_res_dependency_map.dependency_map",
+        "latency_profile": "s02_res_latency_percentiles.latency_profile",
+        "request_deadline_ms": "from_user_input",
+        "false_timeout_rate": "from_user_input"
+      },
+      "outputs": {
+        "timeout_plan": "timeout_plan"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_res_py_timeouts",
+      "skill_name": "res-py-timeouts",
+      "inputs": {
+        "service_repo": "from_user_input",
+        "timeout_plan": "s03_res_timeout_budget.timeout_plan"
+      },
+      "outputs": {
+        "timeout_changes": "timeout_changes"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 4
+    },
+    {
+      "id": "s05_res_node_timeouts",
+      "skill_name": "res-node-timeouts",
+      "inputs": {
+        "service_repo": "from_user_input",
+        "timeout_plan": "s03_res_timeout_budget.timeout_plan"
+      },
+      "outputs": {
+        "timeout_changes": "timeout_changes"
+      },
+      "condition": "stack == 'node'",
+      "parallel_group": 4
+    },
+    {
+      "id": "s06_res_go_timeouts",
+      "skill_name": "res-go-timeouts",
+      "inputs": {
+        "service_repo": "from_user_input",
+        "timeout_plan": "s03_res_timeout_budget.timeout_plan"
+      },
+      "outputs": {
+        "timeout_changes": "timeout_changes"
+      },
+      "condition": "stack == 'go'",
+      "parallel_group": 4
+    },
+    {
+      "id": "s07_res_java_timeouts",
+      "skill_name": "res-java-timeouts",
+      "inputs": {
+        "service_repo": "from_user_input",
+        "timeout_plan": "s03_res_timeout_budget.timeout_plan"
+      },
+      "outputs": {
+        "timeout_changes": "timeout_changes"
+      },
+      "condition": "stack == 'java'",
+      "parallel_group": 4
+    },
+    {
+      "id": "s08_res_retry_policy",
+      "skill_name": "res-retry-policy",
+      "inputs": {
+        "dependency_map": "s01_res_dependency_map.dependency_map",
+        "timeout_plan": "s03_res_timeout_budget.timeout_plan"
+      },
+      "outputs": {
+        "retry_policy": "retry_policy"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s09_res_py_tenacity_retry",
+      "skill_name": "res-py-tenacity-retry",
+      "inputs": {
+        "service_repo": "from_user_input",
+        "retry_policy": "s08_res_retry_policy.retry_policy"
+      },
+      "outputs": {
+        "retry_changes": "retry_changes"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 5
+    },
+    {
+      "id": "s10_res_node_cockatiel_retry",
+      "skill_name": "res-node-cockatiel-retry",
+      "inputs": {
+        "service_repo": "from_user_input",
+        "retry_policy": "s08_res_retry_policy.retry_policy"
+      },
+      "outputs": {
+        "retry_changes": "retry_changes"
+      },
+      "condition": "stack == 'node'",
+      "parallel_group": 5
+    },
+    {
+      "id": "s11_res_go_backoff_retry",
+      "skill_name": "res-go-backoff-retry",
+      "inputs": {
+        "service_repo": "from_user_input",
+        "retry_policy": "s08_res_retry_policy.retry_policy"
+      },
+      "outputs": {
+        "retry_changes": "retry_changes"
+      },
+      "condition": "stack == 'go'",
+      "parallel_group": 5
+    },
+    {
+      "id": "s12_res_java_resilience4j_retry",
+      "skill_name": "res-java-resilience4j-retry",
+      "inputs": {
+        "service_repo": "from_user_input",
+        "retry_policy": "s08_res_retry_policy.retry_policy"
+      },
+      "outputs": {
+        "retry_changes": "retry_changes"
+      },
+      "condition": "stack == 'java'",
+      "parallel_group": 5
+    },
+    {
+      "id": "s13_res_mesh_retry_budget",
+      "skill_name": "res-mesh-retry-budget",
+      "inputs": {
+        "retry_policy": "s08_res_retry_policy.retry_policy",
+        "timeout_plan": "s03_res_timeout_budget.timeout_plan",
+        "mesh_type": "from_user_input_optional"
+      },
+      "outputs": {
+        "mesh_retry_config": "mesh_retry_config"
+      },
+      "condition": "mesh_type == 'envoy' or mesh_type == 'istio'",
+      "parallel_group": 5
+    },
+    {
+      "id": "s14_res_breaker_policy",
+      "skill_name": "res-breaker-policy",
+      "inputs": {
+        "dependency_map": "s01_res_dependency_map.dependency_map",
+        "latency_profile": "s02_res_latency_percentiles.latency_profile",
+        "retry_policy": "s08_res_retry_policy.retry_policy"
+      },
+      "outputs": {
+        "breaker_policy": "breaker_policy"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s15_res_py_pybreaker",
+      "skill_name": "res-py-pybreaker",
+      "inputs": {
+        "service_repo": "from_user_input",
+        "breaker_policy": "s14_res_breaker_policy.breaker_policy"
+      },
+      "outputs": {
+        "breaker_changes": "breaker_changes"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 6
+    },
+    {
+      "id": "s16_res_node_opossum_breaker",
+      "skill_name": "res-node-opossum-breaker",
+      "inputs": {
+        "service_repo": "from_user_input",
+        "breaker_policy": "s14_res_breaker_policy.breaker_policy"
+      },
+      "outputs": {
+        "breaker_changes": "breaker_changes"
+      },
+      "condition": "stack == 'node'",
+      "parallel_group": 6
+    },
+    {
+      "id": "s17_res_go_gobreaker",
+      "skill_name": "res-go-gobreaker",
+      "inputs": {
+        "service_repo": "from_user_input",
+        "breaker_policy": "s14_res_breaker_policy.breaker_policy"
+      },
+      "outputs": {
+        "breaker_changes": "breaker_changes"
+      },
+      "condition": "stack == 'go'",
+      "parallel_group": 6
+    },
+    {
+      "id": "s18_res_java_resilience4j_breaker",
+      "skill_name": "res-java-resilience4j-breaker",
+      "inputs": {
+        "service_repo": "from_user_input",
+        "breaker_policy": "s14_res_breaker_policy.breaker_policy"
+      },
+      "outputs": {
+        "breaker_changes": "breaker_changes"
+      },
+      "condition": "stack == 'java'",
+      "parallel_group": 6
+    },
+    {
+      "id": "s19_res_bulkhead_partition",
+      "skill_name": "res-bulkhead-partition",
+      "inputs": {
+        "service_repo": "from_user_input",
+        "stack": "from_user_input",
+        "dependency_map": "s01_res_dependency_map.dependency_map",
+        "latency_profile": "s02_res_latency_percentiles.latency_profile"
+      },
+      "outputs": {
+        "bulkhead_changes": "bulkhead_changes"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s20_res_redis_token_bucket",
+      "skill_name": "res-redis-token-bucket",
+      "inputs": {
+        "service_repo": "from_user_input",
+        "rate_limit_spec": "from_user_input_optional",
+        "redis_url": "from_user_input_optional"
+      },
+      "outputs": {
+        "token_bucket_limiter": "token_bucket_limiter"
+      },
+      "condition": "rate_limit_spec.algorithm == 'token_bucket'",
+      "parallel_group": 1
+    },
+    {
+      "id": "s21_res_redis_sliding_window",
+      "skill_name": "res-redis-sliding-window",
+      "inputs": {
+        "service_repo": "from_user_input",
+        "rate_limit_spec": "from_user_input_optional",
+        "redis_url": "from_user_input_optional"
+      },
+      "outputs": {
+        "sliding_window_limiter": "sliding_window_limiter"
+      },
+      "condition": "rate_limit_spec.algorithm == 'sliding_window'",
+      "parallel_group": 1
+    },
+    {
+      "id": "s22_res_nginx_limit_req",
+      "skill_name": "res-nginx-limit-req",
+      "inputs": {
+        "nginx_conf_path": "from_user_input_optional",
+        "rate_limit_spec": "from_user_input_optional"
+      },
+      "outputs": {
+        "edge_rate_limit_config": "edge_rate_limit_config"
+      },
+      "condition": "nginx_conf_path != null",
+      "parallel_group": 1
+    },
+    {
+      "id": "s23_res_load_shedding",
+      "skill_name": "res-load-shedding",
+      "inputs": {
+        "service_repo": "from_user_input",
+        "stack": "from_user_input",
+        "latency_profile": "s02_res_latency_percentiles.latency_profile",
+        "request_deadline_ms": "from_user_input"
+      },
+      "outputs": {
+        "load_shed_changes": "load_shed_changes"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s24_res_graceful_degradation",
+      "skill_name": "res-graceful-degradation",
+      "inputs": {
+        "service_repo": "from_user_input",
+        "dependency_map": "s01_res_dependency_map.dependency_map",
+        "breaker_policy": "s14_res_breaker_policy.breaker_policy"
+      },
+      "outputs": {
+        "fallback_matrix": "fallback_matrix"
+      },
+      "parallel_group": 6
+    },
+    {
+      "id": "s25_res_idempotency_keys",
+      "skill_name": "res-idempotency-keys",
+      "inputs": {
+        "service_repo": "from_user_input",
+        "stack": "from_user_input",
+        "key_retention_hours": "from_user_input"
+      },
+      "outputs": {
+        "idempotency_changes": "idempotency_changes"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s26_res_health_probes",
+      "skill_name": "res-health-probes",
+      "inputs": {
+        "service_repo": "from_user_input",
+        "dependency_map": "s01_res_dependency_map.dependency_map",
+        "k8s_manifest_path": "from_user_input_optional"
+      },
+      "outputs": {
+        "probe_changes": "probe_changes"
+      },
+      "condition": "k8s_manifest_path != null",
+      "parallel_group": 2
+    },
+    {
+      "id": "s27_res_toxiproxy_faults",
+      "skill_name": "res-toxiproxy-faults",
+      "inputs": {
+        "dependency_map": "s01_res_dependency_map.dependency_map",
+        "timeout_plan": "s03_res_timeout_budget.timeout_plan",
+        "breaker_policy": "s14_res_breaker_policy.breaker_policy"
+      },
+      "outputs": {
+        "fault_results": "fault_results"
+      },
+      "parallel_group": 6
+    },
+    {
+      "id": "s28_res_chaos_experiment",
+      "skill_name": "res-chaos-experiment",
+      "inputs": {
+        "dependency_map": "s01_res_dependency_map.dependency_map",
+        "fault_results": "s27_res_toxiproxy_faults.fault_results",
+        "steady_state_slo": "from_user_input_optional"
+      },
+      "outputs": {
+        "chaos_journal": "chaos_journal"
+      },
+      "condition": "steady_state_slo != null",
+      "parallel_group": 7
+    },
+    {
+      "id": "s29_res_resilience_verify",
+      "skill_name": "res-resilience-verify",
+      "inputs": {
+        "dependency_map": "s01_res_dependency_map.dependency_map",
+        "timeout_plan": "s03_res_timeout_budget.timeout_plan",
+        "retry_policy": "s08_res_retry_policy.retry_policy",
+        "breaker_policy": "s14_res_breaker_policy.breaker_policy",
+        "fault_results": "s27_res_toxiproxy_faults.fault_results",
+        "chaos_journal": "s28_res_chaos_experiment.chaos_journal",
+        "request_deadline_ms": "from_user_input"
+      },
+      "outputs": {
+        "verification_report": "verification_report"
+      },
+      "parallel_group": 8
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_res_dependency_map",
+      "to_step": "s02_res_latency_percentiles",
+      "data_type": "res-dependency-map",
+      "field_mapping": {
+        "dependency_map": "dependency_map"
+      }
+    },
+    {
+      "from_step": "s01_res_dependency_map",
+      "to_step": "s03_res_timeout_budget",
+      "data_type": "res-dependency-map",
+      "field_mapping": {
+        "dependency_map": "dependency_map"
+      }
+    },
+    {
+      "from_step": "s02_res_latency_percentiles",
+      "to_step": "s03_res_timeout_budget",
+      "data_type": "res-latency-percentiles",
+      "field_mapping": {
+        "latency_profile": "latency_profile"
+      }
+    },
+    {
+      "from_step": "s03_res_timeout_budget",
+      "to_step": "s04_res_py_timeouts",
+      "data_type": "res-timeout-budget",
+      "field_mapping": {
+        "timeout_plan": "timeout_plan"
+      }
+    },
+    {
+      "from_step": "s03_res_timeout_budget",
+      "to_step": "s05_res_node_timeouts",
+      "data_type": "res-timeout-budget",
+      "field_mapping": {
+        "timeout_plan": "timeout_plan"
+      }
+    },
+    {
+      "from_step": "s03_res_timeout_budget",
+      "to_step": "s06_res_go_timeouts",
+      "data_type": "res-timeout-budget",
+      "field_mapping": {
+        "timeout_plan": "timeout_plan"
+      }
+    },
+    {
+      "from_step": "s03_res_timeout_budget",
+      "to_step": "s07_res_java_timeouts",
+      "data_type": "res-timeout-budget",
+      "field_mapping": {
+        "timeout_plan": "timeout_plan"
+      }
+    },
+    {
+      "from_step": "s01_res_dependency_map",
+      "to_step": "s08_res_retry_policy",
+      "data_type": "res-dependency-map",
+      "field_mapping": {
+        "dependency_map": "dependency_map"
+      }
+    },
+    {
+      "from_step": "s03_res_timeout_budget",
+      "to_step": "s08_res_retry_policy",
+      "data_type": "res-timeout-budget",
+      "field_mapping": {
+        "timeout_plan": "timeout_plan"
+      }
+    },
+    {
+      "from_step": "s08_res_retry_policy",
+      "to_step": "s09_res_py_tenacity_retry",
+      "data_type": "res-retry-policy",
+      "field_mapping": {
+        "retry_policy": "retry_policy"
+      }
+    },
+    {
+      "from_step": "s08_res_retry_policy",
+      "to_step": "s10_res_node_cockatiel_retry",
+      "data_type": "res-retry-policy",
+      "field_mapping": {
+        "retry_policy": "retry_policy"
+      }
+    },
+    {
+      "from_step": "s08_res_retry_policy",
+      "to_step": "s11_res_go_backoff_retry",
+      "data_type": "res-retry-policy",
+      "field_mapping": {
+        "retry_policy": "retry_policy"
+      }
+    },
+    {
+      "from_step": "s08_res_retry_policy",
+      "to_step": "s12_res_java_resilience4j_retry",
+      "data_type": "res-retry-policy",
+      "field_mapping": {
+        "retry_policy": "retry_policy"
+      }
+    },
+    {
+      "from_step": "s08_res_retry_policy",
+      "to_step": "s13_res_mesh_retry_budget",
+      "data_type": "res-retry-policy",
+      "field_mapping": {
+        "retry_policy": "retry_policy"
+      }
+    },
+    {
+      "from_step": "s03_res_timeout_budget",
+      "to_step": "s13_res_mesh_retry_budget",
+      "data_type": "res-timeout-budget",
+      "field_mapping": {
+        "timeout_plan": "timeout_plan"
+      }
+    },
+    {
+      "from_step": "s01_res_dependency_map",
+      "to_step": "s14_res_breaker_policy",
+      "data_type": "res-dependency-map",
+      "field_mapping": {
+        "dependency_map": "dependency_map"
+      }
+    },
+    {
+      "from_step": "s02_res_latency_percentiles",
+      "to_step": "s14_res_breaker_policy",
+      "data_type": "res-latency-percentiles",
+      "field_mapping": {
+        "latency_profile": "latency_profile"
+      }
+    },
+    {
+      "from_step": "s08_res_retry_policy",
+      "to_step": "s14_res_breaker_policy",
+      "data_type": "res-retry-policy",
+      "field_mapping": {
+        "retry_policy": "retry_policy"
+      }
+    },
+    {
+      "from_step": "s14_res_breaker_policy",
+      "to_step": "s15_res_py_pybreaker",
+      "data_type": "res-breaker-policy",
+      "field_mapping": {
+        "breaker_policy": "breaker_policy"
+      }
+    },
+    {
+      "from_step": "s14_res_breaker_policy",
+      "to_step": "s16_res_node_opossum_breaker",
+      "data_type": "res-breaker-policy",
+      "field_mapping": {
+        "breaker_policy": "breaker_policy"
+      }
+    },
+    {
+      "from_step": "s14_res_breaker_policy",
+      "to_step": "s17_res_go_gobreaker",
+      "data_type": "res-breaker-policy",
+      "field_mapping": {
+        "breaker_policy": "breaker_policy"
+      }
+    },
+    {
+      "from_step": "s14_res_breaker_policy",
+      "to_step": "s18_res_java_resilience4j_breaker",
+      "data_type": "res-breaker-policy",
+      "field_mapping": {
+        "breaker_policy": "breaker_policy"
+      }
+    },
+    {
+      "from_step": "s01_res_dependency_map",
+      "to_step": "s19_res_bulkhead_partition",
+      "data_type": "res-dependency-map",
+      "field_mapping": {
+        "dependency_map": "dependency_map"
+      }
+    },
+    {
+      "from_step": "s02_res_latency_percentiles",
+      "to_step": "s19_res_bulkhead_partition",
+      "data_type": "res-latency-percentiles",
+      "field_mapping": {
+        "latency_profile": "latency_profile"
+      }
+    },
+    {
+      "from_step": "s02_res_latency_percentiles",
+      "to_step": "s23_res_load_shedding",
+      "data_type": "res-latency-percentiles",
+      "field_mapping": {
+        "latency_profile": "latency_profile"
+      }
+    },
+    {
+      "from_step": "s01_res_dependency_map",
+      "to_step": "s24_res_graceful_degradation",
+      "data_type": "res-dependency-map",
+      "field_mapping": {
+        "dependency_map": "dependency_map"
+      }
+    },
+    {
+      "from_step": "s14_res_breaker_policy",
+      "to_step": "s24_res_graceful_degradation",
+      "data_type": "res-breaker-policy",
+      "field_mapping": {
+        "breaker_policy": "breaker_policy"
+      }
+    },
+    {
+      "from_step": "s01_res_dependency_map",
+      "to_step": "s26_res_health_probes",
+      "data_type": "res-dependency-map",
+      "field_mapping": {
+        "dependency_map": "dependency_map"
+      }
+    },
+    {
+      "from_step": "s01_res_dependency_map",
+      "to_step": "s27_res_toxiproxy_faults",
+      "data_type": "res-dependency-map",
+      "field_mapping": {
+        "dependency_map": "dependency_map"
+      }
+    },
+    {
+      "from_step": "s03_res_timeout_budget",
+      "to_step": "s27_res_toxiproxy_faults",
+      "data_type": "res-timeout-budget",
+      "field_mapping": {
+        "timeout_plan": "timeout_plan"
+      }
+    },
+    {
+      "from_step": "s14_res_breaker_policy",
+      "to_step": "s27_res_toxiproxy_faults",
+      "data_type": "res-breaker-policy",
+      "field_mapping": {
+        "breaker_policy": "breaker_policy"
+      }
+    },
+    {
+      "from_step": "s01_res_dependency_map",
+      "to_step": "s28_res_chaos_experiment",
+      "data_type": "res-dependency-map",
+      "field_mapping": {
+        "dependency_map": "dependency_map"
+      }
+    },
+    {
+      "from_step": "s27_res_toxiproxy_faults",
+      "to_step": "s28_res_chaos_experiment",
+      "data_type": "res-toxiproxy-faults",
+      "field_mapping": {
+        "fault_results": "fault_results"
+      }
+    },
+    {
+      "from_step": "s01_res_dependency_map",
+      "to_step": "s29_res_resilience_verify",
+      "data_type": "res-dependency-map",
+      "field_mapping": {
+        "dependency_map": "dependency_map"
+      }
+    },
+    {
+      "from_step": "s03_res_timeout_budget",
+      "to_step": "s29_res_resilience_verify",
+      "data_type": "res-timeout-budget",
+      "field_mapping": {
+        "timeout_plan": "timeout_plan"
+      }
+    },
+    {
+      "from_step": "s08_res_retry_policy",
+      "to_step": "s29_res_resilience_verify",
+      "data_type": "res-retry-policy",
+      "field_mapping": {
+        "retry_policy": "retry_policy"
+      }
+    },
+    {
+      "from_step": "s14_res_breaker_policy",
+      "to_step": "s29_res_resilience_verify",
+      "data_type": "res-breaker-policy",
+      "field_mapping": {
+        "breaker_policy": "breaker_policy"
+      }
+    },
+    {
+      "from_step": "s27_res_toxiproxy_faults",
+      "to_step": "s29_res_resilience_verify",
+      "data_type": "res-toxiproxy-faults",
+      "field_mapping": {
+        "fault_results": "fault_results"
+      }
+    },
+    {
+      "from_step": "s28_res_chaos_experiment",
+      "to_step": "s29_res_resilience_verify",
+      "data_type": "res-chaos-experiment",
+      "field_mapping": {
+        "chaos_journal": "chaos_journal"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "service_repo",
+    "stack",
+    "trace_source",
+    "metrics_source",
+    "measurement_window",
+    "request_deadline_ms",
+    "false_timeout_rate",
+    "mesh_type",
+    "rate_limit_spec",
+    "redis_url",
+    "nginx_conf_path",
+    "key_retention_hours",
+    "k8s_manifest_path",
+    "steady_state_slo"
+  ],
+  "terminal_outputs": [
+    "timeout_changes",
+    "retry_changes",
+    "mesh_retry_config",
+    "breaker_changes",
+    "bulkhead_changes",
+    "token_bucket_limiter",
+    "sliding_window_limiter",
+    "edge_rate_limit_config",
+    "load_shed_changes",
+    "fallback_matrix",
+    "idempotency_changes",
+    "probe_changes",
+    "verification_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_res_dependency_map",
+      "s20_res_redis_token_bucket",
+      "s21_res_redis_sliding_window",
+      "s22_res_nginx_limit_req",
+      "s25_res_idempotency_keys"
+    ],
+    [
+      "s02_res_latency_percentiles",
+      "s26_res_health_probes"
+    ],
+    [
+      "s03_res_timeout_budget",
+      "s19_res_bulkhead_partition",
+      "s23_res_load_shedding"
+    ],
+    [
+      "s04_res_py_timeouts",
+      "s05_res_node_timeouts",
+      "s06_res_go_timeouts",
+      "s07_res_java_timeouts",
+      "s08_res_retry_policy"
+    ],
+    [
+      "s09_res_py_tenacity_retry",
+      "s10_res_node_cockatiel_retry",
+      "s11_res_go_backoff_retry",
+      "s12_res_java_resilience4j_retry",
+      "s13_res_mesh_retry_budget",
+      "s14_res_breaker_policy"
+    ],
+    [
+      "s15_res_py_pybreaker",
+      "s16_res_node_opossum_breaker",
+      "s17_res_go_gobreaker",
+      "s18_res_java_resilience4j_breaker",
+      "s24_res_graceful_degradation",
+      "s27_res_toxiproxy_faults"
+    ],
+    [
+      "s28_res_chaos_experiment"
+    ],
+    [
+      "s29_res_resilience_verify"
+    ]
+  ],
+  "estimated_cost": 29,
+  "critical_path": [
+    "s01_res_dependency_map",
+    "s02_res_latency_percentiles",
+    "s03_res_timeout_budget",
+    "s08_res_retry_policy",
+    "s14_res_breaker_policy",
+    "s27_res_toxiproxy_faults",
+    "s28_res_chaos_experiment",
+    "s29_res_resilience_verify"
+  ]
+}

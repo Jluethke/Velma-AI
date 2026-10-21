@@ -1,0 +1,1022 @@
+{
+  "name": "monolith-decomposition",
+  "description": "Extract a module from a monolith end to end: scope and baseline, stack-specific dependency graphs and change coupling, seams, table ownership, characterization tests, interface and contract tests, enforced boundaries, in-process or service decision, anti-corruption layer, Pact contracts, schema split, outbox or CDC sync, backfill and reconciliation, strangler routing, shadow diff, latency comparison, flag cutover and decommission.",
+  "steps": [
+    {
+      "id": "s01_mex_extraction_candidate_brief",
+      "skill_name": "mex-extraction-candidate-brief",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "candidate_module": "from_user_input",
+        "extraction_goal": "from_user_input",
+        "stack": "from_user_input",
+        "database_engine": "from_user_input"
+      },
+      "outputs": {
+        "extraction_brief": "extraction_brief"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_mex_py_import_graph_pydeps",
+      "skill_name": "mex-py-import-graph-pydeps",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "extraction_brief": "s01_mex_extraction_candidate_brief.extraction_brief"
+      },
+      "outputs": {
+        "py_import_graph": "py_import_graph"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_mex_node_import_graph_madge",
+      "skill_name": "mex-node-import-graph-madge",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "extraction_brief": "s01_mex_extraction_candidate_brief.extraction_brief"
+      },
+      "outputs": {
+        "node_import_graph": "node_import_graph"
+      },
+      "condition": "stack == 'node'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_mex_go_package_graph",
+      "skill_name": "mex-go-package-graph",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "extraction_brief": "s01_mex_extraction_candidate_brief.extraction_brief"
+      },
+      "outputs": {
+        "go_package_graph": "go_package_graph"
+      },
+      "condition": "stack == 'go'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s05_mex_java_dependency_graph_jdeps",
+      "skill_name": "mex-java-dependency-graph-jdeps",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "extraction_brief": "s01_mex_extraction_candidate_brief.extraction_brief"
+      },
+      "outputs": {
+        "java_dependency_graph": "java_dependency_graph"
+      },
+      "condition": "stack == 'java'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s06_mex_change_coupling_git_log",
+      "skill_name": "mex-change-coupling-git-log",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "extraction_brief": "s01_mex_extraction_candidate_brief.extraction_brief",
+        "history_window": "from_user_input_optional"
+      },
+      "outputs": {
+        "change_coupling": "change_coupling"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s07_mex_seam_identification",
+      "skill_name": "mex-seam-identification",
+      "inputs": {
+        "extraction_brief": "s01_mex_extraction_candidate_brief.extraction_brief",
+        "py_import_graph": "s02_mex_py_import_graph_pydeps.py_import_graph",
+        "node_import_graph": "s03_mex_node_import_graph_madge.node_import_graph",
+        "go_package_graph": "s04_mex_go_package_graph.go_package_graph",
+        "java_dependency_graph": "s05_mex_java_dependency_graph_jdeps.java_dependency_graph",
+        "change_coupling": "s06_mex_change_coupling_git_log.change_coupling"
+      },
+      "outputs": {
+        "seam_map": "seam_map",
+        "boundary_violations": "boundary_violations"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s08_mex_table_ownership_map",
+      "skill_name": "mex-table-ownership-map",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "extraction_brief": "s01_mex_extraction_candidate_brief.extraction_brief",
+        "seam_map": "s07_mex_seam_identification.seam_map",
+        "database_engine": "from_user_input"
+      },
+      "outputs": {
+        "table_ownership": "table_ownership",
+        "shared_tables": "shared_tables"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s09_mex_characterization_tests",
+      "skill_name": "mex-characterization-tests",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "seam_map": "s07_mex_seam_identification.seam_map",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "characterization_suite": "characterization_suite",
+        "baseline_outputs": "baseline_outputs"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s10_mex_interface_boundary_contract",
+      "skill_name": "mex-interface-boundary-contract",
+      "inputs": {
+        "seam_map": "s07_mex_seam_identification.seam_map",
+        "table_ownership": "s08_mex_table_ownership_map.table_ownership",
+        "boundary_violations": "s07_mex_seam_identification.boundary_violations",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "module_interface": "module_interface",
+        "interface_contract_tests": "interface_contract_tests"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s11_mex_py_boundary_import_linter",
+      "skill_name": "mex-py-boundary-import-linter",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "module_interface": "s10_mex_interface_boundary_contract.module_interface"
+      },
+      "outputs": {
+        "py_boundary_rules": "py_boundary_rules"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 6
+    },
+    {
+      "id": "s12_mex_node_boundary_dependency_cruiser",
+      "skill_name": "mex-node-boundary-dependency-cruiser",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "module_interface": "s10_mex_interface_boundary_contract.module_interface"
+      },
+      "outputs": {
+        "node_boundary_rules": "node_boundary_rules"
+      },
+      "condition": "stack == 'node'",
+      "parallel_group": 6
+    },
+    {
+      "id": "s13_mex_go_boundary_internal_depguard",
+      "skill_name": "mex-go-boundary-internal-depguard",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "module_interface": "s10_mex_interface_boundary_contract.module_interface"
+      },
+      "outputs": {
+        "go_boundary_rules": "go_boundary_rules"
+      },
+      "condition": "stack == 'go'",
+      "parallel_group": 6
+    },
+    {
+      "id": "s14_mex_java_boundary_archunit",
+      "skill_name": "mex-java-boundary-archunit",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "module_interface": "s10_mex_interface_boundary_contract.module_interface"
+      },
+      "outputs": {
+        "java_boundary_rules": "java_boundary_rules"
+      },
+      "condition": "stack == 'java'",
+      "parallel_group": 6
+    },
+    {
+      "id": "s15_mex_in_process_or_service_decision",
+      "skill_name": "mex-in-process-or-service-decision",
+      "inputs": {
+        "extraction_brief": "s01_mex_extraction_candidate_brief.extraction_brief",
+        "module_interface": "s10_mex_interface_boundary_contract.module_interface",
+        "change_coupling": "s06_mex_change_coupling_git_log.change_coupling",
+        "shared_tables": "s08_mex_table_ownership_map.shared_tables",
+        "py_boundary_rules": "s11_mex_py_boundary_import_linter.py_boundary_rules",
+        "node_boundary_rules": "s12_mex_node_boundary_dependency_cruiser.node_boundary_rules",
+        "go_boundary_rules": "s13_mex_go_boundary_internal_depguard.go_boundary_rules",
+        "java_boundary_rules": "s14_mex_java_boundary_archunit.java_boundary_rules"
+      },
+      "outputs": {
+        "deployment_decision": "deployment_decision",
+        "decision_evidence": "decision_evidence"
+      },
+      "parallel_group": 7
+    },
+    {
+      "id": "s16_mex_anti_corruption_layer",
+      "skill_name": "mex-anti-corruption-layer",
+      "inputs": {
+        "module_interface": "s10_mex_interface_boundary_contract.module_interface",
+        "seam_map": "s07_mex_seam_identification.seam_map",
+        "deployment_decision": "s15_mex_in_process_or_service_decision.deployment_decision",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "acl_adapter": "acl_adapter",
+        "translation_tests": "translation_tests"
+      },
+      "parallel_group": 8
+    },
+    {
+      "id": "s17_mex_pact_consumer_provider_contracts",
+      "skill_name": "mex-pact-consumer-provider-contracts",
+      "inputs": {
+        "module_interface": "s10_mex_interface_boundary_contract.module_interface",
+        "interface_contract_tests": "s10_mex_interface_boundary_contract.interface_contract_tests",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "pact_files": "pact_files",
+        "provider_verification": "provider_verification"
+      },
+      "condition": "deployment_decision == 'service'",
+      "parallel_group": 6
+    },
+    {
+      "id": "s18_mex_schema_ownership_split",
+      "skill_name": "mex-schema-ownership-split",
+      "inputs": {
+        "table_ownership": "s08_mex_table_ownership_map.table_ownership",
+        "shared_tables": "s08_mex_table_ownership_map.shared_tables",
+        "database_engine": "from_user_input",
+        "module_interface": "s10_mex_interface_boundary_contract.module_interface",
+        "deployment_decision": "s15_mex_in_process_or_service_decision.deployment_decision"
+      },
+      "outputs": {
+        "schema_split_plan": "schema_split_plan",
+        "migration_scripts": "migration_scripts"
+      },
+      "parallel_group": 8
+    },
+    {
+      "id": "s19_mex_dual_write_or_cdc_decision",
+      "skill_name": "mex-dual-write-or-cdc-decision",
+      "inputs": {
+        "schema_split_plan": "s18_mex_schema_ownership_split.schema_split_plan",
+        "database_engine": "from_user_input",
+        "deployment_decision": "s15_mex_in_process_or_service_decision.deployment_decision"
+      },
+      "outputs": {
+        "sync_strategy": "sync_strategy"
+      },
+      "parallel_group": 9
+    },
+    {
+      "id": "s20_mex_transactional_outbox",
+      "skill_name": "mex-transactional-outbox",
+      "inputs": {
+        "schema_split_plan": "s18_mex_schema_ownership_split.schema_split_plan",
+        "sync_strategy": "s19_mex_dual_write_or_cdc_decision.sync_strategy",
+        "stack": "from_user_input",
+        "database_engine": "from_user_input"
+      },
+      "outputs": {
+        "outbox_implementation": "outbox_implementation"
+      },
+      "condition": "sync_strategy == 'outbox'",
+      "parallel_group": 10
+    },
+    {
+      "id": "s21_mex_cdc_debezium_postgres",
+      "skill_name": "mex-cdc-debezium-postgres",
+      "inputs": {
+        "schema_split_plan": "s18_mex_schema_ownership_split.schema_split_plan",
+        "sync_strategy": "s19_mex_dual_write_or_cdc_decision.sync_strategy"
+      },
+      "outputs": {
+        "pg_cdc_pipeline": "pg_cdc_pipeline"
+      },
+      "condition": "database_engine == 'postgres' && sync_strategy == 'cdc'",
+      "parallel_group": 10
+    },
+    {
+      "id": "s22_mex_cdc_debezium_mysql",
+      "skill_name": "mex-cdc-debezium-mysql",
+      "inputs": {
+        "schema_split_plan": "s18_mex_schema_ownership_split.schema_split_plan",
+        "sync_strategy": "s19_mex_dual_write_or_cdc_decision.sync_strategy"
+      },
+      "outputs": {
+        "mysql_cdc_pipeline": "mysql_cdc_pipeline"
+      },
+      "condition": "database_engine == 'mysql' && sync_strategy == 'cdc'",
+      "parallel_group": 10
+    },
+    {
+      "id": "s23_mex_backfill_and_reconcile",
+      "skill_name": "mex-backfill-and-reconcile",
+      "inputs": {
+        "schema_split_plan": "s18_mex_schema_ownership_split.schema_split_plan",
+        "sync_strategy": "s19_mex_dual_write_or_cdc_decision.sync_strategy",
+        "database_engine": "from_user_input",
+        "outbox_implementation": "s20_mex_transactional_outbox.outbox_implementation",
+        "pg_cdc_pipeline": "s21_mex_cdc_debezium_postgres.pg_cdc_pipeline",
+        "mysql_cdc_pipeline": "s22_mex_cdc_debezium_mysql.mysql_cdc_pipeline"
+      },
+      "outputs": {
+        "reconciliation_report": "reconciliation_report"
+      },
+      "condition": "sync_strategy != 'none'",
+      "parallel_group": 11
+    },
+    {
+      "id": "s24_mex_strangler_proxy_routing",
+      "skill_name": "mex-strangler-proxy-routing",
+      "inputs": {
+        "module_interface": "s10_mex_interface_boundary_contract.module_interface",
+        "deployment_decision": "s15_mex_in_process_or_service_decision.deployment_decision",
+        "traffic_entry": "from_user_input"
+      },
+      "outputs": {
+        "routing_config": "routing_config"
+      },
+      "condition": "deployment_decision == 'service'",
+      "parallel_group": 8
+    },
+    {
+      "id": "s25_mex_shadow_traffic_diff",
+      "skill_name": "mex-shadow-traffic-diff",
+      "inputs": {
+        "routing_config": "s24_mex_strangler_proxy_routing.routing_config",
+        "characterization_suite": "s09_mex_characterization_tests.characterization_suite",
+        "baseline_outputs": "s09_mex_characterization_tests.baseline_outputs",
+        "deployment_decision": "s15_mex_in_process_or_service_decision.deployment_decision"
+      },
+      "outputs": {
+        "parity_report": "parity_report"
+      },
+      "parallel_group": 9
+    },
+    {
+      "id": "s26_mex_latency_comparison",
+      "skill_name": "mex-latency-comparison",
+      "inputs": {
+        "routing_config": "s24_mex_strangler_proxy_routing.routing_config",
+        "deployment_decision": "s15_mex_in_process_or_service_decision.deployment_decision",
+        "parity_report": "s25_mex_shadow_traffic_diff.parity_report",
+        "latency_slo": "from_user_input_optional",
+        "load_profile": "from_user_input_optional"
+      },
+      "outputs": {
+        "latency_report": "latency_report"
+      },
+      "parallel_group": 10
+    },
+    {
+      "id": "s27_mex_flag_cutover",
+      "skill_name": "mex-flag-cutover",
+      "inputs": {
+        "routing_config": "s24_mex_strangler_proxy_routing.routing_config",
+        "acl_adapter": "s16_mex_anti_corruption_layer.acl_adapter",
+        "parity_report": "s25_mex_shadow_traffic_diff.parity_report",
+        "latency_report": "s26_mex_latency_comparison.latency_report",
+        "reconciliation_report": "s23_mex_backfill_and_reconcile.reconciliation_report",
+        "flag_provider": "from_user_input_optional",
+        "ramp_plan": "from_user_input_optional"
+      },
+      "outputs": {
+        "cutover_flag": "cutover_flag",
+        "rollout_log": "rollout_log"
+      },
+      "parallel_group": 12
+    },
+    {
+      "id": "s28_mex_decommission_legacy_path",
+      "skill_name": "mex-decommission-legacy-path",
+      "inputs": {
+        "cutover_flag": "s27_mex_flag_cutover.cutover_flag",
+        "rollout_log": "s27_mex_flag_cutover.rollout_log",
+        "schema_split_plan": "s18_mex_schema_ownership_split.schema_split_plan",
+        "seam_map": "s07_mex_seam_identification.seam_map"
+      },
+      "outputs": {
+        "decommission_record": "decommission_record"
+      },
+      "parallel_group": 13
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_mex_extraction_candidate_brief",
+      "to_step": "s02_mex_py_import_graph_pydeps",
+      "data_type": "mex-extraction-candidate-brief",
+      "field_mapping": {
+        "extraction_brief": "extraction_brief"
+      }
+    },
+    {
+      "from_step": "s01_mex_extraction_candidate_brief",
+      "to_step": "s03_mex_node_import_graph_madge",
+      "data_type": "mex-extraction-candidate-brief",
+      "field_mapping": {
+        "extraction_brief": "extraction_brief"
+      }
+    },
+    {
+      "from_step": "s01_mex_extraction_candidate_brief",
+      "to_step": "s04_mex_go_package_graph",
+      "data_type": "mex-extraction-candidate-brief",
+      "field_mapping": {
+        "extraction_brief": "extraction_brief"
+      }
+    },
+    {
+      "from_step": "s01_mex_extraction_candidate_brief",
+      "to_step": "s05_mex_java_dependency_graph_jdeps",
+      "data_type": "mex-extraction-candidate-brief",
+      "field_mapping": {
+        "extraction_brief": "extraction_brief"
+      }
+    },
+    {
+      "from_step": "s01_mex_extraction_candidate_brief",
+      "to_step": "s06_mex_change_coupling_git_log",
+      "data_type": "mex-extraction-candidate-brief",
+      "field_mapping": {
+        "extraction_brief": "extraction_brief"
+      }
+    },
+    {
+      "from_step": "s01_mex_extraction_candidate_brief",
+      "to_step": "s07_mex_seam_identification",
+      "data_type": "mex-extraction-candidate-brief",
+      "field_mapping": {
+        "extraction_brief": "extraction_brief"
+      }
+    },
+    {
+      "from_step": "s02_mex_py_import_graph_pydeps",
+      "to_step": "s07_mex_seam_identification",
+      "data_type": "mex-py-import-graph-pydeps",
+      "field_mapping": {
+        "py_import_graph": "py_import_graph"
+      }
+    },
+    {
+      "from_step": "s03_mex_node_import_graph_madge",
+      "to_step": "s07_mex_seam_identification",
+      "data_type": "mex-node-import-graph-madge",
+      "field_mapping": {
+        "node_import_graph": "node_import_graph"
+      }
+    },
+    {
+      "from_step": "s04_mex_go_package_graph",
+      "to_step": "s07_mex_seam_identification",
+      "data_type": "mex-go-package-graph",
+      "field_mapping": {
+        "go_package_graph": "go_package_graph"
+      }
+    },
+    {
+      "from_step": "s05_mex_java_dependency_graph_jdeps",
+      "to_step": "s07_mex_seam_identification",
+      "data_type": "mex-java-dependency-graph-jdeps",
+      "field_mapping": {
+        "java_dependency_graph": "java_dependency_graph"
+      }
+    },
+    {
+      "from_step": "s06_mex_change_coupling_git_log",
+      "to_step": "s07_mex_seam_identification",
+      "data_type": "mex-change-coupling-git-log",
+      "field_mapping": {
+        "change_coupling": "change_coupling"
+      }
+    },
+    {
+      "from_step": "s01_mex_extraction_candidate_brief",
+      "to_step": "s08_mex_table_ownership_map",
+      "data_type": "mex-extraction-candidate-brief",
+      "field_mapping": {
+        "extraction_brief": "extraction_brief"
+      }
+    },
+    {
+      "from_step": "s07_mex_seam_identification",
+      "to_step": "s08_mex_table_ownership_map",
+      "data_type": "mex-seam-identification",
+      "field_mapping": {
+        "seam_map": "seam_map"
+      }
+    },
+    {
+      "from_step": "s07_mex_seam_identification",
+      "to_step": "s09_mex_characterization_tests",
+      "data_type": "mex-seam-identification",
+      "field_mapping": {
+        "seam_map": "seam_map"
+      }
+    },
+    {
+      "from_step": "s07_mex_seam_identification",
+      "to_step": "s10_mex_interface_boundary_contract",
+      "data_type": "mex-seam-identification",
+      "field_mapping": {
+        "seam_map": "seam_map",
+        "boundary_violations": "boundary_violations"
+      }
+    },
+    {
+      "from_step": "s08_mex_table_ownership_map",
+      "to_step": "s10_mex_interface_boundary_contract",
+      "data_type": "mex-table-ownership-map",
+      "field_mapping": {
+        "table_ownership": "table_ownership"
+      }
+    },
+    {
+      "from_step": "s10_mex_interface_boundary_contract",
+      "to_step": "s11_mex_py_boundary_import_linter",
+      "data_type": "mex-interface-boundary-contract",
+      "field_mapping": {
+        "module_interface": "module_interface"
+      }
+    },
+    {
+      "from_step": "s10_mex_interface_boundary_contract",
+      "to_step": "s12_mex_node_boundary_dependency_cruiser",
+      "data_type": "mex-interface-boundary-contract",
+      "field_mapping": {
+        "module_interface": "module_interface"
+      }
+    },
+    {
+      "from_step": "s10_mex_interface_boundary_contract",
+      "to_step": "s13_mex_go_boundary_internal_depguard",
+      "data_type": "mex-interface-boundary-contract",
+      "field_mapping": {
+        "module_interface": "module_interface"
+      }
+    },
+    {
+      "from_step": "s10_mex_interface_boundary_contract",
+      "to_step": "s14_mex_java_boundary_archunit",
+      "data_type": "mex-interface-boundary-contract",
+      "field_mapping": {
+        "module_interface": "module_interface"
+      }
+    },
+    {
+      "from_step": "s01_mex_extraction_candidate_brief",
+      "to_step": "s15_mex_in_process_or_service_decision",
+      "data_type": "mex-extraction-candidate-brief",
+      "field_mapping": {
+        "extraction_brief": "extraction_brief"
+      }
+    },
+    {
+      "from_step": "s06_mex_change_coupling_git_log",
+      "to_step": "s15_mex_in_process_or_service_decision",
+      "data_type": "mex-change-coupling-git-log",
+      "field_mapping": {
+        "change_coupling": "change_coupling"
+      }
+    },
+    {
+      "from_step": "s08_mex_table_ownership_map",
+      "to_step": "s15_mex_in_process_or_service_decision",
+      "data_type": "mex-table-ownership-map",
+      "field_mapping": {
+        "shared_tables": "shared_tables"
+      }
+    },
+    {
+      "from_step": "s10_mex_interface_boundary_contract",
+      "to_step": "s15_mex_in_process_or_service_decision",
+      "data_type": "mex-interface-boundary-contract",
+      "field_mapping": {
+        "module_interface": "module_interface"
+      }
+    },
+    {
+      "from_step": "s11_mex_py_boundary_import_linter",
+      "to_step": "s15_mex_in_process_or_service_decision",
+      "data_type": "mex-py-boundary-import-linter",
+      "field_mapping": {
+        "py_boundary_rules": "py_boundary_rules"
+      }
+    },
+    {
+      "from_step": "s12_mex_node_boundary_dependency_cruiser",
+      "to_step": "s15_mex_in_process_or_service_decision",
+      "data_type": "mex-node-boundary-dependency-cruiser",
+      "field_mapping": {
+        "node_boundary_rules": "node_boundary_rules"
+      }
+    },
+    {
+      "from_step": "s13_mex_go_boundary_internal_depguard",
+      "to_step": "s15_mex_in_process_or_service_decision",
+      "data_type": "mex-go-boundary-internal-depguard",
+      "field_mapping": {
+        "go_boundary_rules": "go_boundary_rules"
+      }
+    },
+    {
+      "from_step": "s14_mex_java_boundary_archunit",
+      "to_step": "s15_mex_in_process_or_service_decision",
+      "data_type": "mex-java-boundary-archunit",
+      "field_mapping": {
+        "java_boundary_rules": "java_boundary_rules"
+      }
+    },
+    {
+      "from_step": "s07_mex_seam_identification",
+      "to_step": "s16_mex_anti_corruption_layer",
+      "data_type": "mex-seam-identification",
+      "field_mapping": {
+        "seam_map": "seam_map"
+      }
+    },
+    {
+      "from_step": "s10_mex_interface_boundary_contract",
+      "to_step": "s16_mex_anti_corruption_layer",
+      "data_type": "mex-interface-boundary-contract",
+      "field_mapping": {
+        "module_interface": "module_interface"
+      }
+    },
+    {
+      "from_step": "s15_mex_in_process_or_service_decision",
+      "to_step": "s16_mex_anti_corruption_layer",
+      "data_type": "mex-in-process-or-service-decision",
+      "field_mapping": {
+        "deployment_decision": "deployment_decision"
+      }
+    },
+    {
+      "from_step": "s10_mex_interface_boundary_contract",
+      "to_step": "s17_mex_pact_consumer_provider_contracts",
+      "data_type": "mex-interface-boundary-contract",
+      "field_mapping": {
+        "module_interface": "module_interface",
+        "interface_contract_tests": "interface_contract_tests"
+      }
+    },
+    {
+      "from_step": "s08_mex_table_ownership_map",
+      "to_step": "s18_mex_schema_ownership_split",
+      "data_type": "mex-table-ownership-map",
+      "field_mapping": {
+        "table_ownership": "table_ownership",
+        "shared_tables": "shared_tables"
+      }
+    },
+    {
+      "from_step": "s10_mex_interface_boundary_contract",
+      "to_step": "s18_mex_schema_ownership_split",
+      "data_type": "mex-interface-boundary-contract",
+      "field_mapping": {
+        "module_interface": "module_interface"
+      }
+    },
+    {
+      "from_step": "s15_mex_in_process_or_service_decision",
+      "to_step": "s18_mex_schema_ownership_split",
+      "data_type": "mex-in-process-or-service-decision",
+      "field_mapping": {
+        "deployment_decision": "deployment_decision"
+      }
+    },
+    {
+      "from_step": "s15_mex_in_process_or_service_decision",
+      "to_step": "s19_mex_dual_write_or_cdc_decision",
+      "data_type": "mex-in-process-or-service-decision",
+      "field_mapping": {
+        "deployment_decision": "deployment_decision"
+      }
+    },
+    {
+      "from_step": "s18_mex_schema_ownership_split",
+      "to_step": "s19_mex_dual_write_or_cdc_decision",
+      "data_type": "mex-schema-ownership-split",
+      "field_mapping": {
+        "schema_split_plan": "schema_split_plan"
+      }
+    },
+    {
+      "from_step": "s18_mex_schema_ownership_split",
+      "to_step": "s20_mex_transactional_outbox",
+      "data_type": "mex-schema-ownership-split",
+      "field_mapping": {
+        "schema_split_plan": "schema_split_plan"
+      }
+    },
+    {
+      "from_step": "s19_mex_dual_write_or_cdc_decision",
+      "to_step": "s20_mex_transactional_outbox",
+      "data_type": "mex-dual-write-or-cdc-decision",
+      "field_mapping": {
+        "sync_strategy": "sync_strategy"
+      }
+    },
+    {
+      "from_step": "s18_mex_schema_ownership_split",
+      "to_step": "s21_mex_cdc_debezium_postgres",
+      "data_type": "mex-schema-ownership-split",
+      "field_mapping": {
+        "schema_split_plan": "schema_split_plan"
+      }
+    },
+    {
+      "from_step": "s19_mex_dual_write_or_cdc_decision",
+      "to_step": "s21_mex_cdc_debezium_postgres",
+      "data_type": "mex-dual-write-or-cdc-decision",
+      "field_mapping": {
+        "sync_strategy": "sync_strategy"
+      }
+    },
+    {
+      "from_step": "s18_mex_schema_ownership_split",
+      "to_step": "s22_mex_cdc_debezium_mysql",
+      "data_type": "mex-schema-ownership-split",
+      "field_mapping": {
+        "schema_split_plan": "schema_split_plan"
+      }
+    },
+    {
+      "from_step": "s19_mex_dual_write_or_cdc_decision",
+      "to_step": "s22_mex_cdc_debezium_mysql",
+      "data_type": "mex-dual-write-or-cdc-decision",
+      "field_mapping": {
+        "sync_strategy": "sync_strategy"
+      }
+    },
+    {
+      "from_step": "s18_mex_schema_ownership_split",
+      "to_step": "s23_mex_backfill_and_reconcile",
+      "data_type": "mex-schema-ownership-split",
+      "field_mapping": {
+        "schema_split_plan": "schema_split_plan"
+      }
+    },
+    {
+      "from_step": "s19_mex_dual_write_or_cdc_decision",
+      "to_step": "s23_mex_backfill_and_reconcile",
+      "data_type": "mex-dual-write-or-cdc-decision",
+      "field_mapping": {
+        "sync_strategy": "sync_strategy"
+      }
+    },
+    {
+      "from_step": "s20_mex_transactional_outbox",
+      "to_step": "s23_mex_backfill_and_reconcile",
+      "data_type": "mex-transactional-outbox",
+      "field_mapping": {
+        "outbox_implementation": "outbox_implementation"
+      }
+    },
+    {
+      "from_step": "s21_mex_cdc_debezium_postgres",
+      "to_step": "s23_mex_backfill_and_reconcile",
+      "data_type": "mex-cdc-debezium-postgres",
+      "field_mapping": {
+        "pg_cdc_pipeline": "pg_cdc_pipeline"
+      }
+    },
+    {
+      "from_step": "s22_mex_cdc_debezium_mysql",
+      "to_step": "s23_mex_backfill_and_reconcile",
+      "data_type": "mex-cdc-debezium-mysql",
+      "field_mapping": {
+        "mysql_cdc_pipeline": "mysql_cdc_pipeline"
+      }
+    },
+    {
+      "from_step": "s10_mex_interface_boundary_contract",
+      "to_step": "s24_mex_strangler_proxy_routing",
+      "data_type": "mex-interface-boundary-contract",
+      "field_mapping": {
+        "module_interface": "module_interface"
+      }
+    },
+    {
+      "from_step": "s15_mex_in_process_or_service_decision",
+      "to_step": "s24_mex_strangler_proxy_routing",
+      "data_type": "mex-in-process-or-service-decision",
+      "field_mapping": {
+        "deployment_decision": "deployment_decision"
+      }
+    },
+    {
+      "from_step": "s09_mex_characterization_tests",
+      "to_step": "s25_mex_shadow_traffic_diff",
+      "data_type": "mex-characterization-tests",
+      "field_mapping": {
+        "characterization_suite": "characterization_suite",
+        "baseline_outputs": "baseline_outputs"
+      }
+    },
+    {
+      "from_step": "s15_mex_in_process_or_service_decision",
+      "to_step": "s25_mex_shadow_traffic_diff",
+      "data_type": "mex-in-process-or-service-decision",
+      "field_mapping": {
+        "deployment_decision": "deployment_decision"
+      }
+    },
+    {
+      "from_step": "s24_mex_strangler_proxy_routing",
+      "to_step": "s25_mex_shadow_traffic_diff",
+      "data_type": "mex-strangler-proxy-routing",
+      "field_mapping": {
+        "routing_config": "routing_config"
+      }
+    },
+    {
+      "from_step": "s15_mex_in_process_or_service_decision",
+      "to_step": "s26_mex_latency_comparison",
+      "data_type": "mex-in-process-or-service-decision",
+      "field_mapping": {
+        "deployment_decision": "deployment_decision"
+      }
+    },
+    {
+      "from_step": "s24_mex_strangler_proxy_routing",
+      "to_step": "s26_mex_latency_comparison",
+      "data_type": "mex-strangler-proxy-routing",
+      "field_mapping": {
+        "routing_config": "routing_config"
+      }
+    },
+    {
+      "from_step": "s25_mex_shadow_traffic_diff",
+      "to_step": "s26_mex_latency_comparison",
+      "data_type": "mex-shadow-traffic-diff",
+      "field_mapping": {
+        "parity_report": "parity_report"
+      }
+    },
+    {
+      "from_step": "s16_mex_anti_corruption_layer",
+      "to_step": "s27_mex_flag_cutover",
+      "data_type": "mex-anti-corruption-layer",
+      "field_mapping": {
+        "acl_adapter": "acl_adapter"
+      }
+    },
+    {
+      "from_step": "s23_mex_backfill_and_reconcile",
+      "to_step": "s27_mex_flag_cutover",
+      "data_type": "mex-backfill-and-reconcile",
+      "field_mapping": {
+        "reconciliation_report": "reconciliation_report"
+      }
+    },
+    {
+      "from_step": "s24_mex_strangler_proxy_routing",
+      "to_step": "s27_mex_flag_cutover",
+      "data_type": "mex-strangler-proxy-routing",
+      "field_mapping": {
+        "routing_config": "routing_config"
+      }
+    },
+    {
+      "from_step": "s25_mex_shadow_traffic_diff",
+      "to_step": "s27_mex_flag_cutover",
+      "data_type": "mex-shadow-traffic-diff",
+      "field_mapping": {
+        "parity_report": "parity_report"
+      }
+    },
+    {
+      "from_step": "s26_mex_latency_comparison",
+      "to_step": "s27_mex_flag_cutover",
+      "data_type": "mex-latency-comparison",
+      "field_mapping": {
+        "latency_report": "latency_report"
+      }
+    },
+    {
+      "from_step": "s07_mex_seam_identification",
+      "to_step": "s28_mex_decommission_legacy_path",
+      "data_type": "mex-seam-identification",
+      "field_mapping": {
+        "seam_map": "seam_map"
+      }
+    },
+    {
+      "from_step": "s18_mex_schema_ownership_split",
+      "to_step": "s28_mex_decommission_legacy_path",
+      "data_type": "mex-schema-ownership-split",
+      "field_mapping": {
+        "schema_split_plan": "schema_split_plan"
+      }
+    },
+    {
+      "from_step": "s27_mex_flag_cutover",
+      "to_step": "s28_mex_decommission_legacy_path",
+      "data_type": "mex-flag-cutover",
+      "field_mapping": {
+        "cutover_flag": "cutover_flag",
+        "rollout_log": "rollout_log"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "repo_path",
+    "candidate_module",
+    "extraction_goal",
+    "stack",
+    "database_engine",
+    "history_window",
+    "traffic_entry",
+    "latency_slo",
+    "load_profile",
+    "flag_provider",
+    "ramp_plan"
+  ],
+  "terminal_outputs": [
+    "decision_evidence",
+    "translation_tests",
+    "pact_files",
+    "provider_verification",
+    "migration_scripts",
+    "decommission_record"
+  ],
+  "parallel_groups": [
+    [
+      "s01_mex_extraction_candidate_brief"
+    ],
+    [
+      "s02_mex_py_import_graph_pydeps",
+      "s03_mex_node_import_graph_madge",
+      "s04_mex_go_package_graph",
+      "s05_mex_java_dependency_graph_jdeps",
+      "s06_mex_change_coupling_git_log"
+    ],
+    [
+      "s07_mex_seam_identification"
+    ],
+    [
+      "s08_mex_table_ownership_map",
+      "s09_mex_characterization_tests"
+    ],
+    [
+      "s10_mex_interface_boundary_contract"
+    ],
+    [
+      "s11_mex_py_boundary_import_linter",
+      "s12_mex_node_boundary_dependency_cruiser",
+      "s13_mex_go_boundary_internal_depguard",
+      "s14_mex_java_boundary_archunit",
+      "s17_mex_pact_consumer_provider_contracts"
+    ],
+    [
+      "s15_mex_in_process_or_service_decision"
+    ],
+    [
+      "s16_mex_anti_corruption_layer",
+      "s18_mex_schema_ownership_split",
+      "s24_mex_strangler_proxy_routing"
+    ],
+    [
+      "s19_mex_dual_write_or_cdc_decision",
+      "s25_mex_shadow_traffic_diff"
+    ],
+    [
+      "s20_mex_transactional_outbox",
+      "s21_mex_cdc_debezium_postgres",
+      "s22_mex_cdc_debezium_mysql",
+      "s26_mex_latency_comparison"
+    ],
+    [
+      "s23_mex_backfill_and_reconcile"
+    ],
+    [
+      "s27_mex_flag_cutover"
+    ],
+    [
+      "s28_mex_decommission_legacy_path"
+    ]
+  ],
+  "estimated_cost": 28,
+  "critical_path": [
+    "s01_mex_extraction_candidate_brief",
+    "s06_mex_change_coupling_git_log",
+    "s07_mex_seam_identification",
+    "s08_mex_table_ownership_map",
+    "s10_mex_interface_boundary_contract",
+    "s14_mex_java_boundary_archunit",
+    "s15_mex_in_process_or_service_decision",
+    "s18_mex_schema_ownership_split",
+    "s19_mex_dual_write_or_cdc_decision",
+    "s20_mex_transactional_outbox",
+    "s23_mex_backfill_and_reconcile",
+    "s27_mex_flag_cutover",
+    "s28_mex_decommission_legacy_path"
+  ]
+}

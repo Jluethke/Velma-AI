@@ -1,0 +1,180 @@
+{
+  "name": "ci-pipelines-speed",
+  "description": "Measure CI runtime from the platform API, then apply caching, sharding and dependency-graph changes one at a time and keep only measured improvements.",
+  "steps": [
+    {
+      "id": "s01_ci0_detect_stack",
+      "skill_name": "ci0-detect-stack",
+      "inputs": {
+        "repo_dir": "from_user_input",
+        "stack": "from_user_input_optional"
+      },
+      "outputs": {
+        "stack_profile": "stack_profile",
+        "existing_ci_files": "existing_ci_files"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_ci0_ci_runtime_measure",
+      "skill_name": "ci0-ci-runtime-measure",
+      "inputs": {
+        "ci_platform": "from_user_input",
+        "repo_slug": "from_user_input_optional",
+        "gitlab_project_path": "from_user_input_optional",
+        "run_sample_size": "from_user_input"
+      },
+      "outputs": {
+        "runtime_report": "runtime_report"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s03_ci0_ci_runtime_optimize",
+      "skill_name": "ci0-ci-runtime-optimize",
+      "inputs": {
+        "runtime_report": "s02_ci0_ci_runtime_measure.runtime_report",
+        "ci_platform": "from_user_input"
+      },
+      "outputs": {
+        "optimization_plan": "optimization_plan"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_ci0_gha_dependency_cache",
+      "skill_name": "ci0-gha-dependency-cache",
+      "inputs": {
+        "gha_workflow_path": "from_user_input",
+        "stack_profile": "s01_ci0_detect_stack.stack_profile"
+      },
+      "outputs": {
+        "gha_cache_diff": "gha_cache_diff"
+      },
+      "condition": "ci_platform == 'github'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s05_ci0_gha_test_splitting",
+      "skill_name": "ci0-gha-test-splitting",
+      "inputs": {
+        "gha_workflow_path": "from_user_input",
+        "stack_profile": "s01_ci0_detect_stack.stack_profile",
+        "shard_count": "from_user_input"
+      },
+      "outputs": {
+        "gha_shard_diff": "gha_shard_diff"
+      },
+      "condition": "ci_platform == 'github' and shard_count > 1",
+      "parallel_group": 2
+    },
+    {
+      "id": "s06_ci0_gitlab_cache_needs",
+      "skill_name": "ci0-gitlab-cache-needs",
+      "inputs": {
+        "gitlab_ci_path": "from_user_input",
+        "stack_profile": "s01_ci0_detect_stack.stack_profile"
+      },
+      "outputs": {
+        "gitlab_cache_diff": "gitlab_cache_diff"
+      },
+      "condition": "ci_platform == 'gitlab'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s07_ci0_gitlab_parallel_matrix",
+      "skill_name": "ci0-gitlab-parallel-matrix",
+      "inputs": {
+        "gitlab_ci_path": "from_user_input",
+        "stack_profile": "s01_ci0_detect_stack.stack_profile",
+        "shard_count": "from_user_input",
+        "matrix_versions": "from_user_input_optional"
+      },
+      "outputs": {
+        "gitlab_parallel_diff": "gitlab_parallel_diff"
+      },
+      "condition": "ci_platform == 'gitlab' and shard_count > 1",
+      "parallel_group": 2
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s02_ci0_ci_runtime_measure",
+      "to_step": "s03_ci0_ci_runtime_optimize",
+      "data_type": "ci0-ci-runtime-measure",
+      "field_mapping": {
+        "runtime_report": "runtime_report"
+      }
+    },
+    {
+      "from_step": "s01_ci0_detect_stack",
+      "to_step": "s04_ci0_gha_dependency_cache",
+      "data_type": "ci0-detect-stack",
+      "field_mapping": {
+        "stack_profile": "stack_profile"
+      }
+    },
+    {
+      "from_step": "s01_ci0_detect_stack",
+      "to_step": "s05_ci0_gha_test_splitting",
+      "data_type": "ci0-detect-stack",
+      "field_mapping": {
+        "stack_profile": "stack_profile"
+      }
+    },
+    {
+      "from_step": "s01_ci0_detect_stack",
+      "to_step": "s06_ci0_gitlab_cache_needs",
+      "data_type": "ci0-detect-stack",
+      "field_mapping": {
+        "stack_profile": "stack_profile"
+      }
+    },
+    {
+      "from_step": "s01_ci0_detect_stack",
+      "to_step": "s07_ci0_gitlab_parallel_matrix",
+      "data_type": "ci0-detect-stack",
+      "field_mapping": {
+        "stack_profile": "stack_profile"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "repo_dir",
+    "stack",
+    "ci_platform",
+    "repo_slug",
+    "gitlab_project_path",
+    "run_sample_size",
+    "gha_workflow_path",
+    "shard_count",
+    "gitlab_ci_path",
+    "matrix_versions"
+  ],
+  "terminal_outputs": [
+    "existing_ci_files",
+    "optimization_plan",
+    "gha_cache_diff",
+    "gha_shard_diff",
+    "gitlab_cache_diff",
+    "gitlab_parallel_diff"
+  ],
+  "parallel_groups": [
+    [
+      "s01_ci0_detect_stack",
+      "s02_ci0_ci_runtime_measure"
+    ],
+    [
+      "s03_ci0_ci_runtime_optimize",
+      "s04_ci0_gha_dependency_cache",
+      "s05_ci0_gha_test_splitting",
+      "s06_ci0_gitlab_cache_needs",
+      "s07_ci0_gitlab_parallel_matrix"
+    ]
+  ],
+  "estimated_cost": 7,
+  "critical_path": [
+    "s02_ci0_ci_runtime_measure",
+    "s03_ci0_ci_runtime_optimize"
+  ]
+}

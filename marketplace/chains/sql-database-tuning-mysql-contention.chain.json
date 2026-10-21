@@ -1,0 +1,124 @@
+{
+  "name": "sql-database-tuning-mysql-contention",
+  "description": "MySQL contention path: record scope, capture slow statements and performance_schema digests, then diagnose InnoDB row locks, metadata locks and deadlocks.",
+  "steps": [
+    {
+      "id": "s01_sqlo_baseline_scope",
+      "skill_name": "sqlo-baseline-scope",
+      "inputs": {
+        "db_engine": "from_user_input",
+        "db_version": "from_user_input_optional",
+        "stack": "from_user_input",
+        "orm": "from_user_input_optional",
+        "symptom": "from_user_input",
+        "target_environment": "from_user_input",
+        "acceptance_criteria": "from_user_input_optional"
+      },
+      "outputs": {
+        "tuning_scope": "tuning_scope"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_sqlo_mysql_slow_log_capture",
+      "skill_name": "sqlo-mysql-slow-log-capture",
+      "inputs": {
+        "tuning_scope": "s01_sqlo_baseline_scope.tuning_scope",
+        "capture_window": "from_user_input"
+      },
+      "outputs": {
+        "slow_query_list": "slow_query_list"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_sqlo_mysql_perf_schema_digest",
+      "skill_name": "sqlo-mysql-perf-schema-digest",
+      "inputs": {
+        "tuning_scope": "s01_sqlo_baseline_scope.tuning_scope",
+        "slow_query_list": "s02_sqlo_mysql_slow_log_capture.slow_query_list"
+      },
+      "outputs": {
+        "digest_findings": "digest_findings"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_sqlo_mysql_lock_contention",
+      "skill_name": "sqlo-mysql-lock-contention",
+      "inputs": {
+        "tuning_scope": "s01_sqlo_baseline_scope.tuning_scope"
+      },
+      "outputs": {
+        "lock_report": "lock_report"
+      },
+      "parallel_group": 2
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_sqlo_baseline_scope",
+      "to_step": "s02_sqlo_mysql_slow_log_capture",
+      "data_type": "sqlo-baseline-scope",
+      "field_mapping": {
+        "tuning_scope": "tuning_scope"
+      }
+    },
+    {
+      "from_step": "s01_sqlo_baseline_scope",
+      "to_step": "s03_sqlo_mysql_perf_schema_digest",
+      "data_type": "sqlo-baseline-scope",
+      "field_mapping": {
+        "tuning_scope": "tuning_scope"
+      }
+    },
+    {
+      "from_step": "s02_sqlo_mysql_slow_log_capture",
+      "to_step": "s03_sqlo_mysql_perf_schema_digest",
+      "data_type": "sqlo-mysql-slow-log-capture",
+      "field_mapping": {
+        "slow_query_list": "slow_query_list"
+      }
+    },
+    {
+      "from_step": "s01_sqlo_baseline_scope",
+      "to_step": "s04_sqlo_mysql_lock_contention",
+      "data_type": "sqlo-baseline-scope",
+      "field_mapping": {
+        "tuning_scope": "tuning_scope"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "db_engine",
+    "db_version",
+    "stack",
+    "orm",
+    "symptom",
+    "target_environment",
+    "acceptance_criteria",
+    "capture_window"
+  ],
+  "terminal_outputs": [
+    "digest_findings",
+    "lock_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_sqlo_baseline_scope"
+    ],
+    [
+      "s02_sqlo_mysql_slow_log_capture",
+      "s04_sqlo_mysql_lock_contention"
+    ],
+    [
+      "s03_sqlo_mysql_perf_schema_digest"
+    ]
+  ],
+  "estimated_cost": 4,
+  "critical_path": [
+    "s01_sqlo_baseline_scope",
+    "s02_sqlo_mysql_slow_log_capture",
+    "s03_sqlo_mysql_perf_schema_digest"
+  ]
+}

@@ -1,0 +1,151 @@
+{
+  "name": "authentication-authorization-access-control",
+  "description": "Choose RBAC, ABAC or ReBAC, enforce object-level authorization on every lookup, audit JWT checks, and lock it in with abuse-case tests for IDOR, escalation and forged tokens.",
+  "steps": [
+    {
+      "id": "s01_auth_session_vs_token_decision",
+      "skill_name": "auth-session-vs-token-decision",
+      "inputs": {
+        "app_architecture": "from_user_input",
+        "repo_path": "from_user_input"
+      },
+      "outputs": {
+        "auth_inventory": "auth_inventory",
+        "auth_mechanism_decision": "auth_mechanism_decision"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_auth_rbac_vs_abac_decision",
+      "skill_name": "auth-rbac-vs-abac-decision",
+      "inputs": {
+        "authorization_requirements": "from_user_input",
+        "auth_inventory": "s01_auth_session_vs_token_decision.auth_inventory",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "authz_model_decision": "authz_model_decision"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_auth_idor_object_access_checks",
+      "skill_name": "auth-idor-object-access-checks",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "authz_model_decision": "s02_auth_rbac_vs_abac_decision.authz_model_decision"
+      },
+      "outputs": {
+        "object_access_findings": "object_access_findings"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_auth_jwt_verification_audit",
+      "skill_name": "auth-jwt-verification-audit",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "auth_mechanism_decision": "s01_auth_session_vs_token_decision.auth_mechanism_decision"
+      },
+      "outputs": {
+        "jwt_findings": "jwt_findings"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s05_auth_abuse_case_tests",
+      "skill_name": "auth-abuse-case-tests",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "login_handler_findings": "from_user_input_optional",
+        "jwt_findings": "s04_auth_jwt_verification_audit.jwt_findings",
+        "csrf_defense_report": "from_user_input_optional",
+        "object_access_findings": "s03_auth_idor_object_access_checks.object_access_findings",
+        "password_reset_report": "from_user_input_optional"
+      },
+      "outputs": {
+        "abuse_case_tests": "abuse_case_tests"
+      },
+      "parallel_group": 4
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_auth_session_vs_token_decision",
+      "to_step": "s02_auth_rbac_vs_abac_decision",
+      "data_type": "auth-session-vs-token-decision",
+      "field_mapping": {
+        "auth_inventory": "auth_inventory"
+      }
+    },
+    {
+      "from_step": "s02_auth_rbac_vs_abac_decision",
+      "to_step": "s03_auth_idor_object_access_checks",
+      "data_type": "auth-rbac-vs-abac-decision",
+      "field_mapping": {
+        "authz_model_decision": "authz_model_decision"
+      }
+    },
+    {
+      "from_step": "s01_auth_session_vs_token_decision",
+      "to_step": "s04_auth_jwt_verification_audit",
+      "data_type": "auth-session-vs-token-decision",
+      "field_mapping": {
+        "auth_mechanism_decision": "auth_mechanism_decision"
+      }
+    },
+    {
+      "from_step": "s04_auth_jwt_verification_audit",
+      "to_step": "s05_auth_abuse_case_tests",
+      "data_type": "auth-jwt-verification-audit",
+      "field_mapping": {
+        "jwt_findings": "jwt_findings"
+      }
+    },
+    {
+      "from_step": "s03_auth_idor_object_access_checks",
+      "to_step": "s05_auth_abuse_case_tests",
+      "data_type": "auth-idor-object-access-checks",
+      "field_mapping": {
+        "object_access_findings": "object_access_findings"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "app_architecture",
+    "repo_path",
+    "authorization_requirements",
+    "stack",
+    "login_handler_findings",
+    "csrf_defense_report",
+    "password_reset_report"
+  ],
+  "terminal_outputs": [
+    "abuse_case_tests"
+  ],
+  "parallel_groups": [
+    [
+      "s01_auth_session_vs_token_decision"
+    ],
+    [
+      "s02_auth_rbac_vs_abac_decision",
+      "s04_auth_jwt_verification_audit"
+    ],
+    [
+      "s03_auth_idor_object_access_checks"
+    ],
+    [
+      "s05_auth_abuse_case_tests"
+    ]
+  ],
+  "estimated_cost": 5,
+  "critical_path": [
+    "s01_auth_session_vs_token_decision",
+    "s02_auth_rbac_vs_abac_decision",
+    "s03_auth_idor_object_access_checks",
+    "s05_auth_abuse_case_tests"
+  ]
+}

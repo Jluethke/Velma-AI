@@ -1,0 +1,378 @@
+{
+  "name": "type-safety-python",
+  "description": "Untyped Python to checker-strict Python: baseline and coverage, grimp order, stubs, per-module mypy or pyright strict, annotation, TypedDict and Protocol, generics, Any and cast removal, pydantic at boundaries, and a CI gate.",
+  "steps": [
+    {
+      "id": "s01_tsm_migration_intake",
+      "skill_name": "tsm-migration-intake",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "stack": "from_user_input",
+        "python_checker": "from_user_input_optional",
+        "test_command": "from_user_input_optional"
+      },
+      "outputs": {
+        "migration_profile": "migration_profile"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_tsm_py_error_baseline",
+      "skill_name": "tsm-py-error-baseline",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "migration_profile": "s01_tsm_migration_intake.migration_profile"
+      },
+      "outputs": {
+        "py_error_baseline": "py_error_baseline"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_tsm_py_type_coverage",
+      "skill_name": "tsm-py-type-coverage",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "migration_profile": "s01_tsm_migration_intake.migration_profile"
+      },
+      "outputs": {
+        "py_type_coverage": "py_type_coverage"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_tsm_py_conversion_order",
+      "skill_name": "tsm-py-conversion-order",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "migration_profile": "s01_tsm_migration_intake.migration_profile"
+      },
+      "outputs": {
+        "py_conversion_order": "py_conversion_order"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s05_tsm_py_stubs_missing_imports",
+      "skill_name": "tsm-py-stubs-missing-imports",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "py_error_baseline": "s02_tsm_py_error_baseline.py_error_baseline"
+      },
+      "outputs": {
+        "py_stub_report": "py_stub_report"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s06_tsm_py_mypy_module_strict",
+      "skill_name": "tsm-py-mypy-module-strict",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "py_conversion_order": "s04_tsm_py_conversion_order.py_conversion_order",
+        "py_stub_report": "s05_tsm_py_stubs_missing_imports.py_stub_report"
+      },
+      "outputs": {
+        "py_mypy_config": "py_mypy_config"
+      },
+      "condition": "python_checker != 'pyright'",
+      "parallel_group": 4
+    },
+    {
+      "id": "s07_tsm_py_pyright_strict",
+      "skill_name": "tsm-py-pyright-strict",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "py_conversion_order": "s04_tsm_py_conversion_order.py_conversion_order",
+        "py_stub_report": "s05_tsm_py_stubs_missing_imports.py_stub_report"
+      },
+      "outputs": {
+        "py_pyright_config": "py_pyright_config"
+      },
+      "condition": "python_checker == 'pyright'",
+      "parallel_group": 4
+    },
+    {
+      "id": "s08_tsm_py_annotate_module",
+      "skill_name": "tsm-py-annotate-module",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "py_conversion_order": "s04_tsm_py_conversion_order.py_conversion_order",
+        "py_stub_report": "s05_tsm_py_stubs_missing_imports.py_stub_report",
+        "migration_profile": "s01_tsm_migration_intake.migration_profile"
+      },
+      "outputs": {
+        "py_annotated_modules": "py_annotated_modules"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s09_tsm_py_typeddict_protocol",
+      "skill_name": "tsm-py-typeddict-protocol",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "py_annotated_modules": "s08_tsm_py_annotate_module.py_annotated_modules"
+      },
+      "outputs": {
+        "py_structural_types": "py_structural_types"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s10_tsm_py_generics_paramspec",
+      "skill_name": "tsm-py-generics-paramspec",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "py_structural_types": "s09_tsm_py_typeddict_protocol.py_structural_types"
+      },
+      "outputs": {
+        "py_generic_types": "py_generic_types"
+      },
+      "parallel_group": 6
+    },
+    {
+      "id": "s11_tsm_py_eliminate_any_cast",
+      "skill_name": "tsm-py-eliminate-any-cast",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "py_generic_types": "s10_tsm_py_generics_paramspec.py_generic_types"
+      },
+      "outputs": {
+        "py_unsafe_fixes": "py_unsafe_fixes"
+      },
+      "parallel_group": 7
+    },
+    {
+      "id": "s12_tsm_py_pydantic_boundaries",
+      "skill_name": "tsm-py-pydantic-boundaries",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "py_unsafe_fixes": "s11_tsm_py_eliminate_any_cast.py_unsafe_fixes",
+        "boundary_list": "from_user_input_optional"
+      },
+      "outputs": {
+        "py_boundary_validators": "py_boundary_validators"
+      },
+      "parallel_group": 8
+    },
+    {
+      "id": "s13_tsm_py_ci_gate",
+      "skill_name": "tsm-py-ci-gate",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "migration_profile": "s01_tsm_migration_intake.migration_profile",
+        "py_type_coverage": "s03_tsm_py_type_coverage.py_type_coverage",
+        "py_boundary_validators": "s12_tsm_py_pydantic_boundaries.py_boundary_validators",
+        "ci_platform": "from_user_input_optional"
+      },
+      "outputs": {
+        "py_ci_gate": "py_ci_gate"
+      },
+      "parallel_group": 9
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_tsm_migration_intake",
+      "to_step": "s02_tsm_py_error_baseline",
+      "data_type": "tsm-migration-intake",
+      "field_mapping": {
+        "migration_profile": "migration_profile"
+      }
+    },
+    {
+      "from_step": "s01_tsm_migration_intake",
+      "to_step": "s03_tsm_py_type_coverage",
+      "data_type": "tsm-migration-intake",
+      "field_mapping": {
+        "migration_profile": "migration_profile"
+      }
+    },
+    {
+      "from_step": "s01_tsm_migration_intake",
+      "to_step": "s04_tsm_py_conversion_order",
+      "data_type": "tsm-migration-intake",
+      "field_mapping": {
+        "migration_profile": "migration_profile"
+      }
+    },
+    {
+      "from_step": "s02_tsm_py_error_baseline",
+      "to_step": "s05_tsm_py_stubs_missing_imports",
+      "data_type": "tsm-py-error-baseline",
+      "field_mapping": {
+        "py_error_baseline": "py_error_baseline"
+      }
+    },
+    {
+      "from_step": "s04_tsm_py_conversion_order",
+      "to_step": "s06_tsm_py_mypy_module_strict",
+      "data_type": "tsm-py-conversion-order",
+      "field_mapping": {
+        "py_conversion_order": "py_conversion_order"
+      }
+    },
+    {
+      "from_step": "s05_tsm_py_stubs_missing_imports",
+      "to_step": "s06_tsm_py_mypy_module_strict",
+      "data_type": "tsm-py-stubs-missing-imports",
+      "field_mapping": {
+        "py_stub_report": "py_stub_report"
+      }
+    },
+    {
+      "from_step": "s04_tsm_py_conversion_order",
+      "to_step": "s07_tsm_py_pyright_strict",
+      "data_type": "tsm-py-conversion-order",
+      "field_mapping": {
+        "py_conversion_order": "py_conversion_order"
+      }
+    },
+    {
+      "from_step": "s05_tsm_py_stubs_missing_imports",
+      "to_step": "s07_tsm_py_pyright_strict",
+      "data_type": "tsm-py-stubs-missing-imports",
+      "field_mapping": {
+        "py_stub_report": "py_stub_report"
+      }
+    },
+    {
+      "from_step": "s04_tsm_py_conversion_order",
+      "to_step": "s08_tsm_py_annotate_module",
+      "data_type": "tsm-py-conversion-order",
+      "field_mapping": {
+        "py_conversion_order": "py_conversion_order"
+      }
+    },
+    {
+      "from_step": "s05_tsm_py_stubs_missing_imports",
+      "to_step": "s08_tsm_py_annotate_module",
+      "data_type": "tsm-py-stubs-missing-imports",
+      "field_mapping": {
+        "py_stub_report": "py_stub_report"
+      }
+    },
+    {
+      "from_step": "s01_tsm_migration_intake",
+      "to_step": "s08_tsm_py_annotate_module",
+      "data_type": "tsm-migration-intake",
+      "field_mapping": {
+        "migration_profile": "migration_profile"
+      }
+    },
+    {
+      "from_step": "s08_tsm_py_annotate_module",
+      "to_step": "s09_tsm_py_typeddict_protocol",
+      "data_type": "tsm-py-annotate-module",
+      "field_mapping": {
+        "py_annotated_modules": "py_annotated_modules"
+      }
+    },
+    {
+      "from_step": "s09_tsm_py_typeddict_protocol",
+      "to_step": "s10_tsm_py_generics_paramspec",
+      "data_type": "tsm-py-typeddict-protocol",
+      "field_mapping": {
+        "py_structural_types": "py_structural_types"
+      }
+    },
+    {
+      "from_step": "s10_tsm_py_generics_paramspec",
+      "to_step": "s11_tsm_py_eliminate_any_cast",
+      "data_type": "tsm-py-generics-paramspec",
+      "field_mapping": {
+        "py_generic_types": "py_generic_types"
+      }
+    },
+    {
+      "from_step": "s11_tsm_py_eliminate_any_cast",
+      "to_step": "s12_tsm_py_pydantic_boundaries",
+      "data_type": "tsm-py-eliminate-any-cast",
+      "field_mapping": {
+        "py_unsafe_fixes": "py_unsafe_fixes"
+      }
+    },
+    {
+      "from_step": "s01_tsm_migration_intake",
+      "to_step": "s13_tsm_py_ci_gate",
+      "data_type": "tsm-migration-intake",
+      "field_mapping": {
+        "migration_profile": "migration_profile"
+      }
+    },
+    {
+      "from_step": "s03_tsm_py_type_coverage",
+      "to_step": "s13_tsm_py_ci_gate",
+      "data_type": "tsm-py-type-coverage",
+      "field_mapping": {
+        "py_type_coverage": "py_type_coverage"
+      }
+    },
+    {
+      "from_step": "s12_tsm_py_pydantic_boundaries",
+      "to_step": "s13_tsm_py_ci_gate",
+      "data_type": "tsm-py-pydantic-boundaries",
+      "field_mapping": {
+        "py_boundary_validators": "py_boundary_validators"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "repo_path",
+    "stack",
+    "python_checker",
+    "test_command",
+    "boundary_list",
+    "ci_platform"
+  ],
+  "terminal_outputs": [
+    "py_mypy_config",
+    "py_pyright_config",
+    "py_ci_gate"
+  ],
+  "parallel_groups": [
+    [
+      "s01_tsm_migration_intake"
+    ],
+    [
+      "s02_tsm_py_error_baseline",
+      "s03_tsm_py_type_coverage",
+      "s04_tsm_py_conversion_order"
+    ],
+    [
+      "s05_tsm_py_stubs_missing_imports"
+    ],
+    [
+      "s06_tsm_py_mypy_module_strict",
+      "s07_tsm_py_pyright_strict",
+      "s08_tsm_py_annotate_module"
+    ],
+    [
+      "s09_tsm_py_typeddict_protocol"
+    ],
+    [
+      "s10_tsm_py_generics_paramspec"
+    ],
+    [
+      "s11_tsm_py_eliminate_any_cast"
+    ],
+    [
+      "s12_tsm_py_pydantic_boundaries"
+    ],
+    [
+      "s13_tsm_py_ci_gate"
+    ]
+  ],
+  "estimated_cost": 13,
+  "critical_path": [
+    "s01_tsm_migration_intake",
+    "s02_tsm_py_error_baseline",
+    "s05_tsm_py_stubs_missing_imports",
+    "s08_tsm_py_annotate_module",
+    "s09_tsm_py_typeddict_protocol",
+    "s10_tsm_py_generics_paramspec",
+    "s11_tsm_py_eliminate_any_cast",
+    "s12_tsm_py_pydantic_boundaries",
+    "s13_tsm_py_ci_gate"
+  ]
+}

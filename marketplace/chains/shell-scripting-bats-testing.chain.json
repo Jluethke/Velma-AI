@@ -1,0 +1,130 @@
+{
+  "name": "shell-scripting-bats-testing",
+  "description": "Put an existing shell script under test: ShellCheck baseline, bats-core harness, CLI and exit code tests, offline stubs for external commands, and a CI matrix that runs them.",
+  "steps": [
+    {
+      "id": "s01_shs_shellcheck_gate",
+      "skill_name": "shs-shellcheck-gate",
+      "inputs": {
+        "script_path": "from_user_input",
+        "shell_dialect": "from_user_input"
+      },
+      "outputs": {
+        "shellcheck_report": "shellcheck_report"
+      }
+    },
+    {
+      "id": "s02_shs_bats_harness_setup",
+      "skill_name": "shs-bats-harness-setup",
+      "inputs": {
+        "repo_dir": "from_user_input",
+        "script_path": "from_user_input"
+      },
+      "outputs": {
+        "bats_harness": "bats_harness"
+      }
+    },
+    {
+      "id": "s03_shs_bats_cli_tests",
+      "skill_name": "shs-bats-cli-tests",
+      "inputs": {
+        "script_path": "from_user_input",
+        "bats_harness": "s02_shs_bats_harness_setup.bats_harness",
+        "cli_interface": "from_user_input",
+        "exit_code_table": "from_user_input"
+      },
+      "outputs": {
+        "bats_tests": "bats_tests"
+      }
+    },
+    {
+      "id": "s04_shs_bats_command_stubs",
+      "skill_name": "shs-bats-command-stubs",
+      "inputs": {
+        "script_path": "from_user_input",
+        "bats_harness": "s02_shs_bats_harness_setup.bats_harness"
+      },
+      "outputs": {
+        "command_stubs": "command_stubs"
+      }
+    },
+    {
+      "id": "s05_shs_ci_shell_matrix",
+      "skill_name": "shs-ci-shell-matrix",
+      "inputs": {
+        "repo_dir": "from_user_input",
+        "target_platforms": "from_user_input",
+        "shellcheck_report": "s01_shs_shellcheck_gate.shellcheck_report",
+        "bats_tests": "s03_shs_bats_cli_tests.bats_tests"
+      },
+      "outputs": {
+        "ci_workflow": "ci_workflow"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s02_shs_bats_harness_setup",
+      "to_step": "s03_shs_bats_cli_tests",
+      "data_type": "shs-bats-harness-setup",
+      "field_mapping": {
+        "bats_harness": "bats_harness"
+      }
+    },
+    {
+      "from_step": "s02_shs_bats_harness_setup",
+      "to_step": "s04_shs_bats_command_stubs",
+      "data_type": "shs-bats-harness-setup",
+      "field_mapping": {
+        "bats_harness": "bats_harness"
+      }
+    },
+    {
+      "from_step": "s01_shs_shellcheck_gate",
+      "to_step": "s05_shs_ci_shell_matrix",
+      "data_type": "shs-shellcheck-gate",
+      "field_mapping": {
+        "shellcheck_report": "shellcheck_report"
+      }
+    },
+    {
+      "from_step": "s03_shs_bats_cli_tests",
+      "to_step": "s05_shs_ci_shell_matrix",
+      "data_type": "shs-bats-cli-tests",
+      "field_mapping": {
+        "bats_tests": "bats_tests"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "script_path",
+    "shell_dialect",
+    "repo_dir",
+    "cli_interface",
+    "exit_code_table",
+    "target_platforms"
+  ],
+  "terminal_outputs": [
+    "command_stubs",
+    "ci_workflow"
+  ],
+  "parallel_groups": [
+    [
+      "s01_shs_shellcheck_gate",
+      "s02_shs_bats_harness_setup"
+    ],
+    [
+      "s03_shs_bats_cli_tests",
+      "s04_shs_bats_command_stubs"
+    ],
+    [
+      "s05_shs_ci_shell_matrix"
+    ]
+  ],
+  "estimated_cost": 5,
+  "critical_path": [
+    "s02_shs_bats_harness_setup",
+    "s03_shs_bats_cli_tests",
+    "s05_shs_ci_shell_matrix"
+  ]
+}

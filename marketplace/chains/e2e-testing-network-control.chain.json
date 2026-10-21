@@ -1,0 +1,112 @@
+{
+  "name": "e2e-testing-network-control",
+  "description": "Decide per journey dependency between real backend, sandbox, capture and mock, then implement the mocks with Playwright routes or Cypress intercepts that prove they matched.",
+  "steps": [
+    {
+      "id": "s01_e2e_journey_select",
+      "skill_name": "e2e-journey-select",
+      "inputs": {
+        "repo_dir": "from_user_input",
+        "app_url": "from_user_input",
+        "journey_sources": "from_user_input_optional"
+      },
+      "outputs": {
+        "critical_journeys": "critical_journeys"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_e2e_mock_vs_real_decide",
+      "skill_name": "e2e-mock-vs-real-decide",
+      "inputs": {
+        "critical_journeys": "s01_e2e_journey_select.critical_journeys",
+        "repo_dir": "from_user_input"
+      },
+      "outputs": {
+        "backend_plan": "backend_plan"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_e2e_pw_network_mock",
+      "skill_name": "e2e-pw-network-mock",
+      "inputs": {
+        "repo_dir": "from_user_input",
+        "stack": "from_user_input",
+        "backend_plan": "s02_e2e_mock_vs_real_decide.backend_plan"
+      },
+      "outputs": {
+        "pw_route_mocks": "pw_route_mocks"
+      },
+      "condition": "stack != 'cypress'",
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_e2e_cypress_intercept",
+      "skill_name": "e2e-cypress-intercept",
+      "inputs": {
+        "repo_dir": "from_user_input",
+        "backend_plan": "s02_e2e_mock_vs_real_decide.backend_plan"
+      },
+      "outputs": {
+        "cypress_intercepts": "cypress_intercepts"
+      },
+      "condition": "stack == 'cypress'",
+      "parallel_group": 3
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_e2e_journey_select",
+      "to_step": "s02_e2e_mock_vs_real_decide",
+      "data_type": "e2e-journey-select",
+      "field_mapping": {
+        "critical_journeys": "critical_journeys"
+      }
+    },
+    {
+      "from_step": "s02_e2e_mock_vs_real_decide",
+      "to_step": "s03_e2e_pw_network_mock",
+      "data_type": "e2e-mock-vs-real-decide",
+      "field_mapping": {
+        "backend_plan": "backend_plan"
+      }
+    },
+    {
+      "from_step": "s02_e2e_mock_vs_real_decide",
+      "to_step": "s04_e2e_cypress_intercept",
+      "data_type": "e2e-mock-vs-real-decide",
+      "field_mapping": {
+        "backend_plan": "backend_plan"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "repo_dir",
+    "app_url",
+    "journey_sources",
+    "stack"
+  ],
+  "terminal_outputs": [
+    "pw_route_mocks",
+    "cypress_intercepts"
+  ],
+  "parallel_groups": [
+    [
+      "s01_e2e_journey_select"
+    ],
+    [
+      "s02_e2e_mock_vs_real_decide"
+    ],
+    [
+      "s03_e2e_pw_network_mock",
+      "s04_e2e_cypress_intercept"
+    ]
+  ],
+  "estimated_cost": 4,
+  "critical_path": [
+    "s01_e2e_journey_select",
+    "s02_e2e_mock_vs_real_decide",
+    "s03_e2e_pw_network_mock"
+  ]
+}

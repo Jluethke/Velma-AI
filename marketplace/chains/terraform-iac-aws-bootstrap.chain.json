@@ -1,0 +1,183 @@
+{
+  "name": "terraform-iac-aws-bootstrap",
+  "description": "Bootstrap a new AWS Terraform repo: layout, environment pattern, version pins, S3 state with locking, then fmt, validate and TFLint gates.",
+  "steps": [
+    {
+      "id": "s01_tf_repo_layout",
+      "skill_name": "tf-repo-layout",
+      "inputs": {
+        "repo_dir": "from_user_input",
+        "cloud": "from_user_input",
+        "environments": "from_user_input",
+        "components": "from_user_input"
+      },
+      "outputs": {
+        "repo_layout": "repo_layout",
+        "root_modules": "root_modules"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_tf_env_strategy",
+      "skill_name": "tf-env-strategy",
+      "inputs": {
+        "repo_layout": "s01_tf_repo_layout.repo_layout",
+        "environments": "from_user_input",
+        "isolation_requirements": "from_user_input_optional"
+      },
+      "outputs": {
+        "env_strategy": "env_strategy"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_tf_version_pinning",
+      "skill_name": "tf-version-pinning",
+      "inputs": {
+        "root_modules": "s01_tf_repo_layout.root_modules",
+        "terraform_version": "from_user_input_optional",
+        "lock_platforms": "from_user_input_optional"
+      },
+      "outputs": {
+        "version_constraints": "version_constraints",
+        "lock_file_report": "lock_file_report"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_tf_state_s3_backend",
+      "skill_name": "tf-state-s3-backend",
+      "inputs": {
+        "root_modules": "s01_tf_repo_layout.root_modules",
+        "env_strategy": "s02_tf_env_strategy.env_strategy",
+        "aws_region": "from_user_input",
+        "state_bucket_name": "from_user_input"
+      },
+      "outputs": {
+        "backend_config": "backend_config",
+        "state_migration_report": "state_migration_report"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s05_tf_fmt_validate",
+      "skill_name": "tf-fmt-validate",
+      "inputs": {
+        "root_modules": "s01_tf_repo_layout.root_modules"
+      },
+      "outputs": {
+        "fmt_validate_report": "fmt_validate_report"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s06_tf_tflint",
+      "skill_name": "tf-tflint",
+      "inputs": {
+        "root_modules": "s01_tf_repo_layout.root_modules",
+        "cloud": "from_user_input",
+        "fmt_validate_report": "s05_tf_fmt_validate.fmt_validate_report"
+      },
+      "outputs": {
+        "tflint_findings": "tflint_findings"
+      },
+      "parallel_group": 3
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_tf_repo_layout",
+      "to_step": "s02_tf_env_strategy",
+      "data_type": "tf-repo-layout",
+      "field_mapping": {
+        "repo_layout": "repo_layout"
+      }
+    },
+    {
+      "from_step": "s01_tf_repo_layout",
+      "to_step": "s03_tf_version_pinning",
+      "data_type": "tf-repo-layout",
+      "field_mapping": {
+        "root_modules": "root_modules"
+      }
+    },
+    {
+      "from_step": "s01_tf_repo_layout",
+      "to_step": "s04_tf_state_s3_backend",
+      "data_type": "tf-repo-layout",
+      "field_mapping": {
+        "root_modules": "root_modules"
+      }
+    },
+    {
+      "from_step": "s02_tf_env_strategy",
+      "to_step": "s04_tf_state_s3_backend",
+      "data_type": "tf-env-strategy",
+      "field_mapping": {
+        "env_strategy": "env_strategy"
+      }
+    },
+    {
+      "from_step": "s01_tf_repo_layout",
+      "to_step": "s05_tf_fmt_validate",
+      "data_type": "tf-repo-layout",
+      "field_mapping": {
+        "root_modules": "root_modules"
+      }
+    },
+    {
+      "from_step": "s01_tf_repo_layout",
+      "to_step": "s06_tf_tflint",
+      "data_type": "tf-repo-layout",
+      "field_mapping": {
+        "root_modules": "root_modules"
+      }
+    },
+    {
+      "from_step": "s05_tf_fmt_validate",
+      "to_step": "s06_tf_tflint",
+      "data_type": "tf-fmt-validate",
+      "field_mapping": {
+        "fmt_validate_report": "fmt_validate_report"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "repo_dir",
+    "cloud",
+    "environments",
+    "components",
+    "isolation_requirements",
+    "terraform_version",
+    "lock_platforms",
+    "aws_region",
+    "state_bucket_name"
+  ],
+  "terminal_outputs": [
+    "version_constraints",
+    "lock_file_report",
+    "backend_config",
+    "state_migration_report",
+    "tflint_findings"
+  ],
+  "parallel_groups": [
+    [
+      "s01_tf_repo_layout"
+    ],
+    [
+      "s02_tf_env_strategy",
+      "s03_tf_version_pinning",
+      "s05_tf_fmt_validate"
+    ],
+    [
+      "s04_tf_state_s3_backend",
+      "s06_tf_tflint"
+    ]
+  ],
+  "estimated_cost": 6,
+  "critical_path": [
+    "s01_tf_repo_layout",
+    "s05_tf_fmt_validate",
+    "s06_tf_tflint"
+  ]
+}

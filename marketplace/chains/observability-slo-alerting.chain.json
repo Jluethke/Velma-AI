@@ -1,0 +1,286 @@
+{
+  "name": "observability-slo-alerting",
+  "description": "From RED metrics to on-call: SLI and SLO definition with error budget, threshold-aligned histogram buckets, recording rules, multi-window burn-rate alerts, Alertmanager routing, runbooks and promtool unit tests.",
+  "steps": [
+    {
+      "id": "s01_obs_signal_inventory",
+      "skill_name": "obs-signal-inventory",
+      "inputs": {
+        "service_repo": "from_user_input",
+        "stack": "from_user_input",
+        "service_name": "from_user_input"
+      },
+      "outputs": {
+        "signal_plan": "signal_plan"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_obs_red_metrics_spec",
+      "skill_name": "obs-red-metrics-spec",
+      "inputs": {
+        "signal_plan": "s01_obs_signal_inventory.signal_plan"
+      },
+      "outputs": {
+        "red_metric_spec": "red_metric_spec"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_obs_histogram_bucket_design",
+      "skill_name": "obs-histogram-bucket-design",
+      "inputs": {
+        "red_metric_spec": "s02_obs_red_metrics_spec.red_metric_spec",
+        "latency_threshold_seconds": "from_user_input"
+      },
+      "outputs": {
+        "histogram_config": "histogram_config"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_obs_slo_error_budget_define",
+      "skill_name": "obs-slo-error-budget-define",
+      "inputs": {
+        "signal_plan": "s01_obs_signal_inventory.signal_plan",
+        "red_metric_spec": "s02_obs_red_metrics_spec.red_metric_spec",
+        "histogram_config": "s03_obs_histogram_bucket_design.histogram_config",
+        "slo_target": "from_user_input",
+        "slo_window_days": "from_user_input"
+      },
+      "outputs": {
+        "slo_spec": "slo_spec"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s05_obs_sli_recording_rules",
+      "skill_name": "obs-sli-recording-rules",
+      "inputs": {
+        "slo_spec": "s04_obs_slo_error_budget_define.slo_spec",
+        "rules_dir": "from_user_input"
+      },
+      "outputs": {
+        "recording_rules": "recording_rules"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s06_obs_burn_rate_alert_rules",
+      "skill_name": "obs-burn-rate-alert-rules",
+      "inputs": {
+        "slo_spec": "s04_obs_slo_error_budget_define.slo_spec",
+        "recording_rules": "s05_obs_sli_recording_rules.recording_rules",
+        "rules_dir": "from_user_input",
+        "runbook_base_url": "from_user_input"
+      },
+      "outputs": {
+        "alert_rules": "alert_rules"
+      },
+      "parallel_group": 6
+    },
+    {
+      "id": "s07_obs_alertmanager_routing",
+      "skill_name": "obs-alertmanager-routing",
+      "inputs": {
+        "alert_rules": "s06_obs_burn_rate_alert_rules.alert_rules",
+        "alertmanager_config_path": "from_user_input"
+      },
+      "outputs": {
+        "alert_routing": "alert_routing"
+      },
+      "parallel_group": 7
+    },
+    {
+      "id": "s08_obs_alert_runbook_write",
+      "skill_name": "obs-alert-runbook-write",
+      "inputs": {
+        "alert_rules": "s06_obs_burn_rate_alert_rules.alert_rules",
+        "slo_spec": "s04_obs_slo_error_budget_define.slo_spec",
+        "runbook_base_url": "from_user_input"
+      },
+      "outputs": {
+        "runbooks": "runbooks"
+      },
+      "parallel_group": 7
+    },
+    {
+      "id": "s09_obs_promtool_rule_tests",
+      "skill_name": "obs-promtool-rule-tests",
+      "inputs": {
+        "recording_rules": "s05_obs_sli_recording_rules.recording_rules",
+        "alert_rules": "s06_obs_burn_rate_alert_rules.alert_rules",
+        "slo_spec": "s04_obs_slo_error_budget_define.slo_spec"
+      },
+      "outputs": {
+        "rule_test_report": "rule_test_report"
+      },
+      "parallel_group": 7
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_obs_signal_inventory",
+      "to_step": "s02_obs_red_metrics_spec",
+      "data_type": "obs-signal-inventory",
+      "field_mapping": {
+        "signal_plan": "signal_plan"
+      }
+    },
+    {
+      "from_step": "s02_obs_red_metrics_spec",
+      "to_step": "s03_obs_histogram_bucket_design",
+      "data_type": "obs-red-metrics-spec",
+      "field_mapping": {
+        "red_metric_spec": "red_metric_spec"
+      }
+    },
+    {
+      "from_step": "s01_obs_signal_inventory",
+      "to_step": "s04_obs_slo_error_budget_define",
+      "data_type": "obs-signal-inventory",
+      "field_mapping": {
+        "signal_plan": "signal_plan"
+      }
+    },
+    {
+      "from_step": "s02_obs_red_metrics_spec",
+      "to_step": "s04_obs_slo_error_budget_define",
+      "data_type": "obs-red-metrics-spec",
+      "field_mapping": {
+        "red_metric_spec": "red_metric_spec"
+      }
+    },
+    {
+      "from_step": "s03_obs_histogram_bucket_design",
+      "to_step": "s04_obs_slo_error_budget_define",
+      "data_type": "obs-histogram-bucket-design",
+      "field_mapping": {
+        "histogram_config": "histogram_config"
+      }
+    },
+    {
+      "from_step": "s04_obs_slo_error_budget_define",
+      "to_step": "s05_obs_sli_recording_rules",
+      "data_type": "obs-slo-error-budget-define",
+      "field_mapping": {
+        "slo_spec": "slo_spec"
+      }
+    },
+    {
+      "from_step": "s04_obs_slo_error_budget_define",
+      "to_step": "s06_obs_burn_rate_alert_rules",
+      "data_type": "obs-slo-error-budget-define",
+      "field_mapping": {
+        "slo_spec": "slo_spec"
+      }
+    },
+    {
+      "from_step": "s05_obs_sli_recording_rules",
+      "to_step": "s06_obs_burn_rate_alert_rules",
+      "data_type": "obs-sli-recording-rules",
+      "field_mapping": {
+        "recording_rules": "recording_rules"
+      }
+    },
+    {
+      "from_step": "s06_obs_burn_rate_alert_rules",
+      "to_step": "s07_obs_alertmanager_routing",
+      "data_type": "obs-burn-rate-alert-rules",
+      "field_mapping": {
+        "alert_rules": "alert_rules"
+      }
+    },
+    {
+      "from_step": "s04_obs_slo_error_budget_define",
+      "to_step": "s08_obs_alert_runbook_write",
+      "data_type": "obs-slo-error-budget-define",
+      "field_mapping": {
+        "slo_spec": "slo_spec"
+      }
+    },
+    {
+      "from_step": "s06_obs_burn_rate_alert_rules",
+      "to_step": "s08_obs_alert_runbook_write",
+      "data_type": "obs-burn-rate-alert-rules",
+      "field_mapping": {
+        "alert_rules": "alert_rules"
+      }
+    },
+    {
+      "from_step": "s04_obs_slo_error_budget_define",
+      "to_step": "s09_obs_promtool_rule_tests",
+      "data_type": "obs-slo-error-budget-define",
+      "field_mapping": {
+        "slo_spec": "slo_spec"
+      }
+    },
+    {
+      "from_step": "s05_obs_sli_recording_rules",
+      "to_step": "s09_obs_promtool_rule_tests",
+      "data_type": "obs-sli-recording-rules",
+      "field_mapping": {
+        "recording_rules": "recording_rules"
+      }
+    },
+    {
+      "from_step": "s06_obs_burn_rate_alert_rules",
+      "to_step": "s09_obs_promtool_rule_tests",
+      "data_type": "obs-burn-rate-alert-rules",
+      "field_mapping": {
+        "alert_rules": "alert_rules"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "service_repo",
+    "stack",
+    "service_name",
+    "latency_threshold_seconds",
+    "slo_target",
+    "slo_window_days",
+    "rules_dir",
+    "runbook_base_url",
+    "alertmanager_config_path"
+  ],
+  "terminal_outputs": [
+    "alert_routing",
+    "runbooks",
+    "rule_test_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_obs_signal_inventory"
+    ],
+    [
+      "s02_obs_red_metrics_spec"
+    ],
+    [
+      "s03_obs_histogram_bucket_design"
+    ],
+    [
+      "s04_obs_slo_error_budget_define"
+    ],
+    [
+      "s05_obs_sli_recording_rules"
+    ],
+    [
+      "s06_obs_burn_rate_alert_rules"
+    ],
+    [
+      "s07_obs_alertmanager_routing",
+      "s08_obs_alert_runbook_write",
+      "s09_obs_promtool_rule_tests"
+    ]
+  ],
+  "estimated_cost": 9,
+  "critical_path": [
+    "s01_obs_signal_inventory",
+    "s02_obs_red_metrics_spec",
+    "s03_obs_histogram_bucket_design",
+    "s04_obs_slo_error_budget_define",
+    "s05_obs_sli_recording_rules",
+    "s06_obs_burn_rate_alert_rules",
+    "s09_obs_promtool_rule_tests"
+  ]
+}

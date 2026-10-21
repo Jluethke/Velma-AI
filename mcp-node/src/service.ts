@@ -19,6 +19,7 @@ import { ChainComposer, type ComposedChain } from "./chain-composer.js";
 import { MemoryStore } from "./memory-store.js";
 import { KnowledgeGraph } from "./knowledge-graph.js";
 import { extractFacts } from "./fact-extractor.js";
+import { evaluateCondition } from "./chain-condition.js";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -503,7 +504,7 @@ export class SkillChainService {
 
   async handleRunFlowStep(params: { flow_name: string; step_index: number; context: string }): Promise<Record<string, unknown>> {
     type ChainData = Record<string, unknown>;
-    type StepData = { skill_name: string; alias?: string; depends_on?: string[] };
+    type StepData = { skill_name: string; alias?: string; depends_on?: string[]; condition?: string };
 
     const chains = this.availableChains();
     const chainData = chains.find(c => (c as ChainData).name === params.flow_name) as ChainData | undefined;
@@ -519,11 +520,31 @@ export class SkillChainService {
       };
     }
 
-    const step = steps[params.step_index];
-    const skillName = step.skill_name;
-
     let ctx: Record<string, unknown>;
     try { ctx = safeJsonParse(params.context); } catch { ctx = {}; }
+
+    // Skip steps whose condition is known to be false for this context (for example
+    // stack-specific steps for another stack). Unresolvable conditions are passed
+    // to the model to decide.
+    let stepIndex = params.step_index;
+    const skipped: Array<{ step_index: number; skill: string; condition: string }> = [];
+    while (stepIndex < steps.length && evaluateCondition(steps[stepIndex].condition, ctx) === false) {
+      skipped.push({ step_index: stepIndex, skill: steps[stepIndex].skill_name, condition: steps[stepIndex].condition ?? "" });
+      stepIndex++;
+    }
+    if (stepIndex >= steps.length) {
+      return {
+        flow_pipeline: params.flow_name,
+        total_steps: steps.length,
+        skipped_steps: skipped,
+        is_last_step: true,
+        instructions: "The remaining steps do not apply to this context (their conditions are false). All done! Flow pipeline complete.",
+      };
+    }
+
+    const step = steps[stepIndex];
+    const skillName = step.skill_name;
+    const conditionUnresolved = step.condition && evaluateCondition(step.condition, ctx) === null ? step.condition : null;
 
     const skillMap = this.installedSkills();
     const skillPath = skillMap.get(skillName);
@@ -532,11 +553,15 @@ export class SkillChainService {
       skillContent = readFileSync(skillPath, "utf-8");
     }
 
-    const isLast = params.step_index === steps.length - 1;
+    // The next step that is not already known to be skipped. Its condition is
+    // re-checked on the next call, once this step's outputs are in the context.
+    let nextIndex = stepIndex + 1;
+    while (nextIndex < steps.length && evaluateCondition(steps[nextIndex].condition, ctx) === false) nextIndex++;
+    const isLast = nextIndex >= steps.length;
     const nextStep = isLast ? null : {
-      step_index: params.step_index + 1,
-      skill: steps[params.step_index + 1].skill_name,
-      alias: steps[params.step_index + 1].alias ?? steps[params.step_index + 1].skill_name,
+      step_index: nextIndex,
+      skill: steps[nextIndex].skill_name,
+      alias: steps[nextIndex].alias ?? steps[nextIndex].skill_name,
     };
 
     const { required: requiredInputs, optional: optionalInputs } = skillContent
@@ -552,7 +577,10 @@ export class SkillChainService {
 
     const continueMsg = isLast
       ? "All done! Flow pipeline complete."
-      : `Step ${params.step_index + 1} complete. Show the full output above, then ask: 'Ready for step ${params.step_index + 2} (${nextStep?.skill ?? ""})?' Call run_flow_step with step_index=${params.step_index + 1} to continue.`;
+      : `Step ${stepIndex + 1} complete. Show the full output above, then ask: 'Ready for step ${nextIndex + 1} (${nextStep?.skill ?? ""})?' Call run_flow_step with step_index=${nextIndex} and a context that includes this step's outputs to continue.`;
+    const conditionBlock = conditionUnresolved
+      ? `This step applies only when \`${conditionUnresolved}\`. Decide that from the inputs and earlier outputs. If it is false, do not execute this step; call run_flow_step with step_index=${stepIndex + 1} instead.\n\n`
+      : "";
 
     // Track in gamification
     try {
@@ -568,10 +596,13 @@ export class SkillChainService {
 
     return {
       flow_pipeline: params.flow_name,
-      step: params.step_index + 1,
+      step: stepIndex + 1,
+      step_index: stepIndex,
       total_steps: steps.length,
       skill: skillName,
       alias: step.alias ?? skillName,
+      condition: step.condition ?? null,
+      skipped_steps: skipped,
       required_inputs: requiredInputs,
       optional_inputs: optionalInputs,
       inputs_already_provided: alreadyProvided,
@@ -579,7 +610,7 @@ export class SkillChainService {
       context: ctx,
       is_last_step: isLast,
       next_step: nextStep,
-      instructions: `${intakeBlock}Execute the '${skillName}' flow using the skill definition and collected inputs. Show the user the complete output. Then: ${continueMsg}`,
+      instructions: `${conditionBlock}${intakeBlock}Execute the '${skillName}' flow using the skill definition and collected inputs. Show the user the complete output. Then: ${continueMsg}`,
     };
   }
 
@@ -620,6 +651,7 @@ export class SkillChainService {
         alias: step.alias ?? step.skill_name,
         description: (manifest as Record<string, string>).description ?? "",
         depends_on: step.depends_on ?? [],
+        condition: (step as { condition?: string }).condition ?? null,
       };
     });
 

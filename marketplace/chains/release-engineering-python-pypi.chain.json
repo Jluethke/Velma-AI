@@ -1,0 +1,310 @@
+{
+  "name": "release-engineering-python-pypi",
+  "description": "Release a Python package to PyPI: commit audit, griffe API diff, version decision, git-cliff changelog, signed tag, reproducible wheel and sdist, SLSA provenance, Trusted Publishing and clean install check.",
+  "steps": [
+    {
+      "id": "s01_rel_commit_history_audit",
+      "skill_name": "rel-commit-history-audit",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "last_tag": "from_user_input_optional"
+      },
+      "outputs": {
+        "commit_list": "commit_list",
+        "noncompliant_commits": "noncompliant_commits"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_rel_py_api_break_griffe",
+      "skill_name": "rel-py-api-break-griffe",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "last_tag": "from_user_input_optional",
+        "package_name": "from_user_input"
+      },
+      "outputs": {
+        "py_api_breaks": "py_api_breaks"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s03_rel_semver_bump_decision",
+      "skill_name": "rel-semver-bump-decision",
+      "inputs": {
+        "commit_list": "s01_rel_commit_history_audit.commit_list",
+        "noncompliant_commits": "s01_rel_commit_history_audit.noncompliant_commits",
+        "current_version": "from_user_input",
+        "prerelease_id": "from_user_input_optional",
+        "py_api_breaks": "s02_rel_py_api_break_griffe.py_api_breaks",
+        "node_api_breaks": "from_user_input_optional",
+        "go_api_breaks": "from_user_input_optional",
+        "rust_api_breaks": "from_user_input_optional",
+        "deprecation_notices": "from_user_input_optional"
+      },
+      "outputs": {
+        "next_version": "next_version",
+        "bump_level": "bump_level",
+        "bump_rationale": "bump_rationale"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_rel_changelog_git_cliff",
+      "skill_name": "rel-changelog-git-cliff",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "next_version": "s03_rel_semver_bump_decision.next_version",
+        "last_tag": "from_user_input_optional"
+      },
+      "outputs": {
+        "cliff_config": "cliff_config",
+        "cliff_changelog": "cliff_changelog"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s05_rel_tag_sign_git",
+      "skill_name": "rel-tag-sign-git",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "next_version": "s03_rel_semver_bump_decision.next_version",
+        "signing_method": "from_user_input",
+        "rp_changelog": "from_user_input_optional",
+        "sr_changelog": "from_user_input_optional",
+        "cliff_changelog": "s04_rel_changelog_git_cliff.cliff_changelog"
+      },
+      "outputs": {
+        "release_tag": "release_tag",
+        "tag_verification": "tag_verification"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s06_rel_py_reproducible_build",
+      "skill_name": "rel-py-reproducible-build",
+      "inputs": {
+        "repo_path": "from_user_input",
+        "release_tag": "s05_rel_tag_sign_git.release_tag"
+      },
+      "outputs": {
+        "py_dist": "py_dist",
+        "py_repro_report": "py_repro_report"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s07_rel_slsa_provenance_attest",
+      "skill_name": "rel-slsa-provenance-attest",
+      "inputs": {
+        "repo_slug": "from_user_input",
+        "slsa_build_level": "from_user_input_optional",
+        "py_dist": "s06_rel_py_reproducible_build.py_dist",
+        "node_dist": "from_user_input_optional",
+        "go_dist": "from_user_input_optional",
+        "rust_dist": "from_user_input_optional",
+        "image_digest": "from_user_input_optional"
+      },
+      "outputs": {
+        "provenance_attestation": "provenance_attestation",
+        "provenance_verification": "provenance_verification"
+      },
+      "parallel_group": 6
+    },
+    {
+      "id": "s08_rel_py_publish_pypi_trusted",
+      "skill_name": "rel-py-publish-pypi-trusted",
+      "inputs": {
+        "py_dist": "s06_rel_py_reproducible_build.py_dist",
+        "package_name": "from_user_input",
+        "next_version": "s03_rel_semver_bump_decision.next_version",
+        "provenance_verification": "s07_rel_slsa_provenance_attest.provenance_verification"
+      },
+      "outputs": {
+        "pypi_release_url": "pypi_release_url"
+      },
+      "parallel_group": 7
+    },
+    {
+      "id": "s09_rel_py_verify_install",
+      "skill_name": "rel-py-verify-install",
+      "inputs": {
+        "package_name": "from_user_input",
+        "next_version": "s03_rel_semver_bump_decision.next_version",
+        "pypi_release_url": "s08_rel_py_publish_pypi_trusted.pypi_release_url",
+        "smoke_import": "from_user_input_optional"
+      },
+      "outputs": {
+        "py_install_report": "py_install_report"
+      },
+      "parallel_group": 8
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_rel_commit_history_audit",
+      "to_step": "s03_rel_semver_bump_decision",
+      "data_type": "rel-commit-history-audit",
+      "field_mapping": {
+        "commit_list": "commit_list",
+        "noncompliant_commits": "noncompliant_commits"
+      }
+    },
+    {
+      "from_step": "s02_rel_py_api_break_griffe",
+      "to_step": "s03_rel_semver_bump_decision",
+      "data_type": "rel-py-api-break-griffe",
+      "field_mapping": {
+        "py_api_breaks": "py_api_breaks"
+      }
+    },
+    {
+      "from_step": "s03_rel_semver_bump_decision",
+      "to_step": "s04_rel_changelog_git_cliff",
+      "data_type": "rel-semver-bump-decision",
+      "field_mapping": {
+        "next_version": "next_version"
+      }
+    },
+    {
+      "from_step": "s03_rel_semver_bump_decision",
+      "to_step": "s05_rel_tag_sign_git",
+      "data_type": "rel-semver-bump-decision",
+      "field_mapping": {
+        "next_version": "next_version"
+      }
+    },
+    {
+      "from_step": "s04_rel_changelog_git_cliff",
+      "to_step": "s05_rel_tag_sign_git",
+      "data_type": "rel-changelog-git-cliff",
+      "field_mapping": {
+        "cliff_changelog": "cliff_changelog"
+      }
+    },
+    {
+      "from_step": "s05_rel_tag_sign_git",
+      "to_step": "s06_rel_py_reproducible_build",
+      "data_type": "rel-tag-sign-git",
+      "field_mapping": {
+        "release_tag": "release_tag"
+      }
+    },
+    {
+      "from_step": "s06_rel_py_reproducible_build",
+      "to_step": "s07_rel_slsa_provenance_attest",
+      "data_type": "rel-py-reproducible-build",
+      "field_mapping": {
+        "py_dist": "py_dist"
+      }
+    },
+    {
+      "from_step": "s06_rel_py_reproducible_build",
+      "to_step": "s08_rel_py_publish_pypi_trusted",
+      "data_type": "rel-py-reproducible-build",
+      "field_mapping": {
+        "py_dist": "py_dist"
+      }
+    },
+    {
+      "from_step": "s03_rel_semver_bump_decision",
+      "to_step": "s08_rel_py_publish_pypi_trusted",
+      "data_type": "rel-semver-bump-decision",
+      "field_mapping": {
+        "next_version": "next_version"
+      }
+    },
+    {
+      "from_step": "s07_rel_slsa_provenance_attest",
+      "to_step": "s08_rel_py_publish_pypi_trusted",
+      "data_type": "rel-slsa-provenance-attest",
+      "field_mapping": {
+        "provenance_verification": "provenance_verification"
+      }
+    },
+    {
+      "from_step": "s03_rel_semver_bump_decision",
+      "to_step": "s09_rel_py_verify_install",
+      "data_type": "rel-semver-bump-decision",
+      "field_mapping": {
+        "next_version": "next_version"
+      }
+    },
+    {
+      "from_step": "s08_rel_py_publish_pypi_trusted",
+      "to_step": "s09_rel_py_verify_install",
+      "data_type": "rel-py-publish-pypi-trusted",
+      "field_mapping": {
+        "pypi_release_url": "pypi_release_url"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "repo_path",
+    "last_tag",
+    "package_name",
+    "current_version",
+    "prerelease_id",
+    "node_api_breaks",
+    "go_api_breaks",
+    "rust_api_breaks",
+    "deprecation_notices",
+    "signing_method",
+    "rp_changelog",
+    "sr_changelog",
+    "repo_slug",
+    "slsa_build_level",
+    "node_dist",
+    "go_dist",
+    "rust_dist",
+    "image_digest",
+    "smoke_import"
+  ],
+  "terminal_outputs": [
+    "bump_level",
+    "bump_rationale",
+    "cliff_config",
+    "tag_verification",
+    "py_repro_report",
+    "provenance_attestation",
+    "py_install_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_rel_commit_history_audit",
+      "s02_rel_py_api_break_griffe"
+    ],
+    [
+      "s03_rel_semver_bump_decision"
+    ],
+    [
+      "s04_rel_changelog_git_cliff"
+    ],
+    [
+      "s05_rel_tag_sign_git"
+    ],
+    [
+      "s06_rel_py_reproducible_build"
+    ],
+    [
+      "s07_rel_slsa_provenance_attest"
+    ],
+    [
+      "s08_rel_py_publish_pypi_trusted"
+    ],
+    [
+      "s09_rel_py_verify_install"
+    ]
+  ],
+  "estimated_cost": 9,
+  "critical_path": [
+    "s02_rel_py_api_break_griffe",
+    "s03_rel_semver_bump_decision",
+    "s04_rel_changelog_git_cliff",
+    "s05_rel_tag_sign_git",
+    "s06_rel_py_reproducible_build",
+    "s07_rel_slsa_provenance_attest",
+    "s08_rel_py_publish_pypi_trusted",
+    "s09_rel_py_verify_install"
+  ]
+}

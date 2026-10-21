@@ -1,0 +1,154 @@
+{
+  "name": "api-client-sdk-spec-readiness",
+  "description": "Decide whether and how to build a client SDK from an OpenAPI spec: Spectral lint, SDK readiness rules with mutation checks, spec inventory, generator decision and type mapping.",
+  "steps": [
+    {
+      "id": "s01_sdk_spec_spectral_lint",
+      "skill_name": "sdk-spec-spectral-lint",
+      "inputs": {
+        "spec_path": "from_user_input",
+        "spectral_ruleset": "from_user_input_optional"
+      },
+      "outputs": {
+        "lint_report": "lint_report",
+        "validated_spec": "validated_spec"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_sdk_spec_sdk_readiness_rules",
+      "skill_name": "sdk-spec-sdk-readiness-rules",
+      "inputs": {
+        "validated_spec": "s01_sdk_spec_spectral_lint.validated_spec",
+        "lint_report": "s01_sdk_spec_spectral_lint.lint_report"
+      },
+      "outputs": {
+        "readiness_ruleset": "readiness_ruleset",
+        "readiness_report": "readiness_report"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_sdk_spec_inventory",
+      "skill_name": "sdk-spec-inventory",
+      "inputs": {
+        "validated_spec": "s01_sdk_spec_spectral_lint.validated_spec",
+        "readiness_report": "s02_sdk_spec_sdk_readiness_rules.readiness_report"
+      },
+      "outputs": {
+        "api_inventory": "api_inventory"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_sdk_generator_decision",
+      "skill_name": "sdk-generator-decision",
+      "inputs": {
+        "api_inventory": "s03_sdk_spec_inventory.api_inventory",
+        "stack": "from_user_input",
+        "sdk_constraints": "from_user_input_optional"
+      },
+      "outputs": {
+        "generation_plan": "generation_plan"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s05_sdk_model_type_mapping",
+      "skill_name": "sdk-model-type-mapping",
+      "inputs": {
+        "api_inventory": "s03_sdk_spec_inventory.api_inventory",
+        "validated_spec": "s01_sdk_spec_spectral_lint.validated_spec",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "type_mapping": "type_mapping"
+      },
+      "parallel_group": 4
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_sdk_spec_spectral_lint",
+      "to_step": "s02_sdk_spec_sdk_readiness_rules",
+      "data_type": "sdk-spec-spectral-lint",
+      "field_mapping": {
+        "validated_spec": "validated_spec",
+        "lint_report": "lint_report"
+      }
+    },
+    {
+      "from_step": "s01_sdk_spec_spectral_lint",
+      "to_step": "s03_sdk_spec_inventory",
+      "data_type": "sdk-spec-spectral-lint",
+      "field_mapping": {
+        "validated_spec": "validated_spec"
+      }
+    },
+    {
+      "from_step": "s02_sdk_spec_sdk_readiness_rules",
+      "to_step": "s03_sdk_spec_inventory",
+      "data_type": "sdk-spec-sdk-readiness-rules",
+      "field_mapping": {
+        "readiness_report": "readiness_report"
+      }
+    },
+    {
+      "from_step": "s03_sdk_spec_inventory",
+      "to_step": "s04_sdk_generator_decision",
+      "data_type": "sdk-spec-inventory",
+      "field_mapping": {
+        "api_inventory": "api_inventory"
+      }
+    },
+    {
+      "from_step": "s03_sdk_spec_inventory",
+      "to_step": "s05_sdk_model_type_mapping",
+      "data_type": "sdk-spec-inventory",
+      "field_mapping": {
+        "api_inventory": "api_inventory"
+      }
+    },
+    {
+      "from_step": "s01_sdk_spec_spectral_lint",
+      "to_step": "s05_sdk_model_type_mapping",
+      "data_type": "sdk-spec-spectral-lint",
+      "field_mapping": {
+        "validated_spec": "validated_spec"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "spec_path",
+    "spectral_ruleset",
+    "stack",
+    "sdk_constraints"
+  ],
+  "terminal_outputs": [
+    "readiness_ruleset",
+    "generation_plan",
+    "type_mapping"
+  ],
+  "parallel_groups": [
+    [
+      "s01_sdk_spec_spectral_lint"
+    ],
+    [
+      "s02_sdk_spec_sdk_readiness_rules"
+    ],
+    [
+      "s03_sdk_spec_inventory"
+    ],
+    [
+      "s04_sdk_generator_decision",
+      "s05_sdk_model_type_mapping"
+    ]
+  ],
+  "estimated_cost": 5,
+  "critical_path": [
+    "s01_sdk_spec_spectral_lint",
+    "s02_sdk_spec_sdk_readiness_rules",
+    "s03_sdk_spec_inventory",
+    "s04_sdk_generator_decision"
+  ]
+}

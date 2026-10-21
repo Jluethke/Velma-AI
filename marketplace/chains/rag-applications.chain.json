@@ -1,0 +1,953 @@
+{
+  "name": "rag-applications",
+  "description": "Build a measured retrieval-augmented generation system: ingest PDF and HTML, normalize and dedupe, label a gold question set, select embedding model and chunking by retrieval metrics, index in pgvector, FAISS or Qdrant, add hybrid search, filters and reranking, assemble cited prompts, defend against injected content, score faithfulness, triage failures and cache answers.",
+  "steps": [
+    {
+      "id": "s01_rag_corpus_inventory",
+      "skill_name": "rag-corpus-inventory",
+      "inputs": {
+        "source_dir": "from_user_input",
+        "work_dir": "from_user_input"
+      },
+      "outputs": {
+        "corpus_manifest": "corpus_manifest",
+        "record_schema": "record_schema"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_rag_py_pdf_extract_pymupdf",
+      "skill_name": "rag-py-pdf-extract-pymupdf",
+      "inputs": {
+        "corpus_manifest": "s01_rag_corpus_inventory.corpus_manifest",
+        "record_schema": "s01_rag_corpus_inventory.record_schema",
+        "work_dir": "from_user_input"
+      },
+      "outputs": {
+        "pdf_records": "pdf_records",
+        "pdf_extract_log": "pdf_extract_log"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_rag_node_pdf_extract_pdfjs",
+      "skill_name": "rag-node-pdf-extract-pdfjs",
+      "inputs": {
+        "corpus_manifest": "s01_rag_corpus_inventory.corpus_manifest",
+        "record_schema": "s01_rag_corpus_inventory.record_schema",
+        "work_dir": "from_user_input"
+      },
+      "outputs": {
+        "pdf_records": "pdf_records",
+        "pdf_extract_log": "pdf_extract_log"
+      },
+      "condition": "stack == 'node'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s04_rag_ocr_scanned_pdf_ocrmypdf",
+      "skill_name": "rag-ocr-scanned-pdf-ocrmypdf",
+      "inputs": {
+        "corpus_manifest": "s01_rag_corpus_inventory.corpus_manifest",
+        "record_schema": "s01_rag_corpus_inventory.record_schema",
+        "work_dir": "from_user_input",
+        "ocr_language": "from_user_input"
+      },
+      "outputs": {
+        "ocr_records": "ocr_records",
+        "ocr_log": "ocr_log"
+      },
+      "condition": "has_scanned_pdfs == true",
+      "parallel_group": 2
+    },
+    {
+      "id": "s05_rag_py_html_extract_trafilatura",
+      "skill_name": "rag-py-html-extract-trafilatura",
+      "inputs": {
+        "corpus_manifest": "s01_rag_corpus_inventory.corpus_manifest",
+        "record_schema": "s01_rag_corpus_inventory.record_schema",
+        "work_dir": "from_user_input"
+      },
+      "outputs": {
+        "html_records": "html_records",
+        "html_extract_log": "html_extract_log"
+      },
+      "condition": "stack == 'python'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s06_rag_node_html_extract_readability",
+      "skill_name": "rag-node-html-extract-readability",
+      "inputs": {
+        "corpus_manifest": "s01_rag_corpus_inventory.corpus_manifest",
+        "record_schema": "s01_rag_corpus_inventory.record_schema",
+        "work_dir": "from_user_input"
+      },
+      "outputs": {
+        "html_records": "html_records",
+        "html_extract_log": "html_extract_log"
+      },
+      "condition": "stack == 'node'",
+      "parallel_group": 2
+    },
+    {
+      "id": "s07_rag_corpus_normalize_dedupe",
+      "skill_name": "rag-corpus-normalize-dedupe",
+      "inputs": {
+        "corpus_manifest": "s01_rag_corpus_inventory.corpus_manifest",
+        "record_schema": "s01_rag_corpus_inventory.record_schema",
+        "work_dir": "from_user_input",
+        "near_dup_threshold": "from_user_input"
+      },
+      "outputs": {
+        "clean_records": "clean_records",
+        "dedupe_report": "dedupe_report"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s08_rag_gold_question_set_label",
+      "skill_name": "rag-gold-question-set-label",
+      "inputs": {
+        "clean_records": "s07_rag_corpus_normalize_dedupe.clean_records",
+        "seed_questions": "from_user_input_optional",
+        "work_dir": "from_user_input"
+      },
+      "outputs": {
+        "question_set": "question_set",
+        "qrels_spans": "qrels_spans"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s09_rag_retrieval_eval_harness",
+      "skill_name": "rag-retrieval-eval-harness",
+      "inputs": {
+        "question_set": "s08_rag_gold_question_set_label.question_set",
+        "qrels_spans": "s08_rag_gold_question_set_label.qrels_spans",
+        "k_values": "from_user_input",
+        "significance_alpha": "from_user_input",
+        "work_dir": "from_user_input"
+      },
+      "outputs": {
+        "eval_harness": "eval_harness",
+        "harness_sanity_report": "harness_sanity_report"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s10_rag_chunk_candidates_build",
+      "skill_name": "rag-chunk-candidates-build",
+      "inputs": {
+        "clean_records": "s07_rag_corpus_normalize_dedupe.clean_records",
+        "chunk_sizes": "from_user_input",
+        "tokenizer_name": "from_user_input",
+        "work_dir": "from_user_input"
+      },
+      "outputs": {
+        "chunk_sets": "chunk_sets"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s11_rag_embedding_model_select",
+      "skill_name": "rag-embedding-model-select",
+      "inputs": {
+        "chunk_sets": "s10_rag_chunk_candidates_build.chunk_sets",
+        "eval_harness": "s09_rag_retrieval_eval_harness.eval_harness",
+        "candidate_models": "from_user_input",
+        "work_dir": "from_user_input"
+      },
+      "outputs": {
+        "embedding_choice": "embedding_choice",
+        "embedding_eval_report": "embedding_eval_report"
+      },
+      "parallel_group": 6
+    },
+    {
+      "id": "s12_rag_chunk_size_select",
+      "skill_name": "rag-chunk-size-select",
+      "inputs": {
+        "chunk_sets": "s10_rag_chunk_candidates_build.chunk_sets",
+        "embedding_choice": "s11_rag_embedding_model_select.embedding_choice",
+        "eval_harness": "s09_rag_retrieval_eval_harness.eval_harness",
+        "context_token_budget": "from_user_input",
+        "work_dir": "from_user_input"
+      },
+      "outputs": {
+        "chunk_config": "chunk_config",
+        "chunk_eval_report": "chunk_eval_report"
+      },
+      "parallel_group": 7
+    },
+    {
+      "id": "s13_rag_embedding_cache_content_hash",
+      "skill_name": "rag-embedding-cache-content-hash",
+      "inputs": {
+        "embedding_choice": "s11_rag_embedding_model_select.embedding_choice",
+        "chunk_config": "s12_rag_chunk_size_select.chunk_config",
+        "work_dir": "from_user_input"
+      },
+      "outputs": {
+        "embedding_cache": "embedding_cache"
+      },
+      "parallel_group": 8
+    },
+    {
+      "id": "s14_rag_pgvector_hnsw_index",
+      "skill_name": "rag-pgvector-hnsw-index",
+      "inputs": {
+        "chunk_config": "s12_rag_chunk_size_select.chunk_config",
+        "embedding_choice": "s11_rag_embedding_model_select.embedding_choice",
+        "eval_harness": "s09_rag_retrieval_eval_harness.eval_harness",
+        "database_url": "from_user_input",
+        "target_ann_recall": "from_user_input"
+      },
+      "outputs": {
+        "vector_index": "vector_index",
+        "ann_recall_report": "ann_recall_report"
+      },
+      "condition": "store == 'pgvector'",
+      "parallel_group": 8
+    },
+    {
+      "id": "s15_rag_faiss_index_build",
+      "skill_name": "rag-faiss-index-build",
+      "inputs": {
+        "chunk_config": "s12_rag_chunk_size_select.chunk_config",
+        "embedding_choice": "s11_rag_embedding_model_select.embedding_choice",
+        "eval_harness": "s09_rag_retrieval_eval_harness.eval_harness",
+        "work_dir": "from_user_input",
+        "target_ann_recall": "from_user_input",
+        "latency_budget_ms": "from_user_input_optional"
+      },
+      "outputs": {
+        "vector_index": "vector_index",
+        "ann_recall_report": "ann_recall_report"
+      },
+      "condition": "store == 'faiss'",
+      "parallel_group": 8
+    },
+    {
+      "id": "s16_rag_qdrant_collection_index",
+      "skill_name": "rag-qdrant-collection-index",
+      "inputs": {
+        "chunk_config": "s12_rag_chunk_size_select.chunk_config",
+        "embedding_choice": "s11_rag_embedding_model_select.embedding_choice",
+        "eval_harness": "s09_rag_retrieval_eval_harness.eval_harness",
+        "qdrant_url": "from_user_input",
+        "target_ann_recall": "from_user_input"
+      },
+      "outputs": {
+        "vector_index": "vector_index",
+        "ann_recall_report": "ann_recall_report"
+      },
+      "condition": "store == 'qdrant'",
+      "parallel_group": 8
+    },
+    {
+      "id": "s17_rag_pg_fts_rrf_hybrid",
+      "skill_name": "rag-pg-fts-rrf-hybrid",
+      "inputs": {
+        "vector_index": "s14_rag_pgvector_hnsw_index.vector_index",
+        "eval_harness": "s09_rag_retrieval_eval_harness.eval_harness",
+        "database_url": "from_user_input",
+        "fts_config": "from_user_input"
+      },
+      "outputs": {
+        "hybrid_run": "hybrid_run",
+        "hybrid_eval_report": "hybrid_eval_report"
+      },
+      "condition": "store == 'pgvector'",
+      "parallel_group": 9
+    },
+    {
+      "id": "s18_rag_py_bm25s_rrf_hybrid",
+      "skill_name": "rag-py-bm25s-rrf-hybrid",
+      "inputs": {
+        "vector_index": "s15_rag_faiss_index_build.vector_index",
+        "eval_harness": "s09_rag_retrieval_eval_harness.eval_harness",
+        "work_dir": "from_user_input"
+      },
+      "outputs": {
+        "hybrid_run": "hybrid_run",
+        "hybrid_eval_report": "hybrid_eval_report"
+      },
+      "condition": "store == 'faiss'",
+      "parallel_group": 9
+    },
+    {
+      "id": "s19_rag_qdrant_sparse_hybrid",
+      "skill_name": "rag-qdrant-sparse-hybrid",
+      "inputs": {
+        "vector_index": "s16_rag_qdrant_collection_index.vector_index",
+        "eval_harness": "s09_rag_retrieval_eval_harness.eval_harness",
+        "qdrant_url": "from_user_input"
+      },
+      "outputs": {
+        "hybrid_run": "hybrid_run",
+        "hybrid_eval_report": "hybrid_eval_report"
+      },
+      "condition": "store == 'qdrant'",
+      "parallel_group": 9
+    },
+    {
+      "id": "s20_rag_metadata_filter_verify",
+      "skill_name": "rag-metadata-filter-verify",
+      "inputs": {
+        "eval_harness": "s09_rag_retrieval_eval_harness.eval_harness",
+        "metadata_fields": "from_user_input",
+        "store": "from_user_input",
+        "work_dir": "from_user_input"
+      },
+      "outputs": {
+        "filter_report": "filter_report"
+      },
+      "condition": "has_metadata_filters == true",
+      "parallel_group": 10
+    },
+    {
+      "id": "s21_rag_cross_encoder_rerank",
+      "skill_name": "rag-cross-encoder-rerank",
+      "inputs": {
+        "eval_harness": "s09_rag_retrieval_eval_harness.eval_harness",
+        "rerank_models": "from_user_input",
+        "rerank_depths": "from_user_input",
+        "work_dir": "from_user_input",
+        "rerank_latency_budget_ms": "from_user_input_optional"
+      },
+      "outputs": {
+        "rerank_config": "rerank_config",
+        "rerank_eval_report": "rerank_eval_report"
+      },
+      "parallel_group": 11
+    },
+    {
+      "id": "s22_rag_prompt_citation_assembly",
+      "skill_name": "rag-prompt-citation-assembly",
+      "inputs": {
+        "rerank_config": "s21_rag_cross_encoder_rerank.rerank_config",
+        "context_token_budget": "from_user_input",
+        "generator_model": "from_user_input",
+        "work_dir": "from_user_input"
+      },
+      "outputs": {
+        "prompt_template": "prompt_template",
+        "citation_validator": "citation_validator"
+      },
+      "parallel_group": 12
+    },
+    {
+      "id": "s23_rag_retrieved_injection_defense",
+      "skill_name": "rag-retrieved-injection-defense",
+      "inputs": {
+        "prompt_template": "s22_rag_prompt_citation_assembly.prompt_template",
+        "clean_records": "s07_rag_corpus_normalize_dedupe.clean_records",
+        "work_dir": "from_user_input"
+      },
+      "outputs": {
+        "injection_defenses": "injection_defenses",
+        "injection_test_report": "injection_test_report"
+      },
+      "parallel_group": 13
+    },
+    {
+      "id": "s24_rag_answer_faithfulness_score",
+      "skill_name": "rag-answer-faithfulness-score",
+      "inputs": {
+        "question_set": "s08_rag_gold_question_set_label.question_set",
+        "prompt_template": "s22_rag_prompt_citation_assembly.prompt_template",
+        "judge_model": "from_user_input",
+        "work_dir": "from_user_input"
+      },
+      "outputs": {
+        "faithfulness_report": "faithfulness_report",
+        "judge_agreement": "judge_agreement"
+      },
+      "parallel_group": 13
+    },
+    {
+      "id": "s25_rag_failure_analysis_triage",
+      "skill_name": "rag-failure-analysis-triage",
+      "inputs": {
+        "question_set": "s08_rag_gold_question_set_label.question_set",
+        "eval_harness": "s09_rag_retrieval_eval_harness.eval_harness",
+        "faithfulness_report": "s24_rag_answer_faithfulness_score.faithfulness_report",
+        "work_dir": "from_user_input"
+      },
+      "outputs": {
+        "failure_report": "failure_report"
+      },
+      "parallel_group": 14
+    },
+    {
+      "id": "s26_rag_answer_cache_redis",
+      "skill_name": "rag-answer-cache-redis",
+      "inputs": {
+        "prompt_template": "s22_rag_prompt_citation_assembly.prompt_template",
+        "redis_url": "from_user_input",
+        "cache_ttl_seconds": "from_user_input",
+        "work_dir": "from_user_input"
+      },
+      "outputs": {
+        "answer_cache": "answer_cache",
+        "cache_test_report": "cache_test_report"
+      },
+      "condition": "use_answer_cache == true",
+      "parallel_group": 13
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_rag_corpus_inventory",
+      "to_step": "s02_rag_py_pdf_extract_pymupdf",
+      "data_type": "rag-corpus-inventory",
+      "field_mapping": {
+        "corpus_manifest": "corpus_manifest",
+        "record_schema": "record_schema"
+      }
+    },
+    {
+      "from_step": "s01_rag_corpus_inventory",
+      "to_step": "s03_rag_node_pdf_extract_pdfjs",
+      "data_type": "rag-corpus-inventory",
+      "field_mapping": {
+        "corpus_manifest": "corpus_manifest",
+        "record_schema": "record_schema"
+      }
+    },
+    {
+      "from_step": "s01_rag_corpus_inventory",
+      "to_step": "s04_rag_ocr_scanned_pdf_ocrmypdf",
+      "data_type": "rag-corpus-inventory",
+      "field_mapping": {
+        "corpus_manifest": "corpus_manifest",
+        "record_schema": "record_schema"
+      }
+    },
+    {
+      "from_step": "s01_rag_corpus_inventory",
+      "to_step": "s05_rag_py_html_extract_trafilatura",
+      "data_type": "rag-corpus-inventory",
+      "field_mapping": {
+        "corpus_manifest": "corpus_manifest",
+        "record_schema": "record_schema"
+      }
+    },
+    {
+      "from_step": "s01_rag_corpus_inventory",
+      "to_step": "s06_rag_node_html_extract_readability",
+      "data_type": "rag-corpus-inventory",
+      "field_mapping": {
+        "corpus_manifest": "corpus_manifest",
+        "record_schema": "record_schema"
+      }
+    },
+    {
+      "from_step": "s01_rag_corpus_inventory",
+      "to_step": "s07_rag_corpus_normalize_dedupe",
+      "data_type": "rag-corpus-inventory",
+      "field_mapping": {
+        "corpus_manifest": "corpus_manifest",
+        "record_schema": "record_schema"
+      }
+    },
+    {
+      "from_step": "s02_rag_py_pdf_extract_pymupdf",
+      "to_step": "s07_rag_corpus_normalize_dedupe",
+      "data_type": "rag-py-pdf-extract-pymupdf",
+      "field_mapping": {}
+    },
+    {
+      "from_step": "s03_rag_node_pdf_extract_pdfjs",
+      "to_step": "s07_rag_corpus_normalize_dedupe",
+      "data_type": "rag-node-pdf-extract-pdfjs",
+      "field_mapping": {}
+    },
+    {
+      "from_step": "s04_rag_ocr_scanned_pdf_ocrmypdf",
+      "to_step": "s07_rag_corpus_normalize_dedupe",
+      "data_type": "rag-ocr-scanned-pdf-ocrmypdf",
+      "field_mapping": {}
+    },
+    {
+      "from_step": "s05_rag_py_html_extract_trafilatura",
+      "to_step": "s07_rag_corpus_normalize_dedupe",
+      "data_type": "rag-py-html-extract-trafilatura",
+      "field_mapping": {}
+    },
+    {
+      "from_step": "s06_rag_node_html_extract_readability",
+      "to_step": "s07_rag_corpus_normalize_dedupe",
+      "data_type": "rag-node-html-extract-readability",
+      "field_mapping": {}
+    },
+    {
+      "from_step": "s07_rag_corpus_normalize_dedupe",
+      "to_step": "s08_rag_gold_question_set_label",
+      "data_type": "rag-corpus-normalize-dedupe",
+      "field_mapping": {
+        "clean_records": "clean_records"
+      }
+    },
+    {
+      "from_step": "s08_rag_gold_question_set_label",
+      "to_step": "s09_rag_retrieval_eval_harness",
+      "data_type": "rag-gold-question-set-label",
+      "field_mapping": {
+        "question_set": "question_set",
+        "qrels_spans": "qrels_spans"
+      }
+    },
+    {
+      "from_step": "s07_rag_corpus_normalize_dedupe",
+      "to_step": "s10_rag_chunk_candidates_build",
+      "data_type": "rag-corpus-normalize-dedupe",
+      "field_mapping": {
+        "clean_records": "clean_records"
+      }
+    },
+    {
+      "from_step": "s10_rag_chunk_candidates_build",
+      "to_step": "s11_rag_embedding_model_select",
+      "data_type": "rag-chunk-candidates-build",
+      "field_mapping": {
+        "chunk_sets": "chunk_sets"
+      }
+    },
+    {
+      "from_step": "s09_rag_retrieval_eval_harness",
+      "to_step": "s11_rag_embedding_model_select",
+      "data_type": "rag-retrieval-eval-harness",
+      "field_mapping": {
+        "eval_harness": "eval_harness"
+      }
+    },
+    {
+      "from_step": "s10_rag_chunk_candidates_build",
+      "to_step": "s12_rag_chunk_size_select",
+      "data_type": "rag-chunk-candidates-build",
+      "field_mapping": {
+        "chunk_sets": "chunk_sets"
+      }
+    },
+    {
+      "from_step": "s11_rag_embedding_model_select",
+      "to_step": "s12_rag_chunk_size_select",
+      "data_type": "rag-embedding-model-select",
+      "field_mapping": {
+        "embedding_choice": "embedding_choice"
+      }
+    },
+    {
+      "from_step": "s09_rag_retrieval_eval_harness",
+      "to_step": "s12_rag_chunk_size_select",
+      "data_type": "rag-retrieval-eval-harness",
+      "field_mapping": {
+        "eval_harness": "eval_harness"
+      }
+    },
+    {
+      "from_step": "s11_rag_embedding_model_select",
+      "to_step": "s13_rag_embedding_cache_content_hash",
+      "data_type": "rag-embedding-model-select",
+      "field_mapping": {
+        "embedding_choice": "embedding_choice"
+      }
+    },
+    {
+      "from_step": "s12_rag_chunk_size_select",
+      "to_step": "s13_rag_embedding_cache_content_hash",
+      "data_type": "rag-chunk-size-select",
+      "field_mapping": {
+        "chunk_config": "chunk_config"
+      }
+    },
+    {
+      "from_step": "s12_rag_chunk_size_select",
+      "to_step": "s14_rag_pgvector_hnsw_index",
+      "data_type": "rag-chunk-size-select",
+      "field_mapping": {
+        "chunk_config": "chunk_config"
+      }
+    },
+    {
+      "from_step": "s11_rag_embedding_model_select",
+      "to_step": "s14_rag_pgvector_hnsw_index",
+      "data_type": "rag-embedding-model-select",
+      "field_mapping": {
+        "embedding_choice": "embedding_choice"
+      }
+    },
+    {
+      "from_step": "s09_rag_retrieval_eval_harness",
+      "to_step": "s14_rag_pgvector_hnsw_index",
+      "data_type": "rag-retrieval-eval-harness",
+      "field_mapping": {
+        "eval_harness": "eval_harness"
+      }
+    },
+    {
+      "from_step": "s12_rag_chunk_size_select",
+      "to_step": "s15_rag_faiss_index_build",
+      "data_type": "rag-chunk-size-select",
+      "field_mapping": {
+        "chunk_config": "chunk_config"
+      }
+    },
+    {
+      "from_step": "s11_rag_embedding_model_select",
+      "to_step": "s15_rag_faiss_index_build",
+      "data_type": "rag-embedding-model-select",
+      "field_mapping": {
+        "embedding_choice": "embedding_choice"
+      }
+    },
+    {
+      "from_step": "s09_rag_retrieval_eval_harness",
+      "to_step": "s15_rag_faiss_index_build",
+      "data_type": "rag-retrieval-eval-harness",
+      "field_mapping": {
+        "eval_harness": "eval_harness"
+      }
+    },
+    {
+      "from_step": "s12_rag_chunk_size_select",
+      "to_step": "s16_rag_qdrant_collection_index",
+      "data_type": "rag-chunk-size-select",
+      "field_mapping": {
+        "chunk_config": "chunk_config"
+      }
+    },
+    {
+      "from_step": "s11_rag_embedding_model_select",
+      "to_step": "s16_rag_qdrant_collection_index",
+      "data_type": "rag-embedding-model-select",
+      "field_mapping": {
+        "embedding_choice": "embedding_choice"
+      }
+    },
+    {
+      "from_step": "s09_rag_retrieval_eval_harness",
+      "to_step": "s16_rag_qdrant_collection_index",
+      "data_type": "rag-retrieval-eval-harness",
+      "field_mapping": {
+        "eval_harness": "eval_harness"
+      }
+    },
+    {
+      "from_step": "s14_rag_pgvector_hnsw_index",
+      "to_step": "s17_rag_pg_fts_rrf_hybrid",
+      "data_type": "rag-pgvector-hnsw-index",
+      "field_mapping": {
+        "vector_index": "vector_index"
+      }
+    },
+    {
+      "from_step": "s09_rag_retrieval_eval_harness",
+      "to_step": "s17_rag_pg_fts_rrf_hybrid",
+      "data_type": "rag-retrieval-eval-harness",
+      "field_mapping": {
+        "eval_harness": "eval_harness"
+      }
+    },
+    {
+      "from_step": "s15_rag_faiss_index_build",
+      "to_step": "s18_rag_py_bm25s_rrf_hybrid",
+      "data_type": "rag-faiss-index-build",
+      "field_mapping": {
+        "vector_index": "vector_index"
+      }
+    },
+    {
+      "from_step": "s09_rag_retrieval_eval_harness",
+      "to_step": "s18_rag_py_bm25s_rrf_hybrid",
+      "data_type": "rag-retrieval-eval-harness",
+      "field_mapping": {
+        "eval_harness": "eval_harness"
+      }
+    },
+    {
+      "from_step": "s16_rag_qdrant_collection_index",
+      "to_step": "s19_rag_qdrant_sparse_hybrid",
+      "data_type": "rag-qdrant-collection-index",
+      "field_mapping": {
+        "vector_index": "vector_index"
+      }
+    },
+    {
+      "from_step": "s09_rag_retrieval_eval_harness",
+      "to_step": "s19_rag_qdrant_sparse_hybrid",
+      "data_type": "rag-retrieval-eval-harness",
+      "field_mapping": {
+        "eval_harness": "eval_harness"
+      }
+    },
+    {
+      "from_step": "s09_rag_retrieval_eval_harness",
+      "to_step": "s20_rag_metadata_filter_verify",
+      "data_type": "rag-retrieval-eval-harness",
+      "field_mapping": {
+        "eval_harness": "eval_harness"
+      }
+    },
+    {
+      "from_step": "s17_rag_pg_fts_rrf_hybrid",
+      "to_step": "s20_rag_metadata_filter_verify",
+      "data_type": "rag-pg-fts-rrf-hybrid",
+      "field_mapping": {}
+    },
+    {
+      "from_step": "s18_rag_py_bm25s_rrf_hybrid",
+      "to_step": "s20_rag_metadata_filter_verify",
+      "data_type": "rag-py-bm25s-rrf-hybrid",
+      "field_mapping": {}
+    },
+    {
+      "from_step": "s19_rag_qdrant_sparse_hybrid",
+      "to_step": "s20_rag_metadata_filter_verify",
+      "data_type": "rag-qdrant-sparse-hybrid",
+      "field_mapping": {}
+    },
+    {
+      "from_step": "s09_rag_retrieval_eval_harness",
+      "to_step": "s21_rag_cross_encoder_rerank",
+      "data_type": "rag-retrieval-eval-harness",
+      "field_mapping": {
+        "eval_harness": "eval_harness"
+      }
+    },
+    {
+      "from_step": "s17_rag_pg_fts_rrf_hybrid",
+      "to_step": "s21_rag_cross_encoder_rerank",
+      "data_type": "rag-pg-fts-rrf-hybrid",
+      "field_mapping": {}
+    },
+    {
+      "from_step": "s18_rag_py_bm25s_rrf_hybrid",
+      "to_step": "s21_rag_cross_encoder_rerank",
+      "data_type": "rag-py-bm25s-rrf-hybrid",
+      "field_mapping": {}
+    },
+    {
+      "from_step": "s19_rag_qdrant_sparse_hybrid",
+      "to_step": "s21_rag_cross_encoder_rerank",
+      "data_type": "rag-qdrant-sparse-hybrid",
+      "field_mapping": {}
+    },
+    {
+      "from_step": "s20_rag_metadata_filter_verify",
+      "to_step": "s21_rag_cross_encoder_rerank",
+      "data_type": "rag-metadata-filter-verify",
+      "field_mapping": {}
+    },
+    {
+      "from_step": "s21_rag_cross_encoder_rerank",
+      "to_step": "s22_rag_prompt_citation_assembly",
+      "data_type": "rag-cross-encoder-rerank",
+      "field_mapping": {
+        "rerank_config": "rerank_config"
+      }
+    },
+    {
+      "from_step": "s22_rag_prompt_citation_assembly",
+      "to_step": "s23_rag_retrieved_injection_defense",
+      "data_type": "rag-prompt-citation-assembly",
+      "field_mapping": {
+        "prompt_template": "prompt_template"
+      }
+    },
+    {
+      "from_step": "s07_rag_corpus_normalize_dedupe",
+      "to_step": "s23_rag_retrieved_injection_defense",
+      "data_type": "rag-corpus-normalize-dedupe",
+      "field_mapping": {
+        "clean_records": "clean_records"
+      }
+    },
+    {
+      "from_step": "s08_rag_gold_question_set_label",
+      "to_step": "s24_rag_answer_faithfulness_score",
+      "data_type": "rag-gold-question-set-label",
+      "field_mapping": {
+        "question_set": "question_set"
+      }
+    },
+    {
+      "from_step": "s22_rag_prompt_citation_assembly",
+      "to_step": "s24_rag_answer_faithfulness_score",
+      "data_type": "rag-prompt-citation-assembly",
+      "field_mapping": {
+        "prompt_template": "prompt_template"
+      }
+    },
+    {
+      "from_step": "s08_rag_gold_question_set_label",
+      "to_step": "s25_rag_failure_analysis_triage",
+      "data_type": "rag-gold-question-set-label",
+      "field_mapping": {
+        "question_set": "question_set"
+      }
+    },
+    {
+      "from_step": "s09_rag_retrieval_eval_harness",
+      "to_step": "s25_rag_failure_analysis_triage",
+      "data_type": "rag-retrieval-eval-harness",
+      "field_mapping": {
+        "eval_harness": "eval_harness"
+      }
+    },
+    {
+      "from_step": "s24_rag_answer_faithfulness_score",
+      "to_step": "s25_rag_failure_analysis_triage",
+      "data_type": "rag-answer-faithfulness-score",
+      "field_mapping": {
+        "faithfulness_report": "faithfulness_report"
+      }
+    },
+    {
+      "from_step": "s22_rag_prompt_citation_assembly",
+      "to_step": "s26_rag_answer_cache_redis",
+      "data_type": "rag-prompt-citation-assembly",
+      "field_mapping": {
+        "prompt_template": "prompt_template"
+      }
+    },
+    {
+      "from_step": "s25_rag_failure_analysis_triage",
+      "to_step": "s12_rag_chunk_size_select",
+      "data_type": "rag-failure-analysis-triage",
+      "field_mapping": {
+        "failure_report": "failure_report"
+      },
+      "condition": "failure_report.top_class == 'chunk_split'",
+      "max_loops": 2
+    }
+  ],
+  "entry_inputs": [
+    "source_dir",
+    "work_dir",
+    "ocr_language",
+    "near_dup_threshold",
+    "seed_questions",
+    "k_values",
+    "significance_alpha",
+    "chunk_sizes",
+    "tokenizer_name",
+    "candidate_models",
+    "context_token_budget",
+    "database_url",
+    "target_ann_recall",
+    "latency_budget_ms",
+    "qdrant_url",
+    "fts_config",
+    "metadata_fields",
+    "store",
+    "rerank_models",
+    "rerank_depths",
+    "rerank_latency_budget_ms",
+    "generator_model",
+    "judge_model",
+    "redis_url",
+    "cache_ttl_seconds"
+  ],
+  "terminal_outputs": [
+    "pdf_records",
+    "pdf_extract_log",
+    "ocr_records",
+    "ocr_log",
+    "html_records",
+    "html_extract_log",
+    "dedupe_report",
+    "harness_sanity_report",
+    "embedding_eval_report",
+    "chunk_eval_report",
+    "embedding_cache",
+    "ann_recall_report",
+    "hybrid_run",
+    "hybrid_eval_report",
+    "filter_report",
+    "rerank_eval_report",
+    "citation_validator",
+    "injection_defenses",
+    "injection_test_report",
+    "judge_agreement",
+    "failure_report",
+    "answer_cache",
+    "cache_test_report"
+  ],
+  "parallel_groups": [
+    [
+      "s01_rag_corpus_inventory"
+    ],
+    [
+      "s02_rag_py_pdf_extract_pymupdf",
+      "s03_rag_node_pdf_extract_pdfjs",
+      "s04_rag_ocr_scanned_pdf_ocrmypdf",
+      "s05_rag_py_html_extract_trafilatura",
+      "s06_rag_node_html_extract_readability"
+    ],
+    [
+      "s07_rag_corpus_normalize_dedupe"
+    ],
+    [
+      "s08_rag_gold_question_set_label",
+      "s10_rag_chunk_candidates_build"
+    ],
+    [
+      "s09_rag_retrieval_eval_harness"
+    ],
+    [
+      "s11_rag_embedding_model_select"
+    ],
+    [
+      "s12_rag_chunk_size_select"
+    ],
+    [
+      "s13_rag_embedding_cache_content_hash",
+      "s14_rag_pgvector_hnsw_index",
+      "s15_rag_faiss_index_build",
+      "s16_rag_qdrant_collection_index"
+    ],
+    [
+      "s17_rag_pg_fts_rrf_hybrid",
+      "s18_rag_py_bm25s_rrf_hybrid",
+      "s19_rag_qdrant_sparse_hybrid"
+    ],
+    [
+      "s20_rag_metadata_filter_verify"
+    ],
+    [
+      "s21_rag_cross_encoder_rerank"
+    ],
+    [
+      "s22_rag_prompt_citation_assembly"
+    ],
+    [
+      "s23_rag_retrieved_injection_defense",
+      "s24_rag_answer_faithfulness_score",
+      "s26_rag_answer_cache_redis"
+    ],
+    [
+      "s25_rag_failure_analysis_triage"
+    ]
+  ],
+  "estimated_cost": 26,
+  "critical_path": [
+    "s01_rag_corpus_inventory",
+    "s02_rag_py_pdf_extract_pymupdf",
+    "s07_rag_corpus_normalize_dedupe",
+    "s08_rag_gold_question_set_label",
+    "s09_rag_retrieval_eval_harness",
+    "s11_rag_embedding_model_select",
+    "s12_rag_chunk_size_select",
+    "s14_rag_pgvector_hnsw_index",
+    "s17_rag_pg_fts_rrf_hybrid",
+    "s20_rag_metadata_filter_verify",
+    "s21_rag_cross_encoder_rerank",
+    "s22_rag_prompt_citation_assembly",
+    "s24_rag_answer_faithfulness_score",
+    "s25_rag_failure_analysis_triage"
+  ]
+}

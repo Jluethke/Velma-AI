@@ -1,0 +1,339 @@
+{
+  "name": "property-fuzz-testing-go",
+  "description": "Go end to end: rapid property and state machine tests, then go test -fuzz with seeded corpus, coverage, crash triage and committed testdata regressions.",
+  "steps": [
+    {
+      "id": "s01_pft_invariant_discovery",
+      "skill_name": "pft-invariant-discovery",
+      "inputs": {
+        "target_code": "from_user_input",
+        "stack": "from_user_input",
+        "technique": "from_user_input",
+        "has_stateful_api": "from_user_input",
+        "spec_notes": "from_user_input_optional"
+      },
+      "outputs": {
+        "property_catalog": "property_catalog"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "s02_pft_go_rapid_properties",
+      "skill_name": "pft-go-rapid-properties",
+      "inputs": {
+        "property_catalog": "s01_pft_invariant_discovery.property_catalog",
+        "repo_path": "from_user_input"
+      },
+      "outputs": {
+        "go_property_tests": "go_property_tests"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s03_pft_shrinking_reproduction",
+      "skill_name": "pft-shrinking-reproduction",
+      "inputs": {
+        "py_property_tests": "from_user_input_optional",
+        "py_state_machine_tests": "from_user_input_optional",
+        "py_health_report": "from_user_input_optional",
+        "node_property_tests": "from_user_input_optional",
+        "node_model_tests": "from_user_input_optional",
+        "rust_property_tests": "from_user_input_optional",
+        "rust_state_machine_tests": "from_user_input_optional",
+        "go_property_tests": "s02_pft_go_rapid_properties.go_property_tests",
+        "hs_property_tests": "from_user_input_optional",
+        "jvm_property_tests": "from_user_input_optional",
+        "differential_tests": "from_user_input_optional",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "property_failures": "property_failures"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s04_pft_fuzz_target_selection",
+      "skill_name": "pft-fuzz-target-selection",
+      "inputs": {
+        "target_code": "from_user_input",
+        "property_catalog": "s01_pft_invariant_discovery.property_catalog",
+        "stack": "from_user_input"
+      },
+      "outputs": {
+        "fuzz_targets": "fuzz_targets"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "s05_pft_corpus_seeding",
+      "skill_name": "pft-corpus-seeding",
+      "inputs": {
+        "fuzz_targets": "s04_pft_fuzz_target_selection.fuzz_targets",
+        "stack": "from_user_input",
+        "repo_path": "from_user_input",
+        "sample_inputs": "from_user_input_optional"
+      },
+      "outputs": {
+        "seed_corpus": "seed_corpus",
+        "fuzz_dictionary": "fuzz_dictionary"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "s06_pft_go_native_fuzz",
+      "skill_name": "pft-go-native-fuzz",
+      "inputs": {
+        "fuzz_targets": "s04_pft_fuzz_target_selection.fuzz_targets",
+        "seed_corpus": "s05_pft_corpus_seeding.seed_corpus",
+        "repo_path": "from_user_input",
+        "fuzz_time": "from_user_input"
+      },
+      "outputs": {
+        "go_fuzz_findings": "go_fuzz_findings"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "s07_pft_coverage_plateau_analysis",
+      "skill_name": "pft-coverage-plateau-analysis",
+      "inputs": {
+        "go_fuzz_findings": "s06_pft_go_native_fuzz.go_fuzz_findings",
+        "rust_fuzz_findings": "from_user_input_optional",
+        "cpp_fuzz_findings": "from_user_input_optional",
+        "py_fuzz_findings": "from_user_input_optional",
+        "jvm_fuzz_findings": "from_user_input_optional",
+        "seed_corpus": "s05_pft_corpus_seeding.seed_corpus",
+        "stack": "from_user_input",
+        "repo_path": "from_user_input"
+      },
+      "outputs": {
+        "coverage_report": "coverage_report",
+        "harness_improvements": "harness_improvements"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s08_pft_crash_triage_dedup",
+      "skill_name": "pft-crash-triage-dedup",
+      "inputs": {
+        "go_fuzz_findings": "s06_pft_go_native_fuzz.go_fuzz_findings",
+        "rust_fuzz_findings": "from_user_input_optional",
+        "cpp_fuzz_findings": "from_user_input_optional",
+        "py_fuzz_findings": "from_user_input_optional",
+        "jvm_fuzz_findings": "from_user_input_optional",
+        "stack": "from_user_input",
+        "repo_path": "from_user_input"
+      },
+      "outputs": {
+        "crash_clusters": "crash_clusters"
+      },
+      "parallel_group": 5
+    },
+    {
+      "id": "s09_pft_crash_regression_test",
+      "skill_name": "pft-crash-regression-test",
+      "inputs": {
+        "crash_clusters": "s08_pft_crash_triage_dedup.crash_clusters",
+        "property_failures": "s03_pft_shrinking_reproduction.property_failures",
+        "stack": "from_user_input",
+        "repo_path": "from_user_input"
+      },
+      "outputs": {
+        "regression_tests": "regression_tests",
+        "fix_verification": "fix_verification"
+      },
+      "parallel_group": 6
+    },
+    {
+      "id": "s10_pft_ci_fuzz_integration",
+      "skill_name": "pft-ci-fuzz-integration",
+      "inputs": {
+        "regression_tests": "s09_pft_crash_regression_test.regression_tests",
+        "fuzz_targets": "s04_pft_fuzz_target_selection.fuzz_targets",
+        "hypothesis_config": "from_user_input_optional",
+        "stack": "from_user_input",
+        "repo_path": "from_user_input",
+        "ci_platform": "from_user_input"
+      },
+      "outputs": {
+        "ci_config": "ci_config"
+      },
+      "parallel_group": 7
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "s01_pft_invariant_discovery",
+      "to_step": "s02_pft_go_rapid_properties",
+      "data_type": "pft-invariant-discovery",
+      "field_mapping": {
+        "property_catalog": "property_catalog"
+      }
+    },
+    {
+      "from_step": "s02_pft_go_rapid_properties",
+      "to_step": "s03_pft_shrinking_reproduction",
+      "data_type": "pft-go-rapid-properties",
+      "field_mapping": {
+        "go_property_tests": "go_property_tests"
+      }
+    },
+    {
+      "from_step": "s01_pft_invariant_discovery",
+      "to_step": "s04_pft_fuzz_target_selection",
+      "data_type": "pft-invariant-discovery",
+      "field_mapping": {
+        "property_catalog": "property_catalog"
+      }
+    },
+    {
+      "from_step": "s04_pft_fuzz_target_selection",
+      "to_step": "s05_pft_corpus_seeding",
+      "data_type": "pft-fuzz-target-selection",
+      "field_mapping": {
+        "fuzz_targets": "fuzz_targets"
+      }
+    },
+    {
+      "from_step": "s04_pft_fuzz_target_selection",
+      "to_step": "s06_pft_go_native_fuzz",
+      "data_type": "pft-fuzz-target-selection",
+      "field_mapping": {
+        "fuzz_targets": "fuzz_targets"
+      }
+    },
+    {
+      "from_step": "s05_pft_corpus_seeding",
+      "to_step": "s06_pft_go_native_fuzz",
+      "data_type": "pft-corpus-seeding",
+      "field_mapping": {
+        "seed_corpus": "seed_corpus"
+      }
+    },
+    {
+      "from_step": "s06_pft_go_native_fuzz",
+      "to_step": "s07_pft_coverage_plateau_analysis",
+      "data_type": "pft-go-native-fuzz",
+      "field_mapping": {
+        "go_fuzz_findings": "go_fuzz_findings"
+      }
+    },
+    {
+      "from_step": "s05_pft_corpus_seeding",
+      "to_step": "s07_pft_coverage_plateau_analysis",
+      "data_type": "pft-corpus-seeding",
+      "field_mapping": {
+        "seed_corpus": "seed_corpus"
+      }
+    },
+    {
+      "from_step": "s06_pft_go_native_fuzz",
+      "to_step": "s08_pft_crash_triage_dedup",
+      "data_type": "pft-go-native-fuzz",
+      "field_mapping": {
+        "go_fuzz_findings": "go_fuzz_findings"
+      }
+    },
+    {
+      "from_step": "s08_pft_crash_triage_dedup",
+      "to_step": "s09_pft_crash_regression_test",
+      "data_type": "pft-crash-triage-dedup",
+      "field_mapping": {
+        "crash_clusters": "crash_clusters"
+      }
+    },
+    {
+      "from_step": "s03_pft_shrinking_reproduction",
+      "to_step": "s09_pft_crash_regression_test",
+      "data_type": "pft-shrinking-reproduction",
+      "field_mapping": {
+        "property_failures": "property_failures"
+      }
+    },
+    {
+      "from_step": "s09_pft_crash_regression_test",
+      "to_step": "s10_pft_ci_fuzz_integration",
+      "data_type": "pft-crash-regression-test",
+      "field_mapping": {
+        "regression_tests": "regression_tests"
+      }
+    },
+    {
+      "from_step": "s04_pft_fuzz_target_selection",
+      "to_step": "s10_pft_ci_fuzz_integration",
+      "data_type": "pft-fuzz-target-selection",
+      "field_mapping": {
+        "fuzz_targets": "fuzz_targets"
+      }
+    }
+  ],
+  "entry_inputs": [
+    "target_code",
+    "stack",
+    "technique",
+    "has_stateful_api",
+    "spec_notes",
+    "repo_path",
+    "py_property_tests",
+    "py_state_machine_tests",
+    "py_health_report",
+    "node_property_tests",
+    "node_model_tests",
+    "rust_property_tests",
+    "rust_state_machine_tests",
+    "hs_property_tests",
+    "jvm_property_tests",
+    "differential_tests",
+    "sample_inputs",
+    "fuzz_time",
+    "rust_fuzz_findings",
+    "cpp_fuzz_findings",
+    "py_fuzz_findings",
+    "jvm_fuzz_findings",
+    "hypothesis_config",
+    "ci_platform"
+  ],
+  "terminal_outputs": [
+    "fuzz_dictionary",
+    "coverage_report",
+    "harness_improvements",
+    "fix_verification",
+    "ci_config"
+  ],
+  "parallel_groups": [
+    [
+      "s01_pft_invariant_discovery"
+    ],
+    [
+      "s02_pft_go_rapid_properties",
+      "s04_pft_fuzz_target_selection"
+    ],
+    [
+      "s03_pft_shrinking_reproduction",
+      "s05_pft_corpus_seeding"
+    ],
+    [
+      "s06_pft_go_native_fuzz"
+    ],
+    [
+      "s07_pft_coverage_plateau_analysis",
+      "s08_pft_crash_triage_dedup"
+    ],
+    [
+      "s09_pft_crash_regression_test"
+    ],
+    [
+      "s10_pft_ci_fuzz_integration"
+    ]
+  ],
+  "estimated_cost": 10,
+  "critical_path": [
+    "s01_pft_invariant_discovery",
+    "s04_pft_fuzz_target_selection",
+    "s05_pft_corpus_seeding",
+    "s06_pft_go_native_fuzz",
+    "s08_pft_crash_triage_dedup",
+    "s09_pft_crash_regression_test",
+    "s10_pft_ci_fuzz_integration"
+  ]
+}
