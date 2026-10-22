@@ -1,0 +1,694 @@
+[
+  {
+    "chain_name": "multi-channel-alert-routing",
+    "description": "Set up multi-channel alert routing: define alert categories, map each to delivery channels, configure escalation rules, set quiet hours, test the routing, and produce the routing setup document.",
+    "domain": "operations",
+    "tags": ["notifications", "alerting", "routing"],
+    "steps": [
+      {
+        "flow_name": "alert-category-definition",
+        "description": "Define the alert categories and their severity levels for the organization.",
+        "inputs": [
+          {"name": "systems-inventory", "desc": "List of systems and services that produce alerts"},
+          {"name": "team-structure", "desc": "Teams and roles responsible for responding to alerts"}
+        ],
+        "outputs": [
+          {"name": "alert-categories", "desc": "Defined categories (critical, warning, informational) with criteria for each"},
+          {"name": "severity-matrix", "desc": "Matrix mapping alert types to severity levels"}
+        ],
+        "process": [
+          "List every system and service that produces alerts, grouped by function.",
+          "Define three to five severity levels with clear criteria for each (impact scope, urgency, customer visibility).",
+          "Assign each alert type from the systems inventory to a severity level.",
+          "Document the severity matrix with examples for each level."
+        ],
+        "tags": ["notifications", "alerting"]
+      },
+      {
+        "flow_name": "channel-mapping-configuration",
+        "description": "Map each alert category to its delivery channels and recipients.",
+        "inputs": [
+          {"name": "alert-categories", "desc": "Defined alert categories and severity levels"},
+          {"name": "severity-matrix", "desc": "Matrix of alert types to severity"}
+        ],
+        "outputs": [
+          {"name": "channel-map", "desc": "Mapping of each category to delivery channels (SMS, email, push, Slack, PagerDuty, phone call)"},
+          {"name": "recipient-roster", "desc": "List of recipients for each channel and category"}
+        ],
+        "process": [
+          "For each severity level, select the appropriate channels (critical: phone + SMS + PagerDuty; warning: Slack + email; informational: email or dashboard only).",
+          "Assign recipients to each channel based on team structure and on-call rotation.",
+          "Document the channel map with fallback channels if the primary is unreachable.",
+          "Verify that every alert category has at least one channel and one recipient."
+        ],
+        "tags": ["notifications", "routing"]
+      },
+      {
+        "flow_name": "escalation-rule-builder",
+        "description": "Configure escalation rules for unacknowledged alerts.",
+        "inputs": [
+          {"name": "channel-map", "desc": "Alert category to channel mapping"},
+          {"name": "recipient-roster", "desc": "Recipients per channel and category"}
+        ],
+        "outputs": [
+          {"name": "escalation-rules", "desc": "Rules defining when and how to escalate unacknowledged alerts"},
+          {"name": "escalation-contacts", "desc": "Ordered list of escalation contacts for each tier"}
+        ],
+        "process": [
+          "Define the acknowledgment window for each severity level (critical: 5 minutes, warning: 30 minutes, informational: none).",
+          "Set the escalation path: if no acknowledgment within the window, notify the next tier.",
+          "Define three tiers of escalation (primary responder, team lead, management).",
+          "Document the override rules for after-hours and weekends."
+        ],
+        "tags": ["notifications", "escalation"]
+      },
+      {
+        "flow_name": "quiet-hours-override-setup",
+        "description": "Configure quiet hours and the override rules that bypass them for critical alerts.",
+        "inputs": [
+          {"name": "escalation-rules", "desc": "Escalation rules for each severity"},
+          {"name": "channel-map", "desc": "Alert category to channel mapping"}
+        ],
+        "outputs": [
+          {"name": "quiet-hours-config", "desc": "Quiet hours schedule and override rules"},
+          {"name": "override-criteria", "desc": "Criteria that cause an alert to bypass quiet hours"}
+        ],
+        "process": [
+          "Define quiet hours for each team or timezone (e.g., 10 PM to 7 AM local).",
+          "Specify which severity levels are suppressed during quiet hours (informational, warning).",
+          "Define the override criteria: critical alerts always ring through, customer-facing outages always ring through.",
+          "Document the configuration so on-call staff know what will and will not wake them."
+        ],
+        "tags": ["notifications", "scheduling"]
+      },
+      {
+        "flow_name": "alert-routing-test",
+        "description": "Test the alert routing configuration end to end.",
+        "inputs": [
+          {"name": "quiet-hours-config", "desc": "Quiet hours and override configuration"},
+          {"name": "escalation-rules", "desc": "Escalation rules"}
+        ],
+        "outputs": [
+          {"name": "test-results", "desc": "Results of routing tests for each severity and channel combination"},
+          {"name": "routing-setup-document", "desc": "Final alert routing setup document with all configurations"}
+        ],
+        "process": [
+          "Send a test alert at each severity level and verify it arrives on the correct channel to the correct recipient.",
+          "Test the escalation path by letting a test alert go unacknowledged and verifying the escalation fires.",
+          "Test quiet hours by sending a non-critical alert during quiet hours and verifying suppression.",
+          "Test the override by sending a critical alert during quiet hours and verifying delivery.",
+          "Compile the test results and finalize the routing setup document."
+        ],
+        "tags": ["notifications", "testing"]
+      }
+    ]
+  },
+  {
+    "chain_name": "on-call-handoff-process",
+    "description": "Manage on-call rotations and handoffs: define the rotation schedule, document the handoff checklist, conduct the handoff, verify contact info, and produce the handoff record.",
+    "domain": "operations",
+    "tags": ["notifications", "on-call", "operations"],
+    "steps": [
+      {
+        "flow_name": "rotation-schedule-design",
+        "description": "Design the on-call rotation schedule for the team.",
+        "inputs": [
+          {"name": "team-roster", "desc": "List of team members available for on-call"},
+          {"name": "service-coverage-requirements", "desc": "Hours and services that require on-call coverage"}
+        ],
+        "outputs": [
+          {"name": "rotation-schedule", "desc": "On-call rotation schedule (weekly, daily, or follow-the-sun)"},
+          {"name": "coverage-gaps", "desc": "Any gaps in coverage and how they are handled"}
+        ],
+        "process": [
+          "Determine the rotation cadence (weekly is standard; daily for high-volume; follow-the-sun for global teams).",
+          "Assign team members to rotation slots, balancing weekday and weekend shifts.",
+          "Identify coverage gaps (holidays, vacations, single points of failure) and assign backups.",
+          "Publish the schedule to the paging system and team calendar."
+        ],
+        "tags": ["on-call", "scheduling"]
+      },
+      {
+        "flow_name": "handoff-checklist-builder",
+        "description": "Build the handoff checklist that outgoing on-call completes before transferring to the next person.",
+        "inputs": [
+          {"name": "rotation-schedule", "desc": "The on-call rotation schedule"},
+          {"name": "coverage-gaps", "desc": "Coverage gaps and backup assignments"}
+        ],
+        "outputs": [
+          {"name": "handoff-checklist", "desc": "Checklist of items to cover during handoff (open incidents, known issues, upcoming changes)"},
+          {"name": "handoff-template", "desc": "Template document for recording each handoff"}
+        ],
+        "process": [
+          "List the mandatory handoff items: open incidents and their status, known issues being monitored, upcoming deployments or changes, any pending customer escalations.",
+          "Define the format (async written handoff in Slack or wiki, or synchronous 15-minute call).",
+          "Create the handoff template with fields for each item.",
+          "Set the deadline for completing the handoff (at least 1 hour before rotation ends)."
+        ],
+        "tags": ["on-call", "documentation"]
+      },
+      {
+        "flow_name": "handoff-execution",
+        "description": "Conduct the on-call handoff between the outgoing and incoming responders.",
+        "inputs": [
+          {"name": "handoff-checklist", "desc": "Checklist of items to cover"},
+          {"name": "handoff-template", "desc": "Template for recording the handoff"}
+        ],
+        "outputs": [
+          {"name": "handoff-record", "desc": "Completed handoff record with all items addressed"},
+          {"name": "action-items", "desc": "Any follow-up actions for the incoming on-call"}
+        ],
+        "process": [
+          "The outgoing on-call fills in the handoff template with current status for each item.",
+          "The incoming on-call reviews the template and asks clarifying questions.",
+          "Both confirm the handoff is complete and the incoming on-call is now primary.",
+          "Log the handoff record in the team's knowledge base."
+        ],
+        "tags": ["on-call", "handoff"]
+      },
+      {
+        "flow_name": "paging-contact-verification",
+        "description": "Verify that the incoming on-call's contact information is correct in the paging system.",
+        "inputs": [
+          {"name": "handoff-record", "desc": "Completed handoff record"},
+          {"name": "action-items", "desc": "Follow-up actions"}
+        ],
+        "outputs": [
+          {"name": "contact-verification-result", "desc": "Confirmation that the paging system has correct contact info"},
+          {"name": "on-call-handoff-report", "desc": "Final handoff report with verification status"}
+        ],
+        "process": [
+          "Check that the paging system shows the incoming on-call as the current primary responder.",
+          "Send a test page to the incoming on-call and confirm receipt.",
+          "Verify the escalation path lists the correct backup contacts.",
+          "Record the verification result and close the handoff."
+        ],
+        "tags": ["on-call", "verification"]
+      }
+    ]
+  },
+  {
+    "chain_name": "status-page-management",
+    "description": "Set up and manage a public status page: define monitored components, configure status checks, write communication templates, publish incidents, and produce the management document.",
+    "domain": "operations",
+    "tags": ["notifications", "status-page", "communication"],
+    "steps": [
+      {
+        "flow_name": "status-component-definition",
+        "description": "Define the components and services displayed on the status page.",
+        "inputs": [
+          {"name": "service-catalog", "desc": "List of services and their dependencies"},
+          {"name": "customer-facing-services", "desc": "Which services are visible to customers"}
+        ],
+        "outputs": [
+          {"name": "component-list", "desc": "List of components to display on the status page with grouping"},
+          {"name": "dependency-map", "desc": "Map of which components depend on which backend services"}
+        ],
+        "process": [
+          "List every customer-facing service and group them into logical categories (API, web app, mobile, payments, integrations).",
+          "Map each component to its backend dependencies so you know what affects what.",
+          "Define the status levels for each component (operational, degraded, partial outage, major outage, maintenance).",
+          "Decide which internal services are hidden from the public page but tracked internally."
+        ],
+        "tags": ["status-page", "architecture"]
+      },
+      {
+        "flow_name": "automated-status-check-setup",
+        "description": "Configure automated checks that update the status page based on service health.",
+        "inputs": [
+          {"name": "component-list", "desc": "Components displayed on the status page"},
+          {"name": "dependency-map", "desc": "Backend dependency map"}
+        ],
+        "outputs": [
+          {"name": "check-configuration", "desc": "Automated health checks configured for each component"},
+          {"name": "threshold-rules", "desc": "Rules for when a check failure triggers a status change"}
+        ],
+        "process": [
+          "For each component, define the health check (HTTP endpoint, synthetic transaction, metric threshold).",
+          "Set the check interval (every 1 minute for critical, every 5 minutes for others).",
+          "Define the threshold for each status level (e.g., 3 consecutive failures = degraded, 10 = outage).",
+          "Configure the integration between the monitoring system and the status page platform."
+        ],
+        "tags": ["status-page", "monitoring"]
+      },
+      {
+        "flow_name": "incident-template-writer",
+        "description": "Write the communication templates used during status page incidents.",
+        "inputs": [
+          {"name": "check-configuration", "desc": "Health check setup for each component"},
+          {"name": "component-list", "desc": "Status page components"}
+        ],
+        "outputs": [
+          {"name": "incident-templates", "desc": "Templates for initial notice, update, and resolution communications"},
+          {"name": "communication-guidelines", "desc": "Guidelines for tone, frequency, and content of status updates"}
+        ],
+        "process": [
+          "Write the initial incident template: what is affected, what the impact is, when the next update will be.",
+          "Write the update template: what has changed, what the team is doing, when the next update will be.",
+          "Write the resolution template: what was affected, what the root cause was, what the team did to fix it.",
+          "Document the guidelines: update every 30 minutes during an active incident, use plain language, state facts not guesses."
+        ],
+        "tags": ["status-page", "communication"]
+      },
+      {
+        "flow_name": "incident-publishing-workflow",
+        "description": "Publish and manage incidents on the status page during an outage.",
+        "inputs": [
+          {"name": "incident-templates", "desc": "Communication templates"},
+          {"name": "communication-guidelines", "desc": "Guidelines for updates"}
+        ],
+        "outputs": [
+          {"name": "published-incident-log", "desc": "Log of all published incidents and updates"},
+          {"name": "subscriber-notification-record", "desc": "Record of notifications sent to status page subscribers"}
+        ],
+        "process": [
+          "When an incident is declared, post the initial notice using the template and set affected components to the correct status.",
+          "Post updates at the interval defined in the guidelines (every 30 minutes minimum).",
+          "When the incident is resolved, post the resolution notice and return components to operational.",
+          "Review the subscriber notification delivery to confirm all subscribers received the updates."
+        ],
+        "tags": ["status-page", "incident"]
+      },
+      {
+        "flow_name": "status-page-review",
+        "description": "Review the status page program and produce the management document.",
+        "inputs": [
+          {"name": "published-incident-log", "desc": "Log of published incidents"},
+          {"name": "subscriber-notification-record", "desc": "Notification delivery record"}
+        ],
+        "outputs": [
+          {"name": "status-page-metrics", "desc": "Metrics on incidents published, update frequency, subscriber count"},
+          {"name": "status-page-management-document", "desc": "Final management document with all configurations and processes"}
+        ],
+        "process": [
+          "Review the last quarter's incidents for timeliness and accuracy of updates.",
+          "Measure the average time from detection to first status page post.",
+          "Check that the component list and health checks are still accurate.",
+          "Compile the management document with all configurations, templates, and review findings."
+        ],
+        "tags": ["status-page", "review"]
+      }
+    ]
+  },
+  {
+    "chain_name": "alert-fatigue-reduction",
+    "description": "Reduce alert fatigue: audit current alerts, classify by signal quality, tune or remove noisy alerts, consolidate related alerts, set up analytics, and produce the reduction report.",
+    "domain": "operations",
+    "tags": ["notifications", "alerting", "optimization"],
+    "steps": [
+      {
+        "flow_name": "alert-volume-audit",
+        "description": "Audit the current alert volume, frequency, and actionability.",
+        "inputs": [
+          {"name": "alert-history", "desc": "Historical alert data (last 30 to 90 days)"},
+          {"name": "response-logs", "desc": "Logs of how each alert was handled (acknowledged, escalated, ignored, auto-resolved)"}
+        ],
+        "outputs": [
+          {"name": "alert-inventory", "desc": "Inventory of all alert rules with volume and response metrics"},
+          {"name": "noise-candidates", "desc": "Alerts flagged as likely noise (high volume, low action rate)"}
+        ],
+        "process": [
+          "Pull the alert history for the last 30 to 90 days grouped by alert rule.",
+          "For each rule, calculate the volume, false positive rate, and action rate (percentage that led to a human response).",
+          "Flag alerts with an action rate below 10% as noise candidates.",
+          "Rank all alerts by noise score (high volume multiplied by low action rate)."
+        ],
+        "tags": ["alerting", "audit"]
+      },
+      {
+        "flow_name": "alert-signal-classifier",
+        "description": "Classify each alert by criticality and signal quality.",
+        "inputs": [
+          {"name": "alert-inventory", "desc": "All alert rules with metrics"},
+          {"name": "noise-candidates", "desc": "Alerts flagged as likely noise"}
+        ],
+        "outputs": [
+          {"name": "signal-classification", "desc": "Each alert classified as high-signal, tunable, or removable"},
+          {"name": "tuning-recommendations", "desc": "Specific tuning recommendations for each tunable alert"}
+        ],
+        "process": [
+          "Review each noise candidate with the owning team to confirm whether it is truly low-signal.",
+          "Classify each alert into three buckets: high-signal (keep as-is), tunable (adjust threshold or consolidate), removable (delete or disable).",
+          "For tunable alerts, write the specific recommendation (raise threshold, increase evaluation window, consolidate with a related alert).",
+          "For removable alerts, confirm with the owning team before flagging for deletion."
+        ],
+        "tags": ["alerting", "classification"]
+      },
+      {
+        "flow_name": "alert-tuning-execution",
+        "description": "Tune or remove noisy alerts based on the classification.",
+        "inputs": [
+          {"name": "signal-classification", "desc": "Classification of each alert"},
+          {"name": "tuning-recommendations", "desc": "Specific tuning actions"}
+        ],
+        "outputs": [
+          {"name": "tuning-changelog", "desc": "Log of all changes made to alert rules"},
+          {"name": "consolidated-alerts", "desc": "List of alerts that were merged or consolidated"}
+        ],
+        "process": [
+          "Apply the tuning recommendations: adjust thresholds, increase evaluation windows, add conditions.",
+          "Remove or disable the alerts classified as removable.",
+          "Consolidate related alerts that fire together into a single grouped alert.",
+          "Log every change in the tuning changelog with the before and after state."
+        ],
+        "tags": ["alerting", "tuning"]
+      },
+      {
+        "flow_name": "alert-analytics-setup",
+        "description": "Set up ongoing alert analytics to track noise levels over time.",
+        "inputs": [
+          {"name": "tuning-changelog", "desc": "Log of all tuning changes"},
+          {"name": "consolidated-alerts", "desc": "Merged alerts"}
+        ],
+        "outputs": [
+          {"name": "analytics-dashboard", "desc": "Dashboard tracking alert volume, action rate, and noise score over time"},
+          {"name": "alert-reduction-report", "desc": "Final report documenting the audit, changes, and ongoing metrics"}
+        ],
+        "process": [
+          "Build a dashboard that tracks weekly alert volume, action rate, and noise score by team.",
+          "Set a recurring review (monthly) to check for new noise patterns.",
+          "Define the target noise level (e.g., action rate above 50% for all alert rules).",
+          "Compile the alert reduction report with before-and-after metrics and the analytics setup."
+        ],
+        "tags": ["alerting", "analytics"]
+      }
+    ]
+  },
+  {
+    "chain_name": "escalation-policy-design",
+    "description": "Design escalation policies: define tiers, set response time targets, define triggers, configure notification methods, test the paths, and produce the policy document.",
+    "domain": "operations",
+    "tags": ["notifications", "escalation", "policy"],
+    "steps": [
+      {
+        "flow_name": "escalation-tier-definition",
+        "description": "Define the escalation tiers and the response time targets for each.",
+        "inputs": [
+          {"name": "organization-structure", "desc": "Teams, roles, and management hierarchy"},
+          {"name": "service-level-targets", "desc": "SLA and SLO response time commitments"}
+        ],
+        "outputs": [
+          {"name": "tier-definitions", "desc": "Defined escalation tiers (L1, L2, L3, management) with roles and responsibilities"},
+          {"name": "response-time-targets", "desc": "Response time targets for each tier and severity"}
+        ],
+        "process": [
+          "Define three to four escalation tiers: L1 (first responder, on-call), L2 (subject matter expert), L3 (senior engineer or architect), management (director or VP).",
+          "Assign roles and teams to each tier.",
+          "Set response time targets: L1 acknowledges within 5 minutes for critical; L2 engaged within 15 minutes if L1 cannot resolve.",
+          "Document the responsibilities at each tier (L1 triages and communicates, L2 diagnoses, L3 resolves)."
+        ],
+        "tags": ["escalation", "policy"]
+      },
+      {
+        "flow_name": "escalation-trigger-configuration",
+        "description": "Define what triggers an escalation from one tier to the next.",
+        "inputs": [
+          {"name": "tier-definitions", "desc": "Escalation tiers with roles"},
+          {"name": "response-time-targets", "desc": "Response time targets per tier"}
+        ],
+        "outputs": [
+          {"name": "trigger-rules", "desc": "Rules that trigger escalation (time-based, severity-based, customer-impact-based)"},
+          {"name": "notification-methods", "desc": "How each tier is notified during escalation (page, call, Slack, email)"}
+        ],
+        "process": [
+          "Define time-based triggers: if L1 has not acknowledged in X minutes, escalate to L2.",
+          "Define severity-based triggers: critical incidents skip L1 and go directly to L2.",
+          "Define customer-impact triggers: if more than N customers are affected, escalate to management immediately.",
+          "Map each trigger to the notification method for the receiving tier."
+        ],
+        "tags": ["escalation", "configuration"]
+      },
+      {
+        "flow_name": "escalation-path-testing",
+        "description": "Test the escalation paths to verify they work as designed.",
+        "inputs": [
+          {"name": "trigger-rules", "desc": "Escalation trigger rules"},
+          {"name": "notification-methods", "desc": "Notification methods per tier"}
+        ],
+        "outputs": [
+          {"name": "test-results", "desc": "Results of escalation path tests"},
+          {"name": "escalation-policy-document", "desc": "Final escalation policy document with all tiers, triggers, and test results"}
+        ],
+        "process": [
+          "Run a tabletop exercise: simulate a critical incident and walk through the escalation path on paper.",
+          "Run a live test: trigger a test alert, let it escalate through the tiers, and verify each notification arrives.",
+          "Measure the actual time at each tier against the target response times.",
+          "Document any gaps and compile the final escalation policy document."
+        ],
+        "tags": ["escalation", "testing"]
+      }
+    ]
+  },
+  {
+    "chain_name": "incident-notification-workflow",
+    "description": "Notify stakeholders during an incident: detect the incident, classify severity, determine the audience, send notifications at defined intervals, and produce the notification record.",
+    "domain": "operations",
+    "tags": ["notifications", "incident", "communication"],
+    "steps": [
+      {
+        "flow_name": "incident-severity-classifier",
+        "description": "Classify the incident severity to determine the notification audience and cadence.",
+        "inputs": [
+          {"name": "incident-details", "desc": "Description of the incident (what is affected, when it started, current impact)"},
+          {"name": "severity-criteria", "desc": "Criteria for each severity level (SEV1 through SEV4)"}
+        ],
+        "outputs": [
+          {"name": "severity-level", "desc": "Assigned severity level for this incident"},
+          {"name": "notification-audience", "desc": "List of stakeholder groups to notify based on severity"}
+        ],
+        "process": [
+          "Evaluate the incident against the severity criteria: customer impact, revenue impact, data integrity, service availability.",
+          "Assign the severity level (SEV1: total outage; SEV2: major degradation; SEV3: partial issue; SEV4: minor).",
+          "Map the severity to the notification audience (SEV1: all stakeholders including executives; SEV4: engineering only).",
+          "Record the classification rationale."
+        ],
+        "tags": ["incident", "classification"]
+      },
+      {
+        "flow_name": "initial-notification-sender",
+        "description": "Send the initial incident notification to the determined audience.",
+        "inputs": [
+          {"name": "severity-level", "desc": "Assigned severity level"},
+          {"name": "notification-audience", "desc": "Stakeholder groups to notify"}
+        ],
+        "outputs": [
+          {"name": "initial-notification", "desc": "The initial notification message sent to stakeholders"},
+          {"name": "delivery-confirmation", "desc": "Confirmation that the notification reached each channel"}
+        ],
+        "process": [
+          "Draft the initial notification: what is affected, what the current impact is, who is investigating, when the next update will be.",
+          "Send to each audience group on their designated channel (engineering: Slack; leadership: email + Slack; customers: status page).",
+          "Confirm delivery on each channel.",
+          "Set the timer for the next update based on severity (SEV1: every 15 minutes; SEV2: every 30 minutes)."
+        ],
+        "tags": ["incident", "notification"]
+      },
+      {
+        "flow_name": "periodic-update-sender",
+        "description": "Send periodic updates at the defined cadence throughout the incident.",
+        "inputs": [
+          {"name": "initial-notification", "desc": "The initial notification for context"},
+          {"name": "delivery-confirmation", "desc": "Confirmation of initial delivery"}
+        ],
+        "outputs": [
+          {"name": "update-log", "desc": "Log of all periodic updates sent during the incident"},
+          {"name": "stakeholder-questions", "desc": "Questions or requests received from stakeholders during the incident"}
+        ],
+        "process": [
+          "At each update interval, gather the latest status from the incident commander.",
+          "Draft the update: what has changed, what the team is doing now, what the estimated time to resolution is.",
+          "Send the update to all channels and confirm delivery.",
+          "Log the update and note any stakeholder questions that need follow-up."
+        ],
+        "tags": ["incident", "updates"]
+      },
+      {
+        "flow_name": "resolution-notification-sender",
+        "description": "Send the resolution notification and produce the notification record.",
+        "inputs": [
+          {"name": "update-log", "desc": "Log of all updates sent"},
+          {"name": "stakeholder-questions", "desc": "Stakeholder questions from the incident"}
+        ],
+        "outputs": [
+          {"name": "resolution-notice", "desc": "The resolution notification sent to all stakeholders"},
+          {"name": "incident-notification-record", "desc": "Complete record of all notifications sent during this incident"}
+        ],
+        "process": [
+          "Draft the resolution notice: what was affected, what the root cause was, what fixed it, whether any follow-up is needed.",
+          "Send to all channels and confirm delivery.",
+          "Answer any outstanding stakeholder questions.",
+          "Compile the full notification record (initial, updates, resolution) with timestamps and delivery confirmations."
+        ],
+        "tags": ["incident", "resolution"]
+      }
+    ]
+  },
+  {
+    "chain_name": "scheduled-report-distribution",
+    "description": "Automate scheduled report distribution: inventory reports and recipients, define the schedule, configure generation, set up distribution, handle failures, and produce the setup document.",
+    "domain": "operations",
+    "tags": ["notifications", "reporting", "automation"],
+    "steps": [
+      {
+        "flow_name": "report-inventory-audit",
+        "description": "Inventory all recurring reports and their current recipients.",
+        "inputs": [
+          {"name": "department-list", "desc": "List of departments that receive recurring reports"},
+          {"name": "current-reports", "desc": "Known recurring reports and their delivery methods"}
+        ],
+        "outputs": [
+          {"name": "report-catalog", "desc": "Catalog of all recurring reports with frequency, recipients, data sources, and format"},
+          {"name": "automation-candidates", "desc": "Reports that are currently manual and could be automated"}
+        ],
+        "process": [
+          "Survey each department to identify all recurring reports they produce or receive.",
+          "For each report, record: name, frequency, recipients, data source, current delivery method, format.",
+          "Flag reports that are produced manually as automation candidates.",
+          "Flag reports with overlapping content for potential consolidation."
+        ],
+        "tags": ["reporting", "audit"]
+      },
+      {
+        "flow_name": "report-schedule-planner",
+        "description": "Define the generation and distribution schedule for each report.",
+        "inputs": [
+          {"name": "report-catalog", "desc": "Catalog of recurring reports"},
+          {"name": "automation-candidates", "desc": "Reports to automate"}
+        ],
+        "outputs": [
+          {"name": "report-schedule", "desc": "Schedule for each report (generation time, distribution time, timezone)"},
+          {"name": "data-source-map", "desc": "Map of each report to its data source and query"}
+        ],
+        "process": [
+          "Set the generation time for each report (allow enough lead time for data to be complete).",
+          "Set the distribution time (recipients expect the report by a specific hour).",
+          "Map each report to its data source and the query or pipeline that produces it.",
+          "Handle timezone differences for global teams."
+        ],
+        "tags": ["reporting", "scheduling"]
+      },
+      {
+        "flow_name": "report-generation-configuration",
+        "description": "Configure the automated report generation pipeline.",
+        "inputs": [
+          {"name": "report-schedule", "desc": "Schedule for each report"},
+          {"name": "data-source-map", "desc": "Data sources and queries"}
+        ],
+        "outputs": [
+          {"name": "generation-config", "desc": "Configuration for the automated report generation system"},
+          {"name": "output-format-specs", "desc": "Format specifications for each report (PDF, CSV, dashboard link)"}
+        ],
+        "process": [
+          "For each report, configure the data query to run at the scheduled generation time.",
+          "Define the output format (PDF for executives, CSV for analysts, dashboard link for teams).",
+          "Set up the generation pipeline: query, transform, render, store.",
+          "Add validation checks to flag reports with missing or anomalous data before distribution."
+        ],
+        "tags": ["reporting", "automation"]
+      },
+      {
+        "flow_name": "distribution-channel-setup",
+        "description": "Set up the distribution channels and handle delivery failures.",
+        "inputs": [
+          {"name": "generation-config", "desc": "Report generation configuration"},
+          {"name": "output-format-specs", "desc": "Format specs for each report"}
+        ],
+        "outputs": [
+          {"name": "distribution-config", "desc": "Distribution configuration (channels, recipients, retry logic)"},
+          {"name": "report-distribution-document", "desc": "Final setup document covering schedule, generation, and distribution"}
+        ],
+        "process": [
+          "Configure the delivery channel for each report (email, Slack, shared drive, dashboard).",
+          "Set up retry logic for failed deliveries (retry once after 15 minutes, then alert the report owner).",
+          "Add a delivery confirmation log so the team can verify reports were received.",
+          "Compile the final setup document with the full schedule, generation config, and distribution config."
+        ],
+        "tags": ["reporting", "distribution"]
+      }
+    ]
+  },
+  {
+    "chain_name": "threshold-alert-configuration",
+    "description": "Configure threshold-based alerts for business metrics: define the metrics, set thresholds, configure channels, set cool-down periods, test with historical data, and produce the configuration document.",
+    "domain": "operations",
+    "tags": ["notifications", "alerting", "metrics"],
+    "steps": [
+      {
+        "flow_name": "metric-selection-for-alerting",
+        "description": "Select the business metrics to monitor with threshold alerts.",
+        "inputs": [
+          {"name": "business-kpis", "desc": "List of business KPIs and operational metrics"},
+          {"name": "historical-metric-data", "desc": "Historical data for the candidate metrics (last 30 to 90 days)"}
+        ],
+        "outputs": [
+          {"name": "selected-metrics", "desc": "Metrics selected for threshold alerting with rationale"},
+          {"name": "baseline-values", "desc": "Baseline values (mean, standard deviation, percentiles) for each selected metric"}
+        ],
+        "process": [
+          "Review the business KPIs and select those where a deviation requires immediate human attention.",
+          "For each selected metric, pull 30 to 90 days of historical data.",
+          "Calculate the baseline: mean, standard deviation, p5, p50, p95.",
+          "Exclude metrics that are too noisy or too stable for threshold alerting."
+        ],
+        "tags": ["alerting", "metrics"]
+      },
+      {
+        "flow_name": "threshold-definition",
+        "description": "Set the thresholds for each metric: static, dynamic, or anomaly-based.",
+        "inputs": [
+          {"name": "selected-metrics", "desc": "Metrics to alert on"},
+          {"name": "baseline-values", "desc": "Baseline statistics for each metric"}
+        ],
+        "outputs": [
+          {"name": "threshold-rules", "desc": "Threshold rules for each metric (type, value, evaluation window)"},
+          {"name": "alert-channels", "desc": "Channel and recipient assignment for each threshold alert"}
+        ],
+        "process": [
+          "For each metric, choose the threshold type: static (fixed value), dynamic (percentage deviation from rolling average), or anomaly-based (standard deviations from baseline).",
+          "Set the threshold value based on the baseline statistics and acceptable tolerance.",
+          "Define the evaluation window (e.g., 5-minute average, 15-minute sum).",
+          "Assign each alert to a channel and recipient based on the metric's domain (revenue alerts to finance, error rates to engineering)."
+        ],
+        "tags": ["alerting", "thresholds"]
+      },
+      {
+        "flow_name": "cooldown-and-dedup-setup",
+        "description": "Set cool-down periods and deduplication rules to prevent alert storms.",
+        "inputs": [
+          {"name": "threshold-rules", "desc": "Threshold rules for each metric"},
+          {"name": "alert-channels", "desc": "Channel assignments"}
+        ],
+        "outputs": [
+          {"name": "cooldown-config", "desc": "Cool-down period and deduplication rules for each alert"},
+          {"name": "grouping-rules", "desc": "Rules for grouping related alerts into a single notification"}
+        ],
+        "process": [
+          "Set a cool-down period for each alert (e.g., do not re-fire for 30 minutes after the last fire).",
+          "Configure deduplication so identical alerts within the cool-down window are suppressed.",
+          "Define grouping rules for related metrics (e.g., if both error rate and latency breach, send one grouped alert).",
+          "Document the rationale for each cool-down setting."
+        ],
+        "tags": ["alerting", "deduplication"]
+      },
+      {
+        "flow_name": "threshold-backtest-and-document",
+        "description": "Test the thresholds against historical data and produce the configuration document.",
+        "inputs": [
+          {"name": "cooldown-config", "desc": "Cool-down and dedup configuration"},
+          {"name": "grouping-rules", "desc": "Alert grouping rules"}
+        ],
+        "outputs": [
+          {"name": "backtest-results", "desc": "Results of running the thresholds against historical data (fires, false positives, missed events)"},
+          {"name": "threshold-configuration-document", "desc": "Final configuration document with all metrics, thresholds, channels, and cool-down settings"}
+        ],
+        "process": [
+          "Run each threshold rule against the historical data to see how many times it would have fired.",
+          "Compare the fires against known incidents to calculate the true positive and false positive rates.",
+          "Adjust any thresholds that produce too many false positives or miss known incidents.",
+          "Compile the final configuration document with all settings, backtest results, and the tuning rationale."
+        ],
+        "tags": ["alerting", "testing"]
+      }
+    ]
+  }
+]

@@ -1,0 +1,772 @@
+[
+  {
+    "chain_name": "spreadsheet-to-database-sync",
+    "description": "Synchronize data between spreadsheets and databases: map columns to fields, define sync direction, configure triggers, handle type conversions, manage conflicts, and verify the result.",
+    "domain": "technology",
+    "tags": ["data-automation", "spreadsheet", "database", "sync"],
+    "steps": [
+      {
+        "flow_name": "spreadsheet-schema-mapper",
+        "description": "Map spreadsheet columns to database fields, noting data type differences and naming mismatches.",
+        "inputs": [
+          {"name": "spreadsheet-structure", "desc": "Column names, data types, and sample values from the spreadsheet"},
+          {"name": "database-schema", "desc": "Table and field definitions from the target database"}
+        ],
+        "outputs": [
+          {"name": "field-mapping", "desc": "Column-to-field mapping with data type conversions noted"},
+          {"name": "mapping-exceptions", "desc": "Columns or fields that do not have a clear match"}
+        ],
+        "process": [
+          "List every spreadsheet column with its inferred data type and a sample value.",
+          "List every database field with its defined type and constraints.",
+          "Match columns to fields by name similarity and data type compatibility.",
+          "Flag any column or field without a match as an exception to resolve."
+        ],
+        "tags": ["data-automation", "spreadsheet", "mapping"]
+      },
+      {
+        "flow_name": "sync-direction-configurator",
+        "description": "Define whether the sync runs one-way (spreadsheet to database or database to spreadsheet) or bidirectionally, and set the conflict resolution policy.",
+        "inputs": [
+          {"name": "field-mapping", "desc": "Column-to-field mapping from the schema mapper"},
+          {"name": "sync-requirements", "desc": "Business rules for which system is the source of truth and how conflicts should resolve"}
+        ],
+        "outputs": [
+          {"name": "sync-direction", "desc": "One-way or bidirectional, with the designated source of truth"},
+          {"name": "conflict-policy", "desc": "Rules for handling conflicts (last-write-wins, source-wins, manual review)"}
+        ],
+        "process": [
+          "Determine which system is the primary source of truth for each field.",
+          "Choose one-way sync if one system always owns the data, bidirectional if both systems create or update records.",
+          "Define the conflict resolution policy for overlapping updates.",
+          "Document the sync direction and conflict rules."
+        ],
+        "tags": ["data-automation", "sync", "configuration"]
+      },
+      {
+        "flow_name": "sync-trigger-setup",
+        "description": "Configure when the sync runs: on a schedule, on change detection, or manually.",
+        "inputs": [
+          {"name": "sync-direction", "desc": "The chosen sync direction and source of truth"},
+          {"name": "field-mapping", "desc": "The column-to-field mapping"}
+        ],
+        "outputs": [
+          {"name": "trigger-configuration", "desc": "Trigger type, schedule or event definition, and retry policy"},
+          {"name": "sync-frequency", "desc": "How often the sync runs under normal conditions"}
+        ],
+        "process": [
+          "Assess how frequently the source data changes and how quickly the target needs to reflect it.",
+          "Choose the trigger type: scheduled (cron), event-driven (on row change or webhook), or manual.",
+          "Define the retry policy for failed syncs.",
+          "Document the trigger configuration and expected sync frequency."
+        ],
+        "tags": ["data-automation", "sync", "scheduling"]
+      },
+      {
+        "flow_name": "data-type-converter",
+        "description": "Handle data type conversions between the spreadsheet and database (dates, numbers, booleans, enums, text).",
+        "inputs": [
+          {"name": "field-mapping", "desc": "Column-to-field mapping with type differences noted"},
+          {"name": "conflict-policy", "desc": "Conflict resolution rules"}
+        ],
+        "outputs": [
+          {"name": "conversion-rules", "desc": "Specific conversion logic for each field pair with type differences"},
+          {"name": "validation-checks", "desc": "Checks to run after conversion to verify data integrity"}
+        ],
+        "process": [
+          "For each field pair with a type mismatch, define the conversion function (e.g., text date to ISO 8601, string to integer, yes/no to boolean).",
+          "Handle edge cases: empty cells, malformed values, values outside the target type range.",
+          "Write validation checks that run after conversion to flag bad data.",
+          "Document the conversion rules."
+        ],
+        "tags": ["data-automation", "data-types", "conversion"]
+      },
+      {
+        "flow_name": "sync-error-handler",
+        "description": "Define how the sync handles errors: logging, alerts, partial rollback, and retry.",
+        "inputs": [
+          {"name": "trigger-configuration", "desc": "The sync trigger setup"},
+          {"name": "conversion-rules", "desc": "Data type conversion logic"}
+        ],
+        "outputs": [
+          {"name": "error-handling-plan", "desc": "How each category of error is logged, alerted, retried, or escalated"},
+          {"name": "rollback-policy", "desc": "Whether a failed sync rolls back the batch or skips the bad record"}
+        ],
+        "process": [
+          "Categorize possible errors: connection failures, type conversion failures, constraint violations, conflicts.",
+          "For each category, define the response: retry, skip and log, alert, or abort and rollback.",
+          "Set up the error log with enough detail to diagnose issues after the fact.",
+          "Document the error handling plan and rollback policy."
+        ],
+        "tags": ["data-automation", "error-handling"]
+      },
+      {
+        "flow_name": "sync-verification-runner",
+        "description": "Verify the sync by comparing source and target after a run to confirm data integrity.",
+        "inputs": [
+          {"name": "error-handling-plan", "desc": "Error handling and logging configuration"},
+          {"name": "validation-checks", "desc": "Post-conversion validation checks"}
+        ],
+        "outputs": [
+          {"name": "sync-setup-document", "desc": "Complete sync configuration including mapping, direction, triggers, conversions, error handling, and verification"},
+          {"name": "verification-results", "desc": "Results of the initial sync verification (record counts, spot checks, discrepancy list)"}
+        ],
+        "process": [
+          "Run the sync against a test dataset or a small batch of live data.",
+          "Compare record counts between source and target.",
+          "Spot-check a sample of records for field-level accuracy.",
+          "Document the results and flag any discrepancies for investigation."
+        ],
+        "tags": ["data-automation", "verification", "testing"]
+      }
+    ]
+  },
+  {
+    "chain_name": "automated-data-entry",
+    "description": "Automate manual data entry from one system to another: identify sources and targets, define mappings and transformations, configure triggers, validate before entry, and log results.",
+    "domain": "technology",
+    "tags": ["data-automation", "data-entry", "automation"],
+    "steps": [
+      {
+        "flow_name": "data-entry-source-target-inventory",
+        "description": "Identify the data sources (where data comes from) and targets (where data goes), including access methods and data formats.",
+        "inputs": [
+          {"name": "current-manual-process", "desc": "Description of the current manual data entry process, including what is entered, from where, and into what"},
+          {"name": "system-access-details", "desc": "API endpoints, file locations, or UI paths for source and target systems"}
+        ],
+        "outputs": [
+          {"name": "source-inventory", "desc": "List of data sources with access method, format, and frequency of new data"},
+          {"name": "target-inventory", "desc": "List of target systems with access method, required fields, and validation rules"}
+        ],
+        "process": [
+          "List every source the manual process reads from (files, emails, web pages, other systems).",
+          "List every target the manual process writes to (databases, spreadsheets, SaaS platforms).",
+          "For each source and target, document the access method (API, file drop, screen entry) and data format.",
+          "Note any authentication or rate limiting constraints."
+        ],
+        "tags": ["data-automation", "data-entry", "inventory"]
+      },
+      {
+        "flow_name": "data-entry-field-mapper",
+        "description": "Define the field mapping and transformation rules from source to target.",
+        "inputs": [
+          {"name": "source-inventory", "desc": "Data sources with format and field details"},
+          {"name": "target-inventory", "desc": "Target systems with required fields and validation rules"}
+        ],
+        "outputs": [
+          {"name": "field-mapping-rules", "desc": "Source-to-target field mapping with any transformation logic (format, concatenate, split, default)"},
+          {"name": "unmapped-fields", "desc": "Source fields with no target and target fields with no source, requiring manual handling or defaults"}
+        ],
+        "process": [
+          "Match source fields to target fields by name, meaning, and data type.",
+          "Define transformations where the formats differ (date formats, name splitting, unit conversion).",
+          "Identify target required fields that have no source and define default values or manual fill rules.",
+          "Document the complete mapping."
+        ],
+        "tags": ["data-automation", "data-entry", "mapping"]
+      },
+      {
+        "flow_name": "data-entry-trigger-designer",
+        "description": "Configure what triggers the automated entry: new source record, updated record, or scheduled batch.",
+        "inputs": [
+          {"name": "field-mapping-rules", "desc": "The source-to-target field mapping"},
+          {"name": "source-inventory", "desc": "Source system details including data change frequency"}
+        ],
+        "outputs": [
+          {"name": "entry-trigger", "desc": "Trigger type (event-driven or scheduled), polling interval or event definition, and batch size"},
+          {"name": "deduplication-rules", "desc": "How to detect and skip records that have already been entered"}
+        ],
+        "process": [
+          "Determine whether the source supports event notifications (webhooks, change feeds) or requires polling.",
+          "Choose event-driven triggers for real-time needs, scheduled batch for periodic bulk entry.",
+          "Define the deduplication logic to prevent double entry (unique key check, timestamp comparison).",
+          "Document the trigger configuration."
+        ],
+        "tags": ["data-automation", "data-entry", "triggers"]
+      },
+      {
+        "flow_name": "data-entry-validator",
+        "description": "Validate each record before writing it to the target system.",
+        "inputs": [
+          {"name": "field-mapping-rules", "desc": "Source-to-target mapping with transformations"},
+          {"name": "entry-trigger", "desc": "Trigger configuration"}
+        ],
+        "outputs": [
+          {"name": "validation-rules", "desc": "Pre-entry checks for each field (type, range, format, required, referential integrity)"},
+          {"name": "rejection-handling", "desc": "What happens to records that fail validation (quarantine queue, alert, skip and log)"}
+        ],
+        "process": [
+          "For each target field, define the validation rule (type check, range check, format pattern, not-null).",
+          "Add cross-field validations where business rules require it (e.g., end date after start date).",
+          "Define the handling for records that fail: quarantine for manual review, skip and log, or reject and alert.",
+          "Document the validation rules and rejection handling."
+        ],
+        "tags": ["data-automation", "data-entry", "validation"]
+      },
+      {
+        "flow_name": "data-entry-logger",
+        "description": "Log every entry attempt with its outcome (success, failure, skipped) for audit and troubleshooting.",
+        "inputs": [
+          {"name": "validation-rules", "desc": "The validation checks applied to each record"},
+          {"name": "rejection-handling", "desc": "How failed records are handled"}
+        ],
+        "outputs": [
+          {"name": "entry-log-schema", "desc": "Fields captured in the entry log (timestamp, source record ID, target record ID, status, error detail)"},
+          {"name": "data-entry-automation-document", "desc": "Complete documentation of the automated data entry setup"}
+        ],
+        "process": [
+          "Define the log schema: timestamp, source record identifier, target record identifier, status (success, failed, skipped), error detail.",
+          "Configure the log storage (database table, log file, or monitoring system).",
+          "Set up alerts for error rate thresholds (e.g., more than 5% failure in a batch).",
+          "Compile the full automation documentation: sources, targets, mappings, triggers, validation, logging."
+        ],
+        "tags": ["data-automation", "data-entry", "logging"]
+      }
+    ]
+  },
+  {
+    "chain_name": "data-cleanup-workflow",
+    "description": "Clean and standardize messy data: profile the dataset, define cleaning rules, apply them, validate the result, and produce the cleanup report.",
+    "domain": "technology",
+    "tags": ["data-automation", "data-quality", "cleanup"],
+    "steps": [
+      {
+        "flow_name": "data-profiling-analyzer",
+        "description": "Profile the dataset to identify quality issues: null rates, duplicates, format inconsistencies, outliers, and type mismatches.",
+        "inputs": [
+          {"name": "dataset-location", "desc": "Path or connection string to the dataset to clean"},
+          {"name": "expected-schema", "desc": "Expected column names, types, and value ranges"}
+        ],
+        "outputs": [
+          {"name": "profiling-report", "desc": "Per-column statistics: null rate, duplicate rate, distinct count, min/max, format distribution, outlier count"},
+          {"name": "issue-inventory", "desc": "Categorized list of data quality issues found"}
+        ],
+        "process": [
+          "Compute basic statistics for each column: row count, null count, distinct values, min, max, mean (numeric), mode.",
+          "Check for duplicate rows and near-duplicate rows (fuzzy match on key fields).",
+          "Identify format inconsistencies within each column (mixed date formats, inconsistent casing, trailing whitespace).",
+          "Flag outliers using statistical methods (z-score, IQR) for numeric columns.",
+          "Compile the profiling report and issue inventory."
+        ],
+        "tags": ["data-automation", "data-quality", "profiling"]
+      },
+      {
+        "flow_name": "cleaning-rule-definer",
+        "description": "Define the cleaning rules for each category of issue found in profiling.",
+        "inputs": [
+          {"name": "profiling-report", "desc": "Per-column statistics and quality metrics"},
+          {"name": "issue-inventory", "desc": "Categorized list of data quality issues"}
+        ],
+        "outputs": [
+          {"name": "cleaning-rules", "desc": "Ordered list of cleaning operations with their logic (standardize, deduplicate, fill, flag, correct)"},
+          {"name": "priority-ranking", "desc": "Issues ranked by impact on downstream use"}
+        ],
+        "process": [
+          "For format inconsistencies, define the standard format and the transformation to apply.",
+          "For duplicates, define the matching criteria and the merge or keep strategy (keep newest, merge fields).",
+          "For nulls, decide per column: fill with a default, fill from another source, flag for review, or drop the row.",
+          "For outliers, decide: cap at a threshold, flag for review, or leave as-is if legitimate.",
+          "Rank the rules by their impact on data usability."
+        ],
+        "tags": ["data-automation", "data-quality", "rules"]
+      },
+      {
+        "flow_name": "cleaning-rule-executor",
+        "description": "Apply the cleaning rules to the dataset in the defined order.",
+        "inputs": [
+          {"name": "cleaning-rules", "desc": "Ordered cleaning operations"},
+          {"name": "dataset-location", "desc": "Path or connection to the dataset"}
+        ],
+        "outputs": [
+          {"name": "cleaned-dataset-location", "desc": "Path or connection to the cleaned dataset"},
+          {"name": "cleaning-log", "desc": "Record of every change made: row, column, old value, new value, rule applied"}
+        ],
+        "process": [
+          "Back up the original dataset before making changes.",
+          "Apply the cleaning rules in priority order, logging each change.",
+          "Track the number of rows and fields affected by each rule.",
+          "Save the cleaned dataset to the target location."
+        ],
+        "tags": ["data-automation", "data-quality", "execution"]
+      },
+      {
+        "flow_name": "cleaned-data-validator",
+        "description": "Validate the cleaned dataset against business rules and compare quality metrics to the original.",
+        "inputs": [
+          {"name": "cleaned-dataset-location", "desc": "Path to the cleaned dataset"},
+          {"name": "cleaning-log", "desc": "Log of all changes applied"}
+        ],
+        "outputs": [
+          {"name": "validation-results", "desc": "Pass/fail on each business rule, plus before/after quality metrics comparison"},
+          {"name": "data-cleanup-report", "desc": "Summary of what was cleaned, how many records changed, quality improvement metrics, and remaining issues"}
+        ],
+        "process": [
+          "Re-run the profiling on the cleaned dataset and compare metrics to the original (null rate, duplicate rate, format consistency).",
+          "Run the business validation rules (required fields populated, referential integrity, value ranges).",
+          "Compile the cleanup report: issues found, rules applied, records changed, quality improvement, remaining issues.",
+          "Flag any remaining issues that require manual attention."
+        ],
+        "tags": ["data-automation", "data-quality", "validation"]
+      }
+    ]
+  },
+  {
+    "chain_name": "cross-system-data-reconciliation",
+    "description": "Reconcile data between two systems: extract datasets, match records, identify and classify discrepancies, investigate, and produce the reconciliation report.",
+    "domain": "technology",
+    "tags": ["data-automation", "reconciliation", "data-quality"],
+    "steps": [
+      {
+        "flow_name": "reconciliation-dataset-extractor",
+        "description": "Extract the datasets from both systems for comparison, normalizing formats and timestamps.",
+        "inputs": [
+          {"name": "system-a-connection", "desc": "Connection details and query for the first system"},
+          {"name": "system-b-connection", "desc": "Connection details and query for the second system"}
+        ],
+        "outputs": [
+          {"name": "dataset-a", "desc": "Extracted and normalized dataset from system A"},
+          {"name": "dataset-b", "desc": "Extracted and normalized dataset from system B"}
+        ],
+        "process": [
+          "Connect to system A and extract the dataset for the reconciliation period.",
+          "Connect to system B and extract the corresponding dataset.",
+          "Normalize both datasets to a common format (date formats, currency, identifiers).",
+          "Verify row counts and date ranges match the expected scope."
+        ],
+        "tags": ["data-automation", "reconciliation", "extraction"]
+      },
+      {
+        "flow_name": "reconciliation-match-engine",
+        "description": "Match records between the two datasets using the defined keys and flag discrepancies.",
+        "inputs": [
+          {"name": "dataset-a", "desc": "Normalized dataset from system A"},
+          {"name": "dataset-b", "desc": "Normalized dataset from system B"}
+        ],
+        "outputs": [
+          {"name": "matched-records", "desc": "Records that matched on the key fields, with any field-level differences noted"},
+          {"name": "discrepancy-list", "desc": "Unmatched and mismatched records, classified by type (missing in A, missing in B, value mismatch)"}
+        ],
+        "process": [
+          "Define the matching keys (transaction ID, date plus amount, or composite key).",
+          "Run the match: inner join on keys to find matched records, outer join to find unmatched.",
+          "For matched records, compare every non-key field and flag differences.",
+          "Classify discrepancies: missing in A, missing in B, or present in both with value mismatch."
+        ],
+        "tags": ["data-automation", "reconciliation", "matching"]
+      },
+      {
+        "flow_name": "discrepancy-investigator",
+        "description": "Investigate each discrepancy to determine the cause and resolution.",
+        "inputs": [
+          {"name": "discrepancy-list", "desc": "Classified list of unmatched and mismatched records"},
+          {"name": "matched-records", "desc": "Successfully matched records for reference"}
+        ],
+        "outputs": [
+          {"name": "investigation-results", "desc": "Cause and resolution for each discrepancy (timing, data entry error, system bug, legitimate difference)"},
+          {"name": "correction-actions", "desc": "List of corrections to apply in each system to resolve the discrepancies"}
+        ],
+        "process": [
+          "For missing records, check whether the record was created after the extraction cutoff (timing issue) or is genuinely absent.",
+          "For value mismatches, trace the data back to the original entry or transaction to identify the correct value.",
+          "Classify each discrepancy cause: timing, data entry error, system bug, rounding, or legitimate difference.",
+          "Define the correction action for each resolvable discrepancy."
+        ],
+        "tags": ["data-automation", "reconciliation", "investigation"]
+      },
+      {
+        "flow_name": "reconciliation-report-generator",
+        "description": "Produce the reconciliation report with summary statistics, discrepancy detail, and recommended actions.",
+        "inputs": [
+          {"name": "investigation-results", "desc": "Causes and resolutions for discrepancies"},
+          {"name": "correction-actions", "desc": "Corrections to apply in each system"}
+        ],
+        "outputs": [
+          {"name": "reconciliation-report", "desc": "Summary of matched records, discrepancies found, causes, corrections applied, and remaining open items"},
+          {"name": "process-improvements", "desc": "Recommendations to prevent recurring discrepancies"}
+        ],
+        "process": [
+          "Summarize the reconciliation: total records, matched count, discrepancy count by category.",
+          "List each discrepancy with its cause and resolution status.",
+          "Identify patterns in the discrepancies that suggest a systemic issue.",
+          "Recommend process or system changes to reduce future discrepancies."
+        ],
+        "tags": ["data-automation", "reconciliation", "reporting"]
+      }
+    ]
+  },
+  {
+    "chain_name": "report-template-builder",
+    "description": "Build reusable report templates: define the structure, connect data sources, configure calculations, design the layout, and set up the refresh mechanism.",
+    "domain": "technology",
+    "tags": ["data-automation", "reporting", "templates"],
+    "steps": [
+      {
+        "flow_name": "report-structure-designer",
+        "description": "Define the report structure: sections, metrics, and visualizations for each section.",
+        "inputs": [
+          {"name": "report-purpose", "desc": "What question the report answers and who reads it"},
+          {"name": "available-data-sources", "desc": "Data sources the report can pull from (databases, APIs, spreadsheets)"}
+        ],
+        "outputs": [
+          {"name": "report-outline", "desc": "Ordered list of sections with the metrics and visual types for each"},
+          {"name": "data-requirements", "desc": "Fields and aggregations needed from each data source"}
+        ],
+        "process": [
+          "Identify the audience and the decisions the report informs.",
+          "List the metrics and KPIs the report must show.",
+          "Group the metrics into logical sections (summary, detail, trend, comparison).",
+          "For each section, choose the visual type (table, bar chart, line chart, single number, heatmap)."
+        ],
+        "tags": ["data-automation", "reporting", "design"]
+      },
+      {
+        "flow_name": "report-data-connector",
+        "description": "Connect the report template to its data sources and define the queries.",
+        "inputs": [
+          {"name": "report-outline", "desc": "Sections, metrics, and visual types"},
+          {"name": "data-requirements", "desc": "Fields and aggregations needed"}
+        ],
+        "outputs": [
+          {"name": "data-connections", "desc": "Configured connections and queries for each data source"},
+          {"name": "calculation-definitions", "desc": "Formulas and aggregations applied to raw data to produce the report metrics"}
+        ],
+        "process": [
+          "For each data source, set up the connection (credentials, endpoint, query).",
+          "Write the query or extraction logic for each metric.",
+          "Define the calculated fields and aggregations (ratios, running totals, year-over-year).",
+          "Test each connection and query with sample data."
+        ],
+        "tags": ["data-automation", "reporting", "data-sources"]
+      },
+      {
+        "flow_name": "report-layout-formatter",
+        "description": "Design the visual layout: page structure, branding, headers, and conditional formatting.",
+        "inputs": [
+          {"name": "report-outline", "desc": "Sections and visual types"},
+          {"name": "calculation-definitions", "desc": "Metrics and formulas"}
+        ],
+        "outputs": [
+          {"name": "layout-template", "desc": "Visual layout with positioning, sizing, color coding, and conditional formatting rules"},
+          {"name": "formatting-rules", "desc": "Conditional formatting and alerting rules (red if below target, green if above)"}
+        ],
+        "process": [
+          "Arrange sections on the page in order of importance (key takeaways first).",
+          "Apply consistent formatting: fonts, colors, number formats, date formats.",
+          "Add conditional formatting for thresholds (red/yellow/green for KPIs).",
+          "Include headers, footers, timestamps, and data freshness indicators."
+        ],
+        "tags": ["data-automation", "reporting", "layout"]
+      },
+      {
+        "flow_name": "report-refresh-configurator",
+        "description": "Set up how and when the report refreshes its data.",
+        "inputs": [
+          {"name": "data-connections", "desc": "Configured data source connections"},
+          {"name": "layout-template", "desc": "The formatted report layout"}
+        ],
+        "outputs": [
+          {"name": "refresh-schedule", "desc": "When the report refreshes (daily, hourly, on-demand) and the distribution list"},
+          {"name": "report-template-documentation", "desc": "Complete documentation: structure, data sources, calculations, layout, refresh schedule, and usage guide"}
+        ],
+        "process": [
+          "Set the refresh cadence based on how often the underlying data changes and how quickly the audience needs updates.",
+          "Configure the distribution method (email, shared dashboard, file drop).",
+          "Set up error notifications if a refresh fails.",
+          "Compile the template documentation for future maintainers."
+        ],
+        "tags": ["data-automation", "reporting", "scheduling"]
+      }
+    ]
+  },
+  {
+    "chain_name": "data-import-wizard",
+    "description": "Import data from external files into a system: validate the file, map columns, preview, run the import with error handling, and verify the result.",
+    "domain": "technology",
+    "tags": ["data-automation", "import", "data-entry"],
+    "steps": [
+      {
+        "flow_name": "import-file-validator",
+        "description": "Validate the incoming file's format, structure, encoding, and basic data quality.",
+        "inputs": [
+          {"name": "import-file", "desc": "The file to import (CSV, Excel, JSON, XML)"},
+          {"name": "target-system-schema", "desc": "The target system's expected fields, types, and constraints"}
+        ],
+        "outputs": [
+          {"name": "file-profile", "desc": "File format, encoding, row count, column count, and detected data types"},
+          {"name": "structural-issues", "desc": "Any issues with the file structure (missing headers, inconsistent row lengths, encoding errors)"}
+        ],
+        "process": [
+          "Detect the file format (CSV, Excel, JSON, XML) and character encoding.",
+          "Parse the headers and count the rows and columns.",
+          "Check for structural issues: missing headers, ragged rows, embedded delimiters, truncated data.",
+          "Profile each column for data type and null rate."
+        ],
+        "tags": ["data-automation", "import", "validation"]
+      },
+      {
+        "flow_name": "import-column-mapper",
+        "description": "Map the file's columns to the target system's fields, with type conversion rules.",
+        "inputs": [
+          {"name": "file-profile", "desc": "File structure and detected data types"},
+          {"name": "target-system-schema", "desc": "Target fields, types, and constraints"}
+        ],
+        "outputs": [
+          {"name": "import-mapping", "desc": "File column to target field mapping with conversion rules"},
+          {"name": "unmapped-columns", "desc": "File columns that do not map to any target field"}
+        ],
+        "process": [
+          "Auto-match columns to target fields by name similarity.",
+          "For unmatched columns, present them for manual mapping or exclusion.",
+          "Define type conversion rules for each mapped pair.",
+          "Flag required target fields that have no source column."
+        ],
+        "tags": ["data-automation", "import", "mapping"]
+      },
+      {
+        "flow_name": "import-preview-runner",
+        "description": "Preview a sample of the import to catch errors before running the full batch.",
+        "inputs": [
+          {"name": "import-mapping", "desc": "Column-to-field mapping with conversions"},
+          {"name": "import-file", "desc": "The file to import"}
+        ],
+        "outputs": [
+          {"name": "preview-results", "desc": "First N records as they would appear in the target, with any conversion warnings"},
+          {"name": "preview-errors", "desc": "Records that failed validation during preview"}
+        ],
+        "process": [
+          "Apply the mapping and conversion rules to the first 10-50 records.",
+          "Display the transformed records as they would appear in the target system.",
+          "Flag any records that fail validation (type errors, constraint violations, required fields null).",
+          "Ask for confirmation before proceeding to the full import."
+        ],
+        "tags": ["data-automation", "import", "preview"]
+      },
+      {
+        "flow_name": "import-executor",
+        "description": "Run the full import with error handling and progress tracking.",
+        "inputs": [
+          {"name": "import-mapping", "desc": "Validated column-to-field mapping"},
+          {"name": "preview-results", "desc": "Confirmed preview with no blocking errors"}
+        ],
+        "outputs": [
+          {"name": "import-summary", "desc": "Total records processed, succeeded, failed, and skipped"},
+          {"name": "error-log", "desc": "Detail for each failed record (row number, field, error)"}
+        ],
+        "process": [
+          "Run the import in batches, committing each batch on success.",
+          "For each failed record, log the error and continue to the next record.",
+          "Track progress: records processed, succeeded, failed, remaining.",
+          "On completion, report the summary and error log."
+        ],
+        "tags": ["data-automation", "import", "execution"]
+      },
+      {
+        "flow_name": "import-verification-checker",
+        "description": "Verify the imported data by comparing counts, spot-checking records, and running integrity checks.",
+        "inputs": [
+          {"name": "import-summary", "desc": "Counts of processed, succeeded, and failed records"},
+          {"name": "error-log", "desc": "Detail on failed records"}
+        ],
+        "outputs": [
+          {"name": "verification-report", "desc": "Comparison of source file row count to target record count, spot-check results, and integrity check results"},
+          {"name": "import-record", "desc": "Complete import record: file, mapping, preview, execution summary, verification, and error log"}
+        ],
+        "process": [
+          "Compare the source file row count to the target system record count for this import.",
+          "Spot-check a random sample of records for field-level accuracy.",
+          "Run referential integrity checks if the imported data references other tables.",
+          "Compile the complete import record."
+        ],
+        "tags": ["data-automation", "import", "verification"]
+      }
+    ]
+  },
+  {
+    "chain_name": "pivot-analysis-workflow",
+    "description": "Conduct a pivot table analysis: define the question, select the data, configure dimensions, calculate aggregations, identify patterns, and produce the report.",
+    "domain": "technology",
+    "tags": ["data-automation", "analytics", "pivot"],
+    "steps": [
+      {
+        "flow_name": "pivot-question-definer",
+        "description": "Define the analysis question and identify the data source.",
+        "inputs": [
+          {"name": "analysis-question", "desc": "The business question the pivot analysis should answer"},
+          {"name": "available-datasets", "desc": "Datasets available for analysis with their schemas"}
+        ],
+        "outputs": [
+          {"name": "question-definition", "desc": "Precisely stated question with the expected answer format (number, ranking, trend, comparison)"},
+          {"name": "selected-dataset", "desc": "The dataset to use, with relevant columns identified"}
+        ],
+        "process": [
+          "Restate the business question in precise, measurable terms.",
+          "Identify which dataset contains the data needed to answer the question.",
+          "Select the relevant columns from that dataset.",
+          "Note any filtering needed (date range, segment, status)."
+        ],
+        "tags": ["data-automation", "analytics", "question-definition"]
+      },
+      {
+        "flow_name": "pivot-dimension-configurator",
+        "description": "Configure the pivot dimensions: rows, columns, values, and filters.",
+        "inputs": [
+          {"name": "question-definition", "desc": "The precise analysis question"},
+          {"name": "selected-dataset", "desc": "Dataset with relevant columns"}
+        ],
+        "outputs": [
+          {"name": "pivot-configuration", "desc": "Row fields, column fields, value fields with aggregation functions, and filter conditions"},
+          {"name": "aggregation-methods", "desc": "Aggregation function for each value field (sum, count, average, min, max, median)"}
+        ],
+        "process": [
+          "Choose the row dimension (the primary grouping, e.g., product, region, month).",
+          "Choose the column dimension if a cross-tabulation is needed (e.g., month across columns).",
+          "Select the value fields and their aggregation functions (sum revenue, count orders, average rating).",
+          "Apply filters to scope the analysis (date range, category, status)."
+        ],
+        "tags": ["data-automation", "analytics", "pivot-config"]
+      },
+      {
+        "flow_name": "pivot-calculation-runner",
+        "description": "Execute the pivot calculation and produce the result table.",
+        "inputs": [
+          {"name": "pivot-configuration", "desc": "Rows, columns, values, filters, and aggregations"},
+          {"name": "selected-dataset", "desc": "The source dataset"}
+        ],
+        "outputs": [
+          {"name": "pivot-table", "desc": "The computed pivot table with row totals, column totals, and grand total"},
+          {"name": "derived-metrics", "desc": "Calculated metrics added to the pivot (percentage of total, rank, cumulative sum)"}
+        ],
+        "process": [
+          "Apply filters to the dataset.",
+          "Group by the row and column dimensions, computing the aggregation for each cell.",
+          "Add row totals, column totals, and grand total.",
+          "Calculate derived metrics: percentage of total, rank, cumulative sum as needed."
+        ],
+        "tags": ["data-automation", "analytics", "computation"]
+      },
+      {
+        "flow_name": "pivot-pattern-analyzer",
+        "description": "Identify patterns, trends, and outliers in the pivot results.",
+        "inputs": [
+          {"name": "pivot-table", "desc": "The computed pivot table"},
+          {"name": "derived-metrics", "desc": "Calculated metrics (percentages, ranks, cumulative)"}
+        ],
+        "outputs": [
+          {"name": "pattern-findings", "desc": "Notable patterns, trends, and outliers with their significance"},
+          {"name": "pivot-analysis-report", "desc": "Complete analysis report: question, methodology, pivot table, findings, and recommendations"}
+        ],
+        "process": [
+          "Scan for the highest and lowest values in each dimension.",
+          "Look for trends across the column dimension (growth, decline, seasonality).",
+          "Identify outliers that deviate from the group pattern.",
+          "Write the findings as clear statements with supporting numbers.",
+          "Compile the analysis report with the question, method, table, and findings."
+        ],
+        "tags": ["data-automation", "analytics", "pattern-analysis"]
+      }
+    ]
+  },
+  {
+    "chain_name": "data-archival-workflow",
+    "description": "Archive old data from active systems: define criteria, identify records, export to archive storage, verify integrity, remove from active, and produce the archival record.",
+    "domain": "technology",
+    "tags": ["data-automation", "archival", "data-lifecycle"],
+    "steps": [
+      {
+        "flow_name": "archival-criteria-definer",
+        "description": "Define which records qualify for archival based on age, status, and access frequency.",
+        "inputs": [
+          {"name": "system-description", "desc": "The active system and its data model"},
+          {"name": "retention-requirements", "desc": "Legal, regulatory, and business retention rules for each data type"}
+        ],
+        "outputs": [
+          {"name": "archival-criteria", "desc": "Rules that determine when a record is eligible for archival (age, status, last access date)"},
+          {"name": "exclusion-rules", "desc": "Records that must never be archived regardless of age (active cases, open transactions)"}
+        ],
+        "process": [
+          "Review the retention requirements for each data type in the system.",
+          "Define the age threshold for archival (e.g., closed records older than 2 years).",
+          "Add status-based criteria (only closed, completed, or inactive records).",
+          "Define exclusion rules for records that must remain active regardless of age."
+        ],
+        "tags": ["data-automation", "archival", "policy"]
+      },
+      {
+        "flow_name": "archival-record-identifier",
+        "description": "Query the active system to identify records that match the archival criteria.",
+        "inputs": [
+          {"name": "archival-criteria", "desc": "Rules defining archival eligibility"},
+          {"name": "exclusion-rules", "desc": "Records to exclude from archival"}
+        ],
+        "outputs": [
+          {"name": "archival-candidate-list", "desc": "List of records eligible for archival with key fields and counts"},
+          {"name": "archival-size-estimate", "desc": "Estimated storage size of the archival batch"}
+        ],
+        "process": [
+          "Run the archival criteria query against the active system.",
+          "Apply the exclusion rules to remove ineligible records.",
+          "Summarize the candidate list: record count by type, date range, and estimated storage size.",
+          "Review the candidate list for anything unexpected before proceeding."
+        ],
+        "tags": ["data-automation", "archival", "identification"]
+      },
+      {
+        "flow_name": "archival-export-runner",
+        "description": "Export the archival candidates to the archive storage, preserving data integrity.",
+        "inputs": [
+          {"name": "archival-candidate-list", "desc": "Records to archive"},
+          {"name": "archival-size-estimate", "desc": "Expected size of the archive batch"}
+        ],
+        "outputs": [
+          {"name": "archive-location", "desc": "Where the archived data is stored (path, bucket, database)"},
+          {"name": "export-manifest", "desc": "List of exported records with checksums for integrity verification"}
+        ],
+        "process": [
+          "Export the records to the archive storage in a format that preserves all fields and relationships.",
+          "Generate checksums for each exported batch or file.",
+          "Record the export manifest: record IDs, export timestamp, destination, checksums.",
+          "Verify the export completed without errors."
+        ],
+        "tags": ["data-automation", "archival", "export"]
+      },
+      {
+        "flow_name": "archival-integrity-verifier",
+        "description": "Verify the archive by comparing record counts, checksums, and spot-checking data.",
+        "inputs": [
+          {"name": "archive-location", "desc": "Where the archived data is stored"},
+          {"name": "export-manifest", "desc": "List of exported records with checksums"}
+        ],
+        "outputs": [
+          {"name": "integrity-results", "desc": "Verification results: record count match, checksum match, spot-check pass/fail"},
+          {"name": "removal-authorization", "desc": "Confirmation that the archive is verified and records can be removed from the active system"}
+        ],
+        "process": [
+          "Compare the archive record count to the export manifest count.",
+          "Verify checksums match between the export and the archive.",
+          "Spot-check a random sample of archived records against the active system originals.",
+          "If all checks pass, authorize removal from the active system."
+        ],
+        "tags": ["data-automation", "archival", "verification"]
+      },
+      {
+        "flow_name": "archival-active-removal",
+        "description": "Remove the verified archived records from the active system and produce the archival record.",
+        "inputs": [
+          {"name": "removal-authorization", "desc": "Confirmation that the archive is verified"},
+          {"name": "integrity-results", "desc": "Verification results"}
+        ],
+        "outputs": [
+          {"name": "removal-log", "desc": "List of records removed from the active system with timestamps"},
+          {"name": "archival-record", "desc": "Complete archival documentation: criteria, candidates, export, verification, removal, and archive location"}
+        ],
+        "process": [
+          "Remove the archived records from the active system in batches.",
+          "Log each removal: record ID, removal timestamp, archive location.",
+          "Verify the active system record count decreased by the expected amount.",
+          "Compile the complete archival record for audit purposes."
+        ],
+        "tags": ["data-automation", "archival", "removal"]
+      }
+    ]
+  }
+]

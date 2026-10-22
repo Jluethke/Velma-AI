@@ -1,0 +1,819 @@
+[
+  {
+    "chain_name": "medical-billing-coding",
+    "description": "Process medical billing and coding from encounter documentation through claim submission, tracking, and denial management.",
+    "domain": "healthcare",
+    "tags": ["healthcare", "practice-management", "billing", "coding"],
+    "steps": [
+      {
+        "flow_name": "encounter-documentation-intake",
+        "description": "Receive and review encounter documentation for billing readiness.",
+        "inputs": [
+          {"name": "encounter-notes", "desc": "Clinical documentation from the provider visit"},
+          {"name": "patient-demographics", "desc": "Patient name, DOB, insurance, account number"}
+        ],
+        "outputs": [
+          {"name": "encounter-summary", "desc": "Structured summary of the encounter including diagnoses and procedures performed"},
+          {"name": "documentation-gaps", "desc": "List of missing or unclear documentation that needs provider clarification"}
+        ],
+        "process": [
+          "Review the encounter notes for completeness (chief complaint, history, exam, assessment, plan).",
+          "Extract the diagnoses and procedures documented by the provider.",
+          "Flag any documentation gaps that would prevent accurate coding.",
+          "Return the encounter summary and any gaps requiring follow-up."
+        ],
+        "tags": ["healthcare", "billing"]
+      },
+      {
+        "flow_name": "diagnosis-procedure-coding",
+        "description": "Assign ICD-10 diagnosis codes and CPT/HCPCS procedure codes to the encounter.",
+        "inputs": [
+          {"name": "encounter-summary", "desc": "Structured summary of the encounter"},
+          {"name": "documentation-gaps", "desc": "Any gaps flagged during intake"}
+        ],
+        "outputs": [
+          {"name": "coded-encounter", "desc": "Encounter with assigned ICD-10 and CPT/HCPCS codes, modifiers, and units"},
+          {"name": "coding-notes", "desc": "Notes on code selection rationale and any queries sent to the provider"}
+        ],
+        "process": [
+          "Select the ICD-10 codes that match the documented diagnoses, sequencing the primary diagnosis first.",
+          "Assign the CPT or HCPCS codes for each procedure, including modifiers and units.",
+          "Verify that the diagnosis codes support the medical necessity of each procedure code.",
+          "Document the coding rationale and any queries sent back to the provider for clarification."
+        ],
+        "tags": ["healthcare", "coding"]
+      },
+      {
+        "flow_name": "coding-compliance-review",
+        "description": "Verify the coded encounter for compliance with payer rules and coding guidelines.",
+        "inputs": [
+          {"name": "coded-encounter", "desc": "Encounter with assigned codes"},
+          {"name": "coding-notes", "desc": "Rationale and queries"}
+        ],
+        "outputs": [
+          {"name": "compliant-encounter", "desc": "Encounter that has passed compliance checks"},
+          {"name": "compliance-flags", "desc": "Any issues found during compliance review (bundling, modifier misuse, medical necessity)"}
+        ],
+        "process": [
+          "Check for correct use of modifiers and code bundling rules (CCI edits).",
+          "Verify medical necessity by matching diagnosis codes to procedure codes against payer LCD/NCD policies.",
+          "Confirm that the E/M level matches the documented complexity.",
+          "Return the compliant encounter or flag issues for correction."
+        ],
+        "tags": ["healthcare", "compliance"]
+      },
+      {
+        "flow_name": "claim-submission",
+        "description": "Submit the coded claim to the payer through the clearinghouse.",
+        "inputs": [
+          {"name": "compliant-encounter", "desc": "Encounter that passed compliance review"},
+          {"name": "patient-demographics", "desc": "Patient and insurance information"}
+        ],
+        "outputs": [
+          {"name": "submitted-claim", "desc": "Claim record with submission date, payer, and tracking number"},
+          {"name": "submission-errors", "desc": "Any rejection errors from the clearinghouse"}
+        ],
+        "process": [
+          "Build the claim (CMS-1500 or 837P) with the patient demographics, codes, and charges.",
+          "Submit the claim through the clearinghouse to the payer.",
+          "Record the submission date, tracking number, and payer.",
+          "Handle any clearinghouse rejections by correcting and resubmitting."
+        ],
+        "tags": ["healthcare", "billing"]
+      },
+      {
+        "flow_name": "claim-status-tracking",
+        "description": "Track the claim through the adjudication process and record the payer response.",
+        "inputs": [
+          {"name": "submitted-claim", "desc": "Claim record with tracking information"}
+        ],
+        "outputs": [
+          {"name": "adjudicated-claim", "desc": "Claim with payer decision (paid, denied, partial) and payment details"},
+          {"name": "denial-list", "desc": "List of denied line items with denial reason codes"}
+        ],
+        "process": [
+          "Check the claim status with the payer at defined intervals (7, 14, 30 days).",
+          "Record the ERA/EOB when received, including allowed amounts, adjustments, and patient responsibility.",
+          "Separate paid claims from denied or partially denied claims.",
+          "Pass denied items to the denial management step."
+        ],
+        "tags": ["healthcare", "billing"]
+      },
+      {
+        "flow_name": "denial-appeal-management",
+        "description": "Handle claim denials by analyzing the reason, correcting errors, and filing appeals.",
+        "inputs": [
+          {"name": "denial-list", "desc": "Denied line items with reason codes"},
+          {"name": "adjudicated-claim", "desc": "Full claim record for context"}
+        ],
+        "outputs": [
+          {"name": "billing-record", "desc": "Final billing record with payment, adjustments, and appeal outcomes"},
+          {"name": "denial-trends", "desc": "Summary of denial patterns for process improvement"}
+        ],
+        "process": [
+          "Categorize each denial by reason (eligibility, authorization, coding, timely filing, medical necessity).",
+          "For correctable denials, fix the error and resubmit the claim.",
+          "For clinical denials, prepare and submit the appeal with supporting documentation.",
+          "Track appeal outcomes and summarize denial trends for process improvement."
+        ],
+        "tags": ["healthcare", "billing"]
+      }
+    ]
+  },
+  {
+    "chain_name": "insurance-verification-workflow",
+    "description": "Verify patient insurance eligibility and benefits before a visit, including copay estimation and prior authorization checks.",
+    "domain": "healthcare",
+    "tags": ["healthcare", "practice-management", "insurance", "verification"],
+    "steps": [
+      {
+        "flow_name": "patient-insurance-collection",
+        "description": "Collect the patient's insurance information from their card and intake forms.",
+        "inputs": [
+          {"name": "patient-id", "desc": "Patient identifier or account number"},
+          {"name": "insurance-card-data", "desc": "Information from the insurance card (payer, plan, member ID, group number)"}
+        ],
+        "outputs": [
+          {"name": "insurance-profile", "desc": "Structured insurance record with payer, plan, member ID, group, and effective dates"},
+          {"name": "secondary-insurance", "desc": "Secondary insurance information if applicable"}
+        ],
+        "process": [
+          "Record the primary insurance payer, plan name, member ID, and group number from the card.",
+          "Confirm the subscriber relationship (self, spouse, child, other).",
+          "Check for secondary insurance and record if present.",
+          "Verify that the information matches the practice management system."
+        ],
+        "tags": ["healthcare", "insurance"]
+      },
+      {
+        "flow_name": "eligibility-benefits-check",
+        "description": "Verify eligibility and benefits with the payer electronically or by phone.",
+        "inputs": [
+          {"name": "insurance-profile", "desc": "Patient's insurance record"},
+          {"name": "visit-type", "desc": "The type of visit or service planned (office visit, procedure, imaging)"}
+        ],
+        "outputs": [
+          {"name": "eligibility-result", "desc": "Active or inactive status, effective dates, and plan type"},
+          {"name": "benefits-detail", "desc": "Copay, coinsurance, deductible (met and remaining), out-of-pocket max, and visit limits"}
+        ],
+        "process": [
+          "Submit the 270/271 eligibility inquiry to the payer electronically.",
+          "Record the coverage status (active, terminated, pending) and effective dates.",
+          "Extract the benefits for the planned visit type (copay, coinsurance percentage, deductible amounts).",
+          "Note any visit limits, referral requirements, or network restrictions."
+        ],
+        "tags": ["healthcare", "insurance"]
+      },
+      {
+        "flow_name": "prior-auth-requirement-check",
+        "description": "Determine whether the planned service requires prior authorization from the payer.",
+        "inputs": [
+          {"name": "benefits-detail", "desc": "Benefits information including authorization requirements"},
+          {"name": "visit-type", "desc": "The planned service type"}
+        ],
+        "outputs": [
+          {"name": "auth-requirement", "desc": "Whether prior authorization is required, and for which services"},
+          {"name": "auth-instructions", "desc": "Instructions for obtaining authorization if required (phone, portal, form)"}
+        ],
+        "process": [
+          "Check the benefits response for prior authorization requirements for the planned service.",
+          "Cross-reference with the payer's authorization list for the CPT code range.",
+          "If authorization is required, record the submission method and turnaround time.",
+          "Flag the visit for the prior authorization workflow if needed."
+        ],
+        "tags": ["healthcare", "insurance"]
+      },
+      {
+        "flow_name": "patient-cost-estimate",
+        "description": "Calculate and communicate the patient's estimated out-of-pocket cost for the visit.",
+        "inputs": [
+          {"name": "benefits-detail", "desc": "Copay, coinsurance, deductible details"},
+          {"name": "visit-type", "desc": "The planned service type"}
+        ],
+        "outputs": [
+          {"name": "cost-estimate", "desc": "Estimated patient responsibility for the visit (copay, coinsurance, deductible applied)"},
+          {"name": "verification-record", "desc": "Complete verification record for the patient chart"}
+        ],
+        "process": [
+          "Calculate the expected charge based on the fee schedule for the visit type.",
+          "Apply the patient's copay, coinsurance, and remaining deductible to estimate out-of-pocket cost.",
+          "Prepare the cost estimate for communication to the patient before the visit.",
+          "File the complete verification record in the patient chart."
+        ],
+        "tags": ["healthcare", "billing"]
+      }
+    ]
+  },
+  {
+    "chain_name": "referral-management-workflow",
+    "description": "Manage patient referrals from receipt through scheduling, visit, and records return to the referring provider.",
+    "domain": "healthcare",
+    "tags": ["healthcare", "practice-management", "referral"],
+    "steps": [
+      {
+        "flow_name": "referral-intake-verification",
+        "description": "Receive the referral and verify the authorization and patient information.",
+        "inputs": [
+          {"name": "referral-document", "desc": "Referral order from the referring provider"},
+          {"name": "patient-info", "desc": "Patient demographics and insurance information"}
+        ],
+        "outputs": [
+          {"name": "verified-referral", "desc": "Referral with confirmed authorization, patient identity, and insurance eligibility"},
+          {"name": "referral-issues", "desc": "Any problems with the referral (expired, wrong provider, missing info)"}
+        ],
+        "process": [
+          "Verify the referring provider's information and the referral reason.",
+          "Confirm the referral authorization number and expiration date with the payer.",
+          "Verify the patient's identity and insurance eligibility for the referred service.",
+          "Flag any issues that need resolution before scheduling."
+        ],
+        "tags": ["healthcare", "referral"]
+      },
+      {
+        "flow_name": "referral-scheduling",
+        "description": "Schedule the referred patient for the appropriate visit type.",
+        "inputs": [
+          {"name": "verified-referral", "desc": "Confirmed referral with authorization"},
+          {"name": "patient-info", "desc": "Patient contact and insurance information"}
+        ],
+        "outputs": [
+          {"name": "scheduled-appointment", "desc": "Appointment date, time, provider, and location"},
+          {"name": "pre-visit-packet", "desc": "Instructions and forms sent to the patient before the visit"}
+        ],
+        "process": [
+          "Match the referral to the appropriate provider and visit type.",
+          "Schedule the appointment within the authorization timeframe.",
+          "Send the patient the appointment confirmation and pre-visit instructions.",
+          "Request relevant records from the referring provider."
+        ],
+        "tags": ["healthcare", "scheduling"]
+      },
+      {
+        "flow_name": "post-visit-referral-closeout",
+        "description": "Complete the referral by sending records and a consult report back to the referring provider.",
+        "inputs": [
+          {"name": "scheduled-appointment", "desc": "The appointment record"},
+          {"name": "verified-referral", "desc": "The original referral for context"}
+        ],
+        "outputs": [
+          {"name": "consult-report", "desc": "Report sent to the referring provider with findings and recommendations"},
+          {"name": "referral-tracking-record", "desc": "Complete referral record from intake through closeout"}
+        ],
+        "process": [
+          "After the visit, prepare the consult report with findings, diagnoses, and recommendations.",
+          "Send the consult report to the referring provider within the agreed timeframe.",
+          "Update the referral tracking record with the visit outcome and report sent date.",
+          "Close the referral in the tracking system."
+        ],
+        "tags": ["healthcare", "referral"]
+      }
+    ]
+  },
+  {
+    "chain_name": "clinic-appointment-scheduling",
+    "description": "Schedule clinic appointments by matching visit type to provider availability, verifying insurance, and managing the waitlist.",
+    "domain": "healthcare",
+    "tags": ["healthcare", "practice-management", "scheduling"],
+    "steps": [
+      {
+        "flow_name": "scheduling-request-intake",
+        "description": "Receive and categorize the scheduling request by visit type and urgency.",
+        "inputs": [
+          {"name": "scheduling-request", "desc": "Patient's request for an appointment (phone, portal, in-person, referral)"},
+          {"name": "patient-record", "desc": "Patient demographics and insurance on file"}
+        ],
+        "outputs": [
+          {"name": "categorized-request", "desc": "Request categorized by visit type (new, follow-up, procedure, urgent) and urgency"},
+          {"name": "scheduling-constraints", "desc": "Constraints on scheduling (specific provider, insurance network, authorization needed)"}
+        ],
+        "process": [
+          "Determine the visit type from the patient's reason for the appointment.",
+          "Check urgency (routine, urgent, same-day).",
+          "Identify scheduling constraints (provider preference, insurance network, referral/authorization).",
+          "Verify the patient's insurance is active and in-network."
+        ],
+        "tags": ["healthcare", "scheduling"]
+      },
+      {
+        "flow_name": "provider-slot-matching",
+        "description": "Match the request to available provider time slots based on visit type and constraints.",
+        "inputs": [
+          {"name": "categorized-request", "desc": "Categorized appointment request"},
+          {"name": "scheduling-constraints", "desc": "Constraints on scheduling"}
+        ],
+        "outputs": [
+          {"name": "offered-slots", "desc": "List of available appointment slots that meet the criteria"},
+          {"name": "waitlist-option", "desc": "Waitlist position if no immediate slots are available"}
+        ],
+        "process": [
+          "Search the scheduling system for open slots matching the visit type and provider.",
+          "Filter by insurance network and authorization status.",
+          "Offer the patient the earliest available slots.",
+          "If no slots are available within the target timeframe, offer a waitlist position."
+        ],
+        "tags": ["healthcare", "scheduling"]
+      },
+      {
+        "flow_name": "appointment-confirmation-prep",
+        "description": "Book the appointment and send confirmation with pre-visit instructions.",
+        "inputs": [
+          {"name": "offered-slots", "desc": "Available slots presented to the patient"},
+          {"name": "patient-record", "desc": "Patient contact information"}
+        ],
+        "outputs": [
+          {"name": "booked-appointment", "desc": "Confirmed appointment with date, time, provider, location, and visit type"},
+          {"name": "scheduling-record", "desc": "Complete scheduling record including waitlist management"}
+        ],
+        "process": [
+          "Book the selected slot and update the provider's schedule.",
+          "Send the patient the appointment confirmation via their preferred channel (text, email, portal).",
+          "Include pre-visit instructions (forms, fasting, what to bring).",
+          "Set up the appointment reminder sequence (48 hours, 24 hours before)."
+        ],
+        "tags": ["healthcare", "scheduling"]
+      }
+    ]
+  },
+  {
+    "chain_name": "prior-authorization-process",
+    "description": "Obtain prior authorization from an insurer for a medical service, from documentation gathering through approval and communication.",
+    "domain": "healthcare",
+    "tags": ["healthcare", "practice-management", "authorization", "insurance"],
+    "steps": [
+      {
+        "flow_name": "auth-requirement-identification",
+        "description": "Identify the services requiring prior authorization and the payer's submission requirements.",
+        "inputs": [
+          {"name": "planned-services", "desc": "List of planned services or procedures with CPT codes"},
+          {"name": "patient-insurance", "desc": "Patient's insurance plan and payer information"}
+        ],
+        "outputs": [
+          {"name": "auth-requirements", "desc": "Which services need authorization, the payer's submission method, and required documentation"},
+          {"name": "timeline", "desc": "Expected turnaround time and any urgency options"}
+        ],
+        "process": [
+          "Cross-reference the planned CPT codes against the payer's authorization list.",
+          "Identify the payer's submission method (portal, fax, phone).",
+          "List the required clinical documentation for each service.",
+          "Note the standard and expedited turnaround times."
+        ],
+        "tags": ["healthcare", "authorization"]
+      },
+      {
+        "flow_name": "clinical-documentation-assembly",
+        "description": "Gather and organize the clinical documentation required for the authorization submission.",
+        "inputs": [
+          {"name": "auth-requirements", "desc": "Required documentation list from the payer"},
+          {"name": "patient-insurance", "desc": "Patient and insurance identifiers"}
+        ],
+        "outputs": [
+          {"name": "auth-package", "desc": "Complete authorization submission package with clinical notes, test results, and payer forms"},
+          {"name": "missing-items", "desc": "Any documentation still needed before submission"}
+        ],
+        "process": [
+          "Pull the relevant clinical notes, imaging results, lab results, and referral from the patient record.",
+          "Complete the payer's authorization request form.",
+          "Write the clinical rationale or letter of medical necessity if required.",
+          "Verify the package is complete before submission."
+        ],
+        "tags": ["healthcare", "authorization"]
+      },
+      {
+        "flow_name": "auth-submission-tracking",
+        "description": "Submit the authorization request and track it through the payer's review process.",
+        "inputs": [
+          {"name": "auth-package", "desc": "Complete authorization submission"},
+          {"name": "timeline", "desc": "Expected turnaround time"}
+        ],
+        "outputs": [
+          {"name": "auth-status", "desc": "Current authorization status (submitted, in review, approved, denied, peer review requested)"},
+          {"name": "auth-tracking-number", "desc": "Payer's reference number for the authorization request"}
+        ],
+        "process": [
+          "Submit the authorization package through the payer's required channel.",
+          "Record the submission date, tracking number, and expected decision date.",
+          "Follow up with the payer if no response by the expected date.",
+          "Respond to any payer requests for additional information within 24 hours."
+        ],
+        "tags": ["healthcare", "authorization"]
+      },
+      {
+        "flow_name": "auth-decision-communication",
+        "description": "Communicate the authorization decision to the patient and scheduling team, and handle denials.",
+        "inputs": [
+          {"name": "auth-status", "desc": "Authorization decision from the payer"},
+          {"name": "auth-tracking-number", "desc": "Payer reference number"}
+        ],
+        "outputs": [
+          {"name": "authorization-record", "desc": "Complete authorization record with decision, dates, and any appeal outcome"},
+          {"name": "scheduling-clearance", "desc": "Clearance for scheduling (approved) or hold notice (denied/pending appeal)"}
+        ],
+        "process": [
+          "If approved, record the authorization number, approved services, and validity dates.",
+          "Notify the scheduling team to proceed with booking.",
+          "If denied, review the denial reason and decide whether to appeal or pursue alternatives.",
+          "Communicate the outcome to the patient, including any financial implications."
+        ],
+        "tags": ["healthcare", "authorization"]
+      }
+    ]
+  },
+  {
+    "chain_name": "patient-collections-workflow",
+    "description": "Collect patient balances after insurance adjudication through statements, reminders, payment plans, and escalation.",
+    "domain": "healthcare",
+    "tags": ["healthcare", "practice-management", "billing", "collections"],
+    "steps": [
+      {
+        "flow_name": "patient-statement-generation",
+        "description": "Generate the patient statement after insurance has processed the claim.",
+        "inputs": [
+          {"name": "adjudicated-claims", "desc": "Claims with insurance payment applied and remaining patient balance"},
+          {"name": "patient-account", "desc": "Patient account information and contact details"}
+        ],
+        "outputs": [
+          {"name": "patient-statement", "desc": "Itemized statement showing services, insurance payments, adjustments, and patient balance due"},
+          {"name": "balance-summary", "desc": "Total balance due, age of charges, and payment due date"}
+        ],
+        "process": [
+          "Calculate the patient responsibility from the ERA/EOB (copay, coinsurance, deductible, non-covered).",
+          "Generate the itemized statement with service dates, descriptions, and amounts.",
+          "Set the payment due date (typically 30 days from statement date).",
+          "Send the statement via the patient's preferred method (mail, email, portal)."
+        ],
+        "tags": ["healthcare", "collections"]
+      },
+      {
+        "flow_name": "collections-follow-up-sequence",
+        "description": "Send follow-up reminders and contact the patient about unpaid balances.",
+        "inputs": [
+          {"name": "balance-summary", "desc": "Outstanding balance and aging information"},
+          {"name": "patient-account", "desc": "Patient contact details and payment history"}
+        ],
+        "outputs": [
+          {"name": "follow-up-record", "desc": "Record of all collection contacts (dates, methods, responses)"},
+          {"name": "payment-arrangement", "desc": "Payment plan or payment made, if any"}
+        ],
+        "process": [
+          "Send the second statement at 30 days past due with a reminder notice.",
+          "Make a phone call at 60 days past due to discuss payment options.",
+          "Offer a payment plan for balances the patient cannot pay in full.",
+          "Send a final notice at 90 days warning of potential referral to collections."
+        ],
+        "tags": ["healthcare", "collections"]
+      },
+      {
+        "flow_name": "collections-escalation",
+        "description": "Escalate unresolved balances to an external collections agency or write off as bad debt.",
+        "inputs": [
+          {"name": "follow-up-record", "desc": "History of collection attempts"},
+          {"name": "balance-summary", "desc": "Remaining unpaid balance and age"}
+        ],
+        "outputs": [
+          {"name": "collections-record", "desc": "Final disposition of the balance (paid, payment plan, sent to agency, written off)"},
+          {"name": "collections-report", "desc": "Summary of collection outcomes for the billing cycle"}
+        ],
+        "process": [
+          "Review the account for any remaining insurance follow-up before escalating.",
+          "For balances over the threshold and older than 120 days, refer to the collections agency.",
+          "For small balances below the collection threshold, write off as bad debt.",
+          "Record the final disposition and update the patient account."
+        ],
+        "tags": ["healthcare", "collections"]
+      }
+    ]
+  },
+  {
+    "chain_name": "provider-credentialing",
+    "description": "Credential a healthcare provider with insurance payers, from document collection through approval and re-credentialing.",
+    "domain": "healthcare",
+    "tags": ["healthcare", "practice-management", "credentialing"],
+    "steps": [
+      {
+        "flow_name": "credentialing-document-collection",
+        "description": "Collect and verify the provider's credentialing documents.",
+        "inputs": [
+          {"name": "provider-info", "desc": "Provider name, NPI, specialty, and practice affiliation"},
+          {"name": "credentialing-checklist", "desc": "List of required documents by payer"}
+        ],
+        "outputs": [
+          {"name": "provider-file", "desc": "Complete credentialing file with all required documents verified"},
+          {"name": "document-gaps", "desc": "Any missing or expired documents that need to be obtained"}
+        ],
+        "process": [
+          "Collect the provider's licenses, DEA certificate, board certifications, and malpractice insurance.",
+          "Verify education, training, and work history.",
+          "Obtain the malpractice claims history and any disciplinary actions.",
+          "Check the NPDB, OIG exclusion list, and state sanctions."
+        ],
+        "tags": ["healthcare", "credentialing"]
+      },
+      {
+        "flow_name": "caqh-profile-management",
+        "description": "Complete and maintain the provider's CAQH ProView profile.",
+        "inputs": [
+          {"name": "provider-file", "desc": "Verified credentialing documents"}
+        ],
+        "outputs": [
+          {"name": "caqh-profile", "desc": "Completed CAQH profile with attestation"},
+          {"name": "caqh-id", "desc": "Provider's CAQH ID number"}
+        ],
+        "process": [
+          "Create or update the CAQH ProView profile with all provider information.",
+          "Upload supporting documents (licenses, insurance, certifications).",
+          "Complete the attestation and authorize payer access.",
+          "Set the re-attestation reminder (every 120 days)."
+        ],
+        "tags": ["healthcare", "credentialing"]
+      },
+      {
+        "flow_name": "payer-enrollment-submission",
+        "description": "Submit credentialing applications to each insurance payer.",
+        "inputs": [
+          {"name": "caqh-profile", "desc": "Completed CAQH profile"},
+          {"name": "provider-info", "desc": "Provider and practice information"}
+        ],
+        "outputs": [
+          {"name": "enrollment-tracker", "desc": "Tracker with submission dates, payer contacts, and status for each application"},
+          {"name": "enrollment-issues", "desc": "Any rejections or requests for additional information"}
+        ],
+        "process": [
+          "Submit the enrollment application to each target payer (portal, fax, or CAQH delegation).",
+          "Record the submission date and expected turnaround for each payer.",
+          "Follow up on applications at 30 and 60 days if no response.",
+          "Respond to payer requests for additional information within 48 hours."
+        ],
+        "tags": ["healthcare", "credentialing"]
+      },
+      {
+        "flow_name": "credentialing-approval-maintenance",
+        "description": "Record approvals and maintain the re-credentialing calendar.",
+        "inputs": [
+          {"name": "enrollment-tracker", "desc": "Status of each payer application"}
+        ],
+        "outputs": [
+          {"name": "credentialing-record", "desc": "Complete credentialing record with all payer participation dates and contract terms"},
+          {"name": "recredentialing-calendar", "desc": "Calendar of upcoming re-credentialing dates and document expiration dates"}
+        ],
+        "process": [
+          "Record the effective date and participation terms for each approved payer.",
+          "Set up the re-credentialing calendar (typically every 2 to 3 years per payer).",
+          "Track document expiration dates (licenses, malpractice insurance, DEA) and set renewal reminders.",
+          "Maintain the master credentialing file for audits and re-credentialing."
+        ],
+        "tags": ["healthcare", "credentialing"]
+      }
+    ]
+  },
+  {
+    "chain_name": "clinical-quality-reporting",
+    "description": "Report clinical quality measures for regulatory programs from measure identification through data collection, calculation, and submission.",
+    "domain": "healthcare",
+    "tags": ["healthcare", "practice-management", "quality", "reporting"],
+    "steps": [
+      {
+        "flow_name": "quality-program-identification",
+        "description": "Identify the applicable quality reporting programs and measures for the practice.",
+        "inputs": [
+          {"name": "practice-profile", "desc": "Practice type, specialty, payer mix, and provider count"},
+          {"name": "reporting-year", "desc": "The calendar year for which quality measures are being reported"}
+        ],
+        "outputs": [
+          {"name": "applicable-programs", "desc": "List of programs the practice must or should report to (MIPS, HEDIS, state programs)"},
+          {"name": "selected-measures", "desc": "Specific measures selected for reporting, with definitions and data requirements"}
+        ],
+        "process": [
+          "Identify mandatory programs based on practice size and payer participation (MIPS for Medicare, HEDIS for commercial).",
+          "Select the measures that align with the practice's specialty and patient population.",
+          "Review each measure's specifications (numerator, denominator, exclusions, data source).",
+          "Create the reporting timeline with submission deadlines."
+        ],
+        "tags": ["healthcare", "quality"]
+      },
+      {
+        "flow_name": "quality-data-collection",
+        "description": "Collect the clinical data needed to calculate the selected quality measures.",
+        "inputs": [
+          {"name": "selected-measures", "desc": "Measures with definitions and data requirements"},
+          {"name": "reporting-year", "desc": "Reporting period"}
+        ],
+        "outputs": [
+          {"name": "measure-data", "desc": "Extracted clinical data organized by measure (eligible population, numerator events, exclusions)"},
+          {"name": "data-quality-issues", "desc": "Data gaps or quality problems that could affect measure performance"}
+        ],
+        "process": [
+          "Extract the eligible patient population for each measure from the EHR.",
+          "Identify the numerator events (patients who received the recommended care).",
+          "Apply the exclusion criteria.",
+          "Flag any data quality issues (missing documentation, incomplete records)."
+        ],
+        "tags": ["healthcare", "quality"]
+      },
+      {
+        "flow_name": "quality-measure-calculation",
+        "description": "Calculate the performance rates for each quality measure.",
+        "inputs": [
+          {"name": "measure-data", "desc": "Clinical data organized by measure"}
+        ],
+        "outputs": [
+          {"name": "performance-rates", "desc": "Calculated performance rate for each measure (numerator/denominator, percentage, benchmark comparison)"},
+          {"name": "improvement-opportunities", "desc": "Measures where performance is below benchmark, with root cause notes"}
+        ],
+        "process": [
+          "Calculate the performance rate for each measure (numerator divided by denominator).",
+          "Compare the rates against national benchmarks and prior year performance.",
+          "Identify measures below the benchmark and investigate the root causes.",
+          "Document improvement opportunities for the quality improvement team."
+        ],
+        "tags": ["healthcare", "quality"]
+      },
+      {
+        "flow_name": "quality-report-submission",
+        "description": "Submit the quality reports to the applicable programs and archive the documentation.",
+        "inputs": [
+          {"name": "performance-rates", "desc": "Calculated measure performance"},
+          {"name": "applicable-programs", "desc": "Programs and submission requirements"}
+        ],
+        "outputs": [
+          {"name": "submission-confirmation", "desc": "Confirmation of successful submission to each program with reference numbers"},
+          {"name": "quality-reporting-record", "desc": "Complete quality reporting record for the year including data, calculations, and submissions"}
+        ],
+        "process": [
+          "Format the data according to each program's submission specifications (QRDA, flat file, portal entry).",
+          "Submit the reports before the deadline for each program.",
+          "Verify the submission was accepted and record the confirmation.",
+          "Archive the complete reporting package for audit purposes."
+        ],
+        "tags": ["healthcare", "quality"]
+      }
+    ]
+  },
+  {
+    "chain_name": "practice-revenue-cycle",
+    "description": "Manage the practice revenue cycle end to end, from patient registration through final payment, with metrics monitoring and process improvement.",
+    "domain": "healthcare",
+    "tags": ["healthcare", "practice-management", "revenue-cycle", "finance"],
+    "steps": [
+      {
+        "flow_name": "revenue-cycle-baseline",
+        "description": "Establish baseline metrics for the practice's revenue cycle performance.",
+        "inputs": [
+          {"name": "practice-financial-data", "desc": "Billing data including charges, payments, adjustments, AR aging, and denial rates"},
+          {"name": "reporting-period", "desc": "The time period to analyze (month, quarter, year)"}
+        ],
+        "outputs": [
+          {"name": "baseline-metrics", "desc": "Key revenue cycle metrics: days in AR, clean claim rate, denial rate, collection rate, cost to collect"},
+          {"name": "benchmark-comparison", "desc": "How the practice compares to industry benchmarks by specialty"}
+        ],
+        "process": [
+          "Calculate days in accounts receivable (total AR divided by average daily charges).",
+          "Calculate the clean claim rate (claims accepted on first submission divided by total claims).",
+          "Calculate the denial rate (denied claims divided by total claims) and net collection rate.",
+          "Compare each metric against MGMA or specialty-specific benchmarks."
+        ],
+        "tags": ["healthcare", "revenue-cycle"]
+      },
+      {
+        "flow_name": "revenue-cycle-bottleneck-analysis",
+        "description": "Identify the bottlenecks in the revenue cycle that are reducing cash flow or increasing costs.",
+        "inputs": [
+          {"name": "baseline-metrics", "desc": "Current revenue cycle metrics"},
+          {"name": "benchmark-comparison", "desc": "Gap between current performance and benchmarks"}
+        ],
+        "outputs": [
+          {"name": "bottleneck-list", "desc": "Ranked list of revenue cycle bottlenecks with estimated financial impact"},
+          {"name": "root-causes", "desc": "Root causes identified for each bottleneck"}
+        ],
+        "process": [
+          "Analyze AR aging to identify where claims are stalling (0-30, 31-60, 61-90, 90+ days).",
+          "Review denial reasons by category to find the highest-volume and highest-dollar denial types.",
+          "Examine the front-end processes (registration errors, insurance verification gaps, authorization delays).",
+          "Rank the bottlenecks by financial impact and fixability."
+        ],
+        "tags": ["healthcare", "revenue-cycle"]
+      },
+      {
+        "flow_name": "revenue-cycle-improvement-plan",
+        "description": "Design and implement improvements to address the identified bottlenecks.",
+        "inputs": [
+          {"name": "bottleneck-list", "desc": "Ranked bottlenecks with financial impact"},
+          {"name": "root-causes", "desc": "Root causes for each bottleneck"}
+        ],
+        "outputs": [
+          {"name": "improvement-actions", "desc": "Specific actions to address each bottleneck, with owners, deadlines, and expected impact"},
+          {"name": "monitoring-plan", "desc": "How to track whether the improvements are working"}
+        ],
+        "process": [
+          "For each bottleneck, design a specific corrective action (training, process change, technology, staffing).",
+          "Assign an owner and deadline for each action.",
+          "Estimate the expected improvement in the target metric.",
+          "Define how progress will be measured (weekly AR review, monthly denial trending, quarterly collection rate)."
+        ],
+        "tags": ["healthcare", "revenue-cycle"]
+      },
+      {
+        "flow_name": "revenue-cycle-reporting",
+        "description": "Produce the recurring revenue cycle report for practice leadership.",
+        "inputs": [
+          {"name": "improvement-actions", "desc": "Actions in progress and their status"},
+          {"name": "baseline-metrics", "desc": "Baseline for comparison"}
+        ],
+        "outputs": [
+          {"name": "revenue-cycle-report", "desc": "Monthly report with current metrics, trend lines, improvement action status, and financial impact"},
+          {"name": "executive-summary", "desc": "One-page summary of revenue cycle health for leadership"}
+        ],
+        "process": [
+          "Pull the current month's metrics and compare to baseline and prior month.",
+          "Report the status of each improvement action (on track, delayed, completed).",
+          "Calculate the financial impact of completed improvements.",
+          "Produce the executive summary highlighting wins, risks, and next steps."
+        ],
+        "tags": ["healthcare", "revenue-cycle"]
+      }
+    ]
+  },
+  {
+    "chain_name": "telehealth-program-setup",
+    "description": "Set up a telehealth program for a medical practice, from platform selection through workflow configuration, payer verification, and launch.",
+    "domain": "healthcare",
+    "tags": ["healthcare", "practice-management", "telehealth"],
+    "steps": [
+      {
+        "flow_name": "telehealth-platform-selection",
+        "description": "Evaluate and select a telehealth platform based on practice requirements.",
+        "inputs": [
+          {"name": "practice-requirements", "desc": "Practice size, specialties, EHR system, and telehealth use cases"},
+          {"name": "compliance-requirements", "desc": "HIPAA, state licensing, and payer requirements for telehealth"}
+        ],
+        "outputs": [
+          {"name": "platform-selection", "desc": "Selected telehealth platform with rationale"},
+          {"name": "platform-comparison", "desc": "Comparison of evaluated platforms on key criteria (EHR integration, cost, features, compliance)"}
+        ],
+        "process": [
+          "Define the must-have features (EHR integration, scheduling, patient portal, mobile access, recording).",
+          "Evaluate platforms against the requirements (video quality, HIPAA compliance, cost, ease of use).",
+          "Check EHR integration compatibility and implementation effort.",
+          "Select the platform and document the rationale."
+        ],
+        "tags": ["healthcare", "telehealth"]
+      },
+      {
+        "flow_name": "telehealth-workflow-design",
+        "description": "Design the virtual visit workflow from scheduling through follow-up.",
+        "inputs": [
+          {"name": "platform-selection", "desc": "Selected telehealth platform"},
+          {"name": "practice-requirements", "desc": "Practice workflows and visit types"}
+        ],
+        "outputs": [
+          {"name": "telehealth-workflow", "desc": "Step-by-step workflow for virtual visits (scheduling, intake, consent, visit, documentation, follow-up)"},
+          {"name": "consent-forms", "desc": "Telehealth-specific consent forms for patient signature"}
+        ],
+        "process": [
+          "Map the virtual visit workflow (scheduling, pre-visit tech check, intake, consent, video visit, post-visit).",
+          "Design the patient-facing process (how to join, what to prepare, technical requirements).",
+          "Create the telehealth consent form covering risks, limitations, and privacy.",
+          "Define the documentation requirements for telehealth visits."
+        ],
+        "tags": ["healthcare", "telehealth"]
+      },
+      {
+        "flow_name": "telehealth-payer-coverage",
+        "description": "Verify payer coverage and reimbursement rules for telehealth visits.",
+        "inputs": [
+          {"name": "telehealth-workflow", "desc": "Planned visit types and workflow"},
+          {"name": "compliance-requirements", "desc": "State and federal telehealth regulations"}
+        ],
+        "outputs": [
+          {"name": "payer-coverage-matrix", "desc": "Matrix of payer coverage by visit type, CPT code, place of service, and modifier requirements"},
+          {"name": "billing-guidelines", "desc": "Billing instructions for telehealth visits by payer"}
+        ],
+        "process": [
+          "Check each major payer's telehealth coverage policies (covered visit types, originating site rules, provider types).",
+          "Identify the correct CPT codes, place of service codes, and modifiers for telehealth billing.",
+          "Verify state-specific telehealth regulations (licensure, prescribing, consent).",
+          "Build the payer coverage matrix and billing guidelines for the billing team."
+        ],
+        "tags": ["healthcare", "telehealth"]
+      },
+      {
+        "flow_name": "telehealth-launch-monitoring",
+        "description": "Train staff, launch the program, and monitor adoption and outcomes.",
+        "inputs": [
+          {"name": "telehealth-workflow", "desc": "Designed virtual visit workflow"},
+          {"name": "billing-guidelines", "desc": "Billing instructions for telehealth"}
+        ],
+        "outputs": [
+          {"name": "launch-checklist", "desc": "Completed launch checklist including training, testing, and go-live confirmation"},
+          {"name": "telehealth-program-document", "desc": "Complete program documentation including workflow, billing, compliance, and monitoring plan"}
+        ],
+        "process": [
+          "Train providers and staff on the platform, workflow, documentation, and billing.",
+          "Conduct test visits to verify the technology, workflow, and documentation.",
+          "Launch with a defined set of visit types and monitor volume, no-show rates, and patient satisfaction.",
+          "Review telehealth claim denials monthly and adjust billing practices as needed."
+        ],
+        "tags": ["healthcare", "telehealth"]
+      }
+    ]
+  }
+]
