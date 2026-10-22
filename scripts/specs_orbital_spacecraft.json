@@ -1,0 +1,614 @@
+[
+  {
+    "chain_name": "orbit-design-methodology",
+    "description": "Select and characterize an orbit from mission requirements: map needs to Keplerian elements, compare orbit regimes, analyze ground coverage, eclipse timing, radiation exposure, and station-keeping budgets.",
+    "domain": "aerospace",
+    "tags": ["orbital-mechanics", "mission-design", "space-systems", "hardware"],
+    "steps": [
+      {
+        "flow_name": "mission-requirements-to-orbital-parameters",
+        "description": "Translate mission requirements (coverage, revisit time, latency, payload field of view, launch vehicle capacity) into orbital parameter constraints: altitude range, inclination range, eccentricity bounds, and RAAN requirements.",
+        "inputs": [
+          {"name": "mission-objectives", "desc": "Coverage area, revisit time, data latency, payload pointing needs, launch mass budget"},
+          {"name": "launch-vehicle-constraints", "desc": "Fairing diameter, payload mass to orbit by inclination, available launch sites"}
+        ],
+        "outputs": [
+          {"name": "altitude-range", "desc": "Acceptable altitude band with rationale (drag vs coverage vs radiation)"},
+          {"name": "inclination-constraints", "desc": "Required inclination range from coverage geometry and launch site latitude"},
+          {"name": "eccentricity-bounds", "desc": "Circular vs elliptical trade-off based on dwell time and altitude variation needs"}
+        ],
+        "process": [
+          "Calculate minimum altitude from atmospheric drag lifetime requirement using ballistic coefficient and solar activity assumptions. Use the Harris-Priester or Jacchia atmospheric model for density at candidate altitudes.",
+          "Determine inclination from ground coverage requirement. For global coverage, inclination must equal or exceed the latitude of the highest-latitude target. For sun-synchronous orbit, calculate the required inclination from the J2 precession rate equation: dOmega/dt = -3/2 * J2 * (R_e/a)^2 * n * cos(i) and set equal to 360 deg/year.",
+          "Evaluate orbit regime trade-offs: LEO (200-2000 km) for low latency and high resolution but short contact time; MEO (2000-35786 km) for navigation constellations; GEO (35786 km) for continuous coverage of one hemisphere; HEO (Molniya, Tundra) for high-latitude dwell. Quantify contact time per pass using the Earth central angle and orbit period.",
+          "Assess radiation environment at each candidate altitude using AP-8/AE-8 trapped particle models or the more recent AP-9/AE-9. Flag the inner Van Allen belt (1000-6000 km) and South Atlantic Anomaly for LEO below 600 km inclinations above 30 degrees.",
+          "Calculate eclipse fraction as a function of altitude and beta angle. For circular LEO, maximum eclipse fraction is roughly arccos(R_e / (R_e + h)) / pi. Sun-synchronous dawn-dusk orbits minimize eclipse for certain LTAN choices."
+        ],
+        "tags": ["orbital-mechanics", "mission-design"]
+      },
+      {
+        "flow_name": "orbit-regime-selection-and-comparison",
+        "description": "Compare candidate orbit regimes quantitatively across coverage, access time, radiation dose, eclipse fraction, delta-v for orbit maintenance, and launch cost. Produce a scored comparison matrix.",
+        "inputs": [
+          {"name": "altitude-range", "desc": "Acceptable altitude band from requirements analysis"},
+          {"name": "inclination-constraints", "desc": "Required inclination range"},
+          {"name": "eccentricity-bounds", "desc": "Circular vs elliptical constraints"}
+        ],
+        "outputs": [
+          {"name": "candidate-orbits", "desc": "Ranked list of 2-4 candidate orbits with full Keplerian elements and performance scores"},
+          {"name": "orbit-comparison-matrix", "desc": "Quantitative comparison across coverage, eclipse, radiation, maintenance delta-v, and launch cost"}
+        ],
+        "process": [
+          "For each candidate orbit, compute the orbit period T = 2*pi*sqrt(a^3/mu) and ground track repeat cycle. For repeating ground track orbits, find altitude where the number of revolutions per day is a rational fraction (e.g., 15 + 1/16 rev/day for a 16-day repeat).",
+          "Calculate instantaneous access area using the Earth central angle rho = arccos(R_e / (R_e + h)) and the swath width from payload field of view. For a constellation, compute time-averaged revisit using Walker analysis or numerical simulation.",
+          "Estimate annual radiation dose at each candidate orbit using SPENVIS or equivalent. Total ionizing dose behind a reference 100-mil aluminum shield. Flag orbits that exceed typical component ratings (100 krad for rad-hard, 10-30 krad for commercial).",
+          "Compute orbit maintenance delta-v. For LEO, atmospheric drag makeup dominates: delta-v per year = integral of drag acceleration. Use the drag equation F_drag = 0.5 * rho * Cd * A * v^2 with the ballistic coefficient m/(Cd*A). For GEO, north-south station-keeping costs about 50 m/s per year.",
+          "Score each candidate orbit on a weighted matrix. Weight the criteria by mission priority (coverage vs cost vs radiation tolerance). Identify the Pareto-optimal candidates."
+        ],
+        "tags": ["trade-study", "orbital-mechanics"]
+      },
+      {
+        "flow_name": "constellation-design-analysis",
+        "description": "Design a multi-satellite constellation for the selected orbit regime: determine the number of orbital planes, satellites per plane, phasing, and inter-plane spacing using Walker notation or custom geometry.",
+        "inputs": [
+          {"name": "candidate-orbits", "desc": "Ranked orbits from regime selection"},
+          {"name": "orbit-comparison-matrix", "desc": "Quantitative comparison data"}
+        ],
+        "outputs": [
+          {"name": "constellation-geometry", "desc": "Walker notation (i:T/P/F) or custom description with all orbital elements per satellite"},
+          {"name": "coverage-analysis-results", "desc": "Time-averaged and worst-case revisit time, coverage percentage, contact duration statistics"},
+          {"name": "orbit-maintenance-budget", "desc": "Annual delta-v for drag makeup, station-keeping, and constellation maintenance maneuvers"}
+        ],
+        "process": [
+          "Select constellation type. Walker delta patterns distribute satellites uniformly across planes with equal RAAN spacing of 360/P degrees and a relative phase offset of F*360/T degrees. Walker star patterns use 180/P degree RAAN spacing for polar orbits. For non-uniform coverage requirements, custom patterns may outperform Walker.",
+          "Size the constellation. Minimum satellites for continuous single-coverage of a latitude band can be estimated from the street-of-coverage width and the number of orbital planes. For LEO global coverage, the Streets of Coverage formula gives N_planes = ceil(pi / (2 * lambda_street)) where lambda_street is the half-street width from the Earth central angle.",
+          "Run coverage simulation. For each point in a ground grid at the required latitude resolution, compute the access intervals over one constellation repeat period. Record the maximum revisit gap, mean revisit, and contact duration statistics. Vary the Walker F parameter to minimize worst-case revisit.",
+          "Compute differential drag effects within the constellation. Satellites at slightly different altitudes due to deployment dispersions will drift in mean anomaly. Calculate the differential drag acceleration and the required correction maneuvers to maintain phasing within tolerance.",
+          "Produce the orbit maintenance budget. Sum contributions from atmospheric drag makeup (dominant in LEO), east-west station-keeping (dominant for GEO), differential precession correction (for non-sun-synchronous LEO), and end-of-life disposal maneuver. Express as delta-v per year and propellant mass using the rocket equation with the selected propulsion system Isp."
+        ],
+        "tags": ["constellation-design", "coverage-analysis"]
+      }
+    ]
+  },
+  {
+    "chain_name": "orbital-maneuver-design",
+    "description": "Design orbital transfer maneuvers from current orbit to target orbit: evaluate Hohmann, bi-elliptic, and general two-impulse transfers, plan rendezvous and proximity operations, and handle interplanetary trajectory design.",
+    "domain": "aerospace",
+    "tags": ["orbital-mechanics", "trajectory-design", "astrodynamics", "hardware"],
+    "steps": [
+      {
+        "flow_name": "transfer-orbit-selection",
+        "description": "Compare transfer orbit options (Hohmann, bi-elliptic, general two-impulse, low-thrust spiral) for a given initial and target orbit, evaluating delta-v cost, transfer time, and operational complexity.",
+        "inputs": [
+          {"name": "initial-orbit", "desc": "Keplerian elements of the departure orbit"},
+          {"name": "target-orbit", "desc": "Keplerian elements of the destination orbit"},
+          {"name": "spacecraft-propulsion", "desc": "Thrust level, Isp, propellant mass available, engine restart capability"}
+        ],
+        "outputs": [
+          {"name": "transfer-options", "desc": "Ranked list of transfer strategies with delta-v, transfer time, and number of burns"},
+          {"name": "selected-transfer", "desc": "Chosen transfer with full burn sequence definition"}
+        ],
+        "process": [
+          "For coplanar circular-to-circular transfers, compute the Hohmann transfer delta-v: delta_v1 = sqrt(mu/r1) * (sqrt(2*r2/(r1+r2)) - 1) and delta_v2 = sqrt(mu/r2) * (1 - sqrt(2*r1/(r1+r2))). Transfer time is half the transfer orbit period.",
+          "Evaluate bi-elliptic transfer when r2/r1 > 11.94 (always cheaper than Hohmann) or in the range 11.94 > r2/r1 > sqrt(2)+1 (may be cheaper depending on intermediate apoapsis). The bi-elliptic uses three burns but the total delta-v can be less for large orbit ratio changes.",
+          "For plane changes, the delta-v for a simple plane change is 2*v*sin(theta/2) where theta is the plane change angle. Combined plane change with orbit raising at apoapsis is always cheaper: perform the plane change where velocity is lowest. Calculate the optimal split between the two burns.",
+          "For low-thrust transfers (electric propulsion), compute the spiral delta-v. For circular-to-circular, delta_v = sqrt(mu/r1) - sqrt(mu/r2), which is less than Hohmann delta-v but transfer time is much longer. Use Edelbaum's approximation for combined orbit raising and plane change: delta_v = sqrt(v1^2 + v2^2 - 2*v1*v2*cos(pi/2 * delta_i)).",
+          "For each option, calculate propellant mass from the rocket equation m_prop = m_dry * (exp(delta_v / (g0*Isp)) - 1). Compare total delta-v, transfer time, number of engine restarts, and operational risk."
+        ],
+        "tags": ["trajectory-design", "orbital-mechanics"]
+      },
+      {
+        "flow_name": "rendezvous-proximity-operations",
+        "description": "Design the rendezvous sequence from phasing orbit through approach, proximity operations, and docking using Clohessy-Wiltshire relative motion equations and safety constraints.",
+        "inputs": [
+          {"name": "transfer-options", "desc": "Available transfer strategies"},
+          {"name": "selected-transfer", "desc": "Chosen transfer approach"}
+        ],
+        "outputs": [
+          {"name": "rendezvous-sequence", "desc": "Complete burn sequence from phasing through final approach with hold points, delta-v per burn, and timing"},
+          {"name": "safety-analysis", "desc": "Passive safety assessment at each hold point, abort trajectory capability, collision avoidance"}
+        ],
+        "process": [
+          "Design the phasing orbit. To close a phase angle of delta_theta, lower (or raise) the orbit by delta_a such that after N orbits, the target phase is zero. The required semi-major axis difference is delta_a = a_target * (1 - ((N*2*pi - delta_theta)/(N*2*pi))^(2/3)).",
+          "Set up the approach sequence using Clohessy-Wiltshire (Hill's) equations for relative motion. The CW equations describe the linearized motion of the chaser relative to the target in the LVLH frame. In the radial direction: x_ddot - 2*n*z_dot - 3*n^2*x = f_x/m. Along-track: z_ddot + 2*n*x_dot = f_z/m.",
+          "Define hold points along the approach corridor. Typical sequence: start at -30 km range on the V-bar (velocity vector approach) or R-bar (radial approach), hold at -1 km, -200 m, -30 m, -10 m before final approach. At each hold point, verify passive safety: if the chaser loses thrust, will the natural drift maintain safe separation?",
+          "Design the final approach and docking. Constrain the approach velocity to decrease linearly with range (e.g., v_approach = 0.1% of range per second below 200 m). Account for sensor accuracy degradation at different ranges (lidar, camera, radar) and ensure control authority exceeds the largest expected dispersions.",
+          "Plan abort trajectories from each hold point. A retrograde delta-v equal to the current approach velocity plus a safety margin will open the range. Verify that abort from any point in the sequence does not create a collision risk for at least two orbit periods."
+        ],
+        "tags": ["rendezvous", "proximity-operations"]
+      },
+      {
+        "flow_name": "interplanetary-transfer-design",
+        "description": "Design interplanetary transfer trajectories using patched conics, pork chop plots, gravity assists, and three-body dynamics for lunar and planetary missions.",
+        "inputs": [
+          {"name": "rendezvous-sequence", "desc": "Near-Earth rendezvous capability if assembly required"},
+          {"name": "safety-analysis", "desc": "Departure orbit safety constraints"}
+        ],
+        "outputs": [
+          {"name": "interplanetary-trajectory", "desc": "Complete trajectory design with departure date, arrival date, delta-v at each maneuver, and flyby parameters"},
+          {"name": "launch-window-analysis", "desc": "Pork chop plot showing delta-v contours vs departure and arrival dates, optimal and backup windows"}
+        ],
+        "process": [
+          "Generate the pork chop plot. For a grid of departure dates and arrival dates spanning the synodic period, solve Lambert's problem to find the transfer orbit. For each (departure, arrival) pair, compute the departure excess velocity v_infinity and the arrival excess velocity. Plot C3 = v_infinity^2 contours.",
+          "Apply the patched conic method. Divide the trajectory into heliocentric and planetocentric segments. At Earth departure, the hyperbolic excess velocity determines the required injection delta-v from the parking orbit: delta_v = sqrt(v_infinity^2 + 2*mu_Earth/r_park) - v_circular. At arrival, compute the capture delta-v similarly.",
+          "Evaluate gravity assist opportunities. A flyby at a planet changes the heliocentric velocity by rotating the v_infinity vector by the turn angle delta = 2*arcsin(1/(1 + r_p*v_infinity^2/mu_planet)). The energy change depends on the flyby geometry. Sequence multiple flybys (e.g., Venus-Earth-Earth for outer planet missions) to reduce total delta-v.",
+          "For lunar missions, use three-body dynamics. The Earth-Moon L1 and L2 points provide low-energy transfer paths. A weak stability boundary transfer can reduce delta-v by 10-15% compared to a Hohmann-like direct transfer, at the cost of 2-3 months additional transit time. The ballistic capture approach exploits the Sun's gravitational perturbation.",
+          "Perform trajectory correction maneuver budgeting. Injection errors from the launch vehicle produce trajectory dispersions that grow with time. Size the TCM delta-v budget from 3-sigma injection errors and the trajectory sensitivity matrix. Plan TCM timing: TCM-1 typically at departure plus 1-2 days (largest correction), TCM-2 at midcourse, and final targeting TCMs near arrival."
+        ],
+        "tags": ["interplanetary", "trajectory-design"]
+      }
+    ]
+  },
+  {
+    "chain_name": "spacecraft-power-system-design",
+    "description": "Design the spacecraft electrical power system: size solar arrays from orbit and load profile, select and size batteries, design the power bus architecture, and perform end-of-life degradation analysis.",
+    "domain": "aerospace",
+    "tags": ["spacecraft", "power-systems", "space-systems", "hardware"],
+    "steps": [
+      {
+        "flow_name": "power-budget-and-load-analysis",
+        "description": "Build the spacecraft power budget from subsystem loads across all operating modes (nominal, safe, eclipse, peak), including margins and contingency.",
+        "inputs": [
+          {"name": "subsystem-power-estimates", "desc": "Power consumption per subsystem per operating mode"},
+          {"name": "orbit-parameters", "desc": "Altitude, inclination, eclipse fraction, beta angle range"}
+        ],
+        "outputs": [
+          {"name": "power-budget", "desc": "Complete power budget table with per-mode totals, margins, and peak vs average loads"},
+          {"name": "energy-storage-requirement", "desc": "Watt-hours required through eclipse, including depth-of-discharge constraint"}
+        ],
+        "process": [
+          "List every load by subsystem and operating mode. Include primary bus loads (avionics, payload, thermal control, propulsion valves, communication, attitude control) and secondary loads (deployment mechanisms, one-time actuations). Apply a 20% contingency to the sum of estimated loads for preliminary design; reduce to 5-10% as hardware selections mature.",
+          "Calculate the orbit-average power by weighting sunlight and eclipse mode powers by their fractional durations. For a circular LEO orbit, sunlight fraction is approximately 1 - (1/pi)*arccos(sqrt(h^2 + 2*R_e*h) / ((R_e+h)*cos(beta))). The power system must generate enough in sunlight to run sunlit loads AND recharge the battery.",
+          "Identify the peak power mode and its duration. If the peak substantially exceeds average, evaluate whether the bus capacitance or a brief battery supplement can handle it, or whether the solar array must be sized to peak.",
+          "Compute the eclipse energy storage requirement: E_eclipse = P_eclipse * T_eclipse / eta_discharge, where eta_discharge accounts for battery and power conditioning efficiency (typically 0.90-0.95). Add harness losses (2-5% depending on bus voltage and harness length).",
+          "Compile the power budget into a table with columns for each mode and rows for each subsystem, with totals, margins, and the required solar array output and battery capacity clearly stated."
+        ],
+        "tags": ["power-systems", "spacecraft"]
+      },
+      {
+        "flow_name": "solar-array-sizing-and-design",
+        "description": "Size the solar array to meet the power budget, accounting for cell efficiency, packing factor, temperature, radiation degradation, off-pointing losses, and end-of-life performance.",
+        "inputs": [
+          {"name": "power-budget", "desc": "Power budget with required array output"},
+          {"name": "energy-storage-requirement", "desc": "Eclipse energy needs"}
+        ],
+        "outputs": [
+          {"name": "solar-array-design", "desc": "Array area, cell type, string/parallel configuration, deployed geometry, mass estimate"},
+          {"name": "eol-power-analysis", "desc": "End-of-life power output accounting for all degradation factors"}
+        ],
+        "process": [
+          "Select the solar cell technology. Triple-junction GaAs (InGaP/GaAs/Ge) gives 30-32% BOL efficiency. Newer four-junction and inverted metamorphic cells reach 33-35%. Calculate the cell output power per unit area: P_cell = eta_cell * S * cos(theta), where S is the solar constant (1361 W/m^2) and theta is the sun angle.",
+          "Apply degradation factors to get from BOL to EOL power. Radiation degradation: use the equivalent 1 MeV electron fluence from the orbit radiation environment and the cell's remaining factor curve (typically 0.85-0.95 for 5-year LEO, 0.70-0.85 for 15-year GEO). Temperature coefficient: GaAs loses about 0.07-0.10% per degree C above 28C. UV degradation of coverglass: 1-2% over life. Micrometeoroid loss: 0.5-1% per year for large arrays.",
+          "Calculate the required array area: A = P_required / (P_cell_per_area * packing_factor * cos_losses * harness_losses * degradation_product), where packing factor is typically 0.85-0.90 for body-mounted and 0.90-0.95 for deployed panels.",
+          "Design the string architecture. Series strings set the bus voltage; parallel strings provide the current. Each string has cells in series to exceed the bus voltage plus diode and harness drops under worst-case (hot) conditions. Calculate the number of strings needed to meet EOL current requirements.",
+          "Determine the array geometry and deployment mechanism. Body-mounted arrays are simple but area-limited. Deployed rigid panels use hinged deployments. Flexible roll-out arrays save mass for large arrays. Calculate the array mass from the specific power (W/kg) of the selected technology: 40-80 W/kg for rigid panels, 100-200 W/kg for flexible."
+        ],
+        "tags": ["solar-array", "power-systems"]
+      },
+      {
+        "flow_name": "battery-and-power-bus-design",
+        "description": "Select and size the battery for eclipse and peak loads, design the power bus regulation topology, and perform the end-of-life analysis including cycle life and capacity fade.",
+        "inputs": [
+          {"name": "solar-array-design", "desc": "Array configuration and voltage characteristics"},
+          {"name": "eol-power-analysis", "desc": "EOL power margins"}
+        ],
+        "outputs": [
+          {"name": "battery-design", "desc": "Cell chemistry, capacity, series/parallel configuration, mass, charge/discharge protocol"},
+          {"name": "power-bus-architecture", "desc": "Bus topology (DET/PPT/MPPT), voltage, regulation scheme, fault protection"}
+        ],
+        "process": [
+          "Select battery chemistry. Li-ion is standard for modern spacecraft: specific energy 150-200 Wh/kg at cell level. For missions requiring extreme cycle life (LEO with 15 eclipses per day), select cells rated for >30,000 cycles at the intended depth of discharge. LiFePO4 offers longer cycle life at lower specific energy.",
+          "Size the battery capacity: C_batt = E_eclipse / (DOD_max * V_bus * eta_discharge). For LEO missions, DOD is typically limited to 20-30% for long life (>5 years). For GEO with two eclipse seasons per year, DOD can be 60-80%. Verify the cell discharge rate (C-rate) during peak load does not exceed the cell rating.",
+          "Design the power bus topology. Direct Energy Transfer (DET) is simplest: excess solar power is shunted. Peak Power Tracking (PPT) uses a DC-DC converter to operate the array at peak power point, more efficient for varying conditions. Maximum Power Point Tracking (MPPT) is the most efficient variant. For most spacecraft above 1 kW, a regulated 28V or unregulated 22-34V bus is standard; larger spacecraft use 50V or 100V.",
+          "Design fault protection. Include battery charge control (constant current then constant voltage), over-discharge protection with load shedding priorities, bus under-voltage disconnect for non-essential loads, and solar array string isolation in case of short circuits. Size the bus capacitance for transient load steps.",
+          "Perform the end-of-life analysis. Model battery capacity fade from calendar aging (storage temperature) and cycle aging (DOD, temperature, C-rate). Use the manufacturer's capacity retention curve or an empirical model. Verify that at EOL (reduced array output plus faded battery), the power system still meets the minimum required power in the worst-case eclipse season."
+        ],
+        "tags": ["battery", "power-bus", "spacecraft"]
+      }
+    ]
+  },
+  {
+    "chain_name": "spacecraft-thermal-design",
+    "description": "Design the spacecraft thermal control system: build the thermal balance model, select surface finishes and insulation, size heaters and radiators, design heat transport, and plan thermal vacuum testing.",
+    "domain": "aerospace",
+    "tags": ["spacecraft", "thermal-control", "space-systems", "hardware"],
+    "steps": [
+      {
+        "flow_name": "thermal-environment-and-balance",
+        "description": "Characterize the orbital thermal environment and establish the energy balance equation for each spacecraft zone, determining the hot and cold design cases.",
+        "inputs": [
+          {"name": "orbit-parameters", "desc": "Altitude, inclination, eclipse fraction, beta angle range, mission duration"},
+          {"name": "spacecraft-geometry", "desc": "External surface areas, orientations, internal component layout and power dissipation"}
+        ],
+        "outputs": [
+          {"name": "thermal-environment", "desc": "Solar, albedo, and Earth IR heat fluxes for hot and cold cases"},
+          {"name": "energy-balance-model", "desc": "Nodal thermal model with boundary conditions for each design case"}
+        ],
+        "process": [
+          "Define the external heat inputs. Direct solar: q_solar = alpha_s * S * A_projected * cos(theta), where alpha_s is the solar absorptance and S is 1361 W/m^2. Earth albedo: q_albedo = alpha_s * a * S * F * A, where a is the albedo coefficient (0.30 average, varies with cloud and surface), and F is the view factor to Earth. Earth IR: q_IR = epsilon_IR * E * F * A, where E is the Earth IR emission (237 W/m^2 average).",
+          "Calculate the view factor to Earth from the spacecraft surfaces: F = (R_e/(R_e+h))^2 for a surface facing nadir. For arbitrary orientations, use the projected solid angle of the Earth disk.",
+          "Define the hot case: minimum altitude (closest to Earth for max albedo and IR), maximum solar constant (perihelion), maximum internal dissipation, worst-case sun angle for the hottest surface. Define the cold case: maximum altitude, minimum solar constant (aphelion), minimum internal dissipation, eclipse entry with worst-case attitude.",
+          "Build the nodal thermal model. Discretize the spacecraft into thermal nodes (structural panels, electronic boxes, propellant tanks, batteries, payload). Each node has a thermal mass (m*Cp), internal dissipation, radiation coupling to other nodes and to space (sigma*epsilon*A*F), and conduction coupling to adjacent nodes (k*A/L).",
+          "The steady-state energy balance for each node: Q_solar + Q_albedo + Q_IR + Q_internal + sum(Q_conduction_in) = sigma * epsilon * A_rad * T^4 + sum(Q_conduction_out). For transient cases (eclipse entry/exit), solve the differential equation m*Cp*dT/dt = sum(Q_in) - sum(Q_out)."
+        ],
+        "tags": ["thermal-analysis", "spacecraft"]
+      },
+      {
+        "flow_name": "thermal-control-hardware-selection",
+        "description": "Select and size thermal control hardware: surface coatings, multi-layer insulation, heaters, heat pipes, and radiators to maintain all components within their allowable temperature range.",
+        "inputs": [
+          {"name": "thermal-environment", "desc": "Heat fluxes for hot and cold cases"},
+          {"name": "energy-balance-model", "desc": "Nodal model with boundary conditions"}
+        ],
+        "outputs": [
+          {"name": "thermal-hardware-design", "desc": "Surface finish map, MLI coverage, heater sizes and locations, heat pipe specifications, radiator area"},
+          {"name": "temperature-predictions", "desc": "Predicted temperature ranges for all components in hot and cold cases with margin"}
+        ],
+        "process": [
+          "Select surface coatings by function. For radiator surfaces that must reject heat: low alpha/epsilon ratio (white paint, OSR, second-surface mirrors: alpha_s = 0.05-0.15, epsilon_IR = 0.80-0.90). For surfaces that must absorb solar energy: high alpha/epsilon (black anodize: alpha = 0.88, epsilon = 0.88). Account for coating degradation: alpha_s increases with UV and particle exposure. Use EOL alpha values for hot case analysis.",
+          "Size MLI blankets. Effective emissivity of MLI is typically 0.01-0.03 for 15-25 layer blankets with proper construction (no compression, sealed edges, adequate venting). The heat leak through MLI: q = epsilon_eff * sigma * (T_hot^4 - T_cold^4). MLI is used on all surfaces that are neither radiators nor solar-absorbing.",
+          "Size heaters for the cold case. The heater power must make up the deficit when internal dissipation is minimum and heat loss is maximum. Q_heater = Q_radiation_out + Q_conduction_out - Q_minimum_internal - Q_environmental_minimum. Add 25% margin. Select heater type: Kapton film heaters for flat surfaces, cartridge heaters for propellant lines.",
+          "Design heat transport. Heat pipes transport heat from dissipating components to radiators without power. Constant-conductance heat pipes: wick structure (sintered, groove, screen mesh) determines capillary pressure, which must exceed the sum of gravitational, viscous, and entrainment pressure losses. Variable-conductance heat pipes (VCHP) with gas reservoir control the radiator effective area.",
+          "Size the radiator. A_rad = Q_reject / (epsilon * sigma * (T_rad^4 - T_environment^4)). T_environment is the effective sink temperature including Earth IR and albedo contributions. For a space-facing radiator, the sink temperature is approximately 3K plus Earth IR contributions from the view factor. Verify the radiator area fits within the available spacecraft surface area."
+        ],
+        "tags": ["thermal-hardware", "radiator-design"]
+      },
+      {
+        "flow_name": "thermal-vacuum-test-planning",
+        "description": "Plan and execute thermal vacuum testing to validate the thermal design: define test levels, temperature cycles, instrumentation, and correlation of the thermal model to test data.",
+        "inputs": [
+          {"name": "thermal-hardware-design", "desc": "Complete thermal control system design"},
+          {"name": "temperature-predictions", "desc": "Model predictions to validate"}
+        ],
+        "outputs": [
+          {"name": "tvac-test-plan", "desc": "Test matrix with temperature levels, dwell times, cycle count, instrumentation plan"},
+          {"name": "model-correlation-results", "desc": "Thermal model updates from test-to-prediction comparison, updated temperature predictions"}
+        ],
+        "process": [
+          "Define test levels. Qualification test temperatures are typically component qualification limits minus 5C (or acceptance limits plus 10C). Acceptance test temperatures are the predicted hot and cold extremes plus margin (typically +/- 5-10C beyond predicted). Protoflight testing uses qualification levels with acceptance duration.",
+          "Design the thermal environment simulation. In a thermal vacuum chamber, solar simulation uses xenon arc lamps or IR heaters (cheaper but different spectral distribution). For component-level testing, a thermal plate (hot/cold) with conductive interface is standard. Chamber pressure must be below 10^-5 torr to eliminate convection.",
+          "Plan instrumentation. Place thermocouples at all model node locations, on heaters (for functional verification), on MLI exterior (to verify effective emissivity), and at structural interfaces. Use a minimum of two thermocouples per critical component for redundancy. Type T thermocouples give best accuracy at spacecraft temperatures (-100 to +100 C).",
+          "Define the test sequence: pump-down, initial ambient soak, transition to hot case (with electrical loads on), hot dwell at stabilization (temperature change < 1C/hr for 4 hours), transition to cold case (reduce loads, activate heaters), cold dwell at stabilization, repeat for required number of cycles (4 for qualification, 2 for acceptance), return to ambient.",
+          "Perform model correlation. Compare measured temperatures to predictions for each test case. If discrepancies exceed 5C, investigate the model: check interface conductances (most common error source), radiation view factors, and heater performance. Adjust model parameters to match test data within 3C, then re-run the flight predictions with the correlated model. The correlated model becomes the reference for thermal margin assessment."
+        ],
+        "tags": ["testing", "thermal-vacuum"]
+      }
+    ]
+  },
+  {
+    "chain_name": "attitude-determination-control",
+    "description": "Design the spacecraft attitude determination and control system: select sensors and actuators, design the control law, build the pointing budget, and plan the safe mode and detumble sequence.",
+    "domain": "aerospace",
+    "tags": ["spacecraft", "adcs", "guidance-navigation-control", "hardware"],
+    "steps": [
+      {
+        "flow_name": "adcs-requirements-and-sensor-selection",
+        "description": "Derive attitude determination and control requirements from the mission, then select the sensor suite and actuator set that meets pointing accuracy, slew rate, and momentum storage needs.",
+        "inputs": [
+          {"name": "pointing-requirements", "desc": "Pointing accuracy, knowledge accuracy, slew rate, stability during imaging or communication"},
+          {"name": "orbit-and-disturbance-environment", "desc": "Orbit altitude, gravity gradient, magnetic field, aerodynamic drag, solar radiation pressure"}
+        ],
+        "outputs": [
+          {"name": "sensor-suite", "desc": "Selected sensors (type, quantity, mounting, accuracy) for attitude determination"},
+          {"name": "actuator-set", "desc": "Selected actuators (type, quantity, capacity) for attitude control and momentum management"}
+        ],
+        "process": [
+          "Quantify the disturbance torque environment. Gravity gradient: T_gg = 3*mu/(2*R^3) * (I_z - I_x) * sin(2*theta), maximum for 45 degree offset. Aerodynamic: T_aero = 0.5*rho*Cd*A*v^2 * (cp - cm), depends on the offset between center of pressure and center of mass. Solar radiation pressure: T_srp = P_solar * A * (1+r) * (cp - cm), where P_solar = 4.56e-6 N/m^2. Magnetic: T_mag = M * B, where M is the residual magnetic moment.",
+          "Select sensors by accuracy tier. Coarse (>1 deg): sun sensors (analog or digital), magnetometers. Medium (0.01-1 deg): fine sun sensors, horizon sensors, star trackers (lower accuracy in this range). Fine (<0.01 deg): star trackers (3-axis, 1-5 arcsec accuracy), fiber optic or ring laser gyroscopes (0.001-0.01 deg/hr drift). Rate sensing: MEMS gyros (1-10 deg/hr) or fiber optic gyros (0.001-0.01 deg/hr).",
+          "Select actuators by torque and momentum requirements. Reaction wheels: torque 0.01-1 Nm, momentum storage 1-50 Nms. Control moment gyroscopes (CMGs): torque 10-1000 Nm, for agile large spacecraft. Magnetorquers: torque = M * B, limited by available magnetic moment and orbital field strength, good for momentum dumping in LEO. Thrusters: for large slews, orbit-coupled maneuvers, or when other actuators are insufficient.",
+          "Size reaction wheels. The momentum storage must exceed the worst-case cyclic disturbance momentum accumulation over one orbit: H_wheel > integral(T_disturbance) over one orbit period. The wheel torque must exceed the peak disturbance plus the control demand for the required slew rate: T_wheel > T_disturbance + I * alpha_slew.",
+          "Design momentum management. In LEO, magnetorquers dump accumulated momentum from secular disturbances (aerodynamic drag torque). The dumping rate is M_torquer * B_earth * duty_cycle. Verify that the magnetorquer capacity exceeds the secular momentum buildup rate. In GEO or deep space, thrusters perform momentum desaturation."
+        ],
+        "tags": ["adcs", "sensor-selection"]
+      },
+      {
+        "flow_name": "pointing-budget-and-control-design",
+        "description": "Build the pointing error budget from all contributing sources, design the control algorithm, and verify performance through simulation including the safe mode and detumble sequence.",
+        "inputs": [
+          {"name": "sensor-suite", "desc": "Sensors with accuracy specifications"},
+          {"name": "actuator-set", "desc": "Actuators with torque and momentum capacity"}
+        ],
+        "outputs": [
+          {"name": "pointing-budget", "desc": "RSS error allocation across all sources (sensor, alignment, control, structural flex, thermal distortion)"},
+          {"name": "control-design", "desc": "Control law parameters, stability analysis, simulation results, safe mode and detumble design"}
+        ],
+        "process": [
+          "Build the pointing budget as an RSS of independent error sources. Sensor noise: from star tracker noise equivalent angle (typically 1-5 arcsec per axis, 1-sigma). Sensor alignment: measured during integration (typically 10-50 arcsec). Structural flexibility: first structural mode interaction with control bandwidth. Thermal distortion: structural deformation from temperature gradients. Control error: steady-state error from the control law.",
+          "Design the attitude control law. For three-axis stabilized spacecraft, a PD controller is the baseline: T_command = -K_p * theta_error - K_d * omega_error. Select gains for the desired bandwidth: omega_n = sqrt(K_p / I) and damping ratio zeta = K_d / (2*sqrt(K_p*I)). The bandwidth must be below the first structural mode frequency (factor of 5-10 separation) and above the disturbance rejection frequency.",
+          "Analyze stability using classical and modern methods. Bode plot: verify phase margin > 30 degrees and gain margin > 6 dB. Nichols chart for multi-input-multi-output systems. Include actuator dynamics (wheel motor transfer function), sensor noise filter, and structural flexibility (notch filters at structural mode frequencies).",
+          "Design the safe mode. When an anomaly is detected (attitude error exceeds threshold, sensor failure, power anomaly), the spacecraft enters safe mode: reduce to minimum power loads, orient for maximum solar array illumination and thermal safety, use the most reliable sensors and actuators (often sun sensors and magnetorquers). Safe mode must be autonomously recoverable without ground intervention for at least 72 hours.",
+          "Design the detumble algorithm for initial deployment or post-anomaly recovery. B-dot control: command the magnetorquers proportional to the negative rate of change of the magnetic field: M_command = -k * dB/dt. This drives the tumble rate toward zero without requiring attitude knowledge. Calculate the expected detumble time from the initial tip-off rate and the available magnetic torque."
+        ],
+        "tags": ["control-design", "pointing-budget"]
+      }
+    ]
+  },
+  {
+    "chain_name": "spacecraft-communications-design",
+    "description": "Design the spacecraft communication system: derive data rate requirements, perform link budget analysis, select hardware, and design the ground segment interface.",
+    "domain": "aerospace",
+    "tags": ["spacecraft", "communications", "rf-systems", "hardware"],
+    "steps": [
+      {
+        "flow_name": "data-rate-and-link-requirements",
+        "description": "Derive the communication data rate from payload data generation, onboard storage, contact time, and required downlink margin, then establish the link requirements.",
+        "inputs": [
+          {"name": "payload-data-rate", "desc": "Raw data generation rate, compression ratio, onboard processing capability"},
+          {"name": "orbit-and-ground-stations", "desc": "Orbit parameters, ground station locations, contact durations per pass, passes per day"}
+        ],
+        "outputs": [
+          {"name": "link-requirements", "desc": "Required downlink rate, uplink rate, contact schedule, onboard storage capacity"},
+          {"name": "frequency-band-selection", "desc": "Selected RF band with regulatory and performance justification"}
+        ],
+        "process": [
+          "Calculate the daily data volume: V_daily = R_payload * T_acquisition * C_ratio + V_housekeeping, where R_payload is the raw data rate, T_acquisition is the daily observation time, and C_ratio is the compression ratio (typically 2:1 to 10:1 depending on data type).",
+          "Calculate the available contact time per day: T_contact = sum(T_pass_i) for all ground station passes. For a LEO satellite at 500 km with a 5-degree minimum elevation, a typical pass duration is 6-10 minutes. A single mid-latitude ground station gives 4-6 passes per day.",
+          "Determine the required downlink data rate: R_downlink = V_daily / (T_contact * eta_link), where eta_link accounts for link acquisition time, protocol overhead, and retransmissions (typically 0.70-0.85). If R_downlink exceeds practical limits for the band, increase ground stations, add onboard storage and process over multiple days, or use relay satellites.",
+          "Select the frequency band. S-band (2-4 GHz): moderate data rate (up to ~10 Mbps), small antenna, well-established, ITAR-free components available. X-band (8-12 GHz): higher data rate (up to ~800 Mbps), requires better pointing. Ka-band (26-40 GHz): highest data rate (>1 Gbps), rain fade is significant, requires precise pointing. Optical: highest data rate, immune to RF interference, requires sub-arcsecond pointing.",
+          "Size the onboard data storage: S_onboard = V_daily * N_margin, where N_margin is 1.5-2x to handle missed contacts. Select solid-state recorder technology. Radiation-hardened NAND flash for most missions; space-qualified SDRAM for high-speed buffering."
+        ],
+        "tags": ["communications", "data-systems"]
+      },
+      {
+        "flow_name": "link-budget-analysis-and-hardware",
+        "description": "Perform the detailed link budget calculation for both uplink and downlink, select the transponder and antenna hardware, and verify link closure with adequate margin.",
+        "inputs": [
+          {"name": "link-requirements", "desc": "Required data rates and contact geometry"},
+          {"name": "frequency-band-selection", "desc": "Chosen RF band"}
+        ],
+        "outputs": [
+          {"name": "link-budget", "desc": "Complete link budget with all gains and losses, achieved Eb/No vs required, and link margin"},
+          {"name": "communication-hardware", "desc": "Transponder selection, antenna type and gain, RF power, ground station requirements"}
+        ],
+        "process": [
+          "Build the link budget. Start with transmit power P_tx (dBW). Add transmit antenna gain G_tx (dBi). Subtract path losses: free space path loss FSPL = 20*log10(4*pi*d*f/c) in dB, where d is the slant range (worst case: maximum range at minimum elevation) and f is the frequency. Subtract atmospheric loss (0.1-0.5 dB for S/X-band, 1-3 dB for Ka-band at low elevation). Subtract rain fade margin for Ka-band (3-10 dB depending on availability requirement and ground station latitude).",
+          "Add receive antenna gain G_rx (dBi). Subtract system noise temperature contribution: T_sys = T_antenna + T_feed + T_LNA * L_feed, where T_LNA is the LNA noise temperature (typically 50-150K for space, 20-50K for ground). Convert to G/T figure of merit.",
+          "Calculate received C/No = EIRP - FSPL - L_atm + G/T - k_Boltzmann (in dB-Hz). Then Eb/No = C/No - 10*log10(R_data). Compare to required Eb/No for the selected modulation and coding: BPSK uncoded needs ~10 dB, QPSK with rate-1/2 turbo code needs ~1 dB at BER = 10^-6.",
+          "Calculate link margin = achieved Eb/No - required Eb/No. Target 3 dB minimum margin for established links, 6 dB for new designs. If margin is insufficient, increase transmit power, antenna gain, or reduce data rate. If margin is excessive, reduce transmit power or increase data rate.",
+          "Select hardware. Spacecraft transponder: transmit power (1-50W typical), receiver sensitivity, modulation capability. Spacecraft antenna: patch (5-8 dBi, wide beam for omni coverage), horn (15-20 dBi), parabolic reflector (25-45 dBi, requires tracking). Ground station: dish diameter sets G/T (3m dish gives ~38 dBi at X-band). Verify that the selected antenna beamwidth is compatible with the spacecraft pointing accuracy."
+        ],
+        "tags": ["link-budget", "rf-hardware"]
+      }
+    ]
+  },
+  {
+    "chain_name": "spacecraft-structures-design",
+    "description": "Design the spacecraft primary and secondary structure: analyze launch loads, natural frequency requirements, random vibration response, and select materials for the space environment.",
+    "domain": "aerospace",
+    "tags": ["spacecraft", "structures", "mechanical-design", "hardware"],
+    "steps": [
+      {
+        "flow_name": "launch-loads-and-structural-requirements",
+        "description": "Define the structural load cases from the launch vehicle environment, establish natural frequency requirements, and derive the structural design loads.",
+        "inputs": [
+          {"name": "launch-vehicle-environment", "desc": "Quasi-static load factors, random vibration PSD, acoustic environment, shock environment from launch vehicle user guide"},
+          {"name": "spacecraft-mass-properties", "desc": "Total mass, center of gravity, moments of inertia, component masses and locations"}
+        ],
+        "outputs": [
+          {"name": "design-load-cases", "desc": "Combined load cases (static + dynamic) with factors of safety applied"},
+          {"name": "frequency-requirements", "desc": "Minimum natural frequency constraints from launch vehicle coupled loads analysis"}
+        ],
+        "process": [
+          "Extract quasi-static load factors from the launch vehicle user guide. Typical values: axial 3-6g, lateral 1-3g. These occur at different flight events (max-Q, engine cutoff, stage separation). The design must withstand the most severe combination, which is not always the highest individual axis load.",
+          "Determine the natural frequency requirements. Launch vehicles specify minimum fundamental frequency to avoid dynamic coupling: typically >15 Hz lateral, >25 Hz axial for most vehicles. If the spacecraft frequency is too low, coupled loads analysis is required to determine the actual dynamic response.",
+          "Calculate the random vibration response using Miles equation for single-degree-of-freedom response to a flat PSD input: a_rms = sqrt(pi/2 * f_n * Q * W), where f_n is the natural frequency, Q is the amplification factor (typically 10-25 for spacecraft structures), and W is the PSD level at f_n in g^2/Hz. The 3-sigma acceleration is 3 * a_rms.",
+          "Define the factor of safety approach. For metallic structures: 1.25 on ultimate (yield) and 1.40 on ultimate (failure) per NASA-STD-5001. For composite structures: 1.50 on ultimate. For pressurized structures: 2.0 on proof, 2.5 on burst for safety-critical. Prototype hardware tested to qualification levels uses 1.25/1.40; protoflight uses qualification levels with acceptance duration but flight hardware factors.",
+          "Combine the load cases. The design loads are the quasi-static loads factored by the KM factor (mass acceleration curve from the coupled loads analysis, or a conservative estimate from the launch vehicle user guide). Add random vibration and acoustic contributions as RSS with the static loads if they are uncorrelated."
+        ],
+        "tags": ["structural-analysis", "launch-loads"]
+      },
+      {
+        "flow_name": "structural-design-and-material-selection",
+        "description": "Design the spacecraft structure (primary and secondary) using the derived loads, select materials qualified for the space environment, and plan the structural test program.",
+        "inputs": [
+          {"name": "design-load-cases", "desc": "Combined loads with factors of safety"},
+          {"name": "frequency-requirements", "desc": "Minimum natural frequency constraints"}
+        ],
+        "outputs": [
+          {"name": "structural-design", "desc": "Primary structure configuration, panel construction, fastener sizing, mass summary"},
+          {"name": "test-plan", "desc": "Structural test program (static, sine, random vibration, acoustic, shock) with test levels and acceptance criteria"}
+        ],
+        "process": [
+          "Select the primary structure configuration. For small spacecraft (<500 kg), a machined or sheet-metal central cylinder or box frame. For larger spacecraft, a composite or aluminum honeycomb sandwich panel construction with a central thrust tube or cylinder. The thrust tube carries launch loads from the adapter interface to the upper spacecraft.",
+          "Select materials. Aluminum alloys (6061-T6, 7075-T73) are standard for machined structures. Aluminum honeycomb sandwich (5056 core, 2024 or CFRP facesheets) for panels: specific stiffness is excellent and the natural frequency scales as sqrt(EI/m). CFRP offers higher specific stiffness but requires careful CTE management (near-zero CTE is achievable with layup selection). Titanium for high-temperature or high-strength-to-weight fittings.",
+          "Verify outgassing per ASTM E595: total mass loss < 1.0%, collected volatile condensable material < 0.1%. All adhesives, coatings, potting compounds, and cable insulation must pass. Radiation tolerance: verify that polymers and composites maintain strength after the mission total dose.",
+          "Perform structural analysis. For each load case, check stress against allowable (margin of safety = allowable/applied - 1 > 0). Check buckling of thin-walled sections using classical buckling formulas with knockdown factors (NASA SP-8007 for cylinders). Check fastener loads against pullout and shear allowables. Verify the fundamental frequency exceeds the launch vehicle requirement using finite element analysis.",
+          "Define the structural test program. Static test: apply limit loads and verify no permanent deformation, then apply ultimate loads and verify no failure. Sine vibration: sweep through the frequency range at qualification levels to verify no resonance below the minimum frequency and no structural damage. Random vibration: apply the PSD at qualification level for qualification duration (typically 3 minutes per axis). Acoustic test for large or deployable structures. Shock test to simulate separation events."
+        ],
+        "tags": ["structural-design", "material-selection"]
+      }
+    ]
+  },
+  {
+    "chain_name": "space-environment-effects",
+    "description": "Analyze and mitigate space environment effects on spacecraft: atomic oxygen erosion, radiation damage, surface charging, UV degradation, and micrometeoroid and orbital debris risk.",
+    "domain": "aerospace",
+    "tags": ["spacecraft", "space-environment", "radiation", "hardware"],
+    "steps": [
+      {
+        "flow_name": "radiation-environment-analysis",
+        "description": "Characterize the radiation environment for the mission orbit and duration, calculate total ionizing dose and displacement damage behind shielding, and assess single-event effect rates.",
+        "inputs": [
+          {"name": "orbit-parameters", "desc": "Orbit elements, mission duration, solar cycle phase"},
+          {"name": "spacecraft-shielding", "desc": "Shielding geometry (aluminum equivalent thickness for each component location)"}
+        ],
+        "outputs": [
+          {"name": "radiation-dose-analysis", "desc": "TID and displacement damage dose behind shielding for each component location, with margin"},
+          {"name": "single-event-rate-analysis", "desc": "SEU, SEL, SEFI rates for critical components with LET threshold and cross-section data"}
+        ],
+        "process": [
+          "Define the radiation environment. Trapped protons and electrons from the Van Allen belts (AP-9/AE-9 models), solar proton events (ESP or JPL model for statistical worst-case fluence), and galactic cosmic rays (CREME96 or ISO 15390). The environment depends on orbit, solar cycle phase, and mission duration. LEO below 600 km is relatively benign; MEO through the heart of the belts (1500-6000 km) is severe; GEO sees primarily solar proton events and GCR.",
+          "Calculate total ionizing dose (TID). Use a radiation transport code (SHIELDOSE-2 or NOVICE) to propagate the external environment through the spacecraft shielding geometry. Output is dose (in rad(Si) or rad(GaAs)) as a function of aluminum shielding thickness. Apply a radiation design margin factor of 2x to the calculated dose for component selection.",
+          "Calculate displacement damage dose (DDD) for solar cells, optocouplers, and CCDs. Express as equivalent 1 MeV electron or 10 MeV proton fluence using NIEL (non-ionizing energy loss) scaling. Solar cell degradation is characterized by the remaining factor (Pmax/Pmax_BOL) vs fluence.",
+          "Assess single-event effects. For each critical IC, obtain the LET threshold and cross-section curve from test data or the manufacturer. Calculate the SEU rate using the CREME96 or SPENVIS tool for the mission orbit. For latch-up susceptible devices, verify that the LET threshold exceeds the environment or that current limiting and power cycling protection is in place.",
+          "Define mitigation strategies. For TID: shield sensitive components (spot shielding with tantalum or tungsten), use rad-hard or rad-tolerant parts, design for graceful degradation. For SEE: TMR (triple modular redundancy) for critical logic, EDAC for memory, watchdog timers for processor SEFIs, current limiters for latch-up protection."
+        ],
+        "tags": ["radiation", "space-environment"]
+      },
+      {
+        "flow_name": "atomic-oxygen-and-debris-analysis",
+        "description": "Analyze atomic oxygen erosion in LEO, UV and thermal cycling degradation of materials, and micrometeoroid and orbital debris risk with Whipple shield sizing.",
+        "inputs": [
+          {"name": "radiation-dose-analysis", "desc": "Radiation environment context for combined effects"},
+          {"name": "single-event-rate-analysis", "desc": "SEE rates for electronics protection design"}
+        ],
+        "outputs": [
+          {"name": "material-degradation-assessment", "desc": "Erosion rates, UV degradation, thermal cycling fatigue life for all external materials"},
+          {"name": "mmod-risk-assessment", "desc": "Probability of no penetration for mission duration, Whipple shield sizing if required"}
+        ],
+        "process": [
+          "Calculate atomic oxygen fluence. AO is present in LEO from approximately 200-1000 km altitude. The AO flux depends on altitude, solar activity, and ram direction: flux = n_AO * v_orbital, where n_AO is the AO number density from the atmospheric model and v_orbital is approximately 7.5 km/s. Fluence = flux * mission_duration * cos(theta_ram). Typical LEO values: 10^20 to 10^22 atoms/cm^2 for multi-year missions.",
+          "Assess material erosion. Reaction efficiency (cm^3/atom) varies by material: Kapton = 3.0e-24, FEP Teflon = 0.05e-24, silver = 10.5e-24, silicone = 0.4e-24, aluminum = protected by native oxide. Calculate the recession depth: d = R_e * fluence. For Kapton at 10^21 atoms/cm^2 fluence, recession is approximately 30 micrometers. Protect vulnerable surfaces with AO-resistant coatings (SiO2, ITO, atomic-layer-deposited alumina).",
+          "Evaluate UV and thermal cycling effects. Solar UV degrades polymer optical properties (alpha_s increases) and mechanical properties (embrittlement). Thermal cycling in LEO (typically -80C to +80C, 15 cycles per day) causes fatigue in coatings, adhesive bonds, and composite layups. Calculate the total number of thermal cycles over the mission and compare to material fatigue life data.",
+          "Perform MMOD risk assessment. Use the NASA ORDEM 3.1 model (or ESA MASTER) to get the flux of particles vs size for the mission orbit. Calculate the probability of no penetration: P_NP = exp(-F * A * T), where F is the flux of particles above the critical diameter, A is the exposed area, and T is the mission duration. For critical surfaces, P_NP > 0.95 is typical.",
+          "Size Whipple shielding if required. A dual-wall Whipple shield: the bumper (thin outer wall) breaks up the impacting particle into a debris cloud, which the rear wall (thicker, spaced from the bumper) stops. The ballistic limit equation (NASA JSC-28033) gives the critical particle diameter vs impact velocity for a given shield configuration. Size the standoff distance and wall thicknesses to protect against the design particle size (typically 1 cm for crewed vehicles, smaller for uncrewed)."
+        ],
+        "tags": ["atomic-oxygen", "mmod", "space-environment"]
+      }
+    ]
+  },
+  {
+    "chain_name": "satellite-constellation-operations",
+    "description": "Operate a satellite constellation: manage deployment and phasing, design the ground segment, execute collision avoidance, handle anomalies, and plan end-of-life disposal.",
+    "domain": "aerospace",
+    "tags": ["spacecraft-operations", "constellation", "space-systems", "hardware"],
+    "steps": [
+      {
+        "flow_name": "constellation-deployment-and-phasing",
+        "description": "Plan the constellation deployment sequence from launch through orbit raising, phasing, and commissioning of each satellite to its operational slot.",
+        "inputs": [
+          {"name": "constellation-design", "desc": "Walker notation, orbital elements per slot, total satellite count"},
+          {"name": "launch-manifest", "desc": "Number of satellites per launch, launch vehicle injection orbit, deployment sequence"}
+        ],
+        "outputs": [
+          {"name": "deployment-plan", "desc": "Orbit raising and phasing maneuver sequence for each satellite to reach its operational slot"},
+          {"name": "commissioning-schedule", "desc": "Timeline for each satellite from deployment through checkout to operational status"}
+        ],
+        "process": [
+          "Design the orbit raising strategy from the injection orbit to the operational orbit. If the launch vehicle inserts into a lower parking orbit, each satellite uses its own propulsion to raise to the operational altitude. Calculate the Hohmann transfer delta-v and the propellant mass required. For electric propulsion, calculate the spiral time from the thrust and Isp.",
+          "Design the phasing strategy. Satellites deployed from the same launch into the same plane must spread to their required phase spacing. Lower the orbit of trailing satellites (or raise leading satellites) to create a differential drift rate: delta_omega = -3/2 * n * delta_a / a. The phasing time equals the required phase angle divided by delta_omega. Calculate the total delta-v for the phasing maneuver pair (lower, drift, raise).",
+          "For multi-plane constellations, use differential RAAN precession from J2 to spread planes. Deploy to different altitudes; the J2 precession rate difference (delta_RAAN/dt = -3/2 * J2 * n * (R_e/a)^2 * cos(i) * delta_a_correction) provides the required RAAN drift. This takes weeks to months but saves propellant versus direct plane change.",
+          "Plan the commissioning sequence for each satellite: deploy solar arrays and antennas, acquire attitude, establish communication with the ground, check out subsystems (power, thermal, ADCS, payload), upload operational software and configuration, verify pointing accuracy, validate payload data quality, declare operational.",
+          "Establish the constellation management plan: monitor relative spacing, plan maintenance maneuvers to correct drift from differential drag, define the spare satellite strategy (in-orbit spares, ground spares, or on-demand launch), and set up the automated orbit determination and maneuver planning pipeline."
+        ],
+        "tags": ["constellation-operations", "deployment"]
+      },
+      {
+        "flow_name": "ground-segment-and-collision-avoidance",
+        "description": "Design the ground segment for constellation command, control, and data processing, and implement the collision avoidance decision framework using conjunction data messages.",
+        "inputs": [
+          {"name": "deployment-plan", "desc": "Constellation configuration and contact opportunities"},
+          {"name": "commissioning-schedule", "desc": "Timeline and operational status of each satellite"}
+        ],
+        "outputs": [
+          {"name": "ground-segment-design", "desc": "Mission control architecture, automation level, ground station network, data processing pipeline"},
+          {"name": "collision-avoidance-protocol", "desc": "Decision framework for conjunction assessment, maneuver triggers, and execution procedures"}
+        ],
+        "process": [
+          "Design the mission control center. For large constellations (>50 satellites), automation is required: automated orbit determination from GPS/GNSS data, automated health monitoring with threshold-based alerts, automated contact scheduling across the ground station network, and automated command upload for routine operations. Human operators handle anomalies and maneuver approval.",
+          "Design the ground station network. The number and location of stations determines the contact gap (maximum time without communication). For LEO constellations, polar ground stations (Svalbard, Antarctica) provide contacts for all orbit planes. Equatorial stations supplement for low-inclination orbits. Inter-satellite links can eliminate ground station dependency for data relay.",
+          "Implement collision avoidance. Receive conjunction data messages (CDMs) from the 18th Space Defense Squadron (or commercial providers). Each CDM contains the time of closest approach (TCA), miss distance, and covariance. Calculate the probability of collision Pc using the covariance-based method: Pc = integral of the combined position covariance over the hard-body collision area.",
+          "Define the maneuver decision framework. Typical thresholds: Pc > 10^-4 triggers a maneuver, 10^-5 < Pc < 10^-4 triggers enhanced monitoring and maneuver planning. The avoidance maneuver is typically an in-track burn that shifts the TCA timing: delta_v = delta_miss / (T_maneuver * n * a), where T_maneuver is the time before TCA and delta_miss is the desired miss distance increase. Execute maneuvers at least one orbit before TCA.",
+          "Plan end-of-life disposal. For LEO below 2000 km, the 25-year rule (and upcoming 5-year rule) requires deorbit within 25 years of end of mission. Calculate the required perigee-lowering delta-v for atmospheric reentry within the time limit: use the orbit lifetime prediction from atmospheric drag with the ballistic coefficient. Alternatively, deploy a drag sail or use a deorbit propulsion system. Reserve propellant for disposal maneuver in the spacecraft design."
+        ],
+        "tags": ["ground-segment", "collision-avoidance", "operations"]
+      }
+    ]
+  },
+  {
+    "chain_name": "guidance-navigation-control",
+    "description": "Design the launch vehicle guidance, navigation, and control system: inertial navigation error propagation, guidance algorithms, attitude control, dispersions analysis, and abort mode design.",
+    "domain": "aerospace",
+    "tags": ["launch-vehicle", "gnc", "guidance", "hardware"],
+    "steps": [
+      {
+        "flow_name": "navigation-system-design",
+        "description": "Design the inertial navigation system for a launch vehicle: select sensors, model error propagation, and design sensor fusion with external aiding sources.",
+        "inputs": [
+          {"name": "trajectory-requirements", "desc": "Orbit insertion accuracy requirements (semi-major axis, inclination, RAAN, argument of perigee tolerances)"},
+          {"name": "vehicle-dynamics", "desc": "Mass, thrust, burn times, stage separation events, expected vibration environment"}
+        ],
+        "outputs": [
+          {"name": "navigation-design", "desc": "Sensor selection, error model, fusion algorithm, predicted navigation accuracy at orbit insertion"},
+          {"name": "error-budget", "desc": "Navigation error budget allocating contributions from each sensor error source"}
+        ],
+        "process": [
+          "Select the IMU. Ring laser gyros (RLG): bias stability 0.003-0.01 deg/hr, scale factor 1-5 ppm, suitable for large launch vehicles. Fiber optic gyros (FOG): bias stability 0.01-0.1 deg/hr, lighter and cheaper, suitable for small launch vehicles. Accelerometers: pendulous integrating gyro accelerometer (PIGA) for highest accuracy, or MEMS for cost-sensitive applications. The IMU must survive the launch vibration environment.",
+          "Model navigation error propagation. The position error grows with time due to gyro drift (attitude error causes accelerometer misalignment, which integrates into velocity error, which integrates into position error). The dominant error source is gyro bias: position error grows as approximately 0.5 * bias * g * t^2 for a bias-induced tilt. For a 0.01 deg/hr gyro over a 500-second burn, the position error at cutoff is approximately 100-500 meters depending on trajectory.",
+          "Design external aiding. GPS provides position (10 m) and velocity (0.1 m/s) updates that bound the INS drift. Implement a loosely or tightly coupled GPS/INS Kalman filter. For high-altitude or fast-moving phases where GPS may be degraded, use star tracker updates for attitude reset. The Kalman filter state vector includes position, velocity, attitude, and sensor error states (biases, scale factors).",
+          "Build the navigation error budget. Allocate the total orbit insertion accuracy requirement across the contributing sources: IMU errors (gyro bias, gyro scale factor, accelerometer bias, accelerometer scale factor), GPS errors (if used), alignment errors (IMU-to-vehicle alignment), and guidance execution errors. Use covariance analysis or Monte Carlo simulation to verify the RSS of all sources meets the requirement.",
+          "Define the pre-flight alignment procedure. Transfer alignment from the launch pad azimuth reference to the IMU: gyrocompass for azimuth (accuracy limited by gyro bias and Earth rate), leveling for tilt. The alignment time depends on the gyro quality: finer gyros achieve better azimuth accuracy in shorter time. For strap-down IMUs, the alignment is performed in software using the sensed Earth rate and gravity vectors."
+        ],
+        "tags": ["navigation", "inertial-measurement"]
+      },
+      {
+        "flow_name": "guidance-and-control-algorithm-design",
+        "description": "Design the guidance algorithm for powered flight (iterative guidance, explicit guidance, or powered explicit guidance), the attitude control system for each flight phase, and the dispersions analysis.",
+        "inputs": [
+          {"name": "navigation-design", "desc": "Navigation system with error characteristics"},
+          {"name": "error-budget", "desc": "Navigation error contributions"}
+        ],
+        "outputs": [
+          {"name": "guidance-algorithm", "desc": "Guidance law parameters, steering commands, throttle profile, and shutdown criteria"},
+          {"name": "dispersions-analysis", "desc": "Monte Carlo trajectory dispersions showing 3-sigma orbit insertion errors and abort trigger thresholds"}
+        ],
+        "process": [
+          "Select the guidance algorithm. Open-loop (pre-programmed pitch profile): simplest, used for sounding rockets and first-stage atmospheric flight where aerodynamic loads dominate. Closed-loop iterative guidance mode (IGM): solves the boundary value problem in real time to steer to the target orbit, used for upper stages. Powered explicit guidance (PEG): simplified analytical guidance that converges to the optimal steering for vacuum flight.",
+          "Design the first-stage guidance. During atmospheric flight, the vehicle follows a gravity turn trajectory with a pre-programmed pitch profile optimized for the nominal trajectory. The pitch rate is limited by the Q-alpha constraint: the product of dynamic pressure and angle of attack must not exceed the structural limit. An active Q-alpha limiter adjusts the pitch command to keep Q-alpha within bounds during wind shear.",
+          "Design the upper-stage guidance. The IGM or PEG algorithm computes the time-to-go and the required thrust direction to reach the target state (position and velocity). The algorithm iterates: predict the state at cutoff given the current steering, compute the error from the target, and update the steering. Convergence typically requires 2-5 iterations. Shutdown is triggered when the predicted velocity at cutoff matches the target within the navigation accuracy.",
+          "Design the attitude control system. During powered flight: thrust vector control (TVC) using hydraulic or electromechanical gimbal actuators. Size the gimbal angle authority to handle the expected CG offset, thrust misalignment, and wind-induced moments. The TVC bandwidth must be above the rigid-body control frequency but below the first bending mode. Implement gain scheduling as mass and moment of inertia change during the burn.",
+          "Run the dispersions analysis. Monte Carlo simulation with 3000+ cases, varying: wind profile (monthly wind pair sets), thrust variation (+/- 3 sigma), specific impulse variation, mass properties errors, aerodynamic coefficient uncertainties, navigation errors, separation timing, actuator response. The 3-sigma orbit insertion errors must be within the target orbit tolerance. Use the 99.7th percentile results to set abort trigger thresholds (if the vehicle deviates beyond recoverable dispersions, terminate thrust or separate the payload for abort)."
+        ],
+        "tags": ["guidance", "control-design", "monte-carlo"]
+      }
+    ]
+  },
+  {
+    "chain_name": "mission-assurance-methodology",
+    "description": "Implement mission assurance for a space program: parts selection and screening, workmanship standards, contamination control, review processes, and risk management from design through launch.",
+    "domain": "aerospace",
+    "tags": ["mission-assurance", "quality", "space-systems", "hardware"],
+    "steps": [
+      {
+        "flow_name": "parts-and-materials-program",
+        "description": "Establish the parts and materials program: define part grades, selection criteria, radiation screening, derating policy, and approved parts list management.",
+        "inputs": [
+          {"name": "mission-class", "desc": "Mission risk classification (Class A/B/C/D per NPR 8705.4 or equivalent), mission duration, radiation environment"},
+          {"name": "budget-and-schedule-constraints", "desc": "Available budget for parts procurement and screening, schedule for parts qualification"}
+        ],
+        "outputs": [
+          {"name": "parts-program-plan", "desc": "Parts grade requirements, approved parts list, screening and derating policy, radiation lot acceptance test plan"},
+          {"name": "materials-and-processes-requirements", "desc": "Approved materials list, outgassing requirements, restricted materials, process specifications"}
+        ],
+        "process": [
+          "Define part grades by mission class. Class A/B missions (high-value, long-life): MIL-PRF-38535 Class V (space-grade) or Class Q (qualified). These parts have full traceability, radiation characterization, and screening (100% burn-in, particle impact noise detection, DPA of sample lots). Class C/D missions: commercial parts with screening (up-screening) may be acceptable with added risk.",
+          "Establish the derating policy. Derate all parts below their rated values to increase reliability. Per EEE-INST-002 or equivalent: semiconductors derated to 70-80% of rated voltage, resistors to 50-60% of rated power, capacitors to 60-70% of rated voltage. Derating reduces failure rate by lowering stress on the part and provides margin for end-of-life degradation.",
+          "Define the radiation lot acceptance test (RLAT) program. For parts without radiation data, or for new lots of previously characterized parts, test a sample to the mission TID level (with 2x margin). Perform Co-60 irradiation at both high and low dose rates (ELDRS testing for bipolar devices at 10 mrad(Si)/s). Define pass/fail criteria based on parametric shifts vs datasheet limits.",
+          "Establish the approved materials list. All materials in the flight build must pass outgassing per ASTM E595 (TML < 1.0%, CVCM < 0.10%). Restricted materials include cadmium (whiskering), zinc (sublimation in vacuum), tin (whiskering unless mitigated), and PVC (outgassing, radiation degradation). Define process specifications for soldering (J-STD-001 with Space Addendum), crimping, conformal coating, bonding, and cable harnessing.",
+          "Manage the approved parts list (APL). Each part on the APL has a qualified manufacturer, part number, grade, radiation tolerance, and derating status. Parts not on the APL require a nonstandard part approval request (NSPAR) documenting the rationale, risk assessment, and any additional screening or testing required. Track part obsolescence and maintain a last-time-buy strategy."
+        ],
+        "tags": ["mission-assurance", "parts-selection"]
+      },
+      {
+        "flow_name": "review-and-risk-management",
+        "description": "Implement the mission review process and risk management program: define review gates, risk identification and tracking, failure review procedures, and launch readiness assessment.",
+        "inputs": [
+          {"name": "parts-program-plan", "desc": "Parts and materials program framework"},
+          {"name": "materials-and-processes-requirements", "desc": "Approved materials and process controls"}
+        ],
+        "outputs": [
+          {"name": "review-process", "desc": "Design reviews (SRR, PDR, CDR, TRR, MRR, FRR) with entry/exit criteria and required products"},
+          {"name": "risk-management-plan", "desc": "Risk identification, classification, tracking, mitigation, and acceptance process"}
+        ],
+        "process": [
+          "Define the review gate structure. System Requirements Review (SRR): confirm requirements are complete, testable, and traceable. Preliminary Design Review (PDR): verify the design approach meets requirements, identify remaining risks. Critical Design Review (CDR): design is complete and ready for fabrication, all analyses done, test plans approved. Test Readiness Review (TRR): hardware is built, test facilities ready. Mission Readiness Review (MRR): all testing complete, anomalies resolved. Flight Readiness Review (FRR): final check before launch.",
+          "Define entry and exit criteria for each review. CDR exit criteria example: all interface control documents signed, structural analysis shows positive margins on all load cases, thermal analysis shows all components within allowable temperatures with margin, power budget closes with required margin, mass budget within allocation, all action items from PDR are closed.",
+          "Implement the risk management process. Identify risks using fault tree analysis, FMEA, historical lessons learned, and expert judgment. Classify each risk on a 5x5 likelihood vs consequence matrix. For each medium or high risk, define a mitigation plan with specific actions, responsible owner, and completion date. Track risks at regular (monthly) risk board meetings. Define the risk acceptance authority level by risk classification.",
+          "Establish the failure review board (FRB) process. Any test failure, anomaly, or nonconformance during integration and test triggers an FRB. The FRB determines: root cause (using 5-why, fishbone, fault tree), extent of condition (are other units affected?), corrective action, and disposition of the affected hardware (use as-is, rework, replace). The FRB finding must be documented and approved before hardware proceeds.",
+          "Implement contamination control. Define cleanliness levels for critical surfaces (optics, thermal surfaces, propulsion) per IEST-STD-CC1246. Establish cleanroom requirements for integration and test (typically Class 100,000 for general assembly, Class 10,000 for optics integration). Define bakeout procedures for hardware that will outgas in vacuum. Monitor particle and molecular contamination with witness plates and real-time particle counters."
+        ],
+        "tags": ["mission-assurance", "risk-management"]
+      }
+    ]
+  }
+]

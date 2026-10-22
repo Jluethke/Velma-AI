@@ -1,0 +1,772 @@
+[
+  {
+    "chain_name": "neural-signal-acquisition-design",
+    "description": "Design a neural signal acquisition system from electrode selection through amplifier design to wireless telemetry, sized to the target signal type and recording environment.",
+    "domain": "biomedical",
+    "tags": ["neurotechnology", "electrophysiology", "neural-recording", "hardware-design"],
+    "steps": [
+      {
+        "flow_name": "neural-signal-type-specification",
+        "description": "Define the target neural signal type, its amplitude range, bandwidth, and spatial resolution requirement to anchor every downstream design decision.",
+        "inputs": [
+          {"name": "clinical-or-research-objective", "desc": "What the recording system must measure (e.g., single-unit spikes for BCI cursor control, ECoG for seizure localization, EEG for sleep staging)"},
+          {"name": "implant-constraints", "desc": "Whether the system is non-invasive (scalp), minimally invasive (epidural/subdural), or fully implanted (intracortical), plus any size or weight limits"}
+        ],
+        "outputs": [
+          {"name": "signal-specification", "desc": "Target signal type (EEG, ECoG, LFP, single-unit, EMG), amplitude range (microvolts to millivolts), bandwidth (0.1-100 Hz for EEG, 300-6000 Hz for spikes, DC-300 Hz for LFP), and spatial resolution requirement"},
+          {"name": "channel-count-requirement", "desc": "Number of recording channels needed from spatial coverage analysis and information throughput requirement"}
+        ],
+        "process": [
+          "Map the clinical or research objective to the neural signal type that carries the information. Single-unit spikes give the highest information per channel but require intracortical penetration. ECoG gives good spatial resolution (1-4 mm electrode spacing) without penetrating cortex. EEG is non-invasive but spatially blurred (centimeter-scale).",
+          "Define the amplitude range: EEG is 10-100 uV, ECoG is 50-500 uV, LFP is 0.1-1 mV, single-unit spikes are 50-500 uV at the electrode but can be as low as 20 uV for distant neurons. This range sets the amplifier input-referred noise floor target (must be at least 5x below signal for adequate SNR).",
+          "Define the bandwidth: EEG and LFP signals occupy DC to 300 Hz. Spike waveforms require 300-6000 Hz minimum, 300-10000 Hz preferred. Full broadband recording (0.1-10000 Hz) captures both but increases data rate. Sampling rate must be at least 2x the upper bandwidth (Nyquist), practically 3-5x for anti-aliasing filter roll-off.",
+          "Estimate channel count from coverage requirements. For BCI cursor control with intracortical arrays, 96-256 channels in motor cortex. For epilepsy monitoring with ECoG grids, 64-256 channels over suspected focus. For research EEG, 32-256 channels for source localization. Each channel multiplied by the data rate gives total throughput."
+        ],
+        "tags": ["neurotechnology", "signal-specification"]
+      },
+      {
+        "flow_name": "electrode-selection-and-design",
+        "description": "Select or design the electrode array from the signal specification, choosing electrode material, geometry, and array configuration to achieve the required impedance and selectivity.",
+        "inputs": [
+          {"name": "signal-specification", "desc": "Target signal type, amplitude, bandwidth, spatial resolution"},
+          {"name": "channel-count-requirement", "desc": "Number of channels needed"},
+          {"name": "implant-constraints", "desc": "Invasiveness level, size, weight, lifetime requirement"}
+        ],
+        "outputs": [
+          {"name": "electrode-design", "desc": "Electrode type (microelectrode array, ECoG grid, scalp electrode), material (Pt, IrOx, PEDOT:PSS, Ag/AgCl), geometry (site diameter, pitch, shank dimensions), and array configuration"},
+          {"name": "impedance-specification", "desc": "Target electrode impedance at 1 kHz per site and expected impedance range, which drives amplifier input impedance requirements"}
+        ],
+        "process": [
+          "Select electrode type from invasiveness and signal type. Intracortical single-unit recording: silicon microelectrode arrays (Utah array: 10x10, 400 um pitch, 1-1.5 mm shank length; Neuropixels: 384 sites on single shank). ECoG: thin-film platinum or PEDOT:PSS on flexible polymer (polyimide or parylene-C), site diameter 200 um to 2 mm. EEG: sintered Ag/AgCl wet electrodes or dry electrodes (gold pins, conductive polymer).",
+          "Select electrode material for target impedance and longevity. Bare platinum: 100-500 kOhm at 1 kHz for 15 um diameter sites. Iridium oxide (AIROF or SIROF): 10-100 kOhm, excellent charge injection capacity for combined recording/stimulation. PEDOT:PSS: 10-50 kOhm with lower noise floor but chronic stability questions beyond 6-12 months. Ag/AgCl for EEG: less than 5 kOhm after gel application.",
+          "Size the electrode site diameter from spatial selectivity requirement. For single-unit isolation, sites under 30 um diameter. For multi-unit or LFP, 50-200 um. For ECoG macro-contacts, 1-4 mm. Smaller sites have higher impedance (impedance scales roughly as 1/area), which increases thermal noise (Vrms = sqrt(4kTRB) where R is real part of impedance at signal bandwidth B). Calculate thermal noise floor and verify it is below target signal amplitude.",
+          "Define array configuration: electrode count, pitch, total footprint, connector. For chronic implants, the connector and cable are often the failure point. Consider integrated wireless to eliminate percutaneous connectors. For acute research, Omnetics or ZIF connectors are standard. Map the array footprint to the target brain region anatomy."
+        ],
+        "tags": ["neurotechnology", "electrode-design"]
+      },
+      {
+        "flow_name": "neural-amplifier-design",
+        "description": "Design or select the analog front-end amplifier chain from the electrode impedance and signal specification, targeting the required noise floor, CMRR, and power per channel.",
+        "inputs": [
+          {"name": "signal-specification", "desc": "Signal amplitude range and bandwidth"},
+          {"name": "impedance-specification", "desc": "Electrode impedance at 1 kHz and expected range"},
+          {"name": "channel-count-requirement", "desc": "Number of channels to amplify"}
+        ],
+        "outputs": [
+          {"name": "amplifier-specification", "desc": "Input-referred noise floor, gain, bandwidth, CMRR, input impedance, power per channel, and ADC resolution"},
+          {"name": "analog-front-end-architecture", "desc": "Amplifier topology (AC-coupled capacitive feedback, chopper-stabilized, or direct-coupled), multiplexing strategy, and ADC configuration"}
+        ],
+        "process": [
+          "Set the input-referred noise target. For single-unit recording, the noise floor must be below 5 uVrms to detect 50 uV spikes with SNR of 10 (20 dB). For ECoG, below 2 uVrms. For EEG, below 1 uVrms. The amplifier noise and electrode thermal noise add in quadrature: total noise = sqrt(amp_noise^2 + electrode_thermal_noise^2). If electrode thermal noise dominates, reducing amplifier noise further yields diminishing returns.",
+          "Select amplifier topology. Capacitive feedback amplifiers (Intan RHD2164 architecture) are standard for implantable neural recording: AC-coupled with high-pass corner set by capacitor ratio (typically 0.1-1 Hz), mid-band gain of 100-200, input impedance greater than 10 MOhm at 1 kHz. Chopper-stabilized amplifiers reduce flicker noise below 1 Hz but require careful design to avoid chopper artifacts mixing into the neural band. Direct DC-coupled designs are needed for spreading depolarization research.",
+          "Size the ADC: resolution must capture the full dynamic range. Neural signals span about 60 dB (1 mV artifacts to 10 uV spikes). A 16-bit ADC with 1 mV input range gives 15 nV LSB, adequate. In practice, 10-12 bits after the programmable gain amplifier is sufficient for most applications. Sampling rate: 30 kSps per channel for spike recording, 1 kSps for LFP/EEG. Total data rate = channels x bits x sample_rate.",
+          "Calculate power budget per channel. State-of-art neural amplifiers achieve 1-5 uW per channel. For a 1024-channel system, the analog front-end alone draws 1-5 mW. Add digitization power (ADC, multiplexing). For implantable systems, total power must stay within the heat dissipation limit: less than 40 mW/cm2 on brain surface to avoid thermal tissue damage (1 degree C rise threshold). CMRR must exceed 80 dB to reject 50/60 Hz interference and motion artifacts."
+        ],
+        "tags": ["neurotechnology", "amplifier-design", "analog"]
+      },
+      {
+        "flow_name": "data-telemetry-architecture",
+        "description": "Design the data path from digitized neural signals to the external processing system, including on-implant data reduction, wireless link, and power delivery.",
+        "inputs": [
+          {"name": "analog-front-end-architecture", "desc": "Channel count, sample rate, bit depth, total raw data rate"},
+          {"name": "amplifier-specification", "desc": "Power budget and heat constraint"}
+        ],
+        "outputs": [
+          {"name": "telemetry-design", "desc": "Wireless protocol, data rate, on-implant compression strategy, transmit power, and antenna design"},
+          {"name": "power-delivery-design", "desc": "Power source (battery, inductive, ultrasonic), charging protocol, and total power budget"}
+        ],
+        "process": [
+          "Calculate raw data rate: 1024 channels x 30 kSps x 16 bits = 491 Mbps raw. This exceeds any practical implantable wireless link. Data reduction is mandatory. Option 1: transmit only spike times and waveform snippets (detect on-chip, transmit 1-ms waveforms at each threshold crossing, reducing bandwidth by 10-100x). Option 2: transmit LFP only (downsample to 1 kSps, 16 Mbps). Option 3: on-chip spike sorting reduces to firing rates (below 1 Mbps for 1024 channels at 100 Hz update).",
+          "Select wireless link. Near-field inductive (13.56 MHz): reliable, short range (1-3 cm), data rate to 10 Mbps, can share coil with power delivery. UWB (3.1-10.6 GHz): higher data rate (up to 100 Mbps), better range (10 cm through tissue), but higher power and more complex antenna. Bluetooth LE: 2 Mbps, good ecosystem but limited for high-channel-count full-bandwidth. Calculate link margin: path loss through 1 cm tissue at carrier frequency, antenna gain (on-implant antenna is small, typically -10 to -20 dBi), receiver sensitivity.",
+          "Design power delivery. For implantable systems, transcutaneous inductive power is standard: an external coil driven at 100 kHz to 13.56 MHz couples to an implanted coil. Coupling coefficient k depends on coil alignment and separation (typically k = 0.05-0.2 for 1-2 cm separation). Power transfer efficiency = k^2 x Q1 x Q2 / (1 + k^2 x Q1 x Q2). Size the coils from power requirement (typically 10-50 mW for a 1024-channel system after data reduction). Regulate received power with LDO or switched-mode regulator. For battery-backed systems, lithium primary cells give 5-10 years for low-power EEG devices.",
+          "Verify SAR compliance: the transmitted RF power must keep specific absorption rate below 1.6 W/kg averaged over 1 g of tissue (FCC) or 2 W/kg over 10 g (ICNIRP). Run thermal simulation: total implant heat dissipation (electronics + coil losses) must not raise adjacent tissue temperature by more than 1 degree C in steady state."
+        ],
+        "tags": ["neurotechnology", "telemetry", "wireless"]
+      },
+      {
+        "flow_name": "acquisition-system-integration-test",
+        "description": "Integrate and validate the complete acquisition system from electrode to data output using bench testing, saline testing, and in-vivo verification.",
+        "inputs": [
+          {"name": "electrode-design", "desc": "Electrode array specification"},
+          {"name": "amplifier-specification", "desc": "Analog front-end parameters"},
+          {"name": "telemetry-design", "desc": "Wireless link configuration"},
+          {"name": "power-delivery-design", "desc": "Power system configuration"}
+        ],
+        "outputs": [
+          {"name": "system-validation-report", "desc": "Measured noise floor, CMRR, crosstalk, data integrity, power consumption, thermal performance, and recording quality from bench and saline tank testing"},
+          {"name": "acquisition-system-specification", "desc": "Finalized system specification with measured performance against requirements"}
+        ],
+        "process": [
+          "Bench test the analog front-end: measure input-referred noise by shorting inputs and recording (calculate RMS in the signal band). Verify CMRR by applying a common-mode sinusoid at 60 Hz and measuring rejection. Measure crosstalk between adjacent channels by driving one channel and measuring coupling to neighbors. Target: crosstalk below -60 dB.",
+          "Saline tank test: submerge the electrode array in phosphate-buffered saline (PBS, 0.9% NaCl) at 37 degrees C. Measure electrode impedance at 1 kHz using electrochemical impedance spectroscopy. Apply known signals through a reference electrode and verify recording fidelity (amplitude accuracy, bandwidth, phase response). Verify that impedance is within specification and uniform across the array (coefficient of variation below 30%).",
+          "Wireless link test: measure bit error rate at the operating data rate across the intended separation distance. Verify power delivery efficiency and thermal profile (IR camera or embedded temperature sensor). Run the system at full power for 24 hours and verify thermal steady state does not exceed tissue safety limit.",
+          "In-vivo verification (for animal research or first-in-human): record neural signals and verify the presence of expected signal features (spike waveforms with correct width 0.5-2 ms, LFP oscillations at expected frequencies). Calculate SNR of detected spikes. Compare noise floor in-vivo to bench measurements (in-vivo is typically 2-5x higher due to biological noise and motion artifacts). Document any anomalies for design iteration."
+        ],
+        "tags": ["neurotechnology", "verification", "integration-test"]
+      }
+    ]
+  },
+  {
+    "chain_name": "neural-signal-processing-pipeline",
+    "description": "Build a neural signal processing pipeline from raw digitized signals through artifact removal, spike detection, spike sorting, and neural decoding.",
+    "domain": "biomedical",
+    "tags": ["neurotechnology", "signal-processing", "neural-decoding", "electrophysiology"],
+    "steps": [
+      {
+        "flow_name": "neural-artifact-removal",
+        "description": "Remove artifacts from raw neural recordings using methods matched to each artifact source: line noise, motion, stimulation, and biological interference.",
+        "inputs": [
+          {"name": "raw-neural-data", "desc": "Digitized multi-channel neural recording with metadata (sample rate, channel map, recording conditions)"},
+          {"name": "recording-metadata", "desc": "Electrode type, reference scheme, known artifact sources (stimulation timing, movement markers)"}
+        ],
+        "outputs": [
+          {"name": "cleaned-neural-data", "desc": "Neural recording with artifacts removed or attenuated, preserving signal features"},
+          {"name": "artifact-removal-report", "desc": "Which methods were applied, how much variance was removed, and any channels flagged as unrecoverable"}
+        ],
+        "process": [
+          "Apply a notch filter at 50/60 Hz (and harmonics) to remove power line interference only if line noise exceeds 5 uV peak. Use a zero-phase IIR notch (Q factor 30-50) or subtract a sinusoidal template estimated from the data. Avoid aggressive notch filters near neural frequencies of interest.",
+          "Remove motion and muscle artifacts using Independent Component Analysis (ICA). Run ICA on the multi-channel data (FastICA or Infomax). Identify artifact components by their spatial topography (frontal bilateral for eye blinks, lateral for saccades, high-frequency broadband for EMG) and temporal characteristics (correlation with EOG/EMG reference channels if available). Remove identified components and reconstruct. For intracortical recordings, common average referencing (CAR) removes shared motion artifacts: subtract the mean across all channels from each channel.",
+          "Handle stimulation artifacts (if recording during stimulation): blank the stimulation window (typically 0.5-2 ms after each pulse) and interpolate, or use template subtraction by averaging the artifact waveform across hundreds of stimulation events and subtracting the template from each occurrence. For exponential decay artifacts from charge redistribution, fit and subtract an exponential model.",
+          "Flag and exclude bad channels: channels with impedance greater than 2 MOhm (for microelectrodes) or sustained 60 Hz amplitude greater than 50 uV after filtering, or channels with flat signals (broken connections). Interpolate from neighbors for surface arrays (EEG, ECoG) using spherical spline interpolation. For penetrating arrays, simply exclude dead channels from downstream analysis."
+        ],
+        "tags": ["signal-processing", "artifact-removal"]
+      },
+      {
+        "flow_name": "spike-detection-and-sorting",
+        "description": "Detect action potential waveforms from cleaned extracellular recordings and sort them into putative single neuron clusters using feature extraction and clustering.",
+        "inputs": [
+          {"name": "cleaned-neural-data", "desc": "Artifact-cleaned high-pass filtered neural recording (300-6000 Hz bandpass)"}
+        ],
+        "outputs": [
+          {"name": "sorted-spike-trains", "desc": "For each identified neuron: timestamps of spikes, mean waveform, cluster quality metrics (isolation distance, L-ratio, ISI violation rate)"},
+          {"name": "spike-sorting-quality-report", "desc": "Number of single units, multi-units, and noise clusters per channel, with quality metrics"}
+        ],
+        "process": [
+          "Bandpass filter the cleaned data to 300-6000 Hz (4th-order Butterworth, zero-phase). Detect spikes by threshold crossing: set threshold at -4 to -5 times the median absolute deviation (MAD) of the filtered signal divided by 0.6745 (robust noise estimate from Quiroga et al.). Extract 1.5-ms waveform snippets centered on each threshold crossing (typically 48 samples at 30 kSps: 16 pre, 32 post).",
+          "Extract features for clustering. Principal Component Analysis (PCA): compute the first 3-6 PCs of the waveform matrix. These capture waveform shape differences between neurons (peak height, trough width, asymmetry). Alternative: wavelet decomposition coefficients selected by Lilliefors test for non-normality (features that best separate clusters).",
+          "Cluster the feature space into putative single units. Gaussian Mixture Model (GMM): fit K Gaussians using expectation-maximization, select K by BIC (Bayesian Information Criterion). Alternative: density-based clustering (DBSCAN) for non-Gaussian clusters. For high-channel-count probes (Neuropixels), use template matching approaches (Kilosort): project data onto a template bank, assign spikes to templates, merge/split templates iteratively.",
+          "Validate sorting quality. For each cluster: (1) ISI violation rate: fewer than 1% of inter-spike intervals below 1.5 ms refractory period indicates a well-isolated single unit. (2) Isolation distance: Mahalanobis distance between cluster and nearest neighbor, greater than 20 is good. (3) L-ratio: below 0.1 indicates low contamination. (4) Waveform stability across the recording session (drift detection by plotting amplitude over time). Classify units as single-unit (passes all), multi-unit (fails ISI), or noise (fails waveform consistency)."
+        ],
+        "tags": ["signal-processing", "spike-sorting", "electrophysiology"]
+      },
+      {
+        "flow_name": "lfp-spectral-analysis",
+        "description": "Extract and analyze local field potential features including power spectra, event-related potentials, and time-frequency decompositions for neural state characterization.",
+        "inputs": [
+          {"name": "cleaned-neural-data", "desc": "Artifact-cleaned broadband neural recording"}
+        ],
+        "outputs": [
+          {"name": "lfp-features", "desc": "Power spectral densities by frequency band (delta, theta, alpha, beta, gamma, high-gamma), event-related potentials, and time-frequency spectrograms"},
+          {"name": "neural-state-markers", "desc": "Identified neural states (e.g., sleep stages from delta/spindle power, attention from alpha desynchronization, motor preparation from beta suppression)"}
+        ],
+        "process": [
+          "Low-pass filter and downsample to 1 kSps (anti-alias filter at 400 Hz before decimation). Re-reference if needed: bipolar montage for localized signals, Laplacian for spatial filtering of ECoG/EEG. For LFP from penetrating arrays, local re-referencing between nearby contacts improves spatial specificity.",
+          "Compute power spectral density using Welch's method (2-second Hanning windows, 50% overlap) or multitaper method (3-5 tapers for optimal bias-variance trade-off at each frequency). Extract band power by integrating PSD: delta (0.5-4 Hz), theta (4-8 Hz), alpha (8-13 Hz), beta (13-30 Hz), low gamma (30-70 Hz), high gamma (70-200 Hz). High gamma from ECoG is a reliable proxy for local cortical activation.",
+          "For event-locked analysis: epoch data around events (stimulus onset, movement onset), average across trials to obtain event-related potentials (ERPs). Compute time-frequency decomposition using Morlet wavelet convolution (wave number 5-7 for good time-frequency trade-off) or short-time Fourier transform. Normalize to baseline period using decibel or z-score transform. Identify event-related spectral perturbations (ERSP): desynchronization (power decrease) or synchronization (power increase) in specific bands.",
+          "Derive neural state markers: beta (13-30 Hz) desynchronization over motor cortex indicates motor preparation (onset 500-1000 ms before movement). Alpha (8-13 Hz) suppression over visual cortex indicates visual attention. Theta (4-8 Hz) power in hippocampal recordings marks memory encoding. Sleep staging: high delta + sleep spindles (12-15 Hz) = N2 sleep. Document which markers are present and their reliability (effect size across trials)."
+        ],
+        "tags": ["signal-processing", "spectral-analysis", "lfp"]
+      },
+      {
+        "flow_name": "neural-population-decoding",
+        "description": "Decode behavioral variables or intended actions from neural population activity using statistical and machine learning methods matched to the application latency and accuracy requirements.",
+        "inputs": [
+          {"name": "sorted-spike-trains", "desc": "Spike trains from sorted single units"},
+          {"name": "lfp-features", "desc": "LFP band power and spectral features"},
+          {"name": "clinical-or-research-objective", "desc": "What must be decoded (cursor velocity, grasp type, speech, seizure onset)"}
+        ],
+        "outputs": [
+          {"name": "decoder-model", "desc": "Trained decoder with architecture, parameters, feature set, and performance metrics (correlation, bit rate, latency)"},
+          {"name": "decoding-performance-report", "desc": "Offline cross-validated accuracy, information transfer rate in bits per second, and comparison to chance level"}
+        ],
+        "process": [
+          "Select features based on signal type and decoding target. For continuous kinematics (cursor velocity, arm trajectory): firing rates in 50-100 ms bins from motor cortex single units, or high-gamma power from ECoG over motor areas. For discrete classification (grasp type, speech phoneme): firing rate vectors at go-cue aligned epochs, or ECoG time-frequency features in a 500 ms window.",
+          "Select decoder architecture by application. For continuous BCI cursor control: Kalman filter (linear, interpretable, low latency) modeling the relationship between neural firing rates and cursor velocity. The ReFIT Kalman filter adds intention estimation during closed-loop control (clamp the inferred target, refit on corrected training data). For discrete classification: linear discriminant analysis (LDA) for low-dimensional, support vector machine for moderate, or recurrent neural network (GRU/LSTM) for temporal patterns in high-dimensional signals.",
+          "Train and validate. Split data into training (70%) and test (30%) sets, or use 5-fold cross-validation. For Kalman filter: fit state-transition and observation matrices from training data using least-squares. For classifiers: fit on training features, tune hyperparameters on validation fold. Measure offline performance: Pearson correlation (r) between decoded and actual kinematics for continuous, classification accuracy and confusion matrix for discrete. Calculate information transfer rate: ITR = log2(N) + P*log2(P) + (1-P)*log2((1-P)/(N-1)) bits per trial, where N = number of classes, P = accuracy.",
+          "Assess practical performance. Latency budget: time from neural activity to decoded output must be under 100 ms for BCI cursor control (50 ms neural processing delay + 50 ms decode + display). For speech BCI, under 200 ms is acceptable. Measure online performance if possible (closed-loop Fitts's law task: throughput in bits/s, path efficiency). Document session-to-session stability: does decoder performance degrade, and how much recalibration is needed (full retrain, bias correction, or transfer learning with a few trials)."
+        ],
+        "tags": ["neural-decoding", "machine-learning", "bci"]
+      }
+    ]
+  },
+  {
+    "chain_name": "biocompatible-implant-design",
+    "description": "Design a biocompatible neural implant from material selection through encapsulation, sterilization, and chronic performance validation following ISO 10993 and regulatory requirements.",
+    "domain": "biomedical",
+    "tags": ["neurotechnology", "biocompatibility", "implant-design", "regulatory"],
+    "steps": [
+      {
+        "flow_name": "biocompatibility-material-selection",
+        "description": "Select implant materials from the ISO 10993 framework based on contact type, duration, and body tissue, then define the required testing pathway.",
+        "inputs": [
+          {"name": "implant-functional-requirements", "desc": "What the implant must do (record, stimulate, drug delivery), where it is placed (brain, peripheral nerve, spinal cord), and how long it stays (acute under 24h, limited 1-30 days, prolonged over 30 days)"},
+          {"name": "implant-form-factor", "desc": "Physical size, shape, and mechanical constraints from the surgical approach and target anatomy"}
+        ],
+        "outputs": [
+          {"name": "material-selections", "desc": "Selected materials for each implant component (substrate, encapsulation, electrode, conductor, connector) with rationale"},
+          {"name": "biocompatibility-test-matrix", "desc": "Required ISO 10993 tests mapped to each material and contact category (cytotoxicity, sensitization, irritation, acute systemic toxicity, subchronic toxicity, genotoxicity, implantation, hemocompatibility as applicable)"}
+        ],
+        "process": [
+          "Classify the implant by ISO 10993-1: contact type (surface, external communicating, or implant device), contact tissue (bone, tissue/tissue fluid, blood), and contact duration (limited, prolonged, permanent). A chronic intracortical neural implant is: implant device, tissue/tissue fluid contact, permanent duration. This is the highest risk category requiring the most extensive testing.",
+          "Select substrate material. Silicon: well-characterized, standard for Utah and Neuropixels arrays, but brittle and stiff (170 GPa vs brain tissue 1 kPa, 5 orders of magnitude mismatch drives chronic inflammation). Flexible polymers: polyimide (3 GPa, better but still stiff), parylene-C (4 GPa, pinhole-free thin-film conformal coating, USP Class VI), SU-8 (photopatternable but limited biocompatibility data for chronic). For brain implants, compliance matching favors polymer substrates.",
+          "Select encapsulation. Hermetic titanium: gold standard for active implantable devices (pacemakers, cochlear implants), zero moisture ingress, but adds bulk. Ceramic (alumina): RF transparent for wireless, hermetic, but brittle. Thin-film encapsulation (parylene-C, 5-20 um): lightweight, conformal, but moisture penetration limits lifetime to 1-5 years depending on thickness and defects. Liquid crystal polymer (LCP): emerging alternative with low moisture absorption.",
+          "Map required biocompatibility tests from ISO 10993-1 Table A.1. For a permanent implant in tissue contact: cytotoxicity (ISO 10993-5, cell culture), sensitization (ISO 10993-10, guinea pig or local lymph node), irritation/intracutaneous reactivity, acute systemic toxicity, subchronic toxicity (90-day implant study), genotoxicity (Ames, chromosomal aberration, mouse lymphoma), implantation study (ISO 10993-6, histological evaluation at the implant site), chronic toxicity, and carcinogenicity. Materials with extensive prior use (titanium, medical-grade silicone, parylene-C) may qualify for reduced testing via biological safety justification."
+        ],
+        "tags": ["biocompatibility", "material-selection", "regulatory"]
+      },
+      {
+        "flow_name": "implant-encapsulation-design",
+        "description": "Design the implant encapsulation system for moisture protection, mechanical protection, and chronic biocompatibility, verified by accelerated aging.",
+        "inputs": [
+          {"name": "material-selections", "desc": "Materials for each component"},
+          {"name": "implant-form-factor", "desc": "Size, shape, mechanical constraints"}
+        ],
+        "outputs": [
+          {"name": "encapsulation-design", "desc": "Encapsulation material, thickness, deposition method, feedthrough design, and expected lifetime"},
+          {"name": "accelerated-aging-protocol", "desc": "Test protocol to verify encapsulation integrity: temperature, duration, pass/fail criteria based on impedance, leakage current, and visual inspection"}
+        ],
+        "process": [
+          "Define the moisture barrier requirement from the electronics sensitivity. CMOS circuitry fails when moisture reaches the die: target moisture ingress rate below 10^-3 g/m2/day for multi-year implant life. Hermetic enclosures (titanium, ceramic) achieve effectively zero ingress. Thin-film polymer coatings have finite permeability: parylene-C at 10 um thickness allows ~0.08 g/m2/day at 37 degrees C, giving estimated failure in 1-3 years for bare CMOS, longer if additional moisture getters or conformal coatings are used.",
+          "Design feedthroughs for electrical connections passing through the hermetic boundary. For titanium enclosures: glass-to-metal seals or ceramic-to-metal brazed feedthroughs (used in cochlear implants, up to 22 pins). For higher pin counts needed for neural interfaces (100+), thin-film multi-layer feedthroughs on ceramic substrates (alumina with platinum vias) allow higher density. Each feedthrough must maintain hermeticity (leak rate below 10^-8 atm-cc/s He).",
+          "Design for chronic mechanical stability. The implant must withstand micromotion between the brain and skull (10-50 um displacement with each heartbeat and respiration). Strain relief at the electrode-cable junction is critical. Flexible interconnects (thin-film metal on polymer) absorb motion. Anchoring: skull screws for the housing, but no rigid attachment between the housing and the intracortical array (allow floating). Calculate mechanical fatigue life from cyclic strain amplitude and material S-N curve.",
+          "Define accelerated aging protocol per ASTM F1980: use 60 or 85 degrees C saline soak with an acceleration factor calculated from the Arrhenius equation (Q10 = 2 assumption: each 10 degree C increase doubles aging rate). At 60 degrees C, 1 month equals approximately 4 months at 37 degrees C. At 85 degrees C, 1 month equals approximately 23 months. Monitor electrode impedance weekly, leakage current through encapsulation, and visual inspection under microscope for delamination, cracking, or corrosion. Pass criteria: impedance drift below 50%, no leakage current increase, no visible failure through the target equivalent lifetime."
+        ],
+        "tags": ["encapsulation", "reliability", "accelerated-aging"]
+      },
+      {
+        "flow_name": "sterilization-validation",
+        "description": "Select and validate a sterilization method compatible with the implant materials and electronics, meeting sterility assurance level requirements.",
+        "inputs": [
+          {"name": "material-selections", "desc": "All implant materials"},
+          {"name": "encapsulation-design", "desc": "Encapsulation system and sealed electronics"}
+        ],
+        "outputs": [
+          {"name": "sterilization-protocol", "desc": "Selected method, parameters (temperature, time, gas concentration or radiation dose), and validated sterility assurance level (SAL)"},
+          {"name": "material-compatibility-verification", "desc": "Evidence that sterilization does not degrade implant materials or performance beyond acceptable limits"}
+        ],
+        "process": [
+          "Evaluate sterilization methods against material compatibility. Ethylene oxide (EtO): low temperature (37-55 degrees C), compatible with polymers and electronics, but requires aeration to remove toxic residuals (EtO and ethylene chlorohydrin). Standard for polymer-based neural implants. Gamma radiation (25-40 kGy): fast, no residuals, penetrates packaging, but degrades some polymers (PTFE, acetal) and can affect CMOS electronics (total ionizing dose). Electron beam: similar to gamma but less penetration, suitable for surface devices. Steam (autoclave 121 degrees C): incompatible with most polymers and electronics. Vaporized hydrogen peroxide: low temperature, compatible with metals, limited polymer data.",
+          "For most neural implants with polymer components and electronics, EtO is the primary choice. Define cycle parameters: 450-600 mg/L EtO concentration, 55 degrees C, 60% relative humidity, 2-4 hour exposure, followed by aeration at 50 degrees C for 8-12 hours minimum. Aeration time is critical: residual EtO on implant surfaces must be below ISO 10993-7 limits (25 mg for contact devices, lower for implants by body weight calculation).",
+          "Validate sterility assurance level (SAL) of 10^-6 per ISO 11135 (EtO) or ISO 11137 (radiation). For EtO: perform a half-cycle qualification (expose product at half the normal cycle time, demonstrate adequate bioburden kill, then full cycle provides overkill margin). Determine product bioburden per ISO 11737-1 (average and maximum). Demonstrate at least 6-log reduction from maximum bioburden at half-cycle.",
+          "Verify material compatibility post-sterilization: run functional tests on sterilized samples (electrode impedance, amplifier performance, wireless link function, mechanical integrity) and compare to pre-sterilization baseline. For polymer encapsulation, measure molecular weight (GPC) and tensile properties to detect degradation. Any property change beyond specification limits requires a different sterilization method or redesigned materials."
+        ],
+        "tags": ["sterilization", "regulatory", "validation"]
+      },
+      {
+        "flow_name": "chronic-performance-assessment",
+        "description": "Design and execute chronic in-vivo studies to characterize long-term implant performance including signal quality degradation, tissue response, and failure modes.",
+        "inputs": [
+          {"name": "encapsulation-design", "desc": "Encapsulation system with expected lifetime"},
+          {"name": "sterilization-protocol", "desc": "Validated sterilization method"},
+          {"name": "electrode-design", "desc": "Electrode array specification"}
+        ],
+        "outputs": [
+          {"name": "chronic-performance-data", "desc": "Signal quality (SNR, unit yield) over time, impedance tracking, tissue histology at explant, failure mode analysis"},
+          {"name": "implant-lifetime-assessment", "desc": "Estimated functional lifetime with confidence interval, identified failure modes and their timelines, design improvements for next iteration"}
+        ],
+        "process": [
+          "Design the chronic study. For intracortical arrays, a minimum 6-month implant duration demonstrates chronic stability (12 months preferred for regulatory submissions). Species selection: non-human primate for closest brain analogy, rodent for larger cohorts at lower cost. Sample size: minimum 6 animals per group for statistical power on histological endpoints. Define recording schedule: daily for first week, weekly for first month, monthly thereafter. Track electrode impedance at 1 kHz, signal amplitude (peak-to-peak of detected spikes), noise floor (RMS of signal with no detected spikes), unit yield (channels with detectable single units / total channels).",
+          "Characterize the foreign body response timeline. Week 1: acute inflammation (activated microglia, edema, albumin leakage from blood-brain barrier disruption). Week 2-4: chronic inflammation onset (reactive astrocytes begin forming glial sheath, macrophage recruitment). Month 1-3: glial scar matures (dense astrocyte sheath 50-200 um thick around implant, neuronal die-back within 50-100 um of electrode surface). Month 3+: stable chronic state. Quantify by immunohistochemistry at explant: GFAP (astrocytes), Iba-1 (microglia), NeuN (neurons) at 50, 100, 200, 500 um from electrode track.",
+          "Track signal quality degradation. Typical trajectory for rigid silicon arrays: 50-80% of channels record single units at week 1, declining to 20-40% by month 6 due to glial encapsulation increasing electrode-to-neuron distance. Impedance typically increases 2-5x over 6 months as tissue encapsulates. Flexible arrays show slower degradation (hypothesis: reduced micromotion-driven inflammation). Plot unit yield and mean SNR vs time with 95% confidence intervals.",
+          "Identify and classify failure modes. Electrical: broken traces (from chronic flexion), connector failure, encapsulation breach (moisture ingress causing corrosion or short circuits). Biological: glial encapsulation (gradual signal loss), infection (acute, usually from surgical contamination), foreign body reaction to specific materials. Mechanical: implant migration, cable breakage at strain point. For each failure mode, record time-to-failure and build a reliability model (Weibull distribution). Use this data to define the implant's usable lifetime and prioritize design improvements."
+        ],
+        "tags": ["chronic-study", "in-vivo", "reliability"]
+      }
+    ]
+  },
+  {
+    "chain_name": "neurostimulation-system-design",
+    "description": "Design a neurostimulation system from parameter selection through charge safety analysis, current steering, artifact management, and closed-loop adaptation.",
+    "domain": "biomedical",
+    "tags": ["neurotechnology", "neurostimulation", "neuromodulation", "dbs"],
+    "steps": [
+      {
+        "flow_name": "stimulation-parameter-specification",
+        "description": "Define stimulation parameters from the therapeutic target, ensuring charge-balanced waveforms within the electrochemical safety window of the electrode material.",
+        "inputs": [
+          {"name": "therapeutic-objective", "desc": "What the stimulation must achieve (tremor suppression in Parkinson's, seizure termination, pain relief, motor cortex activation for BCI)"},
+          {"name": "electrode-design", "desc": "Electrode material, geometry, impedance, and number of contacts available for stimulation"}
+        ],
+        "outputs": [
+          {"name": "stimulation-parameters", "desc": "Waveform shape (biphasic, symmetric/asymmetric), pulse width, frequency, amplitude (current or voltage), inter-phase gap, and duty cycle"},
+          {"name": "charge-safety-analysis", "desc": "Charge per phase, charge density, position relative to Shannon safety limit, and maximum safe parameters for the electrode"}
+        ],
+        "process": [
+          "Select waveform shape. Charge-balanced biphasic pulses are mandatory for chronic stimulation to prevent electrode corrosion and tissue damage from net DC charge. Cathodic-first (negative first) is standard for neural activation (depolarizes at the electrode, lower threshold than anodic). Asymmetric biphasic (short cathodic, longer lower-amplitude anodic) is more charge-efficient: the cathodic phase activates, the anodic phase recovers charge at lower amplitude to avoid anodic block. Include an inter-phase gap of 25-100 us between phases to prevent the anodic phase from immediately canceling cathodic activation.",
+          "Set pulse width and frequency from the therapeutic literature. Deep brain stimulation for Parkinson's tremor: 60-90 us pulse width, 130-185 Hz frequency, 1-5 mA amplitude (for microelectrodes) or 1-5 V (for macroelectrodes). Cortical stimulation for motor activation: 200-400 us, 50-300 Hz. Spinal cord stimulation for pain: 200-500 us, 40-100 Hz. Vagus nerve stimulation: 250-500 us, 20-30 Hz. Start at the lowest effective parameters and increase to minimize energy consumption and tissue exposure.",
+          "Calculate charge per phase: Q = I x PW (for current-controlled) where I is amplitude and PW is pulse width. Charge density = Q / electrode_area. Apply the Shannon safety limit: log(Q/phase) + log(charge_density) should be less than k, where k = 1.5-2.0 (conservative to aggressive). For a 1 mm diameter electrode (area = 0.785 mm2) at 3 mA x 100 us = 0.3 uC/phase: charge density = 0.38 uC/cm2. Log(0.3e-6) + log(0.38) = -6.52 + (-0.42) = -6.94, well within the k=1.5 limit. For microelectrodes (15 um diameter), the small area makes charge density the binding constraint.",
+          "Calculate compliance voltage: V_compliance must exceed I_stim x Z_electrode + V_tissue. For a 10 kOhm electrode at 1 mA, 10 V across the electrode plus 1-2 V tissue voltage requires at least 12 V compliance. Higher compliance voltage increases power consumption. For battery-powered implants (3.7 V lithium cell), a charge pump or boost converter is needed to reach typical 12-18 V compliance. This is a major power consumer in implantable stimulators."
+        ],
+        "tags": ["neurostimulation", "parameter-design", "safety"]
+      },
+      {
+        "flow_name": "current-steering-and-field-shaping",
+        "description": "Design multi-contact current steering strategies to shape the stimulation field for spatial selectivity, using simultaneous multi-electrode activation.",
+        "inputs": [
+          {"name": "stimulation-parameters", "desc": "Waveform and amplitude specifications"},
+          {"name": "electrode-design", "desc": "Multi-contact electrode geometry and impedance per contact"}
+        ],
+        "outputs": [
+          {"name": "current-steering-configuration", "desc": "Current allocation across contacts (percentage per contact, polarity), steering resolution, and estimated volume of tissue activated"},
+          {"name": "field-model", "desc": "Finite element model of the electric field distribution in tissue, showing isopotential contours and activation volume for each steering configuration"}
+        ],
+        "process": [
+          "Map the target neural structure and the structures to avoid. For DBS in the subthalamic nucleus: target the dorsolateral motor territory (approximately 3x4 mm), avoid the ventral limbic territory (mood side effects) and the medial internal capsule (muscle contractions). The electrode is a cylindrical lead with 4-8 contacts spaced 0.5-1.5 mm apart (Medtronic 3389, Boston Scientific Vercise).",
+          "Implement current steering using multiple independent current sources (one per contact). Divide current across contacts to steer the activation volume. For directional leads (Boston Scientific, Abbott) with segmented contacts (3 segments per row, 120 degrees each), allocate current to one segment to steer the field laterally by approximately 1 mm. For ring contacts, vertical steering between adjacent rings shifts the field up/down along the lead axis in 0.5 mm steps.",
+          "Build a finite element model of the electrode in tissue. Tissue conductivity: gray matter 0.2 S/m, white matter 0.1 S/m (anisotropic along fiber direction), CSF 1.8 S/m, electrode-tissue interface impedance from electrode material. Apply stimulation current boundary conditions. Solve for the potential field. Estimate the volume of tissue activated (VTA) using an activation threshold of 0.2 V/mm for 90 us pulses (or couple to axon models for precise prediction using the activating function: second spatial derivative of the potential along the axon).",
+          "Optimize current allocation to maximize target coverage while minimizing side-effect region activation. This is a constrained optimization: maximize VTA overlap with target region, subject to total current within safety limits and each contact within its charge density limit. In practice, clinicians step through discrete configurations during programming sessions, adjusting by 10-20% current shifts between contacts and evaluating symptom response and side effects."
+        ],
+        "tags": ["neurostimulation", "current-steering", "modeling"]
+      },
+      {
+        "flow_name": "stimulation-artifact-management",
+        "description": "Design the artifact blanking and recovery strategy for systems that must simultaneously record neural signals during active stimulation.",
+        "inputs": [
+          {"name": "stimulation-parameters", "desc": "Waveform timing and amplitude"},
+          {"name": "amplifier-specification", "desc": "Recording amplifier bandwidth, recovery time, and dynamic range"}
+        ],
+        "outputs": [
+          {"name": "artifact-management-design", "desc": "Blanking timing, recovery strategy (sample-and-hold, fast recovery amplifier, template subtraction), and residual artifact specification"},
+          {"name": "recording-during-stimulation-protocol", "desc": "Achievable recording quality during active stimulation with specified parameters"}
+        ],
+        "process": [
+          "Characterize the stimulation artifact. During a stimulation pulse (100 us at 3 mA through a 10 kOhm electrode), the voltage at the electrode reaches 30 V peak, saturating any neural recording amplifier (full-scale typically 1-5 mV). The artifact has three phases: (1) the stimulation pulse itself (100 us), (2) electrode polarization recovery (exponential decay, 0.5-5 ms time constant depending on electrode material and charge), (3) amplifier recovery from saturation (0.1-10 ms depending on AC coupling time constant).",
+          "Design hardware blanking: disconnect the recording input during the stimulation pulse plus a short margin (total blank window: stimulation pulse width + 100-500 us for electrode discharge). During blanking, hold the amplifier output at its pre-blank value (sample-and-hold) to prevent a transient when reconnecting. For 130 Hz stimulation with 500 us total blank window, 6.5% of data is blanked, acceptable for LFP recording (most information is below 100 Hz) but can miss some spikes.",
+          "Design post-artifact recovery. Minimize AC coupling time constants: use DC-coupled or very short time constant (10 ms) amplifiers to reduce exponential recovery artifacts. Add a fast-recover circuit that resets the AC coupling capacitor after each blank window. For remaining artifacts, use template subtraction: average the artifact waveform over 50-100 stimulation cycles (triggered on the stimulation sync signal) and subtract the template from each individual artifact.",
+          "Validate recording quality during stimulation. Record known neural signals (spike-generating cortex during movement) with and without stimulation. Compare SNR, spike detection rate, and LFP power spectra. The residual artifact after blanking and template subtraction should be below the neural noise floor (less than 5 uV RMS in the spike band, less than 10 uV in the LFP band). If not met, increase blank window or add more averaging to template subtraction."
+        ],
+        "tags": ["neurostimulation", "artifact-blanking", "recording"]
+      },
+      {
+        "flow_name": "closed-loop-stimulation-design",
+        "description": "Design a closed-loop neurostimulation system that adjusts stimulation parameters in real time based on detected neural biomarkers.",
+        "inputs": [
+          {"name": "therapeutic-objective", "desc": "What the closed loop must control (tremor, seizure, mood, motor output)"},
+          {"name": "stimulation-parameters", "desc": "Stimulation parameter ranges"},
+          {"name": "neural-state-markers", "desc": "Available biomarkers from neural recording"}
+        ],
+        "outputs": [
+          {"name": "closed-loop-controller-design", "desc": "Biomarker detection algorithm, control law (on/off, proportional, model-predictive), parameter adjustment range, safety limits, and latency specification"},
+          {"name": "stability-safety-analysis", "desc": "Analysis of closed-loop stability (no oscillation, no runaway stimulation), safety bounds, and fallback behavior"}
+        ],
+        "process": [
+          "Select the biomarker for closed-loop control. For Parkinson's disease: beta band (13-30 Hz) power in the subthalamic nucleus (STN) correlates with bradykinesia and rigidity. Elevated beta = more symptoms = need stimulation. As stimulation takes effect, beta power decreases. This creates a natural negative feedback loop. For epilepsy: detect seizure onset signatures (sustained high-frequency oscillations 80-500 Hz, or DC shifts) and trigger stimulation to abort the seizure. For motor BCI: decoded movement intention triggers stimulation of motor cortex or spinal cord.",
+          "Design the control law. Simplest: threshold-based on/off control (if beta power exceeds threshold, stimulate at fixed parameters; below threshold, stop). This works for responsive neurostimulation in epilepsy (NeuroPace RNS). For smoother control in Parkinson's: proportional control where stimulation amplitude scales linearly with beta power above a baseline. More advanced: model-predictive control using a transfer function model from stimulation input to biomarker output (identified from open-loop data), optimizing stimulation trajectory to track a desired biomarker setpoint.",
+          "Analyze closed-loop stability. The neural system introduces delays: stimulation takes 0.5-2 seconds to affect beta power in Parkinson's. If the controller gain is too high relative to the loop delay, oscillations occur (stimulation cycles on and off at a frequency related to the delay). Use control theory: model the plant (brain response to stimulation as a first-order system with delay), design the controller with adequate phase margin (greater than 45 degrees). Set a maximum stimulation amplitude hard limit that cannot be exceeded by the control law under any biomarker input.",
+          "Define safety bounds and fallback. Maximum stimulation amplitude must never exceed the charge density safety limit regardless of biomarker input. Rate-limit parameter changes (no more than 10% amplitude change per second) to prevent abrupt transitions. If the biomarker signal is lost (electrode failure, artifact contamination), fall back to open-loop stimulation at the last known effective parameters. Log all biomarker values and parameter adjustments for clinician review. Include a patient-controlled emergency stop."
+        ],
+        "tags": ["closed-loop", "neuromodulation", "control-systems"]
+      }
+    ]
+  },
+  {
+    "chain_name": "microelectrode-array-fabrication",
+    "description": "Fabricate a microelectrode array from wafer-level micromachining through metallization, packaging, and quality control for implantable neural recording.",
+    "domain": "biomedical",
+    "tags": ["neurotechnology", "microfabrication", "mems", "neural-electrode"],
+    "steps": [
+      {
+        "flow_name": "array-substrate-fabrication",
+        "description": "Fabricate the electrode array substrate using silicon micromachining or polymer thin-film processing, defining the shank geometry and dielectric layers.",
+        "inputs": [
+          {"name": "electrode-design", "desc": "Array geometry (shank count, length, width, pitch), substrate material (silicon, polyimide, parylene-C), and target impedance"}
+        ],
+        "outputs": [
+          {"name": "fabricated-substrate", "desc": "Patterned substrate wafer with shank geometry, dielectric layers, and alignment marks for subsequent metallization"},
+          {"name": "substrate-process-record", "desc": "Process parameters for each fabrication step (etch depth, deposition thickness, lithography alignment) and in-process QC measurements"}
+        ],
+        "process": [
+          "For silicon-based arrays (Utah array style): start with a 500 um thick silicon wafer. Define electrode columns by dicing a grid of 400 um deep cuts on the backside, leaving an array of protruding columns on the front. Etch columns to needle shape using wet isotropic etch (HNA: HF/nitric/acetic) or DRIE (Bosch process for straight sidewalls followed by isotropic SF6 for tip sharpening). Target: 50-80 um diameter shank, 1-1.5 mm length, tip radius under 5 um for low-trauma insertion.",
+          "For polymer-based arrays (Michigan style on polyimide): spin-coat polyimide (HD Microsystems PI-2611, 10-20 um per layer) on a silicon carrier wafer with a sacrificial release layer. Cure at 350 degrees C under nitrogen. Pattern the shank outline using oxygen plasma RIE through an aluminum hard mask. For parylene-C substrates: deposit 5-10 um parylene by CVD (Gorham process) at room temperature, pattern by O2 plasma with photoresist mask.",
+          "Deposit the dielectric insulation layer. For silicon substrates: thermally grow 500 nm SiO2 followed by 200 nm LPCVD Si3N4 (dual-layer for pinhole reduction). For polymer substrates: the polymer itself serves as the dielectric; add a 1 um parylene-C barrier layer if using polyimide (parylene has lower moisture permeability). Verify dielectric integrity by measuring leakage current at 5 V DC in saline: must be below 1 nA per electrode site.",
+          "Perform in-process metrology: measure shank dimensions (optical microscopy, SEM for tip geometry), dielectric thickness (profilometry, ellipsometry), and surface roughness (AFM if electrode sites require sub-nm roughness characterization). Record all process parameters (etch rate, deposition rate, chamber conditions) for traceability."
+        ],
+        "tags": ["microfabrication", "substrate", "mems"]
+      },
+      {
+        "flow_name": "electrode-metallization-process",
+        "description": "Deposit and pattern the electrode metal traces and recording sites to achieve the target impedance and charge injection capacity.",
+        "inputs": [
+          {"name": "fabricated-substrate", "desc": "Patterned substrate with dielectric layers"},
+          {"name": "electrode-design", "desc": "Recording site diameter, material choice, and impedance target"}
+        ],
+        "outputs": [
+          {"name": "metallized-array", "desc": "Electrode array with patterned metal traces and exposed recording sites"},
+          {"name": "impedance-map", "desc": "Measured impedance at 1 kHz for every electrode site across the wafer, with yield and uniformity statistics"}
+        ],
+        "process": [
+          "Deposit the conductor metal stack by sputtering or e-beam evaporation. Standard stack: 20 nm titanium adhesion layer, 200-500 nm gold or platinum conductor, 20 nm titanium cap. For traces that must be thin and flexible: 200 nm gold on 20 nm Cr adhesion layer. Platinum is preferred for electrode sites due to superior electrochemical stability; gold is acceptable for traces that will be insulated.",
+          "Pattern metal using lift-off or wet/dry etch. Lift-off: spin photoresist, lithographically pattern, deposit metal, dissolve resist to lift off unwanted metal. Works well for features above 5 um. For sub-micron features, use dry etch (Ar ion milling of Pt, Cl2-based RIE for Au/Ti) with a hard mask. Alignment accuracy between metal layer and shank geometry must be within 2 um.",
+          "Open recording sites by etching the top dielectric in defined windows. Site diameter determines impedance: 15 um diameter bare Pt site gives 500 kOhm to 1 MOhm at 1 kHz. To reduce impedance, electroplate with high-surface-area coatings: platinum black (electrodeposited from chloroplatinic acid, reduces impedance to 10-50 kOhm), iridium oxide (AIROF by pulsed electrodeposition, also gives high charge injection capacity for stimulation, 1-4 mC/cm2), or PEDOT:PSS (electropolymerized from EDOT monomer in PSS solution, impedance 5-30 kOhm). Each coating has different long-term stability.",
+          "Measure impedance at 1 kHz for all sites using electrochemical impedance spectroscopy in PBS at room temperature. Apply a 10 mV RMS sinusoidal excitation. Calculate yield: percentage of sites within 2x of median impedance. Typical yield target: greater than 90%. Sites with impedance greater than 5x median indicate fabrication defects (incomplete metallization, residual dielectric). Reject or rework defective sites."
+        ],
+        "tags": ["microfabrication", "metallization", "electrochemistry"]
+      },
+      {
+        "flow_name": "array-packaging-and-assembly",
+        "description": "Package the fabricated electrode array into a functional implantable assembly including connector, cable, and hermetic enclosure for the electronics.",
+        "inputs": [
+          {"name": "metallized-array", "desc": "Electrode array with patterned traces and verified recording sites"},
+          {"name": "encapsulation-design", "desc": "Encapsulation material and feedthrough design"}
+        ],
+        "outputs": [
+          {"name": "packaged-assembly", "desc": "Complete electrode array assembly with connector or wireless module, ready for sterilization"},
+          {"name": "assembly-test-results", "desc": "Electrical continuity, impedance verification, insulation resistance, and mechanical integrity test results"}
+        ],
+        "process": [
+          "Release the electrode array from the carrier wafer. For silicon arrays: singulate by dicing or laser cutting. For polymer arrays on sacrificial release layers: dissolve the release layer (aluminum in KOH, copper in ammonium persulfate) and carefully peel the flexible array from the carrier. Handle with care: polymer arrays are fragile during release.",
+          "Bond the array to its cable or flex circuit. Wire bonding (wedge bonding with 25 um gold or aluminum wire) connects array bond pads to a flexible printed circuit (FPC). For high-channel-count arrays, use flip-chip bonding with anisotropic conductive film (ACF) or gold stud bump bonding for hundreds of connections in a small area. Each bond adds series resistance (typically 0.1-1 Ohm per bond, negligible compared to electrode impedance).",
+          "Assemble into the housing. Attach the FPC cable to the hermetic housing feedthrough using connector or direct solder. Encapsulate the cable and transitions with medical-grade silicone (NuSil MED-4211) for flexibility and biocompatibility. For wireless assemblies: mount the ASIC, antenna coil, and battery/capacitor inside the titanium housing. Route the electrode lead out through the hermetic feedthrough. Pot internal connections with epoxy to prevent vibration damage.",
+          "Test the completed assembly. Electrical continuity: verify every channel from electrode tip to external connector/wireless output. Insulation resistance: apply 5 VDC between each channel and ground (saline bath), verify greater than 1 MOhm per channel. Impedance: re-measure all sites in PBS to confirm no degradation from assembly (impedance should be within 20% of pre-assembly values). Mechanical: pull-test the cable-to-housing junction to 2 N minimum without failure. Leak test the hermetic housing with helium leak detection (below 10^-8 atm-cc/s)."
+        ],
+        "tags": ["packaging", "assembly", "implant"]
+      }
+    ]
+  },
+  {
+    "chain_name": "bci-decoder-design",
+    "description": "Design, train, and validate a brain-computer interface decoder from feature selection through model architecture, closed-loop adaptation, and session-to-session transfer.",
+    "domain": "biomedical",
+    "tags": ["neurotechnology", "bci", "neural-decoding", "machine-learning"],
+    "steps": [
+      {
+        "flow_name": "bci-feature-engineering",
+        "description": "Select and extract neural features that carry the most information about the intended variable, matched to the signal type and BCI application.",
+        "inputs": [
+          {"name": "sorted-spike-trains", "desc": "Single-unit and multi-unit spike trains from neural recording"},
+          {"name": "lfp-features", "desc": "LFP band power features"},
+          {"name": "behavioral-data", "desc": "Ground truth behavioral measurements (hand position/velocity, speech audio, cursor target position) time-aligned to neural data"}
+        ],
+        "outputs": [
+          {"name": "feature-matrix", "desc": "Neural features extracted at each time bin (channels x features x time), with feature labels and bin size"},
+          {"name": "feature-information-analysis", "desc": "Mutual information or R-squared between each feature and the behavioral target, guiding feature selection"}
+        ],
+        "process": [
+          "Define the time bin size from the application latency requirement. For continuous cursor control: 50-100 ms bins provide a good trade-off between temporal resolution and firing rate estimation reliability (a neuron firing at 20 Hz gives 1-2 spikes per 50 ms bin, Poisson-limited). For speech BCI: 20-50 ms bins to capture fast articulatory dynamics. For discrete selection: trial-averaged features over 200-500 ms windows.",
+          "Extract features by signal type. From spike trains: firing rate (spike count / bin duration), or threshold crossings per bin if spike sorting is not used (multi-unit activity, which is more stable across days). From LFP/ECoG: band power in relevant bands (high gamma 70-200 Hz from ECoG is the most informative for motor and speech decoding, extracted as the analytic amplitude of the bandpass-filtered signal). From EEG: mu rhythm (8-12 Hz) and beta (13-30 Hz) desynchronization over motor cortex.",
+          "Perform feature selection. Calculate the mutual information or correlation (R-squared) between each neural feature and the behavioral target at multiple time lags (neural activity leads behavior by 50-200 ms in motor cortex). Select the top N features that provide the highest decoding performance in cross-validation, using forward selection or L1 regularization. For high-dimensional feature spaces (1000+ channels x multiple features), PCA or factor analysis first reduces dimensionality to 20-100 latent factors, then decode from factors.",
+          "Handle non-stationarity. Neural feature distributions shift across minutes (adaptation), hours (electrode drift), and days (chronic changes). Z-score features within each session block (subtract mean, divide by standard deviation of a recent calibration window). This normalization preserves relative modulation while removing baseline shifts. For features with log-normal distributions (firing rates), apply log transform before z-scoring."
+        ],
+        "tags": ["bci", "feature-engineering", "neural-decoding"]
+      },
+      {
+        "flow_name": "decoder-architecture-and-training",
+        "description": "Select the decoder model architecture, train on calibration data, and optimize hyperparameters using nested cross-validation.",
+        "inputs": [
+          {"name": "feature-matrix", "desc": "Neural features at each time bin"},
+          {"name": "behavioral-data", "desc": "Ground truth targets"},
+          {"name": "feature-information-analysis", "desc": "Feature relevance rankings"}
+        ],
+        "outputs": [
+          {"name": "trained-decoder", "desc": "Decoder model with fitted parameters and hyperparameters"},
+          {"name": "offline-performance-metrics", "desc": "Cross-validated R-squared, MSE, classification accuracy, and information transfer rate"}
+        ],
+        "process": [
+          "Select architecture by application. For 2D cursor control from motor cortex spikes: Kalman filter (state = [x, y, vx, vy], observation = firing rates). Linear, interpretable, updates in closed-form, very low latency (under 1 ms to compute). For 3D arm kinematics: Kalman filter or unscented Kalman filter if nonlinearities are significant. For discrete classification (grasp types, phonemes): LDA if features are approximately Gaussian, or gradient-boosted trees for nonlinear boundaries. For high-dimensional temporal sequences (speech from ECoG): RNN (GRU or LSTM) or temporal convolutional network, trained end-to-end.",
+          "Train on calibration data. For Kalman filter: closed-form solution. State transition matrix A from regressing state at t+1 on state at t. Observation matrix C from regressing firing rates on state. Noise covariances W and Q from residuals. For neural networks: train with Adam optimizer, learning rate 1e-3 to 1e-4, batch size 32-128, for 50-200 epochs with early stopping on validation loss. Use dropout (0.2-0.5) for regularization with small datasets (common in neural data, often under 10 minutes of calibration).",
+          "Hyperparameter optimization. Use 5-fold cross-validation with temporal splits (not random, to respect time structure). For Kalman filter: optimize the bin size, number of neural features, and time lags included. For neural networks: optimize hidden layer size, dropout rate, learning rate, and number of layers. Use Bayesian optimization (Gaussian process) or random search over the hyperparameter space. Report the mean and standard error of the performance metric across folds.",
+          "Measure offline decoding performance. For continuous targets (velocity): Pearson correlation r (typically 0.7-0.9 for motor BCI with intracortical arrays), R-squared (variance explained), and mean squared error. For discrete targets: classification accuracy, confusion matrix, Cohen's kappa (chance-corrected accuracy). Calculate information transfer rate for comparison across studies. Typical: 2-4 bits/s for intracortical motor BCI (cursor control), 0.5-1 bit/s for ECoG speech BCI, 0.1-0.5 bits/s for EEG motor imagery BCI."
+        ],
+        "tags": ["bci", "decoder-training", "machine-learning"]
+      },
+      {
+        "flow_name": "closed-loop-decoder-adaptation",
+        "description": "Adapt the decoder during closed-loop BCI use to account for user learning and neural non-stationarity, using intention-aware recalibration.",
+        "inputs": [
+          {"name": "trained-decoder", "desc": "Initial offline-trained decoder"},
+          {"name": "offline-performance-metrics", "desc": "Baseline offline accuracy"}
+        ],
+        "outputs": [
+          {"name": "adaptive-decoder", "desc": "Decoder with online adaptation algorithm enabled, including learning rate and update schedule"},
+          {"name": "closed-loop-performance-metrics", "desc": "Online performance metrics (target acquisition time, path efficiency, success rate, throughput in bits/s) from closed-loop testing"}
+        ],
+        "process": [
+          "Identify the online-offline performance gap. Decoders trained on offline calibration data (user performs movements, neural data is recorded) typically underperform when used online (user observes decoded cursor and adapts behavior). The gap arises because the user's neural strategy changes under closed-loop feedback. Expect 20-50% performance reduction initially, recovering as user and decoder co-adapt.",
+          "Implement ReFIT-style intention estimation. During closed-loop cursor control, the true user intention is not known (unlike offline calibration where target movement is measured). Estimate intention by assuming the user always intends to move the cursor toward the target. Re-label the training data: replace the actual cursor velocity (which includes decoder errors) with the vector pointing from current cursor position to target position. Retrain the Kalman filter observation model on this corrected data. This typically doubles the bit rate compared to non-adaptive decoding.",
+          "For continuous adaptation: use recursive least squares (RLS) or stochastic gradient descent to update decoder parameters every N minutes using the most recent data with intention-estimated labels. Set the learning rate to balance tracking non-stationarity (higher rate) against stability (lower rate). A forgetting factor of 0.99-0.999 per sample in RLS gives good results. Monitor decoder stability: if decoded output variance suddenly increases, freeze adaptation and revert to last stable parameters.",
+          "Measure closed-loop performance with standardized tasks. Center-out reaching (Fitts's law): cursor starts at center, 8 targets appear at equal angles, measure acquisition time and path efficiency (straight-line distance / actual path length). Calculate throughput in bits/s using Fitts's law: TP = ID / MT, where ID = log2(D/W + 1), D is target distance, W is target width, MT is movement time. State-of-art intracortical BCI: 2-3 bits/s throughput, comparable to an assistive eye-tracker. Compare to offline predictions and quantify the online-offline gap closure from adaptation."
+        ],
+        "tags": ["bci", "adaptive-decoding", "closed-loop"]
+      },
+      {
+        "flow_name": "cross-session-decoder-transfer",
+        "description": "Design the decoder recalibration strategy for stable day-to-day BCI use without full recalibration, using transfer learning and alignment techniques.",
+        "inputs": [
+          {"name": "adaptive-decoder", "desc": "Decoder with adaptation capability"},
+          {"name": "closed-loop-performance-metrics", "desc": "Within-session performance"}
+        ],
+        "outputs": [
+          {"name": "transfer-learning-strategy", "desc": "Method for cross-session decoder initialization (zero-shot, few-shot, alignment-based) with expected warm-up time and accuracy"},
+          {"name": "long-term-stability-assessment", "desc": "Performance trajectory over weeks and months, identifying degradation sources and their mitigations"}
+        ],
+        "process": [
+          "Characterize day-to-day neural instability. Between sessions (next day), neural recordings change: single-unit tuning properties shift (preferred direction rotates, gain changes), some units disappear and new ones appear (electrode micromotion), baseline firing rates drift. These changes mean a decoder trained on day 1 data performs poorly on day 2 without recalibration (typically 50-80% accuracy drop for Kalman filter on raw spike features).",
+          "Implement alignment-based transfer. LFADS (Latent Factor Analysis via Dynamical Systems) or MINT (Modular Inverse Neural Transform) extract low-dimensional neural dynamics that are more stable than individual neuron tuning. Train the decoder on the latent factors rather than raw firing rates. Day-to-day alignment: find a linear mapping (Procrustes alignment) between day N latent space and the original training day latent space. This typically recovers 70-90% of within-session accuracy without any calibration data on the new day.",
+          "For few-shot recalibration: collect 2-5 minutes of calibration data on the new day (user performs a short target acquisition task). Use this data to update the observation model (Kalman filter C matrix) or fine-tune the last layer of a neural network decoder. This typically recovers 90-100% of within-session accuracy. The trade-off is calibration time: users prefer zero calibration, but 2 minutes of calibration dramatically improves the rest of the session.",
+          "Assess long-term stability. Track daily performance metrics (throughput, success rate, calibration time needed) over months. Identify trends: does performance gradually decline (electrode degradation, increasing glial scar) or remain stable with recalibration? For chronic arrays (Utah), typical trajectory: stable performance for 6-12 months with daily recalibration, then gradual decline as unit yield drops. Strategies to extend functional life: use multi-unit threshold crossings instead of sorted single units (more stable across months), use LFP features (stable for years but lower information content per channel), or transition to a combination of spike and LFP features as single units are lost."
+        ],
+        "tags": ["bci", "transfer-learning", "stability"]
+      }
+    ]
+  },
+  {
+    "chain_name": "electrophysiology-experimental-design",
+    "description": "Design a rigorous electrophysiology experiment from protocol development through statistical power analysis, data management, and ethical compliance.",
+    "domain": "biomedical",
+    "tags": ["neurotechnology", "experimental-design", "electrophysiology", "research-methods"],
+    "steps": [
+      {
+        "flow_name": "experimental-protocol-development",
+        "description": "Design the behavioral task, trial structure, and recording protocol to answer the scientific question with adequate statistical power.",
+        "inputs": [
+          {"name": "research-question", "desc": "The specific hypothesis to test or the neural phenomenon to characterize"},
+          {"name": "recording-capabilities", "desc": "Available recording system (electrode type, channel count, signal type, recording duration limits)"}
+        ],
+        "outputs": [
+          {"name": "experimental-protocol", "desc": "Detailed task design (stimuli, timing, conditions, trial count), recording parameters, and session structure"},
+          {"name": "power-analysis", "desc": "Required sample size (trials per condition, sessions, subjects) to detect the expected effect size with specified power"}
+        ],
+        "process": [
+          "Define the experimental conditions from the hypothesis. For a motor encoding study: conditions might be reach directions (8 directions, center-out). For a cognitive study: conditions might be task difficulty levels or stimulus categories. Ensure conditions are balanced and counterbalanced to avoid order effects. Include catch trials or null conditions to estimate baseline activity and false-positive rates.",
+          "Design the trial structure with precise timing. Define epochs: fixation (500-1000 ms), cue/stimulus (variable by design), delay (if testing working memory, 0.5-3 s), response (movement, speech, button press), inter-trial interval (1-3 s, jittered to prevent anticipatory responses). Total trial duration determines how many trials fit in a session. For intracortical recording in behaving primates: 1-2 hour sessions are typical, giving 300-600 trials for a simple center-out task (3-4 seconds per trial including ITI).",
+          "Calculate statistical power. For spike rate comparisons between conditions: effect size is the difference in firing rate divided by the standard deviation across trials. With typical neural variability (Fano factor approximately 1), detecting a 20% rate modulation (e.g., 20 Hz vs 24 Hz, SD approximately 5 Hz) gives Cohen's d approximately 0.8. At alpha = 0.05, power = 0.8, need approximately 25 trials per condition per neuron (paired comparison). For population-level decoding: the minimum training set size depends on feature dimensionality. As a rule of thumb: 10 trials per class per feature dimension for LDA, more for nonlinear classifiers.",
+          "Plan recording sessions. If testing N conditions with M trials each at T seconds per trial: session duration = N x M x T / 3600 hours. Add 20% overhead for rest periods, reward delivery, and equipment checks. For chronic recording studies, plan the recording schedule across days/weeks to capture both within-session and across-session variability. Document the complete protocol in sufficient detail for replication."
+        ],
+        "tags": ["experimental-design", "protocol", "power-analysis"]
+      },
+      {
+        "flow_name": "recording-session-management",
+        "description": "Execute a recording session with proper equipment setup, quality checks, and real-time monitoring to maximize data quality.",
+        "inputs": [
+          {"name": "experimental-protocol", "desc": "Task design, timing, and recording parameters"}
+        ],
+        "outputs": [
+          {"name": "session-data", "desc": "Recorded neural data with behavioral timestamps, quality annotations, and metadata"},
+          {"name": "session-quality-report", "desc": "Channel impedances, noise levels, unit yield, behavioral performance, and any anomalies during the session"}
+        ],
+        "process": [
+          "Pre-session equipment check. Measure electrode impedances at 1 kHz using the recording system's built-in impedance test. Flag channels with impedance greater than 2 MOhm (possible broken electrode) or less than 10 kOhm (possible short to reference or ground). Check the noise floor: with inputs connected to the headstage but subject at rest, RMS noise should be below 5 uV in the spike band and below 10 uV broadband. Check reference and ground connections: poor reference shows as correlated 60 Hz noise across all channels.",
+          "Configure the recording system. Set the sampling rate (30 kSps for spike recording, 1 kSps for LFP-only). Set the gain to use the full ADC range without clipping: for a +/- 500 uV input range on 16-bit ADC, the LSB is 15 nV, adequate. Enable hardware filters: 0.3-6000 Hz bandpass for spike channels, 0.1-300 Hz for LFP. Set up event synchronization: connect behavioral task system to the recording system via digital event lines (TTL pulses marking trial start, stimulus onset, response, reward).",
+          "Monitor data quality during recording. Display a rolling spectrogram or RMS plot to detect artifacts in real time. Watch for: sudden impedance changes (electrode movement), sustained 60 Hz increase (ground or reference issue), broadband noise bursts (motion artifact, cable connector issue). If quality degrades, pause and troubleshoot before continuing. Track behavioral performance: task completion rate should exceed 80% to ensure adequate trial counts.",
+          "Post-session data management. Save raw data in a standardized format: Neurodata Without Borders (NWB) for archival, or the recording system's native format plus conversion scripts. Record metadata: date, subject ID, electrode map, channel impedances, experimental conditions, task parameters, session notes. Back up data immediately to a second location. Log the session in a lab notebook or database with quality annotations (good session, partial data loss on channels X-Y, behavioral engagement level)."
+        ],
+        "tags": ["recording", "data-management", "quality-control"]
+      },
+      {
+        "flow_name": "neural-data-analysis-framework",
+        "description": "Analyze electrophysiology data with appropriate statistical methods, multiple comparison corrections, and reproducibility measures.",
+        "inputs": [
+          {"name": "session-data", "desc": "Recorded neural data with behavioral timestamps"},
+          {"name": "research-question", "desc": "Hypothesis to test"}
+        ],
+        "outputs": [
+          {"name": "analysis-results", "desc": "Statistical test results, effect sizes, confidence intervals, and population-level summaries"},
+          {"name": "analysis-code-package", "desc": "Complete, executable analysis pipeline (preprocessing, feature extraction, statistical tests, figure generation) for reproducibility"}
+        ],
+        "process": [
+          "Preprocess: artifact removal (see neural-artifact-removal chain), spike sorting (see spike-detection-and-sorting chain), LFP feature extraction (see lfp-spectral-analysis chain). Align neural data to behavioral events using the digital event timestamps. Define analysis windows relative to events (e.g., 200 ms before movement onset to 500 ms after).",
+          "Single neuron analysis. For each neuron, test whether firing rate differs between conditions using ANOVA (if comparing 3+ conditions) or t-test (2 conditions), with trial as the unit of observation. Report effect size (eta-squared for ANOVA, Cohen's d for t-test) alongside p-values. Apply multiple comparison correction across neurons: Benjamini-Hochberg false discovery rate (FDR) correction at q = 0.05, which is less conservative than Bonferroni and more appropriate for neural populations where many neurons are expected to be modulated.",
+          "Population-level analysis. Dimensionality reduction: PCA on population firing rate vectors to identify dominant patterns of activity. Neural state-space analysis: project population activity into the top 2-3 PCs and plot trajectories for different conditions. Decoding analysis: train a classifier (LDA, SVM) on population activity to determine how much condition information is present, using leave-one-out or stratified k-fold cross-validation. Report classification accuracy with 95% confidence interval from bootstrap.",
+          "Ensure reproducibility. Write the complete analysis pipeline as executable code (Python with NumPy/SciPy/scikit-learn, or MATLAB). Pin software versions. Use random seeds for reproducibility. Include the raw data path, all preprocessing parameters, statistical test specifications, and figure generation code. Data and code should be organized for sharing (e.g., DANDI archive for NWB data, GitHub for analysis code). Pre-register the analysis plan before data collection if testing a specific hypothesis (not exploratory)."
+        ],
+        "tags": ["data-analysis", "statistics", "reproducibility"]
+      }
+    ]
+  },
+  {
+    "chain_name": "neural-device-regulatory-pathway",
+    "description": "Navigate the regulatory pathway for a neural device from FDA classification through biocompatibility testing, clinical trial design, and submission.",
+    "domain": "biomedical",
+    "tags": ["neurotechnology", "regulatory", "fda", "clinical-trials"],
+    "steps": [
+      {
+        "flow_name": "device-classification-and-pathway",
+        "description": "Classify the neural device under FDA regulations and identify the appropriate premarket pathway (510(k), De Novo, or PMA).",
+        "inputs": [
+          {"name": "device-description", "desc": "What the device does, its intended use, how it contacts the body (implanted, external, duration), and its risk level"},
+          {"name": "predicate-device-search", "desc": "Results of searching FDA databases (510(k), PMA, De Novo) for similar devices already cleared or approved"}
+        ],
+        "outputs": [
+          {"name": "regulatory-classification", "desc": "FDA product code, classification (Class I, II, or III), and recommended premarket pathway with rationale"},
+          {"name": "regulatory-strategy", "desc": "Timeline, key submissions, standards to meet, and estimated cost for the selected pathway"}
+        ],
+        "process": [
+          "Determine device classification. Most neural recording devices are Class II (510(k)) if they have a predicate (e.g., EEG systems with predicate to existing cleared EEG devices, product code GWQ). Implantable neural stimulators are typically Class III (PMA) due to high risk: deep brain stimulators (product code PFG), responsive neurostimulators (NeuroPace RNS is the predicate for seizure-responsive stimulation). Novel BCI devices with no predicate may use the De Novo pathway to establish a new classification.",
+          "For 510(k): identify a legally marketed predicate device with the same intended use and similar technological characteristics. If the new device differs from the predicate in technology (e.g., wireless vs wired), prepare to demonstrate substantial equivalence through bench testing, biocompatibility, and possibly clinical data. Performance data must show the new device is at least as safe and effective as the predicate. Timeline: 3-6 months for FDA review after submission.",
+          "For PMA (Class III): this requires clinical evidence of safety and effectiveness. Plan for an IDE (Investigational Device Exemption) to conduct a clinical trial before submission. The PMA submission includes: device description, manufacturing information, bench testing, biocompatibility (ISO 10993), electrical safety (IEC 60601), software documentation (IEC 62304), EMC testing, sterility validation, clinical trial data, and labeling. Timeline: 1-3 years for clinical trial plus 6-12 months for FDA review. Cost: typically 1-5 million USD for the clinical trial plus regulatory consultants.",
+          "For all pathways: identify applicable consensus standards. IEC 60601-1 (general safety and essential performance), IEC 60601-1-2 (EMC), IEC 62304 (software lifecycle for medical devices), ISO 14708 (implantable medical devices), ISO 10993 (biocompatibility), ISO 11607 (packaging validation), ISO 11135 or 11137 (sterilization). FDA recognizes these standards: declaring conformity reduces review burden. For cybersecurity of connected neural devices: follow FDA guidance on premarket cybersecurity (threat modeling, SBOM, update mechanism)."
+        ],
+        "tags": ["regulatory", "fda", "classification"]
+      },
+      {
+        "flow_name": "clinical-trial-design-neural",
+        "description": "Design the clinical trial for a neural device including endpoints, patient population, trial structure, and safety monitoring.",
+        "inputs": [
+          {"name": "regulatory-classification", "desc": "FDA pathway and classification"},
+          {"name": "device-description", "desc": "Device function, intended use, target patient population"}
+        ],
+        "outputs": [
+          {"name": "clinical-trial-protocol", "desc": "Trial design (randomized, single-arm, crossover), sample size, primary and secondary endpoints, inclusion/exclusion criteria, and duration"},
+          {"name": "ide-submission-outline", "desc": "Structure of the IDE application including preclinical data package, risk analysis, and informed consent elements"}
+        ],
+        "process": [
+          "Define the primary endpoint from the intended use. For a BCI typing device: typing speed in characters per minute compared to baseline (no-device) condition. For a DBS device for Parkinson's: change in UPDRS motor score (Part III) from pre-implant baseline to 6 or 12 months post-implant. For a seizure-responsive stimulator: percent reduction in seizure frequency compared to a pre-implant baseline period. The primary endpoint must be clinically meaningful, objectively measurable, and previously used in neural device trials for comparability.",
+          "Determine sample size from the expected effect size and variability. For DBS in Parkinson's: existing data shows a mean UPDRS improvement of 10-15 points with SD of 8-10 points. To detect a 10-point improvement (Cohen's d approximately 1.0) at alpha = 0.05, power = 0.9, need approximately 20 subjects per group. For a single-arm trial (no control group, comparing to baseline): approximately 15 subjects. Add 20% for dropout. For first-in-human BCI studies: initial safety cohorts may be as small as 3-5 subjects under a feasibility IDE.",
+          "Design the trial structure. For high-risk neural devices: a staggered enrollment is typical (first 3 subjects implanted sequentially with a safety review between each, then enrollment opens). Include a blinded assessment period if possible (for stimulation devices: randomize to stimulation ON vs OFF periods, with the patient blinded). Follow-up: minimum 1 year for implantable devices, with scheduled assessments at 1, 3, 6, and 12 months. Record all adverse events (device-related and procedure-related) with severity and relatedness classification.",
+          "Prepare the IDE submission package. Sections: (1) device description and intended use, (2) prior investigations (bench testing, animal studies with chronic implant histology, biocompatibility testing per ISO 10993), (3) risk analysis (ISO 14971, with risk/benefit for each identified hazard), (4) manufacturing summary (design controls per 21 CFR 820), (5) clinical investigation plan (the protocol above), (6) informed consent document (must include: surgical risks, device risks, alternative treatments, right to withdraw, long-term follow-up obligations), (7) IRB approval. Submit to FDA: 30-day default review, FDA may place a clinical hold if deficiencies are identified."
+        ],
+        "tags": ["clinical-trials", "regulatory", "ide"]
+      },
+      {
+        "flow_name": "post-market-surveillance-plan",
+        "description": "Design the post-market surveillance system for a neural device to monitor long-term safety, track device performance, and comply with reporting requirements.",
+        "inputs": [
+          {"name": "clinical-trial-protocol", "desc": "Clinical endpoints and safety monitoring plan"},
+          {"name": "device-description", "desc": "Device characteristics and risk profile"}
+        ],
+        "outputs": [
+          {"name": "post-market-plan", "desc": "Complaint handling, MDR reporting procedures, post-market clinical follow-up study design, and corrective action triggers"},
+          {"name": "cybersecurity-post-market-plan", "desc": "Vulnerability monitoring, patch management, coordinated disclosure process for connected neural devices"}
+        ],
+        "process": [
+          "Establish complaint handling per 21 CFR 820.198. Every patient or clinician complaint must be logged, investigated, and classified (device malfunction, adverse event, use error). For neural implants: track electrode impedance trends from follow-up visits (progressive increase may indicate encapsulation failure), stimulation threshold changes (may indicate lead migration), and infection rates (typically 2-5% for cranial implants).",
+          "Define Medical Device Reporting (MDR) triggers per 21 CFR 803. Report to FDA within 30 days: any death or serious injury where the device may have caused or contributed, and any malfunction that would likely cause or contribute to death or serious injury if it recurred. For neural devices, reportable events include: lead fracture, infection requiring explant, hemorrhage from implant procedure, unexpected stimulation effects, device malfunction requiring surgical intervention. Track complaint trends to detect emerging signals.",
+          "Design post-market clinical follow-up (PMCF). For PMA devices: FDA may require a post-approval study as a condition of approval. Typical: enroll 100-500 additional subjects at multiple sites, follow for 3-5 years. Track the same primary endpoint as the pivotal trial plus long-term safety (5-year infection rate, lead integrity, battery longevity). For devices marketed in the EU under MDR: PMCF is mandatory, with periodic safety update reports (PSUR) submitted to the notified body annually.",
+          "For connected/wireless neural devices: implement a cybersecurity post-market plan. Monitor for vulnerabilities in the device software, wireless communication protocol, and connected systems (clinician programmer, patient controller). Establish a coordinated vulnerability disclosure process. Design and validate a secure firmware update mechanism for the implanted device (if applicable) or external components. Test updates on bench before deployment. Maintain a software bill of materials (SBOM) and monitor for CVEs in third-party components."
+        ],
+        "tags": ["post-market", "surveillance", "regulatory"]
+      }
+    ]
+  },
+  {
+    "chain_name": "wireless-implant-telemetry",
+    "description": "Design a wireless telemetry system for an implantable neural device covering data link, power transfer, antenna, and SAR compliance.",
+    "domain": "biomedical",
+    "tags": ["neurotechnology", "wireless", "implant", "telemetry"],
+    "steps": [
+      {
+        "flow_name": "wireless-link-budget-implant",
+        "description": "Calculate the wireless data link budget for transmitting neural data through tissue, selecting the modulation scheme and data rate from the channel count and compression strategy.",
+        "inputs": [
+          {"name": "telemetry-design", "desc": "Required data rate after compression, link range through tissue, BER target"},
+          {"name": "implant-constraints", "desc": "Available power for transmitter, antenna size constraint, SAR limit"}
+        ],
+        "outputs": [
+          {"name": "link-budget-analysis", "desc": "Transmit power, path loss through tissue, receiver sensitivity, link margin, and achievable data rate"},
+          {"name": "modulation-coding-selection", "desc": "Selected modulation (OOK, FSK, BPSK, QPSK), coding (convolutional, LDPC), and protocol"}
+        ],
+        "process": [
+          "Estimate path loss through tissue. For inductive near-field (13.56 MHz) at 1-2 cm separation through skin and skull: coupling loss is dominated by coil geometry and alignment, typically 20-30 dB. For far-field UWB (3-10 GHz) through 1 cm tissue: path loss = free-space path loss + tissue attenuation. Tissue attenuation at 4 GHz: approximately 3-4 dB/cm for skin, 5-7 dB/cm for bone, 1-2 dB/cm for brain. Total one-way loss through 1 cm skin + 0.5 cm bone: approximately 7-10 dB above free-space.",
+          "Calculate link budget: Received power (dBm) = Transmit power (dBm) + TX antenna gain (dBi) - Path loss (dB) + RX antenna gain (dBi). For an implant transmitting at -10 dBm (0.1 mW, well within SAR limits) with a small patch antenna (-15 dBi implant, 0 dBi external), and 40 dB total path loss at 4 GHz: received power = -10 + (-15) - 40 + 0 = -65 dBm. Receiver sensitivity for 10 Mbps BPSK at BER 10^-6: approximately -80 dBm with a low-noise front end. Link margin = -65 - (-80) = 15 dB. Adequate for reliable operation with fading margin.",
+          "Select modulation scheme from power and data rate constraints. For low-power implants (below 1 mW TX): OOK (on-off keying) is simplest but spectral inefficient. FSK: slightly more complex, better noise immunity. BPSK/QPSK: best spectral efficiency but requires coherent receiver. For high data rates (above 10 Mbps), use OFDM over a UWB channel for multipath resilience. Add forward error correction: convolutional code (rate 1/2, constraint length 7) adds 3 dB coding gain. LDPC codes add 5-6 dB but require more decoding power.",
+          "Verify SAR compliance. Calculate the power deposited in tissue: SAR = sigma x |E|^2 / (2 x rho), where sigma is tissue conductivity, E is the electric field, rho is tissue density. For a small antenna radiating 0.1 mW in tissue with sigma = 0.5 S/m, rho = 1000 kg/m3: the peak SAR must be below 1.6 W/kg averaged over 1 g (FCC) or 2 W/kg over 10 g (ICNIRP). Run an EM simulation (FDTD or FEM) with a realistic head phantom model to verify. At 0.1 mW transmit, SAR is typically well below limits, but antenna near-field can create hotspots."
+        ],
+        "tags": ["wireless", "link-budget", "implant"]
+      },
+      {
+        "flow_name": "wireless-power-transfer-design",
+        "description": "Design the wireless power transfer system to charge or continuously power the implant through tissue using inductive, resonant, or ultrasonic coupling.",
+        "inputs": [
+          {"name": "implant-constraints", "desc": "Total power requirement, implant depth, coil size constraint, duty cycle"},
+          {"name": "power-delivery-design", "desc": "Whether battery-backed (intermittent charging) or continuous power required"}
+        ],
+        "outputs": [
+          {"name": "wpt-design", "desc": "External and implant coil geometry, operating frequency, coupling coefficient, power transfer efficiency, and thermal profile"},
+          {"name": "power-management-circuit", "desc": "Rectifier, regulator, and battery charging circuit design for the implanted receiver"}
+        ],
+        "process": [
+          "Select WPT technology. Inductive coupling (100 kHz - 13.56 MHz): mature technology, used in cochlear implants, reliable at 1-2 cm through tissue, power up to several watts. Resonant coupling (6.78 MHz ISM band): higher efficiency at larger gaps and misalignment by exploiting coupled resonant modes, but more complex tuning. Ultrasonic power transfer: uses piezoelectric transducers at 1-5 MHz, smaller receiver size (millimeter-scale), but lower efficiency and complex acoustic path through bone. For most cranial neural implants: inductive at 13.56 MHz is the default.",
+          "Design the coil pair. External (transmit) coil: planar spiral, 30-50 mm diameter, 5-10 turns, Q factor 50-100. Implant (receive) coil: smaller, constrained by implant housing, typically 10-25 mm diameter, 10-20 turns, Q factor 20-50 (lower due to smaller size and proximity to lossy tissue). Calculate coupling coefficient k from coil geometry and separation: k = M / sqrt(L1 x L2), where M is the mutual inductance. For aligned coils at 1 cm separation with diameter ratio 2:1, k is approximately 0.1-0.2. Power transfer efficiency at optimal load: eta = (k^2 x Q1 x Q2) / (1 + k^2 x Q1 x Q2)^2 for series-parallel topology. At k=0.15, Q1=80, Q2=40: eta approximately 60%.",
+          "Design the implanted power management circuit. Rectifier: full-bridge rectifier using Schottky diodes (low forward voltage for efficiency) or active rectification with MOSFETs (for higher efficiency at higher power). Regulator: LDO for low-noise supply to analog circuits, buck converter for digital load. For battery-backed systems: add a lithium battery charging circuit (CC/CV charging, 4.2 V termination for LiCoO2, 3.6 V for LiFePO4). Battery capacity sizing: if the implant draws 20 mW continuous and charges for 30 minutes per day at 100 mW received power: daily energy budget = 20 mW x 24 h = 480 mWh. Charging delivers 100 mW x 0.5 h x 0.7 (charging efficiency) = 35 mWh. This does not balance: either charge more frequently, increase charging power, or reduce implant power consumption.",
+          "Verify thermal safety. The combined heat from coil losses (I^2R in the implant coil), rectifier losses, and electronics dissipation must not raise tissue temperature by more than 1 degree C (2 degree C absolute maximum). Run a thermal model: P_dissipated = P_received x (1 - system_efficiency). For 100 mW received at 60% coil efficiency and 80% electronics efficiency: dissipated = 100 x (1 - 0.6 x 0.8) = 52 mW. Spread over the implant surface area (e.g., 5 cm2): power density = 10.4 mW/cm2. This is below the commonly cited 40 mW/cm2 limit but should be verified by thermal simulation or measurement in a tissue phantom."
+        ],
+        "tags": ["wireless-power", "inductive-coupling", "implant"]
+      },
+      {
+        "flow_name": "implant-antenna-design",
+        "description": "Design the implant antenna for operation inside the body, accounting for tissue loading, size constraints, and coupling to the external system.",
+        "inputs": [
+          {"name": "link-budget-analysis", "desc": "Operating frequency, required gain, bandwidth"},
+          {"name": "implant-constraints", "desc": "Available volume for antenna, implant housing material (titanium, ceramic, polymer)"}
+        ],
+        "outputs": [
+          {"name": "antenna-design", "desc": "Antenna type, dimensions, feed structure, simulated radiation pattern in tissue, and impedance matching"},
+          {"name": "antenna-tissue-interaction", "desc": "Effect of tissue loading on resonant frequency, efficiency, and SAR distribution"}
+        ],
+        "process": [
+          "Select antenna type from size and frequency constraints. For data telemetry at 2.4 GHz (Bluetooth/BLE) or 3-10 GHz (UWB): a planar inverted-F antenna (PIFA) or patch antenna fits inside a flat implant housing (10-25 mm diameter, 2-5 mm thick). For power transfer at 13.56 MHz: a planar spiral coil integrated into the implant housing or wound on a ferrite core. For combined data + power: dual-band or dual-antenna design with a 13.56 MHz coil for power and a UHF/UWB antenna for data.",
+          "Account for tissue loading. Human tissue has high relative permittivity (brain: epsilon_r approximately 50 at 2.4 GHz, muscle: approximately 53) and conductivity (brain: sigma approximately 1.8 S/m at 2.4 GHz). This drastically changes antenna behavior compared to free space: resonant frequency shifts down by roughly sqrt(epsilon_eff) (can be 30-50% lower), bandwidth broadens due to loss, and radiation efficiency drops to 1-10% because tissue absorbs most radiated power. Design the antenna dimensions for the in-body resonant frequency, not free-space.",
+          "Simulate the antenna in a realistic tissue model. Use a finite-difference time-domain (FDTD) or finite element (FEM) solver with a layered tissue model (skin 2 mm, fat 2 mm, bone 5 mm, brain) with frequency-dependent tissue properties from the Gabriel database. Place the antenna at the implant depth. Optimize dimensions (patch length, feed position) for impedance match (S11 below -10 dB at center frequency) and maximum radiation efficiency. Calculate the gain in the direction of the external receiver (typically broadside, through the skull). Expect realized gain of -20 to -30 dBi for a small implant antenna in tissue.",
+          "Optimize impedance matching between the antenna and the transceiver IC. The antenna impedance in tissue is complex and shifts with tissue composition and implant depth. Design a matching network (L-section or pi-network) with a tunable element (varactor or switched capacitor bank) to compensate for patient-to-patient variation. Alternatively, use a wideband antenna design that maintains adequate match (S11 below -6 dB) across the expected impedance variation range."
+        ],
+        "tags": ["antenna-design", "implant", "rf"]
+      }
+    ]
+  },
+  {
+    "chain_name": "closed-loop-neuromodulation",
+    "description": "Design a closed-loop neuromodulation system from biomarker selection through detection algorithm, control law, and stability analysis for adaptive therapy.",
+    "domain": "biomedical",
+    "tags": ["neurotechnology", "neuromodulation", "closed-loop", "adaptive-therapy"],
+    "steps": [
+      {
+        "flow_name": "biomarker-identification-validation",
+        "description": "Identify and validate the neural biomarker that reliably tracks the disease state or symptom to serve as the control signal for adaptive stimulation.",
+        "inputs": [
+          {"name": "therapeutic-objective", "desc": "Disease or symptom to modulate (Parkinson's tremor/bradykinesia, essential tremor, epileptic seizures, chronic pain, depression)"},
+          {"name": "recording-capabilities", "desc": "Available neural signals (LFP from implanted leads, ECoG, scalp EEG, peripheral nerve)"}
+        ],
+        "outputs": [
+          {"name": "validated-biomarker", "desc": "Selected biomarker (signal type, frequency band, spatial location), its correlation with symptom severity, and detection reliability metrics (sensitivity, specificity, latency)"},
+          {"name": "biomarker-characterization-data", "desc": "Receiver operating characteristic (ROC) curve for biomarker-based symptom detection, showing the sensitivity-specificity trade-off at different thresholds"}
+        ],
+        "process": [
+          "Survey candidate biomarkers from clinical literature. Parkinson's disease: beta (13-30 Hz) power in STN LFP correlates with bradykinesia and rigidity (r = 0.5-0.7 with UPDRS III). Gamma (60-90 Hz) activity increases with dyskinesia. Tremor has a specific tremor-frequency oscillation (4-6 Hz) in STN. Essential tremor: cerebellar-thalamic oscillation at tremor frequency. Epilepsy: pre-ictal changes (increased high-frequency oscillations 80-500 Hz, decreased low-frequency power) precede seizure onset by seconds to minutes. Chronic pain: theta (4-8 Hz) power in anterior cingulate cortex. Depression: theta/alpha ratio in prefrontal cortex (less established, still under research).",
+          "Collect paired biomarker-symptom data. Record the candidate neural signals continuously while simultaneously measuring symptom severity. For Parkinson's: record STN LFP during structured motor tasks (finger tapping, gait) with video-based UPDRS scoring by a blinded rater. For epilepsy: long-term monitoring (days to weeks) with simultaneous EEG/ECoG and seizure diary. For each time segment, extract the biomarker value (e.g., beta band power) and the corresponding symptom score.",
+          "Validate biomarker performance. Build a ROC curve: at each threshold of the biomarker, calculate sensitivity (true positive rate: correctly identifies high-symptom periods) and specificity (true negative rate: correctly identifies low-symptom periods). The area under the ROC curve (AUC) quantifies overall discriminability: AUC greater than 0.8 is good, greater than 0.9 is excellent. For Parkinson's beta power vs clinical state (ON/OFF medication): typical AUC is 0.8-0.9. For epileptic seizure detection: sensitivity greater than 90% is required clinically, with specificity determining false alarm rate.",
+          "Characterize biomarker dynamics. Measure the time course: how quickly does the biomarker change after stimulation onset? For Parkinson's beta: suppression begins within 0.5-2 seconds of stimulation onset, recovers within 1-5 seconds after offset. This time constant sets the minimum control loop update rate and influences controller design. Measure biomarker variability: within-session (minutes), across-session (days), across-patient. High inter-patient variability means the threshold must be individualized."
+        ],
+        "tags": ["biomarker", "validation", "neuromodulation"]
+      },
+      {
+        "flow_name": "detection-algorithm-design",
+        "description": "Design the real-time biomarker detection algorithm for embedded implementation on the implanted processor, meeting latency and power constraints.",
+        "inputs": [
+          {"name": "validated-biomarker", "desc": "Selected biomarker with detection parameters"},
+          {"name": "implant-constraints", "desc": "Available processing power (embedded microcontroller or ASIC), memory, power budget for signal processing"}
+        ],
+        "outputs": [
+          {"name": "detection-algorithm", "desc": "Algorithm specification (filtering, feature extraction, classification), detection latency, computational cost, and real-time performance metrics"},
+          {"name": "embedded-implementation-specification", "desc": "Fixed-point arithmetic precision, memory footprint, MIPS requirement, and power consumption estimate"}
+        ],
+        "process": [
+          "Design the feature extraction pipeline for embedded execution. For beta band power detection: bandpass filter (13-30 Hz, 4th-order IIR Butterworth, computationally inexpensive), then rectify (absolute value), then low-pass smooth (2 Hz cutoff, single-pole IIR). This produces a running estimate of beta power with approximately 250 ms latency from the smoothing filter. Total computation: approximately 10 multiply-accumulates per sample at 500 Hz sampling rate, trivial for any microcontroller.",
+          "For seizure detection (more complex): extract multiple features from the LFP in sliding windows (2-second windows, 50% overlap). Features: power in multiple frequency bands (delta, theta, alpha, beta, gamma, high-gamma), line length (sum of absolute sample-to-sample differences), and coastline (similar but amplitude-normalized). Classify using a linear discriminant or small neural network (2 hidden layers, 16 units each). Total computation: approximately 1000 operations per classification, feasible for a low-power ARM Cortex-M4 at under 1 mW.",
+          "Implement in fixed-point arithmetic for embedded deployment. Convert all floating-point operations to Q15 or Q31 fixed-point format. Use CMSIS-DSP library functions for IIR filters and matrix operations on ARM processors. Verify that fixed-point numerical error does not degrade detection performance: compare classification accuracy between floating-point and fixed-point implementations on the same test dataset. Acceptable degradation: less than 2% accuracy loss.",
+          "Validate real-time performance. Run the algorithm on the target processor with real neural data streamed at the actual sample rate. Measure: worst-case execution time per processing cycle (must be less than the inter-sample interval), memory usage (must fit in available SRAM), and power consumption (measure total processor current draw during operation). Detection latency from biomarker change to algorithm output: target less than 500 ms for Parkinson's, less than 2 seconds for seizure onset detection (to allow time for stimulation to abort the seizure)."
+        ],
+        "tags": ["algorithm-design", "embedded", "real-time"]
+      },
+      {
+        "flow_name": "adaptive-control-law-design",
+        "description": "Design the control law that maps biomarker values to stimulation parameter adjustments, including stability analysis and safety bounds.",
+        "inputs": [
+          {"name": "detection-algorithm", "desc": "Real-time biomarker output specification"},
+          {"name": "stimulation-parameters", "desc": "Adjustable parameter range (amplitude, frequency, pulse width)"},
+          {"name": "biomarker-characterization-data", "desc": "Biomarker-symptom correlation and stimulation response dynamics"}
+        ],
+        "outputs": [
+          {"name": "control-law-specification", "desc": "Control algorithm (threshold, proportional, PID, model-predictive), parameter mapping function, update rate, and safety constraints"},
+          {"name": "stability-and-safety-analysis", "desc": "Closed-loop stability verification (phase margin, gain margin), safety bound analysis, and failure mode response"}
+        ],
+        "process": [
+          "Model the plant (brain response to stimulation). From open-loop data (step changes in stimulation amplitude while recording biomarker): identify a transfer function. For Parkinson's beta power response to STN stimulation: approximately a first-order system with gain K (beta suppression per mA of stimulation, typically 20-40%/mA) and time constant tau (0.5-2 seconds for beta onset, 1-5 seconds for offset). Include a pure time delay of 200-500 ms for neural processing. Plant model: G(s) = K x exp(-delay x s) / (1 + tau x s).",
+          "Design the controller. For proportional control: stimulation amplitude = K_p x (biomarker - setpoint), where setpoint is the desired biomarker level (e.g., 50th percentile of beta power distribution). Choose K_p for adequate response without oscillation: the gain margin should be at least 6 dB and phase margin at least 45 degrees. For the first-order plant with delay above: the maximum proportional gain before instability is approximately tau / (K x delay). With tau = 1 s, K = 0.3/mA, delay = 0.3 s: max K_p approximately 11 mA. Use K_p = 3-5 mA for adequate margin.",
+          "Add safety constraints. Hard limits: minimum stimulation amplitude = 0 (no negative stimulation), maximum amplitude = the maximum safe value from charge density analysis. Rate limits: no more than 0.5 mA change per second to prevent abrupt transitions that could cause transient side effects. If the biomarker signal quality drops (amplitude below noise floor, or artifact detected): freeze stimulation at current level for a timeout period (10-30 seconds), then ramp to a safe open-loop default. All transitions must be smooth (ramp, not step) to avoid patient discomfort.",
+          "Simulate the closed-loop system. Use the plant model and controller to simulate the response to: (1) step change in symptom state (e.g., medication wearing off, increasing beta), (2) biomarker noise (random fluctuations), (3) sensor dropout (biomarker signal lost for 5 seconds). Verify: no oscillations in stimulation amplitude, settling time within acceptable clinical range (under 30 seconds for Parkinson's), no overshoot beyond safety limits. Validate the simulation against actual closed-loop recordings from clinical studies if available (Adaptive DBS trials show 30-50% energy savings vs continuous stimulation with equivalent symptom control)."
+        ],
+        "tags": ["control-systems", "adaptive-stimulation", "safety"]
+      }
+    ]
+  }
+]

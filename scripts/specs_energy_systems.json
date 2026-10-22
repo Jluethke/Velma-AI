@@ -1,0 +1,998 @@
+[
+  {
+    "chain_name": "solar-pv-system-design",
+    "description": "Design a solar photovoltaic system from resource assessment through energy yield modeling and financial analysis, covering module selection, string sizing, inverter optimization, and loss chain quantification.",
+    "domain": "energy",
+    "tags": ["solar", "photovoltaic", "energy", "renewable", "engineering"],
+    "steps": [
+      {
+        "flow_name": "solar-resource-assessment",
+        "description": "Characterize the solar resource at a site using TMY data, converting global horizontal irradiance (GHI) to plane-of-array (POA) irradiance through transposition models, and quantifying shading losses from horizon profiles and nearby obstructions.",
+        "inputs": [
+          {"name": "site-coordinates", "desc": "Latitude and longitude of the project site"},
+          {"name": "tmy-data-source", "desc": "Typical Meteorological Year dataset (NSRDB, Meteonorm, SolarAnywhere) with GHI, DNI, DHI, temperature, wind speed"}
+        ],
+        "outputs": [
+          {"name": "poa-irradiance-profile", "desc": "Monthly and annual POA irradiance in kWh/m2 for the selected tilt and azimuth, with shading loss factors applied"},
+          {"name": "site-thermal-profile", "desc": "Ambient temperature distribution and wind speed statistics for cell temperature modeling"}
+        ],
+        "process": [
+          "Obtain TMY data for the site. Compare at least two data sources (NSRDB and Meteonorm) and use the lower P50 value unless site-specific ground measurements exist for correlation.",
+          "Select array tilt and azimuth. For fixed-tilt, start with latitude tilt for annual optimization or latitude minus 10-15 degrees for summer-peaking loads. For trackers, model single-axis horizontal with backtracking.",
+          "Apply a transposition model to convert GHI/DNI/DHI to POA irradiance. Use the Perez model for accuracy or Hay-Davies as a simpler alternative. The choice affects annual yield by 1-3%.",
+          "Build a horizon profile from site survey or lidar data. Calculate row-to-row shading loss from the ground coverage ratio (GCR). For fixed-tilt, GCR of 0.35-0.45 balances energy density with shading loss.",
+          "Quantify the site thermal profile. Cell temperature follows the Sandia or NOCT model: Tcell = Tamb + (NOCT - 20)/800 x POA. Higher wind speeds reduce cell temperature. This feeds the temperature derate in yield modeling."
+        ],
+        "tags": ["solar", "resource-assessment", "irradiance"]
+      },
+      {
+        "flow_name": "pv-module-and-string-sizing",
+        "description": "Select PV modules based on technology trade-offs and size strings to match inverter MPPT voltage windows across the full operating temperature range.",
+        "inputs": [
+          {"name": "poa-irradiance-profile", "desc": "Monthly and annual POA irradiance with shading factors"},
+          {"name": "site-thermal-profile", "desc": "Temperature distribution for voltage calculations"}
+        ],
+        "outputs": [
+          {"name": "module-selection", "desc": "Selected module with datasheet parameters: Pmax, Voc, Vmp, Isc, Imp, temperature coefficients, degradation rate, and bifacial gain if applicable"},
+          {"name": "string-configuration", "desc": "Number of modules per string and strings per inverter MPPT, with voltage range verification at temperature extremes"}
+        ],
+        "process": [
+          "Compare module technologies. Mono PERC is the baseline. TOPCon offers 0.5-1% higher efficiency with better temperature coefficient. HJT has the best temperature coefficient (about -0.26%/C vs -0.35%/C for PERC) but higher cost. Bifacial adds 5-15% energy gain depending on albedo and mounting height.",
+          "Calculate string length from inverter MPPT voltage window. At the coldest expected temperature (record low or ASHRAE 99.6% design temperature), Voc must not exceed the inverter maximum input voltage. Use: Voc_cold = Voc_STC x (1 + TempCoeff_Voc x (Tmin - 25)).",
+          "At the hottest expected temperature (ASHRAE 0.4% design temperature), Vmp must stay above the inverter MPPT minimum voltage. Use: Vmp_hot = Vmp_STC x (1 + TempCoeff_Vmp x (Tmax_cell - 25)), where Tmax_cell includes irradiance heating above ambient.",
+          "The maximum string length is floor(Vmax_inverter / Voc_cold). The minimum string length is ceil(Vmppt_min / Vmp_hot). If min exceeds max, the module-inverter pairing does not work at this site.",
+          "Select the string length that keeps the operating voltage near the middle of the MPPT window for the majority of operating hours. Longer strings reduce BOS cost (fewer strings, combiner boxes, home runs) but reduce design flexibility."
+        ],
+        "tags": ["solar", "module-selection", "string-sizing"]
+      },
+      {
+        "flow_name": "inverter-selection-and-dc-ac-optimization",
+        "description": "Select inverter topology and optimize the DC/AC ratio to maximize energy harvest while managing clipping losses against cost savings.",
+        "inputs": [
+          {"name": "module-selection", "desc": "Selected module parameters"},
+          {"name": "string-configuration", "desc": "String length and count per MPPT"}
+        ],
+        "outputs": [
+          {"name": "inverter-specification", "desc": "Inverter model, rated AC power, MPPT channels, efficiency curve, and grid-code compliance features"},
+          {"name": "dc-ac-ratio", "desc": "Installed DC capacity divided by inverter AC rating, with annual clipping loss quantified"}
+        ],
+        "process": [
+          "Choose inverter topology. Central inverters (500kW-4MW) minimize cost per watt for utility scale. String inverters (50-350kW) allow per-string MPPT and eliminate DC combiner boxes. Microinverters serve residential but add per-module cost and communication complexity.",
+          "Size the DC/AC ratio (also called inverter loading ratio or ILR). For a fixed-tilt system in a moderate resource, ILR of 1.2-1.3 is typical. Higher ILR (1.3-1.5) suits tracker systems or sites where marginal DC capacity is cheap relative to inverter and interconnection cost.",
+          "Quantify clipping loss. Run an hourly simulation: for each hour where DC power exceeds AC rating, the inverter clips to rated AC. Annual clipping loss of 1-3% is generally economic. Beyond 3-4%, the marginal module adds cost without proportional energy.",
+          "Verify inverter efficiency across the operating range. CEC-weighted efficiency (which weights partial-load hours more heavily than peak) matters more than peak efficiency. A 98.5% CEC vs 98.0% CEC inverter recovers the efficiency difference over the project life.",
+          "Confirm grid-code compliance features: reactive power capability (typically +/- 0.85 power factor), voltage ride-through, frequency ride-through, ramp rate control, and anti-islanding per IEEE 1547-2018 Category III for utility-scale."
+        ],
+        "tags": ["solar", "inverter", "optimization"]
+      },
+      {
+        "flow_name": "pv-energy-yield-model",
+        "description": "Build a complete energy yield model quantifying every loss in the chain from incident irradiance to metered AC energy, following PVsyst methodology for bankability.",
+        "inputs": [
+          {"name": "inverter-specification", "desc": "Inverter model and efficiency curve"},
+          {"name": "dc-ac-ratio", "desc": "ILR and clipping loss estimate"}
+        ],
+        "outputs": [
+          {"name": "annual-energy-yield", "desc": "P50 and P90 annual energy production in MWh with full loss tree breakdown"},
+          {"name": "loss-chain-breakdown", "desc": "Each loss category quantified: soiling, shading, temperature, mismatch, wiring, inverter, transformer, clipping, availability, degradation"}
+        ],
+        "process": [
+          "Start from POA irradiance. Apply the incidence angle modifier (IAM) loss: at off-normal angles, reflection from the glass surface reduces absorbed irradiance. Physical models use the Fresnel equations; empirical models use ASHRAE or Martin-Ruiz correlations. Typical annual IAM loss is 2-4%.",
+          "Apply spectral correction if using a model that accounts for it. Air mass and precipitable water vapor shift the solar spectrum relative to the STC reference (AM1.5). This matters more for CdTe (spectral gain at high air mass) than crystalline silicon.",
+          "Apply soiling loss. Site-specific soiling rates range from 1% per month in dusty arid climates to 0.1% per month in wet climates. Cleaning schedule reduces the average soiling loss. Model soiling as a sawtooth: linear accumulation between cleaning events.",
+          "Calculate cell temperature hourly from ambient temperature, wind speed, and irradiance. Apply the temperature derate: Pdc = Pstc x (1 + gamma x (Tcell - 25)), where gamma is the temperature coefficient of power (negative, typically -0.35 to -0.45%/C for crystalline silicon).",
+          "Apply remaining DC losses: module mismatch (1-2%), DC wiring (1-2%), module LID/LeTID (0.5-1.5% first year), and nameplate tolerance (use median from flash test data if available). Then apply inverter efficiency from the efficiency curve at each operating point, transformer loss (typically 0.5-1%), and AC wiring loss. Sum losses to get net AC energy. Express results as P50 (median year) and P90 (exceeded 90% of years, accounting for interannual irradiance variability, typically 5-7% sigma)."
+        ],
+        "tags": ["solar", "energy-yield", "modeling"]
+      },
+      {
+        "flow_name": "pv-financial-model",
+        "description": "Build the financial model for a PV project: LCOE calculation, PPA pricing, degradation-adjusted cash flows, and sensitivity analysis on key variables.",
+        "inputs": [
+          {"name": "annual-energy-yield", "desc": "P50 and P90 energy production estimates"},
+          {"name": "loss-chain-breakdown", "desc": "Itemized losses for cost-benefit analysis of mitigation measures"}
+        ],
+        "outputs": [
+          {"name": "lcoe-analysis", "desc": "Levelized cost of energy in $/MWh with all-in cost assumptions and degradation schedule"},
+          {"name": "project-economics", "desc": "IRR, NPV, payback period, DSCR at P90, and sensitivity tornado chart on key variables"}
+        ],
+        "process": [
+          "Calculate LCOE: total lifecycle cost (capex + NPV of opex + NPV of inverter replacement + decommissioning) divided by NPV of lifetime energy production. Use a real discount rate (nominal minus inflation). Typical utility-scale LCOE components: modules 25-35%, inverters 5-8%, BOS 20-30%, soft costs 15-25%, O&M NPV 10-15%.",
+          "Build the degradation schedule. Year 1 degradation (LID + initial settling) is typically 2-3%. Subsequent annual degradation is 0.4-0.6% per year for crystalline silicon. Bifacial modules may degrade slightly faster on the rear side. The degradation rate is the single largest uncertainty in 25-35 year production estimates.",
+          "Model PPA pricing. The PPA price must cover debt service (DSCR of 1.3-1.4x at P90 energy for investment-grade financing), equity return (levered IRR target, typically 8-12%), and O&M escalation. PPA escalators of 1-2% per year are common but reduce competitiveness against flat PPAs.",
+          "Run sensitivity analysis. The variables with the largest impact on IRR are typically: energy yield (+/- 5%), capex (+/- 10%), PPA price (+/- $5/MWh), degradation rate (+/- 0.1%/yr), and discount rate (+/- 1%). Present results as a tornado chart showing IRR sensitivity to each variable independently.",
+          "Assess bankability risk factors. Lenders evaluate: technology risk (module warranty, inverter replacement schedule), resource risk (P90 vs P50 spread), curtailment risk (grid constraints), offtaker credit quality, and insurance coverage. The gap between P50 and P90 energy directly determines the debt sizing."
+        ],
+        "tags": ["solar", "finance", "lcoe"]
+      }
+    ]
+  },
+  {
+    "chain_name": "battery-energy-storage-design",
+    "description": "Design a battery energy storage system from cell chemistry selection through pack architecture, BMS design, thermal management, and degradation modeling to safety certification.",
+    "domain": "energy",
+    "tags": ["battery", "energy-storage", "bms", "engineering"],
+    "steps": [
+      {
+        "flow_name": "bess-cell-chemistry-selection",
+        "description": "Select battery cell chemistry and form factor by matching application requirements to electrochemical trade-offs in energy density, cycle life, safety, and cost.",
+        "inputs": [
+          {"name": "application-requirements", "desc": "Power rating (MW), energy capacity (MWh), duration, cycle count target, operating temperature range, and safety constraints"},
+          {"name": "project-constraints", "desc": "Space envelope, weight limits, budget targets, supply chain preferences, and regulatory requirements"}
+        ],
+        "outputs": [
+          {"name": "cell-selection", "desc": "Selected cell with chemistry, form factor, capacity, voltage, cycle life curve, and calendar aging parameters"},
+          {"name": "chemistry-trade-off-matrix", "desc": "Comparison of candidate chemistries across energy density, cycle life, safety, cost per kWh, temperature range, and supply chain risk"}
+        ],
+        "process": [
+          "Map the application to a chemistry class. LFP (lithium iron phosphate) for long cycle life (3,000-6,000 cycles to 80% SOH at 1C), superior thermal stability (no thermal runaway below 270C), and lower cost per cycle. NMC (nickel manganese cobalt) for higher energy density (200-270 Wh/kg vs 120-160 Wh/kg for LFP) where space or weight is constrained. Sodium-ion for cost-sensitive, moderate-cycle applications where energy density is less critical.",
+          "Select form factor. Prismatic cells (50-300Ah) simplify pack assembly and thermal management. Cylindrical cells (21700, 46800) offer better cycle life consistency and easier thermal management per cell but require more complex module assembly. Pouch cells maximize packing density but require external compression for cycle life.",
+          "Evaluate cell-level specifications. Capacity, nominal voltage, internal resistance (DC-IR), rate capability (continuous and pulse C-rate), and temperature range. Request cycle life data at the expected depth of discharge (DOD) and C-rate, not just the headline 1C/100% DOD number.",
+          "Assess safety certifications. Cells should pass UN 38.3 for transport, UL 1973 for stationary storage, and IEC 62619. Request abuse test results: nail penetration, overcharge, external short circuit, crush, and thermal abuse at the cell level.",
+          "Evaluate supply chain. Lead time, minimum order quantity, manufacturing location, and bankability (Tier 1 status from BloombergNEF or equivalent). For large projects, negotiate cell-level warranties including capacity fade guarantees (typically 60-70% of nameplate after stated cycle count) and defect rate limits."
+        ],
+        "tags": ["battery", "chemistry", "cell-selection"]
+      },
+      {
+        "flow_name": "battery-pack-architecture-design",
+        "description": "Design the battery pack from cell-level up: series/parallel configuration to hit voltage and capacity targets, busbar routing, fusing strategy, and contactors.",
+        "inputs": [
+          {"name": "cell-selection", "desc": "Cell chemistry, capacity, voltage, internal resistance"},
+          {"name": "chemistry-trade-off-matrix", "desc": "Trade-off data for design margin decisions"}
+        ],
+        "outputs": [
+          {"name": "pack-architecture", "desc": "Series and parallel cell count, module grouping, voltage range (min to max SOC), total energy capacity, and peak power capability"},
+          {"name": "electrical-design", "desc": "Busbar sizing, fuse ratings, contactor selection, pre-charge circuit design, and isolation monitoring approach"}
+        ],
+        "process": [
+          "Determine the series count from the target DC bus voltage. For grid-scale inverters, 1000V or 1500V DC bus is standard. Series cells = Vbus_target / Vcell_nominal. Verify that Vmax (fully charged, cold temperature) does not exceed inverter maximum input voltage, and Vmin (discharged, hot temperature) stays above inverter MPPT minimum.",
+          "Determine the parallel count from the energy or power requirement. Parallel strings = Energy_target / (Series_count x Vcell_nominal x Ccell). Verify that peak current per cell at maximum power does not exceed the cell's rated continuous or pulse C-rate.",
+          "Design the module structure. Group cells into modules (typically 12-24 series cells per module) for manufacturing, maintenance, and safety isolation. Each module gets its own cell monitoring circuit (voltage and temperature sensors per cell or cell group). Module-level fusing allows isolation of a failed module without taking down the rack.",
+          "Size the busbars for maximum continuous current with a temperature rise limit (typically 30C above ambient). Use copper for low resistance; aluminum for weight savings. Calculate I2R losses across the full busbar path and include them in the efficiency model. Add pre-charge resistor and contactor to limit inrush current when connecting the pack to the DC bus.",
+          "Design the isolation monitoring system. Battery packs in grid-scale applications must maintain galvanic isolation from ground. An isolation monitoring device (IMD) continuously measures resistance between DC bus and ground, triggering an alarm or disconnect below the threshold (typically 100 ohm/V)."
+        ],
+        "tags": ["battery", "pack-design", "electrical"]
+      },
+      {
+        "flow_name": "bms-design-methodology",
+        "description": "Design the battery management system: cell monitoring, SOC estimation, balancing strategy, protection logic, and communication architecture.",
+        "inputs": [
+          {"name": "pack-architecture", "desc": "Series/parallel count, module structure"},
+          {"name": "electrical-design", "desc": "Voltage range, current limits, fusing and contactor layout"}
+        ],
+        "outputs": [
+          {"name": "bms-specification", "desc": "BMS architecture with cell monitoring accuracy, SOC estimation method, balancing approach, protection thresholds, and communication protocols"},
+          {"name": "protection-logic", "desc": "Overvoltage, undervoltage, overcurrent, overtemperature thresholds and response actions with timing"}
+        ],
+        "process": [
+          "Define the BMS architecture. Distributed BMS places a cell monitoring IC on each module (measuring cell voltages and temperatures) communicating to a central controller via daisy-chain (isoSPI, CAN, or proprietary). Centralized BMS routes all cell connections to one board, limiting scalability but reducing cost for small packs.",
+          "Specify cell voltage measurement accuracy. For LFP, the flat voltage curve demands accuracy better than +/-3mV to distinguish SOC in the 20-80% range. For NMC, +/-5mV is adequate. Synchronous measurement across all cells is needed for accurate balancing decisions.",
+          "Implement SOC estimation. Coulomb counting (current integration) drifts over time. OCV lookup works only at rest. A Kalman filter or equivalent observer combines both: use the OCV-SOC curve as the measurement model and coulomb counting as the state transition model, with the internal resistance providing an additional observable. Recalibrate at full charge and full discharge rest periods.",
+          "Design the balancing strategy. Passive balancing (bleeding excess charge through resistors) is simple and cheap but wastes energy and generates heat. Active balancing (shuttling charge between cells via switched capacitors or transformers) preserves energy but adds cost and complexity. For grid-scale LFP, passive balancing at 50-200mA per cell is the standard approach. Run balancing during rest periods to avoid affecting SOC estimation.",
+          "Define protection thresholds and response timing. Overvoltage: disconnect charge path within 1 second if any cell exceeds Vmax (e.g., 3.65V for LFP). Undervoltage: disconnect discharge path if any cell drops below Vmin (e.g., 2.5V for LFP). Overcurrent: immediate disconnect for short circuit (hardware comparator, not software), timed disconnect for sustained overload. Overtemperature: reduce power above 45C cell temperature, disconnect above 55C."
+        ],
+        "tags": ["battery", "bms", "protection"]
+      },
+      {
+        "flow_name": "bess-thermal-management-design",
+        "description": "Design the thermal management system for the battery pack: heat generation modeling, cooling system sizing, thermal runaway propagation prevention, and thermal testing methodology.",
+        "inputs": [
+          {"name": "bms-specification", "desc": "Operating parameters, balancing heat load, protection thresholds"},
+          {"name": "protection-logic", "desc": "Temperature thresholds that define cooling system capacity requirements"}
+        ],
+        "outputs": [
+          {"name": "thermal-system-design", "desc": "Cooling method, coolant loop sizing, air flow requirements, insulation strategy, and thermal runaway propagation mitigation"},
+          {"name": "thermal-model-results", "desc": "Maximum cell temperature at rated power, temperature gradient across pack, and thermal time constant for transient events"}
+        ],
+        "process": [
+          "Calculate heat generation. Cell heat comes from I2R losses (ohmic heating from internal resistance) and reversible entropic heating. At 1C continuous, total heat is approximately I2 x Rinternal per cell. For a 280Ah LFP cell at 0.3 milliohm, thats about 23W per cell at 1C. Multiply by cell count for pack-level heat load. Add BMS electronics, contactor, and busbar losses.",
+          "Select cooling method. Air cooling is simplest (fan-forced air through channels between cells) but limited to about 1-2 kW/m2 heat removal. Liquid cooling (glycol-water through cold plates or bottom cooling) handles 5-10 kW/m2 and provides tighter temperature control (+/-2C across pack vs +/-5C for air). Immersion cooling in dielectric fluid offers the highest heat transfer but adds cost and complexity. For grid-scale at 0.5C-1C average, air cooling often suffices. For high-power applications (2C+), liquid cooling is necessary.",
+          "Size the cooling system. The coolant flow rate follows from: Q = m_dot x Cp x delta_T, where Q is heat load, Cp is specific heat of coolant, and delta_T is allowable coolant temperature rise (typically 5-10C). Size the heat exchanger to reject this heat to ambient at the hottest design day. Include a chiller if ambient temperature plus delta_T exceeds the cell temperature limit.",
+          "Design thermal runaway propagation prevention. Even if cell-level thermal runaway cannot be prevented in all cases, pack-level propagation must be stopped. Strategies: thermal barriers between cells (mica sheets, aerogel blankets, intumescent materials), vent gas management (direct venting to outside through fire-rated ducts), and spacing between modules. Test to UL 9540A: trigger thermal runaway in one cell and verify no propagation to adjacent cells within 24 hours.",
+          "Validate with thermal testing. Instrument a representative module with thermocouples on cell surfaces and between cells. Run it at rated power in a thermal chamber at the design ambient temperature. Verify that cell temperatures stay within the operating window and that the temperature gradient across the module matches the model prediction within 3C."
+        ],
+        "tags": ["battery", "thermal", "cooling"]
+      },
+      {
+        "flow_name": "bess-degradation-and-warranty-model",
+        "description": "Model battery degradation from calendar aging and cycle aging mechanisms, size the overbuild for end-of-life capacity, and structure the warranty to match project economics.",
+        "inputs": [
+          {"name": "thermal-system-design", "desc": "Operating temperature profile that affects degradation rate"},
+          {"name": "thermal-model-results", "desc": "Cell temperature distribution under various operating profiles"}
+        ],
+        "outputs": [
+          {"name": "degradation-forecast", "desc": "Year-by-year capacity fade and resistance growth with overbuild recommendation to meet end-of-life energy guarantee"},
+          {"name": "warranty-structure", "desc": "Warranted capacity at each year, throughput limits, temperature and DOD operating envelope for warranty validity"}
+        ],
+        "process": [
+          "Model calendar aging. Calendar aging depends on temperature and SOC (state of charge at rest). Higher temperature and higher resting SOC accelerate SEI layer growth. For LFP at 25C and 50% SOC, calendar aging is approximately 1-2% per year. Each 10C increase roughly doubles the rate (Arrhenius relationship). Store batteries at 30-50% SOC when not cycling to minimize calendar loss.",
+          "Model cycle aging. Cycle aging depends on depth of discharge, C-rate, and temperature. Deeper cycles cause more capacity loss per cycle but deliver more energy per cycle, so the loss per MWh throughput is often similar across DOD ranges. Use the manufacturer's cycle life curve (capacity vs cycle count at specified DOD and temperature) and convert to an equivalent full-cycle count for the expected usage profile using rainflow counting.",
+          "Combine calendar and cycle aging. The total capacity fade is approximately the sum of calendar fade and cycle fade (linear superposition works as a first approximation for the first 80% of life, though degradation accelerates as it approaches the knee of the aging curve). Build a year-by-year model using the expected cycling profile (cycles per day, average DOD, average temperature from the thermal model).",
+          "Size the overbuild. If the project requires delivering 100 MWh at year 15, and the degradation model predicts 78% remaining capacity at year 15, install 100/0.78 = 128 MWh nameplate. This overbuild is the largest single driver of BESS capital cost. Reducing operating temperature by 5C or narrowing the DOD window by 10% can reduce required overbuild by 5-10%.",
+          "Structure the warranty. Manufacturer warranties typically guarantee a minimum remaining capacity (e.g., 60% at 10 years or a stated throughput in MWh). Define the operating envelope that preserves warranty validity: maximum cell temperature, maximum C-rate, DOD limits, and cumulative throughput. The project's BESS controller must enforce these limits. Include augmentation rights (ability to add cells or modules to restore capacity at a known price) in the contract."
+        ],
+        "tags": ["battery", "degradation", "warranty"]
+      }
+    ]
+  },
+  {
+    "chain_name": "grid-interconnection-engineering",
+    "description": "Engineer the grid interconnection for a generation or storage project from initial study through protection coordination, power quality compliance, and commissioning testing.",
+    "domain": "energy",
+    "tags": ["grid", "interconnection", "power-systems", "engineering"],
+    "steps": [
+      {
+        "flow_name": "interconnection-study-process",
+        "description": "Navigate the utility interconnection study process: feasibility, system impact, and facilities study, identifying upgrade costs and schedule risks at each stage.",
+        "inputs": [
+          {"name": "project-parameters", "desc": "Generation type, nameplate capacity (MW), location, point of interconnection, requested interconnection service (energy resource or network resource)"},
+          {"name": "utility-territory", "desc": "Utility or ISO/RTO, applicable interconnection procedures (FERC LGIP/SGIP or state equivalent), queue position if applicable"}
+        ],
+        "outputs": [
+          {"name": "study-results-summary", "desc": "Feasibility findings, system impact study results (thermal, voltage, stability, short circuit), and facilities study cost estimate with network upgrade allocation"},
+          {"name": "interconnection-risks", "desc": "Identified risks: queue position dependencies, cluster study cost allocation, upgrade cost exposure, and schedule to commercial operation"}
+        ],
+        "process": [
+          "Submit the interconnection request with the required deposit and technical data. For FERC-jurisdictional queues, this enters the cluster study process. Provide accurate data: nameplate MW, power factor range, reactive power capability, fault current contribution, and proposed point of interconnection.",
+          "Feasibility study (30-45 days typical): screens for obvious thermal overloads and voltage violations at the POI. A pass here does not guarantee interconnection; it means no fatal flaw at the screening level. A fail identifies which facilities need reinforcement.",
+          "System impact study (6-12 months for cluster studies): models the project along with all other projects in the same cluster. Evaluates steady-state thermal loading, voltage regulation, transient stability, and short circuit duty. Network upgrades identified here are allocated across projects in the cluster based on the utility's methodology (often pro-rata by MW or by the 'but-for' test).",
+          "Facilities study (3-6 months): provides the detailed engineering scope and cost estimate for the interconnection facilities (gen-tie line, interconnection substation, utility metering, and allocated network upgrades). Review the cost estimate against the project's pro forma. Network upgrade costs that exceed the project's budget typically require renegotiation or withdrawal.",
+          "Execute the interconnection agreement. Key terms: milestone schedule (financial security, construction start, commercial operation), default and termination provisions, cost responsibility for upgrades, and operating requirements (reactive power, frequency response, ride-through obligations). Missing milestones can result in queue loss."
+        ],
+        "tags": ["grid", "interconnection", "utility"]
+      },
+      {
+        "flow_name": "power-flow-and-short-circuit-analysis",
+        "description": "Perform power flow and short circuit studies to verify the project's impact on the grid and ensure equipment ratings are adequate.",
+        "inputs": [
+          {"name": "study-results-summary", "desc": "Utility study findings and identified constraints"},
+          {"name": "interconnection-risks", "desc": "Specific risks requiring detailed engineering analysis"}
+        ],
+        "outputs": [
+          {"name": "power-flow-results", "desc": "Voltage profile, thermal loading, and reactive power requirements at the POI under normal and contingency conditions"},
+          {"name": "short-circuit-analysis", "desc": "Three-phase and single-line-to-ground fault current contribution from the project, and total fault duty at the POI"}
+        ],
+        "process": [
+          "Build or obtain the power system model. Use PSS/E, PSCAD, or PowerWorld with the utility's base case. Add the project's generator model (for inverter-based resources, use the WECC second-generation or manufacturer-specific models). Include all other projects in the queue cluster.",
+          "Run power flow for the key dispatch scenarios: peak load with project at full output, light load with project at full output, and peak load with project offline. Check thermal loading on all circuits between the POI and the first strong bus. Verify voltage at the POI stays within ANSI C84.1 Range A (0.95-1.05 pu) under all scenarios.",
+          "Analyze contingency cases (N-1 at minimum). Simulate the loss of each transmission element between the POI and the bulk system. Verify that the project can ride through the contingency without voltage collapse and that remaining elements do not exceed emergency thermal ratings.",
+          "Calculate short circuit contribution. Inverter-based resources contribute 1.1-1.2 times rated current during a fault (limited by inverter current capability), unlike synchronous machines that contribute 5-10 times rated current. Model the inverter's fault current response per IEEE 2800. Verify that total fault duty at the POI does not exceed the interrupting rating of existing breakers.",
+          "Determine reactive power requirements. IEEE 1547-2018 Category III requires the project to provide dynamic reactive power support. Size the inverter's reactive power capability to maintain power factor at the POI as specified in the interconnection agreement (typically +/- 0.95 or better). If the inverter cannot meet the requirement alone, evaluate static VAR compensators or synchronous condensers."
+        ],
+        "tags": ["grid", "power-flow", "short-circuit"]
+      },
+      {
+        "flow_name": "protection-coordination-design",
+        "description": "Design the protection system for the interconnection: relay selection, coordination with utility relays, and anti-islanding detection.",
+        "inputs": [
+          {"name": "power-flow-results", "desc": "Normal and contingency operating conditions at the POI"},
+          {"name": "short-circuit-analysis", "desc": "Fault current levels for relay setting calculations"}
+        ],
+        "outputs": [
+          {"name": "protection-scheme", "desc": "Relay types, settings, and coordination study showing time-current curves and operating sequences"},
+          {"name": "anti-islanding-design", "desc": "Islanding detection method, detection time, and trip logic"}
+        ],
+        "process": [
+          "Define the protection zones. At minimum: generator zone (between the inverter and the step-up transformer), interconnection zone (between the step-up transformer and the POI), and the utility line zone (utility-owned relays on their side of the POI). Each zone requires primary and backup protection.",
+          "Select relays for the generator zone. Overcurrent (50/51), overvoltage and undervoltage (27/59), overfrequency and underfrequency (81O/81U), and reverse power (32) are the minimum set. For inverter-based resources, negative sequence overcurrent (46) detects unbalanced faults. Set the overcurrent elements above maximum normal current with margin for measurement error and below the minimum fault current.",
+          "Coordinate with utility relays. The project's relays must trip faster than the utility's recloser on the feeder or the utility's zone 2 distance relay on the transmission line. Plot time-current curves for all relays in series and verify a minimum coordination interval (typically 0.3 seconds) between adjacent relay operating times at the maximum fault current.",
+          "Design anti-islanding protection per IEEE 1547-2018. Passive methods (voltage and frequency trip settings) detect most islanding conditions. For conditions where load and generation are closely matched, active methods (frequency shift, impedance measurement, or transfer trip from the utility breaker) are needed. Transfer trip via direct communication from the utility breaker to the project provides the most reliable detection.",
+          "Develop the trip logic. Define the sequence: fault detection, breaker trip, lockout, and reclosure blocking. For utility-side faults, the project must cease energization within 2 seconds (IEEE 1547 requirement). For project-side faults, coordinate with the utility to ensure the utility does not trip for faults that the project's relays will clear. Document all settings in a relay settings database for future coordination studies."
+        ],
+        "tags": ["grid", "protection", "relays"]
+      },
+      {
+        "flow_name": "grid-code-compliance-verification",
+        "description": "Verify compliance with IEEE 1547-2018 and applicable grid code requirements through modeling, factory testing, and commissioning tests.",
+        "inputs": [
+          {"name": "protection-scheme", "desc": "Relay settings and coordination study"},
+          {"name": "anti-islanding-design", "desc": "Detection method and trip settings"}
+        ],
+        "outputs": [
+          {"name": "compliance-verification-plan", "desc": "Test plan covering voltage ride-through, frequency ride-through, reactive power capability, ramp rate, and power quality"},
+          {"name": "commissioning-test-results", "desc": "Measured performance against grid code requirements with pass/fail determination for each requirement"}
+        ],
+        "process": [
+          "Define the compliance scope from IEEE 1547-2018 Category III (for projects above 500kVA on transmission): voltage ride-through (HVRT and LVRT curves), frequency ride-through, reactive power capability, voltage regulation mode, ramp rate limits, and power quality (harmonics per IEEE 519).",
+          "Verify voltage ride-through capability. The inverter must remain connected and inject reactive current during voltage sags per the Category III ride-through curve. Factory test certificates from the inverter manufacturer (per UL 1741 SB or IEC 62116) provide type-test evidence. Commissioning testing with controlled voltage injection confirms site-specific performance.",
+          "Verify reactive power capability. At rated active power, the inverter must deliver the specified reactive power range. Test at multiple active power levels (25%, 50%, 75%, 100%) and at both absorbing and injecting reactive power. Plot the measured P-Q capability curve against the requirement.",
+          "Verify power quality. Measure harmonic distortion at the POI during normal operation at various output levels. Total harmonic distortion must be below 5% for voltage and current, with individual harmonics below the limits in IEEE 519 Table 2 based on the short circuit ratio at the POI. Use a power quality analyzer with at least 50th harmonic measurement capability and 10-minute averaging per IEC 61000-4-7.",
+          "Document the commissioning test results in a report that includes: test equipment used with calibration certificates, test conditions (ambient temperature, irradiance for solar, wind speed for wind), measured values versus requirements, and a clear pass/fail determination for each grid code requirement. Submit to the utility for acceptance before commercial operation."
+        ],
+        "tags": ["grid", "compliance", "commissioning"]
+      }
+    ]
+  },
+  {
+    "chain_name": "wind-turbine-engineering",
+    "description": "Engineer a wind energy project from resource assessment through rotor aerodynamics, structural loads, foundation design, and energy yield estimation.",
+    "domain": "energy",
+    "tags": ["wind", "turbine", "renewable", "aerodynamics", "engineering"],
+    "steps": [
+      {
+        "flow_name": "wind-resource-assessment",
+        "description": "Characterize the wind resource at a site using measurement campaigns, statistical distribution fitting, and long-term correlation to produce a bankable energy estimate.",
+        "inputs": [
+          {"name": "site-location", "desc": "Project site coordinates, terrain type, and land area"},
+          {"name": "measurement-campaign-data", "desc": "Met mast or lidar data (minimum 12 months) with wind speed, direction, temperature, and pressure at multiple heights"}
+        ],
+        "outputs": [
+          {"name": "wind-resource-characterization", "desc": "Long-term corrected wind speed distribution at hub height, wind rose, turbulence intensity, wind shear profile, and seasonal patterns"},
+          {"name": "site-wind-parameters", "desc": "Weibull shape and scale parameters, IEC turbine class determination, and extreme wind speed estimates"}
+        ],
+        "process": [
+          "Validate the measurement data. Check for sensor icing (flat-line periods in winter), tower shadow effects (speed deficit at azimuths behind the tower), and data recovery rate (require greater than 90% for bankability). Apply corrections for tower shadow using direction-dependent exclusion sectors.",
+          "Fit a Weibull distribution to the wind speed data at each measurement height. The two-parameter Weibull (shape k and scale A) is the industry standard. Method of moments or maximum likelihood estimation. Verify the fit with a chi-squared or Kolmogorov-Smirnov test. Typical onshore sites have k between 1.8 and 2.5.",
+          "Extrapolate to hub height using the wind shear profile. Measure shear from at least two heights on the met mast. The power law exponent alpha typically ranges from 0.10 (flat, smooth terrain) to 0.25 (rough, forested terrain). Use the log law with roughness length for more physics-based extrapolation. Lidar measurements above 100m reduce extrapolation uncertainty.",
+          "Correlate to long-term reference data. The measurement period (1-3 years) may not represent the long-term mean. Use MCP (Measure-Correlate-Predict) with a 10-20 year reference dataset (reanalysis data like ERA5, or a nearby long-term met station). Apply the correlation to adjust the on-site data to the long-term mean. This step typically shifts the annual mean wind speed by +/- 5% and is a major source of uncertainty.",
+          "Determine the IEC turbine class from the hub-height wind parameters. Class I: Vref = 50 m/s, Vave = 10 m/s. Class II: Vref = 42.5 m/s, Vave = 8.5 m/s. Class III: Vref = 37.5 m/s, Vave = 7.5 m/s. Turbulence category A (Iref = 0.16), B (0.14), or C (0.12). The turbine selected must be certified for a class equal to or above the site conditions."
+        ],
+        "tags": ["wind", "resource", "measurement"]
+      },
+      {
+        "flow_name": "wind-turbine-aerodynamic-design",
+        "description": "Design the wind turbine rotor using blade element momentum (BEM) theory: airfoil selection, blade chord and twist distribution, and performance optimization.",
+        "inputs": [
+          {"name": "wind-resource-characterization", "desc": "Wind speed distribution and turbulence for performance optimization"},
+          {"name": "site-wind-parameters", "desc": "IEC class and extreme wind for structural input"}
+        ],
+        "outputs": [
+          {"name": "rotor-design", "desc": "Blade geometry (chord and twist vs span), airfoil distribution, design tip speed ratio, and rated/cut-in/cut-out wind speeds"},
+          {"name": "power-curve", "desc": "Predicted power output vs wind speed from cut-in to cut-out, with Cp curve vs tip speed ratio"}
+        ],
+        "process": [
+          "Select the design tip speed ratio (TSR). Optimal TSR for a three-bladed horizontal axis turbine is 6-8. Higher TSR means narrower chord (less material) but higher tip speeds (more noise and leading-edge erosion). The tip speed limit for onshore turbines is typically 80-85 m/s for noise compliance; offshore can go higher.",
+          "Apply BEM theory to determine the optimal chord and twist distribution. At each radial station, calculate the induction factors (axial a and tangential a-prime) that maximize the local power coefficient. The Glauert correction applies for high induction (a greater than 0.4). Prandtl's tip loss factor corrects for finite blade effects near the tip and root.",
+          "Select airfoils along the span. Thick airfoils (24-40% thickness) at the root for structural strength, transitioning to thin airfoils (15-21%) at the tip for aerodynamic efficiency. The DU and NACA 63-series are common. Roughness insensitivity matters for leading-edge contamination from insects and erosion. Flatback airfoils at the root improve Cl at high thickness ratios.",
+          "Optimize the blade for the annual energy production (AEP), not just peak Cp. The blade operates across a range of wind speeds with variable pitch and speed control. Below rated wind speed, the controller varies rotor speed to maintain optimal TSR. Above rated, pitch control limits power to rated. The optimization trades peak Cp against performance breadth across the wind speed distribution.",
+          "Generate the predicted power curve. At each wind speed, calculate the power from BEM including mechanical and electrical losses (gearbox if present, generator, converter, transformer). Apply air density corrections for the site altitude and temperature. The gap between the theoretical and measured power curve (typically 2-5%) accounts for yaw misalignment, turbulence effects, and control system imperfections."
+        ],
+        "tags": ["wind", "aerodynamics", "rotor-design"]
+      },
+      {
+        "flow_name": "wind-turbine-structural-loads",
+        "description": "Calculate the structural loads on the wind turbine from design load cases per IEC 61400 and verify structural integrity of the tower, blades, and drivetrain.",
+        "inputs": [
+          {"name": "rotor-design", "desc": "Blade geometry and aerodynamic properties"},
+          {"name": "power-curve", "desc": "Operating parameters vs wind speed"}
+        ],
+        "outputs": [
+          {"name": "design-load-envelope", "desc": "Ultimate and fatigue loads at key cross-sections (blade root, hub, tower top, tower base) from the governing DLCs"},
+          {"name": "structural-verification", "desc": "Material utilization ratios for blades, tower, and foundation interface loads, with factors of safety"}
+        ],
+        "process": [
+          "Define the design load cases (DLCs) per IEC 61400-1. The critical cases typically include: DLC 1.3 (power production with extreme turbulence), DLC 1.6 (power production with extreme coherent gust with direction change), DLC 2.3 (fault during operation with external grid loss), DLC 6.1 (parked, extreme wind with yaw misalignment), and DLC 1.2 (fatigue during normal power production).",
+          "Run aeroelastic simulations. Tools like OpenFAST, Bladed, or HAWC2 model the coupled aerodynamic, structural, and control system response. Each DLC requires multiple simulations with different turbulence seeds (6 seeds minimum per IEC 61400-1 for ultimate loads). Extract time series of forces and moments at key cross-sections.",
+          "Process ultimate loads. For each cross-section, identify the maximum and minimum values of each load component (Mx, My, Mz, Fx, Fy, Fz) across all DLC simulations. Apply the partial safety factor for loads (typically 1.35 for normal conditions). Compare against the cross-section capacity with a material partial safety factor (1.1-1.3 depending on material and failure mode).",
+          "Process fatigue loads. Extract load cycles using rainflow counting from the time series weighted by the annual wind speed distribution. Calculate the damage equivalent load (DEL) at each cross-section for a reference number of cycles (typically 1E7 for 20-year life). Compare the DEL against the material S-N curve (Goodman diagram for mean stress correction) to verify that the accumulated fatigue damage is less than 1.0.",
+          "Derive the foundation interface loads. The tower base loads (overturning moment, vertical force, horizontal shear, torsion) define the foundation design input. For onshore, the overturning moment at the tower base under DLC 6.1 (extreme wind, parked) typically governs the foundation size. Provide the full load envelope (ultimate and fatigue) to the foundation designer."
+        ],
+        "tags": ["wind", "structural", "loads"]
+      },
+      {
+        "flow_name": "wind-farm-layout-and-energy-yield",
+        "description": "Optimize the wind farm layout for energy production while managing wake losses, turbulence loading, and site constraints, then produce a bankable energy yield estimate.",
+        "inputs": [
+          {"name": "design-load-envelope", "desc": "Structural limits that constrain minimum turbine spacing"},
+          {"name": "structural-verification", "desc": "Verified turbine capability under site-specific loads"}
+        ],
+        "outputs": [
+          {"name": "optimized-layout", "desc": "Turbine positions with wake loss analysis, turbulence intensity at each position, and noise contour map"},
+          {"name": "energy-yield-estimate", "desc": "P50 and P90 annual energy production with uncertainty breakdown (resource, wake model, availability, electrical losses, curtailment)"}
+        ],
+        "process": [
+          "Set spacing constraints. Minimum spacing of 3-4 rotor diameters crosswind and 7-10 rotor diameters downwind reduces wake losses to acceptable levels. Tighter spacing increases energy density (MW/km2) but increases wake losses and turbulence loading on downstream turbines. Site constraints (setbacks from property lines, roads, wetlands, residences) further limit positions.",
+          "Run wake modeling. The Jensen/Park model is the simplest (single-wake deficit proportional to thrust coefficient). The Fuga or Bastankhah models add turbulence and terrain effects. For complex terrain, CFD-based wake models improve accuracy but increase computation time. Array efficiency (ratio of actual production to sum of free-stream turbine production) for a well-designed onshore farm is typically 90-95%.",
+          "Optimize the layout using a genetic algorithm or particle swarm optimizer. The objective function is typically net AEP (including wake losses) or LCOE. Constraints include minimum spacing, setbacks, maximum turbulence intensity (must not exceed the turbine's IEC turbulence class), and noise limits at sensitive receptors.",
+          "Compile the energy yield estimate. Start with gross energy (each turbine's free-stream production from the power curve and wind resource). Subtract wake losses (from the wake model), availability losses (typically 2-5% for onshore, accounting for scheduled maintenance and unscheduled downtime), electrical losses (transformer and cable losses, typically 2-3%), environmental losses (icing, high-temperature shutdown, 0.5-2%), and curtailment (grid curtailment or noise curtailment, site-specific).",
+          "Quantify uncertainty for P90 estimation. Major uncertainty sources: long-term wind resource (3-5% sigma), wind speed measurement (1-2%), vertical extrapolation (1-3%), wake model (2-4%), power curve (2-3%), availability (1-2%). Combine in quadrature (RSS) for total uncertainty. P90 = P50 x (1 - 1.28 x sigma_total). A typical onshore project has P90/P50 ratio of 0.88-0.92."
+        ],
+        "tags": ["wind", "layout", "energy-yield"]
+      }
+    ]
+  },
+  {
+    "chain_name": "nuclear-reactor-design-fundamentals",
+    "description": "Apply the fundamental methods of nuclear reactor design: neutronics, thermal-hydraulics, fuel design, reactivity control, and safety analysis.",
+    "domain": "energy",
+    "tags": ["nuclear", "reactor", "neutronics", "safety", "engineering"],
+    "steps": [
+      {
+        "flow_name": "nuclear-neutronics-and-criticality",
+        "description": "Apply neutron transport and diffusion theory to achieve criticality: four-factor formula, multiplication factor, and neutron economy optimization.",
+        "inputs": [
+          {"name": "reactor-concept", "desc": "Reactor type (PWR, BWR, SMR, MSR, HTGR), thermal power rating, and target fuel cycle length"},
+          {"name": "fuel-specification", "desc": "Fuel form (UO2, TRISO, metallic), enrichment target, and cladding material"}
+        ],
+        "outputs": [
+          {"name": "neutronics-design", "desc": "Fuel assembly geometry, enrichment zoning, and beginning-of-life k-effective with margin for burnup reactivity swing"},
+          {"name": "neutron-economy-analysis", "desc": "Four-factor formula breakdown (eta, f, p, epsilon), neutron leakage, and excess reactivity requiring control"}
+        ],
+        "process": [
+          "Start with the four-factor formula: k_inf = eta x f x p x epsilon. Eta is the average number of fission neutrons per thermal neutron absorbed in fuel (about 2.06 for U-235 thermal fission). f is the thermal utilization factor (fraction of thermal absorptions in fuel vs total). p is the resonance escape probability (fraction of neutrons that slow down past U-238 resonances without capture). Epsilon is the fast fission factor (slight multiplication from fast fission in U-238, about 1.03).",
+          "Calculate k-effective by applying the non-leakage probability: k_eff = k_inf x P_NL, where P_NL depends on the geometric buckling B2 and the migration length M. For a cylindrical reactor, B2 = (2.405/R_extrapolated)2 + (pi/H_extrapolated)2. k_eff must equal 1.0 at steady state; the excess above 1.0 at beginning of life is managed by control systems.",
+          "Determine the excess reactivity needed. Over the fuel cycle, reactivity decreases as fissile material is consumed and fission products (especially Xe-135 and Sm-149) build up. The initial excess reactivity must compensate for this burnup swing (typically 10-20% delta_k/k for a PWR operating on an 18-month cycle). This excess is held down by control rods, soluble boron, and burnable absorbers.",
+          "Design the fuel assembly lattice. For a PWR, a 17x17 rod array is standard. The fuel rod pitch (center-to-center distance) determines the moderator-to-fuel ratio, which affects both f and p. Undermoderation (too tight a pitch) reduces f; overmoderation reduces p. The optimal ratio balances these for maximum k_inf. Enrichment zoning (lower enrichment at the periphery of the assembly) flattens the power distribution.",
+          "Run lattice physics calculations using a deterministic code (CASMO, HELIOS) or Monte Carlo (Serpent, OpenMC). Generate few-group cross sections as a function of burnup, moderator temperature, fuel temperature, and boron concentration. These feed into the core-level diffusion calculation for full-core power distribution, critical boron search, and shutdown margin verification."
+        ],
+        "tags": ["nuclear", "neutronics", "criticality"]
+      },
+      {
+        "flow_name": "nuclear-fuel-element-design",
+        "description": "Design the fuel element: pellet geometry, cladding selection, gap conductance, fission gas management, and burnup limits.",
+        "inputs": [
+          {"name": "neutronics-design", "desc": "Assembly geometry and enrichment for fuel rod specifications"},
+          {"name": "neutron-economy-analysis", "desc": "Burnup target and power density for thermal limits"}
+        ],
+        "outputs": [
+          {"name": "fuel-rod-design", "desc": "Pellet dimensions, cladding material and thickness, gap fill gas, plenum volume, and maximum burnup limit"},
+          {"name": "fuel-performance-limits", "desc": "Maximum linear heat rate, centerline temperature limit, internal pressure limit, and cladding strain limit"}
+        ],
+        "process": [
+          "Design the fuel pellet. UO2 pellets are typically 8-10mm diameter, 10-12mm height, with dished ends to accommodate axial thermal expansion and chamfered edges to ease loading. Theoretical density of UO2 is 10.97 g/cm3; pellets are sintered to 94-96% TD. Lower density provides porosity for fission gas storage but reduces uranium loading.",
+          "Select cladding material. Zircaloy-4 and M5 (Zr-Nb alloy) are standard for PWRs. Zirconium has a low thermal neutron absorption cross section (0.18 barns) and adequate corrosion resistance below 360C. Cladding thickness is 0.57-0.65mm, balancing neutron economy against burst and collapse strength. Advanced accident-tolerant fuels (Cr-coated Zr, FeCrAl, SiC/SiC) are entering qualification for enhanced high-temperature performance.",
+          "Design the pellet-cladding gap. Initial gap of 80-100 micrometers filled with helium (high thermal conductivity: 0.15 W/m-K at 300C). Gap conductance improves as burnup increases and the pellet swells into the cladding (pellet-cladding interaction). The gap conductance model (Ross-Stoute or equivalent) calculates the effective heat transfer coefficient across the gap as a function of gap width, gas composition, and contact pressure.",
+          "Size the fission gas plenum. Fission produces about 30 cm3 of gas (at STP) per MWd/kgU of burnup. At high burnup (50-60 MWd/kgU), fission gas release from the pellet matrix can reach 5-15% of total gas produced. The plenum volume (at the top of the fuel rod) must accommodate this gas without exceeding the internal pressure design limit (typically 15-17 MPa at end of life). Plenum-to-fuel volume ratio is typically 0.05-0.10.",
+          "Verify fuel performance limits. Maximum centerline temperature must stay below the UO2 melting point (2840C for fresh fuel, decreasing with burnup) with margin (limit typically set at 2590C). Maximum linear heat rate (power per unit length of fuel rod) is limited by centerline temperature, typically 40-44 kW/m for steady state. Cladding strain limit (1% plastic strain) prevents pellet-cladding mechanical interaction failures during power ramps."
+        ],
+        "tags": ["nuclear", "fuel", "design"]
+      },
+      {
+        "flow_name": "nuclear-thermal-hydraulic-design",
+        "description": "Design the reactor core thermal-hydraulics: coolant flow distribution, hot channel analysis, departure from nucleate boiling margin, and decay heat removal.",
+        "inputs": [
+          {"name": "fuel-rod-design", "desc": "Rod geometry and maximum linear heat rate"},
+          {"name": "fuel-performance-limits", "desc": "Temperature and strain limits for thermal margin calculation"}
+        ],
+        "outputs": [
+          {"name": "thermal-hydraulic-design", "desc": "Core flow rate, inlet/outlet temperatures, pressure drop, and hot channel factors"},
+          {"name": "dnb-margin-analysis", "desc": "Minimum DNBR and its location, with hot channel factor components (engineering, nuclear, flow)"}
+        ],
+        "process": [
+          "Establish the core thermal parameters. For a PWR: inlet temperature around 290C, outlet temperature around 325C, system pressure 15.5 MPa, and coolant flow rate sized to achieve the target temperature rise across the core. Core delta-T = Qcore / (m_dot x Cp), where Qcore is total thermal power and Cp is the specific heat of water at operating conditions.",
+          "Calculate the hot channel factors. The nuclear hot channel factor F_q (ratio of peak to average linear heat rate) typically ranges from 2.0-2.5 including axial and radial peaking. The enthalpy rise hot channel factor F_delta_H (ratio of peak to average channel enthalpy rise) is typically 1.4-1.7. These are decomposed into nuclear factors (from the power distribution) and engineering factors (from manufacturing tolerances).",
+          "Perform the DNB analysis. Departure from nucleate boiling occurs when a vapor film blankets the fuel rod surface, causing a rapid temperature excursion. The DNBR (departure from nucleate boiling ratio) is the ratio of the predicted critical heat flux (from a CHF correlation like W-3 or WRB-2) to the actual local heat flux. Minimum DNBR must exceed the design limit (typically 1.30 for the W-3 correlation) at the most limiting location in the core.",
+          "Analyze the core pressure drop. Components: lower grid plate, fuel assembly inlet nozzle, spacer grids (8-10 per assembly), fuel rods (friction and form losses), upper nozzle, and upper grid plate. Total core delta-P is typically 150-200 kPa. The pressure drop distribution must ensure adequate flow to the hottest fuel assembly without flow instability.",
+          "Design the decay heat removal system. After shutdown, the fuel continues to generate heat from fission product decay: approximately 6% of full power at shutdown, decaying to 1.5% after one hour and 0.4% after one day. The residual heat removal system must remove this heat using redundant, safety-grade pumps and heat exchangers. The ultimate heat sink (river, cooling tower, or passive air) must be sized for decay heat removal under the most adverse environmental conditions."
+        ],
+        "tags": ["nuclear", "thermal-hydraulics", "dnbr"]
+      },
+      {
+        "flow_name": "nuclear-reactivity-control-systems",
+        "description": "Design the reactivity control systems: control rods, soluble boron, and burnable absorbers, ensuring adequate shutdown margin and power distribution control.",
+        "inputs": [
+          {"name": "thermal-hydraulic-design", "desc": "Core parameters that determine moderator temperature feedback"},
+          {"name": "dnb-margin-analysis", "desc": "Power distribution limits that constrain control rod patterns"}
+        ],
+        "outputs": [
+          {"name": "reactivity-control-design", "desc": "Control rod bank layout, boron letdown curve, and burnable absorber loading pattern"},
+          {"name": "shutdown-margin-analysis", "desc": "Shutdown margin verification with the most reactive rod stuck out, including temperature defects and xenon effects"}
+        ],
+        "process": [
+          "Design the control rod system. Rod cluster control assemblies (RCCAs) use 24 Ag-In-Cd or B4C absorber rodlets per cluster, inserted into guide tubes in the fuel assembly. Divide rods into shutdown banks (for reactor trip) and control banks (for power maneuvering). The worth of each bank depends on the neutron flux at the rod tip locations.",
+          "Size the soluble boron concentration. At beginning of cycle, soluble boron (boric acid in the coolant) holds down the excess reactivity that control rods cannot economically suppress. Typical BOC boron concentration is 1000-1600 ppm. The boron letdown curve (concentration vs burnup) tracks the reactivity decrease as fuel depletes. The moderator temperature coefficient must remain negative, which limits maximum boron concentration (boron makes the MTC less negative).",
+          "Design the burnable absorber loading. Integral fuel burnable absorbers (IFBA: ZrB2 coating on fuel pellets) or gadolinia (Gd2O3 mixed with UO2) deplete over the cycle, releasing reactivity to offset fuel depletion. This reduces the required soluble boron concentration (improving MTC) and flattens the radial power distribution. The absorber loading pattern is optimized cycle by cycle using a core design code.",
+          "Verify shutdown margin. With the reactor tripped and the most reactive control rod stuck fully withdrawn (single failure criterion), the core must remain subcritical by at least 1.3% delta_k/k. This must hold at the most reactive condition in the cycle, accounting for the moderator temperature defect (reactivity increase as coolant cools from operating to cold shutdown temperature) and xenon decay (reactivity increase as Xe-135 decays after shutdown).",
+          "Analyze power distribution control. Control rod insertion limits (rod insertion limits or RILs) prevent excessive axial peaking that could violate DNB limits. The operator maintains the axial offset (difference between top and bottom half power) within a target band using control bank stepping. Load-follow operations require coordinating rod movement, boron dilution/boration, and xenon transient management."
+        ],
+        "tags": ["nuclear", "reactivity", "control"]
+      },
+      {
+        "flow_name": "nuclear-safety-analysis-methodology",
+        "description": "Apply the safety analysis methodology for nuclear reactor licensing: design basis accidents, acceptance criteria, and defense in depth.",
+        "inputs": [
+          {"name": "reactivity-control-design", "desc": "Control systems available for accident mitigation"},
+          {"name": "shutdown-margin-analysis", "desc": "Shutdown capability under accident conditions"}
+        ],
+        "outputs": [
+          {"name": "safety-analysis-results", "desc": "Results of the limiting design basis accidents showing compliance with acceptance criteria (peak cladding temperature, oxidation, coolable geometry)"},
+          {"name": "defense-in-depth-assessment", "desc": "Evaluation of barrier integrity (fuel, cladding, primary boundary, containment) under normal, anticipated, and postulated accident conditions"}
+        ],
+        "process": [
+          "Define the design basis events. These include anticipated operational occurrences (AOOs, frequency greater than 1E-2 per year: loss of feedwater, inadvertent rod withdrawal) and postulated accidents (frequency 1E-2 to 1E-6 per year: LOCA, steam line break, rod ejection). Each event is analyzed with conservative assumptions (single failure of active components, loss of offsite power coincident with the event).",
+          "Analyze the loss-of-coolant accident (LOCA). The large-break LOCA (guillotine rupture of the largest pipe) is analyzed in three phases: blowdown (rapid depressurization), refill (ECCS injection refills the lower plenum), and reflood (core is recovered). Acceptance criteria per 10 CFR 50.46: peak cladding temperature less than 2200F (1204C), local oxidation less than 17% of cladding thickness, hydrogen generation less than 1% of total zirconium, coolable geometry maintained, and long-term cooling assured.",
+          "Analyze the reactivity insertion accident (RIA). The limiting event is a control rod ejection due to a failure of the control rod drive mechanism housing. The energy deposited in the fuel must remain below 280 cal/g to prevent fuel dispersal. The analysis uses point kinetics with Doppler feedback (the fuel temperature coefficient provides inherent negative feedback that limits the power excursion).",
+          "Analyze the anticipated transient without scram (ATWS). Per 10 CFR 50.62, the plant must be able to maintain an acceptable condition if the reactor protection system fails to trip the reactor during an anticipated transient. This requires a diverse scram system (AMSAC for PWRs) and demonstrates that peak RCS pressure remains below the ASME Service Level C limit.",
+          "Assess defense in depth. The five levels: Level 1 (prevention of abnormal conditions through conservative design and quality), Level 2 (detection and control of abnormal conditions through reactor protection and control systems), Level 3 (control of design basis accidents through engineered safety features), Level 4 (mitigation of severe accidents through containment and emergency procedures), Level 5 (emergency response through offsite emergency planning). Document how each barrier (fuel matrix, cladding, reactor coolant boundary, containment) is protected at each level."
+        ],
+        "tags": ["nuclear", "safety", "licensing"]
+      }
+    ]
+  },
+  {
+    "chain_name": "hydrogen-production-methodology",
+    "description": "Design a hydrogen production system from electrolyzer selection through balance of plant, efficiency analysis, cost modeling, and safety engineering.",
+    "domain": "energy",
+    "tags": ["hydrogen", "electrolysis", "green-hydrogen", "engineering"],
+    "steps": [
+      {
+        "flow_name": "electrolyzer-technology-selection",
+        "description": "Select the electrolysis technology by matching application requirements to the operating characteristics, efficiency, and maturity of PEM, alkaline, and solid oxide electrolyzers.",
+        "inputs": [
+          {"name": "production-target", "desc": "Required hydrogen output in kg/day or Nm3/hr, purity specification, and delivery pressure"},
+          {"name": "power-source-profile", "desc": "Electricity source (grid, solar, wind, hybrid), variability profile, availability factor, and cost per MWh"}
+        ],
+        "outputs": [
+          {"name": "electrolyzer-selection", "desc": "Selected technology with rated capacity, stack efficiency curve, turndown ratio, ramp rate, and expected stack lifetime"},
+          {"name": "technology-comparison", "desc": "Side-by-side comparison of PEM, alkaline, and SOEC on efficiency, cost, durability, dynamic response, and technology readiness"}
+        ],
+        "process": [
+          "Characterize the duty cycle. If the power source is variable (solar or wind), the electrolyzer must handle frequent load changes. PEM electrolyzers respond in seconds and tolerate 5-100% load range. Alkaline electrolyzers are slower (minutes for large load steps) with a typical minimum load of 20-40%. SOEC operates at high temperature (700-850C) and is best suited for steady-state baseload operation where waste heat is available.",
+          "Compare stack efficiency. The thermodynamic minimum for water splitting is 39.4 kWh per kg H2 (higher heating value basis). PEM stacks operate at 50-65 kWh/kg at rated power. Alkaline stacks achieve 50-60 kWh/kg. SOEC achieves 35-45 kWh/kg by substituting heat for electricity (Faradaic efficiency above 95% at operating temperature). Express efficiency as kWh per kg H2 or as a percentage of HHV (HHV of H2 = 39.4 kWh/kg).",
+          "Evaluate capital cost and stack lifetime. PEM: higher capital cost (800-1500 $/kW) but improving rapidly; stack lifetime 60,000-80,000 hours. Alkaline: lower capital cost (500-1000 $/kW), more mature supply chain; stack lifetime 80,000-100,000 hours. SOEC: highest capital cost currently (1500-3000 $/kW), limited commercial deployment; stack degradation is the main challenge (1-3% per 1000 hours).",
+          "Assess water quality requirements. PEM requires deionized water (less than 1 microsiemens/cm conductivity) to protect the proton exchange membrane. Alkaline uses a KOH electrolyte (25-30% concentration) and is less sensitive to water purity. SOEC uses steam, which must be clean but not ultrapure. Water consumption is approximately 9 liters per kg H2 produced.",
+          "Select based on the application fit. For renewable-coupled (variable power): PEM for its dynamic response, unless budget constraints favor alkaline with an intermediate buffer. For industrial baseload with available heat: SOEC for its superior electrical efficiency. For cost-sensitive, steady-state grid-connected: alkaline for its lower capital cost and proven durability."
+        ],
+        "tags": ["hydrogen", "electrolysis", "technology-selection"]
+      },
+      {
+        "flow_name": "hydrogen-balance-of-plant-design",
+        "description": "Design the balance of plant: power conditioning, water treatment, gas processing, compression, storage, and control systems.",
+        "inputs": [
+          {"name": "electrolyzer-selection", "desc": "Technology, rated capacity, and operating parameters"},
+          {"name": "technology-comparison", "desc": "Technology-specific BOP requirements"}
+        ],
+        "outputs": [
+          {"name": "bop-design", "desc": "Power supply sizing, water treatment train, gas dryer and purifier, compressor selection, and storage vessel sizing"},
+          {"name": "process-flow-diagram", "desc": "Complete PFD with mass and energy balance at rated and partial load conditions"}
+        ],
+        "process": [
+          "Design the power supply. For grid-connected: AC/DC rectifier (thyristor or IGBT-based) sized for stack voltage range and current. For renewable-coupled: DC/DC converter or direct connection (for PV) with MPPT. The power electronics must handle the stack's voltage-current characteristic: voltage increases with current (the polarization curve) and changes with temperature and degradation.",
+          "Design the water treatment system. Raw water passes through multimedia filtration, activated carbon, reverse osmosis (to less than 10 microsiemens/cm), and electrodeionization or mixed-bed ion exchange (to less than 1 microsiemens/cm for PEM). Size for peak water consumption plus 30% for RO reject and system flushing. Include a water storage tank for at least 4 hours of production.",
+          "Design the gas processing system. Hydrogen from the electrolyzer is saturated with water vapor. A condenser and desiccant dryer reduce moisture to the delivery specification (typically less than 5 ppm for fuel cell grade, ISO 14687). For PEM, oxygen crossover produces trace oxygen in the hydrogen stream; a deoxo reactor (catalytic recombiner) reduces O2 to less than 1 ppm if required.",
+          "Select the compressor. Electrolyzer output pressure is 1-30 bar depending on technology. If delivery or storage pressure is higher (350-700 bar for vehicle refueling, 200-350 bar for tube trailer), a multi-stage diaphragm or ionic liquid compressor is needed. Size for rated flow with a capacity margin. Compression energy is significant: approximately 2-4 kWh/kg H2 for compression from 30 to 350 bar.",
+          "Size the storage. Buffer storage between the electrolyzer and the offtaker smooths production-demand mismatch. For ground-level storage, Type I (steel) or Type II (steel liner with composite wrap) vessels at 200-500 bar. Size the storage volume from the maximum expected production-demand mismatch duration. For large volumes, geological storage (salt caverns) offers the lowest cost per kg stored."
+        ],
+        "tags": ["hydrogen", "balance-of-plant", "engineering"]
+      },
+      {
+        "flow_name": "hydrogen-efficiency-and-cost-model",
+        "description": "Build the efficiency chain and cost model: LCOH calculation, sensitivity to electricity price, and comparison against incumbent hydrogen production methods.",
+        "inputs": [
+          {"name": "bop-design", "desc": "BOP equipment sizing and energy consumption"},
+          {"name": "process-flow-diagram", "desc": "Mass and energy balance for efficiency calculation"}
+        ],
+        "outputs": [
+          {"name": "efficiency-chain", "desc": "Electrical-to-hydrogen efficiency at rated and partial load, including all parasitic loads (BOP, compression, cooling)"},
+          {"name": "lcoh-analysis", "desc": "Levelized cost of hydrogen in $/kg with breakdown by electricity, capex, stack replacement, and O&M, plus sensitivity to key variables"}
+        ],
+        "process": [
+          "Calculate the overall system efficiency. Start with stack efficiency (kWh_DC / kg_H2), add rectifier losses (2-4%), BOP parasitics (pumps, fans, controls: 3-8% of rated power), compression energy, and cooling energy. The total specific energy consumption for a PEM system is typically 55-70 kWh/kg H2 including all parasitics. Express as a percentage of HHV: system efficiency = 39.4 / total_kWh_per_kg x 100%.",
+          "Build the LCOH model. LCOH = (Annualized_Capex + Annual_Opex + Annual_Stack_Replacement_Cost + Annual_Electricity_Cost) / Annual_H2_Production. Annualized capex uses CRF (capital recovery factor) from discount rate and project life. Stack replacement is a periodic cost (every 7-10 years for PEM, 10-12 years for alkaline) discounted to present value.",
+          "Electricity cost dominates LCOH. At 50 $/MWh and 55 kWh/kg, electricity alone is 2.75 $/kg H2. At 20 $/MWh (low-cost renewables), it drops to 1.10 $/kg. Capex contribution at current PEM costs (1000 $/kW, 4000 full-load hours) is approximately 1.50-2.00 $/kg. O&M adds 0.20-0.50 $/kg. Total LCOH for green hydrogen today is typically 3-6 $/kg depending on electricity cost and utilization.",
+          "Run sensitivity analysis. The variables with the largest impact: electricity price (+/- 10 $/MWh), capacity factor (+/- 1000 hours), stack efficiency degradation rate (+/- 0.5%/year), capex (+/- 30%), and stack replacement cost (+/- 50%). Present as a tornado chart. The breakeven electricity price against grey hydrogen (SMR at 1.50-2.00 $/kg with no carbon price) is approximately 15-25 $/MWh.",
+          "Evaluate the round-trip efficiency for power-to-gas-to-power (P2G2P). Electrolysis at 65% efficiency, compression at 90%, storage losses negligible for short-term, fuel cell or turbine at 40-60% efficiency. Total round-trip: 23-35%. This makes hydrogen energy storage expensive compared to batteries for short duration but competitive for seasonal storage where the alternative is curtailment."
+        ],
+        "tags": ["hydrogen", "cost", "lcoh"]
+      },
+      {
+        "flow_name": "hydrogen-safety-engineering",
+        "description": "Apply hydrogen safety engineering: hazard identification, ATEX zone classification, ventilation design, detection systems, and emergency response planning.",
+        "inputs": [
+          {"name": "efficiency-chain", "desc": "Operating parameters that define the safety envelope"},
+          {"name": "lcoh-analysis", "desc": "System configuration for hazard analysis scope"}
+        ],
+        "outputs": [
+          {"name": "safety-design", "desc": "ATEX zone classifications, ventilation rates, detection system specification, and passive safety features"},
+          {"name": "emergency-response-plan", "desc": "Leak scenarios, escalation criteria, automatic shutdowns, and emergency procedures"}
+        ],
+        "process": [
+          "Characterize hydrogen hazards. Hydrogen is flammable in air from 4% to 75% by volume (the widest flammable range of any common fuel). Minimum ignition energy is 0.02 mJ (one-tenth of natural gas). Flame speed is high (3.5 m/s laminar) and detonation is possible in confined spaces above 18% concentration. Hydrogen flames are nearly invisible in daylight. Hydrogen embrittlement affects carbon steel above a threshold pressure (dependent on steel grade and temperature).",
+          "Classify ATEX zones per IEC 60079-10-1. Zone 0: inside the electrolyzer stack and gas processing equipment (continuous explosive atmosphere). Zone 1: within 1 meter of potential release points (flanges, valves, fittings) where occasional leaks are expected. Zone 2: further afield where explosive atmosphere is not expected but possible under abnormal conditions. Equipment in each zone must be certified to the corresponding equipment category.",
+          "Design ventilation. For indoor installations, mechanical ventilation must prevent hydrogen accumulation above 25% of the lower flammability limit (1% H2 by volume) under the maximum credible leak rate. The required air flow rate follows from the leak rate and the dilution factor: V_dot = Q_leak / (0.01 x safety_factor), where safety_factor is typically 4. For outdoor installations, natural ventilation often suffices if equipment spacing meets the minimum separation distances.",
+          "Specify detection systems. Install hydrogen detectors at the ceiling (hydrogen rises at 20 m/s in still air), near potential leak sources, and in enclosed or semi-enclosed areas. Catalytic bead sensors for general area monitoring (range 0-100% LEL, response time less than 30 seconds). Set alarm at 20% LEL (0.8% H2) for warning and 40% LEL (1.6% H2) for automatic shutdown and ventilation increase. Cross-sensitivity to other gases must be characterized.",
+          "Design the emergency shutdown system. Automatic triggers: hydrogen detection above 40% LEL, fire detection, loss of ventilation, seismic event above threshold, or manual emergency stop. Shutdown sequence: close hydrogen supply valves (fail-closed), de-energize the electrolyzer stack, purge hydrogen lines with nitrogen, and activate enhanced ventilation. The shutdown must complete within 60 seconds of the trigger. Document the emergency response procedures including evacuation zones (minimum 15-meter radius for outdoor releases) and coordination with local emergency services."
+        ],
+        "tags": ["hydrogen", "safety", "atex"]
+      }
+    ]
+  },
+  {
+    "chain_name": "power-electronics-for-renewables",
+    "description": "Design power electronic converters for renewable energy applications: inverter topology, grid-forming control, MPPT, filter design, and thermal management.",
+    "domain": "energy",
+    "tags": ["power-electronics", "inverter", "renewable", "grid", "engineering"],
+    "steps": [
+      {
+        "flow_name": "renewable-inverter-topology-selection",
+        "description": "Select the inverter topology for grid-tied renewable applications based on power level, voltage, efficiency, and harmonic performance requirements.",
+        "inputs": [
+          {"name": "system-requirements", "desc": "Power rating, DC input voltage range, AC grid voltage, efficiency target, and harmonic limits"},
+          {"name": "application-context", "desc": "Solar/wind/battery, utility-scale or distributed, outdoor or indoor installation"}
+        ],
+        "outputs": [
+          {"name": "topology-selection", "desc": "Selected topology with switching device ratings, number of levels, modulation strategy, and predicted efficiency curve"},
+          {"name": "topology-trade-off-analysis", "desc": "Comparison of candidate topologies on efficiency, cost, complexity, harmonic performance, and common-mode voltage"}
+        ],
+        "process": [
+          "Map the application to a topology class. Two-level voltage source inverter (VSI): simplest, lowest cost, adequate for string inverters up to 100kW. Three-level NPC (neutral point clamped): halves the device voltage stress and reduces output harmonics, standard for central inverters 500kW-4MW. T-type (three-level active NPC): combines advantages of two-level (fewer devices at zero crossing) and NPC (reduced dv/dt), suitable for 100-500kW. Modular multilevel converter (MMC): for HVDC and very high power.",
+          "Select switching devices. For 1500V DC systems: 1200V SiC MOSFETs or 1700V Si IGBTs in a two-level topology, or 900-1200V devices in a three-level. SiC offers lower switching losses (enabling higher switching frequency or higher efficiency) at higher cost per amp. Si IGBTs are cost-effective above 100kW and available in high-current modules. GaN is entering the market for lower-power string inverters.",
+          "Choose the modulation strategy. Space vector PWM (SVPWM) maximizes DC bus utilization (15% higher than sinusoidal PWM) and provides lower harmonic distortion. For three-level topologies, SVPWM with neutral point balancing prevents DC bus capacitor voltage drift. Discontinuous PWM reduces switching losses by clamping one phase to the rail for a portion of each cycle, trading harmonic performance for efficiency at partial load.",
+          "Predict the efficiency curve. Calculate losses at each operating point: conduction losses (from device I-V characteristics and current waveform), switching losses (from switching energy curves and switching frequency), and gate driver losses. For SiC at 16kHz switching frequency, typical inverter efficiency is 98.5-99% at rated power. Partial-load efficiency matters for solar (CEC-weighted efficiency emphasizes 10-75% loading).",
+          "Evaluate common-mode voltage. Two-level inverters generate high-frequency common-mode voltage steps equal to Vdc/2, causing leakage current through parasitic capacitances to ground. This is a concern for transformerless solar inverters (leakage current through PV module frame capacitance). Three-level topologies reduce common-mode steps to Vdc/4. H5, H6, and HERIC topologies specifically address common-mode voltage in single-phase transformerless applications."
+        ],
+        "tags": ["power-electronics", "topology", "inverter"]
+      },
+      {
+        "flow_name": "grid-forming-vs-following-control",
+        "description": "Design the inverter control system: grid-following for stable grids, grid-forming for weak grids and microgrids, with voltage and frequency regulation.",
+        "inputs": [
+          {"name": "topology-selection", "desc": "Inverter topology and switching characteristics"},
+          {"name": "topology-trade-off-analysis", "desc": "Harmonic and dynamic performance characteristics"}
+        ],
+        "outputs": [
+          {"name": "control-architecture", "desc": "Grid-following or grid-forming control structure with tuned controller parameters"},
+          {"name": "stability-analysis", "desc": "Small-signal stability analysis showing gain and phase margins, and impedance-based stability assessment for weak grid conditions"}
+        ],
+        "process": [
+          "Choose between grid-following and grid-forming. Grid-following inverters use a phase-locked loop (PLL) to synchronize with the grid voltage and inject current at the grid frequency. They require a stiff voltage reference and become unstable when the short circuit ratio (SCR) at the POI drops below 2-3. Grid-forming inverters create their own voltage reference and frequency, behaving like a voltage source behind an impedance. They can operate in weak grids (SCR less than 2) and in island mode.",
+          "Design the grid-following controller. Inner current loop: PI controller in the dq synchronous reference frame, bandwidth 500-2000 Hz (one-tenth to one-fifth of switching frequency). Feed-forward of grid voltage decouples the d and q axes. Outer power loop: PI controller generating current references from active and reactive power setpoints, bandwidth 5-50 Hz. PLL bandwidth 10-50 Hz; lower bandwidth improves stability in weak grids but slows transient response.",
+          "Design the grid-forming controller. Virtual synchronous machine (VSM) emulates a synchronous generator: the swing equation provides frequency regulation (virtual inertia H = 2-10 seconds), and a reactive power droop provides voltage regulation. Alternative: droop control (P-f and Q-V droop) is simpler but provides no inertial response. The output impedance of the grid-forming inverter must be predominantly inductive for stable power sharing.",
+          "Perform stability analysis. Small-signal model: linearize the inverter, filter, and grid model around the operating point. Calculate eigenvalues and participation factors to identify potential oscillatory modes. Impedance-based analysis: measure or model the inverter output impedance Zs and the grid impedance Zg. The system is stable if the ratio Zs/Zg satisfies the Nyquist criterion (no encirclement of -1). Weak grids increase the magnitude of Zg, potentially causing instability.",
+          "Implement grid-support functions. Frequency response: reduce power output when frequency exceeds 60.05 Hz (overfrequency droop), increase power (if available) when frequency drops below 59.95 Hz. Voltage regulation: adjust reactive power output to maintain POI voltage within the dead band. Fault ride-through: inject reactive current proportional to voltage depression during grid faults (typically 2% additional reactive current per 1% voltage drop, up to rated current)."
+        ],
+        "tags": ["power-electronics", "control", "grid-forming"]
+      },
+      {
+        "flow_name": "lcl-filter-design-for-harmonics",
+        "description": "Design the LCL output filter for grid-connected inverters to meet harmonic injection limits while minimizing losses, size, and cost.",
+        "inputs": [
+          {"name": "control-architecture", "desc": "Control bandwidth and modulation strategy affecting harmonic spectrum"},
+          {"name": "stability-analysis", "desc": "Impedance characteristics affecting filter resonance damping"}
+        ],
+        "outputs": [
+          {"name": "filter-design", "desc": "LCL filter component values (inductors and capacitors), damping method, and predicted harmonic spectrum at the POI"},
+          {"name": "filter-loss-analysis", "desc": "Copper and core losses in filter inductors, capacitor ESR losses, and total filter efficiency impact"}
+        ],
+        "process": [
+          "Set the design targets. The LCL filter must attenuate switching-frequency harmonics to meet IEEE 519 limits at the POI: individual harmonics below the limits in Table 2 (dependent on ISC/IL ratio), total demand distortion (TDD) below 5% for typical utility-scale. The filter resonant frequency must be between 10x the fundamental (600 Hz for 60 Hz systems) and 0.5x the switching frequency to avoid exciting resonance with either the control bandwidth or the switching harmonics.",
+          "Size the inverter-side inductor L1. L1 limits the peak-to-peak current ripple at the switching frequency. Target ripple of 10-25% of rated peak current. L1 = Vdc / (8 x fsw x delta_I_pp) for a two-level inverter with SVPWM. For a three-level inverter, the effective switching frequency seen by L1 doubles, so L1 can be halved for the same ripple. L1 inductance is typically 5-15% of base impedance.",
+          "Size the filter capacitor Cf. The capacitor provides a low-impedance path for switching-frequency current, shunting it away from the grid. Limit reactive power absorbed by Cf to less than 5% of rated power: Cf less than 0.05 x Prated / (omega x Vline2). Typical values: 1-5% of base impedance. Larger Cf improves filtering but increases reactive current and may cause leading power factor at light load.",
+          "Size the grid-side inductor L2. The resonant frequency of the LCL filter is f_res = 1/(2pi) x sqrt((L1+L2)/(L1 x L2 x Cf)). Choose L2 to place the resonant frequency in the target range. L2 is typically 0.5-2x L1. Verify that the total inductance (L1 + L2) does not exceed the maximum that allows the inverter to deliver rated current at the minimum DC bus voltage.",
+          "Design the damping. Passive damping: a resistor in series with Cf dissipates resonant energy but adds losses (typically 0.5-1% of rated power). Active damping: the inverter control loop adds virtual resistance at the resonant frequency (capacitor current feedback or notch filter). Active damping eliminates the power loss but requires accurate resonant frequency knowledge and adequate control bandwidth. For utility-scale inverters, active damping is standard; passive damping is a fallback for simpler control systems."
+        ],
+        "tags": ["power-electronics", "filter", "harmonics"]
+      },
+      {
+        "flow_name": "renewable-converter-thermal-design",
+        "description": "Design the thermal management for power electronic converters in outdoor renewable energy enclosures: loss modeling, heat sink sizing, and reliability prediction.",
+        "inputs": [
+          {"name": "filter-design", "desc": "Filter losses that add to the thermal load"},
+          {"name": "filter-loss-analysis", "desc": "Quantified losses in filter components"}
+        ],
+        "outputs": [
+          {"name": "thermal-design", "desc": "Heat sink selection, cooling method, enclosure rating, and junction temperature prediction across the operating range"},
+          {"name": "reliability-estimate", "desc": "Expected component life based on thermal cycling and steady-state junction temperature"}
+        ],
+        "process": [
+          "Calculate the total thermal load. Sum the losses from all heat-generating components: switching devices (conduction + switching losses from the topology analysis), filter inductors (copper + core losses), filter capacitors (ESR losses), gate drivers, control electronics, and auxiliary power supplies. At rated power, total losses for a 98.5% efficient inverter at 1 MW are approximately 15 kW.",
+          "Design the semiconductor thermal path. The thermal resistance from junction to ambient is the series sum: Rth_j-c (junction to case, from datasheet) + Rth_c-s (case to heat sink, from thermal interface material) + Rth_s-a (heat sink to ambient, from the heat sink design). Calculate the required Rth_s-a from: Tj_max = Tamb_max + Ptotal x (Rth_j-c + Rth_c-s + Rth_s-a). For IGBT modules, Tj_max is typically 150C; for SiC MOSFETs, 175C.",
+          "Select the cooling method. For inverters up to 100kW, forced-air cooling with aluminum extrusion heat sinks is typical. For 100kW-4MW, liquid cooling (glycol-water through cold plates) provides lower thermal resistance and more compact design. Size the liquid cooling loop: flow rate from Q = m_dot x Cp x delta_T, where delta_T is the allowable coolant temperature rise (typically 10-15C). Include a radiator or heat exchanger to reject heat to ambient.",
+          "Design for the outdoor environment. Inverter enclosures for outdoor installation are typically IP65 (dust-tight, water-jet protected). The enclosure adds thermal resistance between the internal air and ambient. Internal fans circulate air across heat-generating components, while external fans or liquid-to-air heat exchangers reject heat. Derate the inverter output at high ambient temperatures: above the rated ambient (typically 45-50C), reduce power output linearly to maintain junction temperature below the limit.",
+          "Predict reliability from thermal cycling. Power semiconductor lifetime is limited by bond wire fatigue and solder fatigue from thermal cycling. The Coffin-Manson model predicts cycles to failure from the temperature swing delta_Tj and the mean temperature Tj_mean: Nf = A x delta_Tj^(-alpha) x exp(Ea/(k x Tj_mean)), where alpha is typically 4-6 for bond wire fatigue. For a solar inverter with daily thermal cycles of 40-60C swing, expected power module lifetime is 15-25 years. Design for module replacement as a maintenance item."
+        ],
+        "tags": ["power-electronics", "thermal", "reliability"]
+      }
+    ]
+  },
+  {
+    "chain_name": "electrical-protection-system-design",
+    "description": "Design the electrical protection system for power networks: fault analysis, relay coordination, differential protection, arc flash assessment, and microgrid protection.",
+    "domain": "energy",
+    "tags": ["protection", "relay", "fault-analysis", "arc-flash", "engineering"],
+    "steps": [
+      {
+        "flow_name": "symmetrical-components-fault-analysis",
+        "description": "Calculate fault currents using symmetrical components: positive, negative, and zero sequence networks for three-phase, line-to-line, line-to-ground, and double-line-to-ground faults.",
+        "inputs": [
+          {"name": "system-one-line-diagram", "desc": "Network topology with equipment ratings, impedances, and transformer connections"},
+          {"name": "equipment-data", "desc": "Generator subtransient reactances, transformer impedances, cable and line impedances, and source short circuit capacity"}
+        ],
+        "outputs": [
+          {"name": "fault-current-results", "desc": "Three-phase, SLG, LL, and DLG fault currents at each bus, with symmetrical and asymmetrical (DC offset) values"},
+          {"name": "sequence-impedance-model", "desc": "Positive, negative, and zero sequence impedance matrices for the network"}
+        ],
+        "process": [
+          "Build the sequence networks. The positive sequence network is the normal power flow network with all sources and impedances. The negative sequence network has the same topology but generators are represented by their negative sequence reactance (approximately equal to subtransient reactance for round-rotor machines). The zero sequence network depends on transformer winding connections: delta windings block zero sequence current; wye-grounded windings pass it.",
+          "Calculate the three-phase fault current. This uses only the positive sequence network: I_fault_3ph = V_prefault / Z1_total, where Z1_total is the positive sequence impedance from the source to the fault point. This is the simplest and often the highest-magnitude fault.",
+          "Calculate the single-line-to-ground (SLG) fault current. Connect the three sequence networks in series at the fault point: I_fault_SLG = 3 x V_prefault / (Z1 + Z2 + Z0 + 3Zf), where Zf is the fault impedance. In solidly-grounded systems, the SLG fault current can exceed the three-phase fault current when Z0 is less than Z1.",
+          "Apply the DC offset for asymmetrical fault current. The first half-cycle peak is the RMS symmetrical current times the asymmetry factor: I_peak = I_rms_sym x sqrt(2) x (1 + e^(-t/(X/R x T))), where X/R is the system X/R ratio at the fault point and T is the half-cycle period. The momentary (first cycle) and interrupting (3-5 cycle) duty factors from IEEE C37 standards convert symmetrical RMS to the values used for equipment rating verification.",
+          "Verify equipment ratings. Compare the calculated fault currents against the interrupting rating of circuit breakers, the withstand rating of buses and cables, and the through-fault capability of transformers. If the available fault current exceeds the equipment rating, either upgrade the equipment or install current-limiting devices (fuses, current-limiting reactors, or is-limiters)."
+        ],
+        "tags": ["protection", "fault-analysis", "symmetrical-components"]
+      },
+      {
+        "flow_name": "protective-relay-coordination",
+        "description": "Coordinate protective relays through the power system: overcurrent, distance, and directional elements, ensuring selectivity, sensitivity, and speed.",
+        "inputs": [
+          {"name": "fault-current-results", "desc": "Fault currents at each bus for relay setting calculations"},
+          {"name": "sequence-impedance-model", "desc": "Network impedances for distance relay reach calculations"}
+        ],
+        "outputs": [
+          {"name": "relay-settings", "desc": "Pickup values, time dials, instantaneous settings, and coordination time intervals for each relay"},
+          {"name": "coordination-study", "desc": "Time-current curves plotted for each protection zone showing coordination between primary and backup relays"}
+        ],
+        "process": [
+          "Define the protection zones. Each zone has a primary relay (fast clearing) and at least one backup relay (clears if the primary fails, after a time delay). Zones overlap: the downstream relay's instantaneous zone should not reach into the upstream relay's zone. Work from the load toward the source when setting overcurrent relays.",
+          "Set the overcurrent relay pickup (50/51). The time-overcurrent (51) pickup must be above maximum load current with margin (typically 1.25-1.5x) and below minimum fault current in the protected zone. Select the time-current curve (inverse, very inverse, extremely inverse) based on the downstream device characteristics: extremely inverse curves coordinate well with fuse curves; inverse curves suit motor starting and transformer inrush.",
+          "Set the time dial for coordination. At the maximum fault current seen by both the upstream and downstream relays, the upstream relay must clear at least 0.3-0.4 seconds after the downstream relay (the coordination time interval, CTI). This accounts for relay operating time tolerance, circuit breaker clearing time, and relay overtravel. Work upstream from the most remote device, adding the CTI at each level.",
+          "Set instantaneous (50) elements. The instantaneous pickup is set above the maximum fault current that the downstream relay should clear (typically 125% of the maximum through-fault current for the next downstream bus). This provides fast clearing for faults close to the relay location without waiting for the time-overcurrent curve.",
+          "Verify coordination graphically. Plot all relay time-current curves, fuse curves, transformer damage curves, and cable damage curves on the same log-log axes. Verify: no overlap between adjacent relay curves at any fault current level (selectivity), all relays can detect the minimum fault current in their zone (sensitivity), and all faults are cleared within the equipment damage time (speed). Document the settings in a relay database for future maintenance and re-coordination."
+        ],
+        "tags": ["protection", "relay", "coordination"]
+      },
+      {
+        "flow_name": "arc-flash-analysis-method",
+        "description": "Perform arc flash analysis per IEEE 1584 to determine incident energy, arc flash boundaries, and required PPE at each working location in the power system.",
+        "inputs": [
+          {"name": "relay-settings", "desc": "Protection device clearing times that determine arc duration"},
+          {"name": "coordination-study", "desc": "Fault clearing sequence for arc duration calculation at each bus"}
+        ],
+        "outputs": [
+          {"name": "arc-flash-results", "desc": "Incident energy in cal/cm2 at each bus, arc flash boundary distance, and required PPE category"},
+          {"name": "arc-flash-labels", "desc": "Equipment labels per NFPA 70E with incident energy, boundary, PPE requirement, and working distance"}
+        ],
+        "process": [
+          "Determine the arcing current. IEEE 1584-2018 provides empirical equations for arcing current as a function of bolted fault current, system voltage, electrode gap, electrode configuration (VCB, VCBB, HCB, VOA, HOA), and enclosure size. The arcing current is less than the bolted fault current because the arc impedance limits current. Calculate arcing current for both the maximum and reduced (85%) bolted fault current to capture the worst case (reduced arcing current may result in longer clearing time and higher incident energy).",
+          "Determine the arc duration. The arc duration is the time from arc initiation to the upstream protective device clearing the fault. Read the clearing time from the relay or fuse time-current curve at the arcing current (not the bolted fault current). For current-limiting fuses, the clearing time is less than one half-cycle for currents above the fuse's current-limiting threshold.",
+          "Calculate incident energy. IEEE 1584-2018: E = Cf x En x (t/0.2) x (610^x / D^x), where the intermediate variables come from the electrode configuration model. The working distance D is the distance from the arc source to the worker's face and chest (typically 455mm for low-voltage switchgear, 910mm for medium-voltage). Express results in cal/cm2.",
+          "Determine the arc flash boundary. The arc flash boundary is the distance at which incident energy equals the onset of second-degree burn (1.2 cal/cm2). Solve the incident energy equation for distance D where E = 1.2. This boundary defines the restricted approach zone where PPE is required.",
+          "Assign PPE categories per NFPA 70E Table 130.7(C)(15)(c). Category 1: 4 cal/cm2 (arc-rated shirt and pants, safety glasses). Category 2: 8 cal/cm2 (arc-rated shirt, pants, face shield, hard hat). Category 3: 25 cal/cm2 (arc flash suit with hood). Category 4: 40 cal/cm2 (multi-layer arc flash suit). Above 40 cal/cm2, work is not permitted until the hazard is reduced (de-energize, add faster protection, or install arc-resistant switchgear). Generate equipment labels with all required information."
+        ],
+        "tags": ["protection", "arc-flash", "safety"]
+      }
+    ]
+  },
+  {
+    "chain_name": "high-voltage-engineering",
+    "description": "Apply high-voltage engineering methods: insulation coordination, cable design, surge protection, transformer condition assessment, and substation design.",
+    "domain": "energy",
+    "tags": ["high-voltage", "insulation", "transformer", "substation", "engineering"],
+    "steps": [
+      {
+        "flow_name": "insulation-coordination-design",
+        "description": "Design the insulation coordination for a high-voltage system: select BIL and BSL ratings, determine clearances, and specify surge protection to protect equipment from lightning and switching surges.",
+        "inputs": [
+          {"name": "system-voltage-class", "desc": "Nominal system voltage, maximum operating voltage, and isokeraunic level of the area"},
+          {"name": "equipment-catalog", "desc": "Available BIL ratings for transformers, bushings, CTs, PTs, and circuit breakers in the voltage class"}
+        ],
+        "outputs": [
+          {"name": "insulation-levels", "desc": "Selected BIL and BSL for each piece of equipment, with coordination margins to surge arrester protective levels"},
+          {"name": "clearance-requirements", "desc": "Phase-to-ground and phase-to-phase clearances per IEEE C2 (NESC) and IEC 60071"}
+        ],
+        "process": [
+          "Determine the standard insulation level (BIL) for the system voltage class. IEEE C57.12.00 and IEC 60071-1 provide standard BIL values. For 138kV systems: standard BIL is 550 or 650kV. For 230kV: 900 or 1050kV. For 345kV: 1050 or 1300kV. Higher BIL provides more margin but costs more (larger bushings, greater clearances, more insulating material in transformers).",
+          "Select and apply surge arresters. Metal oxide (ZnO) surge arresters limit transient overvoltages to their protective level. Select the arrester MCOV (maximum continuous operating voltage) above the maximum line-to-ground operating voltage. The arrester protective level (at the switching surge and lightning impulse current levels) must be below the equipment BIL with a protection margin of at least 15-20% for lightning and 15% for switching surges.",
+          "Calculate the protective margin. PM = (BIL_equipment - V_protective_level_arrester) / V_protective_level_arrester x 100%. If the margin is less than the minimum, either increase the equipment BIL or select a lower-protective-level arrester (lower MCOV). For transformer protection, the arrester must be mounted as close as possible to the transformer terminals; each meter of lead wire adds approximately 1kV to the effective protective level during fast-front transients.",
+          "Determine clearances. Phase-to-ground clearance depends on the BIL and the altitude (clearances increase above 1000m due to reduced air density). IEEE C2 (NESC) Table 124-1 provides minimum clearances for various BIL levels. Phase-to-phase clearance is typically 1.05-1.15 times the phase-to-ground clearance. Working clearances for personnel must meet NESC Rule 124 or OSHA 1910.269 minimum approach distances.",
+          "Address switching surge insulation coordination for systems 345kV and above. Switching surges (from breaker operations, line energization, fault clearing) produce overvoltages of 1.5-3.0 per unit. Pre-insertion resistors or controlled switching (synchronized breaker closing near voltage zero) limit switching surges to 1.5-2.0 per unit. The BSL (basic switching surge insulation level) must exceed the maximum switching surge with margin. Arresters also limit switching surges but must be rated for the associated energy duty."
+        ],
+        "tags": ["high-voltage", "insulation", "surge-protection"]
+      },
+      {
+        "flow_name": "hv-cable-design-and-ampacity",
+        "description": "Design high-voltage cables: insulation selection, conductor sizing for ampacity, thermal analysis, and installation method considerations.",
+        "inputs": [
+          {"name": "insulation-levels", "desc": "Required insulation level for cable voltage rating"},
+          {"name": "clearance-requirements", "desc": "Installation constraints from clearance and separation requirements"}
+        ],
+        "outputs": [
+          {"name": "cable-specification", "desc": "Cable type, conductor size, insulation material and thickness, shield design, and jacket material"},
+          {"name": "ampacity-calculation", "desc": "Continuous ampacity for the installation conditions, with derating factors for ambient temperature, soil thermal resistivity, depth of burial, and mutual heating"}
+        ],
+        "process": [
+          "Select the cable insulation. XLPE (cross-linked polyethylene) is standard for new installations at 69-500kV: low dielectric losses, no oil maintenance, 90C continuous conductor temperature rating. EPR (ethylene propylene rubber) offers better flexibility for difficult routing but higher dielectric losses. Fluid-filled cables (HPFF, SCFF) remain in service but are rarely specified for new installations due to environmental concerns. For submarine cables, XLPE with lead sheath and wire armor is standard.",
+          "Size the conductor. Start with the required ampacity (current from the power flow study, including emergency and future load growth). The conductor cross section determines the DC resistance. Apply the AC resistance factor (skin effect and proximity effect) which increases resistance by 5-20% above DC resistance for large conductors at 60Hz. Common conductor materials: copper for minimum size, aluminum for minimum weight and cost.",
+          "Calculate the ampacity using IEC 60287 or Neher-McGrath method. The cable temperature rise above ambient is: delta_T = (Wc + 0.5 x Wd) x T1 + (Wc + Wd + Ws) x n x T2 + (Wc + Wd + Ws) x n x T3, where Wc = conductor losses, Wd = dielectric losses, Ws = shield losses, T1 = thermal resistance of insulation, T2 = thermal resistance of jacket and bedding, T3 = thermal resistance of surrounding medium. Solve for the current that makes the conductor temperature equal to 90C.",
+          "Apply derating factors. Ambient soil temperature above 20C: derate using the square root of (90 - Tamb)/(90 - 20). Soil thermal resistivity above 90 C-cm/W: increases T3. Multiple cables in the same trench: mutual heating reduces ampacity by 10-30% depending on spacing (use the Kennelly formula or IEC 60287 grouping factors). Depth of burial: deeper cables have worse heat dissipation. Duct bank installations have higher thermal resistance than direct burial.",
+          "Specify the cable accessories. Joints (straight joints for cable lengths exceeding shipping length, typically 500-1000m): the joint must have equal or better insulation integrity than the cable. Terminations: outdoor or GIS terminations with stress cones to manage the electric field at the insulation screen cutback. Both joints and terminations are the most common failure points in cable systems; specify factory-tested, pre-molded components and require installer certification."
+        ],
+        "tags": ["high-voltage", "cable", "ampacity"]
+      },
+      {
+        "flow_name": "transformer-condition-assessment",
+        "description": "Assess the condition of power transformers using dissolved gas analysis, electrical tests, and physical inspection to make maintenance and replacement decisions.",
+        "inputs": [
+          {"name": "cable-specification", "desc": "System context for transformer loading and protection"},
+          {"name": "ampacity-calculation", "desc": "Loading conditions that affect transformer thermal aging"}
+        ],
+        "outputs": [
+          {"name": "condition-assessment", "desc": "Overall transformer health index based on DGA, electrical tests, and physical inspection, with remaining life estimate"},
+          {"name": "maintenance-recommendations", "desc": "Prioritized maintenance actions: oil processing, leak repair, bushing replacement, load management, or planned replacement"}
+        ],
+        "process": [
+          "Perform dissolved gas analysis (DGA). Sample the insulating oil and measure dissolved gases: hydrogen (H2), methane (CH4), ethane (C2H6), ethylene (C2H4), acetylene (C2H2), carbon monoxide (CO), and carbon dioxide (CO2). Each gas indicates a specific fault type: H2 indicates partial discharge; C2H2 indicates arcing; C2H4 indicates high-temperature oil overheating; CO indicates cellulose degradation. Use the Duval Triangle, Rogers ratios, or IEC 60599 key gas method to classify the fault type. Trending is as important as absolute values: rapidly increasing gas levels indicate an active fault.",
+          "Perform electrical tests. Power factor (dissipation factor) test at 10kV: measures the dielectric losses in the insulation system. Values above 1% for oil-filled transformers indicate insulation degradation. Winding resistance: detects loose connections, broken strands, and tap changer contact problems. Compare phases and compare to nameplate or factory test values; differences above 2% warrant investigation. Turns ratio test: verify at all tap positions; deviation above 0.5% from nameplate indicates winding damage.",
+          "Perform frequency response analysis (FRA). Sweep a low-voltage signal across a frequency range (20Hz to 2MHz) and measure the transfer function between terminals. Compare the measured response to a baseline (factory test or previous measurement). Deviations indicate mechanical changes: winding displacement, core movement, or clamping looseness. FRA is the most sensitive test for detecting mechanical damage from through-faults or transportation incidents.",
+          "Assess insulation condition. Oil quality: measure breakdown voltage (IEC 60156, minimum 30kV for new oil, 20kV for service-aged), moisture content (Karl Fischer, less than 20ppm for transformers above 69kV), and acidity (neutralization number, less than 0.2 mgKOH/g). Paper insulation condition: degree of polymerization (DP) estimated from furan compounds in oil (2-furfuraldehyde correlates inversely with DP). DP below 200 indicates end-of-life paper; replacement may be warranted.",
+          "Calculate the health index. Combine DGA results (40% weight), electrical test results (25%), oil quality (20%), and physical condition (age, loading history, external condition: 15%) into a composite score. Map the score to a condition category: Good (normal maintenance), Fair (increased monitoring), Poor (plan repair or replacement), Very Poor (imminent failure risk, limit loading). Use the health index to prioritize capital spending across the transformer fleet."
+        ],
+        "tags": ["high-voltage", "transformer", "condition-assessment"]
+      }
+    ]
+  },
+  {
+    "chain_name": "microgrid-design-methodology",
+    "description": "Design a microgrid from load characterization through generation mix optimization, energy management system design, islanding capability, and economic analysis.",
+    "domain": "energy",
+    "tags": ["microgrid", "distributed-energy", "islanding", "engineering"],
+    "steps": [
+      {
+        "flow_name": "microgrid-load-characterization",
+        "description": "Characterize the microgrid load: critical vs non-critical classification, load profiles, power quality requirements, and reliability targets.",
+        "inputs": [
+          {"name": "site-description", "desc": "Facility type, building list, process loads, and existing electrical infrastructure"},
+          {"name": "historical-load-data", "desc": "12 months minimum of interval meter data (15-minute or hourly), peak demand, energy consumption, and power factor"}
+        ],
+        "outputs": [
+          {"name": "load-classification", "desc": "Loads classified as critical (must be served in island mode), priority (served if capacity allows), and non-critical (shed in island mode), with power demand for each category"},
+          {"name": "load-profile-analysis", "desc": "Peak, average, and minimum demand by category, daily and seasonal load shapes, power factor profile, and power quality requirements"}
+        ],
+        "process": [
+          "Classify loads by criticality. Critical loads require continuous power (life safety, data centers, refrigeration for perishables, security systems). Priority loads can tolerate brief interruptions but should be restored quickly (HVAC, lighting for occupied spaces, communications). Non-critical loads can be shed for extended periods during island mode (decorative lighting, non-essential equipment, EV charging).",
+          "Build load profiles for each category. From interval meter data, extract the hourly load shape for weekdays and weekends, by season. Identify the peak coincident demand (all categories simultaneously) and the critical-only peak demand. The ratio of critical peak to total peak determines the minimum generation capacity for island mode. Typical ratios: military base 40-60%, hospital campus 60-80%, data center 90-100%.",
+          "Characterize power quality requirements. Voltage: ANSI C84.1 Range A for continuous, Range B for occasional excursions. Frequency: 60 Hz +/- 0.5 Hz for normal, +/- 3 Hz for transient (depends on connected equipment sensitivity). Harmonics: IEEE 519 limits at the PCC. Identify any loads with special requirements: sensitive electronics (CBEMA/ITIC curve compliance), motor starting (voltage dip limits), or three-phase balance requirements.",
+          "Define reliability targets. Express as SAIDI (minutes of interruption per year) and SAIFI (number of interruptions per year) for the microgrid. A military facility may target SAIDI less than 60 minutes (99.99% availability). A commercial campus may accept SAIDI less than 500 minutes (99.9%). These targets drive the redundancy requirements for generation and switching equipment.",
+          "Estimate load growth. Project load changes over the microgrid design life (typically 20-25 years). Account for building additions, EV charging infrastructure, electrification of heating, and energy efficiency improvements. Size the microgrid infrastructure (switchgear, conductors, transformer capacity) for the projected peak, even if the initial generation is sized for current loads."
+        ],
+        "tags": ["microgrid", "load", "characterization"]
+      },
+      {
+        "flow_name": "microgrid-generation-mix-optimization",
+        "description": "Optimize the generation mix for the microgrid: solar, battery, diesel/gas, wind, and other DERs, balancing cost, reliability, and emissions.",
+        "inputs": [
+          {"name": "load-classification", "desc": "Load categories and power demand by category"},
+          {"name": "load-profile-analysis", "desc": "Hourly load profiles for dispatch optimization"}
+        ],
+        "outputs": [
+          {"name": "generation-mix", "desc": "Optimal capacity of each generation source (solar kW, battery kWh/kW, diesel/gas kW, wind kW) with dispatch strategy"},
+          {"name": "economic-comparison", "desc": "Net present cost comparison of microgrid scenarios against grid-only and diesel-only baselines"}
+        ],
+        "process": [
+          "Define the candidate resources. Solar PV: capacity limited by available roof and ground area, production profile from the solar resource. Battery: energy (kWh) and power (kW) are independent design variables; round-trip efficiency 85-90%. Diesel or natural gas generator: dispatchable, fuel cost per kWh, maintenance cost per operating hour, emissions rate. Wind: capacity limited by site and permitting, production profile from the wind resource. Combined heat and power (CHP): if thermal loads exist, CHP improves total efficiency from 35% (electricity only) to 70-85% (electricity + heat).",
+          "Run the optimization. Use HOMER, REopt, DER-CAM, or a custom model. The objective function is typically minimum net present cost (capital + O&M + fuel - avoided grid purchases - demand charge savings). Constraints: critical load must be served for a defined islanding duration (typically 24-72 hours for resilience), emissions limits, space limits, and noise limits. The optimizer sizes each resource and determines the dispatch order.",
+          "Size the battery for the islanding requirement. During a grid outage, the battery must bridge the gap between renewable generation and critical load. For a 24-hour islanding requirement with solar: the battery must cover the nighttime critical load plus any daytime shortfall. A rough sizing: battery kWh = critical load kW x hours without solar x (1 / round-trip efficiency). Refine with an hourly simulation of the worst-case day (minimum solar, maximum critical load).",
+          "Size the diesel/gas backup for worst-case scenarios. Even with solar and battery, extended cloudy periods or equipment failures may exhaust the battery. A diesel or gas generator sized to serve the critical load provides the ultimate backup. N+1 redundancy (one more generator than needed) is standard for high-reliability applications. Fuel storage must be sized for the maximum expected outage duration (regulatory requirements may specify minimum fuel storage for hospitals, military, etc.).",
+          "Compare scenarios. Present the NPC, LCOE, payback period, and CO2 emissions for at least three scenarios: grid-only (baseline), microgrid with optimization, and microgrid with maximum renewable penetration. The optimal scenario minimizes NPC while meeting the reliability and emissions constraints. Sensitivity to utility rate escalation, fuel price, and battery cost shows the robustness of the result."
+        ],
+        "tags": ["microgrid", "optimization", "generation"]
+      },
+      {
+        "flow_name": "microgrid-control-and-islanding",
+        "description": "Design the microgrid control system: energy management, islanding detection, seamless transition, black start, and power quality management in island mode.",
+        "inputs": [
+          {"name": "generation-mix", "desc": "Generation sources and their control capabilities"},
+          {"name": "economic-comparison", "desc": "Selected scenario configuration"}
+        ],
+        "outputs": [
+          {"name": "control-system-design", "desc": "Microgrid controller architecture, dispatch algorithm, islanding transition sequence, and black start procedure"},
+          {"name": "island-mode-performance", "desc": "Voltage and frequency regulation capability, transient response to load steps, and maximum load that can be picked up in a single step"}
+        ],
+        "process": [
+          "Design the microgrid controller architecture. A central microgrid controller (MMC) communicates with all DERs and the point of common coupling (PCC) breaker. The MMC performs economic dispatch (minimizing operating cost while meeting load and constraints), state estimation, and islanding transition management. Communication: typically Modbus TCP or DNP3 over Ethernet, with latency requirements below 100ms for dispatch and below 20ms for protection signals.",
+          "Design the islanding transition. For planned islanding (scheduled maintenance): pre-load the DERs to match the microgrid load, then open the PCC breaker at zero current crossing. For unplanned islanding (grid fault): detect the island condition within 2 seconds (IEEE 1547), transition the grid-forming inverter or diesel generator from grid-following to grid-forming mode, and shed non-critical loads if the available generation is less than the total load. The voltage and frequency transient during transition should stay within ANSI C84.1 Range B.",
+          "Design the black start sequence. After a complete blackout (all sources offline), the black start sequence must re-energize the microgrid without relying on the utility grid. A diesel generator with black start capability (battery cranking, no external power needed) is the typical black start source. Sequence: start the diesel generator, close onto a dead bus, sequentially energize feeders and pick up critical loads in steps (each step limited to avoid frequency and voltage excursions beyond the generator's capability, typically 30-50% of rated load per step).",
+          "Design the economic dispatch algorithm. In grid-connected mode: charge the battery when renewable generation exceeds load or when grid energy is cheap (time-of-use rates), discharge when grid energy is expensive or during demand peaks (peak shaving). Prioritize renewable self-consumption to maximize savings. In island mode: dispatch generators to follow load, charge the battery from excess renewable generation, shed non-critical loads when generation is insufficient.",
+          "Verify island mode power quality. In island mode, voltage and frequency are controlled by the grid-forming source (diesel generator or battery inverter). Simulate load transients: a sudden load increase of 20-30% of the grid-forming source's rating should not cause frequency to dip below 57 Hz or voltage below 0.88 pu (ANSI C84.1 Range B limits). If transient performance is inadequate, add a flywheel, increase battery inverter rating, or implement faster load shedding."
+        ],
+        "tags": ["microgrid", "control", "islanding"]
+      }
+    ]
+  },
+  {
+    "chain_name": "wind-farm-foundation-design",
+    "description": "Design foundations for wind turbines: geotechnical investigation, foundation type selection, structural design, and construction methodology for onshore and offshore applications.",
+    "domain": "energy",
+    "tags": ["wind", "foundation", "geotechnical", "structural", "engineering"],
+    "steps": [
+      {
+        "flow_name": "geotechnical-site-investigation",
+        "description": "Plan and execute the geotechnical investigation for wind turbine foundations: borehole program, in-situ testing, laboratory testing, and geotechnical model development.",
+        "inputs": [
+          {"name": "turbine-layout", "desc": "Turbine positions, tower base loads (overturning moment, vertical force, horizontal shear), and number of turbines"},
+          {"name": "site-geology", "desc": "Available geological maps, prior investigation data, and terrain classification"}
+        ],
+        "outputs": [
+          {"name": "geotechnical-model", "desc": "Soil profile at each turbine location with design soil parameters (bearing capacity, shear strength, stiffness, water table depth)"},
+          {"name": "foundation-design-parameters", "desc": "Allowable bearing pressure, friction angle, cohesion, modulus of subgrade reaction, and any geotechnical hazards (expansive soils, liquefiable layers, karst)"}
+        ],
+        "process": [
+          "Design the investigation program. At minimum, one borehole per turbine location to a depth of 1.5 times the expected foundation diameter (typically 15-25 meters for onshore). Additional boreholes at the substation and along access roads. Include SPT (standard penetration test) at 1.5m intervals, CPT (cone penetration test) for continuous profiling, and pressuremeter or dilatometer tests for stiffness measurement.",
+          "Perform laboratory testing on undisturbed samples. Classification tests (grain size, Atterberg limits, moisture content), strength tests (triaxial compression, direct shear), consolidation tests for settlement prediction, and chemical analysis (sulfate content for concrete durability). For cohesive soils, undrained shear strength from the triaxial test governs short-term bearing capacity. For granular soils, friction angle from the CPT correlation governs bearing capacity.",
+          "Develop the geotechnical model. For each turbine location, create a soil profile showing layers, soil parameters, and the water table. Determine the design bearing pressure from the bearing capacity equation: q_ult = c x Nc + q x Nq + 0.5 x gamma x B x Ngamma, with appropriate partial safety factors (typically 2.0-3.0 for gravity foundations). The bearing pressure must also satisfy settlement limits (typically 25mm total, 10mm differential between tower legs).",
+          "Identify geotechnical hazards. Expansive clay: foundation must extend below the active zone or include a void between the foundation and expansive soil. Liquefiable sand: identify by CPT or SPT, evaluate liquefaction potential using the simplified method (Boulanger and Idriss), and design for post-liquefaction settlement or improve the ground. Karst (soluble rock with voids): require additional investigation (ground-penetrating radar, probe drilling) to map void locations. Frost heave: foundation must extend below the frost line.",
+          "Deliver the geotechnical interpretive report. Present the factual data, the geotechnical model, the design parameters with their characteristic and design values (per Eurocode 7 or IEC 61400-6), and recommendations for foundation type and construction methodology. The report is a key document for the foundation design engineer and is reviewed by the wind turbine manufacturer for compatibility with their tower base loads."
+        ],
+        "tags": ["wind", "geotechnical", "investigation"]
+      },
+      {
+        "flow_name": "onshore-foundation-structural-design",
+        "description": "Design the structural foundation for an onshore wind turbine: gravity base or pile foundation, reinforcement design, anchor bolt embedment, and construction detailing.",
+        "inputs": [
+          {"name": "geotechnical-model", "desc": "Soil profile and design parameters at the turbine location"},
+          {"name": "foundation-design-parameters", "desc": "Allowable bearing pressure, stiffness, and hazard mitigation requirements"}
+        ],
+        "outputs": [
+          {"name": "foundation-design", "desc": "Foundation type, dimensions, reinforcement layout, anchor bolt ring specification, and concrete mix design"},
+          {"name": "construction-specification", "desc": "Excavation requirements, concrete placement sequence, curing requirements, backfill specification, and quality control plan"}
+        ],
+        "process": [
+          "Select the foundation type. Gravity base (octagonal or circular pad, 15-22m diameter, 2-3m deep) is standard for onshore wind turbines on competent soil with adequate bearing capacity (greater than 150 kPa). Pile foundation (driven steel piles or drilled shafts) is used when bearing capacity is insufficient at shallow depth or when the soil is highly compressible. Rock-anchored foundations use post-tensioned anchors drilled into competent rock.",
+          "Size the gravity base foundation. The overturning moment from the tower base is resisted by the weight of the foundation and the overlying soil. Verify: bearing pressure under the combined vertical load and overturning moment does not exceed the allowable (use Meyerhof's effective area method for eccentric loading). Verify rotational stiffness meets the turbine manufacturer's requirement (typically expressed as a maximum rotation at the foundation top for the design moment).",
+          "Design the reinforcement. The foundation slab acts as a cantilevered plate loaded by the soil bearing pressure. The bending moment is maximum at the pedestal face. Design the radial and circumferential reinforcement per ACI 318 or Eurocode 2 for the factored bending moments and shear forces. Minimum reinforcement ratios apply to control cracking. The pedestal transfers the anchor bolt forces into the slab: design for the combined tension, shear, and bending from the tower base flange.",
+          "Specify the anchor bolt ring. The anchor bolt ring (typically 100-140 bolts of 36-72mm diameter arranged on a 4-5m diameter circle) transfers the tower overturning moment into the foundation as a tension-compression couple. Bolt embedment length must develop the bolt's proof load. The bolt template must be surveyed to within 1mm tolerance for compatible mating with the tower base flange.",
+          "Develop the construction specification. Excavation to design depth with proof rolling to verify bearing capacity. Lean concrete mud mat (75-100mm) for a clean working surface. Reinforcement placement with spacers for cover. Continuous concrete pour (a 500-800 cubic meter pour for a large foundation) with temperature monitoring for mass concrete effects (limit temperature rise to 20C above ambient to prevent thermal cracking). Cure for 28 days minimum before tower erection loading. Backfill with compacted select fill to restore overburden."
+        ],
+        "tags": ["wind", "foundation", "structural"]
+      },
+      {
+        "flow_name": "offshore-foundation-engineering",
+        "description": "Design foundations for offshore wind turbines: monopile, jacket, gravity base, or floating concepts, considering wave and current loads, soil-structure interaction, and marine construction methods.",
+        "inputs": [
+          {"name": "foundation-design", "desc": "Onshore design methodology adapted for offshore loading conditions"},
+          {"name": "construction-specification", "desc": "Construction methods adapted for marine installation"}
+        ],
+        "outputs": [
+          {"name": "offshore-foundation-design", "desc": "Foundation type, dimensions, wall thickness, grouted connection or bolted connection design, and scour protection"},
+          {"name": "installation-methodology", "desc": "Vessel requirements, installation sequence, pile driving or suction installation parameters, and weather window requirements"}
+        ],
+        "process": [
+          "Select the foundation type by water depth. Monopile: 0-40m water depth (single large-diameter steel pipe, 6-10m diameter, driven 20-40m into the seabed). Jacket: 25-65m (lattice steel structure with 3-4 pin piles). Gravity base: 0-30m (massive concrete or steel structure relying on weight, suitable for hard seabed). Floating (spar, semi-sub, TLP): beyond 60m depth. Monopiles account for over 80% of installed offshore wind foundations due to their simplicity.",
+          "Design for hydrodynamic loads. Wave loads on the monopile are calculated from Morison's equation: F = 0.5 x Cd x rho x D x |u| x u + Cm x rho x pi x D2/4 x du/dt (drag + inertia). For large-diameter monopiles (D/wavelength greater than 0.2), diffraction effects require the MacCamy-Fuchs correction. Current loads add a steady drag force. Wave and current loads are combined with wind loads for the design load cases per IEC 61400-3 (offshore wind standard).",
+          "Analyze soil-structure interaction. The monopile is a laterally loaded pile. Model the soil-pile interaction using p-y curves (API RP 2GEO or DNVGL-RP-C212). The p-y method provides the lateral soil resistance as a function of lateral displacement at each depth. For clay: use the Matlock soft clay or Reese stiff clay p-y curves. For sand: use the API sand p-y curves. The natural frequency of the monopile-tower system must fall between the 1P and 3P frequencies (the soft-stiff design range) to avoid resonance with rotor excitation.",
+          "Design the grouted or bolted connection. The transition piece connects the monopile to the tower. A grouted connection uses high-strength grout to transfer loads between the transition piece and the monopile. The grout must resist the combination of axial force, bending, and shear. Shear keys (welded ribs on both the inside of the transition piece and outside of the monopile) provide mechanical interlock. Alternatively, a bolted flange connection avoids grout but requires precise pile installation tolerances.",
+          "Design scour protection. Currents and waves cause scouring of the seabed around the monopile, potentially reducing the embedment depth and lateral capacity. Scour depth for a cylindrical monopile in current is approximately 1.3 x D (pile diameter). Rock armor (graded rock placed around the pile base) or concrete mattresses prevent scour. The rock armor layer is typically 0.5-1.0m thick with a D50 stone size calculated from the current velocity using the Isbash or Hudson formula."
+        ],
+        "tags": ["wind", "offshore", "foundation"]
+      }
+    ]
+  },
+  {
+    "chain_name": "microgrid-protection-design",
+    "description": "Design protection systems for microgrids with bidirectional power flow, variable fault current sources, and the need to operate in both grid-connected and island modes.",
+    "domain": "energy",
+    "tags": ["microgrid", "protection", "distributed-energy", "engineering"],
+    "steps": [
+      {
+        "flow_name": "microgrid-fault-current-characterization",
+        "description": "Characterize fault currents in the microgrid for both grid-connected and island modes, accounting for the different fault current contributions of inverter-based and rotating DERs.",
+        "inputs": [
+          {"name": "microgrid-configuration", "desc": "Single-line diagram with all DER sources, their fault current characteristics, and the PCC configuration"},
+          {"name": "protection-requirements", "desc": "Reliability targets, selectivity requirements, and regulatory obligations"}
+        ],
+        "outputs": [
+          {"name": "fault-current-analysis", "desc": "Maximum and minimum fault currents at each bus in grid-connected and island mode, with the contributing sources identified"},
+          {"name": "protection-challenges", "desc": "Identified challenges: reduced fault current in island mode, bidirectional flow, and variable source impedance"}
+        ],
+        "process": [
+          "Calculate fault currents in grid-connected mode. The utility source provides the dominant fault current contribution (typically 5-20 kA at the medium-voltage PCC). Inverter-based DERs contribute 1.1-1.2 times rated current. Diesel generators contribute 3-5 times rated current (subtransient). Sum contributions at each bus using superposition.",
+          "Calculate fault currents in island mode. Without the utility source, fault current drops dramatically. If the microgrid has only inverter-based DERs, the maximum fault current may be only 1.2 times the total rated current of all online inverters. This is often insufficient to operate conventional overcurrent relays. If diesel generators are the grid-forming sources, fault current is 3-5 times generator rating, providing more margin for conventional protection.",
+          "Identify the fault current ratio. The ratio of grid-connected to island mode fault current at each bus determines the protection challenge. Ratios of 5:1 to 20:1 are common. Conventional overcurrent relays set for grid-connected faults may not pick up island mode faults. Conversely, relays set for island mode faults may trip on normal load current in grid-connected mode.",
+          "Characterize the time-varying nature. In island mode, as DERs trip on fault detection, the fault current decreases further. Inverters may limit current to 1.1 pu after 1-2 cycles. Diesel generators provide decaying fault current (subtransient to transient to steady-state) over 0.1-5 seconds. The protection system must be coordinated with these time-varying contributions.",
+          "Map the bidirectional flow paths. Unlike radial distribution, a microgrid may have loop topology or multiple sources feeding a bus from different directions. Faults can be fed from multiple directions simultaneously. This requires directional protection elements to determine which section is faulted and avoid tripping healthy sections."
+        ],
+        "tags": ["microgrid", "fault-current", "characterization"]
+      },
+      {
+        "flow_name": "adaptive-microgrid-protection-design",
+        "description": "Design an adaptive protection scheme that adjusts relay settings between grid-connected and island mode to maintain selectivity and sensitivity under varying fault current conditions.",
+        "inputs": [
+          {"name": "fault-current-analysis", "desc": "Fault currents in both operating modes"},
+          {"name": "protection-challenges", "desc": "Specific challenges requiring adaptive solutions"}
+        ],
+        "outputs": [
+          {"name": "adaptive-protection-scheme", "desc": "Relay selection, dual setting groups, mode-switching logic, and communication architecture for adaptive protection"},
+          {"name": "protection-coordination-results", "desc": "Time-current coordination plots for both grid-connected and island mode, showing selectivity and sensitivity at all fault current levels"}
+        ],
+        "process": [
+          "Select relays with dual setting groups. Modern numerical relays (SEL, ABB, Siemens, GE) support multiple setting groups that can be switched by a digital input or communication command. Define Setting Group 1 for grid-connected mode (higher pickup, conventional coordination) and Setting Group 2 for island mode (lower pickup, faster clearing times).",
+          "Set the grid-connected group (Group 1). Follow conventional coordination practices: 51 pickup above maximum load, coordinated with upstream utility relays (the utility provides coordination requirements in the interconnection agreement). Instantaneous (50) elements set above maximum through-fault current from downstream sources.",
+          "Set the island mode group (Group 2). Lower the 51 pickup to detect the reduced island-mode fault currents. This may require pickup as low as 1.5-2.0 times rated load current, which leaves little margin for normal load variation. Use definite-time overcurrent with fast tripping (0.1-0.3 seconds) rather than inverse-time curves, since the reduced fault current provides less discrimination margin. Add negative-sequence overcurrent (46) elements that are more sensitive to fault current than phase overcurrent when fault current is near load current magnitude.",
+          "Design the mode-switching logic. The microgrid controller detects the transition between grid-connected and island mode (from the PCC breaker status) and sends a command to switch all relay setting groups. Communication latency must be less than the fastest relay operating time to prevent misoperation during the transition. Hardwired (digital inputs from PCC breaker auxiliary contacts) is faster and more reliable than communication-based switching.",
+          "Add communication-based protection for enhanced selectivity. Directional comparison blocking or permissive schemes (similar to transmission line pilot protection) use fiber or Ethernet communication between relays to achieve selectivity without time coordination delays. If relay A detects a fault in the forward direction and relay B does not detect a fault in the reverse direction, relay A trips. This provides fast, selective clearing regardless of the fault current level."
+        ],
+        "tags": ["microgrid", "adaptive-protection", "relays"]
+      }
+    ]
+  }
+]

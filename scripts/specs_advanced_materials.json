@@ -1,0 +1,858 @@
+[
+  {
+    "chain_name": "composite-structure-design",
+    "description": "Design a composite structure from laminate definition through manufacturing process selection to NDI verification, using classical laminate theory for stiffness prediction and established failure criteria for strength.",
+    "domain": "materials-science",
+    "tags": ["composites", "structures", "materials", "manufacturing"],
+    "steps": [
+      {
+        "flow_name": "laminate-load-analysis",
+        "description": "Define the structural load cases and translate them into ply-level stress requirements using classical laminate theory (CLT) and the ABD stiffness matrix.",
+        "inputs": [
+          {"name": "structural-loads", "desc": "Applied forces and moments on the laminate (Nx, Ny, Nxy, Mx, My, Mxy) from the structural model or test specification"},
+          {"name": "material-system", "desc": "Fiber and resin system under consideration (e.g., T700/epoxy, IM7/BMI) with unidirectional ply properties (E1, E2, G12, nu12, ply thickness)"}
+        ],
+        "outputs": [
+          {"name": "abd-stiffness-matrix", "desc": "6x6 ABD matrix relating applied loads to mid-plane strains and curvatures for the candidate laminate"},
+          {"name": "ply-stress-distribution", "desc": "Stress state (sigma_1, sigma_2, tau_12) in each ply in its local material coordinate system"}
+        ],
+        "process": [
+          "Identify all load cases: static ultimate, fatigue spectrum, thermal (delta-T from cure to operating), and moisture (delta-M from dry to equilibrium). Combine using the governing load combinations per the design code (e.g., CMH-17, ECSS).",
+          "Select an initial ply orientation set. Start with the 10% rule (minimum 10% of plies in each of 0, 45, -45, 90 directions). For shear-dominated loads, increase the +/-45 fraction. For axially loaded members, increase the 0 fraction.",
+          "Build the ABD stiffness matrix by summing each ply's transformed stiffness contribution through the laminate thickness. A = sum of Q_bar * t_k, B = sum of Q_bar * t_k * z_bar_k, D = sum of Q_bar * (t_k * z_bar_k^2 + t_k^3/12). A symmetric balanced laminate zeros out B and the A16/A26 coupling terms.",
+          "Invert the ABD matrix to get mid-plane strains and curvatures from the applied loads. Then back-calculate the strain in each ply in the laminate coordinate system, and rotate into each ply's material coordinates using the transformation matrix.",
+          "Report the ply-level stresses for input to the failure analysis step. Flag any ply where the transverse stress sigma_2 exceeds 50% of the transverse strength as a candidate for matrix cracking under fatigue."
+        ],
+        "tags": ["composites", "structural-analysis", "clt"]
+      },
+      {
+        "flow_name": "composite-failure-assessment",
+        "description": "Evaluate laminate strength using multiple failure criteria and identify the first-ply-failure and last-ply-failure loads with appropriate knockdown factors.",
+        "inputs": [
+          {"name": "ply-stress-distribution", "desc": "Stress in each ply in material coordinates from the laminate analysis"},
+          {"name": "material-allowables", "desc": "Ply-level strength values (Xt, Xc, Yt, Yc, S) at the design condition (temperature, moisture, basis values: A-basis or B-basis per MIL-HDBK-5/CMH-17)"}
+        ],
+        "outputs": [
+          {"name": "failure-envelope", "desc": "Margin of safety for each ply under each failure criterion, identifying the critical ply and failure mode"},
+          {"name": "design-knockdowns", "desc": "Applied knockdown factors for environment (hot-wet), damage tolerance (BVID), fatigue, and manufacturing variability with the resulting allowable strain levels"}
+        ],
+        "process": [
+          "Apply the Tsai-Wu failure criterion to each ply: F1*sigma_1 + F2*sigma_2 + F11*sigma_1^2 + F22*sigma_2^2 + F66*tau_12^2 + 2*F12*sigma_1*sigma_2 < 1. The interaction term F12 is typically set to -0.5*sqrt(F11*F22) unless biaxial test data is available.",
+          "Cross-check with the maximum strain criterion and the Hashin criterion. Max strain catches simple fiber failure that Tsai-Wu may mask. Hashin separates fiber failure from matrix failure modes, which matters for progressive damage analysis and fatigue.",
+          "Apply environmental knockdowns. Hot-wet compression strength is typically 60-80% of room temperature dry for carbon/epoxy systems. Pull the specific knockdown from the material qualification database, not a generic value.",
+          "Apply the open-hole compression (OHC) or compression-after-impact (CAI) knockdown for damage tolerance. For aerospace primary structure, the design strain is typically limited to 4500-5000 microstrain in compression after a barely visible impact damage (BVID, typically 50 ft-lb impact energy for thin skins).",
+          "Calculate the margin of safety: MS = (allowable / applied) - 1. Report the minimum MS across all plies, all criteria, all load cases. If MS < 0 on any combination, return to laminate definition and increase ply count or adjust orientations."
+        ],
+        "tags": ["composites", "failure-analysis", "strength"]
+      },
+      {
+        "flow_name": "sandwich-and-joint-design",
+        "description": "Design sandwich panel core selection and attachment joints for the composite structure, accounting for core shear, facesheet wrinkling, and bolted or bonded joint failure modes.",
+        "inputs": [
+          {"name": "failure-envelope", "desc": "Laminate strength margins from the failure assessment"},
+          {"name": "structural-loads", "desc": "Applied loads including out-of-plane pressure and panel stability requirements"}
+        ],
+        "outputs": [
+          {"name": "sandwich-design", "desc": "Core type, density, and thickness selection with facesheet wrinkling and core shear margins"},
+          {"name": "joint-design", "desc": "Joint configuration (bolted, bonded, or hybrid) with bearing/bypass interaction and adhesive peel/shear stress analysis"}
+        ],
+        "process": [
+          "Select core type from loading environment. Nomex honeycomb for moderate temperature aerospace. Aluminum honeycomb for higher loads. Closed-cell foam (Rohacell, Divinycell) where water ingress is a concern. Core density drives shear strength: plot core shear stress (V/d) against core shear allowable for candidate densities.",
+          "Check facesheet wrinkling: sigma_wr = 0.5 * (Ef * Gc * Ec)^(1/3) where Ef is facesheet modulus, Gc is core shear modulus, Ec is core through-thickness modulus. The knockdown from this theoretical value to test is typically 0.5-0.65.",
+          "For bolted joints: calculate the bearing stress (P / (d * t)) and bypass stress from the load distribution. Plot on the bearing/bypass interaction diagram. The bolt pattern must be designed so that no fastener exceeds the interaction envelope. Minimum edge distance is typically 3D, pitch 4-5D.",
+          "For bonded joints: calculate the adhesive shear stress distribution using the Volkersen or Hart-Smith elastic-plastic model. The peak shear stress at the overlap ends must stay below the adhesive shear allowable. Peel stress at the ends of single-lap joints is the typical failure driver; use doublers or tapered adherends to reduce peel.",
+          "For primary structure, bonded joints require a positive NDI method for bond quality verification. If the bond cannot be inspected, design as if the bond carries zero load (fail-safe with mechanical fastener backup)."
+        ],
+        "tags": ["composites", "sandwich", "joints"]
+      },
+      {
+        "flow_name": "composite-manufacturing-selection",
+        "description": "Select the manufacturing process for the composite structure and design the cure cycle, tooling approach, and layup sequence for production.",
+        "inputs": [
+          {"name": "sandwich-design", "desc": "Core and facesheet configuration for the structure"},
+          {"name": "joint-design", "desc": "Joint type and fastener pattern determining manufacturing sequence"}
+        ],
+        "outputs": [
+          {"name": "manufacturing-plan", "desc": "Selected process (autoclave, OOA, RTM, filament winding, AFP), cure cycle definition, tooling concept, and layup instructions"},
+          {"name": "process-quality-requirements", "desc": "Void content target, fiber volume fraction, dimensional tolerances, and in-process inspection requirements"}
+        ],
+        "process": [
+          "Select process by part geometry and rate. Autoclave prepreg for highest quality (void content below 1%, fiber volume 57-62%) but lowest rate. Out-of-autoclave (OOA) prepreg for similar quality without autoclave capital cost. RTM for complex geometry and moderate volume. Filament winding for bodies of revolution. AFP for large contoured skins at moderate rate.",
+          "Design the cure cycle. For epoxy prepreg (e.g., 350F cure): ramp at 1-5 F/min to dwell temperature, hold for gel (optional intermediate hold for thick parts to manage exotherm), ramp to cure temperature, hold at cure for the specified time (typically 2 hours at 350F for aerospace epoxy), cool at a controlled rate (below 5 F/min to manage residual stress). Use embedded thermocouples to verify the actual part temperature follows the cure cycle.",
+          "Design the tool. Match the CTE of the tool to the part if possible (Invar for tight-tolerance aerospace parts, steel or aluminum for less critical). For female tools, account for spring-in from the CTE mismatch and cure shrinkage. Typical spring-in for a 90-degree corner is 1-2 degrees for carbon/epoxy.",
+          "Define the layup sequence. Stagger ply drops to avoid stress concentrations (minimum stagger distance is typically 6mm or 0.25 inches per dropped ply). Interleave ply orientations to distribute matrix cracking under fatigue. Avoid grouping more than 4 plies of the same orientation to limit free-edge delamination.",
+          "Set quality targets: void content below 2% (below 1% for primary structure), fiber volume fraction 55-62% for prepreg, dimensional tolerance per drawing, no delaminations or foreign object debris. Define the incoming material testing (resin gel time, fiber areal weight) and in-process checks (debulk vacuum level, thermocouple readings during cure)."
+        ],
+        "tags": ["composites", "manufacturing", "cure-cycle"]
+      },
+      {
+        "flow_name": "composite-ndi-verification",
+        "description": "Select and apply non-destructive inspection methods to verify the composite structure meets acceptance criteria, with defect disposition methodology.",
+        "inputs": [
+          {"name": "manufacturing-plan", "desc": "Manufacturing process and quality targets for the composite part"},
+          {"name": "process-quality-requirements", "desc": "Void content, delamination, and dimensional acceptance criteria"}
+        ],
+        "outputs": [
+          {"name": "ndi-results", "desc": "Inspection results mapped to the acceptance criteria with pass/fail and defect location data"},
+          {"name": "defect-disposition", "desc": "Engineering disposition for any detected defects (accept, repair, scrap) with substantiation"}
+        ],
+        "process": [
+          "Select NDI method by defect type. Pulse-echo ultrasonic (A-scan/C-scan) for delaminations and voids: detects features larger than about half the wavelength (typically 0.5-1mm at 5MHz for carbon/epoxy). Through-transmission ultrasonic (TTU) for thick sections or attenuating materials. Thermography (flash or lock-in) for near-surface delaminations and water ingress in sandwich structures.",
+          "For ultrasonic C-scan: set the gate to capture the full laminate thickness. Calibrate the attenuation threshold using a reference standard with flat-bottom holes of known diameter (typically 6mm and 12mm). Scan at a pitch of 1mm or finer for aerospace primary structure. Map the attenuation data to create a full-area image of the part.",
+          "For sandwich structures: use bond testers (mechanical impedance analysis or resonance methods) to detect skin-to-core disbonds. X-ray or CT for core crush, node bond failure, and potting compound voids. Shearography for rapid full-field detection of disbonds under thermal or vacuum loading.",
+          "Interpret results against the accept/reject criteria. Typical aerospace criteria: no delamination larger than 6mm x 6mm (per contractual specification), no porosity above 2% by area in any inspection zone, no foreign object inclusion. For defects that exceed criteria, perform engineering disposition: repair if the defect can be removed and patched without exceeding the design allowable, scrap if structural integrity cannot be substantiated.",
+          "Document everything. The NDI report must include the method, equipment, calibration standard, scan parameters, operator certification level (NAS-410 / EN 4179 Level II or III), and the accept/reject determination for each inspection zone. Archive the raw scan data for the life of the structure."
+        ],
+        "tags": ["composites", "ndi", "inspection", "quality"]
+      }
+    ]
+  },
+  {
+    "chain_name": "additive-manufacturing-design",
+    "description": "Design a part for additive manufacturing from process selection through build optimization to qualification, covering DfAM rules, post-processing, and acceptance testing.",
+    "domain": "materials-science",
+    "tags": ["additive-manufacturing", "3d-printing", "materials", "manufacturing"],
+    "steps": [
+      {
+        "flow_name": "am-process-selection",
+        "description": "Select the additive manufacturing process based on material requirements, geometric complexity, production volume, and required mechanical properties.",
+        "inputs": [
+          {"name": "part-requirements", "desc": "Material type, mechanical property targets, dimensional tolerances, surface finish requirements, and production volume"},
+          {"name": "geometry-description", "desc": "Part geometry including overhangs, internal channels, thin walls, and unsupported features"}
+        ],
+        "outputs": [
+          {"name": "selected-process", "desc": "Chosen AM process (SLM/DMLS, EBM, DED, SLS, binder jetting) with rationale"},
+          {"name": "material-feedstock", "desc": "Powder or wire specification (alloy, particle size distribution, morphology, recycling limits)"}
+        ],
+        "process": [
+          "Map material to viable processes. Titanium alloys (Ti-6Al-4V): SLM or EBM (EBM gives lower residual stress due to elevated build temperature, but coarser surface). Nickel superalloys (IN718, IN625): SLM with careful parameter development for crack-free builds. Aluminum (AlSi10Mg, Scalmalloy): SLM. Stainless and tool steels: SLM or binder jetting. Copper alloys: specialized SLM with green laser or EBM. Polymers: SLS for functional parts (PA12, PA11), FDM for prototypes.",
+          "Evaluate geometric feasibility. SLM/EBM: minimum wall thickness 0.3-0.5mm, minimum feature size 0.1mm, overhang angle limit 45 degrees from horizontal without support. DED: minimum feature size 1-2mm, better for adding material to existing parts. Binder jetting: no overhang limits (self-supporting in powder bed) but lower density (requires sintering or infiltration).",
+          "Compare properties. SLM/EBM: near-wrought properties after HIP and heat treatment (Ti-6Al-4V: UTS 1000+ MPa, elongation 10+ %). DED: properties depend on deposition rate vs heat input trade-off. Binder jetting + sinter: 95-99% density depending on material system. SLS polymers: 90-95% of injection-molded properties for PA12.",
+          "Factor production volume. SLM/EBM: economical below 100-1000 parts depending on size (crossover with casting/machining varies). Binder jetting: scales better for volume due to higher build rates. DED: best for low-volume large parts or repair/refurbishment. The cost model must include machine time, powder cost, support removal, post-processing, and inspection."
+        ],
+        "tags": ["additive-manufacturing", "process-selection"]
+      },
+      {
+        "flow_name": "dfam-optimization",
+        "description": "Apply Design for Additive Manufacturing rules to optimize the part geometry for the selected process, including build orientation, support strategy, and lattice structures.",
+        "inputs": [
+          {"name": "selected-process", "desc": "The AM process and machine platform to design for"},
+          {"name": "geometry-description", "desc": "Current part geometry and functional requirements"}
+        ],
+        "outputs": [
+          {"name": "optimized-geometry", "desc": "Modified geometry with DfAM features applied (self-supporting angles, lattice infill, optimized build orientation)"},
+          {"name": "support-strategy", "desc": "Support structure locations, types (block, tree, conical), and removal method"}
+        ],
+        "process": [
+          "Select build orientation. Balance: surface finish (down-skin is roughest, up-skin best, vertical walls intermediate), support volume (overhangs below 45 degrees need support in SLM), build height (taller builds take longer and accumulate more residual stress), critical dimension accuracy (best in-plane, worst in build direction due to staircase effect and thermal distortion).",
+          "Apply self-supporting design rules. Convert overhangs below 45 degrees to chamfers or fillets at 45 degrees. Replace horizontal holes with diamond or teardrop cross-sections (self-supporting above 8mm diameter). Add draft angles to internal channels. Minimum channel diameter for powder removal: 1-2mm for SLM (depends on powder size and channel length).",
+          "Design lattice structures for weight reduction. Use topology optimization to identify load paths, then replace low-stress regions with lattice infill (strut-based: BCC, FCC, octet-truss; or TPMS: gyroid, diamond, Schwarz-P). Size struts above 0.3mm for manufacturability. Grade the lattice density to match the stress distribution. Verify the lattice design by FEA with beam or solid element models.",
+          "Design for post-processing access. Leave machining stock (0.5-1mm) on critical surfaces. Ensure support structures are accessible for removal (no trapped supports in internal cavities). Add sacrificial features for fixturing during machining. Plan the build plate removal method (wire EDM, band saw)."
+        ],
+        "tags": ["additive-manufacturing", "dfam", "topology-optimization"]
+      },
+      {
+        "flow_name": "am-build-parameter-development",
+        "description": "Develop and validate the build parameters (laser/beam power, scan speed, layer thickness, scan strategy) for the selected material and process to achieve target density and microstructure.",
+        "inputs": [
+          {"name": "selected-process", "desc": "AM process and machine platform"},
+          {"name": "material-feedstock", "desc": "Powder or wire specification"}
+        ],
+        "outputs": [
+          {"name": "validated-parameters", "desc": "Locked build parameter set (power, speed, hatch, layer thickness, scan strategy) with density and microstructure verification data"},
+          {"name": "process-window", "desc": "Map of the energy density parameter space showing the boundaries for keyhole porosity, lack-of-fusion porosity, and balling, with the operating point margin"}
+        ],
+        "process": [
+          "Start from the volumetric energy density (VED = P / (v * h * t)) where P is laser power, v is scan speed, h is hatch spacing, t is layer thickness. For SLM of Ti-6Al-4V, the typical VED range for full density is 50-120 J/mm^3. For IN718, 60-100 J/mm^3. For AlSi10Mg, 50-80 J/mm^3. These are starting points; the actual window depends on the specific machine and powder lot.",
+          "Build a single-track experiment matrix varying power and speed. Evaluate track width, continuity, and penetration depth from cross-sections. A stable track must penetrate at least one layer thickness into the previous layer for good interlayer bonding without excessive keyholing (porosity from vapor depression collapse).",
+          "Build density cubes (typically 10x10x10mm) at multiple parameter sets within the single-track window. Measure density by Archimedes method (precision to 0.01 g/cm^3) and cross-section image analysis. Target: above 99.5% relative density for structural applications. Characterize the porosity type (spherical = gas/keyhole, irregular = lack of fusion) to diagnose the process window position.",
+          "Select the scan strategy. Stripe or checkerboard patterns with 67-degree rotation between layers to distribute residual stress. Island scanning for large cross-sections to limit heat accumulation. Contour scans with reduced power for surface quality. Verify that the scan strategy does not create systematic defect patterns at scan boundaries."
+        ],
+        "tags": ["additive-manufacturing", "process-parameters", "metallurgy"]
+      },
+      {
+        "flow_name": "am-post-processing-method",
+        "description": "Define the post-processing sequence for the AM part including stress relief, HIP, heat treatment, support removal, and finish machining to meet final part specifications.",
+        "inputs": [
+          {"name": "validated-parameters", "desc": "Build parameters and as-built material condition"},
+          {"name": "optimized-geometry", "desc": "Part geometry with support locations and machining stock"}
+        ],
+        "outputs": [
+          {"name": "post-processing-sequence", "desc": "Ordered sequence of post-processing operations with parameters (temperatures, pressures, durations) and intermediate inspection points"},
+          {"name": "final-material-properties", "desc": "Expected mechanical properties after post-processing (UTS, YS, elongation, fatigue, fracture toughness) with reference to test coupon data"}
+        ],
+        "process": [
+          "Stress relief on the build plate before removal. For Ti-6Al-4V: 650-670C for 2-3 hours in vacuum or inert atmosphere. For IN718: solution anneal at 1065C for 1 hour followed by precipitation aging. Removing the part from the build plate before stress relief risks distortion and cracking.",
+          "Hot isostatic pressing (HIP) to close internal porosity. For Ti-6Al-4V: 920C / 100 MPa / 2 hours in argon. HIP closes lack-of-fusion and gas porosity below about 50 microns but cannot close surface-connected pores (verify by CT scan before HIP if surface porosity is a concern). HIP typically improves fatigue life by 2-10x by eliminating internal crack initiation sites.",
+          "Heat treatment for target microstructure. For Ti-6Al-4V after HIP: the HIP cycle may serve as the annealing treatment if the temperature is above the beta transus (sub-transus for a fine alpha+beta microstructure, super-transus for a lamellar colony structure with higher fracture toughness but lower fatigue strength). For IN718: double aging (720C/8hr + 620C/8hr) after solution treatment for gamma-prime and gamma-double-prime precipitation.",
+          "Support removal and surface finishing. Wire EDM or band saw for build plate separation. Hand tools, CNC machining, or chemical etching for support removal. Machining of critical surfaces to final dimensions. Shot peening or laser shock peening for fatigue-critical surfaces (introduces compressive residual stress). Surface roughness of as-built SLM parts is typically Ra 5-15 microns; machining brings this to Ra 0.8-3.2 microns.",
+          "Final inspection. Dimensional measurement (CMM or 3D scanning). CT scanning for internal defect detection (resolution depends on part size and wall thickness; typical minimum detectable defect 50-200 microns). Witness coupon testing for mechanical properties (coupons built alongside the part in the same build, subjected to the same post-processing)."
+        ],
+        "tags": ["additive-manufacturing", "post-processing", "hip", "heat-treatment"]
+      },
+      {
+        "flow_name": "am-qualification-methodology",
+        "description": "Qualify the additive manufactured part through a structured test program that demonstrates equivalence to design requirements and establishes production controls.",
+        "inputs": [
+          {"name": "post-processing-sequence", "desc": "Complete manufacturing sequence from build through post-processing"},
+          {"name": "final-material-properties", "desc": "Expected properties from process development"}
+        ],
+        "outputs": [
+          {"name": "qualification-evidence", "desc": "Test results demonstrating the part meets all design requirements with statistical basis values"},
+          {"name": "production-control-plan", "desc": "Locked process specification, in-process controls, acceptance tests, and change management requirements for production"}
+        ],
+        "process": [
+          "Build the test matrix per the applicable standard (NASA-STD-6030, MMPDS/CMH-17 additive, ASTM F3122, or customer-specific). Test at multiple orientations (XY, XZ, ZX as minimum) because AM properties are anisotropic. Include specimens from the bottom, middle, and top of the build volume to characterize spatial variation.",
+          "Generate statistical design allowables. A-basis (99% exceedance at 95% confidence) requires at least 75 specimens per condition for MMPDS. B-basis (90% exceedance at 95% confidence) requires 30+. If test data is limited, use tolerance limit factors (k-factors) appropriate to the sample size. Report: mean, standard deviation, coefficient of variation, and basis values for UTS, YS, elongation, fatigue life at specified stress levels, and fracture toughness.",
+          "Demonstrate equivalence between test coupons and actual part properties. Build instrumented parts with embedded witness coupons (coupons attached to the part or built in the same build at the same height). Destructive testing of sacrificial first articles. CT scanning of production parts to verify internal quality against the qualification CT baseline.",
+          "Lock the process specification. Document every parameter that affects the final part (machine model, software version, powder specification, reuse limits, build parameters, atmosphere, post-processing sequence). Any change to a locked parameter requires re-qualification or a substantiated engineering equivalence assessment. Define the production acceptance test plan: tensile test of witness coupons from every build, dimensional inspection, and NDI per the qualification-established methods."
+        ],
+        "tags": ["additive-manufacturing", "qualification", "testing"]
+      }
+    ]
+  },
+  {
+    "chain_name": "welding-engineering-methodology",
+    "description": "Engineer a welded joint from process selection through WPS development to inspection and fatigue life prediction, following welding code requirements.",
+    "domain": "materials-science",
+    "tags": ["welding", "joining", "manufacturing", "metallurgy"],
+    "steps": [
+      {
+        "flow_name": "weld-process-and-joint-selection",
+        "description": "Select the welding process and joint configuration based on the base material, service environment, access constraints, and production requirements.",
+        "inputs": [
+          {"name": "base-material", "desc": "Material specification (alloy, thickness, condition), including any dissimilar metal combinations"},
+          {"name": "service-requirements", "desc": "Operating environment (temperature, corrosion, fatigue loading), design code (AWS D1.1, ASME IX, EN ISO 15614), and quality level requirements"}
+        ],
+        "outputs": [
+          {"name": "selected-process", "desc": "Welding process (GTAW, GMAW, SAW, laser, EBW, FSW) with rationale including deposition rate, heat input range, and position capability"},
+          {"name": "joint-configuration", "desc": "Joint type (butt, fillet, lap), groove geometry (V, U, J, double-V), root opening, and backing requirements"}
+        ],
+        "process": [
+          "Match process to material. GTAW (TIG) for reactive metals (titanium, zirconium), thin sections, and root passes where quality is critical. GMAW (MIG) for carbon and stainless steels at higher deposition rates. SAW for thick sections in the flat position (highest deposition rate). Laser beam welding for high-speed, low-distortion joints in thin to moderate sections. EBW for deep penetration in a single pass (vacuum environment required). FSW for aluminum alloys where fusion welding creates porosity or hot cracking.",
+          "Select the joint type from the load path. Butt joints for full-strength connections (CJP or PJP). Fillet joints for T and lap connections (size by throat dimension to meet strength). The weld must be designed so that the critical cross-section is in shear through the weld throat, not in tension across a root defect.",
+          "Design the groove geometry. For butt joints in thick sections, single-V for one-sided access, double-V to balance distortion and reduce weld volume (double-V uses roughly 50% of the filler metal volume of single-V for sections above 20mm). Root opening and included angle must allow electrode access to the root. J or U grooves for thick sections to further reduce weld volume but require machining.",
+          "Specify the filler metal. Match or slightly overmatch the base metal strength. For dissimilar metal joints, select a filler that avoids brittle intermetallic formation at the diluted composition. Consult the Schaeffler or WRC-1992 diagram for stainless steel and nickel alloy combinations to predict the weld metal microstructure."
+        ],
+        "tags": ["welding", "process-selection", "joint-design"]
+      },
+      {
+        "flow_name": "wps-development",
+        "description": "Develop the Welding Procedure Specification (WPS) with essential variables, non-essential variables, and supplementary essential variables per the governing code.",
+        "inputs": [
+          {"name": "selected-process", "desc": "Welding process and its operating envelope"},
+          {"name": "joint-configuration", "desc": "Joint geometry and dimensions"}
+        ],
+        "outputs": [
+          {"name": "wps-document", "desc": "Complete WPS with preheat, interpass temperature, heat input limits, travel speed, electrode specification, shielding gas, and technique details"},
+          {"name": "pqr-test-plan", "desc": "Procedure Qualification Record test plan: weld coupon dimensions, mechanical tests (tensile, bend, impact, hardness), and acceptance criteria"}
+        ],
+        "process": [
+          "Set preheat temperature. For carbon steel, calculate from the carbon equivalent (CE = C + Mn/6 + (Cr+Mo+V)/5 + (Ni+Cu)/15). CE above 0.45 requires preheat. AWS D1.1 Table 3.3 provides minimum preheat by thickness and CE. For high-strength steels, also calculate the critical hydrogen content to avoid hydrogen-assisted cracking using the Yurioka CEN method or comparable.",
+          "Set interpass temperature maximum. For carbon and low-alloy steels, typically 250-315C depending on the application (lower for quenched and tempered steels to avoid HAZ softening). For austenitic stainless steels, typically 150-175C maximum to avoid sensitization. For duplex stainless steels, 150C maximum to maintain the austenite/ferrite phase balance.",
+          "Calculate the heat input range. Heat input (kJ/mm) = (V * A * 60) / (S * 1000) where V is voltage, A is current, S is travel speed in mm/min. Apply the thermal efficiency factor (0.6 for GTAW, 0.8 for GMAW, 1.0 for SAW). Maximum heat input is limited by HAZ grain growth (which reduces toughness). Minimum heat input is limited by the need to achieve full fusion and avoid hydrogen cracking.",
+          "Specify the shielding gas. For GTAW of carbon steel and stainless: pure argon for root, argon with 2% CO2 or O2 additions for GMAW of carbon steel. For aluminum GMAW: pure argon or Ar/He mixtures (helium increases arc energy for thicker sections). Back-purge with argon for stainless steel and reactive metals to prevent root oxidation.",
+          "Document the WPS on the standard form (AWS QC-7 or ASME format). List all essential variables. Prepare a PQR test coupon that represents the production joint (same P-number, thickness range, position). The coupon must be tested per code: tensile test across the weld (strength must meet base metal minimum), guided bend tests (face and root bends, no open defects over 3mm), and impact testing if required (CVN at the specified temperature for the weld metal and HAZ)."
+        ],
+        "tags": ["welding", "wps", "qualification"]
+      },
+      {
+        "flow_name": "weld-distortion-and-residual-stress",
+        "description": "Predict and mitigate welding distortion and residual stress through sequence planning, fixturing, and post-weld treatment selection.",
+        "inputs": [
+          {"name": "wps-document", "desc": "Welding parameters including heat input and pass sequence"},
+          {"name": "joint-configuration", "desc": "Joint geometry and structural assembly details"}
+        ],
+        "outputs": [
+          {"name": "distortion-mitigation-plan", "desc": "Weld sequence, fixturing requirements, pre-set (pre-camber) values, and intermediate stress relief points"},
+          {"name": "residual-stress-assessment", "desc": "Expected residual stress distribution and selected mitigation method (PWHT, mechanical stress relief, or as-welded with justification)"}
+        ],
+        "process": [
+          "Estimate shrinkage. Transverse shrinkage of a butt weld is approximately 0.3-1.5mm depending on thickness and groove angle. Longitudinal shrinkage is approximately 0.5-1mm per meter of weld. Angular distortion of a single-V butt weld is roughly 1-5 degrees depending on plate thickness and heat input. Use these estimates to set pre-camber or pre-set values.",
+          "Plan the weld sequence to balance heat input symmetrically. Weld from the center outward to allow shrinkage toward the center. Alternate sides of a double-V groove. For long welds, use the backstep technique (weld short segments in the reverse direction of overall progression) to distribute shrinkage. For closed structures (frames, box beams), plan the sequence to close the last joint where distortion can be accommodated.",
+          "Design fixturing to restrain distortion during welding. Strongbacks for butt joints, clamps and tack welds for positioning. The restraint must be stiff enough to control distortion but not so rigid that it causes cracking in the weld or HAZ (especially for high-strength or crack-sensitive materials). Release restraint gradually after the weld cools to prevent springback-induced cracking.",
+          "Post-weld heat treatment (PWHT) when required. ASME VIII mandates PWHT for carbon steel above certain thicknesses (typically 19mm for P-No. 1). Typical PWHT for carbon steel: 600-650C for 1 hour per 25mm of thickness. Heating and cooling rates must be controlled (typically 55-220 C/hr depending on thickness) to avoid thermal gradients that create new residual stress. Alternatives to furnace PWHT: local PWHT (electric resistance heating blankets, verify the soak band covers the HAZ), mechanical stress relief (vibratory, proof loading), or design with fatigue improvement techniques (toe grinding, TIG dressing, peening) instead of PWHT."
+        ],
+        "tags": ["welding", "distortion", "residual-stress"]
+      },
+      {
+        "flow_name": "weld-inspection-acceptance",
+        "description": "Select and apply weld inspection methods with acceptance criteria per the governing code, covering both surface and volumetric examination.",
+        "inputs": [
+          {"name": "wps-document", "desc": "WPS with joint type and quality requirements"},
+          {"name": "service-requirements", "desc": "Design code and acceptance criteria level"}
+        ],
+        "outputs": [
+          {"name": "inspection-results", "desc": "NDE results for each weld with accept/reject determination per the applicable acceptance criteria"},
+          {"name": "repair-plan", "desc": "Repair procedures for any rejected indications, including excavation method, re-weld procedure, and re-inspection requirements"}
+        ],
+        "process": [
+          "Visual inspection (VT) on 100% of welds. Check for undercut, overlap, incomplete fusion, crater cracks, porosity, and dimensional compliance (leg size, throat, reinforcement height). VT before, during (for multi-pass welds), and after welding. VT catches 60-80% of significant defects when performed by a qualified inspector.",
+          "Surface examination: magnetic particle testing (MT) for ferromagnetic materials, liquid penetrant testing (PT) for non-ferromagnetic materials. MT detects surface and near-surface cracks (sensitivity to about 1mm depth). PT detects surface-breaking defects only. Apply after the weld cools below 50C and the surface is cleaned. For fatigue-critical joints, PT or MT the root side if accessible.",
+          "Volumetric examination: radiographic testing (RT) or ultrasonic testing (UT). RT provides a permanent film record and is well-suited for detecting volumetric defects (porosity, slag inclusions) in butt welds. UT is better for planar defects (lack of fusion, cracks) and can inspect fillet welds that are difficult to radiograph. Phased array UT (PAUT) provides encoded data and improved detection capability over conventional UT.",
+          "Apply the acceptance criteria from the code. AWS D1.1 Table 6.1 for structural steel (different criteria for statically loaded vs cyclically loaded structures). ASME VIII for pressure vessels. EN ISO 5817 quality levels B, C, D. The critical distinction: cyclic service acceptance criteria are tighter because crack-like defects that are harmless under static load become fatigue initiation sites.",
+          "Repair rejected welds by excavation (grinding or air-arc gouging) to sound metal, then re-weld per an approved repair WPS. Re-inspect the repair weld to the same criteria. Track the number of repair cycles on any single joint (typically limit to 2-3 repairs before a stress relief or full cutout is required, as repeated thermal cycles degrade HAZ properties)."
+        ],
+        "tags": ["welding", "inspection", "nde", "acceptance"]
+      },
+      {
+        "flow_name": "weld-fatigue-life-prediction",
+        "description": "Predict the fatigue life of the welded joint using the appropriate methodology for the application, from S-N curves through structural stress methods.",
+        "inputs": [
+          {"name": "joint-configuration", "desc": "Joint geometry and weld profile"},
+          {"name": "service-requirements", "desc": "Cyclic loading spectrum and target fatigue life"}
+        ],
+        "outputs": [
+          {"name": "fatigue-life-prediction", "desc": "Predicted fatigue life at the design confidence level, with identification of the critical location and failure mode"},
+          {"name": "fatigue-improvement-options", "desc": "Post-weld fatigue improvement techniques and their expected benefit factors if the as-welded life is insufficient"}
+        ],
+        "process": [
+          "Classify the weld detail per the fatigue design code. BS 7608, Eurocode 3 (EN 1993-1-9), or IIW recommendations each classify weld details into fatigue categories (FAT classes). A full-penetration butt weld ground flush is FAT 90-112. A transverse non-load-carrying fillet weld is FAT 80. A longitudinal fillet weld end is FAT 50-71. The FAT class defines the characteristic S-N curve at 2 million cycles.",
+          "Calculate the hot-spot stress or structural stress at the weld toe. The nominal stress method uses simple beam/membrane stress at the weld location multiplied by a stress concentration factor from the detail class. The hot-spot stress method (IIW) uses stress extrapolation from FEA to the weld toe using specified read-out points (0.4t and 1.0t for fine mesh, or 0.5t and 1.5t for coarse mesh, where t is plate thickness).",
+          "Apply the Palmgren-Miner damage summation for variable amplitude loading: D = sum(n_i / N_i) where n_i is the number of cycles at stress range S_i and N_i is the fatigue life at S_i from the S-N curve. Failure at D = 1.0 (use D = 0.5 for conservative design or when the loading sequence has occasional overloads that may accelerate crack growth). Extract the stress spectrum from the service load history using rainflow counting.",
+          "If the as-welded fatigue life is insufficient, evaluate improvement techniques. Toe grinding (burr or disc): typically 1.3-1.5x life improvement (removes the crack-like intrusions at the weld toe). TIG dressing: 1.5-2.5x (remelts the toe to a smooth profile and removes intrusions). Hammer peening or HFMI (high-frequency mechanical impact): 2-5x (introduces compressive residual stress at the toe). Apply the improvement factor per IIW recommendations (different factors by R-ratio and yield strength).",
+          "Report the predicted life with explicit statement of the assumptions: S-N curve source, stress calculation method, Miner's sum limit, improvement technique if applied, and the reliability level (characteristic curve is typically mean minus 2 standard deviations, approximately 95% survival probability). If the predicted life still falls short, the joint must be redesigned (e.g., change from fillet to full-penetration, or reduce the stress range by increasing the section)."
+        ],
+        "tags": ["welding", "fatigue", "structural-integrity"]
+      }
+    ]
+  },
+  {
+    "chain_name": "metallurgical-failure-analysis",
+    "description": "Investigate a metallic component failure from initial examination through fractography and metallography to root cause determination and corrective action.",
+    "domain": "materials-science",
+    "tags": ["failure-analysis", "metallurgy", "forensics", "materials"],
+    "steps": [
+      {
+        "flow_name": "failure-scene-documentation",
+        "description": "Document the failed component in its as-received condition before any cleaning or sectioning, preserving evidence of the failure mechanism.",
+        "inputs": [
+          {"name": "failed-component", "desc": "The failed part with any fragments, including service history documentation (operating hours, load history, maintenance records)"},
+          {"name": "failure-description", "desc": "Description of the failure event (sudden vs progressive, operating conditions at time of failure, any abnormal conditions preceding failure)"}
+        ],
+        "outputs": [
+          {"name": "documented-evidence", "desc": "Photographic record and dimensional measurements of the failed component in as-received condition, with fracture origin area identified"},
+          {"name": "initial-hypothesis", "desc": "Preliminary failure mechanism hypothesis based on macroscopic examination (overload, fatigue, corrosion, creep, or combination)"}
+        ],
+        "process": [
+          "Photograph the complete component from multiple angles before touching it. Include a scale reference in every image. Document the location and orientation of all fracture surfaces, cracks, wear patterns, corrosion products, and deformation. Sketch the component with dimensions and mark the fracture location relative to geometric features (holes, fillets, welds, surface transitions).",
+          "Examine the fracture surface macroscopically. Beach marks (concentric lines emanating from the origin) indicate fatigue. A flat, granular surface with no deformation indicates brittle fracture. A fibrous surface with necking indicates ductile overload. Ratchet marks at the surface indicate multiple fatigue initiation sites. Intergranular facets visible to the naked eye suggest stress corrosion cracking, creep, or hydrogen embrittlement.",
+          "Identify the fracture origin. It is the point from which all fracture features (beach marks, chevron marks, river lines) radiate. The origin is almost always at a stress concentration: a machining mark, a corrosion pit, an inclusion, a weld toe, or a design feature (sharp corner, keyway). Preserving the origin area undamaged is the single most critical step in the investigation.",
+          "Protect the fracture surfaces immediately. Do not mate the fracture halves together (this damages the microscopic evidence). Do not clean with solvents yet (corrosion products on the fracture surface are evidence). Apply a thin coat of light oil if the surfaces must be stored before SEM examination. Bag and label each piece separately."
+        ],
+        "tags": ["failure-analysis", "evidence-preservation"]
+      },
+      {
+        "flow_name": "fractographic-examination",
+        "description": "Examine the fracture surface using optical and scanning electron microscopy to identify the micro-scale failure mechanism.",
+        "inputs": [
+          {"name": "documented-evidence", "desc": "Preserved fracture surfaces with identified origin area"},
+          {"name": "initial-hypothesis", "desc": "Preliminary failure mechanism to guide the examination"}
+        ],
+        "outputs": [
+          {"name": "fracture-mechanism", "desc": "Identified microscopic fracture mechanism (transgranular cleavage, intergranular, microvoid coalescence, fatigue striations, quasi-cleavage) with supporting SEM images"},
+          {"name": "origin-characterization", "desc": "Nature of the fracture origin (inclusion, pit, machining defect, hydrogen flake, pre-existing crack) with elemental analysis if applicable"}
+        ],
+        "process": [
+          "Clean the fracture surface in stages. Start with compressed air to remove loose debris. Then ultrasonic cleaning in acetone or isopropanol. For corrosion products that must be preserved for analysis, clean only a portion of the fracture surface and leave the rest undisturbed. For surfaces heavily covered in corrosion or contamination, try replica stripping (cellulose acetate tape) before aggressive cleaning.",
+          "Examine in the SEM at increasing magnification. Start at low magnification (20-50x) to map the entire fracture surface and locate the origin area. Then increase to 200-500x to characterize the fracture morphology in the origin region, the propagation zone, and the final fracture zone. At 1000-5000x, identify the microscopic mechanism.",
+          "Interpret the fracture morphology. Dimples (microvoid coalescence) = ductile fracture. Equiaxed dimples = tensile overload. Elongated dimples = shear overload. Cleavage facets with river lines = brittle transgranular fracture. Smooth intergranular facets = grain boundary weakening (temper embrittlement, hydrogen embrittlement, creep, SCC). Fatigue striations = cyclic loading (spacing corresponds to crack growth rate per cycle). Quasi-cleavage = mixed mechanism typical of high-strength steels or hydrogen-assisted fracture.",
+          "At the origin, use energy-dispersive X-ray spectroscopy (EDS) to characterize any inclusions or foreign material. MnS inclusions (Mn + S signal) are common fatigue initiation sites in steel. Oxide inclusions (Al + O) from the steelmaking process. Corrosion pits show chloride or sulfur. Fretting debris shows oxidized base metal particles. The EDS finding links the fracture origin to the root cause."
+        ],
+        "tags": ["failure-analysis", "fractography", "sem"]
+      },
+      {
+        "flow_name": "metallographic-characterization",
+        "description": "Prepare and examine metallographic cross-sections to characterize the microstructure, hardness profile, and any degradation mechanisms in the bulk material.",
+        "inputs": [
+          {"name": "fracture-mechanism", "desc": "Identified fracture mechanism guiding where to section"},
+          {"name": "failed-component", "desc": "Material available for destructive cross-sectioning (away from the fracture surface)"}
+        ],
+        "outputs": [
+          {"name": "microstructure-report", "desc": "Metallographic images showing grain structure, phase distribution, inclusions, and any anomalies (decarburization, carburization, sensitization, hydrogen damage)"},
+          {"name": "hardness-profile", "desc": "Micro-hardness traverses across relevant features (surface to core, HAZ, case depth) with comparison to specification requirements"}
+        ],
+        "process": [
+          "Select sectioning locations to answer specific questions. Section through the fracture origin to see the crack profile and any subsurface features. Section through an unfailed area to establish the baseline microstructure. For welded components, section through the weld to characterize the weld metal, fusion line, HAZ, and base metal. Section perpendicular to any secondary cracks.",
+          "Mount, grind, and polish per standard metallographic practice (ASTM E3). Final polish with 1 or 0.05 micron alumina or colloidal silica. Etch with the appropriate reagent: 2% nital for carbon and low-alloy steels (reveals ferrite grain boundaries, pearlite, bainite, martensite). Vilella's reagent for stainless steels (reveals prior austenite grain boundaries and sensitization). Kroll's reagent for titanium (reveals alpha and beta phases).",
+          "Examine the microstructure. Compare to the material specification requirements. Look for: decarburization at the surface (loss of carbon = soft surface = fatigue initiation), abnormal grain growth (loss of toughness), sensitization in stainless steel (chromium carbide precipitation at grain boundaries = intergranular corrosion path), hydrogen damage (blistering, flaking, decarburization), improper heat treatment (wrong phase distribution, inadequate tempering).",
+          "Perform micro-hardness testing (Vickers HV0.5 or HV1) across the features of interest. For case-hardened parts, traverse from surface to core (effective case depth is defined at a specific hardness, e.g., 550 HV). For welds, traverse across weld metal, HAZ, and base metal (HAZ softening in quenched and tempered steels, HAZ hardening in as-rolled steels). Hardness above 350 HV in the HAZ of carbon steel indicates a susceptibility to hydrogen cracking."
+        ],
+        "tags": ["failure-analysis", "metallography", "microstructure"]
+      },
+      {
+        "flow_name": "root-cause-determination",
+        "description": "Synthesize all evidence into a root cause determination and formulate corrective actions that prevent recurrence.",
+        "inputs": [
+          {"name": "fracture-mechanism", "desc": "Microscopic fracture mechanism and origin characterization"},
+          {"name": "microstructure-report", "desc": "Microstructural condition and any anomalies identified"},
+          {"name": "hardness-profile", "desc": "Hardness data across the relevant features"}
+        ],
+        "outputs": [
+          {"name": "root-cause-report", "desc": "Root cause statement linking the failure mechanism to the material, manufacturing, design, or service condition that caused it, with all supporting evidence cited"},
+          {"name": "corrective-actions", "desc": "Specific corrective actions addressing the root cause, with verification method for each action"}
+        ],
+        "process": [
+          "Construct the causal chain from the physical evidence. Example: 'The component failed by fatigue (striations on the fracture surface) initiating from a corrosion pit (EDS shows chloride at the origin) on the inner surface where the coating had been damaged during assembly (witness marks adjacent to the pit). The pit grew to critical size under the service environment (warm salt water) and initiated a fatigue crack that propagated under the cyclic loading until the remaining cross-section could not support the peak load.'",
+          "Eliminate alternative hypotheses. For each plausible mechanism, check whether the physical evidence supports or contradicts it. Overload requires deformation and dimpled fracture at the origin. Fatigue requires striations. SCC requires intergranular fracture in a susceptible material and environment. Creep requires grain boundary cavitation and service at elevated temperature. If the evidence is ambiguous, state the uncertainty and what additional testing could resolve it.",
+          "Classify the root cause: design error (inadequate fatigue life, wrong material selection, insufficient corrosion protection), manufacturing defect (machining damage, heat treatment error, welding defect), maintenance error (missed inspection, incorrect repair), or abnormal service condition (overload, overtemperature, corrosive environment not anticipated). The root cause must be actionable: it must point to something that can be changed.",
+          "Formulate corrective actions tied directly to the root cause. If the root cause is a corrosion pit from coating damage: improve coating protection at the damage-prone area (design), add a handling fixture to prevent assembly damage (manufacturing), and add an inspection point for coating integrity before service (maintenance). Each corrective action must have a verification method (test, inspection, analysis) to confirm it addresses the root cause."
+        ],
+        "tags": ["failure-analysis", "root-cause", "corrective-action"]
+      }
+    ]
+  },
+  {
+    "chain_name": "heat-treatment-design",
+    "description": "Design a heat treatment process for a metallic component from phase diagram analysis through cycle definition to quality verification, targeting specific mechanical properties.",
+    "domain": "materials-science",
+    "tags": ["heat-treatment", "metallurgy", "manufacturing", "materials"],
+    "steps": [
+      {
+        "flow_name": "phase-transformation-analysis",
+        "description": "Analyze the alloy phase diagram and transformation behavior to determine the target microstructure and the heat treatment path to achieve it.",
+        "inputs": [
+          {"name": "alloy-specification", "desc": "Alloy composition (grade, specific heat), component geometry (section size, shape), and target mechanical properties (hardness, tensile strength, toughness, fatigue)"},
+          {"name": "prior-condition", "desc": "As-received condition of the material (hot-rolled, cold-drawn, cast, forged, welded) and any prior heat treatments"}
+        ],
+        "outputs": [
+          {"name": "target-microstructure", "desc": "Description of the target microstructure (phase distribution, grain size, precipitate condition) that meets the mechanical property requirements"},
+          {"name": "transformation-path", "desc": "TTT/CCT diagram interpretation showing the required heating temperature, time, and cooling rate to achieve the target microstructure for the actual section size"}
+        ],
+        "process": [
+          "Start from the equilibrium phase diagram. For steel: the Fe-C diagram gives the critical temperatures (Ac1, Ac3, Acm). The austenitizing temperature must be above Ac3 for hypoeutectoid steels (complete austenitization) or between Ac1 and Acm for hypereutectoid steels (retain some carbides to prevent grain growth and retain wear resistance). For aluminum alloys: the solvus temperature defines the solution treatment window.",
+          "Consult the TTT/CCT diagram for the specific alloy (not a generic grade). The CCT diagram is more practical because it reflects continuous cooling (actual quench behavior) rather than isothermal holds. Identify the nose of the pearlite C-curve (must cool through this temperature range faster than the nose time to avoid pearlite formation in through-hardening steels). For the specific section size, estimate the cooling rate at the center using Grossmann's method (H-value for the quenchant, D-value for the section).",
+          "Define the target microstructure. For through-hardened steel: martensite (ideally > 90% at the center for full hardness). For carburized steel: high-carbon martensite case over a tough low-carbon martensite or bainite core. For precipitation-hardened aluminum (e.g., 7075-T6): supersaturated solid solution after quench, then fine GP zones and eta-prime precipitates after aging. For duplex stainless steel: 40-60% ferrite-austenite balance with no sigma or chi phase.",
+          "Estimate the hardenability. For steel, calculate the Jominy equivalent cooling rate at the center of the actual part using Grossmann's equivalent bar diameter and the quench severity (H-value: still water H=1.0, agitated oil H=0.5, polymer quench H=0.2-0.7). The part must achieve the critical cooling rate at its slowest-cooling point to reach the target microstructure."
+        ],
+        "tags": ["heat-treatment", "phase-diagrams", "transformation"]
+      },
+      {
+        "flow_name": "heat-treatment-cycle-design",
+        "description": "Define the complete heat treatment cycle including heating rate, austenitizing/solutioning parameters, quench method, and tempering/aging conditions.",
+        "inputs": [
+          {"name": "transformation-path", "desc": "Required temperatures, times, and cooling rates from the phase transformation analysis"},
+          {"name": "alloy-specification", "desc": "Alloy grade and component geometry for thermal uniformity analysis"}
+        ],
+        "outputs": [
+          {"name": "heat-treatment-cycle", "desc": "Complete cycle specification: heating rate, soak temperature and time, quench medium and agitation, tempering/aging temperature and time, cooling method after temper"},
+          {"name": "furnace-requirements", "desc": "Furnace type (atmosphere, vacuum, salt bath), temperature uniformity class (AMS 2750), atmosphere specification, and fixturing requirements"}
+        ],
+        "process": [
+          "Set the heating rate. For carbon and alloy steels, heat slowly enough to avoid thermal gradients that cause distortion or cracking, especially for complex shapes or large sections. Rule of thumb: 1 hour per 25mm of thickness to reach the soak temperature. For sections with large thickness variations, use a step-heating approach (intermediate hold near Ac1 to equalize temperature before rapid heating through the transformation range).",
+          "Set the soak temperature and time. Austenitizing temperature: typically 30-50C above Ac3 for hypoeutectoid steels (e.g., 845-870C for 4140 steel). Higher temperatures dissolve more carbides and increase hardenability but risk grain growth. Soak time: enough for the entire cross-section to reach temperature and for carbides to dissolve. Minimum 30 minutes per 25mm of section for alloy steels. For solution treatment of aluminum, the temperature must be held within 5C of the target to avoid incipient melting.",
+          "Select the quench medium. Severity ranking: brine > water > polymer > oil > forced air > still air. Harder quench gives higher hardness but higher distortion and cracking risk. For high-alloy steels (4340, H13), oil or polymer quench is sufficient due to high hardenability. For low-alloy steels (1040, 1045), water quench may be required but carries cracking risk for complex shapes. Martempering (quench to just above Ms, equalize, then air cool) reduces distortion while still producing martensite.",
+          "Set the tempering/aging parameters. For steel tempering: the Hollomon-Jaffe parameter (T * (C + log t)) correlates tempering temperature and time to hardness for a given alloy. Typical tempering: 150-200C for high hardness (springs, bearings), 400-650C for toughness (structural components). Avoid the 260-370C tempered martensite embrittlement range for alloy steels. For aluminum aging: e.g., 7075-T6 at 120C for 24 hours (peak aged); 7075-T73 at higher temperature for longer time (overaged for stress corrosion resistance at the cost of some strength)."
+        ],
+        "tags": ["heat-treatment", "cycle-design", "quenching"]
+      },
+      {
+        "flow_name": "case-hardening-process-design",
+        "description": "Design a case hardening process (carburizing, nitriding, or induction hardening) to achieve the target case depth and surface hardness while maintaining core properties.",
+        "inputs": [
+          {"name": "alloy-specification", "desc": "Base alloy and its carburizing or nitriding response"},
+          {"name": "target-microstructure", "desc": "Target case depth, surface hardness, and core hardness requirements"}
+        ],
+        "outputs": [
+          {"name": "case-hardening-specification", "desc": "Complete case hardening process specification with atmosphere composition or power/frequency settings, time at temperature, and quench parameters"},
+          {"name": "expected-case-profile", "desc": "Predicted hardness vs depth profile showing effective case depth, total case depth, and core hardness"}
+        ],
+        "process": [
+          "Select the case hardening method. Gas carburizing for deep cases (0.5-2.5mm) on low-carbon steels (8620, 9310). Carbon diffuses into the surface at 870-950C in an endothermic atmosphere enriched to 0.8-1.0% carbon potential. Nitriding for high surface hardness without quench distortion (ion nitriding or gas nitriding at 500-580C on alloy steels containing nitride formers: Cr, Mo, V, Al). Induction hardening for localized hardening of medium-carbon steels (1045, 4140) where only specific areas need a hard case.",
+          "For carburizing: calculate the required time from Fick's second law of diffusion. The carbon concentration profile c(x,t) = cs - (cs - co) * erf(x / (2 * sqrt(D*t))) where cs is the surface carbon potential, co is the base carbon, D is the diffusion coefficient at temperature, and erf is the error function. At 925C, D for carbon in austenite is approximately 1.3 * 10^-7 cm^2/s. For a 1.0mm effective case depth (defined at 0.40% C or 550 HV), the total carburizing time is approximately 4-6 hours.",
+          "For nitriding: the case depth is much shallower (typically 0.1-0.6mm) and the process time is longer (20-80 hours at 500-580C). The compound zone (white layer) thickness must be controlled: epsilon phase for maximum hardness but brittleness, gamma-prime for a less brittle surface. Pulse plasma nitriding gives better control of the compound zone composition. Specify the maximum white layer thickness or the requirement to remove it by post-process lapping.",
+          "For induction hardening: select the frequency based on the required case depth. Higher frequency (100-400 kHz) for shallow cases (0.5-2mm). Lower frequency (1-10 kHz) for deep cases (3-10mm). The relationship is approximately: depth of current penetration = 503 * sqrt(resistivity / (frequency * permeability)). Power density drives the heating rate; the scanning speed along with power determines the austenitized depth. Quench immediately follows heating (integral quench head)."
+        ],
+        "tags": ["heat-treatment", "carburizing", "nitriding", "induction"]
+      },
+      {
+        "flow_name": "heat-treatment-quality-verification",
+        "description": "Verify that the heat treatment achieved the target properties through testing and inspection, with disposition criteria for non-conformances.",
+        "inputs": [
+          {"name": "heat-treatment-cycle", "desc": "Actual cycle run (furnace chart records, thermocouple data)"},
+          {"name": "expected-case-profile", "desc": "Predicted property values to verify against"}
+        ],
+        "outputs": [
+          {"name": "verification-results", "desc": "Hardness measurements, microstructure evaluation, mechanical test results, and dimensional check against the specification requirements"},
+          {"name": "process-records", "desc": "Complete heat treatment records (furnace charts, atmosphere logs, quench tank temperature, lot traceability) for the quality file"}
+        ],
+        "process": [
+          "Hardness testing per ASTM E18 (Rockwell) or ASTM E384 (micro-hardness). Test at the specified location on the actual part. For case-hardened parts, perform a micro-hardness traverse from surface to core (Vickers HV0.5 at 0.1mm intervals through the case, then 0.5mm intervals to the core). Compare the effective case depth to the specification.",
+          "Microstructural examination of representative samples or sacrificial test pieces processed with the production load. Verify: grain size (ASTM E112, typically ASTM 5-8 for most applications), absence of retained austenite above specification limit (typically < 15% for carburized gears by XRD), absence of intergranular oxidation (IGO) at the surface of carburized parts (IGO depth specification per the drawing, typically < 12 microns), tempered martensite without undissolved ferrite (incomplete austenitization) or free carbide networks.",
+          "Mechanical testing if required by the specification. Tensile test per ASTM E8 (round bar or flat specimen). Charpy V-notch impact test per ASTM E23 at the specified temperature. For case-hardened gears, the core hardness must also meet the minimum (typically 30-40 HRC for 8620, ensuring the core was properly quenched).",
+          "Dimensional inspection. Measure critical dimensions before and after heat treatment to quantify distortion. Growth from carburizing is typically 0.05-0.15mm per surface. Quench distortion is geometry-dependent. If distortion exceeds the tolerance, evaluate whether post-heat-treatment grinding or straightening is acceptable (straightening of hardened parts risks cracking). Verify that the part still meets the finished dimension after any planned grinding stock removal.",
+          "Archive the heat treatment records. Furnace temperature chart showing the entire cycle, atmosphere logs (carbon potential for carburizing, nitrogen flow for nitriding), quench tank temperature (must stay below the specified maximum, typically 60C for oil), load diagram (part position in the furnace), and test results tied to the lot number. Retention per the quality system (typically the life of the product plus a defined period)."
+        ],
+        "tags": ["heat-treatment", "quality", "verification"]
+      }
+    ]
+  },
+  {
+    "chain_name": "corrosion-engineering-methodology",
+    "description": "Engineer corrosion protection for a metallic system from environment characterization through material selection and protection design to inspection planning and remaining life assessment.",
+    "domain": "materials-science",
+    "tags": ["corrosion", "materials", "inspection", "integrity"],
+    "steps": [
+      {
+        "flow_name": "corrosion-environment-assessment",
+        "description": "Characterize the corrosion environment and identify the applicable corrosion mechanisms for the material-environment combination.",
+        "inputs": [
+          {"name": "operating-environment", "desc": "Temperature, pressure, chemical composition (pH, chloride, CO2, H2S, oxygen, water chemistry), flow velocity, and any cyclic conditions"},
+          {"name": "material-of-construction", "desc": "Alloy specification and condition (base metal, welds, heat-affected zones)"}
+        ],
+        "outputs": [
+          {"name": "corrosion-mechanisms", "desc": "Identified active corrosion mechanisms ranked by expected severity (general, pitting, crevice, SCC, MIC, erosion-corrosion, galvanic, hydrogen damage)"},
+          {"name": "corrosion-rate-estimate", "desc": "Estimated corrosion rates from published data, models (de Waard-Milliams for CO2, NORSOK M-506), or operating experience with similar systems"}
+        ],
+        "process": [
+          "Map the material to the environment using established corrosion diagrams. For stainless steels in chloride environments: use the pitting resistance equivalent number (PREN = Cr + 3.3Mo + 16N) and compare to the critical pitting temperature (CPT) for the chloride concentration. For carbon steel in CO2 service: calculate the CO2 partial pressure and temperature to estimate the CO2 corrosion rate using de Waard-Milliams or NORSOK M-506. For H2S service: classify by NACE MR0175/ISO 15156 (sour service limits on hardness and material).",
+          "Identify localized corrosion risks. Crevice corrosion at gaskets, flanges, tube-to-tubesheet joints (more aggressive than pitting because the crevice concentrates chloride and depletes oxygen). Galvanic corrosion at dissimilar metal connections (rank by the galvanic series in the actual environment, not the standard EMF series). Microbiologically influenced corrosion (MIC) in low-flow or stagnant water systems (sulfate-reducing bacteria produce H2S locally). Stress corrosion cracking where tensile stress + susceptible material + specific environment intersect (e.g., chloride SCC of austenitic stainless steel above 60C).",
+          "Estimate the corrosion rate from the best available data. Corrosion coupons from similar service (weight loss per ASTM G1). Published corrosion data (NACE, MTI). Models calibrated to field data. For CO2 corrosion of carbon steel, the de Waard-Milliams model gives a baseline rate corrected for pH, temperature, and flow velocity. Apply a factor of safety (typically 2-3x) to the predicted rate for design purposes to account for model uncertainty and upset conditions."
+        ],
+        "tags": ["corrosion", "environment-assessment"]
+      },
+      {
+        "flow_name": "corrosion-protection-design",
+        "description": "Design the corrosion protection system including material upgrade, coatings, cathodic protection, and chemical treatment to achieve the target design life.",
+        "inputs": [
+          {"name": "corrosion-mechanisms", "desc": "Active mechanisms and their severity ranking"},
+          {"name": "corrosion-rate-estimate", "desc": "Estimated rates for the material-environment combination"}
+        ],
+        "outputs": [
+          {"name": "protection-system", "desc": "Complete corrosion protection design: material selection/upgrade, coating system, cathodic protection, chemical inhibition, and corrosion allowance"},
+          {"name": "design-life-calculation", "desc": "Calculated component life based on the corrosion allowance and protected corrosion rate, with the inspection interval to verify"}
+        ],
+        "process": [
+          "Material selection or upgrade. If the corrosion rate on carbon steel exceeds the practical corrosion allowance (typically 3-6mm over the design life), consider upgrading to a corrosion-resistant alloy (CRA). For CO2 corrosion: 13Cr (UNS S41000) for downhole tubing below 150C and moderate chloride. For higher chloride or temperature: super duplex (UNS S32750, PREN > 40). For H2S: NACE MR0175 limits apply to hardness and yield strength.",
+          "Coating system design. For external atmospheric corrosion: surface preparation to SSPC-SP10 / ISO Sa 2.5 (near-white blast), zinc-rich primer (75-90% zinc by weight in dry film), intermediate coat (epoxy), topcoat (polyurethane for UV resistance). Total DFT typically 200-350 microns depending on corrosivity category (ISO 12944 C3 to CX). For internal linings: liquid epoxy, rubber lining, or fluoropolymer depending on the chemical environment and temperature.",
+          "Cathodic protection. For buried pipelines and marine structures: calculate the current density required to polarize the structure to the protection potential (-850 mV vs Cu/CuSO4 for steel in soil, -800 mV vs Ag/AgCl for steel in seawater). Sacrificial anodes (zinc or aluminum alloy): calculate the anode mass from the current requirement, the anode current capacity (A-h/kg), and the design life. Impressed current: calculate the rectifier output and anode ground bed design.",
+          "Chemical inhibition for internal corrosion in pipelines and vessels. Film-forming corrosion inhibitors reduce the CO2 corrosion rate by 80-95% when applied at the correct concentration (typically 5-50 ppm continuous, or batch treatment at higher concentration). Verify inhibitor effectiveness by corrosion coupon monitoring and/or electrical resistance (ER) probes or linear polarization resistance (LPR) probes. Set the residual corrosion rate target (typically below 0.1 mm/year with inhibition).",
+          "Set the corrosion allowance. For carbon steel in corrosive service: corrosion allowance = protected corrosion rate * design life + margin for upset conditions. Typical corrosion allowances range from 1.5mm (mild service, good inhibition) to 6mm (aggressive service without inhibition). The corrosion allowance determines the minimum required wall thickness: t_min = t_design + CA. For CRA, the corrosion allowance is typically zero unless localized corrosion (pitting) applies, in which case design by maximum expected pit depth."
+        ],
+        "tags": ["corrosion", "protection", "cathodic-protection", "coatings"]
+      },
+      {
+        "flow_name": "corrosion-inspection-and-life-assessment",
+        "description": "Plan the in-service corrosion inspection program and assess the remaining life of corroded components using fitness-for-service methods.",
+        "inputs": [
+          {"name": "protection-system", "desc": "Corrosion protection design and expected corrosion rates"},
+          {"name": "design-life-calculation", "desc": "Design life and inspection interval basis"}
+        ],
+        "outputs": [
+          {"name": "inspection-plan", "desc": "Corrosion monitoring locations (CMLs), inspection methods, intervals, and acceptance criteria"},
+          {"name": "remaining-life-assessment", "desc": "Fitness-for-service assessment methodology for corroded components per API 579 / BS 7910, with the calculated remaining safe operating life"}
+        ],
+        "process": [
+          "Define corrosion monitoring locations (CMLs). Place CMLs at the highest expected corrosion rate locations: bottom of horizontal vessels and piping (water dropout), downstream of flow disturbances (elbows, tees, reducers), at injection points, at the vapor-liquid interface. Minimum density: enough CMLs to characterize the worst-case condition. Group CMLs into circuits of similar corrosion behavior.",
+          "Select inspection methods. Ultrasonic thickness measurement (UT) for general and localized wall thinning (manual spot readings or automated scanning). Radiographic profile measurement for small-bore piping. Internal visual inspection during shutdowns (identify pitting, erosion patterns, MIC, coating breakdown). Long-range guided wave UT for rapid screening of piping runs. Corrosion probes (ER, LPR) for continuous online monitoring between inspections.",
+          "Calculate the remaining life. For general metal loss: remaining life = (t_actual - t_min) / corrosion rate, where t_actual is the measured minimum thickness and t_min is the required minimum thickness for pressure or structural loading per the design code. For localized corrosion (pitting, grooving), apply API 579 Part 5 / Part 6 assessment: if the remaining thickness within the corroded area exceeds the minimum required thickness calculated by the averaging rules (RSF method), the component is fit for continued service.",
+          "Set the inspection interval. The interval must be the lesser of: half the calculated remaining life, or the interval specified by the risk-based inspection (RBI) assessment. For high-consequence equipment, maximum interval is typically 5-10 years regardless of the calculated remaining life. Alert and action thresholds: if the measured corrosion rate exceeds the design basis, trigger an engineering review and increase the inspection frequency."
+        ],
+        "tags": ["corrosion", "inspection", "fitness-for-service", "api-579"]
+      }
+    ]
+  },
+  {
+    "chain_name": "casting-process-design",
+    "description": "Design a metal casting from process selection through gating and risering to solidification simulation, defect prevention, and acceptance testing.",
+    "domain": "materials-science",
+    "tags": ["casting", "foundry", "manufacturing", "metallurgy"],
+    "steps": [
+      {
+        "flow_name": "casting-process-and-alloy-selection",
+        "description": "Select the casting process and alloy based on the part geometry, production volume, mechanical property requirements, and cost targets.",
+        "inputs": [
+          {"name": "part-geometry", "desc": "Part shape, dimensions, weight, wall thickness range, and tolerance requirements"},
+          {"name": "performance-requirements", "desc": "Mechanical properties (strength, ductility, hardness, fatigue, corrosion resistance), operating temperature, and production volume"}
+        ],
+        "outputs": [
+          {"name": "selected-casting-process", "desc": "Chosen process (sand, investment, die, permanent mold, centrifugal) with rationale including tolerance capability, surface finish, and production rate"},
+          {"name": "selected-alloy", "desc": "Alloy specification with castability characteristics (fluidity, shrinkage, hot tearing susceptibility) and expected as-cast and heat-treated properties"}
+        ],
+        "process": [
+          "Match process to requirements. Sand casting: lowest tooling cost, no practical size limit, roughest surface (Ra 12-25 microns), widest tolerance (CT 9-12 per ISO 8062). Investment casting: finest detail and surface finish (Ra 1.6-6.3 microns), tightest tolerance (CT 5-7), economic for complex shapes in low to moderate volume. Die casting (high pressure): highest production rate (100-1000+ parts/hour), excellent repeatability, limited to low-melting alloys (Al, Zn, Mg), porosity from trapped air limits pressure-tightness and heat treatability. Permanent mold: intermediate between sand and die casting for aluminum alloys.",
+          "Select the alloy. For aluminum: A356 (AlSi7Mg) is the workhorse with good castability and mechanical properties after T6 heat treatment (UTS 260-310 MPa, elongation 3-8%). A357 for higher strength. 319 for complex automotive castings. For iron: ductile iron (EN-GJS-400-18, GGG40) for strength and ductility. Gray iron (EN-GJL-250) for vibration damping and wear resistance. For steel: CF8M (316 SS equivalent) for corrosion resistance. WCB (carbon steel) for structural castings. For copper: C83600 (leaded red brass) for pressure-tight valve bodies.",
+          "Evaluate castability. Fluidity determines the minimum wall thickness (typically 3-4mm for aluminum sand casting, 1-2mm for investment casting, 0.5-1mm for zinc die casting). Shrinkage determines the risering difficulty (aluminum shrinks 5-7% volumetrically, steel 7-10%). Hot tearing susceptibility depends on the solidification range and the alloy's ability to accommodate contraction strain (wider freezing range = higher hot tear risk).",
+          "Estimate the cost. The total casting cost = tooling amortization + material (metal weight including gates/risers / pour yield, typically 40-70%) + processing (mold making, melting, pouring, shakeout, finishing) + inspection + scrap rate. For low volume (1-100), sand or investment casting. For high volume (10,000+), die casting or permanent mold for aluminum, green sand for iron."
+        ],
+        "tags": ["casting", "process-selection", "alloy-selection"]
+      },
+      {
+        "flow_name": "gating-and-risering-design",
+        "description": "Design the gating system for mold filling and the risering system for feeding solidification shrinkage, using analytical methods and solidification principles.",
+        "inputs": [
+          {"name": "selected-casting-process", "desc": "Process type and mold material"},
+          {"name": "part-geometry", "desc": "Casting geometry with section thicknesses and thermal centers identified"}
+        ],
+        "outputs": [
+          {"name": "gating-system", "desc": "Pouring basin, sprue, runner, and ingate design with dimensions calculated from fill time and flow rate requirements"},
+          {"name": "riser-design", "desc": "Riser locations, dimensions (diameter, height), and necking calculated from the solidification modulus method to ensure directional solidification toward the risers"}
+        ],
+        "process": [
+          "Calculate the required fill time. For steel castings: t = K * sqrt(W) where K is an empirical constant (1.0-1.5 for thin sections, 1.5-2.5 for thick) and W is the casting weight in kg. For aluminum: similar approach with adjustments for the lower pouring temperature. The fill time must be short enough to prevent premature solidification of thin sections but slow enough to avoid turbulence and mold erosion.",
+          "Design the gating system from top to bottom using Bernoulli's equation. The sprue is tapered to prevent aspiration (top area / bottom area = sqrt(H_bottom / H_top) where H is the head of metal). The runner system distributes metal to the ingates. Use a pressurized system (sprue:runner:ingate ratio of 1:0.8:0.6) for ferrous metals to minimize turbulence, or an unpressurized system (1:1.1:1.2) for aluminum to minimize velocity and oxide entrainment.",
+          "Identify the thermal centers (locations that solidify last) using the solidification modulus method. The modulus M = V/A (volume / cooling surface area) for each section of the casting. The thermal center of each section is the location with the highest modulus. Shrinkage porosity forms at the thermal center unless it is fed by a riser with a higher modulus.",
+          "Size the risers so that each riser solidifies after the section it feeds. The riser modulus must be at least 1.2x the modulus of the fed section (Mr > 1.2 * Mc). Use Chvorinov's rule: solidification time is proportional to M^2. For cylindrical risers: the optimum height-to-diameter ratio is approximately 1.5. Add exothermic or insulating sleeves to increase the riser modulus without increasing the riser volume. The feeding distance (maximum distance a riser can feed) depends on the alloy and the section geometry (longer feeding distance for alloys with a narrow freezing range).",
+          "Add chills (external or internal) to accelerate solidification at locations where the natural solidification direction does not progress toward a riser. Chills increase the effective cooling rate locally, reducing the local modulus and directing the solidification front toward the riser."
+        ],
+        "tags": ["casting", "gating", "risering", "solidification"]
+      },
+      {
+        "flow_name": "casting-defect-prevention",
+        "description": "Predict and prevent casting defects through melt practice control, mold design adjustments, and solidification simulation verification.",
+        "inputs": [
+          {"name": "gating-system", "desc": "Designed gating system to evaluate for fill-related defects"},
+          {"name": "riser-design", "desc": "Risering system to evaluate for solidification-related defects"}
+        ],
+        "outputs": [
+          {"name": "defect-risk-assessment", "desc": "Predicted defect types and locations (shrinkage porosity, gas porosity, hot tears, misruns, inclusions, cold shuts) with risk level and mitigation"},
+          {"name": "verified-design", "desc": "Gating and risering design validated by solidification simulation showing directional solidification, no isolated hot spots, and adequate feeding"}
+        ],
+        "process": [
+          "Run solidification simulation (e.g., MAGMASOFT, ProCAST, SOLIDCast) to predict: fill pattern (verify no cold shuts or misruns), solidification sequence (verify directional solidification toward risers), shrinkage porosity location (Niyama criterion: G/sqrt(R) where G is temperature gradient and R is cooling rate; Niyama < 1.0 indicates shrinkage risk for steel), and hot spot locations (isolated regions that solidify last without riser access).",
+          "Prevent gas porosity through melt practice. For aluminum: degas with inert gas (argon or nitrogen) rotary degassing to reduce hydrogen content below 0.10 mL/100g (measure by reduced pressure test or Alscan). For steel: deoxidize with aluminum and/or silicon to reduce oxygen in the melt. For iron: control carbon equivalent and inoculation for proper graphite morphology (nodularity for ductile iron).",
+          "Prevent hot tears by avoiding casting designs with mechanical restraint during solidification contraction. Hot tears form at temperatures between solidus and the coherency point where the semi-solid material cannot accommodate strain. Fillet all internal corners (minimum fillet radius = section thickness). Avoid abrupt section transitions (taper ratio 3:1 or gentler). Add chills to control the solidification path away from restrained features.",
+          "Prevent inclusions and oxide films. For aluminum: use ceramic foam filters in the gating system (20-30 ppi for general, 50 ppi for aerospace). For steel: design the pouring basin with a dam and weir, use a submerged entry from the ladle. For all alloys: minimize turbulence in the gating system to prevent entrainment of oxide films (the gate velocity should stay below the critical velocity for the alloy, approximately 0.5 m/s for aluminum to avoid surface oxide entrainment)."
+        ],
+        "tags": ["casting", "defect-prevention", "simulation"]
+      },
+      {
+        "flow_name": "casting-inspection-acceptance",
+        "description": "Inspect the finished casting and apply acceptance criteria per the applicable standard, with disposition methodology for indications.",
+        "inputs": [
+          {"name": "verified-design", "desc": "Expected casting quality from the design and simulation"},
+          {"name": "performance-requirements", "desc": "Quality level and inspection requirements from the design code or customer specification"}
+        ],
+        "outputs": [
+          {"name": "inspection-results", "desc": "Results of visual, dimensional, radiographic, and surface NDE with accept/reject determination per the applicable standard"},
+          {"name": "casting-disposition", "desc": "Disposition of each indication (accept as-is, weld repair, scrap) with engineering substantiation"}
+        ],
+        "process": [
+          "Visual inspection per ASTM A802/MSS SP-55 for steel castings, or the applicable standard for the alloy. Check for surface discontinuities (shrinkage, porosity, sand inclusions, hot tears, cold shuts), dimensional compliance (draft angles, machining stock, flatness), and surface finish. Visual inspection by a qualified Level II or III inspector.",
+          "Radiographic inspection per ASTM E446 (steel), ASTM E155 (aluminum), or ASTM E192 (investment castings). Compare the radiograph to the reference radiograph standard and grade each indication by severity. The acceptable grade depends on the application: ASTM E446 Level 1-2 for high-integrity structural or pressure castings, Level 3-5 for less critical applications. Digital radiography provides immediate results and easier archival.",
+          "Surface NDE: magnetic particle testing (MT) for ferromagnetic castings per ASTM E125 reference photographs. Liquid penetrant testing (PT) for non-ferromagnetic castings per ASTM E433. Acceptance criteria by ASME section V or the customer specification. Pay attention to areas of geometric complexity where casting defects concentrate (fillets, junctions, thin-to-thick transitions).",
+          "Mechanical testing of separately cast test bars or test coupons attached to the casting (keel blocks). Tensile test per ASTM E8. Impact test per ASTM E23 if required. Hardness per ASTM E10 (Brinell). Compare to the alloy specification minimum requirements. For ductile iron, also verify nodularity and nodule count by metallographic examination per ASTM A247.",
+          "Disposition non-conformances. Weld repair of casting defects is common but must follow a qualified weld repair procedure per the applicable code (ASME, AWS D15.1 for railroad, AMS 2175 for aerospace). Excavate the defect completely (verify by MT or PT before welding). Post-weld heat treatment if required by the original casting specification. Re-inspect the repair area to the same criteria as the original casting."
+        ],
+        "tags": ["casting", "inspection", "acceptance", "nde"]
+      }
+    ]
+  },
+  {
+    "chain_name": "precision-machining-methodology",
+    "description": "Optimize a precision machining process from cutting parameter selection through tool life management to process capability verification.",
+    "domain": "materials-science",
+    "tags": ["machining", "manufacturing", "precision", "cutting"],
+    "steps": [
+      {
+        "flow_name": "cutting-parameter-optimization",
+        "description": "Select and optimize cutting parameters (speed, feed, depth of cut) for the work material and operation to balance productivity, tool life, and surface quality.",
+        "inputs": [
+          {"name": "workpiece-specification", "desc": "Material (alloy, hardness, condition), geometry, required tolerances, and surface finish specification"},
+          {"name": "machine-capability", "desc": "Machine tool spindle power, speed range, rigidity, and available tooling"}
+        ],
+        "outputs": [
+          {"name": "cutting-parameters", "desc": "Optimized speed (m/min), feed (mm/rev or mm/tooth), and depth of cut for roughing and finishing operations"},
+          {"name": "expected-performance", "desc": "Predicted tool life (minutes or parts), material removal rate (cm^3/min), surface roughness, and cutting forces"}
+        ],
+        "process": [
+          "Start from the tool manufacturer's recommended cutting data for the work material and tool grade. For turning: cutting speed V in m/min, feed f in mm/rev, depth of cut ap in mm. For milling: cutting speed V, feed per tooth fz in mm/tooth, axial depth ap, radial depth ae. These starting parameters are conservative estimates for stable cutting.",
+          "Apply the Taylor tool life equation: VT^n = C, where T is tool life in minutes, n is the Taylor exponent (0.2-0.5 for carbide, 0.1-0.2 for HSS), and C is a constant for the material-tool combination. Reducing speed by 20% approximately doubles tool life for carbide. Optimize for minimum cost per part: the economic cutting speed balances tool change time and tool cost against the cutting time at higher speed.",
+          "Calculate the required spindle power: P (kW) = Fc * V / (60,000 * eta), where Fc is the tangential cutting force (N) = kc * ap * f (kc is the specific cutting force for the material, typically 1500-3000 N/mm^2 for steel, 700-1200 for aluminum), and eta is the machine efficiency (0.7-0.9). The machine must have sufficient power for the roughing parameters.",
+          "Predict the surface roughness. For turning with a round-nose tool: Ra (theoretical) = f^2 / (32 * r_nose) where r_nose is the tool nose radius. The actual Ra is typically 1.5-3x the theoretical due to built-up edge, vibration, and material smearing. For milling: Ra depends on feed per tooth, cutter geometry, and axial depth. For grinding: Ra is determined by wheel grit size, dress parameters, and table speed.",
+          "Check for chatter stability. The critical depth of cut for chatter depends on the dynamic stiffness of the machine-tool-workpiece system and the specific cutting force of the material. Use the stability lobe diagram if available (measured from tap tests on the actual setup). If chatter occurs at the desired parameters, adjust: reduce depth of cut, change speed to a stable lobe, increase tool overhang stiffness, or add damping."
+        ],
+        "tags": ["machining", "cutting-parameters", "optimization"]
+      },
+      {
+        "flow_name": "tool-selection-and-management",
+        "description": "Select the cutting tool geometry, coating, and grade for the operation, and establish the tool life monitoring and replacement strategy.",
+        "inputs": [
+          {"name": "cutting-parameters", "desc": "Optimized speed, feed, and depth of cut"},
+          {"name": "workpiece-specification", "desc": "Material being machined and operation type"}
+        ],
+        "outputs": [
+          {"name": "tool-specification", "desc": "Insert geometry (CNMG, WNMG, etc.), grade (substrate + coating), chipbreaker selection, and tool holder specification"},
+          {"name": "tool-management-plan", "desc": "Tool life criterion (flank wear limit, surface finish degradation, dimensional drift), replacement strategy (fixed interval or condition-based), and preset/offset procedure"}
+        ],
+        "process": [
+          "Select the insert grade (substrate + coating) for the work material. For steel turning: CVD-coated carbide (TiCN + Al2O3 + TiN multilayer) for general purpose. PVD-coated for finishing (sharper edge, thinner coating). Cermet for high-speed finishing of steel (excellent surface finish). For stainless steel: PVD-coated carbide with a sharp geometry to reduce work hardening. For nickel alloys (Inconel): uncoated or PVD-coated carbide with high cobalt content for thermal resistance, or ceramic inserts (SiAlON, whisker-reinforced alumina) at much higher speeds.",
+          "Select the insert geometry. Negative rake inserts (CNMG, WNMG, SNMG) for roughing (strongest edge, double-sided = more cutting edges). Positive rake inserts (CCMT, DCMT) for finishing (lower cutting forces, better surface finish). The nose radius affects both strength and surface finish: larger radius = stronger edge and smoother finish but higher radial force. Chipbreaker selection: open for roughing (heavy feed), medium for general purpose, close for finishing (light feed).",
+          "Set the tool life criterion. For roughing: flank wear VB_max = 0.3mm or notch wear VN = 0.6mm. For finishing: the tool is replaced when the surface finish exceeds the specification or the dimensional drift exceeds the tolerance band. Measure the dimensional drift trend by SPC to establish the predictable tool wear pattern and set the replacement interval conservatively within the drift envelope.",
+          "Establish the tool presetting procedure. Measure tool length and diameter offsets on a tool presetter (off-machine measurement) to minimize setup time. For precision work, perform a test cut and adjust the offset based on the measured dimension. For CNC machines, use tool wear compensation to automatically adjust the offset as the tool wears (step adjustment per part or continuous compensation from in-process measurement)."
+        ],
+        "tags": ["machining", "tooling", "tool-management"]
+      },
+      {
+        "flow_name": "process-capability-verification",
+        "description": "Verify that the machining process is capable of consistently producing parts within specification through statistical analysis and measurement system evaluation.",
+        "inputs": [
+          {"name": "cutting-parameters", "desc": "Finalized machining parameters"},
+          {"name": "workpiece-specification", "desc": "Dimensional tolerances and surface finish requirements to verify capability against"}
+        ],
+        "outputs": [
+          {"name": "capability-assessment", "desc": "Process capability indices (Cp, Cpk) for each critical dimension, with histogram and control chart data"},
+          {"name": "measurement-system-analysis", "desc": "Gage R&R results for the measurement system used to assess capability (acceptable if %GRR < 10% of tolerance for critical dimensions, < 30% for non-critical)"}
+        ],
+        "process": [
+          "First validate the measurement system. Perform a gage R&R study (AIAG MSA method) with 10 parts, 3 operators, 3 repeats. Calculate %GRR as a percentage of the tolerance. If %GRR > 30%, the measurement system is inadequate; improve the gage before assessing process capability. For CMM measurements, verify the probe qualification, fixturing repeatability, and thermal compensation.",
+          "Run a capability study. Machine a minimum of 30 consecutive parts under normal production conditions (include tool changes, reloads, thermal variations). Measure each critical dimension. Calculate Cp = (USL - LSL) / (6 * sigma) and Cpk = min((USL - mean) / (3 * sigma), (mean - LSL) / (3 * sigma)). For most manufacturing: Cpk > 1.33 is acceptable, Cpk > 1.67 for safety-critical dimensions, Cpk > 2.0 for zero-defect targets.",
+          "If Cpk is below target, diagnose the cause. Low Cp (process variation too wide): investigate sources of variation (thermal drift, tool wear, fixture clamping variation, material hardness variation, spindle bearing play). Low Cpk with adequate Cp (process not centered): adjust the tool offset to center the process. Use X-bar and R control charts to distinguish between common cause and special cause variation.",
+          "Implement ongoing process control. Set SPC control limits from the capability study data. Monitor key dimensions on a control chart basis (every nth part, or 100% for critical characteristics). Define the control plan: measurement method, frequency, sample size, reaction plan for out-of-control conditions. For high-precision work (tolerances below 10 microns), environmental control (temperature within 1C of 20C) and warm-up protocols (run the machine for 30+ minutes before production) are required."
+        ],
+        "tags": ["machining", "capability", "spc", "quality"]
+      }
+    ]
+  },
+  {
+    "chain_name": "semiconductor-fabrication-methodology",
+    "description": "Design a semiconductor fabrication process module from lithography through etch and deposition to defect management and yield optimization.",
+    "domain": "materials-science",
+    "tags": ["semiconductor", "fabrication", "lithography", "process-integration"],
+    "steps": [
+      {
+        "flow_name": "lithography-process-design",
+        "description": "Design the lithography process step for pattern definition including resist selection, exposure conditions, and resolution enhancement techniques.",
+        "inputs": [
+          {"name": "design-rules", "desc": "Minimum feature size (critical dimension), pitch, and overlay requirements for the layer being patterned"},
+          {"name": "available-equipment", "desc": "Lithography platform (ArF immersion 193nm, EUV 13.5nm, i-line 365nm) and its optical parameters (NA, partial coherence)"}
+        ],
+        "outputs": [
+          {"name": "lithography-recipe", "desc": "Complete lithography recipe: resist type and thickness, soft bake, exposure dose and focus, PEB, develop time, and any resolution enhancement techniques"},
+          {"name": "process-window", "desc": "Exposure-defocus (ED) window showing the common depth of focus across the critical features, with the process margin for dose and focus variation"}
+        ],
+        "process": [
+          "Calculate the resolution limit: R = k1 * lambda / NA, where lambda is the wavelength, NA is the numerical aperture, and k1 is the process factor (theoretical minimum 0.25 for single exposure, practical minimum 0.3-0.4). For 193nm immersion with NA = 1.35: minimum half-pitch approximately 38nm at k1 = 0.27 (requires multiple patterning). For EUV at 13.5nm with NA = 0.33: minimum half-pitch approximately 13nm at k1 = 0.32.",
+          "Select the resist. For advanced nodes: chemically amplified resist (CAR) for ArF, metal oxide or CAR for EUV. Resist thickness follows the aspect ratio limit (height / width < 3:1 to avoid pattern collapse). For fine features, thinner resist (50-100nm for sub-50nm features) with hard mask underneath. Characterize the resist contrast curve (remaining thickness vs log dose) to determine the optimal exposure dose (dose to clear for positive resist, dose to print for the target CD).",
+          "Apply optical proximity correction (OPC) to the mask. Sub-resolution assist features (SRAFs) improve the depth of focus for isolated features. Serif and hammerhead corrections for line-end pullback and corner rounding. Inverse lithography technology (ILT) for the most critical layers. Verify the OPC by aerial image simulation and check the mask error enhancement factor (MEEF): MEEF = (delta_CD_wafer / delta_CD_mask) * (1/M) where M is the reduction ratio (typically 4x).",
+          "Measure the process window. Expose a focus-exposure matrix (FEM) on a test wafer. Measure the CD at each dose-focus combination. Plot the Bossung curves (CD vs focus at constant dose). The usable process window is the overlap of all features being within their CD specification across the dose and focus range. Minimum acceptable depth of focus is typically 100-200nm for ArF immersion (must accommodate wafer topography, focus error, and tilt)."
+        ],
+        "tags": ["semiconductor", "lithography", "patterning"]
+      },
+      {
+        "flow_name": "etch-process-design",
+        "description": "Design the plasma etch process for pattern transfer from the resist into the target film, achieving the required profile, selectivity, and uniformity.",
+        "inputs": [
+          {"name": "lithography-recipe", "desc": "Resist pattern with CD and profile to be transferred"},
+          {"name": "film-stack", "desc": "Target film and underlying layers to etch through (material, thickness) with selectivity requirements"}
+        ],
+        "outputs": [
+          {"name": "etch-recipe", "desc": "Etch chemistry (gas mixtures, pressures, power levels), endpoint detection method, and over-etch strategy"},
+          {"name": "etch-performance", "desc": "Achieved etch rate, selectivity to mask and underlayer, CD bias, profile angle, uniformity, and loading effects"}
+        ],
+        "process": [
+          "Select the etch chemistry from the material. Silicon and polysilicon: Cl2/HBr-based (Cl2 for high rate, HBr for selectivity to oxide and profile control, add O2 for sidewall passivation). Silicon dioxide: C4F8/Ar/O2 (fluorocarbon polymer deposition on the sidewall provides anisotropy, O2 removes excess polymer, Ar provides ion bombardment for vertical etch). Silicon nitride: CH2F2/O2 or CHF3/O2 (selective to oxide by tuning the C:F ratio). Metals (TiN, W): Cl2/BCl3 for TiN, SF6/Cl2 for W.",
+          "Balance anisotropy and selectivity. Anisotropic etching requires a passivation mechanism on the sidewall (polymer deposition from fluorocarbon gases, or oxidation from O2 addition to chlorine chemistry). Higher ion energy (higher bias power) improves anisotropy but reduces selectivity (the mask etches faster). Lower pressure increases ion directionality (more anisotropic) but may increase ion damage to the underlayer.",
+          "Implement endpoint detection. Optical emission spectroscopy (OES): monitor the emission line of a volatile etch product (e.g., CO for oxide etch in fluorocarbon, SiCl for silicon etch in chlorine). When the target film is consumed, the etch product signal drops (endpoint). Set the over-etch time as a percentage of the main etch time (typically 20-50%) to clear residual material from topographic features and compensate for across-wafer uniformity variation.",
+          "Characterize the etch performance. Measure CD bias (CD_after_etch minus CD_after_litho, including any trim steps). Profile angle by SEM cross-section (target 88-90 degrees for vertical profile). Selectivity = etch rate of target / etch rate of mask (must be sufficient for the mask to survive the entire etch plus over-etch). Uniformity: measure the etch rate at 49 or more points across the wafer (target 3-sigma uniformity below 3%)."
+        ],
+        "tags": ["semiconductor", "etch", "plasma"]
+      },
+      {
+        "flow_name": "thin-film-deposition-design",
+        "description": "Design the thin film deposition process for the required film (dielectric, metal, or barrier) with target thickness, composition, and conformality.",
+        "inputs": [
+          {"name": "film-requirements", "desc": "Target film material, thickness, electrical properties (resistivity, dielectric constant, breakdown voltage), and step coverage requirements"},
+          {"name": "thermal-budget", "desc": "Maximum process temperature allowed by the device structure (especially for back-end-of-line processes with low-k dielectrics or metal interconnects)"}
+        ],
+        "outputs": [
+          {"name": "deposition-recipe", "desc": "Deposition method (PVD, CVD, ALD, electroplating) with process parameters (temperature, pressure, gas flows, power, pulse timing)"},
+          {"name": "film-characterization", "desc": "Measured film properties: thickness and uniformity (by ellipsometry or XRR), composition (by XPS or RBS), resistivity (by four-point probe), stress (by wafer bow), and step coverage (by SEM cross-section)"}
+        ],
+        "process": [
+          "Select the deposition method from the conformality requirement. PVD (sputtering) for blanket metal films where step coverage is not critical (liner/barrier on planar surfaces, seed layers). CVD for conformal films in high-aspect-ratio features (TEOS oxide, tungsten via fill, TiN barrier). ALD for the highest conformality at sub-nm thickness control (required for films below 5nm: high-k gate dielectrics, ALD barrier layers, sub-3nm conformal coatings in extreme aspect ratios above 20:1). Electroplating for copper interconnect fill after PVD seed.",
+          "For PVD (sputtering): select the target material and sputtering gas (Ar for most metals). DC sputtering for metals, RF sputtering for insulators. Reactive sputtering (adding N2 or O2 to the Ar) for nitrides and oxides (e.g., TiN from a Ti target in Ar/N2). Ionized PVD (iPVD) for improved step coverage in high-aspect-ratio features (ions are directional, unlike neutral sputtered atoms). Typical deposition rates: 10-100 nm/min depending on power and target-substrate distance.",
+          "For CVD: select the precursor chemistry. TEOS (tetraethyl orthosilicate) + O3 for conformal oxide at moderate temperature (400-500C). PECVD SiO2 (SiH4 + N2O, 300-400C) for passivation and interlayer dielectric. PECVD SiN (SiH4 + NH3, 300-400C) for etch stop and barrier. Tungsten CVD (WF6 + H2, 300-450C) for via fill. The film properties (stress, composition, density) are sensitive to the plasma power, pressure, temperature, and gas ratio.",
+          "For ALD: define the pulse sequence. Example for Al2O3: TMA (trimethylaluminum) pulse, purge, H2O pulse, purge = 1 ALD cycle depositing approximately 0.1nm per cycle. The process temperature window (between precursor condensation at low T and precursor decomposition at high T) defines the ALD operating regime. For thermal ALD of HfO2 gate dielectric: HfCl4 + H2O at 300C. Plasma-enhanced ALD (PEALD) allows lower temperature and different film properties. Verify the saturation behavior (growth per cycle vs pulse time) to confirm true ALD mode.",
+          "Characterize the deposited film. Thickness and uniformity by spectroscopic ellipsometry (49-point map, target uniformity below 2% 3-sigma). Film composition by X-ray photoelectron spectroscopy (XPS) for stoichiometry and impurity levels. Resistivity by four-point probe (for metals and conductive films). Film stress by wafer bow measurement (Stoney equation: stress = Es * ts^2 * (1/R - 1/R0) / (6 * (1 - vs) * tf) where Es, ts, vs are substrate properties and tf is film thickness). High compressive or tensile stress can cause delamination or wafer warp."
+        ],
+        "tags": ["semiconductor", "deposition", "pvd", "cvd", "ald"]
+      },
+      {
+        "flow_name": "defect-and-yield-management",
+        "description": "Manage defect density through inspection, classification, and root cause analysis to achieve and maintain the target yield.",
+        "inputs": [
+          {"name": "etch-performance", "desc": "Etch process characterization data"},
+          {"name": "film-characterization", "desc": "Deposition process characterization data"}
+        ],
+        "outputs": [
+          {"name": "defect-density-map", "desc": "Defect density (defects/cm^2) by defect type and process step, with Pareto of top yield-limiting defect types"},
+          {"name": "yield-model", "desc": "Yield prediction from defect density using the Poisson model (Y = exp(-D0 * A)) or negative binomial model (Y = (1 + D0 * A / alpha)^(-alpha)) with the process baseline and improvement targets"}
+        ],
+        "process": [
+          "Implement inline defect inspection after each critical process step. Bright-field optical inspection (KLA 2900 series or equivalent) for patterned wafer inspection: detects particles, pattern defects, and bridging down to approximately 30nm depending on the design rule. Dark-field inspection (KLA Surfscan or equivalent) for unpatterned wafer monitoring: measures particle density and haze on bare or film-coated wafers.",
+          "Classify defects. Use automated defect classification (ADC) with SEM review of a sample from each defect bin. Common categories: particles (from process tool contamination, wafer handling), pattern defects (bridging from litho, open from etch, CD variations), film defects (pinholes, delamination, nodules), and scratch/handling damage. The Pareto of defect types by count guides the improvement priority.",
+          "Calculate the yield impact. For random defects: Y = exp(-D0 * A) where D0 is the defect density (defects/cm^2) at the critical defect size, and A is the die area. A defect must be at a critical location (on a feature, not in a field area) and large enough to cause a functional failure. The critical area analysis (from the layout) determines what fraction of the die area is sensitive to each defect type.",
+          "Root-cause and fix. Trace each high-count defect type to its process step by comparing defect maps before and after each step (defect adders per step). Particles: clean the tool (chamber clean, gas line purge), qualify hardware (o-rings, showerheads), improve wafer handling. Pattern defects: adjust litho or etch process (focus/dose, etch chemistry). Systematic defects (repeating at the same die location on every wafer): mask defect or reticle contamination, fix the mask. Track the defect density trend over time to verify that fixes are sustaining."
+        ],
+        "tags": ["semiconductor", "defects", "yield", "inspection"]
+      }
+    ]
+  },
+  {
+    "chain_name": "surface-engineering-methodology",
+    "description": "Engineer a surface modification or coating system from requirement definition through process selection and characterization to specification and quality control.",
+    "domain": "materials-science",
+    "tags": ["surface-engineering", "coatings", "tribology", "materials"],
+    "steps": [
+      {
+        "flow_name": "surface-requirement-analysis",
+        "description": "Define the surface performance requirements from the application and identify the failure modes the surface treatment must prevent.",
+        "inputs": [
+          {"name": "application-requirements", "desc": "Operating conditions (contact stress, sliding speed, temperature, corrosive media), required life, and substrate material"},
+          {"name": "failure-mode-history", "desc": "Current failure modes of uncoated or currently coated parts (wear mechanism, corrosion type, thermal damage)"}
+        ],
+        "outputs": [
+          {"name": "surface-specification-targets", "desc": "Required surface properties: hardness range, friction coefficient, wear rate, corrosion resistance, thermal stability, thickness, and adhesion"},
+          {"name": "candidate-processes", "desc": "Short list of surface modification processes capable of meeting the property targets on the substrate material"}
+        ],
+        "process": [
+          "Identify the dominant wear mechanism. Abrasive wear (hard particles sliding against the surface): need high hardness. Adhesive wear (material transfer between sliding surfaces): need low friction and chemical incompatibility. Erosive wear (particle impact): need hardness plus toughness. Fretting wear (micro-motion at contact interfaces): need a combination of hardness and solid lubricant. The wear mechanism dictates the coating property priorities.",
+          "Identify corrosion requirements. Oxidation resistance at temperature (need a stable oxide former: alumina from Al, chromia from Cr). Aqueous corrosion resistance (need a barrier coating or cathodic protection). Hot corrosion (sulfate/vanadate attack at 700-900C): need MCrAlY or diffusion aluminide coatings. Hydrogen permeation resistance: need a dense barrier (TiN, TiAlN, or DLC).",
+          "Identify process compatibility with the substrate. PVD and CVD work on most substrates but require vacuum. PVD at 200-500C is compatible with tempered steel (no softening if below tempering temperature). CVD at 800-1000C is limited to substrates that tolerate the temperature (HSS, cemented carbide, ceramics). Thermal spray at atmospheric pressure deposits thick coatings (50-500 microns) but with porosity and lower adhesion. Electroplating is substrate-chemistry dependent. Nitriding modifies the substrate surface directly (no separate coating layer).",
+          "Short-list 2-3 candidate processes that meet both the property and the process compatibility requirements. For cutting tools: PVD TiAlN or AlCrN for general-purpose, CVD Al2O3 + TiCN for indexable inserts, DLC for non-ferrous machining. For wear-resistant machine components: hard chromium electroplating (being replaced due to Cr(VI) regulations), thermal spray (HVOF WC-Co), or PVD CrN. For corrosion-resistant fasteners: zinc-nickel electroplating, or PVD CrN."
+        ],
+        "tags": ["surface-engineering", "requirements", "wear-mechanisms"]
+      },
+      {
+        "flow_name": "coating-process-design",
+        "description": "Design the coating deposition process including surface preparation, deposition parameters, and post-treatment to achieve the target properties.",
+        "inputs": [
+          {"name": "candidate-processes", "desc": "Short-listed processes from the requirements analysis"},
+          {"name": "surface-specification-targets", "desc": "Target properties for the coating"}
+        ],
+        "outputs": [
+          {"name": "coating-process-specification", "desc": "Complete process specification: surface preparation, deposition parameters (temperature, pressure, power, gas composition, rotation), post-treatment, and expected properties"},
+          {"name": "trial-coating-results", "desc": "Properties of the trial coating measured on test coupons (hardness, adhesion, thickness, composition, residual stress)"}
+        ],
+        "process": [
+          "Surface preparation. Clean the substrate to remove all contaminants (ultrasonic cleaning in alkaline solution, rinse in DI water, dry). For PVD: sputter etch in the vacuum chamber (Ar ion bombardment at 500-1000V bias for 5-30 minutes) to remove the native oxide and activate the surface. For thermal spray: grit blast to Sa 3 (white metal) with angular alumina (grit size per the coating specification, typically 24-60 mesh) to create anchor tooth profile (Ra 5-15 microns). For electroplating: acid activation per the plating specification.",
+          "For PVD (cathodic arc or magnetron sputtering): select the target material (Ti, Cr, Al, or alloy for reactive deposition of TiN, CrN, TiAlN, AlCrN). Set the reactive gas flow (N2 for nitrides, C2H2 for carbides/DLC). Substrate temperature (200-500C), bias voltage (-50 to -200V), and chamber pressure (0.5-5 Pa) control the coating microstructure, hardness, and residual stress. Higher bias gives denser, harder coatings but higher compressive stress (risk of delamination above 4-6 GPa for most substrates).",
+          "For HVOF thermal spray (WC-Co, Cr3C2-NiCr): select the spray gun and fuel (kerosene or hydrogen). Particle velocity (600-900 m/s for HVOF) determines the coating density and adhesion. Spray distance (200-400mm), powder feed rate, and traverse speed determine the coating thickness per pass (typically 20-50 microns per pass). Keep the substrate temperature below the tempering temperature of steel substrates (monitor with IR pyrometer during spraying).",
+          "Post-treatment. For PVD coatings on cutting tools: typically none required (the coating is used as-deposited). For thermal spray: sealing with a polymer or glass sealant to close surface-connected porosity (required for corrosion applications). For electroplated chromium: baking at 190C for 4+ hours to desorb hydrogen and prevent hydrogen embrittlement of high-strength steel substrates (mandatory per ASTM B850 / AMS 2759/9 for steels above 1000 MPa tensile strength).",
+          "Trial coating on test coupons (same material and surface condition as the production parts). Measure: hardness by nanoindentation (ISO 14577, indent depth less than 10% of coating thickness to avoid substrate influence), adhesion by scratch test (ISO 20502, report Lc2 critical load), thickness by calotest (ball cratering) or cross-section SEM, composition by EDS or GD-OES, and residual stress by the substrate curvature method (Stoney equation) or XRD sin-squared-psi method."
+        ],
+        "tags": ["surface-engineering", "coating-deposition", "pvd", "thermal-spray"]
+      },
+      {
+        "flow_name": "coating-performance-validation",
+        "description": "Validate the coating performance through tribological testing, corrosion testing, and field trial correlation to confirm that it meets the application requirements.",
+        "inputs": [
+          {"name": "trial-coating-results", "desc": "Measured properties of the trial coating"},
+          {"name": "application-requirements", "desc": "Operating conditions and target life"}
+        ],
+        "outputs": [
+          {"name": "performance-test-results", "desc": "Tribological test results (friction coefficient, wear rate, wear mechanism), corrosion test results, and any accelerated life test data"},
+          {"name": "coating-specification-document", "desc": "Final coating specification for procurement or in-house production, including all acceptance criteria and inspection methods"}
+        ],
+        "process": [
+          "Tribological testing. Pin-on-disc (ASTM G99) for sliding wear: measure the friction coefficient and specific wear rate (mm^3 / N*m) against the specified counter-body material at the relevant speed, load, and temperature. Block-on-ring (ASTM G77) for conforming contact. Reciprocating ball-on-flat (ASTM G133) for fretting or oscillating applications. The test conditions must approximate the application conditions; wear mechanisms change with contact pressure and temperature, so a test at the wrong conditions gives misleading data.",
+          "Corrosion testing. Neutral salt spray (ASTM B117) for general atmospheric corrosion resistance (number of hours to red rust or white rust). Electrochemical testing (potentiodynamic polarization per ASTM G5) for quantitative comparison of coatings (corrosion potential, corrosion current density, pitting potential). Immersion testing in the actual service fluid at temperature for process equipment coatings. The test duration and conditions must be relevant to the application; a 500-hour salt spray test on an automotive fastener is meaningful, but on a downhole tool it is not.",
+          "Accelerated life testing where feasible. For cutting tools: run the coated tool in the actual machining operation and measure tool life vs the uncoated or current-coating baseline. For wear components: run a bench test that simulates the actual duty cycle at accelerated frequency or load. Correlate the accelerated test results to field life using the known acceleration factor or by comparison to field data from the current coating.",
+          "Write the coating specification. Include: coating material and composition, thickness range, hardness range, adhesion minimum (Lc2 or Rockwell indentation per VDI 3198: HF1-HF4 acceptable, HF5-HF6 unacceptable), surface roughness after coating, visual appearance acceptance criteria, and any post-treatment requirements. Reference the applicable standards (ISO 6158 for electroplated chromium, ISO 26443 for PVD coatings, ISO 14919 for thermal spray). Define the lot acceptance test plan: which tests on every lot (thickness, hardness, adhesion on a test coupon) and which tests periodically (full characterization including composition, tribological testing)."
+        ],
+        "tags": ["surface-engineering", "tribology", "testing", "specification"]
+      }
+    ]
+  }
+]

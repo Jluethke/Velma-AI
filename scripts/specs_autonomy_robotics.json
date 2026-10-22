@@ -1,0 +1,874 @@
+[
+  {
+    "chain_name": "sensor-fusion-architecture",
+    "description": "Design a multi-sensor fusion system for autonomous platforms: select sensors by range, resolution, and weather resilience, calibrate the suite, choose a fusion architecture, implement state estimation with Kalman filter variants, and build degradation detection with graceful fallback.",
+    "domain": "robotics",
+    "tags": ["autonomy", "perception", "sensor-fusion", "state-estimation"],
+    "steps": [
+      {
+        "flow_name": "sensor-suite-selection",
+        "description": "Select sensors for the perception stack based on range, resolution, field of view, weather performance, and cost. Compare camera, lidar, radar, ultrasonic, and IMU by their operating envelopes and failure modes.",
+        "inputs": [
+          {"name": "platform-type", "desc": "Type of autonomous platform (ground vehicle, drone, marine, industrial robot)"},
+          {"name": "operating-environment", "desc": "Environmental conditions the system must handle (weather, lighting, dust, vibration)"},
+          {"name": "detection-requirements", "desc": "Required detection ranges, angular resolution, and object classes"}
+        ],
+        "outputs": [
+          {"name": "sensor-manifest", "desc": "List of selected sensors with specifications, mounting locations, and coverage zones"},
+          {"name": "coverage-gap-analysis", "desc": "Identified blind spots and environmental conditions where sensors degrade"}
+        ],
+        "process": [
+          "List detection requirements by range band: near-field (0-10m), mid-field (10-100m), far-field (100m+). For each band, identify which object classes must be detected and at what angular resolution.",
+          "Map each sensor modality to its operating envelope. Camera: high resolution but degrades in low light and direct sun; requires ISP tuning per environment. Lidar: precise 3D geometry, degrades in rain/fog/dust proportional to optical density. Radar: weather-immune for velocity and range, poor angular resolution without MIMO or scanning array. Ultrasonic: near-field only, cheap, works in all weather below 10m. IMU: self-contained motion measurement, drifts without external correction.",
+          "For each range band, select the primary and backup sensor modality. Primary provides the highest-quality data in nominal conditions. Backup covers the primary's degraded conditions. Every detection requirement must have at least two independent sensor paths.",
+          "Define mounting locations from the platform geometry. Each sensor needs clear field of view, vibration isolation appropriate to its sensitivity, thermal management if needed (lidar and camera overheat in sun), and cable routing. Document the coverage map as a polar plot showing sensor footprints overlaid.",
+          "Identify remaining coverage gaps and document them as known limitations of the sensor suite. These become inputs to the operational design domain definition."
+        ],
+        "tags": ["perception", "sensor-selection"]
+      },
+      {
+        "flow_name": "sensor-calibration-methodology",
+        "description": "Calibrate the sensor suite: intrinsic parameters for each sensor, extrinsic transforms between all sensor pairs, and temporal synchronization across the suite.",
+        "inputs": [
+          {"name": "sensor-manifest", "desc": "Selected sensors with specifications and mounting locations"},
+          {"name": "coverage-gap-analysis", "desc": "Known coverage gaps to verify after calibration"}
+        ],
+        "outputs": [
+          {"name": "calibration-parameters", "desc": "Intrinsic and extrinsic calibration results for every sensor and sensor pair"},
+          {"name": "synchronization-config", "desc": "Timing synchronization configuration including trigger scheme and latency compensation"}
+        ],
+        "process": [
+          "Intrinsic calibration for each sensor independently. Camera: checkerboard or ChArUco board, capture 30+ images at varied poses, solve for focal length, principal point, and distortion coefficients (Brown-Conrady model). Verify reprojection error below 0.5 pixels. Lidar: verify point cloud accuracy against known targets at multiple ranges, characterize range bias and angular offset. Radar: measure range and angle accuracy against corner reflectors at known positions. IMU: static bias estimation (gravity alignment), Allan variance analysis for gyro drift and accelerometer noise.",
+          "Extrinsic calibration between sensor pairs. Camera-lidar: use a planar target visible to both modalities, solve the rigid body transform (rotation and translation) by minimizing point-to-plane distance in the camera frame. Camera-radar: use corner reflectors with visual fiducials, solve for the 6-DOF transform. Camera-camera: stereo calibration with overlapping checkerboard views. Lidar-IMU: use hand-eye calibration formulation from motion sequences. Verify every transform by projecting one sensor's data into the other's frame and measuring alignment residual.",
+          "Temporal synchronization. Determine each sensor's trigger mechanism: hardware trigger (PPS from GPS), software trigger (ROS timestamp), or free-running with timestamp interpolation. Measure the latency from physical event to timestamp for each sensor. Implement a common time base using PTP (IEEE 1588) or GPS PPS. For sensors that cannot be hardware-triggered, measure and compensate for the latency offset. Verify synchronization by recording a fast-moving calibration target and checking cross-sensor temporal alignment.",
+          "Validate the full calibration by running a field test with known reference objects. Check that fused data aligns within specification: lidar points project onto camera images within 2-3 pixels, radar detections correspond to lidar clusters within one range resolution cell. Document calibration date, conditions, and residuals for every parameter."
+        ],
+        "tags": ["calibration", "sensor-fusion"]
+      },
+      {
+        "flow_name": "fusion-architecture-design",
+        "description": "Select and design the sensor fusion architecture: early fusion (raw data), mid-level fusion (feature/object level), or late fusion (decision level), based on the system's latency, accuracy, and computational constraints.",
+        "inputs": [
+          {"name": "calibration-parameters", "desc": "Calibrated sensor transforms and timing"},
+          {"name": "sensor-manifest", "desc": "Sensor suite with specifications"},
+          {"name": "detection-requirements", "desc": "Required detection performance"}
+        ],
+        "outputs": [
+          {"name": "fusion-architecture", "desc": "Selected fusion architecture with data flow diagram, processing stages, and interface definitions"},
+          {"name": "computational-budget", "desc": "Processing time allocation per fusion stage and total latency budget"}
+        ],
+        "process": [
+          "Evaluate early fusion: raw data from all sensors projected into a common representation (e.g., bird's-eye-view grid, voxel space). Advantages: the learning model sees everything and can discover cross-modal correlations. Disadvantages: high bandwidth and compute, requires tight synchronization, single model couples all sensor processing. Appropriate when compute is abundant and maximum detection performance justifies the cost.",
+          "Evaluate mid-level fusion: each sensor runs its own detection pipeline, outputs are associated and merged at the object or feature level. Camera produces 2D bounding boxes with classification. Lidar produces 3D clusters with geometry. Radar produces tracks with velocity. Association uses gating (Mahalanobis distance in measurement space) then assignment (Hungarian algorithm or GNN). Advantages: modular, each pipeline can run at its own rate, easier to diagnose failures. Disadvantages: association errors, information loss from per-sensor abstraction.",
+          "Evaluate late fusion: each sensor produces independent object tracks, a fusion node merges tracks using track-to-track association and covariance intersection or federated filtering. Advantages: simplest integration, sensors can be added or removed without redesign. Disadvantages: loses fine-grained information, association is harder at the track level, latency accumulates through per-sensor tracking.",
+          "Select the architecture from the evaluation. In practice, most production systems use mid-level fusion with early-fusion augmentation for critical detections. Define the data flow: sensor drivers, per-sensor processing pipelines, association and fusion node, output object list with uncertainties. Allocate the computational budget: total latency from sensor trigger to fused output must be within the control loop deadline (typically 50-100ms for ground vehicles at highway speed). Assign processing time to each stage."
+        ],
+        "tags": ["fusion", "architecture"]
+      },
+      {
+        "flow_name": "state-estimation-filter-design",
+        "description": "Implement state estimation using Kalman filter variants: select between EKF, UKF, and particle filter based on system nonlinearity and computational constraints, tune process and measurement noise, and validate filter performance.",
+        "inputs": [
+          {"name": "fusion-architecture", "desc": "Selected fusion architecture with data flow"},
+          {"name": "sensor-manifest", "desc": "Sensor specifications including noise characteristics"}
+        ],
+        "outputs": [
+          {"name": "filter-design", "desc": "State estimation filter implementation with state vector, process model, measurement models, and noise parameters"},
+          {"name": "filter-performance", "desc": "Estimated accuracy of state estimates (position, velocity, orientation) under nominal and degraded conditions"}
+        ],
+        "process": [
+          "Define the state vector. For a ground vehicle: position (x, y), heading, velocity, yaw rate, and optionally acceleration. For a drone: full 6-DOF pose plus velocities. For each tracked object: position, velocity, heading, dimensions, classification. The state vector size determines computational cost per filter update.",
+          "Select the filter variant. Extended Kalman Filter (EKF): linearizes nonlinear models around the current estimate using Jacobians. Fast, works well when nonlinearity is mild (small timesteps, smooth motion). Unscented Kalman Filter (UKF): propagates sigma points through the nonlinear model, avoids Jacobian computation, better accuracy for strongly nonlinear systems at 2-3x the cost of EKF. Particle filter: represents the posterior as a set of weighted samples, handles arbitrary nonlinearity and multimodal distributions, but scales poorly with state dimension (practical up to ~10 states with 1000+ particles). For most robotic platforms, EKF or UKF is sufficient for ego-state estimation. Use particle filters for global localization with ambiguous measurements.",
+          "Set process noise (Q matrix) and measurement noise (R matrix). Process noise represents unmodeled dynamics: for a constant-velocity model, Q encodes expected acceleration magnitude. Tune Q from recorded trajectory data by computing the innovation sequence and checking its whiteness (autocorrelation should be near zero). Measurement noise R comes from sensor specifications and calibration residuals. Verify consistency: the normalized innovation squared (NIS) should follow a chi-squared distribution with degrees of freedom equal to measurement dimension.",
+          "Validate filter performance against ground truth (RTK-GPS for position, motion capture for full pose in controlled environments). Compute RMS error for each state component. Check that the filter's reported covariance (P matrix) is consistent with actual errors: the estimated uncertainty should contain the actual error approximately 95% of the time at the 2-sigma level. Tune Q and R iteratively if consistency is poor."
+        ],
+        "tags": ["state-estimation", "kalman-filter"]
+      },
+      {
+        "flow_name": "sensor-degradation-detection",
+        "description": "Build sensor health monitoring and graceful degradation: detect when a sensor is providing unreliable data, switch to backup sensor paths, and communicate reduced capability to downstream systems.",
+        "inputs": [
+          {"name": "filter-design", "desc": "State estimation filter with expected measurement residuals"},
+          {"name": "fusion-architecture", "desc": "Fusion architecture with sensor data paths"},
+          {"name": "computational-budget", "desc": "Processing time allocation"}
+        ],
+        "outputs": [
+          {"name": "degradation-detection-system", "desc": "Sensor health monitoring rules, thresholds, and fallback modes for each sensor"},
+          {"name": "reduced-capability-matrix", "desc": "Map of which capabilities are lost when each sensor or sensor combination fails"}
+        ],
+        "process": [
+          "Define health metrics for each sensor. Camera: exposure histogram (saturation or underexposure), blur metric (Laplacian variance), frame drop rate, detection count consistency. Lidar: point count per scan, range noise level, return intensity consistency, self-interference detection. Radar: target count, false alarm rate, SNR trend, interference detection. IMU: bias stability monitoring, vibration spectral content, temperature drift. For each metric, establish normal operating ranges from field data.",
+          "Implement per-sensor anomaly detection. Monitor each health metric in a sliding window. Flag a sensor as degraded when any metric exceeds its threshold for more than N consecutive frames (N chosen to avoid false alarms from transient events like passing through a puddle). Flag a sensor as failed when data stops arriving or consistently fails sanity checks (e.g., lidar returns zero points, camera image is black).",
+          "Design fallback modes. For each sensor failure combination, define which detection capabilities are retained and which are lost. Single camera failure: switch to adjacent camera or lidar-only detection in that sector. Single lidar failure: camera-based 3D estimation (monocular depth) with degraded range accuracy. Radar failure: lose direct velocity measurement, rely on track-based velocity estimation. IMU failure: rely on visual/lidar odometry with degraded latency response. Document the reduced capability for each failure mode.",
+          "Communicate degradation to downstream systems. The sensor fusion module outputs a capability status alongside the fused object list. Downstream planning and control systems use the capability status to adjust their behavior: widen safety margins, reduce speed, limit operational domain. If degradation reduces capability below the minimum for the current operating condition, initiate a transition to a minimal risk condition (e.g., slow down and pull over)."
+        ],
+        "tags": ["safety", "degradation", "monitoring"]
+      }
+    ]
+  },
+  {
+    "chain_name": "motion-planning-methodology",
+    "description": "Design a motion planning system for autonomous platforms: construct the configuration space, select and implement planning algorithms (sampling-based, optimization-based, lattice), handle dynamic obstacles, enforce comfort and safety constraints, and manage computational budgets for real-time operation.",
+    "domain": "robotics",
+    "tags": ["autonomy", "motion-planning", "trajectory-optimization"],
+    "steps": [
+      {
+        "flow_name": "configuration-space-construction",
+        "description": "Build the configuration space representation from the platform geometry and environment, transforming the planning problem from workspace to C-space where the robot is a point.",
+        "inputs": [
+          {"name": "platform-geometry", "desc": "Robot dimensions, turning radius, and kinematic constraints"},
+          {"name": "environment-representation", "desc": "Map or occupancy grid of the operating environment"},
+          {"name": "planning-requirements", "desc": "Speed range, acceleration limits, and mission objectives"}
+        ],
+        "outputs": [
+          {"name": "c-space-model", "desc": "Configuration space representation with obstacle regions, free space, and kinematic constraints encoded"},
+          {"name": "constraint-set", "desc": "Complete set of constraints: kinematic, dynamic, safety margins, and comfort bounds"}
+        ],
+        "process": [
+          "Define the configuration space dimensions from the platform kinematics. For a car-like robot: (x, y, theta, velocity) at minimum, optionally steering angle and curvature for smoother planning. For a drone: (x, y, z, yaw) for position planning, full 6-DOF for aggressive maneuvering. For a manipulator: joint angles (N-dimensional C-space). The dimensionality determines which planning algorithms are computationally feasible.",
+          "Map workspace obstacles into C-space. For a 2D robot with orientation, compute the Minkowski sum of obstacles with the robot footprint at each orientation. For high-dimensional C-space, explicit computation is impractical; instead sample configurations and collision-check each against the environment using the robot's geometric model. Collision checking is the inner-loop bottleneck; use hierarchical bounding volumes (AABB tree, OBB tree) for speed.",
+          "Encode kinematic constraints. Ackermann-steered vehicles have a minimum turning radius that creates non-holonomic constraints: not all C-space directions are reachable from all configurations. Differential-drive robots are also non-holonomic but can turn in place. Holonomic robots (omnidirectional, drones) can move in any direction from any configuration. The constraint type determines which planners are valid: holonomic systems can use any geometric planner, non-holonomic systems need kinodynamic planners or lattice-based planners with pre-computed motion primitives.",
+          "Define the constraint set for planning. Kinematic: max velocity, max acceleration, max curvature (from turning radius), max curvature rate (for smooth steering). Dynamic: max lateral acceleration for tire grip, max longitudinal acceleration and braking. Safety: minimum clearance from obstacles (function of speed), minimum time-to-collision threshold. Comfort: max lateral jerk, max longitudinal jerk, max lateral acceleration for passenger comfort (typically 0.2g for normal driving, 0.4g for urgent situations). Document each constraint with its source and rationale."
+        ],
+        "tags": ["motion-planning", "configuration-space"]
+      },
+      {
+        "flow_name": "planning-algorithm-selection",
+        "description": "Select and implement the planning algorithm: compare sampling-based (RRT, RRT*, PRM), optimization-based (trajectory optimization, MPC), and lattice planners by the problem structure.",
+        "inputs": [
+          {"name": "c-space-model", "desc": "Configuration space representation"},
+          {"name": "constraint-set", "desc": "Kinematic, dynamic, safety, and comfort constraints"},
+          {"name": "planning-requirements", "desc": "Real-time deadline, optimality needs, and replanning frequency"}
+        ],
+        "outputs": [
+          {"name": "planner-implementation", "desc": "Selected planning algorithm with parameters, heuristics, and implementation details"},
+          {"name": "performance-characterization", "desc": "Expected computation time, path quality, and failure modes for the selected planner"}
+        ],
+        "process": [
+          "Evaluate sampling-based planners. RRT: fast to find any feasible path in high-dimensional spaces, poor path quality (jerky, suboptimal length). RRT*: asymptotically optimal but convergence is slow in practice, rewiring cost grows with sample count. PRM: good for repeated queries in a static environment (roadmap built once), not suitable for dynamic environments. Bidirectional RRT: faster for point-to-point problems. Informed RRT*: uses heuristic to focus sampling, converges faster. Best for: high-dimensional spaces (manipulators), cluttered static environments, when any feasible path is acceptable.",
+          "Evaluate optimization-based planners. Trajectory optimization: discretize the trajectory into waypoints, optimize jointly for smoothness, obstacle avoidance, and constraint satisfaction. Can produce high-quality paths but sensitive to initialization (local minima). Model Predictive Control (MPC): optimize over a receding horizon, naturally handles dynamic constraints and replanning, but horizon length limits global reasoning. Best for: structured environments with known dynamics, when path quality matters, when constraints are complex.",
+          "Evaluate lattice planners. Pre-compute a library of dynamically feasible motion primitives (short trajectory segments that respect vehicle kinematics). Search over a graph of these primitives using A* or similar. Guarantees kinematic feasibility by construction. Resolution determines path quality and computational cost. Best for: structured driving (roads, parking), when kinematic feasibility is paramount, when the environment has moderate complexity.",
+          "Select the planner based on the application. Most production autonomous driving systems use a hierarchical approach: a route planner (A* on road graph) for global planning, a behavior planner (state machine or decision tree) for lane-level decisions, and a local trajectory planner (optimization-based or lattice) for the final smooth trajectory. For manipulators, sampling-based planners with post-optimization smoothing are standard. Document the selected architecture, key parameters (sample count, horizon length, primitive resolution), and the computational budget for each planning layer."
+        ],
+        "tags": ["motion-planning", "algorithm-selection"]
+      },
+      {
+        "flow_name": "dynamic-obstacle-handling",
+        "description": "Handle dynamic obstacles in motion planning: predict obstacle trajectories, plan around moving objects using velocity obstacles or prediction-aware optimization, and design contingency plans for uncertain behavior.",
+        "inputs": [
+          {"name": "planner-implementation", "desc": "Selected planning algorithm"},
+          {"name": "c-space-model", "desc": "Configuration space model"},
+          {"name": "constraint-set", "desc": "Safety and comfort constraints"}
+        ],
+        "outputs": [
+          {"name": "dynamic-planning-system", "desc": "Motion planner extended with dynamic obstacle prediction and interaction-aware planning"},
+          {"name": "contingency-plan-framework", "desc": "Framework for generating and selecting contingency trajectories when predictions are uncertain"}
+        ],
+        "process": [
+          "Implement obstacle trajectory prediction. Constant velocity prediction: extrapolate current state forward, simple but fails at intersections and lane changes. Physics-based prediction: propagate with a kinematic model, respecting road geometry (vehicles follow lanes). Behavior-aware prediction: classify intent (lane keep, lane change, turn) from observed behavior, predict trajectory per intent hypothesis with probability weights. Interaction-aware prediction: model how the ego vehicle's plan affects other agents' behavior (game-theoretic). Start with physics-based prediction and add behavior awareness where interaction density demands it.",
+          "Integrate predictions into planning using velocity obstacles or spatiotemporal planning. Velocity Obstacle (VO): compute the set of ego velocities that would lead to collision with a predicted obstacle trajectory. Plan in velocity space to avoid all VOs. Reciprocal Velocity Obstacles (ORCA): assume all agents share responsibility for avoidance, halves the avoidance burden. Spatiotemporal planning: plan in (x, y, t) space where obstacles sweep out volumes over time, find a path through free spacetime. For optimization-based planners, add obstacle prediction as time-varying constraints.",
+          "Design contingency planning for uncertain predictions. Generate multiple trajectory candidates: a nominal trajectory that follows the most likely prediction, and contingency trajectories for alternative obstacle behaviors (e.g., the car ahead brakes hard, the pedestrian steps into the road). Evaluate each contingency for feasibility and cost. Maintain a contingency trajectory that can be executed within the system's reaction time if the nominal plan becomes infeasible. The contingency must always exist; if no safe contingency exists, the system must slow down until one does.",
+          "Handle the interaction problem. When the ego vehicle's behavior affects other agents (merging, unprotected left turns, pedestrian crossings), pure prediction-then-plan creates a frozen robot problem: the planner waits for the other agent, who also waits. Break the deadlock by committing to an assertive plan when the situation is safe (sufficient gap), or by communicating intent (turn signal, creeping forward). Tune the assertiveness parameter per scenario: more assertive in dense urban traffic where hesitation creates risk, more conservative near vulnerable road users."
+        ],
+        "tags": ["motion-planning", "dynamic-obstacles", "prediction"]
+      },
+      {
+        "flow_name": "trajectory-smoothing-and-constraints",
+        "description": "Post-process planned trajectories for smoothness, comfort, and constraint satisfaction: apply trajectory smoothing, enforce jerk limits, and verify the final trajectory against all constraints before execution.",
+        "inputs": [
+          {"name": "dynamic-planning-system", "desc": "Planner output including raw trajectory waypoints"},
+          {"name": "constraint-set", "desc": "Full constraint set including comfort bounds"}
+        ],
+        "outputs": [
+          {"name": "executable-trajectory", "desc": "Smooth, constraint-satisfying trajectory ready for the control system"},
+          {"name": "constraint-verification-report", "desc": "Verification that every constraint is satisfied at every point along the trajectory"}
+        ],
+        "process": [
+          "Apply trajectory smoothing. If the raw planner output is a sequence of waypoints, fit a smooth curve through them. Common approaches: cubic spline interpolation (C2 continuous, fast), quintic polynomial segments (C4 continuous, controls acceleration and jerk), B-spline (adjustable smoothness, convex hull property for obstacle avoidance). Choose the representation that matches the control system's input requirements. For time-parameterized trajectories, smooth position and then compute velocity and acceleration profiles; do not smooth velocity independently as this can create inconsistencies.",
+          "Enforce comfort constraints on the smooth trajectory. Check lateral acceleration at every sample point: if it exceeds the comfort limit (typically 2 m/s^2 for normal driving), reduce speed on that segment. Check longitudinal jerk: if it exceeds the limit (typically 1-2 m/s^3), adjust the acceleration profile. Check lateral jerk: if steering changes are too abrupt, increase the transition time. These checks may require iterating between spatial path smoothing and speed profile optimization.",
+          "Verify all constraints on the final trajectory. Sample the trajectory at the control loop rate (e.g., every 10ms). At each sample: check collision clearance against static and predicted dynamic obstacles, check kinematic feasibility (curvature within turning radius), check dynamic feasibility (acceleration within tire friction limits), check comfort bounds (jerk, lateral acceleration). If any sample violates a constraint, replan with tighter bounds or flag the trajectory as infeasible.",
+          "Prepare the trajectory for execution. Output format: time-stamped sequence of (x, y, heading, curvature, velocity, acceleration) at the control loop rate. Include the constraint verification status and any reduced-confidence flags (e.g., close clearance to obstacles, high predicted curvature near the kinematic limit). The control system uses this trajectory as its reference, tracking it with a path-following controller."
+        ],
+        "tags": ["trajectory", "smoothing", "constraints"]
+      }
+    ]
+  },
+  {
+    "chain_name": "perception-pipeline-design",
+    "description": "Design the perception pipeline for an autonomous system: camera image processing, 3D point cloud analysis, object detection and classification, multi-object tracking, and scene understanding including free space and occupancy mapping.",
+    "domain": "robotics",
+    "tags": ["autonomy", "perception", "computer-vision", "lidar"],
+    "steps": [
+      {
+        "flow_name": "camera-processing-pipeline",
+        "description": "Design the camera processing pipeline from raw sensor data to rectified images: ISP tuning, lens distortion correction, exposure control, and image quality validation.",
+        "inputs": [
+          {"name": "camera-specifications", "desc": "Camera sensor specs including resolution, dynamic range, lens parameters, and frame rate"},
+          {"name": "operating-conditions", "desc": "Lighting conditions, weather, and speed range the system must handle"}
+        ],
+        "outputs": [
+          {"name": "processed-image-stream", "desc": "Rectified, exposure-corrected image stream ready for detection algorithms"},
+          {"name": "image-quality-metrics", "desc": "Per-frame quality metrics for downstream confidence estimation"}
+        ],
+        "process": [
+          "Configure the image signal processor (ISP). Demosaic the Bayer pattern using an edge-aware algorithm (Malvar-He-Cutler or similar) to minimize color artifacts at edges. Apply white balance calibration per illuminant (D65 for daylight, tungsten for tunnel/garage). Set the tone curve for maximum useful dynamic range rather than aesthetic appearance: preserve detail in shadows and highlights, since detection networks need both. Apply noise reduction conservatively: over-smoothing erases fine texture that distinguishes objects from background.",
+          "Implement exposure control for perception. Standard auto-exposure optimizes for average scene brightness, which fails for autonomous driving (dark road with bright headlights, tunnel exit). Instead, use region-weighted exposure: weight the road surface and horizon band more heavily than sky. For HDR: use bracketed exposure with short and long frames, fuse with a deghosting algorithm to prevent motion artifacts. Set exposure limits: minimum exposure time to prevent motion blur at maximum platform speed (e.g., 2ms for highway driving), maximum gain to limit noise.",
+          "Apply lens distortion correction. Use the calibrated distortion model (radial and tangential coefficients) to undistort each frame. For wide-angle lenses (common for near-field perception), the barrel distortion is significant and must be corrected before any geometric reasoning. Pre-compute the undistortion map as a lookup table for real-time performance. Verify correction quality by checking that straight lines in the scene appear straight in the corrected image.",
+          "Define image quality metrics for each frame. Compute: blur metric (Laplacian variance, threshold below which the frame is flagged), saturation percentage (overexposed or underexposed pixels), noise estimate (from sensor dark areas or flat patches), dynamic range utilization. Attach these metrics to each frame so downstream algorithms can adjust their confidence. A frame with 30% saturation from direct sun glare should reduce detection confidence in the affected region."
+        ],
+        "tags": ["camera", "image-processing", "perception"]
+      },
+      {
+        "flow_name": "point-cloud-processing",
+        "description": "Process 3D lidar point clouds: ground segmentation, clustering for object detection, and geometric feature extraction.",
+        "inputs": [
+          {"name": "lidar-specifications", "desc": "Lidar specs including point density, range, and scan pattern"},
+          {"name": "processed-image-stream", "desc": "Camera data for cross-modal validation"}
+        ],
+        "outputs": [
+          {"name": "ground-segmented-cloud", "desc": "Point cloud with ground points labeled and removed from obstacle detection"},
+          {"name": "object-clusters", "desc": "Clustered point groups with bounding boxes, dimensions, and geometric features"}
+        ],
+        "process": [
+          "Ground segmentation. The ground surface must be removed before object clustering to prevent ground points from merging with nearby objects. Methods: RANSAC plane fitting (fast, works for flat ground, fails on hills and curbs), sector-based ground estimation (divide the point cloud into angular sectors, fit a line to the lowest points in each sector, handles slopes), Patchwork/Patchwork++ (ground likelihood estimation per patch, handles uneven terrain). Select based on terrain complexity. Validate by checking that known ground points (road surface) are correctly labeled and known obstacles (curbs, barriers) are not removed.",
+          "Cluster non-ground points into object candidates. Euclidean clustering (DBSCAN or connected-components on a voxel grid): set the distance threshold based on point density at the expected detection range. At 50m, lidar points on a car may be 0.5m apart, so the clustering threshold must accommodate this. Problem: under-segmentation (two nearby objects merged) and over-segmentation (one object split across scan lines). Mitigate under-segmentation by using adaptive thresholds that increase with range. Mitigate over-segmentation by using scan-line-aware connectivity.",
+          "Extract geometric features from each cluster. Compute: oriented bounding box (minimum-volume OBB from PCA or L-shape fitting), cluster dimensions (length, width, height), point count and density, centroid position, intensity statistics. L-shape fitting is important for vehicles: fit two perpendicular lines to the visible edges to estimate the full vehicle footprint from a partial view. These features feed into classification and tracking.",
+          "Cross-validate with camera data. Project each lidar cluster's centroid into the camera image using the calibrated extrinsic transform. Check that the projected position falls within or near a camera detection bounding box. Clusters that have no camera support may be false alarms (ground clutter, vegetation) or objects the camera missed (dark objects, small objects). Use the cross-modal agreement to adjust detection confidence."
+        ],
+        "tags": ["lidar", "point-cloud", "perception"]
+      },
+      {
+        "flow_name": "object-detection-architecture",
+        "description": "Select and configure the object detection architecture for camera and lidar: choose between detection paradigms, train or fine-tune models, and optimize for real-time inference on embedded hardware.",
+        "inputs": [
+          {"name": "detection-requirements", "desc": "Required object classes, detection range, and accuracy targets"},
+          {"name": "computational-budget", "desc": "Available compute hardware and latency budget for detection"}
+        ],
+        "outputs": [
+          {"name": "detection-model", "desc": "Trained and optimized detection model with architecture, weights, and inference pipeline"},
+          {"name": "detection-performance", "desc": "Measured precision, recall, and latency on representative test data"}
+        ],
+        "process": [
+          "Select the detection paradigm. For camera: two-stage detectors (Faster R-CNN family) give higher accuracy but more latency; single-stage detectors (YOLO family, SSD) trade some accuracy for speed; anchor-free detectors (CenterNet, FCOS) avoid anchor hyperparameter tuning. For lidar 3D detection: point-based (PointPillars, VoxelNet) encode the point cloud into a pseudo-image and run 2D detection; point-transformer methods give higher accuracy but more compute. For camera-lidar fusion detection: project lidar features onto camera features in BEV space. Select based on the latency budget and accuracy requirements.",
+          "Configure the model for the target domain. Adjust input resolution for the range/resolution trade-off: higher resolution detects smaller objects at longer range but increases compute. Set the class list to match detection requirements; adding unnecessary classes wastes capacity. For transfer learning: start from a pretrained backbone (ImageNet or nuScenes/Waymo), fine-tune on domain-specific data. Collect or curate training data that covers the operational design domain: all weather conditions, times of day, object types, and edge cases.",
+          "Optimize for embedded inference. Quantize the model from FP32 to INT8 using post-training quantization or quantization-aware training, measuring accuracy loss at each step. Apply TensorRT or equivalent runtime optimization for the target GPU. Profile layer-by-layer to identify bottlenecks. Consider model pruning for further speedup if latency is not met. Target: inference time within the allocated computational budget (e.g., 20ms for a 50ms fusion cycle that includes pre/post-processing).",
+          "Validate detection performance. Run evaluation on a held-out test set that represents the operational domain. Report: precision-recall curves per class, AP (average precision) at standard IoU thresholds (0.5, 0.7 for 2D; 0.25, 0.5 for 3D), detection range vs recall curve, inference latency distribution (mean, 95th percentile, max). Identify failure modes: small objects, occluded objects, unusual poses, adverse weather. Document known limitations for the safety case."
+        ],
+        "tags": ["detection", "deep-learning", "inference"]
+      },
+      {
+        "flow_name": "multi-object-tracking",
+        "description": "Implement multi-object tracking: associate detections across frames, manage track lifecycle, and output tracked object states with uncertainty.",
+        "inputs": [
+          {"name": "detection-model", "desc": "Per-frame detection output (bounding boxes, classes, confidence)"},
+          {"name": "object-clusters", "desc": "Lidar cluster features for 3D tracking"}
+        ],
+        "outputs": [
+          {"name": "tracked-objects", "desc": "List of tracked objects with ID, state (position, velocity, heading), classification, and uncertainty"},
+          {"name": "tracking-metrics", "desc": "Tracking accuracy metrics: MOTA, ID switches, track fragmentation"}
+        ],
+        "process": [
+          "Define the track state and motion model. State: position (x, y, z), velocity (vx, vy), heading, dimensions (length, width, height), classification. Motion model: constant velocity for most objects, bicycle model for vehicles (accounts for turning). Each track maintains a Kalman filter (or UKF for the bicycle model) that predicts the state forward between detections.",
+          "Associate detections to tracks using two-stage gating and assignment. First, gate: compute the Mahalanobis distance between each prediction and each detection, reject pairs beyond a threshold (e.g., 99.7% chi-squared gate). Second, assign: use the Hungarian algorithm (optimal assignment) or greedy nearest-neighbor (faster, suboptimal) to match predictions to detections. Cost function: weighted combination of spatial distance, size similarity, and appearance similarity (if using re-identification features). Handle the assignment matrix: matched pairs update their tracks, unmatched detections become tentative new tracks, unmatched predictions increment a missed-detection counter.",
+          "Manage track lifecycle. Track states: tentative (new detection, not yet confirmed), confirmed (enough consecutive matches, typically 3-5 frames), lost (missed detections exceeding a threshold, typically 5-10 frames), deleted. Tentative tracks are not reported to downstream systems to avoid false tracks. Confirmed tracks are reported with their full state and uncertainty. Lost tracks continue to predict forward (coasting) and can be re-associated if the object reappears. Delete tracks after the coast timeout to prevent ghost objects.",
+          "Output tracked objects with proper uncertainty. Each track reports: unique ID (persistent across frames), state estimate (position, velocity, heading), covariance (uncertainty in each state component), classification with confidence, track age, and time since last detection. Downstream systems use the covariance for decision-making: a track with high positional uncertainty gets a wider safety margin. Measure tracking performance with MOTA (multi-object tracking accuracy), MOTP (precision), ID switch rate, and track fragmentation rate on a validation set."
+        ],
+        "tags": ["tracking", "data-association", "perception"]
+      },
+      {
+        "flow_name": "scene-understanding-mapping",
+        "description": "Build scene understanding from tracked objects: free space estimation, occupancy grid mapping, semantic segmentation for drivable area, and scene-level reasoning.",
+        "inputs": [
+          {"name": "tracked-objects", "desc": "Tracked object list with states and uncertainty"},
+          {"name": "ground-segmented-cloud", "desc": "Lidar point cloud with ground labeled"},
+          {"name": "processed-image-stream", "desc": "Camera image stream for semantic segmentation"}
+        ],
+        "outputs": [
+          {"name": "scene-model", "desc": "Complete scene representation including free space, occupancy grid, drivable area, and lane structure"},
+          {"name": "scene-confidence", "desc": "Per-cell confidence in the scene model for planning to use"}
+        ],
+        "process": [
+          "Build the occupancy grid. Discretize the area around the platform into a 2D grid (typical resolution: 0.1-0.2m for parking, 0.5m for highway). For each lidar scan, ray-trace from the sensor through each cell: cells hit by a lidar return are marked occupied, cells the ray passed through are marked free, cells beyond the return are unknown. Update the grid probabilistically using a log-odds formulation (inverse sensor model). The log-odds representation handles repeated observations naturally: cells observed as free many times become confidently free.",
+          "Estimate free space from both lidar and camera. Lidar free space: the boundary between the last free cell and the first occupied cell in each radial direction. Camera free space: use a trained network for free space segmentation on the ground plane, project the result into world coordinates using the known camera-ground geometry. Fuse lidar and camera free space estimates: take the more conservative (closer) boundary where they disagree, take either where only one sensor has coverage.",
+          "Run semantic segmentation for drivable area. Use a trained segmentation network (DeepLab, SegFormer, or similar) on camera images to classify each pixel: road, sidewalk, lane marking, curb, vegetation, building, sky. Project the road/sidewalk classification onto the ground plane to define the drivable area boundary. Compare with the occupancy grid: the drivable area should be a subset of the free space. Where they disagree, investigate (e.g., occupancy grid shows free space on a sidewalk, but it is not drivable).",
+          "Assemble the scene model. Combine: occupancy grid (where things are), free space boundary (where the platform can physically go), drivable area (where the platform is allowed to go), tracked objects (what is moving and where), lane structure (from HD map or lane detection). Output a unified scene representation that the motion planner consumes. Attach confidence to each element: high confidence for cells observed by multiple sensors, lower confidence for single-sensor observations, lowest for extrapolated regions. The planner uses confidence to modulate its safety margins."
+        ],
+        "tags": ["scene-understanding", "occupancy-grid", "mapping"]
+      }
+    ]
+  },
+  {
+    "chain_name": "localization-mapping-methodology",
+    "description": "Design a localization and mapping system for autonomous platforms: select SLAM algorithms, build and maintain maps, implement GPS-denied localization, and validate localization accuracy for safety-critical operation.",
+    "domain": "robotics",
+    "tags": ["autonomy", "localization", "mapping", "SLAM"],
+    "steps": [
+      {
+        "flow_name": "slam-algorithm-selection",
+        "description": "Select the SLAM algorithm based on sensor suite, environment structure, and accuracy requirements: compare visual SLAM, lidar SLAM, and visual-inertial odometry.",
+        "inputs": [
+          {"name": "sensor-suite", "desc": "Available sensors for localization (cameras, lidar, IMU, GPS)"},
+          {"name": "environment-type", "desc": "Indoor/outdoor, structured/unstructured, feature density"},
+          {"name": "accuracy-requirements", "desc": "Required position and heading accuracy for the application"}
+        ],
+        "outputs": [
+          {"name": "slam-architecture", "desc": "Selected SLAM approach with algorithm, parameters, and expected performance"},
+          {"name": "map-representation", "desc": "Map format and content (point cloud, feature map, occupancy grid, HD map)"}
+        ],
+        "process": [
+          "Evaluate visual SLAM options. ORB-SLAM3: sparse feature-based, works with monocular, stereo, or RGB-D cameras, good loop closure, struggles in textureless environments. LSD-SLAM / DSO: semi-dense or direct methods, work better in low-texture but higher compute. Visual-Inertial Odometry (VIO): fuse camera with IMU for robust tracking during fast motion and brief visual dropout (VINS-Mono, MSCKF, OKVIS). VIO is the minimum viable localization for any camera-equipped platform because the IMU bridges gaps in visual tracking.",
+          "Evaluate lidar SLAM options. Lidar provides geometric accuracy independent of lighting. LOAM/LeGO-LOAM: extract edge and planar features from lidar scans, match features across scans for odometry, build a feature map. ICP-based (KISS-ICP): register consecutive scans using iterative closest point, simple and effective for high-density lidar. NDT-based: represent the environment as normal distributions in a voxel grid, register scans against the distribution. Lidar SLAM gives centimeter-level accuracy in structured environments but degrades in geometrically repetitive spaces (long tunnels, open fields).",
+          "Evaluate fusion approaches. For most outdoor autonomous platforms, the strongest localization combines: lidar SLAM for geometric accuracy, visual features for place recognition (loop closure), IMU for short-term dead reckoning during sensor gaps, GPS for global reference when available. The fusion should be tightly coupled: IMU predictions initialize the scan matching, visual loop closures correct lidar map drift, GPS fixes anchor the map to a global frame.",
+          "Select based on the application constraints. Indoor robot with camera only: VIO with sparse visual SLAM. Outdoor vehicle with lidar and camera: lidar SLAM with visual loop closure and IMU integration. Drone in GPS-denied environment: VIO primary, lidar-aided if equipped. Document the selected architecture, expected accuracy (position RMS, heading RMS), and known failure modes (e.g., performance in rain for lidar, in darkness for camera)."
+        ],
+        "tags": ["SLAM", "localization", "algorithm-selection"]
+      },
+      {
+        "flow_name": "map-building-pipeline",
+        "description": "Build the map from collected sensor data: process mapping runs, optimize the pose graph, generate the map product, and establish quality metrics.",
+        "inputs": [
+          {"name": "slam-architecture", "desc": "Selected SLAM algorithm and configuration"},
+          {"name": "mapping-data", "desc": "Raw sensor data from mapping runs (drives, flights, walks)"}
+        ],
+        "outputs": [
+          {"name": "built-map", "desc": "Optimized map with accuracy metadata and coverage documentation"},
+          {"name": "map-quality-report", "desc": "Quality metrics: consistency, coverage, accuracy against ground truth"}
+        ],
+        "process": [
+          "Process mapping runs through the SLAM pipeline. Run the selected SLAM algorithm on recorded sensor data. For multi-session mapping: align sessions using common overlap regions, merge into a single consistent map. For large-scale mapping: use hierarchical pose graph optimization (local submaps with global optimization) to manage computational cost. Track the mapping residuals: scan matching scores, feature reprojection errors, GPS consistency. Flag regions where residuals are high for manual review.",
+          "Optimize the full pose graph. After all mapping sessions are incorporated, run global pose graph optimization (g2o, GTSAM, or Ceres). Include all constraints: odometry edges, loop closure edges, GPS prior edges. Weight each edge by its measurement uncertainty. After optimization, check for remaining inconsistencies: edges with residuals beyond 3 sigma may indicate incorrect loop closures (perceptual aliasing) and should be reviewed or removed.",
+          "Generate the map product. The raw SLAM output (point cloud or feature map) is the localization map. For autonomous driving, enrich with: lane boundaries and lane connectivity (from lidar reflectivity and camera data), traffic signs and signals (geolocated from detection), road surface type, speed limits. This becomes the HD map. For indoor robots: occupancy grid with room labels and semantic annotations. For drones: 3D mesh or elevation map with no-fly zones.",
+          "Establish map quality metrics. Absolute accuracy: compare map coordinates to survey-grade ground truth (RTK-GPS control points or total station measurements). Internal consistency: measure the spread of repeat observations of the same feature across sessions. Coverage: verify that every required operating area has sufficient map density for localization. Currency: document the mapping date and change detection methodology for keeping the map updated."
+        ],
+        "tags": ["mapping", "pose-graph", "map-building"]
+      },
+      {
+        "flow_name": "real-time-localization",
+        "description": "Implement real-time localization against the built map: match live sensor data to the map, fuse with IMU and GPS, handle degraded conditions, and output a localization state with uncertainty.",
+        "inputs": [
+          {"name": "built-map", "desc": "Pre-built localization map"},
+          {"name": "slam-architecture", "desc": "SLAM algorithm for live matching"}
+        ],
+        "outputs": [
+          {"name": "localization-system", "desc": "Real-time localization pipeline with map matching, sensor fusion, and integrity monitoring"},
+          {"name": "localization-accuracy", "desc": "Expected accuracy under nominal and degraded conditions"}
+        ],
+        "process": [
+          "Implement map matching. Load the relevant map section based on approximate position (from GPS or last known position). Match the current sensor observation against the map. For lidar: scan-to-map registration using ICP or NDT with the map as the target. For camera: match extracted features against map features using descriptor matching and PnP pose estimation. The map match provides an absolute position fix with known accuracy (from the map quality metrics).",
+          "Fuse map match with dead reckoning. Between map matches, propagate the state using IMU integration (for short periods) or wheel odometry (for ground vehicles). The fusion filter (EKF or factor graph) combines: IMU predictions (high rate, drifts), wheel odometry (medium rate, slip errors), map matches (lower rate, high accuracy), GPS when available (variable accuracy, check consistency before accepting). The filter output is the fused position, heading, and velocity with covariance at the control loop rate.",
+          "Handle degraded localization conditions. GPS multipath in urban canyons: detect by checking consistency between GPS and map-matched position, reject GPS fixes that disagree. Lidar degradation in rain or dust: detect by monitoring scan matching score, increase reliance on camera and IMU. Camera degradation in darkness: switch to lidar-primary, increase IMU weight. Total sensor degradation (e.g., dense fog): coast on IMU with growing uncertainty, reduce speed and prepare for controlled stop when uncertainty exceeds the safety threshold.",
+          "Monitor localization integrity. The system must know when its position estimate is unreliable. Implement integrity monitoring: compute the protection level (the bound on the position error at a specified confidence level, analogous to GNSS integrity). If the protection level exceeds the alert limit (the maximum tolerable error for safe operation), declare a localization failure and initiate a safe response. Log localization telemetry for offline analysis: position, covariance, sensor availability, matching scores."
+        ],
+        "tags": ["localization", "real-time", "sensor-fusion"]
+      },
+      {
+        "flow_name": "localization-validation",
+        "description": "Validate localization system accuracy and integrity: design test scenarios, measure performance against ground truth, and verify integrity monitoring.",
+        "inputs": [
+          {"name": "localization-system", "desc": "Real-time localization pipeline"},
+          {"name": "accuracy-requirements", "desc": "Required accuracy and integrity for the application"}
+        ],
+        "outputs": [
+          {"name": "validation-results", "desc": "Localization accuracy, availability, and integrity performance across test scenarios"},
+          {"name": "known-limitations", "desc": "Documented environments and conditions where localization may degrade"}
+        ],
+        "process": [
+          "Design test scenarios covering the operational design domain. Include: nominal conditions (clear weather, good GPS, well-mapped area), GPS-denied (urban canyon, tunnel, indoor), sensor-degraded (rain, fog, night, direct sun), map-change (construction, seasonal vegetation change), dynamic environments (heavy traffic obscuring map features). For each scenario, define the expected localization performance and the acceptance criteria.",
+          "Collect ground truth for validation. Use RTK-GPS (centimeter-level, outdoor only), total station (millimeter-level, controlled areas), motion capture (sub-millimeter, indoor only), or a reference trajectory from a higher-grade INS/GPS system. Synchronize ground truth with the localization system's timestamps. The ground truth accuracy must be at least 5x better than the required localization accuracy.",
+          "Run validation tests and compute metrics. Position RMS error (lateral, longitudinal, vertical separately). Heading RMS error. 95th and 99th percentile errors. Availability: percentage of time the localization system reports a valid position within the accuracy requirement. Integrity: verify that the protection level computed by the system actually bounds the true error at the specified confidence. Plot the protection level vs actual error over time; the actual error should exceed the protection level less than the specified probability (e.g., 10^-7 per hour for safety-critical applications).",
+          "Document known limitations. From the test results, identify environments and conditions where localization degrades. Map these to operational constraints: the system should not operate in environments where localization accuracy cannot meet the safety requirement. Feed these limitations into the operational design domain definition and the safety case."
+        ],
+        "tags": ["validation", "testing", "localization"]
+      }
+    ]
+  },
+  {
+    "chain_name": "functional-safety-autonomous",
+    "description": "Develop the functional safety case for an autonomous system: perform hazard analysis, assign safety integrity levels, develop the safety concept, analyze SOTIF, define the operational design domain, and construct the safety validation argument.",
+    "domain": "robotics",
+    "tags": ["safety", "ISO-26262", "SOTIF", "autonomy"],
+    "steps": [
+      {
+        "flow_name": "hazard-analysis-asil-assignment",
+        "description": "Perform hazard analysis and risk assessment (HARA) for the autonomous system: identify hazards, assess severity, exposure, and controllability, and assign ASIL ratings per ISO 26262.",
+        "inputs": [
+          {"name": "system-description", "desc": "Architecture and functional description of the autonomous system"},
+          {"name": "operational-design-domain", "desc": "Environments and conditions the system is intended to operate in"}
+        ],
+        "outputs": [
+          {"name": "hazard-register", "desc": "List of identified hazards with severity, exposure, controllability, and ASIL ratings"},
+          {"name": "safety-goals", "desc": "Top-level safety goals derived from the hazards, each with an ASIL rating"}
+        ],
+        "process": [
+          "Identify hazardous events. For each vehicle-level function (longitudinal control, lateral control, perception, localization), consider what happens when the function fails or behaves incorrectly. A failed braking function leads to collision. A failed steering function leads to lane departure. A false detection leads to unnecessary braking. A missed detection leads to collision with an undetected object. Be exhaustive: consider both commission (doing the wrong thing) and omission (failing to do the right thing) for every function.",
+          "Assess severity per ISO 26262. S0: no injuries. S1: light to moderate injuries. S2: severe injuries, survival probable. S3: life-threatening, survival uncertain. Assess for the most severe plausible consequence of each hazardous event, considering the operational environment and other road users (pedestrians, cyclists are more vulnerable than other cars).",
+          "Assess exposure and controllability. Exposure (E0-E4): how often is the system in the operating scenario where this hazard could occur. Controllability (C0-C3): how likely is the driver or other road users to avoid harm if the hazardous event occurs. For highly automated systems (SAE Level 4+), controllability by the human driver is C3 (uncontrollable) by definition because no driver intervention can be assumed. This pushes most hazards to higher ASIL levels.",
+          "Assign ASIL and derive safety goals. Use the ISO 26262 ASIL determination table from S, E, and C ratings. Each hazardous event gets an ASIL (A through D, or QM for no safety requirement). Formulate safety goals as top-level requirements: 'The autonomous driving system shall prevent unintended acceleration' (ASIL D). Each safety goal inherits the ASIL of its parent hazardous event. The safety goals are the starting point for the safety concept."
+        ],
+        "tags": ["safety", "HARA", "ASIL"]
+      },
+      {
+        "flow_name": "safety-concept-development",
+        "description": "Develop the functional safety concept: decompose safety goals into safety requirements, allocate to system elements, and define the fault detection, indication, and response strategy.",
+        "inputs": [
+          {"name": "safety-goals", "desc": "Top-level safety goals with ASIL ratings"},
+          {"name": "system-description", "desc": "System architecture for allocation"}
+        ],
+        "outputs": [
+          {"name": "safety-requirements", "desc": "Functional and technical safety requirements allocated to system elements with ASIL"},
+          {"name": "fault-response-strategy", "desc": "For each safety-relevant fault, the detection method, diagnostic coverage, and safe response"}
+        ],
+        "process": [
+          "Decompose safety goals into functional safety requirements (FSR). Each FSR addresses a specific failure mode that could violate the safety goal. Example: safety goal 'prevent unintended acceleration' decomposes into: 'the torque controller shall not command positive torque when the system commands zero torque' (addresses actuator fault), 'the perception system shall not generate false forward clearance when an obstacle exists' (addresses perception fault), 'the planning system shall not generate an acceleration command when the safety goal requires deceleration' (addresses planning fault).",
+          "Allocate FSRs to system elements and assign ASIL. ASIL can be decomposed across redundant elements using ASIL decomposition (e.g., ASIL D on a single channel becomes ASIL B(D) + ASIL B(D) on two independent channels). Decomposition requires demonstrated independence between channels (no common-cause failure modes). For software-heavy autonomous systems, achieving ASIL D through decomposition is the practical path because certifying a complex perception stack to ASIL D monolithically is prohibitively expensive.",
+          "Define the fault detection and diagnostic strategy. For each safety-relevant element, identify credible faults and design diagnostic tests. Hardware faults: use redundancy (dual-channel lockstep for compute, dual IMUs), built-in self-test (memory ECC, CPU self-test), and plausibility monitoring (compare independent sensor measurements). Software faults: diverse redundancy (different algorithms on different platforms), runtime monitoring (watchdog, execution time monitoring, output range checking). Calculate the diagnostic coverage for each fault type: the fraction of faults that the diagnostic can detect within the fault tolerant time interval.",
+          "Define the safe response for each detected fault. The minimal risk condition (MRC) is the state the system transitions to when a fault is detected that cannot be tolerated. For a highway autonomous vehicle, the MRC is typically a controlled stop on the shoulder. The transition to MRC must be achievable within the fault tolerant time interval using only the remaining functional elements. Define degraded operating modes for faults that reduce capability but do not require immediate MRC transition (e.g., single sensor failure with redundant backup)."
+        ],
+        "tags": ["safety", "safety-concept", "fault-tolerance"]
+      },
+      {
+        "flow_name": "sotif-analysis",
+        "description": "Perform Safety of the Intended Functionality (SOTIF) analysis per ISO 21448: identify performance limitations and triggering conditions that could lead to hazards even without system faults.",
+        "inputs": [
+          {"name": "safety-requirements", "desc": "Functional safety requirements from ISO 26262 analysis"},
+          {"name": "system-description", "desc": "Detailed system design including perception and planning algorithms"}
+        ],
+        "outputs": [
+          {"name": "sotif-analysis", "desc": "Triggering conditions, performance limitations, and residual risk assessment for each perception and decision function"},
+          {"name": "sotif-validation-plan", "desc": "Plan to demonstrate that residual SOTIF risk is acceptable"}
+        ],
+        "process": [
+          "Identify performance limitations of each function. Perception: maximum detection range by object type and conditions, minimum object size for detection, classification accuracy by class and conditions, false positive and false negative rates. Localization: accuracy degradation in specific environments (tunnels, featureless areas). Planning: scenarios where the planner produces uncomfortable or suboptimal behavior, edge cases in prediction (unusual road user behavior). These are not faults; they are inherent limitations of the algorithms and sensors.",
+          "Identify triggering conditions. A triggering condition is a specific scenario that activates a performance limitation and leads to a hazardous behavior. Example: low sun angle (triggering condition) causes camera saturation (performance limitation) leading to missed pedestrian detection (hazardous behavior). Build a triggering condition catalog by systematically combining environmental conditions, road user behaviors, and infrastructure configurations with each known performance limitation.",
+          "Classify scenarios into SOTIF areas. Area 1: known safe scenarios (system performs correctly). Area 2: known hazardous scenarios (identified triggering conditions, mitigations in place). Area 3: unknown hazardous scenarios (not yet identified, reduced through testing and analysis). Area 4: unknown safe scenarios. The goal is to minimize Area 3 through systematic exploration: simulation, real-world testing, and expert analysis. No system can eliminate Area 3 entirely; the argument is that it is acceptably small.",
+          "Develop the SOTIF validation strategy. Combine: analysis-based methods (systematic triggering condition identification, coverage argument), simulation-based testing (parametric variation of triggering conditions, adversarial scenario generation), real-world testing (mileage-based statistical argument, scenario-based testing at test tracks). The validation target is that the residual risk from SOTIF-related hazards is below the acceptable risk threshold. This threshold comes from the societal risk acceptance framework (e.g., the system must be at least as safe as an attentive human driver)."
+        ],
+        "tags": ["safety", "SOTIF", "validation"]
+      },
+      {
+        "flow_name": "safety-validation-argument",
+        "description": "Construct the overall safety validation argument: combine functional safety, SOTIF, and cybersecurity evidence into a structured safety case using Goal Structuring Notation.",
+        "inputs": [
+          {"name": "safety-requirements", "desc": "Functional safety requirements and verification evidence"},
+          {"name": "sotif-analysis", "desc": "SOTIF analysis results and validation evidence"},
+          {"name": "hazard-register", "desc": "Complete hazard register with mitigations"}
+        ],
+        "outputs": [
+          {"name": "safety-case", "desc": "Structured safety case in GSN with all evidence linked to claims"},
+          {"name": "residual-risk-assessment", "desc": "Quantified residual risk and argument that it is acceptable"}
+        ],
+        "process": [
+          "Structure the safety case using Goal Structuring Notation (GSN). Top goal: 'The autonomous system is acceptably safe for operation within the defined ODD.' Decompose into sub-goals: 'All identified hazards are mitigated to an acceptable level' (from HARA), 'The system meets all functional safety requirements' (from ISO 26262), 'SOTIF-related risks are acceptably low' (from ISO 21448), 'The system is resilient to cybersecurity threats' (from ISO 21434).",
+          "Link evidence to each claim. For functional safety claims: verification test reports showing each safety requirement is met, diagnostic coverage calculations, FMEA/FTA results, hardware failure rate calculations (PMHF). For SOTIF claims: triggering condition analysis completeness argument, simulation test results, real-world test mileage and encounter statistics, performance monitoring data from field operation. For cybersecurity claims: threat analysis, penetration test results, secure development process evidence.",
+          "Assess residual risk. After all mitigations, some risk remains. Quantify it: the probability of a hazardous event occurring per hour of operation, multiplied by the probability that it leads to harm. Compare against the risk acceptance criterion. For automotive: the total residual risk from all autonomous system hazards combined should be below approximately 10^-8 fatalities per hour of operation (comparable to the best human drivers). Document assumptions and limitations in the residual risk calculation.",
+          "Identify open items and conditions for deployment. The safety case is never fully complete before deployment; it evolves with field data. Define: conditions that must be met before deployment (all safety requirements verified, SOTIF validation targets met), monitoring requirements during operation (safety-relevant metrics, incident reporting), triggers for safety case update (new failure modes discovered, software updates, ODD expansion). The safety case is a living document maintained throughout the product lifecycle."
+        ],
+        "tags": ["safety", "safety-case", "GSN", "validation"]
+      }
+    ]
+  },
+  {
+    "chain_name": "robot-manipulator-design",
+    "description": "Design a robot manipulator system: select the kinematic chain, solve kinematics and dynamics, plan trajectories, implement force control, and design the end-effector for the task.",
+    "domain": "robotics",
+    "tags": ["robotics", "manipulator", "kinematics", "control"],
+    "steps": [
+      {
+        "flow_name": "manipulator-kinematics-design",
+        "description": "Select the manipulator kinematic chain and solve forward and inverse kinematics: choose DOF, extract DH parameters, analyze workspace, and implement IK solutions.",
+        "inputs": [
+          {"name": "task-requirements", "desc": "Workspace volume, payload, reach, dexterity, and speed requirements"},
+          {"name": "mounting-constraints", "desc": "Where the manipulator can be mounted and how it can reach the workspace"}
+        ],
+        "outputs": [
+          {"name": "kinematic-model", "desc": "DH parameters, forward kinematics, inverse kinematics solutions, and workspace analysis"},
+          {"name": "manipulator-selection", "desc": "Selected manipulator type with DOF, reach, payload, and repeatability specifications"}
+        ],
+        "process": [
+          "Determine the required degrees of freedom from the task. 3 DOF (x, y, z) for pick-and-place without orientation control. 4 DOF for palletizing (x, y, z, plus wrist rotation). 6 DOF for general manipulation (arbitrary position and orientation in 3D). 7+ DOF for redundant manipulators that can reconfigure around obstacles while maintaining end-effector pose. More DOF increases dexterity but also cost, complexity, and control difficulty.",
+          "Select the kinematic chain type. Serial (open chain): anthropomorphic (RRR), SCARA (RRP), cylindrical, spherical. Advantages: large workspace relative to footprint, simple kinematics. Disadvantages: cumulative joint errors, lower stiffness. Parallel (closed chain): Delta, Stewart-Gough platform. Advantages: high stiffness, high speed, high accuracy. Disadvantages: small workspace, complex kinematics. Select based on workspace shape, payload, speed, and accuracy requirements.",
+          "Extract DH parameters and solve forward kinematics. For the selected chain, assign coordinate frames to each joint using the Denavit-Hartenberg convention. The DH parameters (a, alpha, d, theta) fully specify the kinematic geometry. Forward kinematics: multiply homogeneous transformation matrices from base to end-effector to get the end-effector pose as a function of joint angles. Validate against the manufacturer's specifications or a CAD model.",
+          "Solve inverse kinematics. For 6-DOF serial robots, closed-form analytical solutions exist for common configurations (e.g., robots with a spherical wrist: decouple position and orientation). For non-standard configurations or redundant robots, use numerical methods: Jacobian pseudo-inverse (iterative, may converge to local minimum), optimization-based (formulate as nonlinear least squares with joint limit constraints). For redundant robots, use the null-space to optimize a secondary objective (avoid joint limits, avoid obstacles, minimize effort). Verify the IK solution by running FK on the result and checking the pose error is below the repeatability specification."
+        ],
+        "tags": ["kinematics", "manipulator", "DH-parameters"]
+      },
+      {
+        "flow_name": "manipulator-dynamics-modeling",
+        "description": "Model the manipulator dynamics for trajectory planning and control: derive the equations of motion, identify inertial parameters, and analyze the dynamic performance envelope.",
+        "inputs": [
+          {"name": "kinematic-model", "desc": "DH parameters and kinematic chain"},
+          {"name": "task-requirements", "desc": "Required speeds, accelerations, and payloads"}
+        ],
+        "outputs": [
+          {"name": "dynamic-model", "desc": "Equations of motion with identified inertial parameters (mass, inertia, friction)"},
+          {"name": "torque-requirements", "desc": "Joint torque requirements for the task profile, used for motor and gearbox selection"}
+        ],
+        "process": [
+          "Derive the equations of motion. Two standard methods: Lagrangian formulation (compute kinetic and potential energy, derive equations from Euler-Lagrange equations, produces the explicit form M(q)q'' + C(q,q')q' + g(q) = tau) and recursive Newton-Euler (compute forces and torques link by link, computationally efficient for real-time control, O(n) vs O(n^3) for Lagrangian). Use Lagrangian for analysis and understanding, Newton-Euler for implementation.",
+          "Identify inertial parameters. From CAD: extract mass, center of mass, and inertia tensor for each link including the motor and gearbox at each joint. From experiments: use excitation trajectories (trajectories that excite all dynamic parameters) and measure joint torques, then solve a least-squares problem for the parameter set. Experimental identification captures friction and compliance that CAD misses. Include viscous friction (proportional to velocity) and Coulomb friction (constant magnitude, direction depends on velocity sign) at each joint.",
+          "Analyze the dynamic performance envelope. Compute the maximum end-effector acceleration and velocity achievable at each workspace point, considering joint torque limits and gear ratios. Identify configurations where the manipulator is near a singularity (the Jacobian loses rank, certain end-effector directions require infinite joint velocities). Map the manipulability measure (determinant or condition number of the Jacobian) across the workspace. This shows where the robot can move agilely and where it is sluggish or singular.",
+          "Determine joint motor and gearbox requirements. For each joint, compute the peak and RMS torque from the task trajectory profile (including payload, acceleration, and gravity). Select the motor to meet RMS torque at continuous rating and peak torque at intermittent rating. Select the gear ratio to match motor speed to joint speed; higher ratio reduces motor torque requirement but adds backlash and inertia. Check that reflected motor inertia through the gear ratio does not dominate the link inertia (gear ratio squared effect)."
+        ],
+        "tags": ["dynamics", "manipulator", "motor-selection"]
+      },
+      {
+        "flow_name": "manipulator-trajectory-planning",
+        "description": "Plan manipulator trajectories in joint space and Cartesian space: generate smooth motion profiles, handle via points, and respect velocity, acceleration, and jerk limits.",
+        "inputs": [
+          {"name": "kinematic-model", "desc": "Kinematics including IK solutions"},
+          {"name": "dynamic-model", "desc": "Dynamic limits (max velocity, acceleration, torque per joint)"},
+          {"name": "task-requirements", "desc": "Task waypoints, cycle time requirements, and path constraints"}
+        ],
+        "outputs": [
+          {"name": "trajectory-plan", "desc": "Time-parameterized trajectory (joint angles or Cartesian pose vs time) with velocity and acceleration profiles"},
+          {"name": "cycle-time-analysis", "desc": "Achievable cycle time and bottleneck identification"}
+        ],
+        "process": [
+          "Choose between joint-space and Cartesian-space planning. Joint-space: interpolate between joint configurations, simple and fast, guarantees joint limit compliance, but the end-effector path in Cartesian space is not controlled (may swing unexpectedly). Cartesian-space: specify the end-effector path (e.g., straight line, arc), solve IK at each trajectory point, guarantees a predictable Cartesian path, but may encounter singularities and joint limit issues. Use Cartesian-space for tasks requiring precise paths (welding, painting, machining). Use joint-space for point-to-point moves (pick and place).",
+          "Generate smooth motion profiles. Trapezoidal velocity profile: accelerate, cruise, decelerate. Simple, time-optimal for a given acceleration limit, but has discontinuous acceleration (jerk is infinite at transitions). S-curve (7-segment) profile: adds jerk-limited transition segments, smoother for mechanical systems and reduces vibration excitation. Polynomial (3rd, 5th, 7th order): fits start and end conditions (position, velocity, acceleration) exactly, higher order gives more smoothness but may oscillate.",
+          "Handle via points. For a sequence of waypoints, options: stop at each via point (trapezoidal profiles between each pair, easy but slow due to deceleration and re-acceleration), blend through via points (insert circular or polynomial blends near each via point to maintain speed, faster cycle time). For blended via points, the blend radius trades off between path accuracy at the via point and speed. In joint space, blend in each joint independently.",
+          "Verify the trajectory against all limits. At each time step: check joint positions against joint limits, check joint velocities against motor speed limits, check joint accelerations against torque limits (using the inverse dynamics model), check Cartesian velocity and acceleration against task requirements. If any limit is violated, scale the trajectory time (slower) or modify the path. Compute the cycle time and identify the bottleneck (which joint or which path segment limits the overall speed). Optimize by adjusting via point locations or blend radii to reduce the bottleneck."
+        ],
+        "tags": ["trajectory", "motion-profile", "manipulator"]
+      },
+      {
+        "flow_name": "force-control-implementation",
+        "description": "Implement force control for contact tasks: select between impedance and admittance control, design the interaction controller, and handle the transition between free motion and contact.",
+        "inputs": [
+          {"name": "dynamic-model", "desc": "Manipulator dynamics model"},
+          {"name": "task-requirements", "desc": "Contact task specification (assembly, grinding, polishing, insertion)"}
+        ],
+        "outputs": [
+          {"name": "force-controller", "desc": "Interaction control system with parameters tuned for the task"},
+          {"name": "contact-transition-logic", "desc": "Logic for detecting contact and switching between free-motion and force-control modes"}
+        ],
+        "process": [
+          "Select the force control strategy. Impedance control: the robot behaves like a mass-spring-damper system. Command a desired impedance (stiffness, damping) rather than a desired force. Good for unknown or varying contact geometry. The robot naturally accommodates geometric uncertainty because it yields in contact. Requires accurate dynamic model and joint torque control (or backdrivable actuators). Admittance control: measure the contact force, compute the corresponding velocity or position adjustment. Works with position-controlled robots (most industrial robots). Less natural interaction dynamics but easier to implement on standard hardware.",
+          "Design the impedance/admittance parameters for the task. For assembly (peg-in-hole): low stiffness in the insertion direction (to accommodate alignment error), high stiffness perpendicular (to maintain alignment). For grinding/polishing: constant force normal to the surface (force control in one direction), position control tangent to the surface (to follow the path). Hybrid position/force control: partition the task space into force-controlled and position-controlled directions using a selection matrix. Tune stiffness and damping by starting conservative (soft, well-damped) and increasing stiffness until the task performance (speed, accuracy) meets requirements without instability.",
+          "Handle the free-motion to contact transition. In free motion, the robot moves to the approach pose under pure position control. Detect contact onset: monitor force/torque sensor or joint torque residuals for a threshold crossing. At contact detection, switch to the force-controlled mode. The transition must be smooth to avoid impact forces: reduce approach velocity as the robot nears the expected contact point, and enable a compliant mode before contact. After the task, detect loss of contact and switch back to position control for retraction.",
+          "Address practical force control challenges. Sensor noise: force/torque sensors pick up vibration and gravity compensation errors; filter the force signal (low-pass, but not so much that the control loop is too slow). Gravity compensation: compute and subtract the gravitational torques on the wrist-mounted force sensor from the robot's known pose and payload mass. Environment stiffness: very stiff environments (metal-on-metal contact) make force control difficult because small position errors create large forces; reduce control stiffness or use a compliant tool adapter. Stability: the coupled robot-environment system can become unstable if the controller bandwidth exceeds the environment's natural frequency; analyze and limit bandwidth accordingly."
+        ],
+        "tags": ["force-control", "impedance", "contact-tasks"]
+      }
+    ]
+  },
+  {
+    "chain_name": "autonomous-drone-design",
+    "description": "Design an autonomous drone system: select the airframe, size the propulsion, design the flight controller, plan autonomous missions, implement sense-and-avoid, and address regulatory requirements.",
+    "domain": "robotics",
+    "tags": ["drone", "UAV", "autonomy", "flight-control"],
+    "steps": [
+      {
+        "flow_name": "drone-airframe-propulsion-sizing",
+        "description": "Select the airframe type and size the propulsion system: match the platform to the mission profile, select motors and propellers, and calculate endurance from battery energy.",
+        "inputs": [
+          {"name": "mission-profile", "desc": "Mission type (inspection, survey, delivery, surveillance), payload mass, endurance requirement, operating environment"},
+          {"name": "performance-requirements", "desc": "Max speed, climb rate, wind resistance, and operating altitude"}
+        ],
+        "outputs": [
+          {"name": "airframe-design", "desc": "Selected airframe type with configuration, dimensions, and mass breakdown"},
+          {"name": "propulsion-system", "desc": "Motor, propeller, ESC, and battery selection with performance curves and endurance calculation"}
+        ],
+        "process": [
+          "Select the airframe type from the mission profile. Multirotor (quad, hex, octo): vertical takeoff and landing, hover capability, simple control, but low endurance (20-40 min typical) and low cruise efficiency. Best for: inspection, photography, short-range delivery, indoor operation. Fixed-wing: high endurance (1-4 hours), long range, efficient cruise, but cannot hover and needs space for takeoff and landing. Best for: mapping, survey, long-range surveillance. VTOL hybrid (tilt-rotor, tail-sitter, quadplane): combines hover capability with efficient cruise, complex mechanically and aerodynamically. Best for: missions needing both hover and long range.",
+          "Size the propulsion for multirotor. Start from the all-up weight (airframe + battery + payload + propulsion). The thrust-to-weight ratio at hover determines efficiency; design for hover at 50-60% throttle (TWR ~2:1) for maneuverability margin and efficiency. Select the propeller diameter from the frame size. Match the motor KV (rpm/volt) to the propeller: low KV for large props (efficient hover), high KV for small props (agile). From the motor and propeller thrust curve, verify thrust at hover throttle, maximum thrust for climb and wind resistance, and power consumption at hover.",
+          "Calculate endurance from battery energy. Battery energy (Wh) = capacity (Ah) * nominal voltage (V). Hover power = all-up weight (N) * disk loading correction. Endurance = battery energy / hover power * discharge efficiency (typically 80% usable). For fixed-wing: calculate cruise power from drag at cruise speed (drag = 0.5 * rho * V^2 * S * Cd), endurance = battery energy / cruise power. Account for reserve (typically 20% for safe return). The endurance calculation is the primary constraint driving the battery-payload trade-off.",
+          "Complete the mass breakdown and verify closure. Sum: airframe structure (30-40% of AUW for multirotor), propulsion (motors, ESCs, 15-20%), battery (30-40%), payload (given), avionics (GPS, flight controller, telemetry, 5-10%). Verify the total equals the all-up weight assumed in propulsion sizing. Iterate if not: a heavier battery gives more endurance but increases the weight that the motors must lift, diminishing returns. Plot endurance vs battery mass to find the optimum."
+        ],
+        "tags": ["drone", "propulsion", "airframe"]
+      },
+      {
+        "flow_name": "flight-controller-design",
+        "description": "Design the flight controller: cascaded attitude and rate control loops, state estimation from IMU and GPS, and failsafe behaviors.",
+        "inputs": [
+          {"name": "airframe-design", "desc": "Airframe configuration, dimensions, and inertia estimates"},
+          {"name": "propulsion-system", "desc": "Motor response characteristics and thrust mapping"}
+        ],
+        "outputs": [
+          {"name": "flight-controller", "desc": "Control architecture with PID gains, state estimator configuration, and mixer matrix"},
+          {"name": "failsafe-design", "desc": "Failsafe behaviors for GPS loss, RC link loss, low battery, and motor failure"}
+        ],
+        "process": [
+          "Design the cascaded control architecture. Outer loop (position controller): takes desired position and velocity, outputs desired attitude angles and thrust. Runs at 50-100 Hz. Middle loop (attitude controller): takes desired roll, pitch, yaw angles, outputs desired angular rates. Runs at 250-500 Hz. Inner loop (rate controller): takes desired angular rates, outputs motor commands through the mixer. Runs at 250-1000 Hz. The cascaded structure allows each loop to be tuned independently with increasing bandwidth from outer to inner.",
+          "Tune PID controllers for each loop. Rate loop (innermost): dominates the handling quality. Start with P gain, increase until oscillation, back off 30%. Add D gain to damp oscillation. Add I gain to eliminate steady-state error from motor/prop imbalance. Attitude loop: P gain only (D is provided by the rate loop). Position loop: P gain for position hold stiffness, I for wind rejection, D for velocity damping. Tune in this order (inner first) because inner loop dynamics affect outer loop response. Use step response tests for rate and attitude loops, figure-8 flight for position loop.",
+          "Configure the state estimator. Fuse IMU (gyroscope and accelerometer) with GPS, magnetometer, and barometer using an EKF. Gyroscope: primary angular rate measurement, integrate for attitude between correction updates. Accelerometer: measures gravity direction for roll/pitch correction (unreliable during maneuvers, so reduce weight when acceleration is far from 1g). Magnetometer: heading reference, susceptible to magnetic interference (calibrate hard and soft iron, reduce weight near metal structures). GPS: position and velocity, 5-10 Hz update rate, 1-3m accuracy. Barometer: altitude, high-rate but affected by pressure changes and prop wash. Fuse with appropriate noise models for each sensor.",
+          "Design failsafe behaviors. GPS loss: hold position using last known GPS position with increasing uncertainty, land if GPS does not recover within timeout. RC link loss: execute return-to-launch at a safe altitude, land after a timeout, or continue the autonomous mission if configured. Low battery: alert, return-to-launch, forced landing at critical voltage to prevent damage. Motor failure: for hexacopter or octocopter, redistribute thrust to remaining motors (controllability analysis determines minimum motor count for each DOF). For quadcopter, a single motor failure means loss of yaw control; descend in controlled spin. Define the priority: land safely above all else."
+        ],
+        "tags": ["flight-control", "PID", "state-estimation"]
+      },
+      {
+        "flow_name": "autonomous-mission-planning",
+        "description": "Plan autonomous drone missions: waypoint generation, survey pattern design, corridor planning, geofencing, and dynamic replanning.",
+        "inputs": [
+          {"name": "mission-profile", "desc": "Mission objectives, area of interest, and constraints"},
+          {"name": "airframe-design", "desc": "Platform endurance, speed, and altitude capabilities"},
+          {"name": "flight-controller", "desc": "Flight controller capabilities and limitations"}
+        ],
+        "outputs": [
+          {"name": "mission-plan", "desc": "Complete mission plan with waypoints, altitudes, speeds, and camera/sensor actions at each point"},
+          {"name": "contingency-plans", "desc": "Alternative plans for weather abort, battery margin, and airspace changes"}
+        ],
+        "process": [
+          "Generate the mission plan from objectives. Survey mission: compute a lawnmower or serpentine pattern over the area of interest. Line spacing from camera footprint at altitude: GSD (ground sample distance) = pixel size * altitude / focal length. Overlap requirement (typically 70% forward, 60% side for photogrammetry) determines the line spacing and trigger interval. Inspection mission: generate waypoints at inspection points with specific viewing angles. Corridor mission (pipeline, powerline): follow the corridor centerline with cross-track waypoints for complete coverage.",
+          "Apply operational constraints. Altitude: minimum altitude for obstacle clearance, maximum altitude from regulation (400 ft AGL in US under Part 107) or airspace restriction. Speed: maximum speed for image quality (motion blur limit from exposure time and GSD), minimum speed for wind resistance (ground speed must be positive in worst-case wind). Geofence: define the boundary the drone must not cross, with a buffer for control authority. No-fly zones: restrict overflights of people, roads, or restricted areas. Battery: plan the return-to-launch with sufficient reserve from any point in the mission.",
+          "Optimize the flight path for efficiency. For survey patterns: orient the flight lines along the longest dimension of the area to minimize the number of turns (turns waste time and battery). Start from the downwind side so the return leg is faster. For multi-battery missions: plan each sortie to minimize the number of redundant overlap strips between sorties. For delivery or inspection: solve the traveling salesman problem variant for the optimal visit order.",
+          "Design contingency plans. Weather abort: monitor wind speed and precipitation, define thresholds for mission continue/abort based on the platform's wind resistance capability. If aborted mid-mission, log the completed coverage and generate a resume plan for the remaining area. Low battery contingency: at any point during the mission, the shortest safe path to a landing zone must be within the remaining battery capacity; if not, begin return immediately. Airspace conflict: if a manned aircraft is detected or ATC issues a restriction, execute a hold or descend pattern until clearance."
+        ],
+        "tags": ["mission-planning", "survey", "drone"]
+      },
+      {
+        "flow_name": "sense-and-avoid-system",
+        "description": "Implement sense-and-avoid for drone operations: detect and track airborne and ground obstacles, compute collision risk, and execute avoidance maneuvers.",
+        "inputs": [
+          {"name": "mission-plan", "desc": "Planned flight path and operational area"},
+          {"name": "airframe-design", "desc": "Platform maneuverability and sensor payload capacity"}
+        ],
+        "outputs": [
+          {"name": "detect-and-avoid-system", "desc": "Obstacle detection, tracking, collision risk assessment, and avoidance maneuver design"},
+          {"name": "regulatory-compliance-package", "desc": "Documentation showing compliance with detect-and-avoid requirements for BVLOS operations"}
+        ],
+        "process": [
+          "Select detection sensors for the operating environment. Cooperative: ADS-B In receiver detects transponder-equipped aircraft (most manned aircraft above 18,000 ft, increasingly at lower altitudes). FLARM for general aviation and gliders in some regions. Non-cooperative: radar (detects aircraft without transponders, works in all weather, heavy and power-hungry), camera-based detection (lightweight, detects against sky background using contrast, limited range in poor visibility, requires specialized tracking algorithms for small targets against cluttered backgrounds), lidar (limited range for air-to-air, more useful for ground obstacles during low-altitude operations). Most BVLOS operations require both cooperative and non-cooperative detection.",
+          "Implement obstacle tracking and collision risk assessment. Track detected obstacles using a Kalman filter with a constant-velocity or constant-turn model. Compute the closest point of approach (CPA): project both the drone's and the obstacle's trajectories forward, find the time and distance of minimum separation. If the projected CPA is within the collision avoidance threshold (well clear volume: 2000 ft horizontally, 250 ft vertically for integration with manned aviation, or smaller for small UAS operations), initiate avoidance. Assess urgency from time to CPA: advisory (>60s), corrective (35-60s), warning (<35s).",
+          "Design avoidance maneuvers. Follow the right-of-way rules: drones yield to all manned aircraft. Preferred avoidance direction: horizontal (right turn in head-on, right turn away in converging), or vertical (descend if the intruder is above, climb if below, matching manned aircraft convention). The avoidance maneuver must clear the well-clear volume and return to the planned path after the conflict is resolved. For ground obstacles during low-altitude flight: maintain a minimum clearance altitude, use lidar or camera-based terrain following.",
+          "Prepare the regulatory compliance package. For BVLOS operations in the US, an FAA waiver requires demonstrating: the ability to detect and avoid other aircraft (equivalent level of safety to visual line of sight), a plan to mitigate risk to people on the ground (ground risk buffer or population density constraints), operational procedures for lost link, low battery, and weather. Document: detection sensor specifications and tested detection range, tracking filter performance, avoidance maneuver response time, and field test results demonstrating the system detects and avoids intruder aircraft."
+        ],
+        "tags": ["detect-and-avoid", "sense-and-avoid", "BVLOS"]
+      }
+    ]
+  },
+  {
+    "chain_name": "control-systems-design-method",
+    "description": "Design a control system from scratch: identify the plant from data, build a model, design and tune the controller, analyze stability and robustness, implement in discrete time, and validate the closed-loop performance.",
+    "domain": "robotics",
+    "tags": ["control-systems", "PID", "state-space", "system-identification"],
+    "steps": [
+      {
+        "flow_name": "system-identification-method",
+        "description": "Identify the plant dynamics from experimental data: design excitation signals, collect response data, and extract transfer function or state-space models.",
+        "inputs": [
+          {"name": "plant-description", "desc": "Physical system to be controlled, including actuators and sensors"},
+          {"name": "performance-requirements", "desc": "Required bandwidth, settling time, steady-state accuracy, and disturbance rejection"}
+        ],
+        "outputs": [
+          {"name": "plant-model", "desc": "Identified plant model (transfer function or state-space) with uncertainty bounds"},
+          {"name": "model-validation", "desc": "Validation results showing model accuracy on test data not used for identification"}
+        ],
+        "process": [
+          "Design the excitation signal. The signal must excite the plant across the frequency range of interest (from DC to at least 5x the desired control bandwidth). Options: step input (simple, reveals DC gain and dominant time constant), frequency sweep (sine wave with slowly increasing frequency, directly yields the Bode plot), pseudo-random binary sequence (PRBS: broadband excitation, efficient, good for linear system identification), multisine (sum of sinusoids at selected frequencies, controls the frequency content precisely). Choose amplitude to stay within the linear operating range.",
+          "Collect and preprocess data. Sample the input and output at a rate at least 10x the highest frequency of interest (Nyquist with margin). Remove DC offset if needed. Apply anti-aliasing filter before sampling. For frequency response identification: compute the FFT of input and output, divide output spectrum by input spectrum to get the frequency response H(jw). For time-domain identification: use the input-output time series directly.",
+          "Extract the model. Frequency domain: fit a transfer function (poles and zeros) to the measured frequency response using least-squares in the frequency domain, weighting by data quality. Start with a low-order model and increase order until the fit is adequate. Time domain: use prediction error methods (PEM) or subspace identification (N4SID) to fit a state-space model to the input-output data. Select model order using information criteria (AIC, BIC) or by examining the singular values in the subspace method.",
+          "Validate the model. Split the data: use one portion for identification, another for validation. On the validation data, simulate the model with the measured input and compare the simulated output to the measured output. Compute the fit percentage (NRMSE). A good model should achieve >80% fit on validation data. Also compare the model's frequency response to the measured frequency response: they should agree within the frequency range of interest. Document the model's valid frequency range and amplitude range."
+        ],
+        "tags": ["system-identification", "frequency-response", "modeling"]
+      },
+      {
+        "flow_name": "controller-design-method",
+        "description": "Design the controller: select the control architecture, tune PID or state-feedback gains, and ensure the controller meets performance specifications.",
+        "inputs": [
+          {"name": "plant-model", "desc": "Identified plant model with uncertainty"},
+          {"name": "performance-requirements", "desc": "Bandwidth, settling time, overshoot, and disturbance rejection requirements"}
+        ],
+        "outputs": [
+          {"name": "controller-design", "desc": "Controller transfer function or gain matrices with all parameters"},
+          {"name": "predicted-performance", "desc": "Simulated closed-loop performance against specifications"}
+        ],
+        "process": [
+          "Select the control architecture. SISO with PID: for plants with a single dominant mode, PID is sufficient and well-understood. P for speed, I for steady-state accuracy, D for damping. Lead-lag compensation: for plants needing phase boost at crossover (lead) or low-frequency gain increase (lag). MIMO state feedback (LQR): for multi-input-multi-output systems, optimal for balancing response speed against control effort. State feedback with observer (LQG): when not all states are measurable, design a Kalman filter to estimate them. Select the simplest architecture that meets the specifications.",
+          "Design PID controller from the plant model. Method 1 (loop shaping): plot the open-loop Bode plot, design the controller to shape it: crossover frequency sets bandwidth (choose based on settling time: bandwidth ~ 4/settling_time), slope of -20 dB/decade at crossover for stability, add phase lead (D term) if the plant phase is too negative at crossover, add lag (I term) for low-frequency gain. Method 2 (pole placement): specify desired closed-loop poles from the performance requirements (natural frequency from bandwidth, damping ratio from overshoot), compute PID gains that place the closed-loop poles there. Method 3 (optimization): minimize a cost function (e.g., ITAE) over the PID gains with constraints on overshoot and settling time.",
+          "Design LQR state feedback (for multi-input or high-order systems). Form the cost function J = integral(x'Qx + u'Ru)dt. Q weights the state errors: larger Q penalizes deviation from the setpoint more, giving faster response. R weights the control effort: larger R gives smoother control inputs. Start with Q = C'C (penalizes output error) and R = I (equal penalty on all inputs). Solve the algebraic Riccati equation for the optimal gain K. Simulate the closed-loop response. Adjust Q and R to meet specifications: if too slow, increase Q; if control is too aggressive, increase R. If not all states are measurable, design a Kalman filter (observer) with the same model and measurement noise characteristics.",
+          "Simulate the closed-loop performance. Apply: step reference (check rise time, overshoot, settling time, steady-state error), step disturbance (check rejection speed and steady-state), noise on the measurement (check that high-frequency controller action is acceptable). Verify all specifications are met. If not, iterate on the controller design. Check actuator saturation: simulate with realistic actuator limits and verify the closed-loop does not wind up (add anti-windup for PID) or become unstable."
+        ],
+        "tags": ["controller-design", "PID", "LQR"]
+      },
+      {
+        "flow_name": "stability-robustness-analysis",
+        "description": "Analyze the closed-loop stability and robustness: compute stability margins, assess sensitivity to model uncertainty, and verify robustness to parameter variation.",
+        "inputs": [
+          {"name": "controller-design", "desc": "Controller with all parameters"},
+          {"name": "plant-model", "desc": "Plant model with identified uncertainty"}
+        ],
+        "outputs": [
+          {"name": "stability-analysis", "desc": "Gain margin, phase margin, delay margin, and sensitivity function analysis"},
+          {"name": "robustness-assessment", "desc": "Robustness to parameter variation, unmodeled dynamics, and time delay"}
+        ],
+        "process": [
+          "Compute classical stability margins. Gain margin: the factor by which the loop gain can increase before instability. Minimum 6 dB (factor of 2) for industrial systems, 12 dB for safety-critical. Phase margin: the phase lag that can be added before instability. Minimum 30 degrees for industrial, 45 degrees for safety-critical. Delay margin: the time delay that can be added before instability; compute from phase margin / crossover frequency. Plot the Nyquist diagram and verify the encirclement count matches the expected number of unstable open-loop poles.",
+          "Analyze the sensitivity functions. Sensitivity S = 1/(1+L): the transfer function from disturbance to output. Complementary sensitivity T = L/(1+L): the transfer function from reference to output (and from noise to output). |S| + |T| = 1 at every frequency (approximately). The peak of |S| (Ms) indicates robustness: Ms < 2 (6 dB) is a common requirement; higher peaks indicate near-instability. The peak of |T| (Mt) indicates noise amplification. Plot S and T on Bode plots; the crossover frequency where |S| = |T| = -3 dB is the bandwidth.",
+          "Assess robustness to plant uncertainty. Vary the plant parameters within their identification uncertainty bounds (e.g., +/-20% on gain, +/-10% on time constants). Re-compute the closed-loop response and stability margins for each variation. If stability margins drop below the minimum at any parameter combination, the controller is not robust. Use structured singular value (mu analysis) for a rigorous bound on the worst-case uncertainty combination. Alternatively, Monte Carlo simulation with parameter distributions gives a probabilistic robustness assessment.",
+          "Test robustness to unmodeled dynamics. The identified plant model omits high-frequency dynamics (resonances, sensor dynamics, actuator bandwidth). Model these as multiplicative uncertainty: the true plant is G_true = G_model * (1 + delta * W(s)) where W(s) is a weighting function that increases with frequency (unmodeled dynamics are larger at high frequencies) and |delta| <= 1. The robust stability condition is |T * W| < 1 at all frequencies. This sets an upper limit on the controller bandwidth: if you push the bandwidth too high, the controller becomes sensitive to unmodeled dynamics."
+        ],
+        "tags": ["stability", "robustness", "margins"]
+      },
+      {
+        "flow_name": "discrete-implementation-validation",
+        "description": "Implement the controller in discrete time for digital execution: select the sample rate, discretize the controller, handle computational delay, and validate on the real hardware.",
+        "inputs": [
+          {"name": "controller-design", "desc": "Continuous-time controller design"},
+          {"name": "stability-analysis", "desc": "Stability margins and robustness bounds"},
+          {"name": "plant-description", "desc": "Hardware platform for implementation"}
+        ],
+        "outputs": [
+          {"name": "discrete-controller", "desc": "Discrete-time controller implementation with sample rate, anti-aliasing, and computational delay compensation"},
+          {"name": "hardware-validation", "desc": "Closed-loop performance measured on real hardware against specifications"}
+        ],
+        "process": [
+          "Select the sample rate. Minimum: 10x the controller bandwidth (Nyquist with margin for the closed-loop dynamics). Higher rates reduce discretization error but increase computational load. For most electromechanical systems, 1-10 kHz. For thermal or process control, 1-100 Hz. Verify that the computing platform can execute the control algorithm within one sample period. Implement an anti-aliasing filter on the sensor input: a low-pass filter with cutoff at the Nyquist frequency (half the sample rate), typically a second-order Butterworth.",
+          "Discretize the controller. Methods: Tustin (bilinear) transform: preserves frequency response well, the standard choice. Zero-order hold: matches the step response, appropriate when the control signal is held constant between samples. Matched pole-zero: places discrete poles and zeros at the mapped locations of the continuous ones. For PID: discretize each term. P is trivial. I becomes a running sum (use trapezoidal integration for accuracy). D becomes a difference equation with a low-pass filter to limit high-frequency gain (filtered derivative: D(z) = Kd * N * (1 - z^-1) / (1 + N*Ts/2 * (1 + z^-1)/(1 - z^-1)) approximately). Verify the discrete controller's frequency response matches the continuous design at frequencies below Nyquist/4.",
+          "Handle computational delay. The controller reads the sensor, computes the output, and applies it to the actuator. This takes time (one sample period in the simplest case). Model the delay as z^-1 in the loop. Recompute stability margins with the delay included. If margins are insufficient, either increase the sample rate (reduce the delay as a fraction of the dynamics) or add a Smith predictor (model-based delay compensation). For cascaded loops, ensure the inner loop executes and settles within the outer loop's sample period.",
+          "Validate on hardware. Deploy the discrete controller to the real system. Run the same tests as in simulation: step response, disturbance rejection, noise sensitivity. Compare hardware results to simulated predictions. Common discrepancies: actuator saturation or rate limiting not in the model, sensor noise higher than modeled, unmodeled resonances excited at the chosen bandwidth. Iterate: if the hardware performance does not match simulation, refine the plant model with the new data and redesign. Document the final controller parameters, sample rate, and measured performance."
+        ],
+        "tags": ["discrete-control", "implementation", "validation"]
+      }
+    ]
+  },
+  {
+    "chain_name": "simulation-validation-methodology",
+    "description": "Design a simulation and validation framework for autonomous systems: build the simulator, model sensors and physics, generate test scenarios, and construct the statistical safety argument.",
+    "domain": "robotics",
+    "tags": ["simulation", "validation", "testing", "safety"],
+    "steps": [
+      {
+        "flow_name": "simulator-architecture-design",
+        "description": "Design the simulator architecture: select the physics engine, sensor models, and environment representation, and define the simulation fidelity requirements.",
+        "inputs": [
+          {"name": "system-under-test", "desc": "The autonomous system to be validated, with its interfaces"},
+          {"name": "validation-objectives", "desc": "What the simulation must demonstrate (safety, performance, robustness)"}
+        ],
+        "outputs": [
+          {"name": "simulator-design", "desc": "Simulator architecture with component selection, fidelity levels, and interface definitions"},
+          {"name": "fidelity-requirements", "desc": "Required simulation fidelity for each component to achieve valid test results"}
+        ],
+        "process": [
+          "Define the simulation loop. The simulator replaces the real world: it provides sensor data to the autonomous system and receives control commands back. The simulation loop: update physics (vehicle dynamics, other actors), render sensor data (camera images, lidar point clouds, radar returns), deliver sensor data to the system under test, receive and apply control commands, advance time. The loop rate must match the real-time sensor rates or run faster for accelerated testing.",
+          "Select the physics engine. Vehicle dynamics: bicycle model (fast, adequate for normal driving), multi-body dynamics (accurate suspension, tire, and chassis modeling for aggressive maneuvers), or lookup-table from real vehicle testing (highest accuracy, limited to the tested vehicle). Other actors: replay recorded trajectories (deterministic, limited coverage), reactive agents (respond to the ego vehicle, more realistic), or learned behavior models. Environment: static from HD map or 3D scan, dynamic elements (traffic lights, construction zones) from scenario scripts.",
+          "Design sensor models at appropriate fidelity. Camera: physically-based rendering (ray tracing for accurate lighting, reflections, and lens effects) gives the most realistic images but is computationally expensive. Reduced fidelity: rasterized rendering with post-processing for noise and blur. Minimum: sensor noise model applied to ground-truth detections (skip image rendering entirely for fast testing of planning and control). Lidar: ray casting against the 3D scene with noise, beam divergence, and multi-return modeling. Radar: point target model with range, Doppler, and cross-section, plus clutter generation. Match fidelity to the test objective: perception testing needs high-fidelity sensor models, planning testing can use ground-truth perception with injected errors.",
+          "Define the domain gap management strategy. No simulator perfectly matches reality. Identify the differences: visual appearance (rendering vs real images), physics (simplified dynamics vs real tire behavior), sensor noise (modeled vs actual statistical distribution), actor behavior (scripted vs human drivers). For each gap, either reduce it (improve the model) or account for it (validate that the gap does not invalidate the test results). Transfer learning: test in simulation for coverage, validate on real-world data for accuracy. Document the domain gaps and their impact on test validity."
+        ],
+        "tags": ["simulation", "architecture", "sensor-model"]
+      },
+      {
+        "flow_name": "scenario-generation-method",
+        "description": "Generate test scenarios systematically: cover the operational design domain, create adversarial scenarios, and mine real-world data for edge cases.",
+        "inputs": [
+          {"name": "simulator-design", "desc": "Simulator with its capabilities and fidelity"},
+          {"name": "validation-objectives", "desc": "What to test and acceptance criteria"}
+        ],
+        "outputs": [
+          {"name": "scenario-library", "desc": "Structured library of test scenarios with coverage documentation"},
+          {"name": "scenario-generation-pipeline", "desc": "Automated pipeline for generating new scenarios from data or parametric variation"}
+        ],
+        "process": [
+          "Define the scenario description framework. Each scenario specifies: initial conditions (ego pose, speed, other actors), environment (road geometry, weather, lighting, traffic signs/signals), actor behaviors over time (trajectories, decision points), and the expected outcome (pass criteria). Use a scenario description language (OpenSCENARIO or similar) for machine-readable specification. Categorize scenarios by type: nominal (common driving situations), edge (rare but plausible), adversarial (designed to exploit known weaknesses).",
+          "Generate parametric scenario variations. Take each base scenario and vary its parameters: actor speeds, gaps, positions, timing. Use methods: grid search (exhaustive but expensive), Latin hypercube sampling (space-filling with fewer samples), adaptive sampling (focus on the boundary between pass and fail regions). For each scenario type, define the relevant parameter ranges from the operational design domain. Example: for a cut-in scenario, vary the cut-in speed, gap, and lateral rate across their plausible ranges.",
+          "Mine real-world data for edge cases. From fleet driving data or public datasets, extract scenarios where the system or a human driver encountered difficulty: hard braking events, near-misses, unusual road user behavior, adverse weather encounters. Replay these in simulation to verify the system handles them correctly. Cluster similar events and create representative scenarios. This data-driven approach finds scenarios that parametric variation might miss because they involve combinations of factors not predicted analytically.",
+          "Generate adversarial scenarios. Use optimization to find the scenario parameters that maximize the system's failure probability. Methods: gradient-based optimization if the simulator is differentiable, evolutionary algorithms for black-box optimization, reinforcement learning to train adversarial agents that provoke failures. Adversarial testing is valuable for finding the system's breaking points, but the scenarios may be unrealistically adversarial. Filter adversarial scenarios for plausibility: only keep scenarios that could actually occur in the operational design domain."
+        ],
+        "tags": ["scenario-generation", "testing", "validation"]
+      },
+      {
+        "flow_name": "statistical-safety-argument",
+        "description": "Construct the statistical argument that the autonomous system is acceptably safe: define the safety target, compute the required test volume, and assess the residual risk.",
+        "inputs": [
+          {"name": "scenario-library", "desc": "Test scenarios with results"},
+          {"name": "validation-objectives", "desc": "Safety target and confidence level"}
+        ],
+        "outputs": [
+          {"name": "safety-argument", "desc": "Statistical safety argument with evidence, assumptions, and residual risk quantification"},
+          {"name": "test-completeness", "desc": "Assessment of whether sufficient testing has been performed to support the safety claim"}
+        ],
+        "process": [
+          "Define the safety target. Common formulation: the system shall have a fatality rate below X per mile (or per hour). The target is often derived from human driver performance: the system must be at least as safe as an attentive human driver, or N times safer. In the US, the human fatality rate is approximately 1.1 per 100 million miles. A target of 10x safer requires demonstrating a rate below 0.11 per 100 million miles. This is the statistical challenge: proving a very low rate requires enormous evidence.",
+          "Compute the required test volume for a purely statistical argument. To demonstrate a failure rate below lambda with confidence C, you need approximately -ln(1-C)/lambda miles (or scenarios) with zero failures. For lambda = 10^-8 per mile (10x safer than human) at 95% confidence: need 3*10^8 miles. This is infeasible with real-world driving alone (billions of miles). This is why simulation is essential: accelerate testing by running millions of scenarios in simulation, each representing a miles-equivalent of driving.",
+          "Construct a structured safety argument that combines evidence types. Pure mileage-based argument: we drove/simulated N miles with zero fatalities, therefore the rate is below X. Scenario-based argument: we tested all scenario types in the ODD, each with parameter variation, and the system passed all. Analysis-based argument: the system architecture has redundancy and fault detection that provides a calculated residual risk below the target. Combine these into a multi-pronged argument: simulation covers breadth (millions of scenarios), real-world testing validates that simulation results transfer, analysis fills gaps where testing cannot reach. The argument is stronger when all three prongs agree.",
+          "Assess residual risk and known limitations. After all testing and analysis, quantify the residual risk: the probability that the system encounters a scenario it cannot handle, multiplied by the probability of harm. The residual risk includes: scenarios in ODD Area 3 (unknown hazardous, see SOTIF analysis), hardware failures not covered by redundancy, environmental conditions beyond the ODD that the system fails to detect and reject. Document these honestly. The safety case is an argument, not a proof; it must be transparent about what is known, what is assumed, and what remains uncertain."
+        ],
+        "tags": ["safety-argument", "statistics", "validation"]
+      }
+    ]
+  },
+  {
+    "chain_name": "human-robot-interaction-design",
+    "description": "Design the human-robot interaction system: build situational awareness interfaces, implement teleoperation with shared autonomy, design mode switching and handoff protocols, and ensure physical interaction safety.",
+    "domain": "robotics",
+    "tags": ["HRI", "teleoperation", "user-interface", "safety"],
+    "steps": [
+      {
+        "flow_name": "situational-awareness-interface",
+        "description": "Design the interface that communicates the robot's state and intent to human operators or bystanders: what the robot perceives, what it plans to do, and how confident it is.",
+        "inputs": [
+          {"name": "robot-system", "desc": "The autonomous system with its perception, planning, and control capabilities"},
+          {"name": "user-roles", "desc": "Who interacts with the robot (operator, supervisor, bystander, co-worker) and what they need to know"}
+        ],
+        "outputs": [
+          {"name": "interface-design", "desc": "Interface layout and information architecture for each user role"},
+          {"name": "information-priority-model", "desc": "What to show and when, based on urgency and relevance"}
+        ],
+        "process": [
+          "Identify what information each user role needs. Operator (remote): full perception view (camera feeds, lidar visualization), system status (localization confidence, sensor health, battery, connectivity), current plan (trajectory, next action), and alerts (detected anomalies, approaching limits). Supervisor (oversight): aggregate fleet status, individual robot status on demand, exception alerts, intervention history. Bystander: the robot's immediate intent (direction of travel, stopping, yielding) through physical signals (lights, sounds, display). Co-worker (collaborative robot): the robot's planned motion (will it enter my workspace), force/speed status, e-stop accessibility.",
+          "Design the display hierarchy. Apply the visual hierarchy: most critical information largest and most prominent, secondary information available but not distracting. For remote operation: center of display is the primary camera view or map view, periphery shows system health indicators, bottom shows the current action and next planned action. Use color coding consistently: green for nominal, yellow for degraded, red for fault or alert. Avoid information overload: show summary status by default, drill-down for details. Display confidence levels for perception outputs so the operator knows when to trust or override.",
+          "Design intent communication for bystanders and co-workers. External signals: LED strips showing direction of travel (animated directional pattern), brake lights for deceleration, warning lights for reversing. Audio: low tone for normal operation (so people know it is there), higher tone or verbal announcement for approaching people or tight spaces. Display: a simple screen showing the robot's immediate plan in pictographic form (arrow for direction, stop sign for stopping). For collaborative robots: projected light showing the planned workspace boundary on the floor.",
+          "Prioritize information by urgency. Define alert levels: informational (system status changes, logged for review), advisory (approaching a limitation, operator should be aware), caution (action may be needed soon), warning (immediate action required). Each alert level gets progressively more intrusive display: informational updates in a log, advisory as a highlighted status change, caution as a pop-up with audio tone, warning as a full-screen alert with persistent audio. Test with operators to verify that critical information is noticed and non-critical information does not cause alarm fatigue."
+        ],
+        "tags": ["interface", "HRI", "situational-awareness"]
+      },
+      {
+        "flow_name": "teleoperation-and-shared-autonomy",
+        "description": "Implement teleoperation with shared autonomy: handle communication latency, blend human input with autonomous capability, and design the control interface for efficient remote operation.",
+        "inputs": [
+          {"name": "robot-system", "desc": "Robot with its autonomous capabilities and communication link"},
+          {"name": "interface-design", "desc": "Operator interface layout"}
+        ],
+        "outputs": [
+          {"name": "teleoperation-system", "desc": "Teleoperation control system with latency compensation and shared autonomy modes"},
+          {"name": "operator-workload-analysis", "desc": "Analysis of operator cognitive load and maximum number of robots per operator"}
+        ],
+        "process": [
+          "Characterize the communication link. Measure: round-trip latency (typical: 50-200ms for cellular, 500ms-2s for satellite), jitter (variation in latency), bandwidth (sufficient for video and control data), reliability (packet loss rate). Latency above 300ms makes direct teleoperation (joystick to motor) unreliable due to operator overcorrection. Above 1s, direct teleoperation is impractical. The communication link quality determines the level of autonomy sharing required.",
+          "Design shared autonomy levels. Level 1 (direct teleoperation): operator sends velocity or steering commands, robot executes immediately. Viable only with <200ms latency. Level 2 (assisted teleoperation): operator sends high-level commands (go to waypoint, follow path), robot handles low-level control (obstacle avoidance, path following). Viable up to ~1s latency. Level 3 (supervisory control): robot operates autonomously, operator monitors and intervenes by exception (approve a decision, select an alternative plan). Viable for any latency. Level 4 (full autonomy with escalation): robot operates independently, escalates specific decisions to the operator when it is uncertain. Implement seamless transitions between levels based on link quality and situation complexity.",
+          "Implement latency compensation. Predictive display: render the robot's predicted future state (where it will be given the current commands and vehicle model) alongside the actual state. The operator controls the predicted state, which feels responsive despite the delayed feedback. Model-based: maintain a local simulation of the robot on the operator's side, driven by the same commands; the local simulation provides instant feedback while the real robot catches up. Haptic feedback: if using force-feedback controls, model the remote environment locally and update with delayed sensor data; direct force transmission over a latent link causes instability.",
+          "Analyze operator workload. Count the information sources the operator must monitor and the decisions they must make per unit time. For a single robot in a complex environment: one operator is fully occupied. For robots in simple environments with high autonomy: one operator can supervise 3-5 robots (fleet management model). Key factor: the intervention rate. If the robot needs operator input every 30 seconds, one operator per robot. If the robot needs input every 10 minutes, one operator can handle a small fleet. Measure intervention rates from field data and staff accordingly."
+        ],
+        "tags": ["teleoperation", "shared-autonomy", "latency"]
+      },
+      {
+        "flow_name": "mode-switching-and-handoff",
+        "description": "Design mode switching between manual, assisted, and autonomous operation: define transition criteria, manage handoff timing, and prevent mode confusion.",
+        "inputs": [
+          {"name": "teleoperation-system", "desc": "Teleoperation and shared autonomy capabilities"},
+          {"name": "robot-system", "desc": "Autonomous system capabilities and limitations"}
+        ],
+        "outputs": [
+          {"name": "mode-switching-design", "desc": "Mode transition logic, handoff timing, and mode annunciation design"},
+          {"name": "mode-confusion-mitigations", "desc": "Analysis and mitigations for mode confusion risks"}
+        ],
+        "process": [
+          "Define the operating modes and their capabilities. Manual: human has direct control, robot provides no autonomous assistance. Assisted: human controls with robot assistance (e.g., collision avoidance active, speed limiting). Autonomous: robot controls, human monitors. Emergency: robot executes a predefined safe behavior regardless of human input. Each mode must have clear entry conditions, exit conditions, and annunciation (visual and auditory indication of the current mode).",
+          "Design the handoff protocol for human-to-robot transition. When the operator engages autonomous mode: verify all preconditions (sensors healthy, localization valid, mission loaded), display a confirmation with the autonomous system's plan, require explicit operator confirmation (button press with verification), ramp control authority from operator to robot over 1-2 seconds (not instant) to smooth the transition. The operator must confirm they are monitoring; passive engagement (not touching controls does not mean monitoring) must be detected and flagged.",
+          "Design the handoff protocol for robot-to-human transition. The robot escalates to the human when: it encounters a situation outside its capability, a fault reduces its confidence below the threshold, or the operator requests control. The escalation must provide: time budget (how long before the robot must act without human input), context (what the situation is, what options the robot sees), a default action (what the robot will do if the human does not respond). The human must have enough time and information to make a decision. If the human does not respond within the time budget, the robot executes the default (which must be safe, not optimal).",
+          "Mitigate mode confusion. Mode confusion occurs when the human and robot disagree about who is in control. Historical cause of accidents in aviation and autonomous driving. Mitigations: always annunciate the current mode prominently (large indicator, distinct colors), require positive action to change modes (no automatic mode transitions without operator awareness), maintain control input monitoring (if the operator provides input inconsistent with the current mode, alert them), log all mode transitions for post-incident analysis. Test the mode switching design with human subjects to identify confusion scenarios before deployment."
+        ],
+        "tags": ["mode-switching", "handoff", "HRI"]
+      },
+      {
+        "flow_name": "physical-interaction-safety",
+        "description": "Ensure physical safety for humans interacting with the robot: implement power and force limiting per ISO/TS 15066, design protective stops, and select appropriate safety-rated components.",
+        "inputs": [
+          {"name": "robot-system", "desc": "Robot hardware with actuator and structure specifications"},
+          {"name": "user-roles", "desc": "Who may be in physical proximity and what contact types are possible"}
+        ],
+        "outputs": [
+          {"name": "physical-safety-design", "desc": "Power and force limits, protective device selection, and safety zone configuration"},
+          {"name": "risk-assessment", "desc": "Contact scenario analysis with force/pressure calculations against ISO/TS 15066 limits"}
+        ],
+        "process": [
+          "Identify contact scenarios. Transient contact: the robot strikes a person and the person can move away (quasi-static impact followed by retraction). Quasi-static contact: the person is trapped between the robot and a fixed object (clamping). For each scenario, identify: the body region that could be contacted (head, chest, hand, leg), the effective mass of the robot at the contact point (from the manipulator dynamics and configuration), and the relative velocity at impact.",
+          "Calculate contact forces and pressures. For transient contact, the impact force depends on the effective mass of the robot at the contact point and the impact velocity: F = sqrt(k * m_reduced * v^2) where k is the contact stiffness (depends on body region, from ISO/TS 15066 Annex A) and m_reduced is the reduced mass (robot effective mass in series with body mass). For quasi-static contact, the force is determined by the robot's maximum force output in the trapped direction. Calculate the resulting pressure from the contact area (robot surface geometry).",
+          "Compare against ISO/TS 15066 biomechanical limits. The standard provides maximum permissible force and pressure for each body region, for both transient and quasi-static contact. Example: for the hand (transient), maximum force is 130 N and maximum pressure is 160 N/cm^2. If the calculated force or pressure exceeds the limit, implement mitigation: reduce robot speed (lower impact velocity), add padding (larger contact area, lower pressure, lower contact stiffness), reduce payload (lower effective mass), restrict workspace to avoid trapping scenarios.",
+          "Design the protective stop system. Safety-rated monitored stop: the robot stops all motion when a person enters the collaborative workspace, uses safety-rated sensors (safety laser scanner, light curtain, safety-rated camera). Speed and separation monitoring: the robot dynamically adjusts its speed based on the distance to the nearest person, stopping before a collision could exceed the force limit. Power and force limiting: the robot operates at forces below the biomechanical limits at all times, using compliant actuators, joint torque sensing, or external force/torque sensors. Select the method based on the task: power/force limiting allows continuous collaboration, monitored stop is simpler but stops production when humans are near."
+        ],
+        "tags": ["physical-safety", "ISO-15066", "collaborative-robot"]
+      }
+    ]
+  }
+]

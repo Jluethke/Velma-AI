@@ -1,0 +1,808 @@
+[
+  {
+    "chain_name": "laser-system-design",
+    "description": "Design a laser system from requirements through gain medium selection, resonator layout, pump coupling, beam quality verification, and safety classification.",
+    "domain": "physics",
+    "tags": ["laser", "photonics", "optics", "hardware"],
+    "steps": [
+      {
+        "flow_name": "laser-requirements-to-gain-medium",
+        "description": "Select the gain medium from wavelength, power, beam quality, and pulse requirements using absorption and emission cross-section data.",
+        "inputs": [
+          {"name": "wavelength-requirement", "desc": "Target wavelength or wavelength range in nm"},
+          {"name": "power-requirement", "desc": "CW average power or pulse energy target"},
+          {"name": "beam-quality-requirement", "desc": "M-squared target and divergence spec"},
+          {"name": "pulse-format", "desc": "CW, Q-switched, or modelocked with target pulse duration"}
+        ],
+        "outputs": [
+          {"name": "gain-medium-selection", "desc": "Selected gain medium with justification (gas, solid-state crystal/ceramic, fiber, semiconductor diode)"},
+          {"name": "emission-cross-section-data", "desc": "Emission cross-section, upper state lifetime, saturation intensity for the selected medium"},
+          {"name": "pump-requirements", "desc": "Pump wavelength, absorption bandwidth, and minimum pump power for threshold"}
+        ],
+        "process": [
+          "Map the target wavelength to available gain media. Gas lasers (HeNe 632.8nm, CO2 10.6um, excimer UV), solid-state (Nd:YAG 1064nm, Yb:YAG 1030nm, Ti:Sapphire 650-1100nm, Er:glass 1550nm), fiber (Yb 1030-1080nm, Er 1550nm, Tm 2000nm), semiconductor (650-1550nm depending on material system).",
+          "Filter by power level. Semiconductor diodes top out around tens of watts per chip. Fiber lasers scale to multi-kW CW. Solid-state bulk lasers handle high pulse energy. Gas lasers are wavelength-driven choices.",
+          "For pulsed operation, check the upper state lifetime against the desired pulse format. Q-switching needs long upper state lifetime (Nd:YAG 230us). Modelocking needs broad emission bandwidth (Ti:Sapphire 128THz, Yb:KGW 25nm). Short upper state lifetimes (semiconductor: ns) suit gain switching or external modulation.",
+          "Calculate the small-signal gain coefficient: g0 = sigma_e * N * pump_rate / (1 + I/I_sat). Verify that the chosen medium can reach threshold gain at a practical pump power given the resonator round-trip loss.",
+          "Document thermal conductivity of the gain medium for high-power applications. Yb:YAG ceramic has better thermal shock resistance than crystal. Fiber geometry gives high surface-to-volume ratio for cooling."
+        ],
+        "tags": ["laser", "gain-medium", "photonics"]
+      },
+      {
+        "flow_name": "laser-resonator-design",
+        "description": "Design the optical resonator for stability, mode size, and output coupling using ABCD matrix propagation and stability criteria.",
+        "inputs": [
+          {"name": "gain-medium-selection", "desc": "Selected gain medium and its properties"},
+          {"name": "emission-cross-section-data", "desc": "Gain cross-section and saturation intensity"},
+          {"name": "beam-quality-requirement", "desc": "Target M-squared and mode"}
+        ],
+        "outputs": [
+          {"name": "resonator-layout", "desc": "Mirror curvatures, separations, and folding geometry"},
+          {"name": "mode-size-profile", "desc": "Beam waist size at each point in the cavity including in the gain medium"},
+          {"name": "output-coupler-spec", "desc": "Output coupler reflectivity for maximum output power given gain and loss"}
+        ],
+        "process": [
+          "Choose resonator type. Plane-parallel for high energy storage but alignment-sensitive. Confocal for minimum diffraction loss but tight tolerance. Hemispherical (one flat, one curved mirror) is the workhorse for stability. Ring cavity for unidirectional operation (eliminates spatial hole burning).",
+          "Apply the stability condition: 0 <= g1*g2 <= 1 where gi = 1 - L/Ri. Plot the stability diagram. Select mirror radii that place the operating point away from the stability boundary for tolerance to thermal lensing.",
+          "Calculate the TEM00 mode size at each point using the ABCD matrix. Beam waist w0 = sqrt(lambda*L/pi * sqrt(g1*g2*(1-g1*g2)/(g1+g2-2*g1*g2)^2)). The mode must fill the gain medium adequately to extract stored energy (mode-gain overlap > 80%) without clipping on apertures.",
+          "For high power, include thermal lensing of the gain medium as an intracavity lens in the ABCD matrix. The thermal lens focal length f_th = K*A / (dn/dT * P_heat) where K is thermal conductivity, A is pump area, dn/dT is thermo-optic coefficient, P_heat is absorbed pump power minus laser output. Track stability versus pump power.",
+          "Optimize output coupler reflectivity. Use Rigrod analysis: P_out = I_sat * A * (ln(1/R) * (2*g0*l/total_loss - 1)) / (1 + sqrt(R/(R*exp(-2*alpha*L)))). Find the R that maximizes P_out numerically. Typical values range from 2% (high gain) to 90% (low gain, e.g. HeNe)."
+        ],
+        "tags": ["laser", "resonator", "optics"]
+      },
+      {
+        "flow_name": "laser-pump-and-cooling-design",
+        "description": "Design the pump source coupling and thermal management for reliable continuous operation at the target power level.",
+        "inputs": [
+          {"name": "pump-requirements", "desc": "Pump wavelength, power, and absorption bandwidth"},
+          {"name": "gain-medium-selection", "desc": "Gain medium and its thermal properties"},
+          {"name": "resonator-layout", "desc": "Cavity geometry for pump delivery"}
+        ],
+        "outputs": [
+          {"name": "pump-system-design", "desc": "Pump source, coupling optics, and delivery method"},
+          {"name": "thermal-management-design", "desc": "Cooling method, flow rates, and temperature control spec"},
+          {"name": "thermal-lens-estimate", "desc": "Expected thermal lens strength versus pump power"}
+        ],
+        "process": [
+          "Select the pump source. Diode laser bars for solid-state lasers (wavelength-matched to absorption peak, e.g., 808nm for Nd:YAG, 940nm or 969nm for Yb:YAG). Fiber-coupled diodes for end-pumping. VCSELs for uniform side-pumping. Electrical discharge for gas lasers. Pump diode for fiber lasers (976nm for Yb-doped).",
+          "Design pump delivery. End-pumping gives good mode overlap but limits power (thermal fracture). Side-pumping scales to higher power but has poorer mode overlap. For fiber lasers, use cladding pumping with double-clad fiber (pump light in inner cladding, signal in core). Calculate absorbed pump power from Beer-Lambert law: P_abs = P_pump * (1 - exp(-alpha_pump * L)).",
+          "Calculate heat load. Quantum defect heating: P_heat = P_abs * (1 - lambda_pump/lambda_laser). For Nd:YAG pumped at 808nm lasing at 1064nm, quantum defect is 24%. Add non-radiative decay and upconversion heating. For Yb:YAG pumped at 969nm (zero-phonon line), quantum defect drops to 6%.",
+          "Size the cooling system. For conduction-cooled slabs: solve the 1D heat equation to find the temperature rise. For water-cooled rods: use Newton's law with the convective heat transfer coefficient. Target is to keep the gain medium below its thermal fracture limit (Nd:YAG thermal shock parameter R = 7.9 W/cm, for 5mm rod this limits pump to about 40W).",
+          "Calculate the thermal lens from the temperature gradient: f_th = pi * K * w_p^2 / (P_heat * dn/dT) for end-pumped, or f_th = K * A / (xi * Q * dn/dT) for uniformly heated rod. Feed this back into the resonator model to verify stability over the operating range."
+        ],
+        "tags": ["laser", "pump", "thermal"]
+      },
+      {
+        "flow_name": "laser-beam-characterization",
+        "description": "Measure and verify beam quality, power, pointing stability, and spectral properties against requirements.",
+        "inputs": [
+          {"name": "resonator-layout", "desc": "Designed cavity configuration"},
+          {"name": "beam-quality-requirement", "desc": "Target M-squared and specifications"},
+          {"name": "power-requirement", "desc": "Target output power or energy"}
+        ],
+        "outputs": [
+          {"name": "beam-quality-report", "desc": "Measured M-squared, beam profile, pointing stability, spectral width"},
+          {"name": "power-performance-data", "desc": "Slope efficiency, threshold, power stability over time"},
+          {"name": "safety-classification", "desc": "IEC 60825 class and required engineering controls"}
+        ],
+        "process": [
+          "Measure M-squared per ISO 11146. Use a focusing lens and camera or scanning slit to measure beam radius at multiple positions through a focus. Fit to w(z) = w0 * sqrt(1 + (M^2 * lambda * z / (pi * w0^2))^2). A perfect TEM00 gives M^2 = 1.0. Multimode beams give M^2 > 1.",
+          "Measure power and efficiency. Record output power vs pump power (slope efficiency curve). Slope efficiency eta_s = (lambda_p/lambda_l) * eta_abs * eta_mode * eta_q * T/(T+L) where T is output coupler transmission, L is intracavity loss, eta_q is quantum efficiency. Compare to design prediction.",
+          "Measure spectral properties. For CW single-frequency lasers, use a scanning Fabry-Perot interferometer (linewidth). For pulsed, use an optical spectrum analyzer. For ultrafast, measure the autocorrelation (pulse duration) and spectrum to compute the time-bandwidth product (transform-limited: 0.44 for sech^2, 0.315 for Gaussian).",
+          "Measure pointing stability. Use a position-sensitive detector (PSD) or camera to record beam centroid over time. Specify in microradians RMS. Environmental vibration and thermal drift are the usual limits.",
+          "Classify per IEC 60825-1. Calculate the accessible emission limit (AEL) from wavelength, exposure duration, beam diameter, and divergence. Class 1 requires no controls. Class 3B and 4 require interlocks, eyewear, warning signs, key switch. Document the nominal hazard zone (NHZ) distance for Class 4."
+        ],
+        "tags": ["laser", "measurement", "beam-quality"]
+      }
+    ]
+  },
+  {
+    "chain_name": "fiber-optic-system-design",
+    "description": "Design a fiber optic communication or sensing system from link requirements through fiber selection, power budget, dispersion management, and installation testing.",
+    "domain": "physics",
+    "tags": ["fiber-optics", "photonics", "telecommunications", "hardware"],
+    "steps": [
+      {
+        "flow_name": "fiber-link-requirements-analysis",
+        "description": "Derive fiber system requirements from data rate, distance, and environmental constraints.",
+        "inputs": [
+          {"name": "data-rate-requirement", "desc": "Target data rate in Gbps or channel count"},
+          {"name": "link-distance", "desc": "Total fiber run length in km"},
+          {"name": "environmental-conditions", "desc": "Temperature range, vibration, radiation if applicable"}
+        ],
+        "outputs": [
+          {"name": "fiber-type-selection", "desc": "Single-mode or multimode, specific fiber standard (G.652, G.655, OM4)"},
+          {"name": "wavelength-plan", "desc": "Operating wavelength(s) and WDM plan if applicable"},
+          {"name": "modulation-format", "desc": "On-off keying, PAM4, or coherent QPSK/16QAM based on reach and rate"}
+        ],
+        "process": [
+          "For distances under 300m at 10-100Gbps, OM4 multimode with 850nm VCSELs is cost-effective. Modal bandwidth of 4700 MHz-km supports 10Gbps to 400m, 100Gbps to 150m with PAM4. Beyond 300m or above 100Gbps, single-mode is required.",
+          "Select the single-mode fiber type. G.652.D (standard SMF, zero dispersion at 1310nm) for metro and access. G.655 (non-zero dispersion shifted) for DWDM long-haul to reduce four-wave mixing. G.654.E (large effective area, low loss) for submarine and ultra-long-haul.",
+          "Choose the operating wavelength. 1310nm for short-reach (zero dispersion on G.652, but higher loss at 0.35dB/km). 1550nm for long-reach (lowest loss at 0.2dB/km, amplifiable with EDFA). 1625nm for monitoring (OTDR testing while live traffic runs at 1310/1550nm). For DWDM, plan channels on the ITU grid (100GHz or 50GHz spacing in C-band 1530-1565nm).",
+          "Select modulation format from the data rate and reach. Direct detection NRZ for 10Gbps to 80km. PAM4 for 100Gbps short-reach. Coherent DP-QPSK for 100Gbps long-haul (spectral efficiency 2 bits/symbol). Coherent DP-16QAM for 400Gbps but shorter reach due to OSNR penalty. Calculate the required OSNR from the modulation format BER target.",
+          "Document environmental requirements. Tight-buffered cable for indoor. Loose-tube with gel or dry block for outdoor (thermal expansion accommodation). Armored for direct burial. All-dielectric self-supporting (ADSS) or optical ground wire (OPGW) for aerial. Radiation-hardened fiber for nuclear or space."
+        ],
+        "tags": ["fiber-optics", "requirements", "telecom"]
+      },
+      {
+        "flow_name": "optical-power-budget-design",
+        "description": "Calculate the optical power budget to verify adequate margin from transmitter to receiver across all loss contributors.",
+        "inputs": [
+          {"name": "fiber-type-selection", "desc": "Fiber type and attenuation coefficient"},
+          {"name": "link-distance", "desc": "Total fiber length including routing margin"},
+          {"name": "wavelength-plan", "desc": "Operating wavelength and channel plan"}
+        ],
+        "outputs": [
+          {"name": "power-budget-table", "desc": "Itemized loss budget from transmitter to receiver with margin"},
+          {"name": "osnr-budget", "desc": "OSNR at receiver for amplified systems with margin allocation"},
+          {"name": "amplifier-plan", "desc": "EDFA placement and gain for long-haul systems"}
+        ],
+        "process": [
+          "Start with transmitter launch power. Typical values: SFP+ at 1310nm launches -8 to +0.5 dBm. DWDM tunable laser at +1 to +4 dBm. Calculate receiver sensitivity from the target BER (typically 1e-12 pre-FEC or 1e-3 with FEC), modulation format, and receiver noise. An APD at 10Gbps gives about -28 dBm at BER 1e-12. A coherent receiver at 100Gbps DP-QPSK needs OSNR of about 12dB (0.1nm reference bandwidth).",
+          "List all loss contributors. Fiber attenuation: length_km * attenuation_coefficient. Connector losses: 0.3-0.5 dB per mated pair. Fusion splice losses: 0.02-0.1 dB each. WDM multiplexer/demultiplexer insertion loss: 3-7 dB depending on channel count. Add a cable plant margin of 2-3 dB for future splices and aging.",
+          "For amplified systems, calculate OSNR. Each EDFA adds ASE noise. OSNR_total = P_ch - NF - 10*log10(N_spans) - 10*log10(h*nu*Bref) where NF is noise figure (typically 5-6dB), N_spans is the number of amplifiers. Allocate margin for nonlinear penalties (self-phase modulation, cross-phase modulation).",
+          "Verify the power budget: Available_power = P_tx - P_rx_sensitivity. Required_power = sum(all_losses). System_margin = Available_power - Required_power. Margin must be positive with at least 3dB for unamplified and adequate OSNR margin (typically 2-3dB) for amplified.",
+          "For DWDM, check per-channel power at the receiver. EDFA gain tilt across the C-band can cause 2-3dB variation. Gain-flattening filters (GFF) reduce this. Channel pre-emphasis at the transmit end compensates for residual tilt. Verify that the weakest channel meets the OSNR target."
+        ],
+        "tags": ["fiber-optics", "power-budget", "telecom"]
+      },
+      {
+        "flow_name": "fiber-dispersion-management",
+        "description": "Analyze and manage chromatic and polarization mode dispersion to ensure error-free transmission at the target data rate.",
+        "inputs": [
+          {"name": "fiber-type-selection", "desc": "Fiber type with dispersion parameters"},
+          {"name": "link-distance", "desc": "Total fiber length"},
+          {"name": "modulation-format", "desc": "Modulation and data rate"}
+        ],
+        "outputs": [
+          {"name": "dispersion-budget", "desc": "Chromatic dispersion and PMD budget versus tolerance"},
+          {"name": "compensation-plan", "desc": "DCF modules, FBG, or DSP compensation approach"},
+          {"name": "dispersion-map", "desc": "Accumulated dispersion versus distance along the link"}
+        ],
+        "process": [
+          "Calculate accumulated chromatic dispersion: CD_total = D * L where D is the dispersion coefficient in ps/(nm*km). For G.652 at 1550nm, D is about 17 ps/(nm*km). A 10Gbps NRZ signal tolerates about 1000 ps/nm (roughly 60km of G.652 at 1550nm). A 100Gbps signal tolerates 16x less (about 60 ps/nm, or roughly 3.5km uncompensated).",
+          "For direct detection systems exceeding the dispersion limit, add dispersion compensating fiber (DCF) or chirped fiber Bragg gratings. DCF has high negative dispersion (-100 ps/nm/km) but adds loss (0.5 dB/km) and nonlinearity due to small effective area. Place DCF at amplifier sites to avoid excess loss.",
+          "For coherent systems, chromatic dispersion is compensated digitally in the DSP. The equalizer applies the inverse transfer function of the fiber. This eliminates DCF entirely, reducing cost and nonlinear penalty. Verify that the DSP's dispersion compensation range covers the link (modern coherent DSPs handle 100,000+ ps/nm).",
+          "Analyze polarization mode dispersion (PMD). PMD accumulates as sqrt(L): PMD_total = PMD_coeff * sqrt(L_km). Modern fiber has PMD_coeff < 0.1 ps/sqrt(km). A 100km link gives < 1ps PMD. The rule of thumb: PMD tolerance is about 10% of the symbol period. At 10Gbps (100ps symbol), 10ps PMD is the limit. Coherent DSP also compensates PMD adaptively.",
+          "Build the dispersion map showing accumulated dispersion versus distance. For long-haul DWDM, the map influences nonlinear performance. A residual dispersion per span of 30-50 ps/nm with full compensation at the receiver is typical for 10Gbps channels. For coherent 100Gbps+, a simple uncompensated (no inline DCF) link with DSP compensation at the receiver is standard practice."
+        ],
+        "tags": ["fiber-optics", "dispersion", "telecom"]
+      },
+      {
+        "flow_name": "fiber-installation-testing",
+        "description": "Test and commission the installed fiber plant using OTDR, power meter, and specialized measurements to verify it meets design specifications.",
+        "inputs": [
+          {"name": "power-budget-table", "desc": "Expected loss budget for comparison"},
+          {"name": "fiber-type-selection", "desc": "Installed fiber type and cable details"},
+          {"name": "link-distance", "desc": "Expected span lengths"}
+        ],
+        "outputs": [
+          {"name": "otdr-trace-analysis", "desc": "Verified splice losses, connector losses, fiber attenuation per span"},
+          {"name": "insertion-loss-report", "desc": "End-to-end optical loss measured vs budget"},
+          {"name": "acceptance-verdict", "desc": "Pass/fail against installation specifications with any remediation needed"}
+        ],
+        "process": [
+          "Perform OTDR testing from both ends of each span. The OTDR sends pulses and measures backscattered light versus time (distance). Select pulse width for resolution vs range trade-off: short pulses (5-10ns) resolve closely spaced events but have less dynamic range; long pulses (1-10us) see further but blur events closer than 50-500m. Use launch and receive fiber coils (150-500m) to characterize the near-end and far-end connectors.",
+          "Analyze the OTDR trace. Identify each event: connectors appear as reflective peaks (return loss should be > 45dB for APC, > 35dB for UPC). Fusion splices appear as loss-only events (target < 0.1dB). Unexpected events (macrobends, stress points, possible cracks) appear as non-reflective losses at unexpected locations. Bidirectional averaging removes the directional bias of Rayleigh backscatter.",
+          "Measure end-to-end insertion loss with a calibrated source and power meter (OLTS). This is the definitive loss measurement (OTDR gives per-event detail but less accurate total loss). Compare against the power budget. The measured loss must be less than the budgeted cable plant loss.",
+          "For high-speed systems, measure return loss (ORL) end-to-end. Target < -30dB for analog and coherent systems (high return loss causes multipath interference). Individual connectors contributing high reflections are identified from the OTDR trace.",
+          "Document results in an acceptance report. Each span: OTDR trace (both directions), insertion loss, return loss, fiber length. Compare every measured value against the specification (typically an industry standard or the design power budget with margin). Failed splices or connectors must be re-done and re-tested."
+        ],
+        "tags": ["fiber-optics", "testing", "installation"]
+      }
+    ]
+  },
+  {
+    "chain_name": "optical-sensor-design",
+    "description": "Design an optical sensor system from sensing mechanism selection through interrogation, multiplexing, calibration, and field deployment.",
+    "domain": "physics",
+    "tags": ["optical-sensor", "photonics", "instrumentation", "hardware"],
+    "steps": [
+      {
+        "flow_name": "optical-sensing-mechanism-selection",
+        "description": "Select the optical sensing mechanism from the measurand characteristics, required sensitivity, and deployment environment.",
+        "inputs": [
+          {"name": "measurand-requirements", "desc": "Physical quantity to measure (strain, temperature, pressure, chemical, acoustic)"},
+          {"name": "sensitivity-resolution-spec", "desc": "Required measurement resolution and range"},
+          {"name": "deployment-environment", "desc": "Temperature range, chemical exposure, electromagnetic interference, access constraints"}
+        ],
+        "outputs": [
+          {"name": "sensing-mechanism", "desc": "Selected sensing approach with operating principle and sensitivity formula"},
+          {"name": "sensor-element-design", "desc": "Physical sensor element specifications (FBG parameters, interferometer type, coating)"},
+          {"name": "cross-sensitivity-analysis", "desc": "Identification of interfering measurands and discrimination strategy"}
+        ],
+        "process": [
+          "Map the measurand to available optical mechanisms. Strain/temperature: fiber Bragg grating (FBG) with wavelength shift 1.2 pm/microstrain or 10 pm/degC at 1550nm. High-resolution acoustic/vibration: Fabry-Perot interferometer or phase-sensitive OTDR. Chemical: fluorescence quenching (oxygen), absorption spectroscopy (gas), surface plasmon resonance (biomolecular). Distributed sensing: Brillouin (strain + temperature over km lengths, 1m resolution).",
+          "For FBG sensors, design the grating parameters. Bragg wavelength lambda_B = 2 * n_eff * Lambda where Lambda is the grating period. Bandwidth is determined by grating length and index modulation. Stronger gratings (higher reflectivity) give broader bandwidth. Typical: 10mm grating, 99% reflectivity, 0.2nm bandwidth. The wavelength shift encodes the measurand.",
+          "For interferometric sensors, select the configuration. Fabry-Perot: cavity length change from pressure or temperature, measured by fringe counting or white-light interrogation. Mach-Zehnder: phase difference between sensing and reference arms, highly sensitive (can detect sub-pm fiber length changes). Sagnac: rotation sensing (fiber optic gyroscope). Michelson: similar to Mach-Zehnder but reflected.",
+          "Analyze cross-sensitivity. FBGs respond to both strain and temperature simultaneously. Discriminate using: two FBGs at different wavelengths (different strain-optic coefficients), an unstrained reference FBG for temperature compensation, or a combined FBG + Fabry-Perot sensor. For distributed Brillouin sensing, separate strain and temperature using both Brillouin frequency shift and intensity.",
+          "Check if the environment demands special fiber. High temperature (> 300C) requires metal-coated or sapphire fiber (FBGs on standard fiber erase above 300C; regenerated FBGs survive to 1000C). Radiation environment: radiation-hardened fiber (fluorine-doped core) to resist radiation-induced attenuation. Hydrogen-rich environment: hermetic carbon coating to prevent hydrogen darkening."
+        ],
+        "tags": ["optical-sensor", "mechanism-selection", "photonics"]
+      },
+      {
+        "flow_name": "optical-interrogator-design",
+        "description": "Design the interrogation system that reads the optical sensor and converts its response to a calibrated measurement.",
+        "inputs": [
+          {"name": "sensing-mechanism", "desc": "Selected sensor type and its signal characteristics"},
+          {"name": "sensitivity-resolution-spec", "desc": "Required measurement bandwidth and resolution"},
+          {"name": "sensor-element-design", "desc": "Sensor element parameters"}
+        ],
+        "outputs": [
+          {"name": "interrogation-system", "desc": "Complete interrogator design (source, detector, demodulation algorithm)"},
+          {"name": "noise-limited-resolution", "desc": "Calculated minimum detectable signal from noise analysis"},
+          {"name": "multiplexing-capacity", "desc": "Number of sensors supportable on one fiber and the multiplexing method"}
+        ],
+        "process": [
+          "For FBG sensors, select the interrogation method. Scanning tunable filter (moderate speed, high resolution): a piezo-scanned Fabry-Perot filter sweeps across the reflected spectrum. Spectrometer-based (high channel count, moderate speed): dispersive element plus CCD/InGaAs array. Edge filter (highest speed, moderate resolution): position the FBG wavelength on the slope of a filter transmission curve. For dynamic strain measurement (kHz bandwidth), use interferometric demodulation.",
+          "Calculate noise-limited wavelength resolution. For a spectrometer interrogator, the resolution depends on the grating pitch and detector pixel count. For a scanning filter, it depends on the filter finesse and scan repeatability. Typical achievable: 1 pm wavelength resolution (about 0.8 microstrain or 0.1C for a standard FBG). Shot noise and detector noise set the fundamental limit.",
+          "For interferometric sensors, select the demodulation scheme. Homodyne: simple but susceptible to signal fading at quadrature points. Heterodyne: frequency offset between arms, giving AC interference signal immune to fading. Phase-generated carrier (PGC): sinusoidal modulation of the interferometer, demodulate using J1 and J2 Bessel function harmonics. PGC is the standard for high-performance interferometric sensing.",
+          "Design multiplexing. WDM for FBGs: each FBG at a different Bragg wavelength, limited by source bandwidth divided by per-sensor wavelength range (typically 40-80 FBGs in C-band with 2nm spacing). TDM: pulse the source and time-gate returns from FBGs at different positions along the fiber. Combined WDM-TDM for hundreds of sensors. OFDR (optical frequency domain reflectometry) for distributed sensing with mm-level spatial resolution over short distances.",
+          "Specify the sampling rate and data acquisition. Match to the measurand bandwidth (structural health monitoring: 1-100 Hz; vibration: 1-50 kHz; acoustic emission: 100 kHz to 1 MHz). Anti-aliasing filter before digitization. Bit resolution from the dynamic range requirement (16-bit ADC for 90dB dynamic range)."
+        ],
+        "tags": ["optical-sensor", "interrogator", "instrumentation"]
+      },
+      {
+        "flow_name": "optical-sensor-calibration-deployment",
+        "description": "Calibrate the optical sensor system and install it in the field with proper bonding, routing, and protection.",
+        "inputs": [
+          {"name": "interrogation-system", "desc": "Complete interrogator configuration"},
+          {"name": "sensor-element-design", "desc": "Sensor element specifications"},
+          {"name": "cross-sensitivity-analysis", "desc": "Known cross-sensitivities to compensate"}
+        ],
+        "outputs": [
+          {"name": "calibration-certificate", "desc": "Calibration data linking sensor output to traceable reference measurements"},
+          {"name": "installation-procedure", "desc": "Step-by-step bonding, routing, and protection procedure for field sensors"},
+          {"name": "measurement-uncertainty-budget", "desc": "Total measurement uncertainty from all contributing sources"}
+        ],
+        "process": [
+          "Calibrate each sensor against a traceable reference. For FBG strain sensors: mount on a calibration beam with known applied strain (foil strain gauge reference, calibrated to within 1%). Record FBG wavelength shift versus applied strain. Fit the gauge factor (typically 0.78 pm/microstrain at 1550nm). For temperature: calibrate in a thermal chamber against a traceable RTD or thermocouple.",
+          "Build the measurement uncertainty budget. Sources: interrogator wavelength accuracy, sensor gauge factor uncertainty, temperature compensation residual, bonding transfer function, long-term wavelength drift, connector repeatability. Combine using root-sum-square for independent sources. Express as expanded uncertainty (k=2, 95% confidence).",
+          "Install sensors. For strain measurement on structures: surface preparation (clean, abrade to Sa 2.5), adhesive selection (cyanoacrylate for short-term, epoxy for long-term, ceramic cement for high temperature). Fiber routing with adequate bend radius (> 15mm for standard SMF). Strain relief at ingress/egress points. Protect with a cover or embedment in composite structures.",
+          "For embedded sensors in composite structures, place the fiber between plies during layup. Fiber orientation matters: align with the reinforcement direction to minimize resin pocket formation. Entry and exit points need strain relief to prevent fiber breakage during cure. The embedding changes the effective gauge factor (stiffer host structure transfers less strain to the fiber).",
+          "Commission the installed system. Verify all sensor channels respond. Apply a known load or temperature change and compare the reading to the calibration. Set baseline readings (zero strain, ambient temperature). Configure data logging, alarming thresholds, and remote access. Document the installation with photographs and coordinates of each sensor location."
+        ],
+        "tags": ["optical-sensor", "calibration", "deployment"]
+      }
+    ]
+  },
+  {
+    "chain_name": "superconducting-qubit-design",
+    "description": "Design a superconducting qubit from parameter selection through junction fabrication, readout design, coherence analysis, and packaging for a quantum processor.",
+    "domain": "physics",
+    "tags": ["quantum-computing", "superconducting", "qubit", "cryogenic"],
+    "steps": [
+      {
+        "flow_name": "qubit-parameter-design",
+        "description": "Select qubit type and calculate the Josephson junction parameters, capacitance, and frequency to meet coherence and gate fidelity targets.",
+        "inputs": [
+          {"name": "coherence-target", "desc": "Target T1 and T2 relaxation times in microseconds"},
+          {"name": "gate-fidelity-target", "desc": "Target single-qubit and two-qubit gate error rates"},
+          {"name": "processor-architecture", "desc": "Number of qubits, connectivity, and frequency allocation plan"}
+        ],
+        "outputs": [
+          {"name": "qubit-type-and-parameters", "desc": "Transmon or fluxonium parameters: Ej, Ec, frequency, anharmonicity"},
+          {"name": "junction-specification", "desc": "Junction area, critical current density, and target resistance"},
+          {"name": "coupling-architecture", "desc": "Qubit-qubit and qubit-resonator coupling design"}
+        ],
+        "process": [
+          "Select qubit type. Transmon (Ej/Ec >> 1, typically 50-100): exponentially suppressed charge noise sensitivity at the cost of reduced anharmonicity (200-350 MHz). Standard choice for current processors. Fluxonium (Ej/Ec ~ 1-10, large superinductance): higher anharmonicity and potentially longer T1 at the cost of more complex fabrication and flux-bias requirement.",
+          "For a transmon, set the target frequency (typically 4-6 GHz, spread across the processor to avoid frequency collisions). The qubit frequency is approximately f_01 = (sqrt(8*Ej*Ec) - Ec) / h. Anharmonicity alpha = -Ec. Choose Ec = 200-350 MHz (sets the anharmonicity). Then Ej = (f_01 + Ec)^2 / (8*Ec). For a 5GHz transmon with Ec = 300MHz: Ej = (5.3GHz)^2 / (8*0.3GHz) = 11.7 GHz.",
+          "Calculate the Josephson junction critical current: Ic = 2*pi*Ej / Phi_0 where Phi_0 = h/(2e) is the flux quantum. For Ej = 11.7 GHz: Ic = 24 nA. The junction room-temperature resistance Rn = pi*Delta/(2*e*Ic) where Delta is the superconducting gap of aluminum (180 ueV). This gives Rn = 11.8 kOhm. Junction area = Rn * Jc_product where Jc is the critical current density of the fabrication process (typically 0.5-2 uA/um^2 for Al/AlOx/Al).",
+          "Design the coupling architecture. Fixed capacitive coupling between transmons gives a coupling strength g/2pi of 1-30 MHz depending on the capacitor geometry. For tunable coupling, add a coupler qubit between computational qubits (allows coupling to be turned on for gates and off for idle, suppressing residual ZZ interaction). Qubit-readout resonator coupling: target dispersive shift chi/2pi = 0.5-2 MHz for state discrimination with readout time of 0.5-2 us.",
+          "Perform frequency collision analysis. Map all qubit frequencies, readout frequencies, and their harmonics. Avoid: qubit-qubit frequency collisions (need > 30 MHz separation for fixed-frequency transmons), qubit frequency near readout frequency, straddling condition where two-qubit frequency sum equals twice a third qubit frequency. Use frequency allocation algorithms for large processors."
+        ],
+        "tags": ["quantum-computing", "qubit-design", "transmon"]
+      },
+      {
+        "flow_name": "josephson-junction-fabrication",
+        "description": "Fabricate Josephson junctions with controlled critical current using shadow evaporation and oxidation control.",
+        "inputs": [
+          {"name": "junction-specification", "desc": "Target junction area, critical current density, and resistance"},
+          {"name": "qubit-type-and-parameters", "desc": "Qubit parameters requiring specific junction properties"}
+        ],
+        "outputs": [
+          {"name": "fabrication-process-recipe", "desc": "Complete process flow: resist, evaporation, oxidation, liftoff"},
+          {"name": "junction-characterization-data", "desc": "Measured Rn distribution, Ic uniformity, and yield"},
+          {"name": "process-control-parameters", "desc": "Critical parameters and their tolerances for reproducibility"}
+        ],
+        "process": [
+          "Prepare the substrate. High-resistivity silicon (> 10 kOhm-cm) or sapphire to minimize dielectric loss. Clean with piranha or oxygen plasma. For highest coherence, the substrate surface treatment (HF dip, thermal oxidation, surface passivation) strongly affects T1 through surface dielectric loss.",
+          "Pattern the junction using Dolan bridge (shadow evaporation) technique. Spin bilayer resist (bottom: copolymer MMA/MAA for undercut, top: PMMA for resolution). E-beam lithography defines the junction area and the bridge structure. Develop to create the undercut profile. The bridge width and resist stack control the angle-dependent shadow geometry.",
+          "Deposit aluminum and form the tunnel barrier. First evaporation at angle theta1 deposits the bottom electrode (typically 20-40nm Al). In-situ oxidation: introduce controlled O2 pressure (0.1-10 mbar) for a controlled time (1-30 minutes) to grow the AlOx tunnel barrier. The oxidation parameters directly set the critical current density: higher pressure*time product gives thicker barrier and lower Jc. This is the most critical step for reproducibility.",
+          "Second evaporation at angle theta2 (opposite direction) deposits the top electrode through the same resist mask, overlapping the oxidized bottom electrode only in the junction area (defined by the shadow geometry). Liftoff in warm solvent removes the resist and excess metal. The junction area is defined by the overlap of the two angle-deposited films.",
+          "Characterize the junctions. Measure room-temperature resistance of each junction (4-point probe or on-chip test structures). Rn variation of +/-5% across a wafer is typical for a controlled process. Calculate the expected Ej and qubit frequency from the measured Rn. For a processor, the frequency spread from junction variation must be within the design's collision-free window."
+        ],
+        "tags": ["quantum-computing", "fabrication", "josephson-junction"]
+      },
+      {
+        "flow_name": "qubit-readout-design",
+        "description": "Design the dispersive readout system including the readout resonator, Purcell filter, and measurement chain for high-fidelity state discrimination.",
+        "inputs": [
+          {"name": "qubit-type-and-parameters", "desc": "Qubit frequency, anharmonicity, and coupling needs"},
+          {"name": "coupling-architecture", "desc": "Qubit-resonator coupling design"},
+          {"name": "coherence-target", "desc": "T1 target sets the Purcell limit"}
+        ],
+        "outputs": [
+          {"name": "readout-resonator-design", "desc": "Resonator frequency, coupling Q, and dispersive shift"},
+          {"name": "purcell-filter-design", "desc": "Filter bandwidth and center frequency to protect T1"},
+          {"name": "measurement-chain-spec", "desc": "Amplifier chain (TWPA/JPA, HEMT, room-temp) with noise budget"}
+        ],
+        "process": [
+          "Design the readout resonator. Place the resonator frequency 1-2 GHz above the qubit frequency (detuning Delta >> g to stay in the dispersive regime). The dispersive shift chi = g^2 * alpha / (Delta * (Delta + alpha)) determines how much the resonator frequency shifts depending on qubit state. Target chi/2pi = 0.5-2 MHz for fast, high-fidelity readout.",
+          "Set the resonator external coupling quality factor Qe. This determines the resonator linewidth kappa = omega_r / Qe. For fast readout (< 1 us), kappa/2pi should be 1-5 MHz. The readout fidelity is limited by the signal-to-noise ratio: SNR = 4 * chi^2 * n_readout * T_meas / kappa where n_readout is the number of photons in the resonator during measurement. Keep n_readout below the critical photon number n_crit = Delta^2 / (4*g^2) to avoid measurement-induced transitions.",
+          "Design the Purcell filter to prevent qubit energy relaxation through the readout port. Without protection, the Purcell-limited T1 = Qe * (Delta/g)^2 / omega_r, which may be shorter than the target. A bandpass Purcell filter centered at the readout frequency with bandwidth matching kappa blocks qubit photon emission at the qubit frequency while passing the readout signal. Verify that the Purcell-limited T1 exceeds the target by at least 5x.",
+          "Design the measurement amplification chain. First amplifier: quantum-limited amplifier at base temperature (TWPA: traveling wave parametric amplifier, or JPA: Josephson parametric amplifier). Adds near-minimum noise (0.5 photon at the quantum limit). Second stage: HEMT amplifier at 4K (noise temperature 2-5K). Third: room-temperature amplifier. The system noise temperature is dominated by the first amplifier per the Friis equation.",
+          "Calculate the expected readout fidelity. State discrimination fidelity depends on the separation of the two pointer states in the IQ plane (proportional to chi * sqrt(n_readout) * T_meas) versus the noise (set by the amplifier chain). Include T1 errors during measurement (qubit may decay from excited to ground during readout). Typical state-of-the-art: 99%+ assignment fidelity in 0.5-1 us measurement time."
+        ],
+        "tags": ["quantum-computing", "readout", "dispersive"]
+      },
+      {
+        "flow_name": "qubit-coherence-analysis",
+        "description": "Identify and mitigate the dominant decoherence mechanisms to achieve the target T1 and T2 times.",
+        "inputs": [
+          {"name": "qubit-type-and-parameters", "desc": "Qubit frequency, junction parameters, and capacitor geometry"},
+          {"name": "fabrication-process-recipe", "desc": "Materials and processes used"},
+          {"name": "readout-resonator-design", "desc": "Readout parameters affecting Purcell decay"}
+        ],
+        "outputs": [
+          {"name": "decoherence-budget", "desc": "Predicted T1 and T2 from each loss mechanism"},
+          {"name": "mitigation-actions", "desc": "Design and process changes to suppress dominant loss channels"},
+          {"name": "characterization-protocol", "desc": "Measurements to diagnose decoherence sources in the fabricated device"}
+        ],
+        "process": [
+          "Enumerate T1 (energy relaxation) mechanisms. Dielectric loss in substrate surface, metal-substrate interface, and junction oxide: 1/T1_dielectric = omega * p_i * tan_delta_i summed over each interface, where p_i is the participation ratio (fraction of electric field energy in that region). Two-level system (TLS) defects in amorphous oxides are the dominant T1 limit for current transmons. Purcell decay through the readout resonator. Quasiparticle tunneling across the junction.",
+          "Enumerate T2 (dephasing) mechanisms. Pure dephasing rate 1/T_phi = 1/T2 - 1/(2*T1). For transmons, the dominant dephasing sources are: 1/f flux noise coupling through residual flux sensitivity (suppressed by operating at the flux sweet spot), photon shot noise in the readout resonator (thermal photon number must be < 0.01 at base temperature), charge noise (exponentially suppressed for Ej/Ec > 50). Measure T2_Ramsey and T2_echo to separate low-frequency and high-frequency noise contributions.",
+          "Calculate the dielectric participation ratios from electromagnetic simulation (HFSS, Sonnet, or Palace). The metal-air surface (native oxide, adsorbates) typically has p ~ 1e-3 with tan_delta ~ 2e-3, limiting T1 to 500 us. The substrate-metal interface has similar contribution. Reducing participation ratios through larger capacitor geometries or cleaner interfaces is the primary design lever.",
+          "Mitigate dominant losses. Surface treatment: HF etch to remove native oxide before metal deposition, high-vacuum metal deposition (< 1e-8 Torr), in-situ ion mill before second metal layer. Use tantalum or niobium instead of aluminum for capacitor pads (lower surface loss, T1 > 300 us demonstrated). Reduce quasiparticles: phonon traps (normal metal patches), improved shielding from infrared radiation, quasiparticle traps near the junction.",
+          "Measure and diagnose on the fabricated device. T1 vs frequency (TLS spectroscopy: TLS defects cause frequency-dependent T1 dips). T1 vs temperature (quasiparticle-limited T1 decreases exponentially with temperature above ~150mK). T2_echo vs wait time (identifies slow noise sources). Randomized benchmarking for gate fidelity. Repeated T1 measurements over hours (TLS fluctuations cause T1 to wander)."
+        ],
+        "tags": ["quantum-computing", "coherence", "decoherence"]
+      }
+    ]
+  },
+  {
+    "chain_name": "quantum-error-correction-methodology",
+    "description": "Implement quantum error correction from error characterization through code selection, syndrome extraction, decoding, and logical qubit overhead estimation.",
+    "domain": "physics",
+    "tags": ["quantum-computing", "error-correction", "surface-code"],
+    "steps": [
+      {
+        "flow_name": "quantum-error-characterization",
+        "description": "Characterize the physical error model of the quantum processor to determine error rates, correlations, and dominant error channels.",
+        "inputs": [
+          {"name": "processor-specifications", "desc": "Number of qubits, connectivity, gate set, and measured gate fidelities"},
+          {"name": "coherence-data", "desc": "Measured T1, T2, and gate error rates for each qubit"},
+          {"name": "target-logical-error-rate", "desc": "Required logical error rate for the target algorithm"}
+        ],
+        "outputs": [
+          {"name": "error-model", "desc": "Characterized error channels (depolarizing, dephasing, leakage, crosstalk) with rates"},
+          {"name": "error-correlations", "desc": "Spatially and temporally correlated error patterns"},
+          {"name": "threshold-comparison", "desc": "Physical error rates compared to code thresholds"}
+        ],
+        "process": [
+          "Measure individual gate error rates using randomized benchmarking (RB). Single-qubit RB gives the average gate error. Interleaved RB isolates individual gate errors. Typical state-of-the-art: 0.01-0.1% single-qubit, 0.1-1% two-qubit (CZ or CNOT).",
+          "Characterize error channels beyond the average rate. Use gate set tomography (GST) for detailed error models of each gate: coherent errors (over-rotation, axis tilt), stochastic Pauli errors (X, Y, Z rates separately), and leakage to non-computational states. The Pauli error channel is the most relevant for QEC analysis.",
+          "Measure correlated errors. Simultaneous RB on neighboring qubits detects crosstalk. Correlated errors are more damaging to QEC than independent errors because they can create undetectable error chains. Measure the correlated error rate and compare to the code's tolerance for correlated errors.",
+          "Compare to the QEC threshold. The surface code has a threshold of approximately 1% per round for depolarizing noise (including measurement errors). If the physical error rate p is below threshold, increasing the code distance d reduces the logical error rate as p_L ~ (p/p_th)^((d+1)/2). If p is above threshold, no amount of encoding helps.",
+          "Identify non-Pauli errors. Leakage (population leaving the qubit subspace) is not directly correctable by Pauli-based QEC. Measure leakage rates per gate cycle. If significant (> 0.1%), leakage reduction circuits (LRU: reset leaked qubits each cycle) must be incorporated. Cosmic ray events cause correlated burst errors across many qubits simultaneously; measure the rate and design mitigation (rapid qubit reset after detection)."
+        ],
+        "tags": ["quantum-computing", "error-characterization", "benchmarking"]
+      },
+      {
+        "flow_name": "qec-code-selection-and-layout",
+        "description": "Select the QEC code and map it to the physical qubit layout with the required code distance for the target logical error rate.",
+        "inputs": [
+          {"name": "error-model", "desc": "Physical error rates and channels"},
+          {"name": "target-logical-error-rate", "desc": "Required logical error rate"},
+          {"name": "processor-specifications", "desc": "Qubit count, connectivity, and layout"}
+        ],
+        "outputs": [
+          {"name": "code-selection", "desc": "Selected QEC code with distance and parameters"},
+          {"name": "physical-layout", "desc": "Mapping of data qubits and ancilla qubits to the physical processor"},
+          {"name": "resource-overhead", "desc": "Number of physical qubits per logical qubit and syndrome extraction circuit depth"}
+        ],
+        "process": [
+          "Select the QEC code. The surface code is the default choice for 2D nearest-neighbor connectivity (matches superconducting qubit architectures). It requires d^2 data qubits and (d-1)^2 + d^2 ancilla qubits for a distance-d code, totaling about 2*d^2 physical qubits per logical qubit. Alternative: color code (transversal non-Clifford gates but higher threshold requirement), LDPC codes (lower overhead at large distance but require long-range connectivity).",
+          "Calculate the required code distance. From the scaling relation p_L = A * (p/p_th)^((d+1)/2) where A is a constant (approximately 0.03 for the surface code), solve for d given p (measured physical error rate) and p_L (target logical error rate). Example: p = 0.1%, p_th = 1%, target p_L = 1e-12 requires d = 23, using about 1058 physical qubits per logical qubit.",
+          "Design the surface code layout on the physical chip. Each data qubit couples to 4 neighboring ancilla qubits (2 X-type stabilizers, 2 Z-type). The ancilla qubit measures a stabilizer each syndrome extraction round using a sequence of 4 CNOT gates. The CNOT ordering matters for hook errors; use the standard ordering that avoids weight-2 hook errors along the diagonal.",
+          "Plan the boundary conditions and logical operations. Smooth and rough boundaries define the logical X and Z operators. A logical CNOT between two surface code patches uses lattice surgery (measuring a joint stabilizer between patches). Magic state injection requires a smaller surface code patch to prepare and distill magic states for T gates.",
+          "Estimate the total physical qubit overhead for the target algorithm. Count: logical data qubits (from the algorithm), logical ancilla qubits (for Toffoli decomposition), magic state factories (each factory is a mini surface code producing one T state every few code cycles, requiring 15*d_factory^2 physical qubits). A useful quantum computation (e.g., factoring a 2048-bit number) requires millions of physical qubits at current error rates."
+        ],
+        "tags": ["quantum-computing", "surface-code", "QEC"]
+      },
+      {
+        "flow_name": "syndrome-decoding-implementation",
+        "description": "Implement real-time syndrome extraction and decoding to identify and correct errors during computation.",
+        "inputs": [
+          {"name": "code-selection", "desc": "QEC code, distance, and stabilizer definitions"},
+          {"name": "physical-layout", "desc": "Qubit layout and connectivity"},
+          {"name": "error-model", "desc": "Error rates for decoder calibration"}
+        ],
+        "outputs": [
+          {"name": "syndrome-extraction-circuit", "desc": "Quantum circuit for one round of stabilizer measurement"},
+          {"name": "decoder-implementation", "desc": "Selected decoder algorithm with latency and accuracy characteristics"},
+          {"name": "logical-error-rate-estimate", "desc": "Simulated logical error rate from Monte Carlo with the calibrated decoder"}
+        ],
+        "process": [
+          "Design the syndrome extraction circuit. Each ancilla qubit is initialized in |+> (for X stabilizers) or |0> (for Z stabilizers), then CNOT-coupled to its neighboring data qubits in the prescribed order, then measured. The measurement result (0 or 1) is the syndrome bit for that stabilizer. A complete syndrome extraction round takes 4 CNOT layers plus preparation and measurement, about 1 microsecond in current hardware.",
+          "Select the decoder. Minimum-weight perfect matching (MWPM): pairs syndrome defects (stabilizer changes between rounds) with minimum total weight graph matching. Time complexity O(n^3) worst case but optimized implementations run in microseconds. Union-Find decoder: near-linear time, slightly lower accuracy than MWPM, better suited for real-time implementation. Neural network decoders: trained on simulated error data, can capture correlations MWPM misses, but latency is harder to bound.",
+          "Calibrate decoder weights. The decoder assigns weights to edges in the matching graph based on error probabilities. Measure individual qubit and gate error rates and use them to set the graph weights. Correlated errors can be modeled as hyperedges. Periodically recalibrate weights as qubit performance drifts.",
+          "Handle measurement errors. Syndrome bits themselves are noisy (measurement error rate comparable to gate error rate). The decoder must distinguish real data errors from measurement errors. This is done by repeating syndrome extraction d times and decoding in a 3D space-time matching graph (spatial dimensions for qubit location, temporal dimension for syndrome round number).",
+          "Validate by Monte Carlo simulation. Simulate the full QEC cycle (encode, d rounds of noisy syndrome extraction, decode, check for logical error) with the calibrated error model. Run millions of trials to estimate the logical error rate with statistical confidence. Verify that the logical error rate meets the target. Compute the lambda factor (suppression per unit distance increase) to extrapolate to other code distances."
+        ],
+        "tags": ["quantum-computing", "decoder", "syndrome"]
+      }
+    ]
+  },
+  {
+    "chain_name": "cryogenic-system-design",
+    "description": "Design a cryogenic system for quantum computing or low-temperature physics experiments, from cooling architecture through wiring, shielding, and thermometry.",
+    "domain": "physics",
+    "tags": ["cryogenic", "quantum-computing", "dilution-refrigerator", "hardware"],
+    "steps": [
+      {
+        "flow_name": "cryostat-architecture-design",
+        "description": "Select the cryostat type and design the cooling stages from room temperature to base temperature.",
+        "inputs": [
+          {"name": "base-temperature-requirement", "desc": "Target base temperature (typically 10-20 mK for qubits)"},
+          {"name": "cooling-power-requirement", "desc": "Heat load at each temperature stage from the experiment"},
+          {"name": "experimental-volume", "desc": "Physical size and mass of the experiment at base temperature"}
+        ],
+        "outputs": [
+          {"name": "cryostat-type-selection", "desc": "Dilution refrigerator, adiabatic demagnetization, or 3He system with justification"},
+          {"name": "cooling-stage-layout", "desc": "Temperature stages, cooling power at each, and thermal intercept plan"},
+          {"name": "cool-down-time-estimate", "desc": "Estimated time from room temperature to base temperature"}
+        ],
+        "process": [
+          "Select the cryostat type by temperature and cooling power. Above 1K: 4He bath cryostat (pumped to 1.2K) or pulse tube cooler (to 3K, cryogen-free). For 0.3-1K: 3He refrigerator (single-shot or continuous cycle). Below 0.3K: dilution refrigerator is the standard for continuous cooling (base temperature 7-15 mK with modern dry systems). For temperatures below 50 mK with very low heat load: adiabatic demagnetization refrigerator (ADR), but single-shot cycle.",
+          "For a dilution refrigerator, design the temperature stages. A typical dry DR has: 50K stage (pulse tube first stage, 30-40W cooling), 4K stage (pulse tube second stage, 1-2W), still plate (~0.8K, 20-50 mW), cold plate (~0.1K, 0.5-1 mW), mixing chamber (10-20 mK, 10-20 uW at 20 mK). The cooling power at the mixing chamber scales as Q_dot = 84 * n_dot_3 * (T_mc^2 - T_still^2) where n_dot_3 is the 3He circulation rate.",
+          "Calculate the heat load budget at each stage. Sources: conduction through mechanical supports and wiring (integral of k(T)*A/L from hot to cold), radiation through shields (Stefan-Boltzmann with emissivity of gold-plated surfaces: ~0.02), dissipation in amplifiers or filters at the cold stages. The budget at each stage must be less than the available cooling power with margin (typically 50% margin).",
+          "Plan the thermal intercepts. Each wire from room temperature must be thermally anchored at each stage to prevent heat from reaching base temperature. Coaxial cables, DC wiring, and mechanical supports all need staged intercepts. Copper braid or copper-clad stainless connectors provide the thermal link. Calculate the heat load contribution from each cable type using tabulated thermal conductivity integrals.",
+          "Estimate the cool-down time. The dominant thermal mass is the mixing chamber plate and experiment hardware. Cool-down from 300K to 4K is limited by the pulse tube capacity (typically 12-24 hours). From 4K to base temperature, the dilution unit takes 4-12 hours. Total: 1-2 days for a typical quantum computing DR. Plan for pre-cooling with exchange gas if the experiment mass is large."
+        ],
+        "tags": ["cryogenic", "dilution-refrigerator", "cooling"]
+      },
+      {
+        "flow_name": "cryogenic-wiring-design",
+        "description": "Design the electrical wiring from room temperature to the experiment at base temperature, balancing signal fidelity against heat load.",
+        "inputs": [
+          {"name": "cooling-stage-layout", "desc": "Temperature stages and available cooling power"},
+          {"name": "signal-requirements", "desc": "Number and type of lines (DC bias, microwave control, readout, flux)"},
+          {"name": "base-temperature-requirement", "desc": "Target base temperature for noise floor"}
+        ],
+        "outputs": [
+          {"name": "wiring-plan", "desc": "Cable types, attenuation, and filtering at each stage for each signal line"},
+          {"name": "heat-load-from-wiring", "desc": "Calculated heat load contribution from all wiring at each stage"},
+          {"name": "noise-temperature-budget", "desc": "Effective noise temperature at the qubit from the wiring and attenuation plan"}
+        ],
+        "process": [
+          "Categorize signal lines by type. DC bias lines (flux bias, gate voltage): low bandwidth, need heavy filtering. Microwave drive lines (qubit control at 4-8 GHz): need attenuation to thermalize noise from room temperature but low enough loss to deliver adequate power. Readout output lines: carry weak signals from the qubit, must preserve signal with minimum added noise. Pump lines for parametric amplifiers: moderate power microwave.",
+          "Design microwave drive line attenuation. Room temperature electronics generate thermal noise at 300K (kT = 6.2e-21 J at 300K, equivalent to about 25 photons at 5 GHz). To thermalize this noise to the base temperature (20 mK, 0.08 photons), attenuate by at least 10*log10(300/0.02) = 42 dB distributed across stages. Typical plan: 20dB at 4K, 10dB at still, 10dB at cold plate, 3dB at mixing chamber. Each attenuator dissipates power at its stage and must be counted in the heat budget.",
+          "Design DC wiring. Use resistive wire (phosphor bronze, manganin, or NbTi superconducting below 10K) to minimize thermal conduction. Each stage gets a low-pass filter: copper powder filter, Eccosorb filter, or RC filter to block high-frequency noise from reaching the qubits. The wire thermal conductance sets the heat load: Q = integral(k(T) * A/L * dT) from hot to cold side of each segment.",
+          "Design the readout output chain. From the qubit, the signal goes through a circulator or isolator (prevents amplifier noise from reaching the qubit), into the quantum-limited amplifier (TWPA or JPA at base temperature, dissipating 1-10 uW), then through a HEMT at 4K. The circulator/isolator adds 0.5-1 dB insertion loss. Superconducting NbTi coaxial cable between mixing chamber and 4K minimizes loss on the readout path.",
+          "Sum the total heat load from wiring. For each cable segment between stages, calculate: P_cond = integral of k(T)*A/L*dT, P_diss = attenuation power dissipated at that stage, P_radiation = any radiative load from imperfect shielding. Verify that the total at each stage is within the cooling power budget. If the heat load is too high, switch to thinner cables, add more thermal intercepts, or reduce the number of lines (multiplexing)."
+        ],
+        "tags": ["cryogenic", "wiring", "microwave"]
+      },
+      {
+        "flow_name": "cryogenic-shielding-thermometry",
+        "description": "Design magnetic shielding, infrared filtering, and thermometry for reliable operation at millikelvin temperatures.",
+        "inputs": [
+          {"name": "cryostat-type-selection", "desc": "Cryostat architecture"},
+          {"name": "base-temperature-requirement", "desc": "Target base temperature"},
+          {"name": "experimental-volume", "desc": "Dimensions and sensitivity of the experiment"}
+        ],
+        "outputs": [
+          {"name": "magnetic-shielding-design", "desc": "Mu-metal and superconducting shield configuration with expected attenuation"},
+          {"name": "ir-filtering-plan", "desc": "Infrared absorbers and light-tight design to suppress photon-induced quasiparticles"},
+          {"name": "thermometry-plan", "desc": "Temperature sensors at each stage with calibration approach"}
+        ],
+        "process": [
+          "Design magnetic shielding. Superconducting qubits are sensitive to magnetic flux noise and stray fields. Use a layered approach: room-temperature mu-metal shield (attenuation factor 100-1000 for DC fields), additional cryoperm shield at 4K (higher permeability when cold), and a superconducting aluminum or lead shield at base temperature (perfect diamagnetic shielding, Meissner effect). The superconducting shield must be cooled through Tc in the low-field environment to avoid trapping flux vortices.",
+          "Design infrared filtering. Stray infrared photons from warm stages generate quasiparticles in superconducting circuits, reducing qubit T1. Install infrared-absorbing filters (Eccosorb CR-110 or similar) at each radiation shield aperture. Make the mixing chamber stage light-tight (no line-of-sight from warm stages). Coaxial cable inner conductors act as waveguides for IR; add inline IR filters (lossy at > 100 GHz but transparent at microwave qubit frequencies).",
+          "Select thermometry for each stage. 50K and 4K: silicon diode or Cernox RTD (calibrated from 1.4K to 420K). Still and cold plate: RuO2 thick-film resistor (calibrated from 20 mK to 40K, good sensitivity below 1K). Mixing chamber: calibrated RuO2 or CMN (cerium magnesium nitrate) thermometer for accurate reading below 100 mK. The CMN susceptibility follows Curie law (1/T) down to 2 mK.",
+          "Calibrate thermometry. Use fixed-point devices (superconducting transition temperatures: tungsten 15.4 mK, beryllium 23.8 mK, iridium 112.4 mK, aluminum 1.175K, indium 3.407K) to verify the thermometer calibration at base temperature. For RuO2, the resistance-temperature curve must be individually calibrated (polynomial fit in log-log space). Self-heating: use low excitation current (1-10 nA at base temperature) to avoid Joule heating that biases the reading.",
+          "Vibration isolation. Mechanical vibrations couple to qubit coherence through piezoelectric effects in substrates and microphonic noise in cables. The pulse tube cooler generates vibrations at 1.4 Hz. Decouple using flexible bellows connections, heavy mixing chamber mass (acts as a low-pass mechanical filter), and vibration-damping mounts. Measure vibration spectra at the experiment stage with an accelerometer during commissioning."
+        ],
+        "tags": ["cryogenic", "shielding", "thermometry"]
+      }
+    ]
+  },
+  {
+    "chain_name": "lidar-system-design",
+    "description": "Design a lidar system from ranging method selection through optical design, scanning, receiver optimization, and point cloud processing.",
+    "domain": "physics",
+    "tags": ["lidar", "photonics", "sensing", "autonomous"],
+    "steps": [
+      {
+        "flow_name": "lidar-architecture-selection",
+        "description": "Select the lidar ranging method and scanner architecture from range, resolution, and cost requirements.",
+        "inputs": [
+          {"name": "range-requirement", "desc": "Maximum detection range for the target reflectivity (e.g., 200m at 10% reflectivity)"},
+          {"name": "resolution-requirements", "desc": "Angular resolution, range precision, and point rate"},
+          {"name": "application-constraints", "desc": "Size, weight, power, cost, and environmental requirements"}
+        ],
+        "outputs": [
+          {"name": "ranging-method", "desc": "Direct time-of-flight, FMCW, or phase-based with justification"},
+          {"name": "scanner-architecture", "desc": "Mechanical spinning, MEMS, OPA, flash, or hybrid"},
+          {"name": "laser-source-selection", "desc": "Wavelength, pulse format, and power level with eye safety analysis"}
+        ],
+        "process": [
+          "Select the ranging method. Direct time-of-flight (dToF): measures the round-trip time of a short laser pulse. Simple, long range (200m+), but range precision limited by timing jitter (typically 2-5 cm). FMCW (frequency-modulated continuous wave): sweeps a coherent laser and measures beat frequency. Gives simultaneous range and velocity, sub-mm precision, immune to ambient light, but limited range (currently 200-300m max) and requires coherent laser source. Phase-based: CW modulated, measures phase of returned signal; high precision but ambiguity range limits application.",
+          "Select scanner architecture by angular coverage and point rate. Mechanical spinning (Velodyne style): 360-degree horizontal, 16-128 channels vertically, 300K-6M points/sec. Mature but large, expensive, and has moving parts. MEMS mirror: compact, moderate FOV (120x30 degrees), single-beam scanning at 1-2M points/sec. Solid-state flash: no moving parts, limited range (30-50m) due to eye safety (energy spread over full FOV), good for short-range. OPA (optical phased array): solid-state beam steering, promising but immature (limited aperture, sidelobe issues).",
+          "Select laser wavelength. 905nm: cheap, efficient InGaAs diode lasers, silicon APD detectors, but eye safety limits peak power (Class 1 AEL at 905nm is more restrictive than 1550nm because 905nm reaches the retina). 1550nm: 10x higher Class 1 AEL (cornea absorbs, does not reach retina), InGaAs APD or SiGe SPAD detectors (more expensive), fiber laser sources available for FMCW. 905nm dominates for cost-sensitive automotive. 1550nm for long-range or eye-safe applications.",
+          "Calculate required transmit power from the lidar range equation. For dToF: SNR = (P_tx * rho * A_rx * eta_sys) / (4 * pi * R^4 * NEP * BW) where P_tx is peak power, rho is target reflectivity, A_rx is receive aperture area, eta_sys is system efficiency, R is range, NEP is receiver noise equivalent power, BW is detection bandwidth. Solve for P_tx given the minimum SNR for detection (typically SNR > 10 for reliable detection). Verify that the transmitted power meets eye safety per IEC 60825 for the beam divergence and scan pattern.",
+          "Compare SWaP-C (size, weight, power, cost) across architectures. Mechanical spinning: large, heavy, $500-$10K depending on channel count. MEMS: compact (fist-sized), moderate cost ($100-$500 at volume), moderate range. Flash: smallest, lowest cost potential, shortest range. FMCW: moderate size, highest cost (coherent source), best precision and velocity sensing. Select based on the application priority (automotive mass-market vs. survey vs. robotics)."
+        ],
+        "tags": ["lidar", "architecture", "sensing"]
+      },
+      {
+        "flow_name": "lidar-optical-receiver-design",
+        "description": "Design the lidar receiver including the detector, optics, and signal processing for the target detection range and false alarm rate.",
+        "inputs": [
+          {"name": "ranging-method", "desc": "Selected ranging approach"},
+          {"name": "laser-source-selection", "desc": "Wavelength and power level"},
+          {"name": "range-requirement", "desc": "Detection range at target reflectivity"}
+        ],
+        "outputs": [
+          {"name": "detector-selection", "desc": "Detector type and specifications (APD, SPAD, SiPM, balanced detector for FMCW)"},
+          {"name": "receiver-optics-design", "desc": "Collection aperture, filter, and focusing design"},
+          {"name": "signal-processing-chain", "desc": "Threshold, timing, or FFT processing for range extraction"}
+        ],
+        "process": [
+          "Select the detector. For 905nm dToF: silicon APD (gain 100-200, NEP ~0.1 pW/sqrt(Hz)) or SiPM/SPAD array (single-photon sensitivity, but saturate in bright ambient). For 1550nm dToF: InGaAs APD (gain 10-30, higher dark current than Si). For FMCW: balanced InGaAs photodetectors (coherent detection gives shot-noise-limited sensitivity, no avalanche gain needed). For flash lidar: 2D detector array (InGaAs focal plane array or SPAD array).",
+          "Design the receiver optics. Collection aperture determines the received signal power (larger aperture = more signal but bigger, heavier optic). Typical: 20-75mm diameter lens for automotive, 100-200mm for survey. A narrowband optical filter (1-10nm bandwidth centered on the laser wavelength) rejects ambient solar background. The filter bandwidth must accommodate the laser wavelength tolerance and temperature shift. Focus the collected light onto the detector active area.",
+          "For dToF, design the timing discrimination. Leading-edge discriminator: simple but walk error (timing depends on signal amplitude). Constant fraction discriminator (CFD): triggers at a fixed fraction of the pulse peak, eliminating walk error. Time-to-digital converter (TDC) resolution sets the range granularity (1 ns = 15 cm). Multiple-return detection: the TDC captures all returns above threshold, enabling detection through vegetation or rain.",
+          "For FMCW, design the coherent processing. Mix the returned signal with the local oscillator on a balanced detector. The beat frequency f_beat = 2*R*chirp_rate/c gives the range. FFT of the beat signal with N points gives range resolution c/(2*B) where B is the chirp bandwidth (e.g., B = 10 GHz gives 1.5 cm resolution). Doppler shift adds to the beat frequency; use triangle-wave chirp (up-down) to separate range from velocity.",
+          "Analyze the detection probability and false alarm rate. For dToF with threshold detection: P_detect = Q-function(SNR - threshold). P_false_alarm = Q-function(threshold / noise_rms). Set the threshold for the desired P_fa (typically 1e-6 per range bin per shot) and calculate the resulting P_detect at maximum range. If P_detect is too low, increase averaging (multiple pulses), increase transmit power, or increase the aperture."
+        ],
+        "tags": ["lidar", "receiver", "detector"]
+      },
+      {
+        "flow_name": "lidar-point-cloud-processing",
+        "description": "Process raw lidar returns into calibrated, georeferenced point clouds with noise filtering and classification.",
+        "inputs": [
+          {"name": "scanner-architecture", "desc": "Scan pattern and angular encoding"},
+          {"name": "signal-processing-chain", "desc": "Raw range and intensity data format"},
+          {"name": "application-constraints", "desc": "Real-time vs post-processing requirements"}
+        ],
+        "outputs": [
+          {"name": "calibrated-point-cloud", "desc": "XYZ coordinates with intensity, calibrated and georeferenced"},
+          {"name": "noise-filtering-results", "desc": "Removed noise points (multipath, bloom, atmospheric) with quality metrics"},
+          {"name": "point-cloud-quality-metrics", "desc": "Point density, precision, accuracy verification against known targets"}
+        ],
+        "process": [
+          "Convert raw measurements to 3D points. For each return: apply the range calibration (system delay offset, walk correction), convert from spherical (range, azimuth, elevation) to Cartesian (x, y, z) using the scanner's angular calibration. Apply the boresight alignment between the scanner and the navigation reference frame. For mobile lidar, integrate with INS/GNSS to georeference each point.",
+          "Filter noise points. Multipath: secondary reflections from nearby surfaces cause ghost points at incorrect ranges; filter by checking spatial consistency with neighbors. Bloom: strong retroreflectors saturate the detector, causing range errors; flag points with anomalously high intensity. Atmospheric: rain, fog, and dust create returns at short range; filter by range gating or statistical outlier removal. Near-range cutoff: scanner mechanics or optical design may create artifacts within minimum range.",
+          "Classify the point cloud for the application. Ground extraction: progressive morphological filter or cloth simulation filter separates ground from objects. Object clustering: group non-ground points into discrete objects by spatial proximity (DBSCAN or connected components on a voxel grid). For autonomous driving: further classify clusters as vehicles, pedestrians, cyclists, etc., using shape features or machine learning on the point cloud.",
+          "Verify point cloud accuracy. Place calibrated survey targets (flat panels of known reflectivity at measured positions) in the scene. Compare lidar-measured positions to survey truth. Range accuracy is typically 1-5 cm for dToF, sub-cm for FMCW. Angular accuracy depends on scanner calibration (typically 0.01-0.1 degrees). Point density varies with range squared (inverse square law for scanning lidars).",
+          "Optimize for real-time output. For automotive lidar, the full pipeline (ranging, calibration, noise filtering, basic classification) must complete within the frame time (typically 50-100 ms for 10-20 Hz frame rate). Hardware acceleration (FPGA or GPU) handles the FFT for FMCW or the TDC readout for dToF. Point cloud compression (octree, range image encoding) reduces bandwidth for downstream processing or transmission."
+        ],
+        "tags": ["lidar", "point-cloud", "processing"]
+      }
+    ]
+  },
+  {
+    "chain_name": "mems-sensor-design",
+    "description": "Design a MEMS sensor from sensing principle through mechanical design, readout circuit, fabrication, packaging, and calibration.",
+    "domain": "physics",
+    "tags": ["mems", "sensor", "microfabrication", "hardware"],
+    "steps": [
+      {
+        "flow_name": "mems-sensing-principle-selection",
+        "description": "Select the transduction mechanism and mechanical structure from the measurand requirements.",
+        "inputs": [
+          {"name": "measurand-spec", "desc": "Physical quantity, range, bandwidth, and resolution requirement"},
+          {"name": "performance-targets", "desc": "Noise floor, linearity, cross-axis rejection, and drift targets"},
+          {"name": "size-cost-constraints", "desc": "Die size, package size, power budget, and target cost at volume"}
+        ],
+        "outputs": [
+          {"name": "transduction-mechanism", "desc": "Capacitive, piezoresistive, piezoelectric, or resonant with justification"},
+          {"name": "mechanical-structure-concept", "desc": "Spring-mass, diaphragm, tuning fork, or Coriolis structure with key dimensions"},
+          {"name": "performance-estimate", "desc": "Estimated sensitivity, noise floor, and bandwidth from first-order analysis"}
+        ],
+        "process": [
+          "Map the measurand to standard MEMS structures. Acceleration: spring-mass system (proof mass suspended by folded beams). Angular rate (gyroscope): vibrating proof mass with Coriolis sensing (drive mode + sense mode). Pressure: thin diaphragm deflecting under pressure difference. Microphone: diaphragm + backplate forming a variable capacitor. Resonant sensors: frequency shift of a vibrating beam under stress (highest resolution but narrowest bandwidth).",
+          "Select transduction. Capacitive: highest sensitivity for small displacements (sub-femtofarad changes detectable), low power (no DC current), but susceptible to parasitic capacitance and requires nearby electronics. Piezoresistive: simpler readout (Wheatstone bridge), works at high temperature, but has 1/f noise and consumes DC power. Piezoelectric (AlN, PZT): self-generating (no bias needed), high bandwidth, but charge leaks at low frequency. Resonant: highest Q factor (10,000-100,000 in vacuum), frequency output, but complex drive circuitry.",
+          "Size the mechanical structure. For a capacitive accelerometer: sensitivity = x/a = 1/omega_n^2 where omega_n = sqrt(k/m). Target resonant frequency sets the bandwidth (3dB bandwidth approximately at resonance). Larger proof mass m gives lower noise floor (Brownian noise acceleration: a_n = sqrt(4*k_B*T*omega_n/(m*Q))). Typical consumer MEMS accelerometer: m = 0.5 ug, f_n = 5 kHz, noise floor = 100 ug/sqrt(Hz). Navigation grade: m = 10 ug, f_n = 500 Hz, noise floor = 1 ug/sqrt(Hz).",
+          "For a MEMS gyroscope, design the drive and sense modes. The proof mass vibrates in the drive mode (typically at 10-30 kHz, Q > 10,000 in vacuum). When rotated, Coriolis force (F = 2*m*v x omega) deflects the mass in the orthogonal sense direction. The sense displacement is proportional to angular rate. Mode matching (drive frequency = sense frequency) maximizes sensitivity but makes the sensor bandwidth narrow. Typical: 2-5 Hz split between modes for consumer, mode-matched for tactical grade.",
+          "Estimate the fundamental noise floor. Mechanical-thermal (Brownian) noise sets the floor for open-loop sensors. For a capacitive accelerometer: NEA = sqrt(4*k_B*T*b/m^2) where b is the damping coefficient. At atmospheric pressure, squeeze-film damping dominates (Q ~ 1-10). In vacuum packaging, Q increases to 1,000-100,000, reducing the noise floor by 10-100x. Electronic noise from the readout ASIC must also be below the mechanical floor to be Brownian-limited."
+        ],
+        "tags": ["mems", "transduction", "design"]
+      },
+      {
+        "flow_name": "mems-fabrication-and-packaging",
+        "description": "Select the fabrication process and design the package to protect the MEMS element while allowing access to the measurand.",
+        "inputs": [
+          {"name": "mechanical-structure-concept", "desc": "MEMS structure and critical dimensions"},
+          {"name": "transduction-mechanism", "desc": "Electrical interface requirements"},
+          {"name": "size-cost-constraints", "desc": "Die size, package size, and volume production requirements"}
+        ],
+        "outputs": [
+          {"name": "fabrication-process-flow", "desc": "Process steps from substrate to released MEMS structure"},
+          {"name": "package-design", "desc": "Package type, sealing method, and stress isolation strategy"},
+          {"name": "yield-and-cost-estimate", "desc": "Expected die yield and cost breakdown at target volume"}
+        ],
+        "process": [
+          "Select fabrication technology. Surface micromachining: thin-film deposition and sacrificial layer etching, good for small structures but limited thickness (2-5 um polysilicon). Bulk micromachining: etching into the silicon substrate (KOH anisotropic etch or DRIE), gives thicker structures (10-500 um) for larger proof masses. SOI (silicon-on-insulator): the device layer is single-crystal silicon on a buried oxide sacrificial layer, combining thickness control with excellent mechanical properties. Epitaxial polysilicon: thick deposited poly for large proof masses.",
+          "Design the critical process steps. For a capacitive accelerometer on SOI: 1) pattern and etch the device layer (DRIE through 20-50 um Si) to define proof mass, springs, and capacitor fingers, 2) release by HF vapor etch of the buried oxide, 3) anti-stiction treatment (SAM coating or supercritical CO2 drying). The capacitive gap (1-3 um) is defined by the SOI buried oxide thickness. Comb finger overlap sets the initial capacitance.",
+          "Design wafer-level packaging. For vacuum-sealed devices (gyroscopes, resonant sensors): bond a cap wafer with getter material (Ti or Zr thin film) to maintain vacuum over device lifetime. Bonding methods: glass frit (robust but large seal area), eutectic (Au-Si at 363C, small seal ring), thermocompression. Hermetic seal leak rate target: < 1e-15 atm*cc/sec (helium) for 10-year vacuum lifetime. For pressure sensors: the cap has a port or the diaphragm is directly exposed.",
+          "Manage package stress. The MEMS die is sensitive to stress transmitted from the package (solder reflow, thermal cycling, PCB bending). Use stress isolation: die attach with soft adhesive (silicone), or mechanically decoupled mounting (anchor only at the center of the die). For precision sensors, ceramic LCC packages outperform plastic QFN because of lower moisture absorption and CTE mismatch. Simulate the package stress using FEA and verify that the induced offset is within the trim range.",
+          "Estimate yield and cost. Die yield depends on defect density and die area: Y = (1 + D0*A/alpha)^(-alpha) (negative binomial model). Typical MEMS defect densities: 1-5 defects/cm^2 for mature processes. For a 2mm x 2mm die (4mm^2 area), yield is 85-95%. Cost = (wafer cost / dies per wafer / yield) + test + package + calibration. At volume (millions), MEMS accelerometer die cost is $0.10-0.50, with packaging and test adding 2-5x."
+        ],
+        "tags": ["mems", "fabrication", "packaging"]
+      },
+      {
+        "flow_name": "mems-readout-and-calibration",
+        "description": "Design the readout ASIC interface and calibration model to convert raw sensor output to a calibrated measurement.",
+        "inputs": [
+          {"name": "transduction-mechanism", "desc": "Electrical signal characteristics from the MEMS element"},
+          {"name": "performance-targets", "desc": "Required noise, linearity, bandwidth, and drift"},
+          {"name": "performance-estimate", "desc": "Expected sensitivity and noise from the MEMS design"}
+        ],
+        "outputs": [
+          {"name": "readout-circuit-design", "desc": "Front-end amplifier, ADC, and digital processing architecture"},
+          {"name": "calibration-model", "desc": "Multi-parameter calibration model (scale factor, bias, cross-axis, temperature coefficients)"},
+          {"name": "production-test-procedure", "desc": "Test sequence for calibration and screening in high-volume manufacturing"}
+        ],
+        "process": [
+          "Design the analog front-end for capacitive MEMS. Use a charge amplifier or switched-capacitor circuit to convert capacitance change to voltage. The carrier frequency (100 kHz to 1 MHz) is chosen above the 1/f noise corner of the amplifier. Chopper stabilization removes offset drift. The C-to-V sensitivity is V_out = V_drive * delta_C / C_fb. Electronic noise floor must be below the Brownian noise of the MEMS to be mechanically limited.",
+          "For force-feedback (closed-loop) operation, apply electrostatic force to null the proof mass displacement. This increases bandwidth (well beyond the mechanical resonance), improves linearity (the sensor always operates near its null point), and increases dynamic range. The feedback force is F = epsilon_0 * A * V^2 / (2*g^2). The control loop bandwidth must be 5-10x the signal bandwidth for stability. Sigma-delta force feedback gives a digital bitstream output directly.",
+          "Build the calibration model. A 6-axis IMU calibration model includes for each axis: scale factor (sensitivity), bias (zero-g offset), cross-axis sensitivity (3 off-diagonal terms), and temperature coefficients for each parameter. Total: (1 scale + 1 bias + 2 cross-axis + 2 temp coefficients) x 6 axes = 36 parameters minimum. Accelerometer bias is calibrated using gravity (rotate to known orientations). Gyroscope bias is measured at rest. Allan variance analysis characterizes noise types (white noise, bias instability, rate random walk).",
+          "Design the production calibration and test procedure. Multi-point temperature calibration (typically -40C, +25C, +85C) on a turntable or rate table. Measure the response to known inputs (1g gravity orientations for accelerometers, known rotation rates for gyroscopes). Fit the calibration model and store coefficients in non-volatile memory on the ASIC. Screen for outliers (bias out of range, excessive noise, nonlinearity). Total test time per unit at high volume: 10-60 seconds (drives the test cost).",
+          "Verify the calibrated performance. Apply the calibration model and measure residual errors against traceable references. Key metrics: bias stability (1-sigma over temperature and time), scale factor error (ppm), cross-axis rejection (%), noise density (ug/sqrt(Hz) or deg/hr/sqrt(Hz)), bandwidth (-3dB point). Compare to the datasheet specification. Allan deviation plot shows the noise floor, bias instability, and long-term drift in one chart."
+        ],
+        "tags": ["mems", "readout", "calibration"]
+      }
+    ]
+  },
+  {
+    "chain_name": "photovoltaic-cell-engineering",
+    "description": "Engineer a photovoltaic cell from architecture selection through optical design, junction formation, passivation, metallization, and module integration.",
+    "domain": "physics",
+    "tags": ["photovoltaic", "solar-cell", "semiconductor", "energy"],
+    "steps": [
+      {
+        "flow_name": "pv-cell-architecture-selection",
+        "description": "Select the cell architecture and material system based on efficiency targets, manufacturing maturity, and cost constraints.",
+        "inputs": [
+          {"name": "efficiency-target", "desc": "Target cell and module efficiency"},
+          {"name": "manufacturing-constraints", "desc": "Throughput, capex budget, and existing equipment compatibility"},
+          {"name": "application-requirements", "desc": "Residential rooftop, utility-scale, building-integrated, or space"}
+        ],
+        "outputs": [
+          {"name": "cell-architecture", "desc": "Selected architecture (PERC, TOPCon, HJT, IBC, tandem) with efficiency potential"},
+          {"name": "material-system", "desc": "Wafer type (p-type/n-type, Cz/FZ), thickness, and resistivity"},
+          {"name": "efficiency-loss-budget", "desc": "Breakdown of losses from the Shockley-Queisser limit to achievable efficiency"}
+        ],
+        "process": [
+          "Start from the Shockley-Queisser limit: 33.7% for a single-junction cell at 1.34 eV bandgap (silicon at 1.12 eV gives 29.4% SQ limit). The loss budget from SQ to real cells: thermalization (largest loss, 30% of incident energy), sub-bandgap transparency (20%), Carnot loss, and emission loss. From the SQ limit to the practical limit (~29%): recombination at surfaces and in the bulk, optical losses (reflection, grid shading, parasitic absorption), and resistive losses (series resistance in fingers and busbars).",
+          "Evaluate architectures by current efficiency records and manufacturing status. PERC (passivated emitter and rear contact): the baseline, 23-24% production cells, fully mature, p-type Cz wafers. TOPCon (tunnel oxide passivated contact): 25-26% production cells, emerging standard, n-type Cz wafers, higher Voc from better rear passivation. HJT (heterojunction with intrinsic thin layer): 25-26%, low-temperature process (< 200C), symmetric structure (bifacial), but silver paste cost is high and the thin amorphous layers are sensitive to process. IBC (interdigitated back contact): 26%+, no front grid shading, but complex patterning. Perovskite-silicon tandem: 33%+ in lab, not yet in production.",
+          "Select the wafer. The industry is transitioning from p-type to n-type silicon. N-type advantages: no light-induced degradation (no boron-oxygen complex), higher bulk lifetime (> 1 ms), better surface passivation with typical stacks. Wafer thickness is decreasing from 180um toward 130um to reduce silicon usage and cost. Thinner wafers need better surface passivation (both sides) because the surface-to-volume ratio increases.",
+          "Build the efficiency loss budget. For a TOPCon cell on 150um n-type Cz: SQ limit 29.4% - Auger recombination 1.5% - surface recombination 0.5% - reflection loss 1% - grid shading 1.5% - series resistance 0.5% - contact recombination 0.5% = approximately 24-25% production efficiency. Each loss category maps to a specific design or process improvement opportunity.",
+          "Consider bifaciality. For ground-mounted utility-scale, bifacial cells harvest reflected light from the ground (albedo). Bifaciality factor (rear efficiency / front efficiency): 70-85% for PERC (aluminum BSF on rear limits rear performance), 85-95% for TOPCon and HJT (passivated rear). Bifacial gain in energy yield: 5-15% depending on albedo, mounting height, and row spacing."
+        ],
+        "tags": ["photovoltaic", "architecture", "solar"]
+      },
+      {
+        "flow_name": "pv-optical-and-junction-design",
+        "description": "Design the optical front surface and the junction formation process to maximize photocurrent and open-circuit voltage.",
+        "inputs": [
+          {"name": "cell-architecture", "desc": "Selected architecture and structure"},
+          {"name": "material-system", "desc": "Wafer type and properties"},
+          {"name": "efficiency-loss-budget", "desc": "Target reductions in optical and recombination losses"}
+        ],
+        "outputs": [
+          {"name": "texturing-and-arc-design", "desc": "Surface texture and anti-reflection coating specifications"},
+          {"name": "junction-formation-recipe", "desc": "Diffusion or implant parameters for the emitter and BSF/FSF"},
+          {"name": "passivation-stack-design", "desc": "Dielectric layers for front and rear surface passivation"}
+        ],
+        "process": [
+          "Design front surface texturing. Random pyramid texturing by alkaline etch (KOH or NaOH with IPA) on (100) silicon creates pyramids 1-5 um tall. This reduces weighted average reflectance from 35% (polished) to ~10%. For multi-crystalline, acidic texturing (HF/HNO3) gives a rounded etch texture. The pyramid angle (54.7 degrees for (111) facets) determines the optical path enhancement (~4n^2 = 50x for perfect Lambertian).",
+          "Design the anti-reflection coating. A single-layer SiNx:H by PECVD at 75nm thickness (quarter-wave at 600nm) reduces reflectance to 2-3%. Refractive index target: n = sqrt(n_air * n_Si) = sqrt(1 * 3.9) = 1.97, achieved by adjusting the SiH4/NH3 ratio in PECVD. For even lower reflectance, a dual-layer stack (MgF2/SiNx or SiO2/SiNx) reduces weighted reflectance below 2%. The SiNx also provides hydrogen passivation of the silicon surface and bulk.",
+          "Design the emitter. For TOPCon: the front boron-doped emitter is formed by BBr3 diffusion at 970-1010C. Sheet resistance target: 100-150 ohm/sq for a lightly doped emitter (low Auger recombination, high Voc) when combined with fine-line metallization. The emitter profile (surface concentration, junction depth) is a trade-off: heavier doping reduces contact resistance but increases Auger recombination and reduces blue response.",
+          "Design surface passivation. Front: SiO2/SiNx stack (the thin SiO2 from thermal oxidation provides excellent chemical passivation, the SiNx provides field-effect passivation with fixed positive charge and hydrogen). Rear for TOPCon: thin tunnel SiO2 (1.5 nm by chemical oxidation or thermal) plus doped polysilicon (n+ poly-Si, 100-200nm, phosphorus-doped). The tunnel oxide allows majority carrier transport while blocking minority carrier recombination. Target interface recombination current J0 < 5 fA/cm^2 for the passivated contact.",
+          "Validate passivation quality. Measure implied Voc (iVoc) and effective minority carrier lifetime by photoconductance decay (Sinton WCT-120). Target iVoc > 720 mV for TOPCon. Measure J0 by the Kane-Swanson method (lifetime at multiple injection levels). Map spatially using photoluminescence imaging to identify passivation non-uniformity before metallization."
+        ],
+        "tags": ["photovoltaic", "optics", "junction"]
+      },
+      {
+        "flow_name": "pv-metallization-and-module",
+        "description": "Design the metallization pattern and integrate the cell into a module with appropriate encapsulation for 25-year reliability.",
+        "inputs": [
+          {"name": "cell-architecture", "desc": "Cell structure and contact requirements"},
+          {"name": "junction-formation-recipe", "desc": "Emitter sheet resistance determining contact difficulty"},
+          {"name": "efficiency-loss-budget", "desc": "Allowable grid shading and series resistance losses"}
+        ],
+        "outputs": [
+          {"name": "metallization-design", "desc": "Grid pattern, finger width, busbar design, and paste selection"},
+          {"name": "module-design", "desc": "Cell-to-module assembly, encapsulant, backsheet, and frame specification"},
+          {"name": "reliability-qualification-plan", "desc": "IEC 61215 test sequence and expected degradation"}
+        ],
+        "process": [
+          "Design the front grid pattern. Finger width is limited by screen printing (currently 25-35 um for fine-line). Finger spacing optimizes the trade-off: closer spacing reduces resistive loss in the emitter (current travels less distance laterally) but increases shading loss. The optimal spacing: d = sqrt(2 * rho_sheet * w_finger / (J_sc * R_finger)) where rho_sheet is emitter sheet resistance, w_finger is printed width, J_sc is short-circuit current density, R_finger is finger line resistance per length. Multi-busbar (MBB) with 9-16 round wires reduces both bubar shading and finger length.",
+          "Select the metallization paste. Front: silver paste for contact to the emitter (must fire through the SiNx ARC at 750-800C peak firing temperature). Contact resistance target: < 1 mOhm*cm^2. For TOPCon rear: silver or silver-aluminum paste contacting the doped polysilicon. Paste cost is significant (silver at $1000/kg, 50-100 mg per cell). Copper plating is an alternative (lower cost, finer lines, lower resistance) but requires a seed layer and plating equipment.",
+          "Fire the metallization. Co-firing in a belt furnace with a carefully profiled temperature ramp: 1) burnout zone (400-500C, organic binders removed), 2) firing zone (750-800C peak for 1-3 seconds, silver frit etches through ARC and forms contact to silicon), 3) rapid cooling. The peak temperature window is narrow: too low gives poor contact, too high causes aluminum spiking or junction shunting. In-line process monitoring by Suns-Voc and IV testing.",
+          "Design the module. Cell stringing (half-cut cells reduce resistive loss by 75% vs full cells). Encapsulant: EVA (mainstream, yellows slightly over 25 years) or POE (better moisture barrier, less PID susceptibility). Front glass: 3.2mm tempered with AR coating. Backsheet: fluoropolymer or glass-glass for bifacial. Frame: anodized aluminum for mechanical protection and mounting. Junction box with bypass diodes (1 per substring of 20-24 cells) for hot spot protection.",
+          "Qualify for IEC 61215. Key tests: thermal cycling (TC200: 200 cycles from -40C to +85C), damp heat (DH1000: 1000 hours at 85C/85%RH), UV exposure, mechanical load (5400 Pa front, 2400 Pa rear), hail impact (25mm ice ball at 23 m/s). Pass criterion: < 5% power degradation after each test. PID (potential-induced degradation) test: 1000V system voltage at 85C/85%RH for 96 hours. Predict field degradation: 0.3-0.5%/year for crystalline silicon modules, warranted to 80% of nameplate at 25-30 years."
+        ],
+        "tags": ["photovoltaic", "metallization", "module"]
+      }
+    ]
+  },
+  {
+    "chain_name": "particle-accelerator-design-fundamentals",
+    "description": "Design the fundamental systems of a particle accelerator from beam dynamics through RF cavities, magnets, vacuum, and diagnostics.",
+    "domain": "physics",
+    "tags": ["accelerator", "particle-physics", "RF", "magnets"],
+    "steps": [
+      {
+        "flow_name": "accelerator-beam-dynamics-design",
+        "description": "Design the beam optics lattice and calculate the key beam parameters for the target energy and luminosity.",
+        "inputs": [
+          {"name": "beam-energy-target", "desc": "Target particle energy and species (electrons, protons, heavy ions)"},
+          {"name": "beam-current-luminosity", "desc": "Target beam current or luminosity for the physics program"},
+          {"name": "accelerator-type", "desc": "Linac, synchrotron, storage ring, or fixed-field alternating gradient"}
+        ],
+        "outputs": [
+          {"name": "lattice-design", "desc": "Magnet arrangement (FODO cells, chicanes, insertion regions) with Twiss parameters"},
+          {"name": "beam-parameters", "desc": "Emittance, beta functions, beam size, and energy spread"},
+          {"name": "rf-requirements", "desc": "RF frequency, voltage, and harmonic number from the lattice circumference"}
+        ],
+        "process": [
+          "Design the basic lattice cell. The FODO cell (focusing-drift-defocusing-drift) is the standard building block. Quadrupole strengths set the betatron tune (number of oscillations per revolution): Q_x and Q_y must avoid resonance conditions (not near integer, half-integer, or low-order fractions). Phase advance per cell of 60-90 degrees is typical. The maximum beta function in the cell determines the required magnet aperture.",
+          "Calculate beam size from emittance and beta function: sigma = sqrt(epsilon * beta) where epsilon is the geometric emittance (invariant for protons if no radiation, decreasing with energy for electrons due to synchrotron radiation). For a proton synchrotron, normalized emittance epsilon_n = beta_rel * gamma * epsilon is conserved. For an electron ring, equilibrium emittance is set by the balance of quantum excitation and radiation damping.",
+          "Design insertion regions. Interaction points (for colliders) need low-beta insertions to squeeze the beam to small size (high luminosity: L = N1*N2*f*gamma / (4*pi*sigma_x*sigma_y)). The final focus triplet provides the squeeze but generates high beta at the triplet (chromatic aberration). Injection and extraction regions need kicker magnets with fast rise time and septum magnets for beam separation.",
+          "Determine RF parameters. RF frequency: h * f_rev where h is the harmonic number (number of buckets) and f_rev is the revolution frequency. The RF voltage must provide sufficient bucket area for the beam energy spread: V_rf = 2*pi*h*eta*delta_E / (q*cos(phi_s)) where eta is the slip factor, delta_E is the energy spread, and phi_s is the synchronous phase. For acceleration, phi_s shifts from 0 to provide net energy gain per turn.",
+          "Analyze collective effects. Space charge tune shift: delta_Q = -N*r_p / (4*pi*epsilon_n*beta^2*gamma^3*B_f) where N is particles per bunch, r_p is classical proton radius, B_f is the bunching factor. This limits intensity in low-energy rings. Impedance-driven instabilities (resistive wall, beam-beam) set current limits at high energy. Simulate with tracking codes (MAD-X for optics, elegant for tracking with collective effects)."
+        ],
+        "tags": ["accelerator", "beam-dynamics", "optics"]
+      },
+      {
+        "flow_name": "accelerator-rf-cavity-design",
+        "description": "Design the RF acceleration system from frequency and voltage requirements through cavity geometry, power source, and control.",
+        "inputs": [
+          {"name": "rf-requirements", "desc": "Frequency, voltage, and power from beam dynamics"},
+          {"name": "beam-energy-target", "desc": "Energy gain per pass or turn"},
+          {"name": "accelerator-type", "desc": "Linac (single-pass) vs ring (multi-pass)"}
+        ],
+        "outputs": [
+          {"name": "cavity-design", "desc": "Cavity geometry, material, operating mode, and Q factor"},
+          {"name": "rf-power-source", "desc": "Klystron, IOT, or solid-state amplifier specification"},
+          {"name": "rf-control-system", "desc": "Low-level RF feedback for amplitude and phase stability"}
+        ],
+        "process": [
+          "Select cavity technology. Normal-conducting copper cavities: simple, moderate Q (10,000-50,000), limited by wall losses (surface resistance scales as sqrt(f)), suitable for low duty cycle (pulsed linacs) or lower frequency (cyclotrons). Superconducting niobium cavities: high Q (1e9 to 1e11), much lower wall power but require cryogenic cooling (2K or 4K), standard for CW and high-duty-cycle machines (e.g., LCLS-II, ESS, LHC).",
+          "Design the cavity geometry. The fundamental mode (TM010 for a pillbox) gives an accelerating electric field along the axis. The shunt impedance R/Q (a geometry-only figure of merit) determines the voltage per unit stored energy. Elliptical cavities (TESLA/ILC shape) have R/Q ~ 1000 ohm at 1.3 GHz, with optimized cell shape to minimize peak surface fields (Epk/Eacc < 2, Bpk/Eacc < 4 mT/(MV/m)) to avoid field emission and quench.",
+          "Calculate the required RF power. For a superconducting cavity: P_beam = V_acc * I_beam (beam loading), P_wall = V_acc^2 / (R/Q * Q0) (cavity wall dissipation, small for SRF). Total RF power includes beam loading, wall losses, and power reflected due to detuning. The coupling factor (Q_ext) is set to match: Q_ext = Q0 at zero beam loading, or Q_ext = V_acc^2 / (R/Q * P_beam) for heavy beam loading.",
+          "Select the RF power source. Klystron: high power (hundreds of kW to MW), efficient at narrow bandwidth, standard for large accelerators. IOT (inductive output tube): better efficiency at lower power, used for storage rings. Solid-state amplifiers: modular, redundant, lower power per unit but scalable, increasingly used for new facilities. Match the source bandwidth and power to the cavity requirement including Lorentz force detuning compensation.",
+          "Design the low-level RF (LLRF) control. Feedback loops stabilize the cavity field amplitude (to 0.01% for FEL-quality beams) and phase (to 0.01 degrees). The control bandwidth must be faster than the dominant perturbation (microphonics at 1-100 Hz for SRF, beam transients at revolution frequency). Digital LLRF systems sample at tens of MHz, apply IQ demodulation, and compute correction signals in an FPGA. Feedforward for known perturbations (Lorentz detuning, beam loading) plus feedback for unknown disturbances."
+        ],
+        "tags": ["accelerator", "RF-cavity", "SRF"]
+      },
+      {
+        "flow_name": "accelerator-magnets-vacuum-diagnostics",
+        "description": "Design the magnet system, vacuum system, and beam diagnostics for reliable accelerator operation.",
+        "inputs": [
+          {"name": "lattice-design", "desc": "Magnet positions, strengths, and aperture requirements"},
+          {"name": "beam-parameters", "desc": "Beam size, current, and energy"},
+          {"name": "beam-energy-target", "desc": "Maximum beam rigidity (B*rho = p/q)"}
+        ],
+        "outputs": [
+          {"name": "magnet-specifications", "desc": "Dipole and quadrupole designs with field quality requirements"},
+          {"name": "vacuum-system-design", "desc": "Beam pipe material, pumping scheme, and target pressure"},
+          {"name": "diagnostics-suite", "desc": "BPM, beam profile, current, and loss monitor specifications"}
+        ],
+        "process": [
+          "Design dipole magnets. For a given beam rigidity B*rho = p/(q*c), the bending radius is rho = B*rho / B. Higher field means smaller radius and smaller machine. Normal conducting iron-core magnets: up to 1.8T. Superconducting NbTi at 4.2K: up to 8-9T (LHC). Nb3Sn at 4.5K: up to 12-16T (HL-LHC upgrade). HTS (REBCO): potentially 20T+, under development. Field quality requirement: field homogeneity better than 1e-4 over the good field region (beam aperture) to avoid resonance driving terms.",
+          "Design quadrupole magnets. The gradient G = d^2B/dx^2 is specified by the lattice design. Aperture = beam pipe diameter + alignment tolerance + good field region margin. For superconducting quadrupoles, the gradient is limited by the conductor at the pole tip: B_pole = G * r_aperture. Iron saturation limits normal-conducting quadrupoles to about 20 T/m at 50mm aperture. Field quality multipoles (sextupole, octupole) must be below 1e-4 of the main quadrupole at the reference radius.",
+          "Design the vacuum system. For electron storage rings: synchrotron radiation desorbs gas from the beam pipe wall; the design pressure (1e-9 mbar) is achieved by distributed pumping (NEG coating on the inner beam pipe surface, plus discrete ion pumps). For proton rings: beam-induced electron cloud can cause pressure rise; mitigate with surface treatment (amorphous carbon coating, sawtooth chamber). Beam pipe material: stainless steel (standard), copper (for synchrotron radiation power), aluminum (reduced impedance, LHC). All-metal seals (Conflat) for UHV integrity.",
+          "Design beam position monitors (BPMs). Button or stripline pickups detect the beam image current. Four electrodes (top, bottom, left, right) give horizontal and vertical position from the difference-over-sum signal. Resolution of 1-10 um RMS is typical for modern digital BPM electronics. Orbit correction uses BPM data and corrector dipole magnets in a feedback loop (beam-based alignment, orbit response matrix inversion).",
+          "Design beam loss monitors. Ionization chambers or scintillator-PMT detectors around the ring detect particle losses. A machine protection system (MPS) uses loss monitor signals to trigger a beam dump if losses exceed safe thresholds (quench protection for superconducting magnets, or activation limits). Loss maps (measured loss pattern versus artificial orbit bump) verify the collimation system performance. The beam dump system must extract the full beam within one revolution for fast failures."
+        ],
+        "tags": ["accelerator", "magnets", "vacuum", "diagnostics"]
+      }
+    ]
+  }
+]

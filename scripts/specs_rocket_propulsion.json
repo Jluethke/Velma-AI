@@ -1,0 +1,1047 @@
+[
+  {
+    "chain_name": "rocket-equation-mission-design",
+    "description": "Apply the Tsiolkovsky rocket equation to real mission delta-v budgets, size stages, optimize mass fractions, and design trajectories from launch to orbit insertion.",
+    "domain": "aerospace",
+    "tags": ["rocket", "orbital-mechanics", "mission-design", "trajectory"],
+    "steps": [
+      {
+        "flow_name": "mission-delta-v-budget",
+        "description": "Build the total delta-v budget for a mission from launch to final orbit, accounting for every loss source.",
+        "inputs": [
+          {"name": "target-orbit", "desc": "Desired orbit parameters (altitude, inclination, eccentricity)"},
+          {"name": "launch-site", "desc": "Launch site latitude and longitude (determines free velocity from Earth rotation and achievable inclinations)"},
+          {"name": "payload-mass-kg", "desc": "Delivered payload mass in kilograms"}
+        ],
+        "outputs": [
+          {"name": "ideal-delta-v", "desc": "Ideal (Hohmann or direct) delta-v to target orbit in m/s"},
+          {"name": "gravity-loss-estimate", "desc": "Gravity loss estimate in m/s from thrust-to-weight ratio and burn time (typically 1000-1500 m/s for LEO)"},
+          {"name": "drag-loss-estimate", "desc": "Aerodynamic drag loss in m/s (typically 100-400 m/s depending on vehicle shape and trajectory)"},
+          {"name": "steering-loss-estimate", "desc": "Steering and cosine losses from off-axis thrust in m/s"},
+          {"name": "total-delta-v-budget", "desc": "Sum of ideal, gravity, drag, and steering losses plus margin"}
+        ],
+        "process": [
+          "Calculate ideal delta-v from vis-viva equation for the target orbit. For LEO at 200 km, ideal delta-v is about 7,800 m/s. For GTO, add the Hohmann transfer delta-v.",
+          "Estimate gravity loss: integral of g*sin(theta)*dt over the burn. For a vehicle with initial T/W of 1.3, gravity loss is roughly 1,200-1,500 m/s. Higher T/W reduces gravity loss but increases structural mass and drag.",
+          "Estimate drag loss from ballistic coefficient and trajectory. A well-designed trajectory through max-Q keeps drag loss to 100-300 m/s. Blunt vehicles or low-altitude staging increase this.",
+          "Estimate steering loss from the angle between thrust vector and velocity vector during gravity turn. Typically 50-150 m/s. Dog-leg maneuvers for inclination changes add significant steering loss.",
+          "Add margin (typically 5-10% for a new vehicle, 2-3% for a mature vehicle). The total budget drives every subsequent sizing decision."
+        ],
+        "tags": ["orbital-mechanics", "mission-design"]
+      },
+      {
+        "flow_name": "staging-optimization",
+        "description": "Determine the number of stages and allocate delta-v and mass between them to minimize total vehicle mass or cost.",
+        "inputs": [
+          {"name": "total-delta-v-budget", "desc": "Total mission delta-v including all losses and margin"},
+          {"name": "payload-mass-kg", "desc": "Payload mass to deliver"},
+          {"name": "available-propellant-combinations", "desc": "List of propellant options with their vacuum Isp, density, and handling considerations"}
+        ],
+        "outputs": [
+          {"name": "stage-count", "desc": "Optimal number of stages with rationale"},
+          {"name": "stage-delta-v-split", "desc": "Delta-v allocation per stage in m/s"},
+          {"name": "stage-mass-estimates", "desc": "Propellant mass, structural mass, and gross mass per stage"},
+          {"name": "payload-fraction", "desc": "Payload mass divided by gross liftoff mass"}
+        ],
+        "process": [
+          "Apply the rocket equation per stage: delta-v = Isp * g0 * ln(m_initial / m_final). Each stage's structural index (structural mass / (structural + propellant mass)) determines how much of the mass ratio translates to useful delta-v.",
+          "For equal-Isp stages, the Lagrange multiplier optimization gives equal mass ratios per stage as the minimum-mass solution. Real stages have different Isp (boosters vs upper stage), so iterate numerically.",
+          "Structural index targets by stage type: pressure-fed storable = 0.10-0.15, pump-fed kerolox = 0.06-0.10, pump-fed hydrolox = 0.10-0.15 (hydrogen tanks are large). These are hard constraints from materials and manufacturing.",
+          "Each additional stage adds staging hardware mass, reduces reliability (more separation events), and increases development cost. Two stages reaches LEO; three stages for high-energy orbits or small launchers. Four stages only for solid-motor vehicles (Vega).",
+          "For reusable first stages, the stage must carry additional delta-v for boostback and landing (1,500-2,500 m/s depending on recovery mode), which reduces payload but amortizes hardware cost over flights."
+        ],
+        "tags": ["staging", "vehicle-sizing"]
+      },
+      {
+        "flow_name": "trajectory-design-gravity-turn",
+        "description": "Design the ascent trajectory from vertical launch through gravity turn to orbit insertion, managing aerodynamic loads and performance.",
+        "inputs": [
+          {"name": "stage-count", "desc": "Number of stages and their delta-v allocations"},
+          {"name": "stage-mass-estimates", "desc": "Mass breakdown per stage"},
+          {"name": "target-orbit", "desc": "Target orbit parameters"}
+        ],
+        "outputs": [
+          {"name": "pitch-program", "desc": "Pitch angle vs time or altitude profile for the gravity turn"},
+          {"name": "max-q-conditions", "desc": "Maximum dynamic pressure: altitude, velocity, Mach number, and load in Pa"},
+          {"name": "staging-conditions", "desc": "Altitude, velocity, and flight path angle at each staging event"},
+          {"name": "orbit-insertion-accuracy", "desc": "Predicted insertion error ellipse from guidance dispersions"}
+        ],
+        "process": [
+          "Launch vertical to clear the tower, then initiate the pitch maneuver (typically 1-5 degrees at T+10-15 seconds). The initial pitch kick sets the gravity turn trajectory; after that, gravity bends the trajectory toward horizontal.",
+          "The gravity turn is a zero-lift trajectory in the pitch plane where the thrust vector follows the velocity vector. This minimizes steering losses but requires the initial conditions to produce an acceptable trajectory. Iterate the pitch kick angle and timing.",
+          "Monitor max-Q (dynamic pressure = 0.5 * rho * v^2). For most launchers this peaks at Mach 1-2 at 10-15 km altitude, typically 20-40 kPa. The structural design case is max-Q combined with gust loads. Throttle-down at max-Q reduces loads but increases gravity loss.",
+          "For non-equatorial orbits from a non-matching launch site latitude, a dog-leg maneuver changes the azimuth during ascent. This is costly in delta-v; a 20-degree plane change at 6 km/s costs roughly 2,000 m/s. Launching near the target inclination avoids this.",
+          "Upper stage guidance uses powered explicit guidance (PEG) or iterative guidance mode (IGM) to compute the remaining thrust direction and cutoff time for precise orbit insertion. These algorithms handle vehicle dispersions and off-nominal performance in real time."
+        ],
+        "tags": ["trajectory", "ascent", "guidance"]
+      },
+      {
+        "flow_name": "launch-window-orbital-analysis",
+        "description": "Determine launch windows from orbital mechanics constraints: target orbit, rendezvous phasing, lighting conditions, and range safety.",
+        "inputs": [
+          {"name": "target-orbit", "desc": "Target orbit parameters including RAAN if relevant"},
+          {"name": "launch-site", "desc": "Launch site location"},
+          {"name": "mission-delta-v-budget", "desc": "Delta-v budget (excess capacity determines window width)"}
+        ],
+        "outputs": [
+          {"name": "launch-window-schedule", "desc": "Available launch times with duration and delta-v cost for each"},
+          {"name": "plane-change-cost", "desc": "Delta-v penalty for off-nominal launch times within the window"},
+          {"name": "range-safety-constraints", "desc": "Azimuth limits from launch site that constrain achievable orbits"}
+        ],
+        "process": [
+          "For a specific RAAN (right ascension of ascending node), the launch time is fixed by the Earth's rotation: the launch site must rotate under the target orbital plane. The instantaneous launch window for ISS rendezvous is about 5 minutes.",
+          "For sun-synchronous orbits, the RAAN must precess to maintain the sun angle. The required RAAN determines the launch time to within minutes. The inclination and altitude are coupled through J2 perturbation.",
+          "Range safety imposes azimuth limits (no flying over populated areas). Cape Canaveral launches east (37-112 degrees azimuth), limiting inclinations to 28.5-57 degrees without dog-leg. Polar and SSO orbits launch from Vandenberg.",
+          "For rendezvous missions, the phasing angle between the launch site and the target determines the launch instant. Coplanar launch eliminates the need for a plane change (very expensive at orbital velocity). The window repeats each time the target ground track passes over the launch site.",
+          "Compute the delta-v cost of launching at off-nominal times within the window. A wider window trades payload capacity for scheduling flexibility. Some missions carry margin specifically for window expansion."
+        ],
+        "tags": ["orbital-mechanics", "launch-window"]
+      },
+      {
+        "flow_name": "payload-sensitivity-analysis",
+        "description": "Quantify how payload capacity changes with Isp, structural mass, engine count, and other design variables to identify the highest-leverage improvements.",
+        "inputs": [
+          {"name": "stage-mass-estimates", "desc": "Baseline mass breakdown per stage"},
+          {"name": "stage-delta-v-split", "desc": "Delta-v allocation per stage"},
+          {"name": "payload-fraction", "desc": "Baseline payload fraction"}
+        ],
+        "outputs": [
+          {"name": "isp-sensitivity", "desc": "Payload gain per second of Isp improvement, per stage"},
+          {"name": "structural-mass-sensitivity", "desc": "Payload gain per kilogram of structural mass removed, per stage"},
+          {"name": "design-trade-priority", "desc": "Ranked list of design changes by payload impact per dollar or per schedule month"}
+        ],
+        "process": [
+          "Differentiate the rocket equation to find payload sensitivity to Isp: d(m_payload)/d(Isp) = m_payload * delta-v / (Isp^2 * g0). For a typical LEO launcher, 1 second of Isp on the first stage is worth 50-100 kg of payload.",
+          "Structural mass sensitivity: 1 kg removed from the first stage is worth approximately 1/(payload_fraction) kg of payload. For a vehicle with 2% payload fraction, 1 kg off the first stage is worth 50 kg of payload. Upper stage mass is even more valuable.",
+          "Engine thrust-to-weight ratio directly affects gravity loss. A lighter engine at the same thrust reduces structural mass AND gravity loss. This is why the Merlin engine's T/W ratio of 150+ was a significant technical achievement.",
+          "Propellant density affects tank size and therefore structural mass. LOX/RP-1 (density impulse ~350 kg*s/L) produces a smaller first stage than LOX/LH2 (density impulse ~120 kg*s/L) despite lower Isp, which is why kerolox first stages dominate modern launchers.",
+          "Build a trade matrix: columns are design changes (better Isp, lighter tanks, more thrust), rows are cost and schedule impact. The highest payload-per-dollar changes get priority. Often, the answer is manufacturing improvement (thinner tanks at same strength) rather than exotic materials."
+        ],
+        "tags": ["vehicle-sizing", "trade-study"]
+      }
+    ]
+  },
+  {
+    "chain_name": "liquid-engine-design-method",
+    "description": "Size and design a liquid rocket engine from thrust requirement through chamber, nozzle, injector, and propellant selection to a buildable configuration.",
+    "domain": "aerospace",
+    "tags": ["rocket", "propulsion", "engine-design", "combustion"],
+    "steps": [
+      {
+        "flow_name": "thrust-chamber-sizing",
+        "description": "Size the thrust chamber from thrust requirement, chamber pressure, and propellant choice using characteristic velocity and thrust coefficient.",
+        "inputs": [
+          {"name": "thrust-requirement-n", "desc": "Required engine thrust in Newtons (sea level or vacuum, specify which)"},
+          {"name": "chamber-pressure-target-pa", "desc": "Target chamber pressure in Pascals (typically 5-30 MPa)"},
+          {"name": "propellant-combination", "desc": "Oxidizer and fuel selection (e.g., LOX/RP-1, LOX/LCH4, LOX/LH2)"}
+        ],
+        "outputs": [
+          {"name": "throat-area", "desc": "Nozzle throat area in m^2 from F = Cf * Pc * At"},
+          {"name": "chamber-volume", "desc": "Chamber volume from characteristic length L* for complete combustion"},
+          {"name": "mixture-ratio", "desc": "Optimal O/F ratio from equilibrium or frozen-flow thermochemistry"},
+          {"name": "theoretical-performance", "desc": "C* (characteristic velocity) and Cf (thrust coefficient) from CEA or equivalent"}
+        ],
+        "process": [
+          "Run chemical equilibrium analysis (NASA CEA or equivalent) for the propellant combination at the target chamber pressure. This gives theoretical C*, Isp, flame temperature, and gas properties (gamma, molecular weight) as a function of mixture ratio.",
+          "The optimal mixture ratio for Isp is NOT stoichiometric. For LOX/RP-1 the Isp peak is at O/F around 2.3-2.7 (fuel-rich), for LOX/LH2 at O/F around 4-6. Operating fuel-rich also keeps the gas temperature below the wall material limit.",
+          "Calculate throat area: At = F / (Cf * Pc). The thrust coefficient Cf depends on expansion ratio and exit pressure; for a well-expanded nozzle at sea level, Cf is approximately 1.5-1.7. At vacuum, Cf can exceed 1.9 with a high expansion ratio.",
+          "Size the chamber volume using characteristic length L* = Vc / At. L* represents the stay time needed for complete combustion. For LOX/RP-1: L* = 1.0-1.3 m; for LOX/LH2: L* = 0.6-0.8 m; for LOX/LCH4: L* = 0.8-1.1 m.",
+          "The chamber diameter is typically 2-4 times the throat diameter for a cylindrical or convergent chamber. Too small increases heat flux at the walls; too large increases mass and length. The contraction ratio affects combustion stability."
+        ],
+        "tags": ["engine-design", "thermochemistry"]
+      },
+      {
+        "flow_name": "nozzle-contour-design",
+        "description": "Design the nozzle contour for maximum thrust coefficient at the design altitude, balancing performance against length and mass.",
+        "inputs": [
+          {"name": "throat-area", "desc": "Nozzle throat area from chamber sizing"},
+          {"name": "chamber-pressure-target-pa", "desc": "Chamber pressure"},
+          {"name": "theoretical-performance", "desc": "Gas properties from thermochemistry (gamma, molecular weight, temperature)"}
+        ],
+        "outputs": [
+          {"name": "expansion-ratio", "desc": "Exit area / throat area selected for design altitude"},
+          {"name": "nozzle-contour", "desc": "Wall contour coordinates from throat to exit"},
+          {"name": "nozzle-length", "desc": "Overall nozzle length and mass estimate"},
+          {"name": "performance-at-altitude", "desc": "Thrust and Isp at sea level, max-Q altitude, and vacuum"}
+        ],
+        "process": [
+          "Select expansion ratio from design altitude: for a sea-level engine, expand to Pe = Pambient at the design point (but over-expanded at sea level is acceptable if Pe > 0.4*Pambient to avoid flow separation). For vacuum engines, expansion ratio is limited by nozzle mass and length.",
+          "The Rao optimum contour maximizes thrust for a given nozzle length. It is shorter than a 15-degree conical nozzle at the same expansion ratio and delivers 1-2% more performance. The contour is computed by method of characteristics with a variational optimization.",
+          "For practical design, the truncated ideal contour (TIC) or thrust-optimized contour (TOC) is generated by specifying the nozzle length as a fraction of a 15-degree cone (typically 80%). The initial expansion angle after the throat is 20-35 degrees, with a parabolic turn to the exit angle of 8-15 degrees.",
+          "Altitude compensation: a fixed nozzle is a compromise. At sea level, the flow is over-expanded (exit pressure below ambient) and a shock forms inside the nozzle (flow separation if too far over-expanded). At vacuum, the flow is under-expanded (wasted energy in radial momentum). Altitude-compensating nozzles (aerospike, extendible nozzle) partially solve this.",
+          "Calculate thrust vs altitude: F = mdot * Ve + (Pe - Pa) * Ae. At sea level, the pressure term is negative for an over-expanded nozzle. At vacuum, Pa = 0 and the full exit area contributes. The Isp difference between sea level and vacuum can be 30-60 seconds."
+        ],
+        "tags": ["nozzle", "gas-dynamics"]
+      },
+      {
+        "flow_name": "injector-design-method",
+        "description": "Design the injector to achieve stable, complete combustion with good mixing and acceptable heat flux to chamber walls.",
+        "inputs": [
+          {"name": "mixture-ratio", "desc": "Target O/F ratio from thermochemistry"},
+          {"name": "chamber-pressure-target-pa", "desc": "Chamber pressure"},
+          {"name": "thrust-requirement-n", "desc": "Engine thrust to determine total mass flow"}
+        ],
+        "outputs": [
+          {"name": "injector-type", "desc": "Selected injector type (impinging, coaxial shear, pintle, swirl) with rationale"},
+          {"name": "element-count-and-pattern", "desc": "Number of injection elements and their arrangement on the injector face"},
+          {"name": "pressure-drop-ratio", "desc": "Injector pressure drop as fraction of chamber pressure (drives feed system sizing)"},
+          {"name": "combustion-efficiency-estimate", "desc": "Expected C* efficiency from element design and chamber L*"}
+        ],
+        "process": [
+          "Select injector type based on propellant state and engine requirements. Coaxial shear (LOX post, fuel annulus) is the standard for LOX/H2 (SSME, Vulcain). Pintle injectors (single moving element) give deep throttling (SpaceX Merlin uses pintle). Impinging doublets/triplets are reliable and well-characterized for storable propellants.",
+          "Size the pressure drop across the injector: 15-25% of chamber pressure for stability. Higher pressure drop isolates the combustion from feed system oscillations (reduces chugging tendency). But higher pressure drop means higher pump discharge pressure, which increases turbopump power and mass.",
+          "Determine element count from desired spray quality. More elements give finer atomization and better mixing but increase manufacturing cost. For a coaxial injector, element counts range from 100 (small engines) to 600+ (large engines). Each element must produce droplets small enough to vaporize within the chamber L*.",
+          "Arrange elements to control wall heat flux. The outer row can be biased fuel-rich (film cooling) to keep the combustion gas temperature below the wall material limit. Film cooling reduces performance (unmixed propellant) but is necessary for survival of copper or nickel alloy chamber walls.",
+          "The injector design sets the combustion stability characteristics. Short combustion zones (high atomization quality, many small elements) have less energy stored in the combustion process and are less susceptible to acoustic instability. Element spacing relative to acoustic mode wavelengths matters."
+        ],
+        "tags": ["injector", "combustion"]
+      },
+      {
+        "flow_name": "propellant-selection-trade",
+        "description": "Compare propellant combinations on Isp, density impulse, handling, manufacturing impact, and total vehicle cost for the mission.",
+        "inputs": [
+          {"name": "mission-delta-v-budget", "desc": "Total delta-v requirements from mission design"},
+          {"name": "stage-count", "desc": "Number of stages in the vehicle"},
+          {"name": "reusability-requirement", "desc": "Whether the stage must be reusable (affects coking, thermal cycling, inspection needs)"}
+        ],
+        "outputs": [
+          {"name": "propellant-recommendation", "desc": "Selected propellant combination with quantified rationale"},
+          {"name": "propellant-comparison-matrix", "desc": "Comparison of candidates across all evaluation criteria"},
+          {"name": "vehicle-sizing-impact", "desc": "How each propellant choice changes stage size, mass, and cost"}
+        ],
+        "process": [
+          "LOX/RP-1: Vacuum Isp 310-340s, density impulse around 350 kg*s/L. Kerosene is storable at room temperature, cheap, and well-characterized. RP-1 cokes (deposits carbon) on hot walls above 500K, which limits regenerative cooling channel temperature and complicates reuse. This is the default for first stages.",
+          "LOX/LH2: Vacuum Isp 440-460s, density impulse around 120 kg*s/L. The highest chemical Isp available. But hydrogen is cryogenic (20K), extremely low density (requiring enormous tanks), and leaks through everything. Tank insulation mass partially offsets the Isp advantage. This is the default for upper stages and is used on Delta IV first stage.",
+          "LOX/LCH4: Vacuum Isp 350-370s, density impulse around 260 kg*s/L. Methane is between RP-1 and H2 in performance and handling. It does not coke, simplifying reuse. It can be manufactured on Mars from CO2 + H2O. Chosen by SpaceX (Raptor), Blue Origin (BE-4), and ULA (Vulcan upper stage). The emerging default.",
+          "Storable (N2O4/UDMH or MMH): Vacuum Isp 300-320s. Hypergolic (ignites on contact). No cryogenic ground support needed. Extremely toxic. Used for upper stages and spacecraft propulsion where restart reliability and simplicity outweigh performance. Not used for first stages on modern Western launchers.",
+          "The trade is NOT just Isp. A 10% density impulse advantage reduces tank volume, which reduces structural mass, which compounds through the rocket equation. For first stages, LOX/RP-1 or LOX/CH4 often beats LOX/LH2 at the vehicle level despite 100s lower Isp, because the tanks are so much smaller."
+        ],
+        "tags": ["propellant", "trade-study"]
+      },
+      {
+        "flow_name": "thrust-vector-control-design",
+        "description": "Design the thrust vector control system to provide pitch, yaw, and roll authority during powered flight.",
+        "inputs": [
+          {"name": "thrust-requirement-n", "desc": "Engine thrust level"},
+          {"name": "nozzle-contour", "desc": "Nozzle geometry for gimbal envelope determination"},
+          {"name": "stage-mass-estimates", "desc": "Vehicle mass and CG location for moment arm calculation"}
+        ],
+        "outputs": [
+          {"name": "tvc-method", "desc": "Selected TVC method (gimbal, secondary injection, movable nozzle) with authority range"},
+          {"name": "gimbal-angle-requirement", "desc": "Required gimbal angle in degrees for pitch and yaw control"},
+          {"name": "actuator-specification", "desc": "Actuator type, force, rate, and bandwidth requirements"},
+          {"name": "roll-control-method", "desc": "Roll control approach (differential gimbal, reaction control, engine-out differential)"}
+        ],
+        "process": [
+          "Gimbaled nozzle is the standard for liquid engines. The entire thrust chamber and nozzle pivot about a gimbal bearing (ball joint or flexure). Typical gimbal range is 5-8 degrees, which provides adequate control authority for CG offset, wind disturbances, and engine-out cases on multi-engine stages.",
+          "Gimbal actuator sizing: the actuator must overcome the nozzle side force (thrust * sin(gimbal angle)), the inertia of the nozzle (angular acceleration), and friction/stiffness of flexible propellant lines and the gimbal bearing. Electromechanical actuators are replacing hydraulic for simplicity and reusability.",
+          "For a single-engine upper stage, gimbaling provides pitch and yaw but no roll authority. Roll control requires either a separate reaction control system (small thrusters), or differential throttle on multiple engines. Vernier engines (small steering engines) were used historically (Atlas, Saturn).",
+          "The gimbal rate requirement comes from the vehicle control bandwidth needed to reject wind gusts and maintain trajectory. Typical requirement is 5-15 degrees/second at the nozzle. The control system bandwidth is constrained by structural flexibility (bending modes) and sloshing propellant.",
+          "For solid motors, the nozzle is gimbaled using a flex seal (flexible bearing made of alternating rubber and metal shims). Alternatively, secondary injection (injecting fluid into the nozzle to create a side force) provides TVC without moving the nozzle. Jet vanes (in the exhaust) work but erode quickly."
+        ],
+        "tags": ["tvc", "controls"]
+      }
+    ]
+  },
+  {
+    "chain_name": "turbopump-design-methodology",
+    "description": "Design the turbopump assembly for a liquid rocket engine: inducer, impeller, turbine, bearings, seals, and power balance across engine cycles.",
+    "domain": "aerospace",
+    "tags": ["rocket", "propulsion", "turbomachinery", "turbopump"],
+    "steps": [
+      {
+        "flow_name": "turbopump-requirements-derivation",
+        "description": "Derive turbopump performance requirements from engine cycle and operating conditions.",
+        "inputs": [
+          {"name": "chamber-pressure-target-pa", "desc": "Engine chamber pressure"},
+          {"name": "propellant-combination", "desc": "Oxidizer and fuel with density and flow rate"},
+          {"name": "engine-cycle-type", "desc": "Gas generator, staged combustion, expander, or electric pump"}
+        ],
+        "outputs": [
+          {"name": "pump-head-rise-requirement", "desc": "Required pressure rise per pump in Pa, from chamber pressure plus injector drop plus line losses"},
+          {"name": "pump-flow-rate", "desc": "Volume flow rate per pump in m^3/s"},
+          {"name": "turbine-power-requirement", "desc": "Shaft power needed to drive both pumps"},
+          {"name": "npsh-available", "desc": "Net positive suction head available from tank pressure and propellant head"}
+        ],
+        "process": [
+          "The pump must raise propellant pressure from tank pressure (typically 150-500 kPa) to chamber pressure plus injector pressure drop plus cooling jacket drop plus line losses. For a 20 MPa chamber: 20 MPa + 5 MPa injector drop + 3 MPa cooling + 2 MPa line losses = 30 MPa pump discharge.",
+          "Calculate required pump power: P = (delta_P * Q) / eta_pump, where Q is volume flow rate and eta_pump is pump efficiency (typically 65-80% for rocket turbopumps). A LOX pump for a large engine needs 10-30 MW of shaft power.",
+          "For gas generator cycle: the turbine exhaust is dumped overboard (Isp loss of 2-5%). Turbine inlet temperature is limited to 700-900 K to avoid exotic turbine materials. This limits chamber pressure to about 10-15 MPa. Simple, reliable (Merlin, F-1, RD-107).",
+          "For staged combustion cycle: turbine exhaust is injected into the main chamber. All propellant contributes to thrust (no Isp loss). Turbine can run at higher pressure than main chamber. Enables chamber pressures of 20-30 MPa (SSME, RD-180, Raptor). More complex, higher pressures throughout.",
+          "For expander cycle: turbine is driven by fuel heated in the regenerative cooling jacket. No separate combustion. Limited by available heat flux, which limits thrust to about 100 kN for hydrogen expanders (RL-10, Vinci). Very reliable, simple, but low thrust."
+        ],
+        "tags": ["turbopump", "cycle-analysis"]
+      },
+      {
+        "flow_name": "inducer-and-impeller-design",
+        "description": "Design the pump hydraulic components to deliver required head rise while avoiding cavitation.",
+        "inputs": [
+          {"name": "pump-head-rise-requirement", "desc": "Required pressure rise"},
+          {"name": "pump-flow-rate", "desc": "Volume flow rate"},
+          {"name": "npsh-available", "desc": "Net positive suction head at pump inlet"}
+        ],
+        "outputs": [
+          {"name": "inducer-design", "desc": "Inducer geometry (hub ratio, blade count, helix angle, suction specific speed)"},
+          {"name": "impeller-design", "desc": "Impeller geometry (specific speed, number of stages, blade count, tip speed)"},
+          {"name": "shaft-speed", "desc": "Pump rotational speed in rpm"},
+          {"name": "cavitation-margin", "desc": "NPSH margin over incipient cavitation"}
+        ],
+        "process": [
+          "The inducer is a low-solidity axial impeller at the pump inlet that raises pressure enough to prevent cavitation in the main impeller. Rocket turbopump inducers operate at suction specific speeds of 20,000-60,000 (US units), far beyond conventional pump limits, by accepting controlled cavitation on the inducer blades.",
+          "Inducer design: typically 2-4 blades, hub-to-tip ratio 0.3-0.5, helical blades with inlet angle matched to the relative flow angle. The inducer tip speed is limited by cavitation breakdown; higher tip speed needs more NPSH. A backflow recirculation zone forms at off-design conditions.",
+          "Select impeller specific speed (Ns = rpm * sqrt(Q) / H^0.75 in US units). Ns determines the impeller geometry: Ns < 1000 is centrifugal (most rocket pumps), Ns > 4000 is axial. For a single centrifugal stage, achievable head rise at 70% efficiency is about 500-2000 m of fluid head depending on tip speed.",
+          "Tip speed limits: for a LOX impeller, the tip speed is limited by material strength to about 200-300 m/s (Inconel or titanium). For a hydrogen impeller, tip speed can be higher because hydrogen is less dense. The shaft speed is set by tip speed / impeller radius.",
+          "For very high chamber pressure engines (staged combustion), a single centrifugal stage may not provide enough head rise. Options: two stages in series, or run at higher speed (requires stronger materials and better bearings). The RD-180 LOX pump uses a single stage at extreme tip speed; SSME uses three stages for the hydrogen pump."
+        ],
+        "tags": ["turbopump", "hydraulic-design"]
+      },
+      {
+        "flow_name": "turbine-design-and-power-balance",
+        "description": "Design the turbine to extract required shaft power from the drive gas within allowable temperature and speed limits.",
+        "inputs": [
+          {"name": "turbine-power-requirement", "desc": "Required shaft power in watts"},
+          {"name": "engine-cycle-type", "desc": "Determines turbine inlet conditions and exhaust disposition"},
+          {"name": "shaft-speed", "desc": "Pump-driven shaft speed requirement"}
+        ],
+        "outputs": [
+          {"name": "turbine-design", "desc": "Turbine configuration (axial impulse, reaction, radial), stage count, blade geometry"},
+          {"name": "turbine-inlet-conditions", "desc": "Temperature, pressure, and flow rate of drive gas"},
+          {"name": "power-balance", "desc": "Closed power balance: turbine power = pump power at operating point"},
+          {"name": "turbine-efficiency", "desc": "Expected turbine efficiency and off-design characteristics"}
+        ],
+        "process": [
+          "For gas generator cycle, the turbine sees fuel-rich gas at 700-900 K and moderate pressure ratio (2-4:1). An axial impulse turbine (velocity-compounded Curtis stage) handles the full expansion in one or two stages. Efficiency is 40-60% but the turbine is compact.",
+          "For staged combustion, the turbine sees very high pressure but low pressure ratio (1.2-1.8:1 since exhaust goes to the high-pressure combustion chamber). This requires a reaction turbine (often two stages) operating at 50-70% efficiency. Turbine inlet temperature can be 700-1100 K depending on material.",
+          "The power balance must close: turbine power output = oxidizer pump power + fuel pump power + mechanical losses. For a gas generator cycle, increasing GG flow increases turbine power but reduces overall Isp. The operating point is where the pump and turbine power curves intersect.",
+          "Turbine blade material selection: single-crystal nickel superalloys (MAR-M246, PWA1480) for highest temperature capability. Uncooled turbine blades limit inlet temperature to about 900 K for Inconel, 1100 K for single-crystal. Cooled blades (as in SSME) allow higher temperatures but add complexity.",
+          "Verify rotordynamic stability: the turbopump shaft runs at 10,000-100,000 rpm in a fluid environment. Critical speeds must not coincide with operating speed. Bearing stiffness and damping (often from the fluid itself in hydrostatic bearings) determine the critical speed map."
+        ],
+        "tags": ["turbine", "power-balance"]
+      },
+      {
+        "flow_name": "bearing-seal-rotor-design",
+        "description": "Select bearings and seals for cryogenic turbopump service and verify rotordynamic stability.",
+        "inputs": [
+          {"name": "shaft-speed", "desc": "Rotational speed"},
+          {"name": "turbine-design", "desc": "Turbine loads and thermal environment"},
+          {"name": "pump-flow-rate", "desc": "Fluid properties at bearing locations"}
+        ],
+        "outputs": [
+          {"name": "bearing-selection", "desc": "Bearing type, material, and life estimate for each bearing location"},
+          {"name": "seal-configuration", "desc": "Seal types between fluid zones (interstage, turbine-pump, shaft seals)"},
+          {"name": "rotordynamic-analysis", "desc": "Critical speed map, stability margin, and unbalance response"},
+          {"name": "life-limiting-component", "desc": "The component that sets the engine life and its failure mechanism"}
+        ],
+        "process": [
+          "Ball bearings with silicon nitride (Si3N4) balls and steel races are standard for LOX turbopumps. DN number (bore mm x rpm) for rocket turbopumps exceeds 2-3 million, at the limit of rolling element bearing technology. Bearing life (L10) is often the life-limiting component of the engine.",
+          "Hydrostatic bearings use the pumped fluid as the bearing lubricant. No wear surfaces, theoretically infinite life, and they provide damping for rotordynamic stability. But they require tight clearances (10-50 micrometers) and can fail if contamination or thermal distortion closes the gap.",
+          "Seal design: the seal between the oxidizer pump and turbine is safety-critical. LOX leaking into the turbine (where hot fuel-rich gas flows) causes a fire. Purge gas (helium) maintains a barrier. Interpropellant seals use multiple stages with drain cavities between them.",
+          "Rotordynamic analysis: map critical speeds (first bending mode, rigid body modes on bearings) versus operating speed. The operating speed should have at least 20% margin from any critical speed. Cross-coupled stiffness from seals and impeller forces can drive subsynchronous instability.",
+          "For reusable engines, bearing and seal life must cover multiple missions with inspection intervals. The SSME turbopumps were the most maintenance-intensive components, requiring overhaul every 10-20 flights. SpaceX designed Raptor for longer bearing life using different materials and lower DN."
+        ],
+        "tags": ["turbopump", "rotordynamics"]
+      }
+    ]
+  },
+  {
+    "chain_name": "combustion-stability-analysis",
+    "description": "Identify, analyze, and suppress combustion instabilities in liquid rocket engines: acoustic modes, feed system coupling, and vehicle-level pogo.",
+    "domain": "aerospace",
+    "tags": ["rocket", "propulsion", "combustion", "stability"],
+    "steps": [
+      {
+        "flow_name": "acoustic-mode-identification",
+        "description": "Calculate the acoustic resonant frequencies of the combustion chamber and identify which modes are most likely to couple with the combustion process.",
+        "inputs": [
+          {"name": "chamber-geometry", "desc": "Chamber diameter, length, nozzle contraction ratio"},
+          {"name": "combustion-gas-properties", "desc": "Speed of sound, temperature, and composition of combustion products"}
+        ],
+        "outputs": [
+          {"name": "acoustic-mode-map", "desc": "Frequencies of longitudinal, tangential, and radial modes"},
+          {"name": "mode-coupling-risk", "desc": "Assessment of which modes can couple with combustion (based on energy and characteristic time)"},
+          {"name": "sensitive-frequency-bands", "desc": "Frequency ranges where instability is most likely"}
+        ],
+        "process": [
+          "Calculate acoustic mode frequencies for a cylindrical chamber: transverse modes f_mn = (alpha_mn * c) / (pi * D), where alpha_mn are Bessel function zeros. First tangential (1T) mode is usually the most dangerous because its pressure antinode is at the injector face where combustion occurs.",
+          "Longitudinal modes: f_n = n * c / (2 * L_eff), where L_eff is the effective acoustic length of the chamber (accounting for nozzle end correction). Longitudinal modes couple with feed system acoustics and can drive chugging.",
+          "The coupling mechanism: pressure oscillations modulate propellant injection rate and atomization quality, which modulates heat release rate, which drives pressure oscillations. The Rayleigh criterion states that instability grows when heat release is in phase with pressure oscillation.",
+          "Characteristic time analysis (Crocco): compare the combustion time delay (atomization + vaporization + mixing + reaction) to the acoustic period. If the time delay is near tau = 1/(2f) for a mode, that mode is at risk. Shorter droplets (finer atomization) have shorter time delays.",
+          "High-frequency instability (>500 Hz, typically 1-10 kHz) is the most destructive. It can melt chamber walls in milliseconds due to the enhanced heat transfer from oscillating gas. The F-1 engine development required over 2,000 bomb tests to solve tangential instability."
+        ],
+        "tags": ["combustion-stability", "acoustics"]
+      },
+      {
+        "flow_name": "stability-rating-methods",
+        "description": "Apply stability rating tests (bomb test, pulse gun, variable orifice) and analytical methods to determine engine stability margins.",
+        "inputs": [
+          {"name": "acoustic-mode-map", "desc": "Identified acoustic modes and their frequencies"},
+          {"name": "injector-type", "desc": "Injector design details that affect combustion response"},
+          {"name": "mode-coupling-risk", "desc": "Which modes are at risk"}
+        ],
+        "outputs": [
+          {"name": "stability-rating", "desc": "Stable, marginally stable, or unstable for each mode"},
+          {"name": "decay-rate", "desc": "Measured pressure oscillation decay rate after perturbation (higher = more stable)"},
+          {"name": "stability-margin", "desc": "Distance from stability boundary in terms of gain or damping"}
+        ],
+        "process": [
+          "The bomb test: detonate a small explosive charge (50-200 mg of RDX) mounted on the injector face during steady-state operation. The explosion excites all acoustic modes simultaneously. Measure the pressure decay: if oscillations decay within a few milliseconds, the engine is stable. If they grow, immediate shutdown.",
+          "The pulse gun: a directed pressure pulse from a small powder charge. Less violent than a bomb, can target specific modes by location on the injector face. Used when bomb tests show marginal stability and more precise data is needed.",
+          "Directional pulse injection: rapidly inject a slug of propellant through a special port to create a localized combustion perturbation. This method allows repeated testing without replacing explosive charges.",
+          "Analytical methods: linear stability analysis solves the coupled acoustic-combustion equations for eigenvalues. If any eigenvalue has a positive real part (growth rate > damping rate), that mode is unstable. The analysis requires a combustion response function, which is difficult to measure or predict accurately.",
+          "Hewitt stability correlation: an empirical method that correlates stability with injector orifice size, chamber diameter, and propellant properties. Smaller orifices (finer atomization) and larger chambers (lower mode frequency relative to combustion time) tend to be more stable. This is a screening tool, not a guarantee."
+        ],
+        "tags": ["combustion-stability", "testing"]
+      },
+      {
+        "flow_name": "instability-suppression-design",
+        "description": "Design damping devices and injector modifications to suppress identified instabilities.",
+        "inputs": [
+          {"name": "stability-rating", "desc": "Which modes are unstable or marginally stable"},
+          {"name": "acoustic-mode-map", "desc": "Mode frequencies and shapes"},
+          {"name": "chamber-geometry", "desc": "Chamber dimensions for fitting damping devices"}
+        ],
+        "outputs": [
+          {"name": "damping-device-design", "desc": "Baffles, acoustic cavities, or absorber specifications"},
+          {"name": "injector-modifications", "desc": "Changes to injection pattern or element design for stability"},
+          {"name": "predicted-stability-improvement", "desc": "Expected increase in damping rate from each modification"}
+        ],
+        "process": [
+          "Baffles: radial blades extending from the injector face into the chamber, typically 3-8 blades for tangential modes. Baffles break up the tangential velocity field at the injector face. They must extend far enough into the chamber to intersect the pressure antinode (typically 1/4 to 1/3 of chamber diameter depth). The F-1 used baffles to solve 1T instability.",
+          "Acoustic cavities (Helmholtz resonators or quarter-wave tubes): tuned absorbers mounted in the chamber wall near the injector end. They absorb acoustic energy at the resonant frequency. Multiple cavities at different depths cover a range of frequencies. The SSME uses acoustic cavities.",
+          "Acoustic absorber rings: an annular slot or series of holes around the chamber periphery, backed by a tuned cavity. Acts as a distributed absorber for tangential modes. Effective but adds complexity and potential leak paths.",
+          "Injector modifications: changing element spacing, orifice size, or element type can detune the combustion response from the acoustic mode. Unlike-doublet to like-doublet conversion, or finer atomization, often improves stability. But each change affects performance and heat transfer.",
+          "The development approach is iterate: predict modes, design damping, test with bombs, measure stability margin, modify if insufficient. Budget at least 3-6 months for stability development on a new injector design. Some engine programs have spent years on stability alone."
+        ],
+        "tags": ["combustion-stability", "damping"]
+      },
+      {
+        "flow_name": "low-frequency-and-pogo-suppression",
+        "description": "Analyze and suppress low-frequency instabilities (chugging) and vehicle-level pogo oscillation.",
+        "inputs": [
+          {"name": "pressure-drop-ratio", "desc": "Injector pressure drop as fraction of chamber pressure"},
+          {"name": "stage-mass-estimates", "desc": "Vehicle structural and propellant mass for pogo analysis"},
+          {"name": "turbopump-requirements-derivation", "desc": "Feed system characteristics"}
+        ],
+        "outputs": [
+          {"name": "chugging-stability-assessment", "desc": "Low-frequency stability margin from feed system/combustion coupling"},
+          {"name": "pogo-mode-identification", "desc": "Vehicle longitudinal structural modes that can couple with propulsion"},
+          {"name": "pogo-suppression-design", "desc": "Accumulator or other device specification for pogo suppression"}
+        ],
+        "process": [
+          "Chugging (10-400 Hz): interaction between feed system dynamics and combustion. Low injector pressure drop allows chamber pressure fluctuations to modulate propellant flow. The stability criterion: injector pressure drop must exceed a critical fraction of chamber pressure (typically >15-20%). Pressure-fed engines are more susceptible than pump-fed.",
+          "Feed system resonance: the propellant feed lines, valves, and manifolds form an acoustic system. If a feed line acoustic mode coincides with a chamber acoustic mode, coupled instability can occur. Feed line length and compliance set the resonant frequencies.",
+          "Pogo oscillation: the vehicle longitudinal structural mode couples with the propulsion system through a feedback loop: structural vibration changes propellant head at the pump inlet, which changes thrust, which drives structural vibration. This destroyed Gemini-Titan and nearly destroyed Apollo 6.",
+          "Pogo suppression: install a gas-filled accumulator in the feed line to change the feed system compliance and detune it from the structural mode. The accumulator acts as a low-pass filter, absorbing pressure oscillations faster than the structural frequency. The Saturn V used helium-charged accumulators in the LOX feed lines.",
+          "Analysis method: model the vehicle structure (longitudinal modes), propulsion system (feed system impedance), and coupling (thrust-to-acceleration loop). The system is stable if the Nyquist plot of the open-loop transfer function does not encircle -1. The accumulator volume and gas charge are sized to move the open-loop gain below 1 at all structural frequencies."
+        ],
+        "tags": ["combustion-stability", "pogo", "structural-dynamics"]
+      }
+    ]
+  },
+  {
+    "chain_name": "structural-analysis-launch-vehicle",
+    "description": "Design and analyze launch vehicle structures: load paths, tank design, material selection, buckling, and factors of safety for flight certification.",
+    "domain": "aerospace",
+    "tags": ["rocket", "structures", "tanks", "materials"],
+    "steps": [
+      {
+        "flow_name": "launch-vehicle-loads-analysis",
+        "description": "Define the load cases and calculate the design loads for every structural component of the launch vehicle.",
+        "inputs": [
+          {"name": "trajectory-design", "desc": "Ascent trajectory with velocity, acceleration, and altitude vs time"},
+          {"name": "stage-mass-estimates", "desc": "Mass breakdown by component and location"},
+          {"name": "vehicle-geometry", "desc": "Vehicle dimensions, station numbering, and component locations"}
+        ],
+        "outputs": [
+          {"name": "load-case-table", "desc": "All design load cases (max-Q, max acceleration, staging, landing) with axial, shear, and bending loads at each station"},
+          {"name": "design-load-envelopes", "desc": "Envelope of maximum loads at each structural station across all load cases"},
+          {"name": "coupled-loads-analysis", "desc": "Dynamic amplification factors from vehicle flexibility and thrust oscillation"}
+        ],
+        "process": [
+          "Identify all load cases: liftoff (thrust transient + acoustic), max-Q (aerodynamic + thrust + gust), max acceleration (near burnout, highest g-load), staging (separation dynamics, venting), engine shutdown transient, and for reusable vehicles, entry and landing loads.",
+          "Static loads at each station: axial load = thrust - weight - drag (integrated from tip to station). Lateral loads from angle of attack at max-Q combined with wind gust (typically 1.4x mean wind for design). The maximum bending moment is usually at the interstage or payload adapter.",
+          "Coupled loads analysis (CLA): the vehicle is not rigid. Structural flexibility amplifies dynamic loads from engine thrust oscillation, wind gusts, buffet, and separation events. Build a finite element model and apply forcing functions. Dynamic amplification factors of 1.2-2.0 are common.",
+          "Engine-out case (for multi-engine stages): sudden loss of one engine creates an asymmetric thrust that generates yaw/pitch moments and shifts the CG. The control system must compensate, and the structure must survive the transient loads during engine-out and the sustained asymmetric flight.",
+          "Thermal loads: cryogenic propellant tanks contract when filled (LOX at 90K, LH2 at 20K). Differential thermal contraction between the tank and the surrounding structure generates thermal stress. This drives the design of tank skirts and attachment fittings."
+        ],
+        "tags": ["structural-analysis", "loads"]
+      },
+      {
+        "flow_name": "tank-structural-design",
+        "description": "Design propellant tank structures for internal pressure, axial compression, and bending loads while minimizing mass.",
+        "inputs": [
+          {"name": "load-case-table", "desc": "Design loads at tank stations"},
+          {"name": "propellant-combination", "desc": "Propellant type determines operating temperature and internal pressure"},
+          {"name": "vehicle-geometry", "desc": "Tank diameter and length constraints"}
+        ],
+        "outputs": [
+          {"name": "tank-wall-design", "desc": "Wall construction type, thickness, and material specification"},
+          {"name": "dome-design", "desc": "Tank dome shape, thickness, and boss configuration"},
+          {"name": "tank-mass-estimate", "desc": "Structural mass of each tank including domes, bosses, and attachments"},
+          {"name": "proof-test-requirements", "desc": "Proof pressure and load test levels for qualification"}
+        ],
+        "process": [
+          "Three approaches to tank design: (1) Pressure-stabilized monocoque: the tank wall carries flight loads only when pressurized (Atlas, Centaur). Lightest possible, but collapses if pressure is lost. (2) Skin-stringer-frame: conventional semi-monocoque with longerons and ring frames (Saturn S-IC). Heavier but structurally robust. (3) Isogrid/orthogrid: machined integral stiffening pattern on tank wall. Intermediate weight and stiffness.",
+          "Wall thickness sizing: the wall must resist hoop stress from internal pressure (sigma = P*r/t) AND axial compression from vehicle bending and thrust loads. For thin-walled cylinders, axial compression is limited by buckling, not material yield. Buckling knockdown factor for monocoque cylinders is 0.6-0.8 of classical theory.",
+          "Material selection: Al 2219-T87 is the standard for LOX tanks (good weldability, good fracture toughness at cryogenic temperature). Al-Li 2195 (27% lower density than 2219, higher strength) is used on modern vehicles (SLS, Falcon 9 upper stage). CFRP composite tanks save 30-40% mass but are challenging for cryogenic service (microcracking, permeation).",
+          "Dome design: ellipsoidal domes (typically 1.4:1 to 2:1 ratio) minimize the combined mass of dome and cylindrical section. Hemispherical domes minimize dome stress but waste volume. The common bulkhead (shared wall between LOX and fuel tanks) eliminates an intertank section and one dome, saving significant mass and length (Saturn S-IV, Centaur).",
+          "Proof testing: each flight tank is pressurized to 1.10-1.25 times the maximum expected operating pressure at the maximum expected flight temperature. This screens for manufacturing defects that would cause failure below design load. The proof test is the final acceptance criterion before flight."
+        ],
+        "tags": ["structures", "tanks"]
+      },
+      {
+        "flow_name": "buckling-and-stability-analysis",
+        "description": "Analyze buckling stability of thin-walled launch vehicle structures under compression and combined loading.",
+        "inputs": [
+          {"name": "tank-wall-design", "desc": "Wall construction, thickness, and stiffening"},
+          {"name": "design-load-envelopes", "desc": "Compression, shear, and bending loads at each station"}
+        ],
+        "outputs": [
+          {"name": "buckling-margins", "desc": "Margin of safety against buckling for each structural section under each load case"},
+          {"name": "knockdown-factors", "desc": "Applied imperfection sensitivity factors with justification"},
+          {"name": "stiffener-optimization", "desc": "Ring frame and stringer sizing for minimum mass at required buckling margin"}
+        ],
+        "process": [
+          "Classical buckling stress for a perfect thin-walled cylinder under axial compression: sigma_cr = 0.605 * E * t / r. But real cylinders buckle at 20-60% of this value due to geometric imperfections. The knockdown factor gamma depends on r/t ratio, manufacturing quality, and boundary conditions.",
+          "NASA SP-8007 provides empirical knockdown factors for monocoque cylinders. For r/t = 500 (typical tank), gamma = 0.3-0.4. More modern approaches use measured imperfection data and nonlinear FEA to compute less conservative (but still safe) knockdown factors.",
+          "For stiffened shells (isogrid, orthogrid, skin-stringer), global buckling (panel buckling between ring frames) and local buckling (skin buckling between stringers) must both be checked. The critical mode depends on the relative stiffness of skin and stiffeners. Both global and local modes need positive margin.",
+          "Combined loading: axial compression + bending + internal pressure. Internal pressure actually stabilizes the shell against buckling (tension in the hoop direction stiffens the wall). This is why pressure-stabilized tanks work: the tank must maintain minimum pressure at all times during handling and flight.",
+          "Qualification: demonstrate buckling margin by test on a full-scale or subscale article. The test article must have representative imperfections. Load to 1.25x or 1.40x limit load (depending on the factor of safety approach: ultimate or limit-based). Correlation of test with analysis validates the knockdown factors."
+        ],
+        "tags": ["structures", "buckling"]
+      },
+      {
+        "flow_name": "factor-of-safety-certification",
+        "description": "Apply the factor of safety philosophy and demonstrate structural adequacy for flight certification.",
+        "inputs": [
+          {"name": "buckling-margins", "desc": "Buckling margins under all load cases"},
+          {"name": "tank-mass-estimate", "desc": "Structural mass for weight-strength trade-offs"},
+          {"name": "coupled-loads-analysis", "desc": "Dynamic load amplification factors"}
+        ],
+        "outputs": [
+          {"name": "structural-certification-package", "desc": "Analysis and test evidence package for flight readiness"},
+          {"name": "mass-statement", "desc": "Final structural mass with margins and reserves"},
+          {"name": "life-and-fatigue-assessment", "desc": "Structural life in flights for reusable stages, or single-flight adequacy for expendable"}
+        ],
+        "process": [
+          "Factor of safety approach: Limit load = maximum expected load in service. Ultimate load = limit load x factor of safety (typically 1.25 for manned, 1.40 for unmanned pressure vessels, 1.25 for primary structure in some programs). The structure must not yield at limit load and must not rupture at ultimate load.",
+          "For mass-critical structures, a lower factor of safety (1.10-1.25) can be justified by: (a) detailed analysis with validated models, (b) extensive testing at the component and full-scale level, (c) rigorous process controls in manufacturing. This is the 'test-verified minimum margin' approach used on Falcon 9.",
+          "Fatigue and damage tolerance for reusable stages: the structure must survive repeated load cycles (launch + entry + landing). Crack growth analysis per NASGRO or equivalent determines inspection intervals. A detectable crack must not grow to critical size between inspections.",
+          "Fracture mechanics: assume a flaw exists at the most critical location (usually a weld) with a size equal to the detection limit of the NDE method used. Calculate the stress intensity factor K_I under limit load. If K_I < K_Ic (fracture toughness) at the operating temperature, the structure is safe. For cryogenic tanks, fracture toughness INCREASES with decreasing temperature for most aluminum alloys (a fortunate property).",
+          "The certification package includes: loads analysis, stress analysis (FEA correlated with test), buckling analysis, fracture mechanics, fatigue life, proof test results, NDE results, material certifications, and process specifications. Each analysis has a signature block for the responsible engineer."
+        ],
+        "tags": ["structures", "certification"]
+      }
+    ]
+  },
+  {
+    "chain_name": "guidance-navigation-control",
+    "description": "Design the GNC system for a launch vehicle: inertial navigation, sensor fusion, guidance algorithms, attitude control, and dispersions analysis.",
+    "domain": "aerospace",
+    "tags": ["rocket", "gnc", "navigation", "controls"],
+    "steps": [
+      {
+        "flow_name": "inertial-navigation-design",
+        "description": "Select and configure the inertial measurement unit and analyze navigation error propagation through ascent.",
+        "inputs": [
+          {"name": "orbit-insertion-accuracy", "desc": "Required orbit insertion accuracy (altitude, velocity, inclination tolerances)"},
+          {"name": "mission-duration", "desc": "Time from liftoff to orbit insertion (error grows with time)"},
+          {"name": "cost-reliability-constraints", "desc": "Budget and reliability requirements (drives IMU grade selection)"}
+        ],
+        "outputs": [
+          {"name": "imu-specification", "desc": "IMU grade (navigation, tactical, MEMS), sensor error budgets"},
+          {"name": "navigation-error-budget", "desc": "Position and velocity error at orbit insertion from each error source"},
+          {"name": "alignment-requirements", "desc": "Pre-launch alignment procedure and accuracy requirements"}
+        ],
+        "process": [
+          "IMU error sources: gyro bias (degrees/hour, causes position error that grows as t^2), gyro scale factor (causes velocity-dependent error), accelerometer bias (micro-g, causes position error growing as t^2), accelerometer scale factor, and noise (random walk). Each error source contributes independently to the navigation solution.",
+          "For a typical LEO launch (500 seconds): a 0.01 deg/hr gyro bias produces about 200 m position error at insertion. A 100 micro-g accelerometer bias produces about 12 m/s velocity error. Navigation-grade IMUs (ring laser gyro or fiber optic gyro) achieve these levels.",
+          "Error propagation: propagate each error source through the trajectory using the linearized navigation equations (state transition matrix). The position and velocity errors at insertion are the RSS of all contributions. This analysis determines if the IMU grade is adequate for the mission accuracy requirement.",
+          "Pre-launch alignment: the IMU must be aligned to the local vertical and true north before launch. Gyrocompassing uses the Earth's rotation rate sensed by the gyros to find north; this takes 5-20 minutes depending on latitude and gyro quality. At equatorial sites, gyrocompassing is difficult (small horizontal component of Earth rate).",
+          "For missions requiring better accuracy than inertial navigation alone provides, add GPS updates during ascent (outside the atmosphere) or star tracker measurements. Sensor fusion via Kalman filter corrects the INS drift. GPS-aided INS can achieve 10 m, 0.1 m/s accuracy."
+        ],
+        "tags": ["navigation", "imu"]
+      },
+      {
+        "flow_name": "guidance-algorithm-design",
+        "description": "Implement the guidance algorithm that computes the required thrust direction and cutoff time for orbit insertion.",
+        "inputs": [
+          {"name": "navigation-error-budget", "desc": "Expected navigation accuracy"},
+          {"name": "stage-mass-estimates", "desc": "Vehicle mass properties for trajectory prediction"},
+          {"name": "target-orbit", "desc": "Desired orbit parameters at insertion"}
+        ],
+        "outputs": [
+          {"name": "guidance-algorithm", "desc": "Selected algorithm (PEG, IGM, or other) with implementation specification"},
+          {"name": "guidance-gains", "desc": "Algorithm tuning parameters for convergence and robustness"},
+          {"name": "performance-envelope", "desc": "Off-nominal conditions the guidance can accommodate (engine out, low Isp, winds)"}
+        ],
+        "process": [
+          "Powered Explicit Guidance (PEG): assumes constant thrust and gravity, solves for the thrust direction (two angles) and cutoff time that achieve the desired position and velocity at burnout. The solution is iterated every guidance cycle (1-10 Hz) as the state estimate is updated. Used on Space Shuttle, Falcon 9 upper stage.",
+          "Iterative Guidance Mode (IGM): similar to PEG but uses a more accurate vehicle model (accounts for changing mass, multi-phase burns). Solves a two-point boundary value problem numerically. Used on Saturn V (and its descendants) and Ariane.",
+          "Open-loop guidance for first stage: during atmospheric flight, the vehicle follows a pre-computed pitch profile (or gravity turn) because aerodynamic loads make closed-loop guidance dangerous (could command maneuvers that exceed structural limits). Closed-loop guidance begins after first stage separation or after exiting the atmosphere.",
+          "Q-alpha limiting: during atmospheric flight, the guidance must limit the product of dynamic pressure and angle of attack (Q-alpha), which is the aerodynamic bending load. If wind or navigation error causes Q-alpha to approach the structural limit, the guidance adjusts the pitch program to reduce angle of attack, accepting trajectory error to protect the structure.",
+          "Engine-out guidance: if an engine fails, the guidance must replan the trajectory with reduced thrust. On multi-engine stages, engine-out may still achieve orbit with a longer burn time (the vehicle has a lower T/W but the same total impulse minus one engine). The guidance must detect the failure and adapt within one guidance cycle."
+        ],
+        "tags": ["guidance", "algorithms"]
+      },
+      {
+        "flow_name": "attitude-control-system-design",
+        "description": "Design the attitude control system for stability and maneuvering during all flight phases.",
+        "inputs": [
+          {"name": "vehicle-geometry", "desc": "Vehicle dimensions, mass properties, and CG travel during flight"},
+          {"name": "tvc-method", "desc": "Thrust vector control capability (gimbal range, rate, bandwidth)"},
+          {"name": "guidance-algorithm", "desc": "Guidance commands that the control system must follow"}
+        ],
+        "outputs": [
+          {"name": "control-law-design", "desc": "Controller architecture, gains, and stability margins for each flight phase"},
+          {"name": "structural-filter-design", "desc": "Filters to prevent control-structure interaction with vehicle bending modes"},
+          {"name": "rcs-design", "desc": "Reaction control system sizing for coast, roll control, and fine pointing"}
+        ],
+        "process": [
+          "The rigid-body control loop: PID or PD controller for each axis (pitch, yaw, roll). The plant is a double integrator (angular acceleration to angle). The loop gain must be high enough for trajectory tracking and disturbance rejection, but low enough to avoid exciting structural bending modes.",
+          "Bending mode filtering: the first bending mode frequency of a launch vehicle is typically 2-8 Hz. If the control loop gain at the bending mode frequency is too high, the controller will excite the bending mode (causing oscillation and potential structural failure). A notch filter at the bending frequency, or low-pass filter below the bending frequency, prevents this.",
+          "Slosh: propellant sloshing in partially filled tanks acts like a pendulum mass and can couple with the control system. Slosh frequency depends on tank diameter and fill level (f = sqrt(g * tanh(pi*h/D) / (pi*D)) for the first mode). Slosh baffles reduce the slosh amplitude; the control loop must be designed to not excite slosh.",
+          "Gain scheduling: the vehicle dynamics change dramatically during flight. Mass decreases (T/W increases), CG moves, aerodynamic properties change with Mach number, and bending mode frequencies change with propellant level. The controller gains must be scheduled (varied with flight condition) to maintain stability margins throughout.",
+          "RCS sizing: during coast phases (between stages, or during orbital maneuvering), main engine TVC is unavailable. Reaction control thrusters provide attitude control. Size the thrusters from the worst-case disturbance torque (residual rates after staging) and the pointing accuracy requirement. Typical RCS thrust: 100-5000 N per thruster."
+        ],
+        "tags": ["controls", "attitude"]
+      },
+      {
+        "flow_name": "monte-carlo-dispersions-analysis",
+        "description": "Quantify the combined effect of all vehicle and environment uncertainties on mission success through Monte Carlo trajectory simulation.",
+        "inputs": [
+          {"name": "guidance-algorithm", "desc": "Guidance algorithm implementation"},
+          {"name": "control-law-design", "desc": "Control system design"},
+          {"name": "navigation-error-budget", "desc": "Navigation sensor error models"}
+        ],
+        "outputs": [
+          {"name": "orbit-insertion-statistics", "desc": "Mean, standard deviation, and 3-sigma bounds for all orbit parameters at insertion"},
+          {"name": "load-statistics", "desc": "Statistical max-Q, max-acceleration, and structural loads across all runs"},
+          {"name": "mission-success-probability", "desc": "Fraction of Monte Carlo runs that achieve the mission success criteria"},
+          {"name": "driving-dispersions", "desc": "Sensitivity ranking: which uncertainties contribute most to performance variation"}
+        ],
+        "process": [
+          "Build a 6-DOF trajectory simulation with models for: vehicle mass properties, engine performance (thrust, Isp), aerodynamics, atmosphere (density, wind), IMU errors, engine gimbal dynamics, slosh, and bending. Each model has nominal values and uncertainty distributions.",
+          "Define the dispersions: engine thrust +/-3%, Isp +/-1%, mass +/-2%, wind (measured profiles plus turbulence model), atmosphere density (range reference atmosphere), IMU errors per sensor specification, CG offset +/- manufacturing tolerance, engine alignment +/- 0.1 degree.",
+          "Run 2,000-10,000 Monte Carlo trajectories, each with random samples from all dispersions simultaneously. Use Latin Hypercube Sampling for efficiency. Each run produces a full trajectory with orbit parameters at insertion, structural loads, and control activity.",
+          "Evaluate results: compute statistics for orbit insertion parameters. The 3-sigma orbit insertion error must be within the mission requirement. If not, identify which dispersions drive the error (sensitivity analysis) and either tighten the tolerance, improve the guidance, or add navigation aids.",
+          "Check structural loads: the 3-sigma max-Q load from dispersions, combined with the structural response, must be within the design load envelope. If dispersions produce loads exceeding the design case, either increase structural capability or add trajectory constraints (load relief autopilot)."
+        ],
+        "tags": ["gnc", "monte-carlo", "dispersions"]
+      }
+    ]
+  },
+  {
+    "chain_name": "thermal-protection-system-design",
+    "description": "Design thermal protection for atmospheric entry: characterize the aerothermal environment, select materials, size TPS thickness, and verify through analysis and test.",
+    "domain": "aerospace",
+    "tags": ["rocket", "reentry", "thermal-protection", "aerothermodynamics"],
+    "steps": [
+      {
+        "flow_name": "aerothermal-environment-characterization",
+        "description": "Calculate the heating environment (heat flux, heat load, pressure, shear) on the vehicle during atmospheric entry.",
+        "inputs": [
+          {"name": "entry-trajectory", "desc": "Velocity, altitude, and flight path angle vs time during entry"},
+          {"name": "vehicle-geometry", "desc": "Vehicle outer mold line for aerothermal analysis"},
+          {"name": "entry-conditions", "desc": "Entry velocity, flight path angle, and atmosphere model"}
+        ],
+        "outputs": [
+          {"name": "stagnation-heating-profile", "desc": "Stagnation point heat flux vs time (convective + radiative)"},
+          {"name": "surface-heating-map", "desc": "Heat flux distribution over the vehicle surface at peak heating"},
+          {"name": "total-heat-load", "desc": "Integrated heat load (J/m^2) at each location, drives TPS mass"}
+        ],
+        "process": [
+          "Stagnation point convective heating: use the Sutton-Graves or Fay-Riddell correlation. q_conv = C * sqrt(rho/r_n) * V^3, where rho is atmospheric density, r_n is nose radius, and V is velocity. Heating scales as velocity cubed, so entry velocity dominates. LEO return at 7.8 km/s is moderate; lunar return at 11 km/s is severe.",
+          "A larger nose radius reduces stagnation heating (factor of 1/sqrt(r_n)) but increases total heat load (longer entry time due to higher drag at a given velocity). This is the fundamental design trade: sharp entry vehicles have high peak heating but low total heat load; blunt vehicles have low peak heating but high total heat load.",
+          "Boundary layer transition from laminar to turbulent: turbulent heating is 2-5x higher than laminar. Transition depends on Reynolds number, surface roughness, and nose bluntness. For ablative TPS, the receding surface can promote transition. Conservative design assumes turbulent flow over much of the vehicle.",
+          "Radiative heating: at velocities above 10 km/s, the shocked gas radiates significantly (shock layer reaches 8,000-15,000 K). Radiative heating can equal or exceed convective heating for lunar/Mars return vehicles. Radiation modeling requires detailed spectral analysis of the shocked gas composition.",
+          "Compute the heat flux distribution over the entire vehicle surface using CFD or engineering correlations (e.g., tangent cone or modified Newtonian for windward surface, Lees for downstream). The lee side has much lower heating but may have complex separated flow regions."
+        ],
+        "tags": ["aerothermodynamics", "reentry"]
+      },
+      {
+        "flow_name": "tps-material-selection",
+        "description": "Select TPS materials for each zone of the vehicle based on heating environment, reusability requirement, and mass budget.",
+        "inputs": [
+          {"name": "stagnation-heating-profile", "desc": "Peak heat flux and total heat load at stagnation"},
+          {"name": "surface-heating-map", "desc": "Heat flux distribution across the vehicle"},
+          {"name": "reusability-requirement", "desc": "Expendable (ablative OK) or reusable (must survive multiple entries)"}
+        ],
+        "outputs": [
+          {"name": "tps-zone-map", "desc": "Vehicle divided into zones with material assigned to each"},
+          {"name": "material-properties", "desc": "Thermal conductivity, density, ablation rate, max temperature for each material"},
+          {"name": "mass-estimate-by-zone", "desc": "TPS mass estimate per zone before thickness optimization"}
+        ],
+        "process": [
+          "Ablative TPS (expendable): the material absorbs heat by charring and sublimating. PICA (Phenolic Impregnated Carbon Ablator) handles up to 200 W/cm^2, density 0.27 g/cm^3, used on Stardust, Dragon. SLA-561V (cork-silicone) handles up to 100 W/cm^2, density 0.26 g/cm^3, used on Mars landers. Avcoat handles up to 300 W/cm^2, density 0.51 g/cm^3, used on Apollo and Orion.",
+          "Reusable TPS: must survive hundreds of entries without replacement. Reinforced Carbon-Carbon (RCC) for the hottest regions (nose cap, wing leading edges on Shuttle: 1,650 C). Ceramic tiles (LI-900: density 0.14 g/cm^3, rated to 1,260 C; LI-2200: to 1,480 C) for moderate heating. Flexible blankets (AFRSI, FRSI) for low-heating regions. TUFROC (Shuttle successor) improves on tile technology.",
+          "For modern reusable vehicles (Falcon 9, Starship), hexagonal heat shield tiles with stainless steel or carbon fiber substrate are used. The tile material must survive thermal cycling and remain attached through vibration. SpaceX uses a proprietary ceramic tile system on Starship.",
+          "Zone the vehicle by heating severity: nose/stagnation (highest, ablative or RCC), windward body (moderate, tiles or ablative), leeward body (low, blankets or insulation), base (complex, engine plume heating during retropropulsion). Each zone boundary must have a smooth transition to avoid step heating.",
+          "Mass estimation: for ablative TPS, mass scales approximately linearly with total heat load (the material must absorb the energy). For insulative TPS (tiles), mass scales with peak heat flux (thicker insulation needed for higher flux to limit back-face temperature). First-order estimate: 10-40 kg/m^2 depending on material and environment."
+        ],
+        "tags": ["tps", "materials"]
+      },
+      {
+        "flow_name": "tps-thickness-sizing",
+        "description": "Size TPS thickness at each location to limit the bondline temperature to the structural material allowable.",
+        "inputs": [
+          {"name": "tps-zone-map", "desc": "Material assigned to each zone"},
+          {"name": "material-properties", "desc": "Thermal properties of each TPS material"},
+          {"name": "surface-heating-map", "desc": "Heat flux time history at each location"}
+        ],
+        "outputs": [
+          {"name": "thickness-map", "desc": "TPS thickness at each zone location"},
+          {"name": "bondline-temperature-history", "desc": "Temperature at the TPS-structure interface vs time"},
+          {"name": "soak-back-peak", "desc": "Maximum bondline temperature (may occur after peak heating, during soak-back)"},
+          {"name": "final-tps-mass", "desc": "Total TPS mass from thickness integration over the vehicle surface"}
+        ],
+        "process": [
+          "The constraint: bondline temperature must stay below the structural material limit. For aluminum structure: 177 C (350 F). For titanium: 315 C (600 F). For CFRP: 150-250 C depending on resin. This single temperature limit, combined with the heating environment, determines the TPS thickness.",
+          "For insulative TPS (tiles, blankets): solve the 1-D heat conduction equation through the TPS thickness with the applied heat flux as the surface boundary condition. Iterate on thickness until the bondline temperature meets the requirement. Include thermal soak-back: after peak heating, the stored thermal energy in the TPS conducts inward and the bondline temperature continues to rise.",
+          "For ablative TPS: the surface recession removes material and energy. Model the charring ablation: virgin material pyrolyzes to form a char layer, releasing pyrolysis gas that blows through the char and provides additional surface cooling (blowing correction). The recession rate depends on heat flux and surface temperature.",
+          "Thermal margin: add 25% to the calculated thickness for material property uncertainty, manufacturing variation, and gap heating effects. Gaps between tiles or ablator blocks allow hot gas penetration to the bondline. Gap filler design is critical for tiled systems.",
+          "Account for soak-back: after the entry heating ends, the TPS surface cools radiatively but the interior is still hot. Heat conducts inward to the bondline, and the bondline temperature peaks 5-30 minutes after peak surface heating. The maximum bondline temperature is often the soak-back peak, not the temperature during peak heating."
+        ],
+        "tags": ["tps", "thermal-analysis"]
+      },
+      {
+        "flow_name": "entry-trajectory-design",
+        "description": "Design the entry trajectory to manage the trade between peak heating, total heat load, g-load, and landing accuracy.",
+        "inputs": [
+          {"name": "entry-conditions", "desc": "Entry interface velocity and flight path angle"},
+          {"name": "tps-zone-map", "desc": "TPS capability (maximum allowable heat flux and heat load)"},
+          {"name": "structural-limits", "desc": "Maximum allowable g-load for structure and payload"}
+        ],
+        "outputs": [
+          {"name": "entry-flight-profile", "desc": "Altitude, velocity, flight path angle, and g-load vs time"},
+          {"name": "bank-angle-schedule", "desc": "Bank angle modulation for range and cross-range control"},
+          {"name": "landing-footprint", "desc": "Achievable landing area from dispersed entry conditions"}
+        ],
+        "process": [
+          "The entry flight path angle at the atmosphere interface (typically 120 km altitude) sets the initial character of the entry. Steep entry (gamma > 5 degrees): high peak g-load and heating rate, short duration, low total heat load. Shallow entry (gamma < 2 degrees): lower peak values but longer entry, higher total heat load, risk of skip-out.",
+          "For lifting entry vehicles (L/D > 0.3), bank angle modulation controls the vertical component of lift, which controls the deceleration rate and therefore heating and g-load. Full lift-up: maximum deceleration altitude, minimum heating. Full lift-down: deeper penetration, higher g-load. Bank angle schedule is the primary control variable.",
+          "The guidance challenge: the entry trajectory must thread between four constraints simultaneously: (1) peak heat flux below TPS limit, (2) total heat load below TPS mass design, (3) peak g-load below structural/human limit, (4) arrive at the landing site with acceptable accuracy. Bank angle and angle of attack are the two controls.",
+          "For ballistic entry (capsules with no lift modulation): the entry corridor is narrow. Too steep = excess g-load (Apollo limit: 10g). Too shallow = skip-out. The corridor width depends on entry velocity and vehicle ballistic coefficient (m/CdA). Higher L/D widens the corridor.",
+          "Cross-range: banking to one side and then the other (bank reversals) allows the vehicle to steer laterally. The Space Shuttle had 2,000 km cross-range capability from its L/D of 1.1. A capsule with L/D of 0.3 has about 100 km of cross-range. Cross-range determines how many orbits must pass before a landing opportunity exists."
+        ],
+        "tags": ["entry", "trajectory"]
+      }
+    ]
+  },
+  {
+    "chain_name": "propellant-tank-design",
+    "description": "Design propellant tanks: geometry, insulation, slosh control, pressurization, and propellant management for ground and flight operations.",
+    "domain": "aerospace",
+    "tags": ["rocket", "structures", "propellant-management", "cryogenics"],
+    "steps": [
+      {
+        "flow_name": "tank-geometry-optimization",
+        "description": "Optimize tank geometry for volume, mass, and vehicle integration.",
+        "inputs": [
+          {"name": "propellant-volume-required", "desc": "Volume of propellant to store, including ullage and residuals"},
+          {"name": "vehicle-diameter", "desc": "Maximum vehicle diameter constraint"},
+          {"name": "propellant-combination", "desc": "Oxidizer and fuel types (determines which tank is forward and temperature)"}
+        ],
+        "outputs": [
+          {"name": "tank-dimensions", "desc": "Cylinder length, dome shape, and diameter for each tank"},
+          {"name": "tank-arrangement", "desc": "Tank stacking order (LOX forward or aft) with rationale"},
+          {"name": "common-bulkhead-assessment", "desc": "Whether a common bulkhead is feasible and its mass savings"}
+        ],
+        "process": [
+          "Tank volume = propellant volume + ullage (gas space above the liquid, typically 3-5% of tank volume for pressurization gas) + residual (propellant that cannot be consumed, 0.5-2% trapped in feed lines and below the outlet). Add 1-2% for tank biasing to ensure mixture ratio control.",
+          "Dome shape: sqrt(2):1 ellipsoidal domes are a good compromise between dome mass and cylinder length. The dome contributes significant volume (pi/6 * D^3 for hemispheres). Deeper domes reduce cylinder length but increase dome mass (higher stress for the same pressure). For a given total volume, there is an optimum dome eccentricity.",
+          "Tank stacking: LOX aft (below fuel) minimizes CG travel during flight (the denser propellant is consumed proportionally with the fuel). LOX forward (above fuel, as on Atlas) places the CG higher, improving structural stability under compression. The choice affects vehicle control dynamics and stability.",
+          "Common bulkhead: a single dome wall separating LOX and fuel eliminates one dome, the intertank structure, and the associated mass. Saves 5-15% of structural mass. But the temperature difference across the bulkhead is extreme (LOX at 90K, LH2 at 20K = 70K gradient, or LOX at 90K, RP-1 at 293K = 200K gradient). Requires excellent insulation and thermal stress management.",
+          "For clustered or parallel tank arrangements (side-mounted boosters, in-space stages with multiple small tanks), consider surface-to-volume ratio (spherical tanks minimize this), propellant management (how to drain multiple tanks evenly), and structural load paths."
+        ],
+        "tags": ["tank-design", "geometry"]
+      },
+      {
+        "flow_name": "cryogenic-insulation-design",
+        "description": "Select and design insulation for cryogenic propellant tanks to manage boiloff, ice formation, and thermal stress.",
+        "inputs": [
+          {"name": "tank-dimensions", "desc": "Tank surface area and wall material"},
+          {"name": "propellant-combination", "desc": "Propellant storage temperature and boiling point"},
+          {"name": "ground-hold-duration", "desc": "Time between tank loading and launch"}
+        ],
+        "outputs": [
+          {"name": "insulation-type", "desc": "Selected insulation system with thickness"},
+          {"name": "boiloff-rate", "desc": "Propellant boiloff rate in kg/hr for ground hold and flight"},
+          {"name": "ice-prevention-strategy", "desc": "Method to prevent ice formation on external surfaces"},
+          {"name": "thermal-stress-analysis", "desc": "Stress from differential thermal contraction between insulation and tank wall"}
+        ],
+        "process": [
+          "Spray-on foam insulation (SOFI): polyurethane or polyisocyanurate foam sprayed directly on the tank exterior. Low cost, well-characterized. Thermal conductivity 0.02-0.04 W/m*K. Thickness 25-75 mm. Risk: foam shedding during ascent (Columbia accident). Used on ET, SLS, Falcon 9 upper stage (internal insulation).",
+          "Multi-layer insulation (MLI): alternating layers of aluminized Mylar and Dacron net spacers in vacuum. Effective thermal conductivity 0.0001-0.001 W/m*K in vacuum (100x better than foam). But only works in vacuum or near-vacuum. Used for upper stages and in-space stages. Ground hold requires purge gas (helium or nitrogen) to prevent condensation.",
+          "Aerogel blankets: silica aerogel in a flexible blanket. Thermal conductivity 0.01-0.02 W/m*K at sea level, better in vacuum. Handles compression better than MLI. Emerging option for reusable vehicle ground hold. Does not shed like foam.",
+          "Internal insulation: insulation applied to the inside of the tank wall, with the propellant in contact with the insulation. Used when external insulation is impractical (reusable vehicles where external TPS covers the tank). The insulation must be compatible with the propellant (LOX compatibility is a safety requirement) and resist delamination under cryogenic cycling.",
+          "Boiloff calculation: heat leak through insulation raises propellant temperature until boiling begins. For a LOX tank with 50 mm foam in ambient conditions, expect 0.5-2 kg/m^2/hr boiloff. Boiloff must be managed by venting (with vapor recovery on ground) or by subcooling the propellant below its boiling point (densification, as SpaceX uses on Falcon 9)."
+        ],
+        "tags": ["insulation", "cryogenics"]
+      },
+      {
+        "flow_name": "slosh-dynamics-and-baffles",
+        "description": "Analyze propellant slosh dynamics and design baffles to prevent control system coupling.",
+        "inputs": [
+          {"name": "tank-dimensions", "desc": "Tank diameter and length"},
+          {"name": "control-law-design", "desc": "Vehicle control system bandwidth and stability margins"},
+          {"name": "trajectory-design", "desc": "Acceleration profile during flight"}
+        ],
+        "outputs": [
+          {"name": "slosh-frequency-vs-fill", "desc": "First and second slosh mode frequencies as a function of fill level"},
+          {"name": "slosh-mass-fraction", "desc": "Fraction of propellant mass that participates in sloshing"},
+          {"name": "baffle-design", "desc": "Baffle type, location, and open area specification"},
+          {"name": "control-interaction-assessment", "desc": "Phase and gain margins with slosh included in the control loop"}
+        ],
+        "process": [
+          "First-mode slosh frequency in a cylindrical tank under axial acceleration: f = (1/2*pi) * sqrt(g_eff * (pi/D) * tanh(pi*h/D)), where g_eff is the effective axial acceleration (thrust/mass), D is tank diameter, and h is liquid depth. As the tank empties, h decreases and the slosh frequency changes.",
+          "The mechanical analogy: the sloshing propellant is modeled as a pendulum mass (first mode) connected to the tank by a spring and damper. The pendulum mass (slosh mass) is a fraction of the total propellant mass, typically 10-50% depending on fill level. The rest of the propellant moves rigidly with the tank (frozen mass).",
+          "Control coupling: if the slosh frequency is close to the vehicle control bandwidth, the control system can excite the slosh, causing growing oscillations. The phase between vehicle lateral motion and slosh force can be destabilizing. The control system designer needs the slosh model to verify stability.",
+          "Baffle design: ring baffles (annular plates attached to the tank wall) are the standard approach. They dissipate slosh energy through viscous damping as the liquid flows through the baffle holes and around the baffle edges. The damping ratio provided by a ring baffle is approximately proportional to the baffle immersion depth and inversely proportional to the baffle spacing.",
+          "Baffle placement: install baffles where the first-mode slosh amplitude is highest (at the liquid free surface for most fill levels). Typically 3-8 baffles in the cylindrical section of the tank. The baffle must have holes or slots (20-40% open area) to allow propellant flow during draining. Solid baffles trap propellant and are not used."
+        ],
+        "tags": ["slosh", "dynamics"]
+      },
+      {
+        "flow_name": "pressurization-system-design",
+        "description": "Design the tank pressurization system to maintain adequate NPSH at the pump inlet and structural integrity of the tank.",
+        "inputs": [
+          {"name": "tank-dimensions", "desc": "Tank volume and ullage volume"},
+          {"name": "npsh-available", "desc": "Required pump inlet pressure"},
+          {"name": "propellant-combination", "desc": "Propellant vapor pressure and temperature"}
+        ],
+        "outputs": [
+          {"name": "pressurization-method", "desc": "Autogenous (self-pressurizing) or stored gas (helium) with rationale"},
+          {"name": "pressurant-mass", "desc": "Mass of pressurant gas required for the burn duration"},
+          {"name": "pressure-schedule", "desc": "Ullage pressure vs time during burn and coast phases"},
+          {"name": "collapse-factor", "desc": "Factor accounting for pressurant gas cooling by contact with cryogenic propellant"}
+        ],
+        "process": [
+          "The tank ullage must be pressurized above the propellant vapor pressure by enough to provide the required NPSH at the pump inlet, accounting for hydrostatic head, line losses, and acceleration effects. Typical ullage pressures: 150-500 kPa for pump-fed engines, 1.5-3 MPa for pressure-fed engines.",
+          "Helium pressurization: high-pressure helium (30-50 MPa) stored in composite-overwrapped pressure vessels (COPVs), regulated down to ullage pressure and injected into the tank as propellant is consumed. Helium is lightweight and inert. The collapse factor (1.5-4.0) accounts for helium cooling and condensation at the cryogenic propellant surface, which requires injecting more helium than the ideal gas law predicts.",
+          "Autogenous pressurization: use heated propellant vapor as the pressurant. For LOX tanks, gaseous oxygen from the regenerative cooling jacket or a heat exchanger. For LH2/LCH4 tanks, gaseous fuel from the cooling jacket. No separate pressurant gas needed, but the heating system adds complexity. Used on Saturn V (LOX tank), SSME, and Raptor.",
+          "Pressurant mass calculation: m_gas = (P_ullage * V_ullage) / (R * T_gas) * collapse_factor, where V_ullage grows as propellant is consumed (from initial 3-5% to 100% at burnout). Integrate over the burn. The collapse factor is the key uncertainty: it depends on gas injection method, tank geometry, and whether the gas contacts the liquid surface.",
+          "For in-space stages with multiple restarts, the pressurization system must maintain tank pressure during coast phases (when the propellant warms and boils) and must settle the propellant before restart (small thrusters or tank pressure to push liquid to the outlet end in zero-g)."
+        ],
+        "tags": ["pressurization", "propellant-management"]
+      }
+    ]
+  },
+  {
+    "chain_name": "reusability-engineering-method",
+    "description": "Engineer a reusable launch vehicle stage: propulsive landing design, refurbishment planning, life-limited part management, and cost modeling.",
+    "domain": "aerospace",
+    "tags": ["rocket", "reusability", "landing", "cost-modeling"],
+    "steps": [
+      {
+        "flow_name": "propulsive-landing-trajectory",
+        "description": "Design the trajectory for propulsive return and landing of a first stage booster.",
+        "inputs": [
+          {"name": "stage-delta-v-split", "desc": "First stage delta-v allocation (determines MECO velocity)"},
+          {"name": "landing-site-location", "desc": "Return to launch site (RTLS) or downrange barge/pad"},
+          {"name": "stage-mass-estimates", "desc": "Stage dry mass and residual propellant mass at MECO"}
+        ],
+        "outputs": [
+          {"name": "return-delta-v-budget", "desc": "Delta-v for boostback, entry burn, and landing burn"},
+          {"name": "propellant-reserve-for-landing", "desc": "Propellant mass reserved for return (reduces payload capacity)"},
+          {"name": "landing-trajectory-profile", "desc": "Altitude, velocity, and engine timeline for the return phase"},
+          {"name": "payload-penalty", "desc": "Payload capacity reduction from expendable mode due to landing propellant reserve"}
+        ],
+        "process": [
+          "RTLS (return to launch site): requires a boostback burn to reverse the downrange velocity. For a stage separating at Mach 6-10, the boostback delta-v is 1,000-2,000 m/s. Then an entry burn at the atmosphere interface (300-600 m/s) to reduce heating and loads, then a landing burn (300-500 m/s). Total return delta-v: 1,500-3,000 m/s. Payload penalty: 30-50%.",
+          "ASDS (autonomous spaceport droneship): the stage continues downrange and lands on a floating platform. No boostback needed. Entry burn and landing burn only. Total return delta-v: 500-1,200 m/s. Payload penalty: 15-30%. Used for high-energy missions where RTLS costs too much payload.",
+          "Landing burn design: the final landing burn starts at 500-1000 m altitude, 200-300 m/s velocity. A single engine (minimum throttle still exceeds 1g for most engines, so the burn must be timed precisely). The hover-slam (suicide burn) starts late and decelerates at >1g to touchdown at near-zero velocity. No hover capability means zero margin for timing error.",
+          "Entry burn: fired at approximately 70 km altitude and Mach 5-8 to create a virtual shock ahead of the vehicle, reducing aerodynamic heating and loads on the engine section. Burns for 15-20 seconds using 3 engines. Without this burn, the engine bells and octaweb would be damaged by reentry heating.",
+          "The payload penalty is the cost of reusability in performance. Calculate by comparing propellant mass budgeted for return against the rocket equation: each kg of landing propellant reduces payload by the inverse of the payload fraction. A vehicle with 2% payload fraction loses 50 kg of payload per kg of return propellant."
+        ],
+        "tags": ["reusability", "landing"]
+      },
+      {
+        "flow_name": "landing-hardware-design",
+        "description": "Design the landing legs, grid fins, and other hardware needed for controlled descent and landing.",
+        "inputs": [
+          {"name": "stage-mass-estimates", "desc": "Landing mass (dry stage + residual propellant)"},
+          {"name": "landing-trajectory-profile", "desc": "Touchdown velocity and attitude requirements"},
+          {"name": "vehicle-geometry", "desc": "Stage diameter and height for stability analysis"}
+        ],
+        "outputs": [
+          {"name": "landing-leg-design", "desc": "Leg geometry, material, deployment mechanism, and crush core specification"},
+          {"name": "grid-fin-design", "desc": "Grid fin size, material, and actuation system for aerodynamic steering"},
+          {"name": "landing-stability-analysis", "desc": "Tip-over analysis for wind, slope, and CG offset"}
+        ],
+        "process": [
+          "Landing legs must absorb the kinetic energy at touchdown (typically 1-3 m/s vertical, 0-2 m/s horizontal). Energy absorption: crushable aluminum honeycomb in the leg strut. The crush stroke must absorb 0.5 * m * v^2 at a force below the structural limit of the vehicle. Typical stroke: 0.2-0.5 m.",
+          "Leg geometry: 4 legs gives a square footprint (simple, light, but sensitive to CG offset and slope). Falcon 9 uses 4 legs. More legs improve stability but add mass and mechanism complexity. The footprint radius must be large enough to prevent tip-over under worst-case CG offset and wind. Rule of thumb: footprint radius > 0.5 * vehicle height * tan(max_tilt_angle).",
+          "Grid fins: lattice-structure aerodynamic surfaces that provide roll, pitch, and yaw control during supersonic and subsonic descent. They work in the wake of the vehicle (fins at the top of a descending stage). Titanium grid fins survive the high heating during reentry without thermal protection. Sized from the required control moment at the worst-case dynamic pressure.",
+          "Cold gas or hydraulic actuation for grid fins. Falcon 9 initially used hydraulic fluid (limited supply = limited steering time); later switched to electric actuators powered by batteries. The actuator rate and authority must handle the guidance commands through transonic flight where aerodynamic characteristics change rapidly.",
+          "Deployment sequence: grid fins deploy after stage separation (or remain deployed throughout, as on Falcon 9 Block 5). Landing legs deploy shortly before landing burn ignition. Deployment reliability must be extremely high (legs or fins failing to deploy = loss of vehicle). Redundant mechanisms and positive locking are required."
+        ],
+        "tags": ["reusability", "landing-hardware"]
+      },
+      {
+        "flow_name": "engine-reuse-life-management",
+        "description": "Manage engine life for reuse: track life-limited parts, predict remaining life, and define refurbishment scope.",
+        "inputs": [
+          {"name": "engine-design-specs", "desc": "Engine operating conditions (chamber pressure, temperature, speed)"},
+          {"name": "flight-history", "desc": "Number of flights and burn time per flight"},
+          {"name": "inspection-data", "desc": "Results from post-flight inspections of critical components"}
+        ],
+        "outputs": [
+          {"name": "life-limited-parts-list", "desc": "Components with defined life limits and remaining life"},
+          {"name": "refurbishment-scope", "desc": "What must be inspected, cleaned, replaced, or tested between flights"},
+          {"name": "engine-life-prediction", "desc": "Predicted number of flights before major overhaul"}
+        ],
+        "process": [
+          "Life-limited parts in a rocket engine: turbopump bearings (fatigue, wear), turbine blades (creep, thermal fatigue), chamber throat (erosion, thermal cycling), nozzle (thermal fatigue of regenerative cooling channels), injector (erosion, coking), seals (wear, embrittlement). Each has a different failure mechanism and life prediction method.",
+          "Turbopump bearing life: ball bearings in cryogenic service degrade from Hertzian contact fatigue. L10 life (90% survival probability) is calculated from load, speed, and material (Si3N4 balls last longer than steel). Target: 20-100 flights per bearing set. Track bearing condition by vibration signature monitoring.",
+          "Thermal fatigue of the thrust chamber: each firing cycle (startup to shutdown) cycles the chamber wall from cryogenic (coolant side) to near-melting (gas side). Copper alloy walls develop fatigue cracks in the cooling channels. Life prediction uses strain range from thermal analysis and low-cycle fatigue curves. The SSME chamber liner was replaced every 20-40 flights.",
+          "Inspection between flights: borescope inspection of the thrust chamber and turbine, vibration signature analysis of turbopumps, leak checks of all seals and joints, visual inspection of the nozzle and injector face, data review from flight instrumentation. The inspection scope defines the turnaround time (Falcon 9 Block 5 targets less than 24 hours between flights).",
+          "Cost of engine refurbishment vs replacement: if refurbishment cost exceeds a threshold fraction of new engine cost (typically 30-50%), replacement is more economical. The goal is to design the engine so that routine maintenance is limited to inspection and replacement of a few low-cost consumable parts (seals, filters, pyrotechnic igniters)."
+        ],
+        "tags": ["reusability", "engine-life"]
+      },
+      {
+        "flow_name": "reusable-vs-expendable-cost-model",
+        "description": "Build an economic model comparing reusable and expendable vehicle cost as a function of flight rate, refurbishment cost, and recovery logistics.",
+        "inputs": [
+          {"name": "vehicle-production-cost", "desc": "Cost to manufacture one stage (expendable reference)"},
+          {"name": "refurbishment-scope", "desc": "Refurbishment cost per flight"},
+          {"name": "payload-penalty", "desc": "Payload reduction from landing propellant reserve"}
+        ],
+        "outputs": [
+          {"name": "cost-per-flight-vs-reuse-count", "desc": "Cost per flight as a function of how many times a stage flies"},
+          {"name": "breakeven-flight-count", "desc": "Number of flights per stage where reusable becomes cheaper than expendable"},
+          {"name": "fleet-economics", "desc": "Cost model for a fleet of reusable stages at a given annual flight rate"}
+        ],
+        "process": [
+          "Expendable cost per flight: production cost + integration + launch operations. For a Falcon 9-class vehicle, first stage production is roughly 60-70% of total vehicle cost. Upper stage, fairing, and integration are the rest.",
+          "Reusable cost per flight: (production cost / number of flights) + refurbishment cost per flight + recovery operations cost. If a stage costs $30M to build, flies 10 times, and costs $2M per refurbishment + $1M recovery: cost per flight = $3M + $2M + $1M = $6M vs $30M expendable. Breakeven at about 3-4 flights.",
+          "The learning curve effect: as flight rate increases, production and refurbishment teams become more efficient. Wright's law: each doubling of cumulative production reduces unit cost by 15-20%. At 50+ flights per year, the cost reduction from volume is significant even for expendable vehicles.",
+          "Flight rate sensitivity: reusable stages have fixed costs (the stage hardware, amortized) and variable costs (refurbishment, recovery). At low flight rates, the amortized hardware cost per flight is high and reusability may not pay off. At high flight rates, the hardware is nearly free per flight and the variable costs dominate. SpaceX's cost advantage grows with their flight rate.",
+          "Payload penalty cost: the customer pays for the payload they need to orbit. If reusability reduces payload capacity by 30%, some missions that fit on an expendable vehicle require a larger (more expensive) reusable vehicle or a two-stage upper stage. Model the customer-facing price to include the payload penalty scenario."
+        ],
+        "tags": ["cost-modeling", "economics"]
+      }
+    ]
+  },
+  {
+    "chain_name": "launch-operations-methodology",
+    "description": "Design and execute launch operations: countdown design, launch commit criteria, pad systems, range safety, and post-flight data review.",
+    "domain": "aerospace",
+    "tags": ["rocket", "launch-operations", "ground-systems", "range-safety"],
+    "steps": [
+      {
+        "flow_name": "countdown-timeline-design",
+        "description": "Design the countdown timeline from vehicle rollout through T-0 and liftoff.",
+        "inputs": [
+          {"name": "vehicle-configuration", "desc": "Vehicle type, propellant combination, and ground support requirements"},
+          {"name": "pad-systems-capability", "desc": "Ground support equipment capability and constraints"},
+          {"name": "launch-window-schedule", "desc": "Available launch window duration and timing"}
+        ],
+        "outputs": [
+          {"name": "countdown-timeline", "desc": "Sequenced timeline of all operations from rollout through T-0"},
+          {"name": "hold-points", "desc": "Built-in hold points for verification and go/no-go decisions"},
+          {"name": "recycle-plan", "desc": "Procedures for restarting the countdown after a hold or scrub"}
+        ],
+        "process": [
+          "Work backward from T-0: engine ignition and release happens at T-0 or T-3 seconds (after engine health check). Before that: arm flight termination system, switch to internal power, retract umbilicals, final pressurization, terminal countdown sequence (usually automated in the last 30-60 seconds).",
+          "Propellant loading: for cryogenic propellants, loading begins T-4 to T-8 hours. LOX is loaded first (denser, lower tank), then fuel (RP-1 can be loaded earlier since it is storable at room temperature). LH2 loading requires continuous topping to replace boiloff. For subcooled/densified propellants (SpaceX), loading occurs late in the countdown (T-35 minutes for Falcon 9).",
+          "Chill-down: before engine start, the turbopumps and feed lines must be cooled to cryogenic temperature to prevent cavitation and thermal shock. Chill-down uses propellant bleed through the engine and lasts 5-30 minutes depending on engine design. Engine conditioning sets the thermal state for reliable ignition.",
+          "Built-in holds: T-60 minutes (range verification), T-20 minutes (final weather check), T-10 minutes (go/no-go poll of all console positions), T-4 minutes (entering terminal count, autosequence start). Holds pause the countdown clock; operations that are time-sensitive (like cryogenic loading) continue during holds.",
+          "Scrub and recycle: if the countdown is stopped after propellant loading, the vehicle must be detanked (propellant drained and tanks safed). Detanking takes 2-6 hours. The turnaround to the next attempt depends on the scrub reason, propellant availability, and launch window. A 24-hour recycle is typical for weather scrubs."
+        ],
+        "tags": ["launch-operations", "countdown"]
+      },
+      {
+        "flow_name": "launch-commit-criteria",
+        "description": "Define the go/no-go criteria that must be met for launch to proceed.",
+        "inputs": [
+          {"name": "vehicle-configuration", "desc": "Vehicle systems and their health monitoring capability"},
+          {"name": "launch-site", "desc": "Launch site weather patterns and range constraints"},
+          {"name": "mission-requirements", "desc": "Mission-specific constraints (crew safety, payload sensitivity)"}
+        ],
+        "outputs": [
+          {"name": "weather-criteria", "desc": "Wind, precipitation, lightning, and cloud ceiling limits for launch"},
+          {"name": "vehicle-health-criteria", "desc": "Redline parameters and their limits for each vehicle system"},
+          {"name": "range-criteria", "desc": "Range safety requirements that must be met (tracking, FTS, exclusion zones)"}
+        ],
+        "process": [
+          "Weather criteria: surface wind speed (typically <30 knots), upper-level wind shear (from weather balloon soundings, compared to vehicle structural limits), cumulus cloud rules (no launch through or near cumulus with tops above freezing level, to avoid triggered lightning), precipitation, temperature limits for propellant and electronics.",
+          "Lightning rules: the most complex weather criteria. Natural lightning within 10 nm in the last 30 minutes = no launch. Triggered lightning risk assessment from electric field mills on the pad and aloft. The vehicle and its exhaust plume can trigger lightning by creating a conducting path through a charge field. Atlas-Centaur 67 was destroyed by triggered lightning.",
+          "Vehicle health: every critical system has redline parameters monitored in real time. Engine parameters (pump inlet pressure, turbopump speed, temperatures), tank pressures, battery voltage, IMU alignment quality, flight computer status. Any single redline violation triggers an automatic hold or cutoff.",
+          "Range safety requirements: the flight termination system (FTS) must be armed and tested. Tracking systems (radar, telemetry) must be operational. Impact prediction must show the vehicle debris footprint is within the approved corridor. Ship and aircraft exclusion zones must be clear. The range safety officer must have communications with the launch team.",
+          "Go/no-go poll: each console position (propulsion, avionics, guidance, range safety, weather, payload, launch director) reports status. Any single 'no-go' stops the count. The launch director makes the final decision. For crewed missions, the crew also has a go/no-go input."
+        ],
+        "tags": ["launch-operations", "commit-criteria"]
+      },
+      {
+        "flow_name": "pad-systems-design",
+        "description": "Design the launch pad systems: flame deflector, sound suppression, umbilicals, and strongback.",
+        "inputs": [
+          {"name": "vehicle-configuration", "desc": "Vehicle size, thrust, and propellant types"},
+          {"name": "launch-site", "desc": "Pad location and existing infrastructure"},
+          {"name": "turnaround-requirement", "desc": "Time between launches for multi-mission capability"}
+        ],
+        "outputs": [
+          {"name": "flame-deflector-design", "desc": "Deflector geometry, water flow rate, and material specification"},
+          {"name": "umbilical-system", "desc": "Fluid, electrical, and data connections between pad and vehicle"},
+          {"name": "launch-mount-design", "desc": "Hold-down and release mechanism specification"},
+          {"name": "sound-suppression-system", "desc": "Water deluge system flow rate and nozzle layout"}
+        ],
+        "process": [
+          "Flame deflector: redirects the engine exhaust away from the vehicle. A flame trench with a deflector surface (wedge or bucket shape) directs the exhaust horizontally. The deflector surface must withstand exhaust temperatures (3,000+ K) and velocities (2,000+ m/s). Refractory concrete over steel, with water cooling. The flame trench for a heavy-lift vehicle is typically 10-20 m deep.",
+          "Sound suppression water deluge: acoustic energy from the rocket exhaust at launch can damage the vehicle and payload (140-180 dB at the pad). Water injected into the exhaust plume at and just after ignition absorbs acoustic energy. Flow rates of 100,000-1,000,000 liters per minute are typical. The water system must start before engine ignition and continue through liftoff.",
+          "Umbilicals: provide propellant, pressurant gas, electrical power, data, and conditioning (air or nitrogen purge for payload fairing) to the vehicle while on the pad. At T-0 or shortly before, umbilicals disconnect. Quick-disconnect fittings must separate cleanly and retract away from the vehicle. A hung umbilical (one that fails to disconnect) can damage the vehicle or pull it off course.",
+          "The strongback or erector: supports the vehicle during pad operations, provides access for personnel, and retracts at launch. For a vehicle erected vertically on the pad, the strongback holds the vehicle against wind loads and provides alignment. At T-0, the strongback releases and retracts (SpaceX Falcon 9 strongback retracts just before launch; some designs fall back).",
+          "Hold-down and release: the vehicle is held on the pad during engine start and health check (T-3 to T-0). Explosive bolts or hydraulic release clamps. The hold-down force must exceed the maximum engine thrust during the health check. Release must be nearly simultaneous at all hold-down points (within milliseconds) to avoid lateral forces on the vehicle."
+        ],
+        "tags": ["pad-systems", "ground-infrastructure"]
+      },
+      {
+        "flow_name": "range-safety-and-flight-termination",
+        "description": "Design the flight termination system and range safety architecture for public protection.",
+        "inputs": [
+          {"name": "trajectory-design", "desc": "Nominal trajectory and failure mode trajectories"},
+          {"name": "launch-site", "desc": "Populated areas and exclusion zones near the flight path"},
+          {"name": "vehicle-configuration", "desc": "Vehicle characteristics affecting debris dispersion"}
+        ],
+        "outputs": [
+          {"name": "fts-design", "desc": "Flight termination system architecture (command destruct, AFTS, or both)"},
+          {"name": "destruct-criteria", "desc": "Criteria for commanding vehicle destruct (IIP lines, corridor violations)"},
+          {"name": "debris-footprint-analysis", "desc": "Predicted debris impact area for nominal and failure cases"},
+          {"name": "casualty-expectation", "desc": "Expected casualties from debris (must be below 30 in a million per mission)"}
+        ],
+        "process": [
+          "The flight termination system (FTS) is a safety system that destroys the vehicle if it deviates from the planned trajectory and threatens populated areas. Required by the FAA (14 CFR 450) and the Eastern/Western Range. The range safety officer (RSO) or an autonomous system commands termination.",
+          "Command destruct: ground-based radar tracks the vehicle. If the instantaneous impact point (IIP) crosses a destruct line (boundary protecting populated areas), the RSO commands destruct via encrypted radio link. The vehicle's linear shaped charges (LSCs) cut the propellant tanks, dispersing propellant and ending thrust. Two independent FTS receivers and batteries are required.",
+          "Autonomous Flight Termination System (AFTS): the vehicle carries its own GPS receiver and pre-loaded trajectory corridor. If the vehicle exits the corridor, the on-board computer commands termination automatically. AFTS eliminates dependence on ground tracking infrastructure and enables launches from sites without full range support. SpaceX, ULA, and others now use AFTS.",
+          "Debris analysis: model the vehicle breakup (from FTS or failure) and propagate debris trajectories through the atmosphere to impact. Consider aerodynamic drag on each fragment, wind, and fragment mass distribution. The debris footprint is an ellipse oriented along the wind direction, typically 5-20 km long.",
+          "Casualty expectation (Ec): Ec = sum over all populated areas of (probability of debris reaching area * population density * casualty area per fragment). FAA requires Ec < 30 per million per mission for each individual and collective risk. This analysis drives the destruct corridor boundaries and may restrict launch times based on ship and aircraft traffic."
+        ],
+        "tags": ["range-safety", "fts"]
+      },
+      {
+        "flow_name": "post-flight-data-review",
+        "description": "Conduct the post-flight data review to verify vehicle performance, identify anomalies, and certify for next flight.",
+        "inputs": [
+          {"name": "flight-telemetry", "desc": "Complete telemetry dataset from the flight"},
+          {"name": "vehicle-configuration", "desc": "As-flown vehicle configuration and predicted performance"},
+          {"name": "inspection-data", "desc": "Post-flight hardware inspection results (for reusable stages)"}
+        ],
+        "outputs": [
+          {"name": "flight-performance-assessment", "desc": "Actual vs predicted performance for every subsystem"},
+          {"name": "anomaly-list", "desc": "All anomalies identified during flight with severity and root cause assessment"},
+          {"name": "flight-readiness-for-next-mission", "desc": "Certification that the vehicle design is ready for the next flight"}
+        ],
+        "process": [
+          "Reconstruct the trajectory: compare actual position, velocity, and attitude from navigation data with the predicted trajectory. Differences indicate performance variations (engine Isp, drag, wind) or anomalies. The reconstructed trajectory is the ground truth for all subsequent analysis.",
+          "Engine performance: compare measured chamber pressure, turbopump speeds, temperatures, and mixture ratio with predictions. Calculate actual Isp and thrust from chamber pressure and flow rates. Any deviation from prediction is investigated. Engine performance data feeds the model for the next flight prediction.",
+          "GNC performance: evaluate navigation accuracy (comparing INS solution with GPS if available), guidance commanding, and control system response. Check control actuator usage (gimbal angles, RCS pulses) against predictions. Excessive control activity may indicate unexpected disturbances or model errors.",
+          "Structural loads: compare measured accelerations, acoustic environment, and temperatures with the design loads analysis. If any measurement exceeds the predicted envelope, investigate whether the structure was overloaded and whether the design loads analysis needs updating.",
+          "Anomaly resolution: each anomaly is categorized by severity (critical, major, minor) and assigned a root cause investigation team. No anomaly may be carried forward to the next flight without either a root cause and corrective action, or a formal risk acceptance by the mission assurance authority. This process is the final gate before the next launch."
+        ],
+        "tags": ["data-review", "certification"]
+      }
+    ]
+  }
+]
