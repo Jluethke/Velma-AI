@@ -1,0 +1,628 @@
+[
+  {
+    "chain_name": "cfd-problem-setup-methodology",
+    "description": "Set up a computational fluid dynamics simulation from scratch: classify the flow regime, select the solver, define boundary conditions, configure convergence criteria, and plan validation against experimental data.",
+    "domain": "engineering",
+    "tags": ["CFD", "simulation", "fluid-dynamics"],
+    "steps": [
+      {
+        "flow_name": "cfd-flow-regime-classification",
+        "description": "Classify the flow physics to determine which governing equations and simplifications apply.",
+        "inputs": [
+          {"name": "problem-description", "desc": "Physical scenario: geometry, fluid, velocities, temperatures, and the quantity of interest"},
+          {"name": "accuracy-requirements", "desc": "How accurate the result must be and what trade-offs between fidelity and compute cost are acceptable"}
+        ],
+        "outputs": [
+          {"name": "flow-classification", "desc": "Compressible vs incompressible (Mach number), laminar vs turbulent (Reynolds number), steady vs transient, single-phase vs multiphase, and whether buoyancy, radiation, or chemical reactions matter"},
+          {"name": "governing-equations", "desc": "Which equation set to solve: incompressible Navier-Stokes, compressible Euler/NS, energy equation coupling, species transport if reactive"}
+        ],
+        "process": [
+          "Compute the Reynolds number Re = rho * V * L / mu for the characteristic length scale and velocity. If Re is below the critical value for the geometry (roughly 2300 for internal pipe, 5e5 for flat plate), the flow is laminar. Above that, it is turbulent or transitional.",
+          "Compute the Mach number Ma = V / a where a is the speed of sound. If Ma < 0.3, the flow is effectively incompressible (density variation < 5%). Between 0.3 and 1.0, compressibility matters but no shocks form. Above 1.0, use a compressible solver with shock-capturing capability.",
+          "Check the Rayleigh number Ra = g * beta * delta_T * L^3 / (nu * alpha) if there is a temperature difference. If Ra exceeds roughly 1e8, natural convection is turbulent. If Ra is comparable to the forced convection Richardson number Ri = Gr/Re^2 near 1, mixed convection must be modeled.",
+          "Determine if the flow is steady or transient from the physics: vortex shedding (Strouhal number), pulsatile flow, or time-varying boundary conditions require transient simulation. If the goal is time-averaged quantities and the flow is statistically steady, RANS with steady solver may suffice.",
+          "Identify multiphase behavior: free surface (VOF), dispersed phase (Eulerian-Lagrangian), or cavitation. Each adds equations and complexity. Only include if the quantity of interest depends on the phase interaction."
+        ],
+        "tags": ["flow-classification", "Reynolds-number", "Mach-number"]
+      },
+      {
+        "flow_name": "cfd-turbulence-model-selection",
+        "description": "Select the turbulence model that matches the flow physics, mesh resolution budget, and accuracy needs.",
+        "inputs": [
+          {"name": "flow-classification", "desc": "Flow regime, separation behavior, and turbulence characteristics"},
+          {"name": "accuracy-requirements", "desc": "Acceptable level of modeling error for the target quantity"}
+        ],
+        "outputs": [
+          {"name": "turbulence-model", "desc": "Selected model (SA, k-epsilon, k-omega SST, RSM, DES, LES, or DNS) with configuration parameters"},
+          {"name": "mesh-requirements", "desc": "Wall resolution (y+ target), mesh density away from walls, and cell count estimate"}
+        ],
+        "process": [
+          "For attached boundary layers and simple shear flows: k-omega SST is the default industry choice. It blends k-omega near walls (accurate boundary layer) with k-epsilon in the freestream (avoids freestream sensitivity). Requires y+ around 1 for best accuracy or y+ 30-300 with wall functions.",
+          "For flows with massive separation (bluff bodies, stall): standard RANS models poorly predict separation location and recirculation zone size. Use DES (detached-eddy simulation) which resolves large eddies in separated regions while modeling the boundary layer with RANS. Mesh must be fine enough in the separation region that the DES length scale is smaller than the local mesh size.",
+          "For flows where turbulence anisotropy matters (swirling flows, secondary flows in ducts): Reynolds Stress Model (RSM) captures anisotropy that two-equation models miss, at the cost of 7 equations instead of 2 and stiffer numerics.",
+          "For flows where temporal fluctuations matter (aeroacoustics, mixing, combustion): LES resolves the energy-containing eddies and models only the subgrid scales. Cell count scales as Re^(9/5) for wall-resolved LES, making it practical only for moderate Reynolds numbers or wall-modeled LES.",
+          "DNS resolves all scales down to the Kolmogorov length. Cell count scales as Re^(9/4). Practical only for Re below roughly 10,000 and simple geometries. Use for validating RANS models, not for engineering design.",
+          "For the chosen model, define y+ target: y+ around 1 for low-Re models and LES, y+ 30-300 for wall-function models. Estimate the first cell height from y+ = (rho * u_tau * y) / mu where u_tau = sqrt(tau_wall / rho)."
+        ],
+        "tags": ["turbulence-modeling", "RANS", "LES", "DES"]
+      },
+      {
+        "flow_name": "cfd-boundary-condition-setup",
+        "description": "Define boundary conditions that correctly represent the physical problem without introducing numerical artifacts.",
+        "inputs": [
+          {"name": "problem-description", "desc": "Physical scenario including inlet/outlet conditions, wall properties, and symmetry planes"},
+          {"name": "turbulence-model", "desc": "Selected turbulence model dictates what turbulence quantities must be specified at boundaries"}
+        ],
+        "outputs": [
+          {"name": "boundary-conditions", "desc": "Complete specification of every boundary: type, values, and turbulence quantities"},
+          {"name": "domain-sizing-rationale", "desc": "How far upstream, downstream, and laterally the domain extends, and why"}
+        ],
+        "process": [
+          "Inlet: specify velocity profile (uniform or developed), total pressure, or mass flow rate. For turbulence quantities, set turbulent intensity I = u'/U (typically 1-5% for wind tunnels, 5-20% for industrial flows) and turbulent length scale l = 0.07*D_h (hydraulic diameter) or turbulent viscosity ratio (mu_t/mu typically 1-10). If the inlet profile matters, run a precursor simulation or use a recycling boundary.",
+          "Outlet: use pressure outlet (fixed static pressure) for most cases. Place it far enough downstream that the flow is nearly parallel (no large gradients). For internal flows, 10-20 diameters downstream of the last disturbance. Avoid velocity outlet unless the mass flow must be exactly specified, as it can cause convergence issues with backflow.",
+          "Walls: no-slip for viscous flow. Specify thermal condition (adiabatic, constant temperature, constant heat flux, or conjugate heat transfer). For rough walls, set equivalent sand-grain roughness height from surface finish data. Wall roughness shifts the log-law intercept and increases skin friction.",
+          "Symmetry: use only when the geometry AND the flow are symmetric. Turbulent flows with instabilities (vortex shedding) are not symmetric even if the geometry is. Symmetry planes reduce cell count by 2x per plane but miss asymmetric flow structures.",
+          "Domain sizing: for external flows, place the inlet at least 5 characteristic lengths upstream (farther for bluff bodies), the outlet at least 10-20 lengths downstream, and lateral boundaries at least 5 lengths away. Check that blockage ratio (object frontal area / domain cross-section) is below 5% to avoid confinement effects."
+        ],
+        "tags": ["boundary-conditions", "domain-sizing", "inlet-outlet"]
+      },
+      {
+        "flow_name": "cfd-solver-configuration",
+        "description": "Configure the solver settings: discretization schemes, linear solver, time stepping, and convergence monitoring.",
+        "inputs": [
+          {"name": "governing-equations", "desc": "Equation set to solve"},
+          {"name": "mesh-requirements", "desc": "Mesh resolution and quality metrics"},
+          {"name": "flow-classification", "desc": "Steady vs transient, compressible vs incompressible"}
+        ],
+        "outputs": [
+          {"name": "solver-settings", "desc": "Solver type, discretization scheme orders, relaxation factors, time step (if transient), and convergence criteria"},
+          {"name": "convergence-monitoring-plan", "desc": "Which residuals to track, what monitor points to set, and what integral quantities to check for convergence"}
+        ],
+        "process": [
+          "Choose pressure-based solver for incompressible and low-Mach flows (SIMPLE, SIMPLEC, or PISO coupling). Choose density-based solver for compressible flows with shocks (explicit or implicit time integration). Pressure-based with coupled solver is the modern default for general-purpose work.",
+          "Set spatial discretization: second-order upwind for convective terms as the minimum acceptable order. First-order upwind introduces excessive numerical diffusion and should only be used for initial iterations to stabilize, then switched to second-order. For LES, use central differencing or bounded central to minimize numerical dissipation.",
+          "For transient simulations, set the time step from the CFL condition: delta_t = CFL * delta_x / (V + a) where CFL < 1 for explicit solvers and CFL can be larger (5-20) for implicit solvers. Also ensure the time step resolves the physical transient: at least 20 time steps per period of the dominant frequency.",
+          "Set convergence criteria: residuals below 1e-4 as a minimum, 1e-6 for well-converged solutions. Monitor the quantity of interest (drag coefficient, pressure drop, heat transfer rate) and declare convergence when it changes less than 0.1% over the last 100 iterations (steady) or when running averages stabilize (transient).",
+          "Check global conservation: mass imbalance should be below 0.1% of the inlet mass flow. Energy imbalance should be below 1% of the total energy flux. Large imbalances indicate mesh quality problems, incorrect boundary conditions, or unconverged solutions."
+        ],
+        "tags": ["solver-settings", "discretization", "convergence"]
+      },
+      {
+        "flow_name": "cfd-validation-strategy",
+        "description": "Plan and execute validation of the CFD result against experimental data or analytical solutions.",
+        "inputs": [
+          {"name": "solver-settings", "desc": "The complete simulation setup"},
+          {"name": "problem-description", "desc": "Physical scenario with available experimental or analytical reference data"}
+        ],
+        "outputs": [
+          {"name": "validation-report", "desc": "Quantitative comparison to reference data, uncertainty estimates, and documented limitations of the simulation"},
+          {"name": "confidence-level", "desc": "Assessment of how much to trust the simulation result for the specific quantity of interest"}
+        ],
+        "process": [
+          "Identify the validation data: experimental measurements (wind tunnel, field data), analytical solutions (for simple geometries), or benchmark results (established test cases like backward-facing step, driven cavity, Ahmed body). Match the simulation conditions exactly to the validation data conditions.",
+          "Run the mesh convergence study (three meshes minimum, Richardson extrapolation for the Grid Convergence Index). The GCI gives a 95% confidence interval on the grid-converged solution. If the GCI is larger than the acceptable error, refine the mesh further.",
+          "Compare quantitatively: overlay profiles (velocity, pressure, temperature) at the same spatial locations as the experimental measurements. Compute error metrics: mean absolute error, RMS error, and maximum local error. For integral quantities (drag, lift, heat transfer), compare within the experimental uncertainty band.",
+          "Assess sensitivity: vary turbulence model, inlet conditions, and mesh topology to quantify how much the result depends on modeling choices. If the result is insensitive to these variations, confidence is higher. If sensitive, document which assumption drives the uncertainty.",
+          "Document limitations: state clearly what the simulation captures and what it does not. Common limitations: steady RANS misses transient effects, wall functions lose accuracy for separated flows, uniform inlet conditions miss real inlet non-uniformity. The simulation is a prediction only within its validated envelope."
+        ],
+        "tags": ["validation", "verification", "uncertainty"]
+      }
+    ]
+  },
+  {
+    "chain_name": "structural-fea-methodology",
+    "description": "Set up and execute a structural finite element analysis from element selection through mesh convergence to result interpretation, producing stress, displacement, and fatigue results with quantified confidence.",
+    "domain": "engineering",
+    "tags": ["FEA", "structural-analysis", "stress-analysis"],
+    "steps": [
+      {
+        "flow_name": "fea-element-and-material-selection",
+        "description": "Select element types and material models that match the structural behavior of the component.",
+        "inputs": [
+          {"name": "component-description", "desc": "Geometry, loading, material, and the structural response to predict (stress, displacement, buckling, fatigue)"},
+          {"name": "analysis-requirements", "desc": "Required accuracy, analysis type (static, dynamic, thermal), and computational budget"}
+        ],
+        "outputs": [
+          {"name": "element-selection", "desc": "Element types for each region (1D beam, 2D shell, 3D solid), with formulation (linear/quadratic, reduced/full integration)"},
+          {"name": "material-model", "desc": "Material constitutive model and parameters for each material in the model"}
+        ],
+        "process": [
+          "Choose element dimensionality from the geometry: thin-walled structures (t/L < 0.1) use shell elements; slender members (cross-section dimensions << length) use beam elements; everything else uses solid elements. Mixed models connect beams to shells to solids using constraint equations at transitions.",
+          "Choose element order: linear elements (4-node tet, 8-node hex, 4-node quad shell) are stiff and need fine meshes. Quadratic elements (10-node tet, 20-node hex, 8-node quad shell) are more accurate per element but cost more per element. For stress accuracy, quadratic elements are preferred. For explicit dynamics, linear elements with single-point integration are standard.",
+          "Choose integration: full integration (2x2x2 for linear hex, 3x3x3 for quadratic hex) is accurate but suffers from shear locking in bending-dominated problems with linear elements. Reduced integration (1 point for linear hex, 2x2x2 for quadratic hex) avoids locking but can exhibit hourglass modes (zero-energy deformation). Use hourglass control with reduced integration.",
+          "Select material model: linear elastic (E, nu) for small strains below yield. Bilinear or multilinear plasticity (yield stress, tangent modulus) for metals beyond yield. Hyperelastic (Mooney-Rivlin, Ogden, Yeoh) for rubbers and polymers at large strains. Viscoelastic (Prony series) for time-dependent polymer response.",
+          "For composites: use layered shell elements with ply-by-ply definition (material, orientation, thickness). Apply failure criteria (Tsai-Wu, Hashin, Puck) at each ply. Classical laminate theory is adequate for thin laminates; 3D solid elements are needed near free edges and through-thickness stress gradients."
+        ],
+        "tags": ["element-selection", "material-model", "meshing-strategy"]
+      },
+      {
+        "flow_name": "fea-mesh-convergence-study",
+        "description": "Establish that the FEA result is independent of mesh density through systematic refinement and error quantification.",
+        "inputs": [
+          {"name": "element-selection", "desc": "Element types and formulations"},
+          {"name": "component-description", "desc": "Geometry with identified stress concentrations and load paths"}
+        ],
+        "outputs": [
+          {"name": "converged-mesh", "desc": "Mesh that produces results within the specified tolerance of the grid-converged solution"},
+          {"name": "mesh-convergence-report", "desc": "Results vs mesh density plot, Richardson extrapolation estimate, and GCI confidence interval"}
+        ],
+        "process": [
+          "Identify critical regions where mesh density matters most: stress concentrations (fillets, holes, notches), contact zones, load application points, and material transitions. These regions need local refinement.",
+          "Build at least three meshes with systematically increasing density. The refinement ratio should be at least 1.5x in each direction (element size ratio). A factor of 2x is standard. Keep the mesh topology similar (same element types and quality) across refinement levels.",
+          "Run the same analysis on all three meshes. Extract the quantity of interest (peak stress, max displacement, natural frequency) at the same location on each mesh.",
+          "Apply Richardson extrapolation: if results on meshes with sizes h1, h2, h3 give values f1, f2, f3, compute the order of convergence p = ln((f3-f2)/(f2-f1)) / ln(r) where r is the refinement ratio. The grid-converged estimate is f_exact = f1 + (f1-f2)/(r^p - 1). The GCI gives a 95% confidence interval.",
+          "For singularities (re-entrant corners, point loads, crack tips): stress does not converge with mesh refinement at the singularity. Use stress linearization (membrane + bending) through the section, or extract stress at a distance from the singularity, or use fracture mechanics (stress intensity factor converges even though stress does not)."
+        ],
+        "tags": ["mesh-convergence", "Richardson-extrapolation", "GCI"]
+      },
+      {
+        "flow_name": "fea-loading-and-boundary-conditions",
+        "description": "Apply loads and constraints that accurately represent the physical loading without introducing artificial stress concentrations or over-constraining.",
+        "inputs": [
+          {"name": "component-description", "desc": "Physical loading scenario, support conditions, and connection details"},
+          {"name": "converged-mesh", "desc": "Mesh ready for analysis"}
+        ],
+        "outputs": [
+          {"name": "loaded-model", "desc": "FEA model with all loads, constraints, and contact definitions applied"},
+          {"name": "bc-verification", "desc": "Free-body check confirming reaction forces match applied loads and no rigid body modes remain"}
+        ],
+        "process": [
+          "Apply constraints that match the physical support: fixed (all 6 DOF) only for truly welded or embedded connections. Pin (3 translations fixed, rotations free) for bolted joints with clearance. Symmetry (normal displacement and out-of-plane rotation fixed) for symmetric problems.",
+          "Avoid over-constraining: fixing a single node creates a stress singularity (infinite stress at that node, which is physically meaningless). Distribute constraints over the physical contact area. Use remote boundary conditions (rigid or deformable) to connect constraints to the structure through a realistic area.",
+          "Apply loads as distributed pressures or surface tractions rather than point forces where possible. A point force on a shell element creates a singularity (stress proportional to 1/r). If a concentrated force is the physical reality (pin-loaded hole), model the contact between the pin and hole explicitly.",
+          "For bolt connections: use pretensioned bolt elements that apply the bolt preload, then carry the external load through a combination of bolt load increase and joint compression relief. The bolt preload is critical for fatigue analysis of bolted joints.",
+          "Run a free-body check: sum all reaction forces and compare to applied loads. They must balance to within numerical tolerance (< 0.1% error). If they do not balance, a load or constraint is wrong. Check for unintended rigid body modes (zero-frequency modes in a modal analysis) which indicate insufficient constraints."
+        ],
+        "tags": ["boundary-conditions", "loading", "contact-modeling"]
+      },
+      {
+        "flow_name": "fea-result-interpretation",
+        "description": "Extract, post-process, and interpret FEA results to answer the engineering question with appropriate conservatism.",
+        "inputs": [
+          {"name": "loaded-model", "desc": "Completed FEA analysis with results"},
+          {"name": "analysis-requirements", "desc": "Design code or standard against which to evaluate results (ASME, Eurocode, FAR, etc.)"}
+        ],
+        "outputs": [
+          {"name": "structural-assessment", "desc": "Pass/fail assessment against the applicable code, with factors of safety and identified critical locations"},
+          {"name": "result-quality-check", "desc": "Element quality metrics, energy balance, stress discontinuity check, and identified modeling limitations"}
+        ],
+        "process": [
+          "Check result quality first: element distortion warnings, negative Jacobians, and energy error norm. The energy balance (external work vs strain energy) should match within 1%. Large strain energy in a few elements indicates a singularity or poor element quality.",
+          "For stress evaluation per ASME BPVC Div 2: perform stress linearization through the section at the critical location. Decompose total stress into membrane (constant through thickness), bending (linear through thickness), and peak (remaining). Compare membrane to the allowable membrane stress, membrane+bending to the allowable membrane+bending stress.",
+          "For fatigue evaluation: extract the alternating stress at the critical location (peak stress including stress concentration). Apply the fatigue strength reduction factor if not already captured by the mesh (mesh must resolve the stress concentration to use FEA stress directly). Compare to the S-N curve for the material. Compute the usage factor if multiple load cycles are present (Miner's rule).",
+          "For buckling: linear buckling (eigenvalue) gives the upper-bound bifurcation load. Apply knockdown factors for imperfections (typically 0.65 to 0.80 for cylinders under axial compression). For accurate buckling prediction, run a nonlinear analysis with geometric imperfections seeded from the first buckling mode shape scaled to the manufacturing tolerance.",
+          "Document limitations: FEA stress at a singularity is mesh-dependent and physically meaningless. Stress below yield in a linear elastic analysis does not guarantee safety if the material is brittle or if fatigue is the failure mode. Static analysis does not capture dynamic amplification."
+        ],
+        "tags": ["stress-analysis", "fatigue", "code-compliance"]
+      }
+    ]
+  },
+  {
+    "chain_name": "conjugate-heat-transfer-methodology",
+    "description": "Set up and run a coupled thermal-fluid simulation where heat conducts through a solid and convects into a fluid, predicting temperature distributions and heat transfer rates for cooling system design.",
+    "domain": "engineering",
+    "tags": ["CHT", "thermal", "simulation", "heat-transfer"],
+    "steps": [
+      {
+        "flow_name": "cht-problem-decomposition",
+        "description": "Decompose the conjugate heat transfer problem into its thermal and fluid domains, define the interface, and select the coupling approach.",
+        "inputs": [
+          {"name": "thermal-problem", "desc": "Physical scenario: heat source, solid geometry, coolant type and flow rate, and the temperature or heat flux to predict"},
+          {"name": "accuracy-requirements", "desc": "Required accuracy in temperature prediction and acceptable computational cost"}
+        ],
+        "outputs": [
+          {"name": "domain-decomposition", "desc": "Solid domain (conduction), fluid domain (convection), and the shared interface where heat and temperature are exchanged"},
+          {"name": "coupling-method", "desc": "Direct (monolithic) or partitioned (iterative exchange) coupling, with update frequency and convergence criterion"}
+        ],
+        "process": [
+          "Identify the solid domain (the structure conducting heat) and the fluid domain (the coolant or gas removing heat). The interface between them is where the thermal boundary condition transitions from Dirichlet (temperature) on one side to Neumann (heat flux) on the other. At the interface, both temperature continuity and heat flux continuity must hold.",
+          "Choose coupling method: monolithic (solve solid and fluid simultaneously in one solver) is the most accurate and stable but requires a single code that handles both. Partitioned (separate solid and fluid solvers exchanging boundary data) is more flexible but requires iteration for convergence. One-way coupling (fluid to solid only) is acceptable when the solid temperature change does not significantly affect the flow.",
+          "For partitioned coupling, define the exchange: the fluid solver sends the heat transfer coefficient h and reference temperature T_ref to the solid solver, which returns the wall temperature. Iterate until the interface temperature changes less than 0.1 K between iterations. Under-relaxation (alpha = 0.3 to 0.7) prevents oscillation.",
+          "Set the mesh at the interface: the fluid and solid meshes do not need to be conformal (matching node-for-node), but non-conformal interfaces require interpolation which can introduce small conservation errors. For high-accuracy work, use conformal interface meshes.",
+          "Estimate the Biot number Bi = h*L/k_solid. If Bi < 0.1, the solid temperature is nearly uniform and a lumped-capacitance model suffices (no FEA needed in the solid). If Bi > 0.1, temperature gradients in the solid matter and full CHT is needed."
+        ],
+        "tags": ["CHT", "coupling", "thermal-fluid"]
+      },
+      {
+        "flow_name": "cht-thermal-boundary-specification",
+        "description": "Specify all thermal boundary conditions for the conjugate simulation: heat sources, insulation, radiation, and ambient conditions.",
+        "inputs": [
+          {"name": "domain-decomposition", "desc": "Solid and fluid domains with interface"},
+          {"name": "thermal-problem", "desc": "Heat generation rates, ambient conditions, and radiation environment"}
+        ],
+        "outputs": [
+          {"name": "thermal-boundary-set", "desc": "Complete thermal boundary condition specification for all surfaces and volumes"},
+          {"name": "energy-balance-check", "desc": "Expected total heat generation vs total heat removal, confirming the problem is thermally balanced"}
+        ],
+        "process": [
+          "Volumetric heat generation: specify in W/m^3 for electrically heated components (P = I^2 * R / volume), electronic chips (thermal design power / die area * thickness), or nuclear fuel. Map the heat generation to the correct solid regions in the mesh.",
+          "External convection boundaries: for surfaces exposed to ambient air, specify the natural convection coefficient from correlations (Churchill-Chu for vertical plates: h = f(Ra, Pr)) or forced convection (Dittus-Boelter for internal flow: Nu = 0.023 * Re^0.8 * Pr^n). These are approximate; if the external flow matters, extend the CFD domain to include it.",
+          "Radiation boundaries: for high-temperature surfaces (above roughly 200C where radiation is significant), include surface-to-surface radiation using the Stefan-Boltzmann law q = epsilon * sigma * (T_surface^4 - T_ambient^4). For enclosed cavities, compute view factors between surfaces. For external surfaces, radiation to a far-field temperature suffices.",
+          "Insulated boundaries: zero heat flux (adiabatic) for surfaces with thermal insulation or symmetry planes. Verify that marking a surface as insulated does not prevent heat from leaving the system (energy balance).",
+          "Energy balance pre-check: total heat generated must equal total heat removed at steady state. Sum all heat sources and compare to the expected heat removal (coolant mass flow * specific heat * delta_T + radiation + natural convection). If they do not balance, a boundary condition is missing."
+        ],
+        "tags": ["thermal-boundaries", "heat-generation", "radiation"]
+      },
+      {
+        "flow_name": "cht-result-analysis",
+        "description": "Extract and interpret conjugate heat transfer results to evaluate thermal performance and identify design improvements.",
+        "inputs": [
+          {"name": "thermal-boundary-set", "desc": "Complete simulation setup"},
+          {"name": "thermal-problem", "desc": "Target temperatures, thermal limits, and design constraints"}
+        ],
+        "outputs": [
+          {"name": "thermal-performance-report", "desc": "Peak temperatures, temperature margins, heat transfer rates, thermal resistance breakdown, and identified hot spots"},
+          {"name": "design-improvement-recommendations", "desc": "Specific changes to geometry, materials, or flow rates that would improve thermal performance, with estimated effect"}
+        ],
+        "process": [
+          "Extract peak temperatures at all critical locations (junction temperature for electronics, wall temperature for structural limits, coolant outlet temperature). Compare to allowable limits. The thermal margin is T_limit - T_peak; document it for each critical location.",
+          "Compute thermal resistance network: total thermal resistance R_total = (T_source - T_coolant_inlet) / Q. Break it down: R_conduction = thickness / (k * area), R_convection = 1 / (h * area), R_interface = (T_hot - T_cold) / q at each interface. The largest thermal resistance is the bottleneck and the target for improvement.",
+          "Check the heat transfer coefficient distribution at the fluid-solid interface. Regions with low h (stagnation zones, recirculation) are where the solid runs hottest. Design changes should target these regions: add fins, turbulators, or redirect flow to increase local h.",
+          "For transient thermal analysis: check the thermal time constant tau = rho * c_p * V / (h * A) of the component. Components with large tau respond slowly to changes in heat load or cooling. If the mission profile has thermal transients faster than the time constant, the steady-state analysis is insufficient and a transient simulation is needed.",
+          "Verify energy conservation in the simulation: sum heat into all domains and sum heat out. The imbalance should be below 1% of the total heat transfer. Large imbalances indicate insufficient convergence, mesh quality issues at the interface, or incorrect boundary conditions."
+        ],
+        "tags": ["thermal-analysis", "thermal-resistance", "hot-spot-identification"]
+      }
+    ]
+  },
+  {
+    "chain_name": "explicit-dynamics-simulation",
+    "description": "Set up and execute an explicit finite element simulation for impact, crash, blast, or metal forming problems where large deformations, material failure, and contact dominate the physics.",
+    "domain": "engineering",
+    "tags": ["explicit-FEA", "impact", "crash-simulation", "dynamics"],
+    "steps": [
+      {
+        "flow_name": "explicit-problem-formulation",
+        "description": "Determine if explicit dynamics is the right method, define the time scale, and set up the initial conditions.",
+        "inputs": [
+          {"name": "impact-scenario", "desc": "Physical event: impactor geometry, mass, velocity, target geometry, materials, and the response to predict (deformation, energy absorption, failure pattern)"},
+          {"name": "analysis-requirements", "desc": "Required fidelity in deformation shape, peak force history, and energy absorption"}
+        ],
+        "outputs": [
+          {"name": "explicit-setup", "desc": "Time scale, mass scaling decision, initial velocities, and gravity specification"},
+          {"name": "method-justification", "desc": "Why explicit is chosen over implicit, and the expected stable time step"}
+        ],
+        "process": [
+          "Explicit vs implicit decision: explicit integration is preferred when the event duration is short (milliseconds to seconds), the deformation is large (elements distort significantly), contact is complex (multiple bodies, sliding, separation), and material failure occurs. Implicit is better for slow quasi-static loading where inertia does not matter.",
+          "Estimate the stable time step: delta_t_stable = L_min / c where L_min is the smallest element characteristic length and c is the speed of sound in the material (c = sqrt(E/rho) for solids). For steel (c ~ 5000 m/s) with 5mm elements, delta_t ~ 1 microsecond. The total simulation time divided by the stable time step gives the number of time steps.",
+          "Mass scaling: for quasi-static problems simulated with explicit (metal forming), artificially increase the material density to increase the stable time step. The criterion: kinetic energy must remain below 5-10% of the internal energy throughout the simulation. If kinetic energy grows too large, the solution has dynamic effects that are not physical.",
+          "Set initial conditions: initial velocity for impactors, initial stress state if the component is preloaded (pretensioned bolts, pressurized vessels), and gravity for drop tests. Ensure the initial configuration has no element penetrations (initial contact overlap causes instability).",
+          "Define the total simulation time: long enough to capture the event and any post-event response (rebound, oscillation). For crash (50-100ms), drop tests (time to peak deformation + rebound), or blast (2-5x the positive phase duration)."
+        ],
+        "tags": ["explicit-dynamics", "time-step", "mass-scaling"]
+      },
+      {
+        "flow_name": "explicit-material-failure-modeling",
+        "description": "Select and calibrate material models with failure criteria for predicting fracture, fragmentation, and energy absorption.",
+        "inputs": [
+          {"name": "impact-scenario", "desc": "Materials involved, strain rates expected, and failure modes to capture"},
+          {"name": "explicit-setup", "desc": "Time scale and loading severity"}
+        ],
+        "outputs": [
+          {"name": "material-cards", "desc": "Complete material model definitions with strain-rate dependence and failure criteria parameters"},
+          {"name": "failure-model-calibration", "desc": "How failure parameters were determined and their experimental basis"}
+        ],
+        "process": [
+          "For metals under impact: Johnson-Cook constitutive model captures strain hardening, strain rate hardening, and thermal softening: sigma = (A + B*epsilon^n) * (1 + C*ln(epsilon_dot/epsilon_dot_0)) * (1 - T*^m). Parameters A, B, n, C, m from tensile tests at multiple strain rates and temperatures.",
+          "For metal failure: Johnson-Cook damage model accumulates damage D = sum(delta_epsilon / epsilon_f) where the failure strain epsilon_f depends on stress triaxiality, strain rate, and temperature. When D reaches 1.0, the element is deleted (eroded). Element erosion creates free surfaces and allows crack propagation.",
+          "For polymers and foams: use tabulated stress-strain curves with rate dependence (input multiple curves at different strain rates, the solver interpolates). Crushable foam models (Deshpande-Fleck) for energy-absorbing foams. Ogden hyperelastic with Mullins effect for rubber.",
+          "For composites under impact: progressive damage models (Hashin, Larc) with element property degradation. When a failure criterion is met in a ply (fiber tension, fiber compression, matrix tension, matrix compression), the corresponding stiffness is reduced to near zero. Full element deletion occurs when all plies have failed in all modes.",
+          "Validate the material model against a simple impact test (Taylor impact, ballistic limit, Charpy) before using it in the full simulation. The calibrated model should reproduce the experimental deformation shape, force-displacement curve, and failure pattern."
+        ],
+        "tags": ["material-failure", "Johnson-Cook", "damage-model"]
+      },
+      {
+        "flow_name": "explicit-contact-and-mesh-setup",
+        "description": "Configure contact algorithms and mesh for large-deformation explicit simulation.",
+        "inputs": [
+          {"name": "impact-scenario", "desc": "Bodies involved, expected contact interactions, and deformation severity"},
+          {"name": "material-cards", "desc": "Material models for all parts"}
+        ],
+        "outputs": [
+          {"name": "contact-definitions", "desc": "Contact type, friction coefficient, and penalty stiffness for each contact pair"},
+          {"name": "explicit-mesh", "desc": "Mesh with element size and quality appropriate for the deformation level and time step target"}
+        ],
+        "process": [
+          "Choose contact algorithm: penalty-based contact (most common in explicit codes) adds a spring force proportional to penetration. Penalty stiffness should be high enough to keep penetration below 5-10% of the element thickness. Too high causes instability (time step drop); too low allows unrealistic penetration.",
+          "Define contact pairs: self-contact (a part folding onto itself), part-to-part contact (impactor to target), and tied contact (welded interfaces that should not separate). For large models, use automatic contact detection (single-surface contact) that checks all exterior faces against all others.",
+          "Set friction: static and dynamic friction coefficients from material pair data. Steel-on-steel: 0.15-0.30 lubricated, 0.50-0.80 dry. For unknown friction, run a sensitivity study: if the result does not change with friction (energy absorption in a crush), the exact value does not matter.",
+          "Mesh for explicit: prefer hexahedral elements (8-node, single integration point with hourglass control). Hex elements have a larger stable time step than tets of similar size. For complex geometry where hex meshing is impractical, use tetrahedral elements but increase mesh density to compensate for tet stiffness.",
+          "Size elements to capture the deformation: in crush zones, elements should be small enough that several elements span the expected fold wavelength. In regions away from contact and deformation, coarser elements save computation. Transition from fine to coarse gradually (no more than 2:1 size ratio at transitions)."
+        ],
+        "tags": ["contact-modeling", "penalty-method", "explicit-mesh"]
+      },
+      {
+        "flow_name": "explicit-result-quality-checks",
+        "description": "Verify that the explicit simulation result is physically meaningful by checking energy balance, hourglassing, and time step history.",
+        "inputs": [
+          {"name": "contact-definitions", "desc": "Complete contact setup"},
+          {"name": "explicit-mesh", "desc": "Meshed model ready for analysis"}
+        ],
+        "outputs": [
+          {"name": "simulation-quality-report", "desc": "Energy balance, hourglass energy ratio, mass scaling ratio, time step history, and identified issues"},
+          {"name": "validated-result", "desc": "Deformation, force history, and energy absorption with confidence assessment"}
+        ],
+        "process": [
+          "Energy balance: total energy = kinetic + internal + contact + hourglass + external work. Total energy should remain constant (within 2% of the initial kinetic energy) throughout the simulation. Energy growth indicates instability. Energy loss beyond physical dissipation indicates excessive damping or contact energy leak.",
+          "Hourglass energy: the ratio of hourglass energy to internal energy should stay below 10% (5% is preferred). Hourglass modes are non-physical zero-energy deformations of reduced-integration elements. If hourglass energy is too high: increase hourglass stiffness, switch to fully integrated elements in critical regions, or refine the mesh.",
+          "Mass scaling check (if used): the ratio of added mass to original mass should be below 5%. Track which elements are mass-scaled and verify they are not in the critical deformation zone. The kinetic-to-internal energy ratio should remain below 5% for quasi-static simulations.",
+          "Time step history: the stable time step should not drop dramatically during the simulation. A sudden drop indicates extreme element distortion. If elements become too distorted, they should be deleted (erosion) rather than allowed to drive the time step to impractical levels.",
+          "Compare to test data: overlay force-displacement or acceleration-time curves from the simulation and the physical test. The peak force, energy absorption (area under the curve), and deformation pattern should agree within 10-15% for a well-calibrated model. Discrepancies point to material model, contact, or boundary condition errors."
+        ],
+        "tags": ["energy-balance", "hourglass-control", "quality-check"]
+      }
+    ]
+  },
+  {
+    "chain_name": "fatigue-life-prediction-methodology",
+    "description": "Predict the fatigue life of a component under cyclic loading using stress-life, strain-life, or fracture mechanics methods, accounting for multiaxial stress, mean stress, surface finish, and environmental effects.",
+    "domain": "engineering",
+    "tags": ["fatigue", "durability", "life-prediction"],
+    "steps": [
+      {
+        "flow_name": "fatigue-loading-characterization",
+        "description": "Process the service loading history into cycle counts and load spectra for fatigue analysis.",
+        "inputs": [
+          {"name": "load-history", "desc": "Time history of the applied load, stress, or strain at the critical location"},
+          {"name": "component-description", "desc": "Material, geometry, surface condition, and operating environment"}
+        ],
+        "outputs": [
+          {"name": "cycle-count", "desc": "Rainflow cycle count matrix: stress amplitude, mean stress, and number of cycles for each bin"},
+          {"name": "loading-characterization", "desc": "Constant amplitude equivalent, load spectrum shape, and whether the loading is proportional or non-proportional"}
+        ],
+        "process": [
+          "If the loading is constant amplitude (sinusoidal), extract stress amplitude sigma_a = (sigma_max - sigma_min)/2 and mean stress sigma_m = (sigma_max + sigma_min)/2. Stress ratio R = sigma_min/sigma_max. Fully reversed loading has R = -1 (sigma_m = 0).",
+          "For variable amplitude loading, apply rainflow cycle counting (ASTM E1049) to extract the individual cycles from the complex history. Each cycle is defined by its range, mean, and count. The rainflow method identifies closed hysteresis loops in the stress-strain response.",
+          "For multiaxial loading, determine if the principal stress axes rotate during the load cycle (non-proportional loading). Non-proportional loading causes additional hardening in most metals and reduces fatigue life compared to proportional loading of the same equivalent stress amplitude.",
+          "Construct the load spectrum: order cycles from largest to smallest amplitude. The spectrum shape determines which cycles contribute most to damage. For many engineering applications, the largest cycles dominate damage; the numerous small cycles contribute little unless they exceed the endurance limit.",
+          "Identify the critical location: the point in the component with the highest fatigue damage. This is usually the location of highest stress concentration, but for variable loading it may depend on the load path. Check multiple locations if the critical point is not obvious."
+        ],
+        "tags": ["rainflow-counting", "load-spectrum", "cycle-counting"]
+      },
+      {
+        "flow_name": "fatigue-method-selection-and-sn-curve",
+        "description": "Select the fatigue analysis method and construct the appropriate S-N or epsilon-N curve for the component.",
+        "inputs": [
+          {"name": "cycle-count", "desc": "Characterization of the cyclic loading"},
+          {"name": "component-description", "desc": "Material, surface finish, size, and required life"}
+        ],
+        "outputs": [
+          {"name": "fatigue-curve", "desc": "S-N curve or strain-life curve with all modification factors applied for the specific component"},
+          {"name": "method-selection", "desc": "Stress-life (high-cycle), strain-life (low-cycle), or fracture mechanics (damage tolerance), with rationale"}
+        ],
+        "process": [
+          "Choose the method based on the expected life: stress-life (S-N approach) for high-cycle fatigue (> 10,000 cycles to failure) where strains remain elastic. Strain-life (epsilon-N approach) for low-cycle fatigue (< 10,000 cycles) where plastic strains occur at the notch root. Fracture mechanics for damage tolerance (known initial crack from inspection).",
+          "For stress-life: start with the polished specimen S-N data from fatigue databases (MMPDS for aerospace metals, Eurocode for structural steel). Modify for component conditions: S_component = S_specimen * k_surface * k_size * k_reliability * k_temperature * k_environment. Surface factor k_surface depends on surface finish (0.7-1.0). Size factor k_size corrects for stress gradient (0.6-0.9 for large parts).",
+          "For strain-life: obtain the Coffin-Manson parameters (sigma_f', b, epsilon_f', c) from strain-controlled fatigue tests. The total strain amplitude is epsilon_a = (sigma_f'/E) * (2N_f)^b + epsilon_f' * (2N_f)^c. The transition life 2N_T where elastic and plastic strain amplitudes are equal separates the high-cycle and low-cycle regimes.",
+          "Apply mean stress correction: Goodman (linear, conservative), Gerber (parabolic, less conservative), or Smith-Watson-Topper (SWT: sigma_a_eq = sqrt(sigma_max * sigma_a), which accounts for mean stress through the maximum stress). SWT is preferred for strain-life because it naturally handles R-ratio effects.",
+          "For welded joints: use the S-N curves from the applicable standard (IIW, BS 7608, Eurocode 3) based on the weld detail class. Weld detail class depends on joint geometry and loading direction. These curves already include the effect of the weld toe stress concentration and residual stress."
+        ],
+        "tags": ["S-N-curve", "Coffin-Manson", "mean-stress-correction"]
+      },
+      {
+        "flow_name": "fatigue-damage-calculation",
+        "description": "Calculate cumulative fatigue damage and predict life under the service loading spectrum.",
+        "inputs": [
+          {"name": "cycle-count", "desc": "Rainflow cycle count from the loading characterization"},
+          {"name": "fatigue-curve", "desc": "S-N or strain-life curve for the component"}
+        ],
+        "outputs": [
+          {"name": "fatigue-life-prediction", "desc": "Predicted life in cycles or hours, cumulative damage factor, and safety factor against the required life"},
+          {"name": "critical-cycles-identification", "desc": "Which load cycles contribute most to damage, enabling targeted load reduction or design changes"}
+        ],
+        "process": [
+          "Apply Palmgren-Miner linear damage accumulation: D = sum(n_i / N_f_i) for each cycle bin i, where n_i is the number of cycles at amplitude sigma_a_i and N_f_i is the number of cycles to failure at that amplitude from the S-N curve. Failure when D = 1.0 (or D = 0.5 to 2.0 in practice, reflecting the scatter in Miner's rule).",
+          "For cycles below the endurance limit: standard Miner's rule (original) ignores them (N_f = infinity). Modified Miner's rule (Haibach) extends the S-N curve below the endurance limit with a shallower slope (typically 2k-1 where k is the slope above the endurance limit). This accounts for small cycles that contribute to damage in the presence of larger overloads that open crack growth.",
+          "For non-proportional multiaxial loading: use a critical plane approach. Compute the shear strain amplitude and normal stress on the critical plane (the plane that maximizes damage). The Fatemi-Socie parameter combines shear strain with normal stress: gamma_max * (1 + k * sigma_n_max / sigma_y). Compare this to the uniaxial strain-life curve.",
+          "Compute the safety factor: SF = 1/D for infinite life. For finite life, SF = N_predicted / N_required. For stress-based safety factor, SF = sigma_endurance / sigma_a at the critical location. A safety factor of 2 on life corresponds to roughly 1.1 to 1.2 on stress (because the S-N curve is steep).",
+          "Identify which cycles dominate the damage: sort the damage contribution per bin (n_i / N_f_i) from largest to smallest. Often, the 10 largest amplitude cycles contribute 80% of the damage. Reducing these cycles (through load limiting, damping, or structural modification) is the most effective path to improved fatigue life."
+        ],
+        "tags": ["Miner-rule", "damage-accumulation", "life-prediction"]
+      }
+    ]
+  },
+  {
+    "chain_name": "topology-optimization-methodology",
+    "description": "Use topology optimization to find the material distribution that minimizes weight while satisfying structural performance constraints, producing a design that is ready for manufacturing refinement.",
+    "domain": "engineering",
+    "tags": ["optimization", "topology", "generative-design"],
+    "steps": [
+      {
+        "flow_name": "topology-problem-formulation",
+        "description": "Define the optimization problem: design domain, loads, constraints, and manufacturing constraints.",
+        "inputs": [
+          {"name": "design-envelope", "desc": "Maximum allowable geometry (bounding box), non-design regions (bolt holes, interfaces), loads, and supports"},
+          {"name": "performance-targets", "desc": "Compliance (stiffness), stress, displacement, or natural frequency targets, plus weight reduction goal"}
+        ],
+        "outputs": [
+          {"name": "optimization-setup", "desc": "Design domain mesh, load cases, constraint functions, and manufacturing constraints (symmetry, draw direction, minimum feature size)"},
+          {"name": "objective-and-constraints", "desc": "Formal optimization statement: minimize weight subject to compliance <= target, or minimize compliance subject to volume <= fraction"}
+        ],
+        "process": [
+          "Define the design domain: fill the maximum allowable envelope with a finite element mesh. Mark regions that must remain solid (interfaces, bolt holes) and regions that must remain void (clearance volumes). The optimization will distribute material in the remaining design domain.",
+          "Choose the formulation: minimize compliance (maximize stiffness) for a given volume fraction is the most common and most stable formulation. Minimize volume subject to stress constraints is more directly useful but more difficult numerically because stress constraints are local (one per element) creating a huge number of constraints.",
+          "Specify all load cases: static loads, thermal loads, gravity, preloads. Multiple load cases are handled as a weighted sum of compliances. The weights determine the relative importance of each load case. Dominant load cases should have higher weights.",
+          "Add manufacturing constraints: symmetry planes enforce symmetry in the result. Draw direction constraint (extrusion constraint) ensures the result can be extracted from a mold. Minimum member size prevents features thinner than the manufacturing process can produce. Maximum member size prevents thick sections that cause porosity in casting.",
+          "Choose the element density method (SIMP: Solid Isotropic Material with Penalization). The penalization exponent p (typically 3) drives intermediate densities toward 0 or 1, producing a clear solid/void result. A filter radius (1.5x to 2x element size) prevents checkerboard patterns."
+        ],
+        "tags": ["topology-optimization", "SIMP", "design-domain"]
+      },
+      {
+        "flow_name": "topology-optimization-execution",
+        "description": "Run the optimization solver and monitor convergence of objective and constraints.",
+        "inputs": [
+          {"name": "optimization-setup", "desc": "Complete problem formulation"},
+          {"name": "objective-and-constraints", "desc": "Formal optimization statement"}
+        ],
+        "outputs": [
+          {"name": "raw-topology", "desc": "Element density field showing where material should be placed, with intermediate densities"},
+          {"name": "optimization-convergence", "desc": "History of objective function, constraint values, and element density histogram over iterations"}
+        ],
+        "process": [
+          "Run the optimization: SIMP with the OC (optimality criteria) method or MMA (method of moving asymptotes) as the optimizer. OC is fast for compliance minimization. MMA handles general constraints better. Typical convergence in 50-200 iterations.",
+          "Monitor convergence: plot objective (compliance or volume) vs iteration. It should decrease monotonically (for minimization). Plot constraint values to verify they are satisfied. Plot the element density histogram: early iterations have many intermediate densities; converged solutions should have most elements at 0 or 1.",
+          "Check for mesh dependence: run the same optimization on a refined mesh. If the topology (structural layout, number of members, connectivity) changes significantly, the result is mesh-dependent. Increase the filter radius or add minimum member size constraints to obtain a mesh-independent result.",
+          "Run multiple starting points if possible: topology optimization can have local minima. Different initial density distributions or different random seeds can produce different topologies with similar objective values. The one with the simplest topology is usually preferred for manufacturing.",
+          "Extract the iso-density surface at a threshold (typically 0.3 to 0.5) to define the solid/void boundary. Elements with density above the threshold are solid; below are void. The threshold affects the final volume and compliance. Sweep the threshold to find the best trade-off."
+        ],
+        "tags": ["SIMP-solver", "convergence", "mesh-independence"]
+      },
+      {
+        "flow_name": "topology-result-interpretation-and-redesign",
+        "description": "Interpret the raw topology result and translate it into a manufacturable design with validated performance.",
+        "inputs": [
+          {"name": "raw-topology", "desc": "Element density field from optimization"},
+          {"name": "performance-targets", "desc": "Original structural requirements to validate against"}
+        ],
+        "outputs": [
+          {"name": "refined-design", "desc": "CAD geometry interpreted from the topology result, smoothed and modified for manufacturing"},
+          {"name": "design-validation", "desc": "FEA of the refined design confirming it meets all performance targets"}
+        ],
+        "process": [
+          "Interpret the topology: the raw result shows load paths and structural layout, not a finished design. It is a starting point for detailed design. Identify the major members (primary load paths), the joints (where members intersect), and the supports (where the structure connects to non-design regions).",
+          "Smooth the geometry: the raw topology has jagged element boundaries. Use marching cubes or a similar algorithm to create a smooth surface. Then manually or parametrically refine: add fillets at junctions (the topology optimizer does not create smooth transitions), clean up thin connections, and add features that manufacturing requires (draft angles, uniform wall thickness for casting).",
+          "For additive manufacturing: the topology result is more directly usable. Add lattice infill to regions with intermediate density. Add support structure for overhangs beyond the self-supporting angle (typically 45 degrees from vertical). Check that all void regions are accessible for powder removal.",
+          "Validate the refined design: run a full FEA (not just topology check) on the refined CAD geometry with the original loads and boundary conditions. The stress, displacement, and natural frequency must meet the original requirements. The refined design is typically 5-15% heavier than the raw topology due to manufacturing-driven modifications.",
+          "Compare the optimized design to the original (if there is one): weight reduction percentage, stiffness change, stress redistribution. Document the trade-offs and any performance that improved beyond the original requirement."
+        ],
+        "tags": ["design-interpretation", "smoothing", "manufacturing-readiness"]
+      }
+    ]
+  },
+  {
+    "chain_name": "electromagnetic-simulation-methodology",
+    "description": "Set up and run electromagnetic field simulations using FEM, FDTD, or method of moments for antenna, EMC, and high-frequency design problems.",
+    "domain": "engineering",
+    "tags": ["electromagnetics", "simulation", "FEM", "FDTD"],
+    "steps": [
+      {
+        "flow_name": "em-problem-classification-and-solver",
+        "description": "Classify the electromagnetic problem and select the solver method that matches the physics and frequency range.",
+        "inputs": [
+          {"name": "em-problem", "desc": "Physical scenario: frequency range, geometry size relative to wavelength, materials, and the quantity to predict (radiation pattern, S-parameters, field distribution, shielding effectiveness)"},
+          {"name": "accuracy-requirements", "desc": "Required accuracy and computational budget"}
+        ],
+        "outputs": [
+          {"name": "solver-selection", "desc": "FEM (frequency domain, arbitrary materials, enclosed boundaries), FDTD (time domain, broadband, large open problems), or MoM (surface currents, antennas in free space)"},
+          {"name": "frequency-mesh-estimate", "desc": "Required mesh density (elements per wavelength) and estimated problem size"}
+        ],
+        "process": [
+          "Classify by electrical size: if the structure is small compared to wavelength (L < lambda/10), use quasi-static or lumped-element analysis (no full-wave needed). If L is comparable to lambda, full-wave simulation is needed. If L >> lambda, ray tracing or asymptotic methods may be more efficient.",
+          "FEM (frequency-domain): best for problems with complex materials (anisotropic, inhomogeneous, lossy), enclosed or partially enclosed domains (waveguides, cavities, microstrip), and when the field at a single frequency is needed. Frequency sweep requires solving at each frequency point. Mesh with at least 6 elements per wavelength (10 for accuracy near resonances).",
+          "FDTD (time-domain): best for broadband analysis (one run gives all frequencies via FFT of the time-domain response), large open problems (antennas in free space), and transient problems (pulse propagation, time-domain reflectometry). Mesh is a regular grid (Yee cell); mesh density at least 10 cells per wavelength at the highest frequency. PML (perfectly matched layer) absorbing boundaries terminate the domain.",
+          "MoM (integral equation): best for antennas and scatterers in free space (no volume discretization of the background). Solves for surface currents on conductors. Matrix size is N_surface^2 which is much smaller than volume methods for open problems. Does not handle inhomogeneous dielectrics well.",
+          "Estimate problem size: N_FEM = (L/lambda)^3 * elements_per_wavelength^3. N_FDTD = (L/lambda + N_PML)^3 * cells_per_wavelength^3 * time_steps. N_MoM = (L/lambda)^2 * elements_per_wavelength^2. A problem that fits in memory with one method may not with another."
+        ],
+        "tags": ["EM-solver-selection", "FEM", "FDTD", "MoM"]
+      },
+      {
+        "flow_name": "em-model-setup-and-excitation",
+        "description": "Set up the electromagnetic model: geometry, materials, excitation, and boundary conditions.",
+        "inputs": [
+          {"name": "solver-selection", "desc": "Chosen solver method"},
+          {"name": "em-problem", "desc": "Physical scenario and design intent"}
+        ],
+        "outputs": [
+          {"name": "em-model", "desc": "Complete model with geometry, material properties (permittivity, permeability, conductivity, loss tangent), excitation (port, plane wave, current source), and boundary conditions"},
+          {"name": "excitation-specification", "desc": "Port definition, impedance normalization, and frequency/time parameters"}
+        ],
+        "process": [
+          "Import or build geometry. Simplify features that are electrically small (much smaller than lambda/20): small fillets, thin coatings (replace with impedance boundary), and fine details far from the region of interest. These features increase mesh density without affecting the result.",
+          "Assign materials: conductors (copper: sigma = 5.8e7 S/m, treat as PEC if skin depth << wall thickness, otherwise use impedance boundary). Dielectrics: specify epsilon_r and loss tangent at the frequency of interest (FR-4: epsilon_r = 4.3, tan_delta = 0.02 at 1 GHz). Frequency-dependent materials require Debye or Drude models in FDTD.",
+          "Define excitation: waveguide port (for transmission lines and waveguides, the port mode pattern is computed and used to inject and absorb energy), lumped port (for small gaps, models a voltage source with impedance), or plane wave (for scattering problems and RCS). The port impedance normalization (typically 50 ohm) defines S-parameter reference.",
+          "Set boundary conditions: PEC (tangential E = 0) for metallic walls, PMC (tangential H = 0) for symmetry planes, radiation boundary or PML for open boundaries. PML must be at least lambda/4 from the nearest structure and at least 8 cells thick in FDTD.",
+          "For FDTD, define the time-domain pulse: Gaussian modulated sinusoid with bandwidth covering the frequency range of interest. The pulse duration determines the frequency resolution after FFT: delta_f = 1/T_total."
+        ],
+        "tags": ["EM-model", "excitation", "material-assignment"]
+      },
+      {
+        "flow_name": "em-result-extraction-and-validation",
+        "description": "Extract electromagnetic quantities of interest and validate against measurements or analytical benchmarks.",
+        "inputs": [
+          {"name": "em-model", "desc": "Complete simulation setup"},
+          {"name": "em-problem", "desc": "Target quantities and validation data"}
+        ],
+        "outputs": [
+          {"name": "em-results", "desc": "S-parameters, radiation patterns, field distributions, impedance, gain, efficiency, or shielding effectiveness as appropriate"},
+          {"name": "em-validation-report", "desc": "Comparison to measurement or analytical solution, convergence check, and identified limitations"}
+        ],
+        "process": [
+          "Extract S-parameters from port simulations: S11 (return loss, should be below -10dB at the operating frequency for antennas), S21 (insertion loss for transmission lines, coupling for filters). Plot on Smith chart for impedance matching analysis.",
+          "For antennas: compute the far-field radiation pattern from near-field to far-field transformation. Extract gain (directivity * efficiency), 3dB beamwidth, front-to-back ratio, and cross-polarization level. The radiation efficiency accounts for conductor loss, dielectric loss, and surface wave loss.",
+          "For EMC/shielding: compute shielding effectiveness SE = 20*log10(E_incident/E_transmitted) in dB at each frequency. Check at apertures and seams which are the primary leakage paths. A 1mm gap in a shield at 1 GHz (lambda = 30cm) provides essentially zero shielding once the gap length exceeds lambda/2.",
+          "Convergence check: for FEM, increase the mesh density (adaptive mesh refinement at high-field locations) until S-parameters change by less than 0.01 dB. For FDTD, run longer in time until the late-time energy decays by 30-40dB below the peak, ensuring the FFT captures all resonances.",
+          "Validate against known benchmarks: standard antenna geometries (dipole, patch) have well-known analytical or published experimental results. If the simulation reproduces these within 0.5dB gain and 2-degree beam pointing, the method and mesh are adequate for the design problem."
+        ],
+        "tags": ["S-parameters", "radiation-pattern", "shielding-effectiveness"]
+      }
+    ]
+  },
+  {
+    "chain_name": "multibody-dynamics-simulation",
+    "description": "Set up and analyze a multibody dynamics model for mechanisms, vehicles, or machinery where rigid and flexible bodies interact through joints, contacts, and force elements.",
+    "domain": "engineering",
+    "tags": ["multibody-dynamics", "mechanism", "kinematics"],
+    "steps": [
+      {
+        "flow_name": "mbd-system-modeling",
+        "description": "Build the multibody system model: bodies, joints, force elements, and degrees of freedom analysis.",
+        "inputs": [
+          {"name": "mechanism-description", "desc": "Physical mechanism: bodies (mass, inertia), joints (type, location, orientation), actuators, springs, dampers, and the motion to predict"},
+          {"name": "analysis-objectives", "desc": "What to predict: kinematics (motion), dynamics (forces and accelerations), or design optimization (parameter study)"}
+        ],
+        "outputs": [
+          {"name": "mbd-model", "desc": "Complete multibody model with bodies, joints, force elements, and initial conditions"},
+          {"name": "dof-analysis", "desc": "Degrees of freedom count (Gruebler/Kutzbach), redundant constraints identification, and expected motion range"}
+        ],
+        "process": [
+          "Define each body: mass, center of mass location, inertia tensor (about the center of mass in body-fixed coordinates). For rigid bodies, these are the only properties needed. For flexible bodies, include the modal representation (Craig-Bampton modes from FEA) or the full FE mesh.",
+          "Define joints: revolute (1 rotational DOF), prismatic (1 translational DOF), spherical (3 rotational DOF), cylindrical (1 rotation + 1 translation), planar (2 translations + 1 rotation), fixed (0 DOF, rigid connection). Each joint constrains the relative motion between two bodies.",
+          "Count degrees of freedom: DOF = 6*N_bodies - N_constraints where each joint type removes a specific number of DOF (revolute removes 5, prismatic removes 5, spherical removes 3, fixed removes 6). If DOF < 0, the system is over-constrained and some joints may need to be replaced with flexible connections or the model corrected.",
+          "Add force elements: springs (linear or nonlinear stiffness), dampers (linear viscous or velocity-dependent), bushings (combined translational and rotational stiffness/damping), actuators (prescribed force or motion), and contact (normal force from penetration, friction from tangential velocity).",
+          "Set initial conditions: initial position (joint coordinates or Cartesian), initial velocity, and any preloads. If the mechanism starts from a complex configuration, run an initial position assembly to find a consistent set of positions and velocities that satisfy all joint constraints."
+        ],
+        "tags": ["multibody-modeling", "joints", "DOF-analysis"]
+      },
+      {
+        "flow_name": "mbd-simulation-and-force-extraction",
+        "description": "Run the multibody dynamics simulation and extract joint forces, accelerations, and loads for structural analysis.",
+        "inputs": [
+          {"name": "mbd-model", "desc": "Complete multibody model"},
+          {"name": "operating-scenario", "desc": "Driving inputs (motor torque profile, road profile, applied loads) and simulation duration"}
+        ],
+        "outputs": [
+          {"name": "motion-results", "desc": "Body positions, velocities, and accelerations over time for all bodies"},
+          {"name": "force-results", "desc": "Joint reaction forces and moments, actuator forces, and contact forces over time, formatted for FEA load input"}
+        ],
+        "process": [
+          "Choose the integration method: for stiff systems (high stiffness contacts, flexible bodies), use an implicit integrator (BDF, HHT-alpha) which is stable at large time steps but requires solving a nonlinear system at each step. For non-stiff systems, explicit integrators (RK45) are simpler but require small time steps for stability.",
+          "Set the time step and output interval: the integration time step should resolve the highest frequency in the system (at least 10x the highest natural frequency for implicit, limited by stability for explicit). The output interval can be coarser than the integration step; record at the Nyquist rate of the highest frequency of interest.",
+          "Run the simulation: monitor energy balance (kinetic + potential + dissipated should equal work input), constraint violation (joint constraint equations should be satisfied to within numerical tolerance, typically 1e-6 to 1e-10), and check for singularities (configurations where the Jacobian loses rank).",
+          "Extract joint forces: at each joint, report the reaction force and moment in the joint coordinate system. These are the loads that the connected structure must carry. For fatigue analysis of joint pins, bearings, or mounting points, extract the complete force time history over the duty cycle.",
+          "For flexible body loads: if a body was modeled as flexible (Craig-Bampton), extract the modal participation factors and interface forces. These can be mapped back to the FE mesh for detailed stress analysis. This coupling (multibody loads to FEA stress) is the critical link between system-level dynamics and component-level durability."
+        ],
+        "tags": ["MBD-simulation", "joint-forces", "load-extraction"]
+      },
+      {
+        "flow_name": "mbd-model-validation-and-correlation",
+        "description": "Validate the multibody model against physical test data and correlate model parameters.",
+        "inputs": [
+          {"name": "motion-results", "desc": "Simulation results"},
+          {"name": "test-data", "desc": "Physical measurements: accelerometer data, position tracking, strain gauge, or load cell data from the real mechanism"}
+        ],
+        "outputs": [
+          {"name": "correlation-report", "desc": "Quantitative comparison of simulation to test, parameter adjustments made, and remaining discrepancies"},
+          {"name": "validated-mbd-model", "desc": "Model with calibrated parameters documented for use in design studies"}
+        ],
+        "process": [
+          "Compare time-domain signals: overlay measured and simulated accelerations, displacements, or forces at the same locations. Use cross-correlation to check timing alignment. Compute NRMSE (normalized root mean square error) as the primary comparison metric.",
+          "Compare frequency content: compute the frequency spectrum (FFT) of measured and simulated signals. The dominant frequencies should match (correct mechanism kinematics). Amplitude differences at specific frequencies point to incorrect stiffness (wrong frequency) or incorrect damping (wrong amplitude).",
+          "Calibrate parameters: if joint friction, bushing stiffness, or contact parameters are uncertain, run a parameter identification. Minimize the error between simulated and measured responses by adjusting the uncertain parameters. Use design-of-experiments (DOE) to screen which parameters have the most effect, then optimize those.",
+          "Check that the model reproduces multiple operating conditions, not just the calibration condition. A model calibrated on one speed or load should predict other speeds and loads without re-calibration. If it does not, the model structure (not just parameters) may be wrong.",
+          "Document the validated operating envelope: the model is valid for the range of speeds, loads, and configurations that have been validated. Extrapolation beyond this range requires additional validation or conservative margin."
+        ],
+        "tags": ["model-correlation", "parameter-calibration", "validation"]
+      }
+    ]
+  }
+]
