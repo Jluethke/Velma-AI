@@ -1,0 +1,740 @@
+[
+  {
+    "chain_name": "invoice-processing-workflow",
+    "description": "Process inbound invoices from receipt through approval to payment scheduling.",
+    "domain": "business",
+    "tags": ["document-automation", "operations", "finance"],
+    "steps": [
+      {
+        "flow_name": "invoice-receiver",
+        "description": "Receive and log an inbound invoice from email, upload, or scan.",
+        "inputs": [
+          {"name": "invoice-source", "desc": "The raw invoice (email attachment, uploaded file, or scanned image)"},
+          {"name": "vendor-name", "desc": "The vendor or supplier name if known"}
+        ],
+        "outputs": [
+          {"name": "received-invoice", "desc": "The invoice file registered in the processing queue"},
+          {"name": "receipt-timestamp", "desc": "When the invoice was received and logged"}
+        ],
+        "process": [
+          "Accept the invoice from the source channel (email, upload portal, or scanner).",
+          "Assign a unique invoice tracking number.",
+          "Log the receipt with timestamp and source channel.",
+          "Place the invoice in the processing queue."
+        ],
+        "tags": ["document-automation", "finance"]
+      },
+      {
+        "flow_name": "invoice-field-extractor",
+        "description": "Extract key fields from the invoice: vendor, amount, date, line items, and PO number.",
+        "inputs": [
+          {"name": "received-invoice", "desc": "The invoice file to extract from"}
+        ],
+        "outputs": [
+          {"name": "extracted-fields", "desc": "Structured data: vendor, invoice number, date, due date, line items, total amount, PO number"},
+          {"name": "extraction-confidence", "desc": "Confidence score for each extracted field"}
+        ],
+        "process": [
+          "Parse the invoice to identify vendor name, invoice number, date, and due date.",
+          "Extract line items with descriptions, quantities, unit prices, and amounts.",
+          "Identify the PO number or reference if present.",
+          "Calculate the invoice total and compare against the stated total."
+        ],
+        "tags": ["document-automation", "extraction"]
+      },
+      {
+        "flow_name": "invoice-po-validator",
+        "description": "Validate the extracted invoice data against the corresponding purchase order.",
+        "inputs": [
+          {"name": "extracted-fields", "desc": "Structured invoice data"},
+          {"name": "extraction-confidence", "desc": "Confidence scores for extracted fields"}
+        ],
+        "outputs": [
+          {"name": "validation-result", "desc": "Pass, fail, or exception with details on each mismatch"},
+          {"name": "variance-report", "desc": "Line-by-line comparison of invoice versus PO"}
+        ],
+        "process": [
+          "Look up the purchase order by PO number.",
+          "Compare invoice line items against PO line items (quantities, prices, descriptions).",
+          "Flag any variances that exceed the tolerance threshold.",
+          "Produce the validation result and variance report."
+        ],
+        "tags": ["document-automation", "validation"]
+      },
+      {
+        "flow_name": "invoice-approval-router",
+        "description": "Route the invoice for approval based on amount thresholds and department rules.",
+        "inputs": [
+          {"name": "extracted-fields", "desc": "Structured invoice data including amount"},
+          {"name": "validation-result", "desc": "Whether the invoice passed PO validation"}
+        ],
+        "outputs": [
+          {"name": "approval-decision", "desc": "Approved, rejected, or escalated with approver name and timestamp"},
+          {"name": "approval-notes", "desc": "Any notes or conditions from the approver"}
+        ],
+        "process": [
+          "Determine the approval routing based on invoice amount and department.",
+          "Send the invoice to the designated approver with the validation report.",
+          "Track the approval status against the SLA.",
+          "Record the approval decision and any conditions."
+        ],
+        "tags": ["document-automation", "approval"]
+      },
+      {
+        "flow_name": "invoice-posting-scheduler",
+        "description": "Post the approved invoice to the accounting system and schedule the payment.",
+        "inputs": [
+          {"name": "extracted-fields", "desc": "Structured invoice data"},
+          {"name": "approval-decision", "desc": "The approval decision and conditions"}
+        ],
+        "outputs": [
+          {"name": "posting-confirmation", "desc": "Confirmation that the invoice was posted to the ledger"},
+          {"name": "payment-schedule", "desc": "Scheduled payment date and method"}
+        ],
+        "process": [
+          "Post the invoice to the general ledger with the correct GL coding.",
+          "Schedule the payment based on payment terms and cash flow.",
+          "Send confirmation to the vendor if required.",
+          "Produce the processed invoice record."
+        ],
+        "tags": ["document-automation", "finance"]
+      }
+    ]
+  },
+  {
+    "chain_name": "contract-generation-workflow",
+    "description": "Generate contracts from templates, route for review, and collect signatures.",
+    "domain": "business",
+    "tags": ["document-automation", "operations", "legal"],
+    "steps": [
+      {
+        "flow_name": "contract-template-selector",
+        "description": "Select the contract template based on the deal type and engagement terms.",
+        "inputs": [
+          {"name": "deal-type", "desc": "The type of deal (service agreement, NDA, license, purchase order, partnership)"},
+          {"name": "deal-parameters", "desc": "Key terms: parties, scope, pricing, duration, special conditions"}
+        ],
+        "outputs": [
+          {"name": "selected-template", "desc": "The contract template chosen for this deal type"},
+          {"name": "template-variables", "desc": "List of fields that need to be populated in the template"}
+        ],
+        "process": [
+          "Match the deal type to the available contract templates.",
+          "Verify the template version is current and approved by legal.",
+          "Identify all variable fields that require population.",
+          "Note any optional clauses to include or exclude based on deal parameters."
+        ],
+        "tags": ["document-automation", "legal"]
+      },
+      {
+        "flow_name": "contract-populator",
+        "description": "Populate the contract template with deal-specific data.",
+        "inputs": [
+          {"name": "selected-template", "desc": "The contract template to populate"},
+          {"name": "deal-parameters", "desc": "Deal-specific data for the variable fields"}
+        ],
+        "outputs": [
+          {"name": "draft-contract", "desc": "The populated contract draft ready for review"},
+          {"name": "population-log", "desc": "Record of which fields were populated and from what source"}
+        ],
+        "process": [
+          "Map deal parameters to template variable fields.",
+          "Populate each field with the correct value (parties, dates, amounts, terms).",
+          "Include or exclude optional clauses based on the deal structure.",
+          "Generate the draft contract document."
+        ],
+        "tags": ["document-automation", "legal"]
+      },
+      {
+        "flow_name": "contract-legal-reviewer",
+        "description": "Route the draft contract for internal legal review and incorporate feedback.",
+        "inputs": [
+          {"name": "draft-contract", "desc": "The populated contract draft"}
+        ],
+        "outputs": [
+          {"name": "reviewed-contract", "desc": "The contract with legal review comments incorporated"},
+          {"name": "review-notes", "desc": "Legal reviewer's notes and any risk flags"}
+        ],
+        "process": [
+          "Send the draft to the assigned legal reviewer.",
+          "Track the review against the turnaround SLA.",
+          "Incorporate the reviewer's redlines and comments.",
+          "Produce the reviewed contract ready for signature."
+        ],
+        "tags": ["document-automation", "legal"]
+      },
+      {
+        "flow_name": "contract-signature-collector",
+        "description": "Send the contract for counterparty signature and file the executed copy.",
+        "inputs": [
+          {"name": "reviewed-contract", "desc": "The reviewed and approved contract"},
+          {"name": "review-notes", "desc": "Any conditions or notes from legal review"}
+        ],
+        "outputs": [
+          {"name": "executed-contract", "desc": "The fully signed contract"},
+          {"name": "contract-record", "desc": "Filing record with contract number, parties, dates, and storage location"}
+        ],
+        "process": [
+          "Send the contract to the counterparty for signature via the e-signature platform.",
+          "Track signature status and send reminders as needed.",
+          "Collect the executed contract with all signatures.",
+          "File the executed contract and produce the contract record."
+        ],
+        "tags": ["document-automation", "legal"]
+      }
+    ]
+  },
+  {
+    "chain_name": "document-classification-pipeline",
+    "description": "Classify incoming documents by type, extract metadata, and route to the correct processing queue.",
+    "domain": "business",
+    "tags": ["document-automation", "operations"],
+    "steps": [
+      {
+        "flow_name": "document-type-identifier",
+        "description": "Identify the type of an incoming document (invoice, contract, letter, form, report).",
+        "inputs": [
+          {"name": "incoming-document", "desc": "The document to classify"},
+          {"name": "classification-rules", "desc": "Rules or model used to classify document types"}
+        ],
+        "outputs": [
+          {"name": "document-type", "desc": "The identified document type"},
+          {"name": "classification-confidence", "desc": "Confidence score for the classification"}
+        ],
+        "process": [
+          "Analyze the document structure, layout, and content.",
+          "Match against known document type patterns (invoices have amounts and vendor info, contracts have signature blocks, etc.).",
+          "Assign the document type with a confidence score.",
+          "Flag low-confidence classifications for manual review."
+        ],
+        "tags": ["document-automation", "classification"]
+      },
+      {
+        "flow_name": "document-metadata-extractor",
+        "description": "Extract metadata from the classified document: date, author, reference numbers, and key entities.",
+        "inputs": [
+          {"name": "incoming-document", "desc": "The document to extract metadata from"},
+          {"name": "document-type", "desc": "The identified document type to guide extraction"}
+        ],
+        "outputs": [
+          {"name": "document-metadata", "desc": "Extracted metadata: date, author, reference numbers, subject, key entities"},
+          {"name": "extraction-log", "desc": "Record of what was extracted and confidence levels"}
+        ],
+        "process": [
+          "Extract the document date, author, and reference numbers.",
+          "Identify key entities (company names, person names, account numbers).",
+          "Extract the subject or title if present.",
+          "Compile the metadata record."
+        ],
+        "tags": ["document-automation", "extraction"]
+      },
+      {
+        "flow_name": "document-queue-router",
+        "description": "Route the classified document to the appropriate processing queue based on type and metadata.",
+        "inputs": [
+          {"name": "document-type", "desc": "The identified document type"},
+          {"name": "document-metadata", "desc": "Extracted metadata for routing decisions"}
+        ],
+        "outputs": [
+          {"name": "routing-destination", "desc": "The queue or team the document was routed to"},
+          {"name": "classification-record", "desc": "Complete record: document type, metadata, routing, timestamp"}
+        ],
+        "process": [
+          "Match the document type and metadata to the routing rules.",
+          "Route invoices to accounts payable, contracts to legal, correspondence to the relevant department.",
+          "Tag and index the document for search and retrieval.",
+          "Produce the classification record."
+        ],
+        "tags": ["document-automation", "routing"]
+      }
+    ]
+  },
+  {
+    "chain_name": "ocr-data-extraction",
+    "description": "Extract structured data from scanned or image-based documents using OCR.",
+    "domain": "technology",
+    "tags": ["document-automation", "ocr", "data-extraction"],
+    "steps": [
+      {
+        "flow_name": "image-preprocessor",
+        "description": "Preprocess the scanned image for OCR: deskew, denoise, and enhance.",
+        "inputs": [
+          {"name": "scanned-document", "desc": "The scanned image or PDF to process"},
+          {"name": "preprocessing-settings", "desc": "Settings for deskew angle, noise reduction, and contrast enhancement"}
+        ],
+        "outputs": [
+          {"name": "preprocessed-image", "desc": "The cleaned and enhanced image ready for OCR"},
+          {"name": "preprocessing-report", "desc": "Summary of corrections applied (rotation, noise removal, enhancement)"}
+        ],
+        "process": [
+          "Detect and correct skew angle.",
+          "Apply noise reduction to remove scanning artifacts.",
+          "Enhance contrast and sharpness for text readability.",
+          "Output the preprocessed image."
+        ],
+        "tags": ["document-automation", "ocr"]
+      },
+      {
+        "flow_name": "ocr-text-extractor",
+        "description": "Run OCR on the preprocessed image to extract raw text.",
+        "inputs": [
+          {"name": "preprocessed-image", "desc": "The cleaned image ready for OCR"}
+        ],
+        "outputs": [
+          {"name": "raw-ocr-text", "desc": "The raw text extracted by OCR with position data"},
+          {"name": "ocr-confidence-map", "desc": "Per-character or per-word confidence scores"}
+        ],
+        "process": [
+          "Run the OCR engine on the preprocessed image.",
+          "Capture the extracted text with bounding box positions.",
+          "Record confidence scores for each text region.",
+          "Identify regions where text could not be read."
+        ],
+        "tags": ["document-automation", "ocr"]
+      },
+      {
+        "flow_name": "structured-field-parser",
+        "description": "Parse the raw OCR text into structured fields based on the document layout.",
+        "inputs": [
+          {"name": "raw-ocr-text", "desc": "Raw text with position data from OCR"},
+          {"name": "ocr-confidence-map", "desc": "Confidence scores for each text region"}
+        ],
+        "outputs": [
+          {"name": "structured-data", "desc": "Parsed fields (names, dates, amounts, addresses, reference numbers)"},
+          {"name": "low-confidence-flags", "desc": "Fields with low confidence that need human review"}
+        ],
+        "process": [
+          "Identify field labels and their associated values using layout analysis.",
+          "Parse dates, amounts, and reference numbers into their data types.",
+          "Validate extracted values against expected formats (date patterns, numeric ranges).",
+          "Flag any fields below the confidence threshold for human review."
+        ],
+        "tags": ["document-automation", "extraction"]
+      },
+      {
+        "flow_name": "extraction-validator",
+        "description": "Validate the extracted data and produce the final extraction record.",
+        "inputs": [
+          {"name": "structured-data", "desc": "Parsed fields from OCR"},
+          {"name": "low-confidence-flags", "desc": "Fields flagged for human review"}
+        ],
+        "outputs": [
+          {"name": "validated-extraction", "desc": "Final validated data record with all fields confirmed"},
+          {"name": "extraction-report", "desc": "Summary of extraction quality, corrections made, and fields reviewed"}
+        ],
+        "process": [
+          "Cross-check extracted fields against each other for consistency (e.g., line item totals match the stated total).",
+          "Present low-confidence fields for human verification.",
+          "Apply corrections from human review.",
+          "Produce the final extraction record and quality report."
+        ],
+        "tags": ["document-automation", "validation"]
+      }
+    ]
+  },
+  {
+    "chain_name": "document-approval-workflow",
+    "description": "Route documents through a multi-level approval workflow with tracking and audit trail.",
+    "domain": "business",
+    "tags": ["document-automation", "operations", "approval"],
+    "steps": [
+      {
+        "flow_name": "approval-rule-definer",
+        "description": "Define the approval rules: who approves what, at what thresholds, and in what order.",
+        "inputs": [
+          {"name": "document-types", "desc": "The types of documents that require approval"},
+          {"name": "approval-policies", "desc": "Organizational policies governing approval authority and thresholds"}
+        ],
+        "outputs": [
+          {"name": "approval-matrix", "desc": "Matrix mapping document types and amounts to approvers and escalation paths"},
+          {"name": "approval-sla", "desc": "Response time expectations for each approval level"}
+        ],
+        "process": [
+          "List the document types that require approval (invoices, contracts, expense reports, purchase requests).",
+          "Define the approval thresholds and routing for each type.",
+          "Set the escalation path for overdue approvals.",
+          "Document the SLA for each approval level."
+        ],
+        "tags": ["document-automation", "approval"]
+      },
+      {
+        "flow_name": "approval-submission-handler",
+        "description": "Submit a document for approval and notify the designated approver.",
+        "inputs": [
+          {"name": "document-for-approval", "desc": "The document submitted for approval"},
+          {"name": "approval-matrix", "desc": "Rules determining who approves this document"}
+        ],
+        "outputs": [
+          {"name": "submission-record", "desc": "Record of submission: document, approver, timestamp, SLA deadline"},
+          {"name": "approver-notification", "desc": "Notification sent to the approver with the document and context"}
+        ],
+        "process": [
+          "Determine the correct approver based on document type, amount, and department.",
+          "Submit the document with supporting context (summary, amount, requester, urgency).",
+          "Notify the approver and set the SLA timer.",
+          "Log the submission in the audit trail."
+        ],
+        "tags": ["document-automation", "approval"]
+      },
+      {
+        "flow_name": "approval-tracker",
+        "description": "Track approval status, send reminders, and handle rejections or resubmissions.",
+        "inputs": [
+          {"name": "submission-record", "desc": "The pending approval submission"},
+          {"name": "approval-sla", "desc": "SLA expectations for response"}
+        ],
+        "outputs": [
+          {"name": "approval-outcome", "desc": "Approved, rejected, or returned for revision with approver comments"},
+          {"name": "approval-audit-trail", "desc": "Complete audit trail: submission, reminders, decision, timestamp"}
+        ],
+        "process": [
+          "Monitor the approval queue for responses.",
+          "Send reminders when the SLA deadline approaches.",
+          "Record the approval decision with the approver's comments.",
+          "If rejected, route back to the submitter with feedback for revision."
+        ],
+        "tags": ["document-automation", "tracking"]
+      }
+    ]
+  },
+  {
+    "chain_name": "records-retention-management",
+    "description": "Manage records retention from inventory through scheduled destruction and legal hold.",
+    "domain": "business",
+    "tags": ["document-automation", "compliance", "records-management"],
+    "steps": [
+      {
+        "flow_name": "retention-requirements-mapper",
+        "description": "Inventory document types and map them to their retention requirements.",
+        "inputs": [
+          {"name": "document-inventory", "desc": "List of document types in the organization"},
+          {"name": "regulatory-requirements", "desc": "Legal, regulatory, and business retention requirements"}
+        ],
+        "outputs": [
+          {"name": "retention-schedule", "desc": "Each document type mapped to its retention period, authority, and disposition method"},
+          {"name": "gap-analysis", "desc": "Document types without defined retention periods"}
+        ],
+        "process": [
+          "List all document types and their storage locations.",
+          "Map each document type to its legal, regulatory, or business retention requirement.",
+          "Set the retention period and disposition method (destroy, archive, transfer).",
+          "Identify any gaps where retention is undefined."
+        ],
+        "tags": ["document-automation", "compliance"]
+      },
+      {
+        "flow_name": "retention-classifier",
+        "description": "Classify existing records against the retention schedule.",
+        "inputs": [
+          {"name": "retention-schedule", "desc": "The approved retention schedule"}
+        ],
+        "outputs": [
+          {"name": "classified-records", "desc": "Records categorized by retention status (active, eligible for destruction, on hold)"},
+          {"name": "classification-summary", "desc": "Counts and volumes by retention category"}
+        ],
+        "process": [
+          "Scan existing records and match to the retention schedule.",
+          "Calculate the retention expiry date for each record.",
+          "Identify records eligible for destruction.",
+          "Flag records under legal hold."
+        ],
+        "tags": ["document-automation", "compliance"]
+      },
+      {
+        "flow_name": "retention-destruction-scheduler",
+        "description": "Schedule and execute destruction for expired records while managing legal holds.",
+        "inputs": [
+          {"name": "classified-records", "desc": "Records with retention status"},
+          {"name": "classification-summary", "desc": "Summary of records by category"}
+        ],
+        "outputs": [
+          {"name": "destruction-log", "desc": "Record of what was destroyed, when, by whom, and the authority"},
+          {"name": "retention-compliance-report", "desc": "Compliance status: records on schedule, overdue for destruction, on hold"}
+        ],
+        "process": [
+          "Prepare the destruction list excluding records on legal hold.",
+          "Execute destruction with proper chain of custody documentation.",
+          "Log each destruction event with date, method, witness, and authority.",
+          "Produce the retention compliance report."
+        ],
+        "tags": ["document-automation", "compliance"]
+      }
+    ]
+  },
+  {
+    "chain_name": "form-digitization-workflow",
+    "description": "Convert paper forms to digital forms with validation and conditional logic.",
+    "domain": "technology",
+    "tags": ["document-automation", "digital-transformation"],
+    "steps": [
+      {
+        "flow_name": "paper-form-auditor",
+        "description": "Audit current paper forms in use and prioritize for digitization.",
+        "inputs": [
+          {"name": "form-inventory", "desc": "List of paper forms currently in use across the organization"},
+          {"name": "digitization-criteria", "desc": "Criteria for prioritization (volume, error rate, processing time)"}
+        ],
+        "outputs": [
+          {"name": "prioritized-forms", "desc": "Forms ranked by digitization priority with rationale"},
+          {"name": "form-analysis", "desc": "Each form's fields, logic, dependencies, and current pain points"}
+        ],
+        "process": [
+          "Collect all paper forms in active use.",
+          "Analyze each form's volume, error rate, and processing cost.",
+          "Rank forms by digitization impact.",
+          "Document each form's fields, rules, and dependencies."
+        ],
+        "tags": ["document-automation", "analysis"]
+      },
+      {
+        "flow_name": "digital-form-designer",
+        "description": "Design the digital version of the form with fields, validation, and conditional logic.",
+        "inputs": [
+          {"name": "form-analysis", "desc": "The paper form's fields, rules, and dependencies"}
+        ],
+        "outputs": [
+          {"name": "form-design", "desc": "Digital form specification with fields, types, validation rules, and conditional logic"},
+          {"name": "user-experience-notes", "desc": "Notes on layout, mobile compatibility, and accessibility"}
+        ],
+        "process": [
+          "Map each paper field to a digital field type (text, dropdown, date, checkbox, file upload).",
+          "Add validation rules (required fields, format checks, range constraints).",
+          "Design conditional logic (show/hide fields based on other answers).",
+          "Plan the layout for desktop and mobile use."
+        ],
+        "tags": ["document-automation", "design"]
+      },
+      {
+        "flow_name": "digital-form-builder",
+        "description": "Build the digital form in the selected platform and test with sample submissions.",
+        "inputs": [
+          {"name": "form-design", "desc": "The form specification"}
+        ],
+        "outputs": [
+          {"name": "built-form", "desc": "The working digital form in the platform"},
+          {"name": "test-results", "desc": "Results from test submissions including edge cases"}
+        ],
+        "process": [
+          "Build the form in the selected platform following the specification.",
+          "Configure the submission workflow (notifications, data storage, integrations).",
+          "Test with sample data covering happy paths and edge cases.",
+          "Fix any issues found during testing."
+        ],
+        "tags": ["document-automation", "implementation"]
+      },
+      {
+        "flow_name": "form-migration-executor",
+        "description": "Migrate from paper to digital with user training and transition support.",
+        "inputs": [
+          {"name": "built-form", "desc": "The tested digital form"},
+          {"name": "test-results", "desc": "Test results confirming the form works"}
+        ],
+        "outputs": [
+          {"name": "migration-record", "desc": "Record of the migration: old form retired, new form live, users trained"},
+          {"name": "digitization-report", "desc": "Before and after comparison of processing time, error rate, and cost"}
+        ],
+        "process": [
+          "Train users on the new digital form.",
+          "Run both paper and digital in parallel during the transition period.",
+          "Retire the paper form once the digital version is validated in production.",
+          "Measure the improvement and produce the digitization report."
+        ],
+        "tags": ["document-automation", "migration"]
+      }
+    ]
+  },
+  {
+    "chain_name": "document-version-control",
+    "description": "Set up document version control with naming conventions, access, and audit trail.",
+    "domain": "business",
+    "tags": ["document-automation", "operations", "governance"],
+    "steps": [
+      {
+        "flow_name": "naming-convention-definer",
+        "description": "Define the document naming convention and version numbering scheme.",
+        "inputs": [
+          {"name": "document-types", "desc": "Types of documents to be version-controlled"},
+          {"name": "organizational-standards", "desc": "Any existing naming or numbering standards"}
+        ],
+        "outputs": [
+          {"name": "naming-convention", "desc": "The naming convention with examples for each document type"},
+          {"name": "version-numbering-scheme", "desc": "Major, minor, and draft version numbering rules"}
+        ],
+        "process": [
+          "Define the naming pattern (project code, document type, date, version).",
+          "Set the version numbering rules (when to increment major vs minor, draft conventions).",
+          "Provide examples for each document type.",
+          "Document exceptions and edge cases."
+        ],
+        "tags": ["document-automation", "governance"]
+      },
+      {
+        "flow_name": "document-storage-configurer",
+        "description": "Set up the storage platform with folder structure and access permissions.",
+        "inputs": [
+          {"name": "naming-convention", "desc": "The approved naming convention"}
+        ],
+        "outputs": [
+          {"name": "folder-structure", "desc": "The configured folder hierarchy with access permissions"},
+          {"name": "access-matrix", "desc": "Who can view, edit, and approve documents in each area"}
+        ],
+        "process": [
+          "Design the folder structure aligned to projects, departments, or document types.",
+          "Set access permissions (view, edit, approve) for each folder.",
+          "Configure the version history settings (how many versions to retain).",
+          "Set up the audit trail for changes."
+        ],
+        "tags": ["document-automation", "governance"]
+      },
+      {
+        "flow_name": "version-control-policy-writer",
+        "description": "Write the version control policy covering check-in, check-out, and audit procedures.",
+        "inputs": [
+          {"name": "naming-convention", "desc": "Naming and numbering rules"},
+          {"name": "folder-structure", "desc": "Storage structure and permissions"},
+          {"name": "access-matrix", "desc": "Access control rules"}
+        ],
+        "outputs": [
+          {"name": "version-control-policy", "desc": "The complete version control policy document"},
+          {"name": "quick-reference-guide", "desc": "One-page reference for daily use"}
+        ],
+        "process": [
+          "Write the check-out and check-in procedures.",
+          "Define the review and approval workflow for version changes.",
+          "Specify the audit and compliance requirements.",
+          "Create the quick reference guide for end users."
+        ],
+        "tags": ["document-automation", "governance"]
+      }
+    ]
+  },
+  {
+    "chain_name": "mail-merge-campaign",
+    "description": "Run a mail merge campaign from data preparation through document generation and distribution.",
+    "domain": "business",
+    "tags": ["document-automation", "operations", "communication"],
+    "steps": [
+      {
+        "flow_name": "merge-data-preparer",
+        "description": "Prepare the data source with clean, validated merge fields.",
+        "inputs": [
+          {"name": "contact-list", "desc": "The raw contact list or data source for the merge"},
+          {"name": "merge-fields", "desc": "The fields needed for the merge (name, address, account number, custom fields)"}
+        ],
+        "outputs": [
+          {"name": "clean-data-source", "desc": "Validated and formatted data source ready for merge"},
+          {"name": "data-quality-report", "desc": "Count of records, missing fields, duplicates removed"}
+        ],
+        "process": [
+          "Import the contact list and map columns to merge fields.",
+          "Validate each record for completeness (no missing required fields).",
+          "Standardize formatting (names, addresses, dates).",
+          "Remove duplicates and produce the data quality report."
+        ],
+        "tags": ["document-automation", "data-prep"]
+      },
+      {
+        "flow_name": "merge-template-builder",
+        "description": "Create the document template with merge field placeholders.",
+        "inputs": [
+          {"name": "merge-fields", "desc": "The fields available for insertion"},
+          {"name": "document-purpose", "desc": "What the merged document is for (letter, label, certificate, notice)"}
+        ],
+        "outputs": [
+          {"name": "merge-template", "desc": "The document template with placeholders for each merge field"},
+          {"name": "template-preview", "desc": "Preview of the template with sample data inserted"}
+        ],
+        "process": [
+          "Design the document layout for the stated purpose.",
+          "Insert merge field placeholders at the correct positions.",
+          "Preview the template with sample data from the data source.",
+          "Verify formatting holds across different data lengths."
+        ],
+        "tags": ["document-automation", "template"]
+      },
+      {
+        "flow_name": "merge-executor",
+        "description": "Run the merge, review the output, and distribute the merged documents.",
+        "inputs": [
+          {"name": "clean-data-source", "desc": "Validated data source"},
+          {"name": "merge-template", "desc": "Template with merge placeholders"}
+        ],
+        "outputs": [
+          {"name": "merged-documents", "desc": "The complete set of merged documents"},
+          {"name": "campaign-record", "desc": "Record of the campaign: count sent, errors, distribution method"}
+        ],
+        "process": [
+          "Run the merge to generate one document per record.",
+          "Review a sample of merged documents for correctness.",
+          "Distribute via the selected channel (print, email, upload).",
+          "Log the campaign results."
+        ],
+        "tags": ["document-automation", "execution"]
+      }
+    ]
+  },
+  {
+    "chain_name": "digital-signature-workflow",
+    "description": "Set up and manage a digital signature workflow from platform selection through tracking.",
+    "domain": "business",
+    "tags": ["document-automation", "operations", "legal"],
+    "steps": [
+      {
+        "flow_name": "esignature-platform-selector",
+        "description": "Select and configure the e-signature platform based on requirements.",
+        "inputs": [
+          {"name": "signature-requirements", "desc": "Volume, compliance needs, integration requirements, and budget"},
+          {"name": "document-types", "desc": "Types of documents that will use e-signatures"}
+        ],
+        "outputs": [
+          {"name": "platform-selection", "desc": "Selected platform with rationale"},
+          {"name": "platform-config", "desc": "Configuration settings: branding, templates, notification rules"}
+        ],
+        "process": [
+          "Evaluate platforms against requirements (compliance, volume, integrations).",
+          "Select the platform that fits the use case.",
+          "Configure branding, notification templates, and default settings.",
+          "Set up integrations with existing document and contract systems."
+        ],
+        "tags": ["document-automation", "setup"]
+      },
+      {
+        "flow_name": "signature-envelope-preparer",
+        "description": "Prepare the document for signing: define signing order, roles, and signature fields.",
+        "inputs": [
+          {"name": "document-to-sign", "desc": "The document that needs signatures"},
+          {"name": "signing-parties", "desc": "Who signs, in what order, and what role each plays (signer, approver, observer)"}
+        ],
+        "outputs": [
+          {"name": "prepared-envelope", "desc": "The document configured with signature fields, signing order, and recipient roles"},
+          {"name": "signing-instructions", "desc": "Instructions for each signer on what to do"}
+        ],
+        "process": [
+          "Place signature, initial, and date fields at the correct positions in the document.",
+          "Define the signing order (sequential or parallel).",
+          "Assign roles to each recipient (signer, approver, carbon copy, observer).",
+          "Set expiration date and reminder frequency."
+        ],
+        "tags": ["document-automation", "preparation"]
+      },
+      {
+        "flow_name": "signature-tracker",
+        "description": "Send for signatures, track completion, and file the signed document.",
+        "inputs": [
+          {"name": "prepared-envelope", "desc": "The document ready for signing"}
+        ],
+        "outputs": [
+          {"name": "signed-document", "desc": "The fully executed document with all signatures"},
+          {"name": "signature-audit-trail", "desc": "Complete audit trail: who signed, when, IP address, authentication method"}
+        ],
+        "process": [
+          "Send the envelope to the first signer (or all signers if parallel).",
+          "Track signing progress and send reminders for unsigned envelopes.",
+          "Collect the completed document once all parties have signed.",
+          "File the signed document and produce the audit trail."
+        ],
+        "tags": ["document-automation", "tracking"]
+      }
+    ]
+  }
+]
