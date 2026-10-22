@@ -1,0 +1,832 @@
+[
+  {
+    "chain_name": "chiplet-architecture-design",
+    "description": "Design a chiplet-based system: partition a monolithic die into chiplets, select die-to-die interfaces, budget bandwidth and latency, choose integration technology, model cost and yield, and plan known-good-die testing.",
+    "domain": "semiconductor",
+    "tags": ["chiplet", "packaging", "heterogeneous-integration", "semiconductor"],
+    "steps": [
+      {
+        "flow_name": "die-partitioning-analysis",
+        "description": "Determine where to split a monolithic die into chiplets based on yield economics, function boundaries, and process node requirements.",
+        "inputs": [
+          {"name": "monolithic-die-spec", "desc": "Current or planned monolithic die: block diagram, area per function, transistor count, process node"},
+          {"name": "target-yield", "desc": "Minimum acceptable die yield and package-level yield targets"},
+          {"name": "volume-projection", "desc": "Annual volume forecast for cost modeling"}
+        ],
+        "outputs": [
+          {"name": "partition-candidates", "desc": "Candidate chiplet partitions with area, function, and process node per chiplet"},
+          {"name": "yield-comparison", "desc": "Yield and cost comparison: monolithic vs each partition candidate using Poisson defect density model"}
+        ],
+        "process": [
+          "Calculate monolithic die yield from die area and defect density using Murphy's or Poisson model: Y = e^(-D*A) where D is defect density per cm2 and A is die area.",
+          "Identify function boundaries where a cut would place different functions on different process nodes (e.g., analog on mature node, digital on leading edge, I/O on trailing node with thick metals).",
+          "For each candidate partition, calculate individual chiplet yields and composite package yield as the product of all chiplet yields times assembly yield.",
+          "Estimate cost per good die for each scenario: wafer cost / (dies per wafer * yield) + assembly cost / assembly yield + test cost at each stage.",
+          "Rank partitions by total cost per good package at target volume. Note which partitions enable reuse of chiplets across product variants."
+        ],
+        "tags": ["chiplet", "yield", "cost-modeling"]
+      },
+      {
+        "flow_name": "die-to-die-interface-selection",
+        "description": "Select the physical interface between chiplets based on bandwidth, latency, power, and integration technology constraints.",
+        "inputs": [
+          {"name": "partition-candidates", "desc": "Chiplet partitions with function assignment"},
+          {"name": "bandwidth-requirements", "desc": "Data rate requirements between chiplet pairs in GB/s"},
+          {"name": "latency-budget", "desc": "Maximum allowable latency per hop in nanoseconds"}
+        ],
+        "outputs": [
+          {"name": "interface-selection", "desc": "Selected PHY for each chiplet-to-chiplet link: UCIe, BoW, HBI, custom, or organic substrate trace"},
+          {"name": "integration-technology", "desc": "Required integration method: silicon interposer, EMIB bridge, fan-out, organic substrate, or direct bonding"}
+        ],
+        "process": [
+          "Map bandwidth requirements to interface options. UCIe standard: 32 GT/s per lane, 16 lanes per module = 32 GB/s per direction at advanced packaging pitch. Organic substrate: limited to ~10-20 GB/s aggregate by trace pitch and length.",
+          "Evaluate latency. On-interposer links add 1-2 ns. Organic substrate links add 5-10 ns. Direct bonding (hybrid Cu-Cu) adds sub-1 ns. Compare to budget.",
+          "Calculate power per bit for each option. UCIe advanced: ~0.25 pJ/bit. UCIe standard (organic): ~0.5 pJ/bit. Proprietary wide parallel bus on interposer: ~0.1 pJ/bit. Long organic trace: ~1-2 pJ/bit.",
+          "Select integration technology based on which interface is needed. Interposer or bridge required for bump pitches below 55um. Fan-out for moderate density without interposer cost. Organic substrate for relaxed pitch.",
+          "Verify that the selected integration technology supports all chiplet-to-chiplet links simultaneously. Check routing density limits on the interposer or bridge."
+        ],
+        "tags": ["chiplet", "interface", "UCIe", "signal-integrity"]
+      },
+      {
+        "flow_name": "chiplet-thermal-analysis",
+        "description": "Analyze thermal behavior of a multi-die package, identify hot spots from overlapping heat sources, and design the thermal solution.",
+        "inputs": [
+          {"name": "interface-selection", "desc": "Chiplet links and integration technology"},
+          {"name": "integration-technology", "desc": "Interposer, bridge, fan-out, or direct bonding"},
+          {"name": "power-map", "desc": "Power dissipation per chiplet and per functional block within each chiplet"}
+        ],
+        "outputs": [
+          {"name": "thermal-model", "desc": "Thermal resistance network for the multi-die assembly with junction temperatures per chiplet"},
+          {"name": "thermal-solution", "desc": "Heat spreader, TIM, and heat sink specification to meet junction temperature targets"}
+        ],
+        "process": [
+          "Build a thermal resistance network from each chiplet junction through die, die attach (TIM1), interposer or substrate, solder balls, and board (bottom path) and through TIM2 and heat sink (top path).",
+          "For stacked dies or interposer-mounted dies, calculate inter-die thermal resistance. A silicon interposer conducts heat laterally but also creates a thermal barrier between die and heat sink.",
+          "Identify hot spot interactions: when two high-power chiplets are adjacent on an interposer, their thermal fields overlap. Model using superposition of point heat sources or FEA.",
+          "Size the heat spreader (copper or vapor chamber) to spread heat from the multi-die footprint. Calculate the spreading resistance from the concentrated die area to the larger heat sink base.",
+          "Verify junction temperatures for each chiplet under worst-case workload (all chiplets at maximum power simultaneously). If any chiplet exceeds its Tj_max, redesign: increase heat sink, improve TIM, or throttle workload."
+        ],
+        "tags": ["thermal", "chiplet", "packaging"]
+      },
+      {
+        "flow_name": "known-good-die-test-strategy",
+        "description": "Design the test strategy to ensure each chiplet is a known-good-die before assembly, minimizing package-level fallout.",
+        "inputs": [
+          {"name": "partition-candidates", "desc": "Chiplet definitions with I/O count and function"},
+          {"name": "thermal-model", "desc": "Thermal constraints affecting test conditions"}
+        ],
+        "outputs": [
+          {"name": "test-plan", "desc": "Test sequence per chiplet: wafer probe, singulated die test, and package-level test with coverage targets and cost estimates"},
+          {"name": "kgd-yield-model", "desc": "Expected KGD yield and its impact on composite package yield"}
+        ],
+        "process": [
+          "Define test coverage targets. For a 4-chiplet package, if each chiplet has 99% KGD quality, composite package yield from KGD alone is 0.99^4 = 96%. For 95% KGD, composite drops to 81%. Set KGD target from package yield goal.",
+          "Design wafer-level probe test: at-speed functional test of core logic, parametric test of analog blocks, IDDQ for defect screening. Account for limited probe contact at fine bump pitch (may need temporary test pads or BIST).",
+          "Evaluate singulated die testing: after dicing, test dies in a carrier or temporary substrate. Higher test coverage than wafer probe (access to all bumps) but added handling cost and risk of damage.",
+          "Calculate test cost per good die at each stage. Compare cost of testing at wafer vs singulated die vs accepting package-level fallout. The break-even depends on chiplet cost and assembly cost.",
+          "Define package-level test for assembled multi-chiplet package: die-to-die link verification, system-level functional, burn-in for infant mortality screening. Package-level test catches assembly defects that KGD testing cannot."
+        ],
+        "tags": ["test", "KGD", "chiplet", "yield"]
+      },
+      {
+        "flow_name": "chiplet-cost-model",
+        "description": "Build a complete cost model for the chiplet-based system and compare to monolithic alternatives.",
+        "inputs": [
+          {"name": "test-plan", "desc": "Test sequence and cost per chiplet"},
+          {"name": "kgd-yield-model", "desc": "KGD yields per chiplet"},
+          {"name": "integration-technology", "desc": "Packaging technology with associated costs"}
+        ],
+        "outputs": [
+          {"name": "cost-comparison", "desc": "Total cost per good package: chiplet vs monolithic, broken down by wafer, test, assembly, and packaging"},
+          {"name": "volume-sensitivity", "desc": "Cost crossover volume where chiplet approach becomes cheaper than monolithic"}
+        ],
+        "process": [
+          "Calculate wafer cost per chiplet die: (wafer cost for that process node) / (gross dies per wafer * chiplet yield). Include mask cost amortized over lifetime volume.",
+          "Add test cost per KGD from the test plan. Include probe card cost amortized, tester time, and handler cost.",
+          "Add packaging cost: interposer or bridge wafer cost per unit, assembly cost (die attach, reflow, underfill), substrate cost, heat spreader and TIM, lid attach, and final test.",
+          "Calculate composite yield: product of all KGD yields * assembly yield * package test yield. Total cost per good package = sum of all component costs / composite yield.",
+          "Compare to monolithic: single die on same leading-edge node, same total function, conventional flip-chip package. Chiplets win when yield loss on large monolithic die exceeds the added packaging cost. Plot cost vs volume to find crossover."
+        ],
+        "tags": ["cost-modeling", "chiplet", "yield", "economics"]
+      }
+    ]
+  },
+  {
+    "chain_name": "2-5d-interposer-design",
+    "description": "Design a 2.5D silicon or organic interposer for multi-die integration: TSV and RDL design, electrical and thermal analysis, warpage management, and assembly process definition.",
+    "domain": "semiconductor",
+    "tags": ["interposer", "2.5D", "TSV", "packaging", "semiconductor"],
+    "steps": [
+      {
+        "flow_name": "interposer-technology-selection",
+        "description": "Select between silicon interposer, organic interposer, and EMIB bridge based on die-to-die requirements and cost targets.",
+        "inputs": [
+          {"name": "die-to-die-requirements", "desc": "Bandwidth, latency, bump pitch, and number of die-to-die connections"},
+          {"name": "die-count-and-size", "desc": "Number of chiplets, their dimensions, and total assembly footprint"},
+          {"name": "cost-target", "desc": "Target packaging cost per unit"}
+        ],
+        "outputs": [
+          {"name": "interposer-technology", "desc": "Selected technology (silicon interposer, organic interposer, EMIB, or hybrid) with rationale"},
+          {"name": "key-design-parameters", "desc": "TSV pitch, RDL line/space, interposer thickness, and process node for the interposer"}
+        ],
+        "process": [
+          "Silicon interposer: supports bump pitch down to 25um (micro-bump) or 10um (hybrid bond), 4-6 RDL layers at 0.4/0.4um line/space, TSV diameter 5-10um at 50um pitch. Cost: $3-8 per cm2 depending on RDL complexity.",
+          "Organic interposer: bump pitch limited to 80-130um, RDL line/space 2/2um to 8/8um, no TSVs (vias through organic at 50-100um diameter). Cost: $0.5-2 per cm2. Use when die-to-die pitch is relaxed.",
+          "EMIB bridge: small silicon bridge embedded in organic substrate, connecting adjacent dies. 55um bump pitch on bridge, organic substrate pitch everywhere else. Cost between organic-only and full silicon interposer.",
+          "Select based on the tightest die-to-die requirement. If any link needs sub-55um pitch or sub-2ns latency, silicon interposer or hybrid bond is required.",
+          "Size the interposer: die placement floor plan with minimum spacing between dies (typically 100-500um for assembly tolerance), total interposer area, and reticle limit (about 26x33mm for single-shot lithography; larger requires stitching)."
+        ],
+        "tags": ["interposer", "technology-selection", "2.5D"]
+      },
+      {
+        "flow_name": "tsv-and-rdl-design",
+        "description": "Design the through-silicon vias and redistribution layers for signal routing, power delivery, and ground distribution on the interposer.",
+        "inputs": [
+          {"name": "interposer-technology", "desc": "Selected interposer technology and parameters"},
+          {"name": "key-design-parameters", "desc": "TSV pitch, RDL line/space, interposer thickness"}
+        ],
+        "outputs": [
+          {"name": "tsv-design", "desc": "TSV dimensions, pitch, keep-out zone, and process (via-middle or via-last)"},
+          {"name": "rdl-stackup", "desc": "RDL layer count, metal thickness, dielectric, line/space rules, and routing plan"}
+        ],
+        "process": [
+          "Size TSVs: diameter typically 5-10um, depth = interposer thickness (50-100um for thinned silicon), aspect ratio limited to 10:1 for via-middle process. Pitch 40-50um minimum for via-middle, wider for via-last.",
+          "Define keep-out zone around each TSV. Thermo-mechanical stress from CTE mismatch between copper fill and silicon creates a stress field. Keep-out radius typically 5-10x TSV diameter for sensitive analog circuits.",
+          "Design RDL stackup. Minimum 2 layers for simple redistribution, 4-6 layers for complex die-to-die routing. Bottom layers (coarse pitch) for power distribution, top layers (fine pitch) for signal routing.",
+          "Route die-to-die signals on top RDL layers. Calculate impedance for controlled-impedance lines (50 ohm single-ended, 85-100 ohm differential). Typical RDL dielectric (SiO2 or polymer, Er ~3-4) and metal (Cu, 1-3um thick).",
+          "Assign TSVs for power and ground. Calculate required TSV count from IR drop budget: each TSV has resistance ~50-200 mohm depending on dimensions. Total power TSV count = I_total * R_per_TSV / V_drop_budget."
+        ],
+        "tags": ["TSV", "RDL", "interposer", "signal-integrity"]
+      },
+      {
+        "flow_name": "interposer-electrical-analysis",
+        "description": "Perform signal integrity and power integrity analysis for the interposer, including die-to-die link quality and power delivery.",
+        "inputs": [
+          {"name": "tsv-design", "desc": "TSV dimensions and placement"},
+          {"name": "rdl-stackup", "desc": "RDL routing plan and stackup"}
+        ],
+        "outputs": [
+          {"name": "si-analysis", "desc": "Eye diagram quality for die-to-die links: insertion loss, return loss, crosstalk, and timing margin"},
+          {"name": "pi-analysis", "desc": "Power delivery network impedance profile and IR drop per chiplet"}
+        ],
+        "process": [
+          "Extract S-parameters for die-to-die signal paths including bump, RDL trace, and bump. Use 2.5D EM extraction tools (Ansys HFSS, Cadence Clarity) or analytical models for initial estimates.",
+          "Simulate eye diagrams at the target data rate. For UCIe advanced at 16 GT/s, verify that insertion loss is within the PHY equalization capability (typically < 4-6 dB at Nyquist).",
+          "Analyze crosstalk between adjacent signal lines. Near-end (NEXT) and far-end (FEXT) crosstalk depend on line spacing and coupling length. Verify that aggregate crosstalk is within the noise budget.",
+          "Build the PDN impedance model: die-level decoupling capacitors, bump inductance, interposer plane capacitance, TSV inductance, and package-level decoupling. Target impedance = V_ripple / I_transient.",
+          "Simulate PDN impedance vs frequency. Verify that the impedance stays below the target from DC to the highest frequency of interest (typically clock frequency). Identify and mitigate any anti-resonance peaks."
+        ],
+        "tags": ["signal-integrity", "power-integrity", "interposer"]
+      },
+      {
+        "flow_name": "interposer-warpage-management",
+        "description": "Analyze and manage warpage in the interposer assembly caused by CTE mismatch between silicon, organic substrate, and solder bumps.",
+        "inputs": [
+          {"name": "interposer-technology", "desc": "Interposer type, dimensions, and materials"},
+          {"name": "si-analysis", "desc": "Validated electrical design constraining material and geometry choices"}
+        ],
+        "outputs": [
+          {"name": "warpage-prediction", "desc": "Predicted warpage at room temperature and at reflow temperature for each assembly step"},
+          {"name": "warpage-mitigation", "desc": "Design changes to keep warpage within assembly tolerance (typically under 50-100um)"}
+        ],
+        "process": [
+          "Model CTE mismatch: silicon interposer CTE ~2.6 ppm/C, organic substrate CTE ~15-17 ppm/C, copper RDL ~17 ppm/C. The assembly warps as it cools from reflow (~250C) to room temperature.",
+          "Calculate warpage using Stoney's equation for thin-film stress or FEA for complex geometries. Key variables: interposer thickness, substrate thickness, die count and placement (dies stiffen the assembly locally).",
+          "Check warpage at critical process steps: after interposer thinning, after die attach to interposer (C4 reflow), after underfill cure, after substrate attach (BGA reflow), after lid attach.",
+          "Mitigate warpage: increase interposer thickness (reduces warpage but increases TSV cost), add a stiffener ring, optimize underfill CTE and modulus, use low-CTE substrate core material, adjust die placement symmetry.",
+          "Verify that final assembly warpage meets the board-level assembly requirement (BGA coplanarity per JEDEC: typically 100-200um for large packages)."
+        ],
+        "tags": ["warpage", "reliability", "interposer", "thermo-mechanical"]
+      },
+      {
+        "flow_name": "interposer-assembly-process",
+        "description": "Define the assembly sequence for the 2.5D interposer package, including die attach, underfill, and substrate integration.",
+        "inputs": [
+          {"name": "warpage-prediction", "desc": "Warpage at each process step"},
+          {"name": "warpage-mitigation", "desc": "Design mitigations applied"}
+        ],
+        "outputs": [
+          {"name": "assembly-sequence", "desc": "Step-by-step assembly process with equipment, materials, and process parameters"},
+          {"name": "assembly-yield-model", "desc": "Expected yield at each assembly step and overall assembly yield"}
+        ],
+        "process": [
+          "Step 1: Die attach to interposer. Place chiplets on interposer using high-accuracy pick-and-place (< 2um accuracy for micro-bump). Mass reflow or thermocompression bonding depending on bump type.",
+          "Step 2: Underfill between dies and interposer. Capillary underfill for micro-bump (control fillet height to avoid contaminating adjacent die sites). Cure at specified temperature and time.",
+          "Step 3: Interposer backside processing if needed (backside RDL, C4 bump for substrate attach). Interposer is thinned to target thickness (50-100um) before or after die attach depending on process flow.",
+          "Step 4: Attach interposer assembly to organic substrate. C4 bump reflow (typically 100-150um pitch). Underfill between interposer and substrate.",
+          "Step 5: Lid attach with TIM1 (between dies and lid) and adhesive (lid to substrate). BGA ball attach to substrate bottom. Final test and singulation if panelized. Estimate yield per step: typically 98-99.5% per reflow and underfill step."
+        ],
+        "tags": ["assembly", "process", "interposer", "manufacturing"]
+      }
+    ]
+  },
+  {
+    "chain_name": "3d-stacking-methodology",
+    "description": "Design a 3D-stacked die assembly: select bonding technology, design TSVs for vertical interconnect, manage thermal and power delivery challenges, partition functions between tiers, and plan the test strategy.",
+    "domain": "semiconductor",
+    "tags": ["3D-stacking", "TSV", "hybrid-bonding", "packaging", "semiconductor"],
+    "steps": [
+      {
+        "flow_name": "3d-bonding-technology-selection",
+        "description": "Select the bonding method for 3D die stacking based on interconnect density, thermal, and manufacturing requirements.",
+        "inputs": [
+          {"name": "vertical-io-count", "desc": "Number of vertical connections required between tiers"},
+          {"name": "pitch-requirement", "desc": "Minimum bond pitch needed for the design"},
+          {"name": "thermal-budget", "desc": "Maximum temperature the bottom die can tolerate during top die bonding"}
+        ],
+        "outputs": [
+          {"name": "bonding-method", "desc": "Selected method: micro-bump, hybrid Cu-Cu bonding, or oxide bonding with rationale"},
+          {"name": "vertical-pitch", "desc": "Achievable bond pitch and resulting vertical interconnect density"}
+        ],
+        "process": [
+          "Micro-bump (solder): pitch 40-55um achievable in production. Compatible with existing flip-chip infrastructure. Reflow temperature 250-260C. Limited density (roughly 400-600 connections per mm2).",
+          "Hybrid bonding (Cu-Cu with oxide): pitch 1-10um in production (TSMC SoIC achieves 9um, research below 1um). Density: 10,000 to 1,000,000 connections per mm2. Requires extremely flat surfaces (CMP, < 0.5nm RMS roughness).",
+          "Oxide bonding: for connections that only need structural bonding, not electrical. Used with TSVs for electrical connection at wider pitch. Lower cost than hybrid bonding.",
+          "Select based on required density. If vertical I/O count / die area > 500/mm2, hybrid bonding is required. If lower density is sufficient, micro-bump is cheaper and more mature.",
+          "Verify thermal compatibility: bottom die must survive the bonding temperature of the top die. Hybrid bonding can be done at lower temperature (room temperature for initial bond, 200-300C anneal) vs micro-bump reflow at 250C."
+        ],
+        "tags": ["bonding", "3D", "hybrid-bonding", "micro-bump"]
+      },
+      {
+        "flow_name": "3d-tsv-design",
+        "description": "Design through-silicon vias for vertical power delivery and signal routing in a 3D stack.",
+        "inputs": [
+          {"name": "bonding-method", "desc": "Selected bonding technology"},
+          {"name": "vertical-pitch", "desc": "Bond pitch and density"}
+        ],
+        "outputs": [
+          {"name": "tsv-specification", "desc": "TSV diameter, depth, pitch, liner thickness, fill material, and process insertion point (via-first, via-middle, via-last)"},
+          {"name": "tsv-keep-out", "desc": "Keep-out zone dimensions around each TSV and impact on available routing area"}
+        ],
+        "process": [
+          "Select TSV process insertion point. Via-middle (after FEOL, before BEOL): diameter 4-8um, compatible with hybrid bonding and micro-bump. Via-last (after wafer thinning): diameter 10-50um, lower cost but larger area.",
+          "Size TSV diameter and depth. Aspect ratio limit ~10:1 for via-middle (electroplating fill limitation). For 50um thinned die, TSV diameter minimum ~5um. Liner: 100-200nm SiO2 isolation + 10-50nm TaN/Ta barrier + Cu fill.",
+          "Calculate TSV electrical parameters. Resistance: R = rho_Cu * L / (pi * r^2). Capacitance: C = 2*pi*epsilon*L / ln(r_outer/r_inner) for the oxide liner. Inductance: L_ind approximately mu_0 * length / (2*pi) * ln(pitch/radius).",
+          "Define keep-out zone. Thermo-mechanical stress from Cu-Si CTE mismatch (Cu ~17 ppm/C, Si ~2.6 ppm/C) creates tensile and compressive stress regions. Affects transistor mobility. Keep-out typically 5-15um radius from TSV center depending on sensitivity.",
+          "Allocate TSVs: power/ground TSVs sized from IR drop budget (target < 5-10mV drop per tier), signal TSVs for vertical data paths. Place power TSVs in a distributed grid pattern to minimize loop inductance."
+        ],
+        "tags": ["TSV", "3D", "vertical-interconnect"]
+      },
+      {
+        "flow_name": "3d-thermal-management",
+        "description": "Analyze and solve thermal challenges in 3D-stacked dies where heat must conduct through silicon and bonding layers to reach the heat sink.",
+        "inputs": [
+          {"name": "tsv-specification", "desc": "TSV design including thermal TSV allocation"},
+          {"name": "bonding-method", "desc": "Bonding method affecting inter-die thermal resistance"}
+        ],
+        "outputs": [
+          {"name": "3d-thermal-analysis", "desc": "Temperature distribution through the stack, hot spot identification, and thermal resistance per tier"},
+          {"name": "thermal-mitigation-plan", "desc": "Thermal TSV allocation, inter-die TIM, and heat sink requirements"}
+        ],
+        "process": [
+          "Calculate inter-die thermal resistance. For micro-bump: solder joint plus underfill gives ~0.1-0.3 K*cm2/W. For hybrid bonding: Cu-Cu bond is nearly zero, but the thin adhesive or oxide layer adds ~0.05-0.1 K*cm2/W.",
+          "Model heat flow path. Heat from the top die must conduct through the bottom die to reach the heat sink below (typical case). Each tier adds thermal resistance. For a 2-high stack, top die sees roughly 2x the thermal resistance of the bottom die.",
+          "Identify hot spots. If both dies have high-power blocks at the same x-y location, the thermal impact stacks. Rearrange chip floor plans to stagger hot spots between tiers when possible.",
+          "Add thermal TSVs in non-active regions. Copper-filled TSVs conduct heat vertically 100x better than silicon. A 10% area allocation for thermal TSVs can reduce inter-die thermal resistance by 30-50%.",
+          "Evaluate advanced cooling: microfluidic channels between tiers (research stage), backside power delivery freeing the frontside for heat extraction, or limiting the top die to lower-power functions (memory, I/O)."
+        ],
+        "tags": ["thermal", "3D-stacking", "hot-spot"]
+      },
+      {
+        "flow_name": "3d-power-delivery-design",
+        "description": "Design the power delivery network for a 3D stack where power must reach upper tiers through TSVs.",
+        "inputs": [
+          {"name": "3d-thermal-analysis", "desc": "Thermal constraints on power density per tier"},
+          {"name": "tsv-specification", "desc": "TSV parameters for power delivery"}
+        ],
+        "outputs": [
+          {"name": "power-delivery-plan", "desc": "Power TSV count and placement, per-tier voltage regulation strategy, and IR drop analysis"},
+          {"name": "decoupling-strategy", "desc": "Decoupling capacitor placement per tier and target PDN impedance"}
+        ],
+        "process": [
+          "Calculate power TSV count per supply domain. Each TSV carries I = V_drop_per_TSV / R_TSV. For a 5um diameter, 50um long Cu TSV, R ~ 20 mohm. At 1mV drop budget per TSV, each carries ~50mA. For 10A supply, need 200 power TSVs minimum.",
+          "Distribute power TSVs across the die area. Concentrated TSVs create local current crowding in the BEOL. Spread them in a grid pattern aligned with on-die power grid.",
+          "Analyze IR drop through the full stack: package bump, substrate via, C4 bump, bottom die BEOL, power TSV, top die BEOL. Simulate with extracted PDN model.",
+          "Design per-tier decoupling. MIM (metal-insulator-metal) capacitors on the interposer or within the BEOL stack provide high-density decoupling (~200 nF/mm2 for deep-trench capacitors). Place close to high-transient-current blocks.",
+          "Consider per-tier or in-package voltage regulation (integrated voltage regulators) to reduce sensitivity to TSV resistance and improve transient response for the top tier."
+        ],
+        "tags": ["power-delivery", "3D-stacking", "TSV", "PDN"]
+      },
+      {
+        "flow_name": "3d-test-strategy",
+        "description": "Define the test methodology for 3D-stacked assemblies including pre-bond, mid-bond, and post-bond test stages.",
+        "inputs": [
+          {"name": "power-delivery-plan", "desc": "Power delivery design for the stack"},
+          {"name": "bonding-method", "desc": "Bonding technology constraining testability"}
+        ],
+        "outputs": [
+          {"name": "3d-test-plan", "desc": "Test sequence at each stage: wafer-level, pre-bond, mid-bond (partial stack), post-bond (complete stack)"},
+          {"name": "3d-test-cost-model", "desc": "Test cost per good stacked die and yield impact of test escape rate"}
+        ],
+        "process": [
+          "Pre-bond test: test each die at wafer level before thinning and stacking. Full functional test plus IDDQ and parametric. This is the KGD gate. Target > 99% outgoing quality.",
+          "Post-thinning test (if applicable): after wafer thinning to target thickness, re-test to catch handling damage. Thinned wafers (50um) are fragile; yield loss from handling is 0.5-2%.",
+          "Mid-bond test: after bonding the first two tiers, test the partial stack. Verify die-to-die connectivity (TSV continuity, bond quality), combined functional test. Catches bonding defects before adding more tiers.",
+          "Post-bond test: full stack assembled. System-level functional test, speed binning, burn-in for infant mortality screening. This stage catches assembly defects and inter-tier interaction failures.",
+          "Model test economics: cost of testing at each stage vs cost of discarding a partially assembled stack. The later a defect is found, the more value is lost. Optimize test insertion points to minimize total cost of quality."
+        ],
+        "tags": ["test", "3D-stacking", "KGD", "yield"]
+      }
+    ]
+  },
+  {
+    "chain_name": "fan-out-wafer-level-packaging",
+    "description": "Design a fan-out wafer-level package: process flow selection, RDL design, signal and thermal analysis, warpage control, and reliability qualification.",
+    "domain": "semiconductor",
+    "tags": ["FOWLP", "fan-out", "RDL", "packaging", "semiconductor"],
+    "steps": [
+      {
+        "flow_name": "fowlp-process-selection",
+        "description": "Select the fan-out process flow (chip-first or chip-last) and define the RDL design rules based on application requirements.",
+        "inputs": [
+          {"name": "die-specifications", "desc": "Die size, I/O count, bump pitch, and number of dies for multi-die fan-out"},
+          {"name": "performance-requirements", "desc": "Electrical performance: frequency, signal integrity, power delivery"},
+          {"name": "form-factor-target", "desc": "Package height and footprint constraints"}
+        ],
+        "outputs": [
+          {"name": "process-flow", "desc": "Selected FOWLP variant: chip-first face-down, chip-first face-up, chip-last, or multi-die InFO"},
+          {"name": "rdl-design-rules", "desc": "Line/space, via diameter, layer count, and dielectric material"}
+        ],
+        "process": [
+          "Chip-first face-down (eWLB type): die placed face-down on carrier, molded, carrier removed, RDL built on exposed die face. Simplest process, good for single-die. Die shift during molding limits fine-pitch RDL (typically 5/5um line/space minimum).",
+          "Chip-first face-up: die placed face-up, molded, RDL built on top. Better die shift control for multi-die. Requires via to reach die pads through dielectric.",
+          "Chip-last (RDL-first): RDL built on carrier wafer first, then dies bonded to RDL. Finest pitch achievable (2/2um or finer) because lithography is done on a flat carrier, not on a reconstructed wafer with die shift. Higher cost.",
+          "Select based on requirements: chip-first for cost-sensitive single-die, chip-last for fine-pitch multi-die (TSMC InFO). For multi-die fan-out as interposer alternative, chip-last gives tighter RDL rules.",
+          "Define RDL rules: line/space from routing density analysis, via size from current capacity, dielectric from electrical (low-Dk) and mechanical (low stress) requirements. Typical: polyimide or PBO dielectric, Cu RDL."
+        ],
+        "tags": ["FOWLP", "process", "RDL", "fan-out"]
+      },
+      {
+        "flow_name": "fowlp-electrical-design",
+        "description": "Design the RDL routing for signal integrity and power delivery in the fan-out package.",
+        "inputs": [
+          {"name": "process-flow", "desc": "Selected FOWLP process and variant"},
+          {"name": "rdl-design-rules", "desc": "Line/space, layers, dielectric"}
+        ],
+        "outputs": [
+          {"name": "rdl-routing", "desc": "Signal and power routing plan with impedance control and crosstalk analysis"},
+          {"name": "electrical-validation", "desc": "Simulated insertion loss, return loss, and PDN impedance meeting specifications"}
+        ],
+        "process": [
+          "Route signal redistributon from die pad locations to package ball locations. For single-die, this is fan-out: routing from small die pad pitch (40-80um) to larger BGA pitch (300-500um).",
+          "Calculate controlled impedance for high-speed signals. RDL trace above a ground plane: Z0 depends on trace width, dielectric thickness, and Er. Typical polymer Er ~3.0-3.5. Use microstrip or coplanar waveguide formulas.",
+          "Analyze crosstalk between adjacent RDL traces. Short coupling length (< 1mm typically) limits crosstalk. Verify with EM simulation for critical signals.",
+          "Design power distribution: wide power traces or power planes if layer count allows. Calculate IR drop from die pad to package ball for worst-case current.",
+          "Simulate package-level resonance. The RDL plus ball array forms a resonant structure. Identify resonance frequencies and verify they do not coincide with signal frequencies. Add decoupling capacitors (embedded in substrate or discrete) if needed."
+        ],
+        "tags": ["signal-integrity", "FOWLP", "RDL", "routing"]
+      },
+      {
+        "flow_name": "fowlp-warpage-and-reliability",
+        "description": "Analyze warpage of the reconstructed wafer and packaged unit, and define the reliability qualification plan.",
+        "inputs": [
+          {"name": "rdl-routing", "desc": "Completed RDL design"},
+          {"name": "process-flow", "desc": "Process flow defining material stackup"}
+        ],
+        "outputs": [
+          {"name": "warpage-analysis", "desc": "Predicted warpage at room temperature and reflow, with mitigation strategy"},
+          {"name": "reliability-plan", "desc": "JEDEC qualification test plan with expected results based on design analysis"}
+        ],
+        "process": [
+          "Model warpage sources: CTE mismatch between silicon die (2.6 ppm/C), mold compound (8-15 ppm/C), and RDL metals/dielectrics. The mold compound dominates for large fan-out area.",
+          "Select mold compound properties to minimize warpage: low CTE (close to silicon), high filler content, balanced modulus. Some designs use mold compound on both sides of the die for symmetry.",
+          "Simulate warpage vs temperature profile during reflow. Peak warpage at reflow temperature must allow solder joint formation. Room temperature warpage affects board-level coplanarity.",
+          "Define reliability qualification per JEDEC JESD47: temperature cycling (condition B: -55 to 125C, 1000 cycles minimum), HAST (130C, 85% RH, 96-168 hours), moisture sensitivity (MSL determination per J-STD-020).",
+          "Board-level reliability: drop test (JESD22-B111), bend test (JESD22-B113), temperature cycling on board (condition G: -40 to 125C). Fan-out packages are sensitive to board flex due to low package stiffness. Verify solder joint integrity."
+        ],
+        "tags": ["warpage", "reliability", "FOWLP", "JEDEC"]
+      }
+    ]
+  },
+  {
+    "chain_name": "flip-chip-design-methodology",
+    "description": "Design a flip-chip interconnect: bump technology selection, UBM and bump design, underfill selection, electrical and thermal analysis, and reliability prediction.",
+    "domain": "semiconductor",
+    "tags": ["flip-chip", "C4", "copper-pillar", "packaging", "semiconductor"],
+    "steps": [
+      {
+        "flow_name": "bump-technology-selection",
+        "description": "Select bump type (solder ball, copper pillar, or gold stud) and pitch based on I/O density, electrical performance, and manufacturing capability.",
+        "inputs": [
+          {"name": "io-count-and-pitch", "desc": "Required I/O count and minimum pitch from die design"},
+          {"name": "current-per-bump", "desc": "Maximum current per bump for power and signal"},
+          {"name": "manufacturing-capability", "desc": "Assembly house capability for bump pitch and type"}
+        ],
+        "outputs": [
+          {"name": "bump-specification", "desc": "Bump type, dimensions (diameter, height, pitch), UBM stack, and solder alloy"},
+          {"name": "bump-count-map", "desc": "Signal, power, ground, and thermal bump allocation across the die"}
+        ],
+        "process": [
+          "C4 solder bumps: 75-200um pitch, solder composition SAC305 or high-Pb (97Pb3Sn for high-reliability). Diameter ~60-100um. Mature, low cost, but limited pitch below 100um due to bridging risk.",
+          "Copper pillar with solder cap: 40-130um pitch. Copper pillar height 20-50um, solder cap 10-25um (SnAg). Better electromigration resistance than C4, finer pitch capability, more uniform standoff height.",
+          "Micro-bump for 2.5D/3D: 25-55um pitch. Smaller solder volume, typically Cu pillar with thin SnAg cap (2-5um). Requires thermocompression bonding for fine pitch.",
+          "Calculate minimum pitch from I/O count and die size: pitch = sqrt(die_area / IO_count) if area array, or tighter calculation for peripheral-only bumping.",
+          "Allocate bumps: signal I/O at periphery or distributed, power and ground in core area. Typical power/ground allocation is 50-70% of total bumps for high-performance designs. Calculate current per power bump and verify it is below electromigration limit."
+        ],
+        "tags": ["bump", "flip-chip", "copper-pillar", "electromigration"]
+      },
+      {
+        "flow_name": "underfill-selection-and-design",
+        "description": "Select underfill material and process to distribute stress from CTE mismatch and protect solder joints.",
+        "inputs": [
+          {"name": "bump-specification", "desc": "Bump type, dimensions, and pitch"},
+          {"name": "die-substrate-combination", "desc": "Die size, substrate material, and CTE difference"}
+        ],
+        "outputs": [
+          {"name": "underfill-specification", "desc": "Underfill type, material properties (CTE, Tg, modulus, filler content), and process parameters"},
+          {"name": "stress-analysis", "desc": "Predicted solder joint stress reduction from underfill and remaining stress at corners"}
+        ],
+        "process": [
+          "Calculate the CTE mismatch stress without underfill. Critical parameter is DNP (distance from neutral point) x delta_CTE x delta_T. Corner bumps see the highest strain. Without underfill, large dies (> 10mm) on organic substrates fail within 100-500 thermal cycles.",
+          "Select underfill type. Capillary underfill: dispensed at die edge, flows by capillary action. Requires gap height and bump pitch that allow flow. Non-conductive paste (NCP): pre-applied on substrate, die is placed into it, compressed during thermocompression bonding.",
+          "Choose material properties. CTE should be between silicon (2.6 ppm/C) and substrate (15-17 ppm/C) to redistribute stress. High filler content (70-80% silica by weight) reduces CTE to 20-30 ppm/C. Tg should be above the use temperature.",
+          "Simulate solder joint stress with underfill. FEA with temperature cycling load. Verify that the maximum inelastic strain energy density at the corner bump is within the fatigue life requirement (Darveaux or Syed model).",
+          "Define process parameters: dispense pattern, flow time, cure profile (temperature ramp, hold time, cool rate). Verify void-free fill by cross-section and SAM inspection of qualification units."
+        ],
+        "tags": ["underfill", "flip-chip", "reliability", "CTE-mismatch"]
+      },
+      {
+        "flow_name": "flip-chip-reliability-prediction",
+        "description": "Predict solder joint fatigue life under thermal cycling and other environmental loads.",
+        "inputs": [
+          {"name": "underfill-specification", "desc": "Underfill properties and process"},
+          {"name": "stress-analysis", "desc": "Simulated stress and strain at critical solder joints"}
+        ],
+        "outputs": [
+          {"name": "fatigue-life-prediction", "desc": "Predicted characteristic life (N63%) under target thermal cycling conditions"},
+          {"name": "reliability-margins", "desc": "Comparison of predicted life to qualification requirement and field life target"}
+        ],
+        "process": [
+          "Extract inelastic strain energy density per cycle from FEA for the critical (corner) solder joint. Use stabilized hysteresis loop (typically 3rd or 4th cycle in simulation).",
+          "Apply Darveaux's model: crack initiation life N0 = K1 * (delta_W)^K2 and crack propagation rate da/dN = K3 * (delta_W)^K4. K constants depend on solder alloy and bump geometry (published values available for SAC305).",
+          "Alternatively use the Syed model: fatigue life Nf = (0.0019 * delta_W_creep)^(-1) for SAC305, where delta_W_creep is accumulated creep strain energy density per cycle.",
+          "Calculate acceleration factor between test condition (e.g., -40 to 125C, 1 cycle per hour) and field condition (e.g., 0 to 60C, 1 cycle per day). Use modified Coffin-Manson or Norris-Landzberg equation.",
+          "Compare predicted life to requirements: JEDEC qualification requires 1000 cycles at condition B (-55/125C) minimum. Field life target typically 5-10 years. Verify that predicted life exceeds requirement with adequate margin (2x minimum for qualification, 3x for field)."
+        ],
+        "tags": ["reliability", "fatigue", "solder-joint", "flip-chip"]
+      }
+    ]
+  },
+  {
+    "chain_name": "package-substrate-design",
+    "description": "Design the organic package substrate: layer stackup, via technology, signal and power integrity, impedance control, and warpage management.",
+    "domain": "semiconductor",
+    "tags": ["substrate", "packaging", "signal-integrity", "semiconductor"],
+    "steps": [
+      {
+        "flow_name": "substrate-stackup-design",
+        "description": "Design the substrate layer count, materials, and via technology based on routing density and electrical requirements.",
+        "inputs": [
+          {"name": "io-requirements", "desc": "Signal I/O count, power/ground pin count, and BGA pitch on bottom side"},
+          {"name": "impedance-targets", "desc": "Controlled impedance values for signal lines (single-ended and differential)"},
+          {"name": "frequency-of-operation", "desc": "Maximum signal frequency for material loss consideration"}
+        ],
+        "outputs": [
+          {"name": "substrate-stackup", "desc": "Layer count, metal thickness per layer, dielectric material and thickness, via types per layer pair"},
+          {"name": "routing-rules", "desc": "Line width, space, via pad size, and anti-pad diameter for each layer"}
+        ],
+        "process": [
+          "Estimate routing density: total signal escapes from die pad array through the substrate to BGA. Each layer can route a limited number of channels based on line/space rules. Layer count = routing channels needed / channels per layer, rounded up.",
+          "Select core material: standard BT (bismaleimide triazine) for most applications, low-CTE ABF (Ajinomoto build-up film) for fine-pitch or large packages, high-Tg FR-4 for cost-sensitive designs. Low-Dk materials (Dk < 3.5 at 10 GHz) for high-frequency.",
+          "Define via technology. Through-hole vias for simple substrates (2-6 layers). Blind and buried vias for higher density. Stacked microvias (ELIC: Every Layer InterConnect) for highest density, allowing vias in pad.",
+          "Calculate impedance: microstrip for outer layers, stripline for inner layers. Use 2D field solver for accuracy. Adjust trace width and dielectric thickness to hit target. For 50 ohm single-ended on ABF (Er ~3.3): roughly 25um trace on 20um dielectric.",
+          "Assign layers: top metal for die attach pads, bottom metal for BGA pads, inner layers alternating signal and reference (ground or power). Dedicate at least one solid ground plane and one solid power plane."
+        ],
+        "tags": ["substrate", "stackup", "impedance", "routing"]
+      },
+      {
+        "flow_name": "substrate-power-integrity",
+        "description": "Design the power delivery network in the substrate including plane design, decoupling, and via transitions.",
+        "inputs": [
+          {"name": "substrate-stackup", "desc": "Layer stackup with power and ground plane assignments"},
+          {"name": "power-requirements", "desc": "Current per supply voltage, transient current amplitude and slew rate"}
+        ],
+        "outputs": [
+          {"name": "pdn-design", "desc": "Power plane shapes, via arrays, and decoupling capacitor placement"},
+          {"name": "pdn-impedance", "desc": "Simulated PDN impedance profile from DC to maximum frequency"}
+        ],
+        "process": [
+          "Calculate target impedance: Z_target = V_ripple / I_transient. For a 1V supply with 5% ripple budget and 10A transient, Z_target = 50mV / 10A = 5 mohm. This is extremely low and must be met from DC to GHz.",
+          "Design plane pair: closely spaced power-ground plane pair provides high-frequency decoupling through plane capacitance. C_plane = Er * E0 * Area / thickness. For 20um dielectric, 10mm x 10mm die shadow: ~15 nF.",
+          "Place decoupling capacitors: 100nF MLCC (0201) in die shadow area for mid-frequency, 10uF (0402) at substrate edge for low-frequency. Account for capacitor series resonance (ESL determines the frequency where capacitor impedance rises).",
+          "Design power via arrays: low-inductance via transitions from die bump to power plane. Use via arrays (not single vias) with adjacent ground vias to minimize loop inductance. L_via approximately 0.2-0.5 nH per via.",
+          "Simulate full PDN: die model (on-die decoupling + current source) + package model (bumps, vias, planes, caps) + board model. Verify impedance below target across the full frequency range. Fix any anti-resonance peaks by adjusting capacitor values or adding damping."
+        ],
+        "tags": ["power-integrity", "PDN", "substrate", "decoupling"]
+      },
+      {
+        "flow_name": "substrate-signal-integrity",
+        "description": "Verify signal integrity for high-speed traces routed through the substrate including loss, crosstalk, and via transitions.",
+        "inputs": [
+          {"name": "routing-rules", "desc": "Trace dimensions and spacing per layer"},
+          {"name": "substrate-stackup", "desc": "Material properties and layer thicknesses"}
+        ],
+        "outputs": [
+          {"name": "si-analysis", "desc": "Insertion loss, return loss, and crosstalk for critical nets"},
+          {"name": "via-transition-design", "desc": "Optimized via transitions (anti-pad, back-drill or stub removal) for high-speed signals"}
+        ],
+        "process": [
+          "Calculate trace loss: conductor loss (skin effect, surface roughness: Hammerstad model) + dielectric loss (loss tangent of substrate material). At 10 GHz, typical ABF substrate loss is 0.8-1.5 dB/cm depending on Df.",
+          "Design via transitions. A via passing through unused layers creates a stub that resonates at f = c / (4 * L_stub * sqrt(Er)). For a 400um stub in Er=3.3, resonance at ~100 GHz (usually acceptable). For thicker substrates, back-drill or use blind vias.",
+          "Optimize via anti-pad diameter. Larger anti-pad reduces via capacitance (better return loss) but breaks up the reference plane (worse for adjacent signals). Balance by simulation. Typical anti-pad: 250-350um for 200um drill.",
+          "Analyze crosstalk for parallel traces. Coupling depends on spacing, trace height above reference plane, and coupling length. For stripline in substrate, 3x line-width spacing gives < -40 dB crosstalk typically.",
+          "Simulate critical paths end-to-end: die bump to substrate trace to BGA ball. Include package model in channel simulation. Verify that the total channel (TX die to package to board to package to RX die) meets the eye mask or BER target."
+        ],
+        "tags": ["signal-integrity", "substrate", "via-transition", "loss"]
+      }
+    ]
+  },
+  {
+    "chain_name": "wire-bond-deep-methodology",
+    "description": "Design wire bond interconnects for advanced applications: pad and loop design, process optimization, copper wire bonding, fine pitch, and reliability analysis.",
+    "domain": "semiconductor",
+    "tags": ["wire-bond", "packaging", "interconnect", "semiconductor"],
+    "steps": [
+      {
+        "flow_name": "wire-bond-pad-and-loop-design",
+        "description": "Design bond pad geometry and wire loop profile to meet electrical, mechanical, and form factor requirements.",
+        "inputs": [
+          {"name": "die-pad-specifications", "desc": "Pad size, pitch, metallization (Al or Cu), and passivation opening"},
+          {"name": "package-constraints", "desc": "Package height limit, mold clearance, bond finger locations on substrate"}
+        ],
+        "outputs": [
+          {"name": "loop-profile", "desc": "Wire loop shape (standard, low, ultra-low, reverse), kink height, loop height, and wire length"},
+          {"name": "pad-design", "desc": "Bond pad size, probe mark allowance, and over-pad passivation rules"}
+        ],
+        "process": [
+          "Select wire diameter from current requirement. Gold: 18um (0.7mil) for low current, 25um (1mil) standard, 33um (1.3mil) for power. Copper: same diameters but higher conductivity (can use thinner wire for same current).",
+          "Design loop profile. Standard loop: 150-250um height, suitable for most packages. Low loop: 75-125um for thin packages (QFN, TQFP). Ultra-low loop: < 75um requires specialized capillary and bonding recipe. Reverse bond (ball on substrate, stitch on die): lowest loop achievable.",
+          "Calculate wire length from bond-to-bond distance, loop height, and kink geometry. Longer wires have higher inductance (L approximately 1 nH/mm) and resistance, and are more susceptible to wire sweep during molding.",
+          "Size bond pads. Ball bond pad: minimum 1.5x to 2x ball diameter (ball is ~1.5x wire diameter). Typical: 60-80um pad for 25um wire. Stitch bond pad (on substrate): elongated for bonding tool landing, typically 50x100um minimum.",
+          "Account for probe marks on pads that will be probed before bonding. Probe marks create surface damage that weakens the bond. Either use separate probe pads or allocate pad area for probe mark outside the ball bond zone."
+        ],
+        "tags": ["wire-bond", "loop", "pad-design"]
+      },
+      {
+        "flow_name": "copper-wire-bonding-optimization",
+        "description": "Optimize the copper wire bonding process to address the specific challenges of copper vs gold wire: harder ball, pad cratering, and oxidation.",
+        "inputs": [
+          {"name": "loop-profile", "desc": "Wire loop and pad design from previous step"},
+          {"name": "pad-design", "desc": "Bond pad geometry and metallization"}
+        ],
+        "outputs": [
+          {"name": "bonding-recipe", "desc": "USG power, bonding force, time, and temperature optimized for copper wire on the target pad metallization"},
+          {"name": "process-controls", "desc": "Forming gas (N2/H2) flow, capillary selection, FAB (free air ball) current, and pad cratering prevention measures"}
+        ],
+        "process": [
+          "Copper wire is 30% harder than gold. The ball formed by EFO (electronic flame-off) is harder and requires higher bonding force or USG power to deform and bond to the pad. But excessive force craters the underlying pad metallization and ILD (low-k dielectric).",
+          "Optimize FAB (free air ball) formation. Copper oxidizes rapidly in air. Use forming gas (95% N2, 5% H2) during EFO to prevent oxidation. Ball size uniformity depends on EFO current, gap, and gas flow.",
+          "Prevent pad cratering. Cratering occurs when the bond force cracks the dielectric stack beneath the aluminum pad. Mitigation: reduce impact force (use ultrasonic-dominant bonding over force-dominant), add a thick top metal pad (Cu redistribution layer under Al pad), or optimize bond tool trajectory to reduce first-impact velocity.",
+          "Design the bonding recipe using DOE: factors = USG power, bond force, bond time, stage temperature. Responses = ball shear strength, wire pull strength, pad crater occurrence, ball size. Find the process window where shear > 5 gf/mil2, pull > 3 gf, and zero craters.",
+          "Implement in-line monitoring: ball shear test (destructive, sample basis), wire pull test (destructive, sample basis), non-stick on pad detection (automatic, 100%), ball placement accuracy (vision system, 100%). Set control limits from DOE results."
+        ],
+        "tags": ["copper-wire", "bonding-recipe", "pad-cratering", "process-optimization"]
+      },
+      {
+        "flow_name": "wire-bond-reliability-analysis",
+        "description": "Predict wire bond reliability under thermal cycling, wire sweep during molding, and intermetallic growth during high-temperature operation.",
+        "inputs": [
+          {"name": "bonding-recipe", "desc": "Optimized bonding parameters"},
+          {"name": "process-controls", "desc": "Process control parameters"}
+        ],
+        "outputs": [
+          {"name": "reliability-prediction", "desc": "Predicted wire bond life under target thermal cycling and operating temperature conditions"},
+          {"name": "wire-sweep-analysis", "desc": "Predicted wire sweep during molding and verification that it stays within clearance limits"}
+        ],
+        "process": [
+          "Intermetallic compound (IMC) growth analysis. Au-Al IMC (Au4Al, Au5Al2) grows per Arrhenius: thickness = A * exp(-Ea/kT) * sqrt(t). At 175C, significant Kirkendall voiding occurs in Au-Al bonds after 500-1000 hours. Cu-Al IMC grows slower (higher activation energy).",
+          "Model wire sweep during molding. Mold compound flows over wires during transfer molding. Wire deflection depends on: flow velocity (gate location, transfer speed), wire span and stiffness (diameter, loop height, arc shape), and mold compound viscosity. Simulate using mold flow analysis.",
+          "Verify wire sweep clearance: deflected wire must maintain minimum spacing to adjacent wires (typically > 1/2 wire diameter) and to die edge (avoid shorting to die metallization). If sweep exceeds limits: reduce loop height, increase wire diameter, optimize gate location, or reduce transfer speed.",
+          "Thermal cycling reliability: wire bond heel crack is the typical failure mode. The wire flexes at the heel (stitch bond) due to CTE mismatch between die and substrate. Thicker wire and lower loop reduce heel stress. Predict life from FEA strain analysis and Cu fatigue data.",
+          "High-temperature storage: verify IMC growth does not degrade bond strength below the 3 gf wire pull minimum after 1000 hours at 150C (per JEDEC JESD22-A103). Cu-Al bonds are more resistant than Au-Al for this failure mode."
+        ],
+        "tags": ["reliability", "wire-bond", "IMC", "wire-sweep"]
+      }
+    ]
+  },
+  {
+    "chain_name": "package-thermal-management-deep",
+    "description": "Design the thermal solution for an IC package: thermal resistance decomposition, TIM selection, heat spreader design, advanced cooling methods, and simulation-to-measurement correlation.",
+    "domain": "semiconductor",
+    "tags": ["thermal", "packaging", "heat-spreader", "TIM", "semiconductor"],
+    "steps": [
+      {
+        "flow_name": "thermal-resistance-decomposition",
+        "description": "Decompose the junction-to-ambient thermal resistance into its constituent parts and identify the dominant resistance.",
+        "inputs": [
+          {"name": "package-type", "desc": "Package form factor (BGA, QFN, flip-chip, lidded, etc.)"},
+          {"name": "die-power", "desc": "Total die power and power density (W/cm2)"},
+          {"name": "cooling-method", "desc": "Airflow velocity or liquid cooling specification"}
+        ],
+        "outputs": [
+          {"name": "thermal-resistance-stack", "desc": "Theta values for each layer from junction to ambient: die, TIM1, lid/spreader, TIM2, heat sink, convection"},
+          {"name": "dominant-resistance", "desc": "The layer contributing the most to total theta_JA, which is the primary optimization target"}
+        ],
+        "process": [
+          "Calculate die-level spreading resistance. For a concentrated heat source (hot spot) on a silicon die, the spreading resistance from hot spot to die backside depends on hot spot area relative to die area. R_spread = 1/(pi*k*sqrt(A_source)) for a circular source on a semi-infinite plane.",
+          "TIM1 (between die and lid): R_TIM1 = BLT / (k_TIM * A_die) + 2*R_contact. BLT (bond line thickness) depends on TIM type: thermal grease 25-75um, thermal pad 50-200um, solder 20-50um, sintered silver 20-50um. Contact resistance depends on surface finish and pressure.",
+          "Heat spreader: R_spreader = t/(k*A) + R_spreading. Copper (k=400 W/mK) or aluminum (k=200 W/mK). Spreading resistance from small die area to larger heat sink interface area. Vapor chamber for high heat flux (eliminates spreading resistance).",
+          "TIM2 (between lid and heat sink): same calculation as TIM1. Often the dominant resistance in air-cooled systems because of large BLT (50-100um) and lower-conductivity material.",
+          "Heat sink and convection: R_HS = 1/(h*A_fin). For natural convection h ~ 5-10 W/m2K, forced air h ~ 25-100 W/m2K, liquid cold plate h ~ 1000-10000 W/m2K. Sum all resistances: theta_JA = R_die + R_TIM1 + R_spreader + R_TIM2 + R_HS."
+        ],
+        "tags": ["thermal-resistance", "packaging", "thermal"]
+      },
+      {
+        "flow_name": "advanced-cooling-methods",
+        "description": "Evaluate and design advanced cooling solutions for high-power packages: vapor chambers, liquid cooling, thermoelectric cooling, and embedded microfluidics.",
+        "inputs": [
+          {"name": "thermal-resistance-stack", "desc": "Current thermal resistance breakdown"},
+          {"name": "dominant-resistance", "desc": "Which layer needs improvement"}
+        ],
+        "outputs": [
+          {"name": "cooling-solution", "desc": "Selected advanced cooling method with design parameters and expected thermal performance"},
+          {"name": "implementation-plan", "desc": "Integration approach with the package, including reliability and cost implications"}
+        ],
+        "process": [
+          "Vapor chamber: replaces solid copper heat spreader. Effective thermal conductivity 5000-20000 W/mK in-plane. Useful when spreading resistance dominates (small die, large heat sink). Design: wick structure (sintered powder, mesh, or grooved), working fluid (water for 30-200C), shell thickness for structural integrity.",
+          "Direct liquid cooling: cold plate mounted directly to package lid (or lidless: directly to die backside with appropriate TIM). Flow rate and channel geometry sized from thermal resistance target. R_liquid = 1/(h*A) where h depends on channel dimensions, fluid velocity, and fluid properties.",
+          "Thermoelectric cooling (TEC): Peltier device between die and heat sink. Can create sub-ambient junction temperatures for hot spots. COP typically 0.3-1.0, so total heat rejection increases. Useful only when a specific block needs to be colder than what passive cooling achieves.",
+          "Embedded microfluidics: fluid channels etched into silicon, either in the interposer or on the die backside. Removes heat directly at the source. Research stage for most applications. Design: channel width 50-200um, depth 100-300um, coolant (water or dielectric fluid), pressure drop budget.",
+          "Select based on power density. Below 50 W/cm2: air cooling with heat sink. 50-150 W/cm2: vapor chamber + high-performance heat sink. 150-500 W/cm2: liquid cold plate. Above 500 W/cm2: embedded microfluidics or direct liquid immersion."
+        ],
+        "tags": ["cooling", "vapor-chamber", "liquid-cooling", "thermal"]
+      },
+      {
+        "flow_name": "thermal-simulation-correlation",
+        "description": "Validate thermal simulation models against physical measurement and establish confidence in predictions for design decisions.",
+        "inputs": [
+          {"name": "cooling-solution", "desc": "Selected cooling design"},
+          {"name": "thermal-resistance-stack", "desc": "Predicted thermal resistances"}
+        ],
+        "outputs": [
+          {"name": "correlation-results", "desc": "Comparison of simulated vs measured temperatures at key points, with root cause analysis for any discrepancy"},
+          {"name": "calibrated-model", "desc": "Updated simulation model with calibrated material properties for future design iterations"}
+        ],
+        "process": [
+          "Build the thermal test vehicle. Use a die with embedded thermal diode or resistive heater and temperature sensor. JEDEC thermal test board (JESD51-9 for BGA) or application-specific board for system-level correlation.",
+          "Measure theta_JA and theta_JC per JEDEC JESD51-1 (junction temperature from thermal diode, ambient or case temperature from thermocouple). Measure at multiple power levels to verify linearity.",
+          "Build the simulation model matching the physical test setup exactly (board dimensions, airflow boundary conditions, ambient temperature). Use manufacturer-specified material properties as starting point.",
+          "Compare simulation to measurement. Typical acceptable correlation: within 10% for theta_JA, within 5% for theta_JC. If outside tolerance: check TIM bond line thickness (measure by cross-section), verify material properties (especially TIM conductivity which varies with pressure and application), check for air gaps or voids.",
+          "Calibrate the model: adjust uncertain parameters (TIM BLT, contact resistance, heat sink fin efficiency) within physically reasonable bounds to match measurement. Document calibrated values. Use calibrated model for future design variants with confidence."
+        ],
+        "tags": ["thermal-simulation", "correlation", "measurement", "JEDEC"]
+      }
+    ]
+  },
+  {
+    "chain_name": "package-reliability-engineering",
+    "description": "Engineer the reliability of an IC package: identify failure mechanisms, design accelerated tests, analyze failure data, predict field life, and qualify the package.",
+    "domain": "semiconductor",
+    "tags": ["reliability", "qualification", "JEDEC", "packaging", "semiconductor"],
+    "steps": [
+      {
+        "flow_name": "failure-mechanism-identification",
+        "description": "Identify the failure mechanisms relevant to the specific package type and use environment.",
+        "inputs": [
+          {"name": "package-design", "desc": "Package type, materials, dimensions, and construction"},
+          {"name": "use-environment", "desc": "Operating temperature range, humidity exposure, mechanical loads (drop, vibration), and expected field life"}
+        ],
+        "outputs": [
+          {"name": "failure-mode-list", "desc": "Ranked list of failure mechanisms with their physical drivers and affected locations in the package"},
+          {"name": "risk-ranking", "desc": "Risk priority based on likelihood and consequence for each mechanism"}
+        ],
+        "process": [
+          "Solder joint fatigue: driven by CTE mismatch between die/substrate and PCB during thermal cycling. Critical for BGA packages, especially large packages on organic boards. Highest risk at corner balls (maximum DNP).",
+          "Wire bond failure: heel crack from thermal cycling (CTE-driven flexing), ball lift from IMC voiding (temperature and time), wire sweep shorting (molding process). Critical for wire-bonded packages in high-temperature applications.",
+          "Delamination: separation at material interfaces (die attach, mold compound to die, mold compound to substrate) driven by moisture absorption and thermal stress. Leads to popcorn cracking during board-level reflow. Risk increases with moisture sensitivity level (MSL).",
+          "Electromigration: current-driven metal migration in solder bumps or RDL. Risk increases with current density and temperature. Critical for flip-chip bumps carrying high current (> 10^4 A/cm2).",
+          "Corrosion: moisture and ionic contamination penetrating the package. Critical for packages with thin or no mold compound (QFN, WLP). Humidity and bias accelerate electrochemical migration between conductors."
+        ],
+        "tags": ["failure-mechanism", "reliability", "FMEA"]
+      },
+      {
+        "flow_name": "accelerated-test-design",
+        "description": "Design the accelerated test program to verify package reliability against each identified failure mechanism.",
+        "inputs": [
+          {"name": "failure-mode-list", "desc": "Failure mechanisms to be tested"},
+          {"name": "risk-ranking", "desc": "Priority ranking for test resource allocation"}
+        ],
+        "outputs": [
+          {"name": "test-matrix", "desc": "Test conditions, sample sizes, and durations per JEDEC standards for each failure mechanism"},
+          {"name": "acceleration-factors", "desc": "Calculated acceleration factor from test condition to field condition for each test"}
+        ],
+        "process": [
+          "Thermal cycling: JEDEC JESD22-A104 condition B (-55/125C) or condition G (-40/125C). 1000 cycles minimum for qualification. Sample size: 77 units for zero-failure demonstration at 90% confidence (per JEDEC JESD47). Acceleration factor from Norris-Landzberg model.",
+          "HAST (Highly Accelerated Stress Test): JESD22-A110, 130C, 85% RH, 3.6V bias. 96 hours = Level 1. Tests for moisture-related corrosion and ion migration. Acceleration factor from Peck's model: AF = (RH_test/RH_field)^n * exp(Ea/k * (1/T_field - 1/T_test)).",
+          "Temperature cycling on board (BLR): JESD22-A104 condition G or TC-C (-40/125C or 0/100C) with package mounted on test board. Tests board-level solder joint reliability. Daisy-chain package design for resistance monitoring.",
+          "Drop test: JESD22-B111, 1500G, 0.5ms half-sine pulse, 30 drops minimum. Tests board-level solder joint and component integrity under mechanical shock. Critical for handheld devices.",
+          "MSL determination: J-STD-020, moisture soak at the tested MSL condition, followed by 3x reflow simulation. Check for delamination and popcorn by SAM (scanning acoustic microscopy). MSL 1 (unlimited floor life) to MSL 6 (must solder within hours of opening dry pack)."
+        ],
+        "tags": ["accelerated-test", "JEDEC", "qualification", "reliability"]
+      },
+      {
+        "flow_name": "failure-data-analysis",
+        "description": "Analyze test results using Weibull statistics to predict failure distributions and field reliability.",
+        "inputs": [
+          {"name": "test-matrix", "desc": "Test conditions and sample sizes"},
+          {"name": "acceleration-factors", "desc": "AF values for field life prediction"}
+        ],
+        "outputs": [
+          {"name": "weibull-parameters", "desc": "Shape (beta) and scale (eta) parameters for each failure mechanism"},
+          {"name": "field-life-prediction", "desc": "Predicted failure rate and characteristic life under field conditions"}
+        ],
+        "process": [
+          "Plot failure data on Weibull probability paper (or use MLE/rank regression). For right-censored data (samples surviving to end of test), use suspension handling. Estimate shape parameter beta and characteristic life eta.",
+          "Interpret beta: beta < 1 indicates infant mortality (decreasing failure rate), beta = 1 is random failure (constant rate, exponential distribution), beta > 1 is wearout (increasing rate). Solder fatigue typically beta = 2-6.",
+          "Calculate confidence bounds on eta using likelihood ratio or Fisher matrix method. Report the lower confidence bound (typically 90% or 95%) for conservative life prediction.",
+          "Convert from test life to field life: eta_field = eta_test * AF. Calculate the failure rate at target field life: F(t) = 1 - exp(-(t/eta_field)^beta). For a 10-year field life target, verify that F(10 years) < acceptable failure rate (typically < 0.1% for consumer, < 0.001% for automotive).",
+          "If test shows failures before qualification endpoint: perform failure analysis to confirm the failure mechanism, redesign to address the mechanism, and retest. Do not simply increase sample size to pass; address the root cause."
+        ],
+        "tags": ["Weibull", "statistics", "reliability", "failure-analysis"]
+      }
+    ]
+  },
+  {
+    "chain_name": "heterogeneous-integration-methodology",
+    "description": "Design a heterogeneous multi-die system: technology selection per function, interface standardization, power delivery, verification, and cost optimization across multiple process nodes and foundries.",
+    "domain": "semiconductor",
+    "tags": ["heterogeneous-integration", "chiplet", "multi-die", "packaging", "semiconductor"],
+    "steps": [
+      {
+        "flow_name": "function-to-technology-mapping",
+        "description": "Map each system function to its optimal process node, considering performance, power, area, and cost trade-offs.",
+        "inputs": [
+          {"name": "system-architecture", "desc": "Block-level architecture with compute, memory, I/O, analog, and RF functions"},
+          {"name": "process-options", "desc": "Available process nodes with PPA characteristics and wafer costs"}
+        ],
+        "outputs": [
+          {"name": "technology-map", "desc": "Assignment of each function to a process node with rationale"},
+          {"name": "die-definitions", "desc": "Preliminary chiplet definitions: function, area estimate, process node, I/O count"}
+        ],
+        "process": [
+          "Analyze each function. Digital logic (CPU, GPU, accelerator): benefits most from leading-edge node (density, speed, power). I/O (SerDes, DDR PHY): often better on N-1 or N-2 node (analog performance, thick metals for inductors, lower cost). Analog/RF: may require specialized process (SiGe BiCMOS, GaAs, SOI).",
+          "Calculate PPA for each function on each candidate node. Transistor density scales ~2x per node, but analog area often does not shrink proportionally. High-voltage I/O may require thick-oxide transistors only available on mature nodes.",
+          "Cost analysis per function: for a given area on a given node, cost = (wafer_cost / dies_per_wafer) * (1/yield). Leading edge (3nm): $20-30K per wafer, mature (28nm): $2-3K. A large analog block on 3nm wastes expensive silicon.",
+          "Identify functions that can share a die (physically adjacent, same process) to minimize chiplet count. Each additional chiplet adds die-to-die interface overhead, assembly cost, and yield risk.",
+          "Document the technology map: which functions on which node, which functions grouped into which chiplets, and which interfaces cross chiplet boundaries (these become die-to-die links)."
+        ],
+        "tags": ["heterogeneous", "process-node", "PPA", "cost"]
+      },
+      {
+        "flow_name": "die-to-die-interface-standard",
+        "description": "Define or select the standardized interface for die-to-die communication in the heterogeneous assembly.",
+        "inputs": [
+          {"name": "technology-map", "desc": "Function-to-node assignment"},
+          {"name": "die-definitions", "desc": "Chiplet definitions with I/O requirements"}
+        ],
+        "outputs": [
+          {"name": "interface-specification", "desc": "Selected standard (UCIe or custom) with protocol, physical layer, and bandwidth per link"},
+          {"name": "interface-ip-plan", "desc": "IP blocks needed per chiplet for die-to-die communication, including area and power overhead"}
+        ],
+        "process": [
+          "Evaluate UCIe (Universal Chiplet Interconnect Express). Standard package: 24 lanes at 32 GT/s = 96 GB/s per direction on organic substrate at 100um bump pitch. Advanced package: 16 GT/s per lane at 25um pitch, lower power per bit. Protocol options: PCIe, CXL, or streaming.",
+          "Evaluate BoW (Bunch of Wires): simpler physical layer (no SerDes, parallel source-synchronous), lower latency (~2ns), lower power per bit, but wider bus (more bumps). Suitable for closely-spaced chiplets on interposer.",
+          "Compare area and power overhead of each interface IP per chiplet. UCIe PHY: ~1-2mm2, ~0.5-1W per link. BoW: smaller PHY but more I/O pins. Custom: optimized for specific bandwidth but not portable.",
+          "Select based on requirements: UCIe for ecosystem compatibility and standardized testing. BoW or custom for lowest latency and power when chiplets are designed together. Consider mix: UCIe for external chiplet interfaces, custom for tightly-coupled pairs.",
+          "Define the interface at each chiplet boundary: protocol, data width, clock scheme (forwarded clock vs embedded), error detection/correction (CRC, retry), and power management (link state transitions, power gating)."
+        ],
+        "tags": ["UCIe", "die-to-die", "interface", "standardization"]
+      },
+      {
+        "flow_name": "heterogeneous-verification-method",
+        "description": "Verify the complete heterogeneous system across multiple chiplets designed on different process nodes, potentially by different teams or companies.",
+        "inputs": [
+          {"name": "interface-specification", "desc": "Die-to-die interface details"},
+          {"name": "interface-ip-plan", "desc": "Interface IP blocks per chiplet"}
+        ],
+        "outputs": [
+          {"name": "verification-plan", "desc": "Multi-level verification strategy from chiplet-level to system-level"},
+          {"name": "package-model-plan", "desc": "Parasitic extraction and modeling plan for package-aware simulation"}
+        ],
+        "process": [
+          "Chiplet-level verification: each chiplet verified independently against the interface specification. Use bus functional models (BFMs) that emulate the other chiplets. Full functional and timing verification with sign-off corners for the chiplet's process node.",
+          "Interface compliance verification: test each chiplet's die-to-die PHY against the standard (UCIe compliance suite or custom protocol checker). Verify electrical parameters (eye diagram, jitter) with extracted package parasitics.",
+          "Package-level extraction: extract the RDL/interposer parasitics (R, L, C, G) from the package layout. Create S-parameter models for die-to-die paths. Include bump models and via transitions. Feed extracted model into channel simulation.",
+          "System-level verification: connect chiplet models through package extracted model. Run system-level functional simulation (reduced stimulus due to complexity). Verify data integrity across die-to-die links with realistic latency and noise.",
+          "Post-silicon validation plan: define the bring-up sequence (power-on, link training, functional test), debug access per chiplet (JTAG chain, embedded logic analyzers), and performance characterization test plan."
+        ],
+        "tags": ["verification", "heterogeneous", "system-level", "compliance"]
+      },
+      {
+        "flow_name": "heterogeneous-cost-optimization",
+        "description": "Optimize the total cost of the heterogeneous system across silicon, packaging, testing, and supply chain.",
+        "inputs": [
+          {"name": "verification-plan", "desc": "Verification approach confirming system feasibility"},
+          {"name": "technology-map", "desc": "Function-to-node assignment with area and yield"}
+        ],
+        "outputs": [
+          {"name": "cost-model", "desc": "Total cost per good system broken down by chiplet silicon, packaging, test, and supply chain"},
+          {"name": "optimization-recommendations", "desc": "Cost reduction opportunities: node migration, chiplet reuse, packaging simplification, test strategy changes"}
+        ],
+        "process": [
+          "Build bottom-up cost model. For each chiplet: wafer cost / (gross die per wafer * yield) + wafer probe test cost + singulation cost + KGD test cost (if applicable). Sum all chiplet costs.",
+          "Add packaging cost: interposer/bridge (if used), assembly (die attach, reflow, underfill per step), substrate, lid/TIM, and final package test. Assembly yield reduces effective package yield.",
+          "Add test cost: wafer probe per chiplet, KGD test per chiplet, package-level test, burn-in (if required). Test cost often 10-30% of total for complex multi-die packages.",
+          "Identify reuse opportunities: a chiplet designed once can be used in multiple products. Amortize NRE (mask cost, design cost) across all products using that chiplet. This is the primary economic driver for chiplets beyond yield improvement.",
+          "Sensitivity analysis: which cost component dominates? If packaging cost dominates, simplify the packaging (organic substrate instead of interposer, fewer RDL layers). If silicon cost dominates, re-evaluate the node assignment (move functions to cheaper nodes). If test cost dominates, improve KGD quality to reduce package-level fallout."
+        ],
+        "tags": ["cost-optimization", "heterogeneous", "chiplet-reuse", "NRE"]
+      }
+    ]
+  }
+]

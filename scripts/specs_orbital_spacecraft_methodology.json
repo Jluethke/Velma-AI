@@ -1,0 +1,2074 @@
+[
+  {
+    "chain_name": "orbital-transfer-optimization",
+    "description": "Select and size an orbit transfer by comparing Hohmann, bi-elliptic, low-thrust spiral, and gravity-assist options against delta-v, time, and propellant cost.",
+    "domain": "aerospace",
+    "tags": [
+      "aerospace",
+      "spacecraft",
+      "orbital-mechanics",
+      "systems-engineering",
+      "delta-v",
+      "transfer-orbit"
+    ],
+    "steps": [
+      {
+        "flow_name": "transfer-requirement-definition",
+        "description": "Define the initial and target orbits, time and mass constraints, and the available delta-v budget for a transfer.",
+        "inputs": [
+          {
+            "name": "initial_orbit",
+            "desc": "Starting orbit: semi-major axis, eccentricity, inclination, and radius at burn points."
+          },
+          {
+            "name": "target_orbit",
+            "desc": "Desired final orbit geometry and any phasing or arrival-time needs."
+          },
+          {
+            "name": "mission_constraints",
+            "desc": "Transfer-time limit, spacecraft wet mass, and propulsion type available."
+          }
+        ],
+        "outputs": [
+          {
+            "name": "transfer_requirements",
+            "desc": "Consolidated transfer problem: radii, inclinations, time window, and thrust class."
+          },
+          {
+            "name": "delta_v_budget_available",
+            "desc": "Delta-v the propulsion system can supply from the usable propellant mass."
+          }
+        ],
+        "process": [
+          "Record the initial and target orbit radii r1 and r2 and the circular speeds v = sqrt(mu/r), using Earth gravitational parameter mu = 398600 km^3/s^2 (Sun mu = 1.327e11 km^3/s^2 for heliocentric transfers).",
+          "Note the plane change required as the inclination difference di between the two orbits.",
+          "Classify the propulsion as high-thrust impulsive (chemical, burns short relative to orbit period) or low-thrust continuous (electric, burns over many revolutions), since this sets which transfer family applies.",
+          "Convert usable propellant mass to an available delta-v with the rocket equation dv = g0 * Isp * ln(m0/mf), g0 = 9.80665 m/s^2, to bound what any candidate transfer may cost.",
+          "State the transfer-time limit; a tight schedule rules out multi-month low-thrust spirals, while an open schedule lets electric propulsion trade time for propellant."
+        ],
+        "tags": [
+          "aerospace",
+          "spacecraft",
+          "orbital-mechanics",
+          "systems-engineering"
+        ]
+      },
+      {
+        "flow_name": "hohmann-and-bielliptic-analysis",
+        "description": "Compute the two-burn Hohmann transfer and the three-burn bi-elliptic transfer, then identify which is cheaper for the orbit ratio.",
+        "inputs": [
+          {
+            "name": "transfer_requirements",
+            "desc": "Radii, speeds, and time window from the requirement definition."
+          }
+        ],
+        "outputs": [
+          {
+            "name": "hohmann_solution",
+            "desc": "Two-burn Hohmann delta-v values and transfer time."
+          },
+          {
+            "name": "bielliptic_solution",
+            "desc": "Three-burn bi-elliptic delta-v and the intermediate apoapsis that minimizes it."
+          },
+          {
+            "name": "transfer_comparison",
+            "desc": "Crossover assessment of Hohmann versus bi-elliptic for the given radius ratio."
+          }
+        ],
+        "process": [
+          "Hohmann transfer ellipse semi-major axis a_t = (r1 + r2) / 2.",
+          "First burn dv1 = sqrt(mu/r1) * (sqrt(2*r2/(r1+r2)) - 1); second burn dv2 = sqrt(mu/r2) * (1 - sqrt(2*r1/(r1+r2))); total dv = dv1 + dv2; transfer time t = pi * sqrt(a_t^3 / mu).",
+          "Worked case low Earth orbit r1 = 6678 km to geostationary r2 = 42164 km: dv1 = 2.42 km/s, dv2 = 1.47 km/s, total = 3.89 km/s, time = 5.27 hours.",
+          "Bi-elliptic transfer raises apoapsis to an intermediate radius rb beyond r2, performs a small burn there, then lowers periapsis: three burns with the second done at low speed far out.",
+          "Bi-elliptic beats Hohmann when r2/r1 is greater than 11.94; between 11.94 and 15.58 the result depends on rb; above 15.58 bi-elliptic almost always wins, at the cost of much longer transfer time."
+        ],
+        "tags": [
+          "aerospace",
+          "spacecraft",
+          "orbital-mechanics",
+          "systems-engineering"
+        ]
+      },
+      {
+        "flow_name": "plane-change-and-combined-maneuver",
+        "description": "Size inclination-change cost and fold the plane change into the apoapsis burn to cut delta-v.",
+        "inputs": [
+          {
+            "name": "transfer_requirements",
+            "desc": "Inclination difference and orbit speeds."
+          },
+          {
+            "name": "hohmann_solution",
+            "desc": "Burn speeds at periapsis and apoapsis to combine the plane change with."
+          }
+        ],
+        "outputs": [
+          {
+            "name": "plane_change_strategy",
+            "desc": "Where to place the inclination change to minimize delta-v."
+          },
+          {
+            "name": "combined_burn_delta_v",
+            "desc": "Delta-v for the combined plane-change-plus-altitude burn."
+          }
+        ],
+        "process": [
+          "Pure plane change delta-v = 2 * v * sin(di/2); the cost scales with the orbital speed v at the burn point.",
+          "Because v is lowest at apoapsis, perform the inclination change at the highest-altitude burn: a 28.5 deg change at geostationary speed (3.07 km/s) costs 1.51 km/s, versus 3.57 km/s if attempted in low orbit at 7.73 km/s.",
+          "Combine the plane change with the circularization burn using the law of cosines: dv = sqrt(v1^2 + v2^2 - 2*v1*v2*cos(di)), which is less than doing the two burns separately.",
+          "Worked case: geostationary insertion from a 28.5 deg transfer orbit folds the plane change into the apogee burn, saving on the order of 1 km/s over sequential burns.",
+          "Split the plane change between the two burns only when a detailed optimization shows a small gain; most of the change belongs at apoapsis."
+        ],
+        "tags": [
+          "aerospace",
+          "spacecraft",
+          "orbital-mechanics",
+          "systems-engineering"
+        ]
+      },
+      {
+        "flow_name": "low-thrust-spiral-and-gravity-assist",
+        "description": "Evaluate electric-propulsion spiral transfers and planetary gravity assists as alternatives to impulsive burns.",
+        "inputs": [
+          {
+            "name": "transfer_requirements",
+            "desc": "Thrust class, mass, and time window."
+          },
+          {
+            "name": "transfer_comparison",
+            "desc": "Impulsive baseline cost to compare against."
+          }
+        ],
+        "outputs": [
+          {
+            "name": "low_thrust_profile",
+            "desc": "Continuous-thrust delta-v and the spiral transfer duration."
+          },
+          {
+            "name": "gravity_assist_options",
+            "desc": "Candidate flybys and the velocity change each can supply for free."
+          }
+        ],
+        "process": [
+          "For a continuous low-thrust spiral between circular orbits the delta-v approaches the speed difference: dv = |sqrt(mu/r1) - sqrt(mu/r2)|, independent of thrust magnitude.",
+          "The Edelbaum result for a combined altitude and plane change is dv = sqrt(v1^2 + v2^2 - 2*v1*v2*cos(pi/2 * di)); electric propulsion absorbs large plane changes far more cheaply than impulsive burns.",
+          "Spiral transfer time t = (spacecraft mass * dv) / thrust; a 2000 kg vehicle with 0.2 N thrust needing 2 km/s takes about 2.0e7 s, roughly 230 days, so schedule is the binding constraint.",
+          "A gravity assist changes the heliocentric velocity by turning the v-infinity vector: the turn angle satisfies sin(delta/2) = 1 / (1 + rp * vinf^2 / mu_planet), so a closer flyby and a slower approach turn more.",
+          "A single Earth or Venus flyby can add on the order of several km/s to an interplanetary trajectory at no propellant cost, which is why outer-planet missions chain multiple assists."
+        ],
+        "tags": [
+          "aerospace",
+          "spacecraft",
+          "orbital-mechanics",
+          "systems-engineering"
+        ]
+      },
+      {
+        "flow_name": "transfer-selection-and-tradeoff",
+        "description": "Build the delta-v versus time versus propellant trade table and recommend the transfer that fits the mission.",
+        "inputs": [
+          {
+            "name": "hohmann_solution",
+            "desc": "Impulsive two-burn baseline."
+          },
+          {
+            "name": "bielliptic_solution",
+            "desc": "Three-burn alternative for large radius ratios."
+          },
+          {
+            "name": "plane_change_strategy",
+            "desc": "Inclination-change placement and cost."
+          },
+          {
+            "name": "low_thrust_profile",
+            "desc": "Electric-propulsion option."
+          },
+          {
+            "name": "gravity_assist_options",
+            "desc": "Flyby opportunities."
+          }
+        ],
+        "outputs": [
+          {
+            "name": "recommended_transfer",
+            "desc": "Chosen transfer method with its delta-v, time, and propellant mass fraction."
+          },
+          {
+            "name": "transfer_rationale",
+            "desc": "Why this method wins given the mission constraints."
+          }
+        ],
+        "process": [
+          "Tabulate each candidate by total delta-v, transfer time, and propellant mass fraction mp/m0 = 1 - exp(-dv / (g0 * Isp)).",
+          "Hohmann is optimal for adjacent orbits (radius ratio below about 11.9) and when transfer time must stay short.",
+          "Bi-elliptic wins only for very large radius ratios and when the longer transfer time is acceptable.",
+          "Low-thrust electric propulsion wins when propellant mass dominates and the schedule allows months, since high Isp (1500 to 4000 s) shrinks mp dramatically.",
+          "Gravity assists win for interplanetary targets where no chemical stage could supply the required delta-v; otherwise pick the impulsive option with the lowest delta-v that meets the time limit."
+        ],
+        "tags": [
+          "aerospace",
+          "spacecraft",
+          "orbital-mechanics",
+          "systems-engineering"
+        ]
+      }
+    ]
+  },
+  {
+    "chain_name": "spacecraft-thermal-control",
+    "description": "Design a spacecraft thermal control system from orbit environment through passive and active elements, closing on verified temperature margins.",
+    "domain": "aerospace",
+    "tags": [
+      "aerospace",
+      "spacecraft",
+      "orbital-mechanics",
+      "systems-engineering",
+      "thermal",
+      "radiator",
+      "heater"
+    ],
+    "steps": [
+      {
+        "flow_name": "thermal-environment-and-requirements",
+        "description": "Characterize the orbital thermal environment and define worst hot and cold cases against component temperature limits.",
+        "inputs": [
+          {
+            "name": "orbit_parameters",
+            "desc": "Altitude, beta angle, and eclipse fraction that set external heat loads."
+          },
+          {
+            "name": "component_list",
+            "desc": "Dissipating units with their power and allowable temperature ranges."
+          },
+          {
+            "name": "mission_phases",
+            "desc": "Operating modes and seasons that bound the thermal extremes."
+          }
+        ],
+        "outputs": [
+          {
+            "name": "thermal_environment",
+            "desc": "Solar, albedo, and Earth-infrared fluxes and the eclipse profile."
+          },
+          {
+            "name": "temperature_requirements",
+            "desc": "Allowable temperature range for every component."
+          },
+          {
+            "name": "hot_cold_cases",
+            "desc": "Worst-hot and worst-cold load combinations to design against."
+          }
+        ],
+        "process": [
+          "Set the solar constant at 1361 W/m^2 near 1 AU, Earth albedo fraction 0.3 (range 0.2 to 0.4), and Earth outgoing infrared near 237 W/m^2.",
+          "Compute eclipse duration from the orbit beta angle; a low-Earth-orbit eclipse lasts up to about 36 minutes and drives the cold case.",
+          "Define the worst-hot case as summer solstice, end-of-life degraded coatings, full Sun, and maximum internal dissipation.",
+          "Define the worst-cold case as maximum eclipse, beginning-of-life coatings, and minimum dissipation (for example safe mode).",
+          "Record component limits such as battery 0 to 30 C, electronics -40 to 85 C, and propellant lines above 10 C to prevent freezing."
+        ],
+        "tags": [
+          "aerospace",
+          "spacecraft",
+          "orbital-mechanics",
+          "systems-engineering"
+        ]
+      },
+      {
+        "flow_name": "thermal-balance-and-radiator-sizing",
+        "description": "Apply the steady-state energy balance to size radiator area and select surface optical properties.",
+        "inputs": [
+          {
+            "name": "thermal_environment",
+            "desc": "External fluxes and eclipse profile."
+          },
+          {
+            "name": "hot_cold_cases",
+            "desc": "Load combinations to balance against."
+          },
+          {
+            "name": "temperature_requirements",
+            "desc": "Target temperatures that set radiator sink conditions."
+          }
+        ],
+        "outputs": [
+          {
+            "name": "heat_balance",
+            "desc": "Absorbed, internal, and emitted heat for each design case."
+          },
+          {
+            "name": "radiator_area",
+            "desc": "Radiator area needed to reject the hot-case heat load."
+          },
+          {
+            "name": "surface_property_selection",
+            "desc": "Coating choices by solar absorptance and infrared emittance."
+          }
+        ],
+        "process": [
+          "Write the steady-state balance Q_absorbed + Q_internal = Q_emitted, with Q_emitted = emittance * sigma * A * T^4 and sigma = 5.67e-8 W/m^2/K^4.",
+          "Absorbed load Q_absorbed = absorptance * (solar + albedo) * A + emittance * EarthIR * A.",
+          "Size the radiator from the hot case: A = Q / (emittance * sigma * (T_radiator^4 - T_sink^4)); rejecting 300 W at 20 C (293 K) to a 3 K deep-space sink needs about 0.73 m^2.",
+          "Prefer surfaces with a low absorptance-to-emittance ratio: white paint near absorptance 0.2 and emittance 0.9, optical solar reflectors near 0.1 and 0.8.",
+          "Account for end-of-life absorptance growth from ultraviolet and contamination (white paint can rise from 0.2 to 0.4), which drives the hot-case radiator size."
+        ],
+        "tags": [
+          "aerospace",
+          "spacecraft",
+          "orbital-mechanics",
+          "systems-engineering"
+        ]
+      },
+      {
+        "flow_name": "passive-thermal-control-design",
+        "description": "Design passive elements: multilayer insulation, coatings, thermal straps, and conductive isolation.",
+        "inputs": [
+          {
+            "name": "heat_balance",
+            "desc": "Heat flows that passive elements must shape."
+          },
+          {
+            "name": "surface_property_selection",
+            "desc": "Coatings chosen for the external surfaces."
+          }
+        ],
+        "outputs": [
+          {
+            "name": "mli_design",
+            "desc": "Multilayer insulation layout and effective emittance."
+          },
+          {
+            "name": "coating_map",
+            "desc": "Surface-by-surface coating assignment."
+          },
+          {
+            "name": "conductive_paths",
+            "desc": "Thermal straps, doublers, and isolation standoffs."
+          }
+        ],
+        "process": [
+          "Multilayer insulation of 15 to 30 layers reaches an effective emittance near 0.01 to 0.03, cutting radiative loss from enclosed surfaces by one to two orders of magnitude.",
+          "Isolate warm units from cold structure with low-conductance standoffs; conduction through a path is Q = k * A * dT / L, so a thin, low-conductivity, long path minimizes leak.",
+          "Size thermal straps and doublers to move heat from a hot unit to a radiator: a 100 mm by 100 mm by 3 mm aluminum doubler (k = 180 W/m/K) carries roughly k*A/L of conductance.",
+          "Map coatings per surface: radiators get low-absorptance reflectors, insulated zones get outer MLI layers, and internal surfaces often get high-emittance black paint to even out gradients.",
+          "Check that passive design alone holds the cold case within limits before adding heaters, since passive control adds no power."
+        ],
+        "tags": [
+          "aerospace",
+          "spacecraft",
+          "orbital-mechanics",
+          "systems-engineering"
+        ]
+      },
+      {
+        "flow_name": "active-thermal-control-design",
+        "description": "Size heaters, heat pipes, louvers, or fluid loops to hold temperatures when passive control is insufficient.",
+        "inputs": [
+          {
+            "name": "heat_balance",
+            "desc": "Residual heat loads passive design cannot handle."
+          },
+          {
+            "name": "temperature_requirements",
+            "desc": "Setpoints and deadbands for active control."
+          },
+          {
+            "name": "conductive_paths",
+            "desc": "Thermal network the active elements tie into."
+          }
+        ],
+        "outputs": [
+          {
+            "name": "heater_sizing",
+            "desc": "Heater power and control setpoints by zone."
+          },
+          {
+            "name": "heat_pipe_design",
+            "desc": "Heat-pipe transport capacity and routing."
+          },
+          {
+            "name": "active_control_plan",
+            "desc": "Louver and fluid-loop use for variable loads."
+          }
+        ],
+        "process": [
+          "Size each heater to cover the cold-case heat loss plus margin: battery and propellant-line heaters are common; add at least 25 percent heater power margin per typical thermal guidelines.",
+          "Control heaters by thermostat or software with a deadband (for example turn on at 5 C, off at 10 C) and verify duty cycle stays below about 80 percent.",
+          "Use constant-conductance ammonia heat pipes to move tens of watts along a meter-scale path with only a few degrees of gradient; variable-conductance pipes self-regulate against load swings.",
+          "Add louvers for highly variable loads: an open-to-closed turndown ratio near 6 to 1 lets effective emittance track dissipation without heater power.",
+          "For loads above about 1 kW use a pumped single-phase or two-phase fluid loop to carry heat from avionics to body-mounted or deployable radiators."
+        ],
+        "tags": [
+          "aerospace",
+          "spacecraft",
+          "orbital-mechanics",
+          "systems-engineering"
+        ]
+      },
+      {
+        "flow_name": "thermal-verification-and-margins",
+        "description": "Build and correlate the thermal model, run thermal-vacuum testing, and confirm qualification margins.",
+        "inputs": [
+          {
+            "name": "mli_design",
+            "desc": "Passive insulation to represent in the model."
+          },
+          {
+            "name": "heater_sizing",
+            "desc": "Heater control to verify under test."
+          },
+          {
+            "name": "active_control_plan",
+            "desc": "Active elements that must meet setpoints."
+          }
+        ],
+        "outputs": [
+          {
+            "name": "thermal_math_model",
+            "desc": "Reduced nodal model with conductors and heat loads."
+          },
+          {
+            "name": "test_plan",
+            "desc": "Thermal-balance and thermal-vacuum cycle plan."
+          },
+          {
+            "name": "verified_margins",
+            "desc": "Measured temperature margins against limits."
+          }
+        ],
+        "process": [
+          "Build a reduced thermal model of nodes and linear and radiative conductors; run the hot and cold cases and the transient eclipse to predict every component temperature.",
+          "Run a thermal-balance test in vacuum and correlate the model to measured steady temperatures within 3 to 5 C before trusting its predictions.",
+          "Apply qualification margins of about plus or minus 10 to 15 C beyond the acceptance range, and design to the hotter and colder predicted bounds.",
+          "Run thermal-vacuum cycling with hot and cold soaks to expose workmanship defects and confirm heater and louver behavior across the range.",
+          "Confirm heater duty cycle has headroom (below roughly 80 percent) and that every component holds within its allowable range at both design extremes."
+        ],
+        "tags": [
+          "aerospace",
+          "spacecraft",
+          "orbital-mechanics",
+          "systems-engineering"
+        ]
+      }
+    ]
+  },
+  {
+    "chain_name": "attitude-determination-control-spacecraft",
+    "description": "Design a spacecraft attitude determination and control system from pointing requirements and disturbance torques through sensors, actuators, momentum management, and control laws.",
+    "domain": "aerospace",
+    "tags": [
+      "aerospace",
+      "spacecraft",
+      "orbital-mechanics",
+      "systems-engineering",
+      "adcs",
+      "attitude-control",
+      "reaction-wheel"
+    ],
+    "steps": [
+      {
+        "flow_name": "pointing-requirements-and-disturbances",
+        "description": "Set pointing accuracy, knowledge, and stability requirements and quantify the environmental disturbance torques.",
+        "inputs": [
+          {
+            "name": "mission_pointing_needs",
+            "desc": "Required pointing accuracy, knowledge, and jitter for the payload."
+          },
+          {
+            "name": "orbit_parameters",
+            "desc": "Altitude and environment that set disturbance magnitudes."
+          },
+          {
+            "name": "spacecraft_geometry",
+            "desc": "Inertia, area, and center-of-pressure to center-of-mass offset."
+          }
+        ],
+        "outputs": [
+          {
+            "name": "pointing_budget",
+            "desc": "Accuracy, knowledge, and stability allocation across the control system."
+          },
+          {
+            "name": "disturbance_torques",
+            "desc": "Gravity-gradient, solar, aerodynamic, and magnetic torque magnitudes."
+          },
+          {
+            "name": "momentum_accumulation",
+            "desc": "Cyclic and secular momentum buildup per orbit."
+          }
+        ],
+        "process": [
+          "State accuracy (for example 0.05 deg), knowledge (0.01 deg), and jitter (arcsec over an integration time) as separate line items that sum in the error budget.",
+          "Gravity-gradient torque Tgg = (3 * mu / (2 * r^3)) * |Iz - Iy| * sin(2*theta); it is the dominant disturbance for many low-orbit bodies.",
+          "Solar-radiation-pressure torque = P * A * (1 + reflectance) * (cp-cg offset), with solar pressure P near 4.5e-6 N/m^2 at 1 AU; it dominates at geostationary altitude.",
+          "Aerodynamic torque in low orbit = 0.5 * rho * v^2 * Cd * A * (cp-cg offset); atmospheric density rho falls sharply with altitude and varies with solar activity.",
+          "Separate cyclic torques (average to zero each orbit, stored in wheels) from secular torques (accumulate, must be unloaded) to size both the wheels and the unloading system."
+        ],
+        "tags": [
+          "aerospace",
+          "spacecraft",
+          "orbital-mechanics",
+          "systems-engineering"
+        ]
+      },
+      {
+        "flow_name": "attitude-sensor-selection",
+        "description": "Select the sensor suite and build the attitude-knowledge error budget.",
+        "inputs": [
+          {
+            "name": "pointing_budget",
+            "desc": "Knowledge allocation the sensors must meet."
+          },
+          {
+            "name": "orbit_parameters",
+            "desc": "Environment constraints such as Sun and Earth presence."
+          }
+        ],
+        "outputs": [
+          {
+            "name": "sensor_suite",
+            "desc": "Chosen complement of star trackers, Sun sensors, gyros, and magnetometers."
+          },
+          {
+            "name": "attitude_knowledge_budget",
+            "desc": "Root-sum-square knowledge error from the selected sensors."
+          }
+        ],
+        "process": [
+          "Star trackers give 1 to 10 arcsec accuracy and absolute three-axis attitude but need an unobstructed field of view and a lost-in-space acquisition mode.",
+          "Sun sensors give coarse 1 deg or digital 0.1 deg knowledge for safe mode; Earth and horizon sensors give nadir reference for Earth-pointing craft.",
+          "Rate gyros propagate attitude between star-tracker updates; specify angle random walk (for example 0.003 deg/sqrt-hr) and bias stability (0.01 deg/hr) since these drive drift.",
+          "Magnetometers give about 0.5 deg attitude from the local field and double as input to magnetic unloading.",
+          "Fuse the sensors in an estimator (deterministic QUEST for a snapshot, an extended Kalman filter for continuous estimation) and root-sum-square the contributors into the knowledge budget."
+        ],
+        "tags": [
+          "aerospace",
+          "spacecraft",
+          "orbital-mechanics",
+          "systems-engineering"
+        ]
+      },
+      {
+        "flow_name": "actuator-sizing-reaction-wheels-cmg",
+        "description": "Size reaction wheels for slew and momentum storage, and assess control-moment gyros for agile pointing.",
+        "inputs": [
+          {
+            "name": "disturbance_torques",
+            "desc": "Torques the actuators must counter."
+          },
+          {
+            "name": "momentum_accumulation",
+            "desc": "Cyclic momentum the wheels must store."
+          },
+          {
+            "name": "pointing_budget",
+            "desc": "Slew-rate and settling requirements."
+          }
+        ],
+        "outputs": [
+          {
+            "name": "wheel_sizing",
+            "desc": "Reaction-wheel torque and momentum capacity and array geometry."
+          },
+          {
+            "name": "cmg_option",
+            "desc": "Control-moment-gyro assessment for high-agility missions."
+          },
+          {
+            "name": "control_authority",
+            "desc": "Available control torque and momentum headroom."
+          }
+        ],
+        "process": [
+          "Size slew torque from a rest-to-rest maneuver: T = 4 * theta * I / t_slew^2 for a bang-bang profile over angle theta in time t_slew.",
+          "Size wheel momentum to absorb the cyclic disturbance over an orbit: stored momentum H is on the order of T_disturbance * (orbit period) / 4.",
+          "Typical small-satellite wheels provide 0.01 to 1 Nm of torque and 0.1 to 20 Nms of storage; mount four wheels in a pyramid so any three give full three-axis control with one failed.",
+          "Control-moment gyros amplify torque by gimbaling a spinning rotor and give the high torque needed for agile imaging slews, at the cost of singularity avoidance in the steering law.",
+          "Keep a momentum margin so wheels stay off their saturation speed during the worst cyclic orbit, and size the array for the maneuver plus disturbance together."
+        ],
+        "tags": [
+          "aerospace",
+          "spacecraft",
+          "orbital-mechanics",
+          "systems-engineering"
+        ]
+      },
+      {
+        "flow_name": "momentum-management-desaturation",
+        "description": "Design momentum unloading with magnetorquers or thrusters to remove secular buildup.",
+        "inputs": [
+          {
+            "name": "momentum_accumulation",
+            "desc": "Secular momentum that must be shed."
+          },
+          {
+            "name": "disturbance_torques",
+            "desc": "Secular torque driving the buildup."
+          },
+          {
+            "name": "wheel_sizing",
+            "desc": "Wheel storage that sets the unloading cadence."
+          }
+        ],
+        "outputs": [
+          {
+            "name": "desaturation_strategy",
+            "desc": "When and how to unload wheel momentum."
+          },
+          {
+            "name": "magnetorquer_sizing",
+            "desc": "Magnetic dipole needed for low-orbit unloading."
+          },
+          {
+            "name": "thruster_unload_budget",
+            "desc": "Propellant for unloading where the field is weak."
+          }
+        ],
+        "process": [
+          "Secular solar or aerodynamic torque drives steady momentum buildup that saturates the wheels and must be removed on a regular cadence.",
+          "Magnetic unloading torque T = m x B, with the low-orbit field B near 25 to 45 microtesla; size the dipole m so the per-orbit magnetic impulse exceeds the accumulated momentum.",
+          "Magnetorquers cannot produce torque about the field direction, so spread unloading over an orbit as the field geometry rotates.",
+          "At geostationary altitude the field is too weak for torquers, so unload with thrusters: budget the propellant from the momentum to be shed divided by the thruster moment arm and specific impulse.",
+          "Set the desaturation frequency from the storage margin: unload before wheels reach their speed limit, typically once to a few times per orbit in low orbit."
+        ],
+        "tags": [
+          "aerospace",
+          "spacecraft",
+          "orbital-mechanics",
+          "systems-engineering"
+        ]
+      },
+      {
+        "flow_name": "control-law-and-stability",
+        "description": "Define control modes and design the feedback law with adequate stability margins.",
+        "inputs": [
+          {
+            "name": "sensor_suite",
+            "desc": "Measurements feeding the controller."
+          },
+          {
+            "name": "wheel_sizing",
+            "desc": "Actuator authority available to the controller."
+          },
+          {
+            "name": "control_authority",
+            "desc": "Torque and momentum headroom."
+          },
+          {
+            "name": "pointing_budget",
+            "desc": "Accuracy and jitter the loop must achieve."
+          }
+        ],
+        "outputs": [
+          {
+            "name": "control_modes",
+            "desc": "Detumble, Sun-safe, and nominal pointing modes."
+          },
+          {
+            "name": "controller_gains",
+            "desc": "Feedback gains and loop bandwidth."
+          },
+          {
+            "name": "stability_margins",
+            "desc": "Gain and phase margins against flexible modes."
+          }
+        ],
+        "process": [
+          "Detumble after separation with the B-dot law m = -k * dB/dt, which drives body rates toward zero using only magnetometer and torquers.",
+          "Use quaternion-feedback proportional-derivative control for nominal pointing: torque = -Kp * quaternion_error - Kd * rate_error.",
+          "Set the control bandwidth a factor of 5 to 10 below the first flexible-body mode so the loop does not excite structural flexibility.",
+          "Hold at least 6 dB gain margin and 30 deg phase margin, and add a notch filter if a flexible mode sits near the crossover.",
+          "Define clean mode transitions (detumble to Sun-safe to nominal) and verify jitter from wheel static and dynamic imbalance stays within the stability allocation."
+        ],
+        "tags": [
+          "aerospace",
+          "spacecraft",
+          "orbital-mechanics",
+          "systems-engineering"
+        ]
+      }
+    ]
+  },
+  {
+    "chain_name": "communication-link-budget",
+    "description": "Build an end-to-end RF link budget from data-rate requirements through transmitter and antenna, path loss, receiver figure of merit, and coding to a closed link with margin.",
+    "domain": "aerospace",
+    "tags": [
+      "aerospace",
+      "spacecraft",
+      "orbital-mechanics",
+      "systems-engineering",
+      "rf-communications",
+      "link-budget",
+      "telemetry"
+    ],
+    "steps": [
+      {
+        "flow_name": "link-requirements-and-geometry",
+        "description": "Set the required data rate from data volume and contact time, and pick a frequency band for the link geometry.",
+        "inputs": [
+          {
+            "name": "data_volume_per_day",
+            "desc": "Payload and housekeeping data that must be downlinked each day."
+          },
+          {
+            "name": "orbit_parameters",
+            "desc": "Orbit that sets slant range and contact duration."
+          },
+          {
+            "name": "ground_network",
+            "desc": "Ground-station locations, antenna sizes, and elevation masks."
+          }
+        ],
+        "outputs": [
+          {
+            "name": "link_requirements",
+            "desc": "Band, duplex plan, and availability targets."
+          },
+          {
+            "name": "contact_geometry",
+            "desc": "Slant range and contact time per pass."
+          },
+          {
+            "name": "required_data_rate",
+            "desc": "Bit rate needed to clear the daily data volume."
+          }
+        ],
+        "process": [
+          "Required bit rate = daily data volume / total usable contact time; a low-orbit pass over one station may last only 6 to 10 minutes, forcing high instantaneous rate.",
+          "Compute slant range from altitude and the minimum elevation mask (typically 5 to 10 deg); at a low mask the range and atmosphere are worst.",
+          "Choose a band by data rate and constraints: UHF for low-rate telemetry, S-band near 2.2 GHz for command and housekeeping, X-band near 8.4 GHz for science downlink, Ka-band near 26 GHz for very high rate.",
+          "Higher bands give more antenna gain for a given size but suffer more rain attenuation and tighter pointing, and require spectrum coordination.",
+          "Record the signal wavelength lambda = c / f (c = 3.0e8 m/s), since antenna gain and path loss both scale with it."
+        ],
+        "tags": [
+          "aerospace",
+          "spacecraft",
+          "orbital-mechanics",
+          "systems-engineering"
+        ]
+      },
+      {
+        "flow_name": "transmitter-and-antenna-sizing",
+        "description": "Size transmit power and antenna gain into an effective isotropic radiated power.",
+        "inputs": [
+          {
+            "name": "link_requirements",
+            "desc": "Band and duplex plan."
+          },
+          {
+            "name": "required_data_rate",
+            "desc": "Rate that drives the needed radiated power."
+          }
+        ],
+        "outputs": [
+          {
+            "name": "eirp_budget",
+            "desc": "Effective isotropic radiated power from the transmit chain."
+          },
+          {
+            "name": "antenna_design",
+            "desc": "Antenna type, size, gain, and beamwidth."
+          },
+          {
+            "name": "transmit_chain",
+            "desc": "Amplifier type and line losses."
+          }
+        ],
+        "process": [
+          "Parabolic antenna gain G = efficiency * (pi * D / lambda)^2; a 0.5 m dish at 8.4 GHz with 55 percent efficiency gives about 31 dBi.",
+          "Half-power beamwidth is about 70 * lambda / D degrees, so higher gain narrows the beam and tightens the pointing requirement.",
+          "Effective isotropic radiated power EIRP = transmit power (dBW) + antenna gain (dBi) - line loss (dB).",
+          "Pick the amplifier by power and efficiency: solid-state amplifiers suit lower power and S-band, traveling-wave-tube amplifiers suit higher power at X- and Ka-band.",
+          "Account for antenna pointing loss from the beamwidth and the attitude error, and for a low-gain omni backup used in safe mode."
+        ],
+        "tags": [
+          "aerospace",
+          "spacecraft",
+          "orbital-mechanics",
+          "systems-engineering"
+        ]
+      },
+      {
+        "flow_name": "path-loss-and-propagation",
+        "description": "Compute free-space path loss and the atmospheric, rain, and polarization losses along the link.",
+        "inputs": [
+          {
+            "name": "contact_geometry",
+            "desc": "Slant range and elevation for the worst-case pass."
+          },
+          {
+            "name": "antenna_design",
+            "desc": "Frequency and polarization of the link."
+          }
+        ],
+        "outputs": [
+          {
+            "name": "path_loss_budget",
+            "desc": "Free-space path loss in decibels."
+          },
+          {
+            "name": "propagation_losses",
+            "desc": "Atmospheric, rain, and polarization-mismatch losses."
+          }
+        ],
+        "process": [
+          "Free-space path loss (dB) = 20*log10(4*pi*d/lambda) = 92.45 + 20*log10(d_km) + 20*log10(f_GHz).",
+          "Worked case geostationary range 35786 km at 8.4 GHz gives about 202 dB of free-space loss.",
+          "Add gaseous atmospheric loss (a few tenths of a dB at X-band near zenith, rising at low elevation) from oxygen and water-vapor absorption.",
+          "Add rain attenuation, small at S- and X-band but tens of dB at Ka-band and low elevation, and set it from the availability target (for example 99.9 percent).",
+          "Add polarization-mismatch loss (small for matched circular polarization) and any radome or feed loss at the ground station."
+        ],
+        "tags": [
+          "aerospace",
+          "spacecraft",
+          "orbital-mechanics",
+          "systems-engineering"
+        ]
+      },
+      {
+        "flow_name": "receiver-gt-and-snr",
+        "description": "Combine the receiver figure of merit with the link to get carrier-to-noise-density and signal-to-noise.",
+        "inputs": [
+          {
+            "name": "path_loss_budget",
+            "desc": "Loss between transmitter and receiver."
+          },
+          {
+            "name": "eirp_budget",
+            "desc": "Radiated power at the transmitter."
+          },
+          {
+            "name": "required_data_rate",
+            "desc": "Rate that converts carrier-to-noise-density into energy per bit."
+          }
+        ],
+        "outputs": [
+          {
+            "name": "gt_budget",
+            "desc": "Receiver gain-to-noise-temperature figure of merit."
+          },
+          {
+            "name": "carrier_to_noise",
+            "desc": "Carrier-to-noise-density ratio of the link."
+          },
+          {
+            "name": "received_snr",
+            "desc": "Energy-per-bit to noise-density ratio."
+          }
+        ],
+        "process": [
+          "Receiver figure of merit G/T = receive-antenna gain (dBi) - 10*log10(system noise temperature in K).",
+          "System noise temperature = antenna noise + receiver noise, referred to the antenna port; a cooled or low-noise front end lowers it and raises G/T.",
+          "Carrier-to-noise-density C/N0 = EIRP - free-space loss - other losses + G/T - Boltzmann constant (where 10*log10(k) = -228.6 dBW/K/Hz).",
+          "Energy per bit to noise density Eb/N0 = C/N0 - 10*log10(bit rate).",
+          "Carry the result in decibels throughout so each gain and loss simply adds, and keep the worst-case geometry and weather in the numbers."
+        ],
+        "tags": [
+          "aerospace",
+          "spacecraft",
+          "orbital-mechanics",
+          "systems-engineering"
+        ]
+      },
+      {
+        "flow_name": "modulation-coding-and-margin",
+        "description": "Select modulation and forward error correction, then close the budget with positive link margin.",
+        "inputs": [
+          {
+            "name": "received_snr",
+            "desc": "Available energy-per-bit to noise-density."
+          },
+          {
+            "name": "carrier_to_noise",
+            "desc": "Carrier-to-noise-density for acquisition checks."
+          },
+          {
+            "name": "required_data_rate",
+            "desc": "Rate that the chosen scheme must support."
+          }
+        ],
+        "outputs": [
+          {
+            "name": "modcod_selection",
+            "desc": "Modulation and coding scheme."
+          },
+          {
+            "name": "link_margin",
+            "desc": "Margin of available over required energy per bit."
+          },
+          {
+            "name": "closed_link_budget",
+            "desc": "Final budget showing a positive margin at the data rate."
+          }
+        ],
+        "process": [
+          "Uncoded coherent BPSK or QPSK needs about 9.6 dB of Eb/N0 for a 1e-5 bit error rate; this is the reference before coding.",
+          "Forward error correction buys coding gain: concatenated convolutional and Reed-Solomon gives several dB, and modern turbo or LDPC codes operate within 1 to 2 dB of the Shannon limit.",
+          "Link margin = available Eb/N0 - required Eb/N0 for the chosen scheme - implementation loss (typically 1 to 2 dB).",
+          "Target at least 3 dB of margin for an operational link so weather, aging, and pointing error do not break it.",
+          "If the margin is negative, raise EIRP, grow an antenna, lower the data rate, or move to a stronger code, and re-close the budget."
+        ],
+        "tags": [
+          "aerospace",
+          "spacecraft",
+          "orbital-mechanics",
+          "systems-engineering"
+        ]
+      }
+    ]
+  },
+  {
+    "chain_name": "orbital-debris-collision-avoidance",
+    "description": "Run conjunction assessment from screening data through probability of collision and a maneuver decision framework to a verified avoidance maneuver.",
+    "domain": "aerospace",
+    "tags": [
+      "aerospace",
+      "spacecraft",
+      "orbital-mechanics",
+      "systems-engineering",
+      "space-debris",
+      "conjunction-assessment",
+      "collision-avoidance"
+    ],
+    "steps": [
+      {
+        "flow_name": "conjunction-screening-and-data",
+        "description": "Screen the spacecraft ephemeris against the catalog and ingest conjunction data for close approaches.",
+        "inputs": [
+          {
+            "name": "spacecraft_ephemeris",
+            "desc": "Predicted orbit and covariance of the protected spacecraft."
+          },
+          {
+            "name": "tracking_data_sources",
+            "desc": "Catalog and conjunction data feeds such as public space-tracking services."
+          },
+          {
+            "name": "screening_parameters",
+            "desc": "Screening volume and look-ahead window."
+          }
+        ],
+        "outputs": [
+          {
+            "name": "conjunction_list",
+            "desc": "Ranked close approaches within the look-ahead window."
+          },
+          {
+            "name": "close_approach_data",
+            "desc": "Time of closest approach, miss distance, and combined covariance per event."
+          }
+        ],
+        "process": [
+          "Ingest conjunction data messages, which report the time of closest approach, the miss vector, and the state covariance of both objects.",
+          "Screen with an ellipsoidal volume around the protected orbit over a look-ahead window of about 3 to 7 days.",
+          "Record for each event the time of closest approach, the radial and cross-track and along-track miss components, and the relative velocity.",
+          "Note the covariance quality, which comes from the tracking cadence and sensor type (radar in low orbit, optical for high orbit); poor covariance makes any probability estimate unreliable.",
+          "Keep in mind the catalog tracks objects down to roughly 10 cm in low orbit, so smaller lethal debris is not screened and remains a background risk."
+        ],
+        "tags": [
+          "aerospace",
+          "spacecraft",
+          "orbital-mechanics",
+          "systems-engineering"
+        ]
+      },
+      {
+        "flow_name": "probability-of-collision-computation",
+        "description": "Compute the probability of collision and test its sensitivity to covariance.",
+        "inputs": [
+          {
+            "name": "close_approach_data",
+            "desc": "Miss vector, relative velocity, and combined covariance."
+          },
+          {
+            "name": "conjunction_list",
+            "desc": "Events to evaluate."
+          }
+        ],
+        "outputs": [
+          {
+            "name": "collision_probability",
+            "desc": "Probability of collision for each event."
+          },
+          {
+            "name": "pc_sensitivity",
+            "desc": "Sensitivity of the probability to covariance and object size."
+          }
+        ],
+        "process": [
+          "Combine both objects' covariances into one relative covariance and project it onto the encounter plane perpendicular to the relative velocity.",
+          "Set the hard-body radius as the sum of the two object radii; the collision cross-section is a circle of that radius in the encounter plane.",
+          "For a fast linear encounter compute the two-dimensional probability by integrating the combined Gaussian over the hard-body circle (the Foster or Chan method).",
+          "Watch for probability dilution: a very large covariance lowers the computed probability in a misleading way, so a near miss with poor tracking can still be dangerous.",
+          "Use a Monte Carlo propagation for slow or highly nonlinear encounters where the linear assumption breaks down, and track how the result moves as covariance shrinks with new tracking."
+        ],
+        "tags": [
+          "aerospace",
+          "spacecraft",
+          "orbital-mechanics",
+          "systems-engineering"
+        ]
+      },
+      {
+        "flow_name": "maneuver-decision-framework",
+        "description": "Apply thresholds and operational factors to decide whether to maneuver.",
+        "inputs": [
+          {
+            "name": "collision_probability",
+            "desc": "Computed probability per event."
+          },
+          {
+            "name": "pc_sensitivity",
+            "desc": "How firm that probability is."
+          },
+          {
+            "name": "mission_constraints",
+            "desc": "Propellant, payload, and operational limits that weigh against maneuvering."
+          }
+        ],
+        "outputs": [
+          {
+            "name": "maneuver_decision",
+            "desc": "Go or no-go decision for an avoidance maneuver."
+          },
+          {
+            "name": "decision_rationale",
+            "desc": "Factors behind the decision."
+          }
+        ],
+        "process": [
+          "Apply tiered thresholds: a common practice treats probability above 1e-4 as an action level (red) and 1e-5 to 1e-4 as a watch level (yellow).",
+          "Weigh the miss distance and time to closest approach alongside the probability, since a short lead time limits options.",
+          "Discount events with poor covariance pending an updated tracking solution rather than acting on a diluted probability.",
+          "Weigh the cost of maneuvering: propellant spent, payload interruption, and the risk of maneuvering into a new conjunction.",
+          "Coordinate with the other object's owner or operator when known, and document the decision basis for the conjunction-assessment record."
+        ],
+        "tags": [
+          "aerospace",
+          "spacecraft",
+          "orbital-mechanics",
+          "systems-engineering"
+        ]
+      },
+      {
+        "flow_name": "avoidance-maneuver-design",
+        "description": "Design the avoidance burn, place it ahead of closest approach, and re-screen the new orbit.",
+        "inputs": [
+          {
+            "name": "maneuver_decision",
+            "desc": "Confirmed decision to maneuver."
+          },
+          {
+            "name": "close_approach_data",
+            "desc": "Geometry that sets the most efficient burn direction."
+          }
+        ],
+        "outputs": [
+          {
+            "name": "avoidance_maneuver",
+            "desc": "Burn direction, magnitude, and timing."
+          },
+          {
+            "name": "post_maneuver_ephemeris",
+            "desc": "Predicted orbit after the maneuver for re-screening."
+          }
+        ],
+        "process": [
+          "An along-track burn is the most efficient way to open miss distance: the along-track separation grows across each orbit after the burn, so a few cm/s applied one to three orbits before closest approach typically yields kilometers of separation.",
+          "A radial burn opens cross-track or radial separation quickly and suits a short lead time, at higher delta-v per meter of separation.",
+          "Place the burn at least one orbit before the time of closest approach so the separation has time to accumulate.",
+          "Keep the burn small to limit the disturbance to the mission orbit, and plan a return-to-station maneuver if the orbit must be restored.",
+          "Propagate the post-maneuver orbit and re-screen it against the catalog to confirm the burn does not create a new conjunction."
+        ],
+        "tags": [
+          "aerospace",
+          "spacecraft",
+          "orbital-mechanics",
+          "systems-engineering"
+        ]
+      },
+      {
+        "flow_name": "post-maneuver-verification",
+        "description": "Confirm the new orbit by tracking, verify the risk is cleared, and document the event.",
+        "inputs": [
+          {
+            "name": "avoidance_maneuver",
+            "desc": "Executed burn to verify."
+          },
+          {
+            "name": "post_maneuver_ephemeris",
+            "desc": "Predicted post-burn orbit to confirm against tracking."
+          }
+        ],
+        "outputs": [
+          {
+            "name": "verification_report",
+            "desc": "Confirmation that the probability is below threshold after the maneuver."
+          },
+          {
+            "name": "updated_screening",
+            "desc": "Fresh screening of the new orbit against the catalog."
+          }
+        ],
+        "process": [
+          "Confirm the achieved orbit from onboard navigation or ground tracking and compare it with the planned post-maneuver orbit.",
+          "Re-run the conjunction screening on the updated orbit and recompute the probability for the original event.",
+          "Verify the probability is now below the action threshold and that no new high-probability conjunction was introduced.",
+          "Record the event, the decision, the maneuver, and the outcome for the operations log and for trending of conjunction rates.",
+          "Notify affected stakeholders and the tracking provider of the maneuver so their catalogs stay consistent."
+        ],
+        "tags": [
+          "aerospace",
+          "spacecraft",
+          "orbital-mechanics",
+          "systems-engineering"
+        ]
+      }
+    ]
+  },
+  {
+    "chain_name": "constellation-design-methodology",
+    "description": "Design a satellite constellation from coverage requirements through orbit selection, Walker geometry, coverage verification, and inter-satellite link topology.",
+    "domain": "aerospace",
+    "tags": [
+      "aerospace",
+      "spacecraft",
+      "orbital-mechanics",
+      "systems-engineering",
+      "constellation",
+      "walker-pattern",
+      "coverage-analysis"
+    ],
+    "steps": [
+      {
+        "flow_name": "coverage-requirements-definition",
+        "description": "Define the coverage area, revisit, elevation mask, and fold requirements the constellation must meet.",
+        "inputs": [
+          {
+            "name": "mission_coverage_goals",
+            "desc": "Continuous or revisit coverage and the service type."
+          },
+          {
+            "name": "service_area",
+            "desc": "Global, regional, or latitude-banded area to cover."
+          },
+          {
+            "name": "quality_of_service",
+            "desc": "Latency, availability, and n-fold coverage needs."
+          }
+        ],
+        "outputs": [
+          {
+            "name": "coverage_requirements",
+            "desc": "Coverage type, area, and quality targets."
+          },
+          {
+            "name": "elevation_mask",
+            "desc": "Minimum user elevation angle for a usable link."
+          },
+          {
+            "name": "revisit_targets",
+            "desc": "Maximum gap and mean revisit time for revisit missions."
+          }
+        ],
+        "process": [
+          "Distinguish continuous coverage (every point always in view of at least one satellite) from revisit coverage (each point seen within a bounded gap).",
+          "Set the minimum user elevation angle, typically 10 to 25 deg, below which terrain and atmosphere make the link unusable.",
+          "Define the fold requirement: navigation needs at least four satellites in view for a position fix, while communications may need one or two.",
+          "Specify latency and availability targets that will later drive altitude and inter-satellite links.",
+          "Bound the latitude range to serve, since polar coverage and equatorial coverage lead to different orbit choices."
+        ],
+        "tags": [
+          "aerospace",
+          "spacecraft",
+          "orbital-mechanics",
+          "systems-engineering"
+        ]
+      },
+      {
+        "flow_name": "orbit-selection-altitude-inclination",
+        "description": "Trade altitude and inclination for coverage footprint, latency, launch cost, and radiation.",
+        "inputs": [
+          {
+            "name": "coverage_requirements",
+            "desc": "Coverage type and area."
+          },
+          {
+            "name": "revisit_targets",
+            "desc": "Gap and revisit limits."
+          }
+        ],
+        "outputs": [
+          {
+            "name": "orbit_selection",
+            "desc": "Low, medium, or geostationary orbit regime."
+          },
+          {
+            "name": "altitude_inclination_choice",
+            "desc": "Chosen altitude and inclination with rationale."
+          }
+        ],
+        "process": [
+          "Compute the coverage footprint half-angle from altitude h and elevation mask el: lambda = acos((Re/(Re+h)) * cos(el)) - el, with Earth radius Re = 6378 km.",
+          "Higher altitude gives a larger footprint and fewer satellites but adds latency, free-space loss, and launch energy.",
+          "Avoid the Van Allen belts (intense trapped radiation roughly 1500 to 6000 km and again near 13000 to 20000 km) by placing the orbit below or within protected windows such as the global-navigation band near 20000 km.",
+          "Set inclination at or above the maximum latitude to be served; use near-polar orbits for global coverage and sun-synchronous orbits for consistent lighting on imaging missions.",
+          "Trade the regimes: low orbit for low latency and high resolution with many satellites, medium orbit for navigation, geostationary for fixed regional coverage with three satellites."
+        ],
+        "tags": [
+          "aerospace",
+          "spacecraft",
+          "orbital-mechanics",
+          "systems-engineering"
+        ]
+      },
+      {
+        "flow_name": "walker-constellation-geometry",
+        "description": "Lay out a Walker pattern and set the satellite count, plane count, and phasing.",
+        "inputs": [
+          {
+            "name": "orbit_selection",
+            "desc": "Orbit regime and altitude."
+          },
+          {
+            "name": "coverage_requirements",
+            "desc": "Coverage type that sets the pattern family."
+          }
+        ],
+        "outputs": [
+          {
+            "name": "walker_pattern",
+            "desc": "Walker Delta or Star notation for the constellation."
+          },
+          {
+            "name": "satellite_count",
+            "desc": "Total satellites and satellites per plane."
+          },
+          {
+            "name": "plane_phasing",
+            "desc": "Inter-plane phase offset between adjacent planes."
+          }
+        ],
+        "process": [
+          "Describe a Walker Delta constellation by inclination : T / P / F, where T is total satellites, P is equally spaced planes, and F (0 to P-1) sets the phasing.",
+          "Place P planes with right ascension of the ascending node spread evenly, and satellites evenly within each plane; the inter-plane phase step is F * 360 / T degrees.",
+          "Use a Walker Star pattern (planes spread over 180 deg with near-polar inclination) for continuous polar and global coverage, accepting a seam where counter-rotating planes meet.",
+          "Worked case: the global-navigation reference design uses 24 satellites in 6 planes at 55 deg, written 55:24/6/2.",
+          "Estimate the minimum total count from the footprint half-angle and the fold requirement, then refine with a coverage simulation."
+        ],
+        "tags": [
+          "aerospace",
+          "spacecraft",
+          "orbital-mechanics",
+          "systems-engineering"
+        ]
+      },
+      {
+        "flow_name": "coverage-analysis-and-verification",
+        "description": "Propagate the constellation and verify coverage percentage, gaps, and revisit statistics.",
+        "inputs": [
+          {
+            "name": "walker_pattern",
+            "desc": "Geometry to propagate."
+          },
+          {
+            "name": "elevation_mask",
+            "desc": "Mask applied when counting visibility."
+          },
+          {
+            "name": "satellite_count",
+            "desc": "Number of satellites in the simulation."
+          }
+        ],
+        "outputs": [
+          {
+            "name": "coverage_statistics",
+            "desc": "Percent coverage and fold achieved over the service area."
+          },
+          {
+            "name": "gap_analysis",
+            "desc": "Maximum and mean coverage gap per grid point."
+          },
+          {
+            "name": "revisit_distribution",
+            "desc": "Distribution of revisit times across latitude."
+          }
+        ],
+        "process": [
+          "Propagate every satellite including the oblateness (J2) effect and grid the service area in latitude and longitude.",
+          "At each time step and grid point count satellites above the elevation mask, then compute percent coverage, maximum gap, and mean revisit over the simulation.",
+          "Verify the fold requirement is met everywhere it is needed (for example four-fold visibility for navigation across the service area).",
+          "Keep the nodal regression rate from J2 common across planes so the relative pattern holds; a mismatch lets planes drift apart over months.",
+          "Summarize with a figure of merit such as worst-case gap or percent of area meeting the target, and iterate the pattern if gaps exceed the limit."
+        ],
+        "tags": [
+          "aerospace",
+          "spacecraft",
+          "orbital-mechanics",
+          "systems-engineering"
+        ]
+      },
+      {
+        "flow_name": "inter-satellite-links-and-topology",
+        "description": "Design the inter-satellite link topology for relay, latency, and pointing.",
+        "inputs": [
+          {
+            "name": "walker_pattern",
+            "desc": "Geometry that sets link ranges and visibility."
+          },
+          {
+            "name": "plane_phasing",
+            "desc": "Phasing that affects cross-plane link geometry."
+          },
+          {
+            "name": "service_area",
+            "desc": "Area that drives the ground-relay versus cross-link trade."
+          }
+        ],
+        "outputs": [
+          {
+            "name": "isl_topology",
+            "desc": "Which satellites link to which, intra-plane and inter-plane."
+          },
+          {
+            "name": "network_latency",
+            "desc": "End-to-end latency across the mesh."
+          },
+          {
+            "name": "link_pointing",
+            "desc": "Pointing range and rate for cross-links."
+          }
+        ],
+        "process": [
+          "Intra-plane links between neighbors in the same plane hold a near-constant range and are the simplest to maintain.",
+          "Inter-plane cross-links vary in range and pointing as planes rotate relative to each other, and the counter-rotating seam in a Star pattern can break cross-links there.",
+          "Optical inter-satellite links carry multi-gigabit rates over thousands of kilometers but need fine beam pointing and acquisition.",
+          "Trade ground-relay against inter-satellite relay: cross-links cut latency and reduce ground-station count but add pointing hardware and routing complexity.",
+          "Size the pointing range and slew rate for the worst cross-plane geometry, and define a mesh routing scheme that survives a single satellite outage."
+        ],
+        "tags": [
+          "aerospace",
+          "spacecraft",
+          "orbital-mechanics",
+          "systems-engineering"
+        ]
+      }
+    ]
+  },
+  {
+    "chain_name": "spacecraft-propulsion-system-sizing",
+    "description": "Size a spacecraft propulsion system from the delta-v budget through technology selection, propellant and tank sizing, thruster layout, and sizing verification.",
+    "domain": "aerospace",
+    "tags": [
+      "aerospace",
+      "spacecraft",
+      "orbital-mechanics",
+      "systems-engineering",
+      "propulsion",
+      "stationkeeping",
+      "electric-propulsion"
+    ],
+    "steps": [
+      {
+        "flow_name": "propulsion-requirements-and-delta-v-budget",
+        "description": "Build the mission delta-v budget and the thrust and impulse requirements.",
+        "inputs": [
+          {
+            "name": "mission_profile",
+            "desc": "Orbit insertion, stationkeeping, and disposal tasks over the mission."
+          },
+          {
+            "name": "spacecraft_mass",
+            "desc": "Wet and dry mass estimates."
+          },
+          {
+            "name": "mission_lifetime",
+            "desc": "Operating duration that scales the stationkeeping total."
+          }
+        ],
+        "outputs": [
+          {
+            "name": "delta_v_budget",
+            "desc": "Delta-v allocated to each task, summed with margin."
+          },
+          {
+            "name": "thrust_requirements",
+            "desc": "Minimum thrust for timely maneuvers."
+          },
+          {
+            "name": "impulse_requirements",
+            "desc": "Total impulse the system must deliver."
+          }
+        ],
+        "process": [
+          "List every delta-v task: orbit insertion or raising, stationkeeping, momentum unloading, and end-of-life disposal.",
+          "For geostationary stationkeeping budget north-south (inclination control) near 50 m/s per year and east-west (longitude control) near 2 m/s per year.",
+          "For low orbit budget drag makeup, which grows sharply at lower altitude and higher solar activity.",
+          "Include disposal: a geostationary craft reorbits about 235 km above the belt, and a low-orbit craft must deorbit within 25 years of end of mission.",
+          "Sum the tasks with margin to set the delta-v budget, multiply by mass for total impulse, and set a minimum thrust so each maneuver finishes within its operational window."
+        ],
+        "tags": [
+          "aerospace",
+          "spacecraft",
+          "orbital-mechanics",
+          "systems-engineering"
+        ]
+      },
+      {
+        "flow_name": "propulsion-technology-selection",
+        "description": "Select the propulsion technology by trading specific impulse against thrust and power.",
+        "inputs": [
+          {
+            "name": "delta_v_budget",
+            "desc": "Total delta-v that favors high specific impulse when large."
+          },
+          {
+            "name": "thrust_requirements",
+            "desc": "Thrust floor that may rule out low-thrust options."
+          },
+          {
+            "name": "power_available",
+            "desc": "Electrical power the bus can give to electric propulsion."
+          }
+        ],
+        "outputs": [
+          {
+            "name": "technology_selection",
+            "desc": "Chosen propulsion type."
+          },
+          {
+            "name": "isp_thrust_tradeoff",
+            "desc": "Specific-impulse versus thrust and power trade."
+          }
+        ],
+        "process": [
+          "Cold gas gives a specific impulse of 50 to 70 s and is simple and clean, suited to small momentum and proximity tasks.",
+          "Monopropellant hydrazine gives 220 to 235 s with simple feed and fast response, common for stationkeeping and small burns.",
+          "Bipropellant (for example monomethylhydrazine with nitrogen tetroxide) gives 300 to 320 s for larger orbit-insertion burns.",
+          "Hall-effect and gridded-ion electric propulsion give 1500 to 2000 s and 3000 to 4000 s respectively, at milli-newton thrust and kilowatt power, trading time for much less propellant.",
+          "Select by total impulse and schedule: electric propulsion saves large propellant mass when power and transfer time allow, chemical wins when thrust and quick maneuvers dominate."
+        ],
+        "tags": [
+          "aerospace",
+          "spacecraft",
+          "orbital-mechanics",
+          "systems-engineering"
+        ]
+      },
+      {
+        "flow_name": "propellant-mass-and-tank-sizing",
+        "description": "Apply the rocket equation to get propellant mass, then size tanks and the feed system.",
+        "inputs": [
+          {
+            "name": "delta_v_budget",
+            "desc": "Delta-v that sets the required mass ratio."
+          },
+          {
+            "name": "technology_selection",
+            "desc": "Specific impulse and propellant type."
+          },
+          {
+            "name": "spacecraft_mass",
+            "desc": "Dry mass that anchors the mass ratio."
+          }
+        ],
+        "outputs": [
+          {
+            "name": "propellant_mass",
+            "desc": "Usable propellant mass plus residual and margin."
+          },
+          {
+            "name": "tank_sizing",
+            "desc": "Tank volume from propellant density."
+          },
+          {
+            "name": "feed_system",
+            "desc": "Pressurization and propellant-management approach."
+          }
+        ],
+        "process": [
+          "Propellant mass mp = m0 * (1 - exp(-dv / (g0 * Isp))), with g0 = 9.80665 m/s^2 and m0 the wet mass.",
+          "Add residuals and loading margin of about 2 to 5 percent so the tanks are not run dry.",
+          "Size tank volume from density: hydrazine near 1010 kg/m^3, nitrogen tetroxide near 1440 kg/m^3, and xenon stored supercritically near 1500 kg/m^3.",
+          "Choose pressurization: blowdown (simple, pressure falls as propellant is used) or regulated (constant pressure from a separate gas tank) for steady performance.",
+          "Add a propellant-management device (surface-tension vanes or a diaphragm) so the feed stays gas-free in free fall."
+        ],
+        "tags": [
+          "aerospace",
+          "spacecraft",
+          "orbital-mechanics",
+          "systems-engineering"
+        ]
+      },
+      {
+        "flow_name": "thruster-configuration-and-layout",
+        "description": "Lay out thrusters for full control authority, redundancy, and clean plume paths.",
+        "inputs": [
+          {
+            "name": "thrust_requirements",
+            "desc": "Control torques and translation needs."
+          },
+          {
+            "name": "technology_selection",
+            "desc": "Thruster type and count available."
+          },
+          {
+            "name": "spacecraft_geometry",
+            "desc": "Mounting geometry and sensitive surfaces."
+          }
+        ],
+        "outputs": [
+          {
+            "name": "thruster_layout",
+            "desc": "Thruster positions and orientations for six-degree-of-freedom control."
+          },
+          {
+            "name": "redundancy_scheme",
+            "desc": "How the layout tolerates a thruster failure."
+          },
+          {
+            "name": "plume_analysis",
+            "desc": "Plume impingement avoidance on arrays and radiators."
+          }
+        ],
+        "process": [
+          "Place thrusters to give three-axis torque couples and the required translation directions; a couple of opposed thrusters makes pure torque with no net force.",
+          "Cant thrusters so a remaining set still gives full control after one failure, accepting a cosine loss cos(theta) in effective thrust from the cant angle.",
+          "Route plumes clear of solar arrays, radiators, and optics, since impingement adds disturbance torque, heating, and contamination.",
+          "For electric propulsion gimbal the thruster so its line of action passes through the moving center of mass as propellant depletes.",
+          "Set the thruster count from the need to hold three-axis control plus the main delta-v direction with margin and redundancy."
+        ],
+        "tags": [
+          "aerospace",
+          "spacecraft",
+          "orbital-mechanics",
+          "systems-engineering"
+        ]
+      },
+      {
+        "flow_name": "propulsion-sizing-verification",
+        "description": "Verify total impulse, lifetime throughput, margins, and disposal compliance.",
+        "inputs": [
+          {
+            "name": "propellant_mass",
+            "desc": "Loaded propellant to check against total impulse."
+          },
+          {
+            "name": "thruster_layout",
+            "desc": "Firing scheme whose throughput must be qualified."
+          },
+          {
+            "name": "mission_lifetime",
+            "desc": "Duration over which the system must last."
+          }
+        ],
+        "outputs": [
+          {
+            "name": "sizing_verification",
+            "desc": "Confirmation the system meets total impulse with margin."
+          },
+          {
+            "name": "lifetime_margin",
+            "desc": "Throughput and firing-count margin against qualification."
+          },
+          {
+            "name": "disposal_compliance",
+            "desc": "Confirmation the disposal delta-v is included."
+          }
+        ],
+        "process": [
+          "Check the loaded propellant delivers the required total impulse with at least 5 percent margin after residuals.",
+          "Confirm the thrusters are qualified for the required throughput and firing count; electric thrusters have erosion-limited life and chemical thrusters have pulse-count limits.",
+          "Re-run the rocket equation with the latest dry-mass growth, since mass growth raises the propellant needed for the same delta-v.",
+          "Confirm the disposal delta-v (reorbit or deorbit) is inside the budget and not consumed by stationkeeping.",
+          "Record the margins and the qualification basis so the propulsion sizing is traceable through the design reviews."
+        ],
+        "tags": [
+          "aerospace",
+          "spacecraft",
+          "orbital-mechanics",
+          "systems-engineering"
+        ]
+      }
+    ]
+  },
+  {
+    "chain_name": "rendezvous-proximity-operations",
+    "description": "Plan rendezvous and proximity operations from phasing and approach corridors through Clohessy-Wiltshire relative dynamics, maneuver planning, relative navigation, and docking capture.",
+    "domain": "aerospace",
+    "tags": [
+      "aerospace",
+      "spacecraft",
+      "orbital-mechanics",
+      "systems-engineering",
+      "rendezvous",
+      "proximity-operations",
+      "docking"
+    ],
+    "steps": [
+      {
+        "flow_name": "rendezvous-phasing-and-approach-planning",
+        "description": "Plan phasing to the target and define the approach corridor and hold points.",
+        "inputs": [
+          {
+            "name": "chaser_orbit",
+            "desc": "Starting orbit of the active spacecraft."
+          },
+          {
+            "name": "target_orbit",
+            "desc": "Orbit of the target to be approached."
+          },
+          {
+            "name": "rendezvous_constraints",
+            "desc": "Timing, lighting, and safety constraints."
+          }
+        ],
+        "outputs": [
+          {
+            "name": "phasing_plan",
+            "desc": "Sequence of phasing orbits to close the along-track gap."
+          },
+          {
+            "name": "approach_corridor",
+            "desc": "Allowed approach cone and axis."
+          },
+          {
+            "name": "hold_points",
+            "desc": "Stationkeeping points along the approach."
+          }
+        ],
+        "process": [
+          "Close the along-track phase angle with a differential-altitude phasing orbit: a slightly lower orbit has a shorter period and catches up, the rate set by the altitude difference.",
+          "Transfer to an approach ellipse with Hohmann-like burns, then hand over to close-range relative maneuvering.",
+          "Choose the approach axis: along the velocity vector (V-bar) or along the radial from the target (R-bar), each with different natural motion and abort behavior.",
+          "Define an approach corridor cone (for example plus or minus 10 deg) that bounds position error for crew or structure safety.",
+          "Set hold points (for example 1 km, 250 m, and 30 m) where the chaser stationkeeps to check navigation and systems before proceeding."
+        ],
+        "tags": [
+          "aerospace",
+          "spacecraft",
+          "orbital-mechanics",
+          "systems-engineering"
+        ]
+      },
+      {
+        "flow_name": "relative-motion-dynamics-cw",
+        "description": "Model relative motion with the Clohessy-Wiltshire equations and characterize natural drift.",
+        "inputs": [
+          {
+            "name": "phasing_plan",
+            "desc": "Approach stage that sets the relative starting state."
+          },
+          {
+            "name": "target_orbit",
+            "desc": "Target orbit that sets the mean motion."
+          }
+        ],
+        "outputs": [
+          {
+            "name": "relative_dynamics",
+            "desc": "Relative equations of motion in the target frame."
+          },
+          {
+            "name": "cw_solution",
+            "desc": "State-transition solution for relative position and velocity."
+          },
+          {
+            "name": "natural_motion",
+            "desc": "Natural relative orbit and drift behavior."
+          }
+        ],
+        "process": [
+          "Work in the target local-vertical-local-horizontal frame with x radial, y along-track, and z cross-track.",
+          "The Clohessy-Wiltshire equations for close, near-circular relative motion are: x'' - 2n*y' - 3n^2*x = ax; y'' + 2n*x' = ay; z'' + n^2*z = az.",
+          "Mean motion n = sqrt(mu / a^3) from the target semi-major axis a sets the relative-motion frequency.",
+          "With no thrust the in-plane motion is a 2-by-1 ellipse (twice as long along-track as radial) that drifts along-track unless the initial along-track rate is nulled.",
+          "Build the state-transition matrix from these equations to propagate any relative state and to solve targeting burns."
+        ],
+        "tags": [
+          "aerospace",
+          "spacecraft",
+          "orbital-mechanics",
+          "systems-engineering"
+        ]
+      },
+      {
+        "flow_name": "proximity-maneuver-and-burn-planning",
+        "description": "Plan proximity burns with the state-transition matrix and ensure passively safe trajectories.",
+        "inputs": [
+          {
+            "name": "cw_solution",
+            "desc": "State-transition solution for targeting."
+          },
+          {
+            "name": "approach_corridor",
+            "desc": "Corridor the trajectory must stay inside."
+          },
+          {
+            "name": "hold_points",
+            "desc": "Waypoints between which to target."
+          }
+        ],
+        "outputs": [
+          {
+            "name": "maneuver_sequence",
+            "desc": "Ordered burns to move between hold points."
+          },
+          {
+            "name": "delta_v_plan",
+            "desc": "Delta-v for each proximity burn."
+          },
+          {
+            "name": "abort_trajectories",
+            "desc": "Passively safe and abort paths."
+          }
+        ],
+        "process": [
+          "Solve a two-impulse transfer with the state-transition matrix: the first burn is dv1 = (phi_rv inverse) * (target relative position - phi_rr * current position), and the second nulls the arrival velocity.",
+          "For a controlled V-bar approach use a glideslope with a steady closing rate, braking in steps as range decreases.",
+          "Design passively safe trajectories so that if a burn is missed the natural drift carries the chaser clear of the target rather than into it.",
+          "Plan an abort or collision-avoidance maneuver from each hold point that opens range using only a radial or along-track burn.",
+          "Keep each burn inside the approach corridor and sum the delta-v across the sequence for the propellant budget."
+        ],
+        "tags": [
+          "aerospace",
+          "spacecraft",
+          "orbital-mechanics",
+          "systems-engineering"
+        ]
+      },
+      {
+        "flow_name": "relative-navigation-sensors",
+        "description": "Select relative-navigation sensors and plan handover by range.",
+        "inputs": [
+          {
+            "name": "approach_corridor",
+            "desc": "Corridor that sets pointing and field-of-view needs."
+          },
+          {
+            "name": "hold_points",
+            "desc": "Ranges at which sensors hand over."
+          },
+          {
+            "name": "relative_dynamics",
+            "desc": "Relative states the navigation filter estimates."
+          }
+        ],
+        "outputs": [
+          {
+            "name": "navigation_sensors",
+            "desc": "Sensor set across far, mid, and near range."
+          },
+          {
+            "name": "nav_accuracy",
+            "desc": "Relative position and velocity accuracy by phase."
+          },
+          {
+            "name": "sensor_handover",
+            "desc": "Ranges at which the active sensor changes."
+          }
+        ],
+        "process": [
+          "Far range (kilometers): use relative satellite-navigation or radio ranging for meter-level relative position.",
+          "Mid range (hundreds of meters): use radar or a camera tracking the target against the star background for bearing and range.",
+          "Near range (below about 100 m): use lidar or flash lidar with a vision system for centimeter-level relative position and attitude.",
+          "Fuse range and bearing in an extended Kalman filter built on the relative dynamics to estimate position and velocity continuously.",
+          "Define handover ranges where the active sensor changes, and account for lighting constraints that can blind an optical sensor during approach."
+        ],
+        "tags": [
+          "aerospace",
+          "spacecraft",
+          "orbital-mechanics",
+          "systems-engineering"
+        ]
+      },
+      {
+        "flow_name": "docking-capture-mechanism",
+        "description": "Define the capture method, envelope, and contact loads for docking or berthing.",
+        "inputs": [
+          {
+            "name": "maneuver_sequence",
+            "desc": "Final approach that sets the closing conditions."
+          },
+          {
+            "name": "nav_accuracy",
+            "desc": "Alignment accuracy at contact."
+          },
+          {
+            "name": "target_orbit",
+            "desc": "Target that the mechanism must mate with."
+          }
+        ],
+        "outputs": [
+          {
+            "name": "docking_mechanism",
+            "desc": "Docking or berthing mechanism type."
+          },
+          {
+            "name": "capture_envelope",
+            "desc": "Allowed misalignment and closing rate at contact."
+          },
+          {
+            "name": "contact_loads",
+            "desc": "Loads the mechanism and structure must absorb."
+          }
+        ],
+        "process": [
+          "Distinguish docking (the vehicle flies itself into capture at a higher closing rate) from berthing (an arm grapples and places a passive vehicle at a low rate).",
+          "Pick a mechanism type: probe-and-drogue, or an androgynous ring that lets either side be active and supports the common docking interface standard.",
+          "Define the capture envelope: lateral and angular misalignment limits plus a closing rate near 0.05 to 0.1 m/s for a soft capture.",
+          "Absorb contact energy with dampers in the soft-capture ring, then draw the interfaces together and engage structural latches for a hard mate.",
+          "Size the structure for the contact loads from the relative mass and closing rate, and verify the load path through the latches and the pressurized or utility interfaces."
+        ],
+        "tags": [
+          "aerospace",
+          "spacecraft",
+          "orbital-mechanics",
+          "systems-engineering"
+        ]
+      }
+    ]
+  },
+  {
+    "chain_name": "space-environment-effects-analysis",
+    "description": "Analyze space-environment effects on a spacecraft: radiation dose, single-event effects, surface and material degradation, micrometeoroid and debris impact, then mitigation and margins.",
+    "domain": "aerospace",
+    "tags": [
+      "aerospace",
+      "spacecraft",
+      "orbital-mechanics",
+      "systems-engineering",
+      "space-environment",
+      "radiation",
+      "mmod"
+    ],
+    "steps": [
+      {
+        "flow_name": "radiation-environment-and-dose",
+        "description": "Characterize the radiation environment and compute total ionizing dose versus shielding.",
+        "inputs": [
+          {
+            "name": "orbit_parameters",
+            "desc": "Orbit that sets trapped-particle and solar exposure."
+          },
+          {
+            "name": "mission_lifetime",
+            "desc": "Duration over which dose accumulates."
+          },
+          {
+            "name": "shielding_config",
+            "desc": "Spacecraft wall and spot-shield thicknesses."
+          }
+        ],
+        "outputs": [
+          {
+            "name": "radiation_environment",
+            "desc": "Trapped, solar, and cosmic particle environment."
+          },
+          {
+            "name": "total_dose",
+            "desc": "Total ionizing dose behind the shielding."
+          },
+          {
+            "name": "dose_depth_curve",
+            "desc": "Dose as a function of aluminum shield thickness."
+          }
+        ],
+        "process": [
+          "Characterize trapped protons and electrons from the belt models, solar energetic-particle events, and the galactic-cosmic-ray background for the orbit.",
+          "Build the dose-depth curve: total ionizing dose in krad(Si) as a function of aluminum thickness, which falls steeply then flattens.",
+          "Typical levels: low orbit a few krad per year, geostationary tens of krad behind a few mm of aluminum over several years, and the medium navigation orbit is harsher from the belts.",
+          "Note diminishing returns in shielding: beyond a few mm of aluminum, electron bremsstrahlung and energetic protons limit the benefit of added mass.",
+          "Derate electronic parts to the dose at their location, using the dose-depth curve plus any local spot shielding."
+        ],
+        "tags": [
+          "aerospace",
+          "spacecraft",
+          "orbital-mechanics",
+          "systems-engineering"
+        ]
+      },
+      {
+        "flow_name": "single-event-effects-analysis",
+        "description": "Analyze single-event effects from the particle spectrum and device cross-sections.",
+        "inputs": [
+          {
+            "name": "radiation_environment",
+            "desc": "Heavy-ion and proton spectrum driving single events."
+          },
+          {
+            "name": "parts_list",
+            "desc": "Devices with their single-event sensitivity data."
+          }
+        ],
+        "outputs": [
+          {
+            "name": "see_rate",
+            "desc": "Predicted single-event upset and latch-up rates."
+          },
+          {
+            "name": "sensitive_parts",
+            "desc": "Parts with destructive or high-rate susceptibility."
+          },
+          {
+            "name": "mitigation_needs",
+            "desc": "Where error correction or protection is required."
+          }
+        ],
+        "process": [
+          "Build the linear-energy-transfer spectrum from galactic cosmic rays, heavy ions, and protons for the orbit and solar condition.",
+          "Characterize each device by its cross-section versus linear-energy-transfer curve and its threshold, typically fit as a Weibull curve.",
+          "Estimate the upset rate as the integral of cross-section over the particle flux above threshold, following a standard rate-prediction method.",
+          "Flag destructive effects: single-event latch-up and gate rupture must be prevented, not merely corrected, through part selection or current limiting.",
+          "Set mitigation: error detection and correction on memory, triple-redundancy or voting on critical logic, watchdog timers, and latch-up current protection."
+        ],
+        "tags": [
+          "aerospace",
+          "spacecraft",
+          "orbital-mechanics",
+          "systems-engineering"
+        ]
+      },
+      {
+        "flow_name": "surface-and-material-effects",
+        "description": "Assess atomic-oxygen erosion, ultraviolet darkening, contamination, and charging on surfaces.",
+        "inputs": [
+          {
+            "name": "orbit_parameters",
+            "desc": "Orbit that sets atomic-oxygen flux and charging environment."
+          },
+          {
+            "name": "spacecraft_geometry",
+            "desc": "Exposed surfaces and their materials."
+          },
+          {
+            "name": "mission_lifetime",
+            "desc": "Exposure duration for cumulative effects."
+          }
+        ],
+        "outputs": [
+          {
+            "name": "ao_erosion",
+            "desc": "Atomic-oxygen recession depth on exposed materials."
+          },
+          {
+            "name": "surface_degradation",
+            "desc": "Change in optical properties from ultraviolet and contamination."
+          },
+          {
+            "name": "charging_assessment",
+            "desc": "Surface and internal charging risk and control."
+          }
+        ],
+        "process": [
+          "Estimate the atomic-oxygen fluence in low orbit, on the order of 1e20 to 1e22 atoms/cm^2 over a mission depending on altitude and solar activity.",
+          "Compute recession depth as fluence times the material erosion yield; polyimide film erodes near 3e-24 cm^3/atom, so unprotected film thins measurably.",
+          "Protect exposed polymers with coatings such as silicon dioxide or germanium, since atomic oxygen attacks hydrocarbons but not these oxides.",
+          "Account for ultraviolet darkening and molecular contamination that raise solar absorptance over time and must be carried in the thermal hot case.",
+          "Assess surface charging (geostationary substorms) and internal charging from energetic electrons; add conductive, grounded surfaces to prevent electrostatic discharge."
+        ],
+        "tags": [
+          "aerospace",
+          "spacecraft",
+          "orbital-mechanics",
+          "systems-engineering"
+        ]
+      },
+      {
+        "flow_name": "mmod-impact-risk",
+        "description": "Estimate micrometeoroid and orbital-debris flux and the probability of no penetration.",
+        "inputs": [
+          {
+            "name": "orbit_parameters",
+            "desc": "Orbit that sets the debris and meteoroid flux."
+          },
+          {
+            "name": "spacecraft_geometry",
+            "desc": "Exposed area and critical-component locations."
+          },
+          {
+            "name": "mission_lifetime",
+            "desc": "Duration over which impact risk accrues."
+          }
+        ],
+        "outputs": [
+          {
+            "name": "mmod_flux",
+            "desc": "Micrometeoroid and debris flux versus particle size."
+          },
+          {
+            "name": "penetration_probability",
+            "desc": "Probability of no penetration for critical items."
+          },
+          {
+            "name": "shielding_recommendation",
+            "desc": "Bumper and standoff recommendation."
+          }
+        ],
+        "process": [
+          "Take the meteoroid flux from a meteoroid environment model and the debris flux from a debris model, each giving flux versus particle size and direction.",
+          "Compute the probability of no penetration PNP = exp(-flux * exposed area * time) for the critical items, and set a target such as 0.95.",
+          "Apply ballistic-limit equations to find the particle size that defeats a given wall at hypervelocity (typical impact speeds 7 to 15 km/s).",
+          "Recommend a Whipple shield where needed: a thin bumper at a standoff shatters and spreads a particle so the rear wall survives, defeating far larger particles than a single wall.",
+          "Concentrate protection on critical components (pressure vessels, propellant tanks, crew volume) to meet the penetration target at acceptable mass."
+        ],
+        "tags": [
+          "aerospace",
+          "spacecraft",
+          "orbital-mechanics",
+          "systems-engineering"
+        ]
+      },
+      {
+        "flow_name": "environment-mitigation-and-margins",
+        "description": "Set part derating, shielding, contamination control, and verification against margins.",
+        "inputs": [
+          {
+            "name": "total_dose",
+            "desc": "Dose that drives radiation design margin."
+          },
+          {
+            "name": "see_rate",
+            "desc": "Single-event rate that drives mitigation."
+          },
+          {
+            "name": "ao_erosion",
+            "desc": "Erosion that drives coatings and material choices."
+          },
+          {
+            "name": "penetration_probability",
+            "desc": "Impact risk that drives shielding mass."
+          }
+        ],
+        "outputs": [
+          {
+            "name": "mitigation_plan",
+            "desc": "Combined environment-mitigation approach."
+          },
+          {
+            "name": "margin_assessment",
+            "desc": "Margins against dose, single-event, erosion, and impact."
+          },
+          {
+            "name": "contamination_control",
+            "desc": "Outgassing limits and cleanliness plan."
+          }
+        ],
+        "process": [
+          "Apply a radiation design margin of at least 2 on dose: select parts rated above twice the predicted dose, or add spot shielding where parts fall short.",
+          "Trade shielding mass against dose with the dose-depth curve, using local spot shields on sensitive parts rather than thickening the whole structure.",
+          "Select low-outgassing materials to the standard screening limits (total mass loss below 1 percent and collected volatile condensable material below 0.1 percent) to protect optics and radiators.",
+          "Bake out contamination-sensitive hardware before flight and control cleanliness during integration.",
+          "Verify by analysis plus test: total-dose testing, heavy-ion and proton single-event beam tests, and material exposure data, and record all margins for review."
+        ],
+        "tags": [
+          "aerospace",
+          "spacecraft",
+          "orbital-mechanics",
+          "systems-engineering"
+        ]
+      }
+    ]
+  }
+]

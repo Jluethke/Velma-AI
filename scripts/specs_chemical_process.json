@@ -1,0 +1,847 @@
+[
+  {
+    "chain_name": "chemical-reactor-design",
+    "description": "Design a chemical reactor from reaction kinetics through type selection, sizing, heat management, and stability analysis. Covers CSTR, PFR, batch, and fluidized bed with catalyst bed design and runaway criteria.",
+    "domain": "chemical-engineering",
+    "tags": ["chemical-engineering", "reactor-design", "kinetics", "process-design"],
+    "steps": [
+      {
+        "flow_name": "reaction-kinetics-characterization",
+        "description": "Determine the rate law and kinetic parameters for the target reaction from experimental data.",
+        "inputs": [
+          {"name": "reaction-system", "desc": "Reactants, products, stoichiometry, and known side reactions"},
+          {"name": "experimental-data", "desc": "Concentration vs time data from batch or differential reactor experiments"}
+        ],
+        "outputs": [
+          {"name": "rate-law", "desc": "Rate expression with reaction orders and rate constant"},
+          {"name": "arrhenius-parameters", "desc": "Pre-exponential factor A and activation energy Ea from ln(k) vs 1/T plot"},
+          {"name": "selectivity-map", "desc": "Selectivity to desired product as function of conversion, temperature, and concentration"}
+        ],
+        "process": [
+          "Plot concentration vs time for batch data. For integral analysis, guess a rate law form, integrate, and linearize to test fit. For differential analysis, compute -dC/dt numerically and plot log(rate) vs log(C) to extract reaction order.",
+          "Repeat at multiple temperatures. Plot ln(k) vs 1/T (Arrhenius plot). Slope gives -Ea/R, intercept gives ln(A). Check linearity; curvature suggests a change in mechanism or competing reactions.",
+          "For complex kinetics (consecutive, parallel), fit rate expressions to the full dataset using nonlinear regression. Use Akaike Information Criterion to compare rival models with different numbers of parameters.",
+          "Map selectivity: for parallel reactions A to P (desired) and A to Q (waste), compute the ratio of rates as a function of concentration and temperature. Identify whether high or low concentration and temperature favor the desired product.",
+          "Document the valid range of the kinetic model: temperature, concentration, and conversion limits beyond which extrapolation is not supported."
+        ],
+        "tags": ["kinetics", "rate-law", "arrhenius"]
+      },
+      {
+        "flow_name": "reactor-type-selection",
+        "description": "Select the reactor type (CSTR, PFR, batch, fluidized bed) based on kinetics, selectivity, and heat transfer requirements.",
+        "inputs": [
+          {"name": "rate-law", "desc": "Reaction rate expression"},
+          {"name": "selectivity-map", "desc": "How selectivity varies with concentration and temperature"},
+          {"name": "production-requirements", "desc": "Production rate, desired conversion, and product purity target"}
+        ],
+        "outputs": [
+          {"name": "reactor-type", "desc": "Selected reactor type with justification"},
+          {"name": "staging-configuration", "desc": "Number of reactors, series vs parallel, intermediate cooling or feeds"},
+          {"name": "volume-comparison", "desc": "Levenspiel plot comparison of CSTR vs PFR volume for the target conversion"}
+        ],
+        "process": [
+          "Construct the Levenspiel plot: plot 1/(-rA) vs conversion XA. The area under the curve gives PFR volume; the rectangle gives CSTR volume. For positive-order kinetics, PFR always requires less volume than a single CSTR.",
+          "For selectivity: if the desired reaction has a higher order than the side reaction, high concentration favors selectivity, so use PFR or batch. If the desired reaction has a lower order, use CSTR (backmixed, low concentration).",
+          "For highly exothermic reactions, evaluate heat removal capacity. CSTR has better mixing and heat transfer area per unit volume. PFR with interstage cooling is an alternative. Fluidized bed provides excellent heat transfer for gas-phase catalytic reactions.",
+          "For very slow reactions or small-scale production, batch reactors allow long residence time without large continuous equipment. Semi-batch allows controlled addition for exothermic or selectivity-sensitive reactions.",
+          "Consider multiple CSTRs in series as a practical compromise: each CSTR approaches PFR performance as the number of stages increases, with the heat transfer and mixing advantages of stirred tanks."
+        ],
+        "tags": ["reactor-selection", "levenspiel"]
+      },
+      {
+        "flow_name": "reactor-sizing-calculation",
+        "description": "Size the reactor from the design equation using residence time and conversion targets.",
+        "inputs": [
+          {"name": "reactor-type", "desc": "Selected reactor type"},
+          {"name": "rate-law", "desc": "Reaction rate expression with kinetic parameters"},
+          {"name": "production-requirements", "desc": "Feed flow rate, target conversion, operating temperature and pressure"}
+        ],
+        "outputs": [
+          {"name": "reactor-volume", "desc": "Required reactor volume with design margin"},
+          {"name": "residence-time", "desc": "Mean residence time at operating conditions"},
+          {"name": "reactor-dimensions", "desc": "Diameter, length or height, and aspect ratio based on type-specific heuristics"}
+        ],
+        "process": [
+          "For PFR: integrate the design equation V = F_A0 * integral(dX/(-rA)) from 0 to target conversion. Use numerical integration (Simpson's rule or adaptive quadrature) when the rate expression does not have a closed-form integral.",
+          "For CSTR: solve the algebraic design equation V = F_A0 * X / (-rA_exit). For nonlinear rate expressions, this requires iteration because exit concentration depends on conversion which depends on volume.",
+          "For batch: solve t_batch = N_A0 * integral(dX/(-rA*V)) + t_downtime. The total cycle time determines the number of batch reactors needed to meet continuous production targets.",
+          "Apply a design factor of 1.1 to 1.2 on volume to account for non-ideal mixing, catalyst aging, and feed composition variability. For catalytic reactors, size for end-of-run catalyst activity, not fresh catalyst.",
+          "Set dimensions from type-specific heuristics: for tubular PFR, L/D ratios of 10 to 100 depending on heat transfer needs. For CSTR, H/D ratio of 1.0 to 1.5 with standard dish heads. Check that residence time distribution is acceptable."
+        ],
+        "tags": ["reactor-sizing", "design-equation"]
+      },
+      {
+        "flow_name": "reactor-heat-management-design",
+        "description": "Design the heat management system for the reactor to maintain target temperature and prevent runaway.",
+        "inputs": [
+          {"name": "reactor-volume", "desc": "Reactor volume and dimensions"},
+          {"name": "reactor-type", "desc": "Selected reactor type"},
+          {"name": "rate-law", "desc": "Rate expression including temperature dependence"},
+          {"name": "arrhenius-parameters", "desc": "Activation energy and pre-exponential factor"}
+        ],
+        "outputs": [
+          {"name": "heat-duty", "desc": "Heat generation rate and required heat removal rate at design conditions"},
+          {"name": "cooling-system-design", "desc": "Cooling jacket, internal coils, or external heat exchanger specification"},
+          {"name": "stability-assessment", "desc": "Parametric sensitivity and runaway margin analysis"}
+        ],
+        "process": [
+          "Calculate adiabatic temperature rise: delta_T_ad = (-delta_H_rxn * C_A0 * X) / (rho * Cp). This is the temperature increase if no heat is removed. Values above 50 to 100 K warrant careful thermal design.",
+          "For CSTR: construct the heat generation curve (S-shaped, from Arrhenius) and heat removal line (linear, from coolant and UA). Stable operation requires the removal line to intersect the generation curve with a steeper slope. Multiple intersections mean multiple steady states; identify the desired one and check that startup trajectory reaches it.",
+          "For PFR: solve the coupled mass and energy balances along the reactor length. For exothermic reactions, a hot spot forms; its magnitude depends on activation energy, feed temperature, and wall cooling. Use the Barkelew criterion or Morbidelli-Varma criterion to check parametric sensitivity near runaway.",
+          "Size the heat transfer area: Q = U * A * delta_T_lm. For jacketed reactors, U is typically 150 to 500 W/m2K depending on fluids and wall. For internal coils, higher area per volume but reduced mixing. External heat exchanger loop allows independent sizing but adds pumping and holdup.",
+          "Design safety interlocks: high-temperature alarm, coolant flow loss detection, emergency quench or dump. For batch reactors, calculate the time from coolant loss to runaway onset (thermal inertia) to determine the required response time for safety systems."
+        ],
+        "tags": ["heat-transfer", "thermal-runaway", "reactor-safety"]
+      },
+      {
+        "flow_name": "catalyst-bed-design",
+        "description": "Design the catalyst bed for a fixed-bed or fluidized-bed reactor including pellet sizing, bed geometry, pressure drop, and mass transfer analysis.",
+        "inputs": [
+          {"name": "reactor-volume", "desc": "Required catalyst volume"},
+          {"name": "reactor-dimensions", "desc": "Reactor diameter and length"},
+          {"name": "rate-law", "desc": "Intrinsic kinetics on catalyst surface"}
+        ],
+        "outputs": [
+          {"name": "catalyst-specification", "desc": "Pellet size, shape, loading, and bed voidage"},
+          {"name": "pressure-drop", "desc": "Pressure drop across the bed from Ergun equation"},
+          {"name": "effectiveness-factor", "desc": "Internal and external mass transfer limitations quantified via Thiele modulus and effectiveness factor"}
+        ],
+        "process": [
+          "Select pellet size and shape. Smaller pellets reduce internal mass transfer resistance (shorter diffusion path) but increase pressure drop. Typical trade-off: 1 to 5 mm for fixed beds. Shaped pellets (rings, trilobe) reduce pressure drop at equivalent external area.",
+          "Calculate pressure drop with the Ergun equation: dP/dz = (150*mu*u*(1-eps)^2)/(dp^2*eps^3) + (1.75*rho*u^2*(1-eps))/(dp*eps^3). Pressure drop must be acceptable relative to operating pressure (typically less than 10% for gas-phase).",
+          "Evaluate internal mass transfer: calculate the Thiele modulus phi = (R/3) * sqrt(k_v / D_eff) for a first-order reaction. The effectiveness factor eta = (1/phi) * (1/tanh(3*phi) - 1/(3*phi)). If eta is less than 0.9, internal diffusion limits the observed rate; use smaller pellets or increase porosity.",
+          "Evaluate external mass transfer: calculate the mass transfer coefficient k_c from the Ranz-Marshall or Thoenes-Kramers correlation. The external effectiveness factor is 1/(1 + k_v*R/(3*k_c*a_p)). If external resistance matters, increase linear velocity or decrease pellet size.",
+          "For fluidized beds: calculate minimum fluidization velocity from the Wen-Yu or Ergun equation at incipient fluidization. Size the distributor plate for uniform gas distribution (minimum 30% of bed pressure drop). Account for bubble bypass in the reaction model using the Kunii-Levenspiel two-phase model."
+        ],
+        "tags": ["catalyst", "fixed-bed", "mass-transfer", "pressure-drop"]
+      }
+    ]
+  },
+  {
+    "chain_name": "distillation-column-design",
+    "description": "Design a distillation column from VLE data through stage count, internals selection, hydraulic design, and energy optimization.",
+    "domain": "chemical-engineering",
+    "tags": ["chemical-engineering", "distillation", "separation", "process-design"],
+    "steps": [
+      {
+        "flow_name": "vle-data-analysis",
+        "description": "Analyze vapor-liquid equilibrium data and select the thermodynamic model for the separation system.",
+        "inputs": [
+          {"name": "component-list", "desc": "Components to separate with boiling points and molecular structures"},
+          {"name": "operating-pressure", "desc": "Column operating pressure or pressure range to evaluate"}
+        ],
+        "outputs": [
+          {"name": "thermodynamic-model", "desc": "Selected VLE model with fitted parameters"},
+          {"name": "relative-volatility", "desc": "Relative volatility as function of composition and pressure"},
+          {"name": "azeotrope-identification", "desc": "Any azeotropes present with composition and temperature"}
+        ],
+        "process": [
+          "Classify the system: ideal (Raoult's law applies), moderately non-ideal (activity coefficient model needed), strongly non-ideal (association, electrolyte). Check for azeotropes by examining if relative volatility crosses unity.",
+          "Select thermodynamic model: NRTL for liquid-liquid and highly non-ideal systems, UNIQUAC for size-different molecules, Wilson for fully miscible systems, SRK or PR equation of state for hydrocarbon and high-pressure systems. Fit binary interaction parameters to experimental VLE data.",
+          "Validate the model against experimental data: plot x-y diagram, compare bubble and dew point temperatures, check activity coefficients at infinite dilution. Mean absolute deviation in temperature should be less than 1 K and in vapor composition less than 0.01 mole fraction.",
+          "Calculate relative volatility alpha = (y_A/x_A) / (y_B/x_B) across the composition range. Note where alpha is lowest (pinch region) as this determines the difficulty of the separation. Alpha less than 1.1 makes distillation impractical; consider alternative separation.",
+          "If azeotropes exist, map the composition space using residue curve maps or distillation boundary analysis. Identify feasible separation sequences and whether pressure-swing, extractive, or azeotropic distillation is needed."
+        ],
+        "tags": ["vle", "thermodynamics", "phase-equilibrium"]
+      },
+      {
+        "flow_name": "stage-count-and-reflux",
+        "description": "Determine the number of theoretical stages, minimum and operating reflux ratio, and feed stage location.",
+        "inputs": [
+          {"name": "thermodynamic-model", "desc": "VLE model with parameters"},
+          {"name": "relative-volatility", "desc": "Relative volatility vs composition"},
+          {"name": "separation-specification", "desc": "Feed composition, distillate and bottoms purity targets, feed rate"}
+        ],
+        "outputs": [
+          {"name": "minimum-stages", "desc": "Minimum stages at total reflux from Fenske equation"},
+          {"name": "minimum-reflux", "desc": "Minimum reflux ratio from Underwood equations"},
+          {"name": "design-stages", "desc": "Number of theoretical stages at operating reflux from Gilliland correlation"},
+          {"name": "feed-stage", "desc": "Optimal feed stage location from Kirkbride equation"}
+        ],
+        "process": [
+          "Calculate minimum stages at total reflux using the Fenske equation: N_min = ln[(x_D/(1-x_D)) * ((1-x_B)/x_B)] / ln(alpha_avg). Use geometric mean alpha across the column for alpha_avg.",
+          "Calculate minimum reflux from the Underwood equations: for each root theta between the relative volatilities, solve sum(alpha_i * z_i / (alpha_i - theta)) = 1-q. Then R_min = sum(alpha_i * x_Di / (alpha_i - theta)) - 1.",
+          "Set operating reflux at 1.1 to 1.5 times minimum reflux. Higher ratios reduce stages but increase energy cost. Use the Gilliland correlation to estimate actual stages: plot (N-N_min)/(N+1) vs (R-R_min)/(R+1) and read off the design point.",
+          "Locate the feed stage using the Kirkbride equation: log(N_R/N_S) = 0.206 * log[(B/D) * (x_F_B/x_F_A)^2 * (x_B_A/x_D_B)^2] where N_R is rectifying stages and N_S is stripping stages.",
+          "For multicomponent systems, use rigorous simulation (MESH equations solved by inside-out or Newton method) to validate the shortcut results. Adjust stages and reflux if the shortcut estimate deviates by more than 10%."
+        ],
+        "tags": ["distillation-design", "stage-count", "reflux"]
+      },
+      {
+        "flow_name": "column-internals-selection",
+        "description": "Select column internals (trays or packing) and size the column diameter.",
+        "inputs": [
+          {"name": "design-stages", "desc": "Number of theoretical stages"},
+          {"name": "separation-specification", "desc": "Flow rates, pressure, and property data for liquid and vapor"},
+          {"name": "thermodynamic-model", "desc": "Property model for density, viscosity, surface tension calculations"}
+        ],
+        "outputs": [
+          {"name": "internals-type", "desc": "Tray type or packing type selected with justification"},
+          {"name": "column-diameter", "desc": "Column diameter from flooding analysis"},
+          {"name": "actual-stages", "desc": "Actual stages after applying tray efficiency or HETP"}
+        ],
+        "process": [
+          "Choose trays vs packing: trays are preferred for large diameters (above 1 m), high liquid rates, fouling service, and when intermediate draws are needed. Packing is preferred for small diameters, low pressure drop requirement, corrosive service, and vacuum operation.",
+          "For trays: select type. Sieve trays are cheapest but have narrow operating range. Valve trays give wider turndown (3:1 to 5:1). Bubble cap trays handle very low liquid rates but are expensive and high pressure drop.",
+          "Size the column diameter from flooding velocity. Calculate the Souders-Brown coefficient C_sb from the Fair correlation. V_flood = C_sb * sqrt((rho_L - rho_V)/rho_V). Set design velocity at 80% of flooding. Diameter = sqrt(4*V_dot / (pi * V_design)).",
+          "For trays, apply the O'Connell correlation for efficiency: E_o = 0.492 * (alpha * mu_L)^(-0.245). Actual stages = theoretical stages / E_o. Typical Murphree tray efficiencies range from 40% to 90%.",
+          "For packing, determine HETP from vendor data or the Onda correlation. HETP typically 0.3 to 0.8 m for structured packing, 0.5 to 1.5 m for random packing. Packed height = HETP * number of theoretical stages. Check operating range against minimum wetting rate."
+        ],
+        "tags": ["column-internals", "trays", "packing"]
+      },
+      {
+        "flow_name": "column-hydraulic-design",
+        "description": "Perform detailed hydraulic design for the column including tray layout, downcomer sizing, and pressure drop verification.",
+        "inputs": [
+          {"name": "column-diameter", "desc": "Column diameter from flooding analysis"},
+          {"name": "internals-type", "desc": "Selected tray or packing type"},
+          {"name": "actual-stages", "desc": "Number of actual stages or packed sections"}
+        ],
+        "outputs": [
+          {"name": "tray-layout", "desc": "Tray spacing, hole area, downcomer area, weir height and length"},
+          {"name": "pressure-drop-profile", "desc": "Pressure drop per stage and total column pressure drop"},
+          {"name": "hydraulic-operating-range", "desc": "Operating diagram showing flooding, weeping, entrainment, and downcomer backup limits"}
+        ],
+        "process": [
+          "Set tray spacing: 450 to 600 mm is standard. Closer spacing reduces column height but increases entrainment. Check that downcomer residence time exceeds 3 to 5 seconds for froth disengagement.",
+          "Size downcomer area: minimum 10% of column cross-section for moderate liquid loads. Calculate downcomer backup: h_dc = h_t + h_w + h_ow + h_hg + h_da. Backup must not exceed 50% of tray spacing to prevent flooding.",
+          "For sieve trays: set hole diameter (5 to 12 mm), hole area (5% to 15% of active area), weir height (25 to 75 mm). Calculate dry tray pressure drop h_d = 0.186*(V_h/C_o)^2 * (rho_V/rho_L). Calculate wet tray drop by adding weir crest and residual head.",
+          "Check weeping: the minimum vapor velocity through holes must exceed the weeping velocity. Plot operating range on a hydraulic diagram with flooding as upper limit and weeping as lower limit. The turndown ratio is the ratio of max to min vapor flow within the operating envelope.",
+          "For packed columns: calculate pressure drop from the Robbins or Kister-Gill correlation. Check for flooding (typically the pressure drop at which liquid holdup increases sharply, around 2 to 3 inches H2O per foot of packing). Verify adequate liquid distribution (minimum 4 to 12 irrigation points per square foot)."
+        ],
+        "tags": ["hydraulics", "tray-design", "pressure-drop"]
+      },
+      {
+        "flow_name": "distillation-energy-optimization",
+        "description": "Optimize the energy consumption of the distillation system through heat integration, advanced configurations, and control strategy.",
+        "inputs": [
+          {"name": "column-diameter", "desc": "Column dimensions and configuration"},
+          {"name": "design-stages", "desc": "Stage count and reflux ratio"},
+          {"name": "separation-specification", "desc": "Feed conditions and product specifications"}
+        ],
+        "outputs": [
+          {"name": "energy-optimization-plan", "desc": "Selected energy reduction measures with expected savings"},
+          {"name": "reboiler-condenser-design", "desc": "Reboiler and condenser type, heat duty, and heat transfer area"},
+          {"name": "control-strategy", "desc": "Control configuration for the optimized column"}
+        ],
+        "process": [
+          "Calculate baseline energy: reboiler duty Q_R = V * H_vap where V is boil-up rate from reflux ratio and feed rate. Condenser duty Q_C = Q_R + Q_feed - Q_products (energy balance). Benchmark against the minimum energy from the reversible separation work.",
+          "Evaluate feed preheating: heating the feed to its bubble point reduces reboiler duty by approximately C_p * delta_T * F. Subcooled feed wastes reboiler energy on sensible heating. Use available waste heat streams for feed preheat.",
+          "Consider a dividing wall column (DWC) for ternary separations: combines two columns into one shell, saving 20% to 30% capital and energy. Feasible when the intermediate component distributes between top and bottom; check with the minimum vapor flow criterion.",
+          "Evaluate heat pump distillation: mechanical vapor recompression (MVR) when the top-bottom temperature difference is less than 20 to 30 K. COP of 5 to 10 is typical. Particularly attractive for close-boiling separations at moderate scale.",
+          "Design the control strategy: for two-product column, use LV configuration (reflux and boilup as manipulated variables) with composition control on both ends. For energy-sensitive operation, use reflux-to-feed ratio with temperature inferential control. Tune for disturbance rejection of feed composition and rate changes."
+        ],
+        "tags": ["energy-optimization", "heat-integration", "distillation-control"]
+      }
+    ]
+  },
+  {
+    "chain_name": "heat-exchanger-design-methodology",
+    "description": "Design a heat exchanger from thermal requirements through detailed mechanical design, covering shell-and-tube, plate, and compact types.",
+    "domain": "chemical-engineering",
+    "tags": ["chemical-engineering", "heat-transfer", "process-design"],
+    "steps": [
+      {
+        "flow_name": "heat-exchanger-thermal-design",
+        "description": "Perform the thermal design of a heat exchanger from duty specification through UA determination.",
+        "inputs": [
+          {"name": "process-conditions", "desc": "Hot and cold stream temperatures, flow rates, and fluid properties"},
+          {"name": "heat-duty", "desc": "Required heat transfer rate in kW"}
+        ],
+        "outputs": [
+          {"name": "lmtd-and-correction", "desc": "Log mean temperature difference and F factor for selected configuration"},
+          {"name": "overall-htc", "desc": "Estimated overall heat transfer coefficient from individual film coefficients"},
+          {"name": "required-area", "desc": "Required heat transfer area with fouling allowance"}
+        ],
+        "process": [
+          "Calculate LMTD for counterflow arrangement: delta_T_lm = (delta_T1 - delta_T2) / ln(delta_T1/delta_T2). For multipass, apply the correction factor F from P-NTU charts. F must exceed 0.75; below this, the temperature cross is too severe for the selected configuration.",
+          "Estimate tube-side heat transfer coefficient from Dittus-Boelter (turbulent) or Sieder-Tate (laminar with viscosity correction). For shell-side, use the Bell-Delaware method which accounts for baffle geometry, leakage, and bypass streams.",
+          "Calculate the overall coefficient: 1/U = 1/h_o + R_fo + (d_o * ln(d_o/d_i))/(2*k_w) + R_fi*(d_o/d_i) + (d_o/d_i)/h_i. Include fouling resistances from TEMA tables by service type. Typical fouling: 0.00017 to 0.00035 m2K/W for clean fluids, up to 0.001 for dirty.",
+          "Calculate required area: A = Q / (U * F * delta_T_lm). Add 10% to 20% overdesign margin. Check that the assumed U is consistent with the calculated U; iterate if they differ by more than 10%.",
+          "Verify with the effectiveness-NTU method as a crosscheck: calculate NTU = UA/(C_min), effectiveness = Q/(C_min * (T_h_in - T_c_in)). Plot on the appropriate effectiveness chart for the configuration."
+        ],
+        "tags": ["thermal-design", "lmtd", "heat-transfer-coefficient"]
+      },
+      {
+        "flow_name": "heat-exchanger-mechanical-design",
+        "description": "Perform mechanical design of the heat exchanger including TEMA type selection, tube sheet, and pressure rating.",
+        "inputs": [
+          {"name": "required-area", "desc": "Heat transfer area with overdesign"},
+          {"name": "process-conditions", "desc": "Pressures, temperatures, and fluid properties"},
+          {"name": "overall-htc", "desc": "Design heat transfer coefficient"}
+        ],
+        "outputs": [
+          {"name": "tema-type", "desc": "TEMA type designation and justification"},
+          {"name": "tube-bundle-geometry", "desc": "Tube OD, wall thickness, length, pitch, layout, number of tubes"},
+          {"name": "shell-specification", "desc": "Shell diameter, wall thickness, nozzle sizes, baffle details"}
+        ],
+        "process": [
+          "Select TEMA type: BEM (fixed tubesheet, cheapest, no thermal expansion allowance), AES (floating head, allows differential thermal expansion, tube bundle removable), AEU (U-tube, allows expansion, lower cost than floating head but cannot clean inside of U-bends). Choose based on temperature difference, cleaning needs, and cost.",
+          "Set tube geometry: standard tube OD (19.05 or 25.4 mm), wall thickness from pressure rating per ASME B31.3, tube pitch (1.25 to 1.5 times OD), layout angle (30 degree triangular for highest density, 90 degree square for mechanical cleaning). Calculate number of tubes from area and tube length (standard: 3, 4.9, or 6.1 m).",
+          "Size the shell: estimate shell ID from tube count using the CTP (count prediction) method or tube count tables. Calculate shell-side flow area and verify that shell-side velocity is 0.3 to 1.0 m/s for liquids. Size nozzles for velocity not exceeding 3 to 4 m/s for liquids.",
+          "Design baffles: single segmental for standard, double segmental for low pressure drop, helical for low vibration. Baffle spacing: minimum 0.2 times shell ID, maximum 1.0 times shell ID. Baffle cut: 25% of shell ID is standard. Check for tube vibration using the Connors criterion for critical velocity.",
+          "Calculate tube sheet thickness per ASME VIII Division 1. Check for tube-to-tubesheet joint integrity (strength weld vs seal weld). Design for the most severe combination of shell and tube side pressures including startup and shutdown conditions."
+        ],
+        "tags": ["mechanical-design", "tema", "asme"]
+      },
+      {
+        "flow_name": "heat-exchanger-optimization",
+        "description": "Optimize the heat exchanger design for cost, performance, and operability.",
+        "inputs": [
+          {"name": "tema-type", "desc": "Selected TEMA type"},
+          {"name": "tube-bundle-geometry", "desc": "Tube layout and dimensions"},
+          {"name": "shell-specification", "desc": "Shell geometry and baffle arrangement"}
+        ],
+        "outputs": [
+          {"name": "optimized-design", "desc": "Final heat exchanger specification with cost estimate"},
+          {"name": "pressure-drop-verification", "desc": "Tube-side and shell-side pressure drops within allowable limits"},
+          {"name": "operating-guidance", "desc": "Commissioning checks, fouling monitoring, and cleaning schedule"}
+        ],
+        "process": [
+          "Check pressure drop: tube-side from Fanning friction factor (including entrance, exit, and return losses for multipass), shell-side from Bell-Delaware or Kern method. Both must be within allowable (typically 0.5 to 1.0 bar for liquids, 0.05 to 0.1 bar for gases). If pressure drop is too high, increase flow area; if too low, the exchanger may be oversized.",
+          "Optimize tube passes: more passes increase tube-side velocity and heat transfer coefficient but also pressure drop. Target tube-side velocity of 1 to 2.5 m/s for liquids. Two passes is common; four passes for low flow rates.",
+          "Evaluate compact alternatives: plate heat exchangers offer 3 to 5 times higher U values in 20% of the footprint, suitable for clean fluids up to ~25 bar and ~150 C. Printed circuit heat exchangers handle higher pressures. Spiral for fouling and slurry service.",
+          "Estimate cost using a correlation based on area and pressure rating. Shell-and-tube cost scales approximately as C = a * A^0.65 (economies of scale). Compare total cost of ownership: capital + energy (pumping) + maintenance (cleaning frequency) over 10-year life.",
+          "Define the operating envelope: minimum and maximum flow rates, fouling trend monitoring (rising pressure drop or falling outlet temperature), cleaning triggers, and tube plugging strategy (up to 10% of tubes can be plugged before redesign is needed)."
+        ],
+        "tags": ["optimization", "pressure-drop", "cost-analysis"]
+      }
+    ]
+  },
+  {
+    "chain_name": "process-safety-engineering",
+    "description": "Engineer the process safety system from hazard identification through LOPA, SIS design, and relief system sizing.",
+    "domain": "chemical-engineering",
+    "tags": ["chemical-engineering", "process-safety", "hazop", "sis"],
+    "steps": [
+      {
+        "flow_name": "hazard-identification-hazop",
+        "description": "Conduct a HAZOP study to systematically identify hazards in the process.",
+        "inputs": [
+          {"name": "process-pid", "desc": "Process and instrumentation diagrams for the system under study"},
+          {"name": "design-intent", "desc": "Design intent for each node including normal operating parameters"}
+        ],
+        "outputs": [
+          {"name": "hazop-worksheets", "desc": "Completed HAZOP worksheets with deviations, causes, consequences, safeguards, and actions"},
+          {"name": "action-items", "desc": "List of recommended actions ranked by risk"}
+        ],
+        "process": [
+          "Divide the process into study nodes at logical process boundaries (vessels, major equipment, pipe sections between control valves). Define the design intent for each node: normal flow, temperature, pressure, composition, level, and phase.",
+          "Apply guide words systematically to each parameter: NO/NOT, MORE, LESS, AS WELL AS, PART OF, REVERSE, OTHER THAN. For each meaningful deviation, identify all credible causes.",
+          "For each cause, identify the consequences assuming all protection layers fail. Rate the severity of the worst credible consequence. Then identify existing safeguards (alarms, trips, relief devices, procedures) and assess whether the residual risk is acceptable.",
+          "Record actions for unacceptable risks: additional instrumentation, design changes, procedures, or further study. Assign each action to an owner with a due date.",
+          "For high-consequence scenarios, flag for Layer of Protection Analysis (LOPA) to determine if an additional safety instrumented function is required."
+        ],
+        "tags": ["hazop", "hazard-identification", "risk-assessment"]
+      },
+      {
+        "flow_name": "lopa-analysis",
+        "description": "Perform Layer of Protection Analysis to determine if additional safety layers are needed for high-risk scenarios.",
+        "inputs": [
+          {"name": "hazop-worksheets", "desc": "HAZOP scenarios flagged for LOPA"},
+          {"name": "risk-criteria", "desc": "Corporate or regulatory risk tolerance criteria"}
+        ],
+        "outputs": [
+          {"name": "lopa-results", "desc": "Frequency of consequence for each scenario after crediting protection layers"},
+          {"name": "sil-requirements", "desc": "Required SIL for any safety instrumented function identified"},
+          {"name": "ipl-credit-summary", "desc": "Independent protection layers credited with their probability of failure on demand"}
+        ],
+        "process": [
+          "Start with the initiating event frequency. Use historical data (CCPS LOPA book, OREDA) or fault tree analysis. Typical frequencies: control loop failure 0.1/yr, human error 0.01 to 1/yr depending on task complexity and time pressure.",
+          "Identify independent protection layers (IPLs). Each IPL must be: independent of the initiating event and other IPLs, auditable, capable of preventing the consequence, and have a quantified probability of failure on demand (PFD). Typical PFD values: BPCS 0.1, alarm with operator response 0.1, relief valve 0.01, SIS 0.01 to 0.001.",
+          "Calculate the mitigated event frequency: f_consequence = f_initiating * PFD_1 * PFD_2 * ... * conditional modifiers (probability of ignition, probability of occupancy, etc.).",
+          "Compare the mitigated frequency against the risk tolerance criterion. If the frequency exceeds the criterion, additional protection is needed. The required risk reduction factor determines the SIL of any new safety instrumented function: SIL 1 = PFD 0.01 to 0.1, SIL 2 = 0.001 to 0.01, SIL 3 = 0.0001 to 0.001.",
+          "Document assumptions: credit only IPLs that have been validated in the field, not those that exist on paper but have not been tested. Flag any scenario where more than SIL 2 is required, as this often indicates a design deficiency rather than a need for more instrumentation."
+        ],
+        "tags": ["lopa", "sil", "risk-assessment"]
+      },
+      {
+        "flow_name": "relief-system-design",
+        "description": "Size the pressure relief system for the process to prevent overpressure in all credible scenarios.",
+        "inputs": [
+          {"name": "process-pid", "desc": "P&ID with vessel design pressures and operating conditions"},
+          {"name": "hazop-worksheets", "desc": "Overpressure scenarios from HAZOP"}
+        ],
+        "outputs": [
+          {"name": "relief-device-sizing", "desc": "Relief valve or rupture disk size for each protected vessel"},
+          {"name": "relief-scenarios", "desc": "Governing scenario for each relief device with required relief rate"},
+          {"name": "disposal-system-design", "desc": "Flare, scrubber, or atmospheric vent design for relieved fluids"}
+        ],
+        "process": [
+          "Identify all overpressure scenarios per API 521: blocked outlet, fire case, control valve failure, thermal expansion, chemical reaction runaway, tube rupture in heat exchanger, utility failure, and check valve failure. Determine the required relief rate for each scenario.",
+          "The governing case is the scenario requiring the largest relief rate. For fire case, use API 521 wetted area method: Q = 21000 * F * A_w^0.82 (BTU/hr) where F is the environmental factor (insulation, drainage) and A_w is the wetted area up to 25 feet height.",
+          "Size the relief valve per API 520: A = W / (C * K_d * P_1 * K_b * K_c) * sqrt(T*Z/M) for gas service. For liquid service, A = Q / (K_d * K_w * K_c) * sqrt(G / (P_1 - P_2)). Select the next standard orifice size from API 526.",
+          "Design the inlet piping so that the pressure drop is less than 3% of the set pressure (to prevent chatter). Design the outlet piping to keep the built-up back pressure within the valve's capability (conventional valve: 10% of set, balanced bellows: 30%, pilot operated: 50%).",
+          "Design the disposal system: for toxic or flammable fluids, route to a flare system. Size the flare header for the simultaneous contingency (not all scenarios at once; typically the largest single contingency plus 50% of the next largest). Calculate the required flare tip diameter for stable flame and radiation limits at grade level (API 521 radiation model)."
+        ],
+        "tags": ["relief-systems", "api-520", "overpressure"]
+      },
+      {
+        "flow_name": "safety-instrumented-system-design",
+        "description": "Design the safety instrumented system (SIS) to meet the required SIL from LOPA analysis.",
+        "inputs": [
+          {"name": "sil-requirements", "desc": "Required SIL for each safety instrumented function"},
+          {"name": "process-pid", "desc": "Process instrumentation and control architecture"}
+        ],
+        "outputs": [
+          {"name": "sif-specification", "desc": "Sensor, logic solver, and final element specification for each safety function"},
+          {"name": "pfd-calculation", "desc": "Calculated PFD average for each SIF demonstrating SIL compliance"},
+          {"name": "proof-test-plan", "desc": "Proof test interval and procedures for each SIF component"}
+        ],
+        "process": [
+          "Define the safety instrumented function: what is sensed, what logic is applied, and what action is taken. Each SIF is independent: it uses dedicated sensors and final elements not shared with the BPCS where the SIL requires it.",
+          "Select the architecture. For SIL 1: single sensor, single logic solver (safety-certified PLC), single final element (e.g., ESD valve). For SIL 2: consider 1oo2 (one out of two) voting on sensors for higher availability, or redundant final elements. SIL 3: typically requires 2oo3 voting and redundant logic solvers.",
+          "Calculate the average PFD using the simplified equations from IEC 61508/61511 or a Markov model. PFD_avg for a single channel = lambda_DU * T_proof / 2, where lambda_DU is the dangerous undetected failure rate and T_proof is the proof test interval. For 1oo2 architecture, PFD drops approximately to (lambda_DU * T_proof)^2 / 3.",
+          "Set the proof test interval so that the PFD_avg meets the SIL requirement with margin. Typical proof test intervals: 1 year for SIL 2, 6 months to 1 year for SIL 3. Partial stroke testing of valves can extend intervals by detecting a fraction of dangerous failures between full proof tests.",
+          "Specify the components: sensors must be SIL-capable with known failure rate data (from manufacturer's FMEDA or the exida SILStat database). Logic solver must be certified to the required SIL per IEC 61508. Final elements (valves) must fail to the safe state and have documented failure rates."
+        ],
+        "tags": ["sis", "sil", "functional-safety"]
+      }
+    ]
+  },
+  {
+    "chain_name": "process-scale-up-methodology",
+    "description": "Scale up a chemical process from laboratory through pilot to production using dimensionless analysis, pilot plant design, and scale-dependent limitation identification.",
+    "domain": "chemical-engineering",
+    "tags": ["chemical-engineering", "scale-up", "pilot-plant"],
+    "steps": [
+      {
+        "flow_name": "dimensionless-scale-analysis",
+        "description": "Analyze the process using dimensionless numbers to identify which transport phenomena dominate at each scale.",
+        "inputs": [
+          {"name": "lab-data", "desc": "Laboratory reactor or process data at bench scale"},
+          {"name": "target-scale", "desc": "Production scale target (volume, throughput)"}
+        ],
+        "outputs": [
+          {"name": "controlling-regime", "desc": "Whether the process is kinetics-limited, heat-transfer-limited, or mass-transfer-limited at target scale"},
+          {"name": "dimensionless-groups", "desc": "Key dimensionless numbers (Re, Da, Pe, Nu, Sh) at both scales"},
+          {"name": "scale-dependent-risks", "desc": "Phenomena that change regime between lab and production scale"}
+        ],
+        "process": [
+          "Calculate the Damkohler number Da = reaction rate / transport rate at both scales. Da less than 0.1 means kinetics-controlled (safe to scale). Da greater than 10 means transport-controlled; the rate at production scale will be limited by mixing or heat transfer, not intrinsic kinetics.",
+          "Calculate the Reynolds number at both scales for stirred vessels: Re = N*D^2*rho/mu. Turbulent mixing (Re above 10000) may be easy at lab scale but expensive to maintain at production scale if the vessel diameter increases geometrically.",
+          "Calculate the Peclet number Pe = u*L/D_eff for flow reactors. High Pe means plug flow; low Pe means significant axial dispersion. Pe often decreases at scale-up due to velocity profile changes, converting an approximately plug-flow lab reactor into a partially backmixed production reactor.",
+          "Evaluate the surface-to-volume ratio: S/V scales as 1/R for a sphere or cylinder. At lab scale (100 mL), the reactor wall provides ample heat transfer area. At production scale (10 m3), the same wall area per volume is 50x lower. Identify whether internal coils, external heat exchange, or a different reactor type is needed.",
+          "List every dimensionless number that changes by more than an order of magnitude between lab and production scale. Each such change is a scale-up risk that must be addressed in pilot design."
+        ],
+        "tags": ["dimensionless-analysis", "scale-up-risk"]
+      },
+      {
+        "flow_name": "pilot-plant-design",
+        "description": "Design the pilot plant to answer the specific scale-up questions identified in the dimensionless analysis.",
+        "inputs": [
+          {"name": "scale-dependent-risks", "desc": "Scale-up risks and regime changes"},
+          {"name": "controlling-regime", "desc": "Whether kinetics, heat, or mass transfer dominates"},
+          {"name": "target-scale", "desc": "Production scale parameters"}
+        ],
+        "outputs": [
+          {"name": "pilot-scale-specification", "desc": "Pilot plant size and configuration to resolve scale-up uncertainties"},
+          {"name": "measurement-plan", "desc": "What to measure at pilot scale to validate the scale-up model"},
+          {"name": "scale-up-criteria", "desc": "Specific criteria that must be met at pilot to proceed to production"}
+        ],
+        "process": [
+          "Size the pilot to resolve the dominant scale-up risk, not to demonstrate the process at small scale. If heat transfer is the risk, the pilot must have the same heat transfer surface-to-volume ratio as production. If mixing is the risk, the pilot must operate at the same power per unit volume or tip speed.",
+          "For mixing scale-up: decide the basis. Constant tip speed (pi*N*D) preserves shear rate at the impeller but reduces bulk circulation. Constant power per volume (P/V proportional to N^3*D^5/V) is the most common basis for blending and gas-liquid dispersion. Constant Reynolds number preserves the flow regime but gives impractical impeller speeds at large scale.",
+          "Instrument the pilot to measure what the model predicts: temperature profiles (not just outlet), concentration profiles (not just conversion), pressure drop, mixing time (conductivity pulse response), and heat transfer coefficient (from energy balance). These measurements validate or falsify the scale-up model.",
+          "Define success criteria quantitatively before running the pilot: yield must exceed X%, temperature hot spot must stay below Y K, residence time distribution must match the PFR/CSTR model within Z%. This prevents post-hoc rationalization of marginal results.",
+          "Plan the number of runs: use statistical design of experiments (factorial or central composite) around the operating point. The pilot must demonstrate robustness to feed variability, not just performance at the design point."
+        ],
+        "tags": ["pilot-plant", "measurement", "experimental-design"]
+      },
+      {
+        "flow_name": "production-scale-design-transfer",
+        "description": "Transfer the process from pilot to production scale using the validated scale-up model.",
+        "inputs": [
+          {"name": "pilot-scale-specification", "desc": "Pilot plant configuration and results"},
+          {"name": "measurement-plan", "desc": "Pilot data collected"},
+          {"name": "scale-up-criteria", "desc": "Success criteria evaluation"}
+        ],
+        "outputs": [
+          {"name": "production-design-basis", "desc": "Design parameters for production-scale equipment"},
+          {"name": "scale-up-factor-analysis", "desc": "Actual vs predicted performance ratios at pilot, projected to production"},
+          {"name": "commissioning-plan", "desc": "Performance tests to validate the production plant against pilot predictions"}
+        ],
+        "process": [
+          "Extract the scale-up correlation from pilot data. For a mixing-dependent process: if yield = f(P/V, tip speed), determine which basis best predicts pilot results and extrapolate to production geometry.",
+          "Apply the validated model to production scale. Calculate all key parameters: reactor volume, impeller diameter and speed, heat transfer area, coolant flow, feed injection location and rate. Flag any parameter that falls outside the validated range of the model.",
+          "For crystallization: scale-up the supersaturation profile, not the equipment. The production crystallizer must generate the same supersaturation vs time profile as the pilot to reproduce the crystal size distribution. This often requires different cooling rates or antisolvent addition rates at larger scale due to mixing limitations.",
+          "For polymerization: maintain the same residence time distribution. At scale, the probability of short-circuit flow (bypassing) increases. Use CFD to verify that the production reactor achieves the same RTD as the pilot. If not, add baffles, redistribute feed injection, or change impeller type.",
+          "Design commissioning tests: run the production plant at reduced throughput first to verify heat transfer, mixing, and conversion. Increase to design rate in steps. At each step, compare measured performance against the scale-up model prediction. Document deviations and their root causes for the next scale-up project."
+        ],
+        "tags": ["production-design", "commissioning", "scale-transfer"]
+      }
+    ]
+  },
+  {
+    "chain_name": "catalysis-engineering",
+    "description": "Engineer a catalytic process from catalyst screening through characterization, kinetics, bed design, and deactivation management.",
+    "domain": "chemical-engineering",
+    "tags": ["chemical-engineering", "catalysis", "reaction-engineering"],
+    "steps": [
+      {
+        "flow_name": "catalyst-screening-and-selection",
+        "description": "Screen candidate catalysts and select the best performer for the target reaction.",
+        "inputs": [
+          {"name": "target-reaction", "desc": "Reaction to catalyze with desired selectivity"},
+          {"name": "operating-constraints", "desc": "Temperature, pressure, and feed composition constraints"}
+        ],
+        "outputs": [
+          {"name": "catalyst-candidates", "desc": "Ranked list of catalyst formulations with activity and selectivity data"},
+          {"name": "selected-catalyst", "desc": "Best catalyst with justification for selection"}
+        ],
+        "process": [
+          "Define screening metrics: conversion at fixed temperature and space velocity, selectivity to desired product, and stability over a minimum run time (typically 100 hours). Weight the metrics according to process priorities.",
+          "Design the screening experiment using design of experiments: vary catalyst composition (active metal loading, promoter, support) as factors. Use a fractional factorial or Plackett-Burman design for initial screening if many candidates exist.",
+          "Test in a differential reactor (low conversion, less than 10%) to measure intrinsic activity without transport artifacts. Operate at the same GHSV, temperature, and pressure as the intended industrial conditions.",
+          "Rank catalysts by turnover frequency (moles converted per active site per second), not just conversion, to account for differences in active site density. Use chemisorption (H2, CO, or probe molecule) to count active sites.",
+          "Select the catalyst considering not just activity and selectivity but also: cost of active metal, mechanical strength (crush test for fixed bed), attrition resistance (for fluidized bed), thermal stability, and tolerance to feed impurities."
+        ],
+        "tags": ["catalyst-screening", "reaction-screening"]
+      },
+      {
+        "flow_name": "catalyst-characterization-method",
+        "description": "Characterize the physical and chemical properties of the selected catalyst.",
+        "inputs": [
+          {"name": "selected-catalyst", "desc": "Catalyst formulation to characterize"}
+        ],
+        "outputs": [
+          {"name": "physical-properties", "desc": "Surface area, pore size distribution, pellet density, crush strength"},
+          {"name": "chemical-properties", "desc": "Active site density, reducibility, acid-base character, oxidation state"},
+          {"name": "characterization-report", "desc": "Complete catalyst property sheet for engineering design"}
+        ],
+        "process": [
+          "Measure surface area by BET nitrogen physisorption. Interpret the isotherm shape: Type I indicates microporous (zeolite), Type IV indicates mesoporous (typical supported metal catalyst). Calculate BJH pore size distribution from the desorption branch.",
+          "Measure active site density by chemisorption: H2 for metal catalysts (dispersion = surface atoms / total atoms), NH3-TPD for acid catalysts (total acid sites and strength distribution from desorption temperature), CO2-TPD for basic catalysts.",
+          "Determine oxidation state and local structure by XRD (crystalline phases, particle size from Scherrer equation), XPS (surface composition and oxidation state), and TEM (particle size distribution, morphology, spatial distribution on support).",
+          "Measure reducibility by TPR (temperature-programmed reduction): identifies the temperature required to activate the catalyst and whether multiple reduction steps exist. This determines the activation procedure for the industrial reactor.",
+          "Measure mechanical properties: crush strength for fixed-bed pellets (minimum 2 to 5 N for small pellets), attrition index for fluidized-bed catalysts (ASTM D5757), and bulk density for reactor loading calculations."
+        ],
+        "tags": ["catalyst-characterization", "bet", "xrd"]
+      },
+      {
+        "flow_name": "catalytic-kinetics-modeling",
+        "description": "Develop a kinetic model for the catalytic reaction from experimental data using mechanistic rate expressions.",
+        "inputs": [
+          {"name": "selected-catalyst", "desc": "Characterized catalyst"},
+          {"name": "characterization-report", "desc": "Catalyst properties for transport analysis"}
+        ],
+        "outputs": [
+          {"name": "kinetic-model", "desc": "Rate expression with fitted parameters and confidence intervals"},
+          {"name": "transport-corrected-rates", "desc": "Intrinsic rates corrected for internal and external mass transfer"}
+        ],
+        "process": [
+          "Verify absence of transport limitations using diagnostic criteria: Weisz-Prater criterion (C_WP = r_obs * rho_p * R^2 / (D_eff * C_s) < 0.3 for less than 5% diffusion limitation), Mears criterion for external mass transfer (r_obs * rho_b * R * n / (k_c * C_b) < 0.15).",
+          "Propose mechanistic rate expressions: Langmuir-Hinshelwood (surface reaction rate-limiting, competitive or non-competitive adsorption), Eley-Rideal (reaction between adsorbed species and gas-phase species), Mars-van Krevelen (redox mechanism for metal oxide catalysts).",
+          "Fit rate parameters by nonlinear regression to experimental data collected over a range of temperatures, pressures, and compositions. Use weighted residuals (weight by inverse of expected variance). Report 95% confidence intervals for each parameter.",
+          "Validate with thermodynamic consistency: at equilibrium, the rate expression must equal zero. The ratio of forward to reverse rate constants must equal the equilibrium constant (Kp). Check that activation energy is physically reasonable for the proposed mechanism (10 to 200 kJ/mol for most catalytic reactions).",
+          "Test the model against data not used for fitting (validation set). If the model predicts validation data within measurement uncertainty, it is suitable for reactor design. If not, revisit the mechanism or add terms for inhibition by products or poisons."
+        ],
+        "tags": ["kinetic-modeling", "langmuir-hinshelwood", "rate-expression"]
+      },
+      {
+        "flow_name": "catalyst-deactivation-management",
+        "description": "Characterize and manage catalyst deactivation to set regeneration schedules and predict catalyst lifetime.",
+        "inputs": [
+          {"name": "selected-catalyst", "desc": "Catalyst in service"},
+          {"name": "kinetic-model", "desc": "Kinetic rate expression for fresh catalyst"}
+        ],
+        "outputs": [
+          {"name": "deactivation-mechanism", "desc": "Identified deactivation mechanism and rate"},
+          {"name": "regeneration-protocol", "desc": "Regeneration conditions and expected activity recovery"},
+          {"name": "lifetime-prediction", "desc": "Expected catalyst life and replacement schedule"}
+        ],
+        "process": [
+          "Identify the deactivation mechanism from spent catalyst characterization: coking (carbon deposition, diagnosed by TGA/TPO), sintering (particle growth, diagnosed by TEM and chemisorption loss), poisoning (irreversible adsorption of impurity, diagnosed by XPS or ICP of spent catalyst), and leaching (loss of active phase to liquid, diagnosed by ICP of effluent).",
+          "Model the deactivation kinetics: for coking, activity a(t) often follows a = (1 + k_d * t)^(-n) or exponential decay. For sintering, use the generalized power-law expression: -da/dt = k_s * (a - a_eq)^n where a_eq is the equilibrium activity at the operating temperature.",
+          "Design the regeneration procedure: for coke, oxidative regeneration (controlled burn in dilute air at temperature below sintering threshold). Measure the activity recovery after regeneration; it will be less than 100% due to irreversible structural changes. Determine the maximum number of regeneration cycles before replacement.",
+          "Set the regeneration schedule: operate until the activity drops to the economic break-even point where the cost of lost yield equals the cost of regeneration downtime. For continuous processes, swing reactors allow one reactor on-stream while the other regenerates.",
+          "Predict total catalyst lifetime: extrapolate the irreversible activity loss per cycle to determine when cumulative loss reaches the replacement threshold. Factor in the cost of catalyst, downtime, and disposal. For precious metal catalysts, account for metal recovery value."
+        ],
+        "tags": ["deactivation", "regeneration", "catalyst-lifetime"]
+      }
+    ]
+  },
+  {
+    "chain_name": "separation-process-selection",
+    "description": "Select and design the separation process from property analysis through detailed equipment design for distillation, membrane, extraction, adsorption, and crystallization.",
+    "domain": "chemical-engineering",
+    "tags": ["chemical-engineering", "separation", "process-design"],
+    "steps": [
+      {
+        "flow_name": "separation-property-analysis",
+        "description": "Analyze the mixture properties to identify which separation methods are feasible.",
+        "inputs": [
+          {"name": "mixture-composition", "desc": "Components, concentrations, and physical properties"},
+          {"name": "separation-targets", "desc": "Purity and recovery requirements for each product"}
+        ],
+        "outputs": [
+          {"name": "feasible-methods", "desc": "Ranked list of feasible separation methods with property basis"},
+          {"name": "separation-difficulty", "desc": "Quantified difficulty for each method (relative volatility, selectivity, rejection)"}
+        ],
+        "process": [
+          "Map the property differences between components to separate: boiling point (distillation), solubility (extraction, crystallization), molecular size (membrane), vapor pressure (evaporation), charge (ion exchange), affinity (adsorption, chromatography).",
+          "For each feasible method, quantify the separation factor: relative volatility alpha for distillation, partition coefficient K for extraction, rejection R for membranes, separation factor alpha for adsorption. Higher factors mean easier separation.",
+          "Screen out methods where the separation factor is too close to 1.0: alpha less than 1.05 for distillation is impractical, K less than 2 for extraction requires too many stages, R less than 0.9 for membranes gives poor purity in a single pass.",
+          "Consider hybrid separations when no single method works well: reactive distillation when reaction equilibrium limits conversion, membrane-distillation hybrid when an azeotrope exists, extraction followed by distillation for heat-sensitive materials.",
+          "Rank the feasible methods by estimated total cost (capital + operating). Distillation is usually cheapest when relative volatility exceeds 1.5 and the mixture is thermally stable. Membranes win for dilute aqueous solutions. Extraction wins for heat-sensitive or high-boiling mixtures."
+        ],
+        "tags": ["separation-selection", "property-analysis"]
+      },
+      {
+        "flow_name": "membrane-separation-design",
+        "description": "Design a membrane separation system from membrane selection through module configuration and fouling management.",
+        "inputs": [
+          {"name": "feasible-methods", "desc": "Membrane identified as a feasible method"},
+          {"name": "mixture-composition", "desc": "Feed composition and conditions"},
+          {"name": "separation-targets", "desc": "Permeate and retentate purity targets"}
+        ],
+        "outputs": [
+          {"name": "membrane-specification", "desc": "Membrane material, module type, and operating conditions"},
+          {"name": "system-design", "desc": "Number of stages, recycle configuration, and total membrane area"},
+          {"name": "fouling-management-plan", "desc": "Cleaning protocol and membrane replacement schedule"}
+        ],
+        "process": [
+          "Select membrane type: microfiltration (0.1 to 10 um pore, particle removal), ultrafiltration (1 to 100 nm, macromolecules), nanofiltration (less than 2 nm, divalent ion rejection), reverse osmosis (nonporous, salt rejection above 99%), gas separation (solution-diffusion), pervaporation (for azeotrope breaking).",
+          "Select module configuration: spiral wound (most common, good area per volume, moderate fouling tolerance), hollow fiber (highest area per volume, good for gas separation), tubular (best fouling tolerance, highest cost), plate-and-frame (for viscous or particulate-laden feeds).",
+          "Calculate required membrane area: A = Q_permeate / (J * recovery). Where J is the flux (L/m2/hr) at operating conditions. Flux depends on transmembrane pressure, temperature, and concentration polarization. Use manufacturer's data corrected for the actual feed composition.",
+          "Design for concentration polarization: calculate the mass transfer coefficient from the Sherwood number correlation for the module geometry. The ratio of wall concentration to bulk concentration (polarization modulus) should be kept below 1.5 to 2.0 by limiting recovery per pass and maintaining cross-flow velocity.",
+          "Plan for fouling: specify pretreatment (prefiltration, pH adjustment, biocide for biofouling), cleaning protocol (frequency, chemicals: acid for inorganic scale, caustic for organics, enzymatic for biofouling), and membrane replacement schedule (typical life 3 to 7 years for RO, 5 to 10 for UF)."
+        ],
+        "tags": ["membrane-separation", "module-design", "fouling"]
+      },
+      {
+        "flow_name": "adsorption-process-design",
+        "description": "Design an adsorption-based separation including adsorbent selection, breakthrough analysis, and regeneration cycle design.",
+        "inputs": [
+          {"name": "feasible-methods", "desc": "Adsorption identified as feasible"},
+          {"name": "mixture-composition", "desc": "Feed composition and flow rate"},
+          {"name": "separation-targets", "desc": "Product purity and recovery targets"}
+        ],
+        "outputs": [
+          {"name": "adsorbent-specification", "desc": "Adsorbent material, particle size, and bed loading"},
+          {"name": "bed-design", "desc": "Bed dimensions, number of beds, and cycle timing"},
+          {"name": "regeneration-design", "desc": "Regeneration method (TSA, PSA, VSA) with energy requirement"}
+        ],
+        "process": [
+          "Select the adsorbent: activated carbon for organics from water or air, zeolite for gas separation by molecular size (3A, 4A, 5A, 13X by target molecule), silica gel or alumina for drying, ion exchange resins for ionic species. Measure the adsorption isotherm (Langmuir, Freundlich, or BET) at operating conditions.",
+          "Calculate the mass transfer zone (MTZ) length from breakthrough experiments at representative conditions. The MTZ determines how much of the bed capacity is used before breakthrough. Short MTZ (sharp front) means high bed utilization; long MTZ means either a larger bed or more frequent cycling.",
+          "Size the bed: bed volume = (feed rate * cycle time * loading capacity) / bed density. Set the bed length to be at least 3 to 5 times the MTZ length for acceptable utilization. Two beds minimum for continuous operation (one adsorbing, one regenerating).",
+          "Design the regeneration cycle: for TSA (temperature swing), calculate the heat required to raise the bed to desorption temperature plus the heat of desorption. For PSA (pressure swing), calculate the purge gas volume and compression energy. For VSA, size the vacuum pump for the required pressure and flow.",
+          "Optimize cycle timing: adsorption time is set by breakthrough. Regeneration time must be shorter than adsorption time to maintain continuous feed processing. Include pressurization, depressurization, and cooling steps in the cycle time. Use simulation (e.g., Aspen Adsorption or COMSOL) to optimize the cycle for minimum energy or maximum productivity."
+        ],
+        "tags": ["adsorption", "psa", "tsa", "breakthrough"]
+      }
+    ]
+  },
+  {
+    "chain_name": "process-simulation-methodology",
+    "description": "Build and validate a process simulation model for design, optimization, and control using commercial simulators.",
+    "domain": "chemical-engineering",
+    "tags": ["chemical-engineering", "process-simulation", "modeling"],
+    "steps": [
+      {
+        "flow_name": "simulation-property-method-selection",
+        "description": "Select the thermodynamic property method and validate it against experimental data.",
+        "inputs": [
+          {"name": "component-list", "desc": "All chemical species in the process"},
+          {"name": "operating-conditions", "desc": "Temperature, pressure, and composition ranges"}
+        ],
+        "outputs": [
+          {"name": "property-method", "desc": "Selected equation of state or activity coefficient model"},
+          {"name": "binary-parameters", "desc": "Fitted or literature binary interaction parameters"},
+          {"name": "validation-results", "desc": "Comparison of model predictions against experimental VLE/LLE data"}
+        ],
+        "process": [
+          "Decision tree for property method: hydrocarbon system at moderate pressure: SRK or PR equation of state. Polar or non-ideal liquid: activity coefficient model (NRTL, UNIQUAC, Wilson). Electrolyte system: electrolyte-NRTL. Polymer system: PC-SAFT or polymer-NRTL. Supercritical: PR with volume translation.",
+          "Check the simulator's built-in binary parameter database. For NRTL and UNIQUAC, the DECHEMA or NIST/TDE databases are the primary sources. If parameters are missing, fit them to experimental VLE data using the simulator's regression tool.",
+          "Validate at conditions representative of the process: compare predicted bubble point, dew point, and x-y diagram against experimental data. For distillation, the error in relative volatility at the pinch composition is the most critical metric.",
+          "For gas-phase processes, verify the equation of state against PVT data and fugacity coefficient data. For high-pressure systems, check the liquid density prediction, which is often poor with cubic equations of state without volume translation.",
+          "Document the validation: which data were used, the source, and the residuals. Flag any region of the operating space where data are sparse and the model is extrapolating. These regions represent design risk."
+        ],
+        "tags": ["thermodynamic-model", "property-method", "simulation-setup"]
+      },
+      {
+        "flow_name": "steady-state-flowsheet-simulation",
+        "description": "Build and converge the steady-state flowsheet model for the process.",
+        "inputs": [
+          {"name": "property-method", "desc": "Validated thermodynamic model"},
+          {"name": "process-pid", "desc": "Process flow diagram with equipment specifications"}
+        ],
+        "outputs": [
+          {"name": "converged-flowsheet", "desc": "Steady-state simulation with heat and mass balance"},
+          {"name": "equipment-performance", "desc": "Performance metrics for each unit operation"},
+          {"name": "sensitivity-results", "desc": "Key parameter sensitivities for design optimization"}
+        ],
+        "process": [
+          "Build the flowsheet sequentially: start with the reactor section, then add separation, and finally recycles. Use tear streams for recycle convergence. Set reasonable initial estimates for tear streams to help convergence (use the expected composition, not defaults).",
+          "Specify equipment models: for reactors, use RSTOIC for known conversion, RGIBBS for equilibrium, or RPLUG/RCSTR with kinetics for design. For columns, start with DSTWU shortcut, then switch to RADFRAC rigorous model. For heat exchangers, use HEATX with design mode.",
+          "Set design specifications: use calculator blocks and design specs to meet process requirements (e.g., adjust reflux ratio to hit distillate purity, adjust reactor temperature to hit conversion target). Avoid over-specifying: N degrees of freedom require exactly N specifications.",
+          "Run sensitivity analyses on key design variables: plot product purity vs reflux ratio, conversion vs temperature, energy consumption vs recycle ratio. Identify the optimal operating point and the sensitivity of product quality to each variable.",
+          "Validate the simulation against known data: if plant data exist, compare predicted and measured flow rates, temperatures, and compositions at key points. If designing a new process, cross-check with manual calculations for the reactor, main separator, and overall energy balance."
+        ],
+        "tags": ["flowsheet-simulation", "process-modeling", "aspen"]
+      },
+      {
+        "flow_name": "dynamic-simulation-and-control",
+        "description": "Extend the model to dynamic simulation for control system design and safety analysis.",
+        "inputs": [
+          {"name": "converged-flowsheet", "desc": "Steady-state simulation model"},
+          {"name": "equipment-performance", "desc": "Equipment sizing and holdup data"}
+        ],
+        "outputs": [
+          {"name": "dynamic-model", "desc": "Dynamic simulation with equipment sizing, holdup, and pressure-flow relations"},
+          {"name": "control-structure", "desc": "Control loops with tuning parameters"},
+          {"name": "transient-analysis", "desc": "Response to key disturbances and abnormal scenarios"}
+        ],
+        "process": [
+          "Convert the steady-state model to dynamic: add equipment dimensions (vessel diameter and height for holdup), valve characteristics (Cv curves), and pressure-flow relationships. Initialize from the converged steady-state solution.",
+          "Implement the control structure: start with the plantwide control structure (Luyben procedure: set production rate, manage inventories, then quality). Add regulatory controllers (level, pressure, flow, temperature) before composition controllers.",
+          "Tune controllers: use relay autotuning or IMC-based tuning. Level controllers should be P-only or loose PI to absorb flow disturbances. Temperature and composition controllers need tighter PI or PID. Use a cascade where inner loop dynamics are 5x faster than outer loop.",
+          "Test disturbance rejection: introduce feed rate changes (plus and minus 10%), feed composition changes, and utility failures (cooling water temperature, steam pressure). Verify that the control system returns to setpoint without violating constraints or safety limits.",
+          "Simulate abnormal scenarios identified in HAZOP: loss of coolant, blocked outlet, runaway reaction initiation. Verify that safety instrumented systems respond within the required time and that the process reaches a safe state. Use the dynamic model to set alarm and trip setpoints with adequate margin."
+        ],
+        "tags": ["dynamic-simulation", "process-control", "transient-analysis"]
+      }
+    ]
+  },
+  {
+    "chain_name": "piping-system-design",
+    "description": "Design the piping system from pipe sizing through pump selection, control valve sizing, stress analysis, and P&ID development.",
+    "domain": "chemical-engineering",
+    "tags": ["chemical-engineering", "piping", "fluid-mechanics"],
+    "steps": [
+      {
+        "flow_name": "pipe-sizing-and-routing",
+        "description": "Size pipes for each service based on velocity criteria and pressure drop limits.",
+        "inputs": [
+          {"name": "process-conditions", "desc": "Flow rates, fluid properties, pressures, and temperatures for each line"},
+          {"name": "plant-layout", "desc": "Equipment arrangement and approximate pipe run lengths"}
+        ],
+        "outputs": [
+          {"name": "pipe-schedule", "desc": "Line list with pipe size, material, schedule, and insulation for each service"},
+          {"name": "pressure-drop-summary", "desc": "Pressure drop for each pipe run"}
+        ],
+        "process": [
+          "Set pipe diameter from velocity criteria: liquid process lines 1 to 3 m/s, liquid pump suction 0.5 to 1.5 m/s (NPSH sensitive), gas lines 15 to 30 m/s, steam 20 to 40 m/s, two-phase per API RP 14E erosional velocity limit. Select the standard pipe size that gives velocity within the acceptable range.",
+          "Calculate pressure drop: delta_P = f * (L/D) * (rho * v^2 / 2) + sum(K * rho * v^2 / 2) for fittings. Use Moody friction factor from the Colebrook-White equation for turbulent flow. For laminar flow (Re less than 2100), f = 64/Re.",
+          "Account for fittings and valves: use equivalent length method (each elbow adds ~30 diameters, each tee ~60 diameters) or resistance coefficient (K-value) method. The 3K method (Darby) gives the most accurate results across Reynolds number ranges.",
+          "Select pipe material from process fluid compatibility, temperature, and pressure: carbon steel for most services, stainless steel 304/316 for corrosive or high-temperature, duplex for chloride service, lined pipe for acids. Select schedule from pressure rating per ASME B31.3.",
+          "Size pipe supports and set routing: maintain slope for drainage (1:200 minimum), allow for thermal expansion with expansion loops or bellows, route to minimize stress concentrations. Identify points requiring spring hangers or constant support hangers for hot lines."
+        ],
+        "tags": ["pipe-sizing", "fluid-mechanics", "pressure-drop"]
+      },
+      {
+        "flow_name": "pump-and-valve-selection",
+        "description": "Select pumps and control valves for the piping system.",
+        "inputs": [
+          {"name": "pipe-schedule", "desc": "Pipe sizes and pressure drops"},
+          {"name": "process-conditions", "desc": "Flow rates and fluid properties"},
+          {"name": "pressure-drop-summary", "desc": "System pressure drops"}
+        ],
+        "outputs": [
+          {"name": "pump-specification", "desc": "Pump type, head, flow, NPSH required, and driver size"},
+          {"name": "control-valve-specification", "desc": "Valve type, Cv, rangeability, and trim selection"},
+          {"name": "system-curve", "desc": "System curve with pump curve overlay showing operating point"}
+        ],
+        "process": [
+          "Calculate total dynamic head for the pump: TDH = static head + friction losses + velocity head difference + pressure difference. Plot the system curve (head vs flow) accounting for the quadratic increase of friction losses with flow.",
+          "Select pump type: centrifugal for most applications (flow above 5 m3/hr, head below 200 m), positive displacement (reciprocating or gear) for high viscosity, high pressure, or low flow. For centrifugal, select specific speed ns = N*sqrt(Q)/H^0.75 to determine impeller type.",
+          "Verify NPSH: NPSHa (available) = pressure head at suction + static head - vapor pressure head - friction losses in suction line. NPSHa must exceed NPSHr (required, from pump data sheet) by at least 0.5 to 1.0 m margin. If not, raise the suction vessel, lower the pump, subcool the liquid, or increase suction pipe size.",
+          "Size the control valve: Cv = Q * sqrt(G / delta_P) for liquid (ISA/IEC 60534). The valve should take 25% to 50% of the total system pressure drop at design flow for good controllability. Select trim: linear for constant pressure drop, equal percentage for variable pressure drop systems. Check rangeability (Cv_max / Cv_min) covers turndown.",
+          "Construct the system curve with the pump curve overlay. The operating point is the intersection. Verify that the pump operates within 80% to 120% of best efficiency point (BEP). At minimum flow, check for recirculation: install a minimum flow bypass if the pump may deadhead."
+        ],
+        "tags": ["pump-selection", "control-valve", "npsh"]
+      },
+      {
+        "flow_name": "pid-development-methodology",
+        "description": "Develop the process and instrumentation diagram from the process flow diagram and control philosophy.",
+        "inputs": [
+          {"name": "process-conditions", "desc": "Process flow diagram with heat and mass balance"},
+          {"name": "control-valve-specification", "desc": "Control valve and instrument specifications"},
+          {"name": "pump-specification", "desc": "Pump and driver specifications"}
+        ],
+        "outputs": [
+          {"name": "pid-drawings", "desc": "Complete P&ID set with instrumentation and control loops"},
+          {"name": "instrument-index", "desc": "Instrument list with tag numbers, types, ranges, and materials"},
+          {"name": "control-narrative", "desc": "Description of each control loop, interlock, and alarm"}
+        ],
+        "process": [
+          "Start with the process flow diagram: add all equipment items with nozzle connections, all process piping with sizes, all utility connections. Number equipment per ISA standard: P for pumps, E for exchangers, V for vessels, T for towers, R for reactors.",
+          "Add regulatory control loops: level control on every liquid inventory, pressure control on every gas space, flow control on critical feeds, temperature control on heat exchangers and reactors. Tag instruments per ISA 5.1: FIC for flow indicating controller, TT for temperature transmitter.",
+          "Add safety instrumentation: pressure relief valves on every closed vessel (per API 520/521 sizing), safety instrumented functions from LOPA (separate from BPCS), manual isolation valves at every equipment boundary for maintenance, check valves to prevent backflow.",
+          "Add utilities and auxiliaries: steam tracing on lines prone to freezing or viscosity issues, sample connections at control points, drain and vent valves, startup/shutdown bypasses, maintenance isolation (double block and bleed for hazardous service).",
+          "Review the P&ID systematically: check every line has proper isolation, check every vessel has pressure relief, check every pump has suction strainer and minimum flow protection, check every control valve has bypass and block valves. Verify instrument ranges cover startup, normal operation, and upset conditions."
+        ],
+        "tags": ["pid", "instrumentation", "process-control"]
+      }
+    ]
+  },
+  {
+    "chain_name": "process-control-design",
+    "description": "Design the process control system from control objective definition through controller tuning, advanced control, and alarm management.",
+    "domain": "chemical-engineering",
+    "tags": ["chemical-engineering", "process-control", "instrumentation"],
+    "steps": [
+      {
+        "flow_name": "control-structure-design",
+        "description": "Design the plantwide control structure from production rate management through quality control.",
+        "inputs": [
+          {"name": "process-pid", "desc": "P&ID with all instruments and control valves"},
+          {"name": "process-objectives", "desc": "Production rate, quality specifications, and constraint limits"}
+        ],
+        "outputs": [
+          {"name": "control-structure", "desc": "Complete control structure with variable pairing and loop types"},
+          {"name": "rga-analysis", "desc": "Relative gain array for interacting loops"}
+        ],
+        "process": [
+          "Apply the Luyben plantwide control procedure: Step 1: establish the production rate manipulator (fresh feed on flow control, or production on demand). Step 2: control all liquid levels and gas pressures to maintain inventory. Step 3: control the product quality.",
+          "For each control loop, identify the manipulated variable, controlled variable, and disturbances. Pair variables using the relative gain array (RGA): lambda_ij = (partial y_i / partial u_j at constant other u) / (partial y_i / partial u_j at constant other y). Pair on RGA elements close to 1.0. Avoid pairing on negative RGA elements (opposite action under regulatory control).",
+          "Classify loops by type: self-regulating (most temperature and composition loops), integrating (level, batch reactor), and unstable (exothermic reactor with positive feedback). Each type requires a different tuning approach.",
+          "Design cascade, ratio, and feedforward loops for improved performance: cascade when an inner measurement exists that detects disturbances faster than the outer loop (e.g., jacket temperature inside reactor temperature), ratio when two flows must maintain proportion, feedforward when a measurable disturbance enters the process.",
+          "Add override and select controls for constraint management: high selector for multiple inputs to a single output (e.g., whichever of pressure or temperature needs cooling more gets priority), low selector for protective limits. These prevent the process from violating safety or equipment limits."
+        ],
+        "tags": ["plantwide-control", "rga", "control-structure"]
+      },
+      {
+        "flow_name": "controller-tuning-methodology",
+        "description": "Tune PID controllers for each loop type using model-based methods.",
+        "inputs": [
+          {"name": "control-structure", "desc": "Control loops with variable pairing"},
+          {"name": "process-pid", "desc": "Process dynamics information"}
+        ],
+        "outputs": [
+          {"name": "tuned-parameters", "desc": "PID parameters (Kc, Ti, Td) for each controller"},
+          {"name": "performance-verification", "desc": "Step response and disturbance rejection test results"}
+        ],
+        "process": [
+          "Identify the process model for each loop: perform a step test (bump the controller output 5% to 10% in manual mode) and fit a first-order-plus-dead-time (FOPDT) model: G(s) = K * exp(-theta*s) / (tau*s + 1). Estimate K (gain), tau (time constant), and theta (dead time) from the response.",
+          "Apply IMC (Internal Model Control) tuning rules: for a self-regulating process, Kc = tau / (K * (lambda + theta)), Ti = tau, Td = 0. The tuning parameter lambda sets the trade-off between speed and robustness: lambda = theta gives moderately aggressive tuning, lambda = 3*theta gives conservative tuning.",
+          "For integrating processes (level control): Kc = tau / (K_i * (lambda + theta)^2), Ti = 2*(lambda + theta), where K_i is the integrating gain. Level controllers should generally be tuned loosely (large lambda) to absorb flow disturbances into the vessel inventory rather than passing them downstream.",
+          "For interacting loops: detune by a factor of 2 to 3 relative to single-loop tuning. Alternatively, use a steady-state decoupler: D(s) = -G12/G11 and D(s) = -G21/G22 to cancel the interaction, then tune each loop independently.",
+          "Verify performance: apply step changes in setpoint and load disturbances. Check that the response meets specifications: overshoot less than 20%, settling time less than 4 time constants, no sustained oscillation. For product quality loops, verify that the product stays within specification during the worst-case disturbance."
+        ],
+        "tags": ["pid-tuning", "imc", "step-test"]
+      },
+      {
+        "flow_name": "alarm-management-design",
+        "description": "Design the alarm system following ISA-18.2 to prevent alarm flooding and ensure operator response.",
+        "inputs": [
+          {"name": "control-structure", "desc": "Control loops and safety systems"},
+          {"name": "process-objectives", "desc": "Safety, environmental, and operational limits"}
+        ],
+        "outputs": [
+          {"name": "alarm-rationalization", "desc": "Rationalized alarm list with setpoints, priorities, and response procedures"},
+          {"name": "alarm-performance-targets", "desc": "Target alarm rate, standing alarm count, and response metrics"}
+        ],
+        "process": [
+          "Start from the master alarm database and rationalize: every alarm must have a defined purpose, a unique response, a sufficient time to respond, and a consequence of inaction. If two alarms have the same response, consolidate. If an alarm has no defined operator action, it should not be an alarm (make it an event or remove it).",
+          "Set alarm priorities per ISA-18.2: critical (immediate threat to life, environment, or major equipment), high (action required within minutes), medium (action required within 15 to 30 minutes), low (action required within shift). Target distribution: less than 5% critical, 15% high, 30% medium, 50% low.",
+          "Set alarm setpoints with proper deadband: the alarm should activate early enough that the operator has time to diagnose and respond before the process reaches the safety limit. Deadband prevents chattering: typically 1% to 3% of span. One-sided alarms (high-only or low-only) unless both directions have different consequences.",
+          "Design for target alarm rate: ISA-18.2 recommends a maximum of 6 alarms per operator per hour in normal operation, 10 per hour during upsets. Standing alarms (always active, no action possible) should be zero; any standing alarm indicates a design issue or stale configuration.",
+          "Implement alarm suppression for known conditions: suppress downstream alarms when the root cause alarm is already active (state-based alarming), suppress alarms during planned transitions (e.g., startup, shutdown), and suppress alarms for equipment that is out of service. Never suppress safety-related alarms."
+        ],
+        "tags": ["alarm-management", "isa-18-2", "alarm-rationalization"]
+      }
+    ]
+  }
+]

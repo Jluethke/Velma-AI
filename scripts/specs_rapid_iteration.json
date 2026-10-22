@@ -1,0 +1,922 @@
+[
+  {
+    "chain_name": "rapid-prototype-test-cycle",
+    "description": "Drive a hardware design from a sharp engineering question through a minimum viable test article, a build-test-learn loop, and fail-fast decision gates, so each iteration buys the most learning per dollar and per day.",
+    "domain": "engineering",
+    "tags": ["prototyping", "iteration", "hardware", "test", "first-principles"],
+    "steps": [
+      {
+        "flow_name": "prototype-objective-and-test-article-scope",
+        "description": "Turn a vague design goal into one or two falsifiable questions and scope the smallest test article that can answer them.",
+        "inputs": [
+          {"name": "design-goal", "desc": "The performance or behavior the design must achieve, stated with a target and a tolerance (for example: burst pressure above 450 psi with margin 1.5)"},
+          {"name": "known-unknowns", "desc": "The list of physics, interfaces, or manufacturing risks the team cannot predict confidently from analysis alone"}
+        ],
+        "outputs": [
+          {"name": "test-questions", "desc": "One or two falsifiable questions, each with a pass/fail threshold and the measurement that decides it"},
+          {"name": "article-scope", "desc": "The minimum feature set, fidelity level, and interfaces the test article must carry to answer the questions, plus what it deliberately omits"}
+        ],
+        "process": [
+          "Write each open risk as a question that a single measurement can answer yes or no. 'Is the design good?' is not testable. 'Does the bracket survive 10,000 cycles at 2.5 kN without a visible crack?' is. Cap the first article at one or two questions; a test that answers five questions at once usually answers none of them cleanly.",
+          "Rank the questions by the product of uncertainty and consequence. A high-consequence item you already understand (bolt preload) does not need a prototype. A low-consequence item you cannot predict (flow separation in a novel duct) might. Spend the first article on the highest uncertainty-times-consequence item.",
+          "Strip the article to only the features that bear on the question. If the question is about weld fatigue, the article needs the weld joint, the local load path, and representative material and thickness, not the full assembly. Every feature you add costs build time and adds a confound.",
+          "Decide the fidelity deliberately: geometry-representative, material-representative, process-representative, or all three. A 3D-printed plastic airflow model answers aerodynamic shape questions at 1/50th the cost of a machined metal one, and tells you nothing about structural margin. Name which questions the chosen fidelity can and cannot answer.",
+          "Set the kill threshold now, before building. Write the number at which you abandon this concept rather than iterate it. Teams that set the kill line after seeing data move it; teams that set it first stop sunk-cost iteration."
+        ],
+        "tags": ["prototyping", "requirements", "test-planning"]
+      },
+      {
+        "flow_name": "minimum-viable-test-article-build",
+        "description": "Build the simplest article that answers the test questions, using the fastest process that preserves the physics under test.",
+        "inputs": [
+          {"name": "article-scope", "desc": "The minimum feature set and fidelity from the scoping step"},
+          {"name": "shop-capability", "desc": "Available in-house processes, lead times, and material stock (machining, 3D print, sheet forming, hand layup)"}
+        ],
+        "outputs": [
+          {"name": "test-article", "desc": "The physical article plus a one-page build record of actual dimensions, material lot, and any deviations from intent"},
+          {"name": "fidelity-caveats", "desc": "The explicit list of ways this article differs from the production design, and which test results those differences could bias"}
+        ],
+        "process": [
+          "Pick the process by lead time first, then representativeness. In-house 3-axis machining of 6061 in two days beats an outsourced 7075 forging in six weeks when the question is geometry, not alloy strength. Reserve long-lead production processes for the article that answers the question only they can answer.",
+          "Build to the as-designed nominal but measure the as-built actual. Record the real wall thickness, the real weld penetration, the real surface finish. A prototype that fails at 80% of predicted load often failed because the as-built part was 15% thinner than drawing, not because the design was wrong.",
+          "Instrument during build, not after. Bond strain gauges before closing a structure, embed thermocouples before potting, add tap points before final assembly. Access you skip now costs a full rebuild later.",
+          "Accept cosmetic and non-load-path defects; reject anything that touches the physics under test. A rough as-printed surface on a stiffness coupon is fine; a 0.5 mm void in the bond line of a bond-strength coupon invalidates the test.",
+          "Make at least two identical articles when the test is destructive or the result is noisy. A single data point from one article cannot separate a real effect from a build artifact. Two to three articles let you see scatter before you draw conclusions."
+        ],
+        "tags": ["prototyping", "fabrication", "test-article"]
+      },
+      {
+        "flow_name": "build-test-learn-iteration-loop",
+        "description": "Run the article against its test questions, capture the data, extract the one dominant lesson, and feed a single change back into the next build.",
+        "inputs": [
+          {"name": "test-article", "desc": "The built and instrumented article with its build record"},
+          {"name": "test-questions", "desc": "The falsifiable questions with pass/fail thresholds from scoping"}
+        ],
+        "outputs": [
+          {"name": "iteration-finding", "desc": "The measured answer to each test question, the dominant failure or limiting mechanism, and its confidence level"},
+          {"name": "next-change", "desc": "The single highest-value design or test change for the next loop, with the predicted effect stated before the next test runs"}
+        ],
+        "process": [
+          "Run the test to the question, then keep going to failure when safe. The pass/fail answer tells you whether this design works; running past the threshold to the actual failure point tells you the margin and the failure mode, which is what you need to design the next iteration.",
+          "Identify the single dominant mechanism that set the result. Most prototypes are governed by one thing: a stress concentration, a thermal path, a resonance, a leak path. Chasing three secondary effects while the dominant one is unaddressed wastes a full loop.",
+          "Change one thing per loop when you are isolating a mechanism; change several when you are exploring a wide space early. Early loops can be coarse and multi-variable to find the neighborhood; late loops must be single-variable to confirm cause and effect.",
+          "Predict the next result before you build. Write the number you expect from the change. When the next test matches the prediction, your mental model is correct and you can advance; when it does not, the gap is the most valuable datum in the program.",
+          "Keep the loop short enough that the team remembers the last build. A loop under one to two weeks preserves context and momentum; a loop of two months loses the thread and invites over-scoped builds. Favor more, smaller loops over fewer, larger ones."
+        ],
+        "tags": ["iteration", "testing", "learning-loop"]
+      },
+      {
+        "flow_name": "fail-fast-decision-gate",
+        "description": "At each loop boundary decide proceed, redesign, or kill using the thresholds set during scoping, so iteration stops when learning stops.",
+        "inputs": [
+          {"name": "iteration-finding", "desc": "The measured results and dominant mechanism from the loop"},
+          {"name": "next-change", "desc": "The proposed next change and its predicted effect"}
+        ],
+        "outputs": [
+          {"name": "gate-decision", "desc": "Proceed to the next maturity level, iterate within this level, or kill the concept, with the rationale tied to the pre-set thresholds"},
+          {"name": "learning-ledger", "desc": "The running record of what each iteration cost, what it proved, and the remaining open questions carried to the next gate"}
+        ],
+        "process": [
+          "Compare the finding to the three thresholds set during scoping: the pass line, the kill line, and the convergence rate. Proceed if above the pass line; kill if below the pre-set kill line; iterate only if between the two and still converging.",
+          "Measure convergence, not just level. If three loops moved the result 40%, 15%, 5%, the design is converging and one more loop is worth it. If they moved it 40%, 38%, 41%, you are oscillating around a limit the current concept cannot pass, and more iteration is waste.",
+          "Weigh the cost of the next loop against the value of the question it answers. A one-day loop that resolves a go/no-go decision is almost always worth running; a six-week loop that refines a number already inside margin is not.",
+          "Kill decisively and record why. A killed concept with a clear recorded reason is a program asset: it stops the team from re-proposing it in three months. Track the kill rate; a program that never kills a concept is not setting its gates honestly.",
+          "Update the learning ledger at every gate so the cost per lesson stays visible. When the marginal cost per lesson rises sharply across loops, the cheap learning is done and the program should move to the next maturity level or stop."
+        ],
+        "tags": ["decision-gate", "iteration", "program-management"]
+      }
+    ]
+  },
+  {
+    "chain_name": "additive-manufacturing-metal-parts",
+    "description": "Take a metal part from additive process selection through design for additive, build preparation, post-processing, and qualification, so a printed part earns its way into structural use rather than being assumed flight-worthy.",
+    "domain": "manufacturing",
+    "tags": ["additive-manufacturing", "metal-am", "dmls", "qualification", "hardware"],
+    "steps": [
+      {
+        "flow_name": "metal-am-process-selection",
+        "description": "Choose among laser powder bed fusion, electron beam melting, and directed energy deposition by part size, material, feature resolution, and the dominant cost driver.",
+        "inputs": [
+          {"name": "part-requirements", "desc": "Material, envelope, minimum feature size, surface finish, structural duty, and production quantity"},
+          {"name": "material-candidates", "desc": "Candidate alloys and their printability, available powder forms, and qualification history"}
+        ],
+        "outputs": [
+          {"name": "process-selection", "desc": "The chosen additive process with the deciding factors and the rejected alternatives and why"},
+          {"name": "build-envelope-fit", "desc": "How the part fits the chosen machine's build volume, including orientation options and nesting for throughput"}
+        ],
+        "process": [
+          "Match feature resolution to process. Laser powder bed fusion (DMLS/SLM) holds minimum features near 0.3 to 0.5 mm with as-built surface roughness Ra of 8 to 15 um and layer thickness 20 to 60 um. Electron beam melting (EBM) runs hotter and faster but holds coarser features near 0.7 to 1.0 mm with Ra of 20 to 35 um. Directed energy deposition (DED) is for large near-net shapes and repairs, with features measured in millimeters.",
+          "Match material to process physics. EBM's hot build chamber (around 650 to 1000 C) suits crack-prone alloys such as titanium aluminides and reduces residual stress, and it processes reactive titanium in vacuum. Laser powder bed fusion covers the widest alloy range (Ti-6Al-4V, IN718, AlSi10Mg, 17-4PH, 316L). DED suits large steel and titanium structures and multi-material gradients.",
+          "Size the part against the build volume. Typical laser powder bed machines run 250 x 250 x 325 mm; large-format reach 400 to 800 mm per side. EBM volumes are similar but builds are faster per unit height. DED has effectively open-ended working volume on a gantry or robot. A part that needs splitting and joining changes the whole cost and qualification picture.",
+          "Identify the dominant cost driver before optimizing geometry. Laser powder bed cost scales with build height (machine time) and part volume (powder and energy), so packing many parts tall in one build and minimizing supports dominate unit cost. For a one-off large bracket, DED near-net plus machining often beats powder bed on both cost and lead time.",
+          "Reject additive where it loses. A simple prismatic part in a standard alloy is cheaper machined from billet. Reserve additive for geometry that only it can make: internal conformal cooling channels, topology-optimized load paths, consolidated multi-part assemblies, or long-lead castings you need in days."
+        ],
+        "tags": ["additive-manufacturing", "process-selection", "manufacturing"]
+      },
+      {
+        "flow_name": "design-for-metal-additive",
+        "description": "Reshape the part for additive constraints: overhang angle, support strategy, orientation, minimum wall, and residual stress management.",
+        "inputs": [
+          {"name": "process-selection", "desc": "The chosen additive process and its resolution and surface limits"},
+          {"name": "functional-geometry", "desc": "The functional surfaces, load paths, fits, and datum features the part must deliver"}
+        ],
+        "outputs": [
+          {"name": "am-ready-geometry", "desc": "The redesigned geometry with self-supporting features, machining stock on critical surfaces, and build orientation fixed"},
+          {"name": "support-strategy", "desc": "The support plan: where supports go, their type, how they are removed, and the orientation that minimizes support on functional surfaces"}
+        ],
+        "process": [
+          "Apply the overhang rule. Surfaces below roughly 45 degrees from horizontal need support in laser powder bed fusion; EBM tolerates shallower angles due to the sintered powder cake. Chamfer or fillet horizontal overhangs to self-supporting angles, and convert flat roofs of internal channels to diamond or teardrop cross-sections that self-support.",
+          "Fix build orientation to trade surface finish, support, and anisotropy together. The build direction (Z) is the weakest and roughest; downskin surfaces are rougher than upskin. Orient so that critical fits and fatigue-critical surfaces are up-facing or vertical, and so the part height (hence machine time) is reasonable.",
+          "Add machining stock only where it is needed. Leave 0.5 to 1.0 mm of stock on bearing bores, sealing faces, and datum surfaces for post-machining, and leave as-built surfaces everywhere tolerance allows. Blanket machining stock inflates cost and defeats the point of additive.",
+          "Keep walls and holes inside printable limits. Minimum reliable wall is about 0.4 to 0.5 mm for laser powder bed; vertical holes print round down to about 0.5 mm, horizontal holes need teardrop shaping below about 8 mm diameter to stay round without support, and small holes often print best as pilot holes to be drilled.",
+          "Manage residual stress in the geometry. Thick-to-thin transitions, large unsupported flat areas, and sharp internal corners concentrate the thermal gradients that warp parts off the plate. Add fillets, break up large flats, and plan for a stress-relief cycle on the build plate before any support or part removal."
+        ],
+        "tags": ["additive-manufacturing", "design-for-am", "geometry"]
+      },
+      {
+        "flow_name": "metal-am-build-preparation",
+        "description": "Prepare the build: slicing, scan strategy, parameter set, powder control, and atmosphere, so the as-built microstructure and density meet the part duty.",
+        "inputs": [
+          {"name": "am-ready-geometry", "desc": "The additive-ready geometry with fixed orientation"},
+          {"name": "support-strategy", "desc": "The support plan for the oriented part"}
+        ],
+        "outputs": [
+          {"name": "build-file", "desc": "The sliced build with scan paths, parameter assignments per region, and support toolpaths ready for the machine"},
+          {"name": "process-record", "desc": "The frozen parameter set, powder lot and recycle count, chamber atmosphere target, and witness-coupon plan for this build"}
+        ],
+        "process": [
+          "Lock the qualified parameter set rather than tuning per build. Each alloy and machine has a developed parameter window: laser power (typically 150 to 400 W for powder bed), scan speed (700 to 1400 mm/s), hatch spacing (0.08 to 0.14 mm), and layer thickness (30 to 60 um), giving volumetric energy density around 40 to 80 J/mm3. Changing any one of these invalidates prior qualification data.",
+          "Set the scan strategy for stress and density. Use a stripe or checkerboard scan with layer-to-layer rotation (commonly 67 degrees) to break up columnar grain alignment and distribute residual stress. Assign contour plus infill parameters separately so the skin gets surface finish and the core gets density.",
+          "Control the powder. Record lot, particle size distribution (typically 15 to 45 um for laser powder bed, 45 to 106 um for EBM), and recycle count; sieve and blend per the powder management plan. Reactive alloys (titanium, aluminum) demand tight oxygen and moisture control because recycled powder picks up oxygen each cycle and shifts mechanical properties.",
+          "Set and verify the atmosphere. Laser powder bed runs under argon or nitrogen with chamber oxygen held below about 0.1% (1000 ppm), often below 100 ppm for titanium; EBM runs under vacuum. Verify the oxygen sensor reading before the build starts, not just the setpoint.",
+          "Add witness coupons to the build plate in representative orientations. Tensile bars, density cubes, and a microstructure coupon printed alongside the part, in the same orientations as the part's critical features, are the evidence that this specific build met properties. Plan their locations and their post-processing to match the part."
+        ],
+        "tags": ["additive-manufacturing", "build-preparation", "process-control"]
+      },
+      {
+        "flow_name": "metal-am-post-processing",
+        "description": "Convert the as-built part to a usable part: stress relief on the plate, part removal, hot isostatic pressing, heat treat, support removal, and finish machining in the right order.",
+        "inputs": [
+          {"name": "build-file", "desc": "The completed build definition identifying which parts and coupons came off this plate"},
+          {"name": "process-record", "desc": "The frozen parameters and material record for traceability through post-processing"}
+        ],
+        "outputs": [
+          {"name": "finished-part", "desc": "The post-processed part at final dimensions with recorded heat treat, hot isostatic pressing, and machining operations"},
+          {"name": "property-state", "desc": "The resulting material condition: density, microstructure, and heat-treat temper, mapped to the expected mechanical properties"}
+        ],
+        "process": [
+          "Stress-relieve before cutting the part off the plate. A sub-transus stress-relief cycle (for Ti-6Al-4V, around 600 to 800 C) while the part is still fixed to the plate prevents the spring-back warping that happens when built-in residual stress releases on removal. Only then wire-EDM or bandsaw the part from the plate.",
+          "Hot isostatic press (HIP) when fatigue or fracture duty requires it. HIP (for titanium, around 900 to 950 C at 100 to 150 MPa for 2 to 4 hours) closes internal gas porosity and lack-of-fusion voids, which can lift fatigue life several-fold. Note that HIP can coarsen microstructure, so the subsequent heat treat is chosen with HIP in mind.",
+          "Apply the solution and aging heat treat to reach the specified temper. The as-built microstructure is not the final one; IN718 needs solution plus double-age, Ti-6Al-4V may be annealed or solution-treated-and-aged depending on the property target. Sequence HIP, solution, and age per the material spec so each step lands the intended phase and grain structure.",
+          "Remove supports and finish surfaces in a controlled order. Grind or machine off supports, then machine datum and functional surfaces using the machining stock left during design. Do the metrology-defining cuts last, after all thermal operations, so heat-treat distortion does not move finished features.",
+          "Improve fatigue-critical surfaces deliberately. As-built and support-contact surfaces are rough stress risers; shot peen, machine, or polish the fatigue-driving surfaces. Plan the datum scheme so the part can be located and machined after it has distorted from the nominal build shape."
+        ],
+        "tags": ["additive-manufacturing", "post-processing", "heat-treatment"]
+      },
+      {
+        "flow_name": "metal-am-part-qualification",
+        "description": "Qualify the part for structural use with density verification, witness-coupon mechanicals, microstructure review, and a dimensional and defect acceptance basis.",
+        "inputs": [
+          {"name": "finished-part", "desc": "The post-processed part at final dimensions"},
+          {"name": "property-state", "desc": "The material condition and expected properties from post-processing"}
+        ],
+        "outputs": [
+          {"name": "qualification-evidence", "desc": "The density, mechanical, microstructure, and dimensional results with accept/reject calls against the acceptance basis"},
+          {"name": "acceptance-basis", "desc": "The documented criteria future builds of this part are accepted against: coupon minimums, allowable porosity, and inspection scope"}
+        ],
+        "process": [
+          "Verify density and internal integrity. Archimedes density gives a fast bulk check (target above 99.5%, often 99.9% after HIP); X-ray computed tomography (CT) finds and locates internal voids, lack-of-fusion, and trapped powder that bulk density misses. Set the allowable defect size and location against the part's stress field, not a blanket number.",
+          "Pull mechanical properties from the witness coupons in the part's build orientations. Report yield, ultimate, elongation, and where duty demands it, fatigue and fracture toughness, in both the Z (build) direction and in-plane, because additive metals are anisotropic. Compare to the material allowables used in the stress analysis, not to wrought handbook values.",
+          "Review microstructure on a sectioned coupon. Confirm the expected phase and grain structure, absence of unmelted powder and keyhole porosity, and that HIP and heat treat landed the intended condition. Microstructure explains why a coupon missed properties and whether the cause is parameter drift or powder.",
+          "Dimensionally inspect against the drawing with a first-article layout. Additive distortion and support-contact zones are the usual nonconformances; CT doubles as a dimensional tool for internal channels that no probe can reach.",
+          "Freeze the acceptance basis for recurring production. Record the coupon minimums, the allowable porosity map, the required inspections, and the frozen process from build preparation. A later build is accepted by repeating this evidence set, and any process change triggers a delta qualification rather than silent acceptance."
+        ],
+        "tags": ["additive-manufacturing", "qualification", "inspection"]
+      }
+    ]
+  },
+  {
+    "chain_name": "composite-layup-design-method",
+    "description": "Design a composite laminate from stacking sequence through failure-criteria checks and cure-process selection to a buildable ply book, applying laminate theory and stacking rules a practitioner can act on.",
+    "domain": "engineering",
+    "tags": ["composites", "laminate", "layup", "cure", "structures"],
+    "steps": [
+      {
+        "flow_name": "laminate-stacking-sequence-design",
+        "description": "Define the ply orientations and stacking order that meet stiffness and strength targets while obeying symmetry, balance, and stacking rules.",
+        "inputs": [
+          {"name": "laminate-loads", "desc": "In-plane loads and moments (Nx, Ny, Nxy, Mx, My, Mxy) and stability requirements for the panel or member"},
+          {"name": "ply-properties", "desc": "Unidirectional ply stiffness and thickness (E1, E2, G12, nu12, cured ply thickness, typically 0.125 to 0.19 mm for carbon prepreg)"}
+        ],
+        "outputs": [
+          {"name": "stacking-sequence", "desc": "The ordered ply stack by angle, with the percentage in each of the 0, plus/minus 45, and 90 families"},
+          {"name": "abd-matrix", "desc": "The 6x6 ABD stiffness matrix for the stack, confirming symmetry and balance and the in-plane and bending stiffness it delivers"}
+        ],
+        "process": [
+          "Start from the load-driven percentage split, then refine. Begin near the 10% rule (at least 10% of plies in each of 0, +45, -45, 90). For axial members raise the 0 fraction; for shear-dominated webs raise the plus/minus 45 fraction; for pressure or biaxial loads balance 0 and 90. A typical general-purpose quasi-isotropic stack is 25/50/25 across 0, plus/minus 45, 90.",
+          "Build the stack symmetric and balanced. Symmetry about the mid-plane zeros the B matrix so in-plane loads do not induce bending (and the part cures flat); balance (equal numbers of +theta and -theta plies) zeros the A16 and A26 shear-extension coupling. Deviations are deliberate only (for example aeroelastic tailoring), not accidental.",
+          "Obey the stacking rules that prevent premature failure. Limit contiguous same-angle plies to about 4 (0.6 to 0.8 mm) to avoid matrix-crack coalescence; place plus/minus 45 pairs adjacent; keep 45-degree jumps between neighbors rather than 90-degree jumps where possible; put a 45 ply on the outer surface to improve damage tolerance and impact resistance.",
+          "Assemble the ABD matrix by summing each ply's transformed reduced stiffness through the thickness: A from Q-bar times ply thickness, B from the first moment about the mid-plane, D from the second moment. Confirm B is effectively zero for the symmetric stack and read off the in-plane (A) and bending (D) stiffness the design delivers.",
+          "Invert the ABD relation to get mid-plane strains and curvatures under the design loads, and check they are within the strain allowable before moving to detailed failure analysis. Carry the ply-by-ply strains forward; they are the input to the failure criteria step."
+        ],
+        "tags": ["composites", "laminate-theory", "stacking-sequence"]
+      },
+      {
+        "flow_name": "composite-failure-criteria-evaluation",
+        "description": "Evaluate the laminate with multiple failure criteria, apply environmental and damage-tolerance knockdowns, and report the margin and governing ply and mode.",
+        "inputs": [
+          {"name": "stacking-sequence", "desc": "The ordered ply stack and the ply-level strains under the design loads"},
+          {"name": "ply-allowables", "desc": "Ply strength values (Xt, Xc, Yt, Yc, S) at the design environment, on the correct statistical basis (A-basis or B-basis)"}
+        ],
+        "outputs": [
+          {"name": "margin-report", "desc": "Margin of safety per ply per criterion, naming the critical ply, the governing failure mode, and the first-ply-failure load"},
+          {"name": "applied-knockdowns", "desc": "The environmental, damage-tolerance, and variability knockdowns applied and the resulting design strain limits"}
+        ],
+        "process": [
+          "Run at least two independent criteria. Apply Tsai-Wu as the interactive quadratic check, cross-check with maximum strain (which catches simple fiber-direction failure Tsai-Wu can mask), and use Hashin when you need to separate fiber failure from matrix failure for progressive-damage or fatigue reasoning. Report the lowest margin across criteria.",
+          "Distinguish first-ply-failure from last-ply-failure. First-ply-failure (usually matrix cracking in an off-axis ply) is the conservative static basis for most primary structure; last-ply-failure with progressive-damage ply discounting is used only where the certification approach allows it. State which basis the margin is reported on.",
+          "Apply the environmental knockdown from qualification data, not a generic factor. Hot-wet compression strength of carbon/epoxy is commonly 60 to 80% of room-temperature-dry; pull the specific retention from the material qualification database for the design temperature and moisture condition.",
+          "Apply the damage-tolerance knockdown. For primary aerospace structure, design strain is typically capped near 4000 to 5000 microstrain in compression after barely visible impact damage (BVID), driven by open-hole compression and compression-after-impact testing rather than pristine-coupon strength. This usually governs the laminate thickness.",
+          "Compute margin of safety as (allowable divided by applied) minus 1 for every ply, criterion, and load case, and report the minimum. If any margin is negative, return to the stacking step to add plies or re-split orientations; if margins are large everywhere, consider removing plies to save weight."
+        ],
+        "tags": ["composites", "failure-analysis", "margins"]
+      },
+      {
+        "flow_name": "composite-cure-process-selection",
+        "description": "Choose the cure process (autoclave, out-of-autoclave, or liquid molding) and define the cure cycle that reaches full cure and the target glass transition without excess porosity.",
+        "inputs": [
+          {"name": "stacking-sequence", "desc": "The laminate definition, thickness, and part size driving the cure approach"},
+          {"name": "quality-requirements", "desc": "Void content limit, surface finish, glass transition target, and production rate requirements"}
+        ],
+        "outputs": [
+          {"name": "cure-process", "desc": "The selected process (autoclave, out-of-autoclave prepreg, or resin infusion) with the deciding factors"},
+          {"name": "cure-cycle", "desc": "The time-temperature-pressure profile: ramp rates, dwell(s), cure temperature, pressure schedule, and vacuum level, with the degree-of-cure and glass-transition target"}
+        ],
+        "process": [
+          "Select the process against the void-content and rate requirements. Autoclave prepreg at 6 to 7 bar reliably reaches below 1% voids and is the default for primary structure. Out-of-autoclave (OOA) prepreg under vacuum-bag-only pressure (about 1 bar) can reach 1 to 2% voids with the right material and careful debulk, and removes the autoclave bottleneck. Resin infusion (VARTM, RTM) suits large parts and dry-fiber preforms at lower tooling cost.",
+          "Set pressure to consolidate and suppress voids. Autoclave pressure both compacts plies and keeps dissolved volatiles in solution to limit porosity; vacuum-bag-only processes depend on a near-full vacuum and an optimized debulk schedule to pull voids out, because they lack the extra pressure. Specify the vacuum level (typically better than 5 inHg absolute, verified for leaks) for OOA.",
+          "Define the cure cycle to reach full degree of cure and the target glass transition (Tg). A representative epoxy cycle is a 1 to 3 C/min ramp to a 120 or 180 C dwell held 2 to 4 hours; the dwell temperature and time set the final Tg, which must sit comfortably above the maximum operating temperature with margin.",
+          "Add intermediate debulk steps for thick laminates. Vacuum debulking every few plies removes entrapped air and bulk factor before cure; skipping it on a thick OOA laminate is a leading cause of porosity. For thick sections, add a lower intermediate dwell to manage the exotherm and avoid a temperature overshoot that degrades the resin.",
+          "Match tooling coefficient of thermal expansion (CTE) and plan springback. Invar or carbon tooling minimizes CTE mismatch and warpage on precise parts; aluminum tooling is cheap but its higher CTE must be compensated. Predict spring-in on angled parts (a few degrees is common) and build the compensation into the tool, not the trim."
+        ],
+        "tags": ["composites", "cure", "process-selection"]
+      },
+      {
+        "flow_name": "composite-ply-book-generation",
+        "description": "Turn the stacking sequence into a buildable ply book: ply boundaries, flat patterns, layup sequence, splice and drop-off rules, and debulk schedule.",
+        "inputs": [
+          {"name": "stacking-sequence", "desc": "The validated and margin-checked ply stack"},
+          {"name": "cure-process", "desc": "The selected cure process and tooling approach that the layup must support"}
+        ],
+        "outputs": [
+          {"name": "ply-book", "desc": "The ordered ply-by-ply layup instruction: each ply's material, orientation, boundary, and sequence number"},
+          {"name": "flat-patterns", "desc": "The flat developed shape of each ply for cutting, with fiber-direction reference and splice locations"}
+        ],
+        "process": [
+          "Generate each ply's boundary and flatten it to a cutting pattern. For contoured parts, develop the flat pattern accounting for draping (fibers shear over double curvature), and mark the 0-degree fiber reference on every pattern so the cutter and the layup technician orient it correctly.",
+          "Define ply drop-offs and taper rules for thickness transitions. Drop interior plies, not surface plies; taper no steeper than about 1 ply per 10 to 20 times ply thickness; stagger drop locations so they do not stack into a single weak line. Abrupt drops create delamination initiation sites.",
+          "Set splice and overlap rules. Butt-splice unidirectional plies with a small gap controlled to within a few millimeters, stagger splices between plies so no two adjacent plies splice at the same location, and use overlap only where the design allows the local thickness bump.",
+          "Write the layup sequence and debulk schedule into the book. Specify which plies are laid before each intermediate debulk, the orientation check points, and any ply that must be inspected before it is covered. The sequence must match the cure process (OOA needs more frequent debulk than autoclave).",
+          "Include the first-article verification plan. Call out which ply boundaries and orientations get a documented inspection, and capture as-built deviations (ply gaps, overlaps, orientation errors) against disposition limits so the ply book doubles as the build record for the structure."
+        ],
+        "tags": ["composites", "ply-book", "manufacturing"]
+      }
+    ]
+  },
+  {
+    "chain_name": "test-campaign-design",
+    "description": "Design a hardware test campaign from the test matrix through instrumentation and data-acquisition architecture to real-time redlines and post-test data reduction, so the campaign answers the engineering questions with known uncertainty.",
+    "domain": "engineering",
+    "tags": ["testing", "instrumentation", "data-acquisition", "test-planning", "hardware"],
+    "steps": [
+      {
+        "flow_name": "test-matrix-construction",
+        "description": "Build the test matrix: the factors, levels, replicates, and article count that answer the questions at the required confidence without wasting articles.",
+        "inputs": [
+          {"name": "test-objectives", "desc": "The engineering questions and the effects to be measured, each with a required resolution and confidence"},
+          {"name": "resource-constraints", "desc": "Available articles, test time, facility slots, and cost per run"}
+        ],
+        "outputs": [
+          {"name": "test-matrix", "desc": "The ordered set of runs: factors and levels per run, replicates, and the article assigned to each"},
+          {"name": "statistical-basis", "desc": "The confidence and resolution the matrix supports, and the assumptions (effect size, scatter) behind the article count"}
+        ],
+        "process": [
+          "List the factors and separate the ones you vary from the ones you hold fixed or block. A factor held fixed must be recorded; a nuisance factor that cannot be held fixed (ambient temperature, operator) should be blocked or randomized so it does not alias with the effect of interest.",
+          "Choose the design structure to the question. Use a full factorial when factors are few (2 to 4) and interactions matter; use a fractional factorial or a response-surface design when factors are many and runs are expensive; use one-factor-at-a-time only to isolate a known mechanism, never to explore an interaction-rich space.",
+          "Size the replicate count from the expected scatter and the effect you must resolve. The number of runs scales roughly with the square of (scatter divided by the effect you need to detect). If a prior build showed 8% coefficient of variation and you must resolve a 5% change at 90% confidence, one run will not do; estimate the replicates before committing articles.",
+          "Allocate articles to runs with destructive testing in mind. A destructive test consumes an article per run, so the matrix and the article budget are the same problem; sequence non-destructive runs first on an article, then its one destructive run last. Reserve spare articles for re-runs of outliers.",
+          "Randomize or block the run order against drift. Facility warm-up, calibration drift, and ambient change over a multi-day campaign can masquerade as a factor effect. Randomize run order, or block by day and include a repeated reference run to detect and correct drift."
+        ],
+        "tags": ["testing", "design-of-experiments", "test-matrix"]
+      },
+      {
+        "flow_name": "test-instrumentation-selection",
+        "description": "Select sensors for each measured quantity by range, accuracy, and bandwidth, and plan their installation and calibration.",
+        "inputs": [
+          {"name": "test-matrix", "desc": "The runs and the quantities each run must measure"},
+          {"name": "measured-quantities", "desc": "The physical quantities (strain, temperature, pressure, acceleration, load, displacement) with expected magnitude and frequency content"}
+        ],
+        "outputs": [
+          {"name": "sensor-plan", "desc": "The sensor type, range, accuracy, and location for each measurement channel, with mounting and wiring approach"},
+          {"name": "calibration-plan", "desc": "The calibration traceability, pre- and post-test calibration checks, and the uncertainty budget per channel"}
+        ],
+        "process": [
+          "Pick the sensor range to sit the expected signal in the upper half of the range without clipping the peaks. A load cell sized at 10x the expected load wastes resolution; one sized at 1.1x risks clipping a transient. Allow headroom for overshoot and the worst-case abort condition.",
+          "Match sensor bandwidth to the physics. Static strain needs only DC to a few Hz; vibration and shock need sensors and mounts flat to well above the highest frequency of interest. A strain gauge bonded for static load is useless for a 2 kHz resonance; an accelerometer's mounted resonance must sit well above the measured band.",
+          "Build the per-channel uncertainty budget. Combine sensor accuracy, signal-conditioning error, data-acquisition quantization, and installation error (gauge misalignment, thermal output, lead-wire resistance) in a root-sum-square. A measurement with 8% uncertainty cannot confirm a 5% effect; fix the instrumentation before the test, not in the analysis.",
+          "Plan installation to the environment. Temperature-compensate strain gauges and use three-wire hookup for lead resistance; heat-sink or shield thermocouples from radiant sources; mount accelerometers with stud or adhesive matched to the frequency; locate pressure taps away from flow separation. Installation error usually dominates sensor spec error.",
+          "Define calibration traceability and pre/post checks. Calibrate against standards traceable to a national reference, record calibration dates and due dates, and run a known-input check before and after the test so a mid-test drift is detectable. A channel that fails its post-test calibration check puts its data in question."
+        ],
+        "tags": ["testing", "instrumentation", "sensors"]
+      },
+      {
+        "flow_name": "test-data-acquisition-architecture",
+        "description": "Define the data-acquisition system: sample rates, anti-alias filtering, channel count, resolution, triggering, and time synchronization.",
+        "inputs": [
+          {"name": "sensor-plan", "desc": "The channel list with each sensor's range and bandwidth"},
+          {"name": "measured-quantities", "desc": "The frequency content and dynamic range each channel must capture"}
+        ],
+        "outputs": [
+          {"name": "daq-architecture", "desc": "The sampling, filtering, resolution, channel grouping, triggering, and synchronization scheme for the campaign"},
+          {"name": "channel-list", "desc": "The engineering channel list with sample rate, range, filter, and calibration coefficients ready to load into the system"}
+        ],
+        "process": [
+          "Set each channel's sample rate above the Nyquist limit with margin. Sample at least 2x the highest frequency of interest to avoid aliasing, and in practice 5 to 10x to resolve the waveform shape. A 1 kHz signal of interest wants roughly 5 to 10 kS/s per channel; static channels can run at tens of samples per second.",
+          "Apply an analog anti-alias filter before digitizing, not a digital filter after. Energy above half the sample rate folds back into the band as unremovable false signal; a low-pass analog filter set below the Nyquist frequency is the only way to stop it. Record the filter corner and order per channel.",
+          "Choose resolution and range for the dynamic range you need. A 16-bit digitizer gives about 96 dB of range; a 24-bit delta-sigma channel suits low-level strain and acoustics. Set the input range to the signal plus headroom so the quantization step is small relative to the smallest feature you must resolve.",
+          "Define triggering and pre-trigger capture for transient events. A burst, impact, or failure happens once; set a level or external trigger and keep a pre-trigger buffer (often 10 to 50% of the record) so the data before the event is captured. For slow tests, continuous streaming to disk with timestamps is simpler and safer.",
+          "Synchronize time across all channels and subsystems. Phase relationships between channels (load versus strain, pressure versus displacement) are only meaningful if sampled on a common clock or hardware-synchronized; cross-correlation and modal work demand it. Use a shared clock, trigger, or timecode, and log the synchronization method."
+        ],
+        "tags": ["testing", "data-acquisition", "sampling"]
+      },
+      {
+        "flow_name": "test-redline-and-abort-criteria",
+        "description": "Set the real-time monitoring displays, redlines, and abort criteria that protect the article, the facility, and the people during the run.",
+        "inputs": [
+          {"name": "test-matrix", "desc": "The runs and the loads or environments each applies"},
+          {"name": "daq-architecture", "desc": "The live channels available for real-time monitoring"}
+        ],
+        "outputs": [
+          {"name": "redline-set", "desc": "The monitored parameters with warning and abort limits, the action at each, and who is authorized to call an abort"},
+          {"name": "monitoring-layout", "desc": "The real-time display layout: which channels are shown, in what form, and the health indicators the test conductor watches"}
+        ],
+        "process": [
+          "Derive redlines from the article and facility limits, not from the test target. A pressure redline sits below the proof or burst limit of the article and the facility plumbing; a temperature redline sits below the point where a fixture or sensor is damaged. Set a warning level below the abort level so the conductor sees a trend before the hard limit.",
+          "Define the action at each limit explicitly. A warning triggers heightened attention or a hold; an abort triggers an automatic or manual safe-shutdown sequence (unload, vent, power down) in a defined order. Vague 'watch it' limits fail under the time pressure of a real excursion.",
+          "Automate the fast aborts and leave the judgment calls to people. A parameter that can exceed a damaging limit faster than a human can react (a pressure spike, an overspeed) needs a hardware or software interlock; slower trends (a creeping temperature, a drifting leak) can be conductor-called. State which aborts are automatic.",
+          "Lay out the monitoring display for the few parameters that decide safety and success, not every channel. The test conductor watches a handful of health indicators and redline parameters live; the full channel set streams to disk for post-test. A cluttered display hides the one trend that matters.",
+          "Assign abort authority and rehearse the call. Name who can call an abort (often any team member for safety, the conductor for test-integrity), brief the sequence before the run, and do a dry run of the abort path. The first time the team executes an abort should not be during the real excursion."
+        ],
+        "tags": ["testing", "safety", "real-time-monitoring"]
+      },
+      {
+        "flow_name": "post-test-data-reduction",
+        "description": "Reduce the raw data to engineering results: apply calibrations, filter and detrend, quantify uncertainty, and report against the test questions.",
+        "inputs": [
+          {"name": "channel-list", "desc": "The acquired channels with their calibration coefficients and filter settings"},
+          {"name": "redline-set", "desc": "The limits and any excursions logged during the run, for flagging affected data"}
+        ],
+        "outputs": [
+          {"name": "reduced-results", "desc": "The engineering-unit results per run with uncertainty bands, answering the test questions"},
+          {"name": "data-quality-report", "desc": "The record of calibration applied, channels dropped or corrected, excursions, and the final data-quality assessment"}
+        ],
+        "process": [
+          "Apply calibrations and verify them against the pre/post checks before reducing anything. Convert counts to engineering units with the recorded coefficients, then confirm each channel's known-input check held across the test. Flag any channel that failed its post-test calibration as suspect before it reaches a conclusion.",
+          "Filter and detrend only with a documented, reversible method. Apply the planned digital filtering (and its corner) to extract the quantity of interest, remove known offsets and drift with a recorded baseline, and keep the raw record untouched so any reduction step can be rechecked. Undocumented smoothing hides real behavior.",
+          "Propagate uncertainty to the reported result. Carry the per-channel uncertainty budget from instrumentation through the data-reduction equations, combining in a root-sum-square, so each reported number has a band. A result quoted without an uncertainty cannot be compared to a prediction or a requirement.",
+          "Reconcile with the prediction and explain the gap. Overlay measured versus predicted, and when they disagree beyond the combined uncertainty, resolve whether the model, the article, or the measurement is wrong before accepting the result. An unexplained gap is a finding, not a rounding issue.",
+          "Report against the original test questions and mark data affected by excursions. State each question's measured answer with its band, note any run affected by a redline excursion or instrumentation loss, and record which runs are valid for the conclusion. Deliver the reduced results and the data-quality report together."
+        ],
+        "tags": ["testing", "data-reduction", "uncertainty"]
+      }
+    ]
+  },
+  {
+    "chain_name": "hardware-failure-analysis-method",
+    "description": "Run a systematic hardware failure analysis from evidence preservation through fractography and metallography to a root-cause tree and verified corrective action, so a failure becomes a confirmed cause and a proven fix rather than a guess.",
+    "domain": "engineering",
+    "tags": ["failure-analysis", "fractography", "root-cause", "metallurgy", "hardware"],
+    "steps": [
+      {
+        "flow_name": "failure-evidence-preservation",
+        "description": "Capture and protect the as-found evidence before any handling destroys it, and reconstruct the timeline and loading at failure.",
+        "inputs": [
+          {"name": "failed-hardware", "desc": "The failed part or assembly and its surrounding components, as recovered"},
+          {"name": "service-history", "desc": "The operating, load, and environmental history, plus the event description at the time of failure"}
+        ],
+        "outputs": [
+          {"name": "evidence-record", "desc": "The documented as-found condition: photographs, fragment map, chain of custody, and preserved fracture surfaces"},
+          {"name": "failure-timeline", "desc": "The reconstructed sequence and loading at failure, with the operating point and environment at the moment of failure"}
+        ],
+        "process": [
+          "Photograph and map before touching anything. Record the as-found position of every fragment, the mating surfaces, and the fracture faces at multiple scales before disassembly. A fracture surface rubbed clean or two fragments fitted back together by hand can destroy the markings that identify the origin and direction.",
+          "Protect the fracture surfaces from contamination and corrosion. Do not touch the fracture face, do not fit pieces together, and keep the surfaces dry and clean; package fragments individually. Fingerprint oils, handling debris, and a few hours of humidity can obscure fatigue striations and the origin.",
+          "Establish chain of custody and label every fragment. In a failure that may reach a formal review or dispute, who held the part and when matters as much as the metallurgy. Bag, label, and log each piece with its recovery location.",
+          "Reconstruct the loading and environment at failure from records, not memory. Pull the load spectrum, temperature, pressure, and operating point at the failure instant from data logs and the event report. Note what was nominal and what was off-nominal; the off-nominal condition is often the trigger.",
+          "Separate the primary failure from secondary damage up front. In an assembly, one part fails first and others break as a consequence. Identify candidate primary fractures (often the one with the oldest-looking surface or the origin that fits the load path) so the investigation targets the cause, not a downstream symptom."
+        ],
+        "tags": ["failure-analysis", "evidence", "investigation"]
+      },
+      {
+        "flow_name": "fractography-and-metallography",
+        "description": "Read the fracture surface and the microstructure to identify the failure mode, the origin, and whether the material and processing were to specification.",
+        "inputs": [
+          {"name": "evidence-record", "desc": "The preserved fracture surfaces and as-found documentation"},
+          {"name": "material-spec", "desc": "The specified material, heat treat, and microstructure the part should have"}
+        ],
+        "outputs": [
+          {"name": "failure-mode", "desc": "The identified fracture mechanism (fatigue, overload, brittle, intergranular, corrosion-assisted) and the located origin and crack direction"},
+          {"name": "material-findings", "desc": "The metallographic and compositional findings: microstructure, hardness, defects, and whether material and processing met the specification"}
+        ],
+        "process": [
+          "Read the macro fracture features first. Beach marks and a smooth-then-rough surface signal fatigue; a chevron pattern points back to a single overload origin; a shear lip indicates ductile overload; a flat, bright, faceted surface indicates brittle fracture. The macro features locate the origin and the crack-growth direction before any microscopy.",
+          "Confirm the mechanism under the scanning electron microscope (SEM). Fatigue striations (one per cycle in the growth region), ductile dimples (microvoid coalescence under overload), transgranular cleavage (brittle), and intergranular separation (temper embrittlement, hydrogen, stress corrosion, or creep) each have a distinct SEM signature. Identify the origin feature: an inclusion, a pore, a machining mark, or a corrosion pit.",
+          "Section through the origin for metallography. Mount, polish, and etch a cross-section through the crack origin to reveal grain structure, phase distribution, decarburization, case depth, and whether a crack followed a weak microstructural path. Section perpendicular to the crack front to see the subsurface initiation.",
+          "Measure microstructure and hardness against the specification. Compare grain size, phase balance, and hardness (and therefore the effective strength) to the material and heat-treat spec. A part at the wrong hardness, with the wrong microstructure, or with excessive inclusions failed partly because it was not the material the design assumed.",
+          "Check composition and for environmental attack. Energy-dispersive spectroscopy at the origin and on any corrosion product identifies the wrong alloy, a contaminant, or a corrosive species. Distinguish a material or process nonconformance from a pure design-load failure, because they lead to different corrective actions."
+        ],
+        "tags": ["failure-analysis", "fractography", "metallography"]
+      },
+      {
+        "flow_name": "hardware-root-cause-fault-tree",
+        "description": "Build a fault tree from the failure mode down to candidate root causes, test each hypothesis against the evidence, and converge on the proven cause.",
+        "inputs": [
+          {"name": "failure-mode", "desc": "The identified mechanism, origin, and crack direction"},
+          {"name": "material-findings", "desc": "The metallographic and compositional findings and any nonconformance"}
+        ],
+        "outputs": [
+          {"name": "root-cause", "desc": "The confirmed root cause (or causes), stated as the chain from initiating condition to failure, with the evidence that supports it and rules out alternatives"},
+          {"name": "hypothesis-ledger", "desc": "The list of candidate causes considered, the test for each, and why each was confirmed or eliminated"}
+        ],
+        "process": [
+          "Build the fault tree top-down from the observed failure. Put the failure at the top, then branch into the independent ways it could occur: higher load than designed, lower strength than designed (material/process), a stress concentration, an environmental assist, or a maintenance/assembly error. Keep branches mutually exclusive so evidence can eliminate whole branches.",
+          "Turn each branch into a falsifiable hypothesis with a discriminating test. 'Fatigue from under-strength material' predicts a specific hardness deficit and origin at an inclusion; 'fatigue from a stress riser' predicts a sharp geometric origin at spec material. Each hypothesis should predict something the evidence can confirm or refute.",
+          "Use the stress-versus-strength frame to separate cause classes. A failure is load exceeding capability: either the load was higher than design (duty, misuse, resonance) or the capability was lower than design (material, process, defect, damage). The fractography and metallography usually point to one side; confirm which.",
+          "Eliminate hypotheses with evidence, not opinion. Keep the hypothesis ledger: for each candidate, record the test and the result that confirmed or killed it. A root cause asserted without having ruled out the alternatives is a guess that will not survive the next recurrence.",
+          "State the root cause as a causal chain and distinguish contributing from root. Write it from the initiating condition through the mechanism to the failure (for example: forging lap at the fillet, not detected in inspection, grew by fatigue under the normal spectrum to critical size). Separate the true root cause from contributing factors so the corrective action targets the right level."
+        ],
+        "tags": ["failure-analysis", "root-cause", "fault-tree"]
+      },
+      {
+        "flow_name": "hardware-corrective-action-verification",
+        "description": "Define corrective and preventive actions against the root cause, verify the fix on hardware, and confirm the failure does not recur across the fleet.",
+        "inputs": [
+          {"name": "root-cause", "desc": "The confirmed root cause and its causal chain"},
+          {"name": "fleet-exposure", "desc": "The population of parts that share the root-cause condition and their service status"}
+        ],
+        "outputs": [
+          {"name": "corrective-action", "desc": "The corrective action on the root cause and the preventive action on the process that let it escape, each with an owner and a verification method"},
+          {"name": "verification-evidence", "desc": "The test or analysis that proves the fix works and the fleet disposition that confirms no further recurrence"}
+        ],
+        "process": [
+          "Separate correction, corrective action, and preventive action. Correction fixes the failed unit; corrective action removes the root cause so new units do not have it; preventive action fixes the process gap (a missing inspection, a loose tolerance) that let the condition escape. All three are usually needed; naming them separately prevents fixing only the symptom.",
+          "Target the corrective action at the proven root cause, not the symptom. If the root cause was a forging lap that inspection missed, the corrective action changes the forging or the inspection, not the part's wall thickness. A fix aimed at a contributing factor leaves the root cause live.",
+          "Verify the fix on representative hardware before fleet rollout. Reproduce the original duty on a corrected article and show the failure mode no longer initiates, or demonstrate by analysis anchored to test that the margin is restored. A corrective action closed on paper without verification is unproven.",
+          "Disposition the exposed fleet by risk. For parts already in service with the root-cause condition, decide inspect, retire, or run-to-limit based on the crack-growth rate and the inspection capability. Set an inspection interval that catches a crack before it reaches critical size if run-on is allowed.",
+          "Confirm no recurrence and close with evidence. Track the corrected population for the failure's return, confirm the preventive action holds in the process, and close the action only with the verification and fleet evidence attached. Feed the lesson back into design rules and inspection standards so the next program inherits it."
+        ],
+        "tags": ["failure-analysis", "corrective-action", "verification"]
+      }
+    ]
+  },
+  {
+    "chain_name": "design-for-manufacturability-review",
+    "description": "Run a design-for-manufacturability review from a structured checklist through tolerance stackup and process-capability assessment to cost-driver and supplier feedback, so a design is cheap and repeatable to make before it is released.",
+    "domain": "manufacturing",
+    "tags": ["dfm", "tolerance-analysis", "process-capability", "cost", "manufacturing"],
+    "steps": [
+      {
+        "flow_name": "dfm-checklist-review",
+        "description": "Review the design against a manufacturability checklist to flag features that are hard, costly, or risky to produce before release.",
+        "inputs": [
+          {"name": "design-package", "desc": "The drawings or model with features, materials, finishes, and callouts to be reviewed"},
+          {"name": "process-constraints", "desc": "The intended manufacturing processes and their known capabilities and limits"}
+        ],
+        "outputs": [
+          {"name": "dfm-findings", "desc": "The flagged features with the manufacturability issue, severity, and a suggested design change for each"},
+          {"name": "standardization-opportunities", "desc": "Opportunities to reduce part count, reuse standard features, and consolidate materials and finishes"}
+        ],
+        "process": [
+          "Check features against the intended process limits. For machining, flag deep pockets (depth beyond about 4x tool diameter), internal sharp corners that force small tools, and features that need a fifth axis or custom tooling. For casting or molding, flag non-draftable walls, uneven wall thickness that causes sink and warp, and undercuts that force side-actions.",
+          "Challenge every tight tolerance and fine finish. Each tolerance band tighter than the process natural capability and each surface-finish callout below what function needs adds cost without value. Ask 'what breaks if this opens up?' for each; tolerances tighter than roughly plus or minus 0.025 mm on a machined feature or a mirror finish should each have a functional reason.",
+          "Reduce part count and standardize. Combine parts that are always assembled together (and never serviced apart), replace custom fasteners with standard ones, and consolidate the material and finish list. Every unique part number, material, and finish is a separate procurement, inventory, and qualification burden.",
+          "Design for assembly, not just for the part. Check that parts can only go together one way (poka-yoke), that fasteners are accessible with standard tools, that there is clearance for hands and tooling, and that the assembly sequence does not trap a part. Assembly cost often exceeds part cost.",
+          "Rank findings by severity and cost impact. Separate must-fix manufacturability blockers (a feature no available process can make) from cost-reduction opportunities (a tolerance that could open up). Carry the severity so the team fixes blockers before release and schedules cost reductions deliberately."
+        ],
+        "tags": ["dfm", "design-review", "manufacturing"]
+      },
+      {
+        "flow_name": "mechanical-tolerance-stackup",
+        "description": "Analyze the tolerance stackup across the assembly to confirm fit and function, using worst-case and statistical methods and sound geometric dimensioning.",
+        "inputs": [
+          {"name": "dfm-findings", "desc": "The flagged features and tolerances from the checklist review"},
+          {"name": "assembly-definition", "desc": "The mating parts, the dimension chain, and the functional gap or fit that must be controlled"}
+        ],
+        "outputs": [
+          {"name": "stackup-result", "desc": "The predicted gap or fit distribution from the dimension chain, by worst-case and statistical methods, against the functional limits"},
+          {"name": "tolerance-allocation", "desc": "The revised tolerance allocation across the chain that meets the functional requirement at acceptable cost"}
+        ],
+        "process": [
+          "Build the one-dimensional dimension loop for the functional gap. Identify the controlling requirement (a clearance, an interference, a flush condition), list every dimension that contributes to it with sign, and confirm the loop closes. Most assembly fit problems are a single dimension chain that nobody summed.",
+          "Run the worst-case stack first. Sum the tolerances arithmetically; if the worst-case result keeps the gap inside its functional limits, the assembly always fits and no statistics are needed. Worst-case is the right method for safety-critical fits and low-volume assemblies where you cannot rely on averaging.",
+          "Run the statistical stack where worst-case is too costly. Combine the contributing tolerances in a root-sum-square (assuming independent, centered, roughly normal distributions) to predict the realistic spread. The statistical gap is much tighter than worst-case for long chains, which often recovers a design that worst-case rejected, at a quantified low defect rate.",
+          "Use geometric dimensioning and tolerancing (GD&T) to control the chain, not just plus/minus sizes. Datum references, position, and profile control how features actually locate in assembly; a chain toleranced only with plus/minus linear dimensions often does not control the real functional relationship. Apply bonus tolerance from maximum material condition where the function allows it.",
+          "Reallocate tolerances to the cheapest-to-hold features. If the stack fails, open the tolerances on the features that are expensive to hold tight and tighten the ones that are cheap, keeping the total within the functional limit. Allocation, not uniform tightening, is how a stackup is closed at minimum cost."
+        ],
+        "tags": ["dfm", "tolerance-analysis", "gd-t"]
+      },
+      {
+        "flow_name": "manufacturing-process-capability",
+        "description": "Assess whether the chosen processes can hold the required tolerances repeatably, using capability indices and measurement-system checks.",
+        "inputs": [
+          {"name": "tolerance-allocation", "desc": "The required tolerances per feature from the stackup"},
+          {"name": "process-data", "desc": "Process variation data: historical or trial-run measurements of the features on the intended process"}
+        ],
+        "outputs": [
+          {"name": "capability-assessment", "desc": "The capability index per critical feature against its tolerance, identifying features the process cannot hold"},
+          {"name": "process-controls", "desc": "The controls needed where capability is marginal: tighter process, inspection, or a tolerance change"}
+        ],
+        "process": [
+          "Compute the capability indices for each critical feature. Cp compares the tolerance width to the process spread (tolerance divided by six standard deviations); Cpk adds centering (the distance from the process mean to the nearer limit over three standard deviations). Cp tells you if the process is precise enough; Cpk tells you if it is also centered.",
+          "Judge against a capability target, not just greater than one. A Cpk of 1.0 implies roughly 2700 defects per million at the limits, which is usually not acceptable; common targets are Cpk of 1.33 (about 63 defects per million) for important features and 1.67 for critical ones. Set the target by the feature's consequence.",
+          "Verify the measurement system before trusting the capability number. Run a gauge repeatability and reproducibility (gauge R&R) study; if measurement variation consumes more than about 10 to 30% of the tolerance, the capability numbers are measuring the gauge, not the process. A bad gauge can make a good process look incapable or hide a bad one.",
+          "Separate the two fixes for an incapable feature. Low Cp means the process is too variable: change the process, tooling, or fixturing to shrink the spread. Low Cpk with adequate Cp means the process is off-center: re-center the setpoint. The corrective action differs, so diagnose which before acting.",
+          "Plan controls where capability stays marginal. Where a feature cannot reach the target economically, add in-process control (SPC charting), 100% inspection or a go/no-go gauge, or negotiate a tolerance change through the stackup. Carry these controls into the production plan rather than discovering them in first-article."
+        ],
+        "tags": ["dfm", "process-capability", "statistics"]
+      },
+      {
+        "flow_name": "cost-driver-and-supplier-feedback",
+        "description": "Identify the cost drivers in the design and fold supplier manufacturability feedback back into the design before release.",
+        "inputs": [
+          {"name": "capability-assessment", "desc": "The features and controls driving process difficulty and cost"},
+          {"name": "supplier-input", "desc": "Quotes, lead times, and manufacturability feedback from the suppliers who would make the part"}
+        ],
+        "outputs": [
+          {"name": "cost-drivers", "desc": "The ranked design features and decisions that drive unit cost, tooling cost, and lead time, with the quantified impact of each"},
+          {"name": "design-changes", "desc": "The supplier-informed design changes that reduce cost or risk, with the saving and any functional trade for each"}
+        ],
+        "process": [
+          "Build a should-cost model from the process, not just the quote. Estimate material (volume and scrap), machine or cycle time, tooling amortized over volume, finishing, inspection, and yield. The model shows which features drive cost and lets you challenge a quote that is out of line with the physics.",
+          "Rank cost drivers by their share of unit cost. Often a handful of decisions (a tight tolerance that forces a grind operation, a material that needs special handling, a feature that forces a second setup) dominate. Rank them so the team spends its redesign effort where the money is.",
+          "Separate recurring unit cost from non-recurring tooling cost against the volume. A hard tool that halves unit cost pays back only above a breakeven volume; at low volume the cheaper-per-part decision may be the higher-unit-cost soft process. Make the recurring-versus-non-recurring trade explicitly against the planned quantity.",
+          "Bring suppliers in before release, not after. The people who run the process see manufacturability issues the design team cannot: a feature that fits their machine poorly, a material they stock in a different form, a tolerance their process holds easily or not at all. Fold their feedback in while the design can still change cheaply.",
+          "Decide each change on cost against function with eyes open. For every supplier-suggested change, record the saving and the functional trade, and route anything that touches form, fit, or function through the tolerance and capability steps before accepting it. Capture the accepted changes as the manufacturability-driven design updates for release."
+        ],
+        "tags": ["dfm", "cost-analysis", "supplier-management"]
+      }
+    ]
+  },
+  {
+    "chain_name": "hardware-qualification-test-program",
+    "description": "Structure a hardware qualification program from the test-versus-analysis strategy through qualification test levels and durations to acceptance testing and delta qualification for design changes, so the product is proven fit without over-testing.",
+    "domain": "engineering",
+    "tags": ["qualification", "test", "acceptance", "verification", "hardware"],
+    "steps": [
+      {
+        "flow_name": "qualification-strategy-test-vs-analysis",
+        "description": "Decide, requirement by requirement, whether qualification is by test, by analysis, by inspection, or by similarity, and plan the evidence accordingly.",
+        "inputs": [
+          {"name": "requirements-set", "desc": "The product requirements to be qualified, each with its verification need and consequence of failure"},
+          {"name": "program-constraints", "desc": "Schedule, article availability, facility access, and the heritage of similar qualified hardware"}
+        ],
+        "outputs": [
+          {"name": "verification-matrix", "desc": "Each requirement mapped to its verification method (test, analysis, inspection, or similarity) with the rationale"},
+          {"name": "qualification-plan", "desc": "The order of qualification activities, the articles required, and the evidence each produces"}
+        ],
+        "process": [
+          "Assign a verification method to every requirement and record why. Test is the default for anything that governs safety, has significant uncertainty, or cannot be predicted confidently; analysis suits well-understood physics anchored to test data; inspection suits dimensional and workmanship requirements; similarity suits features identical to previously qualified hardware under equal or more severe conditions.",
+          "Qualify by analysis only where the model is validated. Analysis-based qualification is acceptable when the method is anchored to test data on representative hardware and the margins are large; it is not acceptable to stand in for a test of a novel, high-consequence, or poorly-modeled behavior. State the validation basis for each analysis-qualified requirement.",
+          "Claim similarity only with a documented comparison. Qualification by similarity requires showing the new item is the same design, material, and process as a qualified item, used in an equal or less severe environment, with the deltas assessed. An undocumented 'it is basically the same' claim is not a qualification basis.",
+          "Order the qualification to find problems early and cheaply. Sequence inexpensive, high-information tests (functional, modal survey, proof) before the expensive, destructive, long-duration ones, so a basic flaw is caught before the program commits a qualification article to a month-long environmental run.",
+          "Plan the articles and their configuration. Qualification articles must represent the production design, material, and process; a qualification run on a hand-built article that differs from production does not qualify production. Identify how many articles each test needs and whether an article can be reused across non-destructive tests before a destructive one."
+        ],
+        "tags": ["qualification", "verification-planning", "strategy"]
+      },
+      {
+        "flow_name": "qual-test-levels-and-durations",
+        "description": "Set the qualification environments, levels, and durations with the correct margin above the acceptance and service conditions.",
+        "inputs": [
+          {"name": "verification-matrix", "desc": "The requirements assigned to test and the environments they must be qualified to"},
+          {"name": "service-environment", "desc": "The service load, vibration, thermal, shock, and life environments the product must survive"}
+        ],
+        "outputs": [
+          {"name": "test-levels", "desc": "The qualification level and duration for each environment, with the margin above service and above acceptance stated"},
+          {"name": "environment-sequence", "desc": "The order of environmental exposures and whether they are applied separately or combined, with the rationale"}
+        ],
+        "process": [
+          "Set qualification levels above acceptance, which sits above service. Qualification demonstrates margin, so it runs hotter, harder, and longer than the product will ever see; acceptance screening runs between service and qualification to catch workmanship defects without consuming life. State the three levels (service, acceptance, qualification) for each environment so the margins are visible.",
+          "Apply established margins per environment. Typical practice adds a vibration qualification margin of a few dB above acceptance (for example acceptance at the service spectrum, qualification 3 to 6 dB higher), a thermal margin of 10 to 20 C beyond the operating extremes, and a shock margin above the worst-case service shock. Use the governing standard's margins where one applies.",
+          "Set test duration from life and acceleration. Vibration duration is set to accumulate the required fatigue dose (often expressed in minutes per axis that represent the service life, sometimes accelerated by raising level and shortening time per an equivalence rule); thermal cycling is set to a cycle count that represents the service life with margin. State the life basis behind each duration.",
+          "Decide separate versus combined environments. Real service often applies vibration, thermal, and load together; a combined-environment test is more representative but harder and costlier. Decide per requirement whether sequential single-environment tests suffice or whether a combined test is needed to expose interaction effects, and justify the choice.",
+          "Order the sequence to be representative and to stress interfaces. A common sequence runs functional, then thermal cycling, then random vibration, then shock, with functional checks between each, so a degradation introduced by one environment is caught before the next. Put the environment most likely to expose a weakness where its effect will be seen."
+        ],
+        "tags": ["qualification", "environmental-test", "margins"]
+      },
+      {
+        "flow_name": "acceptance-test-procedure",
+        "description": "Define the acceptance test that screens each production unit for workmanship and function without consuming qualification margin or life.",
+        "inputs": [
+          {"name": "test-levels", "desc": "The qualification levels, which set the ceiling the acceptance levels sit below"},
+          {"name": "production-config", "desc": "The production unit configuration and the functional performance it must demonstrate"}
+        ],
+        "outputs": [
+          {"name": "acceptance-procedure", "desc": "The acceptance screens and functional tests applied to every unit, with pass/fail criteria and the level and duration of each screen"},
+          {"name": "screening-rationale", "desc": "The rationale tying each screen to the defect it catches and confirming it does not consume unacceptable life"}
+        ],
+        "process": [
+          "Build acceptance to catch workmanship and part defects, not to re-prove the design. Acceptance screens find the cold solder joint, the loose fastener, the marginal part, and the assembly error on an individual unit; the design was already proven in qualification. Keep acceptance focused on unit-to-unit escapes.",
+          "Set acceptance levels between service and qualification. Acceptance vibration and thermal screens run above the service environment to precipitate latent defects but below qualification so they do not consume meaningful life. A common thermal screen runs several cycles across the operating range; a vibration screen runs a short random exposure per axis.",
+          "Include a functional performance test at the limits of the specification. Every unit demonstrates its functional requirements across the operating range (temperature extremes, voltage extremes, load points), not just at nominal, so a unit marginal only at the corner is caught. Record the measured performance, not just pass/fail, to see drift across the production run.",
+          "Bound the life consumed by acceptance screening. Each screen uses some fatigue and thermal life; sum the acceptance exposures across all screens and confirm they stay a small fraction of the qualified life, so the delivered unit retains its margin. A screen that consumes significant life is a design or screen-level problem.",
+          "Define clear pass/fail and the retest and nonconformance path. State the accept criteria, the action on a failure (repair and full re-screen, or scrap), and the limit on how many times a unit may be reworked and re-screened before it is no longer representative of qualified hardware. Random intermittent failures during screening are findings, not nuisances to retest away."
+        ],
+        "tags": ["qualification", "acceptance-test", "screening"]
+      },
+      {
+        "flow_name": "delta-qualification-assessment",
+        "description": "Assess a design, material, or process change and define the minimum delta qualification needed to re-establish the qualification basis without repeating the full program.",
+        "inputs": [
+          {"name": "change-definition", "desc": "The proposed design, material, process, or supplier change and its intent"},
+          {"name": "qualification-plan", "desc": "The original qualification basis and the evidence that supports it"}
+        ],
+        "outputs": [
+          {"name": "change-impact", "desc": "The assessment of which qualified requirements and environments the change affects and which remain covered by the original evidence"},
+          {"name": "delta-qual-scope", "desc": "The minimum set of re-tests and re-analyses needed to re-qualify, with the rationale for everything not repeated"}
+        ],
+        "process": [
+          "Map the change to the requirements and environments it touches. A change affects only some of the qualification basis; trace which requirements, load paths, and environments the change could influence and which it demonstrably cannot. The unaffected qualification evidence still stands and is not repeated.",
+          "Classify the change by its qualification impact. A change with no effect on form, fit, function, or the qualified environments may need only analysis or inspection; a change that alters a load path, a material, or a thermal path needs targeted re-test of the affected environments; a change that invalidates the architecture needs full re-qualification. State the class and its basis.",
+          "Scope the delta tests to the affected envelope with margin. Re-run only the environments the change affects, at the qualification levels, on an article built with the change; do not repeat environments the change cannot influence. Where the change could interact with an untested-together environment, add the combined case.",
+          "Preserve traceability from the original basis to the delta. Document which original evidence remains valid, which is superseded, and which new evidence replaces it, so the qualification basis stays a complete and auditable record after the change. A delta qualification that breaks the traceability chain leaves the product's qualification status ambiguous.",
+          "Decide re-qualification versus grandfathering against risk. For a change with large uncertainty or high consequence, favor re-test even when an analysis argument exists; for a low-risk change with strong analysis and heritage, a documented analysis-based delta is appropriate. Record the decision and its risk rationale so a later reviewer can follow the logic."
+        ],
+        "tags": ["qualification", "change-management", "delta-qual"]
+      }
+    ]
+  },
+  {
+    "chain_name": "rapid-tooling-methodology",
+    "description": "Choose and build tooling at the right level for the production rate, from soft tooling for prototypes through bridge tooling for low-rate to the hard-tooling investment decision, so tooling spend tracks volume and schedule.",
+    "domain": "manufacturing",
+    "tags": ["tooling", "rapid-tooling", "molds", "production-rate", "manufacturing"],
+    "steps": [
+      {
+        "flow_name": "tooling-strategy-by-production-rate",
+        "description": "Decide the tooling level from the production rate, timeline, and design maturity: soft for prototypes, bridge for low-rate, hard for high-rate.",
+        "inputs": [
+          {"name": "production-plan", "desc": "The quantity, rate, and timeline the tooling must support, and how firm the design is"},
+          {"name": "part-characteristics", "desc": "The part material, process (molding, casting, forming, composite), geometry, and tolerance needs"}
+        ],
+        "outputs": [
+          {"name": "tooling-strategy", "desc": "The selected tooling level (soft, bridge, hard) with the volume, timeline, and maturity reasoning"},
+          {"name": "tooling-roadmap", "desc": "The planned progression of tools across the program, including when to step up from one level to the next"}
+        ],
+        "process": [
+          "Decide the tooling level primarily from volume and design maturity. Soft tooling suits tens to a few hundred parts and an evolving design; bridge tooling suits hundreds to low thousands while hard tooling is being cut or the design settles; hard tooling suits tens of thousands and up on a frozen design. Committing hard tooling to an unfrozen design is the classic expensive mistake.",
+          "Weigh lead time against unit cost. Soft tools are available in days to a couple of weeks at low cost but high per-part cost and short life; hard steel tools take many weeks to months and large non-recurring cost but give the lowest per-part cost and the longest life. Pick the level whose total cost over the actual volume is lowest, including the cost of waiting.",
+          "Plan a tooling progression, not a single tool. Many programs run soft tooling for the first prototypes, bridge tooling to start deliveries and burn down design risk, and hard tooling once the design and rate justify it. The roadmap names the trigger (design freeze, volume threshold) for each step so the program does not jump to hard tooling prematurely or cling to soft tooling too long.",
+          "Match the tool to the process and the part life expected on it. Injection molding, die casting, sheet-metal forming, and composite layup each have their own soft/bridge/hard spectrum and their own tool-life expectations (an aluminum injection mold may last thousands of shots, a hardened steel mold millions). Set the expected tool life against the volume the tool must cover.",
+          "Hold tolerance and surface requirements against the tooling level. Soft tools wear and relax tolerances over their short life; hard tools hold tight tolerances and fine finishes over long runs. If the part needs tight tolerances from part one, a soft tool may not be acceptable even at low volume, which forces an earlier bridge or hard tool."
+        ],
+        "tags": ["tooling", "strategy", "production-planning"]
+      },
+      {
+        "flow_name": "soft-tooling-for-prototypes",
+        "description": "Build soft tooling for prototype and very low volumes: 3D-printed tools, cast urethane, and machined aluminum, accepting short life for speed and low cost.",
+        "inputs": [
+          {"name": "tooling-strategy", "desc": "The decision to use soft tooling and the volume and tolerance it must support"},
+          {"name": "part-characteristics", "desc": "The part geometry, material, and process the soft tool must produce"}
+        ],
+        "outputs": [
+          {"name": "soft-tool-design", "desc": "The soft tool design and method (printed mold, silicone/urethane cast, machined aluminum) with expected life and tolerance"},
+          {"name": "prototype-parts-plan", "desc": "The plan to produce the prototype quantity on the soft tool, including cycle, release, and tool-wear expectations"}
+        ],
+        "process": [
+          "Pick the soft-tooling method by part material and quantity. Silicone/urethane vacuum casting makes tens of urethane or epoxy parts from a master in days; 3D-printed molds and fixtures suit short runs and low-pressure or low-temperature processes; machined aluminum molds and dies give better tolerance and finish and a few hundred to a few thousand parts for moderate cost.",
+          "Design to the soft tool's weaknesses. Printed and cast tools soften at temperature and wear quickly under pressure and abrasion; add generous draft, avoid sharp edges that chip, and expect to touch up or replace the tool during the run. Plan features that let you repair the tool rather than scrap it.",
+          "Set realistic life and tolerance expectations and track them. A printed injection-mold insert may give tens to low hundreds of shots before it degrades; a cast silicone mold a handful to tens of pulls; a machined aluminum mold thousands. Monitor part dimensions across the run because a soft tool drifts as it wears.",
+          "Use the soft tool to validate the part and the process cheaply. The point of soft tooling is to get real parts in hand to test fit, function, and the molding or forming process before committing bridge or hard tooling. Capture the process learnings (gate location, cycle, release, warp) that will carry into the next tool.",
+          "Plan tool replacement into the schedule. Because soft tools have short life, plan to make more than one if the prototype quantity exceeds a single tool's life, and sequence tool builds so a worn tool does not stop the program. Treat the soft tool as consumable, not an asset to preserve."
+        ],
+        "tags": ["tooling", "soft-tooling", "prototyping"]
+      },
+      {
+        "flow_name": "bridge-tooling-low-rate-production",
+        "description": "Build bridge tooling to carry low-rate production while the design settles or hard tooling is cut: aluminum molds, modular inserts, and low-cavitation tools.",
+        "inputs": [
+          {"name": "tooling-strategy", "desc": "The decision to use bridge tooling and the rate and duration it must cover"},
+          {"name": "prototype-parts-plan", "desc": "The process learnings from the soft-tool prototypes that inform the bridge tool"}
+        ],
+        "outputs": [
+          {"name": "bridge-tool-design", "desc": "The bridge tool design (aluminum mold, modular insert set, low-cavity count) with its expected life, rate, and tolerance"},
+          {"name": "low-rate-production-plan", "desc": "The plan to run low-rate production on the bridge tool while the design freezes or hard tooling is built"}
+        ],
+        "process": [
+          "Build the bridge tool in aluminum or a pre-hardened steel for a useful but limited life. An aluminum injection mold can run thousands to tens of thousands of shots at a fraction of a hardened-steel tool's cost and lead time, which covers low-rate production and the hard-tool build period. Choose the material for the shot count the bridge phase actually needs.",
+          "Use modular inserts to absorb design changes cheaply. A master unit die (MUD) frame with replaceable cavity inserts lets a design change touch only the insert, not the whole tool. During a phase where the design is still moving, modularity is what makes the bridge tool affordable to update.",
+          "Run low cavitation to cut tool cost and schedule. A one- or two-cavity bridge tool costs far less and comes faster than a multi-cavity production tool; it meets low-rate demand and avoids spending multi-cavity money before the design is frozen. Size the cavity count to the low-rate demand, not the eventual high-rate demand.",
+          "Qualify parts off the bridge tool as representative of production. Bridge-tool parts are usually the first parts made by the production process at a representative rate; use them for first-article inspection and to start deliveries, while recording any differences from the hard-tool parts to come. Confirm the bridge tool holds the required tolerances across its planned run.",
+          "Set the handoff trigger to hard tooling. Define when the program steps from bridge to hard tooling: typically at design freeze and a demonstrated volume that justifies the hard-tool investment. Overlap the hard-tool build with bridge production so deliveries do not pause, and plan the cutover so the first hard-tool parts are qualified before the bridge tool retires."
+        ],
+        "tags": ["tooling", "bridge-tooling", "low-rate-production"]
+      },
+      {
+        "flow_name": "hard-tooling-investment-decision",
+        "description": "Make the hard-tooling investment decision on a frozen design: breakeven volume, payback, tool life, and the risk of committing non-recurring cost.",
+        "inputs": [
+          {"name": "low-rate-production-plan", "desc": "The low-rate production results and the demonstrated demand and design stability"},
+          {"name": "volume-forecast", "desc": "The forecast production volume, rate, and program life over which the hard tool amortizes"}
+        ],
+        "outputs": [
+          {"name": "investment-decision", "desc": "The go/no-go on hard tooling with the breakeven volume, payback period, and the unit-cost and rate gains quantified"},
+          {"name": "hard-tool-specification", "desc": "The hard-tool specification: material, cavity count, expected life, and the rate and tolerance it must deliver"}
+        ],
+        "process": [
+          "Compute the breakeven volume between bridge and hard tooling. Breakeven is the non-recurring hard-tool cost divided by the per-part saving over bridge tooling; below that volume the bridge tool is cheaper overall, above it the hard tool wins. Compare the breakeven to the forecast volume with margin for forecast error.",
+          "Require a frozen design before committing. Hard tooling is the point of no cheap return: a design change after a hardened-steel multi-cavity tool is cut is expensive and slow. Confirm the design is frozen under change control and the qualification is complete or nearly so before releasing the hard-tool cut.",
+          "Specify the tool for the rate and life, not just the part. Set the cavity count from the production rate and cycle time, the tool material (hardened tool steel for millions of cycles, with appropriate coatings and cooling) from the total volume and material abrasiveness, and the cooling and ejection design from the cycle time the rate demands. The tool is a production-rate decision as much as a part decision.",
+          "Quantify the unit-cost and rate gains that justify the spend. Hard tooling lowers per-part cost (multi-cavity, fast cycle, low scrap) and raises sustainable rate; put numbers on both and show the payback period against the forecast. An investment justified only by 'we will need it eventually' without a volume and payback is not justified.",
+          "Weigh the downside of committing early against waiting. Committing hard tooling too early risks an expensive change if the design or volume shifts; waiting too long leaves the program on costly bridge tooling and capped rate. State the risk on each side and the trigger conditions, so the decision is made on evidence rather than hope about the forecast."
+        ],
+        "tags": ["tooling", "hard-tooling", "investment-analysis"]
+      }
+    ]
+  },
+  {
+    "chain_name": "mass-properties-management",
+    "description": "Manage mass properties across a hardware program from mass budget and allocation through tracking and growth reporting to center-of-gravity and inertia estimation and mass-reduction trades, so weight is controlled rather than discovered at integration.",
+    "domain": "engineering",
+    "tags": ["mass-properties", "weight", "center-of-gravity", "inertia", "systems-engineering"],
+    "steps": [
+      {
+        "flow_name": "mass-budget-and-allocation",
+        "description": "Set the total mass target and allocate it top-down to subsystems with maturity-based margins and not-to-exceed limits.",
+        "inputs": [
+          {"name": "mass-requirement", "desc": "The system-level mass target or limit (for example maximum launch mass, payload capacity) and its source"},
+          {"name": "system-architecture", "desc": "The subsystem breakdown the mass must be allocated across"}
+        ],
+        "outputs": [
+          {"name": "mass-allocation", "desc": "The mass budget allocated to each subsystem, with a not-to-exceed value and a target value for each"},
+          {"name": "margin-plan", "desc": "The mass growth allowance and management reserve held at each level and how they shrink as the design matures"}
+        ],
+        "process": [
+          "Start from the hard system limit and work down. Identify the physical limit (launch vehicle capacity, structural rating, range requirement) and set the system mass target below it with a management reserve. Allocate the remainder to subsystems by function and by historical mass fraction for similar systems, so the allocation is grounded in data, not wishful splitting.",
+          "Hold a mass growth allowance sized to the design maturity. Early-stage estimates grow; carry a growth allowance that is large at concept (often 20 to 30% at the system level for a new design) and shrinks as mass moves from estimated to calculated to measured. The allowance is a planned reserve to be consumed deliberately, not slack to be spent silently.",
+          "Give each subsystem both a target and a not-to-exceed value. The target is what the subsystem designs to; the not-to-exceed is the allocation it may not cross without a system-level trade. The gap between them is the margin the system holds against that subsystem's growth.",
+          "Allocate to the controlling party and make it accountable. Each subsystem allocation has an owner who manages to it; a budget with no owner is not managed. Set the reporting cadence and the escalation path for an allocation that is trending over its not-to-exceed value.",
+          "Hold system-level management reserve separate from subsystem margins. Keep a reserve at the system level that only the system owner can release, so a subsystem overrun that cannot be recovered locally has a controlled path to resolution rather than silently eating the system margin. Document the reserve and the rules for drawing it down."
+        ],
+        "tags": ["mass-properties", "budgeting", "systems-engineering"]
+      },
+      {
+        "flow_name": "mass-tracking-and-growth-reporting",
+        "description": "Track actual mass bottom-up against the budget with basis-of-estimate codes and report growth trends so overruns surface early.",
+        "inputs": [
+          {"name": "mass-allocation", "desc": "The subsystem mass budgets with target and not-to-exceed values"},
+          {"name": "component-masses", "desc": "The current component mass values with their source: estimated, calculated, or measured"}
+        ],
+        "outputs": [
+          {"name": "mass-status", "desc": "The current rolled-up mass against budget at system and subsystem level, with margin remaining and trend"},
+          {"name": "growth-trend", "desc": "The mass-versus-time history and the projected mass at delivery, flagging subsystems trending over their not-to-exceed limit"}
+        ],
+        "process": [
+          "Roll mass up bottom-up from a controlled component list. Every component carries a mass value and a basis code: measured (weighed hardware), calculated (from the detailed model), estimated (parametric or analogy), or allocated (a placeholder holding the budget). The rollup against the allocation shows margin remaining at each level.",
+          "Weight the margin by the basis maturity. A subsystem mostly on measured masses needs little remaining margin; one mostly on estimates needs more because it will still grow. Report not just the current mass but the quality of the number, so the system owner knows how much growth is still coming.",
+          "Track mass versus time and project to delivery. Plot the rolled-up mass across the program; a steadily rising line projects to a delivery mass that can be extrapolated well before integration. The trend, not just the snapshot, is what gives time to act on an overrun.",
+          "Flag and escalate subsystems trending over their not-to-exceed value. The reporting exists to surface a problem while it is still cheap to fix; a subsystem whose projection crosses its not-to-exceed limit triggers escalation to a trade study, not a note in a report nobody acts on. Set the threshold that triggers action.",
+          "Keep the mass record under configuration control and reconcile it with measured hardware. As components are built and weighed, replace estimates with measured values and reconcile the model; a large gap between calculated and measured mass is itself a finding (a process or model error) worth investigating. Maintain one controlled source of truth for mass."
+        ],
+        "tags": ["mass-properties", "tracking", "reporting"]
+      },
+      {
+        "flow_name": "cg-and-inertia-estimation",
+        "description": "Estimate and control the center of gravity and the inertia tensor across configurations, and plan the measurement that confirms them.",
+        "inputs": [
+          {"name": "mass-status", "desc": "The component mass list with positions for the current configuration"},
+          {"name": "cg-requirements", "desc": "The allowable center-of-gravity envelope and the inertia limits the system must meet across its configurations"}
+        ],
+        "outputs": [
+          {"name": "cg-inertia-estimate", "desc": "The estimated center of gravity and inertia tensor per configuration, against the allowable envelope and limits"},
+          {"name": "measurement-plan", "desc": "The plan to measure mass, center of gravity, and inertia on the built hardware and reconcile to the estimate"}
+        ],
+        "process": [
+          "Compute the center of gravity as the mass-weighted mean position of every component. Sum mass times position over total mass in each axis; carry it per configuration because the center of gravity moves as fuel burns, payloads change, or appendages deploy. Report the center-of-gravity travel across the full configuration set, not just one point.",
+          "Build the inertia tensor about the center of gravity. Sum each component's own inertia plus its mass times the squared offset from the system center of gravity (the parallel-axis theorem); report the full tensor including products of inertia, because a nonzero product of inertia causes cross-axis coupling that control and dynamics care about.",
+          "Check the center of gravity and inertia against the allowable envelope for every configuration. Stability, control authority, handling, and dynamic behavior all depend on where the center of gravity sits and how the inertia is distributed; a center of gravity that leaves its envelope in one configuration is a system problem even if it is fine in others. Flag the worst-case configuration.",
+          "Hold margin on the center-of-gravity estimate for the same reason as mass. The center of gravity is computed from component masses and positions that are still maturing, so the estimate has uncertainty; keep the predicted center of gravity comfortably inside the envelope early, and tighten as masses become measured.",
+          "Plan the physical measurement to confirm the estimate. Mass is weighed; center of gravity is found by multi-point weighing or a balance method; inertia is measured by a bifilar or torsional pendulum (period gives inertia) or a spin-balance machine. Plan these measurements on the built article and reconcile them to the estimate, because a model error in position shows up here and nowhere earlier."
+        ],
+        "tags": ["mass-properties", "center-of-gravity", "inertia"]
+      },
+      {
+        "flow_name": "mass-reduction-trade-study",
+        "description": "When mass exceeds budget, run a structured trade study to find the cheapest mass to remove using a cost-of-weight metric and the right methods.",
+        "inputs": [
+          {"name": "growth-trend", "desc": "The overrun and the subsystems trending over their not-to-exceed limit"},
+          {"name": "cg-inertia-estimate", "desc": "The current mass distribution and the center-of-gravity and inertia effects any change will have"}
+        ],
+        "outputs": [
+          {"name": "reduction-options", "desc": "The ranked mass-reduction options with the mass saved, the cost and risk of each, and the center-of-gravity effect"},
+          {"name": "recommended-actions", "desc": "The selected set of reductions that recover the budget at acceptable cost and risk, with the net mass and center-of-gravity result"}
+        ],
+        "process": [
+          "Set the value of removing mass with a cost-of-weight metric. A program has an implied or explicit price per kilogram removed (often high for launch, aerospace, or range-limited systems); the metric tells you how much cost and risk a kilogram of saving justifies, so trades are decided on value, not on which engineer argues hardest.",
+          "Find the mass concentrations first. Most mass sits in a few places; a rank-ordered mass list (heaviest components and subsystems first) shows where a given percentage reduction yields the most kilograms. Chasing grams off a hundred small parts rarely beats redesigning the few heavy ones.",
+          "List the reduction methods against their cost and risk. Options run from low-risk (remove unused margin, thin lightly-loaded regions) through moderate (material substitution to higher specific-strength alloys or composites, topology optimization of structural parts) to high-risk (reducing a safety margin, deleting redundancy). Rank by mass saved per unit cost and by the risk each carries.",
+          "Check each option's effect on center of gravity and inertia, not just mass. Removing mass from one end moves the center of gravity and can push it out of its envelope even while reducing total mass; a mass reduction that violates the center-of-gravity requirement is not a valid option. Carry the center-of-gravity and inertia effect through the trade.",
+          "Select the set that recovers the budget at the lowest cost and risk, and re-check the system. Pick the combination of reductions that gets back inside the budget with margin, confirm the net center of gravity and inertia still meet their limits, and route the changes through configuration control. Record the options not taken so the next overrun does not re-study them."
+        ],
+        "tags": ["mass-properties", "trade-study", "weight-reduction"]
+      }
+    ]
+  },
+  {
+    "chain_name": "configuration-management-hardware",
+    "description": "Run hardware configuration management from drawing and document control through engineering change management to as-designed-versus-as-built tracking and effectivity and serialization, so the team always knows exactly what was designed, released, and built.",
+    "domain": "engineering",
+    "tags": ["configuration-management", "change-management", "drawing-control", "traceability", "hardware"],
+    "steps": [
+      {
+        "flow_name": "drawing-and-document-control",
+        "description": "Establish drawing and document control: the drawing tree, release states, revision scheme, and the single controlled source of released definition.",
+        "inputs": [
+          {"name": "product-definition", "desc": "The drawings, models, specifications, and documents that define the product"},
+          {"name": "release-process", "desc": "The review, approval, and release workflow the organization uses for controlled documents"}
+        ],
+        "outputs": [
+          {"name": "drawing-tree", "desc": "The structured drawing tree and document index, from top assembly down to piece parts, with each item's current released revision"},
+          {"name": "control-scheme", "desc": "The release-state and revision scheme: how documents move from draft to released, how revisions are identified, and where the controlled master lives"}
+        ],
+        "process": [
+          "Build the drawing tree from the top assembly down to piece parts and specifications. The tree is the backbone of configuration management: it shows every item that makes up the product, its part number, and its current released revision, and it is how a change is traced to everything it affects. Keep one authoritative tree, not scattered lists.",
+          "Define the release states and the gate between them. A document is draft (in work, freely editable), in review (frozen for approval), or released (controlled, changeable only by a formal change). The gate from review to released is where the approvals are captured; a 'released' document that someone can edit directly is not under control.",
+          "Set an unambiguous part-number and revision scheme. Decide whether form-fit-function changes get a new part number versus a revision, and whether revisions are letters or numbers; a revision changes the definition of the same part number while a new part number means a part not interchangeable with the old. Interchangeability is the rule that decides which applies.",
+          "Keep a single controlled master and prevent uncontrolled copies. The released definition lives in one controlled repository (a product data management system), and working copies are clearly marked uncontrolled. The most common configuration failure is someone building to an out-of-date printout; control is only real if people cannot easily use the wrong revision.",
+          "Make the current released revision of every item visible to everyone who needs it. Engineering, manufacturing, procurement, and quality must all see the same current revision; a change is only effective when everyone downstream is working to it. Define how the released state and current revision are published and how obsolete revisions are withdrawn."
+        ],
+        "tags": ["configuration-management", "drawing-control", "document-control"]
+      },
+      {
+        "flow_name": "engineering-change-management",
+        "description": "Run the change process: change request, classification, impact assessment, approval, and the change order that releases the new definition.",
+        "inputs": [
+          {"name": "drawing-tree", "desc": "The released definition and the items a change would affect"},
+          {"name": "change-need", "desc": "The reason for the change: a defect, an improvement, a cost reduction, or a requirement change"}
+        ],
+        "outputs": [
+          {"name": "change-package", "desc": "The change request, its classification, the impact assessment across affected items, and the approved change order"},
+          {"name": "disposition-plan", "desc": "The disposition of affected in-process and fielded units (use-as-is, rework, scrap, retrofit) and the effectivity point for the change"}
+        ],
+        "process": [
+          "Start every change as a request that states the problem, not the solution. The change request (ECR) captures why a change is needed and what it must achieve; separating the request from the implementing order keeps a record of the problem and prevents a half-analyzed fix from being released. Route the request to a change board for a decision to pursue it.",
+          "Classify the change by its impact on form, fit, function, and interface. A major change (Class I) affects form, fit, function, interface, interchangeability, safety, or a controlled requirement and needs full review and often customer approval; a minor change (Class II) is a documentation or non-interchangeable-detail fix. The classification sets the approval level and the rigor.",
+          "Assess impact across everything the drawing tree connects. A change ripples to mating parts, interfaces, tooling, test procedures, spares, manuals, and qualification; use the drawing tree to find every affected item and assess each. The commonest change failure is updating the part but not the tooling, the test, or the mating part.",
+          "Release the change through a controlled change order (ECN/ECO). After approval, the change order formally supersedes the old revision with the new, records the approvals, and is the authority for everyone downstream to switch. The order names the effectivity point so manufacturing knows exactly which units get the change.",
+          "Disposition the units already in process and in the field. Decide for each affected population: use-as-is (the change is an improvement, old units are acceptable), rework, scrap, or retrofit. A safety change may force retrofit of fielded units; an improvement may apply only to new production. Record the disposition and the effectivity so the as-built record stays accurate."
+        ],
+        "tags": ["configuration-management", "change-management", "ecn-eco"]
+      },
+      {
+        "flow_name": "as-designed-vs-as-built-tracking",
+        "description": "Track the as-built configuration against the as-designed definition, capturing deviations and waivers so each unit's true configuration is known.",
+        "inputs": [
+          {"name": "change-package", "desc": "The released definition and change history that defines the as-designed configuration"},
+          {"name": "build-records", "desc": "The manufacturing records of what was actually built on each unit: parts installed, revisions, and any departures"}
+        ],
+        "outputs": [
+          {"name": "as-built-record", "desc": "The per-unit as-built configuration: the part numbers and revisions actually installed, against the as-designed baseline"},
+          {"name": "deviation-log", "desc": "The authorized deviations and waivers on each unit, with the nonconformance, the disposition, and the approval"}
+        ],
+        "process": [
+          "Baseline the as-designed configuration for each unit's effectivity. The as-designed configuration is the set of released part numbers and revisions that a given unit is supposed to have, driven by the effectivity point from the change orders. Establish it before the build so there is a defined expectation to build against and check.",
+          "Record the as-built configuration as the unit is built, not after. Capture the actual part number and revision of every item installed, the lot or serial of traceable parts, and the operator and date. An as-built record reconstructed from memory after delivery is unreliable; it must be captured at the point of installation.",
+          "Document every departure as an authorized deviation or waiver. A deviation is a pre-build authorization to depart from the definition for specific units; a waiver accepts a nonconformance found after the fact. Each needs the nonconformance described, the engineering disposition (use-as-is with rationale, rework, scrap), and the approval. Undocumented departures destroy configuration integrity.",
+          "Reconcile as-built against as-designed and resolve every gap. Compare the as-built record to the as-designed baseline for each unit; every difference is either a documented deviation/waiver or an escape to be investigated. The reconciliation is what makes the as-built record trustworthy, not just present.",
+          "Keep the per-unit record retrievable for the life of the unit. Field support, failure investigation, and retrofit all need to know a specific unit's true configuration years later. Store the as-built and deviation records against the unit serial so the exact configuration of any delivered unit can be recovered on demand."
+        ],
+        "tags": ["configuration-management", "as-built", "traceability"]
+      },
+      {
+        "flow_name": "effectivity-and-serialization",
+        "description": "Define effectivity and serialization so each change applies to an exactly known set of units and each unit is individually traceable.",
+        "inputs": [
+          {"name": "as-built-record", "desc": "The per-unit configuration and the units in and out of production"},
+          {"name": "traceability-requirements", "desc": "The level of traceability the product requires: serial, lot, or batch, driven by safety, regulatory, or warranty needs"}
+        ],
+        "outputs": [
+          {"name": "effectivity-scheme", "desc": "How effectivity is expressed and applied: by serial number, block, date, or lot, so each change has a precise cut-in point"},
+          {"name": "serialization-plan", "desc": "The serialization and marking plan: which items are serialized, how they are marked, and how the as-built record links to each serial"}
+        ],
+        "process": [
+          "Choose how effectivity is expressed to match the product. Effectivity can be by serial number (unit 101 and up), by block or lot, or by date; serial-number effectivity gives the most precise cut-in and is standard for complex, safety-relevant, or low-rate hardware, while lot or date effectivity suits high-rate commodity parts. Every change order states its effectivity in this scheme.",
+          "Make every change's cut-in point unambiguous. A change that is 'effective soon' creates built-wrong units in the gap; the effectivity names the exact first unit (or lot, or date) that gets the change and confirms the disposition of everything before it. Manufacturing builds to the effectivity, so it must be precise.",
+          "Decide which items are serialized and to what depth. Serialize items that need individual life tracking, failure traceability, or warranty and regulatory tracking (structural parts, life-limited parts, safety-critical assemblies); lot-trace fasteners and raw material; batch-track consumables. Over-serializing wastes effort, under-serializing loses the traceability a failure investigation needs.",
+          "Mark serials durably and link them to the as-built record. Apply the serial by a method that survives the part's service life (laser etch, data-matrix, stamped plate) and tie that serial to the unit's as-built configuration, so scanning or reading the serial retrieves exactly what that unit is and what changes apply to it. A serial that does not link to a record is just a number.",
+          "Maintain the where-used and effectivity links both ways. From a change, you must find every effective unit; from a unit's serial, you must find its full configuration and every change applied to it. Keep the forward (change-to-units) and reverse (unit-to-configuration) links current so recalls, retrofits, and investigations can resolve the exact affected population."
+        ],
+        "tags": ["configuration-management", "effectivity", "serialization"]
+      }
+    ]
+  }
+]

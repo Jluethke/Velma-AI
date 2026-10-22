@@ -1,0 +1,639 @@
+[
+  {
+    "chain_name": "side-channel-analysis-methodology",
+    "description": "Perform side-channel analysis on cryptographic hardware: set up the evaluation lab, acquire power and electromagnetic traces, apply statistical attacks (SPA, DPA, CPA, EM-DPA), evaluate timing leakage, design and verify countermeasures, and produce a TVLA leakage assessment report.",
+    "domain": "security",
+    "tags": ["hardware-security", "side-channel", "cryptography", "power-analysis", "electromagnetic"],
+    "steps": [
+      {
+        "flow_name": "side-channel-lab-setup",
+        "description": "Configure the evaluation laboratory for side-channel measurement: select oscilloscope bandwidth and sample rate, position current probes or shunt resistors for power measurement, select and position near-field EM probes, configure trigger synchronization with cryptographic operations, and verify baseline noise floor.",
+        "inputs": [
+          {"name": "target-device-description", "desc": "Device under test: IC type, package, clock frequency, cryptographic algorithm implemented"},
+          {"name": "evaluation-objectives", "desc": "What to evaluate: key recovery feasibility, leakage presence, countermeasure effectiveness"}
+        ],
+        "outputs": [
+          {"name": "measurement-setup", "desc": "Documented lab configuration: probe placement, oscilloscope settings, trigger configuration, noise floor characterization"},
+          {"name": "acquisition-parameters", "desc": "Sample rate, number of traces planned, alignment trigger point, bandwidth settings"}
+        ],
+        "process": [
+          "Select oscilloscope bandwidth at minimum 5x the device clock frequency. Set sample rate to at least 2.5x bandwidth (oversampling for alignment).",
+          "For power analysis: choose between shunt resistor (1-10 ohm in Vdd path for current measurement) and current probe (wider bandwidth but lower sensitivity). Place shunt as close to device power pin as possible to minimize parasitic coupling.",
+          "For EM analysis: select near-field probe size based on spatial resolution needed (smaller probe = better resolution but weaker signal). H-field probes for current loops, E-field probes for voltage nodes. Map the die surface to locate cryptographic core.",
+          "Configure trigger from a GPIO toggle or communication bus event that marks the start of the cryptographic operation. Verify trigger jitter is below 1 sample period.",
+          "Acquire 100 test traces and compute noise floor: SNR = 20*log10(signal_rms / noise_rms). Verify SNR is sufficient for the planned attack (DPA typically needs SNR > 0.01 per trace, compensated by sqrt(N) averaging).",
+          "Document the setup with photographs and configuration files for reproducibility."
+        ],
+        "tags": ["side-channel", "measurement", "lab-setup"]
+      },
+      {
+        "flow_name": "power-trace-acquisition",
+        "description": "Acquire a statistically sufficient set of power consumption traces from the target device executing cryptographic operations with known and random inputs, aligned and preprocessed for statistical analysis.",
+        "inputs": [
+          {"name": "measurement-setup", "desc": "Lab configuration and probe placement"},
+          {"name": "acquisition-parameters", "desc": "Sample rate, trace count, trigger settings"}
+        ],
+        "outputs": [
+          {"name": "trace-dataset", "desc": "Aligned power traces with corresponding plaintext/ciphertext pairs, stored in standardized format"},
+          {"name": "alignment-quality-report", "desc": "Cross-correlation peak statistics, percentage of traces with acceptable alignment"}
+        ],
+        "process": [
+          "Generate input data: for CPA attacks, use random plaintexts and record both plaintext and ciphertext for each trace. For fixed-vs-random TVLA, alternate between a fixed input and random inputs.",
+          "Acquire N traces where N is determined by: N > (3 * noise_variance) / (signal_of_interest^2) for 99.7% detection confidence. For AES CPA on unprotected implementations, 1000-5000 traces is typical. For masked implementations, N scales quadratically with masking order.",
+          "Perform trace alignment using cross-correlation with a reference trace. Select a stable feature (clock edge, operation start) as alignment anchor. Discard traces with correlation coefficient below 0.95.",
+          "Apply preprocessing: static alignment correction, band-pass filtering to isolate frequency band of interest (typically 1-100 MHz for CMOS switching), DC offset removal, optional compression (principal component analysis for dimensionality reduction).",
+          "Verify dataset quality: compute mean trace and standard deviation envelope, check for bimodal distributions indicating clock jitter or misalignment, verify input coverage is uniform across the byte space."
+        ],
+        "tags": ["side-channel", "acquisition", "power-analysis"]
+      },
+      {
+        "flow_name": "statistical-attack-execution",
+        "description": "Execute statistical side-channel attacks on the acquired trace dataset: simple power analysis for visual key recovery, differential power analysis for statistical distinguishing, and correlation power analysis for efficient key byte extraction.",
+        "inputs": [
+          {"name": "trace-dataset", "desc": "Aligned power traces with plaintext/ciphertext pairs"},
+          {"name": "alignment-quality-report", "desc": "Trace quality metrics"}
+        ],
+        "outputs": [
+          {"name": "attack-results", "desc": "Recovered key bytes with confidence metrics, correlation peaks per byte hypothesis, number of traces to disclosure"},
+          {"name": "leakage-model", "desc": "Identified leakage model: Hamming weight, Hamming distance, or device-specific model with estimated SNR"}
+        ],
+        "process": [
+          "SPA: Visually inspect mean traces for conditional branches dependent on key bits (RSA square-and-multiply pattern, conditional swap in ECC). Overlay traces for different known inputs to identify data-dependent timing or amplitude.",
+          "DPA (Kocher's original): Partition traces by a single bit of an intermediate value (e.g., one output bit of the first AES S-box). Compute difference of means between partitions. If the correct key byte hypothesis is used, the difference trace shows a peak at the time the targeted bit is processed. Repeat for all 256 key byte hypotheses.",
+          "CPA (Brier et al.): For each sample point in the trace and each of 256 key byte hypotheses, compute Pearson correlation between the measured power and a hypothetical intermediate value (Hamming weight of S-box output for AES). The correct key byte produces the highest absolute correlation. Track correlation vs. number of traces to determine the minimum traces for key recovery.",
+          "Determine the leakage model: compare attack success with Hamming weight model (proportional to number of 1-bits in the value) vs Hamming distance model (proportional to bit transitions from previous state). The model with higher peak correlation wins.",
+          "Compute the guessing entropy: rank the correct key byte among all 256 hypotheses as a function of number of traces. Plot the number of traces required for the correct key to reach rank 1 (success rate = 1). This is the key metric for attack efficiency."
+        ],
+        "tags": ["side-channel", "DPA", "CPA", "attack"]
+      },
+      {
+        "flow_name": "countermeasure-design-verification",
+        "description": "Design side-channel countermeasures for the target implementation, implement them, and verify their effectiveness through TVLA leakage assessment and repeat attacks on the protected implementation.",
+        "inputs": [
+          {"name": "attack-results", "desc": "Key recovery results on unprotected implementation"},
+          {"name": "leakage-model", "desc": "Identified leakage model and SNR"}
+        ],
+        "outputs": [
+          {"name": "countermeasure-design", "desc": "Selected countermeasures with implementation specification and overhead analysis"},
+          {"name": "tvla-assessment", "desc": "Test Vector Leakage Assessment results: t-test values per sample point, pass/fail verdict at 4.5 threshold, number of traces used"}
+        ],
+        "process": [
+          "Select countermeasure class based on attack results and performance budget. Masking (Boolean or arithmetic): splits each sensitive variable into d+1 shares where d is the protection order. First-order masking stops first-order DPA but not higher-order attacks. Overhead: roughly (d+1)^2 for d-th order masking in area and time.",
+          "Hiding countermeasures: add random delays (shuffle operation order within a round), insert dummy operations, randomize execution timing. Less provably secure than masking but lower overhead. Amplitude hiding: add noise generators on the power supply.",
+          "Implement the selected countermeasure. For masking: verify that no intermediate computation combines shares in a way that leaks (formal verification with tools like maskVerif, Rebecca, or SILVER). For shuffling: verify uniform distribution of permutations.",
+          "Run TVLA (Goodwill et al., 2011): acquire fixed-vs-random trace sets (10,000+ traces each). Compute Welch's t-test at each sample point. If |t| > 4.5 at any point, the implementation leaks (false positive probability < 0.00001 per point). Non-specific t-test detects any first-order leakage without knowing the leakage model.",
+          "If TVLA passes, repeat the CPA attack on the protected implementation with 10x to 100x the original trace count. Verify that the guessing entropy does not converge to rank 1 within the trace budget. Document the security margin: estimated minimum traces for key recovery on the protected implementation vs. the unprotected baseline."
+        ],
+        "tags": ["side-channel", "countermeasure", "TVLA", "masking"]
+      }
+    ]
+  },
+  {
+    "chain_name": "fault-injection-methodology",
+    "description": "Perform fault injection evaluation on cryptographic hardware: voltage and clock glitching, laser and electromagnetic fault injection, apply differential fault analysis for key recovery, design and verify fault countermeasures.",
+    "domain": "security",
+    "tags": ["hardware-security", "fault-injection", "glitching", "DFA", "laser"],
+    "steps": [
+      {
+        "flow_name": "fault-injection-setup",
+        "description": "Configure the fault injection platform: select injection method, characterize the target device's fault sensitivity, and define the parameter search space for repeatable fault induction.",
+        "inputs": [
+          {"name": "target-device-description", "desc": "Device under test: IC type, package, supply voltage, clock frequency, decapping status"},
+          {"name": "fault-objectives", "desc": "Fault goals: instruction skip, data corruption, algorithm bypass, key recovery via DFA"}
+        ],
+        "outputs": [
+          {"name": "injection-platform", "desc": "Configured fault injection setup: equipment, parameters, trigger synchronization"},
+          {"name": "fault-sensitivity-map", "desc": "Parameter ranges that produce faults vs. crashes vs. no effect, mapped by timing offset and intensity"}
+        ],
+        "process": [
+          "Voltage glitching: use a crowbar MOSFET or FPGA-driven voltage glitch generator. Parameters: glitch voltage (drop to X% of Vdd), glitch width (1-100 ns typical), glitch timing relative to trigger (clock cycle precision). Wider glitches affect more instructions but increase crash probability.",
+          "Clock glitching: insert a short clock period that violates setup time of flip-flops. Parameters: shortened period (fraction of nominal), number of glitch cycles, timing within the target operation. Requires access to external clock input or the ability to override internal oscillator.",
+          "Laser fault injection (requires decapped device): select wavelength (typically 1064 nm for backside through silicon, 532 nm or 808 nm for frontside on older nodes). Spot size determines spatial resolution (1-5 um for single-register targeting). Power determines single-bit vs multi-bit upset. Map the die to locate cryptographic registers.",
+          "Electromagnetic fault injection: use a needle probe (sharp tip EM pulse) coupled to the die surface or package. Advantage: non-invasive (no decapping). Disadvantage: lower spatial resolution and less repeatable. Characterize coupling by sweeping probe position over a grid.",
+          "For all methods: build a parameter sweep that classifies each trial into categories: no effect, correct fault (targeted corruption without crash), crash/reset, and mute (device locks up). Produce a sensitivity map plotting fault success rate vs. timing offset and intensity. Identify the sweet spot with highest correct-fault rate."
+        ],
+        "tags": ["fault-injection", "glitching", "laser", "setup"]
+      },
+      {
+        "flow_name": "differential-fault-analysis",
+        "description": "Apply differential fault analysis to recover secret keys from faulted cryptographic computations, using pairs of correct and faulted outputs to constrain key hypotheses.",
+        "inputs": [
+          {"name": "injection-platform", "desc": "Configured fault injection setup"},
+          {"name": "fault-sensitivity-map", "desc": "Parameter ranges for repeatable faults"}
+        ],
+        "outputs": [
+          {"name": "dfa-key-recovery", "desc": "Recovered key bytes from DFA, number of fault pairs required, remaining key entropy"},
+          {"name": "fault-model-characterization", "desc": "Observed fault model: single-bit, single-byte, random, stuck-at, with statistical distribution"}
+        ],
+        "process": [
+          "For AES DFA (Piret-Quisquater attack): inject faults in round 8 (penultimate round) of AES-128. A single-byte fault in one state byte before MixColumns in round 8 affects 4 bytes of the round 9 output. With 2 correct/faulted pairs targeting different state columns, all 16 bytes of the round key can be recovered.",
+          "Collect correct/faulted output pairs: for each fault injection, record both the correct ciphertext (from an unfaulted run with the same input) and the faulted ciphertext. The input plaintext must be identical for each pair.",
+          "For each faulted pair, compute the difference in the ciphertext. The difference propagates through the last round's SubBytes and ShiftRows. For each key byte hypothesis (256 possibilities), check if the inverse operation produces a difference pattern consistent with the known fault model (single byte difference before MixColumns).",
+          "Intersect key hypotheses across multiple fault pairs. With a single-byte fault model, 2 pairs typically reduce the key space from 2^128 to a unique key. With noisier fault models (multi-byte corruption), more pairs are needed.",
+          "Verify the recovered key by encrypting a test plaintext and comparing to the device output. Document the fault model (which bytes were corrupted, single-bit vs byte-level, bias in fault values) for countermeasure design."
+        ],
+        "tags": ["fault-injection", "DFA", "key-recovery", "AES"]
+      },
+      {
+        "flow_name": "fault-countermeasure-design",
+        "description": "Design and verify fault injection countermeasures: redundancy, detection codes, temporal redundancy, combined protections, and evaluate residual vulnerability.",
+        "inputs": [
+          {"name": "dfa-key-recovery", "desc": "Attack results showing key recovery from faults"},
+          {"name": "fault-model-characterization", "desc": "Observed fault model and success rates"}
+        ],
+        "outputs": [
+          {"name": "fault-countermeasure-spec", "desc": "Countermeasure design with implementation requirements, overhead analysis, and detection/correction capability"},
+          {"name": "residual-vulnerability-assessment", "desc": "Analysis of remaining attack surface after countermeasures, including combined fault+side-channel threats"}
+        ],
+        "process": [
+          "Spatial redundancy: duplicate the computation and compare results before output. Triple modular redundancy (TMR) with majority voting corrects single faults but costs 3x area and power. Dual redundancy with comparison detects but does not correct. For asymmetric detection: compute forward then verify with inverse operation (encrypt then decrypt and compare).",
+          "Temporal redundancy: execute the computation twice (or with complementary operations) sequentially and compare. Lower area cost than spatial redundancy but doubles execution time and is vulnerable to persistent faults or faults that repeat identically.",
+          "Information redundancy: add error detection codes to intermediate values. Parity bits detect odd-weight errors. CRC or linear codes detect broader error patterns. For AES: exploit the algebraic structure to compute check values that propagate through rounds (infection countermeasure: if fault detected, randomize the output rather than blocking it, to prevent fault sensitivity mapping).",
+          "Combined countermeasures: combine fault detection with side-channel masking. Faults on masked implementations can remove masks (second-order fault attack) or bypass checks. Verify that the fault countermeasure does not introduce new side-channel leakage (e.g., comparison operation leaking correct result in power trace).",
+          "Evaluate: repeat the fault injection campaign on the protected implementation. Measure the detection rate (percentage of injected faults that trigger the countermeasure), the false positive rate (countermeasure triggers without fault), and the residual exploitable fault rate. Target: zero exploitable faults with < 0.001% false positive rate."
+        ],
+        "tags": ["fault-injection", "countermeasure", "redundancy", "detection"]
+      }
+    ]
+  },
+  {
+    "chain_name": "secure-boot-chain-design",
+    "description": "Design a secure boot chain from hardware root of trust through application loading: immutable first-stage verification, certificate chain, anti-rollback, secure firmware update, measured boot with attestation, and debug port security.",
+    "domain": "security",
+    "tags": ["hardware-security", "secure-boot", "root-of-trust", "firmware", "attestation"],
+    "steps": [
+      {
+        "flow_name": "root-of-trust-architecture",
+        "description": "Define the hardware root of trust: immutable ROM bootloader, OTP fuse configuration for root public key hash, and the first-stage verification flow that anchors the entire boot chain.",
+        "inputs": [
+          {"name": "platform-description", "desc": "SoC or MCU: boot ROM capabilities, OTP fuse map, secure storage available, debug interface"},
+          {"name": "security-requirements", "desc": "Threat model, required boot chain depth, attestation requirements, update frequency"}
+        ],
+        "outputs": [
+          {"name": "root-of-trust-design", "desc": "ROM boot flow, fuse programming plan, root key management strategy, first-stage loader specification"},
+          {"name": "key-hierarchy", "desc": "Certificate chain: root CA, intermediate signing keys, code signing keys, rotation plan"}
+        ],
+        "process": [
+          "Identify the immutable execution starting point: mask ROM in the SoC that executes on reset. This code must be minimal (verify hash/signature of next stage, branch to it or halt). Verify that no mechanism exists to bypass ROM execution (check boot pin strapping, JTAG override paths, test modes).",
+          "Program the root public key hash into OTP fuses. Store only the hash (SHA-256 of the root public key), not the key itself. The ROM reads the full root public key from a known flash location, hashes it, and compares to the fuse value. This allows key rotation: a new root key with a matching hash can be provisioned (or use a fuse-based key index for multi-key support).",
+          "Design the key hierarchy: Root CA (offline, HSM-stored, never exposed to network) signs an intermediate key. Intermediate key signs per-product-line code signing keys. Code signing keys sign firmware images. Separation allows revoking a compromised code signing key without re-fusing devices.",
+          "First-stage loader verification: ROM loads the first-stage image from flash, verifies its signature against the root public key (ECDSA P-256 or Ed25519 for speed, RSA-2048+ for compatibility with existing PKI). On verification failure: halt, do not fall back to unverified boot. First-stage then verifies second-stage, which verifies application. Each stage gates the next."
+        ],
+        "tags": ["secure-boot", "root-of-trust", "OTP", "key-hierarchy"]
+      },
+      {
+        "flow_name": "anti-rollback-and-update",
+        "description": "Design the anti-rollback mechanism and secure firmware update flow: monotonic counters, version enforcement, authenticated encrypted update images, and recovery mode with minimal attack surface.",
+        "inputs": [
+          {"name": "root-of-trust-design", "desc": "ROM boot flow and fuse layout"},
+          {"name": "key-hierarchy", "desc": "Certificate chain and code signing keys"}
+        ],
+        "outputs": [
+          {"name": "update-mechanism", "desc": "Firmware update protocol: image format, authentication, encryption, anti-rollback, recovery"},
+          {"name": "rollback-protection", "desc": "Monotonic counter scheme, version enforcement policy, fuse utilization plan"}
+        ],
+        "process": [
+          "Anti-rollback: embed a minimum-version field in each signed firmware image. Store the current minimum-version in a monotonic counter (OTP fuse bits or secure counter in trusted storage). On boot, reject any image with version below the stored counter. On successful update, advance the counter to the new version. Fuse-based counters are limited (e.g., 64 fuse bits = 64 version increments); plan fuse utilization across product lifetime.",
+          "Firmware update image format: header (version, target hardware ID, image size, signature algorithm) + encrypted firmware payload (AES-256-GCM: authenticated encryption provides confidentiality and integrity) + signature over header and encrypted payload (code signing key). The device decrypts only after signature verification passes.",
+          "Update flow: receive image over authenticated channel (TLS to update server, or local USB with host authentication). Verify signature. Check version against anti-rollback counter. Write to inactive partition (A/B scheme: boot from A, update writes to B; on next boot, try B; on failure, fall back to A). Verify written image integrity (re-read and re-hash). Mark new partition as active. Advance anti-rollback counter only after successful boot of new image.",
+          "Recovery mode: minimal code path that accepts a signed recovery image. Recovery mode must still enforce signature verification (no unsigned recovery). Trigger: hardware button held during reset, or corruption detected in both A/B partitions. Recovery mode should not expose debug interfaces or bypass boot chain."
+        ],
+        "tags": ["secure-boot", "anti-rollback", "firmware-update", "A-B-partition"]
+      },
+      {
+        "flow_name": "measured-boot-attestation",
+        "description": "Implement measured boot with PCR-style measurement chain and remote attestation, plus debug port security to prevent bypass of the boot chain.",
+        "inputs": [
+          {"name": "update-mechanism", "desc": "Firmware update protocol and image format"},
+          {"name": "rollback-protection", "desc": "Anti-rollback counter and version enforcement"}
+        ],
+        "outputs": [
+          {"name": "measured-boot-design", "desc": "Measurement chain: what is measured, PCR extend sequence, attestation quote format, verification procedure"},
+          {"name": "debug-security-policy", "desc": "Debug port lock mechanism, authenticated debug access, lifecycle state machine"}
+        ],
+        "process": [
+          "Measured boot: at each boot stage, before executing the next stage, hash its image and extend a PCR (Platform Configuration Register) in secure hardware (TPM or equivalent). PCR_new = Hash(PCR_old || measurement). This creates a chain where any change to any boot stage produces a different final PCR value. Measure: ROM version (from fuses), first-stage loader, second-stage, OS kernel, critical configuration.",
+          "Remote attestation: on request from a verifier, the device signs the current PCR values with a device-unique attestation key (stored in TPM or secure element). The verifier compares the signed PCR values against known-good reference values for that device model and firmware version. Mismatch indicates tampered boot chain.",
+          "Debug port security: JTAG and SWD must be disabled or locked by default in production. Implement a lifecycle state machine in OTP fuses: Development (debug open) -> Production (debug locked) -> RMA (debug re-enabled with authentication). Production lock must be irreversible (fuse-based). Authenticated debug: if needed for field diagnosis, require a challenge-response protocol where the debug tool proves possession of a per-device or per-model debug key before the debug port is unlocked for that session.",
+          "Verify the complete chain: attempt to boot with a modified image at each stage and confirm rejection. Attempt to roll back and confirm counter enforcement. Attempt debug access in production state and confirm lock. Perform attestation with a known-bad image and confirm the verifier detects it."
+        ],
+        "tags": ["secure-boot", "measured-boot", "attestation", "debug-security"]
+      }
+    ]
+  },
+  {
+    "chain_name": "hardware-root-of-trust",
+    "description": "Design hardware root of trust components: TPM integration, secure element selection and certification, physically unclonable function design and enrollment, true random number generator qualification, and secure key storage with anti-tamper protection.",
+    "domain": "security",
+    "tags": ["hardware-security", "TPM", "PUF", "TRNG", "secure-element"],
+    "steps": [
+      {
+        "flow_name": "tpm-secure-element-design",
+        "description": "Select and integrate a trusted platform module or secure element: TPM 2.0 hierarchy and key management, CC EAL certification process, and integration into the system security architecture.",
+        "inputs": [
+          {"name": "system-security-architecture", "desc": "Overall system threat model, required security functions, host processor interface"},
+          {"name": "certification-requirements", "desc": "Required assurance level: CC EAL, FIPS 140-3, platform-specific (TCG, GlobalPlatform)"}
+        ],
+        "outputs": [
+          {"name": "tpm-se-selection", "desc": "Selected component with interface specification, supported algorithms, key storage capacity, and certification status"},
+          {"name": "integration-design", "desc": "Bus connection (SPI, I2C), command protocol, key hierarchy mapping to TPM hierarchies, locality configuration"}
+        ],
+        "process": [
+          "Define security functions needed from the root of trust: key generation and storage, signature and verification, encryption/decryption, PCR measurement, attestation, monotonic counter, sealed storage. Map each function to TPM 2.0 commands or SE applets.",
+          "TPM 2.0 hierarchy: Endorsement (EK: device identity, manufacturer-provisioned), Platform (PH: firmware measurements, controlled by BIOS), Owner (SRK: user keys, general purpose). Each hierarchy has independent authorization. Map application keys to the correct hierarchy.",
+          "Select component: compare discrete TPM (e.g., Infineon SLB9672, Nuvoton NPCT7xx) vs firmware TPM (fTPM in ARM TrustZone or Intel ME) vs secure element (NXP SE050, Microchip ATECC608). Discrete TPM provides hardware isolation but adds BOM cost and board space. fTPM shares the main processor. SE is smaller and cheaper but may lack full TPM command set.",
+          "For CC EAL certification: evaluate which EAL level is required (EAL4+ is typical for secure elements, EAL6+ for government applications). Certification adds 6-18 months and significant cost. Use pre-certified components where possible. If custom silicon: engage a CCRA-licensed evaluation lab early, write the Security Target document defining the TOE (Target of Evaluation) boundary.",
+          "Integration: connect via SPI (faster, full-duplex) or I2C (fewer pins, multi-drop). Implement the TCG TPM command interface (TIS or CRB). Verify that the TPM initialization sequence is correct in the boot chain (TPM must be initialized before first PCR extend). Test all key generation, signing, and attestation flows end-to-end."
+        ],
+        "tags": ["TPM", "secure-element", "CC-EAL", "integration"]
+      },
+      {
+        "flow_name": "puf-design-enrollment",
+        "description": "Design and implement a physically unclonable function for device-unique key generation: PUF cell selection, characterization, enrollment with error correction, and reliability verification across environmental conditions.",
+        "inputs": [
+          {"name": "tpm-se-selection", "desc": "Root of trust component selection and integration"},
+          {"name": "integration-design", "desc": "System integration architecture"}
+        ],
+        "outputs": [
+          {"name": "puf-design", "desc": "PUF type, cell count, error correction scheme, enrollment procedure, helper data storage"},
+          {"name": "puf-reliability-data", "desc": "Bit error rate vs. temperature and voltage, uniqueness (inter-device Hamming distance), stability over time"}
+        ],
+        "process": [
+          "Select PUF type: SRAM PUF (power-up state of uninitialized SRAM, most widely used, leverages existing memory), arbiter PUF (race condition between delay paths, higher uniqueness per area but requires careful layout), ring oscillator PUF (frequency comparison, simple to implement in FPGA). SRAM PUF is the default choice for ASIC due to zero additional silicon area if SRAM already exists.",
+          "Characterize PUF: measure the response across N devices (minimum 100 for statistical significance). Compute inter-device Hamming distance (should be near 50% for maximum uniqueness) and intra-device Hamming distance across temperature (-40C to +125C for automotive) and voltage (Vdd +/-10%). Intra-device distance determines the raw bit error rate (BER).",
+          "Design error correction: given raw BER (typically 5-15% for SRAM PUF across full temperature range), select a fuzzy extractor. Scheme: during enrollment, generate a random key, XOR with PUF response to create helper data (stored in non-volatile memory, public). During reconstruction, read PUF response, XOR with helper data, apply error correction (BCH or repetition code) to recover the key. Helper data must not leak information about the key (information-theoretic security of the fuzzy extractor).",
+          "Enrollment procedure: power-cycle the device multiple times (minimum 10) at enrollment temperature. Identify stable bits (same value every time) vs unstable bits (flip between readings). Use stable bits preferentially or increase redundancy for unstable regions. Store helper data and a hash of the derived key for verification.",
+          "Verify across lifecycle: re-derive the key at temperature and voltage corners. Verify bit-exact match after error correction. Perform aging test (1000+ hours at elevated temperature) and re-verify. Document the BER margin: how close is the corrected BER to the code's correction capability."
+        ],
+        "tags": ["PUF", "SRAM-PUF", "fuzzy-extractor", "enrollment"]
+      },
+      {
+        "flow_name": "trng-key-storage-design",
+        "description": "Design and qualify a true random number generator for cryptographic key generation, and design the secure key storage with anti-tamper zeroization.",
+        "inputs": [
+          {"name": "puf-design", "desc": "PUF implementation and enrollment procedure"},
+          {"name": "puf-reliability-data", "desc": "PUF characterization results"}
+        ],
+        "outputs": [
+          {"name": "trng-design", "desc": "TRNG architecture: entropy source, conditioning, health tests, output rate, certification compliance"},
+          {"name": "key-storage-design", "desc": "Key storage mechanism: volatile vs non-volatile, encryption-at-rest, anti-tamper zeroization trigger, access control"}
+        ],
+        "process": [
+          "TRNG entropy source: ring oscillator jitter (sample a free-running oscillator with a lower-frequency clock; the jitter provides entropy), metastable latch (bias a latch near the metastable point), thermal noise amplification. Ring oscillator jitter is the most common in digital ASIC/FPGA. Estimate the min-entropy per sample from the jitter magnitude and sampling rate.",
+          "Conditioning: raw entropy source output is biased. Apply a cryptographic conditioning function: hash-based (SHA-256 over a block of raw bits produces 256 bits at full entropy if input entropy exceeds 256 bits) or AES-CBC-MAC. The conditioning ratio = raw bits consumed / conditioned bits output. NIST SP 800-90B specifies the testing methodology for entropy source characterization.",
+          "Health tests (NIST SP 800-90B): repetition count test (detects stuck output), adaptive proportion test (detects bias drift), startup test (verify entropy source before first use after power-on). These run continuously during operation. On health test failure: raise alarm, stop outputting random numbers, attempt recovery, report to security monitor.",
+          "Key storage: store keys encrypted under the PUF-derived key (keys at rest are never in plaintext in non-volatile memory). Volatile key cache in SRAM for active keys. Anti-tamper zeroization: on tamper detection (mesh break, voltage/temperature out of range, decapsulation light sensor), immediately overwrite key storage SRAM with zeros or random data. Zeroization must complete faster than an attacker can read out the SRAM contents (target: < 1 ms).",
+          "Qualify the TRNG: run the NIST SP 800-22 statistical test suite on a large output sample (minimum 1 Gbit). Run the SP 800-90B entropy estimation tests. For FIPS 140-3 compliance: TRNG must pass continuous health tests and the entropy source must be characterized per 90B. Document the entropy rate, output rate, and conditioning ratio."
+        ],
+        "tags": ["TRNG", "key-storage", "anti-tamper", "zeroization", "NIST"]
+      }
+    ]
+  },
+  {
+    "chain_name": "cryptographic-implementation",
+    "description": "Implement cryptographic algorithms in hardware and software with resistance to side-channel and fault attacks: AES, RSA, ECC implementations, constant-time programming, and FIPS 140-3 compliance.",
+    "domain": "security",
+    "tags": ["cryptography", "AES", "ECC", "RSA", "constant-time", "FIPS"],
+    "steps": [
+      {
+        "flow_name": "symmetric-crypto-implementation",
+        "description": "Implement AES in hardware and software with trade-offs between speed, area, power, and side-channel resistance: table-based, bitsliced, round-unrolled, iterative, and pipelined architectures.",
+        "inputs": [
+          {"name": "performance-requirements", "desc": "Throughput target (Gbps or cycles per block), latency constraint, area/power budget"},
+          {"name": "security-requirements", "desc": "Side-channel resistance level, fault resistance, certification target"}
+        ],
+        "outputs": [
+          {"name": "symmetric-implementation", "desc": "AES implementation with architecture choice, resource utilization, performance metrics, and side-channel properties"},
+          {"name": "implementation-trade-off-analysis", "desc": "Comparison of candidate architectures by throughput, latency, area, power, and security"}
+        ],
+        "process": [
+          "Software implementations: Table-based (T-tables): precompute SubBytes+ShiftRows+MixColumns into four 256-entry 32-bit lookup tables. Fast (1 table lookup per byte per round) but vulnerable to cache-timing attacks (table access pattern depends on key). Bitsliced: represent the AES state as 128 individual bit-slices across registers, implement SubBytes as a sequence of Boolean operations. Constant-time (no data-dependent memory access) but throughput depends on register width (processes multiple blocks in parallel).",
+          "Hardware implementations: Iterative (one round per clock cycle): 10 cycles for AES-128, moderate area, moderate throughput. Round-unrolled (all 10 rounds combinational): single-cycle latency, highest throughput, largest area. Pipelined (one round per pipeline stage): 10-stage pipeline, highest throughput at the cost of 10-cycle latency and pipeline registers. Sub-pipelined for higher clock frequency.",
+          "For side-channel resistance in hardware: implement SubBytes as combinational logic (not ROM/LUT to avoid data-dependent timing). Use registers between combinational stages (no glitch propagation). For masked implementation: split each byte into shares, implement a masked S-box (Canright or tower-field decomposition with domain-oriented masking).",
+          "Key schedule: can be computed on-the-fly (saves area, round key derived each cycle from previous) or precomputed and stored (saves time for repeated encryptions with same key, costs 11x16 = 176 bytes storage for AES-128). For hardware, on-the-fly is typical for area-constrained designs.",
+          "Verify: functional correctness against NIST test vectors (FIPS 197 Appendix B). Performance measurement: cycles per block (software), throughput and area (hardware). Side-channel: run TVLA on hardware implementation, verify constant-time execution for software (using tools like ctgrind or timecop)."
+        ],
+        "tags": ["AES", "implementation", "bitsliced", "T-tables", "hardware"]
+      },
+      {
+        "flow_name": "asymmetric-crypto-implementation",
+        "description": "Implement RSA and ECC with modular arithmetic optimized for the target platform, and with countermeasures against timing, power, and fault attacks.",
+        "inputs": [
+          {"name": "symmetric-implementation", "desc": "Symmetric crypto implementation and trade-off analysis"},
+          {"name": "implementation-trade-off-analysis", "desc": "Architecture comparison methodology"}
+        ],
+        "outputs": [
+          {"name": "asymmetric-implementation", "desc": "RSA and ECC implementations with performance metrics, side-channel properties, and fault resistance"},
+          {"name": "constant-time-verification", "desc": "Evidence that implementation is constant-time: no secret-dependent branches, no secret-dependent memory access, no secret-dependent loop counts"}
+        ],
+        "process": [
+          "Modular arithmetic core: Montgomery multiplication (modular multiplication without division, using shifts and additions). For RSA-2048: multiply 2048-bit numbers modulo N. Implementation: word-level Montgomery (schoolbook for small multipliers, Karatsuba for larger), or systolic array for hardware. Barrett reduction as alternative (precomputes reciprocal of modulus).",
+          "RSA: implement modular exponentiation using square-and-multiply. Vulnerable to SPA (square vs multiply pattern reveals exponent bits). Countermeasure: Montgomery ladder (always perform both square and multiply, select which result to keep). Add blinding: multiply input by r^e (random r) before exponentiation, divide result by r after, so the intermediate values are randomized against DPA.",
+          "ECC scalar multiplication: compute k*P where k is the secret scalar and P is the base point. Double-and-add algorithm (analogous to square-and-multiply) is vulnerable to SPA. Montgomery ladder for constant-time: always perform both point addition and point doubling. Use complete addition formulas (unified formulas that work for all input cases, avoiding exceptional-case branches).",
+          "Constant-time programming rules: (1) No branches conditioned on secret data (use conditional moves or arithmetic masking). (2) No array indexing with secret-dependent index (use constant-time table lookup: scan entire table and select with bitwise mask). (3) No variable-time instructions on secret data (division, some multiplies on some architectures). (4) Compile with optimization flags that preserve constant-time properties (verify assembly output).",
+          "Verify: functional correctness against test vectors (NIST CAVP for RSA, RFC 7748 / FIPS 186-5 for ECC). Constant-time verification: run under valgrind with secret data marked as uninitialized (ctgrind), or use dudect for statistical timing analysis. Fault resistance: verify point validation (reject points not on the curve), verify output consistency (re-derive and compare)."
+        ],
+        "tags": ["RSA", "ECC", "Montgomery", "constant-time", "blinding"]
+      },
+      {
+        "flow_name": "fips-certification-preparation",
+        "description": "Prepare the cryptographic module for FIPS 140-3 certification: define the cryptographic boundary, document the security policy, implement required self-tests, and prepare for CMVP laboratory testing.",
+        "inputs": [
+          {"name": "asymmetric-implementation", "desc": "RSA and ECC implementations"},
+          {"name": "constant-time-verification", "desc": "Constant-time evidence"}
+        ],
+        "outputs": [
+          {"name": "fips-security-policy", "desc": "FIPS 140-3 security policy document: cryptographic boundary, approved algorithms, security levels, roles and services"},
+          {"name": "self-test-implementation", "desc": "Power-on self-tests (known-answer tests for each algorithm), conditional self-tests (pairwise consistency for key generation), continuous TRNG health tests"}
+        ],
+        "process": [
+          "Define the cryptographic boundary: the physical or logical perimeter that contains all cryptographic functions. For a software module: the executable and its memory space. For hardware: the physical chip package. All key material, CSPs (Critical Security Parameters), and cryptographic operations must be within the boundary.",
+          "Document approved algorithms: list every algorithm with its CAVP certificate number. AES (modes: ECB, CBC, CTR, GCM), SHA-2, SHA-3, HMAC, RSA (PKCS#1 v2.1), ECDSA (P-256, P-384), ECDH, DRBG (CTR_DRBG or Hash_DRBG per SP 800-90A). Non-approved algorithms (if present) must be clearly separated and not usable in FIPS mode.",
+          "Implement power-on self-tests: known-answer test (KAT) for each approved algorithm (encrypt a known plaintext with a known key, compare to expected ciphertext). KATs run at module initialization before any cryptographic service is available. If any KAT fails: enter error state, output no cryptographic results, require power cycle.",
+          "Conditional self-tests: pairwise consistency test for every asymmetric key generation (generate key pair, sign a message, verify the signature with the public key). Continuous TRNG output test: compare each block of TRNG output with the previous block; identical consecutive blocks indicate TRNG failure.",
+          "Select FIPS 140-3 security level (1-4). Level 1: basic security, no physical requirements. Level 2: tamper-evident coatings/seals, role-based authentication. Level 3: tamper-responsive circuitry, identity-based authentication. Level 4: envelope protection, environmental failure protection. Most commercial products target Level 1 or 2. Engage a CMVP-accredited laboratory for testing, budget 6-12 months for the evaluation process."
+        ],
+        "tags": ["FIPS-140-3", "certification", "self-test", "CMVP", "cryptographic-boundary"]
+      }
+    ]
+  },
+  {
+    "chain_name": "tamper-resistance-design",
+    "description": "Design physical tamper resistance for security modules: define the security boundary, implement tamper-evident and tamper-responsive protections, anti-probing measures, environmental monitoring, and evaluate against Common Criteria protection profiles.",
+    "domain": "security",
+    "tags": ["hardware-security", "tamper-resistance", "anti-tamper", "physical-security"],
+    "steps": [
+      {
+        "flow_name": "physical-security-boundary-design",
+        "description": "Define the physical security boundary and select tamper protection mechanisms appropriate to the threat model: tamper-evident seals, active mesh, potting, environmental sensors, and zeroization triggers.",
+        "inputs": [
+          {"name": "threat-model", "desc": "Attacker capabilities: remote only, physical access duration, equipment budget (hobbyist, professional, nation-state)"},
+          {"name": "security-level-target", "desc": "Target protection level: FIPS 140-3 Level 2/3/4, PCI PTS, CC protection profile"}
+        ],
+        "outputs": [
+          {"name": "tamper-protection-design", "desc": "Selected mechanisms: mesh design, sensor suite, potting material, seal placement, zeroization circuit"},
+          {"name": "security-boundary-document", "desc": "Drawing showing the physical boundary, all penetration points, and the protection at each point"}
+        ],
+        "process": [
+          "Define the physical security boundary: the enclosure or coating that contains all CSPs (critical security parameters: keys, PINs, intermediate crypto values). Every opening in the boundary (connectors, ventilation, seams) is a potential attack point that must be addressed.",
+          "Tamper-evident (FIPS Level 2): apply tamper-evident seals over enclosure screws and seams. Seals must show visible damage if removed (frangible labels, holographic seals with unique serial numbers). Document seal placement and inspection procedure. Limitation: detects but does not prevent physical access.",
+          "Tamper-responsive (FIPS Level 3+): active mesh surrounding the security boundary. Mesh: a dense serpentine trace pattern on a flexible PCB wrapped around the module. The tamper detection circuit continuously monitors mesh continuity and resistance. Any cut, short, or significant resistance change triggers zeroization. Mesh pitch determines the minimum drill diameter that can penetrate without detection (typical: 100-200 um pitch for professional-grade).",
+          "Environmental sensors: voltage monitor (detect supply glitching), temperature sensor (detect freezing attacks to slow SRAM decay), light sensor (detect decapsulation), clock frequency monitor (detect clock glitching). Each sensor triggers the tamper response when out of specified range. Set thresholds with margin to avoid false triggers during normal operation (temperature: -40C to +85C operational, trigger at -50C or +100C).",
+          "Zeroization circuit: on tamper trigger, overwrite all key storage (battery-backed SRAM) with zeros or random data. Circuit must be powered by a dedicated battery independent of the main power supply (so zeroization works even when the device is powered off). Zeroization completion time must be shorter than the time for an attacker to read out SRAM through the compromised boundary (target: < 100 microseconds for the write cycle)."
+        ],
+        "tags": ["tamper-resistance", "physical-security", "mesh", "zeroization"]
+      },
+      {
+        "flow_name": "anti-probing-evaluation",
+        "description": "Design anti-probing measures against IC-level physical attacks, implement FIB resistance, and evaluate the complete tamper design against the target Common Criteria protection profile.",
+        "inputs": [
+          {"name": "tamper-protection-design", "desc": "Selected tamper mechanisms and sensor suite"},
+          {"name": "security-boundary-document", "desc": "Physical boundary drawing with penetration points"}
+        ],
+        "outputs": [
+          {"name": "anti-probing-design", "desc": "Metal shielding layers, active shield routing, glitch detection, evaluation results"},
+          {"name": "cc-evaluation-readiness", "desc": "Compliance status against target protection profile, gap analysis, evidence package for evaluator"}
+        ],
+        "process": [
+          "Anti-probing at IC level: add top metal shielding layer over sensitive circuits (key storage, crypto core). Route an active shield on this layer (a signal that is continuously monitored; probing or FIB editing disrupts it). Backside protection: use backside metal or deep-trench isolation to prevent substrate probing through the thinned die.",
+          "FIB attack resistance: FIB (focused ion beam) can cut and reconnect metal traces, enabling bypass of security features. Countermeasures: use multiple metal layers for critical signals (FIB can access the top layer but not easily reach buried layers), route security-critical signals on lower metal layers under the active shield, use differential signaling so that a single-trace modification is detectable.",
+          "Glitch detection: monitor the power supply for voltage excursions outside the operating range (both above and below). Use an analog comparator with fast response (< 10 ns) to detect glitch pulses. On detection: trigger a security reset that clears any partially-computed cryptographic state before it can be read out. Also monitor clock frequency and halt on out-of-range periods.",
+          "Evaluation: have an independent security laboratory attempt penetration using the attacker model from the threat model. Test mesh sensitivity (minimum drill size that triggers detection), environmental sensor coverage (can an attacker freeze the battery while bypassing the temperature sensor?), zeroization completeness (can any key material be recovered after tamper trigger?).",
+          "CC protection profile compliance: map each requirement from the target PP (e.g., BSI-CC-PP-0084 for hardware security modules) to the implemented mechanism. Prepare the Security Target document. Compile evidence: design documents, test results, source code review for tamper detection firmware, penetration test reports. Submit to a CCRA-licensed evaluation facility."
+        ],
+        "tags": ["anti-probing", "FIB", "active-shield", "CC-evaluation"]
+      }
+    ]
+  },
+  {
+    "chain_name": "secure-communication-hardware",
+    "description": "Design secure communication hardware: HSM architecture with key ceremony, TLS and MACsec offload engines, IPsec acceleration, quantum-safe key exchange, and secure time synchronization.",
+    "domain": "security",
+    "tags": ["hardware-security", "HSM", "MACsec", "IPsec", "TLS", "post-quantum"],
+    "steps": [
+      {
+        "flow_name": "hsm-architecture-design",
+        "description": "Design a hardware security module: internal architecture, key hierarchy, key ceremony procedure, supported cryptographic services, and physical security boundary.",
+        "inputs": [
+          {"name": "use-case-requirements", "desc": "Application: PKI CA, payment processing, code signing, database encryption, cloud KMS"},
+          {"name": "performance-targets", "desc": "Operations per second by type (RSA sign, AES encrypt, ECDSA verify), concurrent sessions"}
+        ],
+        "outputs": [
+          {"name": "hsm-architecture", "desc": "Internal block diagram: crypto accelerators, key storage, tamper mesh, processor, interfaces"},
+          {"name": "key-ceremony-procedure", "desc": "Multi-party key generation procedure, custodian roles, split knowledge, audit trail"}
+        ],
+        "process": [
+          "Internal architecture: dedicated crypto processor (or FPGA with crypto IP), hardware accelerators for AES, SHA, RSA, ECC, battery-backed SRAM for key storage, tamper mesh and environmental sensors around the security boundary, external interfaces (PCIe, Ethernet, USB). Separate the management interface from the data interface.",
+          "Key hierarchy: Master key (generated inside HSM, never exported, protects all other keys). Key-encrypting keys (KEK: wrap/unwrap data keys for storage outside HSM). Data keys (used for actual cryptographic operations). Token keys (bound to authenticated sessions). Each key has attributes: extractable (yes/no), usage (sign, encrypt, wrap), algorithm.",
+          "Key ceremony for master key initialization: requires M-of-N custodians (e.g., 3-of-5). Each custodian holds a smart card with a key share. During ceremony: each custodian authenticates and inserts their share. HSM reconstructs the master key from the shares (Shamir's secret sharing). Ceremony must be witnessed, recorded (video), and logged in the HSM audit trail. No single person ever sees the complete master key.",
+          "Audit: every key operation logged with timestamp, operation type, key ID, requesting identity, success/failure. Logs are signed by the HSM to prevent tampering. Log export for compliance (PCI DSS, eIDAS, FIPS). Dual control: critical operations (master key generation, firmware update) require two authenticated administrators."
+        ],
+        "tags": ["HSM", "key-hierarchy", "key-ceremony", "audit"]
+      },
+      {
+        "flow_name": "network-crypto-offload-design",
+        "description": "Design TLS, MACsec, and IPsec offload engines for line-rate encryption, including quantum-safe hybrid key exchange and secure time synchronization.",
+        "inputs": [
+          {"name": "hsm-architecture", "desc": "HSM internal architecture and key hierarchy"},
+          {"name": "key-ceremony-procedure", "desc": "Key generation and management procedures"}
+        ],
+        "outputs": [
+          {"name": "crypto-offload-design", "desc": "TLS/MACsec/IPsec engine architecture: throughput, latency, key capacity, algorithm suite"},
+          {"name": "quantum-safe-design", "desc": "Hybrid key exchange implementation: classical + PQC, algorithm selection, performance impact"}
+        ],
+        "process": [
+          "TLS offload: implement TLS 1.3 handshake in hardware/firmware (ECDHE key exchange, certificate verification, HKDF key derivation) with data-plane AES-GCM in a dedicated crypto engine. Key design parameters: maximum concurrent sessions (determines session key storage), handshakes per second (asymmetric crypto throughput), bulk throughput (AES-GCM at line rate: 10/25/100 Gbps). For line-rate AES-GCM: pipeline the GHASH and AES computations, use AES-NI or dedicated hardware blocks.",
+          "MACsec (802.1AE): encrypt and authenticate Ethernet frames at Layer 2. Key agreement via MKA (MACsec Key Agreement, 802.1X-2010). Hardware engine processes frames inline: encrypt payload with AES-GCM-256, append ICV (integrity check value). Latency budget: must not exceed switch forwarding latency specification (< 1 microsecond for cut-through). Support for multiple SAKs (Secure Association Keys) for key rotation without traffic interruption.",
+          "IPsec: hardware acceleration for ESP (Encapsulating Security Payload). Support AES-GCM and ChaCha20-Poly1305. SA (Security Association) lookup from SPI (Security Parameters Index) in packet header. SA database capacity determines maximum concurrent tunnels. Anti-replay window implementation in hardware (bitmap check against sequence number).",
+          "Quantum-safe hybrid: implement hybrid key exchange combining classical ECDH with ML-KEM (Kyber). Concatenate the shared secrets from both and derive the session key with HKDF. This provides security against both classical and quantum attackers. Performance impact: ML-KEM-768 adds approximately 2 KB to the key exchange message and 0.1-0.5 ms to handshake time. Plan for algorithm agility: the design should allow swapping PQC algorithms as standards evolve.",
+          "Secure time synchronization: implement IEEE 1588 PTP with authentication (Annex K) or NTS (Network Time Security, RFC 8915) for NTP. Time accuracy matters for certificate validity checking, replay window management, and audit log integrity. Hardware timestamping at the MAC layer for sub-microsecond accuracy."
+        ],
+        "tags": ["TLS", "MACsec", "IPsec", "post-quantum", "time-sync"]
+      }
+    ]
+  },
+  {
+    "chain_name": "supply-chain-security-hardware",
+    "description": "Secure the hardware supply chain: counterfeit component detection, hardware trojan analysis, trusted manufacturing, IC protection techniques, and component authentication methodology.",
+    "domain": "security",
+    "tags": ["hardware-security", "supply-chain", "counterfeit", "trojan", "authentication"],
+    "steps": [
+      {
+        "flow_name": "counterfeit-detection-methodology",
+        "description": "Detect counterfeit electronic components through layered inspection: visual, electrical, X-ray, and destructive analysis, with statistical sampling for incoming lots.",
+        "inputs": [
+          {"name": "component-description", "desc": "Part number, manufacturer, expected marking, package type, procurement source (authorized vs broker)"},
+          {"name": "risk-assessment", "desc": "Component criticality, supply chain risk level, counterfeit history for this part"}
+        ],
+        "outputs": [
+          {"name": "inspection-results", "desc": "Pass/fail for each inspection tier, photographs, measurements, comparison to known-genuine samples"},
+          {"name": "counterfeit-risk-verdict", "desc": "Accept, reject, or escalate to destructive analysis, with evidence summary"}
+        ],
+        "process": [
+          "Tier 1 - Visual inspection: examine package marking (laser vs ink, font consistency, alignment, country of origin code), measure package dimensions against manufacturer datasheet (counterfeit packages are often re-marked pulls with non-standard dimensions), inspect leads for re-tinning evidence (uneven solder, solder splashes, bent leads from prior board removal), check date code consistency within the lot.",
+          "Tier 2 - Electrical testing: compare DC parametric measurements (Voh, Vol, Iih, Iil, Idd) against datasheet limits. Perform functional test at rated speed and across temperature range. Counterfeit parts often fail at corners that genuine parts pass. Compare curve tracer results (I-V characteristics of I/O pins) against known-genuine samples for the same date code.",
+          "Tier 3 - X-ray inspection: verify internal die size and bond wire pattern match the expected design. Detect re-marking (a smaller die in a larger package, wire bond pattern inconsistent with claimed part number). For BGA: verify solder ball size and pitch consistency (recycled BGAs show non-uniform ball diameter from reworking).",
+          "Tier 4 - Destructive analysis (sampling basis): decapsulate and compare die markings, die size, and circuit topology to known-genuine samples or manufacturer die photographs. Examine bond wire pull strength (degraded in aged or recycled parts). SEM the die surface for signs of previous use (electromigration voids, bond pad wear).",
+          "Statistical sampling: for authorized-distributor procurement, 100% Tier 1 + sample Tier 2. For broker procurement, 100% Tier 1 + 100% Tier 2 + sample Tier 3. For critical/single-source parts from unknown sources, add Tier 4. SAE AS6171 and AS6081 provide the sampling framework."
+        ],
+        "tags": ["counterfeit", "inspection", "supply-chain", "testing"]
+      },
+      {
+        "flow_name": "hardware-trojan-detection",
+        "description": "Detect hardware trojans in ICs: golden-chip comparison, side-channel signature analysis, formal verification approaches, and IC protection through logic locking and split manufacturing.",
+        "inputs": [
+          {"name": "inspection-results", "desc": "Counterfeit screening results (parts passed as genuine)"},
+          {"name": "counterfeit-risk-verdict", "desc": "Risk assessment and evidence"}
+        ],
+        "outputs": [
+          {"name": "trojan-analysis-results", "desc": "Trojan detection verdict: analysis methods applied, coverage, confidence level, any anomalies detected"},
+          {"name": "ic-protection-design", "desc": "IP protection measures: logic locking scheme, split manufacturing plan, PUF-based authentication"}
+        ],
+        "process": [
+          "Side-channel signature comparison: acquire power traces and electromagnetic signatures from the IC under test and compare to a reference (golden) chip that is known to be trojan-free. Statistical tests (principal component analysis, machine learning classifiers) detect added circuitry that causes deviations in power consumption or EM emissions. Limitation: small trojans (< 0.1% of die area) may be below detection threshold.",
+          "Logic testing: apply test vectors designed to activate potential trojans. Standard ATPG patterns cover stuck-at faults but not trojans (which may have rare trigger conditions). Supplement with random and constrained-random test patterns targeting low-controllability nodes. N-detect (apply N patterns that detect each fault) increases the probability of triggering a trojan's activation condition.",
+          "Formal verification: compare the gate-level netlist extracted from the IC (by reverse engineering the layout) to the reference design netlist. Equivalence checking identifies any added, removed, or modified gates. Practical only for smaller designs (< 100K gates) due to the cost of IC reverse engineering and the computational complexity of verification.",
+          "Logic locking: insert key-controlled gates (XOR, MUX) into the design netlist. The IC functions correctly only when the correct key is loaded (stored in tamper-proof memory on-chip). An adversary at the foundry sees the locked netlist but cannot determine the correct key. Key selection: use a SAT-attack-resistant locking scheme (Anti-SAT, SARLock) to resist oracle-guided attacks.",
+          "Split manufacturing: fabricate the front-end-of-line (transistors and lower metal layers) at one foundry and the back-end-of-line (upper metal routing) at a trusted facility. The untrusted foundry sees only partial connectivity, insufficient to understand or modify the circuit function. Combine with logic locking for defense-in-depth. PUF-based authentication: each legitimate IC generates a unique PUF response that is enrolled during trusted testing. In the field, verify the PUF response to authenticate the IC before trusting it."
+        ],
+        "tags": ["hardware-trojan", "logic-locking", "split-manufacturing", "PUF-authentication"]
+      }
+    ]
+  },
+  {
+    "chain_name": "embedded-security-testing",
+    "description": "Perform security testing on embedded devices: hardware reconnaissance, firmware extraction and analysis, protocol fuzzing, attack surface assessment, and IoT certification preparation.",
+    "domain": "security",
+    "tags": ["hardware-security", "penetration-testing", "firmware", "fuzzing", "IoT"],
+    "steps": [
+      {
+        "flow_name": "hardware-reconnaissance",
+        "description": "Perform hardware-level reconnaissance on an embedded device: identify debug interfaces, extract firmware from flash, map the communication interfaces, and document the hardware attack surface.",
+        "inputs": [
+          {"name": "target-device", "desc": "Physical device to test: product description, external interfaces, any available documentation"},
+          {"name": "test-scope", "desc": "Authorization scope, rules of engagement, non-destructive vs destructive analysis permitted"}
+        ],
+        "outputs": [
+          {"name": "hardware-map", "desc": "Board photograph with identified ICs, debug ports (UART, JTAG, SWD), flash chips, test points, communication buses"},
+          {"name": "extracted-firmware", "desc": "Firmware binary extracted from flash or obtained via debug interface, with extraction method documented"}
+        ],
+        "process": [
+          "Visual board inspection: photograph the PCB (both sides). Identify all ICs by marking (look up datasheets). Locate debug headers (UART: 3-4 pin header near processor; JTAG: 10/14/20 pin header; SWD: 2-pin). Identify flash storage (SPI NOR: 8-pin SOIC, eMMC: BGA, NAND: TSOP). Locate test points and unpopulated headers.",
+          "UART discovery: use a logic analyzer or oscilloscope to probe suspected UART pins (look for 3.3V idle-high, data bursts at boot). Try common baud rates (115200, 9600, 57600). Connect a USB-UART adapter. Many devices output boot logs and provide a root shell on UART without authentication.",
+          "JTAG/SWD discovery: if header is present, identify pin functions (TCK, TMS, TDI, TDO for JTAG; SWDIO, SWCLK for SWD) using JTAGulator or manual probing. Connect with OpenOCD or a J-Link debugger. If debug is locked, document the lock mechanism (some devices use a read-once fuse, others use a password).",
+          "Firmware extraction: from SPI flash, desolder or use a test clip (SOIC-8 clip) and read with a flash programmer (CH341A, FlashROM). From eMMC: use the eMMC debug interface or SD adapter. Via debug interface: use OpenOCD to dump flash. From UART: if a bootloader shell is available (U-Boot), use memory read commands. Document which method succeeded.",
+          "Communication interface mapping: identify all external interfaces (Ethernet, Wi-Fi, Bluetooth, Zigbee, cellular, USB) and internal buses (SPI, I2C, CAN). For each external interface, note the protocol and whether it uses encryption/authentication. This map defines the remote attack surface."
+        ],
+        "tags": ["reconnaissance", "UART", "JTAG", "firmware-extraction"]
+      },
+      {
+        "flow_name": "firmware-analysis-fuzzing",
+        "description": "Analyze extracted firmware for vulnerabilities and fuzz communication protocol parsers: static binary analysis, protocol reverse engineering, and targeted fuzzing with coverage feedback.",
+        "inputs": [
+          {"name": "hardware-map", "desc": "Board layout with identified interfaces and ICs"},
+          {"name": "extracted-firmware", "desc": "Firmware binary"}
+        ],
+        "outputs": [
+          {"name": "vulnerability-findings", "desc": "Identified vulnerabilities with severity, exploitability, and remediation recommendations"},
+          {"name": "fuzzing-results", "desc": "Crashes found, code paths exercised, coverage metrics, triage of unique crash signatures"}
+        ],
+        "process": [
+          "Static analysis: load firmware into Ghidra or IDA Pro. Identify the processor architecture from the IC datasheet (ARM Cortex-M, MIPS, Xtensa for ESP32). For bare-metal firmware: manually identify base address from vector table. For Linux-based: extract filesystem (binwalk), identify busybox/dropbear/lighttpd versions, check for known CVEs, find hardcoded credentials (strings search for password, admin, root).",
+          "Cryptographic material search: scan for high-entropy blocks (likely keys or certificates), known key formats (PEM headers, DER sequences), symmetric key patterns. Check if keys are unique per device or shared across production (shared keys mean one compromised device compromises all).",
+          "Protocol reverse engineering: capture traffic on each communication interface (Wireshark for network, logic analyzer for serial). Identify the protocol structure: headers, command codes, length fields, checksums. For proprietary protocols: correlate captured traffic with firmware code to understand the parser.",
+          "Fuzzing: for network-accessible parsers, use AFL, libFuzzer, or Boofuzz. For embedded targets: either emulate the firmware (QEMU for ARM Linux, Unicorn for bare-metal code sections) or fuzz on the physical device via the network interface. Track code coverage (if emulated: compile with coverage instrumentation; if physical: monitor power consumption as a coverage proxy). Run until coverage plateaus (typically 24-72 hours).",
+          "Triage: deduplicate crashes by stack trace signature. For each unique crash: determine root cause (buffer overflow, format string, integer overflow, null dereference), assess exploitability (code execution vs denial of service), and assign severity per CVSS. Document remediation: fix the parser, add input validation at the system boundary, update to a patched library version."
+        ],
+        "tags": ["firmware-analysis", "fuzzing", "reverse-engineering", "vulnerability"]
+      },
+      {
+        "flow_name": "iot-certification-preparation",
+        "description": "Prepare an IoT device for security certification: map requirements from relevant standards, perform gap analysis, remediate findings, and compile the evidence package.",
+        "inputs": [
+          {"name": "vulnerability-findings", "desc": "Security testing results with severity and remediation status"},
+          {"name": "fuzzing-results", "desc": "Protocol fuzzing outcomes and crash triage"}
+        ],
+        "outputs": [
+          {"name": "certification-gap-analysis", "desc": "Requirements from target standard mapped to current device implementation, with pass/fail/gap for each requirement"},
+          {"name": "evidence-package", "desc": "Compiled evidence: test reports, design documents, remediation records, ready for submission to certification body"}
+        ],
+        "process": [
+          "Select target certification: ETSI EN 303 645 (European IoT baseline), NIST IR 8259A (US IoT baseline), ioXt Alliance, UL 2900, or sector-specific (IEC 62443 for industrial). Map each requirement to a testable assertion.",
+          "Common requirements across standards: (1) No default passwords (device must require password change on first use or use unique per-device credentials). (2) Vulnerability disclosure policy published. (3) Software updates: secure update mechanism with authentication. (4) Secure communication: all external communications encrypted (TLS 1.2+ or equivalent). (5) Minimize attack surface: disable unused ports and services. (6) Data protection: personal data encrypted at rest.",
+          "Gap analysis: test each requirement against the device. For requirement 1: attempt login with common default credentials. For requirement 3: attempt to load an unsigned firmware image. For requirement 4: capture all network traffic and verify encryption (no plaintext credentials, no HTTP where HTTPS is expected). Document each requirement as pass, fail, or not-applicable with evidence.",
+          "Remediate failures: prioritize by certification requirement (mandatory requirements must pass) and severity. For each remediation: implement the fix, re-test to verify, document the before-and-after evidence. Track remediation in a findings register with dates and responsible engineers.",
+          "Compile the evidence package: cover letter, device description, architecture diagram, security testing report (penetration test, fuzzing results, vulnerability scan), remediation register, design documents (secure boot chain, update mechanism, key management), and manufacturer declaration of conformity. Submit to the certification body or authorized test laboratory."
+        ],
+        "tags": ["IoT", "certification", "ETSI", "NIST", "compliance"]
+      }
+    ]
+  },
+  {
+    "chain_name": "post-quantum-cryptography-hardware",
+    "description": "Implement post-quantum cryptographic algorithms in hardware: lattice-based ML-KEM and ML-DSA with NTT optimization, hash-based signatures, hardware acceleration architecture, hybrid schemes, and migration planning.",
+    "domain": "security",
+    "tags": ["post-quantum", "ML-KEM", "ML-DSA", "lattice", "hash-based-signatures", "hardware"],
+    "steps": [
+      {
+        "flow_name": "pqc-algorithm-selection",
+        "description": "Select post-quantum algorithms based on application requirements: compare NIST-standardized algorithms by security level, key and signature sizes, performance on target platform, and migration impact.",
+        "inputs": [
+          {"name": "application-requirements", "desc": "Use case: key exchange, digital signature, key encapsulation. Performance constraints, bandwidth constraints, storage constraints."},
+          {"name": "target-platform", "desc": "Hardware platform: FPGA, ASIC, microcontroller, server CPU. Clock frequency, memory, power budget."}
+        ],
+        "outputs": [
+          {"name": "algorithm-selection", "desc": "Selected PQC algorithms with security level, parameter set, and rationale"},
+          {"name": "migration-impact-analysis", "desc": "Protocol changes required, bandwidth impact, storage impact, latency impact compared to classical algorithms"}
+        ],
+        "process": [
+          "Key encapsulation (replacing ECDH/RSA key exchange): ML-KEM (Kyber) is the NIST standard. Parameter sets: ML-KEM-512 (NIST Level 1, ~128-bit security), ML-KEM-768 (Level 3, ~192-bit), ML-KEM-1024 (Level 5, ~256-bit). Key sizes: public key 800-1568 bytes, ciphertext 768-1568 bytes. Performance: 10-100x faster than RSA key exchange, comparable to ECDH on modern CPUs.",
+          "Digital signatures (replacing ECDSA/RSA signatures): ML-DSA (Dilithium) for general use. Parameter sets: ML-DSA-44 (Level 2), ML-DSA-65 (Level 3), ML-DSA-87 (Level 5). Signature size: 2420-4627 bytes (much larger than ECDSA's 64 bytes). Public key: 1312-2592 bytes. For stateless hash-based signatures: SLH-DSA (SPHINCS+) offers conservative security assumptions but larger signatures (7-50 KB). For stateful: XMSS/LMS (smaller signatures but state management is critical: signing key must be updated after each use, reuse breaks security).",
+          "Hybrid approach: combine classical + PQC in a hybrid scheme. For TLS key exchange: concatenate ECDH shared secret and ML-KEM shared secret, derive session key from both. This ensures security even if one algorithm is broken. For signatures: include both ECDSA and ML-DSA signatures in certificates. RFC 9180 (HPKE) and draft-ietf-tls-hybrid-design define the protocol framework.",
+          "Migration impact: evaluate bandwidth increase (ML-KEM adds ~2 KB to TLS handshake, ML-DSA adds ~5 KB per signature in certificate chain). For constrained devices (IoT, embedded): bandwidth and memory may be the binding constraint. For high-throughput servers: computation time is minimal but certificate chain size affects TLS handshake latency.",
+          "Timeline: NIST standards finalized in 2024. Regulatory mandates (CNSA 2.0) require PQC for national security systems by 2030-2033. Start with hybrid to maintain interoperability with classical-only peers. Plan for algorithm agility: design the system so that PQC algorithm and parameter set can be changed without hardware redesign."
+        ],
+        "tags": ["post-quantum", "ML-KEM", "ML-DSA", "algorithm-selection", "migration"]
+      },
+      {
+        "flow_name": "lattice-crypto-hardware-implementation",
+        "description": "Implement lattice-based cryptography in hardware: NTT (Number Theoretic Transform) architecture, modular arithmetic units, memory architecture for polynomial operations, and side-channel protected implementation.",
+        "inputs": [
+          {"name": "algorithm-selection", "desc": "Selected PQC algorithms and parameter sets"},
+          {"name": "migration-impact-analysis", "desc": "Performance and bandwidth requirements"}
+        ],
+        "outputs": [
+          {"name": "hardware-implementation", "desc": "RTL design: NTT unit, modular arithmetic, memory controller, control FSM, with area/throughput/power metrics"},
+          {"name": "side-channel-assessment", "desc": "Leakage evaluation of PQC implementation, countermeasures applied, TVLA results"}
+        ],
+        "process": [
+          "NTT is the core computation: ML-KEM and ML-DSA use polynomial multiplication over Z_q[X]/(X^n+1). Direct multiplication is O(n^2). NTT converts to O(n*log(n)) by transforming polynomials to evaluation form, pointwise multiplying, and inverse-transforming. For ML-KEM-768: n=256, q=3329. NTT butterfly: a' = a + w*b mod q, b' = a - w*b mod q. The modular reduction for q=3329 can use Barrett reduction (precomputed constant) or Montgomery reduction.",
+          "Hardware NTT architecture: Iterative (1 butterfly unit, n*log(n) cycles, minimum area), parallel (k butterfly units, n*log(n)/k cycles), fully unrolled (all butterflies instantiated, log(n) cycles, maximum area/throughput). For FPGA: 2-4 parallel butterflies with dual-port block RAM for coefficient storage is a common area-throughput trade-off. Pipeline the butterfly: multiply in cycle 1, add/subtract in cycle 2.",
+          "Memory architecture: NTT requires in-place coefficient access with specific stride patterns (bit-reversal or natural order depending on the algorithm variant). Use dual-port BRAM with address generation logic that sequences through the NTT stages. Twiddle factors (precomputed powers of the NTT root) stored in a ROM or computed on-the-fly.",
+          "Side-channel protection: the secret key in ML-KEM decapsulation and ML-DSA signing is used in polynomial operations that can leak through power analysis. Apply masking: arithmetic masking for modular additions, Boolean masking for comparisons (especially the implicit rejection in ML-KEM decapsulation, where a timing difference between valid and invalid ciphertexts leaks information). Verify with TVLA on the hardware implementation.",
+          "Verification: test against NIST Known Answer Test vectors (KAT files provided with each standard). Measure throughput (key generations, encapsulations, decapsulations per second), area (LUTs, FFs, BRAM, DSP for FPGA; gate count for ASIC), and power. Compare against software baseline on the same platform to quantify the hardware acceleration factor."
+        ],
+        "tags": ["NTT", "lattice", "hardware-acceleration", "ML-KEM", "side-channel"]
+      },
+      {
+        "flow_name": "pqc-integration-testing",
+        "description": "Integrate PQC hardware into a complete system, test interoperability with hybrid classical/PQC protocols, validate performance at system level, and prepare for compliance.",
+        "inputs": [
+          {"name": "hardware-implementation", "desc": "PQC hardware accelerator RTL and performance metrics"},
+          {"name": "side-channel-assessment", "desc": "Side-channel evaluation results"}
+        ],
+        "outputs": [
+          {"name": "system-integration-results", "desc": "PQC accelerator integrated into TLS/IPsec stack, end-to-end test results, interoperability with reference implementations"},
+          {"name": "compliance-readiness", "desc": "Mapping to CNSA 2.0, FIPS 203/204/205, NIST SP 800-227 requirements with evidence of compliance"}
+        ],
+        "process": [
+          "Integration: connect the PQC hardware accelerator to the host processor via a standard bus (AXI for FPGA, PCIe for server card). Implement a driver that exposes ML-KEM (keygen, encaps, decaps) and ML-DSA (keygen, sign, verify) as API calls. Integrate with an existing TLS library (OpenSSL, mbedTLS) by registering the hardware-accelerated PQC algorithms as providers/engines.",
+          "Interoperability testing: establish TLS 1.3 connections with the reference implementation (liboqs, PQClean) using hybrid key exchange (X25519 + ML-KEM-768). Verify that the handshake completes successfully, that the negotiated cipher suite is correct, and that application data is transferred correctly. Test with both sides using hardware acceleration and with one side using software-only.",
+          "Performance validation: measure end-to-end TLS handshake time (time from ClientHello to application data) and compare hardware-accelerated vs software-only. Measure steady-state throughput (AES-GCM data transfer after handshake). Verify that PQC handshake latency meets application requirements (e.g., < 50 ms for web, < 10 ms for API).",
+          "Certificate chain testing: generate a test CA with ML-DSA certificates. Issue leaf certificates. Verify that certificate chain validation works with ML-DSA signatures. Test certificate chain size impact on handshake (each ML-DSA-65 signature adds ~3.3 KB to the chain vs ~72 bytes for ECDSA). For bandwidth-constrained links: evaluate certificate compression (RFC 8879).",
+          "Compliance mapping: FIPS 203 (ML-KEM), FIPS 204 (ML-DSA), FIPS 205 (SLH-DSA). NIST SP 800-227 (PQC migration guidelines). CNSA 2.0 timeline: software and firmware signing with PQC by 2025, web/cloud services by 2030, traditional networking by 2030, legacy systems by 2033. Document which requirements are met and which need roadmap items."
+        ],
+        "tags": ["PQC-integration", "TLS", "interoperability", "CNSA", "FIPS"]
+      }
+    ]
+  }
+]

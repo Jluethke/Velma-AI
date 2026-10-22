@@ -1,0 +1,1089 @@
+[
+  {
+    "chain_name": "cfd-mesh-convergence-methodology",
+    "description": "Establish grid independence for a CFD result by defining the target quantity, building a systematically refined grid family, sizing the near-wall mesh for the chosen wall treatment, scoring mesh quality, and quantifying discretization error with Richardson extrapolation and the Grid Convergence Index.",
+    "domain": "engineering",
+    "tags": ["cfd", "mesh-convergence", "richardson-extrapolation", "simulation", "engineering"],
+    "steps": [
+      {
+        "flow_name": "cfd-target-quantity-definition",
+        "description": "Fix the scalar quantity of interest the study must converge and the tolerance that defines convergence, so that every later mesh decision is judged against one number rather than a picture.",
+        "inputs": [
+          {"name": "simulation-objective", "desc": "What the CFD study must predict (drag, heat transfer, pressure drop, separation point) and the decision it feeds"},
+          {"name": "geometry-and-flow-conditions", "desc": "Reference length, inlet velocity, fluid properties, Reynolds and Mach numbers"}
+        ],
+        "outputs": [
+          {"name": "target-quantity", "desc": "One or two scalar quantities of interest with their definition, for example drag coefficient Cd or area-averaged Nusselt number"},
+          {"name": "convergence-tolerance", "desc": "Allowed grid-induced uncertainty on the target quantity, stated as a percent band such as 2 percent of Cd"}
+        ],
+        "process": [
+          "Pick a scalar quantity of interest that maps directly to the engineering decision. Integrated quantities such as drag coefficient Cd = 2*Fx/(rho*U^2*A), lift, total pressure drop, or area-averaged Nusselt number converge faster and more monotonically than point values like peak wall shear, so prefer them when the decision allows.",
+          "Compute the reference Reynolds number Re = rho*U*L/mu and Mach number Ma = U/c. These set whether the flow is laminar or turbulent and whether compressibility matters, which in turn drives near-wall resolution and the grid count you must budget for.",
+          "State the convergence tolerance as a percent of the target, not as an absolute residual. A typical external-aerodynamics drag study targets grid-induced uncertainty under 2 percent of Cd; a heat-transfer study often needs 5 percent on Nusselt number because wall-gradient quantities are more mesh-sensitive.",
+          "Separate iterative convergence from grid convergence. Drive solver residuals down at least 3 to 4 orders of magnitude and confirm the target quantity is steady to within one tenth of the grid tolerance before you trust any single mesh, otherwise an unconverged solve masquerades as mesh error.",
+          "Record the operating point (angle of attack, mass flow, wall temperature) that the convergence study locks to. Grid independence is established at one condition; document that the chosen mesh must be re-checked if the flow regime changes, for example when separation appears at higher incidence."
+        ],
+        "tags": ["cfd", "quantity-of-interest"]
+      },
+      {
+        "flow_name": "cfd-grid-family-generation",
+        "description": "Generate at least three systematically refined meshes with a constant refinement ratio so that the discretization error can be fit to a power law rather than guessed from two arbitrary grids.",
+        "inputs": [
+          {"name": "target-quantity", "desc": "The scalar quantity of interest to be tracked across grids"},
+          {"name": "convergence-tolerance", "desc": "Allowed grid-induced uncertainty band"}
+        ],
+        "outputs": [
+          {"name": "grid-family", "desc": "Three or more meshes (coarse, medium, fine) with recorded cell counts and representative cell size h for each"},
+          {"name": "refinement-ratio", "desc": "The constant ratio r = h_coarse/h_fine applied between successive grids, with r at least 1.3"}
+        ],
+        "process": [
+          "Build three meshes minimum. Two grids can only give a difference, not an order of accuracy; three let you solve for the observed order p and detect whether you are in the asymptotic range. Four grids are better when the observed order is uncertain.",
+          "Refine in every direction together by a constant ratio. Define the representative cell size h = (V_domain/N_cells)^(1/3) for 3D (use 1/2 power for 2D). Keep the grid refinement ratio r = h_coarse/h_fine constant between levels, with r >= 1.3 so the change in h is large enough to separate signal from noise.",
+          "A uniform global refinement by r = 2 in each direction multiplies cell count by 8 in 3D, so budget memory and run time accordingly. When 8x is unaffordable, use r = 1.5 (about 3.4x cells) but never drop below 1.3.",
+          "Preserve topology and relative spacing across the family. The boundary-layer growth rate, the surface-to-volume size transition, and the refinement regions must scale uniformly; if only part of the mesh refines, the observed order p becomes meaningless because different regions converge at different rates.",
+          "Run all three meshes at the identical operating point and discretization scheme (same flux limiter, same turbulence model, same wall treatment). Record cell count and h for each. Changing the scheme between grids confounds spatial error with scheme error and invalidates the extrapolation."
+        ],
+        "tags": ["cfd", "grid-refinement"]
+      },
+      {
+        "flow_name": "cfd-wall-treatment-yplus-sizing",
+        "description": "Size the first cell height off every solid wall to the dimensionless distance y-plus that the chosen turbulence wall treatment requires, because a mesh that violates its wall model gives a confidently wrong answer at any density.",
+        "inputs": [
+          {"name": "grid-family", "desc": "The refined meshes needing near-wall layer sizing"},
+          {"name": "geometry-and-flow-conditions", "desc": "Velocity, density, viscosity, and reference length for wall-shear estimation"}
+        ],
+        "outputs": [
+          {"name": "first-cell-height", "desc": "The wall-normal size of the first cell for each wall treatment option, in physical units"},
+          {"name": "wall-treatment-choice", "desc": "Whether the mesh resolves the viscous sublayer (y-plus about 1) or uses wall functions (y-plus 30 to 300)"}
+        ],
+        "process": [
+          "Define the wall coordinate y-plus = rho*u_tau*y/mu, where u_tau = sqrt(tau_w/rho) is the friction velocity and y is the distance to the first cell center. The wall treatment dictates the y-plus you must hit, and the first cell height is what you control to get there.",
+          "Choose the wall treatment first. Wall-resolved integration to the wall needs y-plus about 1 (first cell inside the viscous sublayer, y-plus < 5, ideally near 1) and is required for accurate separation and heat transfer. Wall functions bridge the near-wall region and need the first cell center in the log layer, 30 <= y-plus <= 300, which saves cells but assumes an attached equilibrium boundary layer.",
+          "Estimate wall shear before meshing. For a flat-plate turbulent boundary layer the skin-friction coefficient is Cf = 0.058*Re_x^(-0.2); then tau_w = 0.5*Cf*rho*U^2 and u_tau = sqrt(tau_w/rho). Invert the y-plus definition to get the target first cell height y = y_plus_target*mu/(rho*u_tau).",
+          "Worked number: air at U = 30 m/s, L = 1 m, rho = 1.2 kg/m^3, mu = 1.8e-5 Pa*s gives Re_L about 2.0e6, Cf about 0.0037, tau_w about 2.0 Pa, u_tau about 1.3 m/s. For y-plus = 1 the first cell height is roughly 1.2e-5 m (12 microns); for wall functions at y-plus = 50 it is roughly 6e-4 m.",
+          "Set the prism-layer stack to carry the boundary layer, not just the first cell. Use a growth rate of 1.1 to 1.2 between layers and enough layers that the prism-to-tet transition sits outside the boundary layer (10 to 20 wall units thick is a start; aim to place 15 or more cells across the boundary-layer thickness).",
+          "Verify y-plus from the solution, not the mesh. Compute the actual y-plus field after the first converged run and re-mesh if large patches fall in the buffer layer (5 < y-plus < 30), where neither sublayer resolution nor wall functions are valid and errors are largest."
+        ],
+        "tags": ["cfd", "wall-treatment", "boundary-layer"]
+      },
+      {
+        "flow_name": "cfd-mesh-quality-assessment",
+        "description": "Score the cell-level quality of each mesh against skewness, aspect ratio, orthogonality, and growth-rate limits, because convergence theory assumes well-shaped cells and degenerate elements inject error that no refinement removes.",
+        "inputs": [
+          {"name": "grid-family", "desc": "The meshes to be quality-checked"},
+          {"name": "first-cell-height", "desc": "Near-wall sizing that drives local aspect ratio"}
+        ],
+        "outputs": [
+          {"name": "quality-metrics", "desc": "Distributions of skewness, orthogonal quality, aspect ratio, and growth rate with the worst-cell values flagged"},
+          {"name": "mesh-defect-list", "desc": "Locations and cell counts failing quality limits, with the remedy for each (local refinement, smoothing, re-blocking)"}
+        ],
+        "process": [
+          "Check equiangle skewness, defined as max((theta_max - theta_e)/(180 - theta_e), (theta_e - theta_min)/theta_e) where theta_e is the ideal cell angle. Keep the maximum below 0.85 for the general field and below 0.9 absolute; a single cell above 0.95 can stall or diverge the solver.",
+          "Check orthogonal quality, the alignment between the face normal and the vector joining adjacent cell centers. Values near 1 are ideal; keep the minimum above 0.1, and above 0.15 near walls where gradients are steep. Low orthogonality forces non-orthogonal correction terms that slow convergence and add diffusion.",
+          "Check aspect ratio. High aspect ratio (length over width) is acceptable and expected inside the boundary layer, where 100 to 1000 is normal for prism layers aligned with the flow, but high aspect ratio in regions of multidirectional gradients (stagnation, separation) degrades accuracy. Flag cells over aspect ratio 100 that sit outside attached boundary layers.",
+          "Check volume growth rate between neighboring cells. Keep the ratio under about 1.2 in smooth regions and under 1.3 anywhere; abrupt size jumps act like a numerical interface that reflects and smears gradients. The prism-layer growth rate from the near-wall step feeds directly into this limit.",
+          "Confirm a positive Jacobian (no inverted or negative-volume cells) on every element; even one inverted cell makes the discretization invalid. Build a defect list that maps each failing metric to a fix: local refinement for size jumps, surface smoothing for skew, and re-blocking or boundary-layer capping for the worst skew clusters near sharp features."
+        ],
+        "tags": ["cfd", "mesh-quality"]
+      },
+      {
+        "flow_name": "cfd-richardson-extrapolation-gci",
+        "description": "Compute the observed order of accuracy, the Richardson-extrapolated grid-independent value, and the Grid Convergence Index so the discretization uncertainty is reported as a number with an error bar instead of a claim.",
+        "inputs": [
+          {"name": "grid-family", "desc": "Three or more meshes with recorded cell size h"},
+          {"name": "refinement-ratio", "desc": "The constant refinement ratio r between grids"},
+          {"name": "target-quantity", "desc": "The scalar quantity of interest evaluated on each grid"},
+          {"name": "convergence-tolerance", "desc": "The acceptance band for grid-induced uncertainty"}
+        ],
+        "outputs": [
+          {"name": "observed-order", "desc": "The fitted order of accuracy p from the three grid solutions, compared against the scheme formal order"},
+          {"name": "grid-independent-value", "desc": "The Richardson-extrapolated estimate of the quantity at zero cell size, f_exact"},
+          {"name": "grid-convergence-index", "desc": "The GCI uncertainty band on the fine-grid result, with a pass or fail against the tolerance"}
+        ],
+        "process": [
+          "Order the three solutions f1 (fine), f2 (medium), f3 (coarse) with constant ratio r. Compute the observed order of accuracy p = ln((f3 - f2)/(f2 - f1)) / ln(r). For a nominally second-order scheme expect p near 2; a p far from the formal order signals you are not in the asymptotic range or that limiters and wall models are degrading accuracy.",
+          "Compute the Richardson-extrapolated value f_exact = f1 + (f1 - f2)/(r^p - 1), the estimate of the quantity as cell size goes to zero. This is the best available truth from the family and the anchor for the error band.",
+          "Compute the fine-grid Grid Convergence Index GCI_fine = Fs*|(f2 - f1)/f1|/(r^p - 1), using the safety factor Fs = 1.25 when three or more grids are used (use Fs = 3 for only two grids). The GCI is the recommended uncertainty band on the fine-grid solution, expressed as a percent.",
+          "Confirm the asymptotic range with the ratio GCI_medium/(r^p*GCI_fine); a value near 1.0 (say 0.9 to 1.1) means the grids lie in the asymptotic range and the extrapolation is trustworthy. If it is far from 1, add a finer grid before reporting.",
+          "Compare GCI_fine to the convergence tolerance. If GCI_fine is within the band, declare the fine (or even medium) mesh grid-independent and report the quantity as f_exact plus or minus GCI. If it exceeds the band, refine further or improve near-wall resolution and repeat, rather than accepting the finest mesh by default.",
+          "Watch for non-monotonic convergence, where (f3 - f2) and (f2 - f1) have opposite signs. This makes p complex or negative and the GCI formula invalid; it usually means oscillatory grid behavior from an unconverged solve, a y-plus in the buffer layer, or quality defects, each of which must be fixed before the error estimate means anything."
+        ],
+        "tags": ["cfd", "grid-convergence-index", "discretization-error"]
+      }
+    ]
+  },
+  {
+    "chain_name": "finite-element-structural-analysis",
+    "description": "Run a defensible linear structural finite element analysis from idealization and element choice through boundary conditions, mesh convergence, singularity treatment, and quantitative validation, so the reported stresses carry a known accuracy rather than a colored contour plot.",
+    "domain": "engineering",
+    "tags": ["fea", "structural-analysis", "mesh-convergence", "stress", "engineering"],
+    "steps": [
+      {
+        "flow_name": "fea-idealization-and-element-selection",
+        "description": "Reduce the real part to the simplest model dimension and element type that still captures the load path, because element order and shape decide whether the mesh converges from above or locks solid.",
+        "inputs": [
+          {"name": "part-and-loading", "desc": "Geometry, material, and the loads and supports the part sees in service"},
+          {"name": "analysis-goal", "desc": "What the analysis must deliver (peak stress, deflection, buckling margin, fatigue life)"}
+        ],
+        "outputs": [
+          {"name": "model-idealization", "desc": "The chosen dimensional reduction (beam, shell, axisymmetric, or solid) with the assumptions it imposes"},
+          {"name": "element-selection", "desc": "Element family and interpolation order with the reason, for example quadratic tetrahedra for a cast bracket"}
+        ],
+        "process": [
+          "Choose the lowest model dimension that still carries the load path. Use beam elements when one dimension dominates and sections stay plane; shell elements when thickness is under about one tenth of the in-plane size and bending matters; axisymmetric when geometry and load share an axis; solid elements only when thickness effects, contact, or 3D stress states require them. Each reduction cuts cost by orders of magnitude but imposes kinematic assumptions you must honor.",
+          "Match element order to the quantity of interest. Linear elements give constant strain per element and need many to resolve a gradient; quadratic (second-order) elements give linear strain and resolve bending with far fewer. For stress, prefer quadratic.",
+          "Avoid linear tetrahedra (the 4-node C3D4) for stress. They are overly stiff and under-predict displacement and stress; they lock in bending and near-incompressible response. Use 10-node quadratic tetrahedra (C3D10) for complex cast or machined geometry, or 8-node hexahedra (C3D8 and its reduced or incompatible-mode variants) for sweepable geometry.",
+          "Guard against locking modes. Fully integrated linear hexahedra shear-lock in bending; reduced integration risks hourglass zero-energy modes that need hourglass control; near-incompressible materials (rubber, metals in plastic flow, Poisson ratio near 0.5) need hybrid or reduced-integration formulations. Name the formulation, not just the element shape.",
+          "Write the idealization assumptions down as acceptance conditions. For example, a shell model is valid only while through-thickness stress stays small relative to membrane and bending stress; record the check that will confirm the idealization held once results exist, so the model is falsifiable rather than merely plausible."
+        ],
+        "tags": ["fea", "element-selection"]
+      },
+      {
+        "flow_name": "fea-boundary-condition-definition",
+        "description": "Apply constraints and loads that represent the real support stiffness without over-constraining or leaving rigid-body modes, because boundary conditions set the answer more than the mesh does.",
+        "inputs": [
+          {"name": "model-idealization", "desc": "The dimensional model that the loads and supports attach to"},
+          {"name": "part-and-loading", "desc": "Service loads, support interfaces, and symmetry"}
+        ],
+        "outputs": [
+          {"name": "constraint-set", "desc": "The applied supports, symmetry planes, and coupling/connector definitions with their stiffness assumptions"},
+          {"name": "load-set", "desc": "The applied loads as pressures, tractions, or distributed forces, with point loads avoided where possible"}
+        ],
+        "process": [
+          "Remove all six rigid-body modes without adding spurious stiffness. In 3D the model needs exactly enough constraint to prevent translation and rotation; under-constraint leaves a singular stiffness matrix and the solver fails or returns garbage, while over-constraint invents support reactions that did not exist and depresses stress.",
+          "Represent real support compliance rather than idealized clamps. A bolted flange is not fully fixed; use a bolt-preload connector or a spring representing joint stiffness. A fully fixed face at a stress-critical location creates an artificial stress concentration; move the constraint away from the region of interest or use a softer, more realistic representation.",
+          "Use symmetry only when geometry, material, loads, and expected response are all symmetric. Apply symmetry boundary conditions (zero normal displacement, zero in-plane rotation on the cut plane) to cut cost. Never use symmetry for buckling or modal analysis, which have antisymmetric modes that a symmetric model cannot see.",
+          "Spread loads as pressures or surface tractions, not point forces. A concentrated force on a solid mesh creates a stress singularity at the node that refines to infinity; distribute it over its true contact patch, or use a coupling or distributing constraint that spreads the load to a set of nodes with a controlled stiffness.",
+          "Check the free-body balance before trusting anything. The sum of support reactions must equal the applied load to within solver tolerance (better than 0.1 percent); a mismatch means a load or constraint is wrong. Inspect the deformed shape at a large scale factor to confirm the part moves the way physical intuition expects."
+        ],
+        "tags": ["fea", "boundary-conditions"]
+      },
+      {
+        "flow_name": "fea-mesh-refinement-convergence",
+        "description": "Refine the mesh in the region of interest until the quantity of interest stops changing, tracking convergence on stress and on strain energy so the reported value is mesh-independent away from singularities.",
+        "inputs": [
+          {"name": "element-selection", "desc": "Element family and order used for refinement"},
+          {"name": "constraint-set", "desc": "Supports held fixed across the refinement study"},
+          {"name": "load-set", "desc": "Loads held fixed across the refinement study"}
+        ],
+        "outputs": [
+          {"name": "converged-mesh", "desc": "The mesh at which the quantity of interest changes by less than the acceptance band under further refinement"},
+          {"name": "convergence-record", "desc": "The table of quantity of interest versus element size showing the asymptote and the percent change at the accepted mesh"}
+        ],
+        "process": [
+          "Refine locally where gradients are steep (fillets, holes, section changes) and keep the mesh coarse in low-gradient regions. A uniform fine mesh wastes elements; use at least 3 to 4 quadratic elements through a fillet radius to resolve the surface stress gradient.",
+          "Run an h-refinement sequence: solve the same model at successively smaller element sizes and plot the quantity of interest (peak von Mises stress or a target deflection) against element size or degrees of freedom. Convergence from above is typical for displacement-based elements because they are too stiff and soften as they refine.",
+          "Accept the mesh where the quantity of interest changes by less than about 5 percent between successive refinements, measured away from any singular point. Report the converged value and the percent change at acceptance so the reader sees the remaining discretization error.",
+          "Cross-check with a global energy measure. Total strain energy converges smoothly even when a local stress is noisy; a stable strain energy with a still-climbing local stress is the fingerprint of a singularity, not of a real stress the mesh has yet to resolve.",
+          "Compute von Mises stress sigma_vm = sqrt(0.5*((s1 - s2)^2 + (s2 - s3)^2 + (s3 - s1)^2)) from the principal stresses for ductile-metal yield assessment, and track that scalar through the refinement rather than a single stress component, which can be mesh-orientation sensitive."
+        ],
+        "tags": ["fea", "mesh-convergence"]
+      },
+      {
+        "flow_name": "fea-stress-singularity-treatment",
+        "description": "Distinguish a true stress concentration from a numerical singularity and handle the singularity with fillet geometry, submodeling, or stress linearization, so refinement is not chasing an infinite value.",
+        "inputs": [
+          {"name": "converged-mesh", "desc": "The mesh whose peak stress is under scrutiny"},
+          {"name": "convergence-record", "desc": "The refinement history that reveals a non-converging local stress"}
+        ],
+        "outputs": [
+          {"name": "singularity-classification", "desc": "Whether each hot spot is a real concentration (converges) or a modeling singularity (diverges with refinement)"},
+          {"name": "linearized-or-submodel-stress", "desc": "The usable stress at each singular feature from stress linearization or a geometrically corrected submodel"}
+        ],
+        "process": [
+          "Diagnose the singularity by its refinement signature. At a sharp reentrant corner the linear-elastic stress behaves like r^(lambda-1) as the distance r to the corner goes to zero, with lambda < 1, so the peak stress climbs without bound as the mesh shrinks. A stress that rises by roughly a constant percentage at each halving of element size is singular; a stress that flattens to an asymptote is a real concentration.",
+          "List the usual singularity sources: sharp reentrant corners (zero fillet radius), point loads and point supports, and corners of bonded or tied interfaces where materials with different stiffness meet. Each is an artifact of the idealization, not a physical infinite stress.",
+          "For sharp corners that are physically rounded, add the real fillet radius and re-mesh. The true stress is finite and set by the radius; a fillet of radius equal to a few percent of the local dimension, meshed with 3 or more quadratic elements across the arc, recovers a converging peak stress.",
+          "For pressure-vessel and weld assessment where the geometry is genuinely sharp, use stress linearization across the section per the ASME Section VIII Division 2 approach: integrate the through-thickness stress into a membrane component (average) and a bending component (linear), and assess those against category limits instead of the singular peak. The membrane plus bending stress is finite and mesh-independent even when the surface peak is not.",
+          "For local detail near a singular feature on a large model, build a submodel: cut a small region, drive its cut boundaries with displacements interpolated from the global solution, and mesh it finely with corrected geometry. This resolves the local field at reasonable cost while keeping the global model coarse, and it forces you to supply the real radius that removes the singularity."
+        ],
+        "tags": ["fea", "stress-singularity"]
+      },
+      {
+        "flow_name": "fea-validation-and-error-estimation",
+        "description": "Validate the finite element result against an independent calculation and quantify the remaining discretization error, so the analysis is accepted on evidence rather than on the authority of the contour plot.",
+        "inputs": [
+          {"name": "converged-mesh", "desc": "The accepted mesh and its solution"},
+          {"name": "linearized-or-submodel-stress", "desc": "The usable stress values from singularity handling"},
+          {"name": "analysis-goal", "desc": "The deliverable the validation must support"}
+        ],
+        "outputs": [
+          {"name": "validation-evidence", "desc": "Independent checks (hand calculation, handbook factor, reaction balance, energy check) with the percent agreement for each"},
+          {"name": "error-estimate", "desc": "The estimated discretization error on the reported quantity, for example from a recovery-based error estimator"}
+        ],
+        "process": [
+          "Check global equilibrium first. The sum of reaction forces at supports must equal the applied external load to within 0.1 percent in each direction; the reaction moments must balance the applied moments. A failure here invalidates everything downstream and usually points to a boundary condition or load-application error.",
+          "Compare against an independent closed-form or handbook estimate in a region where one exists. For a hole in a wide plate under tension the elastic stress concentration factor is about 3.0 (Kt = 3 for a small circular hole); for a notch use a Peterson chart factor. Agreement within 5 to 10 percent in a simple region builds confidence in the model setup before trusting the complex regions.",
+          "Use a recovery-based a posteriori error estimator. The Zienkiewicz-Zhu estimator compares the raw element stress field sigma_h to a smoothed recovered field sigma*, and reports a relative error in the energy norm eta = ||sigma* - sigma_h|| / ||sigma*||. Target a global eta under about 5 to 10 percent and inspect the local error map to see where the mesh still needs work.",
+          "Sanity-check the deformation and reaction magnitudes against first principles. A cantilever tip deflection should track delta = F*L^3/(3*E*I); if the model deflection is off by a large factor, the element formulation, section properties, or constraints are wrong, not the mesh density.",
+          "Report the result as a value with an error band and a statement of what was validated. Record the quantity of interest, its estimated discretization error, the independent checks and their agreement, and the assumptions (linear elastic, small displacement, idealization limits) that bound where the number may be used."
+        ],
+        "tags": ["fea", "validation", "error-estimation"]
+      }
+    ]
+  },
+  {
+    "chain_name": "multiphysics-coupling-methodology",
+    "description": "Set up a coupled multiphysics simulation by classifying the coupling, choosing partitioned or monolithic solution, transferring data conservatively across non-matching meshes, converging the coupling iteration, and synchronizing time steps, so the coupled answer is stable and conservative rather than merely connected.",
+    "domain": "engineering",
+    "tags": ["multiphysics", "coupling", "fsi", "solver", "engineering"],
+    "steps": [
+      {
+        "flow_name": "coupling-topology-classification",
+        "description": "Identify which physical fields are coupled, how tightly, and over what interface, because the coupling strength decides every later choice from solver type to time step.",
+        "inputs": [
+          {"name": "physics-and-interfaces", "desc": "The physical fields present (fluid, structure, thermal, electromagnetic) and where they interact"},
+          {"name": "coupling-question", "desc": "The quantity the coupled model must predict and the accuracy it needs"}
+        ],
+        "outputs": [
+          {"name": "coupling-map", "desc": "The coupled field pairs with the direction and physical mechanism of each coupling"},
+          {"name": "coupling-strength", "desc": "A one-way or two-way classification per coupling with an estimate of coupling tightness"}
+        ],
+        "process": [
+          "Name the coupled fields and the mechanism. Common pairs are fluid-structure interaction (pressure and shear load the structure, structural motion changes the flow domain), thermal-stress (temperature field drives thermal expansion and stress), conjugate heat transfer (fluid and solid share a temperature and heat-flux interface), and electro-thermal (Joule heating raises temperature, temperature changes resistivity).",
+          "Classify each coupling as one-way or two-way. One-way coupling holds when field A drives field B but B negligibly affects A, for example a temperature field inducing thermal stress in a stiff part that does not change the temperature field. Two-way coupling holds when the feedback is strong enough to change A, for example a flexible wing bending enough to change the aerodynamic loads.",
+          "Decide one-way versus two-way with a physical ratio, not a guess. For fluid-structure interaction the structural deflection relative to a characteristic flow length, and the ratio of fluid dynamic pressure to structural stiffness, indicate whether motion feeds back. A deflection under about 1 percent of the reference length usually justifies one-way; larger demands two-way.",
+          "Mark whether each coupling is a surface coupling (data exchanged on a shared interface, as in fluid-structure or conjugate heat transfer) or a volume coupling (fields co-located over a region, as in Joule heating or poroelasticity). Surface coupling needs interface mesh mapping; volume coupling needs field interpolation or a shared mesh.",
+          "Record the stiffness and density ratios that predict numerical difficulty. A light, stiff structure in a heavy fluid (low structure-to-fluid density ratio) foreshadows the added-mass instability that will constrain the solution strategy, so flag it here before choosing a solver."
+        ],
+        "tags": ["multiphysics", "coupling-classification"]
+      },
+      {
+        "flow_name": "partitioned-vs-monolithic-selection",
+        "description": "Choose between solving all fields in one combined system (monolithic) or solving each field with its own solver and iterating (partitioned), trading stability against the ability to reuse mature single-physics solvers.",
+        "inputs": [
+          {"name": "coupling-map", "desc": "The coupled field pairs"},
+          {"name": "coupling-strength", "desc": "One-way or two-way and the tightness estimate"}
+        ],
+        "outputs": [
+          {"name": "solution-strategy", "desc": "Monolithic or partitioned, with the coupling scheme (explicit/loose or implicit/strong) named"},
+          {"name": "solver-assignment", "desc": "Which solver handles each field and how the coupled system is assembled or exchanged"}
+        ],
+        "process": [
+          "Understand the monolithic option. A monolithic solver assembles all fields into one system and solves the fully coupled Jacobian at each step. It is unconditionally stable for tight coupling and converges quadratically with a Newton method, but it needs a custom solver, large memory for the combined Jacobian, and good preconditioning; it cannot reuse separately validated single-physics codes.",
+          "Understand the partitioned option. A partitioned scheme keeps each field in its own solver and exchanges interface data between them. It reuses mature, validated solvers and scales to complex physics, but it can be unstable for tight coupling and needs coupling sub-iterations and relaxation to reach the same answer the monolithic solver gives in one shot.",
+          "Split partitioned coupling into loose and strong. A loose (explicit) scheme exchanges data once per time step and marches on; it is cheap and fine for weak coupling. A strong (implicit) scheme sub-iterates the field exchange within each time step until the interface residual converges; it is required for tight coupling and for the added-mass regime.",
+          "Pick by coupling strength and density ratio. Use one-way sequential solving for one-way coupling. Use loose partitioned coupling for weak two-way coupling such as a heavy flexible structure in a light gas. Use strong partitioned or monolithic coupling for tight two-way coupling such as a light structure in a dense liquid, where loose schemes diverge no matter how small the time step.",
+          "Assign solvers and define the exchange. Name which code owns each field, what is passed at the interface (loads one way, displacements or temperatures the other), and whether the strong coupling is driven by fixed-point iteration with relaxation or by an interface quasi-Newton method, which is the choice the next steps implement."
+        ],
+        "tags": ["multiphysics", "solver-selection"]
+      },
+      {
+        "flow_name": "coupling-interface-data-transfer",
+        "description": "Transfer loads and motions across non-matching meshes at the interface using conservative or consistent interpolation as the quantity demands, so coupling does not silently leak energy or force.",
+        "inputs": [
+          {"name": "solver-assignment", "desc": "Which fields exchange data and in which direction"},
+          {"name": "coupling-map", "desc": "The interface where data is transferred"}
+        ],
+        "outputs": [
+          {"name": "mesh-mapping", "desc": "The interpolation operator between the non-matching interface meshes, with its conservation property"},
+          {"name": "transfer-scheme", "desc": "Which quantities use conservative transfer and which use consistent transfer, with the reason"}
+        ],
+        "process": [
+          "Accept that the interface meshes rarely match. The fluid surface mesh and the structural surface mesh are generated independently and have different node positions and densities, so data must be interpolated through a mapping operator built once and reused each exchange.",
+          "Use conservative interpolation for extensive quantities such as force and heat flow. A conservative map preserves the integral, so the total force transferred to the structure equals the total force the fluid applied; the per-node force is distributed by the mapping weights. This prevents a slow energy or momentum leak across the interface.",
+          "Use consistent interpolation for intensive quantities such as displacement, temperature, and velocity. A consistent map reproduces a constant field exactly and is accurate for smooth fields; applied to a force it would not conserve the total, which is why the choice depends on the quantity.",
+          "Mind the accuracy on curved and mismatched interfaces. Nearest-neighbor mapping is fast but low order and loses accuracy where the meshes differ; a projection or radial-basis mapping is higher order and handles gaps and overlaps between the two surfaces better, at higher setup cost.",
+          "Verify the map before coupling. Transfer a known uniform load and confirm the integrated force is preserved to machine precision for the conservative map; transfer a known linear field and confirm the consistent map reproduces it. A mapping that fails these patch tests will corrupt the coupled solution in ways that look like physics."
+        ],
+        "tags": ["multiphysics", "mesh-mapping", "data-transfer"]
+      },
+      {
+        "flow_name": "coupling-iteration-convergence",
+        "description": "Drive the partitioned coupling iteration to a converged interface state with relaxation that tames the added-mass instability, so the coupled result at each step is the true fixed point, not a snapshot of a diverging exchange.",
+        "inputs": [
+          {"name": "transfer-scheme", "desc": "How interface quantities are exchanged each sub-iteration"},
+          {"name": "coupling-strength", "desc": "The tightness that sets how aggressive the relaxation must be"}
+        ],
+        "outputs": [
+          {"name": "coupling-residual-criterion", "desc": "The interface residual norm and tolerance that define a converged coupling step"},
+          {"name": "relaxation-scheme", "desc": "The under-relaxation or quasi-Newton acceleration applied to reach the fixed point"}
+        ],
+        "process": [
+          "Define the interface residual as the change in the exchanged field between successive sub-iterations, for example r_k = d_k_new - d_k_old for interface displacement. Declare the coupling step converged when the relative residual ||r_k||/||d_k|| falls below about 1e-3 to 1e-4, tighter when the time integration is sensitive.",
+          "Recognize the added-mass instability. In fluid-structure interaction with an incompressible or dense fluid, the fluid acts as extra mass on the structure, and a plain fixed-point (Gauss-Seidel) exchange diverges when the fluid-to-structure density ratio is large, regardless of time step. This is a property of the partitioned scheme, not a bug.",
+          "Apply fixed under-relaxation as the first defense: update the exchanged field as d_new = omega*d_computed + (1 - omega)*d_old with a relaxation factor omega between about 0.1 and 0.8. Small omega stabilizes tight coupling but slows convergence, so it is a floor, not the goal.",
+          "Prefer dynamic acceleration for efficiency. Aitken relaxation adapts the factor each sub-iteration as omega_(k+1) = -omega_k*(r_k dot (r_(k+1) - r_k))/||r_(k+1) - r_k||^2, which greatly speeds fixed-point convergence at near-zero cost. Interface quasi-Newton (IQN) methods build an approximate interface Jacobian from the residual history and converge in a handful of sub-iterations even in the added-mass regime.",
+          "Cap the sub-iterations and monitor divergence. Set a maximum sub-iteration count per time step (for example 20) and treat non-convergence as a signal to strengthen relaxation, switch to a quasi-Newton accelerator, or reconsider a monolithic solve, rather than reducing the time step, which does not cure the added-mass divergence."
+        ],
+        "tags": ["multiphysics", "fsi", "relaxation"]
+      },
+      {
+        "flow_name": "coupling-time-step-synchronization",
+        "description": "Synchronize the time integration of fields that each have their own stability limit, using subcycling and a coupling time step that preserves accuracy and stability across the interface.",
+        "inputs": [
+          {"name": "solution-strategy", "desc": "Whether coupling is loose or strong, which sets how often fields synchronize"},
+          {"name": "coupling-residual-criterion", "desc": "The per-step convergence target the time stepping must honor"}
+        ],
+        "outputs": [
+          {"name": "time-step-plan", "desc": "The coupling time step and any per-field subcycling ratios with their stability basis"},
+          {"name": "stability-verification", "desc": "The check that confirms the coupled integration is stable and time-accurate"}
+        ],
+        "process": [
+          "Compute each field stability limit separately. An explicit flow solver obeys a CFL condition dt <= C*h/(|u| + c) with Courant number C of order 1, where c is the sound speed for compressible flow; an explicit structural solver obeys dt <= L_min/c_structural set by the smallest element and the material wave speed. These limits can differ by orders of magnitude.",
+          "Choose the coupling time step as the interval at which fields exchange data. For a time-accurate coupled transient it is bounded by the physics you must resolve (for example the structural vibration period divided by 20 or more), and it must be no larger than the accuracy of the loosest field allows.",
+          "Use subcycling when field limits differ widely. Let the field with the small stable step advance several internal substeps per coupling step while the slower field takes one, and interpolate the interface data across the substeps. This keeps each solver stable without forcing the whole simulation onto the smallest step everywhere.",
+          "Keep loose coupling time-lagged honestly. A loose (explicit) scheme exchanges once per coupling step and is first-order in the coupling and can lose stability for tight problems; if accuracy or stability suffers, move to strong coupling with sub-iteration (the previous step) rather than shrinking dt indefinitely.",
+          "Verify stability and time accuracy with a refinement check. Halve the coupling time step and confirm the coupled response (interface displacement history, transferred force) changes by less than the target tolerance; a response that keeps changing or grows unbounded indicates the coupling scheme, not the step, needs strengthening."
+        ],
+        "tags": ["multiphysics", "time-stepping", "cfl"]
+      }
+    ]
+  },
+  {
+    "chain_name": "monte-carlo-simulation-design",
+    "description": "Design a Monte Carlo study that answers a quantitative question with a stated confidence by defining the estimator, sizing the sample, selecting variance-reduction methods, diagnosing convergence, and handling rare events, so the result carries a confidence interval instead of a single random number.",
+    "domain": "engineering",
+    "tags": ["monte-carlo", "simulation", "variance-reduction", "uncertainty", "engineering"],
+    "steps": [
+      {
+        "flow_name": "mc-problem-and-estimator-definition",
+        "description": "Define the random inputs, the output functional, and the specific estimator the study computes, because a Monte Carlo run with an undefined estimator produces numbers without meaning.",
+        "inputs": [
+          {"name": "system-model", "desc": "The deterministic model that maps inputs to the output of interest"},
+          {"name": "uncertain-inputs", "desc": "The input variables treated as random, with their distributions and correlations"}
+        ],
+        "outputs": [
+          {"name": "output-functional", "desc": "The scalar the study estimates (a mean, a quantile, a probability of exceedance)"},
+          {"name": "estimator-definition", "desc": "The sample estimator formula for that functional and the quantity whose error will be controlled"}
+        ],
+        "process": [
+          "State the random inputs with distributions, not point values. Assign each uncertain input a distribution (normal, lognormal, uniform, Weibull) fit from data or physics, and capture correlations through a correlation matrix or a copula; treating correlated inputs as independent can badly bias tail estimates.",
+          "Define the output functional precisely. Decide whether the target is the mean E[f(X)], a quantile such as the 95th percentile, a variance, or a probability of failure P(g(X) <= 0). The estimator, sample size, and variance-reduction choice all depend on which of these it is.",
+          "Write the estimator for the chosen functional. For a mean the estimator is the sample average mu_hat = (1/N)*sum f(x_i); for a probability it is the sample fraction p_hat = (1/N)*sum I[g(x_i) <= 0], where I is the indicator function; for a quantile it is the order statistic of the sample.",
+          "Separate aleatory from epistemic uncertainty. Aleatory (irreducible, inherent randomness) is what Monte Carlo samples; epistemic (lack of knowledge, for example an uncertain distribution parameter) is often handled by an outer loop or interval, and conflating the two understates or overstates the reported uncertainty.",
+          "Confirm the model is deterministic and repeatable given a fixed input vector and seed. Monte Carlo error analysis assumes each sample is an independent draw of the same mapping; hidden internal randomness or non-repeatability breaks the confidence-interval math that justifies the whole study."
+        ],
+        "tags": ["monte-carlo", "estimator"]
+      },
+      {
+        "flow_name": "mc-sample-size-determination",
+        "description": "Size the sample from the target precision using the central limit theorem, so the run is neither too short to trust nor wastefully long.",
+        "inputs": [
+          {"name": "estimator-definition", "desc": "The estimator whose standard error must be bounded"},
+          {"name": "target-precision", "desc": "The required confidence level and the allowed error on the estimate"}
+        ],
+        "outputs": [
+          {"name": "required-sample-size", "desc": "The number of samples N that meets the precision target, with the formula and assumptions"},
+          {"name": "precision-model", "desc": "The relationship between N and the achieved error, used to plan staged runs"}
+        ],
+        "process": [
+          "Use the plain Monte Carlo error law. The standard error of a mean estimator is SE = sigma/sqrt(N), where sigma is the output standard deviation; the error shrinks as N^(-1/2) independent of the input dimension, which is the defining strength and weakness of the method: dimension-free, but slow.",
+          "Build the confidence interval from the central limit theorem. For large N the estimate is approximately normal, so the interval is mu_hat plus or minus z*SE, with z = 1.96 for 95 percent and z = 2.576 for 99 percent. Invert this to size the run: to reach an absolute error E at confidence level z, N = (z*sigma/E)^2.",
+          "Size probability estimates with their own formula. For a probability p the estimator variance is p*(1 - p)/N, so the coefficient of variation is CoV = sqrt((1 - p)/(N*p)). To estimate p = 1e-3 with CoV = 0.1 by plain Monte Carlo needs N = (1 - p)/(p*CoV^2), which is about 1e5 samples, and p = 1e-6 needs about 1e8, which is why rare events demand variance reduction.",
+          "Estimate sigma before committing. Run a pilot batch of a few thousand samples to estimate the output standard deviation (or the rough p), then size the full run from that estimate; sizing from a guessed sigma can be off by a large factor.",
+          "Plan a staged run with a stopping rule rather than a fixed N guess. Add samples in batches and stop when the half-width of the confidence interval drops below the target, which adapts automatically if the true variance differs from the pilot estimate."
+        ],
+        "tags": ["monte-carlo", "sample-size"]
+      },
+      {
+        "flow_name": "mc-variance-reduction-selection",
+        "description": "Cut the number of samples needed by choosing a variance-reduction technique matched to the problem structure, so the same precision is reached at a fraction of the cost.",
+        "inputs": [
+          {"name": "required-sample-size", "desc": "The plain Monte Carlo sample size to be reduced"},
+          {"name": "system-model", "desc": "Structure of the model that a variance-reduction method can exploit"}
+        ],
+        "outputs": [
+          {"name": "variance-reduction-method", "desc": "The chosen technique (importance sampling, stratified, antithetic, control variates) with its applicability"},
+          {"name": "reduced-estimator", "desc": "The modified estimator and the expected variance-reduction factor"}
+        ],
+        "process": [
+          "Use antithetic variates for smooth, roughly monotone responses. Draw paired samples using u and its mirror 1 - u on each uniform input; the negative correlation between the pair reduces the variance of their average when the output responds monotonically to the inputs, at essentially no extra cost.",
+          "Use control variates when a cheap correlated quantity with a known mean exists. Form the estimator Y = f - c*(g - E[g]) where g is the control with known mean E[g]; the variance-minimizing coefficient is c = Cov(f, g)/Var(g), and the resulting variance is reduced by the factor (1 - rho^2) where rho is the correlation between f and g. A control correlated at rho = 0.9 cuts variance about fivefold.",
+          "Use stratified sampling to remove between-stratum variance. Partition the input space into strata, sample a fixed count in each, and combine with stratum weights; this guarantees coverage of each region and removes the variance that plain random sampling spends on uneven coverage, helping most when the output varies strongly between strata.",
+          "Use importance sampling for rare events and heavy tails. Sample from a biasing distribution q concentrated where the integrand matters and correct with the likelihood ratio: the estimator becomes (1/N)*sum f(x_i)*p(x_i)/q(x_i) with x_i drawn from q. The variance-optimal q is proportional to |f|*p; a well-chosen q can turn an infeasible 1e8-sample rare-event problem into a few thousand samples.",
+          "Match method to structure and check the correction. Antithetic and stratified need no model insight; control variates need a correlated cheap surrogate; importance sampling needs knowledge of where the action is and a biasing density with heavier tails than the target, or the likelihood ratio blows up and variance gets worse, not better."
+        ],
+        "tags": ["monte-carlo", "variance-reduction"]
+      },
+      {
+        "flow_name": "mc-convergence-diagnostics",
+        "description": "Confirm the estimator has converged and report it with a confidence interval, using running statistics and batch means rather than trusting a single final value.",
+        "inputs": [
+          {"name": "reduced-estimator", "desc": "The estimator being monitored as samples accumulate"},
+          {"name": "target-precision", "desc": "The confidence-interval half-width that defines acceptance"}
+        ],
+        "outputs": [
+          {"name": "convergence-report", "desc": "The running mean, standard error, and interval half-width versus sample count showing the plateau"},
+          {"name": "reported-estimate", "desc": "The final estimate with its confidence interval and the achieved precision"}
+        ],
+        "process": [
+          "Plot the running estimate against sample count. The running mean should settle and the running standard error should fall like 1/sqrt(N); a running mean that is still drifting, or a standard error that is not falling at the expected rate, means the run is not converged or the samples are not independent.",
+          "Report the confidence interval, not just the point estimate. Compute the half-width z*SE and present mu_hat plus or minus that half-width at the stated confidence; a Monte Carlo result without an interval is incomplete because a different seed would give a different number.",
+          "Use batch means when samples are correlated, as in Markov chain Monte Carlo. Split the run into non-overlapping batches, average within each, and estimate the standard error from the batch averages; this accounts for autocorrelation that would otherwise make the naive standard error far too small.",
+          "Track the effective sample size for correlated chains. The effective sample size N_eff = N/(1 + 2*sum of autocorrelations) can be far below the raw count; report N_eff so the interval reflects the real information content, not the number of iterations.",
+          "Validate independence of the generator. Confirm the pseudo-random stream has adequate period and low correlation for the sample size; for high-dimensional or very large runs prefer a well-tested generator, since a short-period or correlated stream silently biases the estimate no matter how many samples you draw."
+        ],
+        "tags": ["monte-carlo", "convergence"]
+      },
+      {
+        "flow_name": "mc-rare-event-estimation",
+        "description": "Estimate small failure probabilities in the 1e-4 to 1e-6 range where plain Monte Carlo is infeasible, using subset simulation or importance sampling built on the design point.",
+        "inputs": [
+          {"name": "output-functional", "desc": "The rare-event probability to be estimated, P(g(X) <= 0)"},
+          {"name": "variance-reduction-method", "desc": "The biasing or decomposition strategy carried in from method selection"}
+        ],
+        "outputs": [
+          {"name": "rare-event-probability", "desc": "The estimated small probability with its coefficient of variation"},
+          {"name": "rare-event-validation", "desc": "The check that the biasing or conditioning did not bias the estimate"}
+        ],
+        "process": [
+          "Recognize when plain Monte Carlo fails. Estimating p = 1e-6 to a 10 percent coefficient of variation needs on the order of 1e8 model runs; when each run is a finite element or CFD solve, that is impossible, so a rare-event method is mandatory rather than optional.",
+          "Use subset simulation to decompose a rare event into a product of moderate conditional probabilities. Define nested failure regions F_1 superset F_2 superset ... superset F_m = F with intermediate thresholds chosen so each conditional probability P(F_i | F_(i-1)) is about 0.1; then p_f = product of those conditionals, and each factor is estimated with a manageable sample by Markov chain Monte Carlo seeded from the previous level.",
+          "Use importance sampling centered on the design point for structural reliability. Find the most probable failure point (the design point) by solving for the point on the limit state g = 0 nearest the origin in standard normal space; center the biasing density there so samples land in the failure region, and correct with the likelihood ratio.",
+          "Report the coefficient of variation of the rare estimate, because it can be large even when the method runs. Subset simulation typically achieves a CoV of 0.1 to 0.3 for p around 1e-6 with a few thousand runs per level; a CoV that balloons signals a poorly chosen intermediate-threshold spacing or a multimodal failure region the single design point missed.",
+          "Validate against an independent method or a crude bound. Cross-check the subset-simulation probability with a first-order reliability estimate from the design-point distance (p_f approximately Phi(-beta) where beta is the reliability index), and confirm the two agree in order of magnitude; a large disagreement usually means multiple failure modes that one design point cannot represent."
+        ],
+        "tags": ["monte-carlo", "rare-event", "reliability"]
+      }
+    ]
+  },
+  {
+    "chain_name": "surrogate-model-construction",
+    "description": "Build a trustworthy surrogate for an expensive simulation by laying out a space-filling design of experiments, fitting a response surface or Gaussian process, validating by cross-validation, adding points adaptively where the model is weakest, and certifying accuracy on held-out data.",
+    "domain": "engineering",
+    "tags": ["surrogate-model", "design-of-experiments", "kriging", "cross-validation", "engineering"],
+    "steps": [
+      {
+        "flow_name": "surrogate-doe-sampling-plan",
+        "description": "Lay out where to sample the expensive model so the surrogate sees the whole input space, using a space-filling design sized to the dimension and the model class.",
+        "inputs": [
+          {"name": "input-space", "desc": "The design variables with their ranges and any constraints"},
+          {"name": "simulation-budget", "desc": "How many expensive runs are affordable for building and testing the surrogate"}
+        ],
+        "outputs": [
+          {"name": "sampling-plan", "desc": "The set of input points to evaluate, with the design type and point count"},
+          {"name": "design-rationale", "desc": "Why the chosen design and size fit the dimension and the intended model class"}
+        ],
+        "process": [
+          "Pick a space-filling design for a general nonlinear response. Latin hypercube sampling stratifies each input into N equal-probability bins and places exactly one point per bin per dimension, giving good one-dimensional projection coverage; an optimized Latin hypercube (maximin or minimum-correlation) further spreads points so no large region is left unsampled.",
+          "Use a factorial design only for screening or low dimension. A full two-level factorial needs 2^d runs and a three-level needs 3^d, which explodes with dimension; a fractional factorial screens main effects cheaply but cannot fit curvature. These suit identifying which variables matter, not building an accurate response surface in many dimensions.",
+          "Size the initial design to the dimension. A common heuristic is about 10 points per input dimension for a Gaussian-process surrogate; a quadratic response surface needs at least (d + 1)*(d + 2)/2 points to determine its coefficients, so a 5-variable quadratic needs 21 at minimum and more for a stable fit.",
+          "Reserve part of the budget for testing. Split the affordable runs into an initial build set, an adaptive-infill reserve (the next steps spend it), and an independent test set the surrogate never sees during fitting; a surrogate validated only on its training points reports a falsely low error.",
+          "Respect constraints and variable types. Project or reject samples that violate input constraints, and handle categorical or integer variables explicitly rather than treating them as continuous; a design that places points in infeasible regions wastes expensive runs the budget cannot spare."
+        ],
+        "tags": ["surrogate-model", "design-of-experiments"]
+      },
+      {
+        "flow_name": "surrogate-model-fitting",
+        "description": "Fit the surrogate from the sampled data, choosing among polynomial response surface, Gaussian-process kriging, and radial basis functions by the smoothness and dimension of the response.",
+        "inputs": [
+          {"name": "sampling-plan", "desc": "The input points whose expensive outputs are now available"},
+          {"name": "simulation-outputs", "desc": "The evaluated responses at the sampled points"}
+        ],
+        "outputs": [
+          {"name": "fitted-surrogate", "desc": "The trained surrogate model with its hyperparameters"},
+          {"name": "model-class-choice", "desc": "Which surrogate family was used and why it fits the response character"}
+        ],
+        "process": [
+          "Use a low-order polynomial response surface for smooth, mildly curved responses. A quadratic model y_hat = b0 + sum b_i*x_i + sum b_ij*x_i*x_j fit by least squares is cheap, interpretable, and smooth, but it cannot capture multimodal or sharply varying responses and extrapolates poorly.",
+          "Use Gaussian-process kriging for a general nonlinear response that also needs an uncertainty estimate. The kriging predictor is y_hat(x) = mu + r(x)^T*R^(-1)*(y - 1*mu), where R is the correlation matrix of training points with entries R_ij = exp(-sum theta_k*(x_i,k - x_j,k)^2) and r(x) is the correlation of x to the training points. It interpolates the data exactly and returns a prediction variance s^2(x) that drives adaptive sampling.",
+          "Fit the kriging hyperparameters by maximum likelihood. Estimate the length-scale parameters theta_k and the process variance by maximizing the likelihood of the observed data; small theta_k means the response varies slowly in that direction, large theta_k means it varies fast, so the fitted theta also ranks input sensitivity.",
+          "Use radial basis functions for scattered data in moderate dimension. The model y_hat(x) = sum w_i*phi(||x - x_i||) with a multiquadric phi(r) = sqrt(r^2 + c^2) or Gaussian phi(r) = exp(-(r/c)^2) solves a linear system for the weights w_i and handles irregular point layouts well; the shape parameter c trades smoothness against conditioning.",
+          "Guard the conditioning of the fit. Kriging and radial basis systems become ill-conditioned when sample points are very close or the correlation length is large; add a small regularization (a nugget term on the diagonal) to stabilize the solve, accepting that it turns exact interpolation into smoothing, which is usually the right trade when the simulation itself has numerical noise."
+        ],
+        "tags": ["surrogate-model", "kriging", "response-surface"]
+      },
+      {
+        "flow_name": "surrogate-cross-validation",
+        "description": "Measure the surrogate accuracy honestly with cross-validation, so the reported error reflects prediction at unseen points rather than memorization of the training data.",
+        "inputs": [
+          {"name": "fitted-surrogate", "desc": "The trained surrogate to be validated"},
+          {"name": "simulation-outputs", "desc": "The training responses used for resampling checks"}
+        ],
+        "outputs": [
+          {"name": "cross-validation-metrics", "desc": "Leave-one-out and k-fold error measures (R-squared, RMSE, PRESS) with per-point residuals"},
+          {"name": "weakness-map", "desc": "Where in the input space the surrogate predicts poorly, flagged for adaptive sampling"}
+        ],
+        "process": [
+          "Run leave-one-out cross-validation for small designs. Refit the surrogate N times, each time holding out one point, and predict the held-out value; the collected residuals give the predictive error without spending extra expensive runs. For kriging there are shortcut formulas that give leave-one-out residuals from a single fit.",
+          "Use k-fold cross-validation for larger designs. Split the data into k folds (k = 5 or 10), train on k - 1 and test on the held-out fold, rotate, and aggregate; this is cheaper than leave-one-out when refitting is costly and gives a stable error estimate.",
+          "Report R-squared and root-mean-square error together. The predictive R-squared = 1 - SS_res/SS_tot measures the fraction of variance explained on held-out data (target above about 0.9 for engineering use), while the RMSE gives the error in the output units; R-squared alone can look fine while the RMSE is too large for the decision.",
+          "Compute the PRESS statistic (predicted residual sum of squares) as the sum of squared leave-one-out residuals; a PRESS much larger than the training residual sum of squares is the signature of overfitting, where the surrogate hugs the training points but predicts badly between them.",
+          "Build a weakness map from the residuals. Record where the largest cross-validation errors occur in the input space; these regions, together with the kriging prediction variance, tell the adaptive-sampling step where new expensive runs will buy the most accuracy."
+        ],
+        "tags": ["surrogate-model", "cross-validation"]
+      },
+      {
+        "flow_name": "surrogate-adaptive-infill-sampling",
+        "description": "Spend the remaining simulation budget where it helps most by adding points through an infill criterion that balances exploring uncertain regions against refining promising ones.",
+        "inputs": [
+          {"name": "weakness-map", "desc": "Regions of high surrogate error and high prediction variance"},
+          {"name": "simulation-budget", "desc": "The remaining affordable expensive runs"}
+        ],
+        "outputs": [
+          {"name": "infill-points", "desc": "The next expensive evaluations chosen by the infill criterion"},
+          {"name": "updated-surrogate", "desc": "The surrogate refit after adding the infill points, with its improved error"}
+        ],
+        "process": [
+          "Choose the infill criterion from the goal. For global accuracy, add points where the kriging prediction variance s^2(x) is largest (pure exploration); for locating an optimum, use expected improvement, which balances predicted value against uncertainty; for building a classifier boundary, add points near the predicted limit state.",
+          "Use expected improvement when the surrogate serves optimization. EI(x) = (y_min - y_hat(x))*Phi(z) + s(x)*phi(z) with z = (y_min - y_hat(x))/s(x), where y_min is the best observed value and Phi, phi are the standard normal CDF and PDF. The first term rewards predicted improvement, the second rewards uncertainty, so EI naturally explores and exploits.",
+          "Add points one or a few at a time and refit. After each infill batch, re-estimate the surrogate hyperparameters and re-run cross-validation; adaptive sampling is a loop, and a point added in a region that turns out smooth may change the fitted length scales and redirect the next point.",
+          "Prevent clustering and numerical breakdown. Enforce a minimum distance between new and existing points, because infill criteria can pile points on top of each other as the surrogate becomes certain, which adds ill-conditioning without new information.",
+          "Stop on a budget or a convergence rule. Halt when the expensive-run budget is exhausted, when the maximum expected improvement falls below a threshold, or when cross-validation error plateaus; continuing past the plateau spends runs for negligible accuracy gain."
+        ],
+        "tags": ["surrogate-model", "adaptive-sampling", "expected-improvement"]
+      },
+      {
+        "flow_name": "surrogate-accuracy-certification",
+        "description": "Certify the final surrogate on independent test data and state the domain over which its accuracy holds, so downstream users know where the surrogate may be trusted in place of the simulation.",
+        "inputs": [
+          {"name": "updated-surrogate", "desc": "The final surrogate after adaptive refinement"},
+          {"name": "input-space", "desc": "The domain over which the surrogate is claimed to be valid"}
+        ],
+        "outputs": [
+          {"name": "certified-accuracy", "desc": "The test-set error and prediction-interval coverage that define the surrogate accuracy"},
+          {"name": "validity-domain", "desc": "The region of input space where the surrogate meets its accuracy claim, with extrapolation flagged"}
+        ],
+        "process": [
+          "Evaluate on the held-out test set that was never used in fitting or infill. Report the test RMSE and R-squared; because these points are independent, they give the honest accuracy a cross-validation can only approximate, and they are the number a downstream user should rely on.",
+          "Check prediction-interval coverage for probabilistic surrogates. For a kriging model, confirm that about 95 percent of test points fall within the predicted 95 percent interval y_hat plus or minus 1.96*s; under-coverage means the model understates its own uncertainty and will mislead any reliability or optimization study that trusts the variance.",
+          "State the validity domain explicitly. The surrogate is accurate inside the convex hull (or box) of the training points and degrades outside it; mark extrapolation regions as out of scope, because kriging reverts to the trend mean and polynomials diverge beyond the data, often silently.",
+          "Report accuracy per output and per region if it varies. A single global error can hide a region where the surrogate is poor; if the weakness map showed a hard subregion, report its local error separately so users do not apply a 2 percent global claim in a 20 percent local pocket.",
+          "Hand off the surrogate with its provenance. Record the design type and size, the model class and hyperparameters, the cross-validation and test errors, and the validity domain, so the surrogate can be used, audited, and retired when the underlying simulation or input ranges change."
+        ],
+        "tags": ["surrogate-model", "validation", "certification"]
+      }
+    ]
+  },
+  {
+    "chain_name": "optimization-under-uncertainty",
+    "description": "Formulate and solve a design optimization that accounts for uncertain inputs by characterizing the uncertainty, choosing a stochastic formulation, reforming chance constraints into a solvable form, tracing the multi-objective trade-off front, and verifying the optimum by independent reliability analysis.",
+    "domain": "engineering",
+    "tags": ["optimization", "uncertainty", "chance-constraints", "pareto", "engineering"],
+    "steps": [
+      {
+        "flow_name": "ouu-uncertainty-characterization",
+        "description": "Characterize the uncertain inputs and separate what is random from what is merely unknown, because the formulation and the solver depend on which kind of uncertainty dominates.",
+        "inputs": [
+          {"name": "design-problem", "desc": "The design variables, performance model, and the constraints the design must meet"},
+          {"name": "data-and-knowledge", "desc": "Measurements, expert judgment, and physics that inform the input uncertainty"}
+        ],
+        "outputs": [
+          {"name": "uncertainty-model", "desc": "Distributions or intervals for each uncertain input with correlations"},
+          {"name": "uncertainty-type-split", "desc": "Which uncertainties are aleatory (random) and which are epistemic (reducible lack of knowledge)"}
+        ],
+        "process": [
+          "Separate aleatory from epistemic uncertainty. Aleatory uncertainty is the inherent randomness of an input (manufacturing scatter, load variability) and is represented by a distribution; epistemic uncertainty is lack of knowledge (an uncertain model parameter, a distribution whose parameters are themselves uncertain) and is often represented by an interval or a distribution over distributions. The split changes whether you take an expectation or a worst case.",
+          "Fit distributions to the aleatory inputs. Use lognormal for positive multiplicative quantities, normal for additive errors, Weibull or extreme-value distributions for strength and peak loads; fit from data where it exists and from physics or standards where it does not, and record the sample size behind each fit.",
+          "Capture correlation between inputs. Estimate a correlation matrix or fit a copula; correlated loads and strengths change tail probabilities substantially, and assuming independence can make a design look far safer or riskier than it is.",
+          "Quantify epistemic uncertainty honestly as a range, not a false distribution. When a parameter is simply poorly known, carry it as an interval and plan a worst-case treatment, or place a distribution on it and plan a nested loop; do not disguise ignorance as a tight Gaussian that understates the true uncertainty.",
+          "Rank inputs by their contribution to output variance with a quick sensitivity screen. A variance-based sensitivity index or a simple one-at-a-time screen identifies the few inputs that drive the output, so the formulation and sampling effort concentrate there rather than spreading thin over inputs that barely matter."
+        ],
+        "tags": ["optimization", "uncertainty-quantification"]
+      },
+      {
+        "flow_name": "ouu-stochastic-formulation-selection",
+        "description": "Choose how uncertainty enters the objective and constraints, trading expected performance against variability and against protection from distributional error.",
+        "inputs": [
+          {"name": "uncertainty-model", "desc": "The input distributions and intervals"},
+          {"name": "uncertainty-type-split", "desc": "The aleatory and epistemic classification that steers the formulation"}
+        ],
+        "outputs": [
+          {"name": "stochastic-formulation", "desc": "The objective and constraint form (expected value, mean-variance, chance-constrained, worst-case over an ambiguity set)"},
+          {"name": "risk-preference", "desc": "The stated risk attitude and the parameters that encode it (variance weight, confidence level, ambiguity radius)"}
+        ],
+        "process": [
+          "Use an expected-value objective when many independent realizations average out. Minimize E[f(x, xi)] over design x and random xi when the design will see the long-run average, for example a cost averaged over many production units; this is the simplest formulation and the baseline the others improve on.",
+          "Use a mean-variance objective when variability itself is a cost. Minimize E[f] + k*sqrt(Var[f]) or E[f] + k*Var[f], where the weight k encodes risk aversion; a larger k pushes the design toward lower scatter at the expense of average performance, tracing a performance-versus-consistency trade.",
+          "Use chance constraints when a limit must hold with high probability. Replace a hard constraint g(x, xi) <= 0 with P(g(x, xi) <= 0) >= 1 - alpha, where alpha is the allowed violation probability (for example alpha = 0.01 for 99 percent reliability); this admits rare excursions in exchange for a less conservative, feasible design.",
+          "Use a worst-case formulation over an ambiguity set when the distribution itself is uncertain. Minimize the worst-case expectation max over P in an ambiguity set of E_P[f], where the set is defined by moment bounds or a distance (for example a Wasserstein ball of radius epsilon around the empirical distribution). This protects against getting the distribution wrong, at the cost of conservatism that grows with the ambiguity radius.",
+          "Match the formulation to the risk preference and justify it. State whether the owner of the design cares about average cost, consistency, a reliability target, or protection from modeling error, and choose the formulation that encodes that preference; a mismatch produces a mathematically optimal design that solves the wrong problem."
+        ],
+        "tags": ["optimization", "stochastic-programming"]
+      },
+      {
+        "flow_name": "ouu-chance-constraint-reformulation",
+        "description": "Turn probabilistic constraints into a form a solver can handle, analytically where the distribution allows and by sample approximation otherwise, so the stochastic problem becomes a deterministic surrogate.",
+        "inputs": [
+          {"name": "stochastic-formulation", "desc": "The chance-constrained problem to be reformed"},
+          {"name": "uncertainty-model", "desc": "The distributions needed to evaluate the probabilities"}
+        ],
+        "outputs": [
+          {"name": "deterministic-reformulation", "desc": "The analytic or sample-based deterministic constraints that stand in for the chance constraints"},
+          {"name": "reformulation-assumptions", "desc": "The distribution and independence assumptions each reformulation relies on"}
+        ],
+        "process": [
+          "Reform a Gaussian linear chance constraint analytically. If g(x, xi) is linear in xi and xi is normal, then P(g <= 0) >= 1 - alpha becomes the deterministic constraint mu_g(x) + Phi^(-1)(1 - alpha)*sigma_g(x) <= 0, where mu_g and sigma_g are the mean and standard deviation of g and Phi^(-1) is the standard normal quantile (Phi^(-1)(0.99) = 2.326). This is exact and cheap when its assumptions hold.",
+          "Use the first-order reliability method for nonlinear limit states. Transform to standard normal space, find the most probable point on g = 0 nearest the origin, and relate the reliability index beta (that distance) to the probability via p_f approximately Phi(-beta); the chance constraint P(g <= 0) >= 1 - alpha becomes beta(x) >= Phi^(-1)(1 - alpha). Add the second-order correction when the limit state is strongly curved.",
+          "Use the sample average approximation when distributions are non-Gaussian or constraints are complex. Draw N scenarios and replace the probability with a sample fraction, enforcing g(x, xi_i) <= 0 for a required number of scenarios; the scenario count sets both accuracy and problem size, so size N from the target alpha as in a Monte Carlo study.",
+          "Apply a scenario or sample-discarding bound for a guarantee. Scenario-optimization theory gives the number of scenarios that guarantees the chance constraint holds with high confidence; this converts the probabilistic statement into a finite set of hard constraints with a provable reliability level, at the price of more scenarios.",
+          "Record which reformulation is used where and its assumptions. The analytic form assumes near-Gaussian linear behavior, the reliability method assumes a single dominant failure point, and the sample form assumes enough scenarios; a downstream reader must know which approximation produced the feasible set to judge how much the optimum can be trusted."
+        ],
+        "tags": ["optimization", "chance-constraints", "reliability"]
+      },
+      {
+        "flow_name": "ouu-multi-objective-pareto-tradeoff",
+        "description": "When performance and risk pull in different directions, compute the trade-off front of non-dominated designs so the decision maker sees the exchange rate between objectives rather than one arbitrary weighting.",
+        "inputs": [
+          {"name": "deterministic-reformulation", "desc": "The solvable constraints the search must honor"},
+          {"name": "risk-preference", "desc": "The competing objectives, for example expected performance versus variability"}
+        ],
+        "outputs": [
+          {"name": "pareto-front", "desc": "The set of non-dominated designs trading the competing objectives, with a front-quality measure"},
+          {"name": "tradeoff-insight", "desc": "The exchange rate between objectives and the knee region where improvement in one costs the most in the other"}
+        ],
+        "process": [
+          "Define Pareto dominance. A design dominates another if it is at least as good in every objective and strictly better in at least one; the Pareto front is the set of non-dominated designs, and every point on it is a legitimate optimum for some preference. Reporting the front, not a single point, keeps the risk trade-off explicit.",
+          "Generate the front by the epsilon-constraint method for a few objectives. Minimize the primary objective f1 subject to the others held below moving bounds, f2 <= epsilon, and sweep epsilon across its range; each solve yields one Pareto point, and the sweep traces the front without the blind spots a weighted sum has on non-convex fronts.",
+          "Use a weighted-sum scalarization only when the front is known to be convex. Minimizing w1*f1 + w2*f2 over a grid of weights is simple but cannot reach points on a concave part of the front no matter the weights, so it can miss attractive trade-off designs; prefer epsilon-constraint or an evolutionary method when convexity is not assured.",
+          "Use a multi-objective evolutionary method for many objectives or black-box models. A non-dominated sorting genetic algorithm (NSGA-II) evolves a population toward the front and spreads it with a crowding measure, handling non-convex, disconnected, and noisy fronts that gradient methods struggle with, at the cost of many model evaluations (pair it with a surrogate when the model is expensive).",
+          "Measure front quality and find the knee. Use the hypervolume indicator (the volume of objective space dominated by the front relative to a reference point) to compare fronts and to check convergence; locate the knee, where the exchange rate turns sharply, because designs near the knee usually give the best balance and are the natural candidates to present to the decision maker."
+        ],
+        "tags": ["optimization", "multi-objective", "pareto-front"]
+      },
+      {
+        "flow_name": "ouu-stochastic-solution-verification",
+        "description": "Verify the chosen optimum with an independent reliability and sensitivity check, because an optimum found on an approximated stochastic problem can be fragile to the approximations that produced it.",
+        "inputs": [
+          {"name": "pareto-front", "desc": "The candidate optimal designs to be verified"},
+          {"name": "uncertainty-model", "desc": "The distributions used for independent reliability estimation"}
+        ],
+        "outputs": [
+          {"name": "verified-reliability", "desc": "The true constraint-satisfaction probability of the selected design from an independent estimate"},
+          {"name": "solution-sensitivity", "desc": "How the optimum shifts under perturbations to the distributions and the ambiguity radius"}
+        ],
+        "process": [
+          "Re-estimate the reliability of the selected design with an independent method. If the constraints were reformed analytically or by a reliability index, confirm the achieved probability with a Monte Carlo or subset-simulation run; a design sized for 99 percent reliability that verifies at 95 percent means the reformulation assumptions did not hold.",
+          "Test sensitivity to the distribution parameters. Perturb the means, standard deviations, and correlations within their epistemic ranges and re-solve or re-evaluate; an optimum that moves a lot or loses feasibility under small distribution changes is fragile and should be reported as such, possibly pushing toward the worst-case formulation.",
+          "Check the active chance constraints. Identify which probabilistic constraints are binding at the optimum; those are where the design is most exposed, and small errors in their distributions or in the reformulation have the largest effect on realized reliability.",
+          "Vary the ambiguity radius for worst-case formulations. Trace how the optimal objective and design change as the Wasserstein or moment-set radius grows; the rate of degradation shows the price of distributional protection and whether the chosen radius is defensible given the data behind the distribution.",
+          "Report the verified design with its reliability, its binding constraints, and its sensitivity. Present the optimum as a design that achieves a stated probability of meeting each constraint, with the evidence from the independent check and the conditions under which that claim could break, so the decision rests on verification rather than on the optimizer having stopped."
+        ],
+        "tags": ["optimization", "verification", "reliability"]
+      }
+    ]
+  },
+  {
+    "chain_name": "reduced-order-model-construction",
+    "description": "Build a reduced-order model of a high-dimensional simulation by collecting snapshots and extracting a low-dimensional basis, projecting the governing equations onto it, stabilizing the reduced dynamics, bounding the error, and validating the offline-online cost split, so a model that ran in hours runs in seconds with known accuracy.",
+    "domain": "engineering",
+    "tags": ["reduced-order-model", "proper-orthogonal-decomposition", "galerkin-projection", "model-reduction", "engineering"],
+    "steps": [
+      {
+        "flow_name": "rom-snapshot-collection-and-pod",
+        "description": "Collect representative solution snapshots and extract a low-dimensional basis by proper orthogonal decomposition, choosing the basis size from the captured energy.",
+        "inputs": [
+          {"name": "full-order-model", "desc": "The high-fidelity simulation whose behavior the reduced model must reproduce"},
+          {"name": "parameter-and-time-range", "desc": "The parameter values and time span over which the reduced model must be valid"}
+        ],
+        "outputs": [
+          {"name": "snapshot-set", "desc": "The matrix of full-order solution snapshots sampled across time and parameters"},
+          {"name": "pod-basis", "desc": "The reduced basis of dominant modes with the truncation rank chosen from captured energy"}
+        ],
+        "process": [
+          "Sample snapshots that span the behavior you need to reproduce. Run the full-order model at a spread of parameter values and save the state at many time points; the reduced model can only represent dynamics present in the snapshots, so cover the parameter and time range the application will exercise, including transients and any regime changes.",
+          "Assemble the snapshot matrix X with each column a state vector of dimension n (the full-order size) and m columns (the snapshots). Subtract a reference state (the mean or a steady solution) so the decomposition captures fluctuations rather than the offset.",
+          "Compute the proper orthogonal decomposition by the singular value decomposition X = U*Sigma*V^T. The left singular vectors in U are the orthonormal spatial modes ordered by energy, and the singular values in Sigma give each mode energy as sigma_i^2; this is the optimal linear basis in the sense that no other rank-k basis captures more energy.",
+          "Choose the truncation rank k from the captured-energy criterion. Keep the smallest k such that the cumulative energy sum of sigma_i^2 for i up to k divided by the total sum of sigma_i^2 exceeds a threshold, commonly 0.99 or 0.9999 depending on required fidelity; a sharp drop in the singular-value spectrum indicates a low intrinsic dimension and a small k will suffice.",
+          "Use the method of snapshots when the state dimension is huge. When n is far larger than m, form the small m by m correlation matrix X^T*X and solve its eigenproblem instead of decomposing the tall X directly; the reduced basis follows from the eigenvectors at a fraction of the cost."
+        ],
+        "tags": ["reduced-order-model", "proper-orthogonal-decomposition"]
+      },
+      {
+        "flow_name": "rom-galerkin-projection",
+        "description": "Project the governing equations onto the reduced basis to obtain a small system of equations for the mode amplitudes, precomputing the reduced operators offline.",
+        "inputs": [
+          {"name": "pod-basis", "desc": "The reduced basis onto which the equations are projected"},
+          {"name": "full-order-model", "desc": "The governing operators of the high-fidelity model"}
+        ],
+        "outputs": [
+          {"name": "reduced-operators", "desc": "The precomputed small matrices and tensors of the projected system"},
+          {"name": "reduced-system", "desc": "The low-dimensional system of equations for the modal amplitudes"}
+        ],
+        "process": [
+          "Represent the state in the reduced basis as u approximately equal to Phi*a, where Phi holds the k retained modes and a is the vector of k modal amplitudes. The reduced model solves for a, which has dimension k on the order of tens, instead of u, which has dimension n on the order of millions.",
+          "Project the governing equation by Galerkin. For a semi-discrete system du/dt = A*u + f, substitute u = Phi*a and require the residual to be orthogonal to the basis, left-multiplying by Phi^T: da/dt = (Phi^T*A*Phi)*a + Phi^T*f. The reduced operator Phi^T*A*Phi is a small k by k matrix.",
+          "Precompute every basis-dependent operator offline. The reduced matrices Phi^T*A*Phi and the projected forcing Phi^T*f depend only on the basis and the operators, not on the online parameter or time, so compute them once and store them; the online solve then touches only small k-sized objects.",
+          "Handle parameter dependence with an affine decomposition. When the operator depends on parameters as A(p) = sum theta_q(p)*A_q, project each A_q once offline to get small reduced blocks, and assemble the reduced operator online as sum theta_q(p)*(Phi^T*A_q*Phi); this keeps the online cost independent of the full dimension n.",
+          "Confirm the reduced system reproduces a training case before trusting it. Run the reduced model at a parameter and time already in the snapshot set and compare the reconstructed state Phi*a to the stored full-order solution; a large error here means the basis or the projection is wrong, not that the reduced model is merely extrapolating."
+        ],
+        "tags": ["reduced-order-model", "galerkin-projection"]
+      },
+      {
+        "flow_name": "rom-stability-and-closure",
+        "description": "Stabilize the reduced dynamics and treat nonlinear terms efficiently, because a Galerkin reduced model can be unstable even when the full-order model is stable, and nonlinearities otherwise cost the full dimension to evaluate.",
+        "inputs": [
+          {"name": "reduced-system", "desc": "The projected dynamics that may need stabilization"},
+          {"name": "snapshot-set", "desc": "The data used to build nonlinear-term interpolation"}
+        ],
+        "outputs": [
+          {"name": "stabilized-reduced-model", "desc": "The reduced model with stabilization or closure added so it stays bounded"},
+          {"name": "nonlinear-treatment", "desc": "The interpolation scheme that evaluates nonlinear terms at reduced cost"}
+        ],
+        "process": [
+          "Expect and diagnose reduced-model instability. Truncating the low-energy modes removes the small scales that drain energy in the full system, so a Galerkin reduced model of a convection-dominated or turbulent flow can grow unbounded even though the full model is stable; check the eigenvalues of the reduced operator and watch for energy growth in a test run.",
+          "Add a closure or stabilization to replace the missing dissipation. Options include adding an eddy-viscosity-like dissipation term tuned so the reduced energy balance matches the full model, Petrov-Galerkin projection with a test basis chosen for stability (least-squares Petrov-Galerkin), or retaining a few extra modes purely for stabilization.",
+          "Treat nonlinear terms with hyper-reduction, because a naive nonlinear term costs the full dimension n to evaluate even in a reduced model. The discrete empirical interpolation method selects a small set of m interpolation indices and reconstructs the nonlinear term from the values at only those entries, making the online cost scale with m and k rather than n.",
+          "Build the interpolation basis from nonlinear snapshots. Collect snapshots of the nonlinear term itself, apply a proper orthogonal decomposition to them, and run the interpolation-point selection greedily on the resulting basis; the number of interpolation points m is chosen like the mode count, from the decay of the nonlinear-term singular values.",
+          "Verify that stabilization did not destroy accuracy. A stabilization strong enough to bound the model can also over-damp it; confirm on a training case that the stabilized model still reproduces the full-order energy and key outputs, and tune the stabilization to the lightest touch that keeps the model bounded."
+        ],
+        "tags": ["reduced-order-model", "stabilization", "hyper-reduction"]
+      },
+      {
+        "flow_name": "rom-error-bounds",
+        "description": "Attach an a posteriori error estimate to the reduced-model output so its prediction carries a bound, and use that bound to drive a greedy basis construction.",
+        "inputs": [
+          {"name": "stabilized-reduced-model", "desc": "The reduced model whose error must be bounded"},
+          {"name": "full-order-model", "desc": "The operators needed to compute the residual and stability constant"}
+        ],
+        "outputs": [
+          {"name": "error-bound", "desc": "The a posteriori bound on the reduced-model error as a function of parameters"},
+          {"name": "greedy-basis-plan", "desc": "The next parameter at which to enrich the basis, chosen where the bound is largest"}
+        ],
+        "process": [
+          "Compute the residual of the reduced solution in the full equations. Insert the reconstructed state Phi*a into the full-order governing equation and evaluate the residual r(p); unlike the true error, the residual is computable without a full-order solve, and it is the engine of a posteriori error estimation.",
+          "Bound the error by the residual over a stability constant. For many problems the error satisfies ||u - Phi*a|| <= ||r(p)|| / beta_LB(p), where beta_LB is a computable lower bound on the stability (inf-sup or coercivity) constant of the operator; this turns a cheap residual into a certified bound on the output error.",
+          "Precompute the residual-norm ingredients offline so the bound is cheap online. The residual norm expands into inner products of basis-projected operator pieces that can be assembled once; the online evaluation of the error bound then costs only k-sized operations, preserving the speed that justifies the reduced model.",
+          "Drive a greedy basis construction with the bound. Over a training set of parameters, evaluate the error bound everywhere, run the full-order model only at the single parameter where the bound is largest, add that snapshot to the basis, and repeat; this reduced-basis greedy builds a near-optimal basis with far fewer full-order solves than sampling blindly.",
+          "Stop the greedy loop on the bound, not on a guess. Terminate when the maximum error bound over the training set falls below the target tolerance; the bound gives a certified statement that the reduced model meets its accuracy everywhere in the training set, which a snapshot count alone cannot provide."
+        ],
+        "tags": ["reduced-order-model", "error-bounds", "greedy-sampling"]
+      },
+      {
+        "flow_name": "rom-online-offline-validation",
+        "description": "Validate the reduced model on parameters it was not trained on and account honestly for the offline cost, so the claimed speedup is net of the investment and holds where it will be used.",
+        "inputs": [
+          {"name": "greedy-basis-plan", "desc": "The final basis produced by the greedy enrichment"},
+          {"name": "parameter-and-time-range", "desc": "The operating envelope over which the reduced model is validated"}
+        ],
+        "outputs": [
+          {"name": "validated-rom", "desc": "The reduced model with out-of-sample accuracy and its validity envelope"},
+          {"name": "cost-benefit-record", "desc": "The offline build cost, the online per-query cost, and the net speedup and break-even query count"}
+        ],
+        "process": [
+          "Test at out-of-sample parameters and times. Evaluate the reduced model at parameter and time points deliberately excluded from the snapshot and greedy sets, and compare to full-order solves; in-sample accuracy is expected and proves little, while out-of-sample accuracy is what the application depends on.",
+          "Quantify the online speedup against the full dimension. With a reduced dimension k on the order of 10 to 50 and a full dimension n on the order of 1e6 or more, and with nonlinear terms handled by interpolation so no step touches n, the online solve is typically faster by several orders of magnitude; measure it rather than asserting it.",
+          "Account for the offline cost and the break-even point. The snapshots, decomposition, operator projection, and greedy enrichment are a large one-time cost; divide it by the per-query saving to get the number of online queries needed to break even, and report whether the intended use (many-query optimization, real-time control, uncertainty propagation) clears that threshold.",
+          "Map the validity envelope and its edges. Confirm where in parameter space the out-of-sample error stays within tolerance and mark where it degrades; a reduced model built from snapshots in one regime will not represent a regime change (a new separation, a bifurcation) that the snapshots never saw, and that edge must be stated.",
+          "Hand off the reduced model with its certificate. Package the basis, the reduced operators, the interpolation points, the error bound, the out-of-sample accuracy, and the validity envelope, so the model can be deployed in an optimization or control loop with a clear statement of where and how well it stands in for the full simulation."
+        ],
+        "tags": ["reduced-order-model", "validation", "offline-online"]
+      }
+    ]
+  },
+  {
+    "chain_name": "turbulence-modeling-selection",
+    "description": "Select the turbulence modeling approach that fits the flow physics and the compute budget by screening the flow regime, choosing a RANS closure or a scale-resolving method, sizing the grid each demands, estimating cost, and validating against the law of the wall and reference data.",
+    "domain": "engineering",
+    "tags": ["turbulence", "rans", "les", "cfd", "engineering"],
+    "steps": [
+      {
+        "flow_name": "turbulence-flow-regime-screening",
+        "description": "Screen the flow physics that decide which turbulence approach can succeed, because the dominant features (separation, pressure gradient, transition, unsteadiness) rule methods in or out before any grid is built.",
+        "inputs": [
+          {"name": "flow-configuration", "desc": "The geometry, boundary conditions, and operating point of the flow to be simulated"},
+          {"name": "accuracy-and-output-needs", "desc": "What the simulation must predict (forces, heat transfer, noise, mixing) and to what accuracy"}
+        ],
+        "outputs": [
+          {"name": "flow-regime-profile", "desc": "The Reynolds number, expected separation, pressure-gradient character, transition, and unsteadiness of the flow"},
+          {"name": "modeling-requirements", "desc": "Which physics the turbulence approach must capture to meet the output needs"}
+        ],
+        "process": [
+          "Compute the Reynolds number and locate the flow on the laminar-transitional-turbulent map. Re = rho*U*L/mu sets the range of scales; pipe flow transitions near Re about 2300, a flat-plate boundary layer near Re_x about 5e5, and high-Re external aerodynamics is fully turbulent with a wide scale separation that forbids resolving all scales.",
+          "Identify whether the flow separates and under what pressure gradient. Attached boundary layers with mild gradients are forgiving; adverse pressure gradients and separation (diffusers, airfoils past stall, bluff bodies) are where simple closures fail, because the equilibrium assumptions behind wall functions and the eddy-viscosity closures break down.",
+          "Decide whether transition matters. If a laminar run of boundary layer precedes turbulence (low-Re airfoils, turbine blades, small drones), fully turbulent models will mispredict drag and heat transfer; the output may require a transition-sensitive model rather than a fully turbulent one.",
+          "Judge whether the quantity of interest needs the unsteady turbulent structures themselves. Mean forces and heat transfer on attached flows are often well predicted by a steady averaged model; aeroacoustic noise, buffeting, combustion mixing, and massively separated wakes need the resolved unsteady eddies that only a scale-resolving method provides.",
+          "Translate the physics into modeling requirements. Write down what the approach must capture (near-wall gradients for heat transfer, separation onset for stall, resolved spectra for noise) so the next step chooses a method that meets the requirements rather than defaulting to a familiar one."
+        ],
+        "tags": ["turbulence", "flow-regime"]
+      },
+      {
+        "flow_name": "turbulence-rans-model-selection",
+        "description": "Choose a RANS closure when the averaged flow suffices, matching the model to wall-bounded versus free-shear behavior and to the presence of separation.",
+        "inputs": [
+          {"name": "flow-regime-profile", "desc": "The regime features that steer the closure choice"},
+          {"name": "modeling-requirements", "desc": "The physics the averaged model must capture"}
+        ],
+        "outputs": [
+          {"name": "rans-closure", "desc": "The selected RANS turbulence model with its applicability and limits"},
+          {"name": "wall-treatment-requirement", "desc": "Whether the model integrates to the wall (y-plus about 1) or uses wall functions (y-plus 30 to 300)"}
+        ],
+        "process": [
+          "Use the standard k-epsilon model for high-Reynolds, free-shear and fully turbulent core flows. It is stable and cheap and performs well for jets, mixing layers, and flows without strong wall effects, but it is inaccurate in the near-wall region and under adverse pressure gradients, and it normally runs with wall functions (y-plus 30 to 300) rather than integrating to the wall.",
+          "Use the k-omega SST model as the default for wall-bounded aerodynamic and separating flows. It blends a k-omega formulation near the wall (integrating to the wall at y-plus about 1) with k-epsilon behavior in the far field, and its shear-stress-transport limiter improves the prediction of separation onset under adverse pressure gradients, which is why it is the common first choice for external aerodynamics and turbomachinery.",
+          "Consider a Reynolds-stress model when anisotropy dominates. Flows with strong swirl, rotation, or secondary motions in ducts have anisotropic turbulence that eddy-viscosity models (k-epsilon, k-omega) cannot represent; a Reynolds-stress model solves transport equations for the individual stresses at higher cost and lower stability, justified only when the anisotropy drives the result.",
+          "Add a transition model when the screening flagged transition. Couple the turbulence model with a transition formulation (for example a gamma or gamma-Re-theta model) so the laminar run and transition location are predicted rather than assumed fully turbulent from the leading edge.",
+          "Accept the shared limitation of all RANS closures. They model the entire turbulence spectrum and assume a separation of scales between the mean and the turbulence, so they predict mean attached flows well but lose accuracy for massively separated, strongly unsteady, or acoustically driven flows, which is the boundary where the next step moves to scale-resolving methods."
+        ],
+        "tags": ["turbulence", "rans"]
+      },
+      {
+        "flow_name": "turbulence-scale-resolving-selection",
+        "description": "Choose a scale-resolving approach when averaged models cannot deliver, selecting among large-eddy simulation, detached-eddy hybrids, and direct simulation by what must be resolved and what can be afforded.",
+        "inputs": [
+          {"name": "modeling-requirements", "desc": "The resolved-physics needs that rule out a RANS closure"},
+          {"name": "flow-regime-profile", "desc": "The Reynolds number and separation that set resolution and cost"}
+        ],
+        "outputs": [
+          {"name": "scale-resolving-method", "desc": "The chosen method (LES, wall-modeled LES, DES or DDES, or DNS) with its rationale"},
+          {"name": "resolution-expectation", "desc": "The fraction of turbulent energy to be resolved and the near-wall treatment the method assumes"}
+        ],
+        "process": [
+          "Use large-eddy simulation to resolve the energy-containing eddies and model only the small subgrid scales. A well-resolved LES captures about 80 percent or more of the turbulent kinetic energy on the grid and models the rest with a subgrid-scale model; it predicts unsteady separation, mixing, and noise that RANS cannot, at far higher cost.",
+          "Use direct numerical simulation only at low Reynolds number. DNS resolves every scale down to the Kolmogorov length and needs grid points scaling as Re^(9/4) with time steps scaling similarly, so its cost scales roughly as Re^3; it is a research tool for canonical flows at modest Re and a source of validation data, not a design tool for high-Re hardware.",
+          "Use a hybrid RANS-LES method to afford high-Re wall-bounded flows with separation. Detached-eddy simulation runs RANS in the attached boundary layer and switches to LES in separated regions; delayed DES (DDES) adds a shield so the model does not switch prematurely inside the boundary layer, avoiding the grid-induced-separation error that plain DES suffers when the grid is ambiguous.",
+          "Use wall-modeled LES when resolving the near-wall streaks is unaffordable. Wall-resolved LES near-wall cost scales roughly as Re^1.8 because the streak size shrinks in wall units; a wall model that supplies the wall stress from the outer flow reduces this toward Re^0.4 scaling, making high-Re LES feasible at the price of modeling the inner layer.",
+          "State the resolution expectation the method carries. Record the target resolved-energy fraction, whether the near-wall layer is resolved or modeled, and the subgrid model; these set the grid requirements the next step sizes and are the assumptions the validation must confirm were met."
+        ],
+        "tags": ["turbulence", "les", "des", "dns"]
+      },
+      {
+        "flow_name": "turbulence-grid-and-cost-estimation",
+        "description": "Size the grid and estimate the compute cost the chosen approach demands, so the method is confirmed affordable before a single mesh is generated.",
+        "inputs": [
+          {"name": "scale-resolving-method", "desc": "The method whose grid requirements must be sized (or the RANS wall treatment)"},
+          {"name": "wall-treatment-requirement", "desc": "The near-wall y-plus target that sets the first-cell size"}
+        ],
+        "outputs": [
+          {"name": "grid-sizing", "desc": "The near-wall and bulk resolution in wall units with an estimated cell count"},
+          {"name": "cost-estimate", "desc": "The estimated core-hours and turnaround, with a pass or fail against the compute budget"}
+        ],
+        "process": [
+          "Size the RANS grid from the wall treatment. For wall-resolved RANS place the first cell at y-plus about 1 with 15 or more cells across the boundary layer; for wall functions place the first cell center at 30 <= y-plus <= 300. The total cell count is dominated by the near-wall clustering and the wake refinement, typically millions of cells for a full configuration.",
+          "Size wall-resolved LES in wall units. The near-wall grid needs streamwise spacing delta_x+ about 50 to 150, wall-normal first spacing delta_y+ about 1, and spanwise spacing delta_z+ about 15 to 40 to resolve the near-wall streaks; this fine spacing over the whole wetted area is what makes wall-resolved LES scale as roughly Re^1.8 in cell count.",
+          "Size wall-modeled LES and hybrids more coarsely near the wall. With a wall model the first cell can sit in the log layer and the near-wall grid relaxes, cutting the count substantially; for DDES ensure the grid in the separated region is fine enough to resolve the shed eddies and the switch from RANS to LES happens where intended.",
+          "Estimate time steps and averaging windows for unsteady methods. A scale-resolving run must use a time step with a cell Courant number near or below 1 in the resolved region and must run long enough to gather converged statistics (many flow-through times), so the cost is cells times time steps times flow-throughs, not just cells.",
+          "Compare the estimate to the budget and decide. Convert cell count and time steps into core-hours and wall-clock turnaround for the available machine; if a wall-resolved LES is unaffordable, step back to wall-modeled LES, DDES, or an unsteady RANS before meshing, rather than discovering the infeasibility after building a grid."
+        ],
+        "tags": ["turbulence", "grid-resolution", "cost"]
+      },
+      {
+        "flow_name": "turbulence-model-validation",
+        "description": "Validate the turbulence simulation against the law of the wall and reference data, so the modeling choice is confirmed by evidence rather than by the solution having converged.",
+        "inputs": [
+          {"name": "grid-sizing", "desc": "The grid whose near-wall resolution must be confirmed from the solution"},
+          {"name": "resolution-expectation", "desc": "The resolved-energy and near-wall assumptions to be checked"}
+        ],
+        "outputs": [
+          {"name": "wall-profile-check", "desc": "The near-wall velocity profile compared to the law of the wall, confirming the wall treatment"},
+          {"name": "validation-evidence", "desc": "Skin friction, separation location, or spectra compared to experiment or reference simulation with the agreement"}
+        ],
+        "process": [
+          "Confirm the near-wall velocity follows the law of the wall. Plot the mean velocity in wall units u+ against y+ and check the viscous sublayer u+ = y+ for y+ < 5 and the log law u+ = (1/kappa)*ln(y+) + B with kappa = 0.41 and B = 5.0 to 5.2 for 30 < y+ < 300; a profile off the log law means the wall treatment or near-wall grid is wrong, which corrupts skin friction and heat transfer.",
+          "Check the achieved y+ field against the model requirement. Extract y+ from the solution and confirm it matches the wall treatment target (about 1 for wall-resolved, 30 to 300 for wall functions); patches in the buffer layer (5 < y+ < 30) are where both treatments are invalid and should be re-meshed.",
+          "For scale-resolving runs, verify the resolved-energy fraction. Estimate the ratio of resolved to modeled turbulent kinetic energy and confirm the resolved fraction meets the target (about 80 percent or more for a credible LES); too much modeled energy means the grid is too coarse and the run is closer to an unsteady RANS than an LES.",
+          "Compare an integral quantity to reference data. Match skin-friction coefficient, pressure distribution, separation and reattachment locations, or Nusselt number against experiment or a trusted higher-fidelity simulation; agreement within the accuracy target validates the modeling choice, and a systematic offset points to the closure rather than the mesh.",
+          "Compare spectra or unsteady statistics when the output demands them. For noise or mixing, check the resolved velocity spectrum shows the expected inertial-range slope and that the dominant frequencies match measurements; a spectrum that decays too fast at high wavenumber confirms under-resolution and tells you the scale-resolving method did not deliver what it promised."
+        ],
+        "tags": ["turbulence", "validation", "law-of-the-wall"]
+      }
+    ]
+  },
+  {
+    "chain_name": "thermal-fluid-system-simulation",
+    "description": "Model a piping and thermal-fluid system as a one-dimensional network by building the node-and-branch topology, characterizing pumps, pipes, valves, and heat exchangers, assembling and solving the conservation equations, extending to transient and two-phase behavior, and validating against energy and pressure-drop balances.",
+    "domain": "engineering",
+    "tags": ["thermal-fluid", "piping", "network-model", "heat-exchanger", "engineering"],
+    "steps": [
+      {
+        "flow_name": "tfs-flow-network-topology-build",
+        "description": "Represent the physical system as nodes and branches so a continuous pipe network becomes a solvable set of conservation equations at junctions and flow relations along components.",
+        "inputs": [
+          {"name": "system-schematic", "desc": "The piping and instrumentation layout with components, connections, and operating fluid"},
+          {"name": "operating-conditions", "desc": "Source pressures and temperatures, demanded flows, and the environment the system exchanges heat with"}
+        ],
+        "outputs": [
+          {"name": "network-graph", "desc": "The nodes (junctions, boundaries) and branches (components) with connectivity and reference elevations"},
+          {"name": "boundary-set", "desc": "The fixed-pressure, fixed-flow, and thermal boundary conditions that close the network"}
+        ],
+        "process": [
+          "Map every junction and reservoir to a node and every flow-carrying component to a branch. A node carries a single pressure and temperature; a branch (pipe, pump, valve, heat exchanger) carries a flow and a pressure change that depends on that flow. This one-dimensional abstraction is valid when the flow is well described by cross-section averages, which holds for most piping systems.",
+          "Record elevations at nodes to capture static head. The pressure relation along a branch includes the gravity term rho*g*dz between its end nodes, which matters for tall systems, pump suction head, and natural-circulation loops; omitting elevation silently biases the pressure solution.",
+          "Set the boundary conditions that close the problem. Fix pressure at reservoirs and open ends, fix flow at pumps operating on a demanded duty or at metered supplies, and fix temperature or heat input at thermal boundaries; a network with too few boundaries is underdetermined and one with inconsistent boundaries has no solution.",
+          "Identify loops and series-parallel structure. Count independent loops for the pressure-flow solve; parallel branches split flow by their resistances and series branches share flow, and recognizing this structure both aids the solver initial guess and catches topology errors such as an isolated node with no path to a boundary.",
+          "Choose the modeling fidelity per component. Decide which components are lumped (a single branch resistance) and which need internal nodes (a long pipe discretized for temperature decay, a heat exchanger split into sections); the topology must carry enough internal nodes to resolve the temperature and pressure variation the outputs require."
+        ],
+        "tags": ["thermal-fluid", "network-topology"]
+      },
+      {
+        "flow_name": "tfs-component-characterization",
+        "description": "Assign each branch its physical flow relation, pulling friction, pump, valve, and heat-exchanger characteristics from correlations and curves so the network equations have real coefficients.",
+        "inputs": [
+          {"name": "network-graph", "desc": "The branches needing flow and heat characteristics"},
+          {"name": "operating-conditions", "desc": "Fluid properties and the operating range over which characteristics are evaluated"}
+        ],
+        "outputs": [
+          {"name": "component-models", "desc": "The pressure-flow and heat-transfer relation for each branch with its parameters"},
+          {"name": "property-evaluation", "desc": "The fluid properties (density, viscosity, specific heat) evaluated at the operating states"}
+        ],
+        "process": [
+          "Model pipe friction with the Darcy-Weisbach relation dP = f*(L/D)*(rho*V^2/2), where f is the Darcy friction factor, L and D the length and diameter, and V the mean velocity. Use f = 64/Re for laminar flow (Re < 2300) and solve the Colebrook relation 1/sqrt(f) = -2*log10(eps/(3.7*D) + 2.51/(Re*sqrt(f))) for turbulent flow, where eps is the wall roughness; the Swamee-Jain explicit formula is a good non-iterative approximation.",
+          "Model pumps with their head-versus-flow curve and affinity laws. Represent the pump as a branch whose pressure rise follows the manufacturer head curve H(Q); scale between speeds with the affinity laws Q proportional to N, H proportional to N^2, and shaft power proportional to N^3, so a 20 percent speed cut roughly halves the head and cuts power to about half of half.",
+          "Model valves and orifices with a flow coefficient. Use Q = Cv*sqrt(dP/SG) for a valve of coefficient Cv and fluid specific gravity SG, or a loss coefficient K giving dP = K*(rho*V^2/2) for fittings; the valve characteristic (linear, equal-percentage) sets how Cv varies with stem position for control studies.",
+          "Model heat exchangers with the effectiveness-NTU method. Compute NTU = U*A/C_min where C_min is the smaller of the two stream heat-capacity rates and U*A the overall conductance; for a counterflow exchanger the effectiveness is eps = (1 - exp(-NTU*(1 - Cr)))/(1 - Cr*exp(-NTU*(1 - Cr))) with Cr = C_min/C_max, and the heat duty is Q = eps*C_min*(T_hot_in - T_cold_in).",
+          "Evaluate fluid properties at the local state and flag strong variation. Density, viscosity, and specific heat change with temperature and pressure; for liquids viscosity changes most and feeds back into the friction factor through Re, so for systems with large temperature swings evaluate properties per branch rather than once globally."
+        ],
+        "tags": ["thermal-fluid", "component-models"]
+      },
+      {
+        "flow_name": "tfs-network-solver-architecture",
+        "description": "Assemble and solve the coupled mass, momentum, and energy balances over the network with a Newton iteration, because the pressure-flow system is nonlinear through the friction and component relations.",
+        "inputs": [
+          {"name": "component-models", "desc": "The branch relations that enter the conservation equations"},
+          {"name": "boundary-set", "desc": "The boundary conditions that close the system"}
+        ],
+        "outputs": [
+          {"name": "steady-state-solution", "desc": "The converged node pressures and temperatures and branch flows at the operating point"},
+          {"name": "solver-diagnostics", "desc": "The residual history, iteration count, and the conditioning or convergence issues encountered"}
+        ],
+        "process": [
+          "Write mass conservation at each node: the sum of branch flows into a node equals the sum out, sum of m_dot = 0, which for incompressible liquid is a volumetric balance. These node equations, together with the branch pressure-flow relations, form the system whose unknowns are node pressures and branch flows.",
+          "Write the branch momentum (pressure) relation for each branch: the pressure difference between its nodes equals the component loss plus the elevation term, for example P_i - P_j = f*(L/D)*(rho*V^2/2) + rho*g*(z_j - z_i) for a pipe, with the pump adding a rise and the valve a loss. The nonlinearity in V makes the system nonlinear.",
+          "Solve the nonlinear system with Newton-Raphson. Linearize the node and branch equations about the current guess, assemble the Jacobian of residuals with respect to pressures and flows, solve the linear update, and iterate until the mass and pressure residuals fall below tolerance; the classical Hardy Cross loop method is a special case that corrects one loop flow at a time and converges more slowly.",
+          "Couple the energy equation for temperatures. Once flows are known, solve node energy balances where each node mixes the enthalpy of incoming streams and each branch adds or removes heat (pipe loss to ambient, heat-exchanger duty); for weak coupling solve flow then temperature, and for strong coupling (temperature-dependent properties) iterate between the flow and energy solves.",
+          "Provide a good initial guess and watch conditioning. Seed flows from a simple series-parallel resistance estimate and pressures from the boundaries; a poor guess can send the Newton iteration to a nonphysical negative flow or stall it. Monitor the residual history and the Jacobian conditioning, and add flow limits or relaxation if a branch oscillates between forward and reverse flow near zero."
+        ],
+        "tags": ["thermal-fluid", "network-solver", "newton-raphson"]
+      },
+      {
+        "flow_name": "tfs-transient-and-two-phase-treatment",
+        "description": "Extend the network model to time-dependent operation and two-phase flow where those matter, adding fluid inertia, wave dynamics, and phase-fraction treatment to the steady network.",
+        "inputs": [
+          {"name": "steady-state-solution", "desc": "The steady operating point used as the initial condition for a transient"},
+          {"name": "component-models", "desc": "The component relations extended with inertia and phase behavior"}
+        ],
+        "outputs": [
+          {"name": "transient-response", "desc": "The time history of pressures, flows, and temperatures through the event of interest"},
+          {"name": "two-phase-treatment", "desc": "The phase model applied where vapor or cavitation appears, with its range of validity"}
+        ],
+        "process": [
+          "Add fluid inertia for slow transients. The unsteady momentum balance adds the term (rho*L/A)*dQ/dt to each branch, so flows no longer respond instantly to pressure changes; integrate the node and branch equations in time from the steady initial condition to capture pump trips, valve closures, and load changes on the timescale of seconds.",
+          "Capture waterhammer for fast transients. A rapid valve closure sends a pressure wave at the acoustic speed a = sqrt(K/rho)/sqrt(1 + (K*D)/(E*t)), where K is the fluid bulk modulus and E and t the pipe wall modulus and thickness; the Joukowsky pressure rise for an instantaneous flow change dV is dP = rho*a*dV, which can be many times the operating pressure and sets burst and support loads. Resolve it with the method of characteristics on a pipe discretized to the wave speed and time step.",
+          "Choose the two-phase model by the flow regime. Use a homogeneous equilibrium model (treat the mixture as a single fluid with averaged properties) for well-mixed, near-equilibrium flows; use a drift-flux model where the phases move at different velocities, with the gas superficial velocity j_g = C0*j + Vgj capturing the slip through the distribution parameter C0 and drift velocity Vgj.",
+          "Handle cavitation and column separation in liquid transients. When the transient pressure drops to the vapor pressure, vapor cavities form and later collapse, producing severe secondary pressure spikes; include a vapor-cavity model at the affected nodes so the transient does not silently ignore a damaging event.",
+          "Match the time step to the fastest physics resolved. Slow inertial transients tolerate large steps, but waterhammer and the method of characteristics tie the time step to the wave speed and pipe segment length (dt = dx/a); verify stability and refine the time step until the peak pressures stop changing, as in any transient convergence check."
+        ],
+        "tags": ["thermal-fluid", "transient", "two-phase"]
+      },
+      {
+        "flow_name": "tfs-thermal-fluid-validation",
+        "description": "Validate the network solution against conservation balances and reference points, so the model is accepted on closed energy and pressure accounts rather than on a plausible-looking result.",
+        "inputs": [
+          {"name": "steady-state-solution", "desc": "The steady solution to be checked against balances"},
+          {"name": "transient-response", "desc": "The transient result whose peak values and timing are validated"}
+        ],
+        "outputs": [
+          {"name": "balance-closure", "desc": "The mass, energy, and loop-pressure balances with their closure error"},
+          {"name": "validation-record", "desc": "The comparison of predicted pressure drops, flows, and temperatures against design data or measurements"}
+        ],
+        "process": [
+          "Close the mass balance at every node and overall. Confirm the sum of flows in equals the sum out at each node to solver tolerance and that total supply equals total demand across the system; a mass imbalance means an unconverged solve or a topology error such as a missing connection.",
+          "Close the energy balance across the system. The net heat added (pump work, heat-exchanger duty, pipe losses to ambient) must match the change in fluid enthalpy between inlet and outlet; a persistent energy gap points to a mis-signed heat input, a wrong specific heat, or an unconverged temperature solve.",
+          "Check loop pressure balances. Around every closed loop the sum of pressure changes (losses, pump rises, elevation) must be zero; a nonzero loop residual is the direct measure of pressure-solution error and the quantity the network solver drove down, so confirm it is within tolerance.",
+          "Compare predicted pressure drops and flows to design points or field data. Check the pump operating point against its curve, the pressure drop across a known valve or heat exchanger against its rating, and branch flows against meter readings; agreement within the instrument and correlation uncertainty (often 5 to 10 percent) validates the component characterization.",
+          "Validate the transient peaks and timing. Confirm the predicted waterhammer peak pressure and the arrival time of the wave against the Joukowsky estimate and any measured trace, and confirm the transient settles to the steady solution computed earlier; a transient that does not relax to the correct steady state has an error in the inertia or boundary treatment."
+        ],
+        "tags": ["thermal-fluid", "validation", "balance-closure"]
+      }
+    ]
+  },
+  {
+    "chain_name": "structural-dynamics-modal-analysis",
+    "description": "Characterize the dynamic behavior of a structure by building the mass and stiffness model, extracting natural frequencies and mode shapes, checking modal mass participation, computing frequency response with identified damping, and correlating the model to test data through the modal assurance criterion.",
+    "domain": "engineering",
+    "tags": ["structural-dynamics", "modal-analysis", "natural-frequency", "frequency-response", "engineering"],
+    "steps": [
+      {
+        "flow_name": "sdm-modal-model-setup",
+        "description": "Build the mass and stiffness representation and decide the mass formulation and any degree-of-freedom reduction, because these set the frequencies the eigen-solve will return.",
+        "inputs": [
+          {"name": "structure-definition", "desc": "The geometry, material, connections, and support conditions of the structure"},
+          {"name": "frequency-range-of-interest", "desc": "The upper frequency the analysis must cover, set by the excitation it will see"}
+        ],
+        "outputs": [
+          {"name": "mass-stiffness-model", "desc": "The assembled mass and stiffness matrices with the chosen mass formulation and element density"},
+          {"name": "reduction-scheme", "desc": "Any degree-of-freedom reduction applied and the frequency range it preserves"}
+        ],
+        "process": [
+          "Set the mesh density from the highest frequency and mode shape of interest, not from a static-stress rule. A mode shape has a spatial wavelength that shrinks at higher frequency; use roughly 6 to 10 elements per half-wavelength of the highest mode you must capture, because a mesh that is fine for stress can be too coarse to represent a high-order mode shape.",
+          "Choose the mass formulation. A consistent mass matrix, derived from the same shape functions as the stiffness, is more accurate for a given mesh; a lumped (diagonal) mass matrix is cheaper and preferred for explicit transient runs but tends to under-predict frequencies. Note which you use because it shifts the computed frequencies.",
+          "Represent joints and supports with real stiffness. Bolted and welded joints are not rigid; their compliance lowers natural frequencies, and modeling a joint as fully rigid can push a predicted frequency well above the real one. Where a support is flexible, model it as a spring rather than a fixed boundary.",
+          "Apply degree-of-freedom reduction when the model is large and only low modes matter. Guyan (static) reduction condenses out the massless or high-frequency degrees of freedom but is accurate only well below the omitted frequencies; component-mode synthesis (for example the Craig-Bampton method) retains a set of fixed-interface modes plus boundary degrees of freedom and preserves accuracy to a stated frequency, which is the method for assembling substructures.",
+          "State the valid frequency range of the model. Record the highest frequency the mesh and any reduction can represent reliably (often set at the mesh resolution limit or the reduction cutoff), so later steps do not report modes beyond where the model is trustworthy."
+        ],
+        "tags": ["structural-dynamics", "mass-stiffness"]
+      },
+      {
+        "flow_name": "sdm-eigenvalue-extraction",
+        "description": "Solve the generalized eigenproblem for natural frequencies and mode shapes with a method suited to the model size and the number of modes needed.",
+        "inputs": [
+          {"name": "mass-stiffness-model", "desc": "The mass and stiffness matrices to be solved"},
+          {"name": "reduction-scheme", "desc": "Any reduction that sets the effective system size"}
+        ],
+        "outputs": [
+          {"name": "natural-frequencies", "desc": "The extracted natural frequencies up to the range of interest, with any rigid-body modes identified"},
+          {"name": "mode-shapes", "desc": "The mass-normalized mode shapes corresponding to each frequency"}
+        ],
+        "process": [
+          "Solve the generalized eigenproblem (K - omega^2*M)*phi = 0, whose eigenvalues omega^2 give the natural frequencies f = omega/(2*pi) and whose eigenvectors phi give the mode shapes. For a single-degree-of-freedom check the basic relation is omega_n = sqrt(k/m), which also gives a quick hand estimate of the fundamental frequency.",
+          "Choose the eigensolver by the number of modes and the model size. The Lanczos method is the standard for extracting the lowest tens to hundreds of modes of a large sparse model efficiently; subspace iteration suits a smaller number of modes; avoid dense full-spectrum solvers on large models because cost scales with the cube of the system size.",
+          "Extract modes over a range, not a fixed count. Request all modes up to about 1.5 times the highest excitation frequency so the frequency-response and participation steps have the modes they need, including those just above the band that still contribute to the response through their tails.",
+          "Identify and handle rigid-body modes. A free or partially constrained structure has up to six zero-frequency rigid-body modes; confirm their count matches the constraint state (a correctly supported structure has none, a free-free model has six), because an unexpected near-zero mode signals a missing constraint or a mechanism in the model.",
+          "Mass-normalize the mode shapes so that phi^T*M*phi = 1 for each mode. Mass normalization makes the modal mass unity and the modal stiffness equal to omega^2, which is the convention the frequency-response synthesis and the modal-mass participation calculation assume; mixing normalizations is a common source of wrong response amplitudes."
+        ],
+        "tags": ["structural-dynamics", "eigenvalue-extraction"]
+      },
+      {
+        "flow_name": "sdm-modal-mass-participation-check",
+        "description": "Compute the effective modal mass of each mode and confirm enough modes are retained to represent the dynamic response, using the standard participation threshold.",
+        "inputs": [
+          {"name": "natural-frequencies", "desc": "The extracted frequencies whose participation is assessed"},
+          {"name": "mode-shapes", "desc": "The mass-normalized mode shapes used in the participation calculation"}
+        ],
+        "outputs": [
+          {"name": "modal-mass-table", "desc": "The effective modal mass and cumulative participation per direction for each mode"},
+          {"name": "mode-count-decision", "desc": "The number of modes needed to reach the participation threshold, with any residual-mass correction"}
+        ],
+        "process": [
+          "Compute the effective modal mass of each mode in each direction. For mode i the effective modal mass is m_eff,i = (phi_i^T*M*r)^2 / (phi_i^T*M*phi_i), where r is the rigid-body influence vector for the direction; with mass-normalized modes the denominator is 1 and the numerator is the squared participation factor. This quantifies how much of the total mass each mode mobilizes in a base excitation.",
+          "Sum the effective modal masses and compare to the total mass. The effective modal masses in a direction sum to the total mass of the structure when all modes are included; the cumulative sum as a fraction of total mass tells you how much of the response the retained modes capture in that direction.",
+          "Apply the 90 percent participation rule. Retain enough modes that the cumulative effective modal mass reaches at least 90 percent of the total mass in each excited direction, a common seismic and base-excitation requirement; some demanding applications require 95 percent. A direction that falls short needs more modes extracted.",
+          "Watch for directions dominated by high-frequency or local modes. A stiff direction may reach the participation threshold only with many modes, or its mass may hide in a local mode; check all three translational and, where relevant, rotational directions, because a design can meet the threshold in one direction and badly miss in another.",
+          "Add a residual or missing-mass correction when truncation leaves mass unaccounted. When extracting all needed modes is impractical, add a static correction (a pseudo-mode) that lumps the quasi-static response of the omitted high-frequency modes, so the total response does not lose the stiffness contribution of the modes above the extracted band."
+        ],
+        "tags": ["structural-dynamics", "modal-mass", "participation"]
+      },
+      {
+        "flow_name": "sdm-frequency-response-and-damping",
+        "description": "Build the frequency response of the structure by modal superposition with a damping model, and identify damping from the response peaks so the predicted amplitudes are physical.",
+        "inputs": [
+          {"name": "natural-frequencies", "desc": "The modal frequencies that locate the response peaks"},
+          {"name": "mode-shapes", "desc": "The mode shapes that shape the response between points"}
+        ],
+        "outputs": [
+          {"name": "frequency-response-functions", "desc": "The response per unit excitation across frequency at the points of interest"},
+          {"name": "damping-model", "desc": "The identified modal or proportional damping used in the response, with how it was obtained"}
+        ],
+        "process": [
+          "Synthesize the frequency response by modal superposition. The receptance frequency-response function between a response point and an excitation point is H(omega) = sum over modes r of (phi_r*phi_r^T) / (omega_r^2 - omega^2 + 2*i*zeta_r*omega_r*omega), where zeta_r is the modal damping ratio; the sum over the retained modes gives the response, with peaks at the natural frequencies whose height is set by damping.",
+          "Choose a damping model matched to the available data. Modal damping assigns a ratio zeta_r to each mode and is the most physical when modal test data exist; Rayleigh (proportional) damping C = alpha*M + beta*K is convenient for direct integration and gives zeta = alpha/(2*omega) + beta*omega/2, but its frequency dependence means it can only match the true damping at two frequencies, so pick alpha and beta to bracket the band of interest.",
+          "Identify damping from measured response peaks with the half-power method. For a lightly damped mode the damping ratio is zeta = (f2 - f1)/(2*f_n), where f1 and f2 are the frequencies on either side of the peak where the amplitude falls to 1/sqrt(2) of the peak (the 3 dB points) and f_n is the peak frequency; this reads damping directly off a frequency-response plot.",
+          "Use realistic damping values and never zero. Bolted metal structures typically show zeta around 1 to 3 percent, welded structures less, and structures with joints or damping treatments more; a response computed with zero or guessed damping gives infinite or meaningless resonant peaks, so damping is the parameter that most controls the predicted amplitude near resonance.",
+          "Check the response against resonance and anti-resonance structure. A correct frequency-response function between two points shows peaks at the natural frequencies and anti-resonances (dips) between them whose pattern depends on the point pair; the presence and location of anti-resonances is a quick check that the mode shapes and their signs are right."
+        ],
+        "tags": ["structural-dynamics", "frequency-response", "damping"]
+      },
+      {
+        "flow_name": "sdm-experimental-correlation-mac",
+        "description": "Correlate the analytical modes with measured modes using the modal assurance criterion and reconcile differences through model updating, so the model earns the right to predict untested conditions.",
+        "inputs": [
+          {"name": "mode-shapes", "desc": "The analytical mode shapes to be correlated"},
+          {"name": "natural-frequencies", "desc": "The analytical frequencies compared against test"}
+        ],
+        "outputs": [
+          {"name": "correlation-matrix", "desc": "The modal assurance criterion matrix pairing analytical and test modes with frequency differences"},
+          {"name": "model-update-actions", "desc": "The parameter adjustments that reconcile the model to test, with the physical justification for each"}
+        ],
+        "process": [
+          "Compute the modal assurance criterion between each analytical mode and each test mode. MAC(a, x) = |phi_a^T*phi_x|^2 / ((phi_a^T*phi_a)*(phi_x^T*phi_x)), a number from 0 to 1 that measures the shape consistency between the analytical vector phi_a and the test vector phi_x at the measured degrees of freedom. A MAC above about 0.9 indicates well-correlated mode shapes and below about 0.1 indicates independent shapes.",
+          "Read the MAC matrix for pairing and problems. The ideal matrix is near-identity: each analytical mode pairs with one test mode at high MAC and is near zero elsewhere. Off-diagonal high values mean two modes are being confused (often from too few measurement points), and a low diagonal value means a mode shape the model gets wrong.",
+          "Compare paired frequencies alongside the MAC. For each well-paired mode report the frequency difference between analysis and test; shapes can correlate well (high MAC) while frequencies differ by several percent, which points to a stiffness or mass error rather than a shape error and tells you what to update.",
+          "Update the model against the test with physically meaningful parameters. Adjust uncertain joint stiffnesses, support compliances, or material moduli to bring frequencies and MAC into agreement, changing parameters that are genuinely uncertain rather than tuning arbitrary numbers to force a match; a model matched by non-physical adjustments predicts untested conditions no better than before.",
+          "Use operational deflection shapes when a controlled modal test is not possible. Measure the response under operating excitation to obtain the deflection shape at each frequency; unlike mode shapes these include the forcing and damping, so they show how the structure actually moves in service and can reveal a resonance that the forced-excitation test and the model both underweighted."
+        ],
+        "tags": ["structural-dynamics", "modal-assurance-criterion", "model-updating"]
+      }
+    ]
+  }
+]

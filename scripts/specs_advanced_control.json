@@ -1,0 +1,845 @@
+[
+  {
+    "chain_name": "system-identification-methodology",
+    "description": "Identify a mathematical model of a dynamic system from measured input-output data, selecting experiment design, estimation algorithm, and validation strategy to produce a model suitable for controller design.",
+    "domain": "control-systems",
+    "tags": ["control", "system-identification", "modeling", "estimation"],
+    "steps": [
+      {
+        "flow_name": "sysid-experiment-design",
+        "description": "Design the excitation signal and data collection plan to capture the plant dynamics within the frequency range and amplitude range relevant to the control problem.",
+        "inputs": [
+          {"name": "plant-description", "desc": "Physical description of the system to be identified, including known dynamics, actuator and sensor locations, and operating range"},
+          {"name": "control-objectives", "desc": "What the model will be used for: controller design bandwidth, simulation fidelity requirements, or monitoring"}
+        ],
+        "outputs": [
+          {"name": "excitation-signal-spec", "desc": "Signal type (PRBS, multisine, chirp, step sequence), amplitude, duration, sampling rate, and frequency content coverage"},
+          {"name": "data-collection-plan", "desc": "Sensor channels to record, anti-aliasing filter settings, number of experiments, and steady-state settling requirements between runs"}
+        ],
+        "process": [
+          "Determine the frequency range of interest from the desired closed-loop bandwidth. The excitation must cover at least 0.1x to 10x the target crossover frequency.",
+          "Select signal type: PRBS for broadband coverage with flat spectrum; multisine for precise frequency content control and leakage-free spectral analysis; chirp for swept-sine equivalent with smooth transition; step sequence for time-domain intuition and nonlinearity detection.",
+          "Set signal amplitude large enough for acceptable signal-to-noise ratio but small enough to stay in the linear operating region. If the system is nonlinear, plan multiple amplitude levels to check linearity.",
+          "Choose sampling rate at least 10x the highest frequency of interest (not just 2x Nyquist) to capture transient shape. Specify anti-aliasing filter cutoff at 0.4x the sampling rate.",
+          "Plan experiment duration: for PRBS, at least 5 to 10 periods of the slowest time constant. For multisine, integer number of periods for leakage-free DFT. Include settling time before recording.",
+          "Plan at least two independent datasets: one for estimation, one for validation. If the system drifts, interleave estimation and validation runs."
+        ],
+        "tags": ["experiment-design", "signal-design", "data-collection"]
+      },
+      {
+        "flow_name": "sysid-data-preprocessing",
+        "description": "Clean and condition the raw measurement data to remove artifacts, drift, and offset before model estimation.",
+        "inputs": [
+          {"name": "raw-measurement-data", "desc": "Time-series of input and output channels from the identification experiment"},
+          {"name": "excitation-signal-spec", "desc": "Expected signal properties for sanity checking the recorded data"}
+        ],
+        "outputs": [
+          {"name": "preprocessed-data", "desc": "Cleaned, detrended, filtered, and resampled data ready for model estimation"},
+          {"name": "data-quality-report", "desc": "Signal-to-noise ratio estimate, detected anomalies, frequency content verification, and linearity check results"}
+        ],
+        "process": [
+          "Inspect raw data visually: time-domain plots for saturation, dropouts, and drift; frequency-domain plots for expected bandwidth coverage and noise floor.",
+          "Remove mean or linear trend from both input and output. For slowly drifting systems, use high-pass filtering with cutoff well below the frequency range of interest.",
+          "Check for and remove outliers (sensor glitches, communication dropouts). Interpolate short gaps; discard runs with long gaps.",
+          "If the sampling rate is much higher than needed, decimate with proper anti-aliasing (lowpass filter then downsample). Target 10x to 20x the bandwidth of interest.",
+          "Estimate SNR from the coherence function between input and output. Coherence near 1.0 in the frequency range of interest indicates good SNR and linearity. Low coherence indicates noise, nonlinearity, or unmeasured disturbances.",
+          "For nonlinearity check: compare frequency response at two different amplitudes. If gain or phase changes significantly, the linear model will be approximate and you must document the valid operating range."
+        ],
+        "tags": ["data-preprocessing", "signal-processing", "quality-check"]
+      },
+      {
+        "flow_name": "sysid-nonparametric-estimation",
+        "description": "Estimate the system frequency response without assuming a model structure, providing a reality check before parametric fitting.",
+        "inputs": [
+          {"name": "preprocessed-data", "desc": "Cleaned input-output time series"},
+          {"name": "data-quality-report", "desc": "SNR and coherence information"}
+        ],
+        "outputs": [
+          {"name": "frequency-response-estimate", "desc": "Magnitude and phase vs frequency with confidence bounds, plus coherence function"},
+          {"name": "impulse-response-estimate", "desc": "Time-domain impulse response with estimated settling time and dominant time constants"}
+        ],
+        "process": [
+          "Compute the empirical transfer function estimate (ETFE) using the cross-spectrum divided by the input auto-spectrum. For multisine data, compute directly at excited frequencies for zero-leakage estimates.",
+          "Smooth the ETFE with windowing (Hann, Hamming) to reduce variance at the cost of frequency resolution. Choose window length to give adequate resolution at the frequencies that matter for control.",
+          "Compute coherence function. Mark frequency regions where coherence drops below 0.8 as unreliable for model fitting.",
+          "Extract key features from the frequency response: DC gain, resonance peaks and their frequencies, bandwidth (3dB point), roll-off rate (slope in dB/decade), phase crossover frequency, and apparent time delay from phase slope.",
+          "Compute impulse response via inverse FFT of the frequency response. Identify dominant time constants from exponential decay envelope. Check for non-minimum phase behavior (initial undershoot in step response).",
+          "This nonparametric estimate is the ground truth that any parametric model must match. Overlay parametric model frequency response on this estimate during validation."
+        ],
+        "tags": ["frequency-response", "nonparametric", "spectral-analysis"]
+      },
+      {
+        "flow_name": "sysid-parametric-model-estimation",
+        "description": "Fit a parametric model structure to the data using prediction error or subspace methods, selecting model order and structure from the physics and data.",
+        "inputs": [
+          {"name": "preprocessed-data", "desc": "Cleaned input-output data for estimation"},
+          {"name": "frequency-response-estimate", "desc": "Nonparametric estimate to guide model order and validate parametric fit"},
+          {"name": "plant-description", "desc": "Known physics to guide model structure selection"}
+        ],
+        "outputs": [
+          {"name": "parametric-model", "desc": "Transfer function or state-space model with identified parameters and their uncertainty bounds"},
+          {"name": "model-selection-rationale", "desc": "Why this model structure and order were chosen, and what alternatives were tried"}
+        ],
+        "process": [
+          "Choose model structure from physics: if the plant is known to have N poles and M zeros, use a transfer function of that order. If the structure is unknown, start with ARX for initial order estimation (it always converges), then refine with OE or BJ.",
+          "For state-space identification when order is unknown, use subspace identification (N4SID, MOESP) to estimate the order from singular value decay of the Hankel matrix. The gap in singular values indicates the model order.",
+          "Estimate parameters using prediction error minimization (PEM). Initialize from ARX or subspace estimate to avoid local minima. For OE and BJ models, initialization matters because the cost function is non-convex.",
+          "Try multiple model orders around the suspected value. Compare using AIC (penalizes complexity less) and BIC (penalizes complexity more). Plot fit percentage vs model order; look for the knee where additional order gives diminishing improvement.",
+          "For grey-box identification (known structure with unknown parameters): formulate the state-space matrices as functions of physical parameters, use PEM with analytic gradients, and bound parameters to physically meaningful ranges.",
+          "Extract uncertainty bounds on identified parameters. If uncertainty is large relative to the parameter value, that parameter is not well-identified from this data. Consider redesigning the experiment or simplifying the model."
+        ],
+        "tags": ["parametric-estimation", "model-fitting", "subspace-identification"]
+      },
+      {
+        "flow_name": "sysid-model-validation",
+        "description": "Validate the identified model against independent data and physical expectations to determine if it is adequate for controller design.",
+        "inputs": [
+          {"name": "parametric-model", "desc": "Identified transfer function or state-space model"},
+          {"name": "preprocessed-data", "desc": "Validation dataset (not used for estimation)"},
+          {"name": "frequency-response-estimate", "desc": "Nonparametric ground truth"},
+          {"name": "control-objectives", "desc": "What accuracy is needed for the intended use"}
+        ],
+        "outputs": [
+          {"name": "validated-model", "desc": "The model declared fit for use, with documented accuracy limits and valid operating range"},
+          {"name": "validation-report", "desc": "Fit percentage, residual analysis, frequency response comparison, and identified limitations"}
+        ],
+        "process": [
+          "Simulate the model with the validation dataset input and compare output to measured output. Report fit percentage (NRMSE). For controller design, 80% or higher is typical; for simulation, 90% or higher.",
+          "Analyze residuals (difference between model prediction and measurement). Residuals should be white noise: check with autocorrelation (no significant peaks beyond lag 0) and cross-correlation with input (no significant peaks at any lag). Patterned residuals indicate unmodeled dynamics.",
+          "Overlay the parametric model frequency response on the nonparametric estimate. Agreement within the confidence bounds of the nonparametric estimate is required in the control-relevant frequency range. Disagreement at high frequencies (beyond control bandwidth) is acceptable.",
+          "Check that the model is physically reasonable: correct DC gain, correct number of resonances, reasonable damping ratios, correct sign of gain, stable if the physical system is stable.",
+          "If the model will be used for robust control, characterize the model uncertainty: compute the multiplicative uncertainty (|G_true - G_model| / |G_model|) at each frequency from the nonparametric estimate. This uncertainty bound feeds directly into the robust controller design.",
+          "Document the valid operating range: input amplitude range, frequency range, operating point. The model is not valid outside the conditions under which it was identified."
+        ],
+        "tags": ["validation", "residual-analysis", "model-quality"]
+      }
+    ]
+  },
+  {
+    "chain_name": "model-predictive-control-design",
+    "description": "Design a model predictive controller that optimizes a cost function over a prediction horizon subject to constraints, producing control actions for systems where constraints are the primary design challenge.",
+    "domain": "control-systems",
+    "tags": ["control", "MPC", "optimization", "constrained-control"],
+    "steps": [
+      {
+        "flow_name": "mpc-plant-model-formulation",
+        "description": "Formulate or obtain the discrete-time state-space prediction model used inside the MPC optimizer.",
+        "inputs": [
+          {"name": "plant-model", "desc": "Continuous-time transfer function or state-space model of the plant"},
+          {"name": "control-objectives", "desc": "Tracking, regulation, or economic objectives and the constraint set"}
+        ],
+        "outputs": [
+          {"name": "discrete-prediction-model", "desc": "Discrete-time state-space model (A, B, C, D) at the chosen sample time, augmented with disturbance model if needed"},
+          {"name": "mpc-sample-time-rationale", "desc": "Chosen sample time and why it balances prediction accuracy against computational load"}
+        ],
+        "process": [
+          "Discretize the continuous plant model using zero-order hold at a sample time between 1/10 and 1/30 of the desired closed-loop rise time. Faster sampling improves prediction but increases QP size.",
+          "If the plant is nonlinear, decide between linear MPC with successive linearization (adequate if operating near a setpoint) and nonlinear MPC (needed if the operating range spans significant nonlinearity). Linear MPC is preferred when it works because the QP is convex and solution time is predictable.",
+          "For offset-free tracking of step disturbances, augment the model with integrating disturbance states on the outputs. Design a state estimator (Kalman filter or Luenberger observer) to estimate both plant states and disturbance states from measured outputs.",
+          "Verify the augmented model is observable (disturbance states are observable from outputs). If not, restructure the disturbance model.",
+          "For gain-scheduled MPC (nonlinear plant approximated by multiple linear models), define the scheduling variable and the operating points. At each point, store (A_i, B_i, C_i) and interpolate or switch based on the scheduling variable."
+        ],
+        "tags": ["model-formulation", "discretization", "disturbance-model"]
+      },
+      {
+        "flow_name": "mpc-horizon-and-cost-design",
+        "description": "Select prediction horizon, control horizon, and cost function weights to achieve the desired closed-loop behavior.",
+        "inputs": [
+          {"name": "discrete-prediction-model", "desc": "State-space model at the chosen sample time"},
+          {"name": "control-objectives", "desc": "Desired bandwidth, response shape, and relative importance of tracking vs control effort"}
+        ],
+        "outputs": [
+          {"name": "mpc-tuning-parameters", "desc": "Prediction horizon N_p, control horizon N_c, output weight Q, input weight R, input rate weight S, and terminal cost P"},
+          {"name": "tuning-rationale", "desc": "How each parameter was chosen and what trade-off it controls"}
+        ],
+        "process": [
+          "Set prediction horizon N_p to capture the open-loop settling time of the plant (at least 1.5x the number of samples in the rise time). Too short causes instability; too long wastes computation without improving performance.",
+          "Set control horizon N_c less than or equal to N_p. N_c = N_p gives maximum degrees of freedom but largest QP. Reducing N_c (typically N_c = 3 to 10) constrains later moves to be constant, which acts as implicit regularization and reduces computation. Start with N_c = min(N_p, 10) and reduce if real-time computation is tight.",
+          "Set output tracking weight Q from the relative importance of each output and the acceptable tracking error magnitude. Use inverse-square scaling: Q_ii = 1/(max_acceptable_error_i)^2. This normalizes different-unit outputs to comparable scales.",
+          "Set input weight R to penalize control effort. Start with R small (prioritize tracking) and increase if actuator activity is excessive. R controls the trade-off between fast response and control smoothness.",
+          "Set input rate weight S (move suppression) to limit control action changes per step. This is often more important than R for practical actuator protection and noise sensitivity. Start with S = 0.1 * R and increase if moves are too aggressive.",
+          "For guaranteed stability without terminal constraints, compute the terminal cost P as the solution to the discrete algebraic Riccati equation (DARE) for the unconstrained LQR with weights (Q, R). This makes the finite-horizon cost approximate the infinite-horizon cost."
+        ],
+        "tags": ["horizon-selection", "cost-function", "tuning"]
+      },
+      {
+        "flow_name": "mpc-constraint-formulation",
+        "description": "Translate physical actuator limits, safety limits, and operational limits into the constraint matrices for the QP.",
+        "inputs": [
+          {"name": "discrete-prediction-model", "desc": "Plant model"},
+          {"name": "mpc-tuning-parameters", "desc": "Horizons and weights"},
+          {"name": "physical-constraints", "desc": "Actuator limits (min/max, rate limits), output safety limits, and state constraints"}
+        ],
+        "outputs": [
+          {"name": "constraint-matrices", "desc": "Input constraints (u_min, u_max, delta_u_min, delta_u_max), output constraints (y_min, y_max), and soft constraint slack weights"},
+          {"name": "feasibility-analysis", "desc": "Assessment of whether the constraint set is always feasible and strategy for infeasible cases"}
+        ],
+        "process": [
+          "Formulate hard constraints on inputs from actuator physical limits. These are always hard because the actuator cannot exceed them regardless of what the optimizer requests.",
+          "Formulate input rate constraints from actuator slew rate limits. Rate constraints prevent the optimizer from demanding instantaneous large changes that the actuator cannot track.",
+          "Formulate output constraints. Decide which are hard (safety-critical: must never be violated) and which are soft (desirable but can be temporarily violated with penalty). Most output constraints should be soft to guarantee feasibility.",
+          "For soft constraints, add slack variables with a penalty weight in the cost function. Set the penalty weight high enough that the optimizer violates the soft constraint only when no feasible solution exists within it. Typical penalty: 10x to 100x the corresponding output weight Q_ii.",
+          "Analyze feasibility: given the constraint set and plant dynamics, determine if there exist initial conditions from which no feasible input sequence exists. For input-constrained systems, check that the target setpoint is reachable within the input limits (steady-state feasibility). For output-constrained systems, ensure the plant can be steered away from constraint boundaries fast enough.",
+          "Implement constraint softening or constraint tightening strategy: soften output constraints by default; tighten input constraints slightly (1% to 5% margin) to provide margin for numerical issues."
+        ],
+        "tags": ["constraints", "feasibility", "soft-constraints"]
+      },
+      {
+        "flow_name": "mpc-qp-solver-selection",
+        "description": "Select and configure the quadratic programming solver for real-time execution within the control loop sample time.",
+        "inputs": [
+          {"name": "mpc-tuning-parameters", "desc": "Problem dimensions (N_p, N_c, number of inputs, outputs, constraints)"},
+          {"name": "constraint-matrices", "desc": "Number and type of constraints"},
+          {"name": "mpc-sample-time-rationale", "desc": "Available computation time per sample"}
+        ],
+        "outputs": [
+          {"name": "solver-configuration", "desc": "Selected solver, warm-starting strategy, iteration limits, and fallback behavior for solver failure"},
+          {"name": "worst-case-timing-analysis", "desc": "Measured or estimated worst-case solve time vs available time, and what happens when the solver exceeds the time budget"}
+        ],
+        "process": [
+          "Calculate QP size: number of decision variables = N_c * n_u (inputs over control horizon); number of inequality constraints = 2 * (N_c * n_u + N_p * n_y) for box constraints on inputs and outputs. This determines which solver class is appropriate.",
+          "For small QP (under 100 variables, under 200 constraints): active set methods (qpOASES) are fast and provide exact solutions. Warm-starting from the previous solution's active set makes typical solves very fast (few pivots).",
+          "For medium QP (100 to 1000 variables): interior point methods (ECOS, MOSEK) or ADMM-based methods (OSQP) are competitive. OSQP is good for embedded because it avoids matrix factorization updates and has predictable per-iteration cost.",
+          "For large QP or nonlinear MPC: use structure-exploiting solvers (FORCES Pro, acados) that exploit the banded structure of the MPC problem for O(N) per-iteration complexity instead of O(N^3).",
+          "Implement warm-starting: shift the previous solution by one time step (discard first move, duplicate last move) as initial guess. This typically reduces solve iterations by 50% to 80%.",
+          "Define fallback behavior when the solver fails to converge within the iteration limit: apply the second element of the previous solution (since the first was already applied), and set an alarm. Never apply a zero input on solver failure unless zero is a safe default."
+        ],
+        "tags": ["QP-solver", "real-time", "embedded-optimization"]
+      },
+      {
+        "flow_name": "mpc-commissioning-and-tuning",
+        "description": "Commission the MPC controller on the real system, validate closed-loop performance, and refine tuning from operational data.",
+        "inputs": [
+          {"name": "solver-configuration", "desc": "Complete MPC implementation ready to run"},
+          {"name": "discrete-prediction-model", "desc": "The model used inside MPC"},
+          {"name": "physical-constraints", "desc": "Actual plant limits for safety monitoring"}
+        ],
+        "outputs": [
+          {"name": "commissioned-mpc", "desc": "Tuned and validated MPC controller running on the real plant"},
+          {"name": "performance-report", "desc": "Tracking error, constraint satisfaction, computational load, and comparison to design specifications"}
+        ],
+        "process": [
+          "Before closing the loop, run the MPC optimizer open-loop with recorded plant data to verify it produces reasonable control actions. Check that the solver converges, constraints are satisfied, and the predicted trajectory is physically plausible.",
+          "Close the loop at reduced performance first: increase R and S weights to make the controller conservative, then gradually reduce them toward the design values while monitoring closed-loop behavior.",
+          "Verify constraint satisfaction: log every instance where a constraint becomes active (input saturates or output approaches limit). Active constraints are normal and expected; violated hard constraints indicate a formulation error.",
+          "Measure actual closed-loop bandwidth and compare to design target. If too slow, reduce R or S. If too oscillatory, check model accuracy (closed-loop oscillation often indicates model mismatch rather than weight error).",
+          "Monitor solver computation time distribution. The 99th percentile must be below the sample time. If it is not, reduce N_c, simplify constraints, or move to a faster solver.",
+          "After initial commissioning, update the plant model from closed-loop data (use indirect identification or inject small perturbations on top of the control signal). Re-estimate the model periodically to track plant changes."
+        ],
+        "tags": ["commissioning", "closed-loop-tuning", "performance-validation"]
+      }
+    ]
+  },
+  {
+    "chain_name": "robust-control-methodology",
+    "description": "Design controllers that maintain stability and performance despite plant uncertainty, using structured and unstructured uncertainty models with H-infinity and mu-synthesis methods.",
+    "domain": "control-systems",
+    "tags": ["control", "robust-control", "H-infinity", "uncertainty"],
+    "steps": [
+      {
+        "flow_name": "uncertainty-modeling",
+        "description": "Characterize what is unknown about the plant and represent it mathematically as an uncertainty model compatible with robust analysis tools.",
+        "inputs": [
+          {"name": "nominal-plant-model", "desc": "Best estimate of the plant transfer function or state-space model"},
+          {"name": "plant-knowledge-gaps", "desc": "What is uncertain: parameter ranges, unmodeled dynamics, nonlinearities, time delays"}
+        ],
+        "outputs": [
+          {"name": "uncertainty-model", "desc": "Structured uncertainty (parametric) and unstructured uncertainty (multiplicative or additive weighting functions) bounding the true plant"},
+          {"name": "uncertainty-bound-validation", "desc": "Evidence that the uncertainty model actually contains the true plant (comparison to experimental data or multiple plant models)"}
+        ],
+        "process": [
+          "Classify each uncertainty source: parametric (a known parameter with bounded range, like mass +/-10%), unmodeled dynamics (high-frequency behavior not captured by the nominal model), or nonlinearity (gain variation with amplitude).",
+          "For parametric uncertainty: express each uncertain parameter as p = p_nominal * (1 + delta * w) where delta is a normalized unknown bounded by |delta| <= 1 and w is the fractional uncertainty. Pull out the delta blocks into a diagonal uncertainty matrix.",
+          "For unmodeled dynamics: determine the multiplicative uncertainty weight W_m(s) such that |G_true(jw) - G_nominal(jw)| / |G_nominal(jw)| <= |W_m(jw)| at all frequencies. W_m is typically small at low frequencies (model is accurate) and grows past 1.0 near and above the model bandwidth. The frequency where |W_m| = 1 sets the maximum achievable closed-loop bandwidth.",
+          "Validate the uncertainty model: plot the frequency response of multiple plant realizations (from parameter sweeps, different operating points, or experimental data) and verify they all fall within the uncertainty bounds around the nominal model.",
+          "Formulate the uncertain plant as an LFT (linear fractional transformation): M(s) with the uncertainty block Delta, where Delta is block-diagonal containing all parametric and dynamic uncertainties. This is the standard form for mu-analysis."
+        ],
+        "tags": ["uncertainty", "multiplicative-uncertainty", "LFT"]
+      },
+      {
+        "flow_name": "performance-specification-weighting",
+        "description": "Translate closed-loop performance requirements into frequency-domain weighting functions for the H-infinity synthesis.",
+        "inputs": [
+          {"name": "control-objectives", "desc": "Desired bandwidth, tracking accuracy, disturbance rejection, noise sensitivity, and control effort limits"},
+          {"name": "uncertainty-model", "desc": "Uncertainty bounds that limit achievable performance"}
+        ],
+        "outputs": [
+          {"name": "sensitivity-weights", "desc": "Weighting functions W_p(s) for sensitivity, W_u(s) for control sensitivity, W_t(s) for complementary sensitivity"},
+          {"name": "design-trade-off-map", "desc": "Bode plot showing where each weight dominates and how the trade-offs interact"}
+        ],
+        "process": [
+          "Design the sensitivity weight W_p(s) to enforce tracking and disturbance rejection at low frequencies. W_p should be large (high gain) below the desired bandwidth and roll off above it. A standard form: W_p(s) = (s/M + w_b) / (s + w_b * A) where w_b is the desired bandwidth, A is the maximum steady-state error, and M is the peak sensitivity (typically 1.5 to 2.0).",
+          "Design the complementary sensitivity weight W_t(s) to enforce noise rejection and robustness at high frequencies. W_t limits the closed-loop bandwidth and should be large above the frequency where model uncertainty exceeds the nominal model. If the multiplicative uncertainty W_m is known, set W_t >= W_m to guarantee robust stability via the small gain theorem.",
+          "Design the control sensitivity weight W_u(s) to limit actuator effort. W_u penalizes large control signals and can enforce actuator bandwidth limits. Set W_u based on the inverse of the maximum allowable control signal magnitude at each frequency.",
+          "Check the algebraic constraint: S + T = I means you cannot make both sensitivity and complementary sensitivity small at the same frequency. The weights must be compatible: W_p should be large where W_t is small and vice versa. The crossover region where both are moderate is the closed-loop bandwidth.",
+          "Plot all weights on a single Bode magnitude plot to verify the design makes physical sense: low-frequency tracking (W_p large), high-frequency roll-off (W_t large), and a clear bandwidth region in between."
+        ],
+        "tags": ["weighting-functions", "sensitivity", "performance-specification"]
+      },
+      {
+        "flow_name": "h-infinity-synthesis",
+        "description": "Synthesize a controller that minimizes the H-infinity norm of the weighted closed-loop transfer function, guaranteeing robust stability and nominal performance.",
+        "inputs": [
+          {"name": "nominal-plant-model", "desc": "Plant transfer function or state-space model"},
+          {"name": "sensitivity-weights", "desc": "W_p, W_u, W_t weighting functions"}
+        ],
+        "outputs": [
+          {"name": "h-infinity-controller", "desc": "Controller transfer function K(s) that achieves gamma < 1 (or minimizes gamma)"},
+          {"name": "synthesis-report", "desc": "Achieved gamma, closed-loop singular value plots, and controller order"}
+        ],
+        "process": [
+          "Formulate the generalized plant P(s): stack the performance outputs (W_p * S, W_u * KS, W_t * T) as the regulated output z, the exogenous input w as reference and disturbance, the control input u, and the measured output y. This is the standard two-port formulation.",
+          "Solve the H-infinity optimal control problem using Riccati-based synthesis (hinfsyn) or LMI-based synthesis. The result is a controller K(s) that minimizes gamma = ||T_{zw}||_infinity. If gamma < 1, all weighted performance specifications are met.",
+          "If gamma > 1, the specifications are infeasible. Relax the weights: reduce W_p bandwidth (accept slower tracking), increase W_t weight at lower frequencies (accept more noise), or increase W_u (accept more control effort). Iterate until gamma < 1.",
+          "Examine the controller K(s): check its order (typically equal to plant order plus weight orders), verify it is stable, and plot its frequency response. A very high-order controller can be reduced using balanced truncation while checking that the closed-loop gamma does not increase significantly.",
+          "Verify robust stability: with the multiplicative uncertainty model, check that ||W_m * T||_infinity < 1 (small gain theorem). This guarantees stability for all plants in the uncertainty set. Plot |W_m * T| vs frequency; the peak value is the inverse of the stability margin."
+        ],
+        "tags": ["H-infinity", "synthesis", "optimal-control"]
+      },
+      {
+        "flow_name": "mu-synthesis-for-robust-performance",
+        "description": "Use mu-synthesis (D-K iteration) to design a controller that achieves both robust stability and robust performance for structured uncertainty.",
+        "inputs": [
+          {"name": "uncertainty-model", "desc": "LFT representation with structured uncertainty block Delta"},
+          {"name": "sensitivity-weights", "desc": "Performance weighting functions"},
+          {"name": "h-infinity-controller", "desc": "Initial controller from H-infinity synthesis as starting point"}
+        ],
+        "outputs": [
+          {"name": "mu-controller", "desc": "Controller achieving robust performance for the structured uncertainty set"},
+          {"name": "mu-analysis-report", "desc": "Upper and lower mu bounds vs frequency, worst-case perturbation, and robustness margins"}
+        ],
+        "process": [
+          "Compute the structured singular value mu of the nominal closed-loop N (with the H-infinity controller) over frequency. If mu < 1 at all frequencies, robust performance is already achieved. If mu > 1 at some frequencies, D-K iteration is needed.",
+          "D-K iteration: fix K and compute the D-scales that minimize the upper bound on mu at each frequency. Fit the D-scales with stable, minimum-phase transfer functions (rational approximation). Then fix D and synthesize a new K using H-infinity on the D-scaled plant. Repeat until mu converges below 1 or stops improving.",
+          "D-scale fitting is the critical step: the order of D determines the order of the controller. Start with low-order D (first or second order) and increase only if mu does not converge. High-order D gives better mu bounds but impractical controller complexity.",
+          "After convergence, verify with mu-analysis: compute upper and lower bounds on mu. If the gap between bounds is large, the result is uncertain. Compute worst-case perturbation (the specific Delta that drives the system closest to instability) and verify it is physically plausible.",
+          "Compare the mu-controller complexity and performance against the simpler H-infinity controller or a well-tuned classical controller with gain scheduling. Mu-synthesis is worth the complexity only when the uncertainty structure is well-known and the performance requirements are tight. If a gain-scheduled PID achieves adequate robustness margins, prefer it for implementation simplicity."
+        ],
+        "tags": ["mu-synthesis", "D-K-iteration", "robust-performance"]
+      }
+    ]
+  },
+  {
+    "chain_name": "nonlinear-control-design",
+    "description": "Design controllers for systems where linear approximation is inadequate, using feedback linearization, sliding mode, backstepping, and Lyapunov methods to handle nonlinearity directly.",
+    "domain": "control-systems",
+    "tags": ["control", "nonlinear", "Lyapunov", "sliding-mode"],
+    "steps": [
+      {
+        "flow_name": "nonlinear-system-analysis",
+        "description": "Analyze the nonlinear system to determine its structure, equilibria, stability properties, and which nonlinear control technique is appropriate.",
+        "inputs": [
+          {"name": "system-equations", "desc": "Nonlinear state equations dx/dt = f(x) + g(x)*u, output y = h(x)"},
+          {"name": "control-objectives", "desc": "What output to track, what accuracy, and what disturbances to reject"}
+        ],
+        "outputs": [
+          {"name": "system-analysis", "desc": "Equilibria, relative degree, zero dynamics, controllability form, and recommended control approach"},
+          {"name": "technique-selection", "desc": "Which nonlinear control method fits this system and why alternatives were ruled out"}
+        ],
+        "process": [
+          "Find equilibria by solving f(x_eq) + g(x_eq)*u_eq = 0 with h(x_eq) = y_desired. Check stability of each equilibrium by linearizing and computing eigenvalues of the Jacobian.",
+          "Compute the relative degree: differentiate the output h(x) until the input u appears. r = number of differentiations. If r = n (state dimension), the system is fully feedback linearizable. If r < n, there are (n-r) internal dynamics (zero dynamics) that must be analyzed for stability.",
+          "Check if the zero dynamics are stable (minimum phase). If yes, feedback linearization or backstepping are viable. If the zero dynamics are unstable (non-minimum phase), feedback linearization fails and you must use techniques that do not cancel the unstable dynamics (output redefinition, approximate linearization within a stable region, or sliding mode on a different surface).",
+          "Assess the system structure: strict-feedback form (triangular) enables backstepping; matching condition (uncertainty enters through the same channel as control) enables sliding mode; Euler-Lagrange structure enables passivity-based control.",
+          "Select technique: feedback linearization for well-modeled systems with stable zero dynamics; sliding mode for systems with matched uncertainty and need for invariance to disturbances; backstepping for strict-feedback cascaded systems; Lyapunov redesign for systems where a nominal controller exists but robustness is needed."
+        ],
+        "tags": ["nonlinear-analysis", "equilibria", "relative-degree"]
+      },
+      {
+        "flow_name": "feedback-linearization-design",
+        "description": "Design an exact feedback linearization controller that transforms the nonlinear system into a linear one via a coordinate change and nonlinear state feedback.",
+        "inputs": [
+          {"name": "system-equations", "desc": "Nonlinear state equations"},
+          {"name": "system-analysis", "desc": "Relative degree, zero dynamics stability confirmation"}
+        ],
+        "outputs": [
+          {"name": "linearizing-controller", "desc": "The nonlinear feedback law u = alpha(x) + beta(x)*v that renders the input-output map linear, plus the linear outer-loop controller for v"},
+          {"name": "implementation-requirements", "desc": "States that must be measured or estimated, computational requirements, and sensitivity to model errors"}
+        ],
+        "process": [
+          "Compute the Lie derivatives: L_f^k h(x) for k = 0 to r-1, and L_g L_f^(r-1) h(x). The feedback linearizing law is u = (1 / L_g L_f^(r-1) h) * (-L_f^r h + v) where v is the new input to the linearized system.",
+          "Design the outer-loop linear controller for v to place the closed-loop poles of the linearized (y, dy, ..., d^(r-1)y) dynamics. For tracking, v = y_ref^(r) + k_(r-1)*(y_ref^(r-1) - y^(r-1)) + ... + k_0*(y_ref - y). Choose gains k_i for desired closed-loop bandwidth and damping.",
+          "If r < n, monitor the zero dynamics states during simulation. Even though they are uncontrollable from this output, they must remain bounded. If they diverge for certain reference trajectories, the trajectory is infeasible.",
+          "Assess robustness: feedback linearization cancels the nonlinearity exactly, so model errors create residual nonlinearity. Quantify the effect: if the model error is delta_f in f(x) and delta_g in g(x), the closed-loop error is approximately (delta_f + delta_g * u_nominal). Large u_nominal amplifies model errors.",
+          "For implementation, all states must be available (measured or estimated via a nonlinear observer). The control law requires real-time evaluation of Lie derivatives, which involves partial derivatives of f, g, and h. Verify that this computation fits within the control loop sample time."
+        ],
+        "tags": ["feedback-linearization", "Lie-derivatives", "coordinate-transform"]
+      },
+      {
+        "flow_name": "sliding-mode-control-design",
+        "description": "Design a sliding mode controller that forces the system state onto a sliding surface where the dynamics are desirable and invariant to matched disturbances.",
+        "inputs": [
+          {"name": "system-equations", "desc": "Nonlinear state equations with matched uncertainty/disturbance bounds"},
+          {"name": "control-objectives", "desc": "Tracking objective and disturbance rejection requirement"}
+        ],
+        "outputs": [
+          {"name": "sliding-mode-controller", "desc": "Sliding surface definition, reaching law, equivalent control, and switching control with chattering mitigation"},
+          {"name": "robustness-guarantee", "desc": "Proven disturbance rejection bound and reaching time estimate"}
+        ],
+        "process": [
+          "Define the sliding surface s(x) = 0 such that motion on the surface achieves the control objective. For tracking with relative degree r, use s = e^(r-1) + c_(r-2)*e^(r-2) + ... + c_0*e where e = y - y_ref and c_i place the sliding dynamics poles at desired locations.",
+          "Compute the equivalent control u_eq: the control that would keep s_dot = 0 if the system were exactly on the surface. This is the smooth component that cancels the nominal nonlinearity along the surface.",
+          "Add the switching control u_sw to drive the state to the surface: u_sw = -k * sign(s) where k > |d_max| + eta, with d_max being the bound on matched disturbance and eta a positive margin. This guarantees s * s_dot < 0 (reaching condition) which means the surface is reached in finite time t_reach <= |s(0)| / eta.",
+          "Mitigate chattering (high-frequency switching from sign function): replace sign(s) with sat(s/phi) where phi is a thin boundary layer. Inside the layer, the controller is continuous. The trade-off: larger phi reduces chattering but introduces steady-state error bounded by phi. Alternatively, use super-twisting algorithm: u = -k1 * |s|^(1/2) * sign(s) + integral(-k2 * sign(s)), which achieves second-order sliding mode with continuous control and finite-time convergence.",
+          "Verify the reaching condition analytically: substitute the control law into s_dot and show that s * s_dot < -eta * |s| for all disturbances within the assumed bounds. If the bound is uncertain, add margin or use adaptive sliding mode where the gain k adapts based on observed reaching rate."
+        ],
+        "tags": ["sliding-mode", "chattering-reduction", "invariance"]
+      },
+      {
+        "flow_name": "lyapunov-based-controller-synthesis",
+        "description": "Design a controller using a Lyapunov function to guarantee stability, combining control Lyapunov functions with constructive design procedures.",
+        "inputs": [
+          {"name": "system-equations", "desc": "Nonlinear state equations"},
+          {"name": "control-objectives", "desc": "Stabilization, tracking, or regulation objective"},
+          {"name": "technique-selection", "desc": "Confirmation that Lyapunov-based or backstepping approach is appropriate"}
+        ],
+        "outputs": [
+          {"name": "lyapunov-controller", "desc": "Control law u(x) with the associated Lyapunov function V(x) proving stability"},
+          {"name": "stability-certificate", "desc": "Mathematical proof of stability type (asymptotic, exponential, ISS) and the region of attraction estimate"}
+        ],
+        "process": [
+          "For backstepping (strict-feedback systems): start from the innermost subsystem, design a virtual control and Lyapunov function for that subsystem, then step back to the next subsystem treating the previous virtual control as the state to be regulated. At each step, augment the Lyapunov function with the new tracking error. The final step produces the actual control input.",
+          "For CLF-based design (general affine systems): find a control Lyapunov function V(x) such that for all x != 0, there exists u making V_dot < 0. Sontag's universal formula gives u = -(L_f V + sqrt((L_f V)^2 + (L_g V)^4)) / (L_g V) when L_g V != 0. This is smooth away from the origin and achieves asymptotic stability.",
+          "For ISS (input-to-state stability) design: find V(x) such that V_dot <= -alpha(|x|) + gamma(|w|) where w is the disturbance. This guarantees the state remains bounded proportionally to the disturbance magnitude. The ISS gain gamma characterizes disturbance rejection.",
+          "Estimate the region of attraction: for a local Lyapunov function, the largest level set V(x) = c that is contained within the region where V_dot < 0. Maximize c subject to V_dot < 0 for all x in the level set. LMI methods can compute this for polynomial systems.",
+          "For implementation, evaluate V(x) and its gradient in real-time if a monitoring function is needed (e.g., to detect when the state approaches the region of attraction boundary and switch to a fallback controller)."
+        ],
+        "tags": ["Lyapunov", "backstepping", "CLF", "stability-proof"]
+      }
+    ]
+  },
+  {
+    "chain_name": "state-estimation-methodology",
+    "description": "Design state estimators that reconstruct unmeasured internal states from sensor data, using Kalman filters and their nonlinear extensions with principled noise tuning.",
+    "domain": "control-systems",
+    "tags": ["control", "estimation", "Kalman-filter", "observer"],
+    "steps": [
+      {
+        "flow_name": "observability-and-estimator-selection",
+        "description": "Analyze what states can be estimated from the available measurements and select the estimator structure.",
+        "inputs": [
+          {"name": "system-model", "desc": "State-space model (A, B, C, D) or nonlinear equations"},
+          {"name": "sensor-configuration", "desc": "Which outputs are measured, sensor noise characteristics, and sample rates"}
+        ],
+        "outputs": [
+          {"name": "observability-analysis", "desc": "Observable and unobservable subspaces, observability Gramian condition number, and sensor sufficiency assessment"},
+          {"name": "estimator-architecture", "desc": "Selected estimator type (Luenberger, KF, EKF, UKF, particle filter) with rationale"}
+        ],
+        "process": [
+          "Check observability: for linear systems, compute the observability matrix O = [C; CA; CA^2; ...; CA^(n-1)] and its rank. Full rank means all states are observable. If rank-deficient, identify the unobservable modes from the null space of O.",
+          "For nonlinear systems, check local observability using the observability rank condition: compute dh, dL_f h, dL_f^2 h, ... and check if they span R^n. Nonlinear systems can be locally observable even if the linearization is not, and vice versa.",
+          "Compute the observability Gramian for the linear case: W_o = integral(exp(A^T t) C^T C exp(At) dt). The condition number of W_o indicates estimation difficulty: well-conditioned means all states are equally easy to estimate; ill-conditioned means some states converge slowly. The eigenvector of W_o with the smallest eigenvalue is the hardest-to-estimate direction.",
+          "Select estimator: Luenberger observer for deterministic linear systems with known noise characteristics. Kalman filter when sensor and process noise covariances are known or can be estimated. EKF for mildly nonlinear systems (linearization is adequate). UKF for moderately nonlinear systems (avoids Jacobian computation, better captures nonlinear propagation). Particle filter for strongly nonlinear or non-Gaussian problems (computationally expensive, use only when EKF/UKF fail).",
+          "For multi-rate sensors (different sample rates), design the estimator to run at the fastest rate with measurement updates occurring only when each sensor provides data. This is handled naturally in the Kalman filter prediction-update structure."
+        ],
+        "tags": ["observability", "estimator-selection", "Gramian"]
+      },
+      {
+        "flow_name": "kalman-filter-design-and-tuning",
+        "description": "Design and tune a Kalman filter (or its nonlinear variants) by selecting process and measurement noise covariances from physical reasoning and data.",
+        "inputs": [
+          {"name": "system-model", "desc": "Discrete-time state-space model"},
+          {"name": "sensor-configuration", "desc": "Sensor noise characteristics from datasheets or calibration"},
+          {"name": "estimator-architecture", "desc": "KF, EKF, or UKF selection"}
+        ],
+        "outputs": [
+          {"name": "tuned-estimator", "desc": "Kalman filter with Q and R matrices, initial state estimate and covariance, and convergence time estimate"},
+          {"name": "tuning-rationale", "desc": "How Q and R were determined and what each element represents physically"}
+        ],
+        "process": [
+          "Set measurement noise covariance R from sensor specifications. For each sensor, R_ii = sigma_sensor_i^2 where sigma is the 1-sigma noise from the datasheet or from static calibration data. R is typically well-known and should be set from data, not tuned.",
+          "Set process noise covariance Q to represent model uncertainty and unmodeled disturbances. Q is the primary tuning knob. Start from physical reasoning: if a state represents position and the unmodeled acceleration disturbance has magnitude a_max, then Q for the velocity state is approximately (a_max * dt)^2 and for position is approximately (0.5 * a_max * dt^2)^2.",
+          "If physical reasoning is insufficient, use the following tuning procedure: increase Q_ii for state i to make the estimator trust the measurement more (faster response, more noise). Decrease Q_ii to make the estimator trust the model more (smoother estimate, slower response to real changes). The ratio Q/R sets the estimator bandwidth.",
+          "For EKF, compute the Jacobians F = df/dx and H = dh/dx at each time step evaluated at the current state estimate. If the Jacobians are expensive, consider UKF which avoids explicit Jacobian computation by propagating sigma points through the nonlinear functions.",
+          "For UKF, select sigma point parameters: alpha (spread, typically 1e-3 for Gaussian), beta (distribution, 2 for Gaussian is optimal), kappa (secondary scaling, 0 or 3-n). These rarely need tuning from the defaults for Gaussian problems.",
+          "Validate the estimator: the normalized innovation sequence (innovation / sqrt(innovation covariance)) should be white noise with unit variance. If the innovations are too large, the model is wrong or Q is too small. If the innovations are too small, Q is too large (estimator is being conservative). Use the normalized estimation error squared (NEES) test for consistency."
+        ],
+        "tags": ["Kalman-filter", "noise-tuning", "innovation-analysis"]
+      },
+      {
+        "flow_name": "disturbance-observer-design",
+        "description": "Design an observer that estimates external disturbances acting on the system, enabling feedforward compensation without direct disturbance measurement.",
+        "inputs": [
+          {"name": "system-model", "desc": "Plant model with known disturbance input channel"},
+          {"name": "tuned-estimator", "desc": "State estimator providing state estimates"}
+        ],
+        "outputs": [
+          {"name": "disturbance-observer", "desc": "Observer structure that estimates the disturbance from the discrepancy between model prediction and measurement"},
+          {"name": "disturbance-rejection-bandwidth", "desc": "Frequency range over which the disturbance is effectively estimated and compensated"}
+        ],
+        "process": [
+          "Augment the state vector with the disturbance as an additional state, modeled as an integrator (d_dot = 0 for constant disturbance, d_ddot = 0 for ramp disturbance). The augmented system is [x_dot; d_dot] = [A B_d; 0 0] [x; d] + [B; 0] u, y = [C 0] [x; d]. Check observability of the augmented system.",
+          "Design the estimator for the augmented system. The Kalman filter approach: set Q_dd (process noise for the disturbance state) to reflect how fast the disturbance can change. Large Q_dd allows tracking fast disturbances but amplifies sensor noise in the estimate. Small Q_dd limits the disturbance estimation bandwidth.",
+          "The disturbance estimate d_hat from the observer feeds into a feedforward compensation: u_total = u_feedback - B_d^(-1) * d_hat (if B_d is invertible, meaning the disturbance enters through the same channel as the control). This cancels the disturbance within the observer bandwidth.",
+          "The effective disturbance rejection bandwidth is set by the observer gains, which are determined by Q_dd and R. The observer acts as a low-pass filter on the disturbance: it tracks disturbances below its bandwidth and ignores (cannot estimate) disturbances above it.",
+          "For implementation, the disturbance observer is a complement to the feedback controller: the feedback handles model uncertainty and high-frequency disturbances, while the disturbance observer handles low-frequency load disturbances. The combined bandwidth should cover the full disturbance spectrum without double-counting (which would cause oscillation)."
+        ],
+        "tags": ["disturbance-observer", "feedforward", "augmented-state"]
+      }
+    ]
+  },
+  {
+    "chain_name": "multivariable-control-design",
+    "description": "Design controllers for MIMO systems where multiple inputs and outputs interact, using interaction analysis, decoupling, and optimal MIMO design methods.",
+    "domain": "control-systems",
+    "tags": ["control", "MIMO", "LQR", "decoupling"],
+    "steps": [
+      {
+        "flow_name": "mimo-interaction-analysis",
+        "description": "Analyze the coupling between input-output channels to determine whether decentralized control is feasible or a full MIMO design is needed.",
+        "inputs": [
+          {"name": "mimo-plant-model", "desc": "Transfer function matrix G(s) with n_u inputs and n_y outputs"},
+          {"name": "control-objectives", "desc": "Which outputs to control, acceptable interaction levels, and bandwidth requirements per channel"}
+        ],
+        "outputs": [
+          {"name": "interaction-analysis", "desc": "RGA at key frequencies, SVD analysis showing gain directionality, and recommended input-output pairing or MIMO design approach"},
+          {"name": "control-structure-decision", "desc": "Decentralized (SISO loops), decoupled (static or dynamic decoupler), or full MIMO (LQR, H-infinity) with rationale"}
+        ],
+        "process": [
+          "Compute the Relative Gain Array: RGA = G(0) .* (G(0)^-T) element-wise at steady state. RGA_ij near 1.0 means input j primarily affects output i with little interaction. RGA_ij near 0 means input j does not affect output i. RGA_ij negative means the loop gain reverses sign when other loops close, which is dangerous for decentralized control.",
+          "Pair inputs to outputs by selecting the pairing where RGA diagonal elements are closest to 1.0 and positive. Avoid pairings with RGA < 0 (indicates negative interaction that causes instability when loops close) or RGA >> 1 (indicates the plant is nearly singular in that configuration, sensitive to gain changes).",
+          "Compute RGA at multiple frequencies, especially near the target crossover frequencies. The interaction pattern can change with frequency. The static RGA (at DC) determines steady-state interaction; RGA near crossover determines dynamic interaction during transients.",
+          "Perform SVD analysis: G(jw) = U(w) * Sigma(w) * V(w)^H. The condition number sigma_max/sigma_min indicates how directional the plant is. A large condition number means the plant has a strong direction (easy to excite) and a weak direction (hard to control). The right singular vectors V show which input combinations excite each direction.",
+          "Decision: if RGA is close to identity at all relevant frequencies and condition number is moderate (< 10), decentralized SISO control with detuning for interaction is viable. If RGA is far from identity but the interaction is mostly at low frequency, a static decoupler may suffice. If interaction is frequency-dependent and condition number is large, a full MIMO design (LQR or H-infinity) is needed."
+        ],
+        "tags": ["RGA", "SVD", "interaction-analysis", "pairing"]
+      },
+      {
+        "flow_name": "lqr-lqg-design",
+        "description": "Design a linear quadratic regulator with Kalman filter state estimation, tuned from physical requirements rather than arbitrary weight matrices.",
+        "inputs": [
+          {"name": "mimo-plant-model", "desc": "State-space model (A, B, C, D)"},
+          {"name": "control-objectives", "desc": "State regulation accuracy, control effort budget, and disturbance/noise characteristics"}
+        ],
+        "outputs": [
+          {"name": "lqr-lqg-controller", "desc": "State feedback gain K, Kalman filter gains L, and the combined output-feedback controller transfer function"},
+          {"name": "margins-and-robustness", "desc": "Gain and phase margins at each input channel, sensitivity peak, and comparison to classical margin requirements"}
+        ],
+        "process": [
+          "Set Q matrix (state cost) from Bryson's rule: Q_ii = 1 / (max_acceptable_deviation_of_state_i)^2. This normalizes states with different units and magnitudes to comparable scales. For states you do not care about directly, set Q_ii = 0 (or small for numerical conditioning).",
+          "Set R matrix (input cost): R_jj = 1 / (max_allowable_input_j)^2. This prevents the LQR from demanding more actuator effort than is physically available. Start with Bryson's rule values and adjust: increase R to slow the response, decrease R for faster response with more control effort.",
+          "Solve the continuous or discrete algebraic Riccati equation to get the optimal state feedback gain K. Verify the closed-loop eigenvalues are at reasonable locations (not excessively fast, which would indicate Q is too large relative to R).",
+          "LQR with full state feedback has guaranteed gain margin of at least 6dB and phase margin of at least 60 degrees at each input channel (for continuous-time). These margins degrade when a state estimator is added.",
+          "Design the Kalman filter (L gain from the dual Riccati equation with Q_noise and R_noise). The combined LQG controller K_lqg(s) has no guaranteed margins. Use LQG/LTR (loop transfer recovery) to recover the LQR margins: increase Q_noise = q^2 * B * B^T with increasing q. As q goes to infinity, the LQG loop transfer approaches the LQR loop transfer and the margins are recovered. Choose the smallest q that gives acceptable margins (typically 6dB gain, 45 degrees phase).",
+          "Verify the final controller: plot singular values of the return difference I + GK at the plant input to check robustness. The minimum singular value at each frequency should be above 0.5 (6dB) for adequate robustness."
+        ],
+        "tags": ["LQR", "LQG", "Bryson-rule", "loop-transfer-recovery"]
+      },
+      {
+        "flow_name": "mimo-controller-validation",
+        "description": "Validate the MIMO controller design through simulation, margin analysis, and sensitivity to plant uncertainty.",
+        "inputs": [
+          {"name": "lqr-lqg-controller", "desc": "Designed MIMO controller"},
+          {"name": "mimo-plant-model", "desc": "Nominal plant model"},
+          {"name": "interaction-analysis", "desc": "Known interaction and uncertainty characteristics"}
+        ],
+        "outputs": [
+          {"name": "validated-mimo-controller", "desc": "Controller confirmed to meet performance and robustness requirements"},
+          {"name": "validation-report", "desc": "Time-domain responses, frequency-domain margins, sensitivity analysis, and identified limitations"}
+        ],
+        "process": [
+          "Simulate step responses on each reference channel individually, monitoring all output channels. Check settling time, overshoot, and interaction (response on non-target outputs should be small and transient).",
+          "Simulate simultaneous reference changes and disturbances. The simultaneous case is often worse than individual cases due to interaction.",
+          "Compute MIMO stability margins: disk margin at each channel (simultaneous gain and phase variation that the system can tolerate). Disk margin is more conservative and more meaningful than SISO-style gain/phase margin for MIMO systems.",
+          "Perturb the plant model within the known uncertainty bounds and verify that the closed-loop remains stable and performance degrades gracefully. Check the worst-case plant in the uncertainty set (often identifiable from mu-analysis if available).",
+          "If the controller order is high, reduce it using balanced truncation: compute Hankel singular values of the controller, truncate states with small Hankel singular values, and verify that the closed-loop performance is preserved. The reduced controller should be validated against the full-order controller on the same test cases."
+        ],
+        "tags": ["MIMO-validation", "disk-margin", "controller-reduction"]
+      }
+    ]
+  },
+  {
+    "chain_name": "digital-control-implementation",
+    "description": "Implement a continuous-time controller design in digital hardware, handling discretization, finite word length, delay, anti-windup, and real-time scheduling.",
+    "domain": "control-systems",
+    "tags": ["control", "digital", "implementation", "embedded"],
+    "steps": [
+      {
+        "flow_name": "discretization-and-sample-rate",
+        "description": "Convert a continuous controller to discrete-time and select the sample rate that preserves the designed performance.",
+        "inputs": [
+          {"name": "continuous-controller", "desc": "Controller transfer function K(s) from continuous design"},
+          {"name": "plant-bandwidth", "desc": "Closed-loop bandwidth and highest-frequency dynamics that matter"}
+        ],
+        "outputs": [
+          {"name": "discrete-controller", "desc": "Controller in z-domain K(z) at the selected sample rate"},
+          {"name": "discretization-error-analysis", "desc": "Comparison of continuous and discrete frequency responses showing where they diverge"}
+        ],
+        "process": [
+          "Select sample rate: minimum 10x the closed-loop bandwidth for acceptable phase margin degradation. 20x to 30x is preferred for high-performance servo systems. The sample rate sets the upper limit on achievable bandwidth (no more than fs/6 for adequate phase margin from sampling delay).",
+          "Choose discretization method: Zero-Order Hold (ZOH) for the plant model (matches the physical DAC behavior). Tustin (bilinear transform) for the controller (preserves frequency response mapping, no frequency warping issues below fs/4). Tustin with prewarping at a critical frequency if one specific frequency must match exactly (e.g., a notch filter center).",
+          "Avoid matched pole-zero for controllers with integrators or high-order dynamics; it can introduce unintended behavior. Use it only for simple lead-lag compensators where the pole-zero mapping is intuitive.",
+          "Compare the discrete and continuous controller frequency responses on a Bode plot. They should match within 1dB magnitude and 5 degrees phase up to the closed-loop bandwidth. Divergence above the bandwidth is expected and acceptable.",
+          "Account for the computational delay: the discrete controller computes u[k] from y[k] but by the time u[k] is applied, the plant has moved by approximately one sample period. This is equivalent to an additional 0.5*Ts delay (for compute-then-output) or 1.0*Ts (for output-then-compute). Include this delay in the plant model used for design or design with one extra sample of delay."
+        ],
+        "tags": ["discretization", "sample-rate", "Tustin", "ZOH"]
+      },
+      {
+        "flow_name": "fixed-point-and-numerical-issues",
+        "description": "Handle the practical issues of implementing a controller in finite-precision arithmetic on embedded hardware.",
+        "inputs": [
+          {"name": "discrete-controller", "desc": "Controller in z-domain"},
+          {"name": "hardware-constraints", "desc": "Word length (16-bit, 32-bit, floating-point availability), processor speed, memory"}
+        ],
+        "outputs": [
+          {"name": "implementation-form", "desc": "Controller realization (direct form II, transposed, parallel, cascade second-order sections) with coefficient quantization and scaling"},
+          {"name": "numerical-verification", "desc": "Bit-exact simulation showing coefficient sensitivity, overflow analysis, and limit cycle assessment"}
+        ],
+        "process": [
+          "Select controller realization form: direct form II transposed has better numerical properties (lower coefficient sensitivity) than direct form I. For high-order controllers, cascade of second-order sections (biquads) is preferred because each section has well-behaved coefficients even in fixed-point.",
+          "For fixed-point: determine the dynamic range of each internal signal (state variable, intermediate product). Scale each to use the full word length without overflow. The scaling factors must account for worst-case signal magnitudes, not just nominal.",
+          "Quantize coefficients to the available word length and recompute the discrete pole/zero locations. For an Nth-order controller, pole sensitivity to coefficient quantization grows rapidly with order. If poles shift significantly, split into biquad sections where each section's poles are insensitive to quantization.",
+          "Check for limit cycles: in fixed-point recursive systems, quantization within the feedback loop can create small-amplitude oscillations (granular limit cycles) or large-amplitude oscillations (overflow limit cycles). Deadband limit cycles occur when the quantization step is large relative to the signal. Mitigation: use rounding (not truncation), add dither, or increase word length.",
+          "Run a bit-exact simulation (simulate with the actual fixed-point arithmetic, not floating-point approximation) with representative input signals and compare to the floating-point reference. The difference should be within the quantization noise floor, not growing or oscillating."
+        ],
+        "tags": ["fixed-point", "biquad", "quantization", "overflow"]
+      },
+      {
+        "flow_name": "anti-windup-and-mode-switching",
+        "description": "Handle actuator saturation, controller mode switching, and bumpless transfer between controllers in the digital implementation.",
+        "inputs": [
+          {"name": "discrete-controller", "desc": "Controller with integrator states that can wind up"},
+          {"name": "actuator-limits", "desc": "Saturation limits and rate limits of the actuator"}
+        ],
+        "outputs": [
+          {"name": "anti-windup-controller", "desc": "Controller with anti-windup logic, bumpless transfer between modes, and safe initialization"},
+          {"name": "saturation-response-verification", "desc": "Time-domain simulation showing behavior during and after saturation events"}
+        ],
+        "process": [
+          "Implement back-calculation anti-windup: when the controller output exceeds the actuator limit, feed back the difference (u_commanded - u_actual) through a gain 1/T_t to the integrator. T_t is the anti-windup time constant: set it equal to the integral time constant Ti for PI controllers, or sqrt(Ti*Td) for PID controllers. This drives the integrator state to a value consistent with the saturated output.",
+          "For state-space controllers, the anti-windup is: x[k+1] = A_c*x[k] + B_c*y[k] + L_aw*(u_actual - u_commanded) where L_aw is chosen so that A_c - L_aw*C_c is stable with fast eigenvalues. The Observer-based anti-windup sets L_aw = B_c (simple and effective for many cases).",
+          "For mode switching (e.g., manual to automatic, or switching between two controllers): implement bumpless transfer by initializing the new controller's integrator states so that its first output matches the current actuator output. For state-space controllers, solve for x_new such that C_c*x_new + D_c*y = u_current.",
+          "Safe initialization at startup: set the integrator states to zero only if zero control is safe. Otherwise, initialize the controller in tracking mode (matching its output to the current actuator position) before engaging closed-loop control.",
+          "Verify: simulate a scenario where the reference commands a large step that saturates the actuator. During saturation, the integrator should not wind up (output should not overshoot excessively when the actuator exits saturation). Also verify bumpless transfer: switch controllers during operation and confirm no output transient beyond one sample period."
+        ],
+        "tags": ["anti-windup", "bumpless-transfer", "saturation-handling"]
+      }
+    ]
+  },
+  {
+    "chain_name": "adaptive-control-methodology",
+    "description": "Design controllers that adjust their parameters online to track changing plant dynamics, using model reference adaptive control, self-tuning, and L1 adaptive methods with stability guarantees.",
+    "domain": "control-systems",
+    "tags": ["control", "adaptive", "MRAC", "L1-adaptive"],
+    "steps": [
+      {
+        "flow_name": "adaptive-control-architecture-selection",
+        "description": "Determine which adaptive control architecture matches the uncertainty type and performance requirements.",
+        "inputs": [
+          {"name": "plant-model", "desc": "Nominal plant model with identified uncertain parameters or unknown structure"},
+          {"name": "uncertainty-characterization", "desc": "What is uncertain: gain, time constants, order, or complete unknown within a model class"}
+        ],
+        "outputs": [
+          {"name": "adaptive-architecture", "desc": "Selected approach (direct MRAC, indirect adaptive, self-tuning regulator, L1 adaptive, or gain scheduling) with structure specification"},
+          {"name": "architecture-rationale", "desc": "Why this architecture fits the uncertainty type and what guarantees it provides"}
+        ],
+        "process": [
+          "Classify the uncertainty: if the plant structure is known but parameters vary slowly, direct MRAC or gain scheduling may suffice. If the structure is partially unknown, indirect adaptive (identify then control) is more flexible. If the parameters change rapidly, L1 adaptive provides fast adaptation with bounded transients.",
+          "Direct MRAC: the controller parameters are adjusted directly to make the closed-loop match a reference model, without explicitly identifying the plant. Applicable when the plant has known relative degree and known sign of the high-frequency gain. Simplest architecture but limited to model-matching problems.",
+          "Indirect adaptive (certainty equivalence): identify the plant parameters online, then design the controller as if the identified parameters were exact. More flexible than direct MRAC (any control design method can be used with the identified model) but has a separation between identification and control that can cause transient issues.",
+          "L1 adaptive: separates the adaptation loop (fast parameter estimation) from the control loop (filtered through a low-pass filter that limits the bandwidth of the adaptive signal). This decoupling provides bounded transient response independent of adaptation rate, unlike classical MRAC where fast adaptation can cause high-frequency oscillation.",
+          "Gain scheduling: if the uncertainty is parameterized by a measurable scheduling variable (operating point, speed, load), design a family of controllers at discrete operating points and interpolate. This is the simplest reliable approach when the scheduling variable is measurable and the plant variation is well-characterized."
+        ],
+        "tags": ["adaptive-architecture", "MRAC", "L1", "self-tuning"]
+      },
+      {
+        "flow_name": "parameter-adaptation-law-design",
+        "description": "Design the online parameter update law that drives the adaptive controller parameters toward values that achieve the control objective.",
+        "inputs": [
+          {"name": "adaptive-architecture", "desc": "Selected adaptive control structure"},
+          {"name": "plant-model", "desc": "Plant model class with uncertain parameters"}
+        ],
+        "outputs": [
+          {"name": "adaptation-law", "desc": "Parameter update equation with adaptation gain, modification terms, and parameter bounds"},
+          {"name": "stability-proof-sketch", "desc": "Lyapunov function and the conditions under which parameter convergence and signal boundedness are guaranteed"}
+        ],
+        "process": [
+          "For direct MRAC: define the tracking error e = y - y_m (actual output minus reference model output). The adaptation law is theta_dot = -Gamma * phi * e where Gamma is the positive-definite adaptation gain matrix and phi is the regressor vector. The Lyapunov function V = e^T P e + (theta - theta*)^T Gamma^-1 (theta - theta*) where P solves the reference model Lyapunov equation.",
+          "Set adaptation gain Gamma: large Gamma gives fast adaptation but can cause oscillation (high-frequency chatter). Small Gamma gives slow adaptation and large transient tracking error. Start with Gamma that gives adaptation time constant on the order of the plant's dominant time constant. For each parameter, the diagonal element Gamma_ii scales inversely with the expected magnitude of the corresponding regressor element squared.",
+          "Add robustness modifications to prevent parameter drift when persistent excitation is absent: sigma-modification (adds -sigma*Gamma*theta to the adaptation law, which keeps parameters bounded at the cost of small steady-state error), projection (clips parameters to a known convex set containing the true values), or dead zone (stops adaptation when the tracking error is below the noise floor).",
+          "For L1 adaptive: the adaptation law is the same high-gain form (fast parameter estimation), but the adaptive signal passes through a low-pass filter C(s) before reaching the plant. The filter bandwidth sets the trade-off: wider bandwidth means better disturbance rejection but less filtering of adaptation transients. Design C(s) so that ||G(s)(1-C(s))||_infinity is small (reference tracking is preserved) and ||C(s)||_1 * ||theta||_infinity < 1 (L1 stability condition).",
+          "Verify persistent excitation condition: for parameter convergence (not just signal boundedness), the regressor phi must be persistently exciting (its correlation matrix integral over any window is positive definite). In practice, PE is guaranteed only when the reference signal is sufficiently rich. Without PE, parameters remain bounded (due to sigma-modification or projection) but may not converge to true values."
+        ],
+        "tags": ["adaptation-law", "Lyapunov-stability", "sigma-modification"]
+      },
+      {
+        "flow_name": "adaptive-controller-commissioning",
+        "description": "Commission the adaptive controller on the real plant with safeguards against instability during the initial learning phase.",
+        "inputs": [
+          {"name": "adaptation-law", "desc": "Designed adaptive controller with parameter update law"},
+          {"name": "plant-model", "desc": "Nominal plant for initial parameter guess"}
+        ],
+        "outputs": [
+          {"name": "commissioned-adaptive-controller", "desc": "Running adaptive controller with initial parameters, monitoring, and safety constraints"},
+          {"name": "commissioning-report", "desc": "Parameter convergence behavior, transient performance, and identified operating limitations"}
+        ],
+        "process": [
+          "Initialize adaptive parameters from the nominal plant model. Good initialization reduces the initial transient dramatically. If no nominal model is available, use a brief open-loop identification experiment to get a rough estimate.",
+          "Start with a conservative adaptation gain (small Gamma) and gradually increase it while monitoring closed-loop stability. Watch for high-frequency oscillation in the control signal, which indicates Gamma is too large.",
+          "Implement safety monitoring: if the tracking error exceeds a threshold or the control signal exceeds safe limits, freeze the adaptation (hold parameters constant) and revert to a fixed backup controller. Resume adaptation only after the system returns to normal operating conditions.",
+          "Monitor parameter convergence: plot estimated parameters over time. They should converge or settle within a bounded region. Sustained oscillation of parameters indicates insufficient excitation or a structural model mismatch.",
+          "Document the operating envelope: the adaptive controller is validated only for the range of plant variations it has experienced during commissioning. Extrapolation beyond this range is not guaranteed. Expanding the validated envelope requires testing at additional operating conditions."
+        ],
+        "tags": ["commissioning", "safety-monitoring", "parameter-convergence"]
+      }
+    ]
+  },
+  {
+    "chain_name": "safety-critical-control",
+    "description": "Design control systems for safety-critical applications where constraint violation has severe consequences, using barrier functions, reachability analysis, and runtime assurance with formal certification.",
+    "domain": "control-systems",
+    "tags": ["control", "safety", "barrier-functions", "formal-verification"],
+    "steps": [
+      {
+        "flow_name": "safety-specification-formalization",
+        "description": "Translate natural-language safety requirements into mathematical constraint sets suitable for control design and verification.",
+        "inputs": [
+          {"name": "safety-requirements", "desc": "Natural-language safety requirements (e.g., 'vehicle must not leave lane', 'robot must not contact person above 10N')"},
+          {"name": "system-model", "desc": "Plant dynamics model"}
+        ],
+        "outputs": [
+          {"name": "safe-set-definition", "desc": "Mathematical definition of the safe set C = {x : h(x) >= 0} for each safety constraint"},
+          {"name": "safety-margin-allocation", "desc": "How much margin to build in for model uncertainty, sensor noise, and actuator delay"}
+        ],
+        "process": [
+          "For each safety requirement, define a constraint function h(x) such that h(x) >= 0 when the system is in a safe state and h(x) < 0 when it is unsafe. Example: for a distance constraint d >= d_min, define h(x) = d(x) - d_min.",
+          "The safe set C is the intersection of all individual constraint sets: C = {x : h_1(x) >= 0 AND h_2(x) >= 0 AND ... AND h_m(x) >= 0}.",
+          "Allocate safety margin: tighten each constraint by the worst-case effect of model uncertainty (if position error bound is epsilon, tighten distance constraint by epsilon), sensor noise (tighten by the sensor noise bound in the relevant state), and actuation delay (tighten by the maximum state change possible during the delay period at maximum velocity).",
+          "Check that the tightened safe set is non-empty and that the desired operating region is contained within it. If the margins consume the entire safe set, the requirements are infeasible with the current hardware (need better sensors, faster actuators, or relaxed requirements).",
+          "Distinguish between hard safety constraints (violation causes harm: must never be violated) and soft operational constraints (violation causes performance degradation: can be temporarily violated). Only hard constraints go into the safety-critical control layer."
+        ],
+        "tags": ["safety-specification", "safe-set", "constraint-formalization"]
+      },
+      {
+        "flow_name": "control-barrier-function-design",
+        "description": "Design control barrier functions that render the safe set forward-invariant, ensuring the system never leaves the safe region.",
+        "inputs": [
+          {"name": "safe-set-definition", "desc": "Safe set C defined by h(x) >= 0"},
+          {"name": "system-model", "desc": "Control-affine system dx/dt = f(x) + g(x)u"}
+        ],
+        "outputs": [
+          {"name": "cbf-constraint", "desc": "The CBF condition on the control input: L_f h(x) + L_g h(x) * u >= -alpha(h(x)) that guarantees safety"},
+          {"name": "cbf-qp-controller", "desc": "QP formulation that minimally modifies a nominal controller to satisfy the CBF constraint"}
+        ],
+        "process": [
+          "Verify that h(x) is a valid control barrier function: for all x on the boundary of C (where h(x) = 0), there must exist a control input u such that h_dot = L_f h + L_g h * u >= 0. If L_g h = 0 on the boundary, the constraint has relative degree > 1 and a higher-order CBF (HOCBF) is needed.",
+          "Choose the class-K function alpha: alpha(h) = gamma * h with gamma > 0 is the simplest choice. Larger gamma allows the system to approach the boundary faster (more aggressive use of the safe set) but requires more control authority to enforce safety near the boundary. Smaller gamma is more conservative but easier to enforce.",
+          "Formulate the CBF-QP: minimize ||u - u_nominal||^2 subject to L_f h(x) + L_g h(x) * u >= -alpha(h(x)) for each constraint h_i. This finds the control closest to the nominal (performance-oriented) controller that satisfies all safety constraints. The QP is small (n_u variables, m constraints) and can be solved in real-time.",
+          "For multiple safety constraints, include each as a separate inequality in the QP. If the constraints conflict (no u satisfies all simultaneously), the problem is infeasible. Handle this by prioritizing constraints (relax lower-priority constraints first) or by designing the safe set to guarantee feasibility (pre-verified through reachability analysis).",
+          "For systems with relative degree > 1 (the control input does not appear in h_dot directly), use exponential CBF or HOCBF: define a sequence of functions psi_0 = h, psi_1 = psi_0_dot + alpha_1(psi_0), ..., psi_r = psi_(r-1)_dot + alpha_r(psi_(r-1)) where u appears in psi_r. The constraint becomes psi_r >= 0."
+        ],
+        "tags": ["CBF", "QP-safety-filter", "forward-invariance"]
+      },
+      {
+        "flow_name": "reachability-analysis",
+        "description": "Compute the set of states from which safety can be guaranteed regardless of disturbances, and the set of states from which no control can prevent constraint violation.",
+        "inputs": [
+          {"name": "system-model", "desc": "System dynamics with bounded disturbance"},
+          {"name": "safe-set-definition", "desc": "Constraint set to remain within"},
+          {"name": "actuator-limits", "desc": "Control input bounds"}
+        ],
+        "outputs": [
+          {"name": "backward-reachable-set", "desc": "Set of states from which the system can be driven into the safe set (or kept safe) despite worst-case disturbance"},
+          {"name": "safety-envelope", "desc": "The maximal controlled-invariant subset of the safe set: states from which a controller exists to keep the system safe forever"}
+        ],
+        "process": [
+          "Formulate the Hamilton-Jacobi reachability problem: define V(x,t) as the value function where V >= 0 means the state can be kept safe and V < 0 means no controller can prevent constraint violation. V satisfies the HJ PDE: dV/dt + min_u max_d [DV * (f + g*u + d)] = 0 with terminal condition V(x,T) = h(x).",
+          "Solve the HJ PDE numerically on a grid (toolbox: helperOC or BEACLS). Grid resolution determines accuracy but computation scales exponentially with state dimension (practical for systems up to 4-5 states, approximate methods for higher).",
+          "For higher-dimensional systems, use decomposition (partition the system into lower-dimensional subsystems with conservative coupling bounds) or zonotope-based reachability (scales better but gives over-approximations).",
+          "The zero level set {x : V(x,0) = 0} is the boundary of the backward reachable set. Inside this set, the optimal safe controller is u*(x) = argmin_u max_d [DV * (f + g*u + d)]. This is the last-resort controller that prevents constraint violation.",
+          "Use the reachable set as the safety envelope: the runtime assurance system monitors whether the current state is inside the reachable set (safe) or approaching its boundary (intervention needed). When the state reaches the boundary, the safe controller overrides the nominal controller."
+        ],
+        "tags": ["reachability", "Hamilton-Jacobi", "safety-envelope"]
+      },
+      {
+        "flow_name": "runtime-assurance-architecture",
+        "description": "Implement a runtime assurance system that monitors safety in real-time and switches to a verified safe controller when the nominal controller threatens to violate constraints.",
+        "inputs": [
+          {"name": "safety-envelope", "desc": "Reachable set or CBF-defined safe boundary"},
+          {"name": "cbf-qp-controller", "desc": "Safety-filter controller"},
+          {"name": "nominal-controller", "desc": "Performance-oriented controller (may be unverified, complex, or learned)"}
+        ],
+        "outputs": [
+          {"name": "runtime-assurance-system", "desc": "Simplex-architecture monitor and switch logic with verified safe controller and switching conditions"},
+          {"name": "certification-evidence", "desc": "Formal argument that the runtime assurance system guarantees safety regardless of the nominal controller behavior"}
+        ],
+        "process": [
+          "Implement the Simplex architecture: the nominal controller (complex, high-performance, possibly unverified) runs by default. A monitor evaluates safety in real-time. When the monitor detects that the state is approaching the safety boundary, it switches to the verified safe controller (simple, conservative, formally verified).",
+          "Design the switching condition: switch to the safe controller when the state reaches a switching surface inside the safety envelope. The switching surface must be far enough from the true boundary that the safe controller has time to arrest the motion before the boundary is reached, accounting for switching delay and computation time.",
+          "The verified safe controller must be simple enough to be formally verified: a linear controller, a CBF-QP, or a lookup table. Its only requirement is keeping the state within the safety envelope. Performance is not its concern.",
+          "Implement the monitor as a separate software component with the highest integrity level. It evaluates h(x) (or V(x) from reachability) from sensor data and compares to the switching threshold. The monitor must be independent of the nominal controller code to prevent common-mode failures.",
+          "Build the certification argument: (1) the safety envelope is correct (verified by reachability computation or CBF proof); (2) the verified safe controller keeps the state in the envelope (proven by Lyapunov or reachability); (3) the monitor detects boundary approach with sufficient margin (verified by timing analysis and sensor noise bounds); (4) the switching logic is correct (simple enough for exhaustive testing or formal verification). This four-part argument is the safety case, independent of what the nominal controller does."
+        ],
+        "tags": ["runtime-assurance", "Simplex", "safety-certification"]
+      }
+    ]
+  },
+  {
+    "chain_name": "motion-control-methodology",
+    "description": "Design high-performance motion control systems for servo mechanisms, CNC machines, and precision positioning, from system modeling through cascade tuning to sub-micrometer accuracy.",
+    "domain": "control-systems",
+    "tags": ["control", "motion-control", "servo", "precision"],
+    "steps": [
+      {
+        "flow_name": "servo-system-modeling",
+        "description": "Build the dynamic model of the electromechanical servo system from motor, transmission, and load characteristics.",
+        "inputs": [
+          {"name": "mechanical-specification", "desc": "Motor datasheet (torque constant, back-EMF, rotor inertia, resistance, inductance), transmission (gear ratio, stiffness, backlash), load (inertia, friction, external forces)"},
+          {"name": "performance-requirements", "desc": "Bandwidth, positioning accuracy, settling time, and disturbance rejection"}
+        ],
+        "outputs": [
+          {"name": "servo-model", "desc": "Transfer function from current command to position, including mechanical resonance, friction model, and identified parasitic dynamics"},
+          {"name": "bandwidth-feasibility", "desc": "Whether the required bandwidth is achievable given the mechanical resonance frequencies and actuator limitations"}
+        ],
+        "process": [
+          "Model the motor: transfer function from current to torque is simply K_t (torque constant). From voltage to current: I(s) = (V - K_e * omega) / (Ls + R). For servo drives with current loop, the current loop bandwidth (typically 1-5 kHz) becomes the inner-loop bandwidth limit.",
+          "Model the mechanical system: rigid-body model is J_total * alpha = tau - tau_friction - tau_load. But real systems have flexibility: model the transmission as a two-mass system with spring-damper coupling. The anti-resonance (zero) and resonance (pole) frequencies determine the servo bandwidth limit: the closed-loop bandwidth must be below the anti-resonance frequency to avoid exciting the mechanical resonance.",
+          "Identify the mechanical resonance frequency from a frequency response measurement: apply a swept-sine current command and measure position. The resonance appears as a peak in the magnitude and a 180-degree phase drop. If multiple resonances exist, the lowest one limits the bandwidth.",
+          "Model friction: distinguish between Coulomb friction (constant opposing motion), viscous friction (proportional to velocity), stiction (higher friction at zero velocity), and the Stribeck effect (friction dip at low velocity). For precision systems, use the LuGre model or GMS model that capture pre-sliding behavior.",
+          "Check bandwidth feasibility: the servo bandwidth should be at most 0.3x to 0.5x the anti-resonance frequency. If the required bandwidth exceeds this, consider: stiffer transmission (higher resonance), active vibration damping (notch filter or collocated velocity feedback), or direct drive (eliminate transmission entirely)."
+        ],
+        "tags": ["servo-modeling", "mechanical-resonance", "motor-model"]
+      },
+      {
+        "flow_name": "cascade-loop-tuning",
+        "description": "Tune the cascaded current-velocity-position control loops from the innermost loop outward.",
+        "inputs": [
+          {"name": "servo-model", "desc": "Plant transfer functions for current, velocity, and position loops"},
+          {"name": "performance-requirements", "desc": "Bandwidth and damping for each loop"}
+        ],
+        "outputs": [
+          {"name": "cascade-controller", "desc": "Current loop PI, velocity loop PI, and position loop P (or PID) gains with feedforward terms"},
+          {"name": "loop-bandwidth-hierarchy", "desc": "Verified bandwidth separation between loops: current >> velocity >> position"}
+        ],
+        "process": [
+          "Tune the current loop first (innermost). Use PI control. Set the proportional gain for desired current loop bandwidth (typically 1-5 kHz). The integral gain cancels the motor electrical time constant L/R. Verify that the current loop bandwidth is at least 5x the velocity loop bandwidth target.",
+          "Tune the velocity loop. Use PI control. The velocity plant (with closed current loop) is approximately K_t / (J*s) at frequencies below the current loop bandwidth. Set proportional gain for desired velocity loop bandwidth (typically 50-500 Hz). Integral gain provides zero steady-state velocity error; set it for crossover at 1/10 to 1/5 of the velocity loop bandwidth to avoid interaction with the proportional action.",
+          "Add a notch filter in the velocity loop if the mechanical resonance is within 3x of the velocity loop bandwidth. The notch center frequency should match the resonance frequency from the measured frequency response (not from calculation, as manufacturing tolerance shifts the resonance). Notch depth should be just enough to suppress the resonance peak below 0dB; excessive notch depth wastes phase margin.",
+          "Tune the position loop (outermost). Use proportional gain (Kp) to set the position loop bandwidth (typically 10-100 Hz). The position loop bandwidth must be at most 1/3 to 1/5 of the velocity loop bandwidth. Higher Kp gives faster positioning but less damping; position loop damping comes from the velocity loop, not from a derivative term.",
+          "Add velocity feedforward: for trajectory tracking, the feedforward term is Kv_ff * velocity_command applied directly to the velocity loop reference, bypassing the position loop. Set Kv_ff = 1.0 for ideal feedforward (position error is zero during constant-velocity motion). Add acceleration feedforward Ka_ff * acceleration_command * J / K_t applied to the current command for improved transient tracking."
+        ],
+        "tags": ["cascade-tuning", "feedforward", "notch-filter"]
+      },
+      {
+        "flow_name": "precision-positioning-techniques",
+        "description": "Achieve sub-micrometer or nanometer positioning accuracy using advanced compensation, sensing, and control techniques.",
+        "inputs": [
+          {"name": "cascade-controller", "desc": "Tuned cascade servo controller"},
+          {"name": "precision-requirements", "desc": "Required positioning accuracy, repeatability, and settling time at target accuracy"}
+        ],
+        "outputs": [
+          {"name": "precision-controller", "desc": "Enhanced controller with iterative learning, friction compensation, thermal drift compensation, and sensor strategy for nanometer-level accuracy"},
+          {"name": "error-budget", "desc": "Breakdown of each error source and its contribution to total positioning error"}
+        ],
+        "process": [
+          "Build the error budget: list every error source and its contribution. Typical sources: sensor resolution and noise, quantization of DAC command, Abbe error (angular error amplified by offset distance), thermal expansion (10nm/degree-C per cm of aluminum), servo tracking error, mechanical backlash, cable forces, vibration from floor and acoustic sources.",
+          "Select the position sensor for the required accuracy: encoder resolution (interpolation of sine/cosine signals gives sub-count resolution), linear scale (direct measurement at the point of interest eliminates Abbe error), capacitive sensor (sub-nanometer resolution, short range), laser interferometer (picometer resolution, long range, but sensitive to air refractive index changes).",
+          "Implement friction compensation: use a friction observer that estimates friction force from the discrepancy between commanded and actual acceleration, then cancel it with feedforward. For pre-sliding behavior (important for nanometer positioning), the observer must model the micro-displacement regime, not just Coulomb friction.",
+          "Implement iterative learning control (ILC) for repetitive trajectories: after each pass, update the feedforward signal by adding a correction proportional to the previous tracking error: u_ff_new(t) = Q * (u_ff_old(t) + L * e_old(t)) where L is the learning gain and Q is a low-pass filter that prevents learning at frequencies where the model is uncertain (above the servo bandwidth). ILC can reduce tracking error to the sensor noise floor within 5-20 iterations.",
+          "Compensate thermal drift: measure temperature at critical structural points and apply correction from a calibrated thermal model (expansion coefficient times temperature change times length). For the highest accuracy, use periodic reference measurements (touch probe, laser tracker) to recalibrate the thermal model online."
+        ],
+        "tags": ["precision-motion", "ILC", "friction-compensation", "error-budget"]
+      }
+    ]
+  }
+]

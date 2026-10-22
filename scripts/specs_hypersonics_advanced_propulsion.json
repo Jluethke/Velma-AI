@@ -1,0 +1,669 @@
+[
+  {
+    "chain_name": "hypersonic-aerothermodynamics",
+    "description": "Predict aerodynamic heating and loads on a vehicle flying above Mach 5: characterize the shock layer, predict boundary layer transition, calculate surface heating rates with real gas effects, and select the right computational approach for each flow regime.",
+    "domain": "aerospace",
+    "tags": ["hypersonics", "aerothermodynamics", "heating", "reentry", "aerospace"],
+    "steps": [
+      {
+        "flow_name": "shock-layer-characterization",
+        "description": "Analyze the shock structure around a hypersonic body: oblique shock angles from theta-beta-Mach relations, bow shock standoff distance estimation, entropy layer thickness and its effect on boundary layer development, and post-shock thermodynamic state including temperature and pressure ratios.",
+        "inputs": [
+          {"name": "vehicle-geometry", "desc": "Body shape, nose radius, leading edge sweep, and cross-section profiles"},
+          {"name": "flight-conditions", "desc": "Mach number, altitude, angle of attack, and freestream conditions (density, temperature, velocity)"}
+        ],
+        "outputs": [
+          {"name": "shock-geometry", "desc": "Shock shape, standoff distance, oblique shock angles at key stations"},
+          {"name": "post-shock-state", "desc": "Temperature, pressure, density, and velocity behind the shock at each station"},
+          {"name": "entropy-layer-profile", "desc": "Entropy layer thickness and swallowing distance along the body"}
+        ],
+        "process": [
+          "Calculate freestream conditions from altitude using the 1976 Standard Atmosphere: pressure, density, temperature, speed of sound, dynamic pressure.",
+          "For the nose region, estimate bow shock standoff distance from the Billig correlation (delta/R = 0.143 * exp(3.24/M^2) for a sphere).",
+          "At each body station downstream, apply oblique shock relations: tan(theta) = 2*cot(beta)*[(M1^2*sin^2(beta)-1)/(M1^2*(gamma+cos(2*beta))+2)] to find shock angle beta from body deflection angle theta.",
+          "Calculate post-shock thermodynamic state using normal shock relations applied to the Mach number component normal to the shock (Mn = M*sin(beta)).",
+          "Identify the entropy layer: the region of high-entropy gas processed by the strong bow shock that gets swallowed into the boundary layer downstream. Estimate the swallowing distance using the relation x_sw/R ~ (Re_inf * R)^0.5 where the entropy layer merges with the boundary layer edge.",
+          "Flag stations where post-shock temperatures exceed 2000K, indicating real gas effects will modify the shock structure from ideal gas predictions."
+        ],
+        "tags": ["hypersonics", "shock-analysis"]
+      },
+      {
+        "flow_name": "hypersonic-boundary-layer-transition",
+        "description": "Predict where the boundary layer transitions from laminar to turbulent on a hypersonic vehicle, which determines where heating rates jump by a factor of 3 to 8.",
+        "inputs": [
+          {"name": "shock-geometry", "desc": "Shock shape and post-shock state from shock analysis"},
+          {"name": "vehicle-geometry", "desc": "Surface geometry, roughness map, and any protuberances"},
+          {"name": "flight-conditions", "desc": "Mach, altitude, angle of attack"}
+        ],
+        "outputs": [
+          {"name": "transition-location-map", "desc": "Predicted transition location on each surface with uncertainty bounds"},
+          {"name": "transition-mechanism", "desc": "Dominant instability mechanism at each location (first mode, second mode, crossflow, roughness-induced)"}
+        ],
+        "process": [
+          "Compute boundary layer edge conditions from the inviscid solution: local Mach number, temperature, pressure, and unit Reynolds number along the body.",
+          "Apply the eN method: compute the growth rate of disturbances (first mode: oblique waves dominant below about Mach 4; second mode: acoustic trapped waves dominant above Mach 4) using linear stability theory or correlations.",
+          "Integrate amplification factors along the surface. Transition is predicted where the N-factor reaches a critical value (N = 5 to 10, calibrated to flight or ground test data for the specific environment).",
+          "Assess crossflow instability on swept surfaces: compute the crossflow Reynolds number and compare to critical values (Re_cf ~ 200 for stationary vortices).",
+          "Evaluate roughness effects: for distributed roughness, apply the roughness Reynolds number criterion (Re_kk > 200 for isolated roughness to trip boundary layer). For discrete protuberances, use the Berry-Horvath correlation.",
+          "Apply a factor-of-two uncertainty band on transition location for preliminary design. Note that ground test facilities introduce noise that does not exist in flight, making ground-to-flight transition correlation a known challenge."
+        ],
+        "tags": ["hypersonics", "boundary-layer", "transition"]
+      },
+      {
+        "flow_name": "hypersonic-surface-heating-prediction",
+        "description": "Calculate convective and radiative heating rates on the vehicle surface for both laminar and turbulent boundary layers, including real gas effects.",
+        "inputs": [
+          {"name": "post-shock-state", "desc": "Thermodynamic state behind the shock"},
+          {"name": "transition-location-map", "desc": "Where the boundary layer transitions from laminar to turbulent"},
+          {"name": "vehicle-geometry", "desc": "Surface geometry and nose radius"},
+          {"name": "flight-conditions", "desc": "Mach, altitude, velocity"}
+        ],
+        "outputs": [
+          {"name": "heating-rate-map", "desc": "Convective and radiative heating rate (W/m^2) at each surface station for laminar and turbulent cases"},
+          {"name": "stagnation-heating", "desc": "Peak stagnation point heating rate and integrated heat load"},
+          {"name": "real-gas-corrections", "desc": "Correction factors for dissociation, catalytic wall effects, and surface chemistry"}
+        ],
+        "process": [
+          "Calculate stagnation point heating using the Fay-Riddell equation: q_s = 0.763 * Pr^(-0.6) * (rho_w * mu_w)^0.1 * (rho_e * mu_e)^0.4 * (h_e - h_w) * sqrt(du_e/dx). For quick estimates, use Sutton-Graves: q_s = K * sqrt(rho_inf / R_n) * V^3 where K depends on gas composition (K = 1.7415e-4 for air in SI).",
+          "For laminar flat plate regions, apply the reference enthalpy method: compute reference temperature T* = T_e + 0.5*(T_w - T_e) + 0.22*(T_r - T_e), evaluate transport properties at T*, then use Cf = 0.664/sqrt(Re_x*) and q = 0.5 * Cf * rho* * V_e * (h_aw - h_w).",
+          "For turbulent regions, use the Van Driest II correlation with reference enthalpy: Cf = 0.0592 / Re_x*^0.2, noting that turbulent heating is typically 3 to 8 times laminar heating depending on Reynolds number.",
+          "Apply real gas corrections: at temperatures above 2500K, O2 dissociates; above 4000K, N2 dissociates. This absorbs energy in the shock layer, reducing the temperature below ideal gas predictions. Catalytic wall effects: a fully catalytic wall recovers the dissociation energy at the surface (higher heating); a non-catalytic wall does not (lower heating). The wall catalycity is material-dependent.",
+          "Estimate radiative heating for velocities above about 10 km/s (reentry from lunar or Mars return). Use Tauber-Sutton correlation: q_rad = C * R_n^a * rho^b * f(V) where C, a, b depend on the radiating species. Radiative heating can dominate at super-orbital velocities.",
+          "Integrate heating rate over the trajectory timeline to get total heat load (J/m^2) at each station, which drives TPS thickness sizing."
+        ],
+        "tags": ["hypersonics", "heating", "aerothermodynamics"]
+      },
+      {
+        "flow_name": "real-gas-computational-approach",
+        "description": "Select and configure the right computational method for the flow regime: DSMC for rarefied, Navier-Stokes with chemical kinetics for continuum, and bridging methods for the transitional regime.",
+        "inputs": [
+          {"name": "flight-conditions", "desc": "Velocity, altitude, and trajectory profile"},
+          {"name": "vehicle-geometry", "desc": "Characteristic length scale of the vehicle"}
+        ],
+        "outputs": [
+          {"name": "computational-approach-selection", "desc": "Which solver to use at each trajectory point with justification"},
+          {"name": "chemistry-model-selection", "desc": "Which chemical reaction set and thermal model to use"},
+          {"name": "grid-resolution-requirements", "desc": "Mesh requirements for the selected approach"}
+        ],
+        "process": [
+          "Calculate the Knudsen number at each trajectory point: Kn = lambda/L where lambda is the mean free path (lambda = 1/(sqrt(2)*n*sigma) with n = number density, sigma = collision cross section) and L is the vehicle characteristic length.",
+          "Select solver regime: Kn < 0.001 is continuum (Navier-Stokes valid); 0.001 < Kn < 0.1 is slip flow (Navier-Stokes with slip boundary conditions); 0.1 < Kn < 10 is transitional (DSMC or hybrid); Kn > 10 is free molecular (DSMC or analytical).",
+          "For continuum regime, select the chemical kinetics model: 5-species air (N2, O2, NO, N, O) for temperatures below 9000K; 11-species air (add N2+, O2+, NO+, N+, O+, e-) for ionizing conditions above 9000K. Select thermal model: Park two-temperature model (translational-rotational T and vibrational-electronic Tv) for nonequilibrium.",
+          "For DSMC, select collision model (Variable Hard Sphere or Variable Soft Sphere), chemistry model (TCE or QK), and determine cell size requirements (cell size < local mean free path / 3, time step < mean collision time / 5, particles per cell > 20).",
+          "For the transitional regime, consider hybrid DSMC-NS methods: use a breakdown parameter (e.g., Bird's parameter P = max(|dQ/dx| * lambda / Q) > 0.05 flags continuum breakdown) to determine where to switch from NS to DSMC within the flow domain.",
+          "Estimate computational cost: DSMC scales with the cube of 1/Kn for 3D problems, making low-altitude DSMC prohibitively expensive. Navier-Stokes is cheaper but invalid in rarefied regions. Document the coverage gaps and whether engineering correlations must bridge them."
+        ],
+        "tags": ["hypersonics", "cfd", "dsmc", "computational"]
+      }
+    ]
+  },
+  {
+    "chain_name": "scramjet-engine-design",
+    "description": "Design a supersonic combustion ramjet from inlet through nozzle: size the inlet for shock-on-lip at design Mach, design the isolator and combustor for stable supersonic combustion, and select the fuel and thermal management approach.",
+    "domain": "aerospace",
+    "tags": ["scramjet", "hypersonics", "propulsion", "airbreathing", "aerospace"],
+    "steps": [
+      {
+        "flow_name": "scramjet-inlet-design",
+        "description": "Design the inlet compression system to decelerate and compress the incoming air while maintaining total pressure recovery and starting characteristics.",
+        "inputs": [
+          {"name": "design-mach-range", "desc": "Operating Mach number range (e.g., Mach 4 to 8)"},
+          {"name": "capture-area-requirement", "desc": "Required mass flow rate and capture area from thrust sizing"},
+          {"name": "vehicle-integration-constraints", "desc": "Forebody geometry, cowl position, and structural limitations"}
+        ],
+        "outputs": [
+          {"name": "inlet-geometry", "desc": "Ramp angles, cowl position, and internal contraction ratio"},
+          {"name": "compression-performance", "desc": "Total pressure recovery, static pressure ratio, and temperature at combustor entrance"},
+          {"name": "starting-characteristics", "desc": "Kantrowitz limit check and unstart margin"}
+        ],
+        "process": [
+          "Select inlet type: external compression (all shocks outside cowl, lower performance but self-starting), mixed compression (external + internal shocks, higher performance but must manage starting), or REST inlet (rectangular to elliptical shape transition for 3D vehicles).",
+          "For external compression, set ramp angles to produce oblique shocks that converge at the cowl lip (shock-on-lip condition) at the design Mach number. Use oblique shock relations iteratively: each ramp turns the flow and generates a shock, with the flow behind that shock as the input to the next ramp.",
+          "Calculate total pressure recovery: for n oblique shocks each at angle beta_i, the total pressure ratio is the product of (p02/p01)_i across all shocks. Compare to the normal shock benchmark. Optimal compression uses equal total pressure ratio across each shock.",
+          "Check the Kantrowitz starting limit: the internal contraction ratio (A_throat / A_capture) must exceed the Kantrowitz limit (which is less restrictive than the isentropic limit) for the inlet to start. If the contraction is too high, the inlet will not swallow the starting shock and will operate in an unstarted mode with massive spillage.",
+          "Design variable geometry or boundary layer bleed if the operating Mach range requires it: at off-design Mach numbers, the shock angles change and the shock-on-lip condition is lost. Variable cowl or ramp angles can maintain performance across the Mach range.",
+          "Calculate the boundary layer state on the compression surfaces: thick boundary layers reduce effective compression and can cause shock-boundary layer interactions that trigger inlet unstart."
+        ],
+        "tags": ["scramjet", "inlet", "hypersonics"]
+      },
+      {
+        "flow_name": "scramjet-isolator-combustor-design",
+        "description": "Design the isolator to contain the pre-combustion shock train and the combustor for stable supersonic combustion with adequate mixing and flameholding.",
+        "inputs": [
+          {"name": "inlet-geometry", "desc": "Inlet exit conditions: Mach number, pressure, temperature, and duct cross-section"},
+          {"name": "fuel-selection", "desc": "Fuel type (hydrogen or hydrocarbon) with properties"},
+          {"name": "thrust-requirement", "desc": "Required thrust and specific impulse target"}
+        ],
+        "outputs": [
+          {"name": "isolator-dimensions", "desc": "Isolator length, cross-section, and pressure rise capability"},
+          {"name": "combustor-geometry", "desc": "Combustor length, fuel injection stations, and flameholder geometry"},
+          {"name": "combustion-performance", "desc": "Combustion efficiency, total temperature rise, and pressure profile"}
+        ],
+        "process": [
+          "Size the isolator: its job is to contain the pre-combustion shock train that forms when back-pressure from combustion propagates upstream. Length scales with the duct height and the incoming boundary layer thickness: L/H ~ 50*(M_entrance - 1) for turbulent boundary layers. If the shock train exceeds the isolator length, it propagates into the inlet and causes unstart.",
+          "Select combustor mode: at lower Mach numbers (Mach 4 to 5), dual-mode operation occurs where combustion thermally chokes the flow (ramjet mode with subsonic combustion). Above about Mach 6 to 7, the flow remains supersonic through the combustor (scramjet mode). The transition between modes must be managed.",
+          "Design fuel injection: for hydrogen, use wall-normal injection from the duct walls (generates a bow shock that aids mixing) or strut-based injection for deeper penetration into the core flow. For hydrocarbons, use cavity flameholders (trapped vortex provides residence time for slower hydrocarbon ignition). Injection pressure ratio must exceed the local static pressure by a factor that ensures penetration.",
+          "Size the combustor length from mixing and reaction requirements: hydrogen ignites in microseconds at scramjet temperatures, so the combustor is mixing-limited (length ~ 10 to 20 duct heights). Hydrocarbons have longer ignition delay (milliseconds), requiring longer combustors or pilot cavities.",
+          "Calculate the one-dimensional performance: apply the Rayleigh line analysis (heat addition to supersonic flow) to predict static pressure rise and Mach number change. Total temperature ratio Tt4/Tt3 sets the thrust. For scramjet mode, the exit Mach must remain supersonic.",
+          "Verify thermal choking margin: the maximum heat addition before the flow chokes is limited. If equivalence ratio is too high, the combustor chokes and the shock train extends into (and potentially through) the isolator. Maintain margin by limiting local equivalence ratio or staging fuel injection."
+        ],
+        "tags": ["scramjet", "combustor", "flameholding"]
+      },
+      {
+        "flow_name": "scramjet-nozzle-thermal-management",
+        "description": "Design the exhaust nozzle for thrust extraction and the thermal management system for the engine structure operating in a 1500 to 3000K environment.",
+        "inputs": [
+          {"name": "combustor-geometry", "desc": "Combustor exit conditions and geometry"},
+          {"name": "combustion-performance", "desc": "Exit Mach, pressure, temperature, and species"},
+          {"name": "vehicle-integration-constraints", "desc": "Vehicle aft body shape and structural limits"}
+        ],
+        "outputs": [
+          {"name": "nozzle-geometry", "desc": "Nozzle contour, expansion ratio, and thrust vector"},
+          {"name": "thermal-management-design", "desc": "Cooling approach for each engine section with heat load and coolant flow rates"},
+          {"name": "engine-performance-summary", "desc": "Net thrust, specific impulse, and drag accounting"}
+        ],
+        "process": [
+          "Design the nozzle: for vehicle-integrated scramjets, the aft body of the vehicle serves as the external expansion surface (single expansion ramp nozzle, SERN). The expansion ratio is set by the ratio of nozzle exit pressure to ambient. At high altitude, the nozzle is underexpanded (exit pressure > ambient). Use method of characteristics for the expansion contour to avoid oblique shocks inside the nozzle.",
+          "Account for nozzle losses: divergence loss (thrust reduction from non-axial exit flow), friction loss on the expansion surface, chemical freezing loss (recombination reactions freeze as the gas expands and cools, trapping energy in dissociated species that cannot be recovered as kinetic energy).",
+          "Design the thermal management system: at Mach 6+, wall temperatures on the engine interior approach 1500 to 3000K. For hydrogen fuel, use regenerative cooling: route the hydrogen fuel through cooling passages in the combustor and nozzle walls before injecting it. Hydrogen's high specific heat (14.3 kJ/kg-K) makes it an excellent coolant. For hydrocarbon fuels, use endothermic cracking: the fuel absorbs heat by undergoing pyrolysis (thermal decomposition) in the cooling passages, absorbing 2 to 3 MJ/kg.",
+          "Size cooling passages: calculate heat flux at each engine station (q = h * (T_gas - T_wall)), determine required coolant flow rate from energy balance (m_dot * cp * delta_T = q * A), and size passage geometry for the required flow rate and pressure drop. Verify that wall temperature stays below material limits.",
+          "Perform net thrust accounting: gross thrust = m_dot_exit * V_exit + (p_exit - p_ambient) * A_exit. Subtract inlet momentum drag = m_dot_air * V_freestream. The net thrust is the difference. At high Mach numbers, the net thrust is a small difference between two large numbers, making every percent of loss significant.",
+          "Calculate specific impulse: Isp = F_net / (m_dot_fuel * g). Hydrogen scramjets achieve Isp of 1000 to 2000 s at Mach 6 to 10. Hydrocarbon scramjets achieve 800 to 1200 s. Compare to rocket Isp of 300 to 450 s."
+        ],
+        "tags": ["scramjet", "nozzle", "thermal-management"]
+      }
+    ]
+  },
+  {
+    "chain_name": "electric-propulsion-design",
+    "description": "Design an electric propulsion system for spacecraft: select the thruster type by mission requirements, design the power processing unit, and predict lifetime and mission performance.",
+    "domain": "aerospace",
+    "tags": ["electric-propulsion", "spacecraft", "ion-thruster", "hall-thruster", "aerospace"],
+    "steps": [
+      {
+        "flow_name": "ep-thruster-selection-and-sizing",
+        "description": "Select the electric propulsion thruster type and size it for the mission: match specific impulse, thrust, and power to the mission delta-v, trip time, and available spacecraft power.",
+        "inputs": [
+          {"name": "mission-requirements", "desc": "Delta-v budget, trip time constraint, payload mass, and spacecraft wet mass"},
+          {"name": "available-power", "desc": "Spacecraft power available for propulsion (solar array or nuclear) and its variation with distance from the Sun"},
+          {"name": "mission-type", "desc": "Station-keeping, orbit raising, interplanetary, or drag compensation"}
+        ],
+        "outputs": [
+          {"name": "thruster-type-selection", "desc": "Selected thruster type with specific impulse, thrust, and efficiency"},
+          {"name": "propellant-mass-estimate", "desc": "Required propellant mass from the rocket equation at the selected Isp"},
+          {"name": "power-thrust-trade", "desc": "Power-to-thrust ratio and system-level trade between trip time and propellant mass"}
+        ],
+        "process": [
+          "Map the mission to the EP performance space: plot delta-v vs trip time constraint. Short trip times require high thrust-to-weight (favoring Hall thrusters at 1000 to 3000 s Isp, 50 to 70% efficiency). Long trip times allow high Isp (favoring gridded ion at 3000 to 10000 s Isp, 60 to 80% efficiency). Station-keeping needs low thrust and long life (Hall or electrospray).",
+          "Calculate propellant mass from the Tsiolkovsky equation at the selected Isp: m_prop = m_initial * (1 - exp(-delta_v / (Isp * g))). Note that higher Isp reduces propellant mass but requires more power for the same thrust: P = T * Isp * g / (2 * eta) where eta is thruster efficiency.",
+          "Size the thruster: thrust F = m_dot * v_e where v_e = Isp * g. Power P = F * v_e / (2 * eta). For a given available power, this determines the maximum thrust. Calculate trip time from the thrust and total impulse required.",
+          "Evaluate thruster options: Hall effect thrusters (1000-3000 s Isp, 50-70% eta, simple, flight heritage: SPT-100, BHT-600, X3 nested channel for high power). Gridded ion engines (2000-10000 s Isp, 60-80% eta, higher Isp but lower thrust density: NSTAR, XIPS, T6). Pulsed plasma (low power, low Isp, simple: good for CubeSats). Electrospray (very low thrust, very high Isp: for fine attitude control or micro-propulsion).",
+          "Select propellant: xenon is the baseline (high atomic mass = high thrust per unit power, easily storable as supercritical fluid, but expensive ~$3000/kg and supply-constrained). Krypton is 5 to 10x cheaper, 15 to 20% less efficient in Hall thrusters, and harder to store (lower density). Iodine stores as a solid (high density), but is corrosive and requires careful materials selection.",
+          "Perform system mass trade: total system mass = thruster mass + PPU mass + propellant mass + tankage mass + solar array mass for the EP power. Minimize total system mass, not just propellant mass. The optimal Isp balances propellant mass (decreases with Isp) against power system mass (increases with Isp)."
+        ],
+        "tags": ["electric-propulsion", "sizing", "spacecraft"]
+      },
+      {
+        "flow_name": "ep-power-processing-unit-design",
+        "description": "Design the power processing unit that converts spacecraft bus power into the voltages and currents the thruster requires, with high efficiency and fault tolerance.",
+        "inputs": [
+          {"name": "thruster-type-selection", "desc": "Thruster type and its electrical requirements (voltage, current, power level)"},
+          {"name": "available-power", "desc": "Spacecraft bus voltage and power profile"}
+        ],
+        "outputs": [
+          {"name": "ppu-architecture", "desc": "Converter topology, input/output specifications, and efficiency"},
+          {"name": "ppu-mass-volume", "desc": "PPU mass and volume estimate from power density scaling"},
+          {"name": "fault-protection-design", "desc": "Fault handling for thruster anomalies (arcing, recycles)"}
+        ],
+        "process": [
+          "Define electrical requirements: gridded ion engines need high voltage (1000 to 2000V) at low current for the screen and accelerator grids, plus a discharge supply (20 to 40V, high current) and a neutralizer keeper supply. Hall thrusters need 300 to 800V discharge at 5 to 50A depending on power level, plus a magnet supply and cathode keeper.",
+          "Select converter topology: for high-voltage output, use a series-resonant or phase-shifted full-bridge converter with high-frequency transformer. For the discharge supply of a Hall thruster, a direct buck or boost from the bus may suffice if bus voltage is in range. Target PPU efficiency above 93 to 95% to minimize waste heat in the spacecraft.",
+          "Size the PPU from power density: state-of-the-art PPUs achieve 1 to 3 kW/kg specific power. Mass scales roughly as P^0.7 (larger PPUs are more mass-efficient). Volume follows similar scaling. Include the thermal control mass (heat sinks, radiator interface) in the PPU mass budget.",
+          "Design fault protection: EP thrusters experience recycle events (momentary arcing in the discharge). The PPU must detect overcurrent within microseconds, shut down the discharge, and restart. Typical recycle rate is 1 to 10 per hour for healthy operation; increasing recycle rate indicates end-of-life degradation. Implement a maximum recycle rate limit that triggers thruster shutdown if exceeded.",
+          "Address electromagnetic compatibility: high-frequency switching in the PPU and high-voltage discharge in the thruster both generate EMI. Filter the PPU input to prevent conducted emissions onto the spacecraft bus. Shield the PPU-to-thruster harness. Verify compliance with the spacecraft EMC specification."
+        ],
+        "tags": ["electric-propulsion", "ppu", "power-electronics"]
+      },
+      {
+        "flow_name": "ep-lifetime-prediction-and-testing",
+        "description": "Predict thruster lifetime from wear mechanisms and design the ground test campaign to validate it.",
+        "inputs": [
+          {"name": "thruster-type-selection", "desc": "Thruster type and operating conditions"},
+          {"name": "mission-requirements", "desc": "Required total impulse and operating hours"}
+        ],
+        "outputs": [
+          {"name": "lifetime-prediction", "desc": "Predicted lifetime from each wear mechanism and the life-limiting mechanism"},
+          {"name": "test-plan", "desc": "Ground test campaign design: wear test, characterization test, and acceptance test"},
+          {"name": "qualification-status", "desc": "Gap analysis between predicted life and mission requirement with margin"}
+        ],
+        "process": [
+          "Identify wear mechanisms by thruster type. Hall thrusters: channel wall erosion from ion bombardment (the ceramic or boron nitride channel erodes, eventually exposing the magnetic circuit). Typical life: 5,000 to 30,000 hours depending on voltage and channel design. Gridded ion: grid erosion (pit-and-groove pattern on accelerator grid from charge-exchange ions), cathode insert depletion. Typical life: 10,000 to 50,000 hours.",
+          "For Hall thrusters, predict erosion rate: sputter yield depends on ion energy (approximately proportional to discharge voltage) and incidence angle. Use a Hall thruster erosion model (e.g., BPT model or HPHall simulation) to predict channel wall recession rate (micrometers per hour). End-of-life is when the channel wall erodes through to the magnetic poles.",
+          "For gridded ion, predict accelerator grid erosion: charge-exchange ions born downstream of the screen grid are accelerated back into the accel grid. Pit-and-groove erosion pattern eventually causes structural failure or electron backstreaming. Model with grid erosion codes (CEX2D or similar).",
+          "Design the wear test: run the thruster in a vacuum facility for the qualification life (typically 1.5x the mission life) while periodically measuring channel dimensions (profilometry during brief shutdowns), performance (thrust, Isp, efficiency), and cathode health. Vacuum facility must have sufficient pumping speed (>100,000 L/s for xenon) to maintain pressure below 5e-6 Torr to avoid artificially reducing erosion from facility effects.",
+          "Validate with in-situ diagnostics: QCM (quartz crystal microbalance) for sputter rate, optical emission spectroscopy for erosion products in the plume, and laser profilometry for channel wall profiles without breaking vacuum.",
+          "Assess qualification margin: mission requires X hours of operation. Wear test demonstrates Y hours. If Y > 1.5X, qualification margin is met. If not, identify the life-limiting mechanism and evaluate design changes (magnetically shielded Hall thrusters reduce channel erosion by 100x, extending life to >50,000 hours)."
+        ],
+        "tags": ["electric-propulsion", "lifetime", "testing"]
+      }
+    ]
+  },
+  {
+    "chain_name": "nuclear-thermal-propulsion",
+    "description": "Design a nuclear thermal propulsion system: a fission reactor that heats hydrogen propellant to produce twice the specific impulse of chemical rockets, enabling fast interplanetary transit.",
+    "domain": "aerospace",
+    "tags": ["nuclear-thermal", "propulsion", "ntp", "fission", "aerospace"],
+    "steps": [
+      {
+        "flow_name": "ntp-reactor-core-design",
+        "description": "Design the reactor core that heats hydrogen propellant: select fuel element type, calculate power level from thrust requirement, and design the neutron control system.",
+        "inputs": [
+          {"name": "thrust-requirement", "desc": "Required thrust level (e.g., 25 klbf for a human Mars mission engine)"},
+          {"name": "isp-target", "desc": "Target specific impulse (typically 850 to 950 s for NTP)"},
+          {"name": "mission-profile", "desc": "Number of burns, total burn time, and restart requirements"}
+        ],
+        "outputs": [
+          {"name": "core-geometry", "desc": "Fuel element type, number of elements, core diameter and length"},
+          {"name": "power-level", "desc": "Reactor thermal power required to achieve the thrust at target Isp"},
+          {"name": "reactivity-control", "desc": "Control drum or rod design for reactor startup, power control, and shutdown"}
+        ],
+        "process": [
+          "Calculate required reactor power: P_thermal = F * g * Isp * cp_H2 * (T_chamber - T_inlet) / (Isp * g)^2. Simplified: for 900 s Isp, chamber temperature is about 2700K, and each pound of thrust requires approximately 32 kW of thermal power. A 25,000 lbf engine needs about 800 MW thermal.",
+          "Select fuel element type: NERVA-heritage graphite composite (H2 temperature limited to 2500K, Isp ~ 850 s, proven in NERVA/Rover tests). CERMET (ceramic-metallic: UO2 in tungsten matrix, can reach 2700K+, Isp ~ 900+ s, more resistant to hydrogen corrosion). LEU HALEU fuel (19.75% enriched to stay below weapons-grade threshold, modern regulatory environment).",
+          "Size the core: number of fuel elements from the power per element limit (each NERVA-heritage element: about 1 MW, so 800 elements for an 800 MW core). Core diameter from element packing (hex lattice with tie tubes for structural and moderator function). Core length from required hydrogen heating path length (typically 0.9 to 1.3 m).",
+          "Design reactivity control: rotating control drums at the core periphery (absorber segment of B4C or Eu2O3 facing inward for shutdown, rotated outward for criticality). Calculate drum worth from the reactivity swing required: cold-to-hot reactivity loss (hydrogen worth, temperature defect, xenon poisoning for extended runs) must be within the drum authority.",
+          "Address hydrogen compatibility: hot hydrogen attacks graphite (mid-band corrosion above 2200K). NERVA elements used NbC or ZrC coating on flow channels. CERMET elements are inherently resistant. Design for the mission burn time: short burns (minutes) for impulsive maneuvers have less corrosion concern than sustained burns.",
+          "Verify criticality safety: the reactor must remain subcritical under all credible accident scenarios (launch abort into water, compaction from impact). The water submersion scenario adds moderation and can increase reactivity. Design sufficient shutdown margin with drums in the shutdown position to remain subcritical even when flooded."
+        ],
+        "tags": ["nuclear-thermal", "reactor", "core-design"]
+      },
+      {
+        "flow_name": "ntp-propellant-feed-and-nozzle",
+        "description": "Design the hydrogen feed system, turbopump, and nozzle for the NTP engine, including the bleed cycle that drives the turbomachinery.",
+        "inputs": [
+          {"name": "core-geometry", "desc": "Core flow path, pressure drop, and outlet temperature"},
+          {"name": "power-level", "desc": "Thermal power and hydrogen mass flow rate"},
+          {"name": "thrust-requirement", "desc": "Required thrust and chamber pressure"}
+        ],
+        "outputs": [
+          {"name": "feed-system-design", "desc": "Turbopump sizing, bleed cycle architecture, and valve sequence"},
+          {"name": "nozzle-design", "desc": "Nozzle expansion ratio, throat size, and cooling approach"},
+          {"name": "engine-performance", "desc": "Delivered Isp, thrust, and engine mass estimate"}
+        ],
+        "process": [
+          "Design the engine cycle: NTP engines typically use a hot bleed cycle or expander cycle. In the bleed cycle, a small fraction (1 to 3%) of the hot hydrogen from the reactor is diverted to drive the turbine. In the expander cycle, hydrogen is heated in the nozzle and reflector cooling jacket before entering the turbine. The expander cycle is more efficient but power-limited at high thrust levels.",
+          "Size the turbopump: the pump must raise LH2 from tank pressure (20 to 40 psia) to chamber pressure (500 to 1000 psia) plus pressure drops through the cooling jacket, core, and plumbing. Head rise = delta_P / (rho_LH2 * g). LH2 density is only 70 kg/m^3, so volumetric flow rates are high. Inducer design is critical for cavitation suppression at the low inlet pressures.",
+          "Design the hydrogen flow path through the engine: LH2 from the pump first cools the nozzle (regeneratively), then flows through the reflector and pressure vessel (absorbing neutron and gamma heating), then enters the core fuel elements from the cold end, flowing through the narrow channels in each element to be heated to chamber temperature.",
+          "Size the nozzle: expansion ratio (A_exit/A_throat) from the altitude (vacuum operation: as large as packaging allows, typically 100:1 to 300:1). Throat area from A* = m_dot * sqrt(T_chamber) / (P_chamber * Gamma) where Gamma is a function of the specific heat ratio. For hydrogen at 2700K, gamma is approximately 1.35 (lower than ideal gas due to molecular vibration and dissociation).",
+          "Address nozzle cooling: the throat region sees the highest heat flux (~50 to 100 MW/m^2). Use regenerative cooling with the hydrogen fuel flowing through channels in the nozzle wall. Size the channel geometry from the heat flux, allowable wall temperature, and hydrogen heat transfer coefficient. Hydrogen is an excellent coolant but requires careful structural design for the high pressure.",
+          "Calculate delivered Isp: theoretical Isp from chamber temperature and molecular weight (Isp_vac = sqrt(2*gamma/(gamma-1) * R*T_c/M * (1-(p_e/p_c)^((gamma-1)/gamma))) / g). Subtract losses: divergence (1 to 2%), boundary layer (1 to 2%), chemical nonequilibrium (1%), bleed cycle loss (1 to 3%). Delivered Isp for NTP: 850 to 950 s, roughly double LOX/LH2 chemical engines."
+        ],
+        "tags": ["nuclear-thermal", "turbopump", "nozzle"]
+      },
+      {
+        "flow_name": "ntp-safety-and-ground-testing",
+        "description": "Design the safety case for a nuclear engine and plan the ground test campaign, addressing the unique challenge of testing a nuclear rocket on Earth.",
+        "inputs": [
+          {"name": "core-geometry", "desc": "Reactor design details"},
+          {"name": "engine-performance", "desc": "Operating conditions and burn profiles"},
+          {"name": "mission-profile", "desc": "Launch vehicle integration and mission timeline"}
+        ],
+        "outputs": [
+          {"name": "safety-analysis", "desc": "Nuclear safety assessment covering all mission phases"},
+          {"name": "ground-test-plan", "desc": "Test facility requirements and test sequence"},
+          {"name": "regulatory-pathway", "desc": "Required approvals from NRC, DOE, EPA, and NASA"}
+        ],
+        "process": [
+          "Perform nuclear safety analysis for each mission phase: pre-launch (reactor is cold, subcritical, no fission products), launch (vibration, acoustics, abort scenarios), in-space operation (reactor startup, burns, coast with hot fission products), and disposal (final orbit or heliocentric trajectory to avoid Earth re-entry for hundreds of years).",
+          "Analyze launch abort scenarios: reactor has no fission products before first startup, so a launch abort is a conventional hazmat scenario (uranium fuel, but no volatile fission products). After first burn, fission products create a radioactive inventory. The Safety Analysis Report must show that no credible accident results in a fission product release that exceeds dose limits at the launch site boundary.",
+          "Address inadvertent criticality: design must prevent criticality from impact compaction (demonstrate by analysis and test that the core geometry change from credible impacts does not create a critical configuration) and from water flooding (moderator exclusion). Use inherent safety features: the control drums must be in shutdown position and mechanically locked during launch.",
+          "Plan ground testing: the primary challenge is capturing the radioactive exhaust. Options: (1) nuclear furnace approach (NERVA heritage): route exhaust through a scrubber system to capture fission products before atmospheric release. (2) Contained test: run the reactor at reduced power in a containment vessel. (3) Non-nuclear heated testing: use electric heaters to simulate reactor heating of hydrogen for turbopump and nozzle qualification, then perform a limited nuclear test for integrated performance.",
+          "Identify regulatory pathway: NASA Safety Review (INSRP - Interagency Nuclear Safety Review Panel) for any nuclear launch. NRC for reactor operations. DOE for nuclear material handling. NEPA for environmental impact assessment of ground testing. The regulatory process typically takes 3 to 5 years.",
+          "Design the ground test sequence: cold flow tests (hydrogen flow without nuclear heating), electrically heated tests (resistance heaters simulate reactor power for system checkout), low-power nuclear tests (reactor at 1 to 10% power for neutronic characterization), full-power tests (full thrust duration with exhaust capture)."
+        ],
+        "tags": ["nuclear-thermal", "safety", "testing", "regulatory"]
+      }
+    ]
+  },
+  {
+    "chain_name": "plasma-physics-engineering",
+    "description": "Apply plasma physics to engineering problems: generate, diagnose, and control plasmas for applications ranging from material processing to propulsion to power generation.",
+    "domain": "aerospace",
+    "tags": ["plasma", "physics", "engineering", "fusion", "processing"],
+    "steps": [
+      {
+        "flow_name": "plasma-generation-and-characterization",
+        "description": "Select and configure a plasma source for the application, then measure its properties using appropriate diagnostics.",
+        "inputs": [
+          {"name": "application-requirements", "desc": "Required plasma density, temperature, species, and uniformity for the application"},
+          {"name": "operating-environment", "desc": "Pressure range, gas composition, chamber geometry, and power budget"}
+        ],
+        "outputs": [
+          {"name": "plasma-source-design", "desc": "Selected plasma generation method with operating parameters"},
+          {"name": "diagnostic-plan", "desc": "Measurement techniques for characterizing the plasma"},
+          {"name": "plasma-properties", "desc": "Expected electron density, electron temperature, ion energy distribution"}
+        ],
+        "process": [
+          "Select plasma generation method by application: DC arc discharge (high density, atmospheric pressure, used for plasma spray and cutting, 10,000 to 20,000K). RF inductively coupled (ICP) plasma (moderate density, low to moderate pressure, clean process for semiconductor etching and deposition, 5,000 to 15,000K). Microwave plasma (ECR at 2.45 GHz, low pressure, high ionization efficiency). Capacitively coupled plasma (CCP, low density, good for thin film deposition). Laser-produced plasma (pulsed, very high density and temperature, used for spectroscopy and EUV generation).",
+          "Calculate basic plasma parameters: Debye length lambda_D = sqrt(epsilon_0 * kT_e / (n_e * e^2)), plasma frequency omega_pe = sqrt(n_e * e^2 / (m_e * epsilon_0)), electron-ion collision frequency. These determine whether the plasma is collisional or collisionless and set the scale of sheaths.",
+          "Design the Langmuir probe diagnostic: sweep voltage on a small conducting probe inserted in the plasma. The I-V characteristic reveals electron temperature (from the slope of the electron retardation region: kT_e = e * dV / d(ln(I))), electron density (from the ion saturation current: n_e = I_ion_sat / (0.6 * e * A_probe * sqrt(kT_e / m_i))), and plasma potential (where d^2I/dV^2 = 0).",
+          "Design optical emission spectroscopy (OES): collect light from the plasma and disperse with a spectrometer. Line ratios reveal electron temperature (Boltzmann plot for LTE plasmas). Line broadening reveals density (Stark broadening for hydrogen lines) and temperature (Doppler broadening). Actinometry with a known trace gas gives species concentrations.",
+          "For high-density or high-temperature plasmas, use Thomson scattering: fire a laser beam through the plasma and collect scattered light. The spectral width of the Thomson-scattered light gives T_e directly (Doppler broadening by electrons), and the integrated intensity gives n_e. This is non-perturbative and spatially resolved but requires high-power pulsed lasers.",
+          "Map the plasma uniformity: for processing applications (etching, deposition), uniformity across the substrate is critical. Scan the Langmuir probe or use a spatially resolved OES array. Adjust source geometry (coil design for ICP, electrode spacing for CCP, gas distribution) to improve uniformity."
+        ],
+        "tags": ["plasma", "diagnostics", "generation"]
+      },
+      {
+        "flow_name": "plasma-application-design",
+        "description": "Design the plasma process for the specific application: etching, deposition, spray coating, or flow control.",
+        "inputs": [
+          {"name": "plasma-source-design", "desc": "Plasma source type and operating parameters"},
+          {"name": "plasma-properties", "desc": "Measured or predicted plasma density, temperature, and species"},
+          {"name": "application-requirements", "desc": "Process specifications (etch rate, film properties, coating thickness, flow effect)"}
+        ],
+        "outputs": [
+          {"name": "process-recipe", "desc": "Complete operating recipe with gas flows, pressure, power, and timing"},
+          {"name": "performance-prediction", "desc": "Predicted process outcome with uncertainty bounds"},
+          {"name": "process-control-strategy", "desc": "Feedback variables and control approach for process stability"}
+        ],
+        "process": [
+          "For plasma etching: select etch chemistry (fluorine-based for silicon and silicon oxide, chlorine-based for metals and III-V compounds, oxygen for organics and photoresist). Set operating pressure (lower pressure = more directional etching from ion bombardment, higher pressure = more chemical etching with isotropic profile). Bias the substrate to control ion energy independently of plasma density.",
+          "For plasma-enhanced CVD: select precursor gases (SiH4 + N2O for SiO2, SiH4 + NH3 for SiNx, TEOS for conformal oxide). The plasma dissociates precursors at lower temperature than thermal CVD (300C vs 800C). Control film stress by adjusting RF frequency (13.56 MHz gives compressive stress from ion bombardment, lower frequency gives tensile). Measure refractive index and stress on test wafers.",
+          "For plasma spray coating: design the plasma torch (DC arc between cathode and anode, gas flow creates a plasma jet at 10,000 to 15,000K). Powder injection location and carrier gas flow determine particle trajectory and heating. Particle velocity (200 to 600 m/s) and temperature (must exceed melting point) determine coating density and adhesion. Standoff distance, spray pattern, and robot path determine coating uniformity.",
+          "For plasma actuators (flow control): design a dielectric barrier discharge (DBD) actuator: two electrodes separated by a dielectric, driven by AC at 1 to 20 kHz and 5 to 20 kV. The surface discharge creates a body force that induces a wall jet (1 to 5 m/s). Placement near separation points can delay boundary layer separation. Effective at low Reynolds numbers; limited authority at flight-scale Reynolds numbers without very high power.",
+          "Design the process control strategy: identify the feedback variables (etch endpoint from OES line intensity change, deposition rate from in-situ ellipsometry, spray particle temperature from two-color pyrometry). Implement closed-loop control: adjust power, pressure, or gas flow to maintain the process at its target operating point despite drift in source conditions.",
+          "Perform design of experiments: plasma processes have many interacting parameters. Use a fractional factorial or response surface methodology to map the parameter space efficiently. Identify the key parameters (typically power and pressure dominate) and their interactions. Build a process window that defines the acceptable range for each parameter."
+        ],
+        "tags": ["plasma", "processing", "applications"]
+      }
+    ]
+  },
+  {
+    "chain_name": "thermal-protection-reentry-deep",
+    "description": "Design the thermal protection system for a vehicle re-entering a planetary atmosphere: select materials, predict ablation, and validate through arc jet testing.",
+    "domain": "aerospace",
+    "tags": ["tps", "reentry", "ablation", "thermal-protection", "aerospace"],
+    "steps": [
+      {
+        "flow_name": "entry-trajectory-heating-trade",
+        "description": "Design the entry trajectory to manage the trade between peak heating rate (drives TPS material selection) and total heat load (drives TPS thickness).",
+        "inputs": [
+          {"name": "entry-conditions", "desc": "Entry velocity, entry flight path angle, vehicle ballistic coefficient (m/CdA)"},
+          {"name": "vehicle-constraints", "desc": "Maximum deceleration (g-limit for crew or payload), landing accuracy requirement"}
+        ],
+        "outputs": [
+          {"name": "trajectory-profile", "desc": "Altitude, velocity, and deceleration vs time"},
+          {"name": "heating-profile", "desc": "Heat rate and integrated heat load vs time at key body points"},
+          {"name": "tps-design-environments", "desc": "Peak heating rate and total heat load that drive TPS sizing"}
+        ],
+        "process": [
+          "Calculate the Allen-Eggers ballistic entry solution: for a ballistic (non-lifting) entry at angle gamma, peak deceleration a_max = V_entry^2 * sin(gamma) / (2*e*H_s) where H_s is the atmospheric scale height. Peak heating rate q_max proportional to V_entry^3 * sqrt(rho). Steeper entries have higher peak heating but shorter duration (less total heat load). Shallower entries spread the heating over longer time (lower peak, higher total).",
+          "For lifting entry (L/D > 0), the vehicle can modulate bank angle to control the descent rate. A higher L/D allows more control over the trajectory: skip entry (bounce off the atmosphere to dissipate energy over multiple passes), direct entry with bank angle modulation for g-limiting, and guided entry for landing accuracy. Apollo used L/D ~ 0.3. Crew Dragon L/D ~ 0.2. Dream Chaser L/D ~ 1.5.",
+          "Calculate heating using Chapman's equation or the Sutton-Graves correlation along the trajectory. Stagnation heating: q_stag = K * sqrt(rho / R_n) * V^n where K and n depend on the atmosphere (Earth: n ~ 3 for moderate velocities, n ~ 8 for radiative heating at super-orbital). Integrate heating over the trajectory for total heat load at each body point.",
+          "Identify the design environments: stagnation point sees the highest heating rate (drives material selection). Leeward shoulder or expansion regions see lower heating but can have transition to turbulence with local heating spikes. Acreage (large flat areas) sees moderate heating but large total heat load due to area (drives total TPS mass). Windward centerline of a lifting body sees the highest acreage heating.",
+          "Trade trajectory shape against TPS mass: a steeper entry reduces total heat load (less TPS thickness needed) but increases peak heating rate (may require more capable material). An optimized trajectory minimizes TPS mass, not just heating."
+        ],
+        "tags": ["tps", "reentry", "trajectory"]
+      },
+      {
+        "flow_name": "tps-material-selection-and-sizing",
+        "description": "Select the TPS material for each zone and size its thickness to keep the bondline temperature within limits.",
+        "inputs": [
+          {"name": "tps-design-environments", "desc": "Peak heating rate and total heat load at each body zone"},
+          {"name": "vehicle-constraints", "desc": "Mass budget, reusability requirement, and manufacturing constraints"}
+        ],
+        "outputs": [
+          {"name": "tps-material-map", "desc": "Material selection for each vehicle zone with justification"},
+          {"name": "tps-thickness-map", "desc": "Required thickness at each zone from thermal analysis"},
+          {"name": "tps-mass-estimate", "desc": "Total TPS mass and its distribution"}
+        ],
+        "process": [
+          "Categorize each zone by heating severity: low heating (< 50 W/cm^2): flexible insulation blankets (AFRSI, SIP) or ceramic tiles (LI-900, FRCI-12). Moderate heating (50 to 200 W/cm^2): reinforced carbon-carbon (RCC), ceramic tiles (AETB, TUFROC), or lightweight ablators (SLA-561V). High heating (200 to 1000 W/cm^2): dense ablators (PICA, Avcoat, carbon phenolic). Extreme heating (> 1000 W/cm^2): high-density carbon phenolic, carbon-carbon with ablation.",
+          "For ablative TPS, calculate thickness from the energy balance: the ablator absorbs heat by (1) raising its temperature, (2) pyrolyzing the resin (endothermic decomposition), (3) blowing pyrolysis gases into the boundary layer (blocking convective heating), and (4) radiating from the hot surface. Use a material thermal response code (FIAT, TITAN, CMA) to predict the char depth, pyrolysis depth, and bondline temperature as a function of time.",
+          "Size for the bondline temperature limit: the adhesive bonding the TPS to the structure typically has a limit of 250C (RTV adhesive) or 315C (higher-temperature options). The TPS must be thick enough that the bondline temperature stays below this limit at the end of the entry heating pulse, including the soak-back period after heating ends (the interior continues to heat from thermal conduction after the surface heating stops).",
+          "For reusable TPS (tiles, blankets), verify that the material can survive the surface temperature without degradation: LI-900 tiles are rated to about 1260C surface temperature. FRCI-12 to about 1370C. RCC to about 1650C. TUFROC to about 1800C. The material must also survive thermal shock (rapid heating and cooling), rain erosion, and handling damage.",
+          "Add margin: typically 25 to 50% thickness margin is added to the nominal sizing to account for modeling uncertainty, material property variability, and trajectory dispersions. For crewed vehicles, the margin philosophy is more conservative than for robotic missions.",
+          "Estimate TPS mass: multiply thickness by density at each zone and integrate over the surface area. TPS mass fraction is typically 8 to 15% of entry mass for Earth entry from LEO, and 20 to 35% for lunar or Mars return at higher velocities."
+        ],
+        "tags": ["tps", "materials", "sizing"]
+      },
+      {
+        "flow_name": "tps-arc-jet-testing-validation",
+        "description": "Design and execute arc jet tests to validate TPS material performance and calibrate thermal response models.",
+        "inputs": [
+          {"name": "tps-material-map", "desc": "Selected materials and their thickness"},
+          {"name": "tps-design-environments", "desc": "Heating conditions to replicate in testing"},
+          {"name": "tps-thickness-map", "desc": "Nominal and margined thicknesses"}
+        ],
+        "outputs": [
+          {"name": "test-matrix", "desc": "Arc jet test conditions, sample geometry, and instrumentation plan"},
+          {"name": "test-results", "desc": "Measured recession rate, back-face temperature, and material response data"},
+          {"name": "model-calibration", "desc": "Updated material response model parameters from test data"}
+        ],
+        "process": [
+          "Select the arc jet facility: NASA Ames has the largest arc jets (60 MW IHF for high enthalpy, AHF for medium), Arnold Engineering (AEDC) has several, and university facilities exist at smaller scale. Match the facility capability to the test conditions needed: enthalpy (MJ/kg), heat flux (W/cm^2), surface pressure (atm), and test duration (seconds to minutes).",
+          "Design test samples: flat-faced cylinder models (stagnation point test, simplest geometry for model comparison), wedge models (shear flow for acreage conditions), and seam/gap models (for tiled systems). Instrument with in-depth thermocouples at known depths, surface pyrometer, and recession measurement (real-time laser or pre/post measurement).",
+          "Define the test matrix: at minimum, test at the nominal design condition, at the peak heating condition with margin, and at an off-nominal high condition. Test multiple samples for statistical confidence. Include a range of heat fluxes to map the material's performance envelope. For ablators, include long-duration tests at moderate heat flux (heat load driven) and short-duration tests at high heat flux (recession rate driven).",
+          "Execute tests and collect data: arc jet produces a high-enthalpy gas stream that simulates entry heating. Measure heat flux with a calibration probe (slug calorimeter or Gardon gauge) before and after each material test. Record back-face temperature rise, surface temperature (two-color pyrometer), surface recession (real-time if possible), and mass loss (weigh sample before and after).",
+          "Calibrate the material response model: compare predicted recession, char depth, and back-face temperature to measured values. Adjust model parameters (decomposition kinetics, char thermal conductivity, gas permeability, emissivity) within physically reasonable bounds to match the test data. A model that matches arc jet data gives confidence in flight predictions.",
+          "Perform post-test analysis: section the samples to measure char depth and pyrolysis depth. Compare to model predictions. Use SEM to examine the char microstructure. For ablators, identify the recession mechanism (oxidation, sublimation, mechanical removal). Document any unexpected behavior (delamination, spallation, excessive roughening)."
+        ],
+        "tags": ["tps", "arc-jet", "testing", "validation"]
+      }
+    ]
+  },
+  {
+    "chain_name": "high-temperature-materials",
+    "description": "Select and design materials for extreme temperature service: nickel superalloys for turbines, ceramic matrix composites for hypersonic leading edges, thermal barrier coatings, and refractory metals.",
+    "domain": "aerospace",
+    "tags": ["high-temperature", "materials", "superalloy", "cmc", "aerospace"],
+    "steps": [
+      {
+        "flow_name": "superalloy-and-cmc-selection",
+        "description": "Select the high-temperature material system for the application based on operating temperature, stress, environment, and life requirements.",
+        "inputs": [
+          {"name": "operating-conditions", "desc": "Temperature range, stress state, oxidizing or reducing atmosphere, cyclic vs steady"},
+          {"name": "life-requirement", "desc": "Required service hours and number of thermal cycles"},
+          {"name": "component-function", "desc": "Structural, thermal protection, or wear resistance role"}
+        ],
+        "outputs": [
+          {"name": "material-selection", "desc": "Selected material system with composition, form, and processing route"},
+          {"name": "property-data", "desc": "Mechanical and thermal properties at operating temperature with design allowables"},
+          {"name": "failure-mode-assessment", "desc": "Dominant failure mechanisms and inspection intervals"}
+        ],
+        "process": [
+          "Map the temperature-stress space: below 850C, conventional steels and titanium alloys work. 850 to 1100C: nickel superalloys (Inconel 718 up to 650C, Waspaloy to 750C, single-crystal CMSX-4 or Rene N5 to 1100C with cooling). 1100 to 1600C: ceramic matrix composites (SiC/SiC) or coated superalloys. Above 1600C: ultra-high temperature ceramics (ZrB2-SiC, HfC) or actively cooled refractory metals.",
+          "For nickel superalloy selection: the gamma-prime (Ni3Al) precipitate fraction determines creep strength. Higher gamma-prime volume fraction (60 to 70% in single crystals) gives higher creep resistance but lower ductility and harder processing. Select alloy family by fabrication method: wrought (718, Waspaloy for disks), investment cast equiaxed (IN713 for vanes), directionally solidified (CM247LC), or single crystal (CMSX-4, CMSX-10 for the hottest blades).",
+          "For ceramic matrix composites: SiC fiber in SiC matrix (SiC/SiC) is the primary system for aerospace hot structures. Fiber types: Hi-Nicalon S (best high-temperature retention), Tyranno SA (alternative). Matrix deposited by CVI (chemical vapor infiltration: best properties but slow and expensive), PIP (polymer infiltration and pyrolysis: faster, lower density), or MI (melt infiltration: dense matrix but residual free silicon limits temperature to 1350C).",
+          "Evaluate failure mechanisms: for superalloys, creep rupture (Larson-Miller parameter for life prediction), thermal-mechanical fatigue (TMF: strain range and temperature phase drive crack initiation), oxidation and hot corrosion (type I sulfidation at 800 to 950C, type II below 800C). For CMCs, matrix cracking (proportional limit stress is the design driver, not ultimate strength), fiber creep at extreme temperatures, and environmental barrier degradation.",
+          "Specify design allowables: for metallic components, use minimum properties at the operating temperature from handbook data (MMPDS for metals). For CMCs, use a probabilistic approach (Weibull statistics) because ceramic materials have scatter in strength. Apply appropriate safety factors (1.5 on ultimate for metallic, 2.0 or higher for CMC in critical applications)."
+        ],
+        "tags": ["high-temperature", "superalloy", "cmc", "materials"]
+      },
+      {
+        "flow_name": "thermal-barrier-coating-design",
+        "description": "Design the thermal barrier coating system for hot section components: bond coat, ceramic topcoat, and environmental barrier for CMCs.",
+        "inputs": [
+          {"name": "material-selection", "desc": "Substrate material and its maximum operating temperature"},
+          {"name": "operating-conditions", "desc": "Gas temperature, thermal cycling, and corrosive species"},
+          {"name": "life-requirement", "desc": "Required hours and cycles"}
+        ],
+        "outputs": [
+          {"name": "coating-system-design", "desc": "Complete coating architecture with material, thickness, and process for each layer"},
+          {"name": "temperature-reduction", "desc": "Predicted substrate temperature reduction from the TBC"},
+          {"name": "life-prediction", "desc": "Predicted TBC life from spallation modeling"}
+        ],
+        "process": [
+          "Design the TBC system for superalloy substrates: bond coat (MCrAlY applied by HVOF or VPS, or platinum aluminide by pack cementation or CVD: provides oxidation resistance and adhesion), thermally grown oxide (TGO: alpha-Al2O3 that forms on the bond coat during service, 1 to 10 micrometers: the health of this layer determines TBC life), and ceramic topcoat (7% yttria-stabilized zirconia (7YSZ) applied by APS or EB-PVD: provides the thermal insulation).",
+          "Calculate the temperature drop through the TBC: delta_T = q * t / k where q is the heat flux, t is the coating thickness, and k is the thermal conductivity. 7YSZ has k ~ 1 to 1.5 W/m-K for APS (lower due to porosity and microcracks) and k ~ 1.5 to 2 W/m-K for EB-PVD. A 250 micrometer YSZ coating at 1 MW/m^2 heat flux drops the temperature by about 170 to 250C.",
+          "Select coating process: APS (air plasma spray) gives a lamellar microstructure with in-plane microcracks that provide strain tolerance. EB-PVD (electron beam physical vapor deposition) gives columnar microstructure with inter-columnar gaps that provide strain tolerance and smoother surface (lower aerodynamic penalty). EB-PVD is used on turbine blades; APS on combustor liners and vanes.",
+          "Predict TBC life: the dominant failure mode is spallation driven by TGO growth stress. As the alumina TGO grows during service (parabolic growth: thickness proportional to sqrt(time)), it develops compressive stress from CTE mismatch with the bond coat. When this stress exceeds the bond strength (which degrades from rumpling and void formation), the TBC spalls. Life prediction uses the TGO thickness criterion: spallation occurs when TGO reaches a critical thickness (typically 5 to 10 micrometers).",
+          "For CMC substrates, design an environmental barrier coating (EBC): SiC reacts with water vapor in combustion gas to form volatile Si(OH)4, causing surface recession. EBC layers: silicon bond coat, mullite or BSAS intermediate coat, rare earth silicate topcoat (Yb2Si2O7 or similar). The EBC must be CTE-matched to the SiC substrate to avoid cracking during thermal cycling.",
+          "Define the inspection strategy: TBC health is monitored by visual inspection (discoloration indicates bond coat oxidation), photoluminescence spectroscopy (stress in the TGO correlates with remaining life), and thermal wave imaging (detects delamination before visible spallation). Set inspection intervals from the life model."
+        ],
+        "tags": ["tbc", "coating", "high-temperature", "materials"]
+      }
+    ]
+  },
+  {
+    "chain_name": "cryogenic-engineering-deep",
+    "description": "Design cryogenic systems for propulsion and superconductivity: fluid properties, insulation, valves, and instrumentation for liquids at 20K to 90K.",
+    "domain": "aerospace",
+    "tags": ["cryogenics", "lh2", "lox", "insulation", "aerospace"],
+    "steps": [
+      {
+        "flow_name": "cryogenic-fluid-system-design",
+        "description": "Design the cryogenic fluid storage, transfer, and distribution system: tank insulation, valve selection, and boil-off management.",
+        "inputs": [
+          {"name": "fluid-type", "desc": "Cryogenic fluid (LH2, LOX, LN2, LHe, LCH4) with required storage volume and duration"},
+          {"name": "operating-environment", "desc": "Ground (ambient heat leak) or space (solar, albedo, earth IR heating)"},
+          {"name": "flow-requirements", "desc": "Mass flow rate, pressure, and temperature at delivery point"}
+        ],
+        "outputs": [
+          {"name": "tank-and-insulation-design", "desc": "Tank geometry, insulation type and thickness, and predicted boil-off rate"},
+          {"name": "fluid-system-schematic", "desc": "Piping, valves, vents, and pressurization system layout"},
+          {"name": "thermal-performance", "desc": "Heat leak budget and storage duration before exceeding temperature or pressure limits"}
+        ],
+        "process": [
+          "Characterize the cryogenic fluid properties at storage conditions: LH2 at 20K (density 70 kg/m^3, boiling point 20.3K at 1 atm, heat of vaporization 446 kJ/kg, specific heat 9.7 kJ/kg-K). LOX at 90K (density 1140 kg/m^3, boiling point 90.2K). LCH4 at 111K (density 422 kg/m^3). The huge density difference between LH2 and LOX drives very different tank sizes.",
+          "Design insulation: for ground systems, use vacuum-jacketed piping with multilayer insulation (MLI: alternating layers of aluminized Mylar and Dacron net, effective thermal conductivity ~ 0.05 mW/m-K in vacuum) or spray-on polyurethane foam (k ~ 20 mW/m-K, simpler but much less effective). For launch vehicle tanks, spray-on foam (SOFI: spray-on foam insulation) on the tank exterior is standard (Space Shuttle ET heritage). For in-space, MLI blankets with 20 to 60 layers.",
+          "Calculate boil-off rate: Q_leak = (T_ambient - T_fluid) / R_total where R_total includes insulation, support structure conduction, penetration conduction (fill/drain lines, instrumentation), and radiation. Boil-off rate = Q_leak / h_fg. For LH2 with good MLI in LEO, boil-off is typically 0.1 to 0.5% per day. Without insulation, LH2 in LEO boils off in hours.",
+          "Design pressurization system: autogenous pressurization (warm the cryogen itself: gaseous hydrogen for LH2 tank, gaseous oxygen for LOX tank) is preferred for simplicity but requires heat exchangers. Helium pressurization (inert, does not condense) is used when autogenous is not practical. Calculate pressurant mass: pV = nRT applied to the ullage volume as liquid is expelled, accounting for heat transfer between the warm pressurant gas and the cold tank walls (collapse factor: the gas cools and contracts, requiring more pressurant than the ideal gas calculation).",
+          "Select cryogenic valves: material compatibility is critical (many metals become brittle below their ductile-to-brittle transition temperature; use austenitic stainless steel, Inconel, or aluminum alloys). Valve seats must seal at cryogenic temperatures despite differential thermal contraction. Ball valves are common for on/off (fast actuation); globe valves for throttling. Bellows-sealed valves eliminate packing leaks. All joints must accommodate thermal contraction (flex hoses, expansion bellows, slip joints).",
+          "Design the vent system: as heat leaks into the tank, the liquid warms and the pressure rises. A pressure relief valve (set at the maximum allowable working pressure) vents excess boil-off gas. In microgravity, the liquid and gas are not separated by gravity: a thermodynamic vent system (TVS) uses a Joule-Thomson valve to expand liquid to a lower pressure (and temperature), routing the cold two-phase fluid through a heat exchanger in the tank to intercept heat leak and vent only gas."
+        ],
+        "tags": ["cryogenics", "storage", "insulation"]
+      },
+      {
+        "flow_name": "cryogenic-instrumentation-and-testing",
+        "description": "Select and calibrate instrumentation for cryogenic systems and design the test campaign for system qualification.",
+        "inputs": [
+          {"name": "tank-and-insulation-design", "desc": "System design to be instrumented and tested"},
+          {"name": "measurement-requirements", "desc": "Required accuracy for temperature, pressure, level, and flow"}
+        ],
+        "outputs": [
+          {"name": "instrumentation-plan", "desc": "Sensor selection, placement, and calibration approach for each measurement"},
+          {"name": "test-plan", "desc": "Test sequence for cryogenic system qualification"},
+          {"name": "data-acquisition-setup", "desc": "Signal conditioning, sampling rate, and data recording requirements"}
+        ],
+        "process": [
+          "Select temperature sensors: silicon diode sensors (Lake Shore DT-670: accurate from 1.4K to 500K, interchangeable, good for point measurements). Platinum RTDs (good above 30K, standard in industrial cryogenics but lose sensitivity below 30K). Cernox sensors (Lake Shore: excellent for magnetic field environments where silicon diodes are affected). Thermocouples (Type T: copper-constantan for 15 to 400K, less accurate but cheap and robust for multipoint mapping).",
+          "Select level sensors: capacitance-based (dielectric constant of liquid vs gas differs: for LH2, dielectric constant of liquid is 1.23 vs 1.00 for gas). Point sensors (silicon diode heater: self-heating changes when immersed in liquid). Differential pressure (delta_P = rho * g * h: simple but requires knowing the fluid density, which changes with temperature). For microgravity, capacitance or RF sensors that work regardless of liquid orientation.",
+          "Select flow meters: turbine flow meters (good for clean cryogens, requires straight pipe upstream). Venturi (pressure drop based, no moving parts, but requires known fluid density). Coriolis (mass flow directly, works for two-phase, but expensive and large). Calibrate at cryogenic temperature; room-temperature calibration is not valid due to density and viscosity changes.",
+          "Select pressure transducers: remote-sensing through impulse lines (keeps the transducer warm, but the impulse line may trap gas or liquid). Direct-mount cryogenic transducers (operate at cryogenic temperature: fewer measurement artifacts but limited options). Absolute pressure for tank ullage, differential for flow measurement. Check transducer zero shift at cryogenic temperature.",
+          "Design the signal conditioning: cryogenic sensors often have small signals (millivolts for thermocouples, milliohms change for RTDs). Use 4-wire measurement for RTDs to eliminate lead resistance. Use low-thermal-EMF connections for thermocouples. Sample rate: 1 to 10 Hz for steady-state thermal, 100 Hz to 1 kHz for transient events (chill-down, water hammer, geysering).",
+          "Design the qualification test sequence: leak check at room temperature, then cryogenic leak check (thermal contraction changes seal performance). Proof pressure test at 1.5x MEOP at cryogenic temperature. Chill-down test (verify thermal stress, no cracking). Fill/drain cycle test. Pressurization test (verify collapse factor). Vent system test (verify relief valve function). Long-duration storage test (measure boil-off rate and compare to prediction). Vibration test if flight hardware."
+        ],
+        "tags": ["cryogenics", "instrumentation", "testing"]
+      }
+    ]
+  },
+  {
+    "chain_name": "detonation-engine-design",
+    "description": "Design a pressure-gain combustion engine using detonation waves: rotating detonation engines and pulse detonation engines for higher thermodynamic efficiency than deflagration-based combustors.",
+    "domain": "aerospace",
+    "tags": ["detonation", "rde", "pde", "propulsion", "pressure-gain"],
+    "steps": [
+      {
+        "flow_name": "detonation-fundamentals-and-sizing",
+        "description": "Apply detonation physics to engine design: cell size, wave speed, and injection geometry for stable rotating detonation.",
+        "inputs": [
+          {"name": "propellant-combination", "desc": "Fuel and oxidizer (H2/air, CH4/O2, JP-10/air, etc.)"},
+          {"name": "operating-conditions", "desc": "Inlet pressure, temperature, and mass flow rate"},
+          {"name": "performance-targets", "desc": "Required pressure gain, thrust, and efficiency improvement over deflagration"}
+        ],
+        "outputs": [
+          {"name": "detonation-parameters", "desc": "CJ detonation velocity, pressure ratio, cell size for the propellant combination"},
+          {"name": "annulus-geometry", "desc": "Channel width, diameter, and length for stable detonation propagation"},
+          {"name": "injection-design", "desc": "Injector element sizing and arrangement for detonation wave compatibility"}
+        ],
+        "process": [
+          "Calculate the Chapman-Jouguet (CJ) detonation properties for the propellant pair: the CJ velocity is the minimum stable detonation velocity. For H2/air at 1 atm: V_CJ ~ 1960 m/s, pressure ratio p_CJ/p_1 ~ 15.5, temperature ratio T_CJ/T_1 ~ 10. For CH4/air: V_CJ ~ 1800 m/s. These set the pressure gain: the Humphrey cycle (constant-volume heat addition approximation) gives 10 to 15% higher thermal efficiency than the Brayton cycle (constant-pressure).",
+          "Determine the detonation cell size lambda for the propellant mixture: the cell size is the characteristic length scale of the cellular detonation structure. It depends on mixture composition, pressure, and temperature. For H2/air stoichiometric at 1 atm: lambda ~ 10 to 15 mm. For CH4/air: lambda ~ 200 to 300 mm (much larger, harder to detonate). Cell size decreases with increasing pressure and increasing reactivity.",
+          "Size the RDE annular channel: channel width must be at least lambda/pi (the detonation cell must fit in the channel). Channel outer diameter is set by mass flow rate: the detonation wave propagates azimuthally while fresh mixture is injected axially. The wave sweeps the channel at V_CJ, consuming the mixture that has accumulated since its last pass. Channel length must allow complete combustion before the products exit.",
+          "Design the injection system: the injector must refill the channel between successive detonation wave passages. The refill time is the circumference divided by V_CJ (for a single wave) or divided by N * V_CJ (for N co-rotating waves). Injector elements must survive the periodic detonation wave passage (pressure spike of 15 to 30x inlet pressure). Use unlike-doublet or shear-coaxial elements with acoustic impedance mismatch to prevent detonation flashback into the manifold.",
+          "Predict the number of detonation waves: stable operation can have 1 to 6+ co-rotating waves depending on the channel diameter and mixture reactivity. More waves mean shorter refill time (harder) but more uniform exhaust (better for integration with a turbine). The wave count is not directly controllable; it emerges from the interaction between injection rate, channel geometry, and mixture properties.",
+          "Estimate the actual pressure gain: the CJ pressure ratio is the theoretical maximum, but mixing losses, incomplete combustion, and parasitic expansion before the detonation wave arrives all reduce the realized pressure gain. Current experimental RDEs achieve 2 to 5% total pressure gain over a conventional combustor at similar conditions. The pressure gain increases with the ratio of detonation wave pressure to the inlet pressure."
+        ],
+        "tags": ["detonation", "rde", "fundamentals"]
+      },
+      {
+        "flow_name": "detonation-engine-integration-and-testing",
+        "description": "Integrate the detonation combustor with turbomachinery or a nozzle and design the experimental test campaign.",
+        "inputs": [
+          {"name": "annulus-geometry", "desc": "RDE channel design from sizing"},
+          {"name": "injection-design", "desc": "Injector element design"},
+          {"name": "application", "desc": "Gas turbine replacement, rocket engine, or ramjet combustor"}
+        ],
+        "outputs": [
+          {"name": "integration-design", "desc": "How the RDE interfaces with turbine, nozzle, or inlet"},
+          {"name": "test-rig-design", "desc": "Test facility requirements and instrumentation plan"},
+          {"name": "performance-assessment", "desc": "Measured vs predicted pressure gain and efficiency"}
+        ],
+        "process": [
+          "For gas turbine integration: the RDE replaces the conventional combustor. The turbine downstream must survive the circumferentially non-uniform flow (periodic pressure and temperature pulses at the detonation wave frequency, typically 1 to 10 kHz). The time-averaged turbine inlet conditions must match the design point. Transition duct design smooths the flow and mixes the products before the first turbine vane.",
+          "For rocket engine integration: the RDE operates as a pressure-gain combustor feeding a converging-diverging nozzle. The chamber pressure downstream of the detonation is higher than the injection pressure, which is the fundamental advantage (higher nozzle inlet pressure = higher Isp for the same tank pressure, or lower tank pressure for the same Isp). Nozzle design must handle the oscillatory mass flow.",
+          "Design the test rig: the RDE test article is an annular channel with optical access ports (windows for high-speed imaging of the detonation wave), high-frequency pressure transducers (Kulite or PCB, 500 kHz+ bandwidth to resolve the detonation wave), and thermocouple rakes in the exhaust. The rig needs a high-flow gas supply system with fast-acting valves for ignition sequencing.",
+          "Instrument for wave characterization: use circumferentially distributed high-frequency pressure transducers (at least 4, preferably 8+) to measure wave speed (from time of flight between sensors), wave count, and wave pressure profile. High-speed imaging (100,000 fps+) through quartz or sapphire windows captures the detonation wave structure. Ion probes can detect the detonation front passage.",
+          "Characterize performance: measure the total pressure gain by comparing time-averaged total pressure upstream and downstream of the RDE. This requires carefully designed total pressure probes that survive the detonation environment (cooled pitot-static probes). Measure thrust directly on a thrust stand for rocket applications. Compare to a baseline conventional combustor at the same mass flow rate and equivalence ratio.",
+          "Address key technical risks: detonation-to-deflagration transition (the wave may degrade to a spinning deflagration at low reactivity conditions), thermal management (the channel walls see intense periodic heating from the detonation wave), injector durability (fatigue from thousands of pressure cycles per second), and flashback prevention (the high pressure behind the detonation must not drive combustion into the propellant manifold)."
+        ],
+        "tags": ["detonation", "rde", "testing", "integration"]
+      }
+    ]
+  },
+  {
+    "chain_name": "space-nuclear-power",
+    "description": "Design nuclear power systems for space: radioisotope generators for low power and fission reactors for high power, with the safety and regulatory framework for nuclear launch.",
+    "domain": "aerospace",
+    "tags": ["nuclear-power", "rtg", "fission", "spacecraft", "aerospace"],
+    "steps": [
+      {
+        "flow_name": "space-nuclear-source-selection",
+        "description": "Select the nuclear power source type (radioisotope vs fission reactor) based on mission power level, duration, and mass constraints.",
+        "inputs": [
+          {"name": "power-requirement", "desc": "Electrical power needed (watts to kilowatts to megawatts) and whether continuous or pulsed"},
+          {"name": "mission-duration", "desc": "Required operating life (years to decades)"},
+          {"name": "mass-and-volume-constraints", "desc": "Allowable mass and volume for the power system"}
+        ],
+        "outputs": [
+          {"name": "source-type-selection", "desc": "RTG, Stirling, or fission reactor with justification"},
+          {"name": "system-architecture", "desc": "Power source, conversion, and heat rejection configuration"},
+          {"name": "mass-power-trade", "desc": "Specific power (W/kg) and how it scales with power level"}
+        ],
+        "process": [
+          "Map power level to source type: below about 500 W electrical, radioisotope systems dominate (RTG or Stirling). 500 W to 10 kW: either large radioisotope arrays or small fission reactors compete (crossover depends on mission duration and launch mass sensitivity). Above 10 kW: fission reactors are the only practical nuclear option. Above 100 kW: fission reactors with dynamic conversion (Brayton, Rankine).",
+          "For radioisotope sources: Pu-238 is the standard isotope (87.7-year half-life, alpha emitter, low radiation shielding needed, 0.56 W/g thermal at beginning of life). The fuel form is PuO2 pressed into pellets encased in iridium clad and graphite impact shells (GPHS module: 250 W thermal per module, designed to survive launch abort reentry and impact). Power degrades at 0.8% per year from half-life.",
+          "RTG conversion: thermoelectric couples (SiGe or PbTe/TAGS) convert thermal to electrical at 6 to 7% efficiency. MMRTG (Mars missions): 110 W electrical at BOL from 2000 W thermal (8 GPHS modules). Specific power: about 2.8 W/kg. No moving parts, proven reliability (Voyager RTGs operating since 1977). Stirling conversion: 25 to 30% efficiency, so the same thermal source produces 3 to 4x more electrical power, but has moving parts (piston) with associated reliability concern.",
+          "For fission systems: the reactor produces thermal power from U-235 fission. At 10 kW electrical, a small reactor (KRUSTY/Kilopower heritage: 43 kg U-235 core, heat pipe cooled, Stirling conversion) provides about 10 kW at ~28% conversion efficiency. Specific power: about 5 to 10 W/kg at 10 kW class. At 100 kW+: reactor with Brayton cycle gas turbine or Rankine liquid metal cycle. Specific power improves with scale (15 to 40 W/kg at 100 kW class).",
+          "Design the heat rejection system: all space power systems must reject waste heat by radiation (no convection in vacuum). Radiator area = Q_reject / (epsilon * sigma * T_radiator^4). Higher rejection temperature means smaller radiator but lower conversion efficiency. For thermoelectric at ~525K fin temperature: 50 to 100 m^2/kW of rejection. For Stirling at ~375K: larger radiator needed. For Brayton at ~500K: moderate. Radiator mass often dominates the system mass at high power levels.",
+          "Estimate system mass: reactor + shield + conversion + radiator + structure. The radiation shield (to protect spacecraft electronics and payload) is often the heaviest single component. Shadow shield design: place the reactor at one end of a boom, shield only the cone angle subtended by the spacecraft (saves mass compared to 4-pi shielding). Shield materials: LiH for neutrons, tungsten or depleted uranium for gamma."
+        ],
+        "tags": ["nuclear-power", "rtg", "fission", "spacecraft"]
+      },
+      {
+        "flow_name": "space-nuclear-safety-and-launch",
+        "description": "Navigate the safety analysis and regulatory approval process required to launch a nuclear power source into space.",
+        "inputs": [
+          {"name": "source-type-selection", "desc": "Nuclear source type and its radioactive inventory"},
+          {"name": "launch-vehicle", "desc": "Launch vehicle and its abort scenarios"},
+          {"name": "mission-profile", "desc": "Orbit, mission duration, and end-of-mission disposal"}
+        ],
+        "outputs": [
+          {"name": "safety-analysis-report", "desc": "Nuclear risk assessment for all mission phases"},
+          {"name": "regulatory-approvals", "desc": "Required approvals timeline and responsible agencies"},
+          {"name": "nuclear-launch-safety", "desc": "Probability of release and consequence analysis"}
+        ],
+        "process": [
+          "Prepare the Safety Analysis Report (SAR): analyze all mission phases for nuclear risk. Pre-launch: nuclear material is in storage and transport (standard nuclear material handling procedures). Launch: abort scenarios (pad explosion, range safety destruct, ascent failure with water impact or land impact). In-space: nominal operation (no public risk). End-of-mission: disposal orbit must ensure the radioactive inventory decays to safe levels before any possible reentry.",
+          "For radioisotope systems: the GPHS modules are designed to contain the PuO2 through all credible accident scenarios. Impact testing: GPHS modules are tested by impacting them onto steel plates at terminal velocity from launch abort reentry. Fire testing: GPHS modules survive solid propellant fire and liquid propellant pool fire. Vaporization: calculate the fraction of inventory that could be released as respirable particles in a worst-case explosion and fire. The containment is the safety basis.",
+          "For fission reactors: the reactor is launched cold (no fission products, negligible radioactivity from fresh uranium fuel). The safety concern is inadvertent criticality: the reactor must not achieve a critical configuration from any accident scenario (impact compaction, water flooding as moderator). Design features: mechanical locks on control elements for launch, geometry and reflector design that preclude criticality from compaction, neutron poisons that ensure subcriticality if flooded.",
+          "Submit to the INSRP (Interagency Nuclear Safety Review Panel): INSRP includes representatives from DOE, DOD, EPA, NASA, and NRC. They independently review the SAR and provide a Safety Evaluation Report (SER) to the Office of Science and Technology Policy (OSTP). The OSTP Director (or designee) grants launch approval. This process takes 3 to 5 years from SAR start to launch approval.",
+          "Perform the probabilistic risk assessment: calculate the probability of each accident scenario, the conditional probability of nuclear material release given the accident, and the consequences (population dose from atmospheric dispersion of released material). Acceptable risk is typically less than 1 in 10,000 probability of exceeding a specified population dose per mission.",
+          "Address end-of-mission disposal: for radioisotope systems in LEO, the orbit must be high enough that natural decay (orbital lifetime) exceeds the time for the radioactivity to decay to safe levels (typically >300 years for Pu-238, requiring orbit above ~700 km altitude). For fission reactors, the orbital lifetime must exceed the time for the fission product inventory to decay (typically >1000 years, requiring orbit above ~900 km or disposal in a heliocentric orbit)."
+        ],
+        "tags": ["nuclear-power", "safety", "regulatory", "launch"]
+      }
+    ]
+  }
+]

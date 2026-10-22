@@ -1,0 +1,777 @@
+[
+  {
+    "chain_name": "modal-analysis-methodology",
+    "description": "Perform experimental modal analysis from test setup through parameter extraction to FEA correlation, producing validated mode shapes and natural frequencies for structural dynamics.",
+    "domain": "acoustics",
+    "tags": ["modal-analysis", "vibration", "structural-dynamics", "FRF", "testing"],
+    "steps": [
+      {
+        "flow_name": "modal-test-planning",
+        "description": "Plan the modal test: select excitation method, define measurement grid, and place accelerometers based on pre-test FEA analysis.",
+        "inputs": [
+          {"name": "structure-description", "desc": "Physical description of the test article including geometry, materials, and boundary conditions"},
+          {"name": "frequency-range-of-interest", "desc": "Target frequency band for modal extraction (e.g., 0-500 Hz)"},
+          {"name": "pre-test-fea-modes", "desc": "Predicted mode shapes and frequencies from FEA model, if available"}
+        ],
+        "outputs": [
+          {"name": "excitation-method", "desc": "Selected excitation approach (impact hammer, electrodynamic shaker, or multiple-reference) with rationale"},
+          {"name": "measurement-grid", "desc": "Sensor locations and directions defined to capture target mode shapes without spatial aliasing"},
+          {"name": "test-configuration", "desc": "Complete test setup including boundary conditions, suspension method for free-free, channel assignments, and cabling diagram"}
+        ],
+        "process": [
+          "Review the structure geometry and identify expected mode shapes from pre-test FEA or engineering judgment. Count the modes expected in the frequency range.",
+          "Select excitation method: impact hammer for small to medium structures with good frequency content from tip hardness selection; shaker for large structures or when controlled input spectrum is needed; multiple-reference for structures with repeated roots or closely spaced modes.",
+          "Define the measurement grid. Place points at locations of maximum modal displacement from pre-test analysis. Ensure enough spatial resolution to distinguish the highest-order mode shape in the band (at least 2 points per half-wavelength of the highest bending mode).",
+          "Select accelerometers: mass loading must be less than 1% of local effective mass. Choose sensitivity to cover expected amplitude range. Mount with stud for best frequency response; wax or adhesive if stud mount is not possible, noting the reduced usable frequency range.",
+          "Define driving point location where the excitation is applied and the response is measured at the same DOF. This FRF must show alternating resonance-antiresonance pattern as a quality check.",
+          "Document channel assignments, reference DOF, roving DOF sequence, and expected measurement count. Estimate total test time."
+        ],
+        "tags": ["modal-analysis", "test-planning"]
+      },
+      {
+        "flow_name": "frf-measurement-execution",
+        "description": "Execute frequency response function measurements with proper signal processing, averaging, and quality checks.",
+        "inputs": [
+          {"name": "excitation-method", "desc": "Selected excitation approach"},
+          {"name": "measurement-grid", "desc": "Sensor locations and directions"},
+          {"name": "test-configuration", "desc": "Complete test setup specification"}
+        ],
+        "outputs": [
+          {"name": "frf-dataset", "desc": "Complete set of measured FRFs (magnitude, phase, coherence) across all measurement points"},
+          {"name": "driving-point-frf", "desc": "Driving point FRF validated for alternating pole-zero pattern"},
+          {"name": "measurement-quality-report", "desc": "Coherence statistics, linearity check results, and reciprocity validation"}
+        ],
+        "process": [
+          "Set up the data acquisition system. Configure sampling rate to at least 2.56 times the maximum frequency of interest (provides anti-alias margin). Set block size for frequency resolution (delta-f = 1/T where T is the time block length).",
+          "For impact testing: select hammer tip hardness to excite the full frequency range (soft tip for low frequencies, hard tip for high). Check the force spectrum has energy across the band. Use force window to zero out post-impact noise. Use exponential window on response to reduce leakage while minimizing bias on damping estimates.",
+          "For shaker testing: use burst random or swept sine excitation. Burst random avoids leakage without windows. Swept sine gives best signal-to-noise at each frequency but takes longer.",
+          "Average multiple measurements at each point. Use at least 5 averages for impact, more for noisy environments. Monitor the coherence function: values below 0.9 indicate noise, nonlinearity, or leakage problems at those frequencies.",
+          "Check the driving point FRF: it must show alternating resonance peaks and antiresonance dips, and the imaginary part must remain single-signed (all negative for accelerance). Failure of either check indicates a measurement or setup error.",
+          "Verify reciprocity: measure H_ij and H_ji for at least one pair of points. They should overlay within measurement uncertainty. Poor reciprocity indicates nonlinearity or a boundary condition change.",
+          "Check linearity by measuring at two excitation levels. FRFs should overlay. Divergence indicates nonlinear behavior."
+        ],
+        "tags": ["modal-analysis", "FRF", "measurement"]
+      },
+      {
+        "flow_name": "modal-parameter-extraction",
+        "description": "Extract natural frequencies, damping ratios, and mode shapes from FRF data using appropriate curve-fitting algorithms.",
+        "inputs": [
+          {"name": "frf-dataset", "desc": "Complete set of measured FRFs"},
+          {"name": "driving-point-frf", "desc": "Validated driving point FRF"},
+          {"name": "frequency-range-of-interest", "desc": "Target frequency band"}
+        ],
+        "outputs": [
+          {"name": "modal-parameters", "desc": "Natural frequencies, damping ratios, and mode shapes for each identified mode"},
+          {"name": "modal-complexity", "desc": "Assessment of mode complexity (real vs complex modes) indicating proportional vs nonproportional damping"},
+          {"name": "stability-diagram", "desc": "Stabilization diagram showing stable poles across polynomial orders for mode count validation"}
+        ],
+        "process": [
+          "Start with SDOF methods for well-separated modes: peak-picking gives natural frequency from FRF peak and damping from half-power bandwidth. Circle-fit in Nyquist plot gives frequency, damping, and residue for each mode. These serve as initial estimates and sanity checks.",
+          "For the full dataset, use MDOF methods. Polyreference least-squares complex frequency (PolyMAX or similar) fits all FRFs simultaneously. This handles closely spaced and repeated modes that SDOF methods miss.",
+          "Construct the stabilization diagram: increase the polynomial order from low to high and track which poles remain stable in frequency (within 1%), damping (within 5%), and mode shape (MAC above 0.95). Physical modes stabilize; computational modes do not.",
+          "Select the physical poles from the stabilization diagram. Count them against the expected mode count from the driving point FRF (number of peaks).",
+          "Assess mode complexity. Purely real mode shapes indicate proportional damping. Complex mode shapes (significant imaginary component) indicate nonproportional damping or measurement errors. Calculate the Modal Phase Collinearity (MPC) for each mode: values above 0.9 suggest a real (normal) mode.",
+          "Validate extracted modes: check that synthesized FRFs from the modal model closely match the measured FRFs. Large residuals at specific frequencies indicate missed modes or poor extraction."
+        ],
+        "tags": ["modal-analysis", "curve-fitting", "signal-processing"]
+      },
+      {
+        "flow_name": "fea-correlation-and-updating",
+        "description": "Correlate extracted experimental modes with FEA predictions using MAC and frequency comparison, then update the FEA model to match test data.",
+        "inputs": [
+          {"name": "modal-parameters", "desc": "Experimentally extracted natural frequencies, damping ratios, and mode shapes"},
+          {"name": "pre-test-fea-modes", "desc": "FEA-predicted mode shapes and frequencies"},
+          {"name": "structure-description", "desc": "Physical description of the test article"}
+        ],
+        "outputs": [
+          {"name": "correlation-report", "desc": "MAC matrix, frequency comparison table, and cross-orthogonality check between test and FEA modes"},
+          {"name": "updated-fea-model", "desc": "FEA model with parameters adjusted to match test data within acceptance criteria"},
+          {"name": "validated-modal-model", "desc": "Final validated modal model suitable for design decisions and forced response prediction"}
+        ],
+        "process": [
+          "Compute the Modal Assurance Criterion (MAC) matrix between experimental and FEA mode shapes. MAC values above 0.9 indicate good correlation for a mode pair. Off-diagonal MAC values above 0.1 suggest mode shape confusion or a model problem.",
+          "Compare natural frequencies: plot experimental vs FEA frequency for each paired mode. Compute percentage error. Acceptance criteria depend on application but typically 5% or better for the first several modes.",
+          "Compute cross-orthogonality if a mass matrix is available from FEA. Diagonal terms above 0.9 and off-diagonal terms below 0.1 indicate acceptable correlation. This is a stricter check than MAC because it accounts for mass distribution.",
+          "Identify discrepancies: modes with poor MAC or large frequency error point to specific model deficiencies. Low-frequency errors often indicate boundary condition or joint stiffness problems. High-frequency errors often indicate local stiffness or mass distribution issues.",
+          "Update the FEA model: adjust uncertain parameters (joint stiffness, material properties, boundary conditions) to improve correlation. Use sensitivity analysis to identify which parameters most affect the discrepant modes. Automated model updating via optimization (minimizing frequency and MAC error) can be used but requires physical constraints to avoid non-physical parameter values.",
+          "Recheck all modes after updating. Improving one mode must not degrade others. Document the final correlation metrics and the parameter changes made."
+        ],
+        "tags": ["modal-analysis", "FEA", "model-updating"]
+      }
+    ]
+  },
+  {
+    "chain_name": "noise-control-engineering",
+    "description": "Identify noise sources, quantify transmission paths, and design noise reduction treatments to meet target specifications using measurement-based engineering methods.",
+    "domain": "acoustics",
+    "tags": ["noise-control", "acoustics", "sound", "barrier", "enclosure"],
+    "steps": [
+      {
+        "flow_name": "noise-source-identification",
+        "description": "Identify and rank noise sources using sound intensity mapping, transfer path analysis, and source-path-receiver decomposition.",
+        "inputs": [
+          {"name": "noise-problem-description", "desc": "Description of the noise issue including affected locations, subjective complaints, and operating conditions"},
+          {"name": "noise-target", "desc": "Target noise level or reduction requirement (dB, dBA, octave band, or noise criterion)"}
+        ],
+        "outputs": [
+          {"name": "source-ranking", "desc": "Ranked list of noise sources with their contribution to the total noise at the receiver location"},
+          {"name": "path-characterization", "desc": "Airborne and structure-borne transmission paths identified with their relative contributions"},
+          {"name": "dominant-frequencies", "desc": "Frequency bands where noise exceeds the target, identifying tonal vs broadband character"}
+        ],
+        "process": [
+          "Measure overall sound pressure levels at the receiver location under operating conditions. Obtain octave or third-octave band spectrum. Compare to target noise criterion (NC, RC, or dBA limit) to identify which frequency bands need reduction and by how many dB.",
+          "Use sound intensity mapping (scanning or discrete grid) to identify which surfaces or components radiate the most power. Sound intensity gives net power flow, distinguishing source from reflecting surfaces unlike pressure measurements alone.",
+          "Discriminate airborne from structure-borne paths. For airborne: measure with path blocked (lead vinyl barrier over suspected surface) to quantify its contribution. For structure-borne: measure vibration on radiating surfaces and compute radiated power from velocity and radiation efficiency.",
+          "For complex machines, apply transfer path analysis: measure operational source strengths (blocked force or matrix inversion method) and path transfer functions to reconstruct contributions at the receiver. Rank paths by partial sound pressure.",
+          "Identify tonal components from narrowband FFT analysis. Relate tonal frequencies to source mechanisms (rotation speed, blade pass frequency, gear mesh, electrical hum at mains frequency and harmonics).",
+          "Summarize the noise budget: list each source-path combination, its contribution in dB at the receiver, and the gap to target. This prioritizes which paths to treat."
+        ],
+        "tags": ["noise-control", "measurement", "diagnostics"]
+      },
+      {
+        "flow_name": "noise-treatment-design",
+        "description": "Design noise control treatments including barriers, enclosures, damping, and absorbers sized to meet the target reduction.",
+        "inputs": [
+          {"name": "source-ranking", "desc": "Ranked noise sources with contributions"},
+          {"name": "path-characterization", "desc": "Airborne and structure-borne paths with relative contributions"},
+          {"name": "dominant-frequencies", "desc": "Frequency bands requiring reduction"},
+          {"name": "noise-target", "desc": "Target noise level or reduction requirement"}
+        ],
+        "outputs": [
+          {"name": "treatment-design", "desc": "Specified noise control treatments with predicted insertion loss for each path"},
+          {"name": "predicted-reduction", "desc": "Expected noise level at receiver after treatment, verified against target"},
+          {"name": "treatment-specifications", "desc": "Material specifications, dimensions, mounting details, and installation requirements"}
+        ],
+        "process": [
+          "Address the dominant path first. If 90% of noise comes from one path, treating secondary paths has no effect (logarithmic addition: two equal sources are only 3 dB above one).",
+          "For airborne paths through panels: increase transmission loss. Mass law gives 6 dB per doubling of surface density at a given frequency. Coincidence frequency limits single-wall performance; design the wall so coincidence falls outside the problem frequency range. Double-wall construction with an air gap provides TL exceeding mass law above the mass-air-mass resonance frequency.",
+          "For barriers (partial enclosures, screens): calculate insertion loss from the Maekawa chart using Fresnel number N = 2*delta/lambda where delta is the path length difference over vs around the barrier. Minimum practical insertion loss for a barrier is about 5 dB; maximum about 20 dB, limited by flanking over and around edges.",
+          "For enclosures: design for insertion loss equal to the required reduction plus a margin for flanking. Identify every penetration (piping, wiring, ventilation) and treat each to the same TL as the wall. Ventilation openings require silencers: absorptive for broadband, reactive for tonal.",
+          "For structure-borne paths: apply damping treatment to vibrating surfaces. Constrained layer damping is effective for thin panels (loss factor increase of 0.01 to 0.1). Free-layer damping works where constrained layer is impractical. Target the damping to the radiating surface and the frequency range that dominates.",
+          "For absorption treatment inside reverberant spaces: calculate the required absorption increase from the Sabine equation delta_L = 10*log10(A_after/A_before). Select absorber material and thickness: porous absorber thickness should be at least one-quarter wavelength of the lowest frequency to treat. Mount absorbers on surfaces with highest particle velocity.",
+          "Predict total noise at the receiver after all treatments by subtracting each treatment's insertion loss from its corresponding path contribution. Verify the sum meets the target. If not, identify the next limiting path and add treatment."
+        ],
+        "tags": ["noise-control", "design", "barriers", "enclosures"]
+      },
+      {
+        "flow_name": "noise-compliance-verification",
+        "description": "Verify that installed noise treatments meet the target through post-installation measurement and document compliance.",
+        "inputs": [
+          {"name": "treatment-design", "desc": "Installed noise control treatments"},
+          {"name": "noise-target", "desc": "Target noise level or reduction requirement"},
+          {"name": "predicted-reduction", "desc": "Expected noise level after treatment"}
+        ],
+        "outputs": [
+          {"name": "compliance-report", "desc": "Measured noise levels at receiver locations with comparison to target, including measurement uncertainty"},
+          {"name": "insertion-loss-verification", "desc": "Measured insertion loss of each treatment compared to predicted values"},
+          {"name": "residual-noise-budget", "desc": "Updated noise budget showing remaining sources and paths for further reduction if needed"}
+        ],
+        "process": [
+          "Measure noise levels at the receiver locations under the same operating conditions as the original survey. Use the same instruments, positions, and measurement duration.",
+          "Compare before-and-after spectra to determine actual insertion loss of each treatment. Measure with treatments installed and, where practical, with treatments temporarily removed to confirm the insertion loss is from the treatment, not from other changes.",
+          "Verify compliance against the target at each required location and condition. Apply measurement uncertainty (typically +/- 2 dB for environmental measurements per ISO 9612).",
+          "If the target is not met, re-examine the noise budget. The residual noise identifies which path now dominates. Often a flanking path or an untreated penetration limits performance.",
+          "Document the final compliance state with calibrated measurement data, instrument certificates, environmental conditions, and operating conditions."
+        ],
+        "tags": ["noise-control", "compliance", "verification"]
+      }
+    ]
+  },
+  {
+    "chain_name": "vibration-isolation-design",
+    "description": "Design vibration isolation systems for machinery or sensitive equipment by selecting mount type, calculating natural frequency, and verifying transmissibility performance.",
+    "domain": "acoustics",
+    "tags": ["vibration", "isolation", "mounts", "transmissibility"],
+    "steps": [
+      {
+        "flow_name": "isolation-requirement-analysis",
+        "description": "Define isolation requirements from forcing frequency, amplitude, and target transmissibility or floor vibration criterion.",
+        "inputs": [
+          {"name": "vibration-source", "desc": "Description of the vibration source including forcing frequencies, amplitudes, and operating speed range"},
+          {"name": "isolation-target", "desc": "Required isolation performance (transmissibility ratio, floor vibration criterion VC curve, or force reduction)"},
+          {"name": "installation-constraints", "desc": "Weight, space, environmental conditions, and mounting interface constraints"}
+        ],
+        "outputs": [
+          {"name": "required-natural-frequency", "desc": "Maximum allowable natural frequency of the isolated system to achieve the target transmissibility at the forcing frequency"},
+          {"name": "static-deflection-target", "desc": "Required static deflection corresponding to the natural frequency target"},
+          {"name": "isolation-specification", "desc": "Complete specification including frequency ratio, damping requirements, and load per mount"}
+        ],
+        "process": [
+          "Identify all forcing frequencies. For rotating machinery: 1x running speed (unbalance), 2x (misalignment), blade pass frequency (number of blades times RPM), and any structural resonances near these. For reciprocating machines: 1x, 2x, and higher orders.",
+          "Calculate the required frequency ratio r = f_forcing / f_natural for the target transmissibility T. For a SDOF system: T = 1/sqrt((1-(r)^2)^2 + (2*zeta*r)^2). For 90% isolation (T = 0.1), r must be about 3.3 with 5% damping. For 95% isolation, r must be about 4.6.",
+          "Convert the natural frequency to static deflection: f_n = (1/2*pi)*sqrt(g/delta_static). A 3 Hz natural frequency requires about 28 mm static deflection; 5 Hz requires about 10 mm; 10 Hz requires about 2.5 mm.",
+          "For sensitive equipment (electron microscope, metrology): use VC curves (VC-A through VC-G) as the floor vibration criterion. Measure the existing floor vibration spectrum and determine which VC curve the floor meets. Design isolation to bring equipment vibration below the required VC curve at all frequencies.",
+          "Calculate the load per mount from the total supported weight divided by the number of mounts. Account for center-of-gravity offset: mounts closer to the CG carry more load. Unequal loading shifts the system natural frequencies."
+        ],
+        "tags": ["vibration", "isolation", "requirements"]
+      },
+      {
+        "flow_name": "isolation-mount-selection",
+        "description": "Select the isolation mount type and model based on natural frequency target, load, environment, and performance requirements.",
+        "inputs": [
+          {"name": "required-natural-frequency", "desc": "Maximum allowable natural frequency"},
+          {"name": "static-deflection-target", "desc": "Required static deflection"},
+          {"name": "isolation-specification", "desc": "Complete specification including load per mount and environment"},
+          {"name": "installation-constraints", "desc": "Weight, space, environmental conditions, and mounting interface constraints"}
+        ],
+        "outputs": [
+          {"name": "selected-mounts", "desc": "Mount type, model, quantity, and arrangement with static and dynamic properties"},
+          {"name": "predicted-performance", "desc": "Calculated transmissibility curve showing isolation at all forcing frequencies"},
+          {"name": "mount-arrangement", "desc": "Physical layout of mounts under the equipment with CG alignment analysis"}
+        ],
+        "process": [
+          "Select mount type by natural frequency range: elastomeric pads for 10-30 Hz (small deflection, compact, limited isolation); elastomeric mounts for 5-15 Hz (moderate deflection); steel springs for 1-5 Hz (large deflection, best isolation, but no high-frequency damping without secondary pads); air springs for 0.5-3 Hz (best isolation, require air supply and leveling).",
+          "For elastomeric mounts: select durometer (shore hardness) for the load range. Check that the operating point is within the mount's rated load range (typically 60-80% of maximum). Verify natural frequency from the load-deflection curve, not just the rated frequency at nominal load.",
+          "For steel springs: calculate required stiffness k = W/delta_static. Select a spring with this stiffness at the load. Add neoprene pads between spring and structure to attenuate high-frequency transmission that springs cannot isolate (wire resonance in the spring transmits at 50-200 Hz).",
+          "For air springs: size the air volume for the required stiffness (stiffness is proportional to pressure times area divided by volume). Design the leveling system to maintain ride height as load changes. Account for the surge volume and orifice for damping.",
+          "Arrange mounts symmetrically about the center of gravity. The CG should be in the same horizontal plane as the elastic center of the mounts to avoid coupled rocking and bouncing. Unequal load distribution across mounts produces different natural frequencies per mount, reducing isolation.",
+          "Calculate the full 6-DOF transmissibility (bounce, lateral, rocking, yawing). Check that no coupled mode has a natural frequency too close to a forcing frequency. Rocking modes are typically higher than the vertical bounce mode."
+        ],
+        "tags": ["vibration", "isolation", "mount-selection"]
+      },
+      {
+        "flow_name": "isolation-performance-verification",
+        "description": "Verify installed isolation system performance through vibration measurement and compare to design transmissibility.",
+        "inputs": [
+          {"name": "selected-mounts", "desc": "Installed mount type and arrangement"},
+          {"name": "predicted-performance", "desc": "Design transmissibility curve"},
+          {"name": "isolation-target", "desc": "Required isolation performance"}
+        ],
+        "outputs": [
+          {"name": "measured-transmissibility", "desc": "Measured transmissibility from source to receiver across the frequency range"},
+          {"name": "isolation-verification-report", "desc": "Comparison of measured vs predicted performance with compliance assessment"},
+          {"name": "corrective-actions", "desc": "Recommended adjustments if performance does not meet specification"}
+        ],
+        "process": [
+          "Measure vibration on the source side (above mounts on equipment) and receiver side (below mounts on foundation) simultaneously. Use accelerometers at each mount location.",
+          "Calculate transmissibility as the ratio of receiver to source amplitude at each frequency. Use cross-spectral averaging to improve accuracy.",
+          "Verify the measured natural frequency by identifying the transmissibility peak. Compare to the design prediction. Common reasons for discrepancy: actual load different from design, mount stiffness different from catalog (mounts stiffen at low temperature and soften at high), installation preload incorrect.",
+          "Check isolation at each forcing frequency. If isolation is worse than predicted, investigate: short-circuit paths (rigid connections bypassing mounts such as piping, conduit, or a tool left on the machine), mount overload, or a structural resonance of the foundation at the forcing frequency.",
+          "For sensitive equipment, measure the vibration spectrum at the equipment and compare to the VC curve criterion. Floor-to-equipment transmissibility alone is not sufficient; the absolute level at the equipment matters."
+        ],
+        "tags": ["vibration", "isolation", "verification"]
+      }
+    ]
+  },
+  {
+    "chain_name": "acoustic-design-methodology",
+    "description": "Design the acoustic environment of a space for target reverberation, speech intelligibility, sound insulation, and noise criteria.",
+    "domain": "acoustics",
+    "tags": ["room-acoustics", "architectural-acoustics", "reverberation", "speech-intelligibility"],
+    "steps": [
+      {
+        "flow_name": "acoustic-requirement-definition",
+        "description": "Define acoustic performance requirements for the space based on its function, applicable standards, and user expectations.",
+        "inputs": [
+          {"name": "space-description", "desc": "Room geometry, surface materials, volume, and intended function (lecture hall, office, studio, etc.)"},
+          {"name": "acoustic-goals", "desc": "Desired acoustic quality: reverberation, speech clarity, noise isolation, background noise level"}
+        ],
+        "outputs": [
+          {"name": "reverberation-target", "desc": "Target RT60 by octave band for the room function, from standards or published guidelines"},
+          {"name": "noise-criteria", "desc": "Background noise target (NC, RC, or PNC curve) for the room function"},
+          {"name": "sound-insulation-requirements", "desc": "Required STC or OITC for walls, floors, and ceilings separating adjacent spaces"}
+        ],
+        "process": [
+          "Determine the room function and look up published targets. Speech rooms (classrooms, courtrooms): RT60 of 0.4-0.8s depending on volume. Music rooms: 1.2-2.0s depending on genre (dry for amplified, wet for orchestral). Open offices: short RT with good absorption overhead.",
+          "Set background noise criteria: NC-25 to NC-30 for studios and theaters, NC-30 to NC-35 for conference rooms, NC-35 to NC-40 for open offices. Preferred noise criterion RC (room criterion) also specifies spectral balance to avoid rumbly or hissy character.",
+          "Define sound insulation requirements between adjacent spaces. STC 50 for normal office-to-office, STC 55-60 for conference rooms, STC 60+ for music practice rooms. OITC for exterior walls exposed to traffic or aircraft. Use IIC (impact insulation class) for floor-ceiling assemblies above noise-sensitive spaces.",
+          "Identify any special requirements: low-frequency control for recording studios (modal analysis of room dimensions), flutter echo prevention in parallel-wall rooms, first reflection control for critical listening positions."
+        ],
+        "tags": ["room-acoustics", "design-criteria"]
+      },
+      {
+        "flow_name": "acoustic-treatment-design",
+        "description": "Design absorption, diffusion, and insulation treatments to achieve the acoustic targets in the space.",
+        "inputs": [
+          {"name": "space-description", "desc": "Room geometry, surface materials, and volume"},
+          {"name": "reverberation-target", "desc": "Target RT60 by octave band"},
+          {"name": "noise-criteria", "desc": "Background noise target"},
+          {"name": "sound-insulation-requirements", "desc": "Required STC/OITC for partitions"}
+        ],
+        "outputs": [
+          {"name": "absorption-treatment-plan", "desc": "Type, location, and area of absorptive and diffusive treatments with predicted RT60"},
+          {"name": "partition-design", "desc": "Wall, floor, and ceiling construction specifications to meet STC/OITC requirements"},
+          {"name": "hvac-noise-mitigation", "desc": "Duct silencer, terminal unit, and diffuser noise specifications to meet background noise criteria"}
+        ],
+        "process": [
+          "Calculate the existing reverberation time from the Sabine equation: RT60 = 0.161*V/A where V is volume in m3 and A is total absorption in sabins. For rooms with high absorption, use the Eyring equation: RT60 = 0.161*V / (-S*ln(1-alpha_avg)).",
+          "Determine the additional absorption needed: delta_A = A_target - A_existing, where A_target = 0.161*V/RT60_target. Select absorber type: porous absorbers (fiberglass, mineral wool, open-cell foam) absorb mid and high frequencies. Thickness should be at least one-quarter wavelength of the lowest frequency to treat: 100mm for absorption down to 850 Hz, 200mm for 425 Hz.",
+          "For low-frequency control below 250 Hz: use resonant absorbers. Helmholtz resonators (perforated panels over air cavity) tune to specific frequencies. Membrane absorbers (thin panels flexing over a cavity) absorb at the panel resonance frequency.",
+          "Place absorption strategically. For speech: first reflection points on walls and ceiling near the listener. For reverberation control: distribute absorption across surfaces, not concentrated on one surface (which creates uneven decay). Add diffusion (QRD or Schroeder diffusers) where sound needs to be scattered without being absorbed, such as the back wall of a concert hall.",
+          "Design partitions for the required STC. Single stud wall with one layer of gypsum each side: STC 33-38. Double gypsum: STC 38-43. Staggered stud or resilient channel: STC 45-55. Double stud wall: STC 55-65. Seal all gaps: a 1% open area in a wall reduces TL by 10-15 dB.",
+          "Design HVAC for the background noise target. Calculate noise from the air handler, fan, duct-generated noise, and terminal device. Size duct silencers for insertion loss at the frequencies where the duct noise exceeds the NC curve. Use lined ductwork (minimum 1.2 m of lined duct before the first room outlet). Limit supply air velocity at the diffuser to avoid regenerated noise (typically below 2.5 m/s for NC-30 spaces)."
+        ],
+        "tags": ["room-acoustics", "treatment", "absorption", "insulation"]
+      },
+      {
+        "flow_name": "acoustic-performance-verification",
+        "description": "Measure the completed space against acoustic targets and verify compliance with specified reverberation, noise, and insulation criteria.",
+        "inputs": [
+          {"name": "absorption-treatment-plan", "desc": "Installed acoustic treatments"},
+          {"name": "reverberation-target", "desc": "Target RT60"},
+          {"name": "noise-criteria", "desc": "Background noise target"},
+          {"name": "sound-insulation-requirements", "desc": "Required STC/OITC"}
+        ],
+        "outputs": [
+          {"name": "reverberation-measurement", "desc": "Measured RT60 by octave band at multiple positions compared to target"},
+          {"name": "background-noise-measurement", "desc": "Measured background noise spectrum compared to NC/RC target"},
+          {"name": "field-stc-measurement", "desc": "Measured field STC (FSTC) or NIC for partitions compared to laboratory STC requirement"}
+        ],
+        "process": [
+          "Measure reverberation time per ISO 3382: use interrupted noise or impulse response method. Measure at minimum 3 source positions and 6 receiver positions distributed through the space. Report T20 or T30 (decay evaluated over 20 or 30 dB) by octave band from 125 Hz to 4 kHz.",
+          "Measure background noise with all HVAC operating at design conditions. Use a calibrated sound level meter with octave-band filters. Measure at multiple locations within the occupied zone. Plot against the NC or RC curves to determine the room's noise rating.",
+          "Measure field sound insulation per ASTM E336 or ISO 16283. Use a loudspeaker source in the sending room. Measure sound pressure levels in both rooms. Calculate the Noise Isolation Class (NIC) or field STC (FSTC). Field values are typically 5-10 points lower than laboratory STC due to flanking through shared structure, outlets, doors, and gaps.",
+          "Identify deficiencies and diagnose causes. If RT60 is too long, additional absorption is needed at the frequencies where it fails. If background noise exceeds NC curve, identify the spectral region: low-frequency excess is often the air handler or ductwork rumble; mid/high is often diffuser noise or terminal unit.",
+          "Document compliance with a formal report including measurement methodology, instrument calibration certificates, measurement positions, results by location, and comparison to criteria."
+        ],
+        "tags": ["room-acoustics", "measurement", "compliance"]
+      }
+    ]
+  },
+  {
+    "chain_name": "structural-dynamics-methodology",
+    "description": "Analyze the dynamic response of structures to harmonic, random, and transient loading using analytical and numerical methods.",
+    "domain": "acoustics",
+    "tags": ["structural-dynamics", "vibration", "forced-response", "natural-frequency"],
+    "steps": [
+      {
+        "flow_name": "dynamic-model-formulation",
+        "description": "Formulate the equations of motion for the structure including mass, stiffness, and damping properties.",
+        "inputs": [
+          {"name": "structure-properties", "desc": "Geometry, material properties, boundary conditions, and mass distribution of the structure"},
+          {"name": "loading-description", "desc": "Description of dynamic loads: harmonic forces, random excitation PSD, shock transients, or base excitation"}
+        ],
+        "outputs": [
+          {"name": "mass-stiffness-model", "desc": "Mass and stiffness matrices (or their continuous equivalents) defining the structural dynamics"},
+          {"name": "natural-frequencies-and-modes", "desc": "Undamped natural frequencies and mode shapes from eigenvalue analysis"},
+          {"name": "damping-model", "desc": "Damping matrix or modal damping ratios assigned from material data, test data, or published values"}
+        ],
+        "process": [
+          "Classify the model type needed. Lumped parameter (discrete springs and masses) for simple systems. Continuous (beam, plate, shell theory) for uniform structures where closed-form solutions exist. FEA for complex geometry.",
+          "For FEA: extract natural frequencies and mode shapes from the eigenvalue problem [K - omega^2 * M]{phi} = 0. Include all modes up to at least 1.5 times the highest forcing frequency. Check modal effective mass: modes with significant effective mass participate in the response to base excitation.",
+          "Assign damping. For metals in assembled structures: 1-3% critical damping. For welded steel structures: 0.5-1%. For bolted joints: 2-5%. For composite structures: 1-2%. Use Rayleigh damping [C] = alpha*[M] + beta*[K] if proportional damping is assumed; fit alpha and beta to match target damping ratios at two frequencies.",
+          "Verify the model against known checks: static deflection under gravity, first natural frequency against closed-form estimate for simple geometry (beam: f1 = (pi/2L^2)*sqrt(EI/rho*A) for simply supported), total mass."
+        ],
+        "tags": ["structural-dynamics", "modeling"]
+      },
+      {
+        "flow_name": "forced-response-analysis",
+        "description": "Calculate the structural response to applied dynamic loads: harmonic, random, transient, and base excitation.",
+        "inputs": [
+          {"name": "mass-stiffness-model", "desc": "Mass and stiffness matrices"},
+          {"name": "natural-frequencies-and-modes", "desc": "Natural frequencies and mode shapes"},
+          {"name": "damping-model", "desc": "Damping matrix or modal damping ratios"},
+          {"name": "loading-description", "desc": "Dynamic load specification"}
+        ],
+        "outputs": [
+          {"name": "response-results", "desc": "Displacement, velocity, acceleration, and stress response at critical locations for all load cases"},
+          {"name": "critical-locations", "desc": "Locations of maximum response with peak values and the modes contributing most"},
+          {"name": "design-margins", "desc": "Comparison of response to allowable limits including fatigue life estimate if applicable"}
+        ],
+        "process": [
+          "For harmonic loading: solve in the frequency domain using mode superposition. The response at frequency omega is the sum of modal contributions: q_r(omega) = F_r / (omega_r^2 - omega^2 + 2j*zeta_r*omega_r*omega). This shows resonance amplification at each natural frequency by the factor 1/(2*zeta).",
+          "For random loading (PSD input): compute the response PSD from S_response(f) = |H(f)|^2 * S_input(f). The RMS response is the square root of the integral of the response PSD. For base excitation with a flat input PSD, Miles equation gives the approximate RMS: a_rms = sqrt(pi/2 * f_n * Q * PSD_input * g^2) where Q = 1/(2*zeta).",
+          "For transient loading (shock): use direct time integration (Newmark-beta or central difference) or SRS analysis. The shock response spectrum gives the peak response of a SDOF oscillator at each natural frequency to the transient input. Compare equipment natural frequencies to SRS peaks.",
+          "For base excitation: transform to relative coordinates. The effective force on each mode is the modal participation factor times the base acceleration. Modes with high effective mass in the excitation direction respond most strongly.",
+          "Identify critical locations where stress or displacement is highest. Check fatigue life if the loading is cyclic: use the stress amplitude at each mode's natural frequency weighted by the number of cycles (from Miner's rule for variable amplitude).",
+          "Compute design margins: peak response divided by allowable. For shock qualification: margin of safety = (allowable / peak_response) - 1. Positive margin means the design passes."
+        ],
+        "tags": ["structural-dynamics", "forced-response", "analysis"]
+      },
+      {
+        "flow_name": "tuned-damper-design",
+        "description": "Design a tuned mass damper or dynamic absorber to suppress a specific resonance in the structure.",
+        "inputs": [
+          {"name": "natural-frequencies-and-modes", "desc": "Natural frequencies and mode shapes of the primary structure"},
+          {"name": "response-results", "desc": "Response showing which resonance needs suppression"},
+          {"name": "structure-properties", "desc": "Primary structure mass and stiffness at the attachment point"}
+        ],
+        "outputs": [
+          {"name": "damper-parameters", "desc": "Tuned mass damper mass, stiffness, and damping values optimized for target resonance suppression"},
+          {"name": "predicted-reduction", "desc": "Response comparison with and without TMD showing resonance reduction"},
+          {"name": "damper-specification", "desc": "Physical design: mass block, spring element, damping element, mounting method"}
+        ],
+        "process": [
+          "Identify the target resonance: frequency, mode shape, and the response amplitude to suppress. A TMD is effective for a single resonance; multiple resonances require multiple TMDs or a different approach.",
+          "Select the mass ratio mu = m_TMD / m_effective where m_effective is the modal mass of the target mode at the attachment point. Typical mass ratios: 1-5% for vibration reduction, up to 10% for severe problems. Larger mass ratio gives wider effective bandwidth but costs weight.",
+          "Apply Den Hartog's optimum tuning: f_TMD / f_target = 1 / (1 + mu) for the frequency ratio. Optimal damping ratio of the TMD: zeta_opt = sqrt(3*mu / (8*(1+mu)^3)). These minimize the maximum response of the combined system.",
+          "Calculate the predicted response of the 2-DOF system (primary structure + TMD). The original single peak splits into two smaller peaks. The peak reduction depends on mass ratio: 3% mass ratio reduces the peak by roughly 10-12 dB; 5% by roughly 13-15 dB.",
+          "Design the physical TMD. The mass block must be compact and mountable at a location with significant modal displacement for the target mode. The spring can be a steel leaf, coil spring, or elastomeric element. The damper can be a viscous dashpot, constrained elastomeric layer, or eddy current device. Verify that the TMD's own resonance and stroke are within practical limits."
+        ],
+        "tags": ["structural-dynamics", "tuned-mass-damper", "vibration-control"]
+      }
+    ]
+  },
+  {
+    "chain_name": "rotor-dynamics-methodology",
+    "description": "Analyze rotating machinery for critical speeds, unbalance response, stability, and torsional vibration to meet API and ISO requirements.",
+    "domain": "acoustics",
+    "tags": ["rotor-dynamics", "rotating-machinery", "critical-speed", "balancing"],
+    "steps": [
+      {
+        "flow_name": "rotor-model-construction",
+        "description": "Build the rotor-bearing-support model for lateral and torsional dynamics analysis.",
+        "inputs": [
+          {"name": "rotor-geometry", "desc": "Shaft dimensions, disk locations and masses, coupling details, and overhung components"},
+          {"name": "bearing-data", "desc": "Bearing type, geometry, clearance, preload, and lubricant properties for dynamic coefficient calculation"},
+          {"name": "operating-conditions", "desc": "Speed range, load cases, and process conditions affecting bearing performance"}
+        ],
+        "outputs": [
+          {"name": "lateral-model", "desc": "Rotor-bearing model with stiffness and damping matrices for lateral dynamics (forward and backward whirl)"},
+          {"name": "torsional-model", "desc": "Lumped inertia and stiffness model for torsional vibration analysis"},
+          {"name": "critical-speed-map", "desc": "Plot of undamped critical speeds vs bearing stiffness showing the sensitivity to support conditions"}
+        ],
+        "process": [
+          "Model the shaft as a series of beam elements with mass, stiffness (EI), and gyroscopic effects. Include disks as lumped mass and inertia. Model the shaft as a Timoshenko beam if the length-to-diameter ratio is less than 10 (includes shear deformation).",
+          "Calculate bearing dynamic coefficients (stiffness and damping in 4 DOF: kxx, kxy, kyx, kyy and cxx, cxy, cyx, cyy) from the bearing geometry, clearance, speed, and load. For journal bearings: solve the Reynolds equation. For tilting-pad bearings: solve for each pad, then assemble. Cross-coupled stiffness (kxy, kyx) drives instability and must be captured.",
+          "Include support structure flexibility if the bearing pedestals are not rigid compared to the bearing stiffness. Add pedestal mass and stiffness to the model. This can lower critical speeds compared to a rigid-support assumption.",
+          "Build the torsional model: lump inertias at each disk, coupling, and gear. Stiffness of each shaft segment is GJ/L. Model couplings with their torsional stiffness and damping. Model gears as a speed ratio with reflected inertia and stiffness.",
+          "Generate the critical speed map: plot undamped natural frequencies vs bearing stiffness over a wide range. This shows how sensitive each critical speed is to bearing condition and identifies crossings with operating speed."
+        ],
+        "tags": ["rotor-dynamics", "modeling"]
+      },
+      {
+        "flow_name": "lateral-analysis-and-stability",
+        "description": "Perform unbalance response analysis and stability assessment for the rotor system across the operating speed range.",
+        "inputs": [
+          {"name": "lateral-model", "desc": "Rotor-bearing model for lateral dynamics"},
+          {"name": "critical-speed-map", "desc": "Critical speeds vs bearing stiffness"},
+          {"name": "operating-conditions", "desc": "Speed range and API/ISO requirements"}
+        ],
+        "outputs": [
+          {"name": "unbalance-response", "desc": "Amplitude and phase of rotor vibration at bearings and seals vs speed for specified unbalance distributions"},
+          {"name": "separation-margin", "desc": "Margin between critical speeds and operating speed range per API 617 or applicable standard"},
+          {"name": "stability-assessment", "desc": "Logarithmic decrement of each mode, identifying potentially unstable modes and their destabilizing mechanisms"}
+        ],
+        "process": [
+          "Identify undamped critical speeds from the eigenvalue analysis. Per API 617: the first critical speed must be at least 15% below minimum continuous speed, or the first critical speed must be at least 20% above maximum continuous speed (separation margin). Trip speed and transient speeds must also clear critical speeds.",
+          "Perform unbalance response analysis. Apply unbalance at locations per API (midspan for first mode excitation, at coupling overhang for second mode). Use 4 times the allowable residual unbalance (4W/N) as the analysis unbalance where W is journal static load and N is maximum continuous speed in RPM. Calculate vibration amplitude at bearings and seal locations across the speed range.",
+          "Check vibration amplitude against limits: API 617 limits bearing vibration to 25.4 micrometers or sqrt(12000/N) in mils pk-pk, whichever is less, at maximum continuous speed. At critical speed traversal, the amplification factor (peak amplitude / amplitude at critical speed x sqrt(2)) defines the damped critical speed sharpness.",
+          "Assess stability: compute the damped eigenvalues (complex). The real part indicates stability: negative real part is stable. Express as log decrement delta = -2*pi*sigma/omega_d. API 617 requires delta > 0.1 for Level I analysis. If a mode has low log decrement, identify the destabilizing mechanism: cross-coupled stiffness from oil film bearings, labyrinth seals, or aerodynamic forces.",
+          "If stability is marginal: consider design changes. Tilting-pad bearings reduce cross-coupled stiffness compared to fixed-bore journal bearings. Squeeze-film dampers add direct damping. Swirl brakes or shunt holes in labyrinth seals reduce aerodynamic cross-coupling."
+        ],
+        "tags": ["rotor-dynamics", "unbalance", "stability"]
+      },
+      {
+        "flow_name": "balancing-and-torsional",
+        "description": "Define the balancing procedure and analyze torsional vibration for gear trains and reciprocating machinery.",
+        "inputs": [
+          {"name": "rotor-geometry", "desc": "Shaft dimensions and correction plane locations"},
+          {"name": "torsional-model", "desc": "Lumped inertia and stiffness model for torsional analysis"},
+          {"name": "unbalance-response", "desc": "Vibration response showing correction needed"}
+        ],
+        "outputs": [
+          {"name": "balance-procedure", "desc": "Balance grade, number of planes, method (single-plane, two-plane influence coefficient, or modal), and acceptance criteria"},
+          {"name": "torsional-analysis-results", "desc": "Torsional natural frequencies, forced response to excitation orders, and stress in shaft sections"},
+          {"name": "torsional-compliance", "desc": "Margin between torsional natural frequencies and excitation frequencies per API or applicable standard"}
+        ],
+        "process": [
+          "Select balance grade per ISO 1940: G2.5 for general machinery, G1.0 for precision, G0.4 for high-speed precision. The allowable residual unbalance is U_per = G*M/(omega) where M is rotor mass and omega is operating speed in rad/s.",
+          "Select balancing method: single-plane for rigid rotors or when one correction plane dominates (disc-shaped rotors). Two-plane influence coefficient for rigid rotors with two correction planes (most common). Modal balancing for flexible rotors that operate above the first critical speed (correct each mode at its own influence coefficient).",
+          "For influence coefficient balancing: attach a trial weight at each correction plane in turn. Measure the vibration change (influence coefficient = vibration change / trial weight). Solve for correction weights that minimize vibration at the measurement points. Verify by installing corrections and measuring the final vibration.",
+          "For torsional analysis: compute undamped torsional natural frequencies from the eigenvalue problem [K_t - omega^2 * J]{theta} = 0. Per API 617/618: torsional natural frequencies must have at least 10% separation from any excitation order (1x, 2x for reciprocating, gear mesh frequency and sidebands).",
+          "Calculate forced torsional response at each excitation order. For geared systems: gear mesh excitation from transmission error. For reciprocating machines: gas and inertia torque harmonics up to the significant order. Compute alternating shear stress in each shaft section and compare to the endurance limit with appropriate safety factor (typically 2.0 on alternating stress for infinite life)."
+        ],
+        "tags": ["rotor-dynamics", "balancing", "torsional"]
+      }
+    ]
+  },
+  {
+    "chain_name": "underwater-acoustics",
+    "description": "Design and analyze underwater acoustic systems including sonar, acoustic communications, and noise radiation prediction using ocean propagation physics.",
+    "domain": "acoustics",
+    "tags": ["underwater-acoustics", "sonar", "ocean", "propagation"],
+    "steps": [
+      {
+        "flow_name": "ocean-environment-characterization",
+        "description": "Characterize the underwater acoustic environment including sound speed profile, bathymetry, bottom properties, and ambient noise.",
+        "inputs": [
+          {"name": "operating-area", "desc": "Geographic location, depth, and season for the sonar or acoustic system operation"},
+          {"name": "system-frequency", "desc": "Operating frequency range of the acoustic system"}
+        ],
+        "outputs": [
+          {"name": "sound-speed-profile", "desc": "Sound speed vs depth including thermocline, sound channel axis, and critical depth"},
+          {"name": "bottom-properties", "desc": "Bottom type, reflection loss, and scattering strength for the operating area"},
+          {"name": "ambient-noise-spectrum", "desc": "Ambient noise level vs frequency including wind, shipping, and biological contributions"}
+        ],
+        "process": [
+          "Obtain the sound speed profile from CTD (conductivity-temperature-depth) data or climatological databases (WOA). Sound speed depends on temperature (dominant above thermocline), salinity (minor effect), and pressure (dominant in deep water). Typical range: 1450-1540 m/s.",
+          "Identify the sound channel structure: surface duct (downward-refracting below mixed layer), deep sound channel (SOFAR axis at sound speed minimum, typically 700-1200 m depth), convergence zone (refracted rays returning to surface at 30-60 km intervals), bottom bounce paths.",
+          "Characterize the bottom from geoacoustic databases or surveys. Bottom reflection loss depends on grazing angle, frequency, and sediment type. Sand: moderate loss; mud: high loss at low grazing angles, low loss at steep angles; rock: low loss. Hamilton's regressions give sediment sound speed and attenuation from grain size.",
+          "Estimate ambient noise: use Wenz curves as baseline. Wind-driven noise dominates 500 Hz to 50 kHz (increases ~5 dB per doubling of wind speed). Shipping noise dominates 20-200 Hz in shipping lanes. Biological noise (snapping shrimp, whale calls) can dominate in specific bands and locations."
+        ],
+        "tags": ["underwater-acoustics", "environment", "propagation"]
+      },
+      {
+        "flow_name": "sonar-performance-prediction",
+        "description": "Predict sonar detection performance using the sonar equation, propagation modeling, and target characterization.",
+        "inputs": [
+          {"name": "sound-speed-profile", "desc": "Sound speed vs depth"},
+          {"name": "bottom-properties", "desc": "Bottom type and reflection characteristics"},
+          {"name": "ambient-noise-spectrum", "desc": "Ambient noise levels"},
+          {"name": "system-frequency", "desc": "Sonar operating frequency and bandwidth"}
+        ],
+        "outputs": [
+          {"name": "detection-range-prediction", "desc": "Predicted detection range for specified target and conditions"},
+          {"name": "transmission-loss-field", "desc": "TL vs range and depth from propagation model for the environment"},
+          {"name": "sonar-equation-budget", "desc": "Complete sonar equation showing each term's contribution to the signal excess"}
+        ],
+        "process": [
+          "Apply the sonar equation. For passive sonar: SE = SL - TL - NL + DI - DT where SL = source level of the target, TL = one-way transmission loss, NL = noise level, DI = receiving array directivity index, DT = detection threshold. For active sonar: SE = SL - 2TL + TS - NL + DI - DT where TS = target strength.",
+          "Calculate transmission loss with a propagation model matched to the environment and frequency. Ray tracing (valid when range >> depth, frequency > 1 kHz): traces rays through the sound speed profile, accounts for bottom and surface reflections. Normal modes (valid for low frequency, range-independent environments): sums modal contributions. Parabolic equation (PE: handles range-dependent environments, standard for many Navy applications).",
+          "Estimate target strength from the target's physical size and shape. For a submarine: TS is typically 15-25 dB depending on aspect, frequency, and hull type. For a mine: TS is 5-15 dB. For a surface ship: 15-25 dB. Target strength varies with aspect angle; broadside is highest.",
+          "Calculate the array directivity index DI = 10*log10(N) for N-element array with half-wavelength spacing (isotropic elements). For a line array: DI = 10*log10(2L/lambda) where L is array length. Beamwidth is approximately lambda/L radians.",
+          "Set detection threshold based on desired probability of detection Pd and probability of false alarm Pfa. For a single observation: DT = 5*log10(d(Pd, Pfa)). Typical: DT = 5-10 dB for Pd = 0.5, Pfa = 10^-4. Detection range is where signal excess transitions from positive to negative."
+        ],
+        "tags": ["underwater-acoustics", "sonar", "detection"]
+      },
+      {
+        "flow_name": "transducer-and-array-design",
+        "description": "Design the acoustic transducer and array for the sonar or communication system to meet performance requirements.",
+        "inputs": [
+          {"name": "detection-range-prediction", "desc": "Required source level and receive sensitivity from the sonar equation budget"},
+          {"name": "system-frequency", "desc": "Operating frequency and bandwidth"},
+          {"name": "sonar-equation-budget", "desc": "Performance budget driving transducer requirements"}
+        ],
+        "outputs": [
+          {"name": "transducer-design", "desc": "Transducer element type, dimensions, and electrical specifications"},
+          {"name": "array-configuration", "desc": "Array geometry, element count, beamforming weights, and predicted beam pattern"},
+          {"name": "system-performance-summary", "desc": "Final predicted source level, receiving sensitivity, directivity, and bandwidth of the designed system"}
+        ],
+        "process": [
+          "Select transducer material: PZT ceramic (Navy Type II for projectors, Type VI for hydrophones) for most applications, 1-3 composite for broadband hydrophones (improved acoustic impedance match to water), PVDF for flexible conformal arrays, Tonpilz design for high-power low-frequency projectors.",
+          "Size the transducer element. For a projector: the source level requirement sets the acoustic power, which determines the element radiating area and drive voltage. The resonance frequency of the element must match the operating frequency. For a Tonpilz: the piston area determines the radiation resistance loading; the head mass, tail mass, and ceramic stack length set the resonance.",
+          "Design the array geometry. For a line array: element spacing d = lambda/2 to avoid grating lobes. Array length L determines beamwidth: BW = 0.886*lambda/L for uniform shading. Apply amplitude shading (Dolph-Chebyshev, Taylor) to reduce sidelobes at the cost of slightly wider mainlobe. For a planar array: steer the beam electronically by applying phase shifts across elements.",
+          "Calculate the beam pattern: array factor is the product of element pattern and array weighting function. Verify the main lobe width, sidelobe levels, and grating lobe suppression across the operating bandwidth. Account for element directivity at higher frequencies.",
+          "Verify that the complete system meets the sonar equation budget: projector source level, hydrophone sensitivity, array directivity index, and bandwidth. Check the source level against cavitation limit (approximately 220 dB re 1 uPa at 1m at shallow depths, decreasing with depth)."
+        ],
+        "tags": ["underwater-acoustics", "transducer", "array-design"]
+      }
+    ]
+  },
+  {
+    "chain_name": "audio-transducer-design",
+    "description": "Design loudspeaker drivers, enclosures, and crossover networks using Thiele-Small analysis and acoustic measurement methods.",
+    "domain": "acoustics",
+    "tags": ["audio", "loudspeaker", "transducer", "crossover", "enclosure"],
+    "steps": [
+      {
+        "flow_name": "driver-design-and-characterization",
+        "description": "Design or select a loudspeaker driver and characterize its Thiele-Small parameters for enclosure modeling.",
+        "inputs": [
+          {"name": "audio-requirements", "desc": "Target frequency range, sensitivity, power handling, and directivity pattern for the loudspeaker system"},
+          {"name": "size-constraints", "desc": "Maximum driver diameter and enclosure volume available"}
+        ],
+        "outputs": [
+          {"name": "driver-selection", "desc": "Selected or designed driver(s) with Thiele-Small parameters (Fs, Qes, Qms, Qts, Vas, Sd, xmax, sensitivity)"},
+          {"name": "driver-model", "desc": "Equivalent circuit model of the driver for frequency response prediction"},
+          {"name": "power-handling", "desc": "Thermal and mechanical power limits with duty cycle considerations"}
+        ],
+        "process": [
+          "Define the driver count and type from the frequency range. Subwoofer (20-200 Hz): 200-460 mm cone. Woofer (40-500 Hz): 130-300 mm. Midrange (200 Hz-5 kHz): 75-130 mm. Tweeter (2 kHz-20 kHz): 19-38 mm dome or ribbon.",
+          "Measure or obtain Thiele-Small parameters. Fs (free-air resonance): from impedance measurement, the frequency at the impedance peak. Qes (electrical Q): from impedance curve fitting. Qms (mechanical Q): similarly. Qts = Qes*Qms/(Qes+Qms). Vas (equivalent compliance volume): from shift in resonance when a known mass is added to the cone.",
+          "For custom driver design: motor strength BL product determines sensitivity and Qes. Higher BL gives lower Qes (more electrical damping) and higher sensitivity. Cone mass Mms affects Fs and sensitivity: lighter cone = higher sensitivity but higher Fs. The trade-off between sensitivity and low-frequency extension is fundamental.",
+          "Model the driver as a lumped electromechanical circuit: voice coil resistance Re, inductance Le, BL product transformer, mechanical mass Mms, compliance Cms, and damping Rms. This circuit predicts impedance and frequency response in any enclosure.",
+          "Check excursion limits: at low frequencies the driver must not exceed xmax (linear excursion limit). Maximum SPL below Fs is limited by xmax: SPL_max = 112 + 20*log10(Sd*xmax*f^2) in dB at 1m, where Sd is effective piston area."
+        ],
+        "tags": ["audio", "driver-design", "Thiele-Small"]
+      },
+      {
+        "flow_name": "enclosure-design-methodology",
+        "description": "Design the loudspeaker enclosure (sealed, ported, or transmission line) optimized for the driver's Thiele-Small parameters.",
+        "inputs": [
+          {"name": "driver-selection", "desc": "Driver with Thiele-Small parameters"},
+          {"name": "driver-model", "desc": "Equivalent circuit model"},
+          {"name": "audio-requirements", "desc": "Target frequency response shape and low-frequency extension"},
+          {"name": "size-constraints", "desc": "Maximum enclosure volume"}
+        ],
+        "outputs": [
+          {"name": "enclosure-specification", "desc": "Enclosure type, internal volume, port dimensions (if ported), and construction details"},
+          {"name": "system-frequency-response", "desc": "Predicted anechoic frequency response of the driver-enclosure combination"},
+          {"name": "group-delay", "desc": "Group delay vs frequency showing transient behavior of the design"}
+        ],
+        "process": [
+          "Select enclosure type from Qts. Sealed: suits drivers with Qts between 0.3 and 0.7. Low Qts (0.3) in a sealed box gives an overdamped response (gradual rolloff, good transient). Qts = 0.707 in an appropriately sized sealed box gives a Butterworth (B2) alignment: maximally flat, -3 dB at Fc. Ported: suits drivers with Qts between 0.2 and 0.5 for extended bass.",
+          "For sealed enclosure: Vb = Vas / ((Qtc/Qts)^2 - 1) where Qtc is the desired system Q (0.707 for Butterworth). System resonance Fc = Fs*sqrt(Vas/Vb + 1). The response rolls off at 12 dB/octave below Fc.",
+          "For ported enclosure: use alignment tables (SBB4, QB3, SC4) indexed by Qts to find Vb and Fb (box tuning frequency). Size the port: area must be large enough that air velocity at maximum excursion stays below 5% of sound speed to avoid port noise. Port length from: L = (23562*Sd^2)/(Fb^2*Vb) - 0.73*sqrt(port_area).",
+          "Account for internal losses: stuffing in sealed boxes adds 15-20% to the effective volume. Damping material in ported boxes should not block the port. Brace the enclosure panels to push panel resonances above the operating range; unbraced panels radiate and color the sound.",
+          "Predict the system frequency response: combine the driver's electromechanical model with the enclosure acoustic load. Verify against the target. Plot group delay: a sealed box has monotonically decreasing group delay; a ported box has a group delay peak near the port tuning frequency that may be audible if excessive."
+        ],
+        "tags": ["audio", "enclosure", "ported", "sealed"]
+      },
+      {
+        "flow_name": "crossover-network-design",
+        "description": "Design the crossover network to divide the audio band among drivers while maintaining flat summed response and controlled directivity.",
+        "inputs": [
+          {"name": "driver-selection", "desc": "All drivers in the system with their parameters and frequency response"},
+          {"name": "enclosure-specification", "desc": "Enclosure design for each driver"},
+          {"name": "audio-requirements", "desc": "Target frequency response, power handling, and directivity"}
+        ],
+        "outputs": [
+          {"name": "crossover-schematic", "desc": "Complete crossover circuit with component values for each driver section"},
+          {"name": "summed-response", "desc": "Predicted total system frequency response (magnitude and phase) on and off axis"},
+          {"name": "impedance-curve", "desc": "System impedance vs frequency for amplifier compatibility verification"}
+        ],
+        "process": [
+          "Set crossover frequencies. The woofer-tweeter crossover must be low enough that the tweeter does not receive excessive excursion-limited energy, and high enough that the woofer is still pistonic (cone breakup modes must be above the crossover). Place the crossover at least one octave below the tweeter Fs and one octave below the woofer's first breakup mode.",
+          "Select crossover topology: Butterworth (maximally flat at crossover, but lobing off-axis); Linkwitz-Riley (in-phase summation at crossover, flat power response, standard for professional audio); Bessel (best transient response). The order determines the slope: 1st = 6 dB/oct, 2nd = 12, 3rd = 18, 4th = 24. Higher order protects tweeters better and reduces overlap region.",
+          "Design the passive filter components. For a second-order Linkwitz-Riley high-pass: C = 1/(4*pi*Fc*Re), L = Re/(pi*Fc). For the matching low-pass: L = Re/(pi*Fc), C = 1/(4*pi*Fc*Re). These values assume a resistive load; real drivers have reactive impedance. Add impedance equalization (Zobel network: series R-C across the driver to flatten the impedance rise from voice coil inductance).",
+          "Simulate the summed response: add the high-pass-filtered tweeter response to the low-pass-filtered woofer response including magnitude and phase. Check for a dip or peak at crossover from driver offset (physical distance between acoustic centers). Apply delay or reverse polarity to the tweeter to correct the summation if needed.",
+          "Measure the prototype and iterate. Measure each driver's response through its filter section individually, then measure the combined response at the design listening distance and angle. Adjust component values to compensate for real driver behavior that deviates from the model. Check off-axis response: the crossover frequency is where vertical lobing occurs due to driver spacing."
+        ],
+        "tags": ["audio", "crossover", "filter-design"]
+      }
+    ]
+  },
+  {
+    "chain_name": "vibration-testing-methodology",
+    "description": "Design and execute vibration and shock qualification testing for hardware using random, sine, and transient excitation methods.",
+    "domain": "acoustics",
+    "tags": ["vibration-testing", "qualification", "random-vibration", "shock", "environmental-test"],
+    "steps": [
+      {
+        "flow_name": "vibration-test-specification",
+        "description": "Define vibration and shock test levels from the service environment, applicable standards, and qualification philosophy.",
+        "inputs": [
+          {"name": "service-environment", "desc": "Description of the operational vibration and shock environment (vehicle, aircraft, launch, industrial) with measured or predicted spectra"},
+          {"name": "applicable-standards", "desc": "Test standards to follow (MIL-STD-810, RTCA DO-160, IEC 60068, JEDEC, or program-specific)"},
+          {"name": "test-article-description", "desc": "Hardware to be tested including mass, dimensions, mounting interface, and functional requirements during and after test"}
+        ],
+        "outputs": [
+          {"name": "random-vibration-spec", "desc": "PSD profile (g^2/Hz vs frequency) with duration, axes, and Grms for each test condition"},
+          {"name": "sine-vibration-spec", "desc": "Swept sine profile (g vs frequency), sweep rate, and axes if sine testing is required"},
+          {"name": "shock-spec", "desc": "Shock response spectrum (g vs frequency) or classical pulse (half-sine, trapezoidal) with number of shocks per axis"}
+        ],
+        "process": [
+          "Start from the measured or predicted service environment. If measured data exists: derive the PSD from time history using Welch's method. If no data: use published spectra from the applicable standard (MIL-STD-810 provides environments for ground vehicle, aircraft, ship, etc.).",
+          "Apply qualification margin: typically 6 dB above the maximum expected environment for prototype qualification (to demonstrate margin), or 3 dB above for acceptance testing (to screen defects without consuming excessive life). Duration is typically 3 minutes per axis for qualification; acceptance is shorter.",
+          "For random vibration: define PSD breakpoints in g^2/Hz at key frequencies. Specify the tolerance band (typically +/- 3 dB). Calculate the overall Grms level by integrating the PSD: Grms = sqrt(integral of PSD over frequency). This is the RMS acceleration the test article experiences.",
+          "For shock: derive the SRS from the measured shock pulse or specify the SRS directly from the standard. The SRS shows the peak response of a single-DOF system at each natural frequency. Quality factor Q = 10 is standard unless specified otherwise. Specify number of shocks per direction (typically 3 positive and 3 negative per axis).",
+          "Tailor the test to the actual environment when the standard envelope is overly conservative. Environmental test tailoring per MIL-STD-810 Method 500.6 allows adjusting levels based on measured data, reducing unnecessary testing while maintaining qualification integrity."
+        ],
+        "tags": ["vibration-testing", "specification", "environmental"]
+      },
+      {
+        "flow_name": "test-fixture-and-setup",
+        "description": "Design the test fixture and configure the vibration control system for accurate test execution.",
+        "inputs": [
+          {"name": "test-article-description", "desc": "Hardware dimensions, mass, and mounting interface"},
+          {"name": "random-vibration-spec", "desc": "PSD test profile"},
+          {"name": "shock-spec", "desc": "Shock test specification"}
+        ],
+        "outputs": [
+          {"name": "fixture-design", "desc": "Test fixture design with natural frequency verification showing first mode above the test frequency range"},
+          {"name": "control-strategy", "desc": "Control accelerometer locations, response limit channels, and control algorithm parameters"},
+          {"name": "instrumentation-plan", "desc": "Accelerometer locations, sensitivity, mounting method, and data acquisition settings"}
+        ],
+        "process": [
+          "Design the fixture to be stiff enough that its first natural frequency is above the maximum test frequency (or at least 1.5 times the highest frequency of interest). A fixture resonance within the test band amplifies the input at that frequency and invalidates the test. Use FEA to predict fixture modes with the test article mass.",
+          "Minimize fixture mass: a heavy fixture reduces the shaker's payload capacity and available acceleration. Use aluminum or magnesium for light fixtures. Bolt patterns must match the test article's mounting interface exactly to replicate service boundary conditions.",
+          "Place the control accelerometer at the fixture-to-test-article interface. This is the point where the specified environment should be reproduced. Place response accelerometers on the test article to monitor its dynamic response. Set response limits (notching) if the test article must survive without exceeding stress limits at resonances.",
+          "Configure the vibration controller: set the PSD control profile, tolerance bands, drive limits, and abort levels. For random: the controller adjusts the drive spectrum to maintain the PSD at the control point within tolerance. Loop time should be fast enough to track and correct within 1-2 seconds. Set sigma clipping (typically 3-sigma) to control the instantaneous peak distribution.",
+          "For shock testing: select the shock generation method. Drop table (half-sine pulse from dropping onto a programmer pad), shaker-based (oscillatory SRS control for complex spectra), or pyrotechnic (for high-frequency, high-amplitude shock). Verify that the measured SRS at the control point envelopes the specification within tolerance (+3/-1.5 dB is typical for SRS tolerance)."
+        ],
+        "tags": ["vibration-testing", "fixture", "control"]
+      },
+      {
+        "flow_name": "test-execution-and-analysis",
+        "description": "Execute the vibration and shock tests, monitor test article health, and analyze results for pass/fail determination.",
+        "inputs": [
+          {"name": "fixture-design", "desc": "Verified test fixture"},
+          {"name": "control-strategy", "desc": "Control configuration"},
+          {"name": "instrumentation-plan", "desc": "Sensor and DAQ configuration"},
+          {"name": "random-vibration-spec", "desc": "PSD test profile"},
+          {"name": "shock-spec", "desc": "Shock specification"}
+        ],
+        "outputs": [
+          {"name": "test-data", "desc": "Time histories, PSDs, and SRS from all channels during all test runs"},
+          {"name": "functional-test-results", "desc": "Results of functional checks before, during (if required), and after vibration/shock exposure"},
+          {"name": "test-report", "desc": "Complete test report with pass/fail determination, anomalies, and measured vs specified environments"}
+        ],
+        "process": [
+          "Perform a pre-test functional check of the test article. Document baseline performance. Perform a low-level sine sweep (0.25g or 0.5g) to characterize the test article's resonant frequencies before applying the full test level. This sweep becomes the reference for tracking resonance shifts.",
+          "Run the random vibration test: start at -12 dB (one-quarter amplitude) for a brief check, then increase to -6 dB, then to full level. Monitor control quality (PSD within tolerance), response channels (no unexpected high responses), and abort conditions. Run for the specified duration on each axis.",
+          "After random: repeat the low-level sine sweep. Compare resonant frequencies to the pre-test sweep. A frequency shift of more than 5% typically indicates structural damage (cracking, loosening). A shift of 2-5% warrants investigation.",
+          "Execute shock tests: apply the specified number of shocks per axis per direction. Verify that each shock's SRS at the control point meets the specification within tolerance. Monitor for rattling, clicking, or other sounds during impact that indicate loose hardware.",
+          "Perform the post-test functional check. Compare to the pre-test baseline. Any degradation in function is a test failure regardless of whether the structure shows visible damage. Document all results in the test report with measured spectra overlaid on specifications, functional test comparison, and photographs of the test setup."
+        ],
+        "tags": ["vibration-testing", "execution", "analysis"]
+      }
+    ]
+  },
+  {
+    "chain_name": "noise-vibration-harshness",
+    "description": "Diagnose and resolve NVH issues in vehicles and machinery using transfer path analysis, source characterization, and targeted countermeasures.",
+    "domain": "acoustics",
+    "tags": ["NVH", "automotive", "transfer-path-analysis", "sound-quality"],
+    "steps": [
+      {
+        "flow_name": "nvh-target-and-benchmark",
+        "description": "Set NVH performance targets from competitive benchmarking and customer expectations.",
+        "inputs": [
+          {"name": "vehicle-or-machine-type", "desc": "Type of product and its primary NVH-sensitive operating conditions"},
+          {"name": "competitor-benchmarks", "desc": "Measured NVH data from competitor products or previous generation, if available"},
+          {"name": "customer-requirements", "desc": "Subjective quality expectations and regulatory noise limits"}
+        ],
+        "outputs": [
+          {"name": "nvh-targets", "desc": "Quantified targets for interior noise (dBA overall and spectral), vibration (mm/s or g at steering wheel, seat rail, floor), and exterior noise (pass-by per regulation)"},
+          {"name": "operating-conditions", "desc": "Defined test conditions for each target (speed, RPM, road surface, gear)"},
+          {"name": "frequency-bands-of-concern", "desc": "Specific frequency ranges where the product must meet or beat competition"}
+        ],
+        "process": [
+          "Measure the current product (or prototype) and competitor products under identical standardized conditions. Interior noise: driver's ear, passenger ear, rear seat. Vibration: steering wheel, seat rail, floor. Exterior noise: SAE J1470 or ECE R51 pass-by.",
+          "Compare spectra in third-octave or narrowband. Identify frequency bands where the product exceeds competitors by more than 3 dB (perceptible difference). These are the priority bands for NVH improvement.",
+          "Set targets: match best-in-class competitor in each frequency band, or set a dB improvement target over the current product. For new vehicles, industry expectations set the floor: a compact car targets 65-70 dBA at 100 km/h cruise; a luxury sedan targets 58-62 dBA.",
+          "Define the operating conditions for each target: idle, cruise speeds (60, 80, 100, 120 km/h), wide-open-throttle acceleration in each gear, rough road, expansion joints. Each condition excites different sources and paths."
+        ],
+        "tags": ["NVH", "benchmarking", "targets"]
+      },
+      {
+        "flow_name": "nvh-source-path-diagnosis",
+        "description": "Identify dominant NVH sources and transmission paths using transfer path analysis and operational measurements.",
+        "inputs": [
+          {"name": "nvh-targets", "desc": "Quantified NVH targets"},
+          {"name": "operating-conditions", "desc": "Test conditions"},
+          {"name": "frequency-bands-of-concern", "desc": "Priority frequency ranges"}
+        ],
+        "outputs": [
+          {"name": "source-path-ranking", "desc": "Ranked list of source-path contributions to interior noise and vibration at each operating condition"},
+          {"name": "dominant-mechanisms", "desc": "Physical mechanisms identified for each dominant source (engine order, gear mesh, tire cavity, aerodynamic)"},
+          {"name": "path-transfer-functions", "desc": "Measured or FEA-derived transfer functions from each source to the receiver locations"}
+        ],
+        "process": [
+          "Decompose NVH into source categories: powertrain (engine firing order, accessory drives, transmission gear mesh, driveline), road/tire (tire pattern, tire cavity resonance at ~220 Hz for typical passenger cars, road surface texture), wind (A-pillar vortex, mirror wake, door seal), and body structure (panel radiation from structural vibration).",
+          "Perform transfer path analysis. Classical TPA: measure operational forces at mount locations (mount stiffness times displacement, or inverse matrix method from acceleration and FRF matrix). Multiply force times transfer function (FRF from force to interior microphone) for each path. Sum all path contributions and compare to measured total. The difference validates the model (synthesis accuracy should be within 3 dB of measurement).",
+          "For operational TPA (OTPA): measure operational accelerations at all source-side mount points and interior response simultaneously. Use principal component regression or singular value decomposition to estimate path contributions without needing to measure transfer functions separately. Faster but less physical insight than classical TPA.",
+          "Identify the physical mechanism for each dominant path. Powertrain: engine orders are multiples of half-crank-speed for 4-stroke engines. Gear whine: mesh frequency = number of teeth times shaft RPM. Tire cavity resonance: f = c/(pi*D) where c is sound speed in tire and D is mean diameter, typically near 220 Hz.",
+          "Rank paths by contribution at each target operating condition and frequency band. The top 3 paths typically account for 80% or more of the total energy. Focus countermeasure design on these paths."
+        ],
+        "tags": ["NVH", "transfer-path-analysis", "diagnosis"]
+      },
+      {
+        "flow_name": "nvh-countermeasure-design",
+        "description": "Design and validate NVH countermeasures targeting the dominant source-path contributions identified in diagnosis.",
+        "inputs": [
+          {"name": "source-path-ranking", "desc": "Ranked source-path contributions"},
+          {"name": "dominant-mechanisms", "desc": "Physical mechanisms for each source"},
+          {"name": "path-transfer-functions", "desc": "Transfer functions for each path"},
+          {"name": "nvh-targets", "desc": "Quantified improvement targets"}
+        ],
+        "outputs": [
+          {"name": "countermeasure-design", "desc": "Specified treatments for each dominant path with predicted dB reduction"},
+          {"name": "weight-cost-impact", "desc": "Mass, cost, and packaging impact of each countermeasure"},
+          {"name": "verification-results", "desc": "Measured NVH performance after countermeasure implementation compared to targets"}
+        ],
+        "process": [
+          "Address the source first if practical. Powertrain: engine mount tuning (lower dynamic stiffness at problem frequency), transmission gear tooth profile modification to reduce mesh excitation, crankshaft damper tuning. Tire: cavity resonance dampers (foam ring inside tire), pattern optimization to reduce pattern noise.",
+          "Address the structure-borne path: increase transfer loss by adding mass (constrained layer damping on body panels), increasing stiffness (closeout brackets to shift panel modes away from excitation frequencies), or adding isolation (secondary mount, decoupling bushing). Each approach has weight and cost trade-offs.",
+          "Address the airborne path: seal gaps (door seals, pass-through grommets), add acoustic absorption (headliner, carpet, dash insulator), increase panel TL (add barrier layers: loaded vinyl between carpet and floor).",
+          "Predict the countermeasure effect by modifying the TPA model: reduce the force at the source or reduce the transfer function along the path and recalculate the synthesis at the receiver. The predicted reduction is the difference in synthesized interior noise before and after the change.",
+          "Implement and measure. Compare measured NVH with and without the countermeasure under the same conditions. The measured improvement should be within 2 dB of the prediction if the TPA model is accurate. If not, the discrepancy reveals a flanking path or an inaccurate transfer function.",
+          "Evaluate the sound quality after the countermeasure. Reducing one source can unmask another that was previously inaudible. Listen subjectively and re-analyze the spectrum to confirm no new quality issues emerged."
+        ],
+        "tags": ["NVH", "countermeasures", "design"]
+      }
+    ]
+  }
+]

@@ -1,0 +1,730 @@
+[
+  {
+    "chain_name": "inertial-navigation-deep",
+    "description": "Design and implement a strapdown inertial navigation system from IMU selection through mechanization equations, error modeling, alignment, and aiding integration.",
+    "domain": "sensing",
+    "tags": ["navigation", "inertial", "IMU", "sensing", "hardware"],
+    "steps": [
+      {
+        "flow_name": "imu-selection-methodology",
+        "description": "Select an inertial measurement unit by matching sensor-grade performance to navigation accuracy requirements.",
+        "inputs": [
+          {"name": "navigation-accuracy-requirement", "desc": "Position and attitude accuracy targets over mission duration"},
+          {"name": "operating-environment", "desc": "Vibration, temperature, shock, and size/weight/power constraints"}
+        ],
+        "outputs": [
+          {"name": "imu-grade-selection", "desc": "Selected IMU technology (MEMS, FOG, RLG, HRG) with performance justification"},
+          {"name": "sensor-error-budget", "desc": "Gyro bias stability, ARW, accel bias, VRW values and their allocation to position error"}
+        ],
+        "process": [
+          "Define position accuracy requirement at end of mission or navigation leg without external aiding (free-inertial drift budget).",
+          "Calculate allowable gyro drift rate: for a navigation-grade system, 1 deg/hr gyro drift yields roughly 1 nmi/hr position error. Scale linearly for the target accuracy and mission duration.",
+          "Map drift rate requirement to IMU technology. MEMS: 1-100 deg/hr (tactical). FOG: 0.001-1 deg/hr (navigation to tactical). RLG: 0.001-0.01 deg/hr (navigation). HRG: 0.0001-0.001 deg/hr (strategic/marine).",
+          "Check accelerometer bias requirement: 1 mg bias produces ~0.5 m position error per second squared. For 1-hour free-inertial, micro-g class bias is required for sub-km accuracy.",
+          "Evaluate angular random walk (ARW) and velocity random walk (VRW). ARW drives short-term attitude noise; VRW drives short-term velocity noise. Both matter for aided navigation Kalman filter performance.",
+          "Compare bandwidth requirements. Vibrating structure gyros (HRG, MEMS) have limited bandwidth. RLG and FOG handle high dynamics. Match to platform dynamics (missile: >100 Hz, ship: <10 Hz).",
+          "Evaluate SWaP constraints. MEMS: <50g, <1W. FOG: 0.5-5 kg, 5-15W. RLG: 5-15 kg, 15-50W. HRG: 3-10 kg, 10-30W.",
+          "Document the selected IMU with its datasheet parameters, the error budget allocation showing how each error source contributes to position/attitude error, and the cost-performance trade-off rationale."
+        ],
+        "tags": ["navigation", "IMU", "sensor-selection"]
+      },
+      {
+        "flow_name": "ins-mechanization-design",
+        "description": "Implement the strapdown inertial navigation mechanization equations that convert raw IMU measurements into position, velocity, and attitude.",
+        "inputs": [
+          {"name": "imu-grade-selection", "desc": "Selected IMU technology and its specifications"},
+          {"name": "sensor-error-budget", "desc": "Gyro and accelerometer error parameters"}
+        ],
+        "outputs": [
+          {"name": "mechanization-algorithm", "desc": "Complete strapdown mechanization equations including attitude update, velocity update, and position update"},
+          {"name": "computational-requirements", "desc": "Update rates, floating-point precision requirements, and processing load estimate"}
+        ],
+        "process": [
+          "Define the reference frame convention: body frame (b), navigation frame (n, typically NED or ENU), Earth-Centered Earth-Fixed (ECEF), or Earth-Centered Inertial (ECI). For most terrestrial navigation, mechanize in the local-level navigation frame (NED).",
+          "Implement the attitude update. The body-to-nav direction cosine matrix (DCM) or quaternion propagation integrates the gyro measurements minus the transport rate and Earth rate. Use quaternion normalization to prevent drift. For high rotation rates, use the Bortz equation or equivalent for coning compensation.",
+          "Implement the velocity update. Transform specific force from body to navigation frame using the current DCM/quaternion: v_dot_n = C_b_n * f_b + g_n - (2*omega_ie_n + omega_en_n) x v_n. The gravity model matters: for navigation grade, use the Somigliana formula for normal gravity with free-air correction. For tactical, constant g is often sufficient.",
+          "Implement sculling compensation: the cross-coupling between rotation and specific force that creates velocity errors in a vibrating environment. This requires high-rate IMU data (typically 100-400 Hz) even if the navigation solution outputs at a lower rate.",
+          "Implement the position update. Integrate velocity to get latitude, longitude, and altitude. Account for the Earth's curvature: d(lat)/dt = v_N / (R_M + h), d(lon)/dt = v_E / ((R_N + h) * cos(lat)), d(h)/dt = -v_D. Use the WGS-84 ellipsoid parameters for meridional (R_M) and transverse (R_N) radii of curvature.",
+          "Set the computational update rates. Attitude: 100-400 Hz to capture coning. Velocity: same rate with sculling compensation. Position: can run at 1-50 Hz. Output: typically 1-100 Hz depending on application. Verify that the processor can sustain the required throughput with margin."
+        ],
+        "tags": ["navigation", "strapdown", "mechanization"]
+      },
+      {
+        "flow_name": "ins-error-model-design",
+        "description": "Build the 15+ state error model that characterizes how sensor errors propagate into navigation errors over time.",
+        "inputs": [
+          {"name": "mechanization-algorithm", "desc": "The strapdown mechanization equations"},
+          {"name": "sensor-error-budget", "desc": "Gyro and accelerometer error parameters"}
+        ],
+        "outputs": [
+          {"name": "error-state-model", "desc": "Linear error propagation model (F matrix) with process noise (Q matrix) for Kalman filter design"},
+          {"name": "error-propagation-analysis", "desc": "Time histories of position, velocity, and attitude error growth for unaided operation"}
+        ],
+        "process": [
+          "Define the error state vector. Standard 15-state: delta-position (3), delta-velocity (3), attitude error (3), gyro bias (3), accelerometer bias (3). For higher fidelity, add gyro scale factor (3), accel scale factor (3), gyro misalignment (3) for a 24-state model.",
+          "Derive the error dynamics F matrix by linearizing the mechanization equations. Key coupling terms: attitude error couples into velocity error through specific force (f x delta-psi), velocity error couples into position error through integration, and latitude error couples into east velocity error through Coriolis.",
+          "Identify the Schuler oscillation: a ~84-minute period oscillation where horizontal position errors and tilt errors exchange energy. This is a fundamental property of inertial navigation on a rotating planet and cannot be removed by filtering. It bounds the free-inertial position error growth pattern.",
+          "Model the sensor errors. Gyro bias as a first-order Markov process with correlation time from 1 hour (tactical MEMS) to hundreds of hours (navigation-grade RLG). Random walk as white noise driving the Markov process. Accelerometer bias similarly modeled. Set process noise Q from the sensor specifications (ARW, VRW, bias instability).",
+          "Run a covariance propagation (P_dot = F*P + P*F' + Q) to predict error growth over time without aiding. Verify that the Schuler oscillation appears in the horizontal channel, that vertical channel error grows quadratically (no Schuler bounding), and that heading error growth matches the gyro drift rate.",
+          "Document the observability of each error state. Without external aiding, accelerometer biases in the horizontal plane are indistinguishable from tilt errors (this is the fundamental limitation of unaided INS). Vertical channel is inherently unstable without altitude aiding."
+        ],
+        "tags": ["navigation", "error-model", "Kalman"]
+      },
+      {
+        "flow_name": "ins-alignment-methodology",
+        "description": "Design the alignment sequence that initializes the INS attitude from unknown or approximate orientation using a combination of gravity and Earth rotation sensing.",
+        "inputs": [
+          {"name": "error-state-model", "desc": "The INS error model with state definitions"},
+          {"name": "imu-grade-selection", "desc": "IMU performance parameters"}
+        ],
+        "outputs": [
+          {"name": "alignment-procedure", "desc": "Complete alignment sequence with timing and accuracy predictions"},
+          {"name": "alignment-accuracy", "desc": "Achievable heading, pitch, and roll accuracy as function of alignment time and IMU grade"}
+        ],
+        "process": [
+          "Coarse leveling: determine pitch and roll from accelerometer measurements of gravity. With the platform stationary, the accelerometer body-frame output equals the gravity vector projected into body coordinates. Two-axis tilt is determined from atan2 of accelerometer components. Accuracy limited by accelerometer bias: 1 mg bias gives ~0.06 deg tilt error.",
+          "Coarse heading (gyrocompassing): determine heading from gyroscope measurement of Earth rotation rate. The horizontal component of Earth rate (omega_E * cos(lat) ~ 15 deg/hr * cos(lat)) projects into the body frame through the heading angle. Gyro bias directly limits heading accuracy: heading_error ~ gyro_bias / (omega_E * cos(lat)). At 45 deg latitude, a 0.01 deg/hr gyro gives ~0.06 deg heading. A 1 deg/hr gyro gives ~6 deg heading. MEMS gyros (>1 deg/hr) cannot gyrocompass.",
+          "Fine alignment: run the Kalman filter with the INS operating in navigation mode while stationary or with known zero velocity. The filter observes the difference between computed and measured velocity (zero velocity update, ZUPT) to estimate attitude errors. This improves heading beyond the coarse gyrocompass limit by averaging and by exploiting the Schuler coupling. Fine alignment typically requires 5-15 minutes for navigation-grade systems.",
+          "In-motion alignment: when the platform cannot be stationary, use GPS velocity aiding during the alignment phase. GPS velocity observes horizontal attitude errors through the velocity error they produce. Heading becomes observable through turns (heading error produces cross-track velocity error during turns). A figure-8 or S-turn maneuver accelerates heading convergence.",
+          "Transfer alignment: for a weapon or sensor INS mounted on a platform with its own navigation system, align the subordinate INS to the master. Use velocity matching (compare velocities) and attitude matching. Flexure between master and subordinate IMU locations introduces error that requires modeling or measurement of the relative motion.",
+          "Document the alignment time budget, the achievable accuracy for each phase, and the conditions required (stationary, maneuvering, or moving with GPS). Define go/no-go criteria: what alignment accuracy is needed before the mission can begin."
+        ],
+        "tags": ["navigation", "alignment", "gyrocompass"]
+      },
+      {
+        "flow_name": "ins-aiding-integration",
+        "description": "Design the integration of external aiding sources (GPS, baro, velocity) with the INS using Kalman filtering to bound error growth and calibrate sensor errors in flight.",
+        "inputs": [
+          {"name": "error-state-model", "desc": "The INS error propagation model"},
+          {"name": "alignment-procedure", "desc": "The alignment sequence and initial accuracy"}
+        ],
+        "outputs": [
+          {"name": "aided-ins-design", "desc": "Complete aided INS architecture with measurement models, filter tuning, and fault detection"},
+          {"name": "performance-prediction", "desc": "Aided navigation accuracy under various aiding availability scenarios including GPS denial"}
+        ],
+        "process": [
+          "Define the aiding architecture: loosely coupled (GPS position/velocity as measurements to the INS Kalman filter), tightly coupled (GPS pseudorange and delta-range as measurements), or ultra-tightly coupled (INS-aided GPS tracking loops). Loosely coupled is simplest and works when GPS has 4+ satellites. Tightly coupled works with fewer satellites and in jamming. Ultra-tight provides maximum jam resistance.",
+          "Design the measurement model for each aiding source. GPS position: H maps error states to position difference, R from GPS DOP and UERE. GPS velocity: similarly with velocity errors. Barometric altitude: single measurement with pressure-altitude error model. Doppler velocity (radar or sonar): velocity measurement in sensor frame, transformed through attitude.",
+          "Tune the Kalman filter. Set Q from IMU specifications. Set R from aiding source specifications. Verify filter consistency: the normalized innovation sequence should be zero-mean with unity variance. If innovations are too large, R is too small or the model is wrong. If the state uncertainty does not decrease when measurements arrive, R is too large.",
+          "Design GPS denial handling. When GPS is lost, the filter reverts to free-inertial propagation. The covariance grows according to the unaided error model. Previously estimated sensor biases remain calibrated for a period (depends on Markov correlation time). Predict the position error growth rate during GPS denial from the covariance propagation.",
+          "Implement fault detection and exclusion. Monitor the innovation sequence for outliers (chi-squared test). For critical applications, implement receiver autonomous integrity monitoring (RAIM) concepts: compare the solution with and without each measurement to detect faulty measurements. Set false alarm and missed detection probability targets.",
+          "Run a Monte Carlo simulation varying the sensor errors, aiding availability, and dynamics to predict the navigation accuracy distribution. Report the 95th percentile accuracy for each scenario: continuous GPS, GPS denial for 5/15/60 minutes, GPS denied entirely. This becomes the system performance specification."
+        ],
+        "tags": ["navigation", "Kalman-filter", "GPS-INS"]
+      }
+    ]
+  },
+  {
+    "chain_name": "gnss-receiver-design",
+    "description": "Design a GNSS receiver from RF front-end through acquisition, tracking, navigation solution, and integrity monitoring.",
+    "domain": "sensing",
+    "tags": ["GNSS", "GPS", "receiver", "navigation", "hardware"],
+    "steps": [
+      {
+        "flow_name": "gnss-rf-frontend-design",
+        "description": "Design the RF front-end that converts the satellite signal from the antenna to baseband digital samples.",
+        "inputs": [
+          {"name": "gnss-signal-requirements", "desc": "Target constellations (GPS, Galileo, GLONASS, BeiDou), frequency bands (L1, L2, L5), and performance requirements"},
+          {"name": "operating-constraints", "desc": "Size, power, cost, and interference environment"}
+        ],
+        "outputs": [
+          {"name": "rf-architecture", "desc": "Complete RF chain from antenna to ADC with component specifications"},
+          {"name": "signal-power-budget", "desc": "Link budget from satellite to ADC output showing signal and noise levels at each stage"}
+        ],
+        "process": [
+          "Calculate the received signal power. GPS L1 C/A minimum received power is -158.5 dBW at the antenna. After a typical antenna gain of 3 dBi (RHCP), the signal at the LNA input is approximately -155.5 dBW. The thermal noise floor in the GPS bandwidth (2 MHz for C/A) is kTB = -174 dBm/Hz + 63 dB = -111 dBm, so the pre-correlation SNR is about -25 dB. The signal is below the noise floor and requires code correlation to extract.",
+          "Select the antenna. For single-frequency survey, a patch antenna provides 3-5 dBi gain at zenith. For multi-frequency, a wideband element (spiral, drooping bow-tie, or stacked patch) covers L1/L2/L5. For anti-jam, a controlled reception pattern antenna (CRPA) with multiple elements enables adaptive nulling. Specify axial ratio (<3 dB), phase center stability, and multipath rejection (choke ring or ground plane).",
+          "Design the LNA. Noise figure sets the receiver sensitivity. A typical GNSS LNA has NF = 1.5-2.5 dB, gain = 20-30 dB. Place it as close to the antenna as possible to minimize cable loss before amplification. The Friis equation shows that the LNA noise figure dominates the system noise figure when its gain is high enough to suppress downstream noise.",
+          "Select the downconversion architecture. Direct conversion (zero-IF) is simplest and lowest cost but has DC offset and I/Q imbalance issues. Low-IF (4-20 MHz) avoids DC problems at small complexity increase. Superheterodyne with one or two IF stages provides best selectivity for demanding environments. For multi-constellation, a wideband front-end with digital channelization is increasingly common.",
+          "Select the ADC. Sampling rate must exceed 2x the bandwidth of interest (typically 4-20 MHz for single-band, 40-80 MHz for wideband). Bit depth: 1-2 bits for simple receivers (3 dB loss for 1-bit), 4-8 bits for interference rejection (AGC needed). Quantization noise adds to the noise floor.",
+          "Document the complete signal path with gain, noise figure, IP3, image rejection, and spurious-free dynamic range at each stage. Verify that the total gain places the signal within the ADC input range and that the total noise figure meets the sensitivity requirement."
+        ],
+        "tags": ["GNSS", "RF", "frontend"]
+      },
+      {
+        "flow_name": "gnss-acquisition-tracking",
+        "description": "Design the signal acquisition and tracking algorithms that lock onto satellite signals and maintain continuous measurement of code phase and carrier phase.",
+        "inputs": [
+          {"name": "rf-architecture", "desc": "RF front-end design with ADC output characteristics"},
+          {"name": "signal-power-budget", "desc": "Expected C/N0 at the correlator input"}
+        ],
+        "outputs": [
+          {"name": "acquisition-algorithm", "desc": "Algorithm for initial detection of satellite signals with time-to-first-fix performance"},
+          {"name": "tracking-loop-design", "desc": "Code and carrier tracking loop architectures with bandwidth, pull-in range, and dynamic stress tolerance"}
+        ],
+        "process": [
+          "Design the acquisition algorithm. The receiver must search a 2D space: code phase (1023 chips for GPS C/A, 0.5-chip steps = 2046 bins) and Doppler frequency (+/-5 kHz for stationary, +/-10 kHz with initial velocity uncertainty, 500 Hz steps = 20-40 bins). Serial search tests one cell at a time (slow). Parallel code phase search uses FFT: correlate the incoming signal with the local code replica in the frequency domain, testing all code phases simultaneously for each Doppler bin. This reduces acquisition time by 1000x.",
+          "Set the detection threshold. For a given false alarm probability (Pfa) and detection probability (Pd), the threshold depends on the coherent integration time and the number of non-coherent accumulations. Longer coherent integration improves sensitivity by 3 dB per doubling but requires finer Doppler search (Doppler resolution = 1/T_coh). For weak signals (-155 dBm), use 10-20 ms coherent integration with 10+ non-coherent accumulations.",
+          "Design the code tracking loop (DLL). The early-minus-late discriminator measures code phase error. Correlator spacing (early-late): 1 chip for standard, 0.1-0.5 chip for narrow correlator (reduces multipath error). Loop bandwidth: 1-2 Hz for static, 5-10 Hz for high dynamics. Loop order: first-order tracks constant velocity, second-order tracks constant acceleration. The code loop noise is sigma_code = (BW_L * d / (2 * C/N0))^0.5 chips, where d is correlator spacing.",
+          "Design the carrier tracking loop (PLL/FLL). PLL tracks carrier phase for precise measurements: loop bandwidth 10-25 Hz, loop order 2 or 3. PLL threshold: C/N0 > 25 dB-Hz for 15 Hz bandwidth. Below threshold, fall back to FLL which tracks frequency and tolerates lower C/N0 (~18 dB-Hz). For high dynamics, use FLL-assisted PLL. Carrier loop stress limit: for third-order PLL with 18 Hz bandwidth, maximum jerk tolerance is approximately 10 g/s.",
+          "Implement bit synchronization and navigation message demodulation. GPS C/A data rate is 50 bps. Bit edges are found by detecting the phase reversal at 20 ms intervals. For modernized signals with pilot channels (L2C, L5, Galileo), data-free tracking enables longer coherent integration and improved sensitivity.",
+          "Document the time-to-first-fix (cold start: 30-60 s with almanac, hot start: 1-5 s with ephemeris), tracking sensitivity (minimum C/N0 for sustained tracking), and dynamic performance (maximum acceleration, jerk) for the designed receiver."
+        ],
+        "tags": ["GNSS", "acquisition", "tracking"]
+      },
+      {
+        "flow_name": "gnss-navigation-solution",
+        "description": "Compute position, velocity, and time from the tracked satellite measurements using least-squares or Kalman filter estimation.",
+        "inputs": [
+          {"name": "tracking-loop-design", "desc": "Code and carrier tracking loop outputs (pseudorange, delta-range, carrier phase measurements)"},
+          {"name": "acquisition-algorithm", "desc": "Satellite signal acquisition providing satellite visibility"}
+        ],
+        "outputs": [
+          {"name": "navigation-algorithm", "desc": "Position/velocity/time estimation algorithm with DOP analysis and accuracy prediction"},
+          {"name": "integrity-monitoring", "desc": "RAIM algorithm for fault detection and exclusion"}
+        ],
+        "process": [
+          "Form the pseudorange observation equation: rho_measured = |r_sat - r_user| + c*dt_user + c*dt_iono + c*dt_tropo + multipath + noise. Four unknowns (x, y, z, dt_user) require minimum 4 satellites. Each additional satellite is redundancy for accuracy and integrity.",
+          "Apply corrections. Satellite clock: from broadcast ephemeris. Ionospheric delay: Klobuchar model (broadcast, removes ~50%), dual-frequency (L1-L2 or L1-L5, removes ~99%), SBAS (removes ~80%). Tropospheric delay: Saastamoinen or Hopfield model using surface meteorological data. Satellite orbit: broadcast ephemeris (~1 m) or precise ephemeris (2-5 cm from IGS).",
+          "Solve by weighted least squares: linearize about an approximate position, form the H matrix (direction cosines from user to each satellite), compute delta_x = (H'*W*H)^-1 * H'*W * delta_rho. Iterate until convergence (typically 3-5 iterations from a cold start). The weight matrix W reflects measurement quality (elevation-dependent weighting suppresses low-elevation multipath).",
+          "Compute DOP (Dilution of Precision). G = (H'*H)^-1 gives the geometry matrix. PDOP = sqrt(g11+g22+g33), HDOP and VDOP for horizontal and vertical components. PDOP < 3 is good geometry. DOP * UERE (User Equivalent Range Error) = position error estimate.",
+          "For kinematic applications, implement a Kalman filter with state vector [position, velocity, clock bias, clock drift]. The process model uses constant-velocity or constant-acceleration dynamics. Measurements are pseudorange and delta-range (Doppler). The Kalman filter provides smoother solutions and bridges short measurement gaps.",
+          "Implement RAIM (Receiver Autonomous Integrity Monitoring). With 5+ satellites, compute the residuals after the least-squares solution. The sum-of-squared residuals follows a chi-squared distribution. Compare to a threshold set by the allowable false alarm rate. With 6+ satellites, perform fault detection and exclusion: remove each satellite in turn and check if the residual drops below threshold to identify the faulty measurement."
+        ],
+        "tags": ["GNSS", "positioning", "Kalman"]
+      },
+      {
+        "flow_name": "gnss-multipath-interference",
+        "description": "Design techniques to mitigate multipath errors and intentional/unintentional interference in the GNSS receiver.",
+        "inputs": [
+          {"name": "navigation-algorithm", "desc": "Navigation solution providing position and measurement residuals"},
+          {"name": "rf-architecture", "desc": "RF front-end design parameters"}
+        ],
+        "outputs": [
+          {"name": "multipath-mitigation", "desc": "Techniques and their effectiveness for reducing multipath-induced position errors"},
+          {"name": "interference-countermeasures", "desc": "Detection and mitigation methods for jamming and spoofing"}
+        ],
+        "process": [
+          "Characterize multipath. Short-delay multipath (<1 chip, <300 m for C/A code) distorts the correlation peak and biases the DLL. Long-delay multipath is resolved by the correlator and rejected. Carrier phase multipath has maximum error of quarter-wavelength (~5 cm for L1) and oscillates as geometry changes. Code multipath can be tens of meters for C/A.",
+          "Implement narrow correlator. Reducing early-late spacing from 1 chip to 0.1 chip reduces the multipath error envelope by roughly 10x for short-delay multipath. Requires higher front-end bandwidth. Strobe correlator and double-delta correlator provide further improvement by sharpening the discrimination of the direct signal from reflections.",
+          "Antenna-based multipath mitigation. Choke ring antennas attenuate signals arriving below the horizon (ground reflections). For survey/reference stations, this is the primary multipath defense. For mobile platforms, antenna placement to avoid nearby reflectors is the main lever.",
+          "Detect and characterize interference. Monitor the AGC level or noise floor estimate. A narrowband interferer raises the noise floor locally and can be detected by spectral monitoring. A wideband jammer raises the overall noise floor, reducing C/N0 on all satellites. A spoofer transmits fake GNSS signals; detect by monitoring C/N0 anomalies, clock drift, or consistency with INS.",
+          "Implement interference mitigation. Narrowband: adaptive notch filter in the digital domain, identified from the FFT of the ADC output. Wideband: null-steering with a multi-element antenna (CRPA) using adaptive beamforming. Spoofing: cross-check GNSS with INS (velocity and position consistency), monitor for sudden position jumps, use authenticated signals (Galileo OSNMA) where available.",
+          "Quantify residual errors after mitigation and feed into the navigation accuracy prediction. For a survey receiver with choke ring antenna and narrow correlator, residual multipath is typically 1-5 cm on carrier phase and 10-50 cm on code. For a mobile receiver with a patch antenna, residual multipath is 0.5-5 m on code."
+        ],
+        "tags": ["GNSS", "multipath", "anti-jam"]
+      }
+    ]
+  },
+  {
+    "chain_name": "atomic-clock-engineering",
+    "description": "Design and characterize atomic frequency standards from physics package through electronics, testing, and disciplining for precision timekeeping.",
+    "domain": "sensing",
+    "tags": ["atomic-clock", "timing", "frequency-standard", "metrology"],
+    "steps": [
+      {
+        "flow_name": "atomic-physics-package-selection",
+        "description": "Select the atomic frequency standard technology by matching stability and accuracy requirements to physics package capability.",
+        "inputs": [
+          {"name": "stability-requirement", "desc": "Required Allan deviation at specified averaging times (1s, 100s, 1 day)"},
+          {"name": "application-constraints", "desc": "Size, weight, power, cost, and environmental constraints"}
+        ],
+        "outputs": [
+          {"name": "clock-technology-selection", "desc": "Selected technology (Rb cell, Cs beam, H maser, CSAC, optical) with performance justification"},
+          {"name": "physics-package-parameters", "desc": "Key parameters: transition frequency, line Q, shot noise limit, SWaP"}
+        ],
+        "process": [
+          "Define the stability requirement as Allan deviation (ADEV) at the relevant averaging times. Short-term (1-100s): important for radar, communications, and navigation. Medium-term (100s-1 day): important for holdover during GNSS denial. Long-term (>1 day): important for timekeeping and calibration.",
+          "Map requirements to technology. CSAC (chip-scale): ADEV ~3e-10 at 1s, 3e-12 at 1000s, <120 mW, 35 cc. Rb cell (LPRO): ADEV ~1e-11 at 1s, 1e-13 at 1 day, 5-20W. Cs beam (5071A class): ADEV ~1e-11 at 1s, accuracy ~5e-13 no drift. H maser (active): ADEV ~1e-13 at 1s, 3e-16 at 1000s, best short-term stability. Optical: ADEV ~1e-15 at 1s, research/lab.",
+          "Consider drift. Rubidium has a frequency drift of 1e-11 to 1e-12 per month due to buffer gas permeation and light shift aging. Cesium beam has no drift (primary standard). Hydrogen maser drifts slowly (~1e-15/day) due to cavity pulling. For holdover applications, drift limits the useful free-running period.",
+          "Evaluate environmental sensitivity. Temperature coefficient: Rb ~1e-10/C (uncompensated), Cs ~1e-14/C. Vibration sensitivity (g-sensitivity): quartz ~1e-9/g, Rb ~1e-11/g, Cs ~1e-13/g. Magnetic field: all atomic clocks have Zeeman sensitivity, requiring shielding (mu-metal) and internal C-field control.",
+          "Document the selection with a comparison table showing each technology against the requirements, identifying the selected technology and the reasons for rejecting alternatives."
+        ],
+        "tags": ["atomic-clock", "frequency-standard"]
+      },
+      {
+        "flow_name": "clock-characterization-methodology",
+        "description": "Characterize the atomic clock's stability, phase noise, and environmental sensitivity using standard metrology techniques.",
+        "inputs": [
+          {"name": "clock-technology-selection", "desc": "Selected clock technology and its key parameters"},
+          {"name": "physics-package-parameters", "desc": "Expected performance from technology selection"}
+        ],
+        "outputs": [
+          {"name": "clock-performance-data", "desc": "Measured ADEV, phase noise, drift, and environmental coefficients"},
+          {"name": "characterization-report", "desc": "Complete characterization with uncertainty analysis"}
+        ],
+        "process": [
+          "Measure Allan deviation. Compare the clock under test against a reference clock of equal or better stability using a time interval counter or phase comparison system. Record phase difference samples at the base measurement rate (e.g., 1 Hz). Compute ADEV from the phase data using overlapping Allan variance: ADEV(tau) = sqrt(1/(2*(N-2*m)) * sum((x_{i+2m} - 2*x_{i+m} + x_i)^2)) where m=tau/tau_0. Plot ADEV vs tau on a log-log plot.",
+          "Identify noise types from the ADEV slope. White phase noise: ADEV proportional to tau^-1. White frequency noise (flicker floor): ADEV proportional to tau^-1/2. Flicker frequency noise: ADEV constant (flat). Random walk frequency: ADEV proportional to tau^1/2. Frequency drift: ADEV proportional to tau. Each noise type has a physical origin in the clock.",
+          "Measure phase noise L(f) in dBc/Hz using a phase noise measurement system (PLL-based or cross-correlation for low-noise clocks). This complements ADEV by showing the spectral distribution of noise. Convert between ADEV and L(f) using the transfer function for each noise type.",
+          "Measure temperature sensitivity. Step the temperature in a controlled chamber and measure the frequency change at each step after thermal settling. Compute the temperature coefficient in parts per unit per degree C. For Rb clocks, identify the zero-crossing temperature if the clock has a quadratic temperature characteristic.",
+          "Measure vibration sensitivity (g-sensitivity). Mount the clock on a vibration table and measure the induced phase noise during sinusoidal vibration at several frequencies and amplitudes. The g-sensitivity vector (Gamma) converts acceleration to fractional frequency: delta_f/f = Gamma dot g. Report the magnitude and direction of the sensitivity vector.",
+          "Measure drift rate from long-term data (weeks to months). Fit a linear or quadratic model to the frequency data after removing periodic components (diurnal, if present). Report drift in parts per unit per day or month. For clocks with significant drift, this sets the recalibration or steering interval."
+        ],
+        "tags": ["metrology", "Allan-deviation", "phase-noise"]
+      },
+      {
+        "flow_name": "clock-disciplining-holdover",
+        "description": "Design the disciplining algorithm that steers the local clock to a reference (GPS, UTC) and the holdover strategy for when the reference is lost.",
+        "inputs": [
+          {"name": "clock-performance-data", "desc": "Measured stability, drift, and environmental sensitivity"},
+          {"name": "characterization-report", "desc": "Complete clock characterization data"}
+        ],
+        "outputs": [
+          {"name": "disciplining-algorithm", "desc": "Control algorithm for steering the clock to the reference with filter design and tuning"},
+          {"name": "holdover-performance", "desc": "Time error prediction during GPS denial as a function of holdover duration"}
+        ],
+        "process": [
+          "Design the disciplining loop. A GPS-disciplined oscillator (GPSDO) uses the 1PPS output from a GPS receiver as the reference. The phase error between the local oscillator 1PPS and GPS 1PPS is measured by a time interval counter (sub-nanosecond resolution). A digital control loop adjusts the oscillator frequency tuning (EFC voltage for OCXO, digital command for atomic).",
+          "Select the loop bandwidth. This trades off short-term and long-term performance. Short-term (< 1/BW) performance comes from the local oscillator. Long-term (> 1/BW) performance comes from GPS. For an OCXO with ADEV crossing the GPS ADEV at tau ~100s, the optimal loop bandwidth is approximately 0.01 Hz (time constant ~100s). For Rb with crossing at tau ~10,000s, bandwidth ~0.0001 Hz.",
+          "Implement a Kalman filter for the disciplining. State vector: [phase error, frequency error, frequency drift]. The Kalman filter optimally combines the GPS 1PPS measurement with the oscillator model, and directly estimates the drift rate for holdover prediction. The Q matrix encodes the oscillator noise model (random walk of frequency, frequency drift).",
+          "Design the holdover mode. When GPS is lost, freeze the Kalman filter (no more measurements). The last estimated frequency and drift become the prediction. The holdover time error grows as: dt(T) = drift_rate * T^2/2 + frequency_offset * T + noise_integral. For a disciplined Rb with 1e-12/day drift and 1e-12 frequency error at holdover entry, the time error after 24 hours is approximately 50-100 ns.",
+          "Implement the steering to UTC. For timing applications, the disciplined clock must track UTC(USNO) or UTC as realized by the GPS constellation. Apply the GPS-UTC offset from the navigation message. For sub-microsecond holdover, the clock must have been disciplined long enough for the Kalman filter to converge (typically 3-5 time constants).",
+          "Document holdover performance prediction as a time error vs holdover duration curve. Include the 95th percentile bound for the time error at 1 hour, 4 hours, 24 hours, and 7 days. This curve is the key specification for applications requiring timing holdover during GNSS denial."
+        ],
+        "tags": ["GPSDO", "holdover", "disciplining"]
+      }
+    ]
+  },
+  {
+    "chain_name": "terrain-referenced-navigation",
+    "description": "Design a terrain-referenced navigation system that matches measured terrain profiles against a stored database to determine position without external signals.",
+    "domain": "sensing",
+    "tags": ["navigation", "terrain", "autonomous", "sensing"],
+    "steps": [
+      {
+        "flow_name": "terrain-database-preparation",
+        "description": "Prepare the terrain database that the navigation system will match against, including resolution requirements, data sources, and compression.",
+        "inputs": [
+          {"name": "mission-area", "desc": "Geographic area where terrain navigation must function"},
+          {"name": "navigation-accuracy-target", "desc": "Required horizontal position accuracy from terrain matching"}
+        ],
+        "outputs": [
+          {"name": "terrain-database", "desc": "Formatted terrain elevation database with resolution and accuracy specifications"},
+          {"name": "terrain-suitability-map", "desc": "Map of terrain roughness showing where terrain navigation will and will not work"}
+        ],
+        "process": [
+          "Select the data source. SRTM provides 30m (1 arc-second) global coverage with ~6m vertical accuracy. DTED Level 2 provides 30m posting with ~12m LE90 vertical accuracy. Lidar surveys provide 1-5m posting with <0.5m vertical accuracy but limited coverage. For underwater: bathymetric surveys with multibeam sonar.",
+          "Determine required database resolution. The matching algorithm needs terrain features smaller than the position uncertainty. Rule of thumb: database posting should be 1/3 to 1/5 of the desired position accuracy. For 100m accuracy, 20-30m posting is adequate. For 10m accuracy, 2-5m posting from lidar or high-resolution survey is needed.",
+          "Compute terrain roughness across the mission area. Roughness metrics: standard deviation of elevation within a moving window, or the Laplacian of the elevation surface. Areas with low roughness (flat plains, open water, uniform slope) are unsuitable for terrain matching. Mark these in the suitability map with a warning threshold.",
+          "Format the database for onboard storage. Grid the elevation data in a regular lat/lon grid or UTM projection. Apply lossless compression (delta coding + entropy coding can achieve 3:1-5:1 for terrain). For memory-constrained platforms, load only the tiles along the planned flight path plus margin for off-track navigation.",
+          "Validate the database against independent measurements. Compare database elevations to survey checkpoints not used in the database creation. Report the RMS vertical error and identify any systematic biases that would create a navigation offset."
+        ],
+        "tags": ["terrain", "database", "DTED"]
+      },
+      {
+        "flow_name": "terrain-sensor-selection",
+        "description": "Select and configure the terrain measurement sensor (radar altimeter, lidar, sonar) for profile matching.",
+        "inputs": [
+          {"name": "terrain-database", "desc": "Database resolution and accuracy"},
+          {"name": "platform-constraints", "desc": "Aircraft/vehicle type, altitude, speed, and SWaP limitations"}
+        ],
+        "outputs": [
+          {"name": "terrain-sensor-specification", "desc": "Selected sensor with measurement rate, accuracy, footprint, and installation requirements"},
+          {"name": "measurement-error-model", "desc": "Sensor error characteristics for use in the matching algorithm"}
+        ],
+        "process": [
+          "For airborne: radar altimeter is the standard terrain sensor. Frequency: typically 4.3 GHz (C-band). Measurement principle: FMCW measures the round-trip time to the ground. Accuracy: 1-3 m over land, degraded over vegetation canopy. Footprint: depends on antenna beamwidth and altitude (e.g., 10 deg beamwidth at 500m AGL gives ~90m footprint). Measurement rate: 10-100 Hz.",
+          "For higher accuracy: scanning lidar provides dense point clouds but is expensive, heavy, and eye-safe wavelength selection (1550 nm) adds cost. For covert operation, lidar is detectable. For underwater: forward-looking or downward-looking multibeam sonar measures bathymetry.",
+          "Model the sensor errors. Radar altimeter: bias (calibration residual), noise (from signal processing), footprint averaging (smooths terrain features smaller than the footprint), vegetation penetration uncertainty. For each, estimate the magnitude and whether it is correlated or random across measurements.",
+          "Determine the measurement rate needed for the matching algorithm. The along-track sample spacing should be comparable to the database posting to capture the same terrain features. At 200 m/s airspeed with 30m database posting, the sensor needs ~7 Hz minimum measurement rate. Higher rates improve robustness through averaging.",
+          "Document the sensor specification including mounting requirements (nadir-pointing, stabilized or body-fixed), interface to the navigation computer (measurement format, latency, time-tagging relative to INS), and any operational limitations (minimum/maximum altitude, terrain slope limits)."
+        ],
+        "tags": ["radar-altimeter", "lidar", "sonar"]
+      },
+      {
+        "flow_name": "terrain-matching-algorithm",
+        "description": "Design the terrain matching algorithm that correlates measured terrain profiles with the database to estimate position corrections.",
+        "inputs": [
+          {"name": "terrain-sensor-specification", "desc": "Sensor measurement characteristics"},
+          {"name": "terrain-database", "desc": "Formatted terrain elevation database"},
+          {"name": "measurement-error-model", "desc": "Sensor error statistics"}
+        ],
+        "outputs": [
+          {"name": "matching-algorithm", "desc": "Complete terrain matching algorithm with position correction output and confidence metric"},
+          {"name": "accuracy-prediction", "desc": "Expected position correction accuracy as a function of terrain roughness and sensor performance"}
+        ],
+        "process": [
+          "TERCOM (Terrain Contour Matching) batch correlation. Collect a profile of N terrain height measurements along the flight path. For each candidate position offset (dx, dy) within the search area, extract the corresponding profile from the database and compute the mean absolute difference (MAD) or correlation coefficient with the measured profile. The position offset with the minimum MAD (or maximum correlation) is the best estimate. Search area is defined by the INS position uncertainty (typically 3-sigma).",
+          "SITAN (Sandia Inertial Terrain-Aided Navigation) sequential method. Uses an extended Kalman filter where each terrain height measurement is processed individually. The measurement model: h_measured = h_aircraft - h_terrain(lat, lon). The terrain height is a nonlinear function of position, linearized about the current estimated position. The H matrix contains the terrain slope (dh/dlat, dh/dlon). Flat terrain makes H small and the measurement uninformative (confirming the suitability map).",
+          "Particle filter approach. For highly nonlinear terrain or multimodal position distributions (ambiguous terrain), a particle filter represents the position probability distribution as a set of weighted samples. Each measurement reweights the particles based on how well the measured height matches the database at each particle's position. Particle resampling prevents weight degeneracy. More computationally expensive but handles ambiguity.",
+          "Set the update rate and profile length. TERCOM typically uses profiles of 30-100 measurements (3-10 km at typical altitudes and speeds) and updates every profile length. SITAN updates at each measurement. The particle filter updates at each measurement. Longer profiles give more information but assume the INS error is approximately constant over the profile.",
+          "Implement confidence monitoring. The correlation peak height relative to the background (peak-to-sidelobe ratio) indicates match quality. A low ratio means the terrain is ambiguous or the sensor data is poor. Output a confidence metric with each position correction. If confidence is below threshold, do not apply the correction to the INS.",
+          "Predict the achievable accuracy. Run the algorithm in simulation using the actual terrain database and the sensor error model. Inject known position offsets and verify recovery. The accuracy depends primarily on terrain roughness, database accuracy, sensor noise, and the ratio of database resolution to position error. Typical achievable accuracy: 30-100m CEP with DTED-2 and radar altimeter for terrain with adequate roughness."
+        ],
+        "tags": ["TERCOM", "SITAN", "terrain-matching"]
+      }
+    ]
+  },
+  {
+    "chain_name": "precision-measurement-methodology",
+    "description": "Design and validate a precision measurement system using uncertainty analysis, gage R&R, and statistical process control for measurement processes.",
+    "domain": "sensing",
+    "tags": ["metrology", "measurement", "uncertainty", "quality"],
+    "steps": [
+      {
+        "flow_name": "measurement-uncertainty-analysis",
+        "description": "Construct a measurement uncertainty budget following the GUM method to quantify confidence in measurement results.",
+        "inputs": [
+          {"name": "measurement-process", "desc": "Description of the measurement including the measurand, instrument, method, and environment"},
+          {"name": "accuracy-requirement", "desc": "Required measurement uncertainty relative to the tolerance or specification being measured"}
+        ],
+        "outputs": [
+          {"name": "uncertainty-budget", "desc": "Complete uncertainty budget with all contributing sources, their magnitudes, and the combined uncertainty"},
+          {"name": "measurement-capability", "desc": "Whether the measurement system meets the accuracy requirement and the test uncertainty ratio (TUR)"}
+        ],
+        "process": [
+          "Define the measurand and the measurement model equation: Y = f(X1, X2, ..., Xn) where Xi are the input quantities (reading, corrections, environmental effects). Every term in this equation is either measured or estimated, and each has an uncertainty.",
+          "Identify all uncertainty sources. Use the fishbone diagram approach with categories: instrument (resolution, calibration uncertainty, drift since last calibration, nonlinearity), method (repeatability, operator effect, fixturing), environment (temperature, humidity, vibration), and the item under test (surface finish, thermal equilibrium, elastic deformation under contact).",
+          "Evaluate Type A uncertainty from statistical analysis of repeated measurements. Take N measurements under repeatability conditions. The standard uncertainty is s/sqrt(N) where s is the sample standard deviation. If repeated measurements are impractical, use historical repeatability data from the same process.",
+          "Evaluate Type B uncertainty from non-statistical information. Calibration certificate: u = U/k where U is the expanded uncertainty and k is the coverage factor (typically 2). Manufacturer specification: assume rectangular distribution, u = spec/(sqrt(3)). Temperature effect: u = sensitivity_coefficient * temperature_uncertainty. Resolution: u = resolution/(2*sqrt(3)) for digital, resolution/(sqrt(12)) for analog.",
+          "Combine uncertainties. Each source contributes through the sensitivity coefficient c_i = partial_Y/partial_Xi. Combined standard uncertainty: u_c = sqrt(sum(c_i^2 * u_i^2)). For correlated inputs, include the covariance terms. Expand to 95% confidence: U = k * u_c where k = 2 for a normal distribution (or use effective degrees of freedom and the t-distribution via Welch-Satterthwaite).",
+          "Compute the test uncertainty ratio (TUR = tolerance / (2*U)). The ANSI/NCSL Z540.3 standard requires TUR >= 4:1 for a simple accept/reject decision with <2% false accept risk. If TUR < 4:1, apply guard banding (tighten the acceptance limits by the measurement uncertainty) or improve the measurement system."
+        ],
+        "tags": ["GUM", "uncertainty", "metrology"]
+      },
+      {
+        "flow_name": "gage-repeatability-reproducibility",
+        "description": "Conduct a Gage R&R study to quantify the measurement system variation relative to part variation and tolerance.",
+        "inputs": [
+          {"name": "measurement-process", "desc": "The measurement system to be evaluated"},
+          {"name": "uncertainty-budget", "desc": "Known uncertainty sources for context"}
+        ],
+        "outputs": [
+          {"name": "gage-rr-results", "desc": "Repeatability (EV), reproducibility (AV), and total measurement system variation (%GRR) relative to tolerance and part variation"},
+          {"name": "measurement-system-verdict", "desc": "Whether the measurement system is adequate for the intended use (AIAG MSA criteria)"}
+        ],
+        "process": [
+          "Design the study. Select 10 parts spanning the expected process variation (not just good parts). Select 2-3 operators who normally use the instrument. Each operator measures each part 2-3 times in random order. The operators should not know which part they are measuring or see their previous results. Total measurements: 10 parts x 3 operators x 3 trials = 90.",
+          "Compute repeatability (Equipment Variation, EV): the variation when the same operator measures the same part multiple times. EV = R_bar * k1 where R_bar is the average range across all operator-part combinations and k1 is a constant from the d2* distribution table based on the number of trials and the number of parts*operators.",
+          "Compute reproducibility (Appraiser Variation, AV): the variation between operators measuring the same part. AV = sqrt((X_diff * k2)^2 - (EV^2 / (n*r))) where X_diff is the range of operator averages, k2 depends on the number of operators, n is the number of parts, and r is the number of trials. If the term under the sqrt is negative, AV = 0.",
+          "Compute GRR = sqrt(EV^2 + AV^2). Express as %GRR = GRR / tolerance * 100 and %GRR_TV = GRR / total_variation * 100 where total_variation = sqrt(GRR^2 + PV^2) and PV is the part variation.",
+          "Apply the AIAG MSA criteria. %GRR < 10%: measurement system is adequate. 10-30%: may be acceptable depending on application, importance, and cost of improvement. > 30%: measurement system is not adequate, must be improved before use for process control or acceptance. Also evaluate the number of distinct categories (ndc = 1.41 * PV/GRR). ndc >= 5 means the measurement system can distinguish enough categories for process control.",
+          "If %GRR is too high, diagnose the root cause from the components. High EV (repeatability): investigate instrument resolution, fixturing, contact force variation, thermal drift within the measurement cycle. High AV (reproducibility): investigate operator technique differences, training, measurement procedure clarity, setup differences."
+        ],
+        "tags": ["gage-RR", "MSA", "quality"]
+      },
+      {
+        "flow_name": "measurement-process-control",
+        "description": "Implement statistical process control for the measurement process itself to detect drift, shifts, and degradation before they corrupt measurement results.",
+        "inputs": [
+          {"name": "gage-rr-results", "desc": "Measurement system variation characteristics"},
+          {"name": "measurement-capability", "desc": "Uncertainty budget and TUR"}
+        ],
+        "outputs": [
+          {"name": "measurement-spc-system", "desc": "Control chart scheme for monitoring measurement process stability with check standards and action rules"},
+          {"name": "calibration-interval-justification", "desc": "Data-driven calibration interval based on measurement process drift history"}
+        ],
+        "process": [
+          "Select a check standard: a stable artifact whose value is well-known (calibrated traceable to a national standard). The check standard exercises the measurement process under the same conditions as production measurements. It should be of a value representative of the measurement range in use.",
+          "Measure the check standard at a regular interval (daily, per shift, or per batch depending on the measurement volume and the risk of drift). Record the measured value and the date/time. This forms the data series for the control chart.",
+          "Construct an individuals (X) and moving range (MR) control chart for the check standard measurements. Calculate the centerline (grand average), UCL = X_bar + 2.66*MR_bar, LCL = X_bar - 2.66*MR_bar. Plot each new measurement and apply the Nelson rules (or Western Electric rules) for detecting out-of-control conditions: 1 point beyond 3-sigma, 8 consecutive points on one side of the centerline, 6 consecutive points trending in one direction.",
+          "When an out-of-control condition is detected, investigate the root cause before making further production measurements. Common causes: instrument drift (recalibrate), environmental change (temperature excursion), damage (probe tip wear, surface contamination), operator change. Correct the cause and verify the measurement system returns to control before resuming.",
+          "Use the control chart data to justify calibration intervals. If the measurement process shows no drift or shift over a 12-month period (all points in control), the calibration interval can be extended. If drift is detected before the scheduled calibration, shorten the interval. The goal is to set the interval so that the probability of the measurement drifting out of tolerance between calibrations is below a target (e.g., 5% per NCSL RP-1)."
+        ],
+        "tags": ["SPC", "calibration", "metrology"]
+      }
+    ]
+  },
+  {
+    "chain_name": "radar-system-design",
+    "description": "Design a radar system from requirements through architecture, waveform selection, signal processing, and tracking for surveillance, imaging, or fire control applications.",
+    "domain": "sensing",
+    "tags": ["radar", "signal-processing", "sensing", "hardware"],
+    "steps": [
+      {
+        "flow_name": "radar-requirements-architecture",
+        "description": "Derive radar performance requirements from the operational mission and select the system architecture.",
+        "inputs": [
+          {"name": "operational-requirements", "desc": "Detection range, target types (RCS), revisit rate, angular resolution, environment"},
+          {"name": "platform-constraints", "desc": "Size, weight, power, antenna aperture, and cost constraints"}
+        ],
+        "outputs": [
+          {"name": "radar-architecture", "desc": "Selected architecture (pulsed, CW, FMCW, phased array, SAR) with key parameters"},
+          {"name": "performance-budget", "desc": "Range equation budget showing required transmit power, antenna gain, receiver sensitivity"}
+        ],
+        "process": [
+          "Start with the radar range equation: R_max = ((Pt * G^2 * lambda^2 * sigma) / ((4*pi)^3 * kT * B * F * SNR_min * L))^(1/4). Rearrange to find the required power-aperture product from the detection range and target RCS.",
+          "Select the operating frequency. Lower frequency (L, S band): longer range, better weather penetration, larger antenna for given beamwidth. Higher frequency (X, Ka band): finer resolution, smaller antenna, more atmospheric loss. X-band is the most common compromise for tactical radar.",
+          "Choose the architecture. Pulsed: standard for long-range surveillance, fire control. CW: Doppler-only measurement, good for speed enforcement and proximity fuzing. FMCW: range and velocity, low power, short range, common in automotive and level measurement. Phased array: electronic beam steering for rapid scan and multi-function operation. SAR: synthetic aperture for imaging.",
+          "Size the antenna. Beamwidth = k * lambda / D where k ~ 1.2 for uniform illumination, D is the aperture dimension. For a search radar with required beamwidth of 2 degrees at X-band (3 cm), D ~ 1.2 * 0.03 / (2 * pi/180) ~ 1 m. Antenna gain G ~ 4*pi*A_eff / lambda^2 where A_eff = eta * A_physical, eta ~ 0.5-0.7.",
+          "Close the range equation. With the antenna sized, compute the gain. Set the receiver noise figure (2-5 dB for a low-noise amplifier front-end). Choose the required SNR for detection (13 dB for Pd = 0.9, Pfa = 1e-6 with Swerling I target). Include system losses (2-5 dB for transmission line, radome, beam shape, signal processing losses). Solve for the required peak transmit power.",
+          "Verify the average power and duty cycle are achievable. Average power = peak power * duty cycle. The transmitter technology limits peak and average power: solid-state (GaN AESA): 5-50 W per element, high duty cycle. Klystron/TWT: kW to MW peak, low duty cycle. Magnetron: simple, cheap, limited waveform flexibility. Document the performance budget showing each term in the range equation."
+        ],
+        "tags": ["radar", "architecture", "range-equation"]
+      },
+      {
+        "flow_name": "radar-waveform-design",
+        "description": "Design the radar waveform to achieve the required range resolution, velocity resolution, and ambiguity performance.",
+        "inputs": [
+          {"name": "radar-architecture", "desc": "Selected radar type and key parameters"},
+          {"name": "performance-budget", "desc": "Required SNR, range, and resolution"}
+        ],
+        "outputs": [
+          {"name": "waveform-specification", "desc": "Pulse width, bandwidth, PRF, modulation type, and ambiguity function characterization"},
+          {"name": "signal-processing-requirements", "desc": "Matched filter design, Doppler processing, and computational load"}
+        ],
+        "process": [
+          "Determine range resolution: delta_R = c / (2*B) where B is the signal bandwidth. For 1 m resolution, B = 150 MHz. For 15 m resolution, B = 10 MHz. Unmodulated pulse: B ~ 1/tau, so 1 us pulse gives 150 m resolution. To get fine resolution with long pulses (for energy on target), use pulse compression.",
+          "Design the pulse compression waveform. Linear FM (chirp): sweep bandwidth B over pulse duration T. Time-bandwidth product T*B gives the pulse compression ratio (processing gain in SNR). A 10 us pulse with 100 MHz bandwidth gives TB = 1000, range resolution = 1.5 m, and 30 dB processing gain. Range sidelobes from matched filter are -13.2 dB for rectangular weighting; apply a window (Hamming, Taylor) to reduce sidelobes to -35 to -50 dB at the cost of ~1 dB SNR loss and ~20% resolution widening.",
+          "Select the PRF. Low PRF (unambiguous in range, ambiguous in Doppler): range = c / (2*PRF). Medium PRF: ambiguous in both range and Doppler, resolved by PRF agility (Chinese Remainder Theorem or M-of-N coincidence). High PRF (unambiguous in Doppler, ambiguous in range): used for look-down/shoot-down where target Doppler is the primary discriminant against ground clutter.",
+          "Analyze velocity resolution: delta_V = lambda / (2*T_coh) where T_coh is the coherent processing interval (CPI). For X-band (lambda = 3 cm) with 10 ms CPI, delta_V = 1.5 m/s. Longer CPI improves velocity resolution but requires target acceleration to be less than delta_V/T_coh during the CPI.",
+          "Compute the ambiguity function: chi(tau, fd) = |integral(u(t) * u*(t-tau) * exp(j*2*pi*fd*t) dt)|^2. The ambiguity function completely characterizes the waveform's resolution and ambiguity properties in range-Doppler space. For LFM: a sheared ridge showing range-Doppler coupling. For phase-coded waveforms (Barker, polyphase): a thumbtack with low sidelobes.",
+          "Document the waveform specification, the matched filter or correlation processing required, the expected range and Doppler sidelobes, and the computational requirements for real-time processing."
+        ],
+        "tags": ["radar", "waveform", "pulse-compression"]
+      },
+      {
+        "flow_name": "radar-signal-processing-chain",
+        "description": "Design the radar signal processing chain from raw ADC samples through pulse compression, Doppler filtering, CFAR detection, and target tracking.",
+        "inputs": [
+          {"name": "waveform-specification", "desc": "Waveform parameters and matched filter design"},
+          {"name": "radar-architecture", "desc": "Radar architecture and antenna configuration"}
+        ],
+        "outputs": [
+          {"name": "processing-chain-design", "desc": "Complete signal processing pipeline with algorithms, computational requirements, and expected detection performance"},
+          {"name": "tracking-algorithm", "desc": "Target tracking filter design with track initiation and maintenance logic"}
+        ],
+        "process": [
+          "Pulse compression. Apply the matched filter (correlation of received signal with transmitted waveform replica) in the frequency domain: multiply the FFT of the received signal by the conjugate of the FFT of the reference, then IFFT. Apply the sidelobe reduction window. Output: range-compressed data for each pulse.",
+          "Doppler processing. Collect N pulses (a CPI) and form a range-Doppler map by FFT across the slow-time (pulse-to-pulse) dimension at each range bin. Apply a Doppler window (Chebyshev, Taylor) to reduce spectral sidelobes. The Doppler resolution is PRF/N and the unambiguous Doppler is +/-PRF/2.",
+          "CFAR detection. For each cell in the range-Doppler map, estimate the local noise/clutter level from surrounding reference cells. Cell-averaging CFAR (CA-CFAR): average the reference cells on both sides of the cell under test, multiply by a threshold factor T to achieve the desired Pfa. Variations: greatest-of CFAR (GO-CFAR) for clutter edges, smallest-of (SO-CFAR) for closely spaced targets, ordered-statistics CFAR (OS-CFAR) for inhomogeneous clutter.",
+          "Clustering and centroiding. Group adjacent CFAR detections into a single target report. Compute the centroid in range, Doppler, and angle (if applicable) weighted by detection amplitude. This produces one report per physical target per scan.",
+          "Target tracking. Associate new detections with existing tracks using a gating and assignment algorithm. Gate: use the predicted measurement from the track state and its covariance to define a validation region. Assignment: nearest-neighbor for sparse scenarios, global nearest-neighbor or joint probabilistic data association (JPDA) for dense scenarios. Update the track state with a Kalman filter (constant-velocity or interacting multiple model for maneuvering targets).",
+          "Track management. Initiate new tracks from detections not associated with existing tracks (M-of-N logic: require M detections in N scans to confirm). Delete tracks that miss more than K consecutive scans. Maintain a tentative/confirmed/deleted state machine. Output confirmed tracks with position, velocity, track quality, and ID."
+        ],
+        "tags": ["radar", "signal-processing", "CFAR", "tracking"]
+      }
+    ]
+  },
+  {
+    "chain_name": "sonar-system-design",
+    "description": "Design a sonar system from the sonar equation through transducer selection, beamforming, signal processing, and display for underwater detection or imaging.",
+    "domain": "sensing",
+    "tags": ["sonar", "acoustics", "underwater", "sensing"],
+    "steps": [
+      {
+        "flow_name": "sonar-equation-budget",
+        "description": "Apply the sonar equation to size the sonar system for the required detection range against the expected target in the expected environment.",
+        "inputs": [
+          {"name": "detection-requirements", "desc": "Target type, detection range, classification requirements, operating area"},
+          {"name": "platform-constraints", "desc": "Ship/submarine/UUV size, power, speed, self-noise"}
+        ],
+        "outputs": [
+          {"name": "sonar-performance-budget", "desc": "Complete sonar equation budget showing source level, transmission loss, target strength, noise level, array gain, and detection threshold"},
+          {"name": "operating-frequency", "desc": "Selected frequency with justification from the range-resolution-absorption trade-off"}
+        ],
+        "process": [
+          "Write the active sonar equation in dB: SE = SL - 2*TL + TS - (NL - AG) - DT where SE is signal excess (positive means detection), SL is source level, TL is one-way transmission loss, TS is target strength, NL is noise level, AG is array gain, and DT is detection threshold.",
+          "Select the operating frequency from the range-resolution-absorption trade-off. Low frequency (1-10 kHz): long range (tens of km), low absorption (< 1 dB/km at 1 kHz), poor resolution, large transducers. Medium (10-100 kHz): moderate range (1-10 km), moderate absorption, good resolution, used for mine hunting and fish finding. High (100 kHz - 1 MHz): short range (<1 km), high absorption, fine resolution for imaging and profiling.",
+          "Estimate transmission loss. Spherical spreading: TL = 20*log10(R) applies in deep water. Cylindrical spreading: TL = 10*log10(R) + alpha*R in shallow water with surface/bottom bounding. Absorption coefficient alpha (dB/km) from Francois-Garrison model: strong function of frequency (0.06 at 1 kHz, 10 at 100 kHz, 36 at 300 kHz in seawater). For ducted propagation, use a propagation model (ray tracing or normal mode) with the local sound speed profile.",
+          "Estimate target strength. Submarines: 15-25 dB at beam aspect, 5-10 dB at bow/stern. Fish (individual): -45 to -35 dB depending on species and frequency. Mine: -10 to 0 dB. Ship hull: 10-20 dB. TS varies with frequency and aspect angle.",
+          "Estimate noise level. Ambient noise: Wenz curves give the noise spectral level vs frequency (shipping, wind, rain, biological). Self-noise: flow noise from platform motion, machinery noise. Use the higher of ambient and self-noise. Typical deep ocean: 60-70 dB re 1 uPa in the 1-10 kHz band.",
+          "Close the equation. Set DT from the required probability of detection and false alarm rate (DT ~ 10-15 dB for Pd = 0.5, Pfa = 1e-4 in Gaussian noise). Compute the required SL - AG combination to achieve positive signal excess at the required range. AG = 10*log10(N) for a uniformly weighted line array of N elements."
+        ],
+        "tags": ["sonar", "sonar-equation", "acoustics"]
+      },
+      {
+        "flow_name": "sonar-transducer-array-design",
+        "description": "Design the sonar transducer and array for the required beam pattern, source level, and receiving sensitivity.",
+        "inputs": [
+          {"name": "sonar-performance-budget", "desc": "Required source level and array gain"},
+          {"name": "operating-frequency", "desc": "Selected operating frequency"}
+        ],
+        "outputs": [
+          {"name": "array-design", "desc": "Transducer type, element count, array geometry, beam pattern, and beamforming method"},
+          {"name": "source-and-receive-performance", "desc": "Achievable source level, receiving sensitivity, and beam steering range"}
+        ],
+        "process": [
+          "Select the transducer material. PZT (lead zirconate titanate): most common, high coupling coefficient (~0.7), moderate bandwidth (5-20%). 1-3 composite: PZT pillars in polymer matrix, wider bandwidth (30-60%), better impedance match to water. PVDF: flexible, wideband, low transmit efficiency (receive-only for hydrophones). Tonpilz (head-mass/tail-mass): high-power projector design for low-to-mid frequency.",
+          "Size the array for the required beam pattern. Beamwidth = lambda / (N*d) radians where N is the number of elements and d is the element spacing. To avoid grating lobes, d <= lambda/2. For a 3-degree beam at 10 kHz (lambda = 15 cm), N*d ~ 2.9 m, requiring ~38 elements at lambda/2 spacing.",
+          "Design the beam pattern. Uniform weighting gives -13 dB first sidelobes. Apply amplitude shading (Dolph-Chebyshev for specified sidelobe level, Taylor for near-in sidelobes) to reduce sidelobes at the cost of wider mainlobe and reduced array gain. For a sonar scanning a sector, sidelobes in the direction of strong interferers matter most.",
+          "Implement beamforming. Time-delay beamforming for wideband systems: apply a delay to each element equal to the propagation time difference for the desired steering direction. For narrowband: phase-shift beamforming (simpler, but beam squints with frequency). For multiple simultaneous beams, use an FFT-based spatial processor or a bank of beamformers.",
+          "Verify the achievable source level. SL = SL_element + 10*log10(N) + 10*log10(eta) where SL_element is the source level of one element and eta is the array efficiency. Each element's source level is limited by cavitation (at shallow depths) and mechanical stress. Typical PZT element: 180-200 dB re 1 uPa at 1m per element depending on size and frequency.",
+          "Document the array design with element layout drawing, beam pattern plots (mainlobe, sidelobes, grating lobes), source level vs frequency, receiving sensitivity vs frequency, and steering range limitations."
+        ],
+        "tags": ["sonar", "transducer", "beamforming"]
+      },
+      {
+        "flow_name": "sonar-signal-processing",
+        "description": "Design the sonar signal processing chain for detection, classification, and localization of underwater targets or features.",
+        "inputs": [
+          {"name": "array-design", "desc": "Array geometry and beamforming output"},
+          {"name": "sonar-performance-budget", "desc": "Expected signal and noise levels"}
+        ],
+        "outputs": [
+          {"name": "sonar-processing-chain", "desc": "Complete processing pipeline from beamformed data through detection and display"},
+          {"name": "detection-classification-performance", "desc": "Expected detection and classification performance in the operational environment"}
+        ],
+        "process": [
+          "Active sonar processing. Transmit the designed waveform (CW ping, HFM chirp, or coded sequence). After transmission, apply the matched filter to the beamformed receive data for each beam. The output is a range-bearing map for each ping. For HFM (hyperbolic FM), the matched filter automatically compensates for Doppler, unlike LFM where range-Doppler coupling must be resolved.",
+          "Passive sonar processing. Narrowband: compute the power spectral density of each beam's output using FFT. Display as frequency vs bearing (LOFAR display). Detection of narrowband tonals (machinery lines) at specific frequencies indicates a man-made source. Broadband: compute the total power in a frequency band for each beam. Display as bearing vs time (BTR). DEMON (Detection of Envelope Modulation on Noise) processing extracts propeller blade rate from the amplitude modulation of cavitation noise.",
+          "Normalization and detection. Apply time-varying gain (TVG) to compensate for transmission loss with range: TVG(R) = 20*log10(R) + 2*alpha*R for active sonar. Normalize the background using a CFAR-like algorithm adapted for the sonar reverberation environment. Reverberation (backscatter from the ocean surface, bottom, and volume) often exceeds noise and limits detection performance.",
+          "Classification. After detection, analyze the target echo characteristics: highlight/shadow pattern in imaging sonar, target strength vs aspect, echo duration, spectral content. For mine hunting: shape-based classification from high-resolution imaging sonar (100+ kHz). For ASW: Doppler shift, bearing rate, tonal frequencies, and broadband characteristics.",
+          "Display design. Active: plan position indicator (PPI) showing range-bearing, A-scope showing amplitude vs range for a selected beam. Passive: bearing-time record (BTR) for broadband, LOFAR (frequency-bearing) for narrowband, DEMON for blade rate analysis. The display must allow the operator to distinguish targets from reverberation, biological noise, and other contacts.",
+          "Document the processing chain with computational requirements (MFLOPS for each stage), expected detection ranges in representative environments (deep water, shallow water, Arctic), and classification confidence levels."
+        ],
+        "tags": ["sonar", "signal-processing", "detection"]
+      }
+    ]
+  },
+  {
+    "chain_name": "electro-optical-sensor-design",
+    "description": "Design an electro-optical or infrared sensor system from detector selection through optics, signal processing, and target detection range prediction.",
+    "domain": "sensing",
+    "tags": ["EO", "infrared", "imaging", "sensor", "optics"],
+    "steps": [
+      {
+        "flow_name": "eo-detector-optics-design",
+        "description": "Select the detector and design the optical system to meet sensitivity and resolution requirements.",
+        "inputs": [
+          {"name": "spectral-band", "desc": "Operating wavelength band (visible, SWIR, MWIR, LWIR) based on target and environment"},
+          {"name": "performance-requirements", "desc": "Detection/recognition/identification range, FOV, frame rate, NETD"}
+        ],
+        "outputs": [
+          {"name": "detector-specification", "desc": "Selected detector technology with format, pixel pitch, spectral response, and noise characteristics"},
+          {"name": "optical-design", "desc": "Focal length, f-number, aperture, and optical MTF"}
+        ],
+        "process": [
+          "Select the spectral band from the application. Visible (0.4-0.7 um): reflected light, high resolution, needs illumination at night. SWIR (0.9-1.7 um): sees through haze, nightglow illumination, InGaAs detector. MWIR (3-5 um): thermal emission from hot targets (engines, exhaust), InSb or HgCdTe cooled to 77K. LWIR (8-12 um): thermal emission from ambient temperature objects (people, vehicles), HgCdTe or microbolometer.",
+          "Select the detector. Cooled photon detectors (InSb, HgCdTe): high sensitivity (D* > 1e11 Jones), fast response, require cryogenic cooling (Stirling, Joule-Thomson). Uncooled thermal detectors (microbolometer): lower sensitivity (NETD 30-50 mK), no cooling, lower cost, larger pixel pitch (17-25 um vs 10-15 um for cooled). CMOS/CCD for visible/SWIR.",
+          "Determine the focal length from the required IFOV (instantaneous field of view). IFOV = pixel_pitch / focal_length. For a 15 um pixel and 0.1 mrad IFOV requirement: f = 15e-6 / 0.1e-3 = 150 mm. Total FOV = IFOV * number_of_pixels. A 640x512 array with 0.1 mrad IFOV gives 3.7 deg x 2.9 deg FOV.",
+          "Select the f-number. Lower f-number collects more signal but increases optical aberrations and cost. For thermal imaging: f/1 to f/2 is typical for high-sensitivity cooled systems. For uncooled: f/1 to f/1.4 to compensate for lower detector sensitivity. The optical cutoff frequency f_c = 1/(lambda * f/#) determines the diffraction-limited MTF.",
+          "Compute NETD (Noise Equivalent Temperature Difference) for a thermal imager. NETD = (4 * f/#^2 * sqrt(delta_f)) / (pi * D* * delta_lambda * (dM/dT)) where delta_f is the noise bandwidth (frame_rate / 2 for snapshot), D* is the specific detectivity, delta_lambda is the spectral bandwidth, and dM/dT is the temperature derivative of spectral exitance integrated over the band. For a good LWIR system: NETD < 50 mK.",
+          "Document the optical prescription (focal length, aperture, f-number, number of elements, material), the detector format and cooling requirement, the system MTF at Nyquist frequency, and the NETD for thermal systems or SNR for visible systems."
+        ],
+        "tags": ["EO", "infrared", "detector", "optics"]
+      },
+      {
+        "flow_name": "eo-range-prediction",
+        "description": "Predict the detection, recognition, and identification ranges using the Johnson criteria and atmospheric transmission models.",
+        "inputs": [
+          {"name": "detector-specification", "desc": "Detector and optics design with NETD and resolution"},
+          {"name": "optical-design", "desc": "System MTF and FOV"}
+        ],
+        "outputs": [
+          {"name": "range-prediction", "desc": "Detection, recognition, and identification ranges for specified targets and atmospheric conditions"},
+          {"name": "atmospheric-effects-analysis", "desc": "Impact of atmosphere on system performance"}
+        ],
+        "process": [
+          "Apply the Johnson criteria. Detection requires 1 line pair across the target's critical dimension. Recognition requires 3-4 line pairs. Identification requires 6-8 line pairs. A line pair is one cycle of the system resolution. The resolvable cycles across a target at range R: N_cycles = (target_dimension * f) / (2 * pixel_pitch * R) for a Nyquist-sampled system.",
+          "Account for the system MTF. The Johnson criteria assume adequate contrast and resolution. The system MTF at the spatial frequency corresponding to N_cycles on the target reduces the effective contrast. MTF_system = MTF_optics * MTF_detector * MTF_electronics * MTF_motion. If MTF_system at the relevant frequency is less than the required minimum recognizable contrast, the range is reduced.",
+          "Model atmospheric transmission. Use MODTRAN or a simplified model (Beer-Lambert law with extinction coefficient). In the MWIR (3-5 um), CO2 absorption near 4.2 um creates a notch. In the LWIR (8-12 um), the atmospheric window is broader but ozone absorption near 9.6 um reduces transmission. Aerosol scattering reduces transmission at all wavelengths, with stronger effect at shorter wavelengths.",
+          "Compute the target-to-background contrast. For thermal imaging: delta_T = T_target - T_background. A vehicle engine exhaust might be 100-300 C above ambient. A person is 10-15 C above an outdoor background. The apparent temperature difference at the sensor is delta_T * tau_atm where tau_atm is the atmospheric transmission.",
+          "Calculate the detection range. The minimum resolvable temperature difference (MRT) at the spatial frequency corresponding to 1 line pair on the target at range R must be less than the apparent delta_T. MRT is approximately 2.5 * NETD at low spatial frequencies and degrades (increases) at higher frequencies following the system MTF. Iterate on R to find where the target's apparent contrast equals the MRT at the required spatial frequency.",
+          "Present range predictions as a table: target type, critical dimension, temperature contrast, atmosphere (clear, haze, fog), and detection/recognition/identification range. Include a probability of detection curve (cumulative normal based on the Johnson criteria probability model: 50% at the criterion, reaching 95% at approximately 1.5x the criterion)."
+        ],
+        "tags": ["Johnson-criteria", "range-prediction", "atmospheric"]
+      }
+    ]
+  },
+  {
+    "chain_name": "magnetic-sensor-system",
+    "description": "Design a magnetic sensing system for anomaly detection, survey, or navigation using magnetometers and gradiometers with platform compensation.",
+    "domain": "sensing",
+    "tags": ["magnetic", "magnetometer", "survey", "anomaly-detection"],
+    "steps": [
+      {
+        "flow_name": "magnetometer-selection-configuration",
+        "description": "Select the magnetometer technology and configure it for the application's sensitivity, bandwidth, and dynamic range requirements.",
+        "inputs": [
+          {"name": "detection-target", "desc": "Target type (ferrous object, geological feature, navigation anomaly) and expected signal strength"},
+          {"name": "platform-environment", "desc": "Platform type, magnetic noise sources, and operating conditions"}
+        ],
+        "outputs": [
+          {"name": "magnetometer-specification", "desc": "Selected magnetometer type, sensitivity, bandwidth, dynamic range, and mounting requirements"},
+          {"name": "noise-budget", "desc": "Sensor noise, platform noise, and environmental noise contributions"}
+        ],
+        "process": [
+          "Select the magnetometer type by sensitivity and application. Fluxgate: 10-100 pT/sqrt(Hz) noise floor, 0-1 kHz bandwidth, vector measurement, moderate cost, most common for airborne/marine survey. Optically-pumped cesium or potassium: 1-10 pT/sqrt(Hz), scalar measurement (total field), high absolute accuracy, used for high-sensitivity survey. SQUID: <1 fT/sqrt(Hz), requires cryogenic cooling, used for submarine detection and biomagnetic measurement. Magneto-resistive (AMR, GMR, TMR): 1-100 nT/sqrt(Hz), small, cheap, used for compassing and consumer.",
+          "Determine the required sensitivity from the target signal. A magnetic dipole moment m (A*m^2) produces a field anomaly of approximately mu_0 * m / (4 * pi * r^3) at distance r. A 1000 kg steel object might have m ~ 100 A*m^2. At 100 m range: anomaly ~ 1 nT. At 1 km: anomaly ~ 1 pT. The sensor noise floor must be below the target anomaly with margin for detection (typically 3:1 to 10:1 SNR).",
+          "For gradiometer configuration: use two magnetometers separated by a baseline. The gradient measurement rejects uniform background fields (Earth's field, diurnal variation) and measures the spatial gradient that is stronger for nearby sources. Baseline selection: longer baseline gives stronger gradient signal but also picks up more platform gradient. Typical: 0.5-3 m for airborne, 0.1-0.5 m for UUV.",
+          "Analyze the noise budget. Sensor intrinsic noise (from datasheet). Platform magnetic noise: engines, actuators, electrical systems produce time-varying fields. Environmental noise: geomagnetic micropulsations (0.1-10 nT at 0.001-1 Hz), cultural noise (power lines: 50/60 Hz), lightning (broadband). The noise budget determines whether the sensor can detect the target.",
+          "Specify the mounting requirements. Distance from ferrous platform components (inverse-cube falloff means doubling the distance reduces interference by 8x). For aircraft: boom-mounted or towed bird. For ship: towed fish behind the vessel. For UUV: nose-mounted with non-magnetic construction forward. Specify the heading error tolerance for vector magnetometers (hard iron and soft iron calibration will be needed)."
+        ],
+        "tags": ["magnetometer", "sensor-selection", "gradiometer"]
+      },
+      {
+        "flow_name": "magnetic-compensation-processing",
+        "description": "Design the platform magnetic compensation and data processing pipeline to extract the target anomaly from the measured field.",
+        "inputs": [
+          {"name": "magnetometer-specification", "desc": "Sensor performance and mounting configuration"},
+          {"name": "noise-budget", "desc": "Expected noise sources and their characteristics"}
+        ],
+        "outputs": [
+          {"name": "compensation-algorithm", "desc": "Platform magnetic compensation model with calibration procedure"},
+          {"name": "anomaly-processing-pipeline", "desc": "Data processing chain from raw measurement to anomaly detection or survey map"}
+        ],
+        "process": [
+          "Implement platform magnetic compensation. The Tolles-Lawson model decomposes the platform's magnetic interference into three components: permanent magnetism (constant dipole from hard iron), induced magnetism (from the Earth's field magnetizing the platform, proportional to the ambient field components through the susceptibility tensor), and eddy current effects (from changing fields during maneuvers, proportional to the rate of change of field components). The total has 18 coefficients.",
+          "Calibrate the compensation model. Fly a standard compensation maneuver: a series of rolls, pitches, and yaws at each of 4 cardinal headings (N, E, S, W). This provides sufficient observability for all 18 Tolles-Lawson coefficients. Solve by least squares: minimize the difference between the measured anomaly field and the model prediction. A good compensation reduces the platform noise from 1-10 nT to 0.01-0.1 nT (improvement ratio of 100:1 or better).",
+          "Remove the regional geomagnetic field. Subtract the International Geomagnetic Reference Field (IGRF) model evaluated at the measurement location and altitude. For survey work, also remove the diurnal variation using a base station magnetometer recording at a fixed site. The base station correction: anomaly = total_field_mobile - total_field_base + constant.",
+          "Apply spatial filtering. For survey data collected along flight lines, apply a low-pass filter along-track to suppress noise above the spatial Nyquist of the target (targets at depth d produce anomalies with wavelength > ~2*d, so filter out shorter wavelengths). For detection: apply a matched filter tuned to the expected anomaly shape (dipole at expected depth).",
+          "For survey mapping: grid the line data using minimum curvature or kriging interpolation. Apply a micro-leveling correction to remove residual heading errors visible as line-to-line offsets. Compute the analytic signal (sqrt of the sum of squared horizontal and vertical gradients) to produce a depth-independent anomaly map. For detection: apply a threshold to the filtered data and report detections with estimated position and amplitude."
+        ],
+        "tags": ["magnetic", "compensation", "Tolles-Lawson"]
+      }
+    ]
+  },
+  {
+    "chain_name": "time-frequency-metrology",
+    "description": "Characterize oscillators and time/frequency systems using Allan deviation, phase noise measurement, and precision time distribution methods.",
+    "domain": "sensing",
+    "tags": ["time", "frequency", "metrology", "oscillator", "timing"],
+    "steps": [
+      {
+        "flow_name": "oscillator-characterization",
+        "description": "Characterize an oscillator's stability and noise using Allan deviation and phase noise measurements.",
+        "inputs": [
+          {"name": "oscillator-under-test", "desc": "Oscillator type and nominal specifications"},
+          {"name": "reference-standard", "desc": "Available reference oscillator for comparison measurement"}
+        ],
+        "outputs": [
+          {"name": "stability-profile", "desc": "Allan deviation plot from 0.01s to 10,000s averaging time with identified noise types"},
+          {"name": "phase-noise-spectrum", "desc": "Phase noise spectral density L(f) from 1 Hz to 1 MHz offset"}
+        ],
+        "process": [
+          "Select the measurement method based on the oscillator frequency and the reference available. For RF oscillators (5 MHz, 10 MHz): use a frequency counter with a better reference, or a dual-mixer time-difference (DMTD) system for the highest resolution. For microwave: use a phase detector (mixer at quadrature). The reference must be at least 3x better than the DUT at the averaging times of interest, or use the three-cornered-hat method with three oscillators to separate individual contributions.",
+          "Measure phase data. Record the phase difference between the DUT and the reference at a high rate (e.g., 1 Hz or faster). For a frequency counter: read the time interval at 1 Hz, accumulate for N seconds per data point. For DMTD: the beat frequency is mixed down to a low frequency for precise phase measurement with sub-picosecond resolution.",
+          "Compute Allan deviation. From the phase data x(t) sampled at interval tau_0: ADEV(tau) = sqrt(1/(2*(N-2*m)*tau^2) * sum((x_{i+2m} - 2*x_{i+m} + x_i)^2)) where m = tau/tau_0 and N is the number of phase samples. Use overlapping Allan deviation for improved confidence. Compute for tau from tau_0 to N*tau_0/3. Plot on log-log axes.",
+          "Identify noise types from the ADEV slope. tau^-1: white phase modulation (WPM). tau^-1/2: white frequency modulation (WFM). tau^0 (flat): flicker frequency modulation (FFM), the flicker floor. tau^+1/2: random walk of frequency (RWFM). tau^+1: frequency drift. Each has a physical origin: WFM from thermal noise in the oscillator sustaining circuit, FFM from 1/f noise in the active device, RWFM from random walk in the resonator frequency (temperature, aging).",
+          "Measure phase noise L(f). For direct spectrum method: downconvert the oscillator to baseband and measure the power spectral density of the phase fluctuations. For PLL method: phase-lock a clean reference to the DUT, the PLL error voltage is proportional to phase noise within the loop bandwidth. Cross-correlation method: use two independent references and correlate to reject their noise, improving measurement noise floor by 5*log10(N_averages) dB.",
+          "Document the results. Allan deviation plot with error bars (chi-squared confidence intervals). Phase noise plot L(f) in dBc/Hz. Identify the dominant noise type at each averaging time. Note the flicker floor (best stability) and the averaging time at which it occurs. For clocks to be disciplined, note the crossing point between the local oscillator ADEV and the reference ADEV, which sets the optimal loop bandwidth."
+        ],
+        "tags": ["Allan-deviation", "phase-noise", "oscillator"]
+      },
+      {
+        "flow_name": "frequency-synthesis-design",
+        "description": "Design a frequency synthesis system using DDS, PLL, or optical frequency comb techniques to generate precise frequencies from a reference.",
+        "inputs": [
+          {"name": "stability-profile", "desc": "Reference oscillator stability characteristics"},
+          {"name": "output-frequency-requirements", "desc": "Required output frequencies, phase noise, spurious levels, and switching speed"}
+        ],
+        "outputs": [
+          {"name": "synthesizer-design", "desc": "Architecture and component selection for the frequency synthesizer"},
+          {"name": "output-signal-quality", "desc": "Phase noise, spurious levels, and frequency accuracy of the synthesized output"}
+        ],
+        "process": [
+          "Select the synthesis architecture. Direct Digital Synthesis (DDS): computes output samples from a phase accumulator and lookup table, converted by a DAC. Frequency resolution = f_clock / 2^N where N is the accumulator width (typically 32-48 bits). Spurious: quantization spurs depend on frequency ratio, typically -80 to -100 dBc with careful design. Bandwidth limited to ~40% of the clock frequency.",
+          "PLL synthesis. Integer-N: output = N * f_reference. Phase noise inside the loop bandwidth is the reference phase noise + 20*log10(N). Loop bandwidth trades lock time vs reference spur suppression vs VCO phase noise filtering. Fractional-N: uses sigma-delta modulation of the divider to achieve fractional division ratios, giving fine frequency resolution without reducing the reference frequency. Quantization noise from the modulator must be filtered by the loop.",
+          "For microwave and optical frequencies: use frequency multiplication (each doubling adds 6 dB of phase noise), offset mixing (translate from a synthesized IF to the microwave output), or an optical frequency comb (mode-locked laser producing equally spaced frequency lines spanning an octave, referenced to an atomic clock via f-2f self-referencing).",
+          "Compute the output phase noise. Within the PLL bandwidth: L_out(f) = L_ref(f) + 20*log10(N) + L_PD(f) + L_CP(f) where the last two terms are phase detector and charge pump noise contributions. Outside the PLL bandwidth: L_out(f) = L_VCO(f). The total phase noise is the combination. For DDS: L_out(f) = L_clock(f) + quantization noise floor + DAC noise floor.",
+          "Compute the spurious performance. PLL spurs: reference spurs at multiples of the reference frequency, level depends on charge pump leakage and loop filter rejection. Fractional-N spurs: from the sigma-delta modulator, at offsets related to the fractional ratio. DDS spurs: from phase truncation and DAC nonlinearity, can be predicted from the frequency tuning word.",
+          "Document the synthesizer design with a block diagram, component selection (PLL IC, VCO, DDS chip, loop filter values), simulated phase noise plot, spurious map, lock time, and frequency switching speed. Compare the achieved performance against the requirements."
+        ],
+        "tags": ["frequency-synthesis", "PLL", "DDS"]
+      },
+      {
+        "flow_name": "precision-time-distribution",
+        "description": "Design a system to distribute precise time and frequency from a reference to remote locations using GNSS, fiber, or network-based methods.",
+        "inputs": [
+          {"name": "synthesizer-design", "desc": "Local frequency synthesis system"},
+          {"name": "distribution-requirements", "desc": "Required time accuracy at remote sites, distance, available infrastructure"}
+        ],
+        "outputs": [
+          {"name": "time-distribution-design", "desc": "Selected distribution method with accuracy analysis and equipment specification"},
+          {"name": "achieved-accuracy", "desc": "Expected time and frequency accuracy at each remote site"}
+        ],
+        "process": [
+          "Select the distribution method by accuracy and infrastructure. GPS common-view: compare two GPS receivers at different sites, subtract the common satellite errors. Accuracy: 2-10 ns over intercontinental baselines. Requires GPS receiver and antenna at each site. Two-way satellite time transfer (TWSTT): exchange timing signals through a geostationary satellite, cancel the path delay by symmetry. Accuracy: 0.5-2 ns. Requires satellite modem and antenna.",
+          "For local distribution (within a facility): coaxial cable or fiber distribution of 1PPS and 10 MHz reference. Cable delay: ~5 ns/m for coax, ~5 ns/m for fiber. Compensate with measured delay. For high accuracy: round-trip measurement of cable delay and automatic correction. Temperature coefficient of cable delay: ~100 ppm/C for standard coax. Phase-stabilized fiber links achieve sub-picosecond stability over 100+ km.",
+          "IEEE 1588 Precision Time Protocol (PTP) for network-based distribution. PTP uses timestamped packets exchanged between master and slave clocks to measure and compensate network delay. Hardware timestamping at the PHY layer reduces jitter. Accuracy: 10-100 ns on a well-designed LAN with PTP-aware switches (boundary clocks or transparent clocks). Accuracy degrades across routers and non-PTP switches.",
+          "White Rabbit: an extension of PTP using syntonization (frequency locking via the Ethernet physical layer) and precise phase measurement. Achieves sub-nanosecond accuracy over fiber links of 10+ km. Used in CERN, financial trading, and telecom.",
+          "Design the monitoring and verification system. Each remote site needs a method to verify that it is receiving correct time. Cross-check between distribution methods where possible (e.g., GPS vs PTP). Monitor the time offset at each site and alarm on exceedance. For critical applications, maintain a local holdover clock that continues to provide time during distribution outages.",
+          "Document the distribution architecture, the equipment at each site, the expected accuracy under normal and degraded conditions (e.g., GPS jamming, network congestion, fiber cut), and the monitoring and alarm system."
+        ],
+        "tags": ["time-distribution", "PTP", "GPS-common-view"]
+      }
+    ]
+  }
+]
