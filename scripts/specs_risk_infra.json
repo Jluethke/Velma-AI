@@ -1,0 +1,1171 @@
+[
+  {
+    "chain_name": "risk-register-builder",
+    "description": "Build a risk register from scratch using the pre-mortem method. For each risk: describe it specifically, estimate probability and impact on anchored scales, calculate the risk score, assign an owner, define the mitigation plan, and set the review cadence. Works for personal life risks, project risks, and enterprise risks.",
+    "domain": "risk-management",
+    "tags": ["infrastructure", "resilience", "risk-register", "pre-mortem"],
+    "steps": [
+      {
+        "flow_name": "pre-mortem-risk-brainstorm",
+        "description": "Brainstorm risks using the pre-mortem method: imagine the failure has already happened, then list every plausible cause.",
+        "inputs": [
+          {"name": "scope-description", "desc": "What you are protecting (a project, a business, a household, a product launch, a career move)"},
+          {"name": "time-horizon", "desc": "How far forward to project (3 months, 1 year, 5 years)"}
+        ],
+        "outputs": [
+          {"name": "failure-narrative", "desc": "A written narrative of the imagined failure, specific enough that each cause is traceable"},
+          {"name": "raw-risk-list", "desc": "Every plausible cause of the failure, stated as specific events (not categories)"}
+        ],
+        "process": [
+          "Write a paragraph describing the worst plausible outcome at the end of the time horizon. Be specific: name the state of affairs, who is affected, and what was lost.",
+          "Working backward from that outcome, list every event or condition that could have caused it. Force specificity: not 'financial risk' but 'largest client leaves within 6 months and cash reserves cover only 8 weeks of payroll.'",
+          "For each cause, ask 'what had to be true for this to happen?' to surface second-order risks that hide behind the obvious ones.",
+          "Remove duplicates and merge causes that describe the same event in different words."
+        ],
+        "tags": ["risk-management", "pre-mortem", "brainstorming"]
+      },
+      {
+        "flow_name": "risk-specificity-filter",
+        "description": "Force each risk into a specific, testable statement. Vague risks cannot be managed.",
+        "inputs": [
+          {"name": "raw-risk-list", "desc": "The unfiltered list of risk causes from the pre-mortem"},
+          {"name": "scope-description", "desc": "What you are protecting"}
+        ],
+        "outputs": [
+          {"name": "specific-risk-statements", "desc": "Each risk rewritten as a specific, testable statement with a named trigger event and a measurable consequence"},
+          {"name": "discarded-vague-risks", "desc": "Risks that could not be made specific enough to act on, noted for later revisit"}
+        ],
+        "process": [
+          "For each risk, rewrite it in the form: '[specific trigger event] causes [measurable consequence] within [time frame].' If you cannot fill all three slots, the risk is too vague.",
+          "Test each statement: could two people independently agree on whether this risk has materialized? If not, sharpen the trigger event.",
+          "Set aside risks that remain vague after two attempts. They may indicate a knowledge gap worth investigating separately.",
+          "Group related risks that share a common root cause, but keep each as a separate register entry."
+        ],
+        "tags": ["risk-management", "specificity", "filtering"]
+      },
+      {
+        "flow_name": "probability-scale-calibration",
+        "description": "Build an anchored probability scale with concrete reference points so that ratings are consistent across raters.",
+        "inputs": [
+          {"name": "specific-risk-statements", "desc": "The filtered list of specific risk statements"},
+          {"name": "scope-description", "desc": "The context for calibrating the scale"}
+        ],
+        "outputs": [
+          {"name": "calibrated-probability-scale", "desc": "A 1-5 probability scale where each level has a concrete definition anchored to observable evidence"},
+          {"name": "probability-ratings", "desc": "Each risk rated on the calibrated scale with a one-sentence justification"}
+        ],
+        "process": [
+          "Define the 5 levels with concrete anchors: 1 = no evidence this has happened in comparable situations; 2 = has happened once in comparable situations; 3 = happens to roughly 1 in 5 comparable situations; 4 = happens to more than half of comparable situations; 5 = has already begun or is near-certain.",
+          "For each risk, find the closest anchor. If you lack data, mark the rating as 'estimated' and note what evidence would sharpen it.",
+          "Where two raters disagree by more than 1 point, surface the disagreement and resolve it by identifying the specific evidence each side is weighting.",
+          "Document the final rating and the justification for each risk."
+        ],
+        "tags": ["risk-management", "calibration", "probability"]
+      },
+      {
+        "flow_name": "impact-scale-calibration",
+        "description": "Build an anchored impact scale using dollar equivalents (or time equivalents for personal risks) so that ratings are comparable across different types of risk.",
+        "inputs": [
+          {"name": "specific-risk-statements", "desc": "The filtered list of specific risk statements"},
+          {"name": "scope-description", "desc": "The context for calibrating the scale"}
+        ],
+        "outputs": [
+          {"name": "calibrated-impact-scale", "desc": "A 1-5 impact scale where each level is anchored to a dollar amount, time period, or concrete operational consequence"},
+          {"name": "impact-ratings", "desc": "Each risk rated on the calibrated scale with a one-sentence justification"}
+        ],
+        "process": [
+          "Define the 5 levels with concrete anchors tied to the scope. For a business: 1 = less than 1 week of revenue; 2 = 1 to 4 weeks of revenue; 3 = 1 to 3 months of revenue; 4 = 3 to 12 months of revenue; 5 = existential (bankruptcy, closure, irrecoverable). For personal: substitute monthly income.",
+          "For each risk, estimate the financial or time impact if the risk materializes. Map it to the closest anchor.",
+          "Consider second-order impacts: a data breach costs money to remediate AND costs reputation. Rate the combined impact.",
+          "Document the final rating and the justification for each risk."
+        ],
+        "tags": ["risk-management", "calibration", "impact"]
+      },
+      {
+        "flow_name": "risk-score-calculator",
+        "description": "Calculate the risk score (probability times impact) for each risk and rank them. The ranking determines where to spend mitigation effort.",
+        "inputs": [
+          {"name": "probability-ratings", "desc": "Each risk with its probability rating"},
+          {"name": "impact-ratings", "desc": "Each risk with its impact rating"}
+        ],
+        "outputs": [
+          {"name": "scored-risk-list", "desc": "Each risk with its probability, impact, and composite score, sorted highest to lowest"},
+          {"name": "risk-tiers", "desc": "Risks grouped into tiers: critical (score 15-25), high (score 8-14), medium (score 4-7), low (score 1-3)"}
+        ],
+        "process": [
+          "Multiply the probability rating by the impact rating for each risk to produce the composite score.",
+          "Sort the list from highest score to lowest. Ties break by impact (higher impact wins because the consequence is harder to absorb).",
+          "Group into tiers: critical (15-25), high (8-14), medium (4-7), low (1-3). Critical and high tiers require a mitigation plan. Medium tiers require a monitoring plan. Low tiers are accepted.",
+          "Flag any risk where either dimension is a 5, regardless of the composite score. A 1-probability, 5-impact risk (rare but existential) needs a contingency plan even if the composite score is only 5."
+        ],
+        "tags": ["risk-management", "scoring", "prioritization"]
+      },
+      {
+        "flow_name": "risk-owner-assignment",
+        "description": "Assign an owner to each risk in the critical and high tiers. A risk without an owner is not managed.",
+        "inputs": [
+          {"name": "scored-risk-list", "desc": "The ranked list of scored risks"},
+          {"name": "risk-tiers", "desc": "The tier groupings"}
+        ],
+        "outputs": [
+          {"name": "owned-risk-list", "desc": "Each critical and high risk with a named owner and their authority to act"},
+          {"name": "unowned-risks", "desc": "Any risks that could not be assigned because no one has the authority or knowledge, flagged as organizational gaps"}
+        ],
+        "process": [
+          "For each critical and high risk, identify the person (or role, for a household: the adult responsible) closest to the risk source, with authority to spend money or change process to mitigate it.",
+          "If no one has both proximity and authority, the risk is an organizational gap. Escalate it: someone must be given the authority or the risk is effectively unmanaged.",
+          "Document the owner's name, what they are authorized to do (spend up to $X, change process Y, hire Z), and how they will report on the risk.",
+          "For personal risks, the owner is you. The assignment step forces you to acknowledge that you are the one who must act."
+        ],
+        "tags": ["risk-management", "ownership", "accountability"]
+      },
+      {
+        "flow_name": "mitigation-plan-writer",
+        "description": "Write a mitigation plan for each critical and high risk. A mitigation plan has three parts: prevent (reduce probability), prepare (reduce impact if it happens), and detect (know early).",
+        "inputs": [
+          {"name": "owned-risk-list", "desc": "The risks with assigned owners"},
+          {"name": "calibrated-probability-scale", "desc": "The probability scale for reference"}
+        ],
+        "outputs": [
+          {"name": "mitigation-plans", "desc": "For each risk: the prevention actions, the preparation actions, and the detection mechanism, each with a deadline and cost estimate"},
+          {"name": "residual-risk-assessment", "desc": "The expected probability and impact ratings after mitigation is in place"}
+        ],
+        "process": [
+          "For each risk, write the prevention actions: what can you do to make the trigger event less likely? Be specific. 'Diversify revenue' is not a plan. 'Close 2 new clients above $50K ARR by Q3' is a plan.",
+          "Write the preparation actions: if the risk materializes despite prevention, what reduces the damage? This is insurance, reserves, backup systems, cross-trained staff, documented runbooks.",
+          "Write the detection mechanism: what signal tells you the risk is materializing before the full impact hits? Set the threshold and the response.",
+          "Estimate the cost of each action. If the mitigation costs more than the expected loss (probability times impact in dollars), the mitigation is not worth it. Accept the risk instead.",
+          "Re-rate the probability and impact assuming the mitigation is in place. The residual score is your new baseline."
+        ],
+        "tags": ["risk-management", "mitigation", "planning"]
+      },
+      {
+        "flow_name": "risk-register-review-cadence",
+        "description": "Set the review cadence and produce the final risk register document. A risk register that is not reviewed decays into fiction.",
+        "inputs": [
+          {"name": "mitigation-plans", "desc": "The mitigation plans for all managed risks"},
+          {"name": "residual-risk-assessment", "desc": "The residual risk scores after mitigation"}
+        ],
+        "outputs": [
+          {"name": "risk-register-document", "desc": "The complete risk register: every risk with its specific statement, probability, impact, score, tier, owner, mitigation plan, residual score, and review date"},
+          {"name": "review-schedule", "desc": "The monthly review checklist: which risks to re-assess, what data to collect, and the escalation path for score changes"}
+        ],
+        "process": [
+          "Compile the register in a single document or spreadsheet. Each row: risk ID, specific statement, probability, impact, score, tier, owner, mitigation plan summary, residual score, next review date.",
+          "Set the review cadence: critical risks monthly, high risks quarterly, medium risks semi-annually, low risks annually.",
+          "At each review: re-rate probability and impact using the latest evidence. If a score moves up a tier, trigger the mitigation plan. If a score drops, consider reducing the mitigation spend.",
+          "Add new risks discovered since the last review. Remove risks that are no longer relevant (the project ended, the dependency was eliminated, the market shifted).",
+          "The register is a living document. If the last review date is more than one cycle overdue, the register is not being used."
+        ],
+        "tags": ["risk-management", "review", "documentation"]
+      }
+    ]
+  },
+  {
+    "chain_name": "black-swan-preparation",
+    "description": "Prepare for rare, high-impact, unpredictable events (black swans). You cannot predict the specific event, so build resilience across the four shock categories: health, income, market, and infrastructure. The method is to build reserves, reduce fragility, and increase optionality.",
+    "domain": "risk-management",
+    "tags": ["infrastructure", "resilience", "black-swan", "antifragility"],
+    "steps": [
+      {
+        "flow_name": "shock-category-inventory",
+        "description": "Inventory the four shock categories (health, income, market, infrastructure) and your current exposure in each.",
+        "inputs": [
+          {"name": "current-situation", "desc": "A description of your personal or business situation: income sources, health status, assets, dependencies"},
+          {"name": "obligations", "desc": "Monthly financial obligations and non-financial commitments that cannot be paused"}
+        ],
+        "outputs": [
+          {"name": "shock-exposure-map", "desc": "For each category (health, income, market, infrastructure): the worst plausible shock, the time to impact, and the current buffer"},
+          {"name": "single-points-of-failure", "desc": "Dependencies where a single shock eliminates the resource entirely with no backup"}
+        ],
+        "process": [
+          "For health: what happens if you (or the key person) cannot work for 6 months? What is the income impact, the care cost, and who handles the obligations?",
+          "For income: what happens if the largest income source disappears in 30 days? How many months of obligations can current reserves cover?",
+          "For market: what happens if the market your business serves contracts by 50%? Or if the investment portfolio drops by 40%?",
+          "For infrastructure: what happens if you lose your home, your primary workspace, or your critical technology for 30 days?",
+          "Mark any category where the buffer is less than 3 months of obligations as 'fragile.'"
+        ],
+        "tags": ["risk-management", "black-swan", "exposure-assessment"]
+      },
+      {
+        "flow_name": "reserve-builder",
+        "description": "Build financial and operational reserves to survive a shock without making decisions under duress.",
+        "inputs": [
+          {"name": "shock-exposure-map", "desc": "The exposure assessment from the shock inventory"},
+          {"name": "obligations", "desc": "Monthly financial obligations"}
+        ],
+        "outputs": [
+          {"name": "reserve-targets", "desc": "For each shock category: the target reserve amount (in dollars or months), the current reserve, and the gap"},
+          {"name": "reserve-build-plan", "desc": "A month-by-month plan to close the gap, starting with the most fragile category"}
+        ],
+        "process": [
+          "Set the reserve target for each category. The minimum is 6 months of obligations in liquid assets (cash or equivalents accessible within 5 business days).",
+          "Calculate the gap between current reserves and the target. Rank the gaps by fragility (largest gap relative to exposure first).",
+          "Build the reserve plan: allocate a fixed monthly amount to reserves, directed to the most fragile category first. Do not spread thin across all categories.",
+          "Define what counts as a qualifying reserve drawdown. Without this, reserves erode to non-emergencies."
+        ],
+        "tags": ["risk-management", "reserves", "financial-resilience"]
+      },
+      {
+        "flow_name": "fragility-reducer",
+        "description": "Identify and eliminate single points of failure that make you fragile to shocks.",
+        "inputs": [
+          {"name": "single-points-of-failure", "desc": "The list of dependencies with no backup"},
+          {"name": "shock-exposure-map", "desc": "The shock exposure assessment"}
+        ],
+        "outputs": [
+          {"name": "fragility-fixes", "desc": "For each single point of failure: the redundancy to build, the cost, and the timeline"},
+          {"name": "irreducible-fragilities", "desc": "Fragilities that cannot be eliminated (e.g., your own health), with the compensating controls"}
+        ],
+        "process": [
+          "For each single point of failure, define the redundancy: a second income source, a backup system, a cross-trained person, a secondary supplier, an alternate workspace.",
+          "Estimate the cost of the redundancy. Compare to the cost of the shock: if the redundancy costs less than 10% of the shock's annual expected loss, build it.",
+          "For fragilities that cannot be eliminated (your own health, a regulatory change), define the compensating controls: insurance, contingency plans, documented procedures that someone else can follow.",
+          "Prioritize by shock severity: fix the fragility that leads to the most damaging shock first."
+        ],
+        "tags": ["risk-management", "fragility", "redundancy"]
+      },
+      {
+        "flow_name": "optionality-builder",
+        "description": "Increase optionality so that disorder creates opportunities, not just damage. Options are cheap when you don't need them and valuable when you do.",
+        "inputs": [
+          {"name": "current-situation", "desc": "Your personal or business situation"},
+          {"name": "fragility-fixes", "desc": "The redundancies you are building"}
+        ],
+        "outputs": [
+          {"name": "optionality-inventory", "desc": "A list of options you currently hold (skills, relationships, assets, agreements) and their value in each shock scenario"},
+          {"name": "optionality-build-plan", "desc": "New options to acquire, with the cost to acquire and the scenarios where each pays off"}
+        ],
+        "process": [
+          "Inventory your current options: skills that transfer to other industries, relationships that could become income sources, assets that can be liquidated or repurposed, contractual rights (termination clauses, insurance riders, flexible leases).",
+          "For each option, score its value across the four shock categories. An option that pays off in multiple shock categories is more valuable than one that covers only one.",
+          "Identify new options to acquire: a certification in a second field (income diversification), a relationship with a potential acquirer (market shock exit), a portable skill (infrastructure shock adaptation).",
+          "The cost of an option is its acquisition cost. The value is the damage it prevents or the opportunity it creates if a shock hits. Acquire options where the ratio is favorable."
+        ],
+        "tags": ["risk-management", "optionality", "strategy"]
+      },
+      {
+        "flow_name": "shock-response-protocol",
+        "description": "Write the response protocol for each shock category so that decisions are made before the crisis, not during it.",
+        "inputs": [
+          {"name": "reserve-targets", "desc": "The reserve amounts and access instructions"},
+          {"name": "fragility-fixes", "desc": "The redundancies in place"}
+        ],
+        "outputs": [
+          {"name": "shock-response-playbooks", "desc": "For each shock category: the first 72-hour actions, the 30-day stabilization plan, and the 90-day recovery plan"},
+          {"name": "decision-authorities", "desc": "Who can authorize reserve drawdowns, contract terminations, and emergency spending, and the thresholds for each"}
+        ],
+        "process": [
+          "For each shock category, write the first 72 hours: who is contacted, what is activated (insurance, reserves, backup systems), and what is paused (non-essential spending, discretionary commitments).",
+          "Write the 30-day stabilization plan: how to reduce obligations to match the new reality, how to activate the redundancies, and how to communicate to stakeholders.",
+          "Write the 90-day recovery plan: how to rebuild from the reduced state, what to invest in, and what to let go permanently.",
+          "Store the playbooks where they can be found by someone other than you. A playbook locked in your own head fails if you are the one incapacitated."
+        ],
+        "tags": ["risk-management", "response", "playbook"]
+      },
+      {
+        "flow_name": "annual-resilience-test",
+        "description": "Test the resilience plan annually. A plan that has never been tested is a hypothesis, not a plan.",
+        "inputs": [
+          {"name": "shock-response-playbooks", "desc": "The response protocols to test"},
+          {"name": "reserve-targets", "desc": "The reserve targets to verify"}
+        ],
+        "outputs": [
+          {"name": "test-results", "desc": "For each category: what worked, what failed, and the specific fixes"},
+          {"name": "updated-resilience-plan", "desc": "The revised plan incorporating the test findings"}
+        ],
+        "process": [
+          "For reserves: verify the balances, confirm the access procedures work (can you actually withdraw within 5 business days?), and check that the reserve policy has been followed.",
+          "For redundancies: test the backup. Switch to the backup income source, system, or workspace for a day. If you cannot, the redundancy is theoretical.",
+          "For response protocols: run a tabletop exercise. Pick a shock scenario, walk through the playbook, and note every step where the instructions are unclear, missing, or wrong.",
+          "Update the plan with the findings. Set the next test date."
+        ],
+        "tags": ["risk-management", "testing", "review"]
+      }
+    ]
+  },
+  {
+    "chain_name": "insurance-coverage-audit",
+    "description": "Audit insurance coverage for gaps and overlaps. Inventory every risk above a damage threshold, map existing coverage, identify gaps (uncovered risks) and overlaps (duplicate coverage), and prioritize the fixes. Applies to personal and commercial insurance.",
+    "domain": "risk-management",
+    "tags": ["infrastructure", "resilience", "insurance", "audit"],
+    "steps": [
+      {
+        "flow_name": "insurable-risk-inventory",
+        "description": "Inventory every risk that could cause financial damage exceeding the damage threshold (3 months of income for personal, 3 months of revenue for business).",
+        "inputs": [
+          {"name": "financial-profile", "desc": "Monthly income or revenue, major assets, dependents or stakeholders"},
+          {"name": "risk-context", "desc": "Personal or business, industry, geography, specific exposures"}
+        ],
+        "outputs": [
+          {"name": "insurable-risk-list", "desc": "Every risk above the damage threshold, with the estimated maximum loss"},
+          {"name": "damage-threshold", "desc": "The calculated threshold: 3 months of income or revenue"}
+        ],
+        "process": [
+          "Calculate the damage threshold: 3 times monthly income (personal) or 3 times monthly revenue (business).",
+          "List every event that could cause damage above that threshold: property damage, liability claims, health events, disability, death, business interruption, professional errors, cyber events, natural disasters, vehicle accidents, key person loss.",
+          "For each, estimate the maximum plausible loss. Use replacement cost for property, legal defense plus judgment for liability, lost income for disability.",
+          "Sort by maximum plausible loss, highest first."
+        ],
+        "tags": ["insurance", "risk-inventory", "audit"]
+      },
+      {
+        "flow_name": "existing-coverage-mapper",
+        "description": "Map every existing insurance policy to the risks it covers, including deductibles, limits, and exclusions.",
+        "inputs": [
+          {"name": "insurable-risk-list", "desc": "The inventory of insurable risks"},
+          {"name": "financial-profile", "desc": "Income and asset information for context"}
+        ],
+        "outputs": [
+          {"name": "coverage-map", "desc": "For each risk: the policy that covers it (if any), the deductible, the coverage limit, and any exclusions"},
+          {"name": "policy-inventory", "desc": "Every active insurance policy with its type, carrier, premium, deductible, limit, and renewal date"}
+        ],
+        "process": [
+          "Gather all insurance policies (homeowners/renters, auto, health, disability, life, umbrella/excess, professional liability, general liability, property, cyber, workers comp, key person).",
+          "For each policy, extract: what risks it covers, the deductible, the per-occurrence limit, the aggregate limit, and the exclusions.",
+          "Map each insurable risk to its covering policy. A risk may be covered by multiple policies (overlap) or no policy (gap).",
+          "Note any sublimits (a policy covers the risk but with a limit far below the maximum plausible loss)."
+        ],
+        "tags": ["insurance", "coverage-mapping", "audit"]
+      },
+      {
+        "flow_name": "gap-and-overlap-analyzer",
+        "description": "Identify coverage gaps (uncovered risks above the damage threshold) and overlaps (duplicate coverage for the same risk).",
+        "inputs": [
+          {"name": "coverage-map", "desc": "The risk-to-policy mapping"},
+          {"name": "insurable-risk-list", "desc": "The risks with maximum plausible losses"}
+        ],
+        "outputs": [
+          {"name": "coverage-gaps", "desc": "Risks above the damage threshold with no coverage or with coverage limits below 50% of the maximum plausible loss"},
+          {"name": "coverage-overlaps", "desc": "Risks covered by multiple policies, with the combined premium cost and whether one policy could be dropped"}
+        ],
+        "process": [
+          "For each risk, compare the coverage limit to the maximum plausible loss. If coverage is zero, it is a gap. If coverage is less than 50% of the maximum loss, it is an underinsurance gap.",
+          "For each risk covered by multiple policies, identify which policy is primary and which is excess. If both are primary, you are paying duplicate premiums for the same first-dollar coverage.",
+          "Rank gaps by the uninsured exposure (maximum plausible loss minus coverage limit), highest first.",
+          "Rank overlaps by the premium savings available from eliminating the duplicate."
+        ],
+        "tags": ["insurance", "gap-analysis", "audit"]
+      },
+      {
+        "flow_name": "coverage-fix-prioritizer",
+        "description": "Prioritize the coverage fixes: close gaps by risk severity, eliminate overlaps by premium savings.",
+        "inputs": [
+          {"name": "coverage-gaps", "desc": "The identified gaps"},
+          {"name": "coverage-overlaps", "desc": "The identified overlaps"}
+        ],
+        "outputs": [
+          {"name": "coverage-action-plan", "desc": "Ordered list of coverage changes: new policies to buy, limits to increase, policies to drop, with estimated premium impact for each"},
+          {"name": "annual-premium-projection", "desc": "The projected total annual premium after all changes, compared to the current total"}
+        ],
+        "process": [
+          "For each gap, get quotes for coverage. Compare the annual premium to the annual expected loss (probability times maximum loss). If the premium is less than the expected loss, the coverage is worth buying.",
+          "For each overlap, determine which policy to keep (better terms, lower premium, broader coverage) and which to drop or reduce.",
+          "Order the actions: close the highest-exposure gaps first, then eliminate the most expensive overlaps.",
+          "Calculate the net premium change. Present as a before-and-after comparison."
+        ],
+        "tags": ["insurance", "prioritization", "action-plan"]
+      },
+      {
+        "flow_name": "insurance-review-calendar",
+        "description": "Set up the annual insurance review calendar tied to policy renewal dates.",
+        "inputs": [
+          {"name": "policy-inventory", "desc": "All active policies with renewal dates"},
+          {"name": "coverage-action-plan", "desc": "The prioritized changes"}
+        ],
+        "outputs": [
+          {"name": "review-calendar", "desc": "A calendar of review dates (30 days before each renewal) with the checklist for each review"},
+          {"name": "insurance-audit-document", "desc": "The complete audit: risk inventory, coverage map, gaps, overlaps, action plan, and review calendar"}
+        ],
+        "process": [
+          "For each policy, set a review date 30 days before renewal. At that review: re-assess the covered risks (have they changed?), compare the premium to alternatives, and check for new exclusions.",
+          "Set one annual comprehensive review (regardless of individual renewal dates) to re-run the full risk inventory and coverage mapping.",
+          "Compile the complete audit document. Store it where it can be found by someone other than you.",
+          "If the audit reveals that you are spending more than 5% of income or revenue on insurance, review whether the deductibles are set too low (raising deductibles saves premium for risks you can self-insure)."
+        ],
+        "tags": ["insurance", "review", "calendar"]
+      }
+    ]
+  },
+  {
+    "chain_name": "dependency-mapping-system",
+    "description": "Map every critical dependency (people, systems, vendors, resources) that your operation cannot function without. For each: what happens if it fails, how long until impact, what is the workaround. Single dependencies with no workaround are the highest-priority risks. An untested workaround is not a workaround.",
+    "domain": "risk-management",
+    "tags": ["infrastructure", "resilience", "dependency-mapping", "continuity"],
+    "steps": [
+      {
+        "flow_name": "critical-function-inventory",
+        "description": "Inventory every function that must continue for the operation to survive. A function is critical if pausing it for more than the tolerable downtime causes irreversible damage.",
+        "inputs": [
+          {"name": "operation-description", "desc": "What the operation does (a business, a household, a project, a department)"},
+          {"name": "tolerable-downtime", "desc": "The maximum time each function can be paused before the damage is irreversible"}
+        ],
+        "outputs": [
+          {"name": "critical-function-list", "desc": "Every function classified as critical, with its tolerable downtime and the consequence of exceeding it"},
+          {"name": "non-critical-functions", "desc": "Functions that can be paused for weeks without irreversible damage, noted for completeness"}
+        ],
+        "process": [
+          "List every function the operation performs. For a business: revenue generation, customer delivery, payroll, compliance, IT infrastructure, communication. For a household: income, childcare, housing, health management, transportation.",
+          "For each function, ask: if this stops for [1 day / 1 week / 1 month], what is the consequence? Mark the point where the consequence becomes irreversible (customers leave permanently, legal penalties trigger, health deteriorates past recovery).",
+          "Functions where the irreversible point is less than 1 week are critical. Everything else is important but not critical.",
+          "Rank critical functions by the severity of the irreversible consequence."
+        ],
+        "tags": ["dependency-mapping", "criticality", "inventory"]
+      },
+      {
+        "flow_name": "dependency-tree-builder",
+        "description": "For each critical function, map every dependency: the people, systems, vendors, data, and resources required for it to operate.",
+        "inputs": [
+          {"name": "critical-function-list", "desc": "The ranked list of critical functions"},
+          {"name": "operation-description", "desc": "Context about the operation"}
+        ],
+        "outputs": [
+          {"name": "dependency-tree", "desc": "For each critical function: the complete list of dependencies (people, systems, vendors, data, physical resources), marked as single or redundant"},
+          {"name": "single-dependency-list", "desc": "Every dependency that is the sole provider of a required capability, with no backup"}
+        ],
+        "process": [
+          "For each critical function, walk through the execution from start to finish. At each step, ask: what person, system, vendor, data source, or physical resource does this step require?",
+          "For each dependency, ask: is there a second one that can perform the same function? If yes, mark it as redundant. If no, mark it as single.",
+          "Trace second-order dependencies: if Person A is a single dependency, what does Person A depend on? (Their laptop, their login credentials, their knowledge of the process.)",
+          "Map the dependencies into a tree structure where the critical function is the root and each branch is a dependency chain."
+        ],
+        "tags": ["dependency-mapping", "tree", "analysis"]
+      },
+      {
+        "flow_name": "failure-impact-estimator",
+        "description": "For each single dependency, estimate the impact and time-to-impact if it fails.",
+        "inputs": [
+          {"name": "single-dependency-list", "desc": "The list of single dependencies"},
+          {"name": "critical-function-list", "desc": "The critical functions and their tolerable downtimes"}
+        ],
+        "outputs": [
+          {"name": "failure-impact-table", "desc": "For each single dependency: the affected function, the time from failure to function stoppage, and the estimated recovery time without a workaround"},
+          {"name": "most-fragile-dependencies", "desc": "The top 5 single dependencies ranked by (shortest time to impact) times (longest recovery time)"}
+        ],
+        "process": [
+          "For each single dependency, define the failure scenario: the dependency is suddenly unavailable (person quits, system crashes, vendor goes offline, resource is destroyed).",
+          "Estimate the time from failure to function stoppage. Some failures are instant (server goes down). Others are delayed (key person gives 2 weeks notice but knowledge walks out the door).",
+          "Estimate the recovery time without a workaround: how long to replace the dependency from scratch? Hiring takes months. System migration takes weeks. Vendor qualification takes months.",
+          "Rank by fragility: (time to impact) divided by (recovery time). The most fragile dependencies are those where the impact is fast and the recovery is slow."
+        ],
+        "tags": ["dependency-mapping", "impact", "fragility"]
+      },
+      {
+        "flow_name": "workaround-designer",
+        "description": "Design a workaround for each of the top single dependencies. The workaround must be executable by someone who has never done it before, using only resources currently available.",
+        "inputs": [
+          {"name": "most-fragile-dependencies", "desc": "The top single dependencies to address"},
+          {"name": "dependency-tree", "desc": "The full dependency tree for context"}
+        ],
+        "outputs": [
+          {"name": "workaround-plans", "desc": "For each dependency: the workaround procedure, the resources required, the expected degraded performance level, and the maximum duration the workaround can sustain"},
+          {"name": "workaround-gaps", "desc": "Dependencies where no viable workaround exists, requiring redundancy investment"}
+        ],
+        "process": [
+          "For each dependency, design the workaround: what replaces it, who executes the switch, and what is the degraded level of service?",
+          "Write the workaround as a step-by-step procedure that someone unfamiliar with the system can follow. If it requires tacit knowledge that only one person holds, the workaround is not viable.",
+          "Estimate how long the workaround can sustain the function. Some workarounds work for days but not months (manual processes replacing automated ones).",
+          "For dependencies with no viable workaround, flag them for redundancy investment: hire a second person, deploy a backup system, qualify a second vendor."
+        ],
+        "tags": ["dependency-mapping", "workaround", "continuity"]
+      },
+      {
+        "flow_name": "workaround-test-runner",
+        "description": "Test each workaround. An untested workaround is a hypothesis. A tested workaround is a capability.",
+        "inputs": [
+          {"name": "workaround-plans", "desc": "The designed workarounds"},
+          {"name": "critical-function-list", "desc": "The functions being protected"}
+        ],
+        "outputs": [
+          {"name": "test-results", "desc": "For each workaround: passed or failed, the actual time to execute, the actual degraded performance level, and the specific failures encountered"},
+          {"name": "revised-workaround-plans", "desc": "Updated workaround plans incorporating the test findings"}
+        ],
+        "process": [
+          "Schedule the test during a low-impact period. Simulate the dependency failure (disconnect the system, have the person step away, pause the vendor service).",
+          "Execute the workaround using the written procedure. Have someone who was not involved in designing it execute it to test the documentation.",
+          "Measure: how long did the switch take? What was the actual performance level? Were there steps that failed or were unclear?",
+          "Update the workaround plan with the findings. Schedule the next test (annually for critical workarounds, semi-annually for the most fragile)."
+        ],
+        "tags": ["dependency-mapping", "testing", "validation"]
+      },
+      {
+        "flow_name": "dependency-map-document",
+        "description": "Compile the complete dependency map and store it where it can be accessed during a crisis.",
+        "inputs": [
+          {"name": "dependency-tree", "desc": "The complete dependency tree"},
+          {"name": "revised-workaround-plans", "desc": "The tested workaround plans"}
+        ],
+        "outputs": [
+          {"name": "dependency-map-document", "desc": "The complete dependency map: functions, dependencies, failure impacts, workarounds, test results, and review schedule"},
+          {"name": "crisis-quick-reference", "desc": "A one-page summary: the top 5 fragile dependencies, the workaround for each, and who to contact"}
+        ],
+        "process": [
+          "Compile the full document: critical functions, dependency trees, failure impact table, workaround plans, and test results.",
+          "Create the one-page quick reference for use during an actual crisis. It should be readable in under 2 minutes.",
+          "Store both documents in at least two locations: one digital (cloud storage with shared access), one physical (printed, in a known location).",
+          "Set the review cadence: re-map dependencies whenever a critical function changes, a key person leaves, or a vendor is added or removed."
+        ],
+        "tags": ["dependency-mapping", "documentation", "crisis-reference"]
+      }
+    ]
+  },
+  {
+    "chain_name": "scenario-planning-method",
+    "description": "Build scenario plans for strategic uncertainty using the 2x2 matrix method. Identify the two most impactful uncertainties, create four scenarios, name them, write the narratives, identify early warning signals, and define strategic responses. You do not predict which scenario happens. You prepare for all four.",
+    "domain": "risk-management",
+    "tags": ["infrastructure", "resilience", "scenario-planning", "strategy"],
+    "steps": [
+      {
+        "flow_name": "uncertainty-identifier",
+        "description": "Identify the uncertainties that will most impact your future. An uncertainty is something you cannot control and cannot predict with confidence.",
+        "inputs": [
+          {"name": "strategic-context", "desc": "What you are planning for (a business, a career, a project, a market entry)"},
+          {"name": "time-horizon", "desc": "How far forward to plan (1 year, 3 years, 5 years)"}
+        ],
+        "outputs": [
+          {"name": "uncertainty-long-list", "desc": "Every uncertainty that could materially change the outcome, stated as a spectrum (e.g., 'interest rates: stay low vs. rise sharply')"},
+          {"name": "top-two-uncertainties", "desc": "The two uncertainties with the highest combined impact and unpredictability, each stated as a spectrum"}
+        ],
+        "process": [
+          "List every external factor you cannot control that could change the outcome: market demand, competitor actions, technology shifts, regulatory changes, economic conditions, talent availability, input costs, geopolitical events, health events.",
+          "For each, rate two dimensions: impact on your outcome (1-5) and unpredictability (1-5). High impact plus high unpredictability equals the most important uncertainties to plan for.",
+          "Select the top two. They become the axes of the scenario matrix. State each as a spectrum with two poles (e.g., 'AI adoption: slow and regulated vs. fast and unregulated').",
+          "Verify the two are independent: knowing the outcome of one should not tell you the outcome of the other. If they are correlated, replace one."
+        ],
+        "tags": ["scenario-planning", "uncertainty", "identification"]
+      },
+      {
+        "flow_name": "scenario-matrix-builder",
+        "description": "Build the 2x2 scenario matrix from the two uncertainties. Each quadrant is a distinct, internally consistent future.",
+        "inputs": [
+          {"name": "top-two-uncertainties", "desc": "The two uncertainties as spectrums"},
+          {"name": "strategic-context", "desc": "The planning context"}
+        ],
+        "outputs": [
+          {"name": "scenario-matrix", "desc": "The 2x2 matrix with four named scenarios, each described in one paragraph"},
+          {"name": "scenario-narratives", "desc": "For each scenario: a one-paragraph narrative describing what the world looks like, who thrives, and who struggles"}
+        ],
+        "process": [
+          "Draw the matrix: uncertainty 1 on the x-axis (pole A left, pole B right), uncertainty 2 on the y-axis (pole A bottom, pole B top). Each quadrant is a combination of the two poles.",
+          "Name each scenario with a memorable, descriptive name (not 'Scenario A'). The name should evoke the character of that future.",
+          "Write a one-paragraph narrative for each: what does the world look like? What has changed? Who thrives in this world and who struggles? What are the dominant dynamics?",
+          "Check for internal consistency: are the events in each narrative compatible with each other? Remove contradictions."
+        ],
+        "tags": ["scenario-planning", "matrix", "narratives"]
+      },
+      {
+        "flow_name": "early-warning-signal-mapper",
+        "description": "For each scenario, identify the early warning signals that would tell you it is materializing.",
+        "inputs": [
+          {"name": "scenario-matrix", "desc": "The four named scenarios"},
+          {"name": "scenario-narratives", "desc": "The narrative descriptions"}
+        ],
+        "outputs": [
+          {"name": "signal-map", "desc": "For each scenario: 3-5 observable, measurable signals that would indicate this scenario is becoming reality"},
+          {"name": "signal-monitoring-plan", "desc": "How to track each signal: the data source, the measurement, and the threshold that triggers action"}
+        ],
+        "process": [
+          "For each scenario, ask: what would you see in the next 6 months if this future were unfolding? Look for leading indicators, not lagging ones.",
+          "Make each signal observable and measurable: not 'the market shifts' but 'quarterly revenue from the enterprise segment declines by more than 15% for two consecutive quarters.'",
+          "Identify which signals differentiate between scenarios. A signal that appears in all four scenarios is not useful for planning.",
+          "Define the monitoring plan: where do you get the data, how often do you check, and what threshold triggers a reassessment?"
+        ],
+        "tags": ["scenario-planning", "signals", "monitoring"]
+      },
+      {
+        "flow_name": "strategic-response-designer",
+        "description": "For each scenario, design the strategic response: what you would do if this future materializes.",
+        "inputs": [
+          {"name": "scenario-matrix", "desc": "The four named scenarios"},
+          {"name": "strategic-context", "desc": "The planning context"}
+        ],
+        "outputs": [
+          {"name": "scenario-responses", "desc": "For each scenario: the strategic posture (grow, defend, pivot, exit), the key actions, and the resources required"},
+          {"name": "common-actions", "desc": "Actions that are beneficial across three or four scenarios, which should be taken regardless of which scenario materializes"}
+        ],
+        "process": [
+          "For each scenario, define the strategic posture: grow (invest aggressively), defend (protect current position), pivot (redirect to a new market or model), or exit (wind down and preserve capital).",
+          "For each posture, define the 3-5 key actions and the resources required. Be specific enough that you could start executing within 30 days of deciding.",
+          "Identify the common actions: things that help in three or four scenarios. These are your 'no regret' moves. Execute them now.",
+          "Identify the 'option' actions: things that are cheap to prepare now and valuable if a specific scenario materializes. These are your hedges."
+        ],
+        "tags": ["scenario-planning", "strategy", "response"]
+      },
+      {
+        "flow_name": "scenario-plan-document",
+        "description": "Compile the scenario plan into a document and set the review cadence.",
+        "inputs": [
+          {"name": "scenario-responses", "desc": "The strategic responses for each scenario"},
+          {"name": "signal-monitoring-plan", "desc": "The signal monitoring setup"}
+        ],
+        "outputs": [
+          {"name": "scenario-plan-document", "desc": "The complete scenario plan: uncertainties, matrix, narratives, signals, responses, common actions, and review schedule"},
+          {"name": "immediate-action-list", "desc": "The no-regret and option actions to execute now, before any scenario materializes"}
+        ],
+        "process": [
+          "Compile the full document: the two uncertainties, the 2x2 matrix, the four narratives, the signal map, the four strategic responses, the common actions, and the review schedule.",
+          "Extract the immediate action list: no-regret moves plus options to acquire. These are your current to-do items.",
+          "Set the review cadence: quarterly, check the signals and update the scenario probabilities. Annually, re-assess whether the two uncertainties are still the right axes.",
+          "The scenario plan is not a prediction. It is a preparation. The value is in the thinking, not in being right about which quadrant materializes."
+        ],
+        "tags": ["scenario-planning", "documentation", "review"]
+      }
+    ]
+  },
+  {
+    "chain_name": "personal-emergency-playbook",
+    "description": "Build a personal or household emergency playbook covering 6 categories: medical, financial, natural disaster, death or incapacitation, home emergency, and security. Store it where someone other than you can find it.",
+    "domain": "risk-management",
+    "tags": ["infrastructure", "resilience", "emergency", "personal"],
+    "steps": [
+      {
+        "flow_name": "emergency-contact-sheet",
+        "description": "Build the master emergency contact sheet that covers all 6 categories.",
+        "inputs": [
+          {"name": "household-members", "desc": "Who lives in the household, their ages, and any special needs"},
+          {"name": "location-details", "desc": "Home address, nearest hospital, fire station, police station"}
+        ],
+        "outputs": [
+          {"name": "emergency-contact-sheet", "desc": "The master contact sheet: medical contacts, financial contacts, legal contacts, insurance contacts, utility contacts, and trusted persons"},
+          {"name": "trusted-persons-list", "desc": "People outside the household who have been briefed and can act on your behalf in each category"}
+        ],
+        "process": [
+          "List the contacts for each category: doctors, insurance agents, attorneys, financial advisors, accountants, utility companies, landlord or property manager, trusted neighbor or friend.",
+          "For each contact, record: name, phone number, relationship, and what they can help with.",
+          "Identify 2-3 trusted persons outside the household who can act on your behalf. For each, define what they are authorized to do (access accounts, make medical decisions, care for children or pets).",
+          "Verify all phone numbers are current. Set a reminder to re-verify quarterly."
+        ],
+        "tags": ["emergency", "contacts", "personal"]
+      },
+      {
+        "flow_name": "medical-emergency-section",
+        "description": "Build the medical emergency section: who to call, insurance info, medical power of attorney, and medical history for each household member.",
+        "inputs": [
+          {"name": "household-members", "desc": "Who lives in the household"},
+          {"name": "emergency-contact-sheet", "desc": "The master contact sheet"}
+        ],
+        "outputs": [
+          {"name": "medical-section", "desc": "For each household member: insurance policy number, group number, primary care physician, specialists, allergies, medications, blood type, medical power of attorney holder"},
+          {"name": "medical-action-steps", "desc": "Step-by-step instructions for a medical emergency: who to call first, what information to give the paramedics, where to find the insurance card"}
+        ],
+        "process": [
+          "For each household member, record: health insurance policy number and phone number, primary care physician, specialists, current medications, known allergies, blood type, and any advance directives.",
+          "Identify who holds the medical power of attorney. If no one does, note it as a gap to address with an attorney.",
+          "Write the action steps for someone who has never handled a medical emergency in this household: call 911, give this address, provide this medical history, bring these documents to the hospital.",
+          "Store a copy of insurance cards and advance directives in the playbook."
+        ],
+        "tags": ["emergency", "medical", "personal"]
+      },
+      {
+        "flow_name": "financial-emergency-section",
+        "description": "Build the financial emergency section: where the money is, who has access, and how to keep obligations covered if income stops.",
+        "inputs": [
+          {"name": "household-members", "desc": "Who lives in the household"},
+          {"name": "emergency-contact-sheet", "desc": "The master contact sheet"}
+        ],
+        "outputs": [
+          {"name": "financial-section", "desc": "Every account (bank, investment, retirement) with the institution name, account number (last 4 digits), and who has access. Location of the emergency fund. Auto-pay setup for critical obligations."},
+          {"name": "financial-action-steps", "desc": "Step-by-step instructions for a financial emergency: which accounts to access first, which obligations are auto-paid, which require manual action, and who to call for each"}
+        ],
+        "process": [
+          "List every financial account: checking, savings, emergency fund, investment, retirement, HSA, life insurance. For each, record the institution, the last 4 digits of the account number, and who has access.",
+          "Identify the emergency fund: where it is, how to access it, and how many months of obligations it covers.",
+          "List every recurring obligation: rent or mortgage, utilities, insurance premiums, loan payments, subscriptions. For each, note whether it is auto-paid and from which account.",
+          "Write the action steps: if the primary earner's income stops today, here is what is auto-paid, here is what needs manual attention, and here is how long the emergency fund lasts."
+        ],
+        "tags": ["emergency", "financial", "personal"]
+      },
+      {
+        "flow_name": "disaster-and-home-section",
+        "description": "Build the natural disaster and home emergency sections: evacuation routes, go-bag, water shutoff, electrical panel, and insurance claims.",
+        "inputs": [
+          {"name": "location-details", "desc": "Home address and local hazards (flood zone, earthquake zone, tornado alley, wildfire risk)"},
+          {"name": "household-members", "desc": "Who lives in the household"}
+        ],
+        "outputs": [
+          {"name": "disaster-section", "desc": "Evacuation routes (primary and alternate), meeting points (near home and out of area), go-bag location and contents checklist, shelter locations"},
+          {"name": "home-emergency-section", "desc": "Location of: water main shutoff, gas shutoff, electrical panel, fire extinguishers. Insurance claim process and adjuster phone number. Contractor contacts for emergency repairs."}
+        ],
+        "process": [
+          "Identify the local hazards: flood, earthquake, tornado, wildfire, hurricane, winter storm. For each, define the evacuation route (primary and alternate) and the meeting point.",
+          "Define the go-bag: location, contents (documents, medications, cash, phone charger, water, food for 72 hours, first aid, flashlight). Check the expiration dates semi-annually.",
+          "Map the home emergency shutoffs: where is the water main shutoff valve, the gas shutoff, and the electrical panel? Can every adult in the household find and operate them?",
+          "Record the homeowners or renters insurance claim process: the phone number, the policy number, and the steps to file. Keep a home inventory (photos or video of possessions) stored in the cloud."
+        ],
+        "tags": ["emergency", "disaster", "home"]
+      },
+      {
+        "flow_name": "incapacitation-and-security-section",
+        "description": "Build the death or incapacitation section and the security section: will location, digital legacy, breach response, identity theft steps.",
+        "inputs": [
+          {"name": "household-members", "desc": "Who lives in the household"},
+          {"name": "trusted-persons-list", "desc": "People authorized to act on your behalf"}
+        ],
+        "outputs": [
+          {"name": "incapacitation-section", "desc": "Location of: will, trust documents, life insurance policies, beneficiary designations. Who has power of attorney (financial and medical). Digital legacy: password manager master access, email recovery, social media memorialization instructions."},
+          {"name": "security-section", "desc": "Identity theft response steps (credit freeze, fraud alerts, FTC report). Data breach response steps (change passwords, enable MFA, monitor accounts). Physical security contacts (locksmith, alarm company)."}
+        ],
+        "process": [
+          "Record the location of all legal documents: will, trust, power of attorney, life insurance policies, deeds, titles. Name the attorney who drafted them.",
+          "Define the digital legacy: how does a trusted person access your password manager, email, and financial accounts? Write the procedure without exposing the actual passwords in the playbook.",
+          "Write the identity theft response steps: freeze credit at all three bureaus (Equifax, Experian, TransUnion), file a fraud alert, file an FTC Identity Theft Report, notify affected financial institutions.",
+          "Write the data breach response steps: change passwords starting with email and financial accounts, enable multi-factor authentication everywhere, monitor accounts for unauthorized activity for 90 days."
+        ],
+        "tags": ["emergency", "incapacitation", "security"]
+      },
+      {
+        "flow_name": "playbook-assembly-and-storage",
+        "description": "Assemble the playbook, store it in multiple locations, and brief the trusted persons.",
+        "inputs": [
+          {"name": "medical-section", "desc": "The medical emergency section"},
+          {"name": "financial-section", "desc": "The financial emergency section"},
+          {"name": "disaster-section", "desc": "The disaster and home emergency section"},
+          {"name": "incapacitation-section", "desc": "The incapacitation and security section"}
+        ],
+        "outputs": [
+          {"name": "emergency-playbook", "desc": "The complete playbook document with all 6 sections, table of contents, and last-updated date"},
+          {"name": "storage-and-briefing-record", "desc": "Where the playbook is stored (digital and physical locations) and who has been briefed on its existence and location"}
+        ],
+        "process": [
+          "Compile all sections into a single document with a table of contents and a last-updated date on each section.",
+          "Store in at least three locations: one physical (printed, in a fireproof safe or a known drawer), one digital (cloud storage shared with trusted persons), and one with a trusted person outside the household.",
+          "Brief each trusted person: show them where the playbook is, walk them through the sections relevant to their role, and confirm they can access the digital copy.",
+          "Set a review cadence: update the playbook whenever a major life event occurs (move, marriage, birth, death, job change, new insurance) and conduct a full review annually."
+        ],
+        "tags": ["emergency", "assembly", "storage"]
+      }
+    ]
+  },
+  {
+    "chain_name": "vendor-concentration-risk-audit",
+    "description": "Audit vendor or supplier concentration risk. For each critical function, measure how dependent you are on a single vendor. If the switching cost or switching time exceeds your tolerance, you have concentration risk that needs mitigation.",
+    "domain": "risk-management",
+    "tags": ["infrastructure", "resilience", "vendor-risk", "concentration"],
+    "steps": [
+      {
+        "flow_name": "critical-function-vendor-map",
+        "description": "Map each critical function to its vendor or supplier and calculate the concentration percentage.",
+        "inputs": [
+          {"name": "operation-description", "desc": "What the operation does and its critical functions"},
+          {"name": "vendor-list", "desc": "All current vendors and suppliers with their function and spend"}
+        ],
+        "outputs": [
+          {"name": "vendor-concentration-table", "desc": "For each critical function: the vendors serving it, the percentage of spend or capacity with each, and whether a single vendor exceeds 70% of the function"},
+          {"name": "high-concentration-functions", "desc": "Functions where a single vendor holds more than 70% of the spend or capacity"}
+        ],
+        "process": [
+          "List every critical function that relies on an external vendor or supplier. Include technology, raw materials, professional services, logistics, and infrastructure.",
+          "For each function, list every vendor that serves it. Calculate the percentage of spend or capacity that goes to each vendor.",
+          "Flag any function where a single vendor exceeds 70% of the spend or capacity. This is the concentration risk threshold.",
+          "For flagged functions, note the contractual terms: notice period, termination penalties, and any exclusivity clauses."
+        ],
+        "tags": ["vendor-risk", "concentration", "mapping"]
+      },
+      {
+        "flow_name": "switching-cost-estimator",
+        "description": "Estimate the cost and time to switch away from each concentrated vendor.",
+        "inputs": [
+          {"name": "high-concentration-functions", "desc": "The functions with concentration risk"},
+          {"name": "vendor-concentration-table", "desc": "The full vendor map"}
+        ],
+        "outputs": [
+          {"name": "switching-analysis", "desc": "For each concentrated vendor: the estimated switching cost (dollars), switching time (weeks or months), and the switching risks (data migration, quality drop, integration rework)"},
+          {"name": "concentration-risk-scores", "desc": "Each concentrated vendor scored by (switching cost plus switching time) relative to the function's criticality"}
+        ],
+        "process": [
+          "For each concentrated vendor, estimate the switching cost: termination penalties, new vendor setup costs, data migration, integration rework, retraining, and lost productivity during transition.",
+          "Estimate the switching time: how long from decision to full operation with the new vendor? Include qualification, testing, and ramp-up.",
+          "Identify the switching risks: will quality drop during transition? Is there proprietary data or IP locked in the vendor's system? Are there regulatory or compliance implications?",
+          "Score by criticality: a high switching cost on a non-critical function is tolerable. A high switching cost on a critical function is a priority risk."
+        ],
+        "tags": ["vendor-risk", "switching-cost", "analysis"]
+      },
+      {
+        "flow_name": "vendor-diversification-plan",
+        "description": "Design the diversification plan for each concentrated function.",
+        "inputs": [
+          {"name": "concentration-risk-scores", "desc": "The ranked list of concentration risks"},
+          {"name": "switching-analysis", "desc": "The switching cost and time estimates"}
+        ],
+        "outputs": [
+          {"name": "diversification-plan", "desc": "For each concentrated function: the mitigation strategy (qualify a second vendor, build in-house, stockpile, renegotiate), the timeline, and the budget"},
+          {"name": "acceptable-concentrations", "desc": "Functions where the concentration risk is accepted because the switching cost exceeds the expected loss, with the reasoning documented"}
+        ],
+        "process": [
+          "For each concentration risk, select the mitigation strategy: qualify a second vendor (split the spend 70/30), build in-house capability for the critical component, stockpile enough inventory to survive a vendor failure, or renegotiate the contract with exit provisions and data portability.",
+          "Estimate the cost of each mitigation. Compare to the expected loss from a vendor failure (probability of failure times impact). If the mitigation costs less, proceed. If not, accept the risk with documented reasoning.",
+          "Set the timeline: second-vendor qualification is typically 3-6 months. In-house build depends on complexity. Stockpiling can begin immediately.",
+          "For accepted concentrations, set a monitoring plan: track the vendor's financial health, service quality, and any signals of instability."
+        ],
+        "tags": ["vendor-risk", "diversification", "planning"]
+      },
+      {
+        "flow_name": "vendor-risk-monitoring-setup",
+        "description": "Set up ongoing monitoring for vendor concentration risk so that new concentrations are caught early.",
+        "inputs": [
+          {"name": "diversification-plan", "desc": "The mitigation plan being executed"},
+          {"name": "vendor-concentration-table", "desc": "The current vendor map"}
+        ],
+        "outputs": [
+          {"name": "monitoring-dashboard", "desc": "The metrics to track: concentration percentage per function, vendor financial health indicators, service quality scores, and contract renewal dates"},
+          {"name": "vendor-audit-schedule", "desc": "The annual audit schedule with the checklist for each review"}
+        ],
+        "process": [
+          "Define the metrics: concentration percentage per critical function (updated quarterly), vendor financial health (annual credit check or financial statement review), service quality (quarterly SLA review), and contract renewal timeline.",
+          "Set the alert thresholds: any function crossing 70% concentration triggers a review. Any vendor showing financial distress triggers an accelerated diversification plan.",
+          "Schedule the annual audit: re-run the full concentration analysis, update the switching cost estimates, and review the diversification progress.",
+          "Add new vendors to the map as they are onboarded. Remove vendors as they are offboarded. The map must reflect reality, not the last audit."
+        ],
+        "tags": ["vendor-risk", "monitoring", "audit"]
+      }
+    ]
+  },
+  {
+    "chain_name": "continuity-plan-builder",
+    "description": "Build a business or personal continuity plan. For each critical activity: maximum tolerable downtime, required resources, recovery sequence. Define the triggers, the command structure, the first three actions, and the communication plan. Test annually. A plan that has never been tested is a document, not a plan.",
+    "domain": "risk-management",
+    "tags": ["infrastructure", "resilience", "continuity", "disaster-recovery"],
+    "steps": [
+      {
+        "flow_name": "business-impact-analyzer",
+        "description": "Determine the maximum tolerable downtime and recovery priority for each critical activity.",
+        "inputs": [
+          {"name": "operation-description", "desc": "What the operation does and its activities"},
+          {"name": "revenue-and-obligations", "desc": "Monthly revenue (or income) and fixed obligations"}
+        ],
+        "outputs": [
+          {"name": "impact-analysis", "desc": "For each activity: the financial impact per day of downtime, the maximum tolerable downtime (MTD), the recovery time objective (RTO), and the recovery point objective (RPO for data)"},
+          {"name": "recovery-priority-order", "desc": "Activities ranked by MTD (shortest first), which determines the order of recovery"}
+        ],
+        "process": [
+          "List every activity. For each, estimate the financial impact of one day of downtime: lost revenue, penalty costs, reputational damage, and cascading effects on other activities.",
+          "Determine the maximum tolerable downtime: the point beyond which the damage is irreversible or the cost exceeds the value of recovery.",
+          "Set the recovery time objective (RTO): the target time to restore the activity. It must be shorter than the MTD.",
+          "For data-dependent activities, set the recovery point objective (RPO): how much data loss is tolerable (last hour, last day, zero loss).",
+          "Rank activities by MTD, shortest first. This is the recovery priority."
+        ],
+        "tags": ["continuity", "impact-analysis", "recovery"]
+      },
+      {
+        "flow_name": "disruption-scenario-definer",
+        "description": "Define the disruption scenarios that trigger the continuity plan.",
+        "inputs": [
+          {"name": "impact-analysis", "desc": "The impact analysis with MTDs and RTOs"},
+          {"name": "operation-description", "desc": "The operation context"}
+        ],
+        "outputs": [
+          {"name": "trigger-scenarios", "desc": "The defined scenarios that activate the plan: facility loss, key person absence, technology failure, supply chain disruption, cyber incident, natural disaster"},
+          {"name": "scenario-severity-levels", "desc": "For each scenario: severity levels (partial, major, total) with the criteria for each level"}
+        ],
+        "process": [
+          "Define the scenario categories: facility loss (fire, flood, denied access), key person absence (illness, departure, incapacitation), technology failure (system outage, data loss, ransomware), supply chain disruption (vendor failure, logistics breakdown), and natural disaster (earthquake, hurricane, pandemic).",
+          "For each category, define the severity levels: partial (one function affected, others continue), major (multiple functions affected, some continue at reduced capacity), total (all critical functions stopped).",
+          "Define the activation criteria: who decides the plan is activated, based on what evidence, within what timeframe?",
+          "Map each scenario to the affected critical activities using the impact analysis."
+        ],
+        "tags": ["continuity", "scenarios", "triggers"]
+      },
+      {
+        "flow_name": "command-structure-builder",
+        "description": "Define who is in charge during each scenario and what authority they have.",
+        "inputs": [
+          {"name": "trigger-scenarios", "desc": "The disruption scenarios"},
+          {"name": "recovery-priority-order", "desc": "The recovery priorities"}
+        ],
+        "outputs": [
+          {"name": "command-structure", "desc": "For each severity level: the incident commander, the team leads, and their specific authorities (spend limits, contract authority, communication authority)"},
+          {"name": "succession-plan", "desc": "If the primary commander is unavailable, the succession order with at least 3 deep"}
+        ],
+        "process": [
+          "Designate the incident commander for each severity level. For partial: the function owner. For major: the operations leader (or, for personal, the primary adult). For total: the senior leader or designated trusted person.",
+          "Define the commander's authority: spending authority (up to $X without further approval), contract authority (can engage emergency vendors), communication authority (speaks for the organization).",
+          "Build the succession plan: at least 3 people deep for each role. If person 1 is unavailable, person 2 takes over. Document how person 2 is notified.",
+          "For personal plans: the succession is your trusted person network. Define who takes which role."
+        ],
+        "tags": ["continuity", "command", "authority"]
+      },
+      {
+        "flow_name": "first-72-hour-playbook",
+        "description": "Write the first 72 hours of action for each scenario and severity level.",
+        "inputs": [
+          {"name": "command-structure", "desc": "Who is in charge and their authority"},
+          {"name": "trigger-scenarios", "desc": "The scenario definitions"}
+        ],
+        "outputs": [
+          {"name": "first-72-hour-actions", "desc": "For each scenario and severity: the immediate actions (first hour), the stabilization actions (hours 1-24), and the sustained actions (hours 24-72)"},
+          {"name": "communication-templates", "desc": "Pre-written communication templates for each scenario: internal notification, customer notification, vendor notification, public statement"}
+        ],
+        "process": [
+          "For each scenario, write the first hour: activate the plan (who calls whom), assess the situation (what happened, what is affected, what is the severity), and take the immediate protective actions (secure people, secure data, secure assets).",
+          "Write the stabilization phase (hours 1-24): activate the workarounds for the highest-priority activities, notify the stakeholders using the templates, and begin the damage assessment.",
+          "Write the sustained phase (hours 24-72): execute the recovery sequence in priority order, provide status updates at defined intervals, and adjust the plan as the situation evolves.",
+          "Pre-write the communication templates. In a crisis, writing from scratch is slow and error-prone. The templates include: what happened (factual, no speculation), what we are doing, what you should do, and when the next update will come."
+        ],
+        "tags": ["continuity", "playbook", "crisis-response"]
+      },
+      {
+        "flow_name": "recovery-procedure-writer",
+        "description": "Write the detailed recovery procedures for each critical activity.",
+        "inputs": [
+          {"name": "recovery-priority-order", "desc": "The prioritized list of activities to recover"},
+          {"name": "impact-analysis", "desc": "The MTDs and RTOs for each activity"}
+        ],
+        "outputs": [
+          {"name": "recovery-procedures", "desc": "For each critical activity: the step-by-step recovery procedure, the resources required, the dependencies on other activities, and the success criteria"},
+          {"name": "resource-requirements", "desc": "The total resources needed for recovery: people, technology, workspace, vendors, and budget, by phase"}
+        ],
+        "process": [
+          "For each critical activity in priority order, write the recovery procedure: what steps, in what order, by whom, using what resources, with what success criteria?",
+          "Identify the dependencies: which activities must be recovered before this one can start? Build the dependency sequence.",
+          "Estimate the resources required at each phase: people (by role), technology (systems, access, licenses), workspace (if the primary is unavailable), vendors (emergency contracts), and budget.",
+          "Define the success criteria: how do you know the activity is recovered? It should be measurable: 'system is accepting transactions' not 'system is working.'"
+        ],
+        "tags": ["continuity", "recovery", "procedures"]
+      },
+      {
+        "flow_name": "continuity-plan-test",
+        "description": "Test the continuity plan. A tabletop exercise is the minimum. A simulation is better. A full test is best.",
+        "inputs": [
+          {"name": "first-72-hour-actions", "desc": "The action playbook to test"},
+          {"name": "recovery-procedures", "desc": "The recovery procedures to test"}
+        ],
+        "outputs": [
+          {"name": "test-results", "desc": "What worked, what failed, and the specific fixes for each failure"},
+          {"name": "updated-continuity-plan", "desc": "The revised plan incorporating the test findings, with the next test date scheduled"}
+        ],
+        "process": [
+          "Choose the test type: tabletop (walk through the plan verbally), simulation (execute the plan with simulated disruption), or full test (actually switch to backup systems and procedures).",
+          "Run the test. For a tabletop: gather the team, present the scenario, and walk through each step asking 'can we actually do this?' For a simulation: execute the first 4 hours of the playbook against a simulated scenario.",
+          "Document every failure: steps that were unclear, resources that were unavailable, contacts that were wrong, procedures that took longer than the RTO allows.",
+          "Update the plan with the fixes. Schedule the next test: annually for tabletops, every 2 years for simulations. After any major change to the operation, re-test the affected sections."
+        ],
+        "tags": ["continuity", "testing", "validation"]
+      }
+    ]
+  },
+  {
+    "chain_name": "threat-modeling-method",
+    "description": "Apply threat modeling to any system: personal, business, or technical. Enumerate assets, threats, and attack vectors. Assess likelihood and impact. Map defenses to vectors. The gaps are your vulnerabilities. Prioritize by risk score.",
+    "domain": "risk-management",
+    "tags": ["infrastructure", "resilience", "threat-modeling", "security"],
+    "steps": [
+      {
+        "flow_name": "asset-enumerator",
+        "description": "Enumerate every asset you are protecting. An asset is anything whose loss, damage, or exposure would cause material harm.",
+        "inputs": [
+          {"name": "scope-description", "desc": "What you are modeling (a business, a household, a product, an IT system, a personal life)"},
+          {"name": "harm-definition", "desc": "What counts as material harm in this context (financial loss, reputational damage, physical harm, data exposure, time loss)"}
+        ],
+        "outputs": [
+          {"name": "asset-inventory", "desc": "Every asset with its type (data, financial, physical, reputational, relational, temporal), its value, and the consequence of its loss"},
+          {"name": "crown-jewels", "desc": "The top 5 assets whose loss would cause the most damage, ranked by consequence severity"}
+        ],
+        "process": [
+          "List every asset by type. Data: customer records, financial data, intellectual property, credentials, personal information. Financial: cash, investments, receivables, inventory. Physical: equipment, facilities, vehicles. Reputational: brand trust, professional reputation. Relational: key relationships, contracts. Temporal: time and attention.",
+          "For each asset, estimate the value: replacement cost for physical assets, revenue impact for business assets, recovery cost for data, and consequence severity for intangible assets.",
+          "Identify the crown jewels: the 5 assets whose loss would cause the greatest harm. These get the most protection.",
+          "Note which assets are shared or have dependencies: losing one asset that cascades to losing others is a compounding risk."
+        ],
+        "tags": ["threat-modeling", "assets", "inventory"]
+      },
+      {
+        "flow_name": "threat-enumerator",
+        "description": "For each asset, enumerate the threats: who or what could cause its loss, damage, or exposure.",
+        "inputs": [
+          {"name": "asset-inventory", "desc": "The list of assets to protect"},
+          {"name": "crown-jewels", "desc": "The highest-priority assets"}
+        ],
+        "outputs": [
+          {"name": "threat-catalog", "desc": "For each asset: the threats, categorized as intentional (malicious actors), accidental (human error), systemic (system failure), and environmental (natural events)"},
+          {"name": "threat-actor-profiles", "desc": "For intentional threats: the actor's motivation, capability, and access level"}
+        ],
+        "process": [
+          "For each asset, brainstorm threats in four categories: intentional (theft, fraud, sabotage, espionage), accidental (human error, misconfiguration, data loss), systemic (hardware failure, software bug, vendor outage), and environmental (fire, flood, earthquake, pandemic).",
+          "For intentional threats, profile the actor: what is their motivation (financial gain, revenge, curiosity, ideology), what is their capability (script kiddie, organized crime, insider, nation-state), and what access do they have (outsider, customer, employee, administrator)?",
+          "Focus the analysis on the crown jewels. Every asset deserves a threat scan, but the crown jewels deserve a deep one.",
+          "Remove implausible threats (a household does not need to model nation-state actors). Keep the analysis grounded in the scope."
+        ],
+        "tags": ["threat-modeling", "threats", "enumeration"]
+      },
+      {
+        "flow_name": "attack-vector-mapper",
+        "description": "For each threat, enumerate the attack vectors: the specific ways the threat could materialize.",
+        "inputs": [
+          {"name": "threat-catalog", "desc": "The threats for each asset"},
+          {"name": "asset-inventory", "desc": "The assets and their characteristics"}
+        ],
+        "outputs": [
+          {"name": "attack-vector-map", "desc": "For each threat: the specific attack vectors (how the threat would materialize), with the preconditions for each vector"},
+          {"name": "vector-likelihood-ratings", "desc": "Each vector rated for likelihood (1-5) based on the preconditions and the threat actor's capability"}
+        ],
+        "process": [
+          "For each threat, ask: how would this specific threat materialize? What are the concrete steps from the threat actor's perspective (or the failure sequence for non-intentional threats)?",
+          "For each vector, identify the preconditions: what must be true for this vector to succeed? (The password must be weak. The door must be unlocked. The backup must not exist. The person must be absent.)",
+          "Rate the likelihood of each vector succeeding (1-5) based on how many preconditions are currently met. A vector where all preconditions are met is a near-certainty, not a theoretical risk.",
+          "Group vectors that share preconditions. Fixing one precondition may block multiple vectors at once."
+        ],
+        "tags": ["threat-modeling", "attack-vectors", "analysis"]
+      },
+      {
+        "flow_name": "defense-gap-analyzer",
+        "description": "Map existing defenses to attack vectors and identify the gaps.",
+        "inputs": [
+          {"name": "attack-vector-map", "desc": "The vectors with preconditions"},
+          {"name": "vector-likelihood-ratings", "desc": "The likelihood ratings"}
+        ],
+        "outputs": [
+          {"name": "defense-map", "desc": "For each vector: the existing defense (if any), whether it addresses the preconditions, and its effectiveness rating (1-5)"},
+          {"name": "vulnerability-list", "desc": "Vectors where the defense is absent, ineffective, or only partially blocks the preconditions, scored by (likelihood times impact)"}
+        ],
+        "process": [
+          "For each attack vector, identify the existing defense: is there a control, a process, a technology, or a behavior that blocks or detects this vector?",
+          "Rate the defense effectiveness (1-5): 1 = no defense, 2 = awareness but no control, 3 = partial control (blocks some preconditions but not all), 4 = strong control (blocks most preconditions, detects the rest), 5 = complete control (prevents and detects).",
+          "The vulnerability score is: vector likelihood times asset impact times (6 minus defense effectiveness). This prioritizes high-likelihood, high-impact vectors with weak defenses.",
+          "Rank vulnerabilities by score, highest first. These are your priority fixes."
+        ],
+        "tags": ["threat-modeling", "defenses", "gap-analysis"]
+      },
+      {
+        "flow_name": "mitigation-priority-planner",
+        "description": "Prioritize and plan the mitigations for the top vulnerabilities.",
+        "inputs": [
+          {"name": "vulnerability-list", "desc": "The ranked vulnerabilities"},
+          {"name": "defense-map", "desc": "The current defense posture"}
+        ],
+        "outputs": [
+          {"name": "mitigation-plan", "desc": "For each top vulnerability: the mitigation action, the cost, the timeline, and the expected reduction in vulnerability score"},
+          {"name": "threat-model-document", "desc": "The complete threat model: assets, threats, vectors, defenses, vulnerabilities, and mitigation plan"}
+        ],
+        "process": [
+          "For each top vulnerability, design the mitigation: what control, process, or behavior change would block the preconditions or detect the vector?",
+          "Estimate the cost and timeline. Compare to the expected loss (vulnerability score converted to dollars or consequences). If the mitigation costs less than the expected loss, proceed.",
+          "Look for mitigations that block multiple vectors (shared preconditions). These give the best return on investment.",
+          "Compile the complete threat model document. Set the review cadence: re-assess whenever the asset inventory changes, a new threat emerges, or a defense is modified."
+        ],
+        "tags": ["threat-modeling", "mitigation", "planning"]
+      }
+    ]
+  },
+  {
+    "chain_name": "antifragility-designer",
+    "description": "Design systems that get stronger from disorder. Fragile systems break under stress. Resilient systems survive. Antifragile systems improve. The design principles: small frequent stressors, no single points of failure, optionality, and skin in the game. Apply to health, career, and business.",
+    "domain": "risk-management",
+    "tags": ["infrastructure", "resilience", "antifragility", "design"],
+    "steps": [
+      {
+        "flow_name": "fragility-spectrum-assessment",
+        "description": "Assess where your system falls on the fragility spectrum: fragile (breaks under stress), resilient (survives stress), or antifragile (improves from stress).",
+        "inputs": [
+          {"name": "system-description", "desc": "The system to assess (a business, a career, a health regimen, a portfolio, a team)"},
+          {"name": "recent-stressors", "desc": "Stressors the system has faced in the past 12 months and how it responded"}
+        ],
+        "outputs": [
+          {"name": "fragility-assessment", "desc": "For each component of the system: its position on the fragility spectrum (fragile, resilient, antifragile) with the evidence"},
+          {"name": "fragile-components", "desc": "The components that are fragile (broke or degraded under recent stress), ranked by importance"}
+        ],
+        "process": [
+          "List the components of the system. For a business: revenue model, team, technology, customer base, supply chain, financial structure. For a career: skill set, network, income sources, reputation, knowledge base.",
+          "For each component, review how it responded to recent stress. Did it break (fragile), survive unchanged (resilient), or come out stronger (antifragile)?",
+          "Evidence for antifragility: the team that lost a key member and cross-trained so well that it became less dependent on any one person. The business that survived a downturn and emerged with a leaner cost structure and better processes.",
+          "Rank the fragile components by their importance to the system's survival."
+        ],
+        "tags": ["antifragility", "assessment", "fragility"]
+      },
+      {
+        "flow_name": "stressor-design-protocol",
+        "description": "Design small, frequent stressors that strengthen the system without breaking it. Progressive overload for systems.",
+        "inputs": [
+          {"name": "fragile-components", "desc": "The fragile components to strengthen"},
+          {"name": "fragility-assessment", "desc": "The full assessment"}
+        ],
+        "outputs": [
+          {"name": "stressor-schedule", "desc": "A schedule of designed stressors: what, when, how intense, and what adaptation is expected from each"},
+          {"name": "dose-response-limits", "desc": "For each stressor: the maximum safe intensity (stress that strengthens vs. stress that breaks)"}
+        ],
+        "process": [
+          "For each fragile component, design a stressor that is small enough to survive but large enough to trigger adaptation. Examples: for a team, simulate a key person's absence for a day. For a business, stress-test the cash flow with a simulated revenue drop. For health, increase exercise intensity gradually.",
+          "Set the frequency: stressors need to be frequent enough for adaptation but spaced enough for recovery. Weekly for small stressors, monthly for larger ones, quarterly for simulated crises.",
+          "Define the dose-response limits: at what intensity does the stressor stop strengthening and start breaking? For a business, a simulated 10% revenue drop builds resilience; a real 50% drop may break it.",
+          "Schedule the stressors into the calendar. Stressors that are not scheduled do not happen."
+        ],
+        "tags": ["antifragility", "stressor-design", "progressive-overload"]
+      },
+      {
+        "flow_name": "single-point-eliminator",
+        "description": "Systematically eliminate single points of failure. Every critical path must have at least two ways through.",
+        "inputs": [
+          {"name": "fragility-assessment", "desc": "The full system assessment"},
+          {"name": "system-description", "desc": "The system context"}
+        ],
+        "outputs": [
+          {"name": "single-point-inventory", "desc": "Every single point of failure in the system with the affected function and the failure consequence"},
+          {"name": "redundancy-plan", "desc": "For each single point: the redundancy to build, the cost, and the timeline"}
+        ],
+        "process": [
+          "For each component, ask: if this fails, does the entire system stop? If yes, it is a single point of failure.",
+          "Map the redundancy options: a second person who can do the job, a second system that can take over, a second vendor who can supply, a second income source that can cover obligations.",
+          "Prioritize by consequence severity and cost of redundancy. Build the cheapest, highest-impact redundancies first.",
+          "Accept that some single points cannot be eliminated (your own health). For those, maximize the compensating controls (insurance, documented procedures, trained alternates)."
+        ],
+        "tags": ["antifragility", "redundancy", "single-point"]
+      },
+      {
+        "flow_name": "optionality-maximizer",
+        "description": "Maximize optionality: maintain multiple paths forward so that disorder creates options, not dead ends.",
+        "inputs": [
+          {"name": "system-description", "desc": "The system context"},
+          {"name": "fragility-assessment", "desc": "Where the system is fragile"}
+        ],
+        "outputs": [
+          {"name": "current-options", "desc": "The options the system currently holds and their value in different scenarios"},
+          {"name": "option-acquisition-plan", "desc": "New options to acquire, with the acquisition cost and the scenarios where each pays off"}
+        ],
+        "process": [
+          "Inventory current options: skills, relationships, contracts with exit clauses, liquid assets, transferable capabilities, multiple revenue streams, diversified customer base.",
+          "For each option, score its value across multiple scenarios: economic downturn, technology disruption, competitive entry, regulatory change, personal health event.",
+          "Identify the options that are cheap to hold and valuable in multiple scenarios. These are asymmetric bets: low cost, high potential payoff.",
+          "Acquire the highest-value options first. An option that costs 1% of revenue to maintain and protects against 20% of scenarios is a strong investment."
+        ],
+        "tags": ["antifragility", "optionality", "strategy"]
+      },
+      {
+        "flow_name": "skin-in-the-game-auditor",
+        "description": "Audit whether the decision-makers bear the consequences of their decisions. Systems where decision-makers are insulated from consequences become fragile because bad decisions are not corrected.",
+        "inputs": [
+          {"name": "system-description", "desc": "The system context"},
+          {"name": "fragility-assessment", "desc": "The fragility assessment"}
+        ],
+        "outputs": [
+          {"name": "accountability-map", "desc": "For each major decision area: who decides, who bears the consequences, and whether there is alignment between the two"},
+          {"name": "accountability-fixes", "desc": "Where decision-maker and consequence-bearer are different: the structural change to align them"}
+        ],
+        "process": [
+          "For each major decision area (spending, hiring, product direction, risk acceptance, health choices, investment), identify who makes the decision and who bears the consequence if it goes wrong.",
+          "Where the decision-maker and consequence-bearer are the same person, the system self-corrects: bad decisions cause pain, which corrects future decisions.",
+          "Where they are different, the system is fragile: the decision-maker has no incentive to avoid bad decisions. Examples: a manager who hires poorly but does not work with the hire. An advisor who recommends risky investments but does not invest their own money.",
+          "Design the structural fix: put the decision-maker's own resources at stake, or give the consequence-bearer veto power over the decision."
+        ],
+        "tags": ["antifragility", "accountability", "governance"]
+      },
+      {
+        "flow_name": "antifragility-review",
+        "description": "Review the antifragility design quarterly. Track whether the system is actually getting stronger from the designed stressors.",
+        "inputs": [
+          {"name": "stressor-schedule", "desc": "The designed stressors"},
+          {"name": "redundancy-plan", "desc": "The redundancy buildout plan"}
+        ],
+        "outputs": [
+          {"name": "antifragility-scorecard", "desc": "For each component: its current position on the fragility spectrum, the trend (improving, stable, degrading), and the evidence"},
+          {"name": "updated-design-plan", "desc": "The revised antifragility plan: new stressors to add, redundancies to complete, options to acquire"}
+        ],
+        "process": [
+          "For each component, re-assess its position on the fragility spectrum. Has it moved from fragile toward antifragile? Use evidence from the stressor schedule results.",
+          "Track the adaptation: after each designed stressor, did the system recover faster, perform better, or develop a new capability? If not, the stressor may be too weak or the wrong type.",
+          "Increase the stressor intensity gradually (progressive overload). If the system is adapting, it needs more challenge to continue improving.",
+          "Update the plan: add new stressors for components that have become resilient and need to push toward antifragile. Remove stressors for components that have reached a sufficient level."
+        ],
+        "tags": ["antifragility", "review", "scorecard"]
+      }
+    ]
+  }
+]

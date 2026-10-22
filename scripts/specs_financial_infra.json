@@ -1,0 +1,1229 @@
+[
+  {
+    "chain_name": "marginal-dollar-analysis",
+    "description": "Find true priorities by testing each spending line against one question. If you had one hundred dollars more, would you spend it here, and if you had one hundred dollars less, would you cut it here. Rank every line by marginal value and move dollars toward what matters. Works for personal budgets and departmental allocation.",
+    "domain": "finance",
+    "tags": ["infrastructure", "financial-management", "methodology", "budgeting", "allocation"],
+    "steps": [
+      {
+        "flow_name": "mda-spend-inventory-builder",
+        "description": "Build a complete list of current spending lines for the period.",
+        "inputs": [
+          {"name": "spending-context", "desc": "The budget or allocation being examined and its purpose"},
+          {"name": "time-period", "desc": "The period the spending covers, such as a month, quarter, or year"}
+        ],
+        "outputs": [
+          {"name": "spend-inventory", "desc": "Every recurring and one-time outflow grouped by category"},
+          {"name": "baseline-totals", "desc": "Current total by category and overall"}
+        ],
+        "process": [
+          "List every recurring and one-time outflow for the period.",
+          "Group the outflows by category.",
+          "Record the current amount for each line and total it."
+        ],
+        "tags": ["infrastructure", "budgeting"]
+      },
+      {
+        "flow_name": "mda-add-dollar-tester",
+        "description": "For each line, test whether one hundred more dollars would improve the outcome.",
+        "inputs": [
+          {"name": "spend-inventory", "desc": "The grouped list of spending lines"}
+        ],
+        "outputs": [
+          {"name": "add-value-scores", "desc": "Benefit score for adding a marginal hundred dollars to each line"},
+          {"name": "high-add-lines", "desc": "Lines where more money clearly improves the outcome"}
+        ],
+        "process": [
+          "For each line, estimate the benefit of adding a marginal hundred dollars.",
+          "Score the benefit from none to high.",
+          "Flag the lines where more money clearly helps."
+        ],
+        "tags": ["infrastructure", "financial-management"]
+      },
+      {
+        "flow_name": "mda-cut-dollar-tester",
+        "description": "For each line, test whether one hundred fewer dollars would be felt.",
+        "inputs": [
+          {"name": "spend-inventory", "desc": "The grouped list of spending lines"},
+          {"name": "baseline-totals", "desc": "Current totals for sizing a cut"}
+        ],
+        "outputs": [
+          {"name": "cut-pain-scores", "desc": "Pain score for removing a marginal hundred dollars from each line"},
+          {"name": "low-pain-lines", "desc": "Lines where a cut would barely be felt"}
+        ],
+        "process": [
+          "For each line, estimate the pain of removing a marginal hundred dollars.",
+          "Score the pain from none to severe.",
+          "Flag the lines where a cut would barely be felt."
+        ],
+        "tags": ["infrastructure", "financial-management"]
+      },
+      {
+        "flow_name": "mda-priority-ranker",
+        "description": "Combine add value and cut pain into a single priority ranking.",
+        "inputs": [
+          {"name": "add-value-scores", "desc": "Benefit scores from the add-dollar test"},
+          {"name": "cut-pain-scores", "desc": "Pain scores from the cut-dollar test"}
+        ],
+        "outputs": [
+          {"name": "priority-ranking", "desc": "Lines ranked from highest to lowest marginal priority"},
+          {"name": "reallocation-candidates", "desc": "Top lines to fund and bottom lines to trim"}
+        ],
+        "process": [
+          "Compute a marginal priority for each line from its add value against its cut pain.",
+          "Sort the lines from highest to lowest priority.",
+          "Mark the top candidates to fund and the bottom candidates to trim."
+        ],
+        "tags": ["infrastructure", "methodology"]
+      },
+      {
+        "flow_name": "mda-reallocation-planner",
+        "description": "Move dollars from low-priority lines to high-priority lines.",
+        "inputs": [
+          {"name": "reallocation-candidates", "desc": "Lines to fund and lines to trim"},
+          {"name": "high-add-lines", "desc": "Lines where added money helps most"}
+        ],
+        "outputs": [
+          {"name": "reallocation-plan", "desc": "Sized moves of dollars from trims to additions"},
+          {"name": "net-change-summary", "desc": "Net change per category after the moves"}
+        ],
+        "process": [
+          "Match dollars freed from low-pain cuts against high-value additions.",
+          "Size each move so the total stays within the baseline.",
+          "Summarize the net change per category."
+        ],
+        "tags": ["infrastructure", "allocation"]
+      },
+      {
+        "flow_name": "mda-priority-report-writer",
+        "description": "Write the decision record for the reallocation.",
+        "inputs": [
+          {"name": "reallocation-plan", "desc": "The sized moves of dollars"},
+          {"name": "priority-ranking", "desc": "The ranking behind the moves"}
+        ],
+        "outputs": [
+          {"name": "marginal-analysis-report", "desc": "One-page record of the ranking and the moves"},
+          {"name": "decision-log", "desc": "Which lines were funded, held, or trimmed and why"}
+        ],
+        "process": [
+          "Document the ranking and the reasoning for each move.",
+          "Record which lines were funded, held, or trimmed.",
+          "Produce the one-page summary for sign-off."
+        ],
+        "tags": ["infrastructure", "methodology"]
+      }
+    ]
+  },
+  {
+    "chain_name": "cash-flow-timing-optimization",
+    "description": "Optimize when money moves rather than how much. Map inflows and outflows by date across ninety days, find the valleys and peaks in the balance, shift movable outflows and pull receivables earlier, then value the smoother timing as float.",
+    "domain": "finance",
+    "tags": ["infrastructure", "financial-management", "methodology", "cash-flow", "treasury"],
+    "steps": [
+      {
+        "flow_name": "cfto-flow-calendar-builder",
+        "description": "Map all inflows and outflows by date across the horizon.",
+        "inputs": [
+          {"name": "account-context", "desc": "The accounts and opening balance in scope"},
+          {"name": "planning-horizon", "desc": "The number of days to map, such as ninety"}
+        ],
+        "outputs": [
+          {"name": "flow-calendar", "desc": "Every inflow and outflow placed on a day-by-day calendar"},
+          {"name": "recurring-items", "desc": "The repeating inflows and outflows with their dates"}
+        ],
+        "process": [
+          "List every expected inflow with its date and amount.",
+          "List every expected outflow with its date and amount.",
+          "Place all items on a day-by-day calendar for the horizon."
+        ],
+        "tags": ["infrastructure", "cash-flow"]
+      },
+      {
+        "flow_name": "cfto-balance-projector",
+        "description": "Project the running balance across the horizon.",
+        "inputs": [
+          {"name": "flow-calendar", "desc": "The dated inflows and outflows"},
+          {"name": "recurring-items", "desc": "The repeating items to carry forward"}
+        ],
+        "outputs": [
+          {"name": "daily-balance-curve", "desc": "The running balance for every day of the horizon"},
+          {"name": "starting-balance", "desc": "The opening balance the curve carries from"}
+        ],
+        "process": [
+          "Carry the opening balance forward day by day.",
+          "Apply each inflow and outflow on its date.",
+          "Produce the running balance for every day."
+        ],
+        "tags": ["infrastructure", "cash-flow"]
+      },
+      {
+        "flow_name": "cfto-valley-peak-finder",
+        "description": "Find the low points and high points in the balance.",
+        "inputs": [
+          {"name": "daily-balance-curve", "desc": "The running balance across the horizon"}
+        ],
+        "outputs": [
+          {"name": "cash-valleys", "desc": "Dates where the balance dips below the comfort line"},
+          {"name": "cash-peaks", "desc": "Dates where the balance sits well above the comfort line"}
+        ],
+        "process": [
+          "Scan the balance curve for local minimums below the comfort line.",
+          "Scan the balance curve for local maximums above the comfort line.",
+          "Record the date, depth, and duration of each valley and peak."
+        ],
+        "tags": ["infrastructure", "cash-flow"]
+      },
+      {
+        "flow_name": "cfto-outflow-shifter",
+        "description": "Identify movable outflows and shift them away from valleys.",
+        "inputs": [
+          {"name": "cash-valleys", "desc": "The low points to protect"},
+          {"name": "recurring-items", "desc": "The outflows that might be movable"}
+        ],
+        "outputs": [
+          {"name": "shift-plan", "desc": "Movable outflows with proposed new dates"},
+          {"name": "protected-outflows", "desc": "Fixed obligations left untouched"}
+        ],
+        "process": [
+          "Classify each outflow as fixed-date or movable.",
+          "For movable items landing near a valley, propose a new date.",
+          "Keep fixed obligations untouched."
+        ],
+        "tags": ["infrastructure", "cash-flow"]
+      },
+      {
+        "flow_name": "cfto-receivable-accelerator",
+        "description": "Pull inflows earlier to fill the valleys.",
+        "inputs": [
+          {"name": "cash-valleys", "desc": "The low points to fill"},
+          {"name": "flow-calendar", "desc": "The dated inflows available to move"}
+        ],
+        "outputs": [
+          {"name": "acceleration-plan", "desc": "Inflows that could arrive sooner and by how many days"},
+          {"name": "expected-earlier-inflows", "desc": "Earlier inflows mapped against the valleys they relieve"}
+        ],
+        "process": [
+          "List inflows that could arrive sooner through deposits, invoicing terms, or reminders.",
+          "Estimate how many days each inflow could move.",
+          "Map the earlier inflows against the valleys they relieve."
+        ],
+        "tags": ["infrastructure", "cash-flow"]
+      },
+      {
+        "flow_name": "cfto-float-valuer",
+        "description": "Calculate the value of the improved timing.",
+        "inputs": [
+          {"name": "shift-plan", "desc": "The outflow shifts to apply"},
+          {"name": "acceleration-plan", "desc": "The inflow accelerations to apply"}
+        ],
+        "outputs": [
+          {"name": "float-value", "desc": "The value of the freed balance at the carrying rate"},
+          {"name": "smoothed-balance-curve", "desc": "The balance curve after the shifts and accelerations"}
+        ],
+        "process": [
+          "Rebuild the balance curve with the shifts and accelerations applied.",
+          "Measure the reduction in valley depth and overdraft risk.",
+          "Translate the freed balance into a float value at the carrying rate."
+        ],
+        "tags": ["infrastructure", "methodology"]
+      },
+      {
+        "flow_name": "cfto-timing-plan-writer",
+        "description": "Write the cash timing plan.",
+        "inputs": [
+          {"name": "float-value", "desc": "The value gained from better timing"},
+          {"name": "smoothed-balance-curve", "desc": "The improved balance curve"}
+        ],
+        "outputs": [
+          {"name": "cash-timing-plan", "desc": "Each shift and acceleration with its new date"},
+          {"name": "action-checklist", "desc": "The dated list of moves to make"}
+        ],
+        "process": [
+          "Document each shift and acceleration with its new date.",
+          "State the float value gained and the valleys removed.",
+          "Produce the dated action checklist."
+        ],
+        "tags": ["infrastructure", "methodology"]
+      }
+    ]
+  },
+  {
+    "chain_name": "revenue-per-constraint-hour",
+    "description": "Rank activities by the revenue they produce per hour of the scarcest resource. Identify the binding constraint, measure how much of it each activity consumes, compute revenue per constraint hour, and shift the mix toward the highest ratio work.",
+    "domain": "finance",
+    "tags": ["infrastructure", "financial-management", "methodology", "throughput", "revenue"],
+    "steps": [
+      {
+        "flow_name": "rpch-constraint-identifier",
+        "description": "Find the scarcest resource that caps revenue.",
+        "inputs": [
+          {"name": "operation-context", "desc": "The operation and the period under review"},
+          {"name": "candidate-resources", "desc": "Resources that might limit output, such as staff hours or machine time"}
+        ],
+        "outputs": [
+          {"name": "binding-constraint", "desc": "The one resource that caps revenue"},
+          {"name": "constraint-capacity", "desc": "The total units of the constraint available in the period"}
+        ],
+        "process": [
+          "List the resources that limit output, such as staff hours, machine time, or senior attention.",
+          "Estimate the available units of each over the period.",
+          "Name the one resource that caps revenue and record its total capacity."
+        ],
+        "tags": ["infrastructure", "throughput"]
+      },
+      {
+        "flow_name": "rpch-activity-catalog-builder",
+        "description": "List every revenue activity and its use of the constraint.",
+        "inputs": [
+          {"name": "binding-constraint", "desc": "The scarce resource to measure against"},
+          {"name": "operation-context", "desc": "The operation whose activities are cataloged"}
+        ],
+        "outputs": [
+          {"name": "activity-catalog", "desc": "Each revenue activity with its revenue per unit"},
+          {"name": "constraint-use-per-activity", "desc": "Units of the constraint each activity consumes"}
+        ],
+        "process": [
+          "List each activity that produces revenue.",
+          "Record the revenue per unit of each activity.",
+          "Record how many units of the binding constraint each activity consumes."
+        ],
+        "tags": ["infrastructure", "throughput"]
+      },
+      {
+        "flow_name": "rpch-throughput-calculator",
+        "description": "Compute revenue per constraint hour for each activity.",
+        "inputs": [
+          {"name": "activity-catalog", "desc": "Activities with their revenue"},
+          {"name": "constraint-use-per-activity", "desc": "Constraint hours each activity consumes"}
+        ],
+        "outputs": [
+          {"name": "revenue-per-hour-table", "desc": "Revenue per constraint hour for each activity"},
+          {"name": "activity-ranking", "desc": "Activities ranked from highest to lowest ratio"}
+        ],
+        "process": [
+          "Divide each activity's revenue by the constraint hours it consumes.",
+          "Build a table of revenue per constraint hour.",
+          "Rank the activities from highest to lowest ratio."
+        ],
+        "tags": ["infrastructure", "methodology"]
+      },
+      {
+        "flow_name": "rpch-mix-optimizer",
+        "description": "Shift the activity mix toward the highest ratio work.",
+        "inputs": [
+          {"name": "activity-ranking", "desc": "Activities ranked by revenue per constraint hour"},
+          {"name": "constraint-capacity", "desc": "The total constraint units to fill"}
+        ],
+        "outputs": [
+          {"name": "target-mix", "desc": "The activity mix that fills the constraint with the best ratios"},
+          {"name": "displaced-activities", "desc": "Low-ratio activities pushed out of the mix"}
+        ],
+        "process": [
+          "Fill the constraint capacity starting from the highest revenue-per-hour activity.",
+          "Continue down the ranking until the capacity runs out.",
+          "Record which low-ratio activities are displaced."
+        ],
+        "tags": ["infrastructure", "throughput"]
+      },
+      {
+        "flow_name": "rpch-gain-estimator",
+        "description": "Estimate the revenue gain from the new mix.",
+        "inputs": [
+          {"name": "target-mix", "desc": "The proposed activity mix"},
+          {"name": "revenue-per-hour-table", "desc": "The ratios used to total the mix"}
+        ],
+        "outputs": [
+          {"name": "projected-revenue", "desc": "Total revenue of the target mix"},
+          {"name": "revenue-delta", "desc": "The gain over the current mix and its assumptions"}
+        ],
+        "process": [
+          "Total the revenue of the target mix.",
+          "Compare it against the current mix revenue.",
+          "Report the gain and the assumptions behind it."
+        ],
+        "tags": ["infrastructure", "revenue"]
+      },
+      {
+        "flow_name": "rpch-constraint-report-writer",
+        "description": "Write the decision record for the mix change.",
+        "inputs": [
+          {"name": "projected-revenue", "desc": "The revenue of the target mix"},
+          {"name": "target-mix", "desc": "The mix to adopt"}
+        ],
+        "outputs": [
+          {"name": "constraint-revenue-report", "desc": "Record of the constraint, the ranking, and the gain"},
+          {"name": "mix-change-plan", "desc": "The steps to move to the target mix"}
+        ],
+        "process": [
+          "Document the binding constraint and the ranking.",
+          "State the target mix and the displaced work.",
+          "Produce the change plan with the expected gain."
+        ],
+        "tags": ["infrastructure", "methodology"]
+      }
+    ]
+  },
+  {
+    "chain_name": "price-sensitivity-measurement",
+    "description": "Measure willingness to pay with two methods. Van Westendorp asks four price questions and plots curves to find the acceptable range, and Gabor-Granger tests descending prices to find the revenue maximizing point. Reconcile both and adapt the result to the context, whether freelance rates, a subscription product, a physical product, or a salary ask.",
+    "domain": "finance",
+    "tags": ["infrastructure", "financial-management", "methodology", "pricing", "research"],
+    "steps": [
+      {
+        "flow_name": "psm-survey-designer",
+        "description": "Design the Van Westendorp price sensitivity survey and sampling plan.",
+        "inputs": [
+          {"name": "product-description", "desc": "The product or service being priced"},
+          {"name": "target-respondents", "desc": "The buyers to survey"}
+        ],
+        "outputs": [
+          {"name": "psm-survey", "desc": "The four price questions and supporting items"},
+          {"name": "sample-plan", "desc": "Who to survey and how many responses are needed"}
+        ],
+        "process": [
+          "Write the four Van Westendorp price questions for the product.",
+          "Define the sample and the minimum number of responses.",
+          "Set the screening questions for the target buyers."
+        ],
+        "tags": ["infrastructure", "pricing"]
+      },
+      {
+        "flow_name": "psm-data-collector",
+        "description": "Collect and clean the price sensitivity responses.",
+        "inputs": [
+          {"name": "psm-survey", "desc": "The survey to field"},
+          {"name": "sample-plan", "desc": "The sampling plan to follow"}
+        ],
+        "outputs": [
+          {"name": "clean-responses", "desc": "Validated responses ready for analysis"},
+          {"name": "response-quality-report", "desc": "Response count, screen-outs, and quality flags"}
+        ],
+        "process": [
+          "Field the survey to the planned sample.",
+          "Screen out incomplete or inconsistent responses.",
+          "Produce the cleaned response set and a quality report."
+        ],
+        "tags": ["infrastructure", "pricing"]
+      },
+      {
+        "flow_name": "psm-curve-plotter",
+        "description": "Plot the Van Westendorp curves and find the intersection points.",
+        "inputs": [
+          {"name": "clean-responses", "desc": "The validated price responses"}
+        ],
+        "outputs": [
+          {"name": "psm-curves", "desc": "The cumulative curves for the four questions"},
+          {"name": "intersection-points", "desc": "The acceptable price range and the optimal price point"}
+        ],
+        "process": [
+          "Build the cumulative curves for too cheap, cheap, expensive, and too expensive.",
+          "Find the intersections that mark the range and the optimal point.",
+          "Record the point of marginal cheapness and marginal expensiveness."
+        ],
+        "tags": ["infrastructure", "pricing"]
+      },
+      {
+        "flow_name": "pss-gabor-granger-tester",
+        "description": "Run the Gabor-Granger descending price test to find the revenue maximizing point.",
+        "inputs": [
+          {"name": "clean-responses", "desc": "The respondents from the price survey"}
+        ],
+        "outputs": [
+          {"name": "gabor-granger-schedule", "desc": "Purchase likelihood at each descending price"},
+          {"name": "revenue-maximizing-price", "desc": "The price where likelihood times price peaks"}
+        ],
+        "process": [
+          "Present descending prices and record purchase likelihood at each.",
+          "Build the demand schedule from likelihood against price.",
+          "Find the price where likelihood multiplied by price is highest."
+        ],
+        "tags": ["infrastructure", "pricing"]
+      },
+      {
+        "flow_name": "pss-method-reconciler",
+        "description": "Reconcile the Van Westendorp range with the Gabor-Granger revenue point.",
+        "inputs": [
+          {"name": "intersection-points", "desc": "The Van Westendorp acceptable range and optimal point"},
+          {"name": "revenue-maximizing-price", "desc": "The Gabor-Granger revenue peak"}
+        ],
+        "outputs": [
+          {"name": "reconciled-price-range", "desc": "A single price range supported by both methods"},
+          {"name": "method-comparison", "desc": "Where the two methods agree and where they diverge"}
+        ],
+        "process": [
+          "Place the revenue maximizing price against the acceptable range.",
+          "Narrow to the band supported by both methods.",
+          "Note where the methods agree and where they diverge."
+        ],
+        "tags": ["infrastructure", "methodology"]
+      },
+      {
+        "flow_name": "pss-context-adapter",
+        "description": "Adapt the reconciled range to the specific pricing context.",
+        "inputs": [
+          {"name": "reconciled-price-range", "desc": "The range supported by both methods"},
+          {"name": "product-description", "desc": "The context, such as a freelance rate, subscription, product, or salary"}
+        ],
+        "outputs": [
+          {"name": "context-adjusted-prices", "desc": "Prices adjusted for the context and its norms"},
+          {"name": "pricing-scenarios", "desc": "Low, middle, and high scenarios with their tradeoffs"}
+        ],
+        "process": [
+          "Apply the norms of the context, such as rounding, tiers, or hourly conversion.",
+          "Adjust the range for positioning and competition.",
+          "Lay out low, middle, and high scenarios with their tradeoffs."
+        ],
+        "tags": ["infrastructure", "pricing"]
+      },
+      {
+        "flow_name": "pss-decision-recorder",
+        "description": "Record the price recommendation and the evidence behind it.",
+        "inputs": [
+          {"name": "context-adjusted-prices", "desc": "The adjusted prices and scenarios"},
+          {"name": "method-comparison", "desc": "The agreement between the two methods"}
+        ],
+        "outputs": [
+          {"name": "price-recommendation", "desc": "The recommended price with its scenario"},
+          {"name": "price-sensitivity-report", "desc": "The full record of both methods and the decision"}
+        ],
+        "process": [
+          "State the recommended price and the scenario it fits.",
+          "Summarize the evidence from both methods.",
+          "Produce the report that records the decision and its basis."
+        ],
+        "tags": ["infrastructure", "methodology"]
+      }
+    ]
+  },
+  {
+    "chain_name": "break-even-speed-calculator",
+    "description": "Measure how fast an investment pays itself back rather than its total return. Divide the monthly incremental revenue or savings into the total cost to get a payback period, compare it against the planning horizon, and skip anything that pays back too slowly.",
+    "domain": "finance",
+    "tags": ["infrastructure", "financial-management", "methodology", "investment", "payback"],
+    "steps": [
+      {
+        "flow_name": "bess-investment-scoper",
+        "description": "Define the investment and total its cost.",
+        "inputs": [
+          {"name": "investment-context", "desc": "The investment under consideration and what it should produce"},
+          {"name": "planning-horizon", "desc": "The period the decision must fit inside"}
+        ],
+        "outputs": [
+          {"name": "investment-definition", "desc": "The investment and the outcome it targets"},
+          {"name": "total-cost", "desc": "The upfront cost including setup, fees, and one-time labor"}
+        ],
+        "process": [
+          "Describe the investment and what it is meant to produce.",
+          "Total the upfront cost including setup, fees, and one-time labor.",
+          "State the planning horizon the decision must fit inside."
+        ],
+        "tags": ["infrastructure", "investment"]
+      },
+      {
+        "flow_name": "bess-return-estimator",
+        "description": "Estimate the monthly incremental revenue or savings.",
+        "inputs": [
+          {"name": "investment-definition", "desc": "The investment and its target outcome"}
+        ],
+        "outputs": [
+          {"name": "monthly-return-estimate", "desc": "The steady monthly revenue added or cost removed"},
+          {"name": "return-assumptions", "desc": "The assumptions and the ramp-up before the return is steady"}
+        ],
+        "process": [
+          "Estimate the added revenue the investment produces each month.",
+          "Estimate the costs it removes each month.",
+          "State the assumptions and the ramp-up before the return is steady."
+        ],
+        "tags": ["infrastructure", "investment"]
+      },
+      {
+        "flow_name": "bess-payback-calculator",
+        "description": "Divide cost by monthly return to get the payback period.",
+        "inputs": [
+          {"name": "total-cost", "desc": "The total cost to recover"},
+          {"name": "monthly-return-estimate", "desc": "The steady monthly return"}
+        ],
+        "outputs": [
+          {"name": "payback-months", "desc": "The number of months to recover the cost"},
+          {"name": "cumulative-curve", "desc": "The cumulative return up to the break-even point"}
+        ],
+        "process": [
+          "Divide the total cost by the steady monthly return.",
+          "Adjust for the ramp-up months at the start.",
+          "Build the cumulative return curve to the break-even point."
+        ],
+        "tags": ["infrastructure", "payback"]
+      },
+      {
+        "flow_name": "bess-horizon-comparer",
+        "description": "Compare the payback period against the planning horizon.",
+        "inputs": [
+          {"name": "payback-months", "desc": "The months to recover the cost"},
+          {"name": "planning-horizon", "desc": "The period the decision must fit inside"}
+        ],
+        "outputs": [
+          {"name": "horizon-verdict", "desc": "Whether the payback falls inside or outside the horizon"},
+          {"name": "margin-of-safety", "desc": "The months of margin or overrun"}
+        ],
+        "process": [
+          "Compare the payback months against the horizon.",
+          "Mark the investment as inside or outside the horizon.",
+          "Compute the months of margin or overrun."
+        ],
+        "tags": ["infrastructure", "payback"]
+      },
+      {
+        "flow_name": "bess-sensitivity-tester",
+        "description": "Stress the return assumptions to find the break-even threshold.",
+        "inputs": [
+          {"name": "payback-months", "desc": "The base payback period"},
+          {"name": "return-assumptions", "desc": "The assumptions to stress"}
+        ],
+        "outputs": [
+          {"name": "sensitivity-table", "desc": "Payback under lower returns and a longer ramp-up"},
+          {"name": "breakeven-threshold", "desc": "The minimum monthly return that still pays back in time"}
+        ],
+        "process": [
+          "Recompute the payback if the return is thirty percent lower.",
+          "Recompute the payback if the ramp-up doubles.",
+          "Find the minimum monthly return that still pays back inside the horizon."
+        ],
+        "tags": ["infrastructure", "methodology"]
+      },
+      {
+        "flow_name": "bess-decision-writer",
+        "description": "Write the proceed or skip recommendation.",
+        "inputs": [
+          {"name": "horizon-verdict", "desc": "Whether the payback fits the horizon"},
+          {"name": "sensitivity-table", "desc": "The stressed payback results"}
+        ],
+        "outputs": [
+          {"name": "payback-report", "desc": "The payback period, margin, and stress results"},
+          {"name": "invest-decision", "desc": "The proceed or skip recommendation with reasoning"}
+        ],
+        "process": [
+          "State the payback period and the margin against the horizon.",
+          "Summarize the stress results.",
+          "Recommend proceed or skip with the reasoning."
+        ],
+        "tags": ["infrastructure", "methodology"]
+      }
+    ]
+  },
+  {
+    "chain_name": "expense-velocity-analysis",
+    "description": "Track how fast money leaves, not just how much. Separate slow leaks such as subscriptions from lumpy spends such as annual renewals, audit the leaks for waste, and set up sinking funds for the lumps so large bills do not land as shocks.",
+    "domain": "finance",
+    "tags": ["infrastructure", "financial-management", "methodology", "expenses", "subscriptions"],
+    "steps": [
+      {
+        "flow_name": "eva-expense-collector",
+        "description": "Gather every expense with its timing.",
+        "inputs": [
+          {"name": "expense-source", "desc": "The statements and receipts to pull from"},
+          {"name": "review-window", "desc": "The period under review"}
+        ],
+        "outputs": [
+          {"name": "expense-ledger", "desc": "Every expense with its amount and date"},
+          {"name": "timing-tags", "desc": "Each expense tagged recurring, periodic, or one-time"}
+        ],
+        "process": [
+          "Pull every expense for the window from statements and receipts.",
+          "Record the amount and the date of each.",
+          "Tag each expense as recurring, periodic, or one-time."
+        ],
+        "tags": ["infrastructure", "expenses"]
+      },
+      {
+        "flow_name": "eva-velocity-classifier",
+        "description": "Classify expenses by how fast money leaves.",
+        "inputs": [
+          {"name": "expense-ledger", "desc": "The dated list of expenses"},
+          {"name": "timing-tags", "desc": "The recurring, periodic, and one-time tags"}
+        ],
+        "outputs": [
+          {"name": "slow-leak-set", "desc": "Small steady recurring charges"},
+          {"name": "lumpy-spend-set", "desc": "Large infrequent charges"}
+        ],
+        "process": [
+          "Group small steady recurring charges as slow leaks.",
+          "Group large infrequent charges as lumpy spends.",
+          "Set aside true one-time items separately."
+        ],
+        "tags": ["infrastructure", "expenses"]
+      },
+      {
+        "flow_name": "eva-leak-auditor",
+        "description": "Audit the slow leaks for waste.",
+        "inputs": [
+          {"name": "slow-leak-set", "desc": "The steady recurring charges"}
+        ],
+        "outputs": [
+          {"name": "leak-findings", "desc": "Each recurring charge with its monthly and annual cost"},
+          {"name": "cancellable-leaks", "desc": "Duplicates, unused, and forgotten subscriptions"}
+        ],
+        "process": [
+          "List each recurring charge with its monthly and annual cost.",
+          "Mark duplicates, unused, and forgotten subscriptions.",
+          "Total the recoverable amount from cancellations."
+        ],
+        "tags": ["infrastructure", "subscriptions"]
+      },
+      {
+        "flow_name": "eva-lump-planner",
+        "description": "Plan sinking funds for the lumpy spends.",
+        "inputs": [
+          {"name": "lumpy-spend-set", "desc": "The large infrequent charges"}
+        ],
+        "outputs": [
+          {"name": "sinking-fund-plan", "desc": "Each large expense divided across the months until due"},
+          {"name": "monthly-set-aside", "desc": "The monthly amount needed to meet the lumps"}
+        ],
+        "process": [
+          "List each large periodic expense with its due date and amount.",
+          "Divide each amount across the months until it is due.",
+          "Total the monthly set-aside needed to meet them without a shock."
+        ],
+        "tags": ["infrastructure", "expenses"]
+      },
+      {
+        "flow_name": "eva-velocity-dashboard-builder",
+        "description": "Build the view of how fast money leaves.",
+        "inputs": [
+          {"name": "leak-findings", "desc": "The audited slow leaks"},
+          {"name": "sinking-fund-plan", "desc": "The plan for the lumpy spends"}
+        ],
+        "outputs": [
+          {"name": "velocity-dashboard", "desc": "The steady drain and the smoothed lumps in one view"},
+          {"name": "monthly-outflow-shape", "desc": "The month-by-month shape of outflows"}
+        ],
+        "process": [
+          "Combine the leak findings and the sinking-fund plan into one view.",
+          "Show the steady drain and the smoothed lumps side by side.",
+          "Highlight the fastest-draining categories."
+        ],
+        "tags": ["infrastructure", "methodology"]
+      },
+      {
+        "flow_name": "eva-action-writer",
+        "description": "Write the action list for leaks and lumps.",
+        "inputs": [
+          {"name": "cancellable-leaks", "desc": "The subscriptions to cancel"},
+          {"name": "monthly-set-aside", "desc": "The sinking-fund amounts to open"}
+        ],
+        "outputs": [
+          {"name": "velocity-report", "desc": "The record of leaks, lumps, and the monthly change"},
+          {"name": "expense-action-list", "desc": "The dated list of cancellations and funds to open"}
+        ],
+        "process": [
+          "List the subscriptions to cancel with their annual savings.",
+          "List the sinking funds to open with their monthly amount.",
+          "Produce the dated action list and the expected monthly change."
+        ],
+        "tags": ["infrastructure", "methodology"]
+      }
+    ]
+  },
+  {
+    "chain_name": "negotiation-anchor-strategy",
+    "description": "Set the anchor that pulls a negotiation toward your target. Define the target and walk-away, research the realistic range, place the anchor twenty to forty percent beyond the target with supporting reasoning, and plan the concession path. Works for salary, vendor, real estate, and freelance talks.",
+    "domain": "finance",
+    "tags": ["infrastructure", "financial-management", "methodology", "negotiation", "pricing"],
+    "steps": [
+      {
+        "flow_name": "nas-target-setter",
+        "description": "Set the target and the walk-away point.",
+        "inputs": [
+          {"name": "negotiation-context", "desc": "What is being negotiated and with whom"},
+          {"name": "your-objective", "desc": "What a good result looks like for you"}
+        ],
+        "outputs": [
+          {"name": "target-outcome", "desc": "The concrete number a good result lands on"},
+          {"name": "walk-away-point", "desc": "The point below which no deal is better than a deal"}
+        ],
+        "process": [
+          "State what a good result looks like in concrete numbers.",
+          "Set the walk-away point below which no deal is better.",
+          "Record the units the negotiation is measured in, such as salary, price, or rate."
+        ],
+        "tags": ["infrastructure", "negotiation"]
+      },
+      {
+        "flow_name": "nas-range-researcher",
+        "description": "Research the realistic range and the other side.",
+        "inputs": [
+          {"name": "negotiation-context", "desc": "What is being negotiated"},
+          {"name": "target-outcome", "desc": "The target to place within the range"}
+        ],
+        "outputs": [
+          {"name": "market-range", "desc": "The range from comparable deals"},
+          {"name": "counterpart-profile", "desc": "The other side's likely target, limits, and interests"}
+        ],
+        "process": [
+          "Gather the market range from comparable deals.",
+          "Estimate the other side's likely target and limits.",
+          "Note their interests beyond price."
+        ],
+        "tags": ["infrastructure", "negotiation"]
+      },
+      {
+        "flow_name": "nas-anchor-builder",
+        "description": "Set the anchor twenty to forty percent beyond the target.",
+        "inputs": [
+          {"name": "target-outcome", "desc": "The target the anchor is set beyond"},
+          {"name": "market-range", "desc": "The range that keeps the anchor defensible"}
+        ],
+        "outputs": [
+          {"name": "anchor-value", "desc": "The opening anchor number"},
+          {"name": "anchor-justification", "desc": "The reasoning that makes the anchor credible"}
+        ],
+        "process": [
+          "Place the anchor twenty to forty percent past the target in your favor.",
+          "Keep the anchor within the bounds of a defensible number.",
+          "Write the reasoning that makes the anchor credible."
+        ],
+        "tags": ["infrastructure", "pricing"]
+      },
+      {
+        "flow_name": "nas-concession-planner",
+        "description": "Plan the concession path from anchor to target.",
+        "inputs": [
+          {"name": "anchor-value", "desc": "The opening anchor"},
+          {"name": "walk-away-point", "desc": "The floor the ladder stops at"}
+        ],
+        "outputs": [
+          {"name": "concession-ladder", "desc": "A sequence of shrinking concessions from anchor to target"},
+          {"name": "trade-list", "desc": "Non-price trades to offer in place of price movement"}
+        ],
+        "process": [
+          "Plan a sequence of shrinking concessions from the anchor toward the target.",
+          "Stop the ladder at the walk-away point.",
+          "List non-price trades to offer in place of movement on price."
+        ],
+        "tags": ["infrastructure", "negotiation"]
+      },
+      {
+        "flow_name": "nas-script-writer",
+        "description": "Write the opening and the responses.",
+        "inputs": [
+          {"name": "anchor-justification", "desc": "The reasoning behind the anchor"},
+          {"name": "concession-ladder", "desc": "The planned concession path"}
+        ],
+        "outputs": [
+          {"name": "opening-script", "desc": "The line that states the anchor with its reasoning"},
+          {"name": "response-playbook", "desc": "Responses to a low counter-anchor and common objections"}
+        ],
+        "process": [
+          "Write the opening line that states the anchor with its reasoning.",
+          "Prepare responses to a low counter-anchor and to common objections.",
+          "Set the rule to let silence pull the midpoint toward the target."
+        ],
+        "tags": ["infrastructure", "negotiation"]
+      },
+      {
+        "flow_name": "nas-strategy-report-writer",
+        "description": "Assemble the negotiation plan.",
+        "inputs": [
+          {"name": "opening-script", "desc": "The opening line and reasoning"},
+          {"name": "trade-list", "desc": "The non-price trades available"}
+        ],
+        "outputs": [
+          {"name": "negotiation-plan", "desc": "The anchor, ladder, and scripts in one plan"},
+          {"name": "anchor-strategy-report", "desc": "The one-page strategy to rehearse"}
+        ],
+        "process": [
+          "Assemble the anchor, the ladder, and the scripts into one plan.",
+          "State the target, the walk-away, and the trades.",
+          "Produce the one-page strategy to rehearse before the talk."
+        ],
+        "tags": ["infrastructure", "methodology"]
+      }
+    ]
+  },
+  {
+    "chain_name": "unit-economics-health-check",
+    "description": "Check whether one transaction makes money after variable costs. Compute contribution margin, customer acquisition cost, lifetime value, and the ratio between them. A ratio below three to one signals a structural problem and a payback beyond twelve months signals a cash flow problem.",
+    "domain": "finance",
+    "tags": ["infrastructure", "financial-management", "methodology", "unit-economics", "metrics"],
+    "steps": [
+      {
+        "flow_name": "ueh-transaction-definer",
+        "description": "Define the unit of sale and its variable costs.",
+        "inputs": [
+          {"name": "business-context", "desc": "The business and the period under review"},
+          {"name": "unit-definition", "desc": "What counts as one unit, such as a customer, order, or seat"}
+        ],
+        "outputs": [
+          {"name": "unit-model", "desc": "The defined unit and how it is counted"},
+          {"name": "variable-cost-list", "desc": "The costs that scale with each unit"}
+        ],
+        "process": [
+          "Define one unit of sale, such as a customer, an order, or a seat.",
+          "List the variable costs tied to each unit.",
+          "Separate variable costs from fixed costs that do not scale per unit."
+        ],
+        "tags": ["infrastructure", "unit-economics"]
+      },
+      {
+        "flow_name": "ueh-contribution-calculator",
+        "description": "Compute the contribution margin per unit.",
+        "inputs": [
+          {"name": "unit-model", "desc": "The defined unit"},
+          {"name": "variable-cost-list", "desc": "The variable costs per unit"}
+        ],
+        "outputs": [
+          {"name": "unit-revenue", "desc": "The revenue from one unit"},
+          {"name": "contribution-margin", "desc": "Unit revenue less variable costs, in dollars and percent"}
+        ],
+        "process": [
+          "Record the revenue from one unit.",
+          "Subtract the variable costs from the revenue.",
+          "Report the contribution margin per unit in dollars and percent."
+        ],
+        "tags": ["infrastructure", "unit-economics"]
+      },
+      {
+        "flow_name": "ueh-cac-calculator",
+        "description": "Compute the customer acquisition cost.",
+        "inputs": [
+          {"name": "business-context", "desc": "The sales and marketing spend and the period"},
+          {"name": "unit-model", "desc": "The unit the cost is measured against"}
+        ],
+        "outputs": [
+          {"name": "cac-value", "desc": "The cost to acquire one unit"},
+          {"name": "acquisition-cost-breakdown", "desc": "The acquisition cost broken down by channel"}
+        ],
+        "process": [
+          "Total the sales and marketing spend for the period.",
+          "Divide the spend by the new units acquired in the same period.",
+          "Break the cost down by channel."
+        ],
+        "tags": ["infrastructure", "metrics"]
+      },
+      {
+        "flow_name": "ueh-ltv-calculator",
+        "description": "Compute the lifetime value of a unit.",
+        "inputs": [
+          {"name": "contribution-margin", "desc": "The margin each unit contributes"},
+          {"name": "unit-model", "desc": "The unit and its retention behavior"}
+        ],
+        "outputs": [
+          {"name": "ltv-value", "desc": "The lifetime value of one unit"},
+          {"name": "retention-assumptions", "desc": "The retention or repeat assumptions behind the estimate"}
+        ],
+        "process": [
+          "Estimate the average lifespan of a unit from retention or repeat rate.",
+          "Multiply the contribution margin by the expected lifespan.",
+          "State the retention assumptions behind the estimate."
+        ],
+        "tags": ["infrastructure", "unit-economics"]
+      },
+      {
+        "flow_name": "ueh-ratio-analyzer",
+        "description": "Compute the lifetime value to acquisition cost ratio and the payback.",
+        "inputs": [
+          {"name": "ltv-value", "desc": "The lifetime value of a unit"},
+          {"name": "cac-value", "desc": "The cost to acquire a unit"}
+        ],
+        "outputs": [
+          {"name": "ltv-cac-ratio", "desc": "The ratio of lifetime value to acquisition cost"},
+          {"name": "cac-payback-months", "desc": "The months to recover the acquisition cost"}
+        ],
+        "process": [
+          "Divide the lifetime value by the acquisition cost for the ratio.",
+          "Divide the acquisition cost by the monthly contribution for the payback months.",
+          "Compare the ratio against the three to one line and the twelve month line."
+        ],
+        "tags": ["infrastructure", "metrics"]
+      },
+      {
+        "flow_name": "ueh-diagnosis-builder",
+        "description": "Diagnose structural versus cash flow problems.",
+        "inputs": [
+          {"name": "ltv-cac-ratio", "desc": "The ratio to test against the health line"},
+          {"name": "cac-payback-months", "desc": "The payback to test against the time line"}
+        ],
+        "outputs": [
+          {"name": "health-diagnosis", "desc": "Whether the unit is healthy, structurally weak, or cash constrained"},
+          {"name": "problem-flags", "desc": "The specific flags raised and the lever for each"}
+        ],
+        "process": [
+          "Flag a ratio below three to one as a structural problem.",
+          "Flag a payback over twelve months as a cash flow problem.",
+          "Name the lever most likely to fix each flag."
+        ],
+        "tags": ["infrastructure", "methodology"]
+      },
+      {
+        "flow_name": "ueh-health-report-writer",
+        "description": "Write the unit economics health check.",
+        "inputs": [
+          {"name": "health-diagnosis", "desc": "The diagnosis of the unit"},
+          {"name": "ltv-cac-ratio", "desc": "The headline ratio to report"}
+        ],
+        "outputs": [
+          {"name": "unit-economics-report", "desc": "The margin, cost, value, ratio, and payback in one record"},
+          {"name": "improvement-levers", "desc": "The levers ranked by expected effect"}
+        ],
+        "process": [
+          "State the contribution margin, acquisition cost, lifetime value, ratio, and payback.",
+          "Summarize the diagnosis in plain terms.",
+          "List the levers ranked by expected effect."
+        ],
+        "tags": ["infrastructure", "methodology"]
+      }
+    ]
+  },
+  {
+    "chain_name": "financial-runway-calculator",
+    "description": "Divide available cash by monthly burn to find how many months of runway remain, then stress the result against a revenue drop, a major expense, and a doubled timeline. Runway is a function of the burn rate, which is the variable you control.",
+    "domain": "finance",
+    "tags": ["infrastructure", "financial-management", "methodology", "runway", "burn-rate"],
+    "steps": [
+      {
+        "flow_name": "frc-cash-counter",
+        "description": "Total the cash available without penalty.",
+        "inputs": [
+          {"name": "financial-context", "desc": "The accounts and balances in scope"},
+          {"name": "as-of-date", "desc": "The date the cash is counted as of"}
+        ],
+        "outputs": [
+          {"name": "available-cash", "desc": "The cash available without penalty"},
+          {"name": "cash-sources", "desc": "Where the cash sits and any committed portions"}
+        ],
+        "process": [
+          "Total the cash across accounts available without penalty.",
+          "Note any committed funds that are not truly available.",
+          "Record the as-of date for the count."
+        ],
+        "tags": ["infrastructure", "runway"]
+      },
+      {
+        "flow_name": "frc-burn-calculator",
+        "description": "Compute the net monthly burn rate.",
+        "inputs": [
+          {"name": "financial-context", "desc": "The monthly inflows and outflows"},
+          {"name": "available-cash", "desc": "The cash the burn draws down"}
+        ],
+        "outputs": [
+          {"name": "monthly-burn", "desc": "The net monthly outflow after reliable inflow"},
+          {"name": "burn-breakdown", "desc": "The burn broken down by category"}
+        ],
+        "process": [
+          "Total the monthly outflows across fixed and variable costs.",
+          "Subtract any reliable monthly inflow to get the net burn.",
+          "Break the burn down by category."
+        ],
+        "tags": ["infrastructure", "burn-rate"]
+      },
+      {
+        "flow_name": "frc-runway-calculator",
+        "description": "Divide cash by burn to get the months of runway.",
+        "inputs": [
+          {"name": "available-cash", "desc": "The cash on hand"},
+          {"name": "monthly-burn", "desc": "The net monthly burn"}
+        ],
+        "outputs": [
+          {"name": "runway-months", "desc": "The months of runway at the current rate"},
+          {"name": "runway-end-date", "desc": "The date the cash runs out at the current rate"}
+        ],
+        "process": [
+          "Divide the available cash by the net monthly burn.",
+          "Convert the result to months of runway.",
+          "Mark the date the cash runs out at the current rate."
+        ],
+        "tags": ["infrastructure", "runway"]
+      },
+      {
+        "flow_name": "frc-stress-tester",
+        "description": "Stress the runway against shocks.",
+        "inputs": [
+          {"name": "runway-months", "desc": "The base runway to stress"},
+          {"name": "burn-breakdown", "desc": "The burn categories shocks act on"}
+        ],
+        "outputs": [
+          {"name": "stress-scenarios", "desc": "Runway under a revenue drop, a major expense, and a longer timeline"},
+          {"name": "worst-case-runway", "desc": "The shortest runway across the scenarios"}
+        ],
+        "process": [
+          "Recompute the runway if revenue drops thirty percent.",
+          "Recompute the runway if a major expense hits.",
+          "Recompute the runway if the timeline to profitability doubles."
+        ],
+        "tags": ["infrastructure", "methodology"]
+      },
+      {
+        "flow_name": "frc-lever-finder",
+        "description": "Find the burn levers that extend the runway.",
+        "inputs": [
+          {"name": "burn-breakdown", "desc": "The burn categories to trim"},
+          {"name": "worst-case-runway", "desc": "The runway the levers must protect"}
+        ],
+        "outputs": [
+          {"name": "burn-levers", "desc": "The categories ranked by size and flexibility"},
+          {"name": "extended-runway", "desc": "The runway under a realistic set of cuts"}
+        ],
+        "process": [
+          "Rank the burn categories by size and flexibility.",
+          "Estimate the runway added by trimming each lever.",
+          "Show the extended runway under a realistic set of cuts."
+        ],
+        "tags": ["infrastructure", "burn-rate"]
+      },
+      {
+        "flow_name": "frc-runway-report-writer",
+        "description": "Write the runway report.",
+        "inputs": [
+          {"name": "stress-scenarios", "desc": "The stressed runway results"},
+          {"name": "burn-levers", "desc": "The levers that extend the runway"}
+        ],
+        "outputs": [
+          {"name": "runway-report", "desc": "The base runway, end date, and stress results"},
+          {"name": "runway-action-plan", "desc": "The levers with the months each one buys"}
+        ],
+        "process": [
+          "State the base runway and the end date.",
+          "Summarize the stress scenarios and the worst case.",
+          "List the levers with the months each one buys."
+        ],
+        "tags": ["infrastructure", "methodology"]
+      }
+    ]
+  },
+  {
+    "chain_name": "invisible-cost-detector",
+    "description": "Find the costs that never appear on a statement. Convert commute and upkeep time into dollars, price the opportunity cost of tied-up capital, estimate the cognitive load of complexity, and count the switching costs of lock-in. Some cheap options are expensive once every cost is counted.",
+    "domain": "finance",
+    "tags": ["infrastructure", "financial-management", "methodology", "cost-analysis", "decision-making"],
+    "steps": [
+      {
+        "flow_name": "icd-decision-framer",
+        "description": "Frame the choice and its visible costs.",
+        "inputs": [
+          {"name": "decision-context", "desc": "The choice being made and its purpose"},
+          {"name": "options-to-compare", "desc": "The options under comparison"},
+          {"name": "your-hourly-value", "desc": "The dollar value of an hour of your time"}
+        ],
+        "outputs": [
+          {"name": "option-set", "desc": "The options with their key attributes"},
+          {"name": "visible-cost-table", "desc": "The sticker price of each option"}
+        ],
+        "process": [
+          "List the options being compared.",
+          "Record the sticker price of each option as its visible cost.",
+          "Record the hourly value of your time and the period the costs cover."
+        ],
+        "tags": ["infrastructure", "cost-analysis"]
+      },
+      {
+        "flow_name": "icd-time-cost-calculator",
+        "description": "Convert the time each option consumes into dollars.",
+        "inputs": [
+          {"name": "option-set", "desc": "The options under comparison"},
+          {"name": "visible-cost-table", "desc": "The visible costs to add time onto"},
+          {"name": "your-hourly-value", "desc": "The dollar value of an hour of your time"}
+        ],
+        "outputs": [
+          {"name": "running-cost-with-time", "desc": "Visible cost plus the time cost per option"},
+          {"name": "time-cost-detail", "desc": "The hours and dollar value behind the time cost"}
+        ],
+        "process": [
+          "Estimate the hours each option consumes, such as commute, setup, and upkeep.",
+          "Multiply the hours by the hourly value of your time.",
+          "Add the time cost to the visible cost for a running total."
+        ],
+        "tags": ["infrastructure", "cost-analysis"]
+      },
+      {
+        "flow_name": "icd-opportunity-cost-calculator",
+        "description": "Price the opportunity cost of tied-up capital.",
+        "inputs": [
+          {"name": "option-set", "desc": "The options under comparison"},
+          {"name": "running-cost-with-time", "desc": "The running total to add opportunity cost onto"}
+        ],
+        "outputs": [
+          {"name": "running-cost-with-opportunity", "desc": "The running total including opportunity cost"},
+          {"name": "opportunity-cost-detail", "desc": "The capital tied and the return it would earn elsewhere"}
+        ],
+        "process": [
+          "Identify the capital each option locks up.",
+          "Apply the return that capital would earn elsewhere.",
+          "Add the opportunity cost to the running total."
+        ],
+        "tags": ["infrastructure", "cost-analysis"]
+      },
+      {
+        "flow_name": "icd-complexity-cost-estimator",
+        "description": "Estimate the cost of cognitive load and complexity.",
+        "inputs": [
+          {"name": "option-set", "desc": "The options under comparison"},
+          {"name": "running-cost-with-opportunity", "desc": "The running total to add complexity cost onto"}
+        ],
+        "outputs": [
+          {"name": "running-cost-with-complexity", "desc": "The running total including complexity cost"},
+          {"name": "complexity-cost-detail", "desc": "The attention and decisions each option adds"}
+        ],
+        "process": [
+          "Rate the ongoing attention and decisions each option adds.",
+          "Translate the load into a rough monthly cost.",
+          "Add the complexity cost to the running total and note where it compounds."
+        ],
+        "tags": ["infrastructure", "cost-analysis"]
+      },
+      {
+        "flow_name": "icd-switching-cost-estimator",
+        "description": "Estimate the switching costs of lock-in.",
+        "inputs": [
+          {"name": "option-set", "desc": "The options under comparison"},
+          {"name": "running-cost-with-complexity", "desc": "The running total to add switching cost onto"}
+        ],
+        "outputs": [
+          {"name": "true-cost-table", "desc": "The full true cost per option after every layer"},
+          {"name": "switching-cost-detail", "desc": "The exit cost and the lock-in flags per option"}
+        ],
+        "process": [
+          "Estimate the cost to leave each option later.",
+          "Flag contracts, data, and habits that create lock-in.",
+          "Add the switching cost to the running total to form the true cost."
+        ],
+        "tags": ["infrastructure", "cost-analysis"]
+      },
+      {
+        "flow_name": "icd-true-cost-ranker",
+        "description": "Rank the options by true cost against the sticker price.",
+        "inputs": [
+          {"name": "true-cost-table", "desc": "The full true cost per option"},
+          {"name": "visible-cost-table", "desc": "The sticker prices to compare against"}
+        ],
+        "outputs": [
+          {"name": "cost-ranking", "desc": "The options ranked by true total cost"},
+          {"name": "sticker-gap-table", "desc": "The gap between each sticker price and its true cost"}
+        ],
+        "process": [
+          "Rank the options by their true total cost.",
+          "Compare each true cost against its sticker price.",
+          "Flag the options whose true cost far exceeds the sticker."
+        ],
+        "tags": ["infrastructure", "methodology"]
+      },
+      {
+        "flow_name": "icd-cost-report-writer",
+        "description": "Write the true-cost finding.",
+        "inputs": [
+          {"name": "cost-ranking", "desc": "The options ranked by true cost"},
+          {"name": "sticker-gap-table", "desc": "The gaps between sticker and true cost"}
+        ],
+        "outputs": [
+          {"name": "invisible-cost-report", "desc": "Sticker price next to true cost for each option"},
+          {"name": "cheapest-true-option", "desc": "The cheapest option once every cost is counted"}
+        ],
+        "process": [
+          "Present the sticker price next to the true cost for each option.",
+          "Call out the options whose true cost is far above the sticker.",
+          "Name the cheapest option once all costs are counted."
+        ],
+        "tags": ["infrastructure", "methodology"]
+      }
+    ]
+  }
+]

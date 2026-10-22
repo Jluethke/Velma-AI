@@ -1,0 +1,1336 @@
+[
+  {
+    "chain_name": "personal-crm-system",
+    "description": "Build a personal CRM that holds 50 to 150 contacts organized into Dunbar tiers (5 intimate, 15 close, 50 regular, 150 acquaintance), tracks what matters about each person, sets a contact cadence per tier, and surfaces follow-ups when a contact falls past its cadence. The result is a system you can run from a spreadsheet or any contact tool, not a product you have to buy.",
+    "domain": "relationships",
+    "tags": ["infrastructure", "crm", "relationships", "personal-crm"],
+    "steps": [
+      {
+        "flow_name": "pcrm-contact-roster-capture",
+        "description": "Pull every meaningful contact out of scattered sources (phone, email, messaging apps, past calendars) into one roster, so the system starts from a complete picture instead of the handful of people who happen to be top of mind.",
+        "inputs": [
+          {"name": "contact-sources", "desc": "The places your contacts currently live: phone contacts, email address book, messaging apps, social connections, past calendar invites, business cards"},
+          {"name": "time-available", "desc": "How much time you can spend on the initial capture (a 30 minute pass captures the obvious people, a 2 hour pass catches the long tail)"}
+        ],
+        "outputs": [
+          {"name": "raw-contact-roster", "desc": "A single de-duplicated list of every contact worth tracking, with name and at least one way to reach them"},
+          {"name": "source-coverage-notes", "desc": "Which sources you pulled from and which you skipped, so you know where gaps remain"}
+        ],
+        "process": [
+          "Export or copy contacts from each source into one list. Do not filter yet. A name you are unsure about stays in for now, because deleting is faster than remembering someone you dropped.",
+          "Remove duplicates by matching on email and phone first, then on name. When two records clearly belong to the same person, merge them and keep every reachable address.",
+          "Apply one inclusion test to each name: have you interacted with this person on purpose in the last two years, or do you expect to on purpose in the next one? If neither, move them to a separate parked list rather than the active roster.",
+          "Record which sources you covered. The long tail (old calendars, event attendee lists) holds people you have forgotten but who still matter, so note any source you did not have time to pull."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      },
+      {
+        "flow_name": "pcrm-dunbar-tier-assignment",
+        "description": "Sort the roster into the four Dunbar tiers so that attention gets allocated by relationship closeness rather than by whoever contacted you most recently. The tier sizes are targets, not hard caps, but large overflows are a signal worth reading.",
+        "inputs": [
+          {"name": "raw-contact-roster", "desc": "The de-duplicated list of contacts to tier"},
+          {"name": "source-coverage-notes", "desc": "Where the roster came from and where gaps remain"}
+        ],
+        "outputs": [
+          {"name": "tiered-roster", "desc": "Every contact assigned to one of four tiers: inner 5, close 15, regular 50, acquaintance 150"},
+          {"name": "tier-overflow-flags", "desc": "Tiers that are far over their target size, with a note on what the overflow means"}
+        ],
+        "process": [
+          "Assign the inner 5 first: the people you would call in a crisis at 2am. If you have more than 5, you are probably counting people you wish were that close rather than people who are. Keep it honest.",
+          "Assign the close 15 (minus the inner 5, so about 10 more): people you talk with regularly and would be genuinely sad to lose touch with. Then the regular 50: people you want ongoing contact with. Everyone else who passed the inclusion test lands in the acquaintance 150.",
+          "Place each person by actual closeness and by how much contact you want, not by how often they happen to reach you. A needy acquaintance who messages daily still belongs in the outer tier.",
+          "Flag any tier that is far over target. An inner 5 of 12 means the tier has lost its meaning. A regular 50 of 200 means you are trying to actively maintain more relationships than the research says is sustainable, and the cadence step will expose the strain."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      },
+      {
+        "flow_name": "pcrm-context-field-design",
+        "description": "Define the small set of context fields the system will track for each contact, so that before any interaction you can recall what you last discussed, what matters to them, and what you promised. The field set is deliberately short so that keeping it current stays realistic.",
+        "inputs": [
+          {"name": "tiered-roster", "desc": "Contacts sorted into Dunbar tiers"},
+          {"name": "tier-overflow-flags", "desc": "Tiers over target size and what that signals"}
+        ],
+        "outputs": [
+          {"name": "context-field-schema", "desc": "The fields tracked per contact: last contact date, what you last discussed, what matters to them, what you promised, next action"},
+          {"name": "field-fill-priority", "desc": "Which fields to fill first by tier, so inner tiers get full context and outer tiers get the minimum"}
+        ],
+        "process": [
+          "Define five fields and stop there. Last-contact-date, last-topic (one line on what you discussed), what-matters (what this person cares about or is working toward right now), open-promise (anything you said you would do), and next-action (the single next thing to do with them).",
+          "Set the rule that what-matters and open-promise are the two fields that actually change behavior, so they are mandatory for the inner 5 and close 15. For acquaintances, last-contact-date alone is enough to run the cadence.",
+          "Write a one-line example for each field so future entries stay consistent. Last-topic is not a transcript, it is a phrase like talked through their job search, not the whole conversation.",
+          "Decide the update trigger: fields get refreshed right after an interaction while it is fresh, not in a weekly batch, because the detail you want (what mattered to them that day) is gone by the weekend."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      },
+      {
+        "flow_name": "pcrm-cadence-rule-setter",
+        "description": "Set a target contact cadence for each tier (inner 5 weekly, close 15 biweekly, regular 50 monthly, acquaintance 150 quarterly) and then pressure-test whether the total contact load those cadences imply is actually achievable in the time you have.",
+        "inputs": [
+          {"name": "context-field-schema", "desc": "The per-contact fields including last contact date"},
+          {"name": "field-fill-priority", "desc": "Which fields matter most per tier"}
+        ],
+        "outputs": [
+          {"name": "tier-cadence-rules", "desc": "The target days between contacts for each tier, with any per-tier adjustments"},
+          {"name": "cadence-load-estimate", "desc": "The number of touchpoints per week the cadences imply, checked against available time"}
+        ],
+        "process": [
+          "Set the starting cadences: inner 5 weekly (7 days), close 15 biweekly (14 days), regular 50 monthly (30 days), acquaintance 150 quarterly (90 days). These are the defaults you will adjust.",
+          "Compute the implied weekly load. At full tier sizes this is roughly 5 weekly, 7.5 biweekly, 11.7 monthly, and 12.5 quarterly touchpoints, which lands near 36 contacts per week. Compare that to the time you actually have for relationship upkeep.",
+          "If the load exceeds your time, do not just miss cadences silently. Either lengthen the outer-tier cadences (acquaintances every 180 days instead of 90) or shrink the tiers. A cadence you cannot meet trains you to ignore the system.",
+          "Allow per-contact overrides for known rhythms. A friend you see every holiday does not need a monthly nudge, and a mentor you want to stay close to may warrant a tighter cadence than their tier default."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      },
+      {
+        "flow_name": "pcrm-tool-mapping",
+        "description": "Map the schema and cadence rules onto whatever tool will actually hold the data (a spreadsheet, a notes app, phone contact fields, or a dedicated contact tool), choosing the tool by whether you will keep it current rather than by its feature list.",
+        "inputs": [
+          {"name": "tier-cadence-rules", "desc": "Target days between contacts per tier"},
+          {"name": "cadence-load-estimate", "desc": "Implied weekly contact load versus available time"}
+        ],
+        "outputs": [
+          {"name": "tool-field-mapping", "desc": "How each schema field maps to a column, property, or custom field in the chosen tool"},
+          {"name": "automation-options", "desc": "Which parts can be computed automatically (next-due date) versus which stay manual in this tool"}
+        ],
+        "process": [
+          "Pick the tool by one test: where will you reliably update a record 30 seconds after a conversation? A spreadsheet you keep open beats a polished tool you forget to open.",
+          "Map each field to a column or property. Add one computed field, next-due-date, as last-contact-date plus the cadence for that tier. In a spreadsheet this is a formula, in a contact app it may be a manual date you set.",
+          "Decide what the tool can automate. If it supports computed dates and filtered views, set next-due-date to recalculate automatically. If not, plan a weekly recalculation pass instead of pretending the tool will do it.",
+          "Keep the schema identical across whatever tools you use. If contacts live half in your phone and half in a sheet, the same five fields appear in both so a future consolidation is a copy, not a redesign."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      },
+      {
+        "flow_name": "pcrm-followup-surfacing",
+        "description": "Turn the stored data into a working queue by surfacing exactly the contacts who have fallen past their tier cadence, sorted so the most overdue and most important rise to the top instead of drowning in the full list.",
+        "inputs": [
+          {"name": "tool-field-mapping", "desc": "How fields map to the chosen tool, including the next-due date"},
+          {"name": "automation-options", "desc": "What the tool computes automatically versus manually"}
+        ],
+        "outputs": [
+          {"name": "overdue-followup-queue", "desc": "Contacts whose next-due date has passed, sorted by how overdue and by tier priority"},
+          {"name": "cadence-breach-report", "desc": "A summary of how many contacts per tier are overdue, revealing where the cadence is systematically slipping"}
+        ],
+        "process": [
+          "Build one view that filters to contacts where next-due-date is in the past. This is the only view you need day to day. Everything else is reporting.",
+          "Sort the queue by days-overdue within tier, so an inner-5 person two days late outranks an acquaintance a month late. Closeness breaks ties, not raw overdue days.",
+          "Produce the breach report: overdue count per tier. If the acquaintance tier is almost entirely overdue, the cadence is too aggressive for that tier and should be lengthened rather than endlessly chased.",
+          "Keep the queue small enough to act on. If it is always hundreds long, the cadences are unrealistic and the fix is in the cadence rules, not in trying harder to clear an impossible list."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      },
+      {
+        "flow_name": "pcrm-weekly-review-ritual",
+        "description": "Install the lightweight weekly ritual that keeps the system alive: clear the overdue queue, log new interactions, and watch a few health metrics so that a stale CRM gets caught early instead of quietly dying.",
+        "inputs": [
+          {"name": "overdue-followup-queue", "desc": "The sorted queue of contacts past cadence"},
+          {"name": "cadence-breach-report", "desc": "Per-tier overdue counts"}
+        ],
+        "outputs": [
+          {"name": "review-ritual-plan", "desc": "A fixed weekly routine (when, how long, what steps) for working the queue and updating records"},
+          {"name": "maintenance-metrics", "desc": "The handful of numbers that tell you the system is healthy: percent of contacts within cadence, queue length trend, records updated this week"}
+        ],
+        "process": [
+          "Set a fixed weekly slot of 20 to 30 minutes. A floating review that competes with everything else does not happen. Put it on the calendar as a recurring block.",
+          "Run the same three steps each week: work the top of the overdue queue (not the whole thing), log any interactions you have not yet recorded, and reset next-due dates for anyone you contacted.",
+          "Track three numbers only: percent of contacts currently within their cadence (the headline health metric), the trend in queue length (growing means the system is losing), and records updated this week (near zero means you have stopped using it).",
+          "Review the metrics monthly against the cadence rules. If a tier is chronically out of cadence despite effort, that is data: lengthen the cadence, shrink the tier, or accept that some outer-tier contacts are really parked, not active."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      }
+    ]
+  },
+  {
+    "chain_name": "trust-account-ledger",
+    "description": "Track the emotional deposits and withdrawals in your most important relationships using Covey's emotional bank account model, so that before any withdrawal (a favor, a hard piece of news, a request) you can check the balance first. The same ledger works for personal relationships, manager and report relationships, client relationships, and vendor relationships, with only the deposit and withdrawal definitions shifting by context.",
+    "domain": "relationships",
+    "tags": ["infrastructure", "crm", "relationships", "trust"],
+    "steps": [
+      {
+        "flow_name": "trust-ledger-relationship-selection",
+        "description": "Select the top 20 relationships to put on the ledger and tag each by context, because tracking every relationship is unsustainable and the value comes from attention to the relationships where a drained balance would cost you the most.",
+        "inputs": [
+          {"name": "relationship-pool", "desc": "The full set of relationships you could track across work and personal life"},
+          {"name": "relationship-context", "desc": "The contexts in play: personal, manager-and-report, client, vendor, or a mix"}
+        ],
+        "outputs": [
+          {"name": "top-relationships", "desc": "The 20 relationships that go on the ledger, chosen by importance and by the cost of a drained balance"},
+          {"name": "context-tags", "desc": "Each relationship tagged by context, since deposits and withdrawals mean different things in each"}
+        ],
+        "process": [
+          "List candidate relationships and score each on two axes: how much you depend on it, and how damaging a low balance would be. A vendor you rarely need but who holds a single point of failure can still make the list.",
+          "Take the top 20. Fewer is fine. More than 20 and the ledger becomes a chore you abandon. The point is sustained attention to the few that carry real weight.",
+          "Tag each with its context (personal, manager, report, client, vendor). The context determines what counts as a deposit later, so do not skip it.",
+          "Note any relationship that spans two contexts (a colleague who is also a friend). These carry two ledgers that can diverge, and a withdrawal in one context can draw down the balance in the other."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      },
+      {
+        "flow_name": "trust-ledger-deposit-withdrawal-taxonomy",
+        "description": "Define what actually counts as a deposit and a withdrawal in each context, because an abstract model is useless until you can name the concrete behaviors that build or spend trust with these specific people.",
+        "inputs": [
+          {"name": "top-relationships", "desc": "The 20 relationships on the ledger"},
+          {"name": "context-tags", "desc": "The context of each relationship"}
+        ],
+        "outputs": [
+          {"name": "deposit-catalog", "desc": "The concrete deposit behaviors per context: keeping commitments, clarifying expectations, small kindnesses, loyalty in their absence, sincere apologies"},
+          {"name": "withdrawal-catalog", "desc": "The concrete withdrawal behaviors per context: broken promises, unclear expectations, unkindness, criticism behind their back, requests and favors"}
+        ],
+        "process": [
+          "Start from Covey's six deposit types (keeping commitments, clarifying expectations, attending to small things, showing personal integrity and loyalty to the absent, delivering sincere apologies when you withdraw, understanding the individual) and translate each into a concrete behavior for your contexts.",
+          "For deposits, write what it looks like with these people specifically. In a manager relationship, a deposit is defending your report in a meeting they are not in. In a client relationship, it is flagging a problem before they notice it.",
+          "For withdrawals, be honest about the ordinary ones. Asking for a favor is a withdrawal even when granted. Delivering bad news is a withdrawal even when necessary. A withdrawal is not a wrong, it is a draw on the balance.",
+          "Note the asymmetry: in most relationships a withdrawal spends more than a deposit builds, so trust is slow to accumulate and fast to drain. Your catalogs should reflect that a broken promise can undo many small kindnesses."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      },
+      {
+        "flow_name": "trust-ledger-balance-estimator",
+        "description": "Estimate the current balance in each relationship by reviewing recent deposits and withdrawals, producing a rough reading (healthy, thin, overdrawn) rather than a false-precision number, since the goal is to know which accounts are safe to draw on.",
+        "inputs": [
+          {"name": "deposit-catalog", "desc": "Concrete deposit behaviors per context"},
+          {"name": "withdrawal-catalog", "desc": "Concrete withdrawal behaviors per context"}
+        ],
+        "outputs": [
+          {"name": "balance-estimates", "desc": "A rough balance reading per relationship: healthy, thin, or overdrawn, with the reasoning"},
+          {"name": "recent-activity-log", "desc": "The recent deposits and withdrawals you recalled for each relationship, as the evidence behind the reading"}
+        ],
+        "process": [
+          "For each relationship, recall the last several months of interactions and sort them into deposits and withdrawals using your catalogs. Write them down, because memory favors the dramatic and forgets the quiet deposits.",
+          "Read the balance qualitatively. Healthy means recent deposits clearly outweigh withdrawals and the relationship absorbs a mistake without strain. Thin means it is roughly even and a withdrawal would be felt. Overdrawn means recent withdrawals dominate and the relationship is running on goodwill you no longer have.",
+          "Weight recency and withdrawals more heavily. A deposit from a year ago counts for little, and a single serious withdrawal (a broken commitment) can overwhelm months of small deposits.",
+          "Resist false precision. A number like 73 implies a measurement you did not make. Three bands (healthy, thin, overdrawn) are enough to drive the decisions that follow."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      },
+      {
+        "flow_name": "trust-ledger-low-account-finder",
+        "description": "Identify the thin and overdrawn accounts and separate the ones that are low because of neglect from the ones that are low because of an unrepaired withdrawal, since the two call for different responses.",
+        "inputs": [
+          {"name": "balance-estimates", "desc": "The qualitative balance reading per relationship"},
+          {"name": "recent-activity-log", "desc": "The deposits and withdrawals behind each reading"}
+        ],
+        "outputs": [
+          {"name": "low-account-list", "desc": "The thin and overdrawn relationships, ranked by a combination of how low and how important"},
+          {"name": "overdrawn-warnings", "desc": "Relationships where the balance is low enough that any near-term withdrawal would cause real damage"}
+        ],
+        "process": [
+          "Pull every relationship reading thin or overdrawn into one list. Rank by combining how low the balance is with how important the relationship is, so an overdrawn inner relationship outranks a thin peripheral one.",
+          "Diagnose the cause for each. Neglect-low means the balance faded from inattention (no recent deposits, no specific wrong). Withdrawal-low means a specific unrepaired withdrawal is dragging it down. The log tells you which.",
+          "Flag the overdrawn accounts as warnings. These are relationships where you cannot safely ask for anything right now, and attempting a withdrawal would push them toward rupture.",
+          "Note any relationship that is important and overdrawn at the same time. That combination is the highest risk on the ledger and gets first claim on your repair attention."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      },
+      {
+        "flow_name": "trust-ledger-deposit-plan-builder",
+        "description": "Build specific deposit plans for the low accounts, matched to cause, because a neglect-low account recovers through steady small deposits while a withdrawal-low account recovers only through a sincere apology and changed behavior, not through unrelated niceness.",
+        "inputs": [
+          {"name": "low-account-list", "desc": "Thin and overdrawn relationships ranked and diagnosed"},
+          {"name": "overdrawn-warnings", "desc": "Accounts too low for any near-term withdrawal"}
+        ],
+        "outputs": [
+          {"name": "deposit-plans", "desc": "Per-relationship deposit plans matched to cause, with specific actions drawn from the deposit catalog"},
+          {"name": "deposit-schedule", "desc": "When each deposit happens, paced so the deposits read as genuine rather than as a sudden transactional campaign"}
+        ],
+        "process": [
+          "For neglect-low accounts, plan a series of small genuine deposits over time: attend to the small things, follow through on a minor commitment, make contact with no ask attached. Consistency rebuilds these, not a grand gesture.",
+          "For withdrawal-low accounts, the first deposit is usually a sincere apology that names the specific withdrawal, without excuses, followed by visibly changed behavior. Unrelated kindness before the apology reads as avoidance and can deepen the deficit.",
+          "Draw each action from the deposit catalog so it fits the context. A client deposit (proactively flagging a risk) differs from a personal deposit (remembering what matters to them), and using the wrong register can feel hollow.",
+          "Pace the schedule so deposits do not arrive all at once. A sudden flood of attention right before you need something is itself read as a withdrawal, because the motive is obvious. Spread deposits so they look like how you treat the relationship, not like a down payment on a request."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      },
+      {
+        "flow_name": "trust-ledger-withdrawal-check",
+        "description": "Create the pre-withdrawal check, the core payoff of the ledger: a short protocol you run before any favor, hard conversation, or request, so that you draw on healthy accounts and shore up thin ones before drawing rather than after causing damage.",
+        "inputs": [
+          {"name": "deposit-plans", "desc": "The deposit plans for low accounts"},
+          {"name": "deposit-schedule", "desc": "The timing of planned deposits"}
+        ],
+        "outputs": [
+          {"name": "withdrawal-checklist", "desc": "The short checklist to run before any withdrawal: current balance, size of the withdrawal, whether to deposit first or proceed"},
+          {"name": "withdrawal-timing-rules", "desc": "Rules for when to delay a withdrawal to build balance first and when the withdrawal cannot wait"}
+        ],
+        "process": [
+          "Write the checklist as three questions: what is the current balance in this account, how large is the withdrawal I am about to make, and does the balance comfortably cover it?",
+          "Set the decision rule. Healthy balance and small withdrawal: proceed. Thin balance or large withdrawal: deposit first if you can, or at minimum acknowledge the draw (name that you are asking a lot). Overdrawn: do not withdraw unless it is unavoidable.",
+          "Add timing rules for the unavoidable case. Some withdrawals cannot wait (urgent bad news, a time-boxed request). When you must withdraw from a low account, pair it with an immediate sincere acknowledgment and a concrete plan to rebuild, so the draw does not read as careless.",
+          "Make the check a habit by attaching it to a trigger: before sending a request, before a performance conversation, before asking a vendor for an exception. The check is worthless if you only remember it after the relationship is already strained."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      },
+      {
+        "flow_name": "trust-ledger-context-adapter",
+        "description": "Adapt the finished ledger to each relationship context so the same model runs correctly for personal, manager-and-report, client, and vendor relationships, and flag the cross-context cases where a withdrawal in one role draws down trust in another.",
+        "inputs": [
+          {"name": "withdrawal-checklist", "desc": "The pre-withdrawal check"},
+          {"name": "withdrawal-timing-rules", "desc": "When to delay a withdrawal versus proceed"}
+        ],
+        "outputs": [
+          {"name": "context-adapted-ledgers", "desc": "The ledger tuned per context, with context-specific deposits, withdrawals, and power dynamics accounted for"},
+          {"name": "cross-context-cautions", "desc": "Relationships spanning two contexts where a withdrawal in one role spends trust in the other"}
+        ],
+        "process": [
+          "For manager-and-report relationships, account for power asymmetry. A withdrawal from a report (extra work, a hard review) costs more than the same ask between peers, because the report has less freedom to refuse, so the required balance is higher.",
+          "For client relationships, treat reliability and proactive communication as the heaviest deposits, and treat surprises (even good ones delivered badly) as withdrawals. Clients bank trust mostly through predictability.",
+          "For vendor relationships, remember the ledger runs both directions and often outlasts individuals. Deposits like paying on time and giving clear specifications build balance you will need when you ask for an exception later.",
+          "List the cross-context relationships and set a caution for each: a withdrawal you make as a manager can drain the balance you hold as a friend, and the person does not keep the two accounts as separate as you do. Decide in advance which role governs when they conflict."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      }
+    ]
+  },
+  {
+    "chain_name": "warm-introduction-engine",
+    "description": "Replace cold outreach (1 to 3 percent response) with warm introductions (40 to 60 percent response) by finding a mutual connection, crafting a blurb the connector can forward without editing, framing the introduction so it benefits both sides, tracking the chain, and following up with the connector whether or not the introduction converts. The follow-up is what keeps the connector willing to introduce you again.",
+    "domain": "relationships",
+    "tags": ["infrastructure", "crm", "relationships", "introductions"],
+    "steps": [
+      {
+        "flow_name": "warm-intro-target-definition",
+        "description": "Define precisely who you want to reach and why, because a specific target (a named person or a tightly described role) makes mutual connections findable and makes the eventual ask easy for a connector to act on, while a vague target stalls the whole chain.",
+        "inputs": [
+          {"name": "outreach-goal", "desc": "What you are trying to accomplish with the introduction (a sale, a hire, advice, a partnership, a job)"},
+          {"name": "target-criteria", "desc": "The attributes of the right person to reach: role, company type, seniority, location, or a specific named individual"}
+        ],
+        "outputs": [
+          {"name": "target-profile", "desc": "A precise description of the person or role to reach, specific enough that a connector could recognize who fits"},
+          {"name": "target-shortlist", "desc": "Named individuals who fit the profile, where you can name them, in priority order"}
+        ],
+        "process": [
+          "State the goal of the introduction in one sentence, because the goal determines who the right target is. Advice, a sale, and a job each point to different people even in the same company.",
+          "Turn the criteria into a profile a stranger could match against. Not someone in operations but a VP of operations at a mid-size logistics company dealing with route planning. Specificity is what lets a connector think of a name.",
+          "Where you can, name actual individuals who fit, and rank them. A named target makes the mutual-connection search concrete instead of hypothetical.",
+          "Sanity check that the target can actually give you what you want. The most senior person is often not the right target, because the person with the problem you solve may be two levels down."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      },
+      {
+        "flow_name": "warm-intro-mutual-connection-finder",
+        "description": "Find the people who sit between you and the target, mapping every path you can (shared employers, schools, communities, second-degree connections) so you are choosing from several possible connectors rather than forcing the one obvious path.",
+        "inputs": [
+          {"name": "target-profile", "desc": "The precise description of who to reach"},
+          {"name": "target-shortlist", "desc": "Named individuals who fit, in priority order"}
+        ],
+        "outputs": [
+          {"name": "mutual-connection-map", "desc": "For each target, the mutual connections who could introduce you, including multi-hop paths"},
+          {"name": "connection-strength-notes", "desc": "How strong each potential connector's relationship is with both you and the target"}
+        ],
+        "process": [
+          "For each named target, list everyone you know who plausibly knows them: shared current or former employers, schools, professional communities, and people whose networks overlap with the target's world.",
+          "Include second-degree paths where a direct connection does not exist. A two-hop path (you know A, A knows the target) is still far warmer than cold, and sometimes A is more willing than a closer but busier connector.",
+          "For each potential connector, note the strength of their relationship with you and, separately, with the target. A connector who barely knows the target cannot make a warm introduction no matter how well they know you.",
+          "Do not filter yet. Map all the paths first. The selection step weighs them, and a path you dismiss early (an old colleague you have not spoken to in a while) sometimes turns out to be the strongest."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      },
+      {
+        "flow_name": "warm-intro-connector-selection",
+        "description": "Choose the best connector for each target by balancing relationship strength on both sides against how much social capital the ask will cost the connector, since the ideal connector knows the target well, thinks well of you, and will not be overspending their own credibility by introducing you.",
+        "inputs": [
+          {"name": "mutual-connection-map", "desc": "Potential connectors and paths per target"},
+          {"name": "connection-strength-notes", "desc": "Relationship strength on both sides"}
+        ],
+        "outputs": [
+          {"name": "selected-connectors", "desc": "The chosen connector for each target, with a backup where one exists"},
+          {"name": "connector-fit-rationale", "desc": "Why each connector was chosen, and the cost the introduction imposes on them"}
+        ],
+        "process": [
+          "Score each potential connector on three things: strength of their tie to the target, how favorably they view you, and how low the cost of the ask is to them. The best connector is strong on all three, not just the first.",
+          "Prefer a connector for whom the introduction is a small deposit, not a large withdrawal. Someone who introduces people routinely and whose standing with the target is secure can make the introduction without risking their own credibility.",
+          "Avoid overusing one super-connector for every target. Spreading asks protects the relationship you most rely on and keeps any single person from feeling mined.",
+          "Pick a backup connector where the map allows, so that if the first connector declines or goes quiet, you are not restarting the search from zero."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      },
+      {
+        "flow_name": "warm-intro-forwardable-blurb-writer",
+        "description": "Write the forwardable blurb, the single most important artifact in the chain: a short self-contained paragraph the connector can forward to the target with one line of their own, so making the introduction costs them 30 seconds instead of real effort.",
+        "inputs": [
+          {"name": "selected-connectors", "desc": "The chosen connector per target"},
+          {"name": "connector-fit-rationale", "desc": "Why each connector fits and the cost to them"}
+        ],
+        "outputs": [
+          {"name": "forwardable-blurb", "desc": "A short paragraph the connector can forward as-is: who you are, why you are reaching out to this target, and what you are asking for"},
+          {"name": "blurb-variants", "desc": "Versions tuned to the ask (advice, sale, hire) and to the target's likely priorities"}
+        ],
+        "process": [
+          "Write the blurb so the connector does zero work. It should say who you are in one line, why this specific target (not a generic pitch), and the single clear ask, short enough to forward from a phone.",
+          "Make the ask small and concrete. A 20 minute call about a specific topic converts far better than an open-ended request to connect, because the target can gauge the cost immediately.",
+          "Lead with something the target will recognize as relevant to them, not with your credentials. The target reads the forward asking why should I care, and the first sentence has to answer that.",
+          "Write variants for the different ask types and target priorities, so the connector can pick the one that fits, and so you are not sending a sales-shaped blurb when the ask is really for advice."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      },
+      {
+        "flow_name": "warm-intro-double-benefit-framing",
+        "description": "Frame the introduction as a benefit to both the target and the connector, not just to you, and build in the reputation protection that makes a connector comfortable, since the biggest reason introductions do not happen is the connector's fear of looking bad if it goes poorly.",
+        "inputs": [
+          {"name": "forwardable-blurb", "desc": "The self-contained blurb to forward"},
+          {"name": "blurb-variants", "desc": "Versions tuned to ask type and target priorities"}
+        ],
+        "outputs": [
+          {"name": "mutual-benefit-statement", "desc": "A clear statement of what the target gains and what the connector gains from making the introduction"},
+          {"name": "referrer-risk-reducers", "desc": "The elements that lower the connector's reputation risk: a low-commitment first step, an easy out, and no pressure on the target"}
+        ],
+        "process": [
+          "Name what the target gains. If you cannot articulate why the introduction is good for them independent of what you want, the introduction is a favor, not a match, and it will convert poorly and strain the connector.",
+          "Name what the connector gains. Often it is social capital (they look connected and helpful) or the satisfaction of a good match. Make it easy for them to feel good about forwarding it.",
+          "Reduce the connector's risk directly. Offer the target a low-commitment first step (a short call, no obligation) and an explicit easy out, so that if the target is not interested, the connector has not spent credibility pushing something unwanted.",
+          "Remove pressure from the ask. The connector should be able to forward the blurb and step back, not feel they must advocate or chase. Low-pressure introductions preserve the connector's willingness to introduce you again."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      },
+      {
+        "flow_name": "warm-intro-chain-tracker",
+        "description": "Track every introduction through its stages (asked, forwarded, target responded, meeting held, outcome) so that nothing stalls silently, you know when to nudge gently, and you can later see which connectors and framings actually produce results.",
+        "inputs": [
+          {"name": "mutual-benefit-statement", "desc": "What target and connector each gain"},
+          {"name": "referrer-risk-reducers", "desc": "The reputation-risk reducers built into the ask"}
+        ],
+        "outputs": [
+          {"name": "intro-tracking-log", "desc": "A log of each introduction: target, connector, date asked, current stage, and outcome"},
+          {"name": "intro-status-states", "desc": "The defined stages an introduction moves through and the action due at each"}
+        ],
+        "process": [
+          "Define the stages: asked the connector, connector forwarded, target responded, meeting held, outcome reached. Each introduction sits in exactly one stage so you always know what is next.",
+          "Log every introduction against these stages with dates. The dates tell you when something has stalled (a connector who has not forwarded after a week, a target who has not replied after two).",
+          "Set the action due at each stage. After asking, the ball is with the connector, so wait. After forwarding with no target response, a single gentle nudge to the connector is appropriate, never repeated pressure.",
+          "Record outcomes even for the ones that die, because the pattern across many introductions is what later tells you which connectors convert and which framings land, and which targets were never a real fit."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      },
+      {
+        "flow_name": "warm-intro-connector-followup",
+        "description": "Close the loop with every connector regardless of outcome, because the follow-up is what sustains the introduction engine: a connector who is thanked and told what happened will introduce you again, while one who hears nothing back quietly stops.",
+        "inputs": [
+          {"name": "intro-tracking-log", "desc": "The log of introductions and their stages"},
+          {"name": "intro-status-states", "desc": "The stages and the action due at each"}
+        ],
+        "outputs": [
+          {"name": "connector-followup-plan", "desc": "A plan for closing the loop with each connector: thank them, report what happened, and offer reciprocation"},
+          {"name": "connector-acknowledgment-notes", "desc": "Notes on how each connector prefers to be acknowledged and what you owe them in return"}
+        ],
+        "process": [
+          "Thank the connector within a day of the introduction being forwarded, before any outcome is known. This acknowledges the act of introducing, which is the part they controlled, and it is the most important touch.",
+          "Close the loop at the outcome. If it converted, share the good result and credit them. If it did not, thank them anyway and say briefly that it was not a fit, without blaming their contact. Both outcomes earn a report.",
+          "Look for a way to reciprocate. The durable introduction engine runs on two-way value, so note what the connector cares about and make an introduction for them, or help in some other way, so the ledger stays balanced.",
+          "Record how each connector likes to be acknowledged (a quick note, a public thank-you with permission, a returned favor) so future follow-ups fit them, and so a reliable connector feels valued rather than used."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      }
+    ]
+  },
+  {
+    "chain_name": "relationship-debt-audit",
+    "description": "Find the relationships that mattered but have been neglected, before they atrophy past recovery. List the people who were important two years ago, date your last real contact with each, decide which are worth recovering, and reach out with something specific rather than a hollow checking in. Unresolved relationship debt (the people you keep meaning to contact) drains background energy without ever producing action, so the audit either clears the debt or consciously releases it.",
+    "domain": "relationships",
+    "tags": ["infrastructure", "crm", "relationships", "reconnection"],
+    "steps": [
+      {
+        "flow_name": "reldebt-dormant-list-builder",
+        "description": "Rebuild the list of people who genuinely mattered roughly two years ago, using memory prompts to surface the ones you have forgotten, because the relationships quietly draining you are usually the ones you cannot casually recall.",
+        "inputs": [
+          {"name": "memory-prompts", "desc": "Sources that jog memory of past-important people: old calendars, photos, past projects, previous jobs, old message threads"},
+          {"name": "lookback-window", "desc": "How far back to look (two years is the default, long enough that neglect shows but short enough that recovery is realistic)"}
+        ],
+        "outputs": [
+          {"name": "past-important-list", "desc": "People who clearly mattered within the lookback window: close colleagues, friends, mentors, collaborators"},
+          {"name": "recall-confidence-notes", "desc": "How vividly you remember each relationship, since faint recall is itself a signal of how far the relationship has decayed"}
+        ],
+        "process": [
+          "Work through memory prompts rather than freelancing from memory. Open old calendars, past project rosters, photos, and message threads from around the lookback window. The point is to surface people who have fallen off your mental map.",
+          "Aim for around 30 people. Include anyone who was a real part of your life or work then: close colleagues, friends, mentors, people you collaborated with closely.",
+          "For each, note how vividly you recall them. A person you have to reconstruct from a calendar entry is further gone than one whose face comes immediately, and that gap predicts how hard recovery will be.",
+          "Do not pre-judge who is worth keeping yet. This step is pure recall. Filtering now would drop exactly the neglected relationships the audit exists to catch."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      },
+      {
+        "flow_name": "reldebt-last-contact-dating",
+        "description": "Date your last real interaction with each person (a genuine exchange, not a passive like or a mass message) and rank by silence duration, so the extent of each relationship's decay becomes a concrete number instead of a vague sense of having been out of touch.",
+        "inputs": [
+          {"name": "past-important-list", "desc": "The people who mattered within the lookback window"},
+          {"name": "recall-confidence-notes", "desc": "How vividly each relationship is remembered"}
+        ],
+        "outputs": [
+          {"name": "last-contact-dates", "desc": "The date of the last genuine two-way interaction with each person"},
+          {"name": "silence-duration-ranking", "desc": "The list ranked by how long the silence has run, from most recently in touch to most decayed"}
+        ],
+        "process": [
+          "For each person, find the last real interaction: a conversation, a genuine message exchange, a meeting. Do not count passive signals like seeing their post or a group broadcast. Those feel like contact but are not.",
+          "Where you cannot find an exact date, estimate to the season (spring two years ago). An approximate date is enough to rank, and chasing precision here wastes the audit's time.",
+          "Rank by silence duration. The ranking matters because recently dormant relationships are easy to restart while the longest-silent ones may not remember you well, which changes the reconnection approach.",
+          "Notice where silence duration and recall confidence disagree. A person you remember vividly but have not contacted in two years is a relationship you have been carrying as debt, meaning to reach out and never doing it."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      },
+      {
+        "flow_name": "reldebt-recovery-worth-scorer",
+        "description": "Decide which dormant relationships are actually worth recovering, scoring each on genuine mutual value and realistic recoverability, so effort goes to relationships that can and should come back rather than to every name on the list out of guilt.",
+        "inputs": [
+          {"name": "last-contact-dates", "desc": "The last genuine contact date per person"},
+          {"name": "silence-duration-ranking", "desc": "The list ranked by length of silence"}
+        ],
+        "outputs": [
+          {"name": "recovery-worth-scores", "desc": "Each relationship scored on mutual value and on how realistically it can be recovered"},
+          {"name": "recovery-candidates", "desc": "The subset worth actively recovering, separated from those to let rest"}
+        ],
+        "process": [
+          "Score each relationship on value: what did it bring when it was active (meaning, growth, collaboration, support), and is that value still relevant to who you are now? Some relationships were tied to a job or a phase that has passed.",
+          "Score each on recoverability: how warm was the ending, how long the silence, and whether there is a natural reason to reconnect. A relationship that ended warmly and recently is highly recoverable, one that drifted after a falling-out is not.",
+          "Separate the genuinely worth-recovering from the guilt-driven. You are allowed to decide a relationship ran its course. Keeping a dead relationship on the active list is itself the debt the audit is trying to clear.",
+          "Produce the candidate list, deliberately short. Reconnecting well with five people beats sending ten hollow messages, because each real reconnection takes a specific, thoughtful approach."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      },
+      {
+        "flow_name": "reldebt-energy-drain-identifier",
+        "description": "Identify the unresolved open loops behind the relationships (an unanswered message, an unkept promise, an unspoken apology) because that specific open loop is what turns a dormant relationship into background energy drain, and naming it is the first step to closing it.",
+        "inputs": [
+          {"name": "recovery-worth-scores", "desc": "Value and recoverability scores per relationship"},
+          {"name": "recovery-candidates", "desc": "The relationships worth actively recovering"}
+        ],
+        "outputs": [
+          {"name": "open-loop-list", "desc": "The specific unresolved thread behind each neglected relationship, where one exists"},
+          {"name": "energy-drain-flags", "desc": "Relationships that carry real background energy cost, whether or not you choose to recover them"}
+        ],
+        "process": [
+          "For each candidate, ask what is actually unresolved. Often there is a specific open loop: a message you never answered, a promise you did not keep, a thank-you you never sent, a conversation that ended badly.",
+          "Recognize that the open loop, not the mere passage of time, is usually what makes a dormant relationship weigh on you. You avoid reaching out because reaching out means facing the unanswered thing.",
+          "Flag the relationships that carry genuine energy cost. These are the ones that surface in your mind unprompted, the ones you keep meaning to deal with. That recurring background thought is the debt made visible.",
+          "Note that some drains attach to relationships you decided not to recover. Those still need closing, because an unresolved loop drains energy even when you do not want the relationship back, which the closure step handles."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      },
+      {
+        "flow_name": "reldebt-specific-reconnect-drafter",
+        "description": "Draft reconnection messages built around something specific to each person (a shared memory, a reason they came to mind, a genuine update) rather than a generic checking in, because specificity is what signals the relationship mattered and what makes a reply likely.",
+        "inputs": [
+          {"name": "open-loop-list", "desc": "The unresolved thread behind each relationship"},
+          {"name": "energy-drain-flags", "desc": "Relationships carrying real background energy cost"}
+        ],
+        "outputs": [
+          {"name": "reconnect-drafts", "desc": "A specific, personal reconnection message for each recovery candidate"},
+          {"name": "reconnect-hooks", "desc": "The concrete hook each message hangs on: a shared memory, a relevant update, a reason they came to mind, an overdue acknowledgment"}
+        ],
+        "process": [
+          "For each candidate, find the hook: a specific shared memory, a piece of news relevant to them, an honest reason they came to mind, or the overdue acknowledgment the open loop calls for. The hook is the message.",
+          "Where there is an open loop, address it directly and simply. A brief honest line (I owed you a reply and I am sorry it is two years late) clears far more than pretending the gap did not happen.",
+          "Keep the message low-pressure. Reconnection after long silence works when it asks for nothing beyond the exchange itself, because a reconnect that leads with a request reads as reaching out only because you need something.",
+          "Write each message to one person. A reconnection that could have been sent to anyone signals the opposite of what you intend, and the whole point is to show this specific relationship was worth remembering."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      },
+      {
+        "flow_name": "reldebt-closure-decider",
+        "description": "Decide, for every relationship on the audit, whether to recover it or release it, and log the decision, so the audit ends with a cleared ledger: active reconnection for the ones worth it, conscious closure for the rest, and no lingering open loops silently draining energy.",
+        "inputs": [
+          {"name": "reconnect-drafts", "desc": "The specific reconnection messages"},
+          {"name": "reconnect-hooks", "desc": "The concrete hook behind each message"}
+        ],
+        "outputs": [
+          {"name": "recover-or-release-decisions", "desc": "For each relationship: recover (send the reconnect) or release (consciously let it rest), with the reasoning"},
+          {"name": "debt-clearance-log", "desc": "A record of what was sent, what was released, and which open loops were closed, so the audit has a clean endpoint"}
+        ],
+        "process": [
+          "Make an explicit recover-or-release call for every name, including the ones you are not reconnecting with. Leaving a name undecided is how it drifts back onto the mental list and resumes draining energy.",
+          "For recover decisions, send the reconnection message rather than letting it sit as a perfect unsent draft. An imperfect message sent today beats a polished one that never goes out, which is how the debt accumulated in the first place.",
+          "For release decisions, close any open loop first where it is owed. Even when you are letting a relationship rest, sending the overdue apology or acknowledgment closes the loop so it stops surfacing in your mind.",
+          "Log every outcome: sent, released, loop closed. The log is the point. An audit that ends with a clear record of what you did is a cleared debt, and you can re-run it in a year against a clean slate."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      }
+    ]
+  },
+  {
+    "chain_name": "reciprocity-mapping",
+    "description": "Map the flow of value in your network: for each key relationship, what you give, what they give, and whether the exchange is balanced. Imbalanced relationships are unstable (chronic over-givers burn out, chronic under-givers get quietly dropped), so the map identifies where you over-give and where you under-give and produces a plan to rebalance before the instability forces the issue.",
+    "domain": "relationships",
+    "tags": ["infrastructure", "crm", "relationships", "reciprocity"],
+    "steps": [
+      {
+        "flow_name": "recip-relationship-selection",
+        "description": "Select the relationships to map and define the value lens you will measure through, because reciprocity means different things in different relationships and a single money-only lens would misread a friendship that trades mostly in support and attention.",
+        "inputs": [
+          {"name": "network-list", "desc": "The relationships you could map across personal and professional life"},
+          {"name": "value-lens", "desc": "The kinds of value that count: time, help, money, introductions, emotional support, information, opportunities"}
+        ],
+        "outputs": [
+          {"name": "focus-relationships", "desc": "The relationships to map, chosen where the exchange is significant enough that imbalance would matter"},
+          {"name": "lens-definition", "desc": "The explicit definition of what counts as value in these relationships, so give and receive are measured consistently"}
+        ],
+        "process": [
+          "Choose relationships where enough value flows that balance matters. A relationship with almost no exchange cannot be meaningfully imbalanced, so focus on the ones carrying real give and take.",
+          "Define the value lens explicitly and broadly. Value is not just favors or money, it includes time, attention, emotional support, information, introductions, and opportunities. A narrow lens makes healthy relationships look one-sided.",
+          "Match the lens to the relationship type. In a friendship, emotional support and presence dominate. In a professional relationship, information, introductions, and opportunities weigh more. Use the right lens for each.",
+          "Keep the set manageable, around 10 to 20 relationships. Mapping value flow honestly takes thought per relationship, and a bloated list gets filled in carelessly."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      },
+      {
+        "flow_name": "recip-give-inventory",
+        "description": "Inventory what you give to each relationship across the full value lens, honestly and concretely, since most people either undercount their giving (and feel resentful) or overcount it (and feel entitled), and the rebalance depends on an accurate count.",
+        "inputs": [
+          {"name": "focus-relationships", "desc": "The relationships being mapped"},
+          {"name": "lens-definition", "desc": "What counts as value in these relationships"}
+        ],
+        "outputs": [
+          {"name": "give-inventory", "desc": "For each relationship, the concrete things you give across the value lens"},
+          {"name": "give-frequency-notes", "desc": "How often and how substantially you give, so a one-time large gift is not confused with steady small support"}
+        ],
+        "process": [
+          "For each relationship, list what you actually give across every category in the lens: time spent, help offered, support provided, information shared, introductions made, opportunities passed along.",
+          "Be concrete, not aspirational. Count what you have genuinely given recently, not what you intend to give or what you gave once years ago. The map needs current reality.",
+          "Record frequency and weight, because they change the picture. Steady small support reads very differently from a single large favor, and both differ from availability (being reliably there) which is a real but easily overlooked form of giving.",
+          "Watch your own bias. If you tend toward resentment, you likely undercount. If you tend toward entitlement, you likely overcount. Name your lean and correct for it deliberately."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      },
+      {
+        "flow_name": "recip-receive-inventory",
+        "description": "Inventory what each person gives you across the same value lens, which is harder to see clearly because received value (especially emotional support, information, and access) is easy to take for granted and to undercount.",
+        "inputs": [
+          {"name": "give-inventory", "desc": "What you give to each relationship"},
+          {"name": "give-frequency-notes", "desc": "Frequency and weight of your giving"}
+        ],
+        "outputs": [
+          {"name": "receive-inventory", "desc": "For each relationship, the concrete things they give you across the value lens"},
+          {"name": "receive-frequency-notes", "desc": "How often and how substantially they give, measured the same way as the give side"}
+        ],
+        "process": [
+          "For each relationship, list what they give you across the same categories. Use the give-inventory as a mirror, filling in the other direction for the same person so the two sides are directly comparable.",
+          "Pay special attention to the forms of value that are easy to take for granted: being reliably available, consistent emotional support, information and context you would not otherwise have, and access to their network.",
+          "Measure frequency and weight the same way you did for giving, so the comparison is fair. A friend who gives steady low-key support may out-give a contact who did one flashy favor.",
+          "Correct the opposite bias here. People who undercount their own giving often also undercount what they receive, and people who feel over-given-to often fail to see the quiet value flowing back to them."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      },
+      {
+        "flow_name": "recip-balance-assessor",
+        "description": "Assess the balance of each relationship by comparing the give and receive inventories, mapping the direction and degree of value flow, while accounting for the fact that healthy relationships balance over time rather than in every single exchange.",
+        "inputs": [
+          {"name": "receive-inventory", "desc": "What each person gives you"},
+          {"name": "receive-frequency-notes", "desc": "Frequency and weight of what they give"}
+        ],
+        "outputs": [
+          {"name": "balance-ratios", "desc": "For each relationship, a rough reading of balance: roughly even, you give more, or they give more, and by how much"},
+          {"name": "flow-direction-map", "desc": "The net direction of value flow across the mapped network, showing where you are a net giver and net receiver"}
+        ],
+        "process": [
+          "For each relationship, compare the two inventories and read the balance qualitatively: roughly even, tilted toward you giving more, or tilted toward them giving more. Avoid false precision, a direction and a rough degree is enough.",
+          "Judge balance over time, not per exchange. Healthy relationships are not tit-for-tat, they even out across months and years. A relationship that looks lopsided this month may be balanced across the year, so take the longer view.",
+          "Account for different currencies. One person gives money and the other gives time, and that can be a fair trade. Imbalance is when the total value is lopsided, not when the currencies differ.",
+          "Map the net direction across the whole set. Seeing where you are a net giver and where a net receiver across the network reveals patterns a single relationship hides, like giving generously to people who cannot reciprocate while under-investing in peers who could."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      },
+      {
+        "flow_name": "recip-imbalance-classifier",
+        "description": "Classify the imbalanced relationships into where you over-give and where you under-give, and diagnose why, because the cause (generosity, people-pleasing, status-seeking, simple neglect) determines whether and how to rebalance.",
+        "inputs": [
+          {"name": "balance-ratios", "desc": "Balance reading per relationship"},
+          {"name": "flow-direction-map", "desc": "Net direction of value flow across the network"}
+        ],
+        "outputs": [
+          {"name": "over-give-list", "desc": "Relationships where you give substantially more than you receive, with the likely cause"},
+          {"name": "under-give-list", "desc": "Relationships where you receive substantially more than you give, with the likely cause"}
+        ],
+        "process": [
+          "Pull the clearly imbalanced relationships into two lists. Leave the roughly-even ones alone, they are working. The energy goes to the lopsided ones.",
+          "For each over-give relationship, diagnose why you give more. Sometimes it is chosen generosity toward someone who genuinely cannot reciprocate (a mentee, a relative in need), which is healthy. Sometimes it is people-pleasing or buying approval, which is not. The distinction decides whether to act.",
+          "For each under-give relationship, diagnose why you receive more. Often it is simple neglect of someone generous, which is a quiet risk because under-given people eventually withdraw without announcing it. Sometimes you are early in a relationship where the balance has not formed yet.",
+          "Flag the dangerous cases: chronic over-giving that is draining you, and chronic under-receiving where a generous person is being taken for granted. These are the unstable relationships most likely to break if left alone."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      },
+      {
+        "flow_name": "recip-rebalance-planner",
+        "description": "Build a rebalancing plan for the imbalanced relationships: give more where you have been coasting on others' generosity, and pull back or reset expectations where you have been over-giving, with care, since abruptly changing the terms of a relationship can itself cause harm.",
+        "inputs": [
+          {"name": "over-give-list", "desc": "Relationships where you give more, with cause"},
+          {"name": "under-give-list", "desc": "Relationships where you receive more, with cause"}
+        ],
+        "outputs": [
+          {"name": "rebalance-actions", "desc": "Specific actions per relationship: concrete ways to give more to under-given people and to adjust over-giving"},
+          {"name": "rebalance-cautions", "desc": "Where to move gently, since changing established terms can be read as withdrawal or rejection if done abruptly"}
+        ],
+        "process": [
+          "For under-give relationships, plan specific ways to give back drawn from the value lens: make the introduction you have been meaning to make, offer the help they would value, reciprocate the support they have given. Vague intent to be better does not rebalance anything.",
+          "For unhealthy over-giving, plan to reduce gradually and redirect the freed energy. The goal is not to start keeping score with a friend, it is to stop over-investing where it drains you and reinvest where the balance is real.",
+          "Leave chosen generosity alone. Where you give more on purpose to someone who cannot reciprocate and you are glad to, that is not an imbalance to fix, and the plan should explicitly protect it.",
+          "Move gently where you are changing established terms. A person used to your over-giving may read a sudden pullback as rejection, so reset expectations slowly and, where appropriate, honestly, rather than withdrawing abruptly and leaving them confused."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      }
+    ]
+  },
+  {
+    "chain_name": "network-gap-analysis",
+    "description": "Find the structural holes in your network using Burt's structural holes theory. Map your network into clusters, find where you have zero connections, and recognize that those gaps are opportunities and information you will never hear about because no one in your network is positioned to tell you. Then fill one gap at a time by joining the communities your existing network does not reach, rather than adding more contacts in the clusters where you are already saturated.",
+    "domain": "relationships",
+    "tags": ["infrastructure", "crm", "relationships", "network-analysis"],
+    "steps": [
+      {
+        "flow_name": "netgap-cluster-mapping",
+        "description": "Map your network into clusters by shared context (employer, industry, school, geography, community), because the structural view that reveals gaps requires seeing your network as a set of groups rather than a flat list of individuals.",
+        "inputs": [
+          {"name": "contact-list", "desc": "Your contacts with enough metadata to group them: how you know them, their industry, role, and location"},
+          {"name": "clustering-basis", "desc": "The dimensions to cluster on: shared employer, industry, profession, school, geography, social community"}
+        ],
+        "outputs": [
+          {"name": "cluster-map", "desc": "Your network grouped into clusters, each a set of contacts who share a context and who mostly know each other"},
+          {"name": "cluster-labels", "desc": "A label and rough size for each cluster, with a note on how connected its members are to each other"}
+        ],
+        "process": [
+          "Group your contacts by shared context. Most people cluster naturally: current coworkers, former coworkers, an industry group, a school cohort, a geographic community, a hobby or social circle.",
+          "Label each cluster and estimate its size. The size matters because a very large cluster is where you are probably over-invested, and a thin cluster may be a bridge worth strengthening.",
+          "Note internal density, how much the members of a cluster know each other. A dense cluster (everyone knows everyone) gives you redundant information, because anything one member knows the others likely know too.",
+          "Identify which clusters you personally bridge, where you are the main link between two groups. Those bridges are a source of your value, and they are also fragile, which later steps address."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      },
+      {
+        "flow_name": "netgap-zero-connection-finder",
+        "description": "Find the regions where you have zero connections: the industries, roles, communities, and worlds your network does not touch at all. These blind spots are invisible from inside your network precisely because no one in it can point them out to you.",
+        "inputs": [
+          {"name": "cluster-map", "desc": "Your network grouped into clusters"},
+          {"name": "cluster-labels", "desc": "Labels, sizes, and internal density of each cluster"}
+        ],
+        "outputs": [
+          {"name": "zero-connection-regions", "desc": "The worlds you have no path into: industries, functions, seniority levels, geographies, or communities absent from your clusters"},
+          {"name": "missing-cluster-list", "desc": "The specific clusters that should plausibly exist in your network given your goals but do not"}
+        ],
+        "process": [
+          "Step back from the clusters you have and ask what is not there. List the industries, professional functions, seniority levels, geographies, and communities that are absent entirely from your map.",
+          "Reason from your goals to the clusters you would expect to need. If a goal depends on reaching a world (a new industry, a type of role, a funding source) and no cluster touches it, that is a structural gap, not a minor omission.",
+          "Accept that this step is inherently hard, because you are trying to see what you cannot see. Use external references (industry maps, org structures, who normally surrounds a goal like yours) to surface worlds you would not think of unprompted.",
+          "Distinguish gaps that matter from gaps that do not. You do not need to know everyone in every field. A missing cluster is only a real gap if it sits between you and something you want or need to hear about."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      },
+      {
+        "flow_name": "netgap-opportunity-valuation",
+        "description": "Value each gap by what filling it would give you access to, and prioritize, since a network has more gaps than anyone can fill and the structural holes worth bridging are the ones connected to real opportunities or to resilience against a real risk.",
+        "inputs": [
+          {"name": "zero-connection-regions", "desc": "The worlds your network does not touch"},
+          {"name": "missing-cluster-list", "desc": "Clusters that should plausibly exist but do not"}
+        ],
+        "outputs": [
+          {"name": "gap-value-scores", "desc": "Each gap scored by the value of what it would open up: information, opportunities, or resilience"},
+          {"name": "prioritized-gaps", "desc": "The gaps ranked, so attention goes to the few highest-value holes rather than spreading thin"}
+        ],
+        "process": [
+          "For each gap, name concretely what filling it would give you: information you currently cannot get, opportunities you cannot currently reach, or resilience against a risk your current clusters all share.",
+          "Apply Burt's core insight, that the value of a structural hole is the non-redundant information and opportunity on the other side. A gap into a world that thinks differently from all your clusters is worth more than one into a near-duplicate of what you have.",
+          "Weigh resilience, not just opportunity. If all your high-trust relationships sit in one industry or one employer, the gap into a different world is worth filling as insurance, because a single downturn could otherwise take out your whole network at once.",
+          "Rank the gaps and keep the priority list short. Filling one gap well, by genuinely entering a new community, takes months, so three prioritized gaps is plenty to work on at a time."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      },
+      {
+        "flow_name": "netgap-community-identification",
+        "description": "For the prioritized gaps, identify the actual communities, venues, and groups where the people on the other side gather, turning an abstract gap into a concrete place you could show up, since you fill a gap by entering a community, not by collecting individual contacts.",
+        "inputs": [
+          {"name": "gap-value-scores", "desc": "Each gap scored by the value it would open up"},
+          {"name": "prioritized-gaps", "desc": "The gaps ranked by priority"}
+        ],
+        "outputs": [
+          {"name": "candidate-communities", "desc": "For each prioritized gap, the specific communities, events, groups, or venues where those people actually gather"},
+          {"name": "community-access-notes", "desc": "How open each community is to newcomers and what it takes to enter credibly"}
+        ],
+        "process": [
+          "For each prioritized gap, find where those people actually congregate: professional associations, conferences, online communities, local meetups, alumni groups, or recurring events specific to that world.",
+          "Rank candidate communities by the ratio of target people present to the effort of entering. A focused community full of the people you want to reach beats a large general venue where they are a small fraction.",
+          "Note each community's openness. Some welcome newcomers immediately, some require a credential or an invitation, some expect you to contribute before you belong. The access path shapes the entry strategy.",
+          "Prefer communities where you can genuinely contribute, not just extract. You enter a community credibly by being useful in it, and a community you join only to mine for contacts will sense it and keep you at the edge."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      },
+      {
+        "flow_name": "netgap-single-gap-selector",
+        "description": "Select one gap to work on first, against the discipline of filling gaps one at a time, because genuine entry into a new community demands sustained presence and spreading yourself across several at once produces shallow presence in all of them and real entry into none.",
+        "inputs": [
+          {"name": "candidate-communities", "desc": "Communities where the target people gather, per gap"},
+          {"name": "community-access-notes", "desc": "How open each community is and what entry takes"}
+        ],
+        "outputs": [
+          {"name": "selected-gap", "desc": "The single gap to fill first, with its chosen target community"},
+          {"name": "selection-rationale", "desc": "Why this gap and community first: value, accessibility, and fit with your current capacity"}
+        ],
+        "process": [
+          "Choose one gap. The temptation is to start on several at once, but entering a community well takes repeated presence over months, and parallel attempts dilute into shallow dabbling that reaches no community.",
+          "Balance value against accessibility and your current capacity. The highest-value gap is not always the right first move if its community is hard to enter and you have little time. An accessible medium-value gap can be the better starting point to build momentum.",
+          "Pick the specific community within the gap, not just the gap. The target is show up at this group, not break into this industry. Concreteness is what makes the next step actionable.",
+          "Write down why this one first. When the entry gets slow, as it will, the rationale reminds you why you chose it and keeps you from abandoning it to chase a shinier gap before this one has paid off."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      },
+      {
+        "flow_name": "netgap-entry-strategy",
+        "description": "Design the entry strategy for the selected community: how you will show up, contribute, and build initial relationships so you enter as a genuine participant rather than an outsider collecting contacts, because the quality of entry determines whether the gap actually closes.",
+        "inputs": [
+          {"name": "selected-gap", "desc": "The single gap and its target community"},
+          {"name": "selection-rationale", "desc": "Why this gap and community were chosen first"}
+        ],
+        "outputs": [
+          {"name": "entry-plan", "desc": "The concrete plan to enter the community: how to show up, how to contribute, and the cadence of presence"},
+          {"name": "first-contact-targets", "desc": "The first few people to build real relationships with inside the community, chosen as footholds rather than trophies"}
+        ],
+        "process": [
+          "Plan how you will show up and keep showing up. One appearance at an event does not enter a community. Decide the cadence (attend the monthly meetup, post regularly in the forum, volunteer for the association) that builds familiarity over time.",
+          "Lead with contribution. Decide what you can offer this community that is genuinely useful (knowledge, help, effort, a connection from your other clusters). Contribution is what converts you from visitor to member.",
+          "Choose a few first-contact targets as footholds, not trophies. The welcoming regular, the organizer, the fellow newcomer are better early relationships than the most senior person, because they integrate you into the community rather than giving you one isolated contact.",
+          "Set a realistic time horizon. Genuine entry typically takes months of repeated presence, so plan for that rather than expecting a few weeks to close a structural hole, and judge progress by relationships formed, not events attended."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      },
+      {
+        "flow_name": "netgap-progress-tracker",
+        "description": "Track progress on closing the selected gap and decide when it is filled enough to move to the next one, so gap-filling becomes an ongoing practice that keeps your network structurally healthy rather than a one-time project that quietly lapses.",
+        "inputs": [
+          {"name": "entry-plan", "desc": "The plan to enter and contribute to the community"},
+          {"name": "first-contact-targets", "desc": "The first foothold relationships inside the community"}
+        ],
+        "outputs": [
+          {"name": "gap-fill-tracker", "desc": "A simple tracker of entry progress: presence maintained, relationships formed, and whether the gap is beginning to deliver its value"},
+          {"name": "progress-review-cadence", "desc": "When to review progress, when to judge the gap filled enough, and when to begin the next gap"}
+        ],
+        "process": [
+          "Track the inputs you control: whether you are maintaining the planned presence and contribution. Showing up as planned is the leading indicator, because relationships and value follow from consistent presence, not from intention.",
+          "Track the outputs that signal the gap is closing: real relationships forming (people who now recognize and respond to you), and the first non-redundant information or opportunity reaching you through the new community.",
+          "Define filled enough rather than finished. A gap is filled when you have a few genuine relationships in the community and value has started to flow, at which point the community largely sustains itself with lighter upkeep.",
+          "Set a review cadence to decide when to start the next prioritized gap, and fold the filled gap into ordinary relationship maintenance so it does not decay back into a hole while your attention moves on."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      }
+    ]
+  },
+  {
+    "chain_name": "relationship-triage-method",
+    "description": "After a life change (a move, a job change, a breakup, a loss, becoming a parent, a health event) triage your relationships with three questions: does this person give or drain energy, is there mutual investment, and does this relationship align with who you are becoming. Sort each relationship into keep, maintain with boundaries, or let go gracefully. A life change is the natural moment to do this consciously instead of letting relationships drift by default.",
+    "domain": "relationships",
+    "tags": ["infrastructure", "crm", "relationships", "triage"],
+    "steps": [
+      {
+        "flow_name": "triage-relationship-inventory",
+        "description": "Inventory the relationships to triage and capture how the life change has already shifted each one, because a major change tends to rearrange relationships on its own (some deepen, some strain, some lose their shared basis) and the triage works with that movement rather than against it.",
+        "inputs": [
+          {"name": "life-change-context", "desc": "The life change prompting the triage and how it has altered your circumstances, priorities, and available time"},
+          {"name": "relationship-pool", "desc": "The relationships currently in your life, across personal, family, social, and professional spheres"}
+        ],
+        "outputs": [
+          {"name": "triage-inventory", "desc": "The relationships to triage, with the ones most affected by the change noted"},
+          {"name": "change-impact-notes", "desc": "How the life change has already shifted each relationship: strengthened, strained, or lost its shared basis"}
+        ],
+        "process": [
+          "List the relationships that are active or lingering in your life right now across every sphere, including the ones that feel obligatory and the ones running purely on momentum.",
+          "Note how the change has affected each. A move strains proximity-based friendships, a job change dissolves relationships built only on shared work, a loss or a health event reveals who shows up. The change has already begun sorting them.",
+          "Mark the relationships most disrupted by the change, because those are where conscious triage matters most. Relationships untouched by the change can mostly continue as they are.",
+          "Approach the inventory without guilt. A life change legitimately reshapes a social world, and some relationships ending is natural rather than a failure. The triage names that honestly instead of letting it happen by neglect."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      },
+      {
+        "flow_name": "triage-energy-question",
+        "description": "Ask the first triage question of each relationship: on balance, does this person give energy or drain it? This is the most immediate signal and the easiest to read honestly after a life change, when your energy is often limited and you can feel clearly which interactions restore you and which deplete you.",
+        "inputs": [
+          {"name": "triage-inventory", "desc": "The relationships to triage"},
+          {"name": "change-impact-notes", "desc": "How the change has shifted each relationship"}
+        ],
+        "outputs": [
+          {"name": "energy-assessments", "desc": "Each relationship marked as net energy-giving, neutral, or net energy-draining, over a fair sample of interactions"},
+          {"name": "energy-flagged-relationships", "desc": "The clearly draining relationships flagged for closer examination in the later questions"}
+        ],
+        "process": [
+          "For each relationship, recall how you feel after your typical interactions, not your best or worst single memory. Energized and lighter, neutral, or depleted and heavier is the reading you want.",
+          "Judge over a fair sample. Everyone has an off day, and a good relationship going through a hard stretch is not a draining one. Look at the pattern across many interactions, not a recent rough patch.",
+          "Separate draining from demanding. A relationship that asks a lot but that you choose to pour into (a child, a friend in crisis) can be demanding without being draining, because the giving is meaningful. Draining is when you leave consistently depleted with nothing gained.",
+          "Flag the consistently draining relationships. A drain is not an automatic cut, since the later questions may reveal real mutual investment or alignment, but it is the signal that this relationship needs a conscious decision rather than default continuation."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      },
+      {
+        "flow_name": "triage-mutual-investment-question",
+        "description": "Ask the second triage question: is the investment mutual, or are you the only one maintaining the relationship? Mutual investment is what distinguishes a relationship worth sustaining through a hard stretch from one that only exists because you keep it alive single-handedly.",
+        "inputs": [
+          {"name": "energy-assessments", "desc": "Energy reading per relationship"},
+          {"name": "energy-flagged-relationships", "desc": "The clearly draining relationships flagged"}
+        ],
+        "outputs": [
+          {"name": "investment-assessments", "desc": "Each relationship marked by whether investment is mutual, mostly one-way toward you, or mostly one-way from you"},
+          {"name": "one-sided-flags", "desc": "Relationships you maintain entirely alone, where the other person never initiates or reciprocates"}
+        ],
+        "process": [
+          "For each relationship, ask who initiates and who reciprocates. Do they reach out, remember what matters to you, and show up, or does the relationship only happen when you drive it?",
+          "Be fair about circumstance. Someone going through their own hard period may invest less temporarily while still being genuinely invested. One-sidedness is a concern when it is the enduring pattern, not a season.",
+          "Distinguish the two directions of one-sidedness. A relationship where you give far more than you get is a different problem from one where someone depends heavily on you, and both differ from mutual investment.",
+          "Flag the relationships you maintain entirely alone. A relationship that would simply end the moment you stopped initiating is telling you something, and the life change is the moment to decide whether to keep carrying it or let it rest."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      },
+      {
+        "flow_name": "triage-alignment-question",
+        "description": "Ask the third triage question: does this relationship align with who you are becoming? A life change often shifts your direction, and some relationships fit the person you were while others fit the person you are growing into. Alignment is the hardest question because a relationship can be energy-giving and mutual yet still belong to a chapter that is closing.",
+        "inputs": [
+          {"name": "investment-assessments", "desc": "Mutual-investment reading per relationship"},
+          {"name": "one-sided-flags", "desc": "Relationships you maintain entirely alone"}
+        ],
+        "outputs": [
+          {"name": "alignment-assessments", "desc": "Each relationship marked by how well it fits the direction you are growing toward after the change"},
+          {"name": "alignment-conflicts", "desc": "Relationships that are positive on energy and investment but pull against who you are becoming"}
+        ],
+        "process": [
+          "For each relationship, ask whether it supports the direction you are heading or holds you in a version of yourself you are leaving behind. Some relationships are anchored to habits, places, or identities that the change is moving you past.",
+          "Be honest about relationships that keep you in old patterns. A relationship can be comfortable and even positive and still quietly anchor you to a self you are trying to grow out of, which is the subtlest finding in the triage.",
+          "Do not confuse alignment with usefulness. This is about whether the relationship fits your life and values going forward, not whether the person is advantageous. A deep friendship that spans many chapters aligns even if it serves no purpose.",
+          "Flag the alignment conflicts: relationships that score well on energy and mutual investment yet pull against your direction. These are the genuinely hard calls, and the disposition step addresses them with options beyond a simple keep or cut."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      },
+      {
+        "flow_name": "triage-disposition-assignment",
+        "description": "Combine the three answers into a disposition for each relationship: keep (invest fully), maintain with boundaries (continue in a limited, defined way), or let go gracefully. The middle option matters most, since most relationships are not clean keeps or clean cuts and deserve a defined, limited place rather than an all-or-nothing verdict.",
+        "inputs": [
+          {"name": "alignment-assessments", "desc": "Alignment reading per relationship"},
+          {"name": "alignment-conflicts", "desc": "Positive relationships that conflict with your direction"}
+        ],
+        "outputs": [
+          {"name": "disposition-assignments", "desc": "Each relationship assigned keep, maintain with boundaries, or let go gracefully, based on the three questions together"},
+          {"name": "boundary-notes", "desc": "For the maintain-with-boundaries group, the specific limits that let the relationship continue without the cost that triggered the flag"}
+        ],
+        "process": [
+          "Combine the three readings. A relationship that gives energy, is mutual, and aligns is a clear keep. One that drains, is one-sided, and misaligns is a clear let-go. Most relationships land somewhere between, which is where the middle option does its work.",
+          "Assign maintain-with-boundaries to the mixed cases: the family member you will not cut but whose draining patterns you will limit, the old friend you will see occasionally but no longer center, the alignment conflict you keep in a smaller role.",
+          "For each maintain-with-boundaries relationship, define the actual boundary: how often, in what contexts, with what topics off limits, with what level of investment. A boundary that is only a vague intention does not hold.",
+          "Resist resolving every hard case as a cut. Letting go is right for some, but the maintain-with-boundaries option preserves relationships that are worth a limited place, which an all-or-nothing triage would wrongly destroy."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      },
+      {
+        "flow_name": "triage-graceful-exit-planner",
+        "description": "For the let-go group, plan a graceful exit, because how a relationship ends matters and most relationships deserve a gentle fade or an honest close rather than a cruel cutoff or a cowardly ghosting. The aim is to release the relationship without inflicting unnecessary harm on the other person or on your own peace.",
+        "inputs": [
+          {"name": "disposition-assignments", "desc": "The keep, maintain, and let-go assignments"},
+          {"name": "boundary-notes", "desc": "The boundaries defined for the maintain-with-boundaries group"}
+        ],
+        "outputs": [
+          {"name": "exit-plans", "desc": "For each let-go relationship, how it will end: a natural fade, an honest conversation, or a clear boundary, matched to the relationship"},
+          {"name": "closure-scripts", "desc": "What to say where an explicit close is warranted, said with honesty and without blame"}
+        ],
+        "process": [
+          "Match the exit to the relationship. A casual relationship can simply fade as you stop initiating, and forcing a dramatic conversation on it would be odd. A close or formal relationship warrants an honest ending rather than a silent fade.",
+          "Choose honesty over ghosting for relationships that mattered. Disappearing on someone who was genuinely part of your life leaves them with an open loop and leaves you with guilt. A brief honest close serves both of you better.",
+          "Where an explicit close is warranted, prepare what to say so it lands with care: honest about the relationship changing, free of blame, and without relitigating old grievances. The goal is release, not a verdict on who was wrong.",
+          "Protect your own peace in the plan. Some relationships cannot be ended cleanly because the other person will not allow it, and in those cases a firm boundary (or, in genuinely harmful cases, a clean break) is the graceful option available to you."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      }
+    ]
+  },
+  {
+    "chain_name": "stakeholder-influence-mapping",
+    "description": "Map the people who affect a decision or project. For each: their position (supportive, neutral, or opposed), what they actually care about, what would move them, and who influences them. Then sequence your effort: convert the neutrals first (they are cheapest to move and shift the center of gravity), and only then address the opposed. Most people either ignore stakeholder dynamics entirely or spend all their energy arguing with the most vocal opponent, which is usually the worst allocation of effort.",
+    "domain": "relationships",
+    "tags": ["infrastructure", "crm", "relationships", "stakeholders"],
+    "steps": [
+      {
+        "flow_name": "stake-stakeholder-identification",
+        "description": "Identify everyone who affects or is affected by the decision or project, including the quiet influencers who hold no formal role but shape the outcome, because the stakeholder who sinks a project is often the one nobody put on the list.",
+        "inputs": [
+          {"name": "decision-or-project", "desc": "The decision or project whose stakeholders you are mapping, and the outcome you want"},
+          {"name": "scope-notes", "desc": "The boundaries of the effort: what it touches, whose work or interests it changes, and who holds approval or veto"}
+        ],
+        "outputs": [
+          {"name": "stakeholder-list", "desc": "Everyone who affects or is affected by the outcome, formal and informal"},
+          {"name": "stakeholder-roles", "desc": "Each stakeholder's relationship to the decision: decision-maker, approver, influencer, implementer, or affected party"}
+        ],
+        "process": [
+          "List the obvious stakeholders first: the formal decision-makers, approvers, and the people whose work the outcome directly changes.",
+          "Then hunt for the non-obvious ones: the trusted adviser a decision-maker always consults, the veteran whose opinion carries weight informally, the team that will have to live with the result and can quietly undermine it.",
+          "Classify each by their relationship to the decision: who decides, who must approve, who influences the deciders, who implements, and who is simply affected. The role determines how much their position matters.",
+          "Check for the invisible veto. Many efforts fail because of a stakeholder with no formal authority but real informal power to block, so deliberately ask who could kill this quietly and make sure they are on the list."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      },
+      {
+        "flow_name": "stake-position-classification",
+        "description": "Classify each stakeholder's current position toward the outcome as supportive, neutral, or opposed, and rate your confidence, because position is often misread (public agreement can mask private opposition) and acting on a wrong read wastes effort or triggers an ambush.",
+        "inputs": [
+          {"name": "stakeholder-list", "desc": "Everyone who affects or is affected by the outcome"},
+          {"name": "stakeholder-roles", "desc": "Each stakeholder's role relative to the decision"}
+        ],
+        "outputs": [
+          {"name": "position-map", "desc": "Each stakeholder marked supportive, neutral, or opposed toward the outcome you want"},
+          {"name": "position-confidence", "desc": "How confident you are in each read, flagging the ones based on assumption rather than evidence"}
+        ],
+        "process": [
+          "Mark each stakeholder supportive, neutral, or opposed based on what you actually know, not on what their role suggests they should think. People surprise you in both directions.",
+          "Rate your confidence in each read. A position you have heard them state is high confidence, a position you are inferring from their incentives is a guess, and guesses need verification before you build a plan on them.",
+          "Watch for the gap between public and private positions. Someone agreeable in meetings may be privately opposed and working against the effort quietly, which is far more dangerous than open opposition.",
+          "Flag the low-confidence reads for direct checking. Where a stakeholder is important and your read is a guess, finding out their real position (through conversation or a trusted intermediary) is worth doing before you plan around an assumption."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      },
+      {
+        "flow_name": "stake-interest-mapping",
+        "description": "Map what each stakeholder actually cares about, separating their stated position from the underlying interest driving it, because people take positions for reasons, and you move a position only by addressing the interest beneath it, not by arguing against the position itself.",
+        "inputs": [
+          {"name": "position-map", "desc": "Each stakeholder's position toward the outcome"},
+          {"name": "position-confidence", "desc": "Confidence in each position read"}
+        ],
+        "outputs": [
+          {"name": "interest-map", "desc": "For each stakeholder, the underlying interests driving their position: what they protect, want, fear, or are measured on"},
+          {"name": "stated-vs-real-interests", "desc": "Where a stakeholder's stated reason differs from the real interest, so you address the right thing"}
+        ],
+        "process": [
+          "For each stakeholder, dig past the position to the interest. Someone opposing a change may really be protecting their team's workload, their status, a metric they are judged on, or simply their sense of control. The position is the symptom.",
+          "Distinguish stated reasons from real interests. The stated objection (this is technically risky) often masks the real one (this threatens my role). Addressing the stated reason while missing the real one changes nothing.",
+          "Identify what each stakeholder is measured and rewarded on, because self-interest around incentives drives more positions than people admit. A stakeholder whose bonus depends on a metric your project threatens will oppose it regardless of its merits.",
+          "Note the interests you can genuinely serve versus those you cannot. Some opposition rests on interests you can accommodate, and some on interests fundamentally at odds with the outcome, and knowing which is which shapes whether to convert or to route around them."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      },
+      {
+        "flow_name": "stake-lever-identification",
+        "description": "For each stakeholder, identify the lever that would actually move their position: the evidence, assurance, accommodation, or trade that addresses their real interest. A lever is specific and grounded in their interest, not a generic case for why the outcome is good.",
+        "inputs": [
+          {"name": "interest-map", "desc": "The underlying interests driving each position"},
+          {"name": "stated-vs-real-interests", "desc": "Where stated reasons differ from real interests"}
+        ],
+        "outputs": [
+          {"name": "movement-levers", "desc": "For each stakeholder, the specific thing that would move them toward support: evidence, an assurance, an accommodation, a trade, or a trusted endorsement"},
+          {"name": "lever-evidence", "desc": "What you would need to supply or demonstrate for each lever to work"}
+        ],
+        "process": [
+          "For each stakeholder, design the lever from their interest. If the interest is a protected workload, the lever is a credible assurance or a resource that protects it. If it is a metric, the lever is evidence the outcome improves or does not harm that metric.",
+          "Make levers specific to the person, not generic. The same project moves different stakeholders through different levers, and a one-size pitch persuades no one because it addresses no one's actual interest.",
+          "Prefer levers you can actually deliver. A lever that requires promising something you cannot guarantee buys short-term agreement and long-term distrust, so ground each lever in what you can genuinely provide.",
+          "Identify what each lever requires you to supply: the data to gather, the assurance to secure, the accommodation to arrange, or the trusted person whose endorsement would carry weight. The lever is only useful once you can actually pull it."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      },
+      {
+        "flow_name": "stake-influence-network-mapping",
+        "description": "Map who influences whom among the stakeholders, because positions are not held in isolation: many stakeholders take their cue from someone they trust, and moving that trusted influencer can shift several positions at once far more efficiently than persuading each person directly.",
+        "inputs": [
+          {"name": "movement-levers", "desc": "The lever that would move each stakeholder"},
+          {"name": "lever-evidence", "desc": "What each lever requires you to supply"}
+        ],
+        "outputs": [
+          {"name": "influence-network", "desc": "The map of who influences whom among the stakeholders, showing whose opinion others follow"},
+          {"name": "influencer-ranking", "desc": "The stakeholders whose position shifts the most other positions, ranked by reach"}
+        ],
+        "process": [
+          "Map the influence ties: for each stakeholder, note whose lead they follow, whose opinion they check, and who they defer to. Influence often runs along lines of trust and expertise, not the org chart.",
+          "Find the high-leverage influencers, the stakeholders whose shift would cascade. A respected skeptic who comes around can bring several fence-sitters with them, which is far cheaper than converting each one directly.",
+          "Account for the influence the opposed hold. An opponent who influences several neutrals is more dangerous than an isolated one, because they are not just one position against you, they anchor others.",
+          "Rank stakeholders by influence reach, not just by their own position. This ranking reorders your effort: a neutral with wide influence may deserve more attention than a supporter with none."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      },
+      {
+        "flow_name": "stake-neutral-conversion-plan",
+        "description": "Build the plan to convert the neutrals first, because neutrals are the cheapest to move (they are not invested in opposing you), converting them builds visible momentum, and shifting the center of gravity toward support often makes the opposed far easier to handle afterward.",
+        "inputs": [
+          {"name": "influence-network", "desc": "Who influences whom among stakeholders"},
+          {"name": "influencer-ranking", "desc": "Stakeholders ranked by influence reach"}
+        ],
+        "outputs": [
+          {"name": "neutral-conversion-plan", "desc": "The plan to move the neutrals to support, prioritizing high-influence neutrals and using each one's specific lever"},
+          {"name": "conversion-sequence", "desc": "The order of approach, sequenced so early conversions build momentum and influence toward the harder ones"}
+        ],
+        "process": [
+          "Start with the neutrals, not the loudest opponent. Neutrals are cheaper to move because they hold no stake in opposing you, and a visible run of neutrals turning supportive shifts the perceived consensus.",
+          "Prioritize high-influence neutrals using the influence map, because converting one neutral who sways three others is worth more than converting three isolated ones. Apply each neutral's specific lever from the lever step.",
+          "Sequence the approach so momentum compounds. Convert the accessible, high-influence neutrals first, let their visible support make the next ones easier, and build toward a tipping point where support looks like the default position.",
+          "Track the shifting center of gravity. As neutrals convert, the opposed increasingly find themselves isolated rather than leading a faction, which is exactly the condition under which the opposition-handling step becomes manageable."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      },
+      {
+        "flow_name": "stake-opposition-handling-plan",
+        "description": "Build the plan to address the opposed, now that the neutrals have shifted the balance, choosing deliberately for each opponent among genuine conversion, negotiated accommodation, containment, or routing around them, since not every opponent can or needs to be won over.",
+        "inputs": [
+          {"name": "neutral-conversion-plan", "desc": "The plan and sequence for converting neutrals"},
+          {"name": "conversion-sequence", "desc": "The order of approach that builds momentum"}
+        ],
+        "outputs": [
+          {"name": "opposition-handling-plan", "desc": "For each opponent, the chosen approach: convert via their lever, negotiate an accommodation, contain their influence, or route around them"},
+          {"name": "escalation-guardrails", "desc": "The limits on how far to push, so handling opposition does not create lasting enemies or a damaging fight"}
+        ],
+        "process": [
+          "Address the opposed only after the neutrals have moved, because an opponent isolated from the fence-sitters they used to anchor is far more tractable than one leading a faction.",
+          "Choose an approach per opponent rather than defaulting to persuasion. Convert the ones whose interest you can genuinely serve, negotiate an accommodation with those who need something specific, contain the influence of those you cannot move, and simply route around the ones whose opposition does not actually block the outcome.",
+          "Know when not to fight. Energy spent arguing with an implacable low-influence opponent is energy wasted, and some opposition is best left alone once it can no longer sway the decision.",
+          "Set guardrails on escalation. Winning the decision while making a lasting enemy of someone you will work with again is often a net loss, so decide in advance how hard to push and preserve the relationship where you can, because today's opponent is tomorrow's stakeholder on another project."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      }
+    ]
+  },
+  {
+    "chain_name": "follow-up-system-design",
+    "description": "Build a follow-up system on one principle: after every meaningful interaction, capture one concrete action within 24 hours, schedule it with a specific date, and track it to completion. Consistent follow-up is the highest-return relationship behavior there is, because it is rare, it signals reliability, and it compounds. The system makes follow-up automatic rather than dependent on memory and good intentions.",
+    "domain": "relationships",
+    "tags": ["infrastructure", "crm", "relationships", "follow-up"],
+    "steps": [
+      {
+        "flow_name": "followup-capture-protocol",
+        "description": "Design the capture protocol that gets a follow-up out of your head and into the system within 24 hours of an interaction, because the window in which you remember what was said and what you intended to do closes fast, and a follow-up not captured in that window is usually lost.",
+        "inputs": [
+          {"name": "interaction-types", "desc": "The kinds of interactions that generate follow-ups: meetings, calls, chance conversations, messages, events"},
+          {"name": "capture-tools", "desc": "The tools available to capture into: a task app, a notes app, voice memo, a CRM, a notebook"}
+        ],
+        "outputs": [
+          {"name": "capture-protocol", "desc": "The protocol for capturing a follow-up right after an interaction, tuned to each interaction type"},
+          {"name": "capture-window-rules", "desc": "The rule that follow-ups are captured within 24 hours, with the practical trigger that enforces it"}
+        ],
+        "process": [
+          "Set the core rule: capture within 24 hours, ideally within minutes. The memory of what mattered and what you meant to do decays quickly, and a vague recollection a week later is not enough to act on.",
+          "Design capture per interaction type. A scheduled meeting can end with two minutes of capture built in, a chance conversation needs an immediate voice memo or note before the next thing crowds it out, a message thread can be captured as you close it.",
+          "Choose the lowest-friction tool you will actually use in the moment. The best capture tool is the one already in your hand, so a quick note or voice memo beats a polished system you have to sit down to open.",
+          "Attach capture to an existing trigger so it does not depend on remembering to remember: the act of leaving a meeting, hanging up a call, or closing a conversation becomes the cue to capture before moving on."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      },
+      {
+        "flow_name": "followup-action-extraction",
+        "description": "Define how to extract the one concrete action from an interaction, because most interactions generate a vague sense of I should follow up rather than a specific doable task, and a follow-up that is not a concrete action never gets done.",
+        "inputs": [
+          {"name": "capture-protocol", "desc": "The protocol for capturing follow-ups after interactions"},
+          {"name": "capture-window-rules", "desc": "The 24 hour capture window and its trigger"}
+        ],
+        "outputs": [
+          {"name": "action-extraction-rules", "desc": "Rules for turning what happened in an interaction into one specific, doable follow-up action"},
+          {"name": "action-quality-criteria", "desc": "The test for whether a captured follow-up is concrete enough to act on without further thinking"}
+        ],
+        "process": [
+          "Extract one action, not a list. A single clear follow-up that actually happens beats five good intentions that do not. If an interaction genuinely generated several, pick the one that matters most and let the rest go.",
+          "Make the action concrete and self-contained. Not follow up with Sarah but send Sarah the article on route planning we discussed. The captured task should require no further thinking to execute.",
+          "Capture the context the action needs alongside it: what was discussed, what you promised, and any detail you will need, so that future-you can act without reconstructing the conversation.",
+          "Apply a quality test to each captured action: could you do this right now from the capture alone, without remembering anything extra? If not, it is too vague, and you sharpen it while the interaction is still fresh."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      },
+      {
+        "flow_name": "followup-scheduling-rule",
+        "description": "Define how every follow-up gets a specific date rather than living on an undated someday list, because an undated follow-up is not scheduled, it is merely hoped for, and the specific date is what moves it from intention to commitment.",
+        "inputs": [
+          {"name": "action-extraction-rules", "desc": "Rules for extracting one concrete follow-up action"},
+          {"name": "action-quality-criteria", "desc": "The test for whether an action is concrete enough"}
+        ],
+        "outputs": [
+          {"name": "scheduling-rules", "desc": "Rules for assigning every follow-up a specific do-date, including how to time follow-ups appropriately"},
+          {"name": "due-date-logic", "desc": "How to set the date based on urgency, the promise made, and the natural rhythm of the relationship"}
+        ],
+        "process": [
+          "Require a specific date on every follow-up. Someday is not a date, and a task without a date drifts indefinitely. Even a rough but specific date (next Tuesday) is a commitment where someday is not.",
+          "Time the follow-up appropriately rather than always immediately. Some follow-ups are urgent (a promise to send something today), some are better paced (a check-in that would feel pushy the next day but natural in two weeks). The date reflects the right timing, not just the soonest.",
+          "Honor any timing you committed to. If you told someone you would follow up after their launch, the date is after their launch, not whenever you remember. The specific date is how you keep the implicit promise.",
+          "Put the dated follow-up where it will surface on its day: a task manager with due dates, a calendar, or a tickler system. A date that does not resurface the task when it comes due is just a note."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      },
+      {
+        "flow_name": "followup-completion-tracking",
+        "description": "Build the tracking that ensures scheduled follow-ups actually get completed and that overdue ones get caught rather than silently abandoned, because a follow-up system that captures and schedules but does not enforce completion just produces a well-organized list of broken intentions.",
+        "inputs": [
+          {"name": "scheduling-rules", "desc": "Rules for assigning follow-ups specific dates"},
+          {"name": "due-date-logic", "desc": "How dates are set based on urgency and relationship rhythm"}
+        ],
+        "outputs": [
+          {"name": "completion-tracker", "desc": "The mechanism for seeing follow-ups due today, marking them done, and spotting what slipped"},
+          {"name": "overdue-escalation-rules", "desc": "What happens to an overdue follow-up: reschedule with intent, do it now, or consciously drop it"}
+        ],
+        "process": [
+          "Build a daily view of follow-ups due today, so working the system is a short routine (see what is due, do it or reschedule it) rather than an open-ended search through a backlog.",
+          "Mark completion explicitly. The act of marking a follow-up done both clears it and gives you a visible record of reliability, which is the evidence the review step uses later.",
+          "Catch the overdue rather than letting them vanish. An overdue follow-up should resurface, not disappear, because the whole value of the system is that nothing meant to happen quietly fails to.",
+          "Set an honest rule for overdue items: either reschedule with a real new date and intent, do it now, or consciously drop it and let the person go. An item rescheduled five times is one you have decided not to do, and naming that is better than carrying it as permanent guilt."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      },
+      {
+        "flow_name": "followup-roi-review",
+        "description": "Review the return the follow-up system is producing, because seeing that consistent follow-up actually strengthens relationships and opens opportunities is what sustains the habit, and the review also reveals where follow-up is being spent on low-value interactions and where it is missing high-value ones.",
+        "inputs": [
+          {"name": "completion-tracker", "desc": "The record of follow-ups due, done, and slipped"},
+          {"name": "overdue-escalation-rules", "desc": "How overdue follow-ups are handled"}
+        ],
+        "outputs": [
+          {"name": "roi-review-method", "desc": "A periodic review of what the follow-up system is producing: relationships strengthened, opportunities opened, reliability demonstrated"},
+          {"name": "follow-through-metrics", "desc": "The few numbers worth watching: follow-up completion rate, average time from capture to completion, and share of meaningful interactions that generated a follow-up"}
+        ],
+        "process": [
+          "Review periodically what the follow-ups produced. Note the relationships that deepened, the opportunities that came from a reliable follow-up, and the trust built by consistently doing what you said you would. Seeing the return sustains the habit.",
+          "Track completion rate as the core health metric. A high rate means the system is real, a falling rate means capture or scheduling is breaking down and the habit is slipping.",
+          "Watch the time from capture to completion. Follow-ups that routinely complete long after their date point to dates set unrealistically or a tracker that is not surfacing them, both fixable.",
+          "Check where follow-up is being allocated. If you are diligently following up on low-value interactions while high-value ones generate no follow-up, the fix is in what you choose to capture, not in working the system harder."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      },
+      {
+        "flow_name": "followup-habit-installer",
+        "description": "Install follow-up as a durable habit by reducing friction at every step and anchoring the behavior to existing routines, because the system only delivers its compounding return if it runs automatically, and a follow-up practice that depends on willpower eventually lapses.",
+        "inputs": [
+          {"name": "roi-review-method", "desc": "The method for reviewing what follow-up produces"},
+          {"name": "follow-through-metrics", "desc": "The numbers that indicate follow-up health"}
+        ],
+        "outputs": [
+          {"name": "habit-install-plan", "desc": "A plan to make follow-up automatic: triggers, routines, and an initial period of deliberate practice"},
+          {"name": "friction-reduction-steps", "desc": "Specific changes that lower the effort of capturing, scheduling, and completing follow-ups"}
+        ],
+        "process": [
+          "Anchor each part of the system to an existing routine. Capture anchors to ending an interaction, scheduling anchors to capture, and working the due list anchors to a fixed daily moment (such as the start of the workday) so none of it depends on remembering to begin.",
+          "Reduce friction everywhere. Pre-set templates for common follow-ups, a capture tool already open, a one-tap way to mark done. Every bit of friction is a point where the habit can break, so removing friction is how the habit survives.",
+          "Run a deliberate practice period of a few weeks where you consciously enforce the loop, because a habit needs repetition to become automatic, and the early period is where it is most fragile and most worth protecting.",
+          "Use the metrics from the review as the feedback that keeps the habit honest. A completion rate you check regularly is a gentle accountability that catches the slip before the practice quietly dies, and once the return is visible the habit largely sustains itself."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      }
+    ]
+  },
+  {
+    "chain_name": "difficult-relationship-repair",
+    "description": "Repair a damaged relationship through a disciplined sequence: diagnose the damage from both perspectives, own your part without equivocation, ask what repair looks like to the other person rather than assuming, propose concrete behavioral changes, follow through visibly over time, and accept that some damage is permanent. The sequence matters because repair attempts usually fail at a predictable point: people apologize for their version of events, propose their idea of repair, and expect trust to return immediately, none of which works.",
+    "domain": "relationships",
+    "tags": ["infrastructure", "crm", "relationships", "repair"],
+    "steps": [
+      {
+        "flow_name": "repair-damage-diagnosis-self",
+        "description": "Diagnose the damage honestly from your own perspective first: what happened, what you did, and what the real harm was, because a repair built on a vague or self-serving account of the damage will address the wrong thing, and you cannot own a part you have not clearly named.",
+        "inputs": [
+          {"name": "relationship-background", "desc": "The history and nature of the relationship and why it matters enough to repair"},
+          {"name": "incident-summary", "desc": "What happened, as best you can reconstruct it, including the events that led to the damage"}
+        ],
+        "outputs": [
+          {"name": "self-perspective-diagnosis", "desc": "Your honest account of what happened and what the real damage to the relationship was"},
+          {"name": "self-contribution-notes", "desc": "The specific things you did or failed to do that contributed, named plainly without justification"}
+        ],
+        "process": [
+          "Reconstruct what happened as factually as you can, separating the events from your interpretation of them. The goal is an account you could state plainly, not a case for your own defense.",
+          "Name the real damage, which is usually about trust, respect, or safety rather than the surface incident. The argument was about a missed deadline, but the damage was the other person learning they could not rely on you.",
+          "List your specific contributions plainly: the things you did, the things you failed to do, the patterns you brought. Write them without the word but, because every justification you attach here is one you will leak later and undermine the repair.",
+          "Resist the pull to make yourself the misunderstood party. A diagnosis that conveniently concludes you were mostly right is not a diagnosis, it is a defense, and it guarantees the repair will fail at the ownership step."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      },
+      {
+        "flow_name": "repair-damage-diagnosis-other",
+        "description": "Diagnose the damage from the other person's perspective, genuinely reconstructing how the events looked and felt to them, because repair that addresses only your version of what happened misses the harm they actually experienced, and the gap between the two perspectives is usually where the repair lives.",
+        "inputs": [
+          {"name": "self-perspective-diagnosis", "desc": "Your honest account of what happened and the damage"},
+          {"name": "self-contribution-notes", "desc": "Your specific contributions to the damage"}
+        ],
+        "outputs": [
+          {"name": "other-perspective-diagnosis", "desc": "A genuine reconstruction of how the events looked and felt from the other person's side"},
+          {"name": "perspective-gap-map", "desc": "Where your account and their likely account diverge, which is where the real repair work sits"}
+        ],
+        "process": [
+          "Reconstruct the events as they likely experienced them, not as you need them to have experienced them. Ask what they saw, what they felt, and what they concluded about you, drawing on what you know of them.",
+          "Take their harm seriously even where you think it is disproportionate. Whether their reaction seems fair is beside the point for repair, the point is that the harm is real to them and the relationship will not recover until it is addressed.",
+          "Map the gap between the two perspectives. Often each person is reacting to something the other does not even see, and naming that gap (you were hurt by X, which I did not realize mattered) is frequently the heart of the repair.",
+          "Where you genuinely cannot reconstruct their view, note it as something to learn rather than guess. The next step asks them directly, and an honest I am not sure how this looked to you beats a confident wrong assumption."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      },
+      {
+        "flow_name": "repair-ownership-statement",
+        "description": "Compose and deliver an ownership statement that takes responsibility for your part without equivocation, because the equivocating apology (I am sorry if you were hurt, I am sorry but you also) is the single most common point where repair attempts fail, since it signals you are still defending rather than owning.",
+        "inputs": [
+          {"name": "other-perspective-diagnosis", "desc": "How the events looked and felt from their side"},
+          {"name": "perspective-gap-map", "desc": "Where your account and theirs diverge"}
+        ],
+        "outputs": [
+          {"name": "ownership-statement", "desc": "A clear statement taking responsibility for your specific part, naming the harm, without excuse or counter-accusation"},
+          {"name": "non-equivocation-check", "desc": "The check that the statement contains no hidden defense: no if, no but, no shifting blame, no demand for immediate forgiveness"}
+        ],
+        "process": [
+          "Build the statement from your contribution notes and their perspective: name specifically what you did, acknowledge the harm it caused them in their terms, and express genuine regret for it.",
+          "Strip out every equivocation. I am sorry if you felt that way is not ownership, it is a suggestion they overreacted. I am sorry but you also is a counter-attack wearing an apology. Cut the if, the but, and the and-you-too entirely.",
+          "Own only your part, and own it fully rather than partially. You are not responsible for their contribution and should not claim it, but the part that is yours gets owned without hedging, because partial ownership reads as negotiation.",
+          "Make no demand for forgiveness or immediate repair in return. The ownership stands on its own, and attaching so now we are good to it converts the apology into a transaction and tells them you want the discomfort over more than you want to repair the harm."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      },
+      {
+        "flow_name": "repair-what-repair-looks-like",
+        "description": "Ask the other person what repair would actually look like to them, rather than assuming, because people need different things to rebuild (some need acknowledgment, some need changed behavior, some need time, some need a specific amends) and imposing your idea of repair often misses what they actually require.",
+        "inputs": [
+          {"name": "ownership-statement", "desc": "The delivered statement of responsibility"},
+          {"name": "non-equivocation-check", "desc": "The confirmation the statement held no hidden defense"}
+        ],
+        "outputs": [
+          {"name": "repair-definition-questions", "desc": "The questions that invite the other person to define what rebuilding trust would require from you"},
+          {"name": "listening-protocol", "desc": "How to receive their answer: without defending, bargaining, or correcting, even when it is hard to hear"}
+        ],
+        "process": [
+          "Ask directly and openly what rebuilding would require. Questions like what would help, what do you need from me, and what would it take to trust me again hand them the definition of repair instead of you assuming it.",
+          "Be ready for a range of answers. Some people need only to feel heard, some need a concrete change, some need an amends, some need time and space, and some are not ready to answer yet. Each is legitimate and tells you what the repair actually is.",
+          "Set the listening protocol before you ask, because their answer may be hard to hear. The discipline is to receive it without defending, correcting their account, or negotiating the terms down. You asked, so you listen.",
+          "Accept that they may not know yet, or may need the question to sit. Pushing for an immediate answer serves your urgency, not their repair, so leave room for the question to be answered over time."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      },
+      {
+        "flow_name": "repair-behavioral-change-proposal",
+        "description": "Propose concrete behavioral changes that address what they said they need, because trust is rebuilt through changed behavior over time, not through words, and a vague promise to do better gives them nothing to observe, while a specific change gives them something they can actually watch for.",
+        "inputs": [
+          {"name": "repair-definition-questions", "desc": "What the other person said repair would require"},
+          {"name": "listening-protocol", "desc": "How their answer was received"}
+        ],
+        "outputs": [
+          {"name": "behavioral-change-proposals", "desc": "Specific, observable changes in your behavior that address what they identified as needed"},
+          {"name": "change-commitments", "desc": "The changes stated as commitments you can be held to, with enough specificity that they will be able to tell whether you kept them"}
+        ],
+        "process": [
+          "Translate what they need into specific behaviors. Not I will be more reliable but I will confirm commitments in writing and tell you immediately if something is at risk. A change they can observe is worth more than a virtue they have to take on faith.",
+          "Propose changes that genuinely address their stated need, not changes that are easy for you but miss the point. If they needed to feel consulted, the change is about how you include them, not an unrelated gesture.",
+          "Commit only to changes you will actually sustain, because a repair promise you break confirms their worst conclusion and does more damage than the original injury. Under-promise and hold it rather than over-promise and fail.",
+          "State the commitments specifically enough to be checkable, so both of you know what keeping them looks like. Vague commitments cannot be observed, which means they cannot rebuild trust, because trust rebuilds precisely by them watching you keep a specific word."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      },
+      {
+        "flow_name": "repair-visible-followthrough",
+        "description": "Follow through on the committed changes visibly and consistently over time, because trust is restored only by a pattern of kept commitments that the other person can see, and the repair is not the apology or the promise but the weeks and months of behavior that prove the promise was real.",
+        "inputs": [
+          {"name": "behavioral-change-proposals", "desc": "The specific changes proposed"},
+          {"name": "change-commitments", "desc": "The changes stated as checkable commitments"}
+        ],
+        "outputs": [
+          {"name": "followthrough-plan", "desc": "The plan to sustain the committed changes over the time it takes for trust to rebuild, not just in the first days"},
+          {"name": "visibility-markers", "desc": "How the kept commitments become observable to the other person without you demanding credit for them"}
+        ],
+        "process": [
+          "Plan to sustain the changes over the long haul, because trust rebuilds on a pattern, not an event. The first week of good behavior proves nothing to someone who was hurt, it is the consistency over months that does.",
+          "Make the follow-through visible without demanding credit. The changes should be observable in your behavior, but announcing look how reliable I am being turns the repair into a performance and asks them to reward you, which undercuts it.",
+          "Expect testing and setbacks. The other person may test whether the change is real, and you may slip. A slip handled honestly (naming it, correcting it immediately) can actually strengthen the repair, while a slip hidden confirms the original distrust.",
+          "Let trust return on their timeline, not yours. Pushing for the relationship to feel normal before they are ready pressures them and signals the follow-through was a means to an end, so keep the behavior steady and let them close the distance when they are ready."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      },
+      {
+        "flow_name": "repair-permanence-acceptance",
+        "description": "Assess honestly whether the relationship can fully recover and accept that some damage is permanent, because not every relationship returns to what it was, and a mature repair includes recognizing when the realistic outcome is a changed relationship, a reduced one, or a respectful ending rather than a full restoration.",
+        "inputs": [
+          {"name": "followthrough-plan", "desc": "The plan to sustain the changes over time"},
+          {"name": "visibility-markers", "desc": "How kept commitments become observable to the other person"}
+        ],
+        "outputs": [
+          {"name": "permanence-assessment", "desc": "An honest read of how fully the relationship can recover, given their response and the nature of the damage"},
+          {"name": "acceptance-or-closure-plan", "desc": "How to accept the realistic outcome: a restored relationship, a changed or reduced one, or a respectful ending"}
+        ],
+        "process": [
+          "After genuine follow-through over time, read the realistic ceiling of the recovery from their response, not from your hope. Some relationships return fully, some settle into a changed form, some reduce to civil distance, and some cannot continue.",
+          "Accept that some damage is permanent without treating that as failure. You can do the repair perfectly and still not get the relationship back, because the other person has their own agency and some injuries change a relationship for good.",
+          "Match your acceptance to the realistic outcome. If it recovered, invest in the changed relationship on its new footing. If it reduced, hold it at the level it can sustain without forcing more. If it ended, let it end with the ownership intact and without demanding absolution.",
+          "Take the durable gain regardless of outcome: you owned your part, you changed real behavior, and you learned what the damage was. That stands even if the relationship does not, and it is what you carry into every relationship that follows."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      }
+    ]
+  }
+]

@@ -1,0 +1,1277 @@
+[
+  {
+    "chain_name": "loss-analysis-method",
+    "description": "Study lost deals on purpose. Winners tell you what you want to hear, but losses tell you the truth. For every loss, record the stage it died at, who actually decided, the stated reason, and the real reason. The pattern across losses reveals the objection you keep losing to.",
+    "domain": "sales",
+    "tags": ["infrastructure", "sales-methodology", "marketing", "loss-analysis"],
+    "steps": [
+      {
+        "flow_name": "loss-deal-inventory",
+        "description": "Pull every closed-lost deal from a defined window so the analysis sits on real data, not memory.",
+        "inputs": [
+          {"name": "crm-export", "desc": "Export of closed-lost opportunities with dates, amounts, stages, and notes"},
+          {"name": "time-window", "desc": "The period to study, usually the last two to four quarters"}
+        ],
+        "outputs": [
+          {"name": "lost-deal-list", "desc": "Clean list of lost deals inside the window with their key fields"},
+          {"name": "loss-metadata", "desc": "Per-deal metadata: amount, segment, rep, competitor, and last activity date"}
+        ],
+        "process": [
+          "Filter the export to opportunities marked closed-lost with a close date inside the time window.",
+          "Drop duplicates and deals that were never real, such as test records or deals disqualified on day one.",
+          "For each remaining deal, capture amount, segment, owning rep, named competitor if any, and the date of last meaningful activity.",
+          "Confirm the count is large enough to see a pattern. Fewer than fifteen losses means widen the window before continuing."
+        ],
+        "tags": ["data-prep", "loss-analysis"]
+      },
+      {
+        "flow_name": "loss-stage-tagging",
+        "description": "Tag each loss by the pipeline stage where it actually stalled or died, not the stage it was sitting in when marked lost.",
+        "inputs": [
+          {"name": "lost-deal-list", "desc": "Clean list of lost deals"},
+          {"name": "loss-metadata", "desc": "Per-deal metadata"}
+        ],
+        "outputs": [
+          {"name": "stage-tagged-losses", "desc": "Losses tagged with the stage where momentum stopped"},
+          {"name": "stage-distribution", "desc": "Count of losses at each stage, showing where deals die most"}
+        ],
+        "process": [
+          "For each deal, read the activity trail backward to find the last stage where the buyer was still moving forward.",
+          "Tag the loss to that stage, since a deal marked lost at proposal may have truly died at discovery.",
+          "Count losses per stage and write the distribution.",
+          "Flag any stage that holds a large share of losses as a candidate problem area to examine in later steps."
+        ],
+        "tags": ["tagging", "loss-analysis"]
+      },
+      {
+        "flow_name": "decision-maker-identification",
+        "description": "For each loss, separate the contact you worked from the person who actually made the no decision.",
+        "inputs": [
+          {"name": "stage-tagged-losses", "desc": "Losses tagged by stage"}
+        ],
+        "outputs": [
+          {"name": "decision-map", "desc": "Per-deal map of who decided versus who you were talking to"},
+          {"name": "authority-gaps", "desc": "Deals where you never reached the real decision maker"}
+        ],
+        "process": [
+          "For each loss, name the person who gave the final no and the person you spent the most time with.",
+          "Mark deals where those two were different people, which signals you were selling to the wrong level.",
+          "Collect the deals where the real decision maker was never engaged into an authority-gap list.",
+          "Note whether authority gaps cluster in a segment, deal size, or stage."
+        ],
+        "tags": ["stakeholders", "loss-analysis"]
+      },
+      {
+        "flow_name": "stated-vs-real-reason-capture",
+        "description": "Capture the reason the buyer gave, then the reason the evidence suggests, and rate how sure you are of each.",
+        "inputs": [
+          {"name": "stage-tagged-losses", "desc": "Losses tagged by stage"},
+          {"name": "decision-map", "desc": "Who decided versus who you worked"}
+        ],
+        "outputs": [
+          {"name": "reason-pairs", "desc": "For each loss, the stated reason paired with the likely real reason"},
+          {"name": "reason-confidence", "desc": "Confidence rating on each real-reason judgment"}
+        ],
+        "process": [
+          "Record the stated reason exactly as the buyer phrased it, including vague ones like budget or timing.",
+          "From notes, pricing history, and who decided, write the real reason you believe sits behind the stated one.",
+          "Rate confidence in each real reason as high, medium, or low based on how much evidence supports it.",
+          "Where confidence is low, note what you would need to ask the buyer to raise it."
+        ],
+        "tags": ["analysis", "loss-analysis"]
+      },
+      {
+        "flow_name": "loss-pattern-synthesis",
+        "description": "Cluster the reason pairs into recurring loss patterns and name the single objection that shows up most.",
+        "inputs": [
+          {"name": "reason-pairs", "desc": "Stated and real reasons per loss"},
+          {"name": "reason-confidence", "desc": "Confidence ratings on real reasons"},
+          {"name": "stage-distribution", "desc": "Where losses concentrate by stage"}
+        ],
+        "outputs": [
+          {"name": "loss-patterns", "desc": "Named clusters of losses that share a real reason"},
+          {"name": "dominant-objection", "desc": "The one objection responsible for the most lost revenue"}
+        ],
+        "process": [
+          "Group the real reasons into clusters, weighting each by deal size and by reason confidence.",
+          "Cross the clusters against the stage distribution to see where each pattern tends to kill the deal.",
+          "Rank clusters by lost revenue, not by count, so one large recurring loss is not hidden by many small ones.",
+          "Name the top cluster as the dominant objection and write it in the buyer's language."
+        ],
+        "tags": ["synthesis", "loss-analysis"]
+      },
+      {
+        "flow_name": "root-objection-validation",
+        "description": "Test the dominant objection against a fresh sample of losses and, where possible, against the buyers themselves.",
+        "inputs": [
+          {"name": "loss-patterns", "desc": "Named loss clusters"},
+          {"name": "dominant-objection", "desc": "The leading objection to validate"}
+        ],
+        "outputs": [
+          {"name": "validated-objection", "desc": "The dominant objection after testing, kept, revised, or replaced"},
+          {"name": "counter-evidence", "desc": "Cases that did not fit the objection and what they imply"}
+        ],
+        "process": [
+          "Pull a sample of recent losses that were not part of the original synthesis and check whether the objection holds.",
+          "Where you can, reach three to five lost buyers and ask one direct question about why they chose otherwise.",
+          "Keep, revise, or replace the objection based on what the sample and the buyers say.",
+          "Record the losses that did not fit as counter-evidence, since they often point to a second pattern worth its own study."
+        ],
+        "tags": ["validation", "loss-analysis"]
+      },
+      {
+        "flow_name": "loss-remediation-plan",
+        "description": "Turn the validated objection into specific changes to messaging, qualification, and sales process, with metrics to prove they worked.",
+        "inputs": [
+          {"name": "validated-objection", "desc": "The tested dominant objection"},
+          {"name": "loss-patterns", "desc": "Named loss clusters"}
+        ],
+        "outputs": [
+          {"name": "remediation-plan", "desc": "Concrete changes to messaging, qualification, and process tied to each pattern"},
+          {"name": "tracking-metrics", "desc": "Metrics and a review date to confirm the changes reduced losses"}
+        ],
+        "process": [
+          "For the validated objection, write one change to messaging, one to qualification criteria, and one to the sales process.",
+          "Assign each change an owner and a start date so the plan does not die as a document.",
+          "Define the metric that will move if the change works, such as win rate at the stage where the objection kills deals.",
+          "Set a review date one quarter out to compare the metric against the baseline from this study."
+        ],
+        "tags": ["remediation", "loss-analysis"]
+      }
+    ]
+  },
+  {
+    "chain_name": "objection-mining-from-reviews",
+    "description": "Mine competitor 1-star and 3-star reviews for the objections your market already says out loud. Collect fifty to one hundred reviews, pull the complaints, cluster them by theme, and rank by frequency. The top five themes are your positioning openings.",
+    "domain": "sales",
+    "tags": ["infrastructure", "sales-methodology", "marketing", "voice-of-customer"],
+    "steps": [
+      {
+        "flow_name": "review-source-collection",
+        "description": "Gather fifty to one hundred competitor reviews skewed toward the 1-star and 3-star range, where the real complaints live.",
+        "inputs": [
+          {"name": "competitor-list", "desc": "The competitors whose buyers overlap with yours"},
+          {"name": "review-sources", "desc": "Where their reviews live, such as app stores, review sites, and forums"}
+        ],
+        "outputs": [
+          {"name": "raw-reviews", "desc": "Collected reviews with star rating, date, and source"},
+          {"name": "source-coverage", "desc": "How many reviews came from each competitor and source, to expose gaps"}
+        ],
+        "process": [
+          "For each competitor, collect reviews across the named sources, aiming for fifty to one hundred in total.",
+          "Weight collection toward 1-star and 3-star reviews, since 5-star reviews rarely name a real problem.",
+          "Keep the star rating, date, and source with each review so later ranking can account for recency.",
+          "Record how many reviews came from each competitor and source so you can see where coverage is thin."
+        ],
+        "tags": ["collection", "voice-of-customer"]
+      },
+      {
+        "flow_name": "complaint-extraction",
+        "description": "Pull the concrete complaint sentences out of each review and set aside the noise.",
+        "inputs": [
+          {"name": "raw-reviews", "desc": "Collected competitor reviews"}
+        ],
+        "outputs": [
+          {"name": "complaint-statements", "desc": "The specific complaint sentences extracted from reviews"},
+          {"name": "discarded-noise", "desc": "Text set aside as vague or off-topic, kept for an audit trail"}
+        ],
+        "process": [
+          "Read each review and extract the sentences that name a specific problem the buyer hit.",
+          "Keep the buyer's own words, since their phrasing is the language your market uses.",
+          "Set aside praise, vague venting, and off-topic remarks as discarded noise.",
+          "Tag each complaint with the review it came from so frequency counts stay honest."
+        ],
+        "tags": ["extraction", "voice-of-customer"]
+      },
+      {
+        "flow_name": "theme-clustering",
+        "description": "Group the extracted complaints into a small set of clear themes with definitions.",
+        "inputs": [
+          {"name": "complaint-statements", "desc": "Extracted complaint sentences"}
+        ],
+        "outputs": [
+          {"name": "complaint-themes", "desc": "A set of themes, each holding related complaints"},
+          {"name": "theme-definitions", "desc": "A one-line definition of each theme so the boundaries are clear"}
+        ],
+        "process": [
+          "Sort the complaints into groups where each group shares a root problem.",
+          "Keep the number of themes small, usually five to nine, so the signal stays readable.",
+          "Write a one-line definition for each theme that states what belongs in it and what does not.",
+          "Reassign any complaint that could sit in two themes to the one its root cause fits best."
+        ],
+        "tags": ["clustering", "voice-of-customer"]
+      },
+      {
+        "flow_name": "frequency-ranking",
+        "description": "Count and rank the themes by how often they appear and how severe each complaint sounds.",
+        "inputs": [
+          {"name": "complaint-themes", "desc": "Grouped complaint themes"},
+          {"name": "source-coverage", "desc": "Coverage by competitor and source"}
+        ],
+        "outputs": [
+          {"name": "ranked-themes", "desc": "Themes ordered by a combined frequency and severity score"},
+          {"name": "severity-scores", "desc": "Per-theme severity rating based on how damaging the complaints are"}
+        ],
+        "process": [
+          "Count the complaints in each theme and note how many distinct reviews and sources they span.",
+          "Rate severity by how much the complaint would stop a buyer from renewing or recommending.",
+          "Combine frequency and severity into one score, and discount themes that come from a single source.",
+          "Order the themes by the combined score and mark the top five."
+        ],
+        "tags": ["ranking", "voice-of-customer"]
+      },
+      {
+        "flow_name": "positioning-opportunity-mapping",
+        "description": "Map the top themes to the things you do differently, and name the proof each claim will need.",
+        "inputs": [
+          {"name": "ranked-themes", "desc": "Themes ordered by score"},
+          {"name": "severity-scores", "desc": "Per-theme severity ratings"}
+        ],
+        "outputs": [
+          {"name": "positioning-openings", "desc": "For each top theme, the opening it creates for your positioning"},
+          {"name": "proof-requirements", "desc": "The evidence each positioning claim must carry to be believed"}
+        ],
+        "process": [
+          "For each top theme, state plainly whether you actually solve that complaint better, since claiming one you do not solve backfires.",
+          "Write the opening as a contrast: the market hits this problem, and here is how your approach avoids it.",
+          "For each opening, name the proof a skeptical buyer would demand, such as a metric, a reference, or a demo moment.",
+          "Drop any opening where you cannot supply the proof, and keep it on a list for product to close later."
+        ],
+        "tags": ["positioning", "voice-of-customer"]
+      },
+      {
+        "flow_name": "objection-preempt-messaging",
+        "description": "Draft messaging that raises and answers each top objection before the buyer has to say it.",
+        "inputs": [
+          {"name": "positioning-openings", "desc": "Openings created by the top themes"},
+          {"name": "proof-requirements", "desc": "Proof each claim needs"}
+        ],
+        "outputs": [
+          {"name": "preempt-messages", "desc": "Short messages that name the common objection and answer it with proof"},
+          {"name": "placement-plan", "desc": "Where each message should appear across the buyer journey"}
+        ],
+        "process": [
+          "For each opening, write a short message that names the objection in the buyer's words, then answers it with the proof you have.",
+          "Keep the tone honest, since a preempt that overclaims reads worse than staying silent.",
+          "Decide where each message does the most work, such as the pricing page, a sales call, or a comparison page.",
+          "Note which messages the sales team should say aloud versus which belong in written assets."
+        ],
+        "tags": ["messaging", "voice-of-customer"]
+      }
+    ]
+  },
+  {
+    "chain_name": "worst-fit-disqualification",
+    "description": "Define the worst-fit buyer explicitly, then build qualification and copy that lets them leave early on their own. Disqualifying the wrong buyer fast protects pipeline quality and makes the right buyer trust you faster. This is the sales-qualification counterpart to anti-persona work.",
+    "domain": "sales",
+    "tags": ["infrastructure", "sales-methodology", "marketing", "qualification"],
+    "steps": [
+      {
+        "flow_name": "bad-fit-deal-review",
+        "description": "Review deals that closed but then churned, demanded heavy discounts, or drained support, to find what bad fit looks like.",
+        "inputs": [
+          {"name": "account-history", "desc": "Won accounts with renewal status, discount level, and expansion history"},
+          {"name": "support-record", "desc": "Support and success records showing ticket load and escalations by account"}
+        ],
+        "outputs": [
+          {"name": "bad-fit-signals", "desc": "Signals that showed up before a deal turned into a bad-fit account"},
+          {"name": "cost-to-serve-notes", "desc": "Where bad-fit accounts cost more than they returned"}
+        ],
+        "process": [
+          "Pull accounts that churned early, needed deep discounts to close, or generated outsized support load.",
+          "For each, look back at the sales cycle and note what was visible before the deal closed.",
+          "List the early signals that correlate with the bad outcome, such as a mismatched use case or an unrealistic timeline.",
+          "Note the cost to serve each pattern, in support hours, discount dollars, and team strain."
+        ],
+        "tags": ["analysis", "qualification"]
+      },
+      {
+        "flow_name": "worst-fit-profile-builder",
+        "description": "Compose the worst-fit buyer profile from the signals, named and concrete enough to recognize on a first call.",
+        "inputs": [
+          {"name": "bad-fit-signals", "desc": "Signals that precede bad-fit accounts"},
+          {"name": "cost-to-serve-notes", "desc": "Where bad-fit accounts cost more than they return"}
+        ],
+        "outputs": [
+          {"name": "worst-fit-profile", "desc": "A named composite of the buyer you should not sell to"},
+          {"name": "disqualifier-list", "desc": "The specific, observable disqualifiers drawn from the profile"}
+        ],
+        "process": [
+          "Write one composite profile from the signals. Give it a name and describe its use case, budget range, timeline, and expectations.",
+          "For each trait, state why it leads to a bad outcome for both sides, not just for you.",
+          "Turn the traits into a short list of disqualifiers a rep can observe or ask about directly.",
+          "Keep disqualifiers observable, since a disqualifier a rep cannot check is useless on a live call."
+        ],
+        "tags": ["persona", "qualification"]
+      },
+      {
+        "flow_name": "early-screen-question-design",
+        "description": "Turn the disqualifiers into screening questions for the first call, with a rubric to score the answers.",
+        "inputs": [
+          {"name": "worst-fit-profile", "desc": "The named worst-fit composite"},
+          {"name": "disqualifier-list", "desc": "Observable disqualifiers"}
+        ],
+        "outputs": [
+          {"name": "screening-questions", "desc": "Questions that surface disqualifiers without sounding like an interrogation"},
+          {"name": "scoring-rubric", "desc": "How to score answers into pursue, probe further, or disqualify"}
+        ],
+        "process": [
+          "For each disqualifier, write a question that a good-fit buyer answers comfortably and a bad-fit buyer stumbles on.",
+          "Phrase questions as help, not as a gate, so the call stays a conversation.",
+          "Build a rubric that maps answer patterns to pursue, probe further, or disqualify.",
+          "Set a rule for how many disqualifiers trigger a polite exit, so reps are not left guessing."
+        ],
+        "tags": ["questions", "qualification"]
+      },
+      {
+        "flow_name": "self-select-copy-writer",
+        "description": "Write copy that gives the wrong buyer a clear, early reason to leave before anyone spends time on a call.",
+        "inputs": [
+          {"name": "worst-fit-profile", "desc": "The named worst-fit composite"},
+          {"name": "disqualifier-list", "desc": "Observable disqualifiers"}
+        ],
+        "outputs": [
+          {"name": "self-select-copy", "desc": "Copy that lets the wrong buyer recognize this is not for them"},
+          {"name": "placement-recommendations", "desc": "Where the copy should sit to catch bad fit before a call"}
+        ],
+        "process": [
+          "Write short copy in the buyer's words that states who this is not built for, drawn from the worst-fit profile.",
+          "Test each line against a good-fit buyer: if it would scare the right buyer off, soften or remove it.",
+          "Recommend placement where it catches bad fit early, such as the pricing page or a qualification form.",
+          "Note that this copy often raises conversion, because confidence and specificity reassure the right buyer."
+        ],
+        "tags": ["copywriting", "qualification"]
+      },
+      {
+        "flow_name": "right-fit-inversion",
+        "description": "Invert the worst-fit profile into a sharpened right-fit definition and the criteria that identify it.",
+        "inputs": [
+          {"name": "worst-fit-profile", "desc": "The named worst-fit composite"},
+          {"name": "screening-questions", "desc": "The screening questions"}
+        ],
+        "outputs": [
+          {"name": "right-fit-profile", "desc": "The sharpened profile of the buyer you want"},
+          {"name": "targeting-criteria", "desc": "The three to five criteria that most cleanly separate right fit from worst fit"}
+        ],
+        "process": [
+          "For each worst-fit trait, write its opposite: what the right-fit buyer expects, needs, and values.",
+          "Pick the three to five criteria that separate the two profiles most cleanly, since those are your targeting rules.",
+          "Write the right-fit profile in the same format as the worst-fit one, as a named composite.",
+          "Confirm a rep could sort a new lead into one profile or the other within five questions."
+        ],
+        "tags": ["persona", "qualification"]
+      },
+      {
+        "flow_name": "qualification-rollout",
+        "description": "Fold the questions, copy, and criteria into the live qualification process and set the metric that proves pipeline quality improved.",
+        "inputs": [
+          {"name": "screening-questions", "desc": "The screening questions"},
+          {"name": "self-select-copy", "desc": "The self-select copy"},
+          {"name": "targeting-criteria", "desc": "The right-fit targeting criteria"}
+        ],
+        "outputs": [
+          {"name": "qualification-playbook", "desc": "The combined playbook reps follow to screen, exit, or advance a lead"},
+          {"name": "pipeline-quality-metrics", "desc": "Metrics and a review date to confirm fewer bad-fit deals enter the pipeline"}
+        ],
+        "process": [
+          "Assemble the questions, scoring rubric, self-select copy, and targeting criteria into one short playbook.",
+          "Give reps a scripted, respectful way to exit a call when the disqualifiers trigger.",
+          "Choose the metric that should improve, such as win rate, average deal size, or early churn.",
+          "Set a review date to compare the metric against the baseline before the changes went live."
+        ],
+        "tags": ["rollout", "qualification"]
+      }
+    ]
+  },
+  {
+    "chain_name": "micro-commitment-funnel",
+    "description": "Build the path to the big yes out of a sequence of small yeses, so the buyer's own consistency carries them forward. Map the current asks, break the big ones into smaller ones, and sequence them from a free assessment to a custom plan to a pilot to the full purchase.",
+    "domain": "sales",
+    "tags": ["infrastructure", "sales-methodology", "marketing", "funnel-design"],
+    "steps": [
+      {
+        "flow_name": "current-ask-mapping",
+        "description": "Map every ask you currently make of a prospect, in order, with the size of each commitment.",
+        "inputs": [
+          {"name": "current-funnel", "desc": "The current sequence of steps from first touch to purchase"},
+          {"name": "offer-description", "desc": "What you ultimately want the buyer to say yes to"}
+        ],
+        "outputs": [
+          {"name": "ask-inventory", "desc": "Every ask in the current journey, in sequence"},
+          {"name": "commitment-sizes", "desc": "The size of each ask in time, money, and risk to the buyer"}
+        ],
+        "process": [
+          "List every ask the buyer faces, from giving an email to signing a contract, in the order they hit it.",
+          "For each ask, rate the commitment it demands in the buyer's time, money, and perceived risk.",
+          "Mark which asks are reversible and which feel permanent, since permanent asks carry more weight.",
+          "Note where the buyer must say yes to something before they have seen any value."
+        ],
+        "tags": ["mapping", "funnel-design"]
+      },
+      {
+        "flow_name": "commitment-gap-analysis",
+        "description": "Find the places where the ask jumps too far too fast and the buyer drops off.",
+        "inputs": [
+          {"name": "ask-inventory", "desc": "Every ask in sequence"},
+          {"name": "commitment-sizes", "desc": "The size of each ask"}
+        ],
+        "outputs": [
+          {"name": "commitment-gaps", "desc": "The transitions where the commitment size jumps sharply"},
+          {"name": "drop-off-points", "desc": "Where buyers actually leave, matched against the gaps"}
+        ],
+        "process": [
+          "Walk the sequence and measure the jump in commitment between each ask and the next.",
+          "Flag the transitions where the jump is large, since those are where consistency breaks.",
+          "Overlay any real drop-off data you have and see whether drops line up with the large jumps.",
+          "Rank the gaps by how much pipeline they cost, so the biggest leak gets fixed first."
+        ],
+        "tags": ["analysis", "funnel-design"]
+      },
+      {
+        "flow_name": "micro-ask-design",
+        "description": "Design smaller intermediate asks that fill the gaps, so each step is a believable next yes.",
+        "inputs": [
+          {"name": "commitment-gaps", "desc": "Transitions with sharp jumps"},
+          {"name": "drop-off-points", "desc": "Where buyers leave"}
+        ],
+        "outputs": [
+          {"name": "micro-asks", "desc": "The new small asks that bridge each gap"},
+          {"name": "yes-ladder", "desc": "The full ladder of asks from smallest to largest"}
+        ],
+        "process": [
+          "For each large gap, design one or two smaller asks that a buyer who said the last yes would find easy.",
+          "Make each micro-ask return value to the buyer, so saying yes feels like a gain, not a concession.",
+          "Order the asks into a ladder where each rung is only slightly higher than the one below.",
+          "Check that no rung still contains a hidden large jump that a buyer would balk at."
+        ],
+        "tags": ["design", "funnel-design"]
+      },
+      {
+        "flow_name": "offer-sequencing",
+        "description": "Sequence the concrete offers, such as a free assessment, a custom plan, a pilot, and the full purchase, and define what moves a buyer up.",
+        "inputs": [
+          {"name": "micro-asks", "desc": "The bridging small asks"},
+          {"name": "yes-ladder", "desc": "The full ladder of asks"}
+        ],
+        "outputs": [
+          {"name": "sequenced-offers", "desc": "The ordered offers mapped onto the yes ladder"},
+          {"name": "transition-triggers", "desc": "The signal that tells you a buyer is ready for the next offer"}
+        ],
+        "process": [
+          "Place a real offer on each rung, starting with something free that still delivers value.",
+          "Make each offer a natural setup for the next, so the pilot presumes the plan and the plan presumes the assessment.",
+          "Define the trigger that means a buyer is ready to move up, such as using the assessment or hitting a result.",
+          "Write what happens when a buyer stalls on a rung, since a stall is a signal, not a failure."
+        ],
+        "tags": ["sequencing", "funnel-design"]
+      },
+      {
+        "flow_name": "friction-removal",
+        "description": "Remove the friction at each transition so the next yes costs the buyer as little effort as possible.",
+        "inputs": [
+          {"name": "sequenced-offers", "desc": "The ordered offers"},
+          {"name": "transition-triggers", "desc": "Signals a buyer is ready to advance"}
+        ],
+        "outputs": [
+          {"name": "friction-fixes", "desc": "The specific friction removed at each transition"},
+          {"name": "transition-copy", "desc": "The words that carry the buyer from one offer to the next"}
+        ],
+        "process": [
+          "At each transition, list what the buyer must do, decide, or wait for, and cut whatever is not essential.",
+          "Pre-fill, pre-schedule, or pre-decide whatever you can on the buyer's behalf.",
+          "Write the transition copy so the next step sounds like the obvious continuation of the last yes.",
+          "Remove any new decision that forces the buyer to reconsider a yes they already gave."
+        ],
+        "tags": ["optimization", "funnel-design"]
+      },
+      {
+        "flow_name": "funnel-instrumentation",
+        "description": "Instrument each step so you can see where the sequence of yeses stops and act on it.",
+        "inputs": [
+          {"name": "sequenced-offers", "desc": "The ordered offers"},
+          {"name": "friction-fixes", "desc": "Friction removed at each transition"}
+        ],
+        "outputs": [
+          {"name": "funnel-metrics", "desc": "The conversion metric for each rung of the ladder"},
+          {"name": "review-cadence", "desc": "How often to review the funnel and who owns the fix"}
+        ],
+        "process": [
+          "Define the conversion metric for each transition, so every rung reports its own yes rate.",
+          "Set a baseline from current data where it exists, and mark where you are starting blind.",
+          "Decide how often to review the metrics and who acts when a rung underperforms.",
+          "Name the first experiment to run on the weakest rung at the next review."
+        ],
+        "tags": ["measurement", "funnel-design"]
+      }
+    ]
+  },
+  {
+    "chain_name": "decoy-pricing-architecture",
+    "description": "Use a deliberately placed middle tier to make the premium tier the obvious choice. Start from two tiers, add a decoy at about two and a half times the basic price that carries most but not all of the premium value, then measure how buyer choice shifts.",
+    "domain": "sales",
+    "tags": ["infrastructure", "sales-methodology", "marketing", "pricing"],
+    "steps": [
+      {
+        "flow_name": "current-tier-audit",
+        "description": "Document the current tiers, prices, and what each one includes, so the decoy is built on facts.",
+        "inputs": [
+          {"name": "pricing-data", "desc": "Current tiers, prices, and conversion by tier"},
+          {"name": "feature-list", "desc": "The full list of features and which tier holds each"}
+        ],
+        "outputs": [
+          {"name": "tier-map", "desc": "A clear map of tiers, prices, and included value"},
+          {"name": "value-gaps", "desc": "Where the jump between tiers is confusing or poorly justified"}
+        ],
+        "process": [
+          "Lay out each tier with its price and the value a buyer gets at that price.",
+          "Record the share of buyers who pick each tier today, since that is the baseline you will move.",
+          "Mark where the gap between two tiers is hard for a buyer to reason about.",
+          "Note any tier that almost nobody chooses, since it may already be acting as an accidental decoy."
+        ],
+        "tags": ["audit", "pricing"]
+      },
+      {
+        "flow_name": "value-metric-definition",
+        "description": "Define the single value metric buyers actually compare tiers on, since the decoy works along that axis.",
+        "inputs": [
+          {"name": "tier-map", "desc": "The map of current tiers"},
+          {"name": "value-gaps", "desc": "Where tier jumps confuse buyers"}
+        ],
+        "outputs": [
+          {"name": "value-metric", "desc": "The metric buyers use to judge whether a tier is worth it"},
+          {"name": "willingness-to-pay-notes", "desc": "What the market will pay at each point on that metric"}
+        ],
+        "process": [
+          "Identify the one thing buyers point to when they say a tier is or is not worth the price.",
+          "Confirm the metric scales with value the buyer feels, not just with a feature count.",
+          "Gather what you know about willingness to pay along that metric from quotes, losses, and discounts.",
+          "State the metric in one sentence so every later pricing choice can be checked against it."
+        ],
+        "tags": ["definition", "pricing"]
+      },
+      {
+        "flow_name": "decoy-tier-construction",
+        "description": "Construct the middle decoy tier and set its price to anchor the premium tier as the smart buy.",
+        "inputs": [
+          {"name": "tier-map", "desc": "The map of current tiers"},
+          {"name": "value-metric", "desc": "The metric buyers compare on"}
+        ],
+        "outputs": [
+          {"name": "decoy-tier", "desc": "The middle tier defined by name, price, and intended role"},
+          {"name": "anchor-rationale", "desc": "Why this price and position make the premium tier look like the better value"}
+        ],
+        "process": [
+          "Set the decoy price near two and a half times the basic tier, inside the range the audit showed buyers accept.",
+          "Position the decoy so that the step from decoy to premium looks small next to the value it adds.",
+          "Write the anchor rationale: the decoy exists to reframe the premium price, not mainly to be sold.",
+          "Sanity check that the decoy is still a fair offer on its own, since an obviously bad tier erodes trust."
+        ],
+        "tags": ["construction", "pricing"]
+      },
+      {
+        "flow_name": "feature-allocation",
+        "description": "Allocate features so the decoy sits close to premium but is missing the one capability the best buyers most want.",
+        "inputs": [
+          {"name": "decoy-tier", "desc": "The middle tier definition"},
+          {"name": "value-metric", "desc": "The metric buyers compare on"}
+        ],
+        "outputs": [
+          {"name": "feature-allocation", "desc": "Which features sit in basic, decoy, and premium"},
+          {"name": "premium-differentiator", "desc": "The single capability that pulls the right buyer up to premium"}
+        ],
+        "process": [
+          "Give the decoy most of the premium value so it is clearly better than basic.",
+          "Hold back one capability that the highest-value buyers care about most, and place it only in premium.",
+          "Check the differentiator is something the right buyer will notice and the wrong buyer will not miss.",
+          "Avoid crippling the decoy on small, petty features, since that reads as manipulation rather than design."
+        ],
+        "tags": ["allocation", "pricing"]
+      },
+      {
+        "flow_name": "pricing-page-layout",
+        "description": "Lay out the three tiers so the buyer's eye lands on the premium tier as the recommended choice.",
+        "inputs": [
+          {"name": "decoy-tier", "desc": "The middle tier definition"},
+          {"name": "feature-allocation", "desc": "Which features sit in each tier"}
+        ],
+        "outputs": [
+          {"name": "page-layout", "desc": "The arrangement and labeling of the three tiers"},
+          {"name": "visual-emphasis-plan", "desc": "How emphasis guides the eye toward premium"}
+        ],
+        "process": [
+          "Order the tiers so the decoy sits between basic and premium, with premium shown as recommended.",
+          "Label features so the gap between decoy and premium is read at a glance, not studied.",
+          "Use emphasis, such as a highlight or a most-popular marker, to point at premium without hiding the others.",
+          "Keep the page honest and scannable, since a confusing page sends buyers to a sales rep or away."
+        ],
+        "tags": ["layout", "pricing"]
+      },
+      {
+        "flow_name": "conversion-shift-measurement",
+        "description": "Measure how tier choice shifts after the decoy goes live, and adjust if the shift did not land.",
+        "inputs": [
+          {"name": "page-layout", "desc": "The arrangement of the three tiers"},
+          {"name": "anchor-rationale", "desc": "Why the decoy should move choice toward premium"}
+        ],
+        "outputs": [
+          {"name": "conversion-shift-report", "desc": "How the mix of tier choices changed against the baseline"},
+          {"name": "pricing-adjustments", "desc": "The next change to make if the shift fell short"}
+        ],
+        "process": [
+          "Compare the new mix of tier choices against the baseline the audit captured.",
+          "Confirm the shift came from buyers moving up, not from buyers leaving, by watching total conversion.",
+          "If premium did not gain, test a different decoy price or differentiator rather than scrapping the idea.",
+          "Record the result so the pricing decision has evidence behind it, not just a theory."
+        ],
+        "tags": ["measurement", "pricing"]
+      }
+    ]
+  },
+  {
+    "chain_name": "champion-mapping-method",
+    "description": "Find the person inside the buying organization who feels the problem, holds enough authority, and will argue your case when you are not in the room. Map the organization, score the contacts, and arm the champion with the business case in their own language.",
+    "domain": "sales",
+    "tags": ["infrastructure", "sales-methodology", "marketing", "enterprise-sales"],
+    "steps": [
+      {
+        "flow_name": "buying-org-mapping",
+        "description": "Map the buying organization: the roles that touch the decision, their influence, and who owns the problem.",
+        "inputs": [
+          {"name": "account-intel", "desc": "What you know about the account: structure, goals, and recent changes"},
+          {"name": "stakeholder-notes", "desc": "Notes from calls on who said what and who reports to whom"}
+        ],
+        "outputs": [
+          {"name": "org-map", "desc": "A map of the people in the deal and their roles"},
+          {"name": "influence-lines", "desc": "Who influences whom, including the quiet influencers off the org chart"}
+        ],
+        "process": [
+          "Lay out the known people in the account with their titles and apparent roles in the decision.",
+          "Draw the reporting lines and, more important, the influence lines that do not follow the chart.",
+          "Mark the economic buyer, the technical evaluators, and the people who can block.",
+          "Flag the gaps, since the people you have not met often decide the outcome."
+        ],
+        "tags": ["mapping", "enterprise-sales"]
+      },
+      {
+        "flow_name": "problem-owner-identification",
+        "description": "Identify who personally owns the pain your product removes, since a champion without the pain will not fight for you.",
+        "inputs": [
+          {"name": "org-map", "desc": "The map of people in the deal"},
+          {"name": "influence-lines", "desc": "Who influences whom"}
+        ],
+        "outputs": [
+          {"name": "problem-owners", "desc": "The people who feel the problem directly"},
+          {"name": "pain-intensity", "desc": "How sharply each one feels it and why"}
+        ],
+        "process": [
+          "For each person, ask whether the problem shows up in their own goals, metrics, or daily work.",
+          "Separate the people who merely agree the problem exists from the people it actually hurts.",
+          "Rate how intensely each problem owner feels the pain and what event made it real for them.",
+          "Note who gains the most visible win if the problem is solved, since that person has a reason to push."
+        ],
+        "tags": ["discovery", "enterprise-sales"]
+      },
+      {
+        "flow_name": "champion-scoring",
+        "description": "Score each candidate on pain, authority, and willingness to advocate, and pick the primary champion.",
+        "inputs": [
+          {"name": "problem-owners", "desc": "People who feel the problem"},
+          {"name": "pain-intensity", "desc": "How sharply each feels it"}
+        ],
+        "outputs": [
+          {"name": "champion-scores", "desc": "Each candidate scored on pain, authority, and willingness"},
+          {"name": "primary-champion", "desc": "The candidate best placed to carry the deal internally"}
+        ],
+        "process": [
+          "Score each candidate on three axes: how much they feel the pain, how much authority they hold, and how willing they are to advocate.",
+          "Weight willingness heavily, since a motivated mid-level champion often beats a senior bystander.",
+          "Pick the primary champion and name a backup, because champions change roles or leave.",
+          "Record what would have to be true for the backup to step in."
+        ],
+        "tags": ["scoring", "enterprise-sales"]
+      },
+      {
+        "flow_name": "motivation-discovery",
+        "description": "Discover what the champion personally gains from a win and what risk they fear, so the case speaks to both.",
+        "inputs": [
+          {"name": "primary-champion", "desc": "The chosen champion"},
+          {"name": "champion-scores", "desc": "The scoring across candidates"}
+        ],
+        "outputs": [
+          {"name": "champion-motivation", "desc": "What the champion stands to gain personally and professionally"},
+          {"name": "risk-concerns", "desc": "What the champion is afraid will go wrong if they back you"}
+        ],
+        "process": [
+          "Learn what a win does for the champion's standing, goals, and career, not just for the company.",
+          "Surface the risk they carry by advocating, such as looking wrong in front of a boss.",
+          "Ask what would make them confident enough to put their name behind the decision.",
+          "Record both the upside they want and the downside they fear, since the case must address each."
+        ],
+        "tags": ["discovery", "enterprise-sales"]
+      },
+      {
+        "flow_name": "business-case-construction",
+        "description": "Build the business case in the champion's own language and metrics, so they can present it as theirs.",
+        "inputs": [
+          {"name": "champion-motivation", "desc": "What the champion gains"},
+          {"name": "risk-concerns", "desc": "What the champion fears"}
+        ],
+        "outputs": [
+          {"name": "business-case", "desc": "The case for change written in the organization's own terms"},
+          {"name": "proof-points", "desc": "The evidence that backs each claim in the case"}
+        ],
+        "process": [
+          "Frame the case around the champion's metrics and the organization's stated goals, not your feature list.",
+          "Quantify the cost of staying put and the gain from changing, in numbers the finance team will accept.",
+          "Address each risk concern directly, so the champion is not blindsided when a skeptic raises it.",
+          "Attach a proof point to every claim, since an unproven claim is a liability the champion will not carry."
+        ],
+        "tags": ["business-case", "enterprise-sales"]
+      },
+      {
+        "flow_name": "enablement-kit",
+        "description": "Give the champion a kit that lets them sell internally when you are not there.",
+        "inputs": [
+          {"name": "business-case", "desc": "The case for change"},
+          {"name": "proof-points", "desc": "Evidence behind the case"}
+        ],
+        "outputs": [
+          {"name": "champion-kit", "desc": "A short, forwardable set of materials the champion can use internally"},
+          {"name": "objection-answers", "desc": "Prepared answers to the objections the champion will meet inside the room"}
+        ],
+        "process": [
+          "Assemble a short deck or one-pager the champion can forward without editing.",
+          "Keep it skimmable, since internal readers give it less attention than the champion does.",
+          "Write answers to the objections the champion will face from peers, finance, and security.",
+          "Rehearse the pitch with the champion so they can deliver it in their own voice."
+        ],
+        "tags": ["enablement", "enterprise-sales"]
+      },
+      {
+        "flow_name": "advocacy-tracking",
+        "description": "Track whether the champion is actually advancing the deal and where they stall, so you can help at the right moment.",
+        "inputs": [
+          {"name": "champion-kit", "desc": "The internal selling kit"},
+          {"name": "primary-champion", "desc": "The chosen champion"}
+        ],
+        "outputs": [
+          {"name": "advocacy-signals", "desc": "Signs the champion is moving the deal or has gone quiet"},
+          {"name": "support-actions", "desc": "What you will do to unblock the champion at each stall"}
+        ],
+        "process": [
+          "Agree on the internal milestones the champion is driving toward and a rough timeline.",
+          "Watch for signals of real movement, such as new people pulled in, versus silence.",
+          "When the champion stalls, diagnose whether it is a missing proof, a blocker, or lost priority.",
+          "Match each stall to a specific support action rather than simply asking for an update."
+        ],
+        "tags": ["tracking", "enterprise-sales"]
+      }
+    ]
+  },
+  {
+    "chain_name": "content-that-sells-method",
+    "description": "Answer the five questions buyers care about most, including the uncomfortable ones about price, problems, and comparisons. A buyer who arrives pre-educated closes faster and argues less. Built on the They Ask You Answer approach of honest, buyer-first content.",
+    "domain": "sales",
+    "tags": ["infrastructure", "sales-methodology", "marketing", "content"],
+    "steps": [
+      {
+        "flow_name": "buyer-question-harvest",
+        "description": "Harvest the real questions buyers ask sales and support, since those are the questions content must answer.",
+        "inputs": [
+          {"name": "sales-call-notes", "desc": "Notes and recordings from sales calls"},
+          {"name": "support-log", "desc": "Support and chat logs showing what buyers ask after the sale"}
+        ],
+        "outputs": [
+          {"name": "question-list", "desc": "The real questions buyers ask, in their own words"},
+          {"name": "question-frequency", "desc": "How often each question comes up"}
+        ],
+        "process": [
+          "Read through sales notes and support logs and write down every question a buyer actually asked.",
+          "Keep the buyer's phrasing, since their words are the search terms and the objections.",
+          "Count how often each question or close variant appears.",
+          "Separate pre-sale questions from post-sale ones, since content should answer the pre-sale set first."
+        ],
+        "tags": ["research", "content"]
+      },
+      {
+        "flow_name": "uncomfortable-question-selection",
+        "description": "Select the five questions that most content avoids: cost, problems, comparisons, reviews, and who is best.",
+        "inputs": [
+          {"name": "question-list", "desc": "The real buyer questions"},
+          {"name": "question-frequency", "desc": "How often each is asked"}
+        ],
+        "outputs": [
+          {"name": "priority-questions", "desc": "The five questions to answer first, weighted to the uncomfortable ones"},
+          {"name": "avoidance-reasons", "desc": "Why the company has avoided answering each, so the fear is named"}
+        ],
+        "process": [
+          "From the list, pull the questions that touch cost, problems, comparisons, reviews, and who is best for whom.",
+          "Rank them by frequency and by how directly they block a purchase.",
+          "Pick the top five, making sure at least three are ones the company has been reluctant to answer.",
+          "For each, write why it has gone unanswered, since naming the fear makes it easier to overcome."
+        ],
+        "tags": ["prioritization", "content"]
+      },
+      {
+        "flow_name": "honest-answer-drafting",
+        "description": "Draft honest answers to the chosen questions, including the parts that are not flattering.",
+        "inputs": [
+          {"name": "priority-questions", "desc": "The five questions to answer"},
+          {"name": "avoidance-reasons", "desc": "Why each has gone unanswered"}
+        ],
+        "outputs": [
+          {"name": "draft-answers", "desc": "Direct answers that tell the buyer the truth, including limits"},
+          {"name": "honesty-checks", "desc": "A pass confirming each answer would survive a skeptical buyer reading it"}
+        ],
+        "process": [
+          "Answer each question the way you would tell a friend, including the cases where you are not the right choice.",
+          "State real price ranges and real tradeoffs, since dodging them is why buyers distrust vendor content.",
+          "Name the buyers you are not for, which paradoxically earns trust with the buyers you are for.",
+          "Run an honesty check: would this answer hold up if the buyer tested it against reality?"
+        ],
+        "tags": ["writing", "content"]
+      },
+      {
+        "flow_name": "proof-integration",
+        "description": "Back each answer with evidence, examples, and real numbers so the honesty is believable, not just claimed.",
+        "inputs": [
+          {"name": "draft-answers", "desc": "The honest draft answers"},
+          {"name": "honesty-checks", "desc": "The skeptical-reader pass"}
+        ],
+        "outputs": [
+          {"name": "proof-backed-answers", "desc": "Answers with evidence attached to each claim"},
+          {"name": "evidence-gaps", "desc": "Claims you cannot yet prove, flagged for follow-up"}
+        ],
+        "process": [
+          "For each claim in an answer, attach a number, an example, or a reference the buyer can check.",
+          "Prefer specific proof over general assurance, since a single concrete example outweighs a paragraph of claims.",
+          "Where you lack proof, mark the gap rather than papering over it with confident language.",
+          "Route the evidence gaps to whoever can close them, such as product, finance, or customer success."
+        ],
+        "tags": ["evidence", "content"]
+      },
+      {
+        "flow_name": "content-format-mapping",
+        "description": "Map each answer to the format and channel where buyers actually look for it.",
+        "inputs": [
+          {"name": "proof-backed-answers", "desc": "Answers with evidence"},
+          {"name": "priority-questions", "desc": "The five questions"}
+        ],
+        "outputs": [
+          {"name": "content-plan", "desc": "Each answer mapped to a format and channel"},
+          {"name": "publishing-schedule", "desc": "The order and dates to publish, starting with the highest-impact answers"}
+        ],
+        "process": [
+          "For each answer, choose the format the buyer prefers, such as an article, a comparison page, or a short video.",
+          "Match the channel to where buyers search, since the best answer in the wrong place goes unread.",
+          "Schedule publishing to lead with the answers that remove the biggest purchase blockers.",
+          "Plan to update each piece as the evidence gaps close, so the content stays true."
+        ],
+        "tags": ["planning", "content"]
+      },
+      {
+        "flow_name": "sales-integration",
+        "description": "Wire the content into the sales process so reps send the right piece at the right moment.",
+        "inputs": [
+          {"name": "content-plan", "desc": "Answers mapped to formats and channels"},
+          {"name": "publishing-schedule", "desc": "The publishing order"}
+        ],
+        "outputs": [
+          {"name": "sales-assignment-guide", "desc": "Which piece a rep sends at which stage and objection"},
+          {"name": "close-rate-tracking", "desc": "How to tell whether buyers who read the content close faster"}
+        ],
+        "process": [
+          "For each stage and common objection, name the content a rep should send to move the deal.",
+          "Train reps to use content as an answer, not as homework, so it speeds the deal rather than stalling it.",
+          "Track whether deals where the buyer read the content close faster or at a higher rate.",
+          "Feed what reps learn back into the question list, so the content keeps matching real objections."
+        ],
+        "tags": ["integration", "content"]
+      }
+    ]
+  },
+  {
+    "chain_name": "referral-system-design",
+    "description": "Ask for referrals at the moment of peak satisfaction, and ask for one specific person facing one specific problem. Give a forwardable tool, track every source and its close rate. Referrals close several times better than cold leads, so the system is worth building on purpose.",
+    "domain": "sales",
+    "tags": ["infrastructure", "sales-methodology", "marketing", "referrals"],
+    "steps": [
+      {
+        "flow_name": "satisfaction-moment-mapping",
+        "description": "Find the moments when customers feel the most value, since that is when a referral ask lands.",
+        "inputs": [
+          {"name": "customer-journey", "desc": "The stages a customer moves through after buying"},
+          {"name": "satisfaction-signals", "desc": "Signals of satisfaction, such as results reached, reviews, and renewals"}
+        ],
+        "outputs": [
+          {"name": "peak-moments", "desc": "The points in the journey where satisfaction is highest"},
+          {"name": "trigger-events", "desc": "The observable events that mark each peak moment"}
+        ],
+        "process": [
+          "Map the customer journey and mark where customers report or show the most value.",
+          "Identify the events that reliably precede those peaks, such as hitting a first result or renewing.",
+          "Choose the peaks that are both high in satisfaction and easy to detect in your systems.",
+          "Avoid asking at neutral moments, since a mistimed ask teaches customers to ignore the ask."
+        ],
+        "tags": ["mapping", "referrals"]
+      },
+      {
+        "flow_name": "referral-ask-design",
+        "description": "Write a specific ask tied to a specific problem and a specific kind of person, not a vague request to spread the word.",
+        "inputs": [
+          {"name": "peak-moments", "desc": "The high-satisfaction points"},
+          {"name": "trigger-events", "desc": "The events that mark them"}
+        ],
+        "outputs": [
+          {"name": "referral-ask", "desc": "The exact wording of the ask, naming a specific problem and person"},
+          {"name": "ask-timing", "desc": "When and how to deliver the ask relative to the trigger event"}
+        ],
+        "process": [
+          "Write the ask as a single, concrete question: who is one person you know dealing with this specific problem?",
+          "Avoid the vague ask to tell your friends, since a vague ask returns nothing.",
+          "Tie the ask to the value the customer just felt, so it reads as a natural extension of their win.",
+          "Decide the moment and the medium, such as right after a success milestone in a short message."
+        ],
+        "tags": ["design", "referrals"]
+      },
+      {
+        "flow_name": "forwardable-tool-creation",
+        "description": "Create something the customer can forward without effort, so the referral costs them almost nothing.",
+        "inputs": [
+          {"name": "referral-ask", "desc": "The specific ask"},
+          {"name": "ask-timing", "desc": "When and how to deliver it"}
+        ],
+        "outputs": [
+          {"name": "forwardable-asset", "desc": "A ready-to-send asset the customer can pass along as is"},
+          {"name": "intro-template", "desc": "A short template that makes the introduction easy to write"}
+        ],
+        "process": [
+          "Build an asset the customer can forward directly, such as a short note, a guide, or an invite.",
+          "Write a template the customer can paste and send, since drafting an intro is the friction that kills referrals.",
+          "Make the asset useful to the person receiving it on its own, so forwarding it feels like a favor, not an ad.",
+          "Keep it short, since a long asset is less likely to be sent."
+        ],
+        "tags": ["enablement", "referrals"]
+      },
+      {
+        "flow_name": "referral-routing",
+        "description": "Define how a referral is received, routed, and acknowledged, so no introduction falls through the cracks.",
+        "inputs": [
+          {"name": "forwardable-asset", "desc": "The ready-to-send asset"},
+          {"name": "intro-template", "desc": "The introduction template"}
+        ],
+        "outputs": [
+          {"name": "routing-process", "desc": "The path a referral takes from arrival to first contact"},
+          {"name": "acknowledgment-plan", "desc": "How and when the referrer is thanked and updated"}
+        ],
+        "process": [
+          "Define where a referral lands and who owns the first response, with a target response time.",
+          "Make sure the referred person gets a warm, context-aware first contact, not a generic sales touch.",
+          "Plan how the referrer is thanked quickly, since a slow or silent thank-you ends future referrals.",
+          "Decide what the referrer hears about the outcome, within the bounds of the referred person's privacy."
+        ],
+        "tags": ["process", "referrals"]
+      },
+      {
+        "flow_name": "source-tracking",
+        "description": "Track every referral source and its outcome, so you know which customers and moments produce real deals.",
+        "inputs": [
+          {"name": "routing-process", "desc": "The referral path"},
+          {"name": "referral-ask", "desc": "The specific ask"}
+        ],
+        "outputs": [
+          {"name": "source-ledger", "desc": "A record of who referred whom and from which moment"},
+          {"name": "close-rate-by-source", "desc": "Close rate and value by referral source and by moment"}
+        ],
+        "process": [
+          "Record each referral with its source customer, the moment it came from, and the ask that prompted it.",
+          "Follow each referral to its outcome, closed or not, with the deal value.",
+          "Compute close rate and value by source and by moment, so you can see what produces results.",
+          "Compare referral close rates against cold leads to size the program's real contribution."
+        ],
+        "tags": ["measurement", "referrals"]
+      },
+      {
+        "flow_name": "referral-loop-reinforcement",
+        "description": "Close the loop so the customers who refer well keep referring, and the program compounds.",
+        "inputs": [
+          {"name": "source-ledger", "desc": "Record of referrals and their sources"},
+          {"name": "close-rate-by-source", "desc": "Close rate and value by source"}
+        ],
+        "outputs": [
+          {"name": "reinforcement-plan", "desc": "How to keep strong referrers engaged and asking again"},
+          {"name": "referrer-recognition", "desc": "How referrers are recognized in a way that fits your relationship with them"}
+        ],
+        "process": [
+          "Identify the customers who refer often and whose referrals close, and treat them as a distinct group.",
+          "Design a way to recognize them that fits the relationship, since the wrong reward can cheapen a genuine referral.",
+          "Set a cadence to re-engage strong referrers at their next peak moment, not at random.",
+          "Review the ledger regularly and retire the parts of the ask that are not producing referrals."
+        ],
+        "tags": ["reinforcement", "referrals"]
+      }
+    ]
+  },
+  {
+    "chain_name": "positioning-through-constraint",
+    "description": "Position by what you refuse to do. A subtractive claim is more memorable than an additive one. State the tradeoffs you chose on purpose, which repels the bad-fit buyer and earns trust with the good-fit buyer who was tired of vendors promising everything.",
+    "domain": "sales",
+    "tags": ["infrastructure", "sales-methodology", "marketing", "positioning"],
+    "steps": [
+      {
+        "flow_name": "tradeoff-inventory",
+        "description": "List the tradeoffs your product makes, whether chosen on purpose or forced by the design.",
+        "inputs": [
+          {"name": "product-description", "desc": "What the product does and how it is built"},
+          {"name": "roadmap-notes", "desc": "What you have chosen not to build and why"}
+        ],
+        "outputs": [
+          {"name": "tradeoff-list", "desc": "The tradeoffs the product makes, named plainly"},
+          {"name": "constraint-candidates", "desc": "The tradeoffs that could become deliberate positioning"}
+        ],
+        "process": [
+          "List everything the product does not do, from missing features to use cases you turn away.",
+          "For each, note whether it is a deliberate choice or a current limit you intend to close.",
+          "Pull the deliberate choices into a candidate list, since those are the ones you can stand behind.",
+          "Keep the forced limits separate, since positioning on a limit you plan to remove is a trap."
+        ],
+        "tags": ["inventory", "positioning"]
+      },
+      {
+        "flow_name": "deliberate-constraint-selection",
+        "description": "Choose the constraints you are willing to own in public, since a stated constraint is a promise.",
+        "inputs": [
+          {"name": "tradeoff-list", "desc": "The tradeoffs the product makes"},
+          {"name": "constraint-candidates", "desc": "Tradeoffs that could become positioning"}
+        ],
+        "outputs": [
+          {"name": "owned-constraints", "desc": "The constraints you will state publicly and stand behind"},
+          {"name": "rejected-constraints", "desc": "Candidates you chose not to state, with the reason"}
+        ],
+        "process": [
+          "For each candidate, ask whether you will still honor it in a year, since a stated constraint is a promise.",
+          "Keep the constraints that reflect a real belief about how the job should be done.",
+          "Reject candidates that are merely temporary or that you would abandon for a big enough deal.",
+          "Record why each rejected candidate was dropped, so the decision is not relitigated every quarter."
+        ],
+        "tags": ["selection", "positioning"]
+      },
+      {
+        "flow_name": "refusal-statement-writing",
+        "description": "Write the things you will not do as clear statements a buyer can understand in one read.",
+        "inputs": [
+          {"name": "owned-constraints", "desc": "The constraints you will state publicly"}
+        ],
+        "outputs": [
+          {"name": "refusal-statements", "desc": "Plain statements of what you will not do and will not be"},
+          {"name": "rationale-notes", "desc": "The reason behind each refusal, in the buyer's interest"}
+        ],
+        "process": [
+          "Turn each owned constraint into a plain statement of what you will not do.",
+          "Write the reason in terms of the buyer's benefit, since a refusal without a reason sounds like a weakness.",
+          "Keep each statement short enough to repeat, since a positioning line that cannot be repeated does not travel.",
+          "Avoid hedging words that soften the refusal, since the clarity is the point."
+        ],
+        "tags": ["writing", "positioning"]
+      },
+      {
+        "flow_name": "audience-sorting",
+        "description": "Predict who each refusal repels and who it attracts, so you choose the tradeoffs on purpose.",
+        "inputs": [
+          {"name": "refusal-statements", "desc": "The statements of what you will not do"},
+          {"name": "rationale-notes", "desc": "The reason behind each refusal"}
+        ],
+        "outputs": [
+          {"name": "repelled-segments", "desc": "The buyers each refusal will push away"},
+          {"name": "attracted-segments", "desc": "The buyers each refusal will draw in and reassure"}
+        ],
+        "process": [
+          "For each refusal, name the buyers who will walk away, and confirm they are buyers you are glad to lose.",
+          "Name the buyers who will lean in because the refusal signals focus and honesty.",
+          "Check that the attracted segments are large and reachable enough to build a business on.",
+          "If a refusal repels buyers you need and attracts few, send it back to the selection step."
+        ],
+        "tags": ["segmentation", "positioning"]
+      },
+      {
+        "flow_name": "positioning-statement-assembly",
+        "description": "Assemble the subtractive positioning statement and the pillars that carry it through all messaging.",
+        "inputs": [
+          {"name": "refusal-statements", "desc": "The statements of what you will not do"},
+          {"name": "attracted-segments", "desc": "The buyers each refusal draws in"}
+        ],
+        "outputs": [
+          {"name": "positioning-statement", "desc": "A positioning statement built on what you refuse to do"},
+          {"name": "messaging-pillars", "desc": "The few pillars that every message must support"}
+        ],
+        "process": [
+          "Combine the strongest refusals into a single positioning statement aimed at the attracted segments.",
+          "Lead with the constraint, then with what the constraint lets you do better than anyone trying to do everything.",
+          "Reduce the statement to a few pillars that any piece of messaging can be checked against.",
+          "Test the statement on a good-fit buyer and confirm they find it clarifying rather than limiting."
+        ],
+        "tags": ["assembly", "positioning"]
+      },
+      {
+        "flow_name": "constraint-consistency-check",
+        "description": "Check that product, pricing, and copy honor the stated constraints, since a broken promise costs more than no promise.",
+        "inputs": [
+          {"name": "positioning-statement", "desc": "The subtractive positioning statement"},
+          {"name": "messaging-pillars", "desc": "The pillars every message must support"}
+        ],
+        "outputs": [
+          {"name": "consistency-report", "desc": "Where the product, pricing, or copy contradicts the stated constraints"},
+          {"name": "alignment-fixes", "desc": "The changes needed to make the promise and the product match"}
+        ],
+        "process": [
+          "Walk the product, pricing, and copy and flag anywhere they contradict a stated constraint.",
+          "Pay special attention to the sales floor, where the pressure to win a deal breaks the constraint first.",
+          "List the fixes needed so the promise and the product match, with an owner for each.",
+          "Set a recurring check, since positioning erodes quietly as teams make small exceptions."
+        ],
+        "tags": ["validation", "positioning"]
+      }
+    ]
+  },
+  {
+    "chain_name": "sales-conversation-structure",
+    "description": "Run the sales call as seventy percent listening and thirty percent talking. Move through situation, problem, the cost of doing nothing, a solution mapped only to the stated problems, and a specific next step rather than let me know. Built on consultative questioning.",
+    "domain": "sales",
+    "tags": ["infrastructure", "sales-methodology", "marketing", "discovery"],
+    "steps": [
+      {
+        "flow_name": "call-preparation",
+        "description": "Prepare the account context and the questions before the call, so the time on the call goes to listening.",
+        "inputs": [
+          {"name": "account-context", "desc": "What you know about the account and the person before the call"},
+          {"name": "call-objective", "desc": "The one outcome this call should produce"}
+        ],
+        "outputs": [
+          {"name": "prep-brief", "desc": "A short brief on the account, the person, and the likely situation"},
+          {"name": "question-bank", "desc": "The questions to ask, grouped by situation, problem, and cost"}
+        ],
+        "process": [
+          "Gather what you know about the account and the person, and write a short brief you can scan before the call.",
+          "Set one clear objective for the call, since a call with three objectives achieves none.",
+          "Draft the questions in advance, grouped into situation, problem, and cost, so you are not improvising.",
+          "Plan to talk for less than a third of the call, and hold the pitch until you have earned it."
+        ],
+        "tags": ["preparation", "discovery"]
+      },
+      {
+        "flow_name": "situation-questions",
+        "description": "Open with situation questions to learn the current state before you touch any problem.",
+        "inputs": [
+          {"name": "prep-brief", "desc": "The short brief on account and person"},
+          {"name": "question-bank", "desc": "The grouped questions"}
+        ],
+        "outputs": [
+          {"name": "situation-notes", "desc": "What the buyer told you about their current state"},
+          {"name": "current-state-map", "desc": "A map of how things work for them today"}
+        ],
+        "process": [
+          "Ask open questions about how things work today, and let the buyer talk without steering.",
+          "Keep situation questions brief, since too many make the buyer feel interrogated rather than heard.",
+          "Note the facts in the buyer's own words, since you will mirror them back later.",
+          "Build a quick map of the current state you can refer to when problems surface."
+        ],
+        "tags": ["discovery", "questioning"]
+      },
+      {
+        "flow_name": "problem-questions",
+        "description": "Surface the problems and the events that trigger them, letting the buyer name the pain.",
+        "inputs": [
+          {"name": "situation-notes", "desc": "What the buyer said about their current state"},
+          {"name": "current-state-map", "desc": "The map of how things work today"}
+        ],
+        "outputs": [
+          {"name": "problem-list", "desc": "The problems the buyer named, in their words"},
+          {"name": "problem-triggers", "desc": "The events that make each problem show up"}
+        ],
+        "process": [
+          "Ask about the parts of the current state that cause difficulty, and wait through the silences.",
+          "Let the buyer name the problem, since a problem the buyer says out loud is one they own.",
+          "For each problem, learn what triggers it and how often it happens.",
+          "Resist pitching a fix here, since naming a solution too early stops the buyer from fully stating the pain."
+        ],
+        "tags": ["discovery", "questioning"]
+      },
+      {
+        "flow_name": "cost-of-inaction-questions",
+        "description": "Quantify what each problem costs if nothing changes, so urgency comes from the buyer, not from you.",
+        "inputs": [
+          {"name": "problem-list", "desc": "The problems the buyer named"},
+          {"name": "problem-triggers", "desc": "The events that trigger each problem"}
+        ],
+        "outputs": [
+          {"name": "cost-estimates", "desc": "The cost of each problem in time, money, and risk if nothing changes"},
+          {"name": "urgency-signals", "desc": "Which problems the buyer feels enough to act on now"}
+        ],
+        "process": [
+          "For each problem, ask what it costs today and what it will cost if it continues for another year.",
+          "Help the buyer put numbers on it, since a cost the buyer quantifies is a cost they will act on.",
+          "Note which problems carry real urgency and which the buyer can live with.",
+          "Let the buyer conclude that doing nothing is expensive, rather than telling them so."
+        ],
+        "tags": ["discovery", "questioning"]
+      },
+      {
+        "flow_name": "solution-mapping",
+        "description": "Map your solution only to the problems the buyer actually named, and leave the rest unsaid.",
+        "inputs": [
+          {"name": "problem-list", "desc": "The problems the buyer named"},
+          {"name": "cost-estimates", "desc": "The cost of each problem"}
+        ],
+        "outputs": [
+          {"name": "mapped-solution", "desc": "The parts of your solution tied to each stated problem"},
+          {"name": "unaddressed-gaps", "desc": "Problems you cannot solve, named honestly"}
+        ],
+        "process": [
+          "Present only the parts of your solution that answer a problem the buyer stated, and skip the rest.",
+          "Tie each capability back to the exact problem and cost the buyer described, in their words.",
+          "Name the problems you cannot solve, since honesty here protects the deal from unraveling later.",
+          "Keep this short, since the buyer has already sold themselves if the discovery was done well."
+        ],
+        "tags": ["solution", "discovery"]
+      },
+      {
+        "flow_name": "next-step-close",
+        "description": "Propose one specific, scheduled next step rather than leaving it at let me know.",
+        "inputs": [
+          {"name": "mapped-solution", "desc": "The solution tied to the stated problems"},
+          {"name": "urgency-signals", "desc": "Which problems the buyer feels most"}
+        ],
+        "outputs": [
+          {"name": "next-step-proposal", "desc": "One concrete next step with a date and an owner"},
+          {"name": "commitment-check", "desc": "Confirmation that the buyer actually agreed, not just nodded"}
+        ],
+        "process": [
+          "Propose one specific next step with a date, such as a scoped pilot or a meeting with the decision maker.",
+          "Avoid the open-ended let me know, since it hands control of the deal to the buyer's busy calendar.",
+          "Tie the next step to the urgency the buyer expressed, so it feels like their idea.",
+          "Confirm the commitment explicitly, since a vague yes is a no that has not happened yet."
+        ],
+        "tags": ["closing", "discovery"]
+      },
+      {
+        "flow_name": "call-debrief",
+        "description": "Debrief the call into notes the pipeline can act on, so the next touch continues the conversation.",
+        "inputs": [
+          {"name": "next-step-proposal", "desc": "The agreed next step"},
+          {"name": "situation-notes", "desc": "What the buyer said about their current state"}
+        ],
+        "outputs": [
+          {"name": "call-debrief", "desc": "A structured record of situation, problems, costs, and the agreed next step"},
+          {"name": "follow-up-actions", "desc": "The actions you owe the buyer and the dates they are due"}
+        ],
+        "process": [
+          "Write the debrief while it is fresh, capturing the situation, problems, costs, and the next step.",
+          "Record the buyer's own phrasing, since the next touch should sound like it heard the last call.",
+          "List what you promised and when it is due, so no commitment to the buyer is dropped.",
+          "Update the pipeline so the deal's stage reflects what the call actually established."
+        ],
+        "tags": ["debrief", "discovery"]
+      }
+    ]
+  }
+]

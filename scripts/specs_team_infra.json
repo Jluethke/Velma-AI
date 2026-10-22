@@ -1,0 +1,1106 @@
+[
+  {
+    "chain_name": "work-sample-over-interview",
+    "description": "Replace unstructured interviews with paid work samples that predict job performance at 0.54 correlation (versus 0.38 for structured interviews and 0.18 for unstructured). Design a simulation of the actual job, score it blindly, and compare against interview impressions to calibrate your hiring process.",
+    "domain": "human-resources",
+    "tags": ["infrastructure", "hiring", "team-building", "methodology"],
+    "steps": [
+      {
+        "flow_name": "job-task-decomposition",
+        "description": "Decompose the target role into the 3-5 tasks that occupy most of the working week. Ignore the job description. Instead, shadow or interview someone currently in the role and log what they actually do hour by hour for a full week. Rank the tasks by time spent and by impact on team output. The top 3 tasks by impact are the candidates for the work sample.",
+        "inputs": [
+          {"name": "role-title", "desc": "The title of the role being hired for"},
+          {"name": "current-holder-notes", "desc": "Notes from shadowing or interviewing someone currently in the role, logging their actual daily tasks"}
+        ],
+        "outputs": [
+          {"name": "task-decomposition", "desc": "Ranked list of the role's actual tasks by time spent and impact, with the top 3 flagged as work sample candidates"},
+          {"name": "impact-ranking", "desc": "Which tasks produce the most value for the team, independent of time spent"}
+        ],
+        "process": [
+          "List every task the current holder performed during the observation period, with estimated hours per week.",
+          "For each task, rate its impact on team output: if this task were done poorly, how much would the team suffer?",
+          "Rank by impact. The top 3 are your work sample candidates. If the highest-impact task is also the hardest to simulate (e.g., crisis management), move to the next one."
+        ],
+        "tags": ["hiring", "job-analysis"]
+      },
+      {
+        "flow_name": "work-sample-task-designer",
+        "description": "Design a work sample task that simulates one of the top-impact tasks in a 2-4 hour format. The task must be self-contained (no proprietary data), realistic (not a puzzle or trivia), and completable by someone who does not yet know your internal systems. Provide all necessary context in the task brief.",
+        "inputs": [
+          {"name": "task-decomposition", "desc": "The ranked task list from the decomposition step"},
+          {"name": "impact-ranking", "desc": "Which tasks matter most"}
+        ],
+        "outputs": [
+          {"name": "work-sample-brief", "desc": "The complete task brief given to candidates, including context, deliverables, time limit, and any reference materials"},
+          {"name": "compensation-terms", "desc": "How much the candidate is paid for completing the work sample, and when payment is made"}
+        ],
+        "process": [
+          "Select the highest-impact task that can be simulated without proprietary data. If the real task uses internal tools, substitute with a publicly available equivalent.",
+          "Write the brief as if you were assigning the task to a new hire on day one. Include all the context they would need. If they need to ask clarifying questions to complete it, the brief is incomplete.",
+          "Set the time limit at 2-4 hours. Shorter tasks do not produce enough signal. Longer tasks impose too much on the candidate.",
+          "Set the compensation at the role's hourly rate for the time limit. Unpaid work samples select for candidates who can afford to work for free, which is a bias, not a filter."
+        ],
+        "tags": ["hiring", "assessment-design"]
+      },
+      {
+        "flow_name": "scoring-rubric-builder",
+        "description": "Build the scoring rubric before any candidate attempts the task. This prevents the rubric from being reverse-engineered from the first submission. Define 4-6 scoring dimensions, each with a 1-5 scale and concrete anchors for each level. Weight the dimensions by importance to the role.",
+        "inputs": [
+          {"name": "work-sample-brief", "desc": "The task brief candidates will receive"},
+          {"name": "impact-ranking", "desc": "Which aspects of performance matter most in this role"}
+        ],
+        "outputs": [
+          {"name": "scoring-rubric", "desc": "The complete rubric with dimensions, scales, anchors, and weights"},
+          {"name": "scorer-instructions", "desc": "Instructions for the person scoring the work samples, including how to handle edge cases"}
+        ],
+        "process": [
+          "Identify 4-6 dimensions that distinguish good work from mediocre work on this task. Common dimensions: accuracy, thoroughness, communication clarity, efficiency, and judgment under ambiguity.",
+          "For each dimension, write concrete anchors for levels 1, 3, and 5. Level 1 is unacceptable. Level 3 is competent. Level 5 is exceptional. Levels 2 and 4 are interpolations.",
+          "Weight each dimension. If accuracy is twice as important as communication clarity, give it double the weight.",
+          "Write scorer instructions that specify: score each dimension independently, do not let a strong impression on one dimension inflate others (halo effect), and record a brief justification for each score."
+        ],
+        "tags": ["hiring", "assessment-design"]
+      },
+      {
+        "flow_name": "blind-scoring-protocol",
+        "description": "Score the work samples with candidate identity removed. Strip names, email addresses, and any identifying metadata from submissions before scoring. Assign each submission a random ID. If multiple scorers are available, have each score independently before comparing.",
+        "inputs": [
+          {"name": "scoring-rubric", "desc": "The rubric with dimensions, scales, and weights"},
+          {"name": "scorer-instructions", "desc": "How to apply the rubric"}
+        ],
+        "outputs": [
+          {"name": "blinding-protocol", "desc": "Step-by-step process for stripping identity from submissions and assigning random IDs"},
+          {"name": "inter-rater-process", "desc": "How to handle disagreements between multiple scorers, including the threshold for discussion"}
+        ],
+        "process": [
+          "Before scoring begins, a coordinator (not a scorer) strips all identifying information from each submission and assigns a random 4-digit ID.",
+          "Each scorer receives the anonymized submissions and scores them independently using the rubric. No discussion until all scores are submitted.",
+          "After independent scoring, compare scores. If two scorers differ by more than 1 point on any dimension, they discuss that dimension and re-score. The goal is calibration, not consensus.",
+          "Record the final scores by random ID. Reveal identities only after all scoring is complete."
+        ],
+        "tags": ["hiring", "bias-reduction"]
+      },
+      {
+        "flow_name": "interview-impression-collector",
+        "description": "Collect the interviewers' gut impressions and structured interview scores separately from the work sample scores. The purpose is to compare the two signals. If they diverge, the work sample is almost always the better predictor. Document each interviewer's prediction: will this candidate succeed in the role? (yes, maybe, no).",
+        "inputs": [
+          {"name": "blinding-protocol", "desc": "The protocol used to blind work samples"},
+          {"name": "inter-rater-process", "desc": "How scoring disagreements are resolved"}
+        ],
+        "outputs": [
+          {"name": "interview-impressions", "desc": "Each interviewer's prediction for each candidate, recorded before seeing work sample scores"},
+          {"name": "structured-scores", "desc": "Structured interview scores (if conducted) for comparison"}
+        ],
+        "process": [
+          "After each interview, ask the interviewer to record their prediction: will this candidate succeed in the role within 12 months? Yes, maybe, or no. Plus a one-sentence rationale.",
+          "Collect all predictions before revealing work sample scores. This prevents anchoring.",
+          "If structured interviews were conducted, collect those scores separately."
+        ],
+        "tags": ["hiring", "data-collection"]
+      },
+      {
+        "flow_name": "signal-comparison-analysis",
+        "description": "Compare work sample scores against interview impressions. For each candidate, place them on a 2x2: high work sample / high interview, high work sample / low interview, low work sample / high interview, low work sample / low interview. The interesting candidates are the divergences. High work sample / low interview candidates are often the best hires that traditional processes miss.",
+        "inputs": [
+          {"name": "interview-impressions", "desc": "Interviewer predictions for each candidate"},
+          {"name": "structured-scores", "desc": "Structured interview scores if available"}
+        ],
+        "outputs": [
+          {"name": "signal-comparison-matrix", "desc": "2x2 matrix placing each candidate by work sample score versus interview impression"},
+          {"name": "divergence-analysis", "desc": "Analysis of candidates where work sample and interview signals disagree, with a recommendation for each"}
+        ],
+        "process": [
+          "For each candidate, plot their work sample score (rubric total) against their interview impression (yes/maybe/no converted to 3/2/1).",
+          "Identify the divergent candidates. High work sample / low interview: the process is catching someone the interview would have rejected. Investigate whether the low interview impression was based on surface factors (communication style, appearance, nervousness) rather than capability.",
+          "Low work sample / high interview: the process is flagging someone the interview would have passed. This is the candidate who interviews well but may underperform. Investigate before advancing.",
+          "Make the hiring recommendation based primarily on work sample score. Use the interview to assess only what the work sample cannot: collaboration style, values alignment, and motivation."
+        ],
+        "tags": ["hiring", "decision-making"]
+      },
+      {
+        "flow_name": "hiring-process-calibration",
+        "description": "After hires are made, track the correlation between work sample scores and actual job performance at 6 and 12 months. This closes the loop. If the correlation is low, the work sample task is not simulating the right thing. Adjust the task, not the scoring.",
+        "inputs": [
+          {"name": "signal-comparison-matrix", "desc": "The 2x2 matrix from the comparison step"},
+          {"name": "divergence-analysis", "desc": "Notes on divergent candidates"}
+        ],
+        "outputs": [
+          {"name": "calibration-report", "desc": "Correlation between work sample scores and actual performance at 6 and 12 months, with recommendations for adjusting the work sample task"},
+          {"name": "process-improvement-plan", "desc": "Specific changes to the work sample, rubric, or process based on calibration data"}
+        ],
+        "process": [
+          "At 6 months post-hire, collect the manager's performance rating and compare against the work sample score. Calculate the correlation.",
+          "At 12 months, repeat. The 12-month correlation is the one that matters.",
+          "If the correlation is below 0.40, the work sample is not testing the right thing. Revisit the task decomposition and pick a different task.",
+          "If the correlation is above 0.40 but below 0.54 (the research benchmark), look at whether the rubric dimensions are weighted correctly.",
+          "Track separately: what happened to the divergent candidates? Did the high-work-sample / low-interview candidates succeed? If yes, the work sample saved you from a bad rejection."
+        ],
+        "tags": ["hiring", "continuous-improvement"]
+      }
+    ]
+  },
+  {
+    "chain_name": "reverse-engineered-hiring-profile",
+    "description": "Build the hiring profile from your best performers instead of a wish list. Interview your top 5 performers to find what they actually do that sets them apart, what skills they use daily that were not in the job description, and what personality traits make them effective in this specific environment. The pattern across all 5 is the real hiring profile.",
+    "domain": "human-resources",
+    "tags": ["infrastructure", "hiring", "team-building", "methodology"],
+    "steps": [
+      {
+        "flow_name": "top-performer-identifier",
+        "description": "Identify the top 5 performers in the role or team. Use output metrics (revenue generated, tickets resolved, code shipped, students advanced) rather than manager ratings. Manager ratings measure who the manager likes. Output metrics measure who produces results. If output metrics are not available, use peer nominations: ask each team member to name the person they would want on a critical project.",
+        "inputs": [
+          {"name": "role-or-team", "desc": "The role or team you are building the hiring profile for"},
+          {"name": "performance-data", "desc": "Available output metrics or peer nomination results for the team"}
+        ],
+        "outputs": [
+          {"name": "top-performers-list", "desc": "The top 5 performers identified by output metrics or peer nominations, with the data supporting each selection"},
+          {"name": "selection-method", "desc": "Which method was used (output metrics or peer nominations) and why"}
+        ],
+        "process": [
+          "Collect output metrics for every person in the role. If multiple metrics exist, weight them by business impact.",
+          "Rank by the weighted metric. The top 5 are your interview subjects.",
+          "If output metrics are unavailable or unreliable, use peer nomination: ask each team member privately to name 2 people they would want on a critical project. The 5 with the most nominations are your subjects.",
+          "Record which method you used and why, so you can revisit if the resulting profile does not predict well."
+        ],
+        "tags": ["hiring", "performance-analysis"]
+      },
+      {
+        "flow_name": "first-90-days-interviewer",
+        "description": "Interview each top performer about their first 90 days. The question is not 'what did you do?' but 'what did you do that, looking back, set you apart from people who started at the same time and did not perform as well?' Most will initially say 'I just worked hard.' Push past that. Ask for specific actions, decisions, or habits.",
+        "inputs": [
+          {"name": "top-performers-list", "desc": "The 5 people to interview"},
+          {"name": "selection-method", "desc": "How they were selected"}
+        ],
+        "outputs": [
+          {"name": "first-90-days-data", "desc": "For each performer: the specific actions, decisions, or habits from their first 90 days that they believe set them apart"},
+          {"name": "common-early-actions", "desc": "Actions that appeared in 3 or more of the 5 interviews"}
+        ],
+        "process": [
+          "Interview each performer separately (30-45 minutes). Start with: Think back to your first 90 days. What did you do differently from someone who started the same week and did not perform as well?",
+          "When they say 'I worked hard' or 'I asked questions,' push: What specifically did you ask about? Who did you seek out? What did you do that was not in the onboarding plan?",
+          "Record the specific, concrete actions. 'Built a relationship with the warehouse team in the first week' is useful. 'Was proactive' is not.",
+          "After all 5 interviews, find the actions that appear in 3 or more. These are the signal."
+        ],
+        "tags": ["hiring", "behavioral-interview"]
+      },
+      {
+        "flow_name": "hidden-skill-extractor",
+        "description": "Extract the skills each top performer uses daily that were never in the job description. These are the hidden requirements. Ask: 'What skill do you use every day that was not mentioned when you were hired?' and 'What would someone need to learn on day one that nobody told them about?'",
+        "inputs": [
+          {"name": "first-90-days-data", "desc": "What each performer did early on"},
+          {"name": "common-early-actions", "desc": "Shared early actions across performers"}
+        ],
+        "outputs": [
+          {"name": "hidden-skills-inventory", "desc": "Skills used daily by top performers that do not appear in the job description, with frequency count across the 5"},
+          {"name": "job-description-gaps", "desc": "The gap between what the job description says and what the role actually requires"}
+        ],
+        "process": [
+          "In the same interview (or a follow-up), ask each performer: What skill do you use every day that was not mentioned when you were hired?",
+          "Follow up: If you had to train your replacement in one week, what would you spend the most time on? The answer is usually the hidden skill.",
+          "Compare the hidden skills list against the current job description. List every skill that appears in the interviews but not in the job description.",
+          "Rank hidden skills by how many of the 5 performers mentioned them."
+        ],
+        "tags": ["hiring", "skill-analysis"]
+      },
+      {
+        "flow_name": "environment-trait-matcher",
+        "description": "Identify the personality traits or working styles that make someone effective in this specific environment, not in general. A trait that predicts success at a 50-person startup may predict failure at a 5,000-person bank. Ask: 'What about you, as a person, makes you good at this job in THIS company?' Not in any company. In this one.",
+        "inputs": [
+          {"name": "hidden-skills-inventory", "desc": "The unlisted skills top performers use daily"},
+          {"name": "job-description-gaps", "desc": "Where the job description is wrong"}
+        ],
+        "outputs": [
+          {"name": "environment-trait-profile", "desc": "The personality traits and working styles that predict success in this specific environment, with concrete examples from each performer"},
+          {"name": "anti-patterns", "desc": "Traits or styles that the performers say would fail in this environment, even if they would succeed elsewhere"}
+        ],
+        "process": [
+          "Ask each performer: What about you, as a person, makes you good at this job here? Not at any company. At this one.",
+          "Push for specifics. 'I am adaptable' is not useful. 'I can switch between deep focus work and constant interruptions within the same hour, and this role requires that because the office is open-plan and the work is detail-oriented' is useful.",
+          "Ask the inverse: What kind of person would fail here, even if they were technically skilled?",
+          "Compile the traits and anti-patterns across all 5. The traits that appear in 3+ interviews are the environment-specific predictors."
+        ],
+        "tags": ["hiring", "cultural-analysis"]
+      },
+      {
+        "flow_name": "pattern-synthesizer",
+        "description": "Find the pattern across all 5 performers. The individual interviews contain noise. The pattern is the signal. Look for: the same early action appearing 3+ times, the same hidden skill appearing 3+ times, and the same environment trait appearing 3+ times. These three clusters form the real hiring profile.",
+        "inputs": [
+          {"name": "environment-trait-profile", "desc": "Traits that predict success here specifically"},
+          {"name": "anti-patterns", "desc": "Traits that predict failure here specifically"}
+        ],
+        "outputs": [
+          {"name": "synthesized-profile", "desc": "The real hiring profile: the early actions, hidden skills, and environment traits that predict success, derived from the pattern across all 5 performers"},
+          {"name": "confidence-levels", "desc": "For each element of the profile: how many of the 5 performers exhibited it (3/5 is the minimum threshold)"}
+        ],
+        "process": [
+          "Lay out all the data from the 5 interviews in a matrix: rows are performers, columns are the early actions, hidden skills, and environment traits collected.",
+          "Mark which performer exhibited which element. Count the frequency of each element.",
+          "Keep only elements that appear in 3 or more of the 5 performers. Everything else is individual variation, not a pattern.",
+          "Write the synthesized profile as a narrative: 'The person who succeeds in this role [does X in the first 90 days], [uses Y skill daily that is not in the job description], and [has Z trait that makes them effective in this specific environment].'"
+        ],
+        "tags": ["hiring", "pattern-recognition"]
+      },
+      {
+        "flow_name": "job-description-rewriter",
+        "description": "Rewrite the job description to match the real profile. The original job description was a guess. The synthesized profile is evidence. Replace the guessed requirements with the pattern-derived ones. This will feel uncomfortable because the new description will look different from the old one. That is the point.",
+        "inputs": [
+          {"name": "synthesized-profile", "desc": "The evidence-based hiring profile"},
+          {"name": "confidence-levels", "desc": "How strong the evidence is for each element"}
+        ],
+        "outputs": [
+          {"name": "revised-job-description", "desc": "The rewritten job description reflecting what the role actually requires, based on evidence from top performers"},
+          {"name": "screening-criteria", "desc": "Specific, observable criteria derived from the profile that can be used to screen candidates, replacing vague requirements like 'team player' or 'self-starter'"}
+        ],
+        "process": [
+          "Compare the synthesized profile against the current job description line by line. For each requirement in the current description: does it appear in the profile? If not, remove it or mark it as optional.",
+          "For each element in the profile that is not in the current description: add it, with specific language. Replace 'strong communication skills' with the actual communication behavior the top performers described.",
+          "Write screening criteria that are observable in a resume, cover letter, or phone screen. 'Built cross-functional relationships in previous roles' is observable. 'Team player' is not.",
+          "Flag: the revised description will attract different candidates than the old one. That is correct. The old description was attracting people who matched a guess, not people who match reality."
+        ],
+        "tags": ["hiring", "job-design"]
+      }
+    ]
+  },
+  {
+    "chain_name": "exit-interview-pattern-miner",
+    "description": "Analyze exit interview data to find the systemic causes of turnover. The stated reason for leaving is often not the real reason. Code each exit by stated reason, tenure at departure, team, manager, and role, then look for clusters. If departures cluster under a specific manager, the problem is the manager. If they cluster at a specific tenure, there is a growth ceiling. The pattern reveals the lever.",
+    "domain": "human-resources",
+    "tags": ["infrastructure", "hiring", "team-building", "retention"],
+    "steps": [
+      {
+        "flow_name": "exit-data-codifier",
+        "description": "Code each exit interview into a structured record: stated reason for leaving (categorized), tenure at departure (months), team, manager, role, performance rating at last review, and any voluntary comments. The stated reason categories should be: compensation, growth, management, work-life balance, relocation, role fit, other opportunity, and unknown.",
+        "inputs": [
+          {"name": "exit-interview-records", "desc": "Raw exit interview notes or transcripts for the analysis period"},
+          {"name": "analysis-period", "desc": "The time window to analyze (e.g., past 24 months)"}
+        ],
+        "outputs": [
+          {"name": "coded-exit-data", "desc": "Structured records for each departure with stated reason category, tenure, team, manager, role, and last performance rating"},
+          {"name": "data-quality-notes", "desc": "Any gaps, inconsistencies, or biases in the data (e.g., exit interviews not conducted, high refusal rate)"}
+        ],
+        "process": [
+          "For each departure in the analysis period, create a structured record with: name (anonymized for reporting), stated reason (coded to one of the 8 categories), tenure in months, team, direct manager, role title, and last performance rating.",
+          "If the stated reason does not fit cleanly into one category, code it as the primary category and note the secondary in comments.",
+          "Flag any departures where no exit interview was conducted. These are not missing at random. People who refuse exit interviews often have the strongest grievances.",
+          "Record the overall data quality: what percentage of departures have complete exit interviews? If below 70%, the data has a selection bias that limits the analysis."
+        ],
+        "tags": ["retention", "data-analysis"]
+      },
+      {
+        "flow_name": "cluster-detector",
+        "description": "Look for clusters in the coded data. A cluster is 3 or more departures sharing a common attribute (same manager, same tenure band, same team, same stated reason). Clusters are the signal. Individual departures are noise. Sort the data by each attribute and count.",
+        "inputs": [
+          {"name": "coded-exit-data", "desc": "The structured exit records"},
+          {"name": "data-quality-notes", "desc": "Known gaps and biases in the data"}
+        ],
+        "outputs": [
+          {"name": "cluster-report", "desc": "All clusters of 3+ departures sharing a common attribute, ranked by size"},
+          {"name": "base-rate-comparison", "desc": "For each cluster, the departure rate compared to the company base rate, to distinguish real clusters from random variation"}
+        ],
+        "process": [
+          "Group departures by manager. Calculate the departure rate per manager (departures / team size). Compare against the company-wide rate. Any manager above 1.5x the base rate is a cluster.",
+          "Group departures by tenure band (0-6 months, 6-12, 12-18, 18-24, 24-36, 36+). Look for a spike. A spike at 12-18 months is a growth ceiling. A spike at 0-6 months is a hiring or onboarding problem.",
+          "Group by team, role, and stated reason category. Apply the same 1.5x base rate threshold.",
+          "Rank the clusters by size and statistical significance. The largest cluster is the highest-leverage intervention point."
+        ],
+        "tags": ["retention", "pattern-analysis"]
+      },
+      {
+        "flow_name": "stated-vs-real-reason-prober",
+        "description": "For each major cluster, probe whether the stated reason is the real reason. People leaving because of a bad manager often cite 'other opportunity' because it is safer. The real reason is usually one layer deeper. Cross-reference the stated reasons within each cluster against the manager, team, and tenure data.",
+        "inputs": [
+          {"name": "cluster-report", "desc": "The identified clusters"},
+          {"name": "base-rate-comparison", "desc": "Statistical significance of each cluster"}
+        ],
+        "outputs": [
+          {"name": "real-reason-hypotheses", "desc": "For each major cluster, the hypothesized real reason for departure, with supporting evidence from the cross-referencing"},
+          {"name": "validation-suggestions", "desc": "How to validate each hypothesis (e.g., anonymous survey of current team, manager 360 review)"}
+        ],
+        "process": [
+          "For each major cluster, look at the stated reasons. If 4 people left the same manager but cited 4 different reasons (compensation, growth, opportunity, work-life), the real reason is probably the manager, not 4 different things.",
+          "Cross-reference: did the departures coincide with any changes (new manager, reorg, policy change, lost project)?",
+          "Look at the performance ratings of the departed. If high performers are leaving and low performers are staying, the environment is pushing out the wrong people.",
+          "Write a hypothesis for each cluster: 'The real reason for this cluster of departures is [X], because [evidence].'"
+        ],
+        "tags": ["retention", "root-cause-analysis"]
+      },
+      {
+        "flow_name": "retention-lever-ranker",
+        "description": "Rank the retention levers by impact and feasibility. The largest cluster with a fixable cause is the highest-priority intervention. A cluster caused by a bad manager can be fixed by coaching or replacing the manager. A cluster caused by below-market compensation requires a budget decision. A cluster caused by a growth ceiling requires creating a new career path.",
+        "inputs": [
+          {"name": "real-reason-hypotheses", "desc": "The hypothesized real causes for each cluster"},
+          {"name": "validation-suggestions", "desc": "How to validate each hypothesis"}
+        ],
+        "outputs": [
+          {"name": "ranked-retention-levers", "desc": "The retention levers ranked by expected impact (cluster size times probability of success) and feasibility (cost, timeline, organizational willingness)"},
+          {"name": "intervention-plan", "desc": "For the top 3 levers, the specific intervention, expected timeline, and how to measure whether it worked"}
+        ],
+        "process": [
+          "For each cluster, estimate the cost of doing nothing: the number of departures per year times the cost of replacement (typically 50-200% of annual salary depending on seniority).",
+          "For each intervention, estimate the cost and probability of success. A manager coaching program costs X and has Y% success rate. A 10% compensation adjustment costs Z.",
+          "Rank by: (cluster size x replacement cost x probability of success) minus intervention cost. This is the expected ROI of each lever.",
+          "For the top 3 levers, write the intervention plan: what specifically will change, by when, and how you will measure the result (departure rate from this cluster at 6 and 12 months)."
+        ],
+        "tags": ["retention", "strategic-planning"]
+      },
+      {
+        "flow_name": "retention-intervention-tracker",
+        "description": "Track whether the interventions actually reduced departures from the targeted clusters. Measure at 6 and 12 months. If the departure rate from a cluster drops by 30% or more after the intervention, the lever worked. If it does not, the hypothesis was wrong or the intervention was insufficient.",
+        "inputs": [
+          {"name": "ranked-retention-levers", "desc": "The prioritized retention levers"},
+          {"name": "intervention-plan", "desc": "The specific interventions being implemented"}
+        ],
+        "outputs": [
+          {"name": "intervention-results", "desc": "For each intervention: the departure rate from the targeted cluster before and after, with a pass/fail judgment at the 30% reduction threshold"},
+          {"name": "revised-hypotheses", "desc": "For interventions that failed, the revised hypothesis about the real cause and the next intervention to try"}
+        ],
+        "process": [
+          "At 6 months post-intervention, count the departures from the targeted cluster. Compare against the same period before the intervention.",
+          "At 12 months, repeat. The 12-month number is the one that matters. Some interventions take time to show results.",
+          "If the departure rate dropped by 30% or more, the intervention worked. Document it for future reference.",
+          "If the departure rate did not change, the hypothesis was wrong or the intervention was too weak. Revisit the cluster data and generate a new hypothesis."
+        ],
+        "tags": ["retention", "measurement"]
+      }
+    ]
+  },
+  {
+    "chain_name": "team-skill-matrix-builder",
+    "description": "Map the team's skills and find the single points of failure. Any skill with only one person at competent level or above is a vulnerability. The matrix reveals both cross-training priorities and hiring priorities: hire for the skills where you have no backup, not the skills where you already have depth.",
+    "domain": "human-resources",
+    "tags": ["infrastructure", "team-building", "skills", "risk-management"],
+    "steps": [
+      {
+        "flow_name": "skill-inventory-builder",
+        "description": "List every skill the team needs to function. Do not use the job descriptions. Instead, list every task the team performed in the last quarter and extract the skills required for each. Include technical skills, process skills, and relationship skills (e.g., 'is the only person who knows how to talk to the vendor').",
+        "inputs": [
+          {"name": "team-name", "desc": "The team being assessed"},
+          {"name": "recent-task-log", "desc": "A log or list of tasks the team performed in the last quarter"}
+        ],
+        "outputs": [
+          {"name": "skill-inventory", "desc": "Complete list of skills the team needs, derived from actual tasks rather than job descriptions"},
+          {"name": "skill-categories", "desc": "Skills grouped by category (technical, process, relationship, domain-knowledge)"}
+        ],
+        "process": [
+          "List every distinct task the team performed in the last quarter. Group similar tasks.",
+          "For each task group, identify the skills required to perform it. Be specific: 'Python programming' is too broad. 'Writing database migration scripts in Python' is the right level.",
+          "Include relationship skills: who is the person that vendor X calls when something goes wrong? Who is the person that the executive team trusts to present results? These are skills.",
+          "Categorize each skill: technical (tools, languages, systems), process (how things get done), relationship (who knows whom), domain-knowledge (understanding of the business area)."
+        ],
+        "tags": ["team-building", "skill-assessment"]
+      },
+      {
+        "flow_name": "proficiency-assessor",
+        "description": "For each person on the team, rate their proficiency on each skill: learning (can do it with help), competent (can do it independently), expert (can teach others and handle edge cases). Use self-assessment cross-referenced with peer assessment. Self-assessment alone is unreliable because of the Dunning-Kruger effect.",
+        "inputs": [
+          {"name": "skill-inventory", "desc": "The complete list of skills the team needs"},
+          {"name": "skill-categories", "desc": "Skills grouped by category"}
+        ],
+        "outputs": [
+          {"name": "proficiency-matrix", "desc": "A matrix with team members as rows, skills as columns, and proficiency level (learning, competent, expert) in each cell"},
+          {"name": "assessment-confidence", "desc": "How confident the assessment is for each cell (high if both self and peer agree, low if they diverge)"}
+        ],
+        "process": [
+          "Send each team member the skill inventory and ask them to rate themselves on each skill: learning, competent, or expert.",
+          "For each skill, ask 1-2 peers to validate the self-assessment. The peer check is: would you trust this person to handle [specific task requiring this skill] independently?",
+          "Where self-assessment and peer assessment diverge, default to the peer assessment. People who rate themselves as expert when peers say competent are overestimating. People who rate themselves as learning when peers say competent are underestimating.",
+          "Flag any cell where confidence is low (self and peer diverge by 2 levels). These need a practical test to resolve."
+        ],
+        "tags": ["team-building", "skill-assessment"]
+      },
+      {
+        "flow_name": "single-point-failure-finder",
+        "description": "Scan the proficiency matrix for single points of failure: any skill where only one person is at competent or above. These are the team's vulnerabilities. If that person is sick, quits, or goes on leave, the team cannot perform that function. Rank the single points by impact: how often is this skill needed, and what happens if it is unavailable?",
+        "inputs": [
+          {"name": "proficiency-matrix", "desc": "The completed skill/person matrix"},
+          {"name": "assessment-confidence", "desc": "Confidence levels for each assessment"}
+        ],
+        "outputs": [
+          {"name": "single-points-of-failure", "desc": "Every skill with only one person at competent or above, ranked by impact (frequency of need times consequence of unavailability)"},
+          {"name": "risk-score", "desc": "An overall team risk score based on the number and severity of single points of failure"}
+        ],
+        "process": [
+          "Scan each column (skill) of the matrix. Count the number of people at competent or expert.",
+          "Any skill with a count of 1 is a single point of failure. Any skill with a count of 0 is a gap (the team cannot perform this function reliably).",
+          "For each single point, estimate: how often is this skill needed (daily, weekly, monthly, rarely)? If the person is unavailable, what happens (work stops, quality drops, workaround exists)?",
+          "Rank the single points by: frequency times consequence. The daily-need, work-stops combination is the highest priority."
+        ],
+        "tags": ["team-building", "risk-analysis"]
+      },
+      {
+        "flow_name": "cross-training-planner",
+        "description": "For each single point of failure, plan the cross-training. The goal is to move at least one additional person from learning to competent on each vulnerable skill. The person doing the cross-training should be the current expert, and the timeline should be realistic (most skills take 2-8 weeks of deliberate practice, not a one-hour knowledge transfer).",
+        "inputs": [
+          {"name": "single-points-of-failure", "desc": "Skills with only one competent person, ranked by impact"},
+          {"name": "risk-score", "desc": "Overall team risk level"}
+        ],
+        "outputs": [
+          {"name": "cross-training-plan", "desc": "For each single point of failure: who will learn the skill, who will teach it, what the training looks like, and the target date for reaching competent level"},
+          {"name": "training-priority-sequence", "desc": "The order in which to address the single points, starting with the highest-impact vulnerability"}
+        ],
+        "process": [
+          "For each single point of failure, identify the best candidate to cross-train. Choose someone who: already has adjacent skills (reduces learning time), is not themselves a single point on another skill (do not overload), and is willing.",
+          "Define what competent looks like for this specific skill: what tasks must the person be able to handle independently?",
+          "Design the training: pair with the expert for X weeks, shadow specific tasks, then handle those tasks independently with the expert available for questions, then handle them fully independently.",
+          "Set a realistic timeline. A skill used daily can be learned in 2-4 weeks. A skill used weekly takes 4-8 weeks. A skill used monthly takes 2-3 months."
+        ],
+        "tags": ["team-building", "training"]
+      },
+      {
+        "flow_name": "hiring-priority-deriver",
+        "description": "Derive hiring priorities from the matrix instead of from manager wish lists. The matrix reveals two kinds of hiring needs: gaps (skills with zero competent people, currently handled by workarounds or not handled) and depth (skills with only one competent person that cannot be cross-trained internally because the skill is too specialized). These are the roles to hire for.",
+        "inputs": [
+          {"name": "cross-training-plan", "desc": "Which single points of failure can be addressed internally"},
+          {"name": "training-priority-sequence", "desc": "The cross-training schedule"}
+        ],
+        "outputs": [
+          {"name": "hiring-priorities", "desc": "Roles to hire based on matrix gaps and single points that cannot be cross-trained internally, ranked by business impact"},
+          {"name": "hire-vs-train-decision", "desc": "For each skill gap: whether to address it through hiring (cannot train internally) or cross-training (can train internally), with rationale"}
+        ],
+        "process": [
+          "List every skill with 0 people at competent or above. These are gaps. The team is either not performing this function or performing it poorly.",
+          "List every single point of failure where cross-training is not feasible (the skill is too specialized, no one has adjacent skills, or the expert is leaving soon).",
+          "Combine the gaps and the un-trainable single points. These are the hiring priorities.",
+          "Rank them by business impact: what is the cost of not having this skill covered? This ranking, not the manager's wish list, should drive headcount decisions."
+        ],
+        "tags": ["team-building", "workforce-planning"]
+      },
+      {
+        "flow_name": "matrix-maintenance-cadence",
+        "description": "Set up a cadence to maintain the matrix. Skills change as the work changes. People learn new skills. New people join. People leave. A matrix that is 6 months old is unreliable. Update quarterly: reassess proficiency levels, add new skills from recent work, remove skills no longer needed, and re-scan for new single points of failure.",
+        "inputs": [
+          {"name": "hiring-priorities", "desc": "Current hiring needs from the matrix"},
+          {"name": "hire-vs-train-decision", "desc": "Whether each gap is addressed by hiring or training"}
+        ],
+        "outputs": [
+          {"name": "maintenance-schedule", "desc": "Quarterly cadence for updating the matrix: who does it, what they review, and how results are communicated to the team"},
+          {"name": "change-trigger-list", "desc": "Events that should trigger an immediate matrix update outside the quarterly cadence (e.g., someone leaving, a new project with new skill requirements, a reorg)"}
+        ],
+        "process": [
+          "Schedule a quarterly matrix review. The team lead or manager runs it. Each review takes 1-2 hours.",
+          "In each review: ask the team what new tasks they performed this quarter that required new skills. Add those skills. Remove skills the team no longer needs.",
+          "Reassess proficiency levels for any person who has been cross-training or has taken on new responsibilities.",
+          "Re-scan for single points of failure and update the cross-training and hiring priorities.",
+          "Define the triggers for out-of-cycle updates: someone gives notice, a new project is staffed, a reorg moves people in or out."
+        ],
+        "tags": ["team-building", "continuous-improvement"]
+      }
+    ]
+  },
+  {
+    "chain_name": "onboarding-time-to-productivity",
+    "description": "Measure and systematically shorten the time from hire to full productivity. Define full productivity in measurable terms, measure the current baseline, map the onboarding process, identify the bottlenecks with the longest delays, and fix them in order. Most onboarding problems are waiting problems (access, equipment, documentation), not learning problems.",
+    "domain": "human-resources",
+    "tags": ["infrastructure", "hiring", "team-building", "onboarding"],
+    "steps": [
+      {
+        "flow_name": "productivity-definition-writer",
+        "description": "Define full productivity in measurable, observable terms for this specific role. 'Up to speed' is not a definition. 'Handles 20 tickets per day with a 95% resolution rate and no escalations for routine issues' is a definition. The definition must be specific enough that two managers would agree on whether a new hire has reached it.",
+        "inputs": [
+          {"name": "role-title", "desc": "The role being onboarded"},
+          {"name": "current-performance-benchmarks", "desc": "Performance data from current team members at full productivity"}
+        ],
+        "outputs": [
+          {"name": "productivity-definition", "desc": "The specific, measurable criteria that define full productivity for this role"},
+          {"name": "milestone-ladder", "desc": "Intermediate milestones between day one and full productivity (e.g., at 2 weeks can handle X, at 4 weeks can handle Y)"}
+        ],
+        "process": [
+          "Look at the performance data for current team members who are considered fully productive. What are their output metrics?",
+          "Set the full productivity threshold at 80% of the team median. Not the top performer. Not the average. The median, at 80%. A new hire who reaches this level is productive.",
+          "Define 3-4 intermediate milestones between day one and full productivity. Each milestone should be independently verifiable.",
+          "Test the definition: describe it to two managers separately and ask if they would agree that a new hire meeting these criteria is fully productive. If they disagree, the definition is too vague."
+        ],
+        "tags": ["onboarding", "measurement"]
+      },
+      {
+        "flow_name": "baseline-time-measurer",
+        "description": "Measure the current time-to-productivity for the last 5-10 hires. For each hire, determine when they reached each milestone and when they reached full productivity. If this data does not exist, estimate it by interviewing the managers and the new hires. The baseline is the number you are trying to improve.",
+        "inputs": [
+          {"name": "productivity-definition", "desc": "The measurable criteria for full productivity"},
+          {"name": "milestone-ladder", "desc": "The intermediate milestones"}
+        ],
+        "outputs": [
+          {"name": "baseline-measurements", "desc": "Time-to-productivity for each recent hire, with milestone dates, producing a median baseline"},
+          {"name": "variance-analysis", "desc": "The spread in time-to-productivity across hires, and any obvious factors that explain the variance (e.g., hires with prior industry experience ramp faster)"}
+        ],
+        "process": [
+          "For each of the last 5-10 hires in this role, determine when they reached each milestone and full productivity.",
+          "If milestone dates were not tracked, interview the manager: When could this person handle [milestone task] independently? Estimate to the nearest week.",
+          "Calculate the median time-to-productivity. This is the baseline.",
+          "Look at the variance. If the fastest hire reached productivity in 4 weeks and the slowest in 16, something in the process is inconsistent. Identify what was different for the fast hires."
+        ],
+        "tags": ["onboarding", "measurement"]
+      },
+      {
+        "flow_name": "onboarding-process-mapper",
+        "description": "Map the actual onboarding process as experienced by the new hire, not as documented in the handbook. Walk through the first 4 weeks day by day with a recent hire. For each day, record: what they were supposed to do, what they actually did, what they were waiting for, and what they wished they had known.",
+        "inputs": [
+          {"name": "baseline-measurements", "desc": "Current time-to-productivity data"},
+          {"name": "variance-analysis", "desc": "What explains the difference between fast and slow ramps"}
+        ],
+        "outputs": [
+          {"name": "process-map", "desc": "Day-by-day map of the actual onboarding experience, with waiting times, blockers, and gaps annotated"},
+          {"name": "new-hire-feedback", "desc": "Direct quotes from recent hires about what slowed them down, what was missing, and what helped most"}
+        ],
+        "process": [
+          "Interview 2-3 recent hires (preferably one fast ramper and one slow ramper). Walk through their first 4 weeks day by day.",
+          "For each day, ask: What were you supposed to do? What did you actually do? Were you waiting for anything? What did you wish someone had told you?",
+          "Map the process as a timeline. Mark every waiting period in a different color. Waiting periods are the low-hanging fruit.",
+          "Note the gaps: moments where the new hire had no task, no direction, and no one to ask. These gaps are where onboarding fails."
+        ],
+        "tags": ["onboarding", "process-analysis"]
+      },
+      {
+        "flow_name": "bottleneck-identifier-ranker",
+        "description": "Identify the bottlenecks in the onboarding process and rank them by delay caused. A bottleneck is anything that prevents the new hire from progressing to the next step. Common bottlenecks: waiting for system access (IT), waiting for equipment, no documentation for critical processes, no assigned buddy or mentor, unclear first assignment.",
+        "inputs": [
+          {"name": "process-map", "desc": "The day-by-day onboarding map with delays annotated"},
+          {"name": "new-hire-feedback", "desc": "Direct quotes about what slowed things down"}
+        ],
+        "outputs": [
+          {"name": "ranked-bottlenecks", "desc": "Every bottleneck in the onboarding process, ranked by the delay it causes (in days or weeks of lost productivity)"},
+          {"name": "bottleneck-owners", "desc": "Who controls each bottleneck (IT, HR, the hiring manager, the team) and their current SLA or response time"}
+        ],
+        "process": [
+          "From the process map, list every waiting period and gap. For each, estimate the delay in working days.",
+          "Classify each bottleneck: access (IT), equipment (facilities/procurement), knowledge (documentation/training), direction (manager/team), or social (no buddy/mentor).",
+          "Identify who controls each bottleneck. Access delays are IT's problem. Knowledge delays are the team's problem. Direction delays are the manager's problem.",
+          "Rank by delay caused. The bottleneck that costs the most days is the highest priority to fix."
+        ],
+        "tags": ["onboarding", "bottleneck-analysis"]
+      },
+      {
+        "flow_name": "bottleneck-eliminator",
+        "description": "Fix the bottlenecks in priority order. For each bottleneck, design a specific fix and implement it. The fix for access delays is pre-provisioning before the start date. The fix for knowledge gaps is documentation. The fix for direction gaps is a structured first-week plan. Do not try to fix everything at once. Fix the biggest bottleneck first, measure the result, then move to the next.",
+        "inputs": [
+          {"name": "ranked-bottlenecks", "desc": "Bottlenecks ranked by delay caused"},
+          {"name": "bottleneck-owners", "desc": "Who controls each bottleneck"}
+        ],
+        "outputs": [
+          {"name": "fix-implementations", "desc": "For each of the top 3 bottlenecks: the specific fix implemented, who is responsible, and the expected reduction in delay"},
+          {"name": "revised-onboarding-plan", "desc": "The updated onboarding process with the fixes incorporated"}
+        ],
+        "process": [
+          "Take the top-ranked bottleneck. Design the fix. Common fixes: pre-provision all access and equipment before the start date (submit requests at offer acceptance, not on day one), write the missing documentation (the team should maintain a 'new hire survival guide'), create a structured first-week plan with daily objectives.",
+          "Implement the fix. This may require coordination with other teams (IT, facilities). Set a deadline.",
+          "Move to the second bottleneck. Repeat.",
+          "Update the onboarding plan to incorporate the fixes. The plan should specify what happens before day one, during week one, and during weeks two through four."
+        ],
+        "tags": ["onboarding", "process-improvement"]
+      },
+      {
+        "flow_name": "time-to-productivity-re-measurer",
+        "description": "After implementing the fixes, measure the time-to-productivity for the next 3-5 hires and compare against the baseline. The target is a 25% reduction in the median time-to-productivity. If the reduction is less than 25%, either the biggest bottleneck was not actually the biggest, or the fix was insufficient.",
+        "inputs": [
+          {"name": "fix-implementations", "desc": "The bottleneck fixes that were implemented"},
+          {"name": "revised-onboarding-plan", "desc": "The updated onboarding process"}
+        ],
+        "outputs": [
+          {"name": "post-fix-measurements", "desc": "Time-to-productivity for the first 3-5 hires under the new process, compared against the baseline"},
+          {"name": "improvement-assessment", "desc": "Whether the 25% reduction target was met, and if not, what the next intervention should be"}
+        ],
+        "process": [
+          "For each new hire under the revised process, track their milestone dates and time-to-full-productivity using the same definition as the baseline.",
+          "After 3-5 hires, calculate the new median time-to-productivity and compare against the baseline.",
+          "If the improvement is 25% or more, the intervention worked. Document it and move to the next bottleneck.",
+          "If the improvement is less than 25%, interview the recent hires: what slowed them down? The answer will reveal the next bottleneck to fix."
+        ],
+        "tags": ["onboarding", "measurement"]
+      }
+    ]
+  },
+  {
+    "chain_name": "culture-add-hiring-method",
+    "description": "Hire for culture ADD instead of culture FIT. Culture fit produces homogeneous teams that agree on everything and miss blind spots. Culture add produces teams with diverse perspectives that challenge each other. Define what is MISSING from the team, screen for those missing elements, and change the interview question from 'would I enjoy working with this person?' to 'what does this person bring that nobody on the team currently has?'",
+    "domain": "human-resources",
+    "tags": ["infrastructure", "hiring", "team-building", "diversity"],
+    "steps": [
+      {
+        "flow_name": "team-composition-auditor",
+        "description": "Audit the current team composition across multiple dimensions: professional background, problem-solving style, communication style, industry experience, education path, and demographic background. The goal is not to label people but to see the team as a whole and notice what is overrepresented and what is absent.",
+        "inputs": [
+          {"name": "team-roster", "desc": "The current team members with their backgrounds"},
+          {"name": "team-purpose", "desc": "What the team exists to accomplish and who it serves"}
+        ],
+        "outputs": [
+          {"name": "composition-profile", "desc": "The team's current composition across all dimensions, showing where there is depth and where there are gaps"},
+          {"name": "homogeneity-flags", "desc": "Dimensions where the team is notably uniform (e.g., everyone came from the same 3 companies, everyone solves problems the same way)"}
+        ],
+        "process": [
+          "For each team member, note: professional background (where they worked before), problem-solving style (analytical, intuitive, collaborative, independent), communication style (direct, diplomatic, written-first, verbal-first), industry experience, and education path.",
+          "Look for clustering. If 80% of the team shares any single attribute, that is a homogeneity flag.",
+          "Ask: given what this team exists to accomplish and who it serves, what perspectives are missing? If the team builds products for small business owners and nobody on the team has run a small business, that is a gap."
+        ],
+        "tags": ["hiring", "team-analysis"]
+      },
+      {
+        "flow_name": "missing-perspective-definer",
+        "description": "Define what is missing from the team's perspectives and capabilities. This is not about what the team cannot do technically. It is about how the team thinks and what blind spots that creates. A team of all engineers misses the customer perspective. A team of all generalists misses deep expertise. A team of all optimists misses risk awareness.",
+        "inputs": [
+          {"name": "composition-profile", "desc": "The team's current makeup"},
+          {"name": "homogeneity-flags", "desc": "Where the team is too uniform"}
+        ],
+        "outputs": [
+          {"name": "missing-perspectives", "desc": "The specific perspectives, experiences, and thinking styles that the team lacks, with an explanation of why each gap matters"},
+          {"name": "blind-spot-examples", "desc": "Concrete examples of decisions or outcomes where the team's homogeneity caused a problem or missed an opportunity"}
+        ],
+        "process": [
+          "For each homogeneity flag, ask: what has this uniformity caused us to miss? Interview team members and stakeholders for examples.",
+          "For each gap identified in the composition audit, describe the perspective that is missing and why it matters for the team's mission.",
+          "Write the blind-spot examples as stories: 'We launched feature X without considering use case Y because nobody on the team had experience Z.'",
+          "Prioritize the missing perspectives by impact: which gap, if filled, would most improve the team's decisions and output?"
+        ],
+        "tags": ["hiring", "perspective-analysis"]
+      },
+      {
+        "flow_name": "culture-add-criteria-builder",
+        "description": "Convert the missing perspectives into hiring criteria. Each missing perspective becomes a screening question. Instead of 'is this person a culture fit?' (which means 'is this person like us?'), the questions become 'does this person bring [specific missing perspective]?' This makes the hiring decision evidence-based rather than vibes-based.",
+        "inputs": [
+          {"name": "missing-perspectives", "desc": "What the team lacks"},
+          {"name": "blind-spot-examples", "desc": "Concrete consequences of the gaps"}
+        ],
+        "outputs": [
+          {"name": "culture-add-criteria", "desc": "Specific, assessable criteria for each missing perspective, written as things you can observe in a candidate's background, portfolio, or interview responses"},
+          {"name": "screening-questions", "desc": "Interview questions designed to surface each missing perspective"}
+        ],
+        "process": [
+          "For each missing perspective, write a criterion that is observable: 'Has worked directly with [customer type the team currently does not understand]' or 'Has experience in [industry the team has not touched]' or 'Approaches problems by [method nobody on the team uses].'",
+          "For each criterion, write an interview question that surfaces it. Not 'are you analytical?' but 'Tell me about a time you solved a problem that your team thought was unsolvable. What did you see that they did not?'",
+          "Test the questions: would a candidate who matches the criterion give a different answer than a candidate who does not? If the question does not discriminate, rewrite it."
+        ],
+        "tags": ["hiring", "criteria-design"]
+      },
+      {
+        "flow_name": "interview-reframe-trainer",
+        "description": "Train interviewers to evaluate for culture add instead of culture fit. The biggest obstacle is the interviewer's instinct: 'I liked this person' is a fit signal, not an add signal. Train interviewers to ask: 'What does this person bring that nobody on the team currently has?' and to treat discomfort with a candidate's different style as a positive signal, not a negative one.",
+        "inputs": [
+          {"name": "culture-add-criteria", "desc": "The specific criteria for what the team needs"},
+          {"name": "screening-questions", "desc": "The questions designed to surface missing perspectives"}
+        ],
+        "outputs": [
+          {"name": "interviewer-guide", "desc": "A guide for interviewers explaining the culture add approach, with the specific criteria and questions for this role"},
+          {"name": "bias-checklist", "desc": "A checklist interviewers use after each interview to check whether their reaction to the candidate was based on add criteria or on similarity to themselves"}
+        ],
+        "process": [
+          "Explain the shift to interviewers: culture fit asks 'is this person like us?' Culture add asks 'does this person bring something we lack?' The first produces similarity. The second produces capability.",
+          "Give interviewers the specific criteria and questions. Their job is to assess the criteria, not to form a general impression.",
+          "Create the bias checklist: after each interview, the interviewer answers: (1) Did I form my impression in the first 5 minutes? (2) Is my positive or negative reaction based on similarity to me or difference from me? (3) Can I point to a specific criterion this candidate does or does not meet?",
+          "Practice: run a calibration exercise where interviewers evaluate the same candidate independently and compare their assessments against the criteria."
+        ],
+        "tags": ["hiring", "bias-reduction"]
+      },
+      {
+        "flow_name": "add-impact-tracker",
+        "description": "After hiring for culture add, track whether the new hire's different perspective actually produced better outcomes. The proof is in the decisions: did the team make a decision differently because of the new person's input? Did the team catch a blind spot it would have missed? Track these instances for the first 12 months.",
+        "inputs": [
+          {"name": "interviewer-guide", "desc": "The culture add framework used in hiring"},
+          {"name": "bias-checklist", "desc": "The bias check used by interviewers"}
+        ],
+        "outputs": [
+          {"name": "add-impact-log", "desc": "Specific instances where the culture-add hire's different perspective changed a team decision or caught a blind spot in the first 12 months"},
+          {"name": "method-assessment", "desc": "Whether the culture add criteria predicted the right kind of impact, and adjustments for the next hire"}
+        ],
+        "process": [
+          "At monthly team retrospectives, ask: was there a decision this month where someone's different perspective changed the outcome?",
+          "Track each instance: what was the decision, what would the team have done without the input, and what did the different perspective add?",
+          "At 12 months, review the log. If the culture-add hire contributed multiple instances of changed decisions, the criteria were good. If not, either the criteria missed the mark or the team environment did not support the different perspective.",
+          "Adjust the criteria for the next hire based on what you learned."
+        ],
+        "tags": ["hiring", "measurement"]
+      }
+    ]
+  },
+  {
+    "chain_name": "performance-calibration-system",
+    "description": "Calibrate performance ratings across managers to remove bias and inconsistency. Without calibration, ratings reflect the manager more than the employee. Some managers rate everyone high. Some rate everyone low. Calibration forces managers to justify ratings with specific examples and adjusts for systematic bias.",
+    "domain": "human-resources",
+    "tags": ["infrastructure", "team-building", "performance", "methodology"],
+    "steps": [
+      {
+        "flow_name": "rating-distribution-analyzer",
+        "description": "Before calibration, analyze the rating distributions by manager. For each manager, plot the distribution of ratings they gave. Identify the outliers: managers whose distributions are more than one standard deviation from the company norm. These are the systematic over-raters and under-raters.",
+        "inputs": [
+          {"name": "performance-ratings-data", "desc": "All performance ratings for the current cycle, organized by manager"},
+          {"name": "company-rating-scale", "desc": "The rating scale used (e.g., 1-5, exceeds/meets/below)"}
+        ],
+        "outputs": [
+          {"name": "manager-distributions", "desc": "The rating distribution for each manager, compared against the company-wide distribution"},
+          {"name": "systematic-bias-flags", "desc": "Managers whose distributions are more than one standard deviation from the norm, flagged as potential over-raters or under-raters"}
+        ],
+        "process": [
+          "Calculate the company-wide rating distribution: what percentage of employees received each rating level?",
+          "For each manager, calculate their distribution. Plot both on the same chart.",
+          "Flag managers whose mean rating is more than one standard deviation above (over-rater) or below (under-rater) the company mean.",
+          "Note: a skewed distribution is not necessarily wrong. A manager may genuinely have a strong team. But the flag prompts the calibration discussion."
+        ],
+        "tags": ["performance", "data-analysis"]
+      },
+      {
+        "flow_name": "calibration-session-facilitator",
+        "description": "Facilitate the calibration session. Managers present their ratings for each employee, with specific examples. The facilitator's job is to surface inconsistencies: if Manager A rates a behavior as 'exceeds expectations' and Manager B rates the same behavior as 'meets expectations,' one of them is wrong. The group resolves the inconsistency.",
+        "inputs": [
+          {"name": "manager-distributions", "desc": "Rating distributions by manager"},
+          {"name": "systematic-bias-flags", "desc": "Managers flagged as potential over-raters or under-raters"}
+        ],
+        "outputs": [
+          {"name": "calibrated-ratings", "desc": "The final ratings after calibration adjustments, with notes on any changes from the original ratings"},
+          {"name": "calibration-notes", "desc": "Key discussions and decisions from the calibration session, including where managers disagreed and how it was resolved"}
+        ],
+        "process": [
+          "Start with the flagged managers. Ask them to present their highest and lowest rated employees with specific examples. The group assesses whether the examples justify the ratings.",
+          "For each rating level, compare examples across managers. If Manager A's 'exceeds' examples are weaker than Manager B's 'meets' examples, the ratings are inconsistent. Discuss and adjust.",
+          "The facilitator does not overrule managers. The facilitator asks questions: 'Manager A, you rated this as exceeds. Manager B rated a similar behavior as meets. Can you explain the difference?'",
+          "Record every adjustment: the original rating, the calibrated rating, and the reason for the change."
+        ],
+        "tags": ["performance", "facilitation"]
+      },
+      {
+        "flow_name": "bias-pattern-documenter",
+        "description": "Document the patterns of bias revealed during calibration. Which managers consistently over-rate or under-rate? Which managers rate based on recency (the last month of performance rather than the full cycle)? Which managers rate based on effort rather than output? These patterns are coaching opportunities.",
+        "inputs": [
+          {"name": "calibrated-ratings", "desc": "Final ratings after calibration"},
+          {"name": "calibration-notes", "desc": "Key discussions and adjustments"}
+        ],
+        "outputs": [
+          {"name": "bias-pattern-report", "desc": "Documented patterns of rating bias by manager, including the type of bias (leniency, severity, recency, effort-based, halo effect) and specific examples"},
+          {"name": "coaching-recommendations", "desc": "Specific coaching points for each manager with identified bias patterns"}
+        ],
+        "process": [
+          "Review the calibration adjustments. Group them by manager. If a manager's ratings were adjusted multiple times in the same direction, there is a systematic bias.",
+          "Classify the bias: leniency (rates everyone high), severity (rates everyone low), recency (bases ratings on recent events), effort-based (rates hard workers high regardless of output), halo effect (one strong trait inflates all ratings).",
+          "Write the coaching recommendation for each manager: what specific bias to watch for, with the examples from this calibration as evidence.",
+          "Note: bias patterns are private feedback to the manager, not public. The goal is to help them rate more accurately, not to shame them."
+        ],
+        "tags": ["performance", "coaching"]
+      },
+      {
+        "flow_name": "calibration-cycle-improver",
+        "description": "After each calibration cycle, improve the process. Track: how many ratings were adjusted (should decrease over time as managers learn), how long the session took, and whether managers found it valuable. If adjustments are not decreasing, the coaching is not working.",
+        "inputs": [
+          {"name": "bias-pattern-report", "desc": "Documented bias patterns"},
+          {"name": "coaching-recommendations", "desc": "Coaching points for each manager"}
+        ],
+        "outputs": [
+          {"name": "cycle-metrics", "desc": "Adjustment rate, session duration, and manager feedback for this calibration cycle"},
+          {"name": "process-improvements", "desc": "Changes to make for the next cycle based on what worked and what did not"}
+        ],
+        "process": [
+          "Calculate the adjustment rate: what percentage of ratings changed during calibration? Track this across cycles. A healthy trend is 20-30% in the first cycle, declining to under 10% by the fourth cycle.",
+          "Collect manager feedback: Was the calibration session useful? Did it change how you will rate next time?",
+          "Identify process improvements: Was the session too long? (Cap at 3 hours.) Were there too many employees per session? (Cap at 20.) Did the facilitator allow discussion to become personal? (Add ground rules.)",
+          "Implement the improvements for the next cycle."
+        ],
+        "tags": ["performance", "continuous-improvement"]
+      }
+    ]
+  },
+  {
+    "chain_name": "organizational-debt-identifier",
+    "description": "Find and eliminate organizational debt: the accumulated processes, roles, approvals, and structures that no longer serve their original purpose. Organizational debt accumulates silently and slows everything down, like technical debt. For each item, ask: does the original reason still apply? If not, eliminate it.",
+    "domain": "human-resources",
+    "tags": ["infrastructure", "team-building", "operations", "methodology"],
+    "steps": [
+      {
+        "flow_name": "process-inventory-collector",
+        "description": "Inventory every recurring process, approval chain, meeting, report, and standing role on the team. Do not use the org chart or the process documentation. Instead, ask each team member: What do you do every week that you suspect adds no value? What approval do you need that feels unnecessary? What meeting do you attend that could be an email?",
+        "inputs": [
+          {"name": "team-or-org-scope", "desc": "The team, department, or organization to audit for organizational debt"},
+          {"name": "team-member-list", "desc": "The people to interview about their recurring activities"}
+        ],
+        "outputs": [
+          {"name": "process-inventory", "desc": "Every recurring process, approval, meeting, report, and standing role, with the time spent per week and the number of people involved"},
+          {"name": "team-suspicion-list", "desc": "Items that team members suspect add no value, with their reasoning"}
+        ],
+        "process": [
+          "Ask each team member (anonymously if possible): What do you do every week that you suspect adds no value? What approval slows you down? What meeting could be eliminated?",
+          "Compile the responses. Count how many people flagged each item.",
+          "Add any recurring processes, meetings, or reports not flagged by the team (they may be so habitual that nobody questions them). Look at calendars and process documentation.",
+          "For each item, record: what it is, how often it occurs, how many people are involved, and how much time it consumes per occurrence."
+        ],
+        "tags": ["operations", "process-audit"]
+      },
+      {
+        "flow_name": "origin-story-excavator",
+        "description": "For each item in the inventory, find why it was created. Every process exists for a reason, but the reason may no longer apply. A weekly status meeting was created because two teams were not communicating. Are they still not communicating, or has Slack replaced the meeting? An approval chain was created after a costly mistake. Has the underlying system been fixed?",
+        "inputs": [
+          {"name": "process-inventory", "desc": "All recurring processes, approvals, meetings, and roles"},
+          {"name": "team-suspicion-list", "desc": "Items suspected of adding no value"}
+        ],
+        "outputs": [
+          {"name": "origin-stories", "desc": "For each item: why it was created, when, by whom, and what problem it was solving"},
+          {"name": "still-valid-flags", "desc": "For each item: whether the original reason still applies (yes, partially, or no)"}
+        ],
+        "process": [
+          "For each item, ask the longest-tenured team member: Why do we do this? When did it start? What problem was it solving?",
+          "If nobody remembers why a process exists, that is itself a signal. A process whose purpose is forgotten is likely debt.",
+          "For each item with a known origin, assess: does the original problem still exist? If the process was created because of a specific incident, has the underlying cause been fixed?",
+          "Mark each item: still valid (the original reason fully applies), partially valid (the reason partially applies but the process is heavier than needed), or no longer valid (the reason no longer applies)."
+        ],
+        "tags": ["operations", "root-cause-analysis"]
+      },
+      {
+        "flow_name": "debt-cost-calculator",
+        "description": "Calculate the cost of each piece of organizational debt. Cost equals the time spent per occurrence times the number of people involved times the frequency per year times the average hourly cost of those people. This converts vague complaints ('this meeting is useless') into a dollar figure that motivates action.",
+        "inputs": [
+          {"name": "origin-stories", "desc": "Why each process exists and whether the reason still applies"},
+          {"name": "still-valid-flags", "desc": "Whether each process is still valid, partially valid, or no longer valid"}
+        ],
+        "outputs": [
+          {"name": "debt-cost-table", "desc": "For each item marked as partially valid or no longer valid: the annual cost in hours and dollars"},
+          {"name": "total-debt-cost", "desc": "The total annual cost of organizational debt across all items"}
+        ],
+        "process": [
+          "For each item marked partially valid or no longer valid, calculate: time per occurrence (hours) times number of people involved times occurrences per year.",
+          "Multiply by the average loaded hourly cost of the involved people. This is the annual cost of this piece of debt.",
+          "Sum all items. This is the total annual cost of organizational debt for this team or department.",
+          "Rank items by annual cost. The most expensive items are the highest priority to eliminate."
+        ],
+        "tags": ["operations", "cost-analysis"]
+      },
+      {
+        "flow_name": "elimination-decision-maker",
+        "description": "For each piece of debt, decide: eliminate entirely, simplify (reduce the frequency or scope), or keep (the cost is justified by a reason the team had not articulated). The default should be eliminate. Most organizations keep processes because of inertia, not because of a conscious decision.",
+        "inputs": [
+          {"name": "debt-cost-table", "desc": "Annual cost of each debt item"},
+          {"name": "total-debt-cost", "desc": "Total annual cost of organizational debt"}
+        ],
+        "outputs": [
+          {"name": "elimination-decisions", "desc": "For each debt item: eliminate, simplify (with the specific simplification), or keep (with the justification)"},
+          {"name": "freed-capacity", "desc": "The total hours per year freed by eliminating and simplifying, converted to FTE equivalents"}
+        ],
+        "process": [
+          "For each item, start with the assumption that it should be eliminated. The burden of proof is on keeping it, not on eliminating it.",
+          "If someone argues to keep it, ask: what specifically would go wrong if we stopped doing this? If the answer is vague ('things might fall through the cracks'), propose a 30-day trial elimination and monitor for actual problems.",
+          "For items that cannot be eliminated entirely, simplify: reduce the frequency (weekly to monthly), reduce the scope (full report to dashboard), or reduce the participants (whole team to 2 people).",
+          "Calculate the freed capacity: total hours per year saved by eliminations and simplifications, divided by 2,000 (working hours per year) equals FTE equivalents recovered."
+        ],
+        "tags": ["operations", "decision-making"]
+      },
+      {
+        "flow_name": "debt-prevention-protocol",
+        "description": "Prevent new organizational debt from accumulating. For every new process, meeting, approval chain, or role created going forward, require: the specific problem it solves, the sunset date (when it will be reviewed for elimination), and the success metric (how to know if it is working). Without these, the process is born as debt.",
+        "inputs": [
+          {"name": "elimination-decisions", "desc": "What was eliminated or simplified"},
+          {"name": "freed-capacity", "desc": "Hours and FTEs recovered"}
+        ],
+        "outputs": [
+          {"name": "prevention-protocol", "desc": "The process for creating new processes: required fields (problem statement, sunset date, success metric) and the review cadence"},
+          {"name": "debt-review-schedule", "desc": "The recurring schedule for auditing existing processes for debt, using the same method that produced this audit"}
+        ],
+        "process": [
+          "Require every new process, meeting, or approval chain to have three fields at creation: (1) the specific problem it solves, (2) the sunset date (default: 6 months, after which it must be justified to continue), and (3) the success metric (how to know it is working).",
+          "At each sunset date, review the process against its success metric. If it is not meeting the metric, eliminate it.",
+          "Schedule a full organizational debt audit annually, using the same method: inventory, origin stories, cost calculation, elimination decisions.",
+          "Track the trend: is total organizational debt increasing or decreasing year over year? A healthy organization reduces debt over time."
+        ],
+        "tags": ["operations", "prevention"]
+      }
+    ]
+  },
+  {
+    "chain_name": "manager-effectiveness-measurement",
+    "description": "Measure manager effectiveness using outputs, not inputs. Lagging indicators (retention, performance, promotion rate) show the result. Leading indicators (1:1 frequency, engagement scores, time-to-fill) predict the result 6-12 months in advance. Measure both, intervene on leading indicators before the lagging indicators deteriorate.",
+    "domain": "human-resources",
+    "tags": ["infrastructure", "team-building", "management", "measurement"],
+    "steps": [
+      {
+        "flow_name": "lagging-indicator-collector",
+        "description": "Collect the lagging indicators for each manager: team voluntary turnover rate (last 12 months), team performance distribution (from the calibrated ratings), and team promotion rate (promotions in the last 24 months as a percentage of team size). These tell you what already happened.",
+        "inputs": [
+          {"name": "manager-list", "desc": "The managers being assessed"},
+          {"name": "hr-data-access", "desc": "Access to turnover, performance rating, and promotion data by team"}
+        ],
+        "outputs": [
+          {"name": "lagging-indicators", "desc": "For each manager: voluntary turnover rate, team performance distribution, and promotion rate, compared against the company median"},
+          {"name": "lagging-outliers", "desc": "Managers in the bottom or top quartile on any lagging indicator"}
+        ],
+        "process": [
+          "For each manager, calculate: voluntary turnover rate (voluntary departures from their team in the last 12 months divided by average team size).",
+          "Calculate the team performance distribution: what percentage of their team is at each rating level? Compare against the company distribution.",
+          "Calculate the promotion rate: team members promoted in the last 24 months divided by average team size.",
+          "Compare each manager's lagging indicators against the company median. Flag those in the bottom quartile on any indicator."
+        ],
+        "tags": ["management", "measurement"]
+      },
+      {
+        "flow_name": "leading-indicator-collector",
+        "description": "Collect the leading indicators for each manager: 1:1 frequency and consistency, team engagement survey scores, time-to-fill for open roles on their team, and skip-level feedback (what their direct reports say about them to their manager's manager). These predict what will happen in 6-12 months.",
+        "inputs": [
+          {"name": "lagging-indicators", "desc": "Historical output data by manager"},
+          {"name": "lagging-outliers", "desc": "Managers flagged by lagging data"}
+        ],
+        "outputs": [
+          {"name": "leading-indicators", "desc": "For each manager: 1:1 frequency, engagement scores, time-to-fill, and skip-level feedback summary"},
+          {"name": "leading-outliers", "desc": "Managers in the bottom or top quartile on any leading indicator"}
+        ],
+        "process": [
+          "For 1:1s: check the calendar data. How many scheduled 1:1s did the manager actually hold in the last quarter (not canceled or rescheduled)? Consistency matters more than frequency.",
+          "For engagement: if a pulse survey or annual survey exists, pull the results for each manager's team.",
+          "For time-to-fill: how long does it take to fill an open role on this manager's team? Long time-to-fill signals that the team's reputation is poor or the manager is not engaged in hiring.",
+          "For skip-level: summarize what each manager's direct reports say in skip-level conversations. If skip-level conversations are not happening, that is itself a leading indicator (the manager's manager is not checking)."
+        ],
+        "tags": ["management", "measurement"]
+      },
+      {
+        "flow_name": "correlation-analyzer",
+        "description": "Analyze the correlation between leading and lagging indicators. Managers in the bottom quartile on leading indicators today should be in the bottom quartile on lagging indicators in 6-12 months. If the data confirms this pattern, leading indicators can be used for early intervention.",
+        "inputs": [
+          {"name": "leading-indicators", "desc": "Current leading indicator data by manager"},
+          {"name": "leading-outliers", "desc": "Managers flagged by leading data"}
+        ],
+        "outputs": [
+          {"name": "correlation-report", "desc": "The correlation between each leading indicator and each lagging indicator, with the time lag"},
+          {"name": "predictive-model", "desc": "Which leading indicators are the strongest predictors of which lagging outcomes"}
+        ],
+        "process": [
+          "For each leading-lagging pair, calculate the correlation using data from the last 2-3 years (if available).",
+          "The expected pattern: low 1:1 consistency correlates with higher turnover 6-12 months later. Low engagement scores correlate with lower team performance in the next review cycle.",
+          "Identify the strongest predictors. These are the leading indicators to monitor most closely.",
+          "If historical data is insufficient to calculate correlation, start tracking now and revisit in 12 months."
+        ],
+        "tags": ["management", "analytics"]
+      },
+      {
+        "flow_name": "intervention-designer",
+        "description": "For each manager in the bottom quartile on leading indicators, design a specific intervention. The intervention depends on which indicator is low. Low 1:1 consistency: the manager needs time management coaching or a reduced scope. Low engagement: the manager needs feedback on their leadership behaviors. Low time-to-fill: the manager needs to invest in their team's reputation.",
+        "inputs": [
+          {"name": "correlation-report", "desc": "Which leading indicators predict which lagging outcomes"},
+          {"name": "predictive-model", "desc": "The strongest leading-to-lagging predictors"}
+        ],
+        "outputs": [
+          {"name": "intervention-plans", "desc": "For each flagged manager: the specific intervention, who delivers it, the timeline, and the success metric"},
+          {"name": "escalation-criteria", "desc": "At what point a manager's leading indicators are bad enough to warrant removal from the management role, not just coaching"}
+        ],
+        "process": [
+          "For each flagged manager, identify which leading indicator is lowest. Design the intervention around that specific deficit.",
+          "Match the intervention to the problem: 1:1 consistency (coaching on time management, reducing scope), engagement (behavioral feedback, leadership development), time-to-fill (employer branding within the team, manager involvement in hiring).",
+          "Set a timeline: 90 days for behavioral changes, 6 months for measurable improvement in leading indicators.",
+          "Define the escalation: if leading indicators do not improve after two intervention cycles (12 months), the manager should be considered for a role change. Bad management has a compounding cost."
+        ],
+        "tags": ["management", "coaching"]
+      },
+      {
+        "flow_name": "manager-scorecard-publisher",
+        "description": "Create a recurring manager scorecard that presents the leading and lagging indicators in a single view. Publish it quarterly. The scorecard is not punitive. It is diagnostic. Managers who see their own data in context are more likely to self-correct than managers who receive only verbal feedback.",
+        "inputs": [
+          {"name": "intervention-plans", "desc": "Interventions for flagged managers"},
+          {"name": "escalation-criteria", "desc": "When coaching escalates to role change"}
+        ],
+        "outputs": [
+          {"name": "scorecard-template", "desc": "The template for the quarterly manager scorecard, showing leading and lagging indicators with company quartile benchmarks"},
+          {"name": "delivery-process", "desc": "How the scorecard is delivered to each manager (private, with their manager, with context and coaching resources)"}
+        ],
+        "process": [
+          "Design the scorecard: one page, each indicator shown as a value with the company median and quartile boundaries. Green, yellow, red coloring based on quartile.",
+          "Deliver privately: each manager sees only their own data, not other managers'. The scorecard is shared with their manager for coaching purposes.",
+          "Include context: if a manager's turnover rate is high but all departures were low performers, note that. Context prevents misinterpretation.",
+          "Publish quarterly. Over time, managers learn to self-monitor and correct before the scorecard arrives."
+        ],
+        "tags": ["management", "reporting"]
+      }
+    ]
+  },
+  {
+    "chain_name": "role-design-from-outcomes",
+    "description": "Design roles starting from the measurable outcomes they must produce, not from a list of responsibilities. Responsibility-based job descriptions create busy people. Outcome-based job descriptions create productive people. Define the 3-5 outcomes the role must deliver in year one, then work backward to the activities, and then check whether one person can produce all of them.",
+    "domain": "human-resources",
+    "tags": ["infrastructure", "team-building", "job-design", "methodology"],
+    "steps": [
+      {
+        "flow_name": "outcome-definer",
+        "description": "Define the 3-5 measurable outcomes the role must deliver in its first year. An outcome is not an activity. 'Manage the support queue' is an activity. 'Reduce average ticket resolution time from 4 hours to 2 hours' is an outcome. Outcomes have a number, a direction, and a timeframe.",
+        "inputs": [
+          {"name": "business-need", "desc": "Why this role is being created or redesigned"},
+          {"name": "stakeholder-expectations", "desc": "What the hiring manager and key stakeholders expect this role to accomplish"}
+        ],
+        "outputs": [
+          {"name": "role-outcomes", "desc": "The 3-5 measurable outcomes the role must deliver in year one, each with a metric, a target, and a deadline"},
+          {"name": "outcome-priorities", "desc": "The rank order of the outcomes: if the person can only accomplish 3 of the 5, which 3 matter most?"}
+        ],
+        "process": [
+          "Interview the hiring manager and 2-3 stakeholders. For each, ask: If this role is filled perfectly, what will be true in 12 months that is not true today? Push for specifics and numbers.",
+          "Convert each answer to an outcome format: [metric] moves from [current level] to [target level] by [date].",
+          "If a stakeholder gives an activity ('manage the support queue'), ask: What result does managing the queue produce? That result is the outcome.",
+          "Limit to 3-5 outcomes. More than 5 means the role is trying to do too many things. Force the stakeholders to prioritize."
+        ],
+        "tags": ["job-design", "outcome-definition"]
+      },
+      {
+        "flow_name": "activity-reverse-engineer",
+        "description": "For each outcome, work backward to the activities required to produce it. If the outcome is 'reduce ticket resolution time from 4 hours to 2 hours,' the activities might be: analyze the current resolution process, identify the bottlenecks, redesign the triage workflow, train the team on the new workflow, monitor the resolution time metric weekly.",
+        "inputs": [
+          {"name": "role-outcomes", "desc": "The measurable outcomes the role must deliver"},
+          {"name": "outcome-priorities", "desc": "Which outcomes matter most"}
+        ],
+        "outputs": [
+          {"name": "activity-map", "desc": "For each outcome: the specific activities required to produce it, with estimated time per week"},
+          {"name": "total-time-estimate", "desc": "The total estimated time per week across all activities, as a sanity check against available hours"}
+        ],
+        "process": [
+          "For each outcome, list every activity that must happen to move the metric from the current level to the target level.",
+          "For each activity, estimate the time per week. Be realistic. Include not just the doing but the meetings, communication, and coordination required.",
+          "Sum the time across all outcomes. If the total exceeds 50 hours per week, the role is overloaded. Cut the lowest-priority outcome or split the role.",
+          "Flag activities that require skills not usually found in the same person (e.g., deep data analysis AND executive-level presentation). These signal a potential role split."
+        ],
+        "tags": ["job-design", "activity-analysis"]
+      },
+      {
+        "flow_name": "role-coherence-checker",
+        "description": "Check whether one person can realistically produce all the outcomes. The most common job design failure is combining activities that require different modes of work (deep focus AND constant availability) or different skill sets (technical expertise AND sales ability). If the role requires two different people, split it.",
+        "inputs": [
+          {"name": "activity-map", "desc": "Activities required for each outcome with time estimates"},
+          {"name": "total-time-estimate", "desc": "Total weekly time required"}
+        ],
+        "outputs": [
+          {"name": "coherence-assessment", "desc": "Whether the role is coherent (one person can do it) or needs to be split, with the specific conflicts identified"},
+          {"name": "role-structure-recommendation", "desc": "If the role should be split: how to divide the outcomes across two roles so each is coherent"}
+        ],
+        "process": [
+          "Check for mode conflicts: does the role require long blocks of uninterrupted focus AND constant availability for interruptions? If yes, one mode will always lose.",
+          "Check for skill conflicts: does the role require deep technical expertise AND high-touch relationship management? Very few people excel at both.",
+          "Check for time conflicts: do the activities for different outcomes need to happen at the same time? (e.g., two outcomes require presence in different meetings that overlap.)",
+          "If any conflict is found, recommend splitting the role. Define the split by outcomes, not by activities: each new role owns complete outcomes, not fragments."
+        ],
+        "tags": ["job-design", "organizational-design"]
+      },
+      {
+        "flow_name": "outcome-based-jd-writer",
+        "description": "Write the job description based on outcomes, not responsibilities. The job description leads with the outcomes the person will produce, not the tasks they will perform. This attracts candidates who think in terms of results, not activities. It also makes performance evaluation straightforward: did you produce the outcomes?",
+        "inputs": [
+          {"name": "coherence-assessment", "desc": "Whether the role is coherent or needs splitting"},
+          {"name": "role-structure-recommendation", "desc": "How the role is structured"}
+        ],
+        "outputs": [
+          {"name": "outcome-based-job-description", "desc": "The job description structured around outcomes (what you will accomplish) rather than responsibilities (what you will do)"},
+          {"name": "evaluation-criteria", "desc": "How performance will be measured, derived directly from the outcomes"}
+        ],
+        "process": [
+          "Open the job description with the outcomes: 'In your first year, you will...' followed by each outcome with its metric and target.",
+          "Below the outcomes, list the activities as context (not as the primary content): 'To produce these outcomes, you will...'",
+          "Replace generic requirements ('strong analytical skills') with the specific skills required by the activities ('able to analyze a 10,000-row dataset to identify the top 3 bottlenecks in a support workflow').",
+          "Include the evaluation criteria: 'Your success in this role will be measured by...' followed by the outcomes. This signals to candidates that results matter, not just effort."
+        ],
+        "tags": ["job-design", "recruitment"]
+      },
+      {
+        "flow_name": "90-day-outcome-plan-builder",
+        "description": "Build the 90-day plan for the new hire, structured around the outcomes. The first 30 days are for understanding the current state. Days 30-60 are for designing the changes. Days 60-90 are for implementing the first changes and demonstrating early movement on at least one outcome metric.",
+        "inputs": [
+          {"name": "outcome-based-job-description", "desc": "The outcome-based JD"},
+          {"name": "evaluation-criteria", "desc": "How success is measured"}
+        ],
+        "outputs": [
+          {"name": "ninety-day-plan", "desc": "A structured 90-day plan with specific milestones at 30, 60, and 90 days, each tied to an outcome"},
+          {"name": "early-win-target", "desc": "The single outcome metric most likely to show movement in 90 days, which the new hire should focus on first"}
+        ],
+        "process": [
+          "Days 1-30: For each outcome, the new hire learns the current state. What is the current metric value? What has been tried before? Who are the key people involved?",
+          "Days 30-60: For the highest-priority outcome, the new hire designs the intervention. What will they change, and what result do they expect?",
+          "Days 60-90: Implement the intervention. Track the metric weekly. At day 90, report: the metric moved from X to Y, or it did not move because [specific reason].",
+          "The early win target should be the outcome that is most controllable (the new hire can influence it without depending on many other teams) and most visible (stakeholders will notice the improvement)."
+        ],
+        "tags": ["job-design", "onboarding"]
+      }
+    ]
+  }
+]

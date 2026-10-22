@@ -1,0 +1,899 @@
+[
+  {
+    "chain_name": "relationship-lifecycle-engine",
+    "description": "Build a relationship lifecycle system that tracks contacts through stages from stranger to advocate (or dormant and lost), with defined entry criteria, transition signals, decay rules, and re-engagement triggers. The system works identically for personal contacts, sales leads, or customer accounts.",
+    "domain": "business",
+    "tags": ["infrastructure", "crm", "relationships", "lifecycle"],
+    "steps": [
+      {
+        "flow_name": "lifecycle-stage-definition",
+        "description": "Define the lifecycle stages a relationship passes through and the observable behaviors that characterize each stage.",
+        "inputs": [
+          {"name": "relationship-context", "desc": "Whether this system is for personal contacts, sales leads, customer accounts, or a hybrid"},
+          {"name": "contact-inventory-sample", "desc": "A sample of 20-30 contacts to use as calibration data for stage definitions"}
+        ],
+        "outputs": [
+          {"name": "stage-definitions", "desc": "Ordered list of lifecycle stages with behavioral descriptions: stranger, acquaintance, active, trusted, advocate, dormant, lost"},
+          {"name": "stage-indicators", "desc": "Observable signals for each stage (e.g., active = initiated contact in last 90 days AND responded within 48 hours at least twice)"}
+        ],
+        "process": [
+          "Define each stage by what the OTHER person does, not what you do. Stranger = no mutual awareness. Acquaintance = they recognize your name but have not initiated contact. Active = bilateral communication within a defined window. Trusted = they share non-public information or make introductions unprompted. Advocate = they refer others to you or publicly endorse you. Dormant = formerly active, now silent beyond the decay threshold. Lost = dormant beyond recovery threshold or explicitly disengaged.",
+          "For each stage, list 2-3 concrete behavioral indicators that are observable without asking (you should not survey people to classify them). Example: Trusted is not 'I feel close to them' but 'they forwarded me a private opportunity without being asked.'",
+          "Classify your sample contacts into stages using only the indicators. If more than 30% land in a single stage, split that stage or tighten the criteria. If any stage has zero contacts, either the stage definition is too narrow or your network has a structural gap worth noting.",
+          "Write the final stage definitions as a reference card: stage name, behavioral indicators, and one sentence distinguishing it from the adjacent stages above and below."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      },
+      {
+        "flow_name": "transition-signal-mapper",
+        "description": "Map the specific signals that indicate a relationship is moving between lifecycle stages, both upward (deepening) and downward (decaying).",
+        "inputs": [
+          {"name": "stage-definitions", "desc": "The lifecycle stages and their behavioral indicators"},
+          {"name": "stage-indicators", "desc": "Observable signals for each stage"}
+        ],
+        "outputs": [
+          {"name": "upward-transitions", "desc": "For each adjacent stage pair, the signals that indicate the relationship is moving up"},
+          {"name": "downward-transitions", "desc": "For each stage, the signals that indicate decay toward dormant or lost"}
+        ],
+        "process": [
+          "For each stage boundary (stranger to acquaintance, acquaintance to active, etc.), define the minimum trigger event. A transition requires at least one signal from the person (not from you). Your outreach alone does not advance a relationship; their response does.",
+          "Define downward transitions as absence patterns. Active to dormant is not 'they seem distant' but 'zero initiated contact in X days AND last two of your messages received no response.' Quantify the absence window for each stage. Higher stages get longer windows (a trusted contact going quiet for 60 days is different from an acquaintance going quiet for 60 days).",
+          "Identify the acceleration signals: events that skip stages. A warm introduction from a mutual trusted contact can move someone from stranger to active in one interaction. A public betrayal can move someone from trusted to lost in one event. Document these stage-skip events.",
+          "Build a transition matrix: rows are current stage, columns are possible next stages, cells contain the trigger signals. Most cells should be empty (you do not go from stranger to advocate in one step without an acceleration event)."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      },
+      {
+        "flow_name": "decay-rule-calibrator",
+        "description": "Calibrate the decay rules that determine how quickly a relationship downgrades when interaction stops, accounting for the fact that different relationship types decay at different rates.",
+        "inputs": [
+          {"name": "upward-transitions", "desc": "Signals for relationship advancement"},
+          {"name": "downward-transitions", "desc": "Absence patterns for each stage"}
+        ],
+        "outputs": [
+          {"name": "decay-schedule", "desc": "Per-stage decay timelines with the specific day counts before downgrade"},
+          {"name": "decay-modifiers", "desc": "Factors that slow or accelerate decay (shared context, mutual connections, seasonal patterns)"}
+        ],
+        "process": [
+          "Set the base decay window for each stage. A reasonable starting point: acquaintance decays to stranger after 180 days of no contact. Active decays to acquaintance after 90 days. Trusted decays to active after 120 days. Advocate decays to trusted after 150 days. These are defaults to be calibrated.",
+          "Identify decay modifiers. Shared organizational context slows decay (a former coworker stays 'active' longer than a conference acquaintance). Mutual connections slow decay (if you both still talk to the same people, the relationship has ambient maintenance). Seasonal patterns matter (some relationships are annual, like holiday contacts or conference buddies, and should not decay between cycles).",
+          "Calibrate against your actual data. Look at relationships that went dormant: how long was the gap before you noticed? That felt gap is your natural decay sensitivity. Set the decay window slightly shorter than that gap so the system alerts you before you would have noticed on your own.",
+          "Define the recovery window: the period after a relationship enters dormant where reactivation is still straightforward (a simple 'been a while' message). Beyond the recovery window, reactivation requires a re-engagement sequence (covered in the reactivation-triage-system chain)."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      },
+      {
+        "flow_name": "re-engagement-trigger-designer",
+        "description": "Design the triggers that fire when a relationship enters the decay window, prompting action before the relationship downgrades.",
+        "inputs": [
+          {"name": "decay-schedule", "desc": "Per-stage decay timelines"},
+          {"name": "decay-modifiers", "desc": "Factors that slow or accelerate decay"}
+        ],
+        "outputs": [
+          {"name": "trigger-rules", "desc": "The specific conditions that fire a re-engagement prompt, including the timing relative to the decay deadline"},
+          {"name": "re-engagement-actions", "desc": "The suggested actions for each trigger, calibrated to the relationship stage and the person's communication preferences"}
+        ],
+        "process": [
+          "Set triggers at 50% and 80% of the decay window. At 50%, the prompt is informational ('you have not talked to X in Y days'). At 80%, the prompt is urgent ('X will downgrade to [lower stage] in Z days unless you make contact').",
+          "Design re-engagement actions by stage. For active relationships approaching acquaintance, a low-effort touchpoint works (share an article relevant to their interests, comment on something they posted). For trusted relationships approaching active, a higher-effort touchpoint is needed (schedule a call, send a personal note referencing a specific shared experience).",
+          "Build in a context-sensitive suggestion engine: the trigger should include what you last talked about (from the interaction log), what they care about (from their profile), and a specific conversation starter. 'You should reconnect with Sarah' is useless. 'Sarah mentioned she was evaluating new vendors last time you spoke in March, and her company just posted a procurement role' is actionable.",
+          "Set a do-not-disturb override: some relationships are intentionally dormant (you are maintaining distance from a former colleague, or a client relationship ended cleanly). Mark these as 'parked' so the system does not nag you to re-engage."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      },
+      {
+        "flow_name": "lifecycle-field-mapping",
+        "description": "Map the lifecycle system onto whatever tool stores your contacts (CRM, spreadsheet, phone contacts, or a dedicated system) by defining the fields, automations, and views needed.",
+        "inputs": [
+          {"name": "trigger-rules", "desc": "The re-engagement trigger conditions"},
+          {"name": "re-engagement-actions", "desc": "Suggested actions per trigger"}
+        ],
+        "outputs": [
+          {"name": "field-schema", "desc": "The fields to add to each contact record: current stage, last interaction date, interaction count, decay deadline, parked flag"},
+          {"name": "view-definitions", "desc": "The filtered views needed: approaching decay, recently upgraded, recently downgraded, parked, by stage"}
+        ],
+        "process": [
+          "Define the minimum fields: current_stage (enum), last_interaction_date (date), interaction_count_90d (integer), decay_deadline (computed date), next_action (text), parked (boolean). These six fields are enough to run the system regardless of tool.",
+          "Design the views. The daily working view is 'approaching decay, sorted by deadline.' The weekly review view is 'stage changes this week.' The strategic view is 'stage distribution histogram' (if 80% of your contacts are acquaintances and 2% are trusted, your network is wide but shallow).",
+          "Define the update protocol: when do fields get refreshed? After every interaction, update last_interaction_date and increment interaction_count_90d. Stage transitions happen on the next review cycle, not in real time (to prevent flapping). Review cycles should be weekly for personal use, daily for sales.",
+          "If the tool supports automation, configure the decay deadline as a computed field (last_interaction_date + decay_window_for_stage). If not, build a weekly batch process to recalculate."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      },
+      {
+        "flow_name": "lifecycle-launch-protocol",
+        "description": "Launch the lifecycle system by classifying existing contacts, setting initial baselines, and running the first review cycle.",
+        "inputs": [
+          {"name": "field-schema", "desc": "The contact record fields"},
+          {"name": "view-definitions", "desc": "The filtered views"}
+        ],
+        "outputs": [
+          {"name": "initial-classification", "desc": "Every contact classified into a lifecycle stage with the evidence for that classification"},
+          {"name": "first-action-queue", "desc": "The immediate actions generated by the first run: contacts approaching decay, contacts that should be parked, and contacts whose stage assignment needs verification"}
+        ],
+        "process": [
+          "Classify all existing contacts using the stage indicators. For each contact, find the last interaction date and the nature of the last few interactions. Assign the stage based on recency and behavior, not gut feeling. If you cannot find evidence for a stage, default to the lower one.",
+          "Flag contacts where the classification feels wrong. This is the calibration step. If someone you consider trusted got classified as acquaintance because you have not interacted in 200 days, either your decay window is too tight or the relationship actually is more dormant than you thought. Adjust the decay parameters based on these calibration cases.",
+          "Generate the first action queue: sort all contacts by decay deadline ascending. The ones closest to downgrading are your immediate priorities. Also flag any contacts already past their decay window who need to be formally downgraded or re-engaged.",
+          "Set the review cadence: commit to reviewing the approaching-decay view on a fixed schedule (daily for sales, weekly for personal). The system only works if you review it. A lifecycle engine that nobody checks is a database, not a system."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      }
+    ]
+  },
+  {
+    "chain_name": "follow-up-cadence-designer",
+    "description": "Design follow-up cadences based on relationship value and engagement velocity, not arbitrary time intervals. The math is the same whether you are following up with a friend, a sales prospect, or a dormant account.",
+    "domain": "business",
+    "tags": ["infrastructure", "crm", "relationships", "follow-up"],
+    "steps": [
+      {
+        "flow_name": "engagement-velocity-calculator",
+        "description": "Calculate the engagement velocity for each contact: how quickly and consistently they respond and initiate, which determines the natural rhythm of the relationship.",
+        "inputs": [
+          {"name": "contact-interaction-history", "desc": "Timestamped log of all interactions (sent and received) for the contacts to analyze"},
+          {"name": "time-window", "desc": "The lookback period for velocity calculation (default 180 days)"}
+        ],
+        "outputs": [
+          {"name": "velocity-scores", "desc": "Per-contact velocity score combining response speed, response rate, and initiation ratio"},
+          {"name": "velocity-segments", "desc": "Contacts grouped into velocity tiers: high (responds fast, initiates often), medium (responds reliably, rarely initiates), low (slow or inconsistent responses), dormant (no response in window)"}
+        ],
+        "process": [
+          "Calculate three metrics per contact. Response speed: median time from your message to their reply (ignore outliers beyond 7 days). Response rate: percentage of your messages that received any reply. Initiation ratio: their initiated contacts divided by total contacts (0.5 means they reach out as often as you do, 0.0 means you always initiate).",
+          "Combine into a velocity score. Weight response rate highest (a contact who always replies but slowly is better than one who sometimes replies instantly). A reasonable weighting: 50% response rate, 30% initiation ratio, 20% response speed.",
+          "Segment contacts into tiers using natural breaks in the distribution, not arbitrary cutoffs. If your contacts cluster at 0.8 and 0.3 with a gap at 0.5, the break is at 0.5. Do not force four even quartiles.",
+          "Flag anomalies: contacts whose velocity changed significantly in the last 30 days (a previously high-velocity contact going silent, or a dormant contact suddenly re-engaging). These are transition signals for the lifecycle system."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      },
+      {
+        "flow_name": "cadence-interval-calculator",
+        "description": "Calculate the optimal follow-up interval for each velocity segment, based on the principle that follow-up timing should match the natural rhythm of the relationship.",
+        "inputs": [
+          {"name": "velocity-scores", "desc": "Per-contact velocity scores"},
+          {"name": "velocity-segments", "desc": "Contacts grouped by velocity tier"}
+        ],
+        "outputs": [
+          {"name": "segment-cadences", "desc": "The recommended follow-up interval for each velocity segment with the reasoning"},
+          {"name": "individual-overrides", "desc": "Contacts whose optimal interval differs from their segment default, with the reason"}
+        ],
+        "process": [
+          "Set the base interval as 1.5 times the median gap between interactions in that segment. If high-velocity contacts interact every 10 days on average, the follow-up interval is 15 days. This ensures you follow up before the natural rhythm breaks but not so often that you are pushing faster than the relationship wants to move.",
+          "Adjust for relationship value. Multiply the base interval by a value factor: high-value contacts (top 20% by whatever your value metric is) get 0.8x the interval (more frequent). Low-value contacts get 1.2x (less frequent). The adjustment is small because value should not overwhelm rhythm.",
+          "Identify individual overrides. Some contacts have strong patterns (always responds on Mondays, goes dark in December, only engages around quarterly reviews). Set contact-level overrides for these. The pattern is more useful than the math.",
+          "Define the diminishing-returns rule: if three consecutive follow-ups get no response, double the interval. If three more get no response, move the contact to a re-engagement sequence instead of continuing the cadence. Persistence past the diminishing-returns threshold is noise, not diligence."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      },
+      {
+        "flow_name": "re-engagement-sequence-builder",
+        "description": "Build re-engagement sequences for dormant contacts, where each step escalates in novelty and value to break through the silence.",
+        "inputs": [
+          {"name": "segment-cadences", "desc": "Follow-up intervals by segment"},
+          {"name": "individual-overrides", "desc": "Contact-level interval adjustments"}
+        ],
+        "outputs": [
+          {"name": "re-engagement-sequences", "desc": "Step-by-step sequences for re-engaging dormant contacts, with timing and content type for each step"},
+          {"name": "exit-criteria", "desc": "When to stop the sequence and either release the contact or escalate to a different channel"}
+        ],
+        "process": [
+          "Design a 4-step sequence with escalating novelty. Step 1 (day 0): low-effort, high-relevance touchpoint (share something specifically relevant to them, not a generic 'checking in'). Step 2 (day 14): different channel than step 1 (if step 1 was email, step 2 is a text or social media comment). Step 3 (day 30): offer something of value with no ask (an introduction, a resource, a piece of information they would care about). Step 4 (day 45): the direct ask ('I have not heard from you, are you still interested in [specific thing]?').",
+          "The key principle: each step must be MORE novel and MORE valuable than the last. Generic 'just checking in' messages at every step teach the contact to ignore you. Escalating novelty earns attention. If you cannot think of something novel for step 3, that tells you the relationship may not have enough substance to reactivate.",
+          "Define the exit criteria. After step 4 with no response: mark the contact as lost (not dormant). After any step with a response: exit the sequence and resume normal cadence. After step 2 with a 'not interested' response: mark as lost and set a 6-month re-evaluation reminder.",
+          "Build a separate re-engagement sequence for high-value dormant contacts where the stakes justify more effort. This sequence gets 6 steps, longer gaps (21 days between steps), and includes a personal gesture (handwritten note, relevant gift, in-person drop-by if geographically feasible)."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      },
+      {
+        "flow_name": "cadence-content-planner",
+        "description": "Plan what to say at each follow-up touchpoint so that every interaction adds value instead of just marking time.",
+        "inputs": [
+          {"name": "re-engagement-sequences", "desc": "The dormant contact sequences"},
+          {"name": "exit-criteria", "desc": "When to stop sequences"}
+        ],
+        "outputs": [
+          {"name": "content-categories", "desc": "Types of follow-up content matched to relationship stage and velocity (share insight, ask question, make introduction, offer help, give update)"},
+          {"name": "content-rotation-rules", "desc": "Rules for rotating content types so you do not send the same kind of message twice in a row"}
+        ],
+        "process": [
+          "Define 5 content categories: (1) Share insight (an article, observation, or piece of information relevant to their work or interests), (2) Ask a question (seek their expertise or opinion on something specific), (3) Make an introduction (connect them to someone they should know), (4) Offer help (identify a problem they have and offer a specific solution), (5) Give an update (share your own news that they would find relevant).",
+          "Map content categories to relationship stages. Acquaintances get categories 1 and 5 (low commitment). Active contacts get all five. Trusted contacts get categories 2, 3, and 4 more heavily (reciprocal exchange). Never send a category 5 update to someone who has not shown interest in your work.",
+          "Set the rotation rule: never use the same content category twice in a row with the same contact. If your last message was a shared article (category 1), the next should be a question, introduction, offer, or update. This prevents the pattern where every follow-up is 'saw this article and thought of you' until the person stops reading.",
+          "Pre-populate a content bank: for each contact in the active and trusted stages, note 2-3 topics they care about, questions you could ask them, and people you could introduce them to. The bank makes follow-ups fast to execute because the thinking is already done."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      },
+      {
+        "flow_name": "cadence-execution-tracker",
+        "description": "Set up the tracking system that ensures cadences actually get executed and measures whether they are producing the intended effect on relationship velocity.",
+        "inputs": [
+          {"name": "content-categories", "desc": "Types of follow-up content by stage"},
+          {"name": "content-rotation-rules", "desc": "Rules for content type rotation"}
+        ],
+        "outputs": [
+          {"name": "execution-dashboard", "desc": "The metrics to track: follow-ups due, follow-ups completed, response rate by content type, velocity changes after follow-up"},
+          {"name": "cadence-feedback-loop", "desc": "How to adjust cadences based on results (contacts where the cadence is too frequent get longer intervals, contacts where follow-ups consistently produce responses get shorter intervals)"}
+        ],
+        "process": [
+          "Build the daily execution view: contacts due for follow-up today, sorted by value and urgency. Include the suggested content category (from rotation rules) and the last interaction context (from the interaction log) so execution takes minutes, not research.",
+          "Track two outcome metrics per follow-up: (1) did it get a response? (2) did it change the engagement velocity? A follow-up that gets a response but does not change velocity is maintenance. A follow-up that increases velocity is growth. A follow-up that gets no response is noise.",
+          "Build the monthly feedback loop: for each velocity segment, compare the follow-up interval to the actual response pattern. If high-velocity contacts are responding before your cadence fires, shorten the interval (you are under-serving them). If contacts consistently ignore your cadence-driven follow-ups, lengthen the interval (you are over-serving them).",
+          "Set the abandonment metric: if a contact's response rate to your follow-ups drops below 20% over 6 months, stop the cadence and move them to re-engagement. A cadence with a 10% response rate is training the contact to ignore you."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      }
+    ]
+  },
+  {
+    "chain_name": "interaction-context-logger",
+    "description": "Build an interaction logging system where every touchpoint captures enough context that future-you can pick up exactly where past-you left off, in under 2 minutes of prep time.",
+    "domain": "business",
+    "tags": ["infrastructure", "crm", "relationships", "logging"],
+    "steps": [
+      {
+        "flow_name": "log-entry-schema-designer",
+        "description": "Design the minimum viable log entry that captures enough context for future retrieval without being so burdensome that you stop logging.",
+        "inputs": [
+          {"name": "interaction-channels", "desc": "The channels through which you interact with contacts (email, phone, text, in-person, video call, social media, etc.)"},
+          {"name": "retrieval-use-cases", "desc": "What you need to recall before an interaction (what you last discussed, what they asked for, what you promised, their current priorities)"}
+        ],
+        "outputs": [
+          {"name": "log-entry-schema", "desc": "The fields for each log entry: date, channel, contact, topic, their-state, promises-made, next-action, and how long each should take to fill"},
+          {"name": "channel-specific-adapters", "desc": "How the schema maps to each channel (email logs can be partially automated, phone calls need manual entry, in-person needs voice notes)"}
+        ],
+        "process": [
+          "Define 7 fields. Date (automatic). Channel (pick from list). Contact (pick from contacts). Topic (one sentence: what you discussed, not a transcript). Their-state (one phrase: what they seem focused on, worried about, or excited about right now). Promises-made (anything you said you would do). Next-action (the single next thing to do with this contact).",
+          "Set a time budget: each log entry should take under 60 seconds to complete. If it takes longer, you will stop doing it within a week. The their-state and promises-made fields are the most valuable and the easiest to forget, so those are mandatory. Topic and next-action can be 3-word summaries.",
+          "Design channel adapters. Email: extract topic and promises from the email itself (can be partially automated with search). Phone/video: log immediately after hanging up (even a voice memo you transcribe later). In-person: use a quick note on your phone during or immediately after. Social media: only log if the interaction was substantive (a comment thread counts, a like does not).",
+          "Define the 'skip log' criteria: not every interaction needs a log entry. Routine pleasantries, group broadcasts, and auto-generated messages get skipped. The rule: log it if future-you would want to know it happened. If you would not reference it in your next conversation with this person, skip it."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      },
+      {
+        "flow_name": "retrieval-workflow-builder",
+        "description": "Build the retrieval workflow so you can prep for any interaction in under 2 minutes by pulling the right context at the right time.",
+        "inputs": [
+          {"name": "log-entry-schema", "desc": "The fields for each log entry"},
+          {"name": "channel-specific-adapters", "desc": "How logging works per channel"}
+        ],
+        "outputs": [
+          {"name": "prep-card-template", "desc": "A one-page prep card that summarizes everything you need before talking to someone: last 3 interactions, open promises, their current state, suggested talking points"},
+          {"name": "retrieval-triggers", "desc": "When prep cards should be generated (before scheduled meetings, when a contact reaches out, when a follow-up is due)"}
+        ],
+        "process": [
+          "Design the prep card: a single view with 4 sections. (1) Last 3 interactions: date, channel, topic (one line each). (2) Open promises: anything you said you would do that is not yet done. (3) Their state: the most recent their-state entry. (4) Suggested talking point: based on their interests and your content bank, one specific thing to bring up.",
+          "Set the 2-minute rule: the prep card must be generated and readable in under 2 minutes. This means pre-computation (promises flagged as open/closed, interactions sorted by recency) rather than searching through raw logs at prep time.",
+          "Define retrieval triggers: generate a prep card automatically before any scheduled meeting (calendar integration), when a contact initiates an unexpected message (inbox integration), and when a follow-up cadence fires. The prep card should appear without you asking for it.",
+          "Build the promise-tracking layer: every promise-made entry stays open until you explicitly close it. The prep card shows open promises in red. An unclosed promise from 90 days ago is a credibility problem that should be visible every time you interact with that contact."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      },
+      {
+        "flow_name": "logging-habit-installer",
+        "description": "Install the logging habit by reducing friction to near zero and building accountability for the first 30 days.",
+        "inputs": [
+          {"name": "prep-card-template", "desc": "The one-page prep card format"},
+          {"name": "retrieval-triggers", "desc": "When prep cards should appear"}
+        ],
+        "outputs": [
+          {"name": "friction-reduction-plan", "desc": "Specific changes to make logging take under 30 seconds per interaction (templates, quick-entry tools, voice-to-text)"},
+          {"name": "accountability-system", "desc": "How to track logging compliance for the first 30 days and what to do when you skip a day"}
+        ],
+        "process": [
+          "Reduce friction to the minimum. Pre-populate date and channel automatically. Use a contact picker instead of typing names. Offer topic templates for common interaction types ('caught up on their project,' 'discussed potential collaboration,' 'they asked for help with X'). Enable voice-to-text for the their-state field so you can dictate instead of type.",
+          "Set a 30-day compliance target: log at least 80% of substantive interactions. Track compliance as a simple ratio (entries created / interactions that should have been logged). Below 80%, the system is not producing enough data to be useful.",
+          "Build the recovery protocol for skipped days: at the end of each week, review your calendar and communication history for any interactions you forgot to log. Batch-enter them with whatever you can remember. A late entry with partial information is better than no entry.",
+          "Define the 30-day graduation: after 30 days, review the logs. Are the prep cards useful? Are you actually reading them before interactions? If yes, the habit is installed. If no, identify which fields are not providing value and remove them. A 4-field log you actually use beats a 7-field log you abandon."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      },
+      {
+        "flow_name": "interaction-pattern-analyzer",
+        "description": "Analyze interaction logs to surface patterns you would not notice from individual entries: who you are over-investing in, who you are neglecting, and where your interaction quality is declining.",
+        "inputs": [
+          {"name": "friction-reduction-plan", "desc": "The low-friction logging setup"},
+          {"name": "accountability-system", "desc": "The compliance tracking system"}
+        ],
+        "outputs": [
+          {"name": "interaction-heatmap", "desc": "A heatmap showing interaction frequency by contact over time, revealing clusters of attention and gaps"},
+          {"name": "pattern-insights", "desc": "Identified patterns: contacts getting disproportionate attention relative to value, high-value contacts being neglected, interactions that are all outbound with no response"}
+        ],
+        "process": [
+          "Build the interaction heatmap: contacts on one axis, weeks on the other, cell color by interaction count. Look for horizontal streaks (you talk to this person constantly) and vertical gaps (you went a month without logging anything, which means either a quiet period or a logging lapse).",
+          "Calculate the attention-value ratio: divide interaction count by relationship value for each contact. High ratio = over-invested (you are spending a lot of time on a low-value relationship). Low ratio = under-invested (high-value contact getting neglected). Sort by ratio to find the biggest mismatches.",
+          "Identify one-way relationships: contacts where your initiation ratio is above 0.8 (you initiate 80%+ of interactions). These are relationships where you are doing all the work. Some are worth maintaining (mentors, key clients). Others should be deprioritized or moved to a lighter cadence.",
+          "Run the analysis monthly. The patterns shift over time. A contact who was high-velocity last quarter may have gone quiet. A contact you were neglecting may have become strategically important. The analysis keeps your attention allocation aligned with reality."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      }
+    ]
+  },
+  {
+    "chain_name": "relationship-scoring-model",
+    "description": "Build a multi-dimensional relationship score that works for personal networks, sales pipelines, or customer portfolios. The dimensions are universal; only the weights shift by context.",
+    "domain": "business",
+    "tags": ["infrastructure", "crm", "relationships", "scoring"],
+    "steps": [
+      {
+        "flow_name": "scoring-dimension-definer",
+        "description": "Define the dimensions that make up the relationship score and the raw data behind each one.",
+        "inputs": [
+          {"name": "scoring-context", "desc": "Whether this score is for personal networking, sales, customer success, or general purpose"},
+          {"name": "available-data", "desc": "What interaction and contact data you have access to (CRM fields, email history, calendar, social media, phone logs)"}
+        ],
+        "outputs": [
+          {"name": "dimension-definitions", "desc": "The 5 scoring dimensions with their data sources and calculation methods"},
+          {"name": "data-gap-assessment", "desc": "Dimensions where data is incomplete and how to work around the gaps"}
+        ],
+        "process": [
+          "Define 5 dimensions. Recency: days since last interaction (lower is better). Frequency: interactions per period in the measurement window. Mutual value: evidence of reciprocal exchange (they help you AND you help them, not one-way). Momentum: is the relationship accelerating (more frequent, deeper interactions) or decaying (less frequent, shallower)? Strategic importance: how critical is this contact to your goals independent of the current interaction pattern?",
+          "For each dimension, specify the raw data. Recency = max(last_outbound_date, last_inbound_date). Frequency = count of interactions in the last 90 days. Mutual value = count of value-exchange events (introductions made, favors done, insights shared) in both directions. Momentum = frequency in last 30 days divided by frequency in prior 60 days (above 1.0 = accelerating). Strategic importance = manual score on 1-5 scale updated quarterly.",
+          "Assess data gaps. Mutual value is the hardest to measure because value exchanges are often informal. If you do not have an interaction log with enough detail, approximate with initiation ratio (a balanced ratio suggests mutual value). If strategic importance feels arbitrary, define it by asking: 'if this person disappeared from my network tomorrow, what would I lose?'",
+          "Normalize each dimension to 0-100 scale using min-max normalization within your contact set. This ensures no dimension dominates because of unit differences."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      },
+      {
+        "flow_name": "weight-calibration-engine",
+        "description": "Set the dimension weights based on context and calibrate them against your actual prioritization behavior.",
+        "inputs": [
+          {"name": "dimension-definitions", "desc": "The 5 scoring dimensions with calculation methods"},
+          {"name": "data-gap-assessment", "desc": "Where data is incomplete"}
+        ],
+        "outputs": [
+          {"name": "weight-profiles", "desc": "Weight sets for different contexts: personal networking, sales, customer success, general purpose"},
+          {"name": "calibration-results", "desc": "How well the weighted score matches your actual prioritization when tested against known contacts"}
+        ],
+        "process": [
+          "Set default weights by context. Personal networking: recency 15%, frequency 15%, mutual value 35%, momentum 15%, strategic importance 20%. Sales: recency 20%, frequency 15%, mutual value 10%, momentum 30%, strategic importance 25%. Customer success: recency 25%, frequency 20%, mutual value 15%, momentum 25%, strategic importance 15%. The key difference: personal relationships weight mutual value highest; sales weights momentum highest.",
+          "Calibrate against your gut. Take your 10 most important contacts and your 10 least important. Score them with the default weights. If a contact you consider critical scores low, the weights are wrong. Adjust until the score ranking roughly matches your intuition for these 20 calibration contacts.",
+          "Test the weights against the middle of your list (contacts 11-30 by your gut ranking). These are the contacts where the score should teach you something. If the score ranks someone higher than your gut says, investigate: maybe you are undervaluing them. If lower, maybe the score is missing context that the weights should capture.",
+          "Set a re-calibration schedule: review weights quarterly. Priorities shift. A personal contact who becomes a business contact needs different weighting. A customer success context that shifts from retention to expansion changes which dimensions matter."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      },
+      {
+        "flow_name": "composite-score-calculator",
+        "description": "Calculate the composite score for every contact and use it to generate prioritized action lists.",
+        "inputs": [
+          {"name": "weight-profiles", "desc": "Weight sets for different contexts"},
+          {"name": "calibration-results", "desc": "Calibration test results"}
+        ],
+        "outputs": [
+          {"name": "scored-contact-list", "desc": "Every contact with their composite score, dimension breakdown, and rank"},
+          {"name": "score-driven-actions", "desc": "Actions generated by score patterns: high-score contacts to invest in, declining-score contacts to re-engage, mismatched-dimension contacts to investigate"}
+        ],
+        "process": [
+          "Calculate the weighted composite: sum of (dimension_score * weight) across all 5 dimensions for each contact. The result is a 0-100 score. Sort contacts by score descending.",
+          "Generate three action lists from the scores. (1) Invest list: top 15% by score, especially those with high momentum (these relationships are growing and worth accelerating). (2) Re-engage list: contacts whose score dropped more than 20 points in the last quarter (relationships in freefall). (3) Investigate list: contacts with extreme dimension imbalances (high strategic importance but low frequency means you know they matter but are not acting on it).",
+          "Build the dimension breakdown view for each contact. A single composite score hides the story. A contact with score 65 from balanced dimensions is different from a contact with score 65 from max strategic importance and zero momentum. The breakdown tells you what to do: the balanced 65 needs maintenance, the imbalanced 65 needs urgent re-engagement.",
+          "Set the review cadence: recalculate scores monthly. Compare month-over-month changes to spot trends. A contact whose score rises 10 points per month is becoming important. A contact dropping 5 points per month is fading. The trend matters more than the absolute number."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      },
+      {
+        "flow_name": "score-decay-and-momentum-tracker",
+        "description": "Track score changes over time to identify relationship momentum (accelerating or decaying) as a leading indicator of relationship health.",
+        "inputs": [
+          {"name": "scored-contact-list", "desc": "Contacts with composite scores"},
+          {"name": "score-driven-actions", "desc": "Actions from score patterns"}
+        ],
+        "outputs": [
+          {"name": "momentum-classifications", "desc": "Each contact classified as accelerating, stable, decaying, or stalled, based on score trajectory over the last 3 months"},
+          {"name": "early-warning-list", "desc": "Contacts where momentum just turned negative (the relationship was growing but stopped), which is the highest-leverage moment for intervention"}
+        ],
+        "process": [
+          "Calculate momentum as the slope of the composite score over the last 3 monthly snapshots. Positive slope = accelerating. Near-zero slope = stable. Negative slope = decaying. No score history = new (treat as accelerating for the first 3 months to give the relationship a chance).",
+          "Build the early-warning system. The most important signal is not a low score (that contact may have always been peripheral) but a newly negative slope (that contact was important and is becoming less so). Flag any contact that moved from accelerating or stable to decaying in the last month.",
+          "Cross-reference momentum with strategic importance. A decaying relationship with low strategic importance is natural attrition. A decaying relationship with high strategic importance is a problem. Prioritize intervention for the latter.",
+          "Produce the monthly momentum report: total contacts accelerating vs. decaying (the ratio tells you if your network is growing or shrinking in quality), the top 5 fastest-rising contacts (your emerging priorities), and the top 5 fastest-declining (your urgent interventions)."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      }
+    ]
+  },
+  {
+    "chain_name": "network-structural-analysis",
+    "description": "Map your network as a graph to find structural holes, bridge contacts, single points of failure, and targeted relationship-building opportunities using Burt's structural holes theory.",
+    "domain": "business",
+    "tags": ["infrastructure", "crm", "relationships", "network-analysis"],
+    "steps": [
+      {
+        "flow_name": "network-graph-builder",
+        "description": "Build a graph representation of your network where nodes are contacts and edges represent known connections between them.",
+        "inputs": [
+          {"name": "contact-list", "desc": "Your contacts with basic metadata (name, organization, role, how you know them)"},
+          {"name": "known-connections", "desc": "Connections you know about between your contacts (who knows who, through what context)"}
+        ],
+        "outputs": [
+          {"name": "network-graph", "desc": "A graph with nodes (contacts) and edges (connections), annotated with connection strength and context"},
+          {"name": "cluster-map", "desc": "Natural clusters in your network identified by shared organizational, industry, or social context"}
+        ],
+        "process": [
+          "Create a node for each contact. Annotate with: organization, industry, how you met, and your relationship strength (from your scoring model if available, or a simple strong/medium/weak classification).",
+          "Add edges between contacts you know are connected to each other. You do not need to map every connection, just the ones you are aware of. Include the connection context (coworkers, same conference, you introduced them, mutual friend). Edge strength mirrors the weakest of your relationships with the two nodes.",
+          "Run community detection on the graph. Even manually, you can identify clusters: your work colleagues form one cluster, your college friends another, your industry contacts another. Label each cluster by its primary context.",
+          "Note the contacts that appear in multiple clusters (they attend industry events AND are college friends). These are your bridge contacts. Also note clusters that are entirely disconnected from all other clusters (you are the only connection between these groups)."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      },
+      {
+        "flow_name": "structural-hole-finder",
+        "description": "Identify the structural holes in your network: gaps between clusters where you could be the bridge, or where the absence of a bridge makes your network fragile.",
+        "inputs": [
+          {"name": "network-graph", "desc": "Nodes, edges, and cluster annotations"},
+          {"name": "cluster-map", "desc": "Natural clusters identified"}
+        ],
+        "outputs": [
+          {"name": "structural-holes", "desc": "Pairs of clusters with no connection between them (or only a single fragile connection through you)"},
+          {"name": "bridging-opportunities", "desc": "Specific introductions you could make to connect disconnected clusters, with the value proposition for both parties"}
+        ],
+        "process": [
+          "For each pair of clusters, count the edges between them. Zero edges = a structural hole. One edge through you = a single-point-of-failure connection. Multiple edges = a well-connected bridge. A network with many structural holes means your value comes from being the connector, but it is also fragile.",
+          "Evaluate each structural hole: would connecting these clusters create value? Not every hole needs filling. Your college friends cluster and your dentist's referral cluster probably should stay disconnected. But your industry contacts cluster and your potential clients cluster being disconnected is a missed opportunity.",
+          "For valuable structural holes, identify specific introductions. The introduction must benefit both parties, not just you. 'Sarah in my fintech cluster needs a security auditor, and James in my cybersecurity cluster is looking for fintech clients' is a bridging introduction with value on both sides.",
+          "Prioritize holes where bridging creates the most network resilience. If you are the only connection between two important clusters, one broken relationship fractures your network. Building parallel bridges (introducing multiple people between the clusters) makes the network robust."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      },
+      {
+        "flow_name": "network-density-scorer",
+        "description": "Calculate network density and diversity scores that quantify the overall health and strategic value of your network.",
+        "inputs": [
+          {"name": "structural-holes", "desc": "Gaps between clusters"},
+          {"name": "bridging-opportunities", "desc": "Potential introductions to fill gaps"}
+        ],
+        "outputs": [
+          {"name": "density-score", "desc": "How interconnected your network is (ratio of actual connections to possible connections)"},
+          {"name": "diversity-score", "desc": "How diverse your network is across industries, roles, seniority levels, and geographies"}
+        ],
+        "process": [
+          "Calculate density: actual edges divided by possible edges (n*(n-1)/2 for an undirected graph). Low density (below 0.1) means your contacts mostly do not know each other, which gives you brokerage power but limited group benefits. High density (above 0.4) means everyone knows everyone, which provides trust and support but limited new information.",
+          "Calculate diversity across 4 axes: industry (how many different industries are represented), role (how many different functional roles), seniority (mix of junior, mid, and senior contacts), and geography (how many distinct metro areas or regions). Score each axis on 0-10 using an entropy measure (even distribution = high score, one-dominant-category = low score).",
+          "Identify the diversity gaps. If 80% of your contacts are in one industry, you are deep but narrow. If 90% are at your seniority level, you lack mentors and mentees. The gaps point directly to where targeted relationship-building would add the most value.",
+          "Combine into a network health score: average of density and diversity scores. But do not optimize for the score. A salesperson's network should be low-density and high-diversity (many disconnected clusters across industries). A community organizer's network should be high-density and moderate-diversity (tight-knit but spanning different groups). The ideal depends on your goals."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      },
+      {
+        "flow_name": "targeted-growth-planner",
+        "description": "Design a targeted relationship-building plan that fills structural gaps and increases network resilience, instead of adding contacts randomly.",
+        "inputs": [
+          {"name": "density-score", "desc": "Network interconnectedness measure"},
+          {"name": "diversity-score", "desc": "Network diversity across axes"}
+        ],
+        "outputs": [
+          {"name": "growth-targets", "desc": "Specific types of contacts to add (by industry, role, seniority, geography) to address the biggest gaps"},
+          {"name": "growth-strategy", "desc": "How to meet these target contacts (which events, communities, introductions, and platforms are most likely to connect you with the right people)"}
+        ],
+        "process": [
+          "From the diversity gaps, define 3-5 target profiles. Example: if you lack senior-level contacts outside your industry, the target is 'VP or above in an adjacent industry.' If you lack early-career contacts, the target is 'people 3-5 years into their career in your field.' Be specific enough that you could recognize the person.",
+          "For each target profile, identify the highest-probability channels. Where do these people gather? Industry conferences, specific online communities, alumni networks, professional associations, local meetups. Rank channels by the ratio of target contacts to effort required.",
+          "Set a growth pace: adding 2-3 meaningful new contacts per month is sustainable. Adding 20 is collecting business cards. Each new contact should reach 'active' stage within 90 days or the connection was not meaningful enough to maintain.",
+          "Build the parallel bridge strategy: when you identify a structural hole worth filling, do not introduce just one pair of people. Introduce 2-3 pairs. This creates redundancy so the bridge survives if any single relationship cools. It also creates a small cross-cluster community that sustains itself through shared context."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      }
+    ]
+  },
+  {
+    "chain_name": "trust-escalation-sequence",
+    "description": "Design a methodical sequence of increasing commitment that builds trust through reciprocal exchanges, testing at each level before escalating. The same framework applies to friendships, business partnerships, and sales relationships.",
+    "domain": "business",
+    "tags": ["infrastructure", "crm", "relationships", "trust"],
+    "steps": [
+      {
+        "flow_name": "trust-level-taxonomy",
+        "description": "Define the levels of trust and the observable evidence for each, so you can accurately assess where any relationship stands.",
+        "inputs": [
+          {"name": "relationship-type", "desc": "The context: personal, professional, sales, partnership, or general purpose"},
+          {"name": "risk-tolerance", "desc": "Your tolerance for relationship risk (conservative: slow escalation, aggressive: faster escalation)"}
+        ],
+        "outputs": [
+          {"name": "trust-levels", "desc": "Defined levels from zero-trust to full-trust with behavioral markers for each"},
+          {"name": "evidence-checklist", "desc": "For each level, the specific observable behaviors that confirm the other party has reached that trust level"}
+        ],
+        "process": [
+          "Define 5 trust levels. Level 0 (transactional): you exchange only what is required for a specific purpose. Level 1 (informational): you share non-sensitive insights, opinions on public topics, and general advice. Level 2 (reputational): you stake your reputation on each other (make introductions, give public endorsements, co-create content). Level 3 (strategic): you share non-public information about plans, opportunities, and vulnerabilities. Level 4 (committed): you make significant commitments (invest money, dedicate time, take career risks on each other's behalf).",
+          "For each level, define the evidence that someone is AT that level, not just what YOU are willing to do. Level 2 is not 'I would introduce them to my contacts' but 'they introduced me to their contacts without being asked.' Trust is verified by what the other party does when they have the option not to.",
+          "Define the asymmetry rule: trust levels can be different in each direction. You may trust someone at level 3 while they trust you at level 1. Asymmetric trust is common and not necessarily a problem, but extreme asymmetry (you at level 4, them at level 1) is a vulnerability.",
+          "Map common trust illusions: interactions that feel like trust but are not. Someone who shares gossip with everyone is not at level 3 with you specifically. Someone who makes introductions as a networking tactic is at level 2 for instrumental reasons, not relational ones. The evidence checklist must distinguish genuine trust from habitual behavior."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      },
+      {
+        "flow_name": "escalation-move-designer",
+        "description": "Design the specific moves that advance trust from one level to the next, including the reciprocity test at each level.",
+        "inputs": [
+          {"name": "trust-levels", "desc": "The defined trust levels with behavioral markers"},
+          {"name": "evidence-checklist", "desc": "Observable behaviors confirming each level"}
+        ],
+        "outputs": [
+          {"name": "escalation-moves", "desc": "For each level transition, the specific actions to take that signal you are willing to move to the next level"},
+          {"name": "reciprocity-tests", "desc": "How to verify that the other party reciprocates at each level before escalating further"}
+        ],
+        "process": [
+          "Design escalation moves for each transition. 0 to 1: share a useful insight relevant to their specific situation (not a broadcast), ask a genuine question about their work. 1 to 2: introduce them to a specific person in your network (not a mass introduction), endorse them publicly in a small setting. 2 to 3: share a non-public plan or challenge, ask for their input on a sensitive decision. 3 to 4: propose a joint commitment with shared risk (co-invest, co-create, formally partner).",
+          "Build the reciprocity test into each move. After making an escalation move, wait. Do not make a second move at the same level until they reciprocate. If you share a useful insight (level 1 move) and they reciprocate with their own insight, you are both at level 1. If they do not reciprocate after two attempts, they are not at that level regardless of how they respond conversationally.",
+          "Define the timing of the reciprocity window. Level 1 reciprocity should come within 2-4 weeks. Level 2 within 1-3 months. Level 3 within 3-6 months. Level 4 reciprocity has no fixed window but should come within the context of the commitment. Faster reciprocity generally indicates higher trust velocity.",
+          "Set the escalation pace: never skip a level. The temptation in both personal and business relationships is to jump from level 1 to level 3 when you feel a strong connection. But skipping level 2 means you have not tested reputational trust. If they will not introduce you to their network, they should not be trusted with your strategic information."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      },
+      {
+        "flow_name": "trust-failure-handler",
+        "description": "Handle trust failures at each level: what to do when reciprocity fails, when trust is violated, and how to recover or downgrade gracefully.",
+        "inputs": [
+          {"name": "escalation-moves", "desc": "Actions for each level transition"},
+          {"name": "reciprocity-tests", "desc": "How to verify reciprocation"}
+        ],
+        "outputs": [
+          {"name": "failure-protocols", "desc": "For each trust level, the protocol when the other party fails to reciprocate or actively violates trust"},
+          {"name": "recovery-pathways", "desc": "When and how to attempt recovery after a trust failure, and when to permanently downgrade"}
+        ],
+        "process": [
+          "Define failure types by level. Level 1 failure: they do not reciprocate information sharing (not a violation, just a signal to stop escalating). Level 2 failure: they misuse an introduction or publicly undermine you (an active violation requiring downgrade). Level 3 failure: they share your strategic information without permission (a serious violation requiring immediate downgrade to level 0). Level 4 failure: they do not honor a commitment (the most severe, requiring formal resolution).",
+          "Build the response protocol. For non-reciprocation (passive failure): stop escalating but maintain the current level. Do not confront or withdraw, just stop investing more. For active violations: downgrade by 2 levels immediately. Communicate the downgrade through behavior change (reduce information sharing, stop making introductions), not through confrontation unless the violation requires a direct conversation.",
+          "Define recovery conditions. A level 1-2 failure can be recovered if the person acknowledges the issue and demonstrates changed behavior over 3+ months. A level 3-4 failure requires explicit conversation, acknowledgment, and a probationary period before any re-escalation. Some failures are permanent (deliberate betrayal of confidential information, fraud).",
+          "Build the cost-of-failure calculation: before each escalation move, ask 'if this fails, what do I lose?' Level 1 failure costs you nothing (you shared public-grade information). Level 4 failure costs you real resources. The escalation sequence is designed so that by the time you reach level 4, you have enough evidence of trustworthiness to make the risk rational."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      },
+      {
+        "flow_name": "trust-portfolio-assessor",
+        "description": "Assess your entire trust portfolio: how your trust is distributed across contacts and whether the distribution matches your strategic needs.",
+        "inputs": [
+          {"name": "failure-protocols", "desc": "Protocols for trust failures"},
+          {"name": "recovery-pathways", "desc": "When and how to recover from trust failures"}
+        ],
+        "outputs": [
+          {"name": "trust-distribution", "desc": "Count of contacts at each trust level and whether the distribution is healthy (pyramid shape: many at level 1, fewer at each higher level)"},
+          {"name": "trust-concentration-risks", "desc": "Areas where your high-trust relationships are concentrated in a single organization, industry, or social circle"}
+        ],
+        "process": [
+          "Count contacts at each trust level. A healthy distribution is a pyramid: many at levels 0-1, fewer at level 2, a small group at level 3, and a handful at level 4. If the distribution is inverted (many at level 3-4, few at level 1), you are not building new relationships. If it is flat (roughly equal at all levels), you may be escalating trust too quickly.",
+          "Assess concentration risk. If all your level 3-4 contacts are in one organization, a single organizational event (layoff, restructuring, acquisition) could wipe out your high-trust network. If all are in one industry, an industry downturn affects everyone simultaneously. Diversify high-trust relationships across contexts.",
+          "Identify the trust bottleneck: the level where the most relationships stall. If many contacts are stuck at level 1 (informational but never advancing to reputational), you may not be making enough escalation moves. If many stall at level 2, the reciprocity test at level 3 may be too demanding or you may not be offering enough to justify the escalation.",
+          "Produce the quarterly trust portfolio review: changes in trust distribution, notable escalations and downgrades, concentration risk changes, and 3-5 relationships to prioritize for escalation in the next quarter."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      }
+    ]
+  },
+  {
+    "chain_name": "reactivation-triage-system",
+    "description": "Triage dormant relationships for reactivation using recency-frequency-value analysis. The method is the same for personal contacts going cold and churning customers: score, segment, and treat each segment differently.",
+    "domain": "business",
+    "tags": ["infrastructure", "crm", "relationships", "reactivation"],
+    "steps": [
+      {
+        "flow_name": "dormant-contact-identifier",
+        "description": "Identify all contacts that meet the dormancy criteria and pull their interaction histories for scoring.",
+        "inputs": [
+          {"name": "contact-database", "desc": "All contacts with interaction history"},
+          {"name": "dormancy-threshold", "desc": "Number of days without interaction that qualifies as dormant (default: 90 days for active-stage contacts, 180 for trusted)"}
+        ],
+        "outputs": [
+          {"name": "dormant-list", "desc": "All contacts meeting the dormancy threshold with their last interaction date and former lifecycle stage"},
+          {"name": "interaction-summaries", "desc": "For each dormant contact, a summary of the last 5 interactions before they went quiet"}
+        ],
+        "process": [
+          "Query all contacts where last_interaction_date is older than the dormancy threshold for their lifecycle stage. Trusted contacts get a longer threshold because high-trust relationships sustain longer periods of silence without actually decaying.",
+          "For each dormant contact, pull the last 5 interactions and summarize: what were you discussing, was there an unresolved thread, did one of you make a promise that was not fulfilled? An unfulfilled promise is often the reason someone went quiet.",
+          "Exclude intentionally parked contacts (you chose to let these go dormant) and contacts marked as lost (they already went through a reactivation attempt or explicitly disengaged).",
+          "Sort the dormant list by days-since-last-interaction ascending. The most recently dormant contacts are easiest to reactivate (the relationship is still warm in their mind). The longest-dormant contacts may not remember who you are."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      },
+      {
+        "flow_name": "rfv-scorer",
+        "description": "Score each dormant contact on recency, frequency, and value to determine who is worth reactivating and how much effort to invest.",
+        "inputs": [
+          {"name": "dormant-list", "desc": "Dormant contacts with last interaction dates"},
+          {"name": "interaction-summaries", "desc": "Last 5 interactions before dormancy"}
+        ],
+        "outputs": [
+          {"name": "rfv-scores", "desc": "Each dormant contact scored on recency (how recently active), frequency (how often they engaged when active), and value (relationship value when active)"},
+          {"name": "rfv-segments", "desc": "Contacts segmented into tiers: high-RFV (personal outreach), medium-RFV (targeted batch), low-RFV (light touch or release)"}
+        ],
+        "process": [
+          "Score recency on a 1-5 scale: went dormant in the last 90 days = 5, 91-180 days = 4, 181-365 days = 3, 1-2 years = 2, over 2 years = 1. The score reflects how easily the relationship can be restarted, not just how recently it was active.",
+          "Score frequency on a 1-5 scale based on their interaction pattern when they were active. Weekly contact when active = 5, monthly = 4, quarterly = 3, semi-annual = 2, annual or less = 1. High-frequency contacts who go dormant are more notable (something changed) than low-frequency contacts who go dormant (this may be their normal pattern).",
+          "Score value on a 1-5 scale. Use your relationship scoring model if available. If not, assess by asking: what did this relationship produce when active? Introductions, insights, deals, emotional support, collaboration? Tangible mutual value = 5. One-way value (they helped you but you never reciprocated, or vice versa) = 3. Pleasant but not productive = 1.",
+          "Combine into an RFV composite: (recency * 0.3) + (frequency * 0.3) + (value * 0.4). Value gets the highest weight because a high-value contact dormant for 2 years is still worth more effort than a low-value contact dormant for 30 days. Segment: top 25% = high-RFV, middle 50% = medium-RFV, bottom 25% = low-RFV."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      },
+      {
+        "flow_name": "reactivation-strategy-assigner",
+        "description": "Assign a specific reactivation strategy to each segment, calibrated to the effort justified by the RFV score.",
+        "inputs": [
+          {"name": "rfv-scores", "desc": "Recency, frequency, value scores per contact"},
+          {"name": "rfv-segments", "desc": "Contacts in high, medium, or low tiers"}
+        ],
+        "outputs": [
+          {"name": "reactivation-plans", "desc": "Per-segment reactivation strategy with channel, message type, timing, and escalation sequence"},
+          {"name": "release-criteria", "desc": "When to stop trying and release a contact from the reactivation funnel"}
+        ],
+        "process": [
+          "High-RFV strategy: personal, 1-to-1 outreach. Reference the last specific conversation. Offer something of value (an introduction, a resource, an insight relevant to their current situation). Use their preferred channel (from historical data). Follow up once at 14 days if no response. This segment justifies 15-30 minutes of prep per contact.",
+          "Medium-RFV strategy: personalized but scalable outreach. Use a template that includes one personalized element (their name, their company's recent news, a reference to shared context). Send on a channel where they historically responded. Follow up once at 21 days. This segment gets 5 minutes of prep per contact.",
+          "Low-RFV strategy: batch communication. Add to a re-engagement email sequence or social media interaction (comment on their posts, like their updates). If no engagement after 60 days, release the contact to the 'lost' stage. Do not invest personal effort. This segment gets zero individual prep.",
+          "Define release criteria: a contact exits the reactivation funnel when they (a) respond (move back to active lifecycle stage), (b) explicitly ask to be removed, or (c) do not respond after completing the full sequence for their tier. Released contacts get a 6-month or 12-month re-evaluation flag, not permanent deletion."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      },
+      {
+        "flow_name": "reactivation-outcome-tracker",
+        "description": "Track reactivation outcomes to improve future efforts: which strategies work, which contacts come back, and what the overall reactivation rate tells you about your relationship maintenance habits.",
+        "inputs": [
+          {"name": "reactivation-plans", "desc": "Strategies assigned to each segment"},
+          {"name": "release-criteria", "desc": "When to stop reactivation attempts"}
+        ],
+        "outputs": [
+          {"name": "reactivation-metrics", "desc": "Response rate by segment, reactivation rate (returned to active), time-to-reactivation, and cost per reactivated contact"},
+          {"name": "root-cause-analysis", "desc": "Why contacts went dormant in the first place (unfulfilled promises, life changes, relationship ran its course, you stopped reaching out) to prevent future dormancy"}
+        ],
+        "process": [
+          "Track 4 metrics: response rate (how many responded at all), reactivation rate (how many returned to active engagement), time-to-reactivation (days from first outreach to re-engagement), and persistence (how many attempts it took). Break these down by RFV segment to see which tier has the best return on effort.",
+          "Analyze the non-responders: look for patterns. Did they all go dormant around the same time (suggesting an external event, not relationship decay)? Were they all in the same lifecycle stage (suggesting your maintenance at that stage is insufficient)? Were they all on the same channel (suggesting channel decay, not relationship decay)?",
+          "Conduct the root cause analysis on successful reactivations. Ask (or infer): why did the relationship go dormant? Common causes: you stopped initiating (a maintenance failure), they had a life or job change (natural transition), an unresolved issue created friction (a repair opportunity), the relationship simply ran its course (acceptable loss). Each cause implies a different prevention strategy.",
+          "Feed results back into the lifecycle engine: if high-frequency contacts go dormant at a predictable rate, your decay windows may be too generous. If contacts in a particular cluster all go dormant together, there may be a structural issue in that part of your network. The reactivation data is a diagnostic tool for the entire relationship system."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      }
+    ]
+  },
+  {
+    "chain_name": "referral-loop-architecture",
+    "description": "Design a referral system where the act of referring is rewarding independent of the outcome. Maps referral motivation across personal and enterprise contexts and builds the acknowledgment loop that sustains referral behavior.",
+    "domain": "business",
+    "tags": ["infrastructure", "crm", "relationships", "referrals"],
+    "steps": [
+      {
+        "flow_name": "referral-motivation-mapper",
+        "description": "Map the motivations that drive people to make referrals across different relationship types, so you can design a system that activates the right motivation for each referrer.",
+        "inputs": [
+          {"name": "referral-context", "desc": "Whether this is for personal networking, B2B sales, B2C growth, or professional services"},
+          {"name": "referrer-profiles", "desc": "The types of people who refer (clients, friends, colleagues, partners) and what they typically value"}
+        ],
+        "outputs": [
+          {"name": "motivation-map", "desc": "For each referrer type, the primary and secondary motivations: social capital, reciprocity, financial incentive, status, altruism, or obligation"},
+          {"name": "anti-motivations", "desc": "What discourages referrals: reputation risk, inconvenience, unclear value to the referred party, feeling used"}
+        ],
+        "process": [
+          "Identify the 6 referral motivations. Social capital: referring makes the referrer look connected and knowledgeable. Reciprocity: they owe you a favor or want to bank one. Financial incentive: they receive a direct reward. Status: referring elevates their standing in a community. Altruism: they genuinely think the match will help both parties. Obligation: they feel social pressure to refer (weakest and least sustainable).",
+          "Map each referrer type to their primary motivation. Clients primarily refer for social capital (they want their peers to have a good experience and to look smart for recommending). Friends refer for reciprocity and altruism. Partners refer for financial incentive and status. Colleagues refer for social capital and obligation. Getting the motivation wrong wastes the ask.",
+          "Map the anti-motivations. The biggest referral killer is reputation risk: if the referral goes badly, the referrer looks bad. Second is inconvenience: if making the referral requires effort (filling out a form, writing an email), many people will not bother. Third is unclear value: if the referrer cannot articulate why their contact should care, they will not make the introduction.",
+          "Design the referral ask to activate the primary motivation and neutralize the anti-motivations. For social-capital-motivated referrers: make them look good by giving them a specific success story they can share. For convenience: provide a copy-paste introduction they can send in 30 seconds. For reputation risk: offer a no-commitment first step (a free consultation, a casual coffee) so the referrer is not staking their credibility on a sale."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      },
+      {
+        "flow_name": "referral-ask-integrator",
+        "description": "Build the referral ask into natural conversation touchpoints so it does not feel like a sales pitch or an imposition.",
+        "inputs": [
+          {"name": "motivation-map", "desc": "Referrer motivations by type"},
+          {"name": "anti-motivations", "desc": "What discourages referrals"}
+        ],
+        "outputs": [
+          {"name": "ask-touchpoints", "desc": "The specific moments in a relationship where a referral ask is natural and welcome (after delivering value, after receiving a compliment, after solving a problem)"},
+          {"name": "ask-scripts", "desc": "Word-for-word ask templates for each touchpoint, calibrated to the referrer's motivation"}
+        ],
+        "process": [
+          "Identify the 3 natural ask touchpoints. (1) After delivering value: you just solved a problem, shipped a project, or helped them with something, and they expressed satisfaction. (2) After receiving unsolicited praise: they told someone else you did good work, or they gave you a testimonial unprompted. (3) After a milestone: a contract renewal, a project completion, an anniversary of working together. These moments have high trust and positive sentiment.",
+          "Design the ask for each touchpoint. After delivering value: 'I am glad that worked out. Is there anyone else you know dealing with [specific problem] who might benefit from the same approach?' After praise: 'That means a lot. Would you be comfortable saying that to [specific person or in specific context]?' After a milestone: 'We have been working together for [time], and it has been productive. Who else in your network faces similar challenges?'",
+          "The ask must be specific. 'Do you know anyone who might need help?' fails because it requires the referrer to do the work of matching. 'Do you know any operations managers at mid-size logistics companies dealing with route optimization?' succeeds because the referrer can immediately think of a specific person.",
+          "Build a do-not-ask list: contacts who have declined a referral ask, contacts where the relationship is too new (below trust level 2), and contacts who are in a difficult period (layoff, personal crisis). Asking at the wrong moment burns social capital faster than not asking at all."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      },
+      {
+        "flow_name": "super-connector-identifier",
+        "description": "Track referral chains to identify your super-connectors: the small number of contacts who generate a disproportionate share of your referrals.",
+        "inputs": [
+          {"name": "ask-touchpoints", "desc": "When referral asks are appropriate"},
+          {"name": "ask-scripts", "desc": "How to make the ask"}
+        ],
+        "outputs": [
+          {"name": "referral-attribution-log", "desc": "Every referral tracked back to its source, with the chain of introductions if multi-hop"},
+          {"name": "super-connector-list", "desc": "Contacts who have made 3 or more successful referrals, ranked by referral volume and quality"}
+        ],
+        "process": [
+          "Build the attribution log: for every new contact or opportunity that came through a referral, record who made the introduction, when, and what happened (converted, did not convert, still in progress). If the referral was multi-hop (A introduced B who introduced C), track the full chain.",
+          "Identify the power law: in most networks, 10-15% of contacts generate 80%+ of referrals. These are your super-connectors. They refer frequently because they are (a) well-connected, (b) motivated by social capital, and (c) trust you enough to stake their reputation repeatedly.",
+          "Profile your super-connectors. What do they have in common? What motivates them? How do they prefer to refer (email introduction, verbal mention, social media tag)? Understanding their pattern lets you make it easier for them and identify similar people who could become super-connectors.",
+          "Invest disproportionately in super-connectors. They should be at the top of your relationship maintenance list. Send them thank-you notes, give them early access to your work, update them on the outcomes of their referrals. A super-connector who feels valued will continue referring. One who feels taken for granted will stop."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      },
+      {
+        "flow_name": "acknowledgment-loop-designer",
+        "description": "Design the acknowledgment loop that makes referrers feel valued whether or not the referral converts, sustaining referral behavior over time.",
+        "inputs": [
+          {"name": "referral-attribution-log", "desc": "Referrals tracked to their sources"},
+          {"name": "super-connector-list", "desc": "Top referrers identified"}
+        ],
+        "outputs": [
+          {"name": "acknowledgment-protocol", "desc": "The specific actions to take at each stage of a referral (when received, when first contact made, when converted or not converted)"},
+          {"name": "referrer-update-cadence", "desc": "How often to update referrers on the status of their referrals and the format of those updates"}
+        ],
+        "process": [
+          "Design a 3-touch acknowledgment protocol. Touch 1 (within 24 hours of the referral): thank the referrer and confirm you will reach out to their contact. This is the most important touch because it validates their effort immediately. Touch 2 (within 1 week): update the referrer that you connected with their contact and share one positive observation ('Sarah was great, we had a productive conversation about X'). Touch 3 (at outcome): whether the referral converted or not, close the loop. If converted: share the positive outcome and credit the referrer. If not converted: thank them and explain briefly without blaming their contact.",
+          "The key principle: the acknowledgment rewards the ACT of referring, not the OUTCOME. If you only thank people when referrals convert, you are training them to pre-qualify heavily (reducing volume) or to feel bad when referrals do not work out (reducing future attempts). Thank equally for the introduction regardless of what happens next.",
+          "For super-connectors, add a quarterly recognition. A personal note, a small gift, or a public acknowledgment (with their permission). This is not an incentive payment; it is a signal that you notice and value their contribution to your network.",
+          "Build the update into your existing cadence system: when a referral-related follow-up is due, include the referrer update as a linked action. Do not track referrals in a separate system from your relationship management. They are part of the same relationship fabric."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      }
+    ]
+  },
+  {
+    "chain_name": "relationship-segmentation-engine",
+    "description": "Segment contacts by behavior patterns (communication style, response latency, topic affinity, seasonal patterns, preferred channel) instead of demographics. Behavioral segments tell you how to engage. Demographics tell you what they look like.",
+    "domain": "business",
+    "tags": ["infrastructure", "crm", "relationships", "segmentation"],
+    "steps": [
+      {
+        "flow_name": "behavioral-signal-extractor",
+        "description": "Extract behavioral signals from interaction history that reveal each contact's communication patterns.",
+        "inputs": [
+          {"name": "interaction-history", "desc": "Timestamped interaction log across all channels"},
+          {"name": "channel-list", "desc": "All communication channels used (email, phone, text, social media, in-person, video call)"}
+        ],
+        "outputs": [
+          {"name": "behavioral-profiles", "desc": "Per-contact profile with: preferred channel, average response time, initiation ratio, peak engagement times, topic keywords, seasonal patterns"},
+          {"name": "signal-confidence", "desc": "For each behavioral attribute, the confidence level based on sample size (5+ data points = high, 2-4 = medium, 1 = low)"}
+        ],
+        "process": [
+          "Extract channel preference: for each contact, count interactions by channel and identify the channel with the highest response rate (not the highest volume, because you may be emailing them when they prefer text). If response rate on text is 95% and email is 40%, text is their preferred channel regardless of how many emails you have sent.",
+          "Calculate response latency: median time from your message to their reply, by channel. Some people respond to texts in minutes but take days on email. The latency tells you which channel to use for time-sensitive communication and which for asynchronous topics.",
+          "Determine initiation patterns: do they proactively reach out, or do they only respond to your outreach? What triggers their proactive outreach (specific topics, specific times of year, specific events)? A contact who only initiates when they need something is not disengaged; they have a transactional communication pattern.",
+          "Identify seasonal patterns: some contacts are active in Q1 and Q3 (budget planning cycles), some are active in summer (conference season), some go dark in December (holiday). These patterns are invisible in aggregate but obvious when you plot individual interaction timelines."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      },
+      {
+        "flow_name": "behavior-cluster-builder",
+        "description": "Cluster contacts into behavioral segments based on their communication patterns, producing groups that predict how to engage rather than who they are.",
+        "inputs": [
+          {"name": "behavioral-profiles", "desc": "Per-contact behavioral attributes"},
+          {"name": "signal-confidence", "desc": "Confidence levels for each attribute"}
+        ],
+        "outputs": [
+          {"name": "behavioral-segments", "desc": "Named segments with defining characteristics (e.g., 'Quick Text Responders,' 'Quarterly Check-In People,' 'Event-Triggered Connectors')"},
+          {"name": "segment-sizes", "desc": "How many contacts fall into each segment and the distribution of relationship value across segments"}
+        ],
+        "process": [
+          "Cluster contacts using 3 primary dimensions: response latency (fast/medium/slow/unresponsive), initiation pattern (proactive/reactive/event-triggered), and channel preference (synchronous like phone and video, or asynchronous like email and text). These three dimensions produce the most actionable segments.",
+          "Name each segment descriptively so the name tells you how to engage. 'Fast Async' = responds quickly on text/email, prefers written communication. 'Quarterly Sync' = responds slowly to written messages but engages deeply on quarterly calls. 'Event Connectors' = goes quiet between events but reaches out before and after conferences or milestones.",
+          "Validate segments against your experience. Does the segmentation explain past interaction frustrations? If you have been emailing a 'Fast Async' contact instead of texting, or trying to schedule monthly calls with a 'Quarterly Sync,' the segmentation reveals a channel mismatch that was hurting the relationship.",
+          "Identify outlier contacts who do not fit any segment cleanly. These may have too little data (assign them to 'unknown' and collect more signals) or they may have genuinely unusual patterns (they respond to everything within an hour except topics about money, which they ignore). Outlier patterns are often the most important to capture."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      },
+      {
+        "flow_name": "segment-engagement-strategist",
+        "description": "Design engagement strategies tailored to each behavioral segment so you communicate in the way each person is most likely to respond to.",
+        "inputs": [
+          {"name": "behavioral-segments", "desc": "Named segments with characteristics"},
+          {"name": "segment-sizes", "desc": "Contacts per segment and value distribution"}
+        ],
+        "outputs": [
+          {"name": "segment-playbooks", "desc": "For each segment: preferred channel, optimal send time, ideal message length, follow-up interval, and content type that generates the highest response rate"},
+          {"name": "channel-switching-rules", "desc": "When to switch channels within a segment (e.g., move from email to phone if email goes unanswered for X days)"}
+        ],
+        "process": [
+          "Build a playbook for each segment. For 'Fast Async' contacts: use text or chat, keep messages under 100 words, expect a reply within hours, follow up at 7 days if no response. For 'Quarterly Sync' contacts: schedule a 30-minute call every 3 months, send a brief agenda beforehand, do not expect responses to interim emails. For 'Event Connectors': reach out 2 weeks before industry events, suggest meeting up, follow up within 48 hours after the event.",
+          "Define the channel escalation sequence for each segment. If the preferred channel gets no response, which channel to try next. For async-preferring contacts, escalate from text to email to phone. For sync-preferring contacts, escalate from phone to video to in-person. Never skip to a higher-effort channel without trying the preferred one first.",
+          "Set message length and format by segment. Some contacts respond to short direct messages ('Are you free Thursday?'). Others need context ('I have been thinking about the conversation we had about X, and I wanted to share Y because Z'). Match the format to the segment's observed preference, not your own communication style.",
+          "Build the A/B testing protocol: for segments with 10+ contacts, test variations (send time, message length, content type) and measure response rate. Over time, refine the playbooks from data rather than assumptions. For small segments, rely on individual behavioral profiles instead."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      },
+      {
+        "flow_name": "segment-migration-tracker",
+        "description": "Track how contacts move between behavioral segments over time, since communication preferences change with life events, job changes, and relationship deepening.",
+        "inputs": [
+          {"name": "segment-playbooks", "desc": "Engagement strategies per segment"},
+          {"name": "channel-switching-rules", "desc": "When to try a different channel"}
+        ],
+        "outputs": [
+          {"name": "migration-patterns", "desc": "Common segment transitions (e.g., contacts often move from 'Fast Async' to 'Quarterly Sync' when they get promoted) and what triggers them"},
+          {"name": "re-segmentation-schedule", "desc": "How often to recalculate behavioral profiles and reassign segments (quarterly for active contacts, annually for dormant)"}
+        ],
+        "process": [
+          "Re-run behavioral profile extraction quarterly for active contacts. Compare the new profile to the previous segment assignment. If 2 or more primary dimensions changed, the contact has migrated to a new segment. Update their playbook accordingly.",
+          "Identify common migration triggers. Job change often shifts communication patterns (new email, different availability, new topics). Life events (new child, relocation) change response latency and channel preference. Relationship deepening moves people from formal channels (email) to informal ones (text, social media).",
+          "Build the migration alert: when a contact's behavior changes significantly (response time doubles, channel preference shifts, initiation pattern reverses), flag it for review. The change may indicate a life event worth acknowledging, a problem in the relationship worth addressing, or simply a natural evolution.",
+          "Track the aggregate migration rate: what percentage of your contacts change segments each quarter? A high rate (above 30%) means your segments are too narrow or your behavioral data is noisy. A low rate (below 5%) means your segments are stable and the playbooks are reliable. Target 10-20% quarterly migration as healthy."
+        ],
+        "tags": ["infrastructure", "crm", "relationships"]
+      }
+    ]
+  },
+  {
+    "chain_name": "contact-data-hygiene-system",
+    "description": "Build a system that keeps contact data clean over time by modeling data decay rates, running periodic verification, deduplicating records, and enriching from public signals.",
+    "domain": "business",
+    "tags": ["infrastructure", "crm", "relationships", "data-quality"],
+    "steps": [
+      {
+        "flow_name": "data-decay-modeler",
+        "description": "Model the decay rate for each type of contact data so you know when a field is likely stale even if nobody reported a change.",
+        "inputs": [
+          {"name": "contact-fields", "desc": "The fields in your contact records (name, email, phone, job title, company, address, social profiles)"},
+          {"name": "historical-change-data", "desc": "Any records of when contact fields changed in the past (from CRM history, bounced emails, returned mail, LinkedIn profile changes)"}
+        ],
+        "outputs": [
+          {"name": "decay-model", "desc": "Per-field estimated half-life: the number of months after which there is a 50% chance the field is outdated"},
+          {"name": "staleness-flags", "desc": "Fields in your current database that exceed their half-life and should be verified"}
+        ],
+        "process": [
+          "Set default half-lives from industry data. Job title: 18 months (median tenure in a role). Company: 24 months (median time at a company). Email: 14 months (tied to company changes plus domain changes). Phone: 30 months. Physical address: 36 months. LinkedIn URL: 60 months (rarely changes). Name: practically never (but legal name changes and name corrections happen).",
+          "Calibrate against your own data. If you have CRM change history, calculate the actual change frequency for each field. If your contacts change jobs faster than the 18-month default (common in tech), shorten the half-life. If your contacts are in stable industries (government, academia), lengthen it.",
+          "Flag all fields that exceed their half-life. A contact whose job title was last confirmed 24 months ago has exceeded the 18-month half-life and should be flagged for verification. Do not assume the data is wrong, just that it needs checking.",
+          "Rank staleness by relationship importance. A stale phone number for a level 4 trusted contact is a higher priority than a stale email for a level 1 acquaintance. Verify high-value contacts first."
+        ],
+        "tags": ["infrastructure", "crm", "data-quality"]
+      },
+      {
+        "flow_name": "verification-trigger-system",
+        "description": "Set up periodic and event-based triggers that prompt data verification before the data goes stale enough to cause problems.",
+        "inputs": [
+          {"name": "decay-model", "desc": "Per-field half-lives"},
+          {"name": "staleness-flags", "desc": "Currently stale fields"}
+        ],
+        "outputs": [
+          {"name": "verification-schedule", "desc": "The periodic verification cadence per field type and relationship tier"},
+          {"name": "event-triggers", "desc": "Events that should trigger immediate verification (bounced email, changed LinkedIn profile, company acquisition, re-engagement after dormancy)"}
+        ],
+        "process": [
+          "Set the periodic schedule: verify each field at 75% of its half-life. Job titles get checked every 13 months. Emails every 10 months. Phone numbers every 22 months. Batch the verifications into a monthly process where you check all fields due that month.",
+          "Define event triggers that override the periodic schedule. Bounced email = immediate email verification. LinkedIn profile change notification = immediate title and company verification. Company acquisition announcement = verify all contacts at that company. Re-engagement after dormancy = verify all fields (a lot may have changed while they were quiet).",
+          "Design the verification methods by field. Email: send a message and see if it bounces. Phone: call or text. Job title and company: check LinkedIn or company directory. Address: verify next time you send physical mail. Social profiles: visit the profile. Minimize verification that feels like surveillance; use natural touchpoints where possible.",
+          "Build the verification queue: a prioritized list of contacts and fields to verify, sorted by staleness relative to half-life and relationship importance. Process the queue weekly as part of your relationship maintenance routine, not as a separate task."
+        ],
+        "tags": ["infrastructure", "crm", "data-quality"]
+      },
+      {
+        "flow_name": "dedup-merge-engine",
+        "description": "Build the logic for identifying and merging duplicate contact records, which accumulate as people change emails, phone numbers, and companies.",
+        "inputs": [
+          {"name": "verification-schedule", "desc": "When fields get checked"},
+          {"name": "event-triggers", "desc": "Events that trigger verification"}
+        ],
+        "outputs": [
+          {"name": "dedup-rules", "desc": "The matching rules for identifying potential duplicates (name similarity, shared email domain, shared phone number, shared company)"},
+          {"name": "merge-protocol", "desc": "How to merge two records into one: which fields to keep, how to preserve interaction history from both records, and how to handle conflicts"}
+        ],
+        "process": [
+          "Define matching rules with confidence tiers. High confidence: exact email match OR exact phone match (these are almost certainly the same person). Medium confidence: same first name AND same company AND similar last name (catches name misspellings). Low confidence: same last name AND same city AND similar job title (may be the same person or may be a relative/colleague). Only auto-merge high confidence matches; present medium and low for manual review.",
+          "Design the merge protocol. For each field, keep the most recently verified value. For interaction history, concatenate from both records with a merge marker. For relationship scores, keep the higher score. For lifecycle stage, keep the higher stage. For tags and notes, union from both records.",
+          "Handle the 'same person, different role' case: someone you know personally AND professionally may appear as two contacts (personal email and work email). These should merge into a single record with both email addresses, not stay as separate records that get separate follow-up cadences.",
+          "Set a dedup cadence: run the matching rules monthly. New duplicates appear when you add contacts from a new source (conference leads, email imports, social media connections) that overlaps with existing records. Also run dedup after any bulk import."
+        ],
+        "tags": ["infrastructure", "crm", "data-quality"]
+      },
+      {
+        "flow_name": "enrichment-workflow-builder",
+        "description": "Build the workflow for enriching contact records from public signals to fill gaps and keep data current without asking the contact directly.",
+        "inputs": [
+          {"name": "dedup-rules", "desc": "Duplicate detection logic"},
+          {"name": "merge-protocol", "desc": "How to merge records"}
+        ],
+        "outputs": [
+          {"name": "enrichment-sources", "desc": "Ranked list of public data sources for each field (LinkedIn for job title, company website for email format, social media for interests)"},
+          {"name": "enrichment-workflow", "desc": "The step-by-step process for enriching a contact record, including when to enrich (on creation, on verification trigger, on re-engagement) and how to validate enriched data"}
+        ],
+        "process": [
+          "Map enrichment sources by field. Job title and company: LinkedIn (primary), company website (secondary). Email: company email pattern + first/last name (verify by sending). Phone: not reliably enrichable from public sources, ask directly. Interests and topics: social media posts and activity. Company size and industry: company databases and news.",
+          "Design the enrichment workflow. On new contact creation: look up LinkedIn profile and company, populate job title, company, and industry. On verification trigger: re-check LinkedIn for title and company changes. On re-engagement: full re-enrichment of all fields since the contact may have changed jobs, cities, or roles during dormancy.",
+          "Set the validation rule: enriched data gets a 'source: enriched' tag and a lower confidence score than directly confirmed data. If enriched data conflicts with existing data, flag for manual review instead of overwriting. A LinkedIn title that differs from your CRM might mean the contact changed jobs, or it might mean LinkedIn is showing an old profile.",
+          "Define the enrichment ethics boundary. Use only publicly available information (LinkedIn public profiles, company websites, published articles, public social media). Do not use information obtained through access the contact did not intend (private social media posts, internal directories you have access to but should not use for personal CRM purposes). The enrichment should pass the test: 'would the contact be comfortable knowing I found this information this way?'"
+        ],
+        "tags": ["infrastructure", "crm", "data-quality"]
+      }
+    ]
+  }
+]

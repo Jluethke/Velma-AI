@@ -1,0 +1,1093 @@
+[
+  {
+    "chain_name": "leading-indicator-finder",
+    "description": "Find the metrics that predict outcomes (leading indicators) instead of the ones that only record them (lagging indicators). For any goal, work backward from the outcome to the behavior that produces it, then to the measurable signal that precedes the behavior. That signal is your leading indicator.",
+    "domain": "analytics",
+    "tags": ["infrastructure", "measurement", "leading-indicators", "prediction"],
+    "steps": [
+      {
+        "flow_name": "outcome-goal-definition",
+        "description": "Define the outcome you want to move. State it as a specific, measurable number with a time horizon. 'Increase revenue' is not a goal. 'Revenue of $500K by Q4' is. The specificity of the goal determines the quality of every indicator you derive from it.",
+        "inputs": [
+          {"name": "goal-description", "desc": "The outcome you want to achieve, in your own words"},
+          {"name": "current-baseline", "desc": "Where the metric stands today, with the measurement method"}
+        ],
+        "outputs": [
+          {"name": "defined-outcome", "desc": "The goal restated as a specific number with a deadline"},
+          {"name": "lagging-metric", "desc": "The metric that directly measures the outcome (this is, by definition, a lagging indicator)"}
+        ],
+        "process": [
+          "Take the goal description and extract the noun (what changes), the direction (up or down), the magnitude (how much), and the deadline (by when).",
+          "If any of those four components is missing, derive it from the baseline and the context. A goal without a magnitude is a wish.",
+          "Name the lagging metric: the number you will check at the deadline to know whether you succeeded. This metric moves last, not first."
+        ],
+        "tags": ["measurement", "goal-setting"]
+      },
+      {
+        "flow_name": "outcome-driver-decomposition",
+        "description": "Decompose the outcome into the behaviors and activities that produce it. Revenue is produced by deals closed. Deals closed is produced by proposals sent. Proposals sent is produced by discovery calls completed. Each layer is closer to something you can influence daily.",
+        "inputs": [
+          {"name": "defined-outcome", "desc": "The specific outcome with number and deadline"},
+          {"name": "lagging-metric", "desc": "The metric that measures the outcome directly"}
+        ],
+        "outputs": [
+          {"name": "driver-tree", "desc": "A tree of activities, from the outcome at the root down to the daily behaviors at the leaves"},
+          {"name": "driver-levels", "desc": "The number of levels between the outcome and the most actionable daily behavior"}
+        ],
+        "process": [
+          "Ask: what directly produces this outcome? Write that as the first driver. Then ask: what directly produces THAT driver? Repeat until you reach something a person does on a specific day.",
+          "At each level, check the causal direction. 'More discovery calls' causes 'more proposals sent' causes 'more deals closed' causes 'more revenue.' If the causal arrow is uncertain, mark it.",
+          "Stop decomposing when you reach a behavior that a single person can do in a single day. That is the leaf of the tree."
+        ],
+        "tags": ["measurement", "decomposition"]
+      },
+      {
+        "flow_name": "leading-signal-identification",
+        "description": "From the driver tree, identify which drivers are leading indicators: the ones that change BEFORE the outcome moves. A leading indicator has two properties: it is measurable before the outcome changes, and changes in it predict changes in the outcome.",
+        "inputs": [
+          {"name": "driver-tree", "desc": "The decomposition from outcome down to daily behaviors"},
+          {"name": "driver-levels", "desc": "How many levels deep the tree goes"}
+        ],
+        "outputs": [
+          {"name": "candidate-leading-indicators", "desc": "List of drivers that change before the outcome, with the estimated lead time for each"},
+          {"name": "lead-time-estimates", "desc": "For each candidate, the estimated delay between the indicator moving and the outcome moving"}
+        ],
+        "process": [
+          "For each driver in the tree, estimate the time lag between when it changes and when the outcome changes. Drivers closer to the leaves have longer lead times.",
+          "Filter to drivers where the lead time is long enough to act on. A leading indicator with a 1-day lead time on a quarterly goal is useful. A 1-hour lead time is noise.",
+          "For each candidate, ask: can I measure this reliably, at least weekly? If not, it is theoretically leading but practically useless."
+        ],
+        "tags": ["measurement", "leading-indicators"]
+      },
+      {
+        "flow_name": "predictive-validity-test",
+        "description": "Test whether each candidate leading indicator actually predicts the outcome. Use historical data if available. If not, design a prospective tracking period. A metric that moves before the outcome but has no causal relationship is a coincidence, not an indicator.",
+        "inputs": [
+          {"name": "candidate-leading-indicators", "desc": "The candidate indicators with estimated lead times"},
+          {"name": "current-baseline", "desc": "Current state of the outcome metric for comparison"}
+        ],
+        "outputs": [
+          {"name": "validated-indicators", "desc": "Indicators that passed the predictive validity test, with correlation strength"},
+          {"name": "rejected-indicators", "desc": "Indicators that failed the test, with the reason (no correlation, too noisy, unmeasurable)"}
+        ],
+        "process": [
+          "For each candidate, gather at least 8 data points (weeks or months) of historical values for both the indicator and the outcome. Fewer than 8 points cannot distinguish signal from noise.",
+          "Plot the indicator values against the outcome values shifted by the estimated lead time. If the indicator went up and the outcome later went up (or the reverse, consistently), the correlation is real.",
+          "If no historical data exists, commit to a 4-8 week prospective tracking period before making decisions based on the indicator. Mark it as 'unvalidated' until then."
+        ],
+        "tags": ["measurement", "validation"]
+      },
+      {
+        "flow_name": "indicator-cadence-assignment",
+        "description": "Assign the right measurement cadence to each indicator. Leading indicators get measured more frequently than lagging ones because the whole point is to see them move before the outcome does. A leading indicator measured monthly alongside a quarterly outcome gives you one data point of lead time, which is worthless.",
+        "inputs": [
+          {"name": "validated-indicators", "desc": "The leading indicators that passed validation"},
+          {"name": "lagging-metric", "desc": "The outcome metric with its natural measurement cadence"}
+        ],
+        "outputs": [
+          {"name": "indicator-schedule", "desc": "Each indicator with its measurement cadence (daily, weekly, biweekly) and the person or system responsible for collecting it"},
+          {"name": "review-cadence", "desc": "How often to review the leading indicators together and compare to the lagging metric trend"}
+        ],
+        "process": [
+          "Set the lagging metric cadence to match its natural cycle (monthly revenue measured monthly, quarterly retention measured quarterly).",
+          "Set each leading indicator cadence to at least 4x the lagging metric cadence. If the lagging metric is monthly, leading indicators should be weekly at minimum.",
+          "For each indicator, assign a collection method (automated pull, manual entry, survey) and an owner. An indicator without an owner decays to zero within 3 weeks."
+        ],
+        "tags": ["measurement", "cadence"]
+      },
+      {
+        "flow_name": "response-protocol-builder",
+        "description": "For each leading indicator, define what to do when it moves. A leading indicator without a response protocol is a weather forecast you never check before leaving the house. Define the threshold that triggers a response, the specific response, and who executes it.",
+        "inputs": [
+          {"name": "indicator-schedule", "desc": "The indicators with their cadences and owners"},
+          {"name": "defined-outcome", "desc": "The outcome goal, for calibrating response thresholds"}
+        ],
+        "outputs": [
+          {"name": "response-protocols", "desc": "For each indicator: the green/yellow/red thresholds, the specific action triggered at yellow and red, and the person who executes it"},
+          {"name": "leading-indicator-system", "desc": "The complete system: indicators, cadences, thresholds, and response protocols, ready to operate"}
+        ],
+        "process": [
+          "For each indicator, calculate the value range that corresponds to being on track for the outcome goal. That is the green zone. The boundary where the outcome becomes at risk is the yellow threshold. The point where the outcome is unlikely without intervention is the red threshold.",
+          "For yellow: define a diagnostic action (investigate why the indicator dropped, check if it is noise or real). For red: define a corrective action (change the input, reallocate resources, escalate).",
+          "Test the system by walking through a scenario: the indicator drops to yellow on Tuesday. Who sees it? What do they do? By when? If the answer is 'nobody' or 'nothing,' the system is not real."
+        ],
+        "tags": ["measurement", "response-protocol"]
+      }
+    ]
+  },
+  {
+    "chain_name": "metric-action-linkage",
+    "description": "Build a measurement system where every metric has a defined response. A metric without a linked action is decoration. A dashboard where every number has a response protocol is a control system. This chain converts monitoring into managing.",
+    "domain": "analytics",
+    "tags": ["infrastructure", "measurement", "action-linkage", "control-systems"],
+    "steps": [
+      {
+        "flow_name": "metric-inventory-collector",
+        "description": "List every metric currently tracked, across all systems and dashboards. Most organizations (and individuals) track 5-10x more metrics than they act on. The inventory is the first step to finding the dead weight.",
+        "inputs": [
+          {"name": "data-sources", "desc": "List of dashboards, spreadsheets, reports, and tracking systems in use"},
+          {"name": "scope-boundary", "desc": "The team, project, or life area to inventory"}
+        ],
+        "outputs": [
+          {"name": "metric-inventory", "desc": "Every metric tracked, with its source system, update frequency, and current value"},
+          {"name": "inventory-count", "desc": "Total number of metrics found"}
+        ],
+        "process": [
+          "Walk through each data source and extract every named metric, KPI, or tracked number. Include informal ones (the number someone checks in a spreadsheet every Monday).",
+          "For each metric, record: name, source system, update frequency, current value, and who looks at it.",
+          "Do not filter or judge yet. The goal is a complete list, not a clean one."
+        ],
+        "tags": ["measurement", "inventory"]
+      },
+      {
+        "flow_name": "action-linkage-auditor",
+        "description": "For each metric in the inventory, determine whether it has a linked action. A linked action means: when this metric crosses a threshold, a specific person does a specific thing. Most metrics fail this test.",
+        "inputs": [
+          {"name": "metric-inventory", "desc": "The complete list of tracked metrics"}
+        ],
+        "outputs": [
+          {"name": "linked-metrics", "desc": "Metrics that have a defined action when they move, with the action and owner documented"},
+          {"name": "unlinked-metrics", "desc": "Metrics that no one acts on, regardless of their value"}
+        ],
+        "process": [
+          "For each metric, ask: in the last 90 days, did anyone take a specific action because this metric changed? Not 'discussed it in a meeting,' but actually changed something.",
+          "If yes, document: what threshold triggered the action, what the action was, and who did it. That is a linked metric.",
+          "If no, or if the answer is 'we would if it moved enough,' classify it as unlinked. 'Would' is not the same as 'did.'"
+        ],
+        "tags": ["measurement", "audit"]
+      },
+      {
+        "flow_name": "unlinked-metric-triage",
+        "description": "For each unlinked metric, decide: should it get an action link, or should it be retired? There are only two valid states for a metric. Either it has a response protocol, or it does not exist.",
+        "inputs": [
+          {"name": "unlinked-metrics", "desc": "Metrics that currently have no action linked to them"},
+          {"name": "scope-boundary", "desc": "The goals and priorities of the team or person, for relevance scoring"}
+        ],
+        "outputs": [
+          {"name": "metrics-to-link", "desc": "Unlinked metrics that deserve an action link, because they align with a current goal"},
+          {"name": "metrics-to-retire", "desc": "Unlinked metrics to stop tracking, because no plausible action would follow from their movement"}
+        ],
+        "process": [
+          "For each unlinked metric, ask: does this metric align with a current goal or priority? If no, retire it immediately.",
+          "If yes, ask: if this metric dropped by 30% tomorrow, would anyone do something different? If the answer is still no, retire it.",
+          "For the survivors: these are metrics that matter but lack a response. They move to the linkage builder."
+        ],
+        "tags": ["measurement", "triage"]
+      },
+      {
+        "flow_name": "threshold-calibrator",
+        "description": "Set the thresholds that trigger action for each metric that needs a link. The threshold is the line between 'normal variation' and 'something changed that requires a response.' Set it too tight and every fluctuation triggers a fire drill. Set it too loose and real problems slide by.",
+        "inputs": [
+          {"name": "metrics-to-link", "desc": "Metrics that need action thresholds"},
+          {"name": "linked-metrics", "desc": "Already-linked metrics, for calibration reference"}
+        ],
+        "outputs": [
+          {"name": "calibrated-thresholds", "desc": "For each metric: the green/yellow/red boundaries, derived from historical variance and the goal target"},
+          {"name": "threshold-rationale", "desc": "Why each threshold is set where it is, so future reviewers can adjust without guessing"}
+        ],
+        "process": [
+          "Pull the last 12 data points for each metric. Calculate the mean and standard deviation. Normal variation is within 1 standard deviation of the mean.",
+          "Set yellow at 1.5 standard deviations from the target (worth investigating). Set red at 2 standard deviations (requires action). Adjust for metrics with natural seasonality or trends.",
+          "For new metrics with no history, set provisional thresholds based on the goal and commit to recalibrating after 8 data points."
+        ],
+        "tags": ["measurement", "thresholds"]
+      },
+      {
+        "flow_name": "response-action-designer",
+        "description": "Design the specific action triggered at each threshold. The action must be concrete, assignable, and completable within the measurement cadence. 'Look into it' is not an action. 'Run the customer churn diagnostic playbook and report findings by Friday' is.",
+        "inputs": [
+          {"name": "calibrated-thresholds", "desc": "The metrics with their green/yellow/red boundaries"},
+          {"name": "scope-boundary", "desc": "Who is available to take action, and what resources they have"}
+        ],
+        "outputs": [
+          {"name": "response-actions", "desc": "For each metric at each threshold level: the specific action, the owner, and the completion deadline relative to the trigger"},
+          {"name": "escalation-rules", "desc": "What happens if the action is not completed by the deadline, or if the metric does not recover after the action"}
+        ],
+        "process": [
+          "For each yellow threshold: design a diagnostic action. The goal is to determine whether the movement is noise or signal. Example: pull the segment-level data and identify which segment moved.",
+          "For each red threshold: design a corrective action. The goal is to change an input that will move the metric back. Example: increase outbound call volume by 20% this week.",
+          "For each action, name the owner (a person, not a team) and the deadline (relative to the trigger, not a calendar date). 'Within 48 hours of the trigger' is a deadline."
+        ],
+        "tags": ["measurement", "response-design"]
+      },
+      {
+        "flow_name": "control-system-assembler",
+        "description": "Assemble the complete control system: the surviving metrics, their thresholds, their response actions, and the review cadence. This is the artifact that replaces the old dashboard. It is not a display. It is an operating manual.",
+        "inputs": [
+          {"name": "linked-metrics", "desc": "Metrics that already had actions"},
+          {"name": "response-actions", "desc": "Newly designed actions for previously unlinked metrics"},
+          {"name": "escalation-rules", "desc": "What happens when actions fail or deadlines pass"}
+        ],
+        "outputs": [
+          {"name": "control-system-document", "desc": "The complete metric-action control system: every active metric, its threshold, its response, its owner, and its escalation path"},
+          {"name": "retired-metrics-log", "desc": "Metrics retired in this process, with the reason, for reference if someone asks why they disappeared"}
+        ],
+        "process": [
+          "Combine all linked metrics (old and new) into a single document. For each: metric name, source, cadence, thresholds, yellow action, red action, owner, escalation.",
+          "Set the review cadence: how often to check whether the control system itself is working. Monthly is typical. In the review, check: did any metric hit yellow or red? Was the action taken? Did it work?",
+          "Delete the retired metrics from the dashboards. If someone complains, show them the retired-metrics log and ask when they last acted on the metric."
+        ],
+        "tags": ["measurement", "control-system"]
+      }
+    ]
+  },
+  {
+    "chain_name": "signal-noise-separator",
+    "description": "Determine the minimum sample size and time window needed to distinguish real signal from random noise in any dataset. Most people make decisions on insufficient data because they do not know how many observations they need. This chain calculates that number.",
+    "domain": "analytics",
+    "tags": ["infrastructure", "measurement", "statistics", "sample-size"],
+    "steps": [
+      {
+        "flow_name": "effect-size-definer",
+        "description": "Define the minimum change you care about detecting. If your conversion rate is 5%, do you care about a change to 5.1% or only to 6%? The smaller the change you want to detect, the more data you need. Most people skip this step and then wonder why their data is inconclusive.",
+        "inputs": [
+          {"name": "metric-name", "desc": "The metric you are trying to evaluate (conversion rate, weight, revenue, error rate, etc.)"},
+          {"name": "current-value", "desc": "The current baseline value of the metric, with units"}
+        ],
+        "outputs": [
+          {"name": "minimum-detectable-effect", "desc": "The smallest change worth detecting, expressed as an absolute change and a percentage change from baseline"},
+          {"name": "effect-rationale", "desc": "Why this effect size matters (the business or personal consequence of missing a change smaller than this)"}
+        ],
+        "process": [
+          "State the current baseline value. Then ask: what is the smallest change that would make you do something different? That is your minimum detectable effect.",
+          "Express it as both an absolute number (from 5% to 6% = 1 percentage point) and a relative change (1/5 = 20% relative increase).",
+          "If you cannot define this, you are not ready to measure. Go back and define what decision this measurement is supposed to inform."
+        ],
+        "tags": ["statistics", "effect-size"]
+      },
+      {
+        "flow_name": "variance-estimator",
+        "description": "Estimate how noisy your data is. High-variance data requires more observations to see a real signal. A metric that bounces between 3% and 7% daily needs far more data than one that stays between 4.8% and 5.2%.",
+        "inputs": [
+          {"name": "metric-name", "desc": "The metric being evaluated"},
+          {"name": "current-value", "desc": "The baseline value"}
+        ],
+        "outputs": [
+          {"name": "estimated-variance", "desc": "The standard deviation of the metric over the measurement period, estimated from historical data or domain knowledge"},
+          {"name": "variance-source", "desc": "Whether the variance estimate came from historical data (strong) or domain assumption (weak, requires more safety margin)"}
+        ],
+        "process": [
+          "If historical data exists (at least 20 data points), calculate the standard deviation directly. This is the strong path.",
+          "If no historical data exists, estimate the plausible range (the metric probably falls between X and Y) and divide the range by 4 to approximate the standard deviation. This is the weak path and requires a 50% safety margin on the sample size.",
+          "Record whether the variance comes from data or assumption. This determines the confidence of the sample size calculation."
+        ],
+        "tags": ["statistics", "variance"]
+      },
+      {
+        "flow_name": "confidence-level-selector",
+        "description": "Choose your tolerance for two types of error: false positives (concluding there is a signal when there is not) and false negatives (missing a real signal). The standard defaults are 5% false positive rate and 20% false negative rate, but you should choose consciously, not by default.",
+        "inputs": [
+          {"name": "minimum-detectable-effect", "desc": "The effect size you are trying to detect"},
+          {"name": "effect-rationale", "desc": "Why this effect matters, to calibrate the cost of errors"}
+        ],
+        "outputs": [
+          {"name": "alpha-level", "desc": "The false positive rate you will tolerate (probability of seeing a signal that is not real)"},
+          {"name": "beta-level", "desc": "The false negative rate you will tolerate (probability of missing a real signal)"}
+        ],
+        "process": [
+          "Ask: what is the cost of a false positive (acting on noise)? If the cost is high (launching a product, changing a medication, making an investment), use alpha = 0.01. If moderate, use 0.05. If low (trying a new workout routine), 0.10 is fine.",
+          "Ask: what is the cost of a false negative (missing a real change)? If the cost is high (missing a safety issue, ignoring a disease), use beta = 0.10. If moderate, use 0.20. If low, 0.30 is acceptable.",
+          "Record the chosen levels and the reasoning. This is a judgment call, not a formula, and future reviewers need to know why you chose these values."
+        ],
+        "tags": ["statistics", "confidence"]
+      },
+      {
+        "flow_name": "sample-size-calculator",
+        "description": "Calculate the number of observations needed to detect the defined effect with the chosen confidence levels. This is the core calculation: given effect size, variance, and error tolerance, how many data points do you need before you can trust your conclusion?",
+        "inputs": [
+          {"name": "minimum-detectable-effect", "desc": "The smallest change to detect"},
+          {"name": "estimated-variance", "desc": "The standard deviation of the metric"},
+          {"name": "alpha-level", "desc": "False positive tolerance"},
+          {"name": "beta-level", "desc": "False negative tolerance"}
+        ],
+        "outputs": [
+          {"name": "required-sample-size", "desc": "The number of observations needed per group (for comparisons) or total (for trend detection)"},
+          {"name": "required-duration", "desc": "Given the current data collection rate, how long it will take to reach the required sample size"}
+        ],
+        "process": [
+          "For a two-group comparison (A/B test): n = ((z_alpha + z_beta)^2 * 2 * variance^2) / effect_size^2. Use z_alpha = 1.96 for 0.05 and z_beta = 0.84 for 0.20 as defaults.",
+          "For a single metric trend: n = ((z_alpha + z_beta)^2 * variance^2) / effect_size^2. This is the same formula without the factor of 2.",
+          "Divide the required sample size by the daily data collection rate to get the duration in days. If the duration is longer than your patience, go back and increase the minimum detectable effect (you need to care about bigger changes) or accept higher error rates."
+        ],
+        "tags": ["statistics", "sample-size"]
+      },
+      {
+        "flow_name": "data-collection-commitment",
+        "description": "Commit to the measurement plan before starting. The most common failure mode in measurement is peeking at the data before the sample size is reached and making a premature conclusion. This step locks the plan.",
+        "inputs": [
+          {"name": "required-sample-size", "desc": "How many observations you need"},
+          {"name": "required-duration", "desc": "How long the measurement will take"}
+        ],
+        "outputs": [
+          {"name": "measurement-commitment", "desc": "The locked plan: what you are measuring, the sample size, the end date, and the rule that you will not conclude anything before the end date"},
+          {"name": "interim-check-rules", "desc": "If you must check early (safety concerns), the stopping rules that account for multiple looks at the data"}
+        ],
+        "process": [
+          "Write the commitment: 'I will collect N observations over D days/weeks. I will not draw a conclusion before then. On the end date, I will evaluate the result using the pre-defined thresholds.'",
+          "If early stopping is necessary (for safety or ethical reasons), apply the Bonferroni correction: divide alpha by the number of interim looks. Two interim checks means each check uses alpha/3 instead of alpha.",
+          "Share the commitment with anyone who will see the results. This prevents the most common analysis error: 'it looked significant on Tuesday, so we stopped.'"
+        ],
+        "tags": ["statistics", "commitment"]
+      },
+      {
+        "flow_name": "conclusion-evaluator",
+        "description": "When the sample size is reached, evaluate the result. Either the signal exceeded the noise threshold (the effect is real) or it did not (the data is inconclusive or the effect does not exist at the size you cared about). There are only these two conclusions.",
+        "inputs": [
+          {"name": "measurement-commitment", "desc": "The locked plan with the pre-defined thresholds"},
+          {"name": "metric-name", "desc": "The metric being evaluated, for the final report"}
+        ],
+        "outputs": [
+          {"name": "conclusion", "desc": "Whether the effect is real (signal detected), not real (no signal at the defined effect size), or inconclusive (insufficient data despite the plan)"},
+          {"name": "measurement-report", "desc": "The full report: hypothesis, sample size, duration, observed effect, confidence interval, and conclusion"}
+        ],
+        "process": [
+          "Calculate the observed effect (the difference between the groups or the trend magnitude). Calculate the confidence interval around it.",
+          "If the confidence interval excludes zero (for a difference) or excludes the null hypothesis, the effect is real at the chosen confidence level. If it includes zero, the data does not support a conclusion that the effect exists.",
+          "Write the report: state the hypothesis, the observed result, the confidence interval, and the conclusion. Do not say 'the effect was not significant' when you mean 'we did not have enough data.' Those are different statements."
+        ],
+        "tags": ["statistics", "conclusion"]
+      }
+    ]
+  },
+  {
+    "chain_name": "pareto-analysis-engine",
+    "description": "Find the 20% of inputs producing 80% of outputs in any domain. Products, customers, activities, expenses, features, habits. Sort by output, draw the cumulative curve, and find where diminishing returns begin. Everything above the knee gets more resources. Everything below gets automated, delegated, or eliminated.",
+    "domain": "analytics",
+    "tags": ["infrastructure", "measurement", "pareto", "prioritization"],
+    "steps": [
+      {
+        "flow_name": "input-output-mapper",
+        "description": "List all inputs and measure the output each one produces. An input is anything you invest resources in (time, money, attention). An output is the result you care about (revenue, satisfaction, progress, health). The mapping must be specific: not 'marketing' but 'Google Ads, LinkedIn posts, email campaigns, trade shows, referral program.'",
+        "inputs": [
+          {"name": "domain-description", "desc": "The area to analyze (business line, personal schedule, product portfolio, customer base, etc.)"},
+          {"name": "output-metric", "desc": "The output you care about (revenue, time saved, satisfaction score, weight lost, etc.)"}
+        ],
+        "outputs": [
+          {"name": "input-list", "desc": "Every distinct input, at the most granular level available"},
+          {"name": "output-per-input", "desc": "The measured output each input produces, over the same time period"}
+        ],
+        "process": [
+          "List every input at the most specific level you can. Break categories into their components. 'Customers' becomes each customer or customer segment. 'Activities' becomes each distinct activity.",
+          "For each input, measure the output it produces. Use the same time period for all inputs. If direct measurement is not possible, estimate and mark the estimate.",
+          "Record the total output across all inputs. You will use this to calculate percentages."
+        ],
+        "tags": ["pareto", "mapping"]
+      },
+      {
+        "flow_name": "pareto-sort-and-curve",
+        "description": "Sort inputs by output descending and calculate the cumulative percentage. This is the Pareto curve: the x-axis is the percentage of inputs, the y-axis is the cumulative percentage of output. The steeper the initial curve, the more concentrated your output is.",
+        "inputs": [
+          {"name": "input-list", "desc": "All inputs"},
+          {"name": "output-per-input", "desc": "Output produced by each input"}
+        ],
+        "outputs": [
+          {"name": "sorted-inputs", "desc": "Inputs ranked from highest output to lowest, with cumulative output percentage at each row"},
+          {"name": "concentration-ratio", "desc": "The percentage of inputs producing 80% of the output (the Pareto ratio)"}
+        ],
+        "process": [
+          "Sort inputs by output descending. For each row, calculate: this input's output as a percentage of total, and the running cumulative percentage.",
+          "Find the row where the cumulative output crosses 80%. Count what percentage of inputs are above that line. That is your Pareto ratio. Classic is 20/80, but real data varies (10/90 is common, 30/70 also common).",
+          "If the ratio is close to 50/50, the distribution is even and Pareto prioritization has limited value. If it is 10/90 or more extreme, the prioritization opportunity is large."
+        ],
+        "tags": ["pareto", "analysis"]
+      },
+      {
+        "flow_name": "vital-few-identifier",
+        "description": "Name the vital few: the inputs above the knee of the curve. These are the inputs where additional investment produces disproportionate returns. They are your highest-leverage activities, customers, or products.",
+        "inputs": [
+          {"name": "sorted-inputs", "desc": "The ranked input list with cumulative percentages"},
+          {"name": "concentration-ratio", "desc": "The Pareto ratio"}
+        ],
+        "outputs": [
+          {"name": "vital-few", "desc": "The inputs above the Pareto knee, with the output each produces and the percentage of total"},
+          {"name": "trivial-many", "desc": "The inputs below the knee, with the same data"}
+        ],
+        "process": [
+          "Draw the line at the Pareto knee (where cumulative output crosses 80%). Everything above is the vital few.",
+          "For the vital few, ask: is there a common characteristic? Are they all from the same channel, the same customer type, the same time of day? The pattern in the vital few is actionable intelligence.",
+          "For the trivial many, count the total resources consumed. This is your opportunity cost: the resources spent on the 80% of inputs that produce only 20% of output."
+        ],
+        "tags": ["pareto", "prioritization"]
+      },
+      {
+        "flow_name": "resource-reallocation-plan",
+        "description": "Build a plan to shift resources from the trivial many to the vital few. This is where the analysis becomes action. The goal is not to eliminate the trivial many overnight, but to systematically redirect time, money, and attention toward the highest-output inputs.",
+        "inputs": [
+          {"name": "vital-few", "desc": "The high-output inputs"},
+          {"name": "trivial-many", "desc": "The low-output inputs with their resource consumption"}
+        ],
+        "outputs": [
+          {"name": "reallocation-plan", "desc": "For each input: keep and invest more, automate, delegate, reduce, or eliminate, with the specific resource shift"},
+          {"name": "expected-impact", "desc": "The estimated output gain from the reallocation, based on the observed concentration ratio"}
+        ],
+        "process": [
+          "For each vital few input: identify one specific way to increase investment (more time, more budget, more attention). The investment should be proportional to the output it produces.",
+          "For each trivial many input: classify as automate (replace human effort with a system), delegate (hand to someone with lower opportunity cost), reduce (do less of it), or eliminate (stop entirely).",
+          "Estimate the output gain: if you shift 20% of the resources from trivial many to vital few, and the vital few are 4x more productive per unit of resource, the net gain is 20% * 3 = 60% more output from the same total resources. This is an estimate, not a guarantee."
+        ],
+        "tags": ["pareto", "reallocation"]
+      },
+      {
+        "flow_name": "pareto-recheck-schedule",
+        "description": "Schedule the recheck. Pareto distributions shift over time. Last year's vital few may be this year's trivial many. Set a recurring recheck to re-run the analysis and adjust the reallocation.",
+        "inputs": [
+          {"name": "reallocation-plan", "desc": "The current resource allocation plan"},
+          {"name": "domain-description", "desc": "The area being analyzed, for scheduling context"}
+        ],
+        "outputs": [
+          {"name": "recheck-schedule", "desc": "When to re-run the Pareto analysis (quarterly for business, monthly for personal, annually for portfolio)"},
+          {"name": "pareto-analysis-report", "desc": "The complete analysis: input list, Pareto curve, vital few, trivial many, reallocation plan, and recheck schedule"}
+        ],
+        "process": [
+          "Set the recheck frequency based on how fast the domain changes. Fast-changing domains (marketing channels, product features) recheck quarterly. Stable domains (customer portfolio, personal habits) recheck semi-annually.",
+          "At each recheck, re-run the entire analysis from scratch. Do not assume last period's vital few are still vital. Check whether the reallocation produced the expected output gain.",
+          "If the Pareto ratio has become less extreme (closer to 50/50), the reallocation is working: you reduced the concentration by improving the former trivial many or by realizing the former vital few had a ceiling."
+        ],
+        "tags": ["pareto", "review"]
+      }
+    ]
+  },
+  {
+    "chain_name": "cohort-analysis-method",
+    "description": "Track groups over time instead of looking at aggregate averages. Aggregate averages hide everything: improving cohorts can produce a flat average if the mix shifts. This chain teaches the cohort method that reveals the trends averages obscure.",
+    "domain": "analytics",
+    "tags": ["infrastructure", "measurement", "cohort-analysis", "trends"],
+    "steps": [
+      {
+        "flow_name": "cohort-dimension-selector",
+        "description": "Choose the dimension that defines your cohorts. The cohort dimension is the thing that groups people or items by when or how they entered. Signup month, acquisition channel, product tier, hire date, habit start week. The right dimension depends on the question you are trying to answer.",
+        "inputs": [
+          {"name": "analysis-question", "desc": "The question you are trying to answer (e.g., 'is retention improving?', 'which channel produces the best customers?', 'am I getting better at this habit?')"},
+          {"name": "available-data", "desc": "What data you have, including time range and segmentation fields"}
+        ],
+        "outputs": [
+          {"name": "cohort-dimension", "desc": "The field used to group entities into cohorts (e.g., signup month, acquisition source)"},
+          {"name": "cohort-metric", "desc": "The metric tracked for each cohort over time (e.g., retention rate, lifetime value, session completion rate)"}
+        ],
+        "process": [
+          "Start with the question. 'Is retention improving?' means cohort by signup month, metric is retention. 'Which channel is best?' means cohort by acquisition channel, metric is lifetime value.",
+          "Verify you have enough data: at least 4 cohorts with at least 20 members each. Fewer than 4 cohorts cannot show a trend. Fewer than 20 members per cohort produces noisy curves.",
+          "If you have multiple candidate dimensions, pick the one most aligned with the decision you will make. If you are deciding where to spend marketing budget, cohort by channel. If you are evaluating a product change, cohort by signup month (before vs. after the change)."
+        ],
+        "tags": ["cohort-analysis", "setup"]
+      },
+      {
+        "flow_name": "cohort-table-builder",
+        "description": "Build the cohort table: rows are cohorts, columns are time periods since entry, cells are the metric value. This is the core data structure. Reading down a column shows how different cohorts compare at the same age. Reading across a row shows how one cohort evolves over time.",
+        "inputs": [
+          {"name": "cohort-dimension", "desc": "The field defining cohorts"},
+          {"name": "cohort-metric", "desc": "The metric to track per cohort"}
+        ],
+        "outputs": [
+          {"name": "cohort-table", "desc": "The table: rows = cohorts, columns = periods since entry, cells = metric value"},
+          {"name": "cohort-sizes", "desc": "The number of members in each cohort (for weighting and significance)"}
+        ],
+        "process": [
+          "Group all entities by the cohort dimension. For each cohort, calculate the metric at each time period since entry (month 0, month 1, month 2, etc.).",
+          "Record the cohort size (number of members at entry). Smaller cohorts produce noisier curves and should be interpreted with more caution.",
+          "Fill the table. Recent cohorts will have fewer columns (they have not aged as far). This is expected and correct."
+        ],
+        "tags": ["cohort-analysis", "data-structure"]
+      },
+      {
+        "flow_name": "cohort-curve-comparison",
+        "description": "Compare cohort curves to find the real trends. The aggregate average of all cohorts combined is a single number that hides everything. The cohort curves show whether each successive cohort is better, worse, or the same as the one before it.",
+        "inputs": [
+          {"name": "cohort-table", "desc": "The cohort table with metric values over time"},
+          {"name": "cohort-sizes", "desc": "The size of each cohort"}
+        ],
+        "outputs": [
+          {"name": "cohort-comparison", "desc": "For each time period: how newer cohorts compare to older ones (improving, declining, or stable)"},
+          {"name": "inflection-points", "desc": "Cohorts where the curve shape changed noticeably, indicating something happened between those cohorts"}
+        ],
+        "process": [
+          "Plot each cohort as a line on the same chart. The x-axis is time since entry. The y-axis is the metric. Each line is one cohort.",
+          "Compare the lines at the same age. At month 3, is the January cohort higher or lower than the December cohort? Is there a consistent direction across successive cohorts?",
+          "Look for inflection points: cohorts where the curve shape changes. If cohorts before March look one way and cohorts after March look different, something changed in March. That is the signal."
+        ],
+        "tags": ["cohort-analysis", "comparison"]
+      },
+      {
+        "flow_name": "cohort-insight-extractor",
+        "description": "Extract the actionable insight from the cohort comparison. The insight is not 'retention is 40%.' The insight is 'cohorts acquired after we changed the onboarding flow retain 12 percentage points better at month 3.' The first is a number. The second is a decision input.",
+        "inputs": [
+          {"name": "cohort-comparison", "desc": "How newer cohorts compare to older ones"},
+          {"name": "inflection-points", "desc": "Where the cohort curves changed shape"}
+        ],
+        "outputs": [
+          {"name": "cohort-insights", "desc": "The specific, actionable findings from the cohort analysis, with magnitudes and confidence levels"},
+          {"name": "recommended-actions", "desc": "What to do based on the findings: double down on what improved the curves, investigate what worsened them"}
+        ],
+        "process": [
+          "For each inflection point, identify what changed between the before and after cohorts. Was there a product change, a marketing shift, a process update, a seasonal effect?",
+          "Quantify the difference: how many percentage points better or worse are the post-inflection cohorts at each age? Is the difference consistent or does it converge over time?",
+          "If the change was intentional (a new onboarding flow), attribute the improvement. If unintentional, investigate. If seasonal, note it and do not attribute it to anything you did."
+        ],
+        "tags": ["cohort-analysis", "insight"]
+      },
+      {
+        "flow_name": "aggregate-vs-cohort-reconciler",
+        "description": "Reconcile the cohort findings with the aggregate numbers. When someone says 'retention is flat,' the cohort analysis may show that retention is improving but the mix is shifting toward channels with lower retention, producing a flat aggregate. The cohort view is the truth. The aggregate is the shadow.",
+        "inputs": [
+          {"name": "cohort-insights", "desc": "The findings from the cohort analysis"},
+          {"name": "analysis-question", "desc": "The original question, for framing the final answer"}
+        ],
+        "outputs": [
+          {"name": "reconciled-narrative", "desc": "The complete story: what the aggregate says, what the cohorts say, why they differ, and which one to act on"},
+          {"name": "cohort-analysis-report", "desc": "The full report: question, cohort definition, table, curves, insights, and recommended actions"}
+        ],
+        "process": [
+          "Calculate the aggregate metric (all cohorts combined). Then compare it to the cohort-level finding. If they disagree, explain why: mix shift, Simpson's paradox, or survivorship bias are the usual culprits.",
+          "State the conclusion in terms of the original question. Answer the question, do not just present data. 'Retention is improving by 3 points per cohort, masked by a shift toward lower-retention channels' is an answer.",
+          "Recommend which metric to track going forward: the aggregate (if mix is stable) or the cohort-level metric (if mix is shifting). In most cases, the cohort-level metric is the better management tool."
+        ],
+        "tags": ["cohort-analysis", "reconciliation"]
+      }
+    ]
+  },
+  {
+    "chain_name": "feedback-loop-designer",
+    "description": "Design feedback loops that actually close. A feedback loop has four components: sensor, comparator, controller, and actuator. Most 'feedback loops' are broken because one component is missing (usually the actuator). This chain maps each component explicitly, for any domain from personal habits to enterprise operations.",
+    "domain": "analytics",
+    "tags": ["infrastructure", "measurement", "feedback-loops", "control-theory"],
+    "steps": [
+      {
+        "flow_name": "system-state-sensor-design",
+        "description": "Design the sensor: the mechanism that measures the current state of the thing you want to control. The sensor must measure the right thing, at the right frequency, with enough accuracy to detect the changes you care about. A bathroom scale is a sensor. A quarterly business review is a sensor. A daily standup is a sensor.",
+        "inputs": [
+          {"name": "controlled-variable", "desc": "The thing you want to keep on target (weight, revenue, code quality, response time, etc.)"},
+          {"name": "target-value", "desc": "The desired state of the controlled variable"}
+        ],
+        "outputs": [
+          {"name": "sensor-design", "desc": "What measures the current state, how often, and with what precision"},
+          {"name": "measurement-lag", "desc": "The delay between reality changing and the sensor reflecting the change"}
+        ],
+        "process": [
+          "Identify what directly measures the controlled variable. Not a proxy, not a related metric, but the actual value. Revenue is measured by the accounting system. Weight is measured by the scale. Response time is measured by the monitoring system.",
+          "Set the measurement frequency to at least 4x the action frequency. If you can adjust weekly, measure at least twice a week. If you can adjust daily, measure daily.",
+          "Estimate the measurement lag: how long between reality changing and the sensor showing the change. Accounting revenue has a 30-day lag (invoiced vs. collected). The bathroom scale has a 1-3 day lag (water weight masks fat loss). The monitoring system has seconds of lag."
+        ],
+        "tags": ["feedback-loops", "sensor"]
+      },
+      {
+        "flow_name": "comparator-design",
+        "description": "Design the comparator: the mechanism that calculates the error between the sensor reading and the target. The comparator's job is to produce a single number: how far off are you, and in which direction. Without a comparator, you have data but no information.",
+        "inputs": [
+          {"name": "sensor-design", "desc": "How the current state is measured"},
+          {"name": "target-value", "desc": "The desired state"}
+        ],
+        "outputs": [
+          {"name": "comparator-design", "desc": "How the error is calculated: the formula, the frequency, and the output format (absolute error, percentage error, trend direction)"},
+          {"name": "error-thresholds", "desc": "The thresholds that classify the error: acceptable (within noise), concerning (investigate), critical (act now)"}
+        ],
+        "process": [
+          "Define the error formula: error = current value minus target value. Decide whether to use absolute error (how many units off) or relative error (what percentage off). Absolute is better when the target is small. Relative is better when comparing across different scales.",
+          "Set thresholds: acceptable error is within the normal noise range (1 standard deviation of historical variation). Concerning error exceeds noise but may be temporary (1.5-2 standard deviations). Critical error is clearly outside normal range (more than 2 standard deviations).",
+          "Define the comparator frequency: match it to the sensor frequency. Every time the sensor reads, the comparator calculates. The output is a single status: on track, concerning, or critical."
+        ],
+        "tags": ["feedback-loops", "comparator"]
+      },
+      {
+        "flow_name": "controller-design",
+        "description": "Design the controller: the mechanism that decides what corrective action to take based on the error signal. The controller translates 'you are 15% below target' into 'increase outbound calls by 20%' or 'reduce calorie intake by 300.' Without a controller, knowing you are off track does not help.",
+        "inputs": [
+          {"name": "comparator-design", "desc": "How the error is calculated and classified"},
+          {"name": "error-thresholds", "desc": "The thresholds for acceptable, concerning, and critical error"}
+        ],
+        "outputs": [
+          {"name": "controller-design", "desc": "For each error level: the corrective action, the expected response time, and the escalation path if the correction does not work"},
+          {"name": "correction-menu", "desc": "The menu of available corrective actions, ordered from least disruptive to most disruptive"}
+        ],
+        "process": [
+          "List all available corrective actions, from smallest to largest. For weight: skip dessert, reduce portions, add a workout, consult a dietitian. For revenue: increase outreach, run a promotion, expand to a new channel, restructure pricing.",
+          "Map each error level to a corrective action. Acceptable error: no action (the system is self-correcting within noise). Concerning error: apply the smallest corrective action. Critical error: apply a larger action and increase monitoring frequency.",
+          "Define the escalation path: if the first corrective action does not reduce the error within one measurement cycle, escalate to the next action. If two cycles pass without improvement, escalate again."
+        ],
+        "tags": ["feedback-loops", "controller"]
+      },
+      {
+        "flow_name": "actuator-design",
+        "description": "Design the actuator: the mechanism that executes the corrective action. This is where most feedback loops break. The sensor works, the comparator works, the controller decides, and then nobody does anything. The actuator is the person, process, or automation that actually changes the input.",
+        "inputs": [
+          {"name": "controller-design", "desc": "The corrective actions at each error level"},
+          {"name": "controlled-variable", "desc": "What is being controlled, for context on who can act"}
+        ],
+        "outputs": [
+          {"name": "actuator-design", "desc": "For each corrective action: who executes it, how they are notified, and the deadline for execution"},
+          {"name": "execution-verification", "desc": "How to verify the corrective action was actually taken (not just decided on)"}
+        ],
+        "process": [
+          "For each corrective action, name the specific person (not team) who executes it. If it is automated, name the system and the trigger.",
+          "Define the notification mechanism: how does the actuator learn that an action is needed? Push notification, email, dashboard alert, calendar reminder. The notification must be unavoidable within the required response time.",
+          "Define the verification: how do you know the action was taken? The actuator confirms (checkbox, log entry, commit). If the action was not taken within the deadline, the escalation path activates."
+        ],
+        "tags": ["feedback-loops", "actuator"]
+      },
+      {
+        "flow_name": "loop-stability-check",
+        "description": "Check whether the feedback loop is stable or will oscillate. A loop that overreacts to every signal produces wild swings (over-correction). A loop that underreacts misses real changes (under-correction). The goal is a loop that converges on the target.",
+        "inputs": [
+          {"name": "sensor-design", "desc": "Measurement frequency and lag"},
+          {"name": "controller-design", "desc": "Corrective action magnitudes"},
+          {"name": "measurement-lag", "desc": "Delay between reality and measurement"}
+        ],
+        "outputs": [
+          {"name": "stability-assessment", "desc": "Whether the loop will converge (stable), oscillate (unstable), or under-respond (sluggish), with the reason"},
+          {"name": "tuning-recommendations", "desc": "How to adjust the loop parameters to improve stability"}
+        ],
+        "process": [
+          "Check for over-correction risk: if the corrective action magnitude is large relative to the error, and the measurement lag is long, the loop will oscillate. You correct, the correction has not shown up in the sensor yet, so you correct again, and then both corrections hit at once.",
+          "Check for under-correction risk: if the corrective action magnitude is small relative to the error, the loop will be sluggish and may never reach the target.",
+          "The fix for oscillation is: smaller corrective actions, or longer wait times between actions (wait for the sensor to reflect the last correction before applying the next one). The fix for sluggishness is: larger corrective actions or faster measurement."
+        ],
+        "tags": ["feedback-loops", "stability"]
+      },
+      {
+        "flow_name": "feedback-loop-assembler",
+        "description": "Assemble the complete feedback loop and document it as a single operating system. The documentation includes all four components, the stability check, and the operating instructions for the person running the loop.",
+        "inputs": [
+          {"name": "sensor-design", "desc": "Measurement mechanism"},
+          {"name": "comparator-design", "desc": "Error calculation"},
+          {"name": "actuator-design", "desc": "Execution mechanism"},
+          {"name": "stability-assessment", "desc": "Whether the loop is stable"}
+        ],
+        "outputs": [
+          {"name": "feedback-loop-document", "desc": "The complete loop: sensor, comparator, controller, actuator, stability check, and operating instructions"},
+          {"name": "loop-health-metric", "desc": "How to measure whether the loop itself is working: is the error trending toward zero over time?"}
+        ],
+        "process": [
+          "Assemble the four components into a single diagram or document: sensor reads, comparator calculates error, controller selects action, actuator executes. Draw the arrows showing the flow.",
+          "Add the operating instructions: how often the loop cycles, who is responsible for each component, and what to do if a component breaks (sensor stops reporting, actuator is unavailable).",
+          "Define the meta-metric: is the loop itself working? Plot the error over time. If the error is trending toward zero, the loop is working. If it is flat or increasing, one of the four components is broken."
+        ],
+        "tags": ["feedback-loops", "assembly"]
+      }
+    ]
+  },
+  {
+    "chain_name": "dashboard-audit-method",
+    "description": "Audit an existing dashboard for usefulness. Most dashboards are graveyards of metrics nobody acts on. For each metric: when was the last time someone took action because of it? If never, remove it. A good dashboard has 5-7 metrics that drive decisions, not 40 that decorate a screen.",
+    "domain": "analytics",
+    "tags": ["infrastructure", "measurement", "dashboard", "audit"],
+    "steps": [
+      {
+        "flow_name": "dashboard-census",
+        "description": "Take a census of every metric on every dashboard in scope. Count them. The number is usually higher than anyone expects, because dashboards accumulate metrics over time and nobody removes old ones.",
+        "inputs": [
+          {"name": "dashboard-list", "desc": "The dashboards to audit (URLs, screenshots, or names)"},
+          {"name": "audience-description", "desc": "Who looks at these dashboards and what decisions they make"}
+        ],
+        "outputs": [
+          {"name": "metric-census", "desc": "Every metric on every dashboard: name, visualization type, update frequency, and which dashboard it appears on"},
+          {"name": "total-metric-count", "desc": "The total number of metrics across all dashboards"}
+        ],
+        "process": [
+          "Walk through each dashboard and list every metric, chart, number, gauge, and table. Count each distinct data point as one metric. A chart with 5 series counts as 5 metrics.",
+          "Record the visualization type (line chart, bar chart, number, gauge, table, pie chart) and the update frequency (real-time, daily, weekly, monthly) for each.",
+          "Sum the total. If it exceeds 20 metrics per decision-maker, the dashboards are almost certainly carrying dead weight."
+        ],
+        "tags": ["dashboard", "census"]
+      },
+      {
+        "flow_name": "last-action-test",
+        "description": "For each metric, ask the last-action question: when was the last time someone took a specific action because this metric changed? Not discussed it, not noticed it, but actually did something different. This single question eliminates most dashboard metrics.",
+        "inputs": [
+          {"name": "metric-census", "desc": "All metrics from the census"},
+          {"name": "audience-description", "desc": "Who looks at these dashboards"}
+        ],
+        "outputs": [
+          {"name": "action-linked-metrics", "desc": "Metrics where someone took action in the last 90 days because of the metric's value"},
+          {"name": "no-action-metrics", "desc": "Metrics where no one can name a specific action taken because of the metric"}
+        ],
+        "process": [
+          "For each metric, ask the dashboard audience: in the last 90 days, did you change what you were doing because of this number? If yes, document the action. If no, mark it as no-action.",
+          "Be strict. 'I looked at it' is not an action. 'I mentioned it in a meeting' is not an action. An action is: I changed a plan, allocated a resource, started or stopped something, or escalated an issue.",
+          "If the audience cannot remember whether they acted on a metric, that is a no. A metric that drives action is memorable."
+        ],
+        "tags": ["dashboard", "audit"]
+      },
+      {
+        "flow_name": "frequency-match-check",
+        "description": "For surviving metrics, check whether the update frequency matches the decision frequency. A metric that updates daily on a dashboard reviewed monthly wastes 29 out of 30 updates. A metric that updates monthly on a dashboard checked daily creates 29 days of stale information per cycle.",
+        "inputs": [
+          {"name": "action-linked-metrics", "desc": "Metrics that passed the last-action test"}
+        ],
+        "outputs": [
+          {"name": "frequency-matched", "desc": "Metrics where the update frequency is within 2x of the decision frequency"},
+          {"name": "frequency-mismatched", "desc": "Metrics where the update and decision frequencies are misaligned, with the recommended adjustment"}
+        ],
+        "process": [
+          "For each metric, determine the decision frequency: how often does someone make or adjust a decision based on this number? Daily decisions need daily (or faster) data. Weekly decisions need weekly data.",
+          "Compare to the update frequency. If the metric updates 4x faster than the decision frequency, it is over-updating (creating noise). If it updates slower, it is under-updating (the decision-maker is looking at stale data).",
+          "Recommend the adjustment: change the update frequency to match the decision frequency, or if that is not possible, add a note on the dashboard showing the data freshness."
+        ],
+        "tags": ["dashboard", "frequency"]
+      },
+      {
+        "flow_name": "visualization-fitness-review",
+        "description": "Check whether each visualization type matches the question the metric answers. Lines show trends over time. Bars compare categories. Numbers show current state. Pie charts almost never show anything useful. Using the wrong visualization makes the data harder to read, not easier.",
+        "inputs": [
+          {"name": "frequency-matched", "desc": "Metrics with correct update frequency"}
+        ],
+        "outputs": [
+          {"name": "visualization-assessment", "desc": "For each metric: whether the current visualization type matches the analytical question, and the recommended change if not"},
+          {"name": "layout-recommendations", "desc": "How to arrange the surviving metrics on the dashboard for readability"}
+        ],
+        "process": [
+          "For each metric, identify the question it answers: 'what is the current value?' (use a number or gauge), 'how has it changed over time?' (use a line chart), 'how do categories compare?' (use a bar chart), 'what is the distribution?' (use a histogram).",
+          "Flag pie charts. In almost every case, a bar chart conveys the same information more accurately because humans compare lengths better than angles.",
+          "Arrange the layout: the most important metric (the one with the most action history) goes top-left. Group related metrics together. Leave white space between groups."
+        ],
+        "tags": ["dashboard", "visualization"]
+      },
+      {
+        "flow_name": "dashboard-rebuild-plan",
+        "description": "Produce the rebuild plan: the surviving metrics, their visualizations, their layout, and the metrics that were removed. The rebuilt dashboard will be smaller, faster to read, and every number on it will be connected to a decision.",
+        "inputs": [
+          {"name": "visualization-assessment", "desc": "The surviving metrics with their recommended visualizations"},
+          {"name": "no-action-metrics", "desc": "The metrics being removed"},
+          {"name": "layout-recommendations", "desc": "How to arrange the dashboard"}
+        ],
+        "outputs": [
+          {"name": "dashboard-rebuild-spec", "desc": "The specification for the rebuilt dashboard: which metrics, which visualizations, which layout, and the action protocol for each metric"},
+          {"name": "removed-metrics-archive", "desc": "The metrics removed, with the reason, archived in case someone asks about them later"}
+        ],
+        "process": [
+          "Write the rebuild spec: for each metric, state the name, the question it answers, the visualization type, the update frequency, and the action triggered when it moves.",
+          "Archive the removed metrics with the reason: 'no action taken in 90+ days,' 'frequency mismatched and not adjustable,' or 'redundant with another metric.'",
+          "Set a review date (90 days) to check whether the rebuilt dashboard is being used as designed. If metrics are being added back, require them to pass the last-action test before they go on."
+        ],
+        "tags": ["dashboard", "rebuild"]
+      }
+    ]
+  },
+  {
+    "chain_name": "anomaly-detection-designer",
+    "description": "Build a system that spots unusual patterns without generating false alarms. Define the baseline from history, set detection thresholds using standard deviations, choose between static and dynamic baselines, and configure cool-down periods. Works for server metrics, financial data, health tracking, or any time series.",
+    "domain": "analytics",
+    "tags": ["infrastructure", "measurement", "anomaly-detection", "alerting"],
+    "steps": [
+      {
+        "flow_name": "baseline-profiler",
+        "description": "Build the baseline: the normal range of the metric using historical data. The baseline is what 'normal' looks like, so that 'unusual' can be defined as 'not normal.' Without a baseline, every fluctuation looks like an anomaly.",
+        "inputs": [
+          {"name": "metric-to-monitor", "desc": "The metric you want anomaly detection on (response time, daily revenue, heart rate, error count, etc.)"},
+          {"name": "historical-data-range", "desc": "How much historical data is available (e.g., 90 days of daily values)"}
+        ],
+        "outputs": [
+          {"name": "baseline-profile", "desc": "The mean, standard deviation, and shape of the metric's normal distribution, broken down by any relevant segments (day of week, hour, season)"},
+          {"name": "baseline-quality", "desc": "Whether the baseline is strong (60+ data points, stable distribution) or weak (fewer data points, shifting distribution)"}
+        ],
+        "process": [
+          "Calculate the mean and standard deviation of the metric over the historical period. Plot the distribution to check whether it is roughly normal, skewed, or bimodal.",
+          "Check for patterns: does the metric vary by day of week, time of day, or season? If so, build separate baselines for each segment. Monday's normal is not Saturday's normal.",
+          "Assess baseline quality: 60+ data points with a stable mean is strong. 20-59 points is moderate (widen thresholds by 20%). Fewer than 20 points is weak (use provisional thresholds and commit to recalibrating after 60 points)."
+        ],
+        "tags": ["anomaly-detection", "baseline"]
+      },
+      {
+        "flow_name": "threshold-type-selector",
+        "description": "Choose between static thresholds (fixed boundaries) and dynamic thresholds (moving boundaries that adapt to trends). Static works for metrics with a stable mean. Dynamic works for metrics that trend upward or downward, or that have strong seasonality.",
+        "inputs": [
+          {"name": "baseline-profile", "desc": "The baseline statistics and distribution shape"},
+          {"name": "baseline-quality", "desc": "How strong the baseline is"}
+        ],
+        "outputs": [
+          {"name": "threshold-type", "desc": "Static (fixed boundaries) or dynamic (moving boundaries), with the rationale"},
+          {"name": "threshold-parameters", "desc": "For static: the fixed upper and lower bounds. For dynamic: the window size, the recalculation frequency, and the deviation multiplier"}
+        ],
+        "process": [
+          "Check whether the metric's mean is stable over time. If the mean has shifted by more than 1 standard deviation over the historical period, the metric has a trend and static thresholds will either fire constantly (trend moves away from baseline) or never fire (trend moves toward baseline).",
+          "For stable metrics: use static thresholds set at the mean plus or minus N standard deviations. 2 sigma catches 5% false positive rate. 3 sigma catches 0.3%.",
+          "For trending or seasonal metrics: use dynamic thresholds with a rolling window (last 30 days). Recalculate the mean and standard deviation at each measurement interval. The thresholds move with the metric's natural evolution."
+        ],
+        "tags": ["anomaly-detection", "thresholds"]
+      },
+      {
+        "flow_name": "sensitivity-calibrator",
+        "description": "Set the sensitivity: how many standard deviations from the baseline triggers an alert. Tighter thresholds catch more anomalies but generate more false positives. Looser thresholds miss subtle anomalies but avoid alert fatigue. The right sensitivity depends on the cost of missing an anomaly versus the cost of a false alarm.",
+        "inputs": [
+          {"name": "threshold-type", "desc": "Static or dynamic"},
+          {"name": "metric-to-monitor", "desc": "The metric, for context on the cost of errors"}
+        ],
+        "outputs": [
+          {"name": "sensitivity-level", "desc": "The number of standard deviations for the alert threshold (e.g., 2.0, 2.5, 3.0)"},
+          {"name": "expected-false-positive-rate", "desc": "How often the system will fire on normal data at this sensitivity"}
+        ],
+        "process": [
+          "Assess the cost of a missed anomaly (false negative). For safety-critical metrics (medical, infrastructure), set tight thresholds (2 sigma, accepting 5% false positives). For business metrics, use moderate thresholds (2.5 sigma, about 1.2% false positives). For informational metrics, use loose thresholds (3 sigma, 0.3%).",
+          "Assess the cost of a false alarm. If each alert requires a human to investigate, false alarms are expensive and should be minimized. If alerts are logged for batch review, a higher false positive rate is tolerable.",
+          "Calculate the expected false positive rate: at 2 sigma, expect 1 false alarm per 20 measurements. At 3 sigma, expect 1 per 370 measurements. At the chosen sensitivity, compute the number of false alarms per week or month given the measurement frequency."
+        ],
+        "tags": ["anomaly-detection", "sensitivity"]
+      },
+      {
+        "flow_name": "cooldown-and-dedup-config",
+        "description": "Configure the cool-down period to prevent alert storms. When an anomaly persists, the system should fire once and suppress duplicates until the anomaly resolves or a new, different anomaly occurs. Without cool-down, a single outage generates an alert every measurement interval.",
+        "inputs": [
+          {"name": "sensitivity-level", "desc": "The alert threshold in standard deviations"},
+          {"name": "threshold-parameters", "desc": "The measurement frequency and threshold configuration"}
+        ],
+        "outputs": [
+          {"name": "cooldown-config", "desc": "How long to suppress repeat alerts after the first firing (e.g., 1 hour, 1 day), and the conditions that reset the cool-down"},
+          {"name": "dedup-rules", "desc": "How to group related anomalies into a single incident rather than separate alerts"}
+        ],
+        "process": [
+          "Set the cool-down period to the expected resolution time for a typical anomaly. If most anomalies resolve within 1 hour, set cool-down to 1 hour. If they take a day, set it to 1 day.",
+          "Define the reset condition: the cool-down resets when the metric returns to the normal range for at least 2 consecutive measurements. This prevents premature reset from a brief dip back to normal.",
+          "Define deduplication: if two metrics anomaly-fire within the same cool-down window and share a likely root cause (same system, same customer, same time), group them into one incident."
+        ],
+        "tags": ["anomaly-detection", "cooldown"]
+      },
+      {
+        "flow_name": "anomaly-response-protocol",
+        "description": "Define what happens when an anomaly fires. The detection system identifies the anomaly. The response protocol determines what to do about it. Without a response protocol, anomaly detection is a notification, not a system.",
+        "inputs": [
+          {"name": "cooldown-config", "desc": "How alerts are suppressed and grouped"},
+          {"name": "metric-to-monitor", "desc": "The metric, for context on who should respond"}
+        ],
+        "outputs": [
+          {"name": "response-protocol", "desc": "Who is notified, through what channel, and what diagnostic steps they take first"},
+          {"name": "anomaly-detection-system", "desc": "The complete system: baseline, thresholds, sensitivity, cool-down, and response protocol, ready to operate"}
+        ],
+        "process": [
+          "Define the notification: who receives the alert, through what channel (email, SMS, Slack, pager), and the message format (metric name, current value, baseline value, deviation magnitude).",
+          "Define the first diagnostic step: is this a real anomaly or a data quality issue? Check the data source for collection errors, delayed data, or double-counting before investigating the metric itself.",
+          "Define the escalation: if the anomaly persists after the cool-down period and the first diagnostic step did not explain it, who gets the escalation, and what additional resources are available?"
+        ],
+        "tags": ["anomaly-detection", "response"]
+      }
+    ]
+  },
+  {
+    "chain_name": "experiment-design-framework",
+    "description": "Design an experiment (A/B test, habit trial, process change) that will produce a conclusive result. Define the hypothesis, calculate the sample size, set the runtime before starting, and commit to not peeking. This prevents the most common experiment failure: declaring victory too early on noisy data.",
+    "domain": "analytics",
+    "tags": ["infrastructure", "measurement", "experimentation", "ab-testing"],
+    "steps": [
+      {
+        "flow_name": "hypothesis-formulator",
+        "description": "Write the hypothesis as a specific, falsifiable prediction. 'This will improve things' is not a hypothesis. 'Changing the button color from gray to green will increase click-through rate from 3.2% to at least 3.8%' is. The specificity forces you to commit to what you expect before you see the data.",
+        "inputs": [
+          {"name": "experiment-idea", "desc": "The change you want to test, in your own words"},
+          {"name": "current-metric-value", "desc": "The current value of the metric you expect to change"}
+        ],
+        "outputs": [
+          {"name": "hypothesis-statement", "desc": "The specific, falsifiable prediction: if we do X, metric Y will change from A to at least B"},
+          {"name": "null-hypothesis", "desc": "The opposite: the change has no effect, and the metric stays at A"}
+        ],
+        "process": [
+          "Extract the independent variable (what you are changing) and the dependent variable (what you expect to move). If you cannot name both, the idea is not ready to test.",
+          "State the hypothesis in the form: 'If [change], then [metric] will [direction] from [baseline] to at least [target].' The target must be a specific number, not 'better.'",
+          "State the null hypothesis: 'The change has no effect on [metric], which will remain at [baseline] within normal variation.' The experiment's job is to reject the null, not to confirm the hypothesis."
+        ],
+        "tags": ["experimentation", "hypothesis"]
+      },
+      {
+        "flow_name": "experiment-sample-sizer",
+        "description": "Calculate how many observations (users, days, trials) you need for a conclusive result. This number depends on the effect size, the baseline variance, and your error tolerance. Running the experiment for fewer observations than this number guarantees an inconclusive result.",
+        "inputs": [
+          {"name": "hypothesis-statement", "desc": "The specific prediction with baseline and target values"},
+          {"name": "current-metric-value", "desc": "The baseline for variance estimation"}
+        ],
+        "outputs": [
+          {"name": "required-observations", "desc": "The number of observations per group (or total, for a before/after design)"},
+          {"name": "estimated-runtime", "desc": "How many days or weeks to reach the required observations at the current traffic or activity rate"}
+        ],
+        "process": [
+          "Calculate the effect size: the difference between the target and the baseline, divided by the standard deviation. If you do not have the standard deviation, estimate the plausible range and divide by 4.",
+          "Use the standard formula: n = ((1.96 + 0.84)^2 * 2 * variance) / effect_size^2 for a two-group test at 95% confidence and 80% power. Adjust the z-scores if you chose different error tolerances.",
+          "Divide by the daily observation rate to get the runtime. If the runtime is longer than your patience allows, either increase the effect size (care about bigger changes) or accept lower confidence."
+        ],
+        "tags": ["experimentation", "sample-size"]
+      },
+      {
+        "flow_name": "experiment-controls-designer",
+        "description": "Identify and control for confounding variables: things that could change the metric besides your experimental change. If you change the button color on the same day you launch a sale, you cannot attribute the click-through change to the button. The sale is a confound.",
+        "inputs": [
+          {"name": "hypothesis-statement", "desc": "What you are testing"},
+          {"name": "estimated-runtime", "desc": "How long the experiment will run"}
+        ],
+        "outputs": [
+          {"name": "confound-list", "desc": "Variables that could affect the metric during the experiment, with the control strategy for each"},
+          {"name": "experiment-design", "desc": "The design type (A/B split, before/after, crossover) chosen to minimize confounding"}
+        ],
+        "process": [
+          "List everything else that might change the metric during the runtime: seasonal effects, marketing campaigns, product changes, holidays, competitor actions, personal schedule changes.",
+          "For each confound, choose a control strategy: hold constant (do not change anything else during the experiment), measure and adjust (track the confound and subtract its effect), or randomize (A/B split so confounds affect both groups equally).",
+          "Choose the experiment design: A/B split (two groups, same time period, strongest control), before/after (one group, two time periods, weaker control but simpler), or crossover (each group gets both conditions, strongest for individual-level effects)."
+        ],
+        "tags": ["experimentation", "controls"]
+      },
+      {
+        "flow_name": "peeking-prevention-protocol",
+        "description": "Set the rules for when you are allowed to look at the results. The most common experiment failure is peeking at the data before the sample size is reached and stopping when it looks good. This inflates the false positive rate from 5% to as high as 30%.",
+        "inputs": [
+          {"name": "required-observations", "desc": "How many observations are needed"},
+          {"name": "estimated-runtime", "desc": "How long the experiment runs"}
+        ],
+        "outputs": [
+          {"name": "analysis-schedule", "desc": "The specific date (or observation count) when the results will be analyzed, and the rule that no conclusions are drawn before then"},
+          {"name": "early-stopping-rules", "desc": "If early stopping is necessary (safety or ethics), the corrected thresholds that account for multiple looks"}
+        ],
+        "process": [
+          "Set the analysis date: the date when the required sample size will be reached. Write it down. Commit to not looking at the metric comparison before this date.",
+          "If you must look early (safety monitoring, ethical concerns), apply a correction: divide alpha by the number of planned looks (Bonferroni) or use a sequential testing framework (alpha spending function). Two looks means each look uses alpha/3 (stricter than alpha/2 due to correlation).",
+          "Remove access to the comparison data during the experiment if possible. If not possible, assign a different person to monitor for safety issues, and keep the experimenter blinded."
+        ],
+        "tags": ["experimentation", "peeking"]
+      },
+      {
+        "flow_name": "result-analyzer",
+        "description": "On the analysis date, evaluate the result. There are three possible conclusions: the effect is real (reject the null), the effect is not detectable at this size (fail to reject the null), or the data is insufficient (the experiment failed logistically). State the conclusion clearly.",
+        "inputs": [
+          {"name": "hypothesis-statement", "desc": "The prediction"},
+          {"name": "analysis-schedule", "desc": "The pre-committed analysis plan"}
+        ],
+        "outputs": [
+          {"name": "experiment-result", "desc": "The observed effect, the confidence interval, the p-value, and the conclusion (real effect, no effect, or inconclusive)"},
+          {"name": "decision-recommendation", "desc": "Based on the result: implement the change, do not implement, or run a larger experiment"}
+        ],
+        "process": [
+          "Calculate the observed effect (difference between test and control, or before and after). Calculate the 95% confidence interval around the effect.",
+          "If the confidence interval does not include zero, the effect is statistically significant at the chosen alpha level. If it does include zero, the data does not support the hypothesis at this sample size.",
+          "State the practical significance: even if statistically significant, is the observed effect large enough to matter? A 0.1% increase in click-through rate may be statistically real but not worth implementing."
+        ],
+        "tags": ["experimentation", "analysis"]
+      },
+      {
+        "flow_name": "experiment-learnings-recorder",
+        "description": "Record what you learned, whether the experiment succeeded or failed. Failed experiments are not wasted experiments if you learned something. Record the hypothesis, the result, and the next question. This builds an experiment history that prevents you from re-running the same tests.",
+        "inputs": [
+          {"name": "experiment-result", "desc": "The conclusion of the experiment"},
+          {"name": "experiment-idea", "desc": "The original idea, for recording the full lifecycle"}
+        ],
+        "outputs": [
+          {"name": "experiment-record", "desc": "The permanent record: hypothesis, design, sample size, runtime, result, confidence interval, and the next question it raises"},
+          {"name": "experiment-portfolio", "desc": "Updated log of all experiments run, with win/loss/inconclusive counts and cumulative learning"}
+        ],
+        "process": [
+          "Write the experiment record: what was tested, what was expected, what was observed, what was concluded, and what question this raises next.",
+          "If the experiment succeeded: what does the effect size tell you about the mechanism? Can you extend it to other areas?",
+          "If the experiment failed: was the hypothesis wrong (the change does not work), or was the experiment underpowered (the change might work but the sample was too small to detect it)? These are different outcomes with different next steps."
+        ],
+        "tags": ["experimentation", "learning"]
+      }
+    ]
+  },
+  {
+    "chain_name": "measurement-debt-audit",
+    "description": "Audit what you measure versus what you should measure. Find the metrics nobody uses (measurement debt, costing effort for no return) and the goals with no metric (blind spots, where you are flying without instruments). Kill the debt. Fill the gaps.",
+    "domain": "analytics",
+    "tags": ["infrastructure", "measurement", "audit", "debt"],
+    "steps": [
+      {
+        "flow_name": "measurement-inventory-builder",
+        "description": "List every metric currently tracked, across all systems. Include formal metrics (dashboards, reports) and informal ones (the number someone checks in a spreadsheet, the thing you mentally track). The goal is a complete picture of what is being measured.",
+        "inputs": [
+          {"name": "scope-description", "desc": "The team, project, business, or personal area to audit"},
+          {"name": "data-sources", "desc": "All systems, tools, dashboards, and spreadsheets that contain metrics"}
+        ],
+        "outputs": [
+          {"name": "measurement-inventory", "desc": "Every metric tracked: name, source, update frequency, collection method, and collection cost (time or money to maintain)"},
+          {"name": "total-measurement-cost", "desc": "The aggregate cost (time and money) of maintaining all current measurements"}
+        ],
+        "process": [
+          "Walk through every dashboard, report, spreadsheet, and tracking tool. List every metric, KPI, or number that is tracked on a recurring basis.",
+          "For each metric, estimate the collection cost: how much time or money does it take to keep this metric updated? Include the time to collect, clean, calculate, and review the data.",
+          "Sum the total measurement cost. This number is usually surprisingly high and motivates the audit."
+        ],
+        "tags": ["measurement", "inventory"]
+      },
+      {
+        "flow_name": "three-question-scorer",
+        "description": "Score each metric on three questions. Usage: does anyone look at it? Actionability: does anyone act on it? Relevance: does it align with a current goal? A metric that scores zero on all three is pure debt.",
+        "inputs": [
+          {"name": "measurement-inventory", "desc": "All tracked metrics with their details"}
+        ],
+        "outputs": [
+          {"name": "scored-metrics", "desc": "Each metric with its usage, actionability, and relevance scores (0 or 1 for each)"},
+          {"name": "debt-candidates", "desc": "Metrics scoring 0 on all three questions, identified as measurement debt"}
+        ],
+        "process": [
+          "Usage: has anyone looked at this metric in the last 30 days? Check access logs, meeting agendas, or ask the team. If no one has looked at it, score 0.",
+          "Actionability: in the last 90 days, did anyone change a plan, allocate a resource, or start/stop something because of this metric? If no, score 0.",
+          "Relevance: does this metric align with a current goal, OKR, priority, or personal objective? If it tracks something that was a priority 6 months ago but is not anymore, score 0."
+        ],
+        "tags": ["measurement", "scoring"]
+      },
+      {
+        "flow_name": "measurement-debt-eliminator",
+        "description": "For metrics scoring zero on all three questions, decide: retire (stop collecting) or convert (give it an action link to make it useful). The default is retire. The burden of proof is on keeping a metric, not on removing it.",
+        "inputs": [
+          {"name": "debt-candidates", "desc": "Metrics with zero scores across all three questions"}
+        ],
+        "outputs": [
+          {"name": "retired-metrics", "desc": "Metrics to stop tracking, with the reason and the estimated cost saved"},
+          {"name": "converted-metrics", "desc": "Metrics given a new action link and a 90-day probation period to prove their value"}
+        ],
+        "process": [
+          "For each debt candidate, ask one final question: if we stop tracking this, is there a plausible scenario where we would regret it? Be specific. 'We might need it someday' is not a scenario.",
+          "If no plausible regret scenario exists, retire the metric. Calculate the cost saved (collection time, system resources, attention).",
+          "If a plausible scenario exists, do not keep the metric as-is. Instead, give it an action link (define what action would be taken if it moved) and put it on 90-day probation. If no one acts on it in 90 days, retire it."
+        ],
+        "tags": ["measurement", "debt-elimination"]
+      },
+      {
+        "flow_name": "blind-spot-finder",
+        "description": "List your current goals, priorities, and objectives. For each, check whether a metric tracks progress toward it. Goals without metrics are blind spots: you are committed to an outcome but have no way to know whether you are making progress.",
+        "inputs": [
+          {"name": "scope-description", "desc": "The area being audited, for pulling the current goals"},
+          {"name": "scored-metrics", "desc": "The surviving metrics, for matching against goals"}
+        ],
+        "outputs": [
+          {"name": "measured-goals", "desc": "Goals that have at least one metric tracking progress"},
+          {"name": "unmeasured-goals", "desc": "Goals with no metric, identified as blind spots"}
+        ],
+        "process": [
+          "List every current goal, priority, or objective for the scope. Include formal ones (OKRs, business plan targets) and informal ones (personal goals, team aspirations).",
+          "For each goal, check: is there at least one metric in the surviving inventory that tracks progress toward this goal? If yes, link them. If no, mark it as a blind spot.",
+          "Rank the blind spots by importance: which unmeasured goals carry the highest consequences if they silently go off track?"
+        ],
+        "tags": ["measurement", "blind-spots"]
+      },
+      {
+        "flow_name": "gap-metric-designer",
+        "description": "For each blind spot, design the metric that should exist. The metric does not need to be perfect. A rough weekly estimate is better than no measurement at all. The goal is to move from 'flying blind' to 'flying with instruments, even if the instruments are imprecise.'",
+        "inputs": [
+          {"name": "unmeasured-goals", "desc": "Goals with no tracking metric"},
+          {"name": "total-measurement-cost", "desc": "The current cost of measurement, to budget the new metrics"}
+        ],
+        "outputs": [
+          {"name": "new-metrics", "desc": "For each blind spot: the metric name, collection method, update frequency, target value, and action protocol"},
+          {"name": "measurement-budget", "desc": "The total cost of the new metrics, funded by the savings from retiring debt metrics"}
+        ],
+        "process": [
+          "For each blind spot, ask: what is the simplest number that would tell you whether you are making progress? Not the ideal metric, but the minimum viable measurement. A weekly manual estimate is acceptable.",
+          "Define the collection method (automated pull, manual entry, proxy metric), the frequency (weekly minimum), and the target value.",
+          "Fund the new metrics from the savings of retiring debt metrics. If the new metrics cost more than the savings, prioritize by blind spot importance and defer the rest."
+        ],
+        "tags": ["measurement", "gap-filling"]
+      },
+      {
+        "flow_name": "measurement-portfolio-rebalancer",
+        "description": "Assemble the rebalanced measurement portfolio: the surviving old metrics, the new gap-filling metrics, and the retired debt metrics. The result is a measurement system that tracks what matters, ignores what does not, and has no blind spots on current goals.",
+        "inputs": [
+          {"name": "scored-metrics", "desc": "Surviving old metrics"},
+          {"name": "new-metrics", "desc": "Gap-filling metrics for blind spots"},
+          {"name": "retired-metrics", "desc": "Debt metrics being stopped"}
+        ],
+        "outputs": [
+          {"name": "rebalanced-portfolio", "desc": "The complete measurement portfolio: every active metric with its source, frequency, target, and action protocol"},
+          {"name": "audit-report", "desc": "The full audit report: what was tracked, what was retired (with savings), what was added (with cost), and the net change in measurement quality"}
+        ],
+        "process": [
+          "Combine the surviving metrics and the new metrics into a single portfolio. For each metric: name, source, frequency, target, action protocol, owner.",
+          "Calculate the net change: metrics removed, metrics added, cost saved, cost added, blind spots closed. A good audit reduces total metrics while increasing coverage of current goals.",
+          "Schedule the next audit (quarterly for fast-changing areas, semi-annually for stable ones). Measurement portfolios drift over time as goals change and metrics accumulate."
+        ],
+        "tags": ["measurement", "portfolio"]
+      }
+    ]
+  }
+]

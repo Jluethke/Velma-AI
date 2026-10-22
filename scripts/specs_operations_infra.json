@@ -1,0 +1,1127 @@
+[
+  {
+    "chain_name": "upstream-intervention-design",
+    "description": "Trace a recurring problem to the point furthest upstream where a small change prevents it, then design and sequence the intervention. Uses the Five Whys to build the causal chain, scores prevention leverage at each level, and chooses the highest-leverage point rather than the most visible symptom. The highest-leverage intervention usually sits three to four levels above the symptom.",
+    "domain": "operations",
+    "tags": ["operations", "infrastructure", "systems-thinking", "methodology", "root-cause"],
+    "steps": [
+      {
+        "flow_name": "problem-symptom-capture",
+        "description": "State the recurring problem as an observable symptom with evidence of how often it happens. A symptom stated as a feeling or an opinion cannot be traced; a symptom stated as a countable event can.",
+        "inputs": [
+          {"name": "recurring-problem", "desc": "The problem that keeps happening, in plain language"},
+          {"name": "observation-context", "desc": "Where and when the problem shows up"}
+        ],
+        "outputs": [
+          {"name": "symptom-statement", "desc": "The problem restated as one observable, countable event"},
+          {"name": "occurrence-evidence", "desc": "How often the symptom occurred over a recent window"}
+        ],
+        "process": [
+          "Rewrite the problem as a single observable event, not a judgment. Replace 'quality is bad' with 'three defects per hundred units reached the customer last month'.",
+          "Record how often the symptom happened over a recent, bounded window so later steps measure against a real rate.",
+          "Name where in the process the symptom first becomes visible, which is almost never where it is caused.",
+          "Confirm the symptom is specific enough that two people watching the same process would count it the same way."
+        ]
+      },
+      {
+        "flow_name": "five-whys-causal-chain",
+        "description": "Build the causal chain by asking why the symptom happens, then why that happens, down to the point where the next why leaves the span of control. Each answer must be a cause that, if removed, would stop the one above it.",
+        "inputs": [
+          {"name": "symptom-statement", "desc": "The observable symptom to trace"},
+          {"name": "occurrence-evidence", "desc": "How often the symptom occurs"}
+        ],
+        "outputs": [
+          {"name": "causal-chain", "desc": "Ordered chain of causes from symptom down to root"},
+          {"name": "root-cause-candidates", "desc": "The lowest causes that still sit inside the span of control"}
+        ],
+        "process": [
+          "Ask why the symptom happens and write a cause that would, if removed, stop the symptom.",
+          "Ask why that cause happens and repeat, keeping each link a true cause rather than a restatement of the one above.",
+          "Stop when the next why leaves your span of control or when answers start to loop.",
+          "Mark the one or two lowest causes still inside your control as root-cause candidates."
+        ]
+      },
+      {
+        "flow_name": "causal-level-leverage-scoring",
+        "description": "Score each level of the causal chain for prevention leverage: how many downstream symptoms it would stop and how durable the fix would be. Intervening near the top treats one instance; intervening near the root treats the class.",
+        "inputs": [
+          {"name": "causal-chain", "desc": "Ordered chain of causes"},
+          {"name": "root-cause-candidates", "desc": "The lowest in-control causes"}
+        ],
+        "outputs": [
+          {"name": "leverage-scored-levels", "desc": "Each causal level with a prevention-leverage score"},
+          {"name": "highest-leverage-level", "desc": "The level where one change prevents the most recurrence"}
+        ],
+        "process": [
+          "For each level, estimate how many downstream occurrences a fix at that level would prevent.",
+          "Estimate how durable a fix would be at each level, favoring causes that do not drift back over time.",
+          "Score each level on reach times durability, so a narrow permanent fix can beat a broad temporary one.",
+          "Select the level with the highest score as the intervention target, which is usually several levels above the root and above the symptom."
+        ]
+      },
+      {
+        "flow_name": "upstream-intervention-options",
+        "description": "Generate concrete interventions at the chosen leverage level and state the mechanism by which each one prevents the downstream symptom. An intervention with no stated mechanism is a hope, not a design.",
+        "inputs": [
+          {"name": "leverage-scored-levels", "desc": "Causal levels with leverage scores"},
+          {"name": "highest-leverage-level", "desc": "The target level for intervention"}
+        ],
+        "outputs": [
+          {"name": "intervention-options", "desc": "Candidate changes at the target level"},
+          {"name": "prevention-mechanism", "desc": "How each option breaks the causal link to the symptom"}
+        ],
+        "process": [
+          "Generate several distinct interventions that act at the target level, not at the symptom.",
+          "For each one, write the mechanism: the exact causal link it removes or weakens.",
+          "Discard any option whose mechanism is really just added inspection or added effort downstream.",
+          "Keep options that change the condition that produced the cause, so the symptom cannot form."
+        ]
+      },
+      {
+        "flow_name": "downstream-effect-check",
+        "description": "Walk each intervention forward through the causal chain to confirm it actually prevents the original symptom and to surface side effects it may create elsewhere. A fix that moves the problem is not a fix.",
+        "inputs": [
+          {"name": "intervention-options", "desc": "Candidate interventions"},
+          {"name": "prevention-mechanism", "desc": "Stated mechanism for each"}
+        ],
+        "outputs": [
+          {"name": "prevented-symptoms", "desc": "Downstream symptoms each intervention stops"},
+          {"name": "side-effect-watchlist", "desc": "New risks or shifted load each intervention may create"}
+        ],
+        "process": [
+          "Trace each intervention forward and confirm the original symptom can no longer form by that path.",
+          "List any other symptoms the same change prevents, which raises its value.",
+          "List any new load or risk the change pushes onto another part of the system.",
+          "Flag interventions that only relocate the symptom rather than removing its cause."
+        ]
+      },
+      {
+        "flow_name": "intervention-feasibility-filter",
+        "description": "Filter the surviving interventions by what you can actually control and afford. The best leverage point is worthless if the change sits outside your authority or costs more than the recurrence it prevents.",
+        "inputs": [
+          {"name": "intervention-options", "desc": "Candidate interventions"},
+          {"name": "prevented-symptoms", "desc": "Symptoms each prevents"},
+          {"name": "side-effect-watchlist", "desc": "Side effects to weigh"}
+        ],
+        "outputs": [
+          {"name": "feasible-interventions", "desc": "Interventions inside your control and worth their cost"},
+          {"name": "feasibility-notes", "desc": "Why each kept option is controllable and affordable"}
+        ],
+        "process": [
+          "Drop any intervention that requires authority or access you do not have and cannot get.",
+          "Compare each intervention's cost against the cost of the recurrence it prevents over a year.",
+          "Weigh side effects against prevented symptoms and keep only net-positive options.",
+          "Record for each survivor why it is both controllable and worth the cost."
+        ]
+      },
+      {
+        "flow_name": "upstream-rollout-plan",
+        "description": "Sequence the chosen intervention with a verification checkpoint that measures the symptom rate after the change. Prevention is only proven when the downstream symptom count falls, not when the change is deployed.",
+        "inputs": [
+          {"name": "feasible-interventions", "desc": "The interventions to roll out"},
+          {"name": "feasibility-notes", "desc": "Control and cost notes"}
+        ],
+        "outputs": [
+          {"name": "rollout-plan", "desc": "Ordered steps to put the intervention in place"},
+          {"name": "verification-checkpoint", "desc": "When and how to confirm the symptom rate dropped"}
+        ],
+        "process": [
+          "Order the chosen intervention into concrete steps with an owner for each.",
+          "Set a checkpoint date and tie it to the same symptom count captured at the start.",
+          "Define the threshold that counts as success and the fallback if the rate does not move.",
+          "Schedule a single re-measure so the fix is judged by outcome, not by completion."
+        ]
+      }
+    ]
+  },
+  {
+    "chain_name": "pareto-operations-audit",
+    "description": "Find the roughly twenty percent of activities producing eighty percent of results, then protect them, trim the bottom, and optimize the middle. Lists every activity, attributes measurable output to each, ranks by output-to-input ratio, segments into core, elimination, and optimization bands, and reallocates freed capacity to the core.",
+    "domain": "operations",
+    "tags": ["operations", "infrastructure", "systems-thinking", "methodology", "prioritization"],
+    "steps": [
+      {
+        "flow_name": "activity-inventory-capture",
+        "description": "List every activity in the chosen area along with the time or resource it consumes. An honest inventory counts the small recurring activities that hide from attention, not just the visible big ones.",
+        "inputs": [
+          {"name": "activity-domain", "desc": "The role, team, or process to audit"},
+          {"name": "time-period", "desc": "The window over which activity is counted"}
+        ],
+        "outputs": [
+          {"name": "activity-list", "desc": "Every activity performed in the area"},
+          {"name": "time-allocation", "desc": "Time or resource each activity consumed over the window"}
+        ],
+        "process": [
+          "List every distinct activity performed in the area over the window, including small recurring ones.",
+          "Attach the time or resource each activity consumed, measured rather than guessed where possible.",
+          "Split activities that bundle very different work so each line has a single purpose.",
+          "Confirm the time allocations roughly sum to the real capacity of the window."
+        ]
+      },
+      {
+        "flow_name": "output-attribution-per-activity",
+        "description": "Attribute a measurable output to each activity using one clear output metric. Activities that resist any output measure are flagged, because unmeasurable output is often absent output.",
+        "inputs": [
+          {"name": "activity-list", "desc": "Every activity in the area"},
+          {"name": "time-allocation", "desc": "Resource each activity consumed"}
+        ],
+        "outputs": [
+          {"name": "activity-output-map", "desc": "Each activity paired with its measurable output"},
+          {"name": "output-metric-definition", "desc": "The single metric used to compare outputs"}
+        ],
+        "process": [
+          "Define one output metric that applies across activities, such as revenue, resolved cases, or decisions enabled.",
+          "Attribute a value on that metric to each activity, using ranges where exact numbers are unavailable.",
+          "Flag any activity that resists measurement and note whether the output is hard to see or simply absent.",
+          "Keep the attribution honest by crediting an activity only for output it directly causes."
+        ]
+      },
+      {
+        "flow_name": "output-input-ratio-calculator",
+        "description": "Compute the output-to-input ratio for each activity and rank them. The ratio, not raw output, reveals the vital few, because a high-output activity that consumes everything is not efficient.",
+        "inputs": [
+          {"name": "activity-output-map", "desc": "Activities paired with output"},
+          {"name": "output-metric-definition", "desc": "The comparison metric"}
+        ],
+        "outputs": [
+          {"name": "ratio-ranked-activities", "desc": "Activities ranked by output per unit of input"},
+          {"name": "ratio-method-notes", "desc": "Assumptions and ranges used in the ratios"}
+        ],
+        "process": [
+          "Divide each activity's output by the input it consumed to get a ratio.",
+          "Rank activities from highest to lowest ratio.",
+          "Record assumptions and ranges so the ranking can be challenged and corrected.",
+          "Note where two activities are close enough that their order is uncertain."
+        ]
+      },
+      {
+        "flow_name": "pareto-segmentation",
+        "description": "Segment the ranked activities into the core producing most results, the bottom producing little, and the middle. The split is a judgment guided by the ratio distribution, not a rigid eighty-twenty line.",
+        "inputs": [
+          {"name": "ratio-ranked-activities", "desc": "Activities ranked by ratio"},
+          {"name": "ratio-method-notes", "desc": "Assumptions behind the ranking"}
+        ],
+        "outputs": [
+          {"name": "core-activities", "desc": "The vital few producing most of the result"},
+          {"name": "elimination-candidates", "desc": "The low-ratio activities to test for removal"},
+          {"name": "optimization-targets", "desc": "The middle activities worth improving"}
+        ],
+        "process": [
+          "Walk down the ranked list and mark where the cumulative output reaches roughly four fifths of the total.",
+          "Label the activities above that point the core, the vital few that carry the result.",
+          "Label the lowest-ratio tail as elimination candidates to be tested, not cut blindly.",
+          "Label the remaining middle band as optimization targets where small gains add up."
+        ]
+      },
+      {
+        "flow_name": "elimination-and-protection-plan",
+        "description": "Protect the core from erosion and test-eliminate the bottom rather than cutting it outright. Many low-ratio activities exist for a reason that is invisible until they stop, so removal is a reversible trial.",
+        "inputs": [
+          {"name": "core-activities", "desc": "The vital few to protect"},
+          {"name": "elimination-candidates", "desc": "Low-ratio activities to test removing"}
+        ],
+        "outputs": [
+          {"name": "protection-plan", "desc": "Actions that keep the core funded and defended"},
+          {"name": "elimination-trial-plan", "desc": "Reversible trials to remove low-ratio activities"}
+        ],
+        "process": [
+          "For each core activity, name what protects its time and resources from being eroded by low-ratio work.",
+          "For each elimination candidate, design a reversible trial that stops the activity for a set period.",
+          "Define what signal would prove the activity was actually needed, so a real dependency surfaces fast.",
+          "Set a restore path for any trial that turns out to have cut something load-bearing."
+        ]
+      },
+      {
+        "flow_name": "reallocation-plan",
+        "description": "Shift the capacity freed by trimming and by optimizing the middle back into the core, and project the output gain. The point of the audit is not to do less but to move effort to where it produces the most.",
+        "inputs": [
+          {"name": "optimization-targets", "desc": "Middle activities to improve"},
+          {"name": "protection-plan", "desc": "How the core is protected"},
+          {"name": "elimination-trial-plan", "desc": "Trials freeing capacity"}
+        ],
+        "outputs": [
+          {"name": "reallocation-plan", "desc": "Where freed capacity goes and in what order"},
+          {"name": "expected-output-gain", "desc": "The projected result from moving effort to the core"}
+        ],
+        "process": [
+          "Estimate the capacity freed by the elimination trials and by streamlining the optimization targets.",
+          "Direct that freed capacity toward the core activities with the highest ratios.",
+          "Project the output gain from the reallocation using the same metric as the ranking.",
+          "Order the moves so the core is strengthened before any freed capacity is spent elsewhere."
+        ]
+      }
+    ]
+  },
+  {
+    "chain_name": "decision-fatigue-audit",
+    "description": "Reduce the daily decision load that drains judgment by logging every decision for one day, categorizing each as essential, automatable, or eliminable, then writing rules for the automatable, removing the eliminable, and protecting energy for the essential. Fewer, better-placed decisions beat more willpower.",
+    "domain": "operations",
+    "tags": ["operations", "infrastructure", "systems-thinking", "methodology", "personal-productivity"],
+    "steps": [
+      {
+        "flow_name": "decision-log-capture",
+        "description": "Log every decision made during one representative day, however small. The count itself is the first finding, because most people make far more decisions than they believe and most carry no real stakes.",
+        "inputs": [
+          {"name": "observation-day", "desc": "The representative day being logged"},
+          {"name": "role-context", "desc": "The role and setting shaping the day's decisions"}
+        ],
+        "outputs": [
+          {"name": "decision-log", "desc": "Every decision made during the day"},
+          {"name": "decision-count", "desc": "The total number of decisions logged"}
+        ],
+        "process": [
+          "Record each decision as it happens, from what to eat to what to approve, without filtering for importance.",
+          "Note roughly when each decision happened so energy patterns show up later.",
+          "Capture small repeated decisions as separate entries, since their volume is the point.",
+          "Total the count at the end of the day to establish the raw decision load."
+        ]
+      },
+      {
+        "flow_name": "decision-categorization",
+        "description": "Sort each logged decision into essential, automatable, or eliminable. Essential decisions need real judgment; automatable ones follow a clear rule; eliminable ones should not have reached you at all.",
+        "inputs": [
+          {"name": "decision-log", "desc": "Every decision from the day"},
+          {"name": "decision-count", "desc": "Total decisions logged"}
+        ],
+        "outputs": [
+          {"name": "categorized-decisions", "desc": "Each decision tagged essential, automatable, or eliminable"},
+          {"name": "category-counts", "desc": "How many decisions fell into each category"}
+        ],
+        "process": [
+          "Tag a decision essential when it needs genuine judgment and the outcome matters.",
+          "Tag a decision automatable when a clear rule would reach the same answer you would.",
+          "Tag a decision eliminable when it adds no value and only exists out of habit or poor setup.",
+          "Count each category so the split between judgment and noise is visible."
+        ]
+      },
+      {
+        "flow_name": "automatable-rule-design",
+        "description": "Write an explicit rule for each automatable decision so it stops consuming attention. A good rule names the trigger and the response and covers the common cases, leaving only the exceptions for a person.",
+        "inputs": [
+          {"name": "categorized-decisions", "desc": "Decisions tagged by category"},
+          {"name": "category-counts", "desc": "Counts per category"}
+        ],
+        "outputs": [
+          {"name": "decision-rules", "desc": "Explicit trigger-and-response rules for automatable decisions"},
+          {"name": "rule-coverage", "desc": "Share of occurrences each rule handles without a person"}
+        ],
+        "process": [
+          "For each automatable decision, write a rule as a trigger paired with a fixed response.",
+          "Test the rule against the day's log to see how many instances it would have handled.",
+          "Define the narrow exception path where the rule hands back to human judgment.",
+          "Record the share of occurrences the rule covers so low-value rules can be dropped."
+        ]
+      },
+      {
+        "flow_name": "eliminable-removal-plan",
+        "description": "Remove eliminable decisions at their source rather than deciding them faster. A decision that should never reach you is fixed by changing the setup that routes it to you, not by handling it more efficiently.",
+        "inputs": [
+          {"name": "categorized-decisions", "desc": "Decisions tagged by category"},
+          {"name": "decision-rules", "desc": "Rules already drafted for automatable decisions"}
+        ],
+        "outputs": [
+          {"name": "elimination-actions", "desc": "Changes that stop eliminable decisions from reaching you"},
+          {"name": "removed-count", "desc": "How many daily decisions the changes remove"}
+        ],
+        "process": [
+          "For each eliminable decision, find the setup that routes it to you in the first place.",
+          "Design the change that stops it at the source, such as a default, a standing choice, or a handoff.",
+          "Confirm the change does not simply recreate the decision somewhere else in your day.",
+          "Total the decisions removed so the reduction in load is measurable."
+        ]
+      },
+      {
+        "flow_name": "essential-energy-protection",
+        "description": "Schedule the essential decisions for the hours when judgment is sharpest and batch like decisions together. Essential decisions deserve the energy freed by automating and eliminating the rest.",
+        "inputs": [
+          {"name": "categorized-decisions", "desc": "Decisions tagged by category"},
+          {"name": "elimination-actions", "desc": "Changes freeing up attention"}
+        ],
+        "outputs": [
+          {"name": "energy-schedule", "desc": "When essential decisions are placed against the energy curve"},
+          {"name": "batching-plan", "desc": "Groups of similar decisions handled together"}
+        ],
+        "process": [
+          "Map the day's energy curve from the timestamps in the log.",
+          "Place the essential decisions in the high-energy windows and keep those windows clear.",
+          "Group similar essential decisions so context does not have to be rebuilt each time.",
+          "Guard the protected windows against the automatable and eliminable traffic now being removed."
+        ]
+      },
+      {
+        "flow_name": "fatigue-reduction-synthesis",
+        "description": "Synthesize the rules, removals, and schedule into a single estimate of the reduced daily decision load and a plan to hold it. The gain is real only if the lighter load survives contact with a normal week.",
+        "inputs": [
+          {"name": "decision-rules", "desc": "Rules for automatable decisions"},
+          {"name": "elimination-actions", "desc": "Source changes removing decisions"},
+          {"name": "energy-schedule", "desc": "The protected schedule for essential decisions"}
+        ],
+        "outputs": [
+          {"name": "reduced-load-estimate", "desc": "The new daily decision count after rules and removals"},
+          {"name": "redesign-summary", "desc": "The combined changes and how to sustain them"}
+        ],
+        "process": [
+          "Subtract the automated and eliminated decisions from the original count to estimate the new load.",
+          "Combine the rules, removals, and schedule into one short operating description of the day.",
+          "Name the drift risks that would let old decisions creep back in.",
+          "Set a re-check date to confirm the lighter load held over a full week."
+        ]
+      }
+    ]
+  },
+  {
+    "chain_name": "failure-demand-elimination",
+    "description": "Cut the work created by failing to do it right the first time. Samples incoming work, separates value demand from failure demand, categorizes the failure demand, traces each category to its first-time-right failure, fixes the source, and sequences the fixes by released capacity. In many operations, failure demand is a large share of the total load.",
+    "domain": "operations",
+    "tags": ["operations", "infrastructure", "systems-thinking", "methodology", "service-design"],
+    "steps": [
+      {
+        "flow_name": "demand-sampling",
+        "description": "Sample the incoming work over a bounded window so the mix can be measured rather than guessed. Sampling at the point of intake catches what gets absorbed quietly before anyone records it as a problem.",
+        "inputs": [
+          {"name": "work-intake-source", "desc": "Where incoming work or requests arrive"},
+          {"name": "sampling-period", "desc": "The window over which intake is sampled"}
+        ],
+        "outputs": [
+          {"name": "demand-sample", "desc": "The sampled set of incoming work items"},
+          {"name": "sample-window", "desc": "The bounded period the sample represents"}
+        ],
+        "process": [
+          "Capture incoming work items at the point of intake over a bounded window.",
+          "Record each item in the requester's own words before it is reclassified internally.",
+          "Keep the window long enough to cover normal variation in the work mix.",
+          "Note the total volume so later ratios map back to real load."
+        ]
+      },
+      {
+        "flow_name": "value-vs-failure-classification",
+        "description": "Classify each sampled item as value demand, which is work the operation exists to do, or failure demand, which is work caused by not doing something right earlier. The ratio is usually higher than the operation believes.",
+        "inputs": [
+          {"name": "demand-sample", "desc": "Sampled incoming work"},
+          {"name": "sample-window", "desc": "The period sampled"}
+        ],
+        "outputs": [
+          {"name": "value-demand", "desc": "Items the operation exists to serve"},
+          {"name": "failure-demand", "desc": "Items caused by an earlier failure to do it right"},
+          {"name": "failure-demand-ratio", "desc": "Failure demand as a share of total demand"}
+        ],
+        "process": [
+          "Classify an item as value demand when it is work the operation exists to perform.",
+          "Classify an item as failure demand when it exists only because something earlier was not done right.",
+          "Resolve ambiguous items by asking whether the requester should have needed to make contact at all.",
+          "Compute the failure-demand ratio against the sample total."
+        ]
+      },
+      {
+        "flow_name": "failure-demand-categorization",
+        "description": "Group the failure demand into a small number of categories by what went wrong, and size each by volume. A handful of categories usually accounts for most of the failure demand.",
+        "inputs": [
+          {"name": "failure-demand", "desc": "Items caused by earlier failures"},
+          {"name": "failure-demand-ratio", "desc": "Failure demand share of total"}
+        ],
+        "outputs": [
+          {"name": "failure-categories", "desc": "Failure demand grouped by what went wrong"},
+          {"name": "category-volumes", "desc": "The volume carried by each category"}
+        ],
+        "process": [
+          "Group failure-demand items by the thing that went wrong, not by the department that handles them.",
+          "Keep the number of categories small so attention stays on the heavy ones.",
+          "Size each category by its share of failure-demand volume.",
+          "Rank the categories so the largest sources of rework are obvious."
+        ]
+      },
+      {
+        "flow_name": "root-cause-tracing",
+        "description": "Trace each heavy category back to the point where the work was not done right the first time. The cause lives upstream of where the failure demand arrives, in the step that should have handled it correctly.",
+        "inputs": [
+          {"name": "failure-categories", "desc": "Failure demand grouped by cause"},
+          {"name": "category-volumes", "desc": "Volume per category"}
+        ],
+        "outputs": [
+          {"name": "root-causes", "desc": "The first-time-right failure behind each category"},
+          {"name": "cause-to-category-map", "desc": "Which cause produces which failure-demand category"}
+        ],
+        "process": [
+          "For each heavy category, find the earlier step that should have resolved the need correctly.",
+          "Identify why that step did not do it right the first time.",
+          "Map each root cause to the categories and volume it produces downstream.",
+          "Note where one cause feeds several categories, since fixing it clears more than one."
+        ]
+      },
+      {
+        "flow_name": "source-fix-design",
+        "description": "Design a fix at each source step so the work is done right the first time and the failure demand never forms. Added inspection downstream is not a source fix; it is more failure demand.",
+        "inputs": [
+          {"name": "root-causes", "desc": "The first-time-right failures"},
+          {"name": "cause-to-category-map", "desc": "Cause to category mapping"}
+        ],
+        "outputs": [
+          {"name": "source-fixes", "desc": "Changes at the source step that prevent the failure"},
+          {"name": "fix-effort-estimate", "desc": "The effort each source fix requires"}
+        ],
+        "process": [
+          "For each root cause, design a change at the source step that makes the work right the first time.",
+          "Reject fixes that only add downstream checking, since that is more failure demand in disguise.",
+          "Estimate the effort each source fix requires to build and sustain.",
+          "Confirm each fix removes the cause rather than catching its result later."
+        ]
+      },
+      {
+        "flow_name": "prevented-demand-projection",
+        "description": "Project how much failure demand each source fix removes and how much capacity that releases. A fix is justified by the recurring load it deletes, not by the defect it corrects once.",
+        "inputs": [
+          {"name": "source-fixes", "desc": "The designed source fixes"},
+          {"name": "fix-effort-estimate", "desc": "Effort per fix"}
+        ],
+        "outputs": [
+          {"name": "prevented-demand", "desc": "Failure-demand volume each fix removes"},
+          {"name": "capacity-released", "desc": "The capacity freed when that demand stops arriving"}
+        ],
+        "process": [
+          "For each fix, multiply the category volume it clears by how often it recurs to get prevented demand.",
+          "Convert prevented demand into the handling capacity it currently consumes.",
+          "Account for fixes that clear several categories at once through a shared cause.",
+          "Express the release as recurring capacity per period, not a one-time saving."
+        ]
+      },
+      {
+        "flow_name": "implementation-sequencing",
+        "description": "Sequence the source fixes by capacity released per unit of effort and set a metric to watch. The first fix should be the one that deletes the most recurring work for the least build, so the operation gets lighter fast.",
+        "inputs": [
+          {"name": "source-fixes", "desc": "The designed source fixes"},
+          {"name": "prevented-demand", "desc": "Demand each fix removes"},
+          {"name": "capacity-released", "desc": "Capacity each fix frees"}
+        ],
+        "outputs": [
+          {"name": "fix-sequence", "desc": "Fixes ordered by release per unit of effort"},
+          {"name": "monitoring-metric", "desc": "The failure-demand metric to track after each fix"}
+        ],
+        "process": [
+          "Rank the fixes by capacity released divided by effort required.",
+          "Sequence the highest-return fixes first so load drops quickly.",
+          "Set the failure-demand ratio as the metric to re-measure after each fix lands.",
+          "Define the target ratio that signals the operation is running mostly on value demand."
+        ]
+      }
+    ]
+  },
+  {
+    "chain_name": "process-documentation-method",
+    "description": "Produce a process document that a newcomer can actually follow. Records the doer narrating the work, transcribes it into ordered steps, drafts a procedure, has a different person follow it, repairs every stuck point, and gates completion on a newcomer finishing the task using only the document. The test of a document is whether it works in someone else's hands.",
+    "domain": "operations",
+    "tags": ["operations", "infrastructure", "systems-thinking", "methodology", "knowledge-capture"],
+    "steps": [
+      {
+        "flow_name": "doer-narration-capture",
+        "description": "Record the person who does the task narrating each step as they do it for real. Live narration captures the small moves and decisions that an expert leaves out when describing the task from memory.",
+        "inputs": [
+          {"name": "task-to-document", "desc": "The task being captured"},
+          {"name": "doer-identity", "desc": "The person who normally performs the task"}
+        ],
+        "outputs": [
+          {"name": "narration-recording", "desc": "The doer's spoken walkthrough while performing the task"},
+          {"name": "task-scope", "desc": "Where the task starts and ends"}
+        ],
+        "process": [
+          "Have the doer perform the real task, not a demonstration, while speaking each action aloud.",
+          "Ask them to voice the small judgments they make, not only the visible steps.",
+          "Mark the clear start and end of the task so the scope is bounded.",
+          "Capture the recording in full before any editing or cleanup."
+        ]
+      },
+      {
+        "flow_name": "narration-transcription",
+        "description": "Transcribe the narration into an ordered sequence of steps and pull out the decision points where the work branches. The transcript is raw material; the structure comes from separating actions from the choices between them.",
+        "inputs": [
+          {"name": "narration-recording", "desc": "The doer's spoken walkthrough"},
+          {"name": "task-scope", "desc": "The bounded start and end"}
+        ],
+        "outputs": [
+          {"name": "raw-step-sequence", "desc": "The task as an ordered list of actions"},
+          {"name": "decision-points", "desc": "Places where the doer chose between paths"}
+        ],
+        "process": [
+          "Transcribe the narration and break it into discrete, ordered actions.",
+          "Separate each action from the reasoning attached to it.",
+          "Mark every point where the doer chose one path over another and note the condition.",
+          "Keep the doer's own terms so the draft stays faithful to the real work."
+        ]
+      },
+      {
+        "flow_name": "draft-procedure-writeup",
+        "description": "Write the first-draft procedure from the ordered steps and decision points, and surface the knowledge the draft silently assumes. Assumed knowledge is the hidden reason newcomers get stuck.",
+        "inputs": [
+          {"name": "raw-step-sequence", "desc": "Ordered actions"},
+          {"name": "decision-points", "desc": "Branch conditions"}
+        ],
+        "outputs": [
+          {"name": "draft-procedure", "desc": "The first written procedure with steps and branches"},
+          {"name": "assumed-knowledge", "desc": "Terms, access, and context the draft takes for granted"}
+        ],
+        "process": [
+          "Turn the ordered actions into numbered steps a reader can follow in sequence.",
+          "Write each decision point as a clear condition with the path to take for each case.",
+          "List every term, tool, or access the draft assumes the reader already has.",
+          "Keep steps at the level of actions a newcomer can perform, not summaries an expert would."
+        ]
+      },
+      {
+        "flow_name": "independent-follower-test",
+        "description": "Have a different person, not the doer, follow the draft and perform the task while recording every point they get stuck. The author cannot find the gaps because the author already knows the answers.",
+        "inputs": [
+          {"name": "draft-procedure", "desc": "The first written procedure"},
+          {"name": "assumed-knowledge", "desc": "The draft's assumed context"}
+        ],
+        "outputs": [
+          {"name": "stuck-points", "desc": "Every place the follower could not proceed from the document alone"},
+          {"name": "follower-feedback", "desc": "What the follower needed that the document did not provide"}
+        ],
+        "process": [
+          "Give the draft to someone who does not already know the task.",
+          "Have them attempt the task using only the document, without asking the doer.",
+          "Record every point where they stall, guess, or have to ask a question.",
+          "Capture what information would have unblocked each stuck point."
+        ]
+      },
+      {
+        "flow_name": "gap-repair-pass",
+        "description": "Fix every stuck point by adding the missing step, condition, or context to the procedure. A stuck point left unrepaired will stop the next reader in exactly the same place.",
+        "inputs": [
+          {"name": "draft-procedure", "desc": "The procedure being repaired"},
+          {"name": "stuck-points", "desc": "Where the follower could not proceed"},
+          {"name": "follower-feedback", "desc": "What was missing at each point"}
+        ],
+        "outputs": [
+          {"name": "revised-procedure", "desc": "The procedure with every stuck point repaired"},
+          {"name": "resolved-gaps", "desc": "Record of what was added to fix each stuck point"}
+        ],
+        "process": [
+          "For each stuck point, add the exact step, condition, or context that would have unblocked the follower.",
+          "Fold previously assumed knowledge into the document so it no longer depends on the doer.",
+          "Keep the fixes at the reader's level rather than adding expert shorthand.",
+          "Record what was changed so repeated gaps across readers become visible."
+        ]
+      },
+      {
+        "flow_name": "newcomer-completion-gate",
+        "description": "Confirm the document is done by having a fresh newcomer complete the task using only the revised procedure, with no help. The document is finished when it works in the hands of someone who has never done the task.",
+        "inputs": [
+          {"name": "revised-procedure", "desc": "The repaired procedure"},
+          {"name": "resolved-gaps", "desc": "What was fixed in the repair pass"}
+        ],
+        "outputs": [
+          {"name": "validated-procedure", "desc": "The procedure proven in a newcomer's hands"},
+          {"name": "completion-evidence", "desc": "Proof the newcomer finished using only the document"}
+        ],
+        "process": [
+          "Give the revised procedure to a newcomer who has not seen the earlier rounds.",
+          "Have them complete the task using only the document and no outside help.",
+          "Treat any new stuck point as a failed gate and send the document back for repair.",
+          "Mark the procedure validated only when a newcomer finishes unaided, and record the evidence."
+        ]
+      }
+    ]
+  },
+  {
+    "chain_name": "automation-roi-calculator",
+    "description": "Decide whether a repetitive task is worth automating using a rigorous payback test. Measures time per occurrence and frequency, computes the annual manual cost, estimates build and maintenance cost, calculates the break-even horizon against a two-year rule, and adjusts for maintenance, opportunity cost, and the value of human judgment before recording the decision.",
+    "domain": "operations",
+    "tags": ["operations", "infrastructure", "systems-thinking", "methodology", "automation"],
+    "steps": [
+      {
+        "flow_name": "task-time-frequency-capture",
+        "description": "Measure how long the task takes per occurrence and how often it occurs. Both numbers should be measured on the real task, because remembered times are usually shorter than observed ones.",
+        "inputs": [
+          {"name": "task-description", "desc": "The repetitive task under consideration"},
+          {"name": "measurement-window", "desc": "The period over which time and frequency are measured"}
+        ],
+        "outputs": [
+          {"name": "time-per-occurrence", "desc": "Measured time the task takes each time it is done"},
+          {"name": "occurrence-frequency", "desc": "How often the task occurs over the window"}
+        ],
+        "process": [
+          "Time the task on several real occurrences rather than estimating from memory.",
+          "Count how often the task occurs over a representative window.",
+          "Include the setup and cleanup time around the task, not only the core minutes.",
+          "Record ranges where occurrences vary so later math can show a best and worst case."
+        ]
+      },
+      {
+        "flow_name": "annual-manual-cost",
+        "description": "Compute the annual time the task consumes by hand by multiplying time per occurrence by yearly frequency. This is the recurring cost that automation would remove and the baseline every other number is compared against.",
+        "inputs": [
+          {"name": "time-per-occurrence", "desc": "Time per instance"},
+          {"name": "occurrence-frequency", "desc": "Instances per window"}
+        ],
+        "outputs": [
+          {"name": "annual-manual-hours", "desc": "Total yearly hours the task consumes by hand"},
+          {"name": "manual-cost-basis", "desc": "The assumptions behind the annual figure"}
+        ],
+        "process": [
+          "Scale the frequency to a full year.",
+          "Multiply annual frequency by time per occurrence to get annual manual hours.",
+          "Carry the best-case and worst-case ranges through the multiplication.",
+          "Record the assumptions so the baseline can be checked and revised."
+        ]
+      },
+      {
+        "flow_name": "automation-build-estimate",
+        "description": "Estimate the one-time effort to build the automation, including design, testing, and the parts that always take longer than the happy path. Build estimates for automation tend to run low, so the estimate should be deliberately honest.",
+        "inputs": [
+          {"name": "annual-manual-hours", "desc": "Yearly manual hours"},
+          {"name": "manual-cost-basis", "desc": "Baseline assumptions"}
+        ],
+        "outputs": [
+          {"name": "build-hours", "desc": "Estimated one-time hours to build the automation"},
+          {"name": "build-assumptions", "desc": "What the build estimate assumes and excludes"}
+        ],
+        "process": [
+          "Estimate the hours to design, build, and test the automation end to end.",
+          "Add time for the edge cases and error handling that the manual task absorbs silently today.",
+          "State what the estimate excludes so hidden work does not sink the payback later.",
+          "Keep the estimate honest by comparing it to similar past builds rather than the happy path."
+        ]
+      },
+      {
+        "flow_name": "maintenance-cost-estimate",
+        "description": "Estimate the recurring maintenance the automation will demand, since automation is not free after it ships. Brittle integrations and changing inputs turn a one-time build into an ongoing cost that can erase the saving.",
+        "inputs": [
+          {"name": "build-hours", "desc": "One-time build estimate"},
+          {"name": "build-assumptions", "desc": "Build assumptions"}
+        ],
+        "outputs": [
+          {"name": "annual-maintenance-hours", "desc": "Estimated yearly hours to keep the automation working"},
+          {"name": "maintenance-assumptions", "desc": "What drives the maintenance estimate"}
+        ],
+        "process": [
+          "Estimate the yearly hours to fix breakage, handle input changes, and keep dependencies current.",
+          "Weigh how brittle the automation is against how often its inputs or environment change.",
+          "Add the cost of monitoring the automation so silent failures do not go unnoticed.",
+          "Record what drives the estimate so it can be revised as the automation ages."
+        ]
+      },
+      {
+        "flow_name": "breakeven-calculator",
+        "description": "Compute the break-even horizon and test it against the rule that build should not exceed about two years of manual cost. If the automation takes longer than two years to pay back, the honest answer is usually not to build it.",
+        "inputs": [
+          {"name": "annual-manual-hours", "desc": "Yearly manual hours"},
+          {"name": "build-hours", "desc": "One-time build hours"},
+          {"name": "annual-maintenance-hours", "desc": "Yearly maintenance hours"}
+        ],
+        "outputs": [
+          {"name": "breakeven-months", "desc": "Months until the automation pays back its build and maintenance"},
+          {"name": "two-year-verdict", "desc": "Whether payback falls inside the two-year rule"}
+        ],
+        "process": [
+          "Compute the net yearly saving as annual manual hours minus annual maintenance hours.",
+          "Divide build hours by the net yearly saving to get the payback time in months.",
+          "Compare the payback against the two-year rule and record a pass or fail.",
+          "Flag the case where maintenance meets or exceeds manual cost, which means it never pays back."
+        ]
+      },
+      {
+        "flow_name": "judgment-and-opportunity-adjustment",
+        "description": "Adjust the verdict for the value of human judgment lost and the opportunity cost of the build time. A task that carries judgment or that competes with higher-value work can fail the test even when the raw hours pass.",
+        "inputs": [
+          {"name": "breakeven-months", "desc": "Raw payback horizon"},
+          {"name": "two-year-verdict", "desc": "Raw pass or fail"}
+        ],
+        "outputs": [
+          {"name": "adjusted-verdict", "desc": "The verdict after judgment and opportunity cost"},
+          {"name": "judgment-risk-notes", "desc": "What human judgment the automation would remove"}
+        ],
+        "process": [
+          "Name any human judgment the task carries that an automation would lose or flatten.",
+          "Weigh the build time against the next best use of that same time.",
+          "Revise the verdict down when lost judgment or opportunity cost outweighs the raw hours saved.",
+          "Record why the adjusted verdict differs from the raw break-even result."
+        ]
+      },
+      {
+        "flow_name": "automation-decision-record",
+        "description": "Record the automate-or-not decision with the numbers and the reasoning so it can be revisited when frequency or cost changes. A decision without its basis gets relitigated from scratch every time someone asks.",
+        "inputs": [
+          {"name": "adjusted-verdict", "desc": "The adjusted verdict"},
+          {"name": "judgment-risk-notes", "desc": "Judgment considerations"}
+        ],
+        "outputs": [
+          {"name": "automation-decision", "desc": "The final automate or do-not-automate decision"},
+          {"name": "decision-rationale", "desc": "The numbers and reasoning behind the decision"}
+        ],
+        "process": [
+          "State the decision plainly as automate or do not automate.",
+          "Attach the manual cost, build, maintenance, payback, and adjustment behind it.",
+          "Name the condition that would flip the decision, such as a change in frequency or cost.",
+          "Set a re-check trigger so the decision is revisited when that condition changes."
+        ]
+      }
+    ]
+  },
+  {
+    "chain_name": "meeting-elimination-method",
+    "description": "Shrink a recurring meeting load to only what earns its place. Inventories every recurring meeting, tests each against the decision it enables, cancels those tied to no decision, and holds the survivors to an agenda, decision-maker attendance, early-ending action capture, and a fast summary. A meeting that produces no decision is a status report that could be read.",
+    "domain": "operations",
+    "tags": ["operations", "infrastructure", "systems-thinking", "methodology", "meetings"],
+    "steps": [
+      {
+        "flow_name": "recurring-meeting-inventory",
+        "description": "List every recurring meeting and compute the real time it costs across all attendees. The cost of a weekly hour-long meeting for eight people is a surprising amount of time per year, and seeing it changes the conversation.",
+        "inputs": [
+          {"name": "meeting-calendar", "desc": "The calendar of recurring meetings"},
+          {"name": "team-scope", "desc": "The team or group whose meetings are in scope"}
+        ],
+        "outputs": [
+          {"name": "meeting-list", "desc": "Every recurring meeting in scope"},
+          {"name": "meeting-time-cost", "desc": "Total attendee time each meeting consumes per year"}
+        ],
+        "process": [
+          "List every recurring meeting on the team's calendars.",
+          "For each, multiply duration by frequency by number of attendees to get annual attendee hours.",
+          "Include preparation and follow-up time, not just the scheduled block.",
+          "Rank meetings by total time cost so the expensive ones get the most scrutiny."
+        ]
+      },
+      {
+        "flow_name": "decision-dependency-test",
+        "description": "Test each meeting by asking what decision would not get made without it. A meeting that enables a real recurring decision survives; one that only shares information that could be read fails the test.",
+        "inputs": [
+          {"name": "meeting-list", "desc": "Every recurring meeting"},
+          {"name": "meeting-time-cost", "desc": "Time cost per meeting"}
+        ],
+        "outputs": [
+          {"name": "decision-tagged-meetings", "desc": "Meetings tied to a recurring decision"},
+          {"name": "no-decision-meetings", "desc": "Meetings that enable no decision"}
+        ],
+        "process": [
+          "For each meeting, name the specific decision that would not happen if it were cancelled.",
+          "Tag the meeting as decision-bearing only when that decision is real and recurring.",
+          "Tag meetings that only broadcast status or information as no-decision meetings.",
+          "Treat a meeting whose decision could be made asynchronously as a no-decision meeting."
+        ]
+      },
+      {
+        "flow_name": "cancellation-batch",
+        "description": "Cancel the meetings tied to no decision and replace the information they shared with a written channel. Reclaimed time is the first and largest return, and a written update serves the same purpose without the synchronous cost.",
+        "inputs": [
+          {"name": "no-decision-meetings", "desc": "Meetings enabling no decision"}
+        ],
+        "outputs": [
+          {"name": "cancelled-meetings", "desc": "The meetings removed from the calendar"},
+          {"name": "reclaimed-hours", "desc": "Annual attendee hours returned by cancelling"}
+        ],
+        "process": [
+          "Cancel each no-decision meeting rather than shortening it.",
+          "Replace the information it shared with a written update people can read on their own time.",
+          "Confirm no real recurring decision was quietly riding on the cancelled meeting.",
+          "Total the attendee hours returned so the reclaimed capacity is visible."
+        ]
+      },
+      {
+        "flow_name": "survivor-agenda-standard",
+        "description": "Require every surviving meeting to publish an agenda a day ahead or be cancelled for that occurrence. The agenda forces a reason to meet and lets attendees arrive ready instead of discovering the topic in the room.",
+        "inputs": [
+          {"name": "decision-tagged-meetings", "desc": "Meetings that survived the decision test"}
+        ],
+        "outputs": [
+          {"name": "agenda-standard", "desc": "The rule requiring an agenda ahead of each meeting"},
+          {"name": "agenda-template", "desc": "A template listing the decisions each meeting will make"}
+        ],
+        "process": [
+          "Set the rule that a meeting without a published agenda a day ahead is cancelled for that occurrence.",
+          "Build an agenda template framed around the decisions to be made, not topics to be discussed.",
+          "Require each agenda item to name the decision and the input needed to make it.",
+          "Make the no-agenda-no-meeting rule automatic so it does not depend on anyone policing it."
+        ]
+      },
+      {
+        "flow_name": "attendee-minimization",
+        "description": "Limit each meeting to the people who make or directly inform the decision. Every extra attendee multiplies the cost and dilutes the decision, and people who only need the outcome can read the summary.",
+        "inputs": [
+          {"name": "decision-tagged-meetings", "desc": "Surviving meetings"},
+          {"name": "agenda-standard", "desc": "The agenda rule"}
+        ],
+        "outputs": [
+          {"name": "attendee-rules", "desc": "Who must attend each meeting and who only needs the summary"},
+          {"name": "removed-attendee-hours", "desc": "Attendee hours saved by trimming the invite list"}
+        ],
+        "process": [
+          "For each meeting, identify who actually makes the decision and who directly informs it.",
+          "Move everyone else to the summary distribution instead of the invite.",
+          "Confirm the decision can still be made with the trimmed group present.",
+          "Total the attendee hours saved by shortening the invite lists."
+        ]
+      },
+      {
+        "flow_name": "action-capture-protocol",
+        "description": "End each meeting a few minutes early to write the decisions and actions, and send a summary within the hour. A decision that is not written down was not really made, and a summary sent fast is read while the context is fresh.",
+        "inputs": [
+          {"name": "agenda-standard", "desc": "The agenda rule"},
+          {"name": "attendee-rules", "desc": "Who attends and who reads"}
+        ],
+        "outputs": [
+          {"name": "action-protocol", "desc": "The end-early routine for capturing decisions and actions"},
+          {"name": "summary-standard", "desc": "The rule for sending a summary within the hour"}
+        ],
+        "process": [
+          "Reserve the last few minutes of every meeting to record decisions and assign actions with owners.",
+          "Write each action as an owner, a task, and a date.",
+          "Send a short summary of decisions and actions within an hour, while context is fresh.",
+          "Route the summary to the people moved off the invite so they stay informed without attending."
+        ]
+      },
+      {
+        "flow_name": "meeting-hygiene-rollout",
+        "description": "Roll the cancellations and the survivor standards out together and track the time reclaimed. The reform holds only if the reclaimed hours are visible and the standards are enforced automatically rather than by willpower.",
+        "inputs": [
+          {"name": "cancelled-meetings", "desc": "The meetings removed"},
+          {"name": "reclaimed-hours", "desc": "Hours returned by cancelling"},
+          {"name": "action-protocol", "desc": "The capture routine for survivors"}
+        ],
+        "outputs": [
+          {"name": "rollout-plan", "desc": "The plan to put cancellations and standards in place"},
+          {"name": "time-reclaimed-estimate", "desc": "Total annual time returned by the full reform"}
+        ],
+        "process": [
+          "Sequence the cancellations and the survivor standards into a single rollout.",
+          "Make the agenda, attendee, and summary rules the default so they do not rely on willpower.",
+          "Add the hours reclaimed by cancelling to the hours saved by trimming invites.",
+          "Set a review date to confirm meetings did not quietly creep back onto the calendar."
+        ]
+      }
+    ]
+  },
+  {
+    "chain_name": "feedback-loop-tightening",
+    "description": "Shorten the time between an action and learning whether it worked, so fewer mistakes accumulate before correction. Maps the current loop, measures the delay at each stage, classifies the delays, replaces periodic steps with continuous ones, checks that the faster signal still tells the truth, and rolls out a tighter loop with a target time.",
+    "domain": "operations",
+    "tags": ["operations", "infrastructure", "systems-thinking", "methodology", "feedback-loops"],
+    "steps": [
+      {
+        "flow_name": "loop-mapping",
+        "description": "Map the current loop from the moment an action is taken to the moment you learn whether it worked. Most teams have never drawn this loop and are surprised how many stages sit between doing and knowing.",
+        "inputs": [
+          {"name": "process-to-improve", "desc": "The process whose feedback loop is being tightened"},
+          {"name": "current-review-cadence", "desc": "How often results are currently reviewed"}
+        ],
+        "outputs": [
+          {"name": "loop-map", "desc": "The path from action taken to learning the result"},
+          {"name": "loop-stages", "desc": "The ordered stages the signal passes through"}
+        ],
+        "process": [
+          "Mark the moment an action is taken as the start of the loop.",
+          "Mark the moment someone learns whether it worked as the end of the loop.",
+          "List every stage the signal passes through between those two points.",
+          "Confirm the map reflects what actually happens, not the process as it is supposed to run."
+        ]
+      },
+      {
+        "flow_name": "delay-measurement",
+        "description": "Measure the delay at each stage and the total loop time. The total is the real quantity that matters, because it sets how long a mistake can run before anyone can see it.",
+        "inputs": [
+          {"name": "loop-map", "desc": "The action-to-learning path"},
+          {"name": "loop-stages", "desc": "The ordered stages"}
+        ],
+        "outputs": [
+          {"name": "stage-delays", "desc": "The time the signal waits at each stage"},
+          {"name": "total-loop-time", "desc": "The full time from action to learning"}
+        ],
+        "process": [
+          "Measure how long the signal waits at each stage, including time spent queued or batched.",
+          "Sum the stage delays into a total loop time from action to learning.",
+          "Separate working time from waiting time, since waiting is usually the larger share.",
+          "Record the stages where the signal waits longest."
+        ]
+      },
+      {
+        "flow_name": "delay-source-classification",
+        "description": "Classify each delay by its source: batching, queued review, or periodic reporting. Naming the source points to the fix, because batching, queues, and schedules are each removed in a different way.",
+        "inputs": [
+          {"name": "stage-delays", "desc": "Delay at each stage"},
+          {"name": "total-loop-time", "desc": "Full loop time"}
+        ],
+        "outputs": [
+          {"name": "delay-sources", "desc": "Each delay tagged batching, queue, or periodic reporting"},
+          {"name": "biggest-delay", "desc": "The single stage contributing the most waiting"}
+        ],
+        "process": [
+          "Tag a delay as batching when the signal waits for a group of items to accumulate.",
+          "Tag a delay as a queue when the signal waits for a person or step to become free.",
+          "Tag a delay as periodic reporting when the signal waits for a scheduled review.",
+          "Identify the single stage that contributes the most waiting to the total."
+        ]
+      },
+      {
+        "flow_name": "continuous-redesign",
+        "description": "Redesign the loop to replace periodic steps with continuous ones and to shrink batches. The largest wins come from turning scheduled reviews into live signals, so the result is seen as it happens rather than at the next meeting.",
+        "inputs": [
+          {"name": "delay-sources", "desc": "Delays tagged by source"},
+          {"name": "biggest-delay", "desc": "The heaviest single delay"}
+        ],
+        "outputs": [
+          {"name": "redesigned-loop", "desc": "The loop with periodic steps made continuous and batches shrunk"},
+          {"name": "batching-removed", "desc": "Which batches and scheduled waits were eliminated"}
+        ],
+        "process": [
+          "Replace the biggest periodic wait with a continuous signal that updates as results arrive.",
+          "Shrink batches toward single-item flow wherever the economics allow.",
+          "Collapse queued reviews into the work itself so the signal does not wait for a free reviewer.",
+          "Recompute the projected loop time after the redesign."
+        ]
+      },
+      {
+        "flow_name": "signal-quality-check",
+        "description": "Check that the faster signal still tells you what actually worked. A loop can be tightened so far that the signal becomes noise, and reacting to noise creates more mistakes than slow feedback ever did.",
+        "inputs": [
+          {"name": "redesigned-loop", "desc": "The tightened loop"},
+          {"name": "batching-removed", "desc": "What was made continuous"}
+        ],
+        "outputs": [
+          {"name": "signal-validity", "desc": "Whether the faster signal still reflects the real result"},
+          {"name": "false-signal-risks", "desc": "Where the faster signal could mislead"}
+        ],
+        "process": [
+          "Confirm the faster signal measures the real result and not just an early proxy for it.",
+          "Check that the signal is stable enough to act on and not dominated by noise.",
+          "Identify where a continuous signal could trigger overreaction to normal variation.",
+          "Add a smoothing or confirmation step where the faster signal would otherwise mislead."
+        ]
+      },
+      {
+        "flow_name": "tightened-loop-rollout",
+        "description": "Roll out the tighter loop and set an explicit target loop time to hold. A loop with no target drifts back toward periodic reviews, so the target and its measurement are part of the design.",
+        "inputs": [
+          {"name": "redesigned-loop", "desc": "The tightened loop"},
+          {"name": "signal-validity", "desc": "Whether the signal is trustworthy"},
+          {"name": "false-signal-risks", "desc": "Where the signal could mislead"}
+        ],
+        "outputs": [
+          {"name": "rollout-plan", "desc": "Steps to put the tighter loop in place"},
+          {"name": "target-loop-time", "desc": "The loop time the team commits to holding"}
+        ],
+        "process": [
+          "Sequence the redesign into concrete steps with owners.",
+          "Set a target loop time and the measurement that tracks it.",
+          "Build in the smoothing or confirmation steps that keep the fast signal honest.",
+          "Schedule a check to confirm the loop did not drift back toward periodic review."
+        ]
+      }
+    ]
+  },
+  {
+    "chain_name": "constraint-removal-vs-optimization",
+    "description": "Decide whether a system needs optimization or a structural change by testing its ceiling. States the goal and current output, models the output if every step hit its theoretical maximum, tests whether that ceiling is good enough, and branches: if the optimized ceiling clears the goal, optimize; if it does not, the structure is the problem and no amount of tuning will fix it.",
+    "domain": "operations",
+    "tags": ["operations", "infrastructure", "systems-thinking", "methodology", "systems-design"],
+    "steps": [
+      {
+        "flow_name": "system-goal-and-current-output",
+        "description": "State the system's goal in measurable terms and its current output on the same measure. Without a goal expressed as a number, there is no way to tell whether optimization could ever be enough.",
+        "inputs": [
+          {"name": "system-description", "desc": "The system or process under review"},
+          {"name": "current-metric", "desc": "The metric that defines success for the system"}
+        ],
+        "outputs": [
+          {"name": "system-goal", "desc": "The target output stated as a number on the metric"},
+          {"name": "current-output", "desc": "The system's current output on that metric"}
+        ],
+        "process": [
+          "State the system's goal as a number on a single clear metric.",
+          "Measure the system's current output on the same metric.",
+          "Confirm the metric captures what the system actually exists to produce.",
+          "Record the gap between current output and goal as the problem to be closed."
+        ]
+      },
+      {
+        "flow_name": "theoretical-max-modeling",
+        "description": "Model the output the system would reach if every step ran at its theoretical maximum. This ceiling, not the current output, is what tells you whether optimization has room to solve the problem.",
+        "inputs": [
+          {"name": "system-goal", "desc": "The target output"},
+          {"name": "current-output", "desc": "The current output"}
+        ],
+        "outputs": [
+          {"name": "theoretical-max-output", "desc": "The output if every step hit its maximum"},
+          {"name": "per-step-ceiling", "desc": "The maximum each step could reach"}
+        ],
+        "process": [
+          "For each step, estimate the maximum output it could reach if perfectly run.",
+          "Combine the per-step ceilings through the structure to get the system's theoretical maximum.",
+          "Respect the structure, since a series of steps is capped by its tightest link even at maximum.",
+          "Record the ceiling as the best the current structure could ever do."
+        ]
+      },
+      {
+        "flow_name": "good-enough-gap-test",
+        "description": "Test whether the theoretical maximum clears the goal. This single comparison decides everything downstream, because it separates problems that tuning can solve from problems built into the structure.",
+        "inputs": [
+          {"name": "theoretical-max-output", "desc": "The structure's ceiling"},
+          {"name": "per-step-ceiling", "desc": "Per-step maximums"},
+          {"name": "system-goal", "desc": "The target output"}
+        ],
+        "outputs": [
+          {"name": "sufficiency-verdict", "desc": "Whether the optimized ceiling clears the goal"},
+          {"name": "gap-size", "desc": "How far the ceiling sits above or below the goal"}
+        ],
+        "process": [
+          "Compare the theoretical maximum against the goal.",
+          "Record whether the ceiling clears the goal with room to spare, barely, or not at all.",
+          "Measure how far the ceiling sits above or below the goal.",
+          "Treat a ceiling below the goal as proof that no amount of optimization can succeed."
+        ]
+      },
+      {
+        "flow_name": "path-branch-decision",
+        "description": "Choose the path the verdict dictates: optimize the existing structure, or change the structure itself. Optimizing a structure whose ceiling is below the goal wastes effort that can only ever fall short.",
+        "inputs": [
+          {"name": "sufficiency-verdict", "desc": "Whether the ceiling clears the goal"},
+          {"name": "gap-size", "desc": "Distance from ceiling to goal"}
+        ],
+        "outputs": [
+          {"name": "chosen-path", "desc": "Either optimize the structure or change the structure"},
+          {"name": "path-rationale", "desc": "Why the verdict points to that path"}
+        ],
+        "process": [
+          "If the optimized ceiling clears the goal, choose to optimize the existing structure.",
+          "If the optimized ceiling falls below the goal, choose to change the structure.",
+          "When the ceiling clears the goal only barely, weigh the cost of optimizing against the risk of running at the edge.",
+          "Record the rationale so the chosen path is traceable to the sufficiency verdict."
+        ]
+      },
+      {
+        "flow_name": "structural-redesign-or-optimization-plan",
+        "description": "Build the plan for the chosen path: an optimization plan that moves the system toward its ceiling, or structural options that raise the ceiling by changing the game. Each path produces a different kind of work and should not be confused.",
+        "inputs": [
+          {"name": "chosen-path", "desc": "Optimize or change the structure"},
+          {"name": "path-rationale", "desc": "Why that path was chosen"}
+        ],
+        "outputs": [
+          {"name": "action-plan", "desc": "The optimization plan or the structural-change plan for the chosen path"},
+          {"name": "game-change-options", "desc": "Structural options that raise the ceiling, when a change is needed"}
+        ],
+        "process": [
+          "On the optimize path, plan the moves that close the gap between current output and the ceiling.",
+          "On the change path, generate structural options that lift the ceiling itself rather than tuning within it.",
+          "For a structural change, name what new ceiling each option would create.",
+          "Keep the two kinds of work distinct so a redesign is never mistaken for an optimization."
+        ]
+      },
+      {
+        "flow_name": "decision-record-and-review-trigger",
+        "description": "Record the decision with its ceiling math and set a trigger to re-run the test when the goal or the structure changes. A ceiling that was high enough last year can fall below a raised goal, flipping optimize into redesign.",
+        "inputs": [
+          {"name": "action-plan", "desc": "The plan for the chosen path"},
+          {"name": "game-change-options", "desc": "Structural options considered"}
+        ],
+        "outputs": [
+          {"name": "decision-record", "desc": "The decision with its goal, ceiling, and chosen path"},
+          {"name": "reevaluation-trigger", "desc": "The condition that forces re-running the ceiling test"}
+        ],
+        "process": [
+          "Record the goal, the theoretical ceiling, the verdict, and the chosen path together.",
+          "Name the condition that would change the answer, such as a raised goal or a new step in the structure.",
+          "Set the trigger that forces re-running the ceiling test when that condition occurs.",
+          "Keep the record where the next review of the system will find it."
+        ]
+      }
+    ]
+  }
+]

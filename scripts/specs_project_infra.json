@@ -1,0 +1,620 @@
+[
+  {
+    "chain_name": "critical-chain-scheduler",
+    "description": "Apply Goldratt's Critical Chain method to any multi-step initiative. Remove task-level safety padding (which people add to every estimate and then waste). Add a project buffer at the end of the critical chain and feeding buffers where non-critical paths join. Manage by buffer consumption, not by individual task deadlines. Projects finish faster because padding is concentrated where it is useful instead of dispersed where it is wasted.",
+    "domain": "project-management",
+    "tags": ["infrastructure", "critical-chain", "scheduling", "goldratt"],
+    "steps": [
+      {
+        "flow_name": "task-network-builder",
+        "description": "Build the task network: every task, its dependencies, its duration estimate, and its resource requirements.",
+        "inputs": [
+          {"name": "initiative-description", "desc": "What the project or initiative delivers"},
+          {"name": "task-list", "desc": "All tasks with duration estimates, dependencies, and resource assignments"}
+        ],
+        "outputs": [
+          {"name": "task-network", "desc": "The dependency graph: tasks as nodes, dependencies as edges, with duration and resource for each task"},
+          {"name": "critical-path", "desc": "The longest path through the network (the sequence that determines the project duration)"}
+        ],
+        "process": [
+          "List every task with its estimated duration. For each, identify the predecessor tasks (what must finish before this task can start) and the resources required.",
+          "Build the dependency graph: tasks are nodes, predecessor relationships are edges. The graph must be acyclic (no circular dependencies).",
+          "Find the critical path: the longest path from start to finish. This is the minimum project duration if every task on the path finishes on time.",
+          "Identify the non-critical paths: tasks that have float (slack time before they delay the project). Note how much float each non-critical task has."
+        ],
+        "tags": ["critical-chain", "task-network", "dependencies"]
+      },
+      {
+        "flow_name": "resource-contention-resolver",
+        "description": "Identify resource conflicts on the critical path. If the same person or resource is needed by two parallel tasks, one must wait. This extends the critical path and creates the critical chain (the critical path constrained by resource availability).",
+        "inputs": [
+          {"name": "task-network", "desc": "The dependency graph with resource assignments"},
+          {"name": "critical-path", "desc": "The initial critical path"}
+        ],
+        "outputs": [
+          {"name": "critical-chain", "desc": "The resource-leveled critical path: the longest chain of tasks considering both dependencies and resource contention"},
+          {"name": "resource-conflicts", "desc": "The specific conflicts resolved and the sequencing decisions made"}
+        ],
+        "process": [
+          "For each resource, check if it is assigned to two or more tasks that are scheduled to run in parallel. If yes, one must be sequenced after the other.",
+          "Resolve the conflict by prioritizing the task on the critical path. The non-critical task waits. Recalculate the critical path after each resolution.",
+          "The result is the critical chain: the longest path considering both task dependencies and resource contention. This is longer than the original critical path if there were resource conflicts.",
+          "The critical chain is the true constraint. Everything else subordinates to it."
+        ],
+        "tags": ["critical-chain", "resource-leveling", "contention"]
+      },
+      {
+        "flow_name": "padding-remover-and-buffer-builder",
+        "description": "Remove the safety padding from individual task estimates and concentrate it into project and feeding buffers.",
+        "inputs": [
+          {"name": "critical-chain", "desc": "The resource-leveled critical chain"},
+          {"name": "task-network", "desc": "The full task network"}
+        ],
+        "outputs": [
+          {"name": "aggressive-estimates", "desc": "Each task's duration cut to the 50% confidence estimate (the estimate that is right half the time), removing the safety padding"},
+          {"name": "project-buffer", "desc": "A buffer at the end of the critical chain, sized at 50% of the total padding removed from critical chain tasks"},
+          {"name": "feeding-buffers", "desc": "Buffers where non-critical paths join the critical chain, sized at 50% of the padding removed from those paths"}
+        ],
+        "process": [
+          "For each task, ask the estimator: 'What is your 50% confidence estimate (you are equally likely to finish early as late)?' and 'What is your 90% confidence estimate (the safe one)?' The difference is the safety padding.",
+          "Use the 50% estimate as the task duration. Aggregate the removed padding: for critical chain tasks, half of the total removed padding becomes the project buffer. For non-critical paths, half of the removed padding becomes the feeding buffer at the junction point.",
+          "Place the project buffer at the end of the critical chain. It protects the project finish date. Place each feeding buffer at the point where a non-critical path joins the critical chain. It protects the critical chain from delays on non-critical paths.",
+          "The project duration is: aggressive critical chain duration plus project buffer. This is typically shorter than the original critical path because concentrated buffers are smaller than dispersed padding."
+        ],
+        "tags": ["critical-chain", "buffers", "estimation"]
+      },
+      {
+        "flow_name": "buffer-management-protocol",
+        "description": "Manage the project by buffer consumption, not by individual task status. A task that is late is not a problem if the buffer absorbs it. A buffer that is more than two-thirds consumed is the alarm.",
+        "inputs": [
+          {"name": "project-buffer", "desc": "The project buffer size and current consumption"},
+          {"name": "feeding-buffers", "desc": "The feeding buffer sizes and current consumption"}
+        ],
+        "outputs": [
+          {"name": "buffer-status-dashboard", "desc": "For each buffer: size, consumption (days used), percentage consumed, and zone (green: under 1/3, yellow: 1/3 to 2/3, red: over 2/3)"},
+          {"name": "buffer-management-rules", "desc": "Green: no action. Yellow: investigate the cause, plan corrective action. Red: execute corrective action immediately."}
+        ],
+        "process": [
+          "Track buffer consumption weekly. Each time a critical chain task takes longer than its aggressive estimate, the overage is subtracted from the project buffer. Same for feeding buffers.",
+          "Zone the buffers: green (0-33% consumed, project is on track), yellow (34-66% consumed, investigate and plan), red (67-100% consumed, act now).",
+          "In the yellow zone: identify why the buffer is being consumed. Is it one task that exploded or a pattern of small overruns? Plan the corrective action but do not execute yet.",
+          "In the red zone: execute corrective action. Options: add resources to the critical chain task, de-scope non-essential features, crash the schedule by overlapping tasks that were sequential, or extend the project finish date."
+        ],
+        "tags": ["critical-chain", "buffer-management", "tracking"]
+      },
+      {
+        "flow_name": "critical-chain-review",
+        "description": "Review the critical chain method after each project. Did buffer management work? Were estimates calibrated? What changes for the next project?",
+        "inputs": [
+          {"name": "buffer-status-dashboard", "desc": "The final buffer status at project completion"},
+          {"name": "aggressive-estimates", "desc": "The 50% estimates used during the project"}
+        ],
+        "outputs": [
+          {"name": "estimation-accuracy", "desc": "How accurate were the 50% estimates? What percentage of tasks finished within the estimate? What was the average overrun?"},
+          {"name": "method-improvements", "desc": "What to change for the next project: buffer sizing, estimation calibration, resource conflict resolution, or buffer management thresholds"}
+        ],
+        "process": [
+          "Compare actual task durations to the 50% estimates. If more than 60% of tasks finished within the estimate, the estimates were too padded (use tighter estimates next time). If less than 40% finished within, the estimates were too aggressive.",
+          "Compare actual buffer consumption to buffer size. If less than 50% of the buffer was used, the buffer was too large. If more than 90% was used, the buffer was too small.",
+          "Identify the tasks that consumed the most buffer. Were they predictable (we should have known) or unpredictable (genuine uncertainty)?",
+          "Update the method for the next project: adjust the buffer sizing formula, calibrate the estimation guidance, and revise the threshold zones based on this project's data."
+        ],
+        "tags": ["critical-chain", "review", "calibration"]
+      }
+    ]
+  },
+  {
+    "chain_name": "scope-management-method",
+    "description": "Define scope by what is excluded, not just what is included. Every addition is evaluated against the constraint triangle (time, cost, quality): if you add scope, something else must give. Scope creep is not a mysterious force. It is the accumulation of unvetted additions.",
+    "domain": "project-management",
+    "tags": ["infrastructure", "scope-management", "constraints", "discipline"],
+    "steps": [
+      {
+        "flow_name": "scope-boundary-setter",
+        "description": "Define the scope boundary: what is included and, more importantly, what is explicitly excluded.",
+        "inputs": [
+          {"name": "initiative-description", "desc": "What the project or initiative delivers"},
+          {"name": "constraints", "desc": "The fixed constraints: deadline, budget, quality standard"}
+        ],
+        "outputs": [
+          {"name": "in-scope-list", "desc": "Everything that is included, stated specifically enough that two people would agree on whether a given item is in scope"},
+          {"name": "out-of-scope-list", "desc": "Everything explicitly excluded, especially items that someone might reasonably assume are included"}
+        ],
+        "process": [
+          "List everything the project will deliver. Be specific: 'User login with email and password' not 'Authentication.'",
+          "List everything the project will NOT deliver, especially things that are adjacent to the deliverables. 'The project includes the API but NOT the mobile app that consumes it.' 'The report includes data from Q1-Q4 but NOT the predictive model.'",
+          "The out-of-scope list is more important than the in-scope list. Every scope dispute comes from something that was not explicitly excluded.",
+          "Get agreement on both lists from the key stakeholders before work begins. Written agreement, not verbal."
+        ],
+        "tags": ["scope-management", "boundaries", "exclusions"]
+      },
+      {
+        "flow_name": "change-request-evaluator",
+        "description": "When someone asks to add or change scope, evaluate it against the constraint triangle. Adding scope without adjusting time, cost, or quality is a lie.",
+        "inputs": [
+          {"name": "in-scope-list", "desc": "The agreed scope"},
+          {"name": "constraints", "desc": "The fixed constraints"},
+          {"name": "change-request", "desc": "The requested change or addition to scope"}
+        ],
+        "outputs": [
+          {"name": "impact-assessment", "desc": "The impact of the change on time, cost, and quality. At least one must change. If the requestor wants none to change, the change is denied."},
+          {"name": "trade-off-options", "desc": "The options: add the scope and extend the deadline, add the scope and increase the budget, add the scope and reduce quality elsewhere, or remove something else to make room"}
+        ],
+        "process": [
+          "For each change request, estimate the impact on time (how many additional days), cost (how much additional budget), and quality (what gets less attention to make room).",
+          "Present the trade-off: 'We can add [change]. The impact is [X days / $Y / reduced quality on Z]. Which trade-off do you prefer?' The requestor must choose.",
+          "If the requestor wants the change without any trade-off, the answer is: 'That is not possible within the current constraints. Which constraint should we relax?'",
+          "Log every change request and its resolution: approved (with trade-off), deferred (to a future phase), or denied (does not justify the trade-off). This log is the scope management audit trail."
+        ],
+        "tags": ["scope-management", "change-request", "trade-offs"]
+      },
+      {
+        "flow_name": "scope-creep-detector",
+        "description": "Detect scope creep before it accumulates. Scope creep is the sum of small, unvetted additions that individually seem harmless.",
+        "inputs": [
+          {"name": "in-scope-list", "desc": "The original agreed scope"},
+          {"name": "change-request", "desc": "The change request log"}
+        ],
+        "outputs": [
+          {"name": "scope-drift-report", "desc": "The cumulative scope added since the baseline, with the total impact on time, cost, and quality"},
+          {"name": "scope-creep-alerts", "desc": "Alerts for: unapproved additions found in the work product, cumulative additions exceeding 10% of original scope, and changes made without going through the change request process"}
+        ],
+        "process": [
+          "Compare the current work product to the original scope baseline. Identify anything being built that was not in the original in-scope list and was not approved through a change request.",
+          "Calculate the cumulative impact: all approved changes plus any unapproved additions. Express as a percentage of the original scope.",
+          "If cumulative additions exceed 10% of original scope, trigger a scope re-baselining: the stakeholders must formally agree to the expanded scope with the updated constraints.",
+          "If unapproved additions are found, trace them to the person who added them. This is not blame; it is process feedback. The addition may be valid but it must go through the evaluation process."
+        ],
+        "tags": ["scope-management", "creep-detection", "monitoring"]
+      },
+      {
+        "flow_name": "scope-review-checkpoint",
+        "description": "At each major milestone, review the scope: is the remaining scope achievable within the remaining constraints?",
+        "inputs": [
+          {"name": "scope-drift-report", "desc": "The current scope status"},
+          {"name": "constraints", "desc": "The remaining time, budget, and quality targets"}
+        ],
+        "outputs": [
+          {"name": "scope-vs-constraints-assessment", "desc": "An honest assessment: can the remaining scope be delivered within the remaining constraints? If not, what must be cut or what constraints must be relaxed?"},
+          {"name": "scope-adjustment-recommendation", "desc": "The recommended scope adjustments: items to defer to a future phase, items to simplify, or constraints to relax"}
+        ],
+        "process": [
+          "At each milestone, measure: how much scope has been delivered (percentage of the in-scope list completed), how much time has been consumed (percentage of the deadline used), and how much budget has been spent.",
+          "If scope delivered is behind the constraint consumption (e.g., 40% of scope done but 60% of time used), the project will miss the deadline unless scope is cut or the deadline is extended.",
+          "Recommend specific cuts: which in-scope items can be deferred to a future phase with the least impact on the project's value? Cut from the bottom of the priority list, not the middle.",
+          "Present the assessment to stakeholders: 'At the current pace, we can deliver [list] by the deadline. [These items] would need to move to the next phase. Alternatively, we can extend the deadline by [X weeks] to include everything.'"
+        ],
+        "tags": ["scope-management", "review", "milestones"]
+      }
+    ]
+  },
+  {
+    "chain_name": "retrospective-that-produces-change",
+    "description": "Run retrospectives that produce system changes, not lists. Most retrospectives generate a list of 'things to improve' that is forgotten by the next sprint. This method: identify the single highest-leverage improvement, assign it to a person, set the deadline, and verify it shipped before the next retrospective.",
+    "domain": "project-management",
+    "tags": ["infrastructure", "retrospective", "continuous-improvement", "action"],
+    "steps": [
+      {
+        "flow_name": "data-collection-before-opinions",
+        "description": "Collect data before opinions. What actually happened (metrics, events, deliverables) vs. what people feel happened.",
+        "inputs": [
+          {"name": "period-under-review", "desc": "The time period or project being reviewed"},
+          {"name": "team-members", "desc": "The participants in the retrospective"}
+        ],
+        "outputs": [
+          {"name": "objective-data", "desc": "Metrics, events, and deliverables from the period: what was delivered, what was late, what failed, what was blocked, what surprised"},
+          {"name": "team-sentiment-data", "desc": "Each team member's responses to: 'What went well?', 'What was frustrating?', 'What would you change?' Collected individually before the group discussion."}
+        ],
+        "process": [
+          "Before the retrospective meeting, collect the objective data: velocity metrics, defect counts, deployment frequency, incident count, customer feedback, anything measurable.",
+          "Before the meeting, have each team member independently answer three questions: What went well? What was frustrating? What one thing would you change? Individual responses prevent groupthink.",
+          "Compile the data. Look for patterns: are multiple people frustrated by the same thing? Does the metric data confirm or contradict the sentiment?",
+          "Present the data at the start of the retrospective. Data first, then discussion. This anchors the conversation in reality instead of the loudest opinion."
+        ],
+        "tags": ["retrospective", "data-collection", "preparation"]
+      },
+      {
+        "flow_name": "root-cause-identifier",
+        "description": "For the top frustration or failure, find the root cause using the 5 Whys method. Surface-level fixes address symptoms. Root-cause fixes prevent recurrence.",
+        "inputs": [
+          {"name": "objective-data", "desc": "The metrics and events from the period"},
+          {"name": "team-sentiment-data", "desc": "The individual team member responses"}
+        ],
+        "outputs": [
+          {"name": "top-issue", "desc": "The single issue that, if fixed, would produce the largest improvement"},
+          {"name": "root-cause-analysis", "desc": "The 5 Whys chain for the top issue: the surface symptom, the proximate cause, and the root cause (the systemic issue)"}
+        ],
+        "process": [
+          "From the data, identify the single most impactful issue. Prioritize by: how many people mentioned it, how much it affected delivery, and how systemic it is (affects every sprint vs. one-time).",
+          "Apply the 5 Whys: ask 'Why did this happen?' and then ask 'Why?' to the answer, five times. The first answer is the symptom. By the third or fourth answer, you reach the systemic cause.",
+          "Example: 'The release was late (symptom). Why? Testing took longer than expected. Why? We discovered untested edge cases. Why? The test plan was not reviewed before coding started. Why? There is no step in our process for test plan review before coding.' The root cause is a missing process step, not slow testing.",
+          "If the 5 Whys leads to 'because we did not have enough time,' push further: why did we not have enough time? Usually the answer is scope creep, inaccurate estimates, or unplanned work."
+        ],
+        "tags": ["retrospective", "root-cause", "five-whys"]
+      },
+      {
+        "flow_name": "single-action-committer",
+        "description": "Commit to a single action that addresses the root cause. One action, one owner, one deadline. Not a list of five improvements that no one owns.",
+        "inputs": [
+          {"name": "root-cause-analysis", "desc": "The root cause and the systemic issue"},
+          {"name": "team-members", "desc": "The team and their capacity"}
+        ],
+        "outputs": [
+          {"name": "committed-action", "desc": "The single action: what will change (a process, a tool, a habit), who owns the change, and the deadline for implementation"},
+          {"name": "success-criterion", "desc": "How to know the action worked: a measurable outcome that will be checked at the next retrospective"}
+        ],
+        "process": [
+          "Design the action that addresses the root cause. It should be a systemic change: a process step added or removed, a tool introduced, a communication pattern changed, a policy updated.",
+          "Assign a single owner. The owner is responsible for implementing the change, not the entire team. 'The team will do better' is not an action. 'Maria will add a test plan review step to the sprint planning template by next Friday' is an action.",
+          "Set the deadline: the action must be implemented before the next retrospective. If it cannot be done in one sprint, break it into a smaller first step that can.",
+          "Define the success criterion: at the next retrospective, how will you know this worked? The criterion must be measurable: 'Reduce unplanned testing extensions from 3 per sprint to 0.'"
+        ],
+        "tags": ["retrospective", "action", "commitment"]
+      },
+      {
+        "flow_name": "action-verification-at-next-retro",
+        "description": "At the start of the next retrospective, verify the committed action was implemented and measure its effect. This creates accountability.",
+        "inputs": [
+          {"name": "committed-action", "desc": "The action from the previous retrospective"},
+          {"name": "success-criterion", "desc": "The measurable outcome to check"}
+        ],
+        "outputs": [
+          {"name": "action-status", "desc": "Was the action implemented? If yes, did it produce the expected improvement? If no, why not?"},
+          {"name": "improvement-trend", "desc": "The running log of retrospective actions and their outcomes, showing whether the team is actually improving over time"}
+        ],
+        "process": [
+          "Start the retrospective by reviewing the previous action: was it implemented? Check with the owner.",
+          "If implemented, measure the success criterion: did the metric improve? Did the frustration recur? If the action worked, acknowledge it and move on.",
+          "If not implemented, ask why. Was it deprioritized? Was it harder than expected? Was the owner overloaded? The reason determines the response: re-commit, reassign, or redesign the action.",
+          "Maintain the improvement trend log: every retrospective action, its status, and its measured outcome. Over multiple sprints, this log shows whether retrospectives are producing real improvement or generating ignored lists."
+        ],
+        "tags": ["retrospective", "verification", "accountability"]
+      }
+    ]
+  },
+  {
+    "chain_name": "project-risk-radar",
+    "description": "Continuous risk scanning for projects and initiatives. A one-time risk assessment decays as the project evolves. The risk radar runs weekly: scan for new risks, re-assess changed risks, flag approaching risks, and retire expired risks.",
+    "domain": "project-management",
+    "tags": ["infrastructure", "risk-radar", "continuous-scanning", "project-risk"],
+    "steps": [
+      {
+        "flow_name": "weekly-risk-scan",
+        "description": "Run a weekly scan for new risks based on what happened since the last scan.",
+        "inputs": [
+          {"name": "current-risk-register", "desc": "The existing list of identified project risks"},
+          {"name": "weekly-events", "desc": "What happened in the past week: deliverables completed or missed, decisions made, dependencies changed, new information received"}
+        ],
+        "outputs": [
+          {"name": "new-risks-identified", "desc": "Risks surfaced by the week's events that were not in the previous register"},
+          {"name": "changed-risks", "desc": "Existing risks whose probability or impact changed based on the week's events"}
+        ],
+        "process": [
+          "Review the week's events: what was delivered, what was missed, what dependencies shifted, what new information emerged, what decisions were made.",
+          "For each event, ask: does this create a new risk? Does this change the probability or impact of an existing risk? Does this eliminate an existing risk?",
+          "Add new risks to the register with their probability, impact, and the event that surfaced them.",
+          "Update changed risks: re-rate their probability and impact based on the new information."
+        ],
+        "tags": ["risk-radar", "scanning", "weekly"]
+      },
+      {
+        "flow_name": "risk-proximity-tracker",
+        "description": "Track how close each risk is to materializing. A risk that could hit in 2 weeks needs different attention than one that could hit in 6 months.",
+        "inputs": [
+          {"name": "current-risk-register", "desc": "The updated risk register"},
+          {"name": "project-timeline", "desc": "The remaining project timeline and milestones"}
+        ],
+        "outputs": [
+          {"name": "risk-proximity-map", "desc": "Each risk with its proximity: how many weeks until it could materialize (immediate, near-term: 1-4 weeks, mid-term: 1-3 months, distant: 3+ months)"},
+          {"name": "approaching-risk-alerts", "desc": "Risks that moved from mid-term to near-term since the last scan, requiring immediate mitigation planning"}
+        ],
+        "process": [
+          "For each risk, estimate the earliest it could materialize: is the trigger event days away, weeks away, or months away?",
+          "Classify by proximity: immediate (could happen this week), near-term (1-4 weeks), mid-term (1-3 months), distant (3+ months).",
+          "Flag any risk that moved closer since the last scan. A risk that was distant and is now near-term is accelerating.",
+          "Prioritize mitigation by proximity: an imminent high-impact risk demands action now, regardless of whether a distant higher-score risk exists."
+        ],
+        "tags": ["risk-radar", "proximity", "tracking"]
+      },
+      {
+        "flow_name": "risk-radar-dashboard",
+        "description": "Produce the weekly risk radar report: a visual summary of all risks by score and proximity.",
+        "inputs": [
+          {"name": "risk-proximity-map", "desc": "The proximity-tagged risks"},
+          {"name": "approaching-risk-alerts", "desc": "The acceleration alerts"}
+        ],
+        "outputs": [
+          {"name": "risk-radar-report", "desc": "The weekly report: risk count by zone (red/yellow/green), approaching risks requiring action, risks retired since last scan, and the single highest-priority risk"},
+          {"name": "mitigation-action-items", "desc": "Actions needed this week for immediate and near-term risks"}
+        ],
+        "process": [
+          "Produce the radar summary: how many risks in each proximity zone, how many moved closer, how many were retired (the trigger event passed without the risk materializing or the risk was mitigated).",
+          "Highlight the single highest-priority risk: the one with the highest score among the immediate and near-term risks. This is the one that demands the most attention this week.",
+          "List the mitigation actions for the week: what must happen this week to address immediate and near-term risks?",
+          "Distribute the report to the project team and stakeholders. The format should be scannable in under 2 minutes: headline risk count, top risk, and action items."
+        ],
+        "tags": ["risk-radar", "dashboard", "reporting"]
+      }
+    ]
+  },
+  {
+    "chain_name": "work-breakdown-decomposer",
+    "description": "Decompose any initiative into estimable work packages using recursive decomposition. Keep breaking each item into smaller pieces until every piece can be estimated by one person and completed in one week or less. If you cannot decompose it, you do not understand it well enough to estimate it.",
+    "domain": "project-management",
+    "tags": ["infrastructure", "work-breakdown", "decomposition", "estimation"],
+    "steps": [
+      {
+        "flow_name": "deliverable-level-decomposer",
+        "description": "Decompose the initiative into deliverables: the tangible outputs that prove the initiative is complete.",
+        "inputs": [
+          {"name": "initiative-description", "desc": "What the initiative achieves"},
+          {"name": "acceptance-criteria", "desc": "How you know the initiative is complete"}
+        ],
+        "outputs": [
+          {"name": "deliverable-list", "desc": "Every deliverable with its acceptance criterion: the specific, testable condition that proves it is complete"},
+          {"name": "deliverable-dependencies", "desc": "Which deliverables depend on other deliverables"}
+        ],
+        "process": [
+          "List every tangible output the initiative produces. Each deliverable is something you can point to and say 'this exists now and it did not before.' Examples: a document, a deployed feature, a trained person, a completed migration.",
+          "For each deliverable, write the acceptance criterion: the specific, testable condition that proves it is complete. 'The report is done' is not testable. 'The report contains data from Q1-Q4, has been reviewed by the finance team, and is published on the intranet' is testable.",
+          "Map the dependencies: which deliverables must be complete before others can start?",
+          "If any deliverable cannot be described with a specific acceptance criterion, it is not understood well enough yet. Break it into smaller parts until each part has a clear criterion."
+        ],
+        "tags": ["work-breakdown", "deliverables", "decomposition"]
+      },
+      {
+        "flow_name": "task-level-decomposer",
+        "description": "Decompose each deliverable into tasks: the work packages that one person can estimate and complete in one week or less.",
+        "inputs": [
+          {"name": "deliverable-list", "desc": "The deliverables with acceptance criteria"},
+          {"name": "deliverable-dependencies", "desc": "The dependency map"}
+        ],
+        "outputs": [
+          {"name": "task-list", "desc": "Every task with its parent deliverable, estimated duration (in hours or days), and the person or skill required to complete it"},
+          {"name": "uncertainty-flags", "desc": "Tasks that could not be decomposed to one week or less, indicating areas of high uncertainty that need investigation before estimation"}
+        ],
+        "process": [
+          "For each deliverable, list the tasks: the specific work steps from start to the acceptance criterion. Each task should be completable by one person in one week or less.",
+          "If a task takes more than one week, decompose it further. Ask: what are the sub-steps? A task that cannot be broken down but still takes more than one week usually contains hidden complexity.",
+          "Estimate each task: hours or days. The estimate should come from the person who will do the work, not from the person who assigned it.",
+          "Flag tasks that resist decomposition: they cannot be broken down and the duration is uncertain. These are the areas of highest risk and need investigation (a spike, a proof of concept, or expert consultation) before the project plan can be finalized."
+        ],
+        "tags": ["work-breakdown", "tasks", "estimation"]
+      },
+      {
+        "flow_name": "estimation-validation",
+        "description": "Validate the estimates by summing the parts and comparing to the whole. If the sum of the tasks does not match a top-down estimate, investigate the gap.",
+        "inputs": [
+          {"name": "task-list", "desc": "The task-level estimates"},
+          {"name": "initiative-description", "desc": "The initiative for top-down estimation context"}
+        ],
+        "outputs": [
+          {"name": "bottom-up-total", "desc": "The sum of all task estimates, organized by deliverable and total"},
+          {"name": "top-down-estimate", "desc": "An independent top-down estimate based on comparable past initiatives or expert judgment"},
+          {"name": "estimation-gap-analysis", "desc": "The difference between bottom-up and top-down estimates, with the likely causes of the gap"}
+        ],
+        "process": [
+          "Sum the task estimates by deliverable and for the project total. This is the bottom-up estimate.",
+          "Independently estimate the total using a top-down method: how long did similar initiatives take? What does an experienced person estimate without seeing the task breakdown?",
+          "Compare the two. If the bottom-up is significantly lower than the top-down, the breakdown probably missed tasks (integration work, testing, documentation, coordination overhead). If higher, the breakdown may be too granular (sub-tasks inflated when viewed individually).",
+          "Investigate the gap: add the missing tasks, adjust the inflated ones, or reconcile the two estimates. The final estimate should be defensible from both directions."
+        ],
+        "tags": ["work-breakdown", "validation", "estimation"]
+      }
+    ]
+  },
+  {
+    "chain_name": "milestone-verification-protocol",
+    "description": "Design milestones that verify outcomes, not activities. 'Code is written' is an activity milestone. 'Ten users completed the workflow without error' is an outcome milestone. Activity milestones give false confidence because they measure effort, not results.",
+    "domain": "project-management",
+    "tags": ["infrastructure", "milestones", "verification", "outcomes"],
+    "steps": [
+      {
+        "flow_name": "outcome-milestone-designer",
+        "description": "Convert activity milestones into outcome milestones by asking: 'What is true about the world after this milestone that was not true before?'",
+        "inputs": [
+          {"name": "initiative-description", "desc": "The initiative and its deliverables"},
+          {"name": "current-milestones", "desc": "The existing milestone list (which may be activity-based)"}
+        ],
+        "outputs": [
+          {"name": "outcome-milestones", "desc": "Each milestone restated as an outcome: a condition in the world that is verifiable by someone who is not on the project team"},
+          {"name": "verification-methods", "desc": "For each outcome milestone: how to verify it (test, demonstration, user trial, data query, external review)"}
+        ],
+        "process": [
+          "For each existing milestone, ask: 'Is this an activity or an outcome?' An activity is something the team does (write code, conduct research, build a report). An outcome is something that is true afterward (users can log in, the report answered the board's three questions, the system handles 1000 requests per second).",
+          "Restate activity milestones as outcomes: 'Code complete' becomes 'All automated tests pass and the feature is deployed to staging.' 'Research complete' becomes 'The research answered the three defined questions with cited evidence.'",
+          "Define the verification method for each outcome: who verifies, how they verify, and what constitutes a pass or fail. The verifier should ideally be someone outside the project team.",
+          "If a milestone cannot be stated as a verifiable outcome, it is a checkpoint, not a milestone. Checkpoints are useful for coordination but should not be confused with progress."
+        ],
+        "tags": ["milestones", "outcomes", "verification"]
+      },
+      {
+        "flow_name": "milestone-gate-builder",
+        "description": "Build gates at each milestone: what must be true to pass, what happens if it fails, and who makes the go/no-go decision.",
+        "inputs": [
+          {"name": "outcome-milestones", "desc": "The outcome milestones with verification methods"},
+          {"name": "initiative-description", "desc": "The initiative context"}
+        ],
+        "outputs": [
+          {"name": "milestone-gates", "desc": "For each milestone: the pass criteria, the fail criteria, the remediation plan for a fail, and the go/no-go decision maker"},
+          {"name": "gate-schedule", "desc": "The scheduled dates for each gate review, with the preparation steps and the required attendees"}
+        ],
+        "process": [
+          "For each milestone, define the pass criteria: what specific conditions must be met? All of them, not just some. A partial pass is a fail with asterisks.",
+          "Define the fail criteria: what specific conditions indicate the milestone is not met? Include the boundary cases: is 90% of tests passing a pass or a fail?",
+          "Define the remediation plan: if the gate fails, what happens? Options: rework until the gate passes (with a deadline), proceed with risk accepted (the decision maker acknowledges the gap), or re-scope (remove the failing component and adjust downstream).",
+          "Assign the go/no-go decision maker. This person reviews the evidence and makes the call. It should not be the project manager (who has an incentive to say go) but a stakeholder or quality owner."
+        ],
+        "tags": ["milestones", "gates", "decisions"]
+      },
+      {
+        "flow_name": "milestone-tracking-dashboard",
+        "description": "Track milestone progress visually: what has been verified, what is upcoming, and what is at risk.",
+        "inputs": [
+          {"name": "milestone-gates", "desc": "The gates with pass/fail criteria"},
+          {"name": "gate-schedule", "desc": "The scheduled gate dates"}
+        ],
+        "outputs": [
+          {"name": "milestone-dashboard", "desc": "A visual tracker: each milestone with its scheduled date, actual date, and status (passed, upcoming, at risk, failed)"},
+          {"name": "milestone-trends", "desc": "Are milestones being hit on time? Is the slip trend increasing or decreasing? How many milestones have failed their first gate attempt?"}
+        ],
+        "process": [
+          "Build the dashboard: one row per milestone, columns for scheduled date, actual date (if passed), status, and the key metric or evidence for the pass.",
+          "Color-code: green (passed), yellow (upcoming, on track), orange (upcoming, at risk of missing), red (missed or failed).",
+          "Track trends: are milestones slipping? If each milestone slips further than the last, the project is decelerating. This is the earliest warning of a troubled project.",
+          "Report the dashboard weekly as part of the project status. Milestones are the most meaningful progress indicator because they verify outcomes, not activities."
+        ],
+        "tags": ["milestones", "tracking", "dashboard"]
+      }
+    ]
+  },
+  {
+    "chain_name": "stakeholder-alignment-tracker",
+    "description": "Track alignment across stakeholders on scope, timeline, priorities, and success criteria. Misalignment is invisible until delivery, when it becomes expensive. The tracker surfaces disagreements early by explicitly recording each stakeholder's expectations and comparing them.",
+    "domain": "project-management",
+    "tags": ["infrastructure", "stakeholder-alignment", "expectations", "tracking"],
+    "steps": [
+      {
+        "flow_name": "expectation-collector",
+        "description": "Collect each key stakeholder's expectations individually: what they think the project will deliver, when, and how success will be measured.",
+        "inputs": [
+          {"name": "initiative-description", "desc": "The project or initiative"},
+          {"name": "key-stakeholders", "desc": "The stakeholders whose alignment matters (decision makers, funders, users, team leads)"}
+        ],
+        "outputs": [
+          {"name": "expectation-records", "desc": "For each stakeholder: their stated expectations for scope (what will be delivered), timeline (when), and success criteria (how they will judge whether it worked)"},
+          {"name": "alignment-matrix", "desc": "A side-by-side comparison of all stakeholders' expectations, highlighting where they agree and where they diverge"}
+        ],
+        "process": [
+          "Interview each key stakeholder individually (not in a group, where social pressure creates false agreement). Ask: 'In your own words, what will this project deliver? By when? How will you know it was successful?'",
+          "Record their answers verbatim. Do not paraphrase or interpret. The exact words reveal what they actually expect, not what the project charter says they should expect.",
+          "Build the alignment matrix: one column per stakeholder, rows for scope items, timeline, and success criteria. Mark agreements (all stakeholders said the same thing) and divergences (different stakeholders said different things).",
+          "Divergences are not failures. They are discoveries. A divergence found now is a conversation. A divergence found at delivery is a conflict."
+        ],
+        "tags": ["stakeholder-alignment", "expectations", "collection"]
+      },
+      {
+        "flow_name": "divergence-resolver",
+        "description": "Resolve the divergences: bring misaligned stakeholders to a shared understanding before work begins or continues.",
+        "inputs": [
+          {"name": "alignment-matrix", "desc": "The side-by-side comparison with divergences highlighted"},
+          {"name": "key-stakeholders", "desc": "The stakeholders involved"}
+        ],
+        "outputs": [
+          {"name": "resolved-expectations", "desc": "The unified expectations: what the project will deliver, when, and how success is measured, agreed by all key stakeholders"},
+          {"name": "unresolved-divergences", "desc": "Any divergences that could not be resolved, with the escalation plan (who makes the final call)"}
+        ],
+        "process": [
+          "For each divergence, bring the disagreeing stakeholders together. Present both versions neutrally: 'Stakeholder A expects [X], Stakeholder B expects [Y]. Can we align on one?'",
+          "If the divergence is a misunderstanding (they meant the same thing in different words), clarify and document the shared understanding.",
+          "If the divergence is a genuine disagreement (they want different things), facilitate the trade-off conversation: 'We can do X or Y within the constraints. Which is more important?'",
+          "For divergences that cannot be resolved at this level, escalate to the sponsor or decision authority. Do not proceed with unresolved divergences; they will become delivery disputes."
+        ],
+        "tags": ["stakeholder-alignment", "divergence", "resolution"]
+      },
+      {
+        "flow_name": "alignment-maintenance-check",
+        "description": "Maintain alignment throughout the project by checking for drift at each major milestone.",
+        "inputs": [
+          {"name": "resolved-expectations", "desc": "The agreed expectations"},
+          {"name": "initiative-description", "desc": "The project context and milestones"}
+        ],
+        "outputs": [
+          {"name": "alignment-check-protocol", "desc": "The protocol for checking alignment at each milestone: what to ask, who to ask, and how to surface new divergences"},
+          {"name": "alignment-drift-log", "desc": "A running log of alignment checks: when checked, what divergences surfaced, and how they were resolved"}
+        ],
+        "process": [
+          "At each major milestone, re-check alignment by asking each key stakeholder: 'Is the project still delivering what you expect? Has your definition of success changed?'",
+          "If expectations have shifted (which is normal as more is learned), surface the shift and resolve it using the same process as the initial divergence resolution.",
+          "Log the alignment checks and any shifts. The log reveals patterns: is one stakeholder's expectations constantly shifting? That may indicate unclear requirements or scope creep originating from that stakeholder.",
+          "Alignment maintenance takes 30 minutes per milestone. Alignment failure at delivery takes weeks to resolve. The investment is asymmetric."
+        ],
+        "tags": ["stakeholder-alignment", "maintenance", "monitoring"]
+      }
+    ]
+  },
+  {
+    "chain_name": "project-post-mortem-method",
+    "description": "Run a post-mortem that produces systemic fixes, not blame. Root cause analysis using the 5 Whys, systemic fix identification, and follow-through tracking. The output is a system change, not a lesson learned that sits in a document. Applies to project failures, incidents, and even successes (to understand what to repeat).",
+    "domain": "project-management",
+    "tags": ["infrastructure", "post-mortem", "root-cause", "systemic-fix"],
+    "steps": [
+      {
+        "flow_name": "blameless-timeline-builder",
+        "description": "Build a factual timeline of events leading to the outcome. No blame, no interpretation, just what happened and when.",
+        "inputs": [
+          {"name": "incident-or-project", "desc": "The project, incident, or outcome being analyzed"},
+          {"name": "participants", "desc": "The people involved who can contribute to the timeline"}
+        ],
+        "outputs": [
+          {"name": "event-timeline", "desc": "A chronological list of events: what happened, when, and who was involved. No interpretation, no blame."},
+          {"name": "decision-points", "desc": "The key decision points in the timeline: where a different decision could have changed the outcome"}
+        ],
+        "process": [
+          "Collect inputs from every participant: what did you do, what did you see, what did you decide, and when? Collect individually to avoid contamination.",
+          "Build the timeline: event, timestamp, person involved. Use the 'newspaper test': if a reporter could verify this event from logs, emails, or records, it belongs in the timeline.",
+          "Identify the decision points: moments where a different decision could have led to a different outcome. These are not blame points; they are learning points.",
+          "Set the ground rule: the timeline describes what happened, not who is at fault. Systems produce outcomes; people operate within systems. Fix the system, not the person."
+        ],
+        "tags": ["post-mortem", "timeline", "blameless"]
+      },
+      {
+        "flow_name": "five-whys-root-cause-analysis",
+        "description": "Apply the 5 Whys to each key decision point. Surface the systemic root cause, not the proximate error.",
+        "inputs": [
+          {"name": "event-timeline", "desc": "The factual timeline"},
+          {"name": "decision-points", "desc": "The key decision points to analyze"}
+        ],
+        "outputs": [
+          {"name": "root-cause-chains", "desc": "For each key decision point: the 5 Whys chain from the proximate cause to the systemic root cause"},
+          {"name": "systemic-root-causes", "desc": "The 1-3 systemic root causes that, if fixed, would prevent recurrence across similar situations"}
+        ],
+        "process": [
+          "For each decision point, ask 'Why did this happen?' five times. Each answer should reference a systemic factor (process, tool, incentive, information flow), not a personal failing.",
+          "If a 'Why' answer is 'because [person] made a mistake,' ask: 'Why was it possible for a reasonable person to make that mistake in this system?' The answer reveals the systemic gap.",
+          "Group the root causes: often multiple decision points trace back to the same 1-3 systemic root causes. These are the high-leverage fix points.",
+          "Common systemic root causes: missing information (the decision-maker did not have the data), missing process (there was no step to catch this), misaligned incentives (the system rewarded the wrong behavior), inadequate tools (the tool made the error easy and the correct action hard)."
+        ],
+        "tags": ["post-mortem", "root-cause", "five-whys"]
+      },
+      {
+        "flow_name": "systemic-fix-designer",
+        "description": "Design a systemic fix for each root cause. The fix changes the system so that the failure cannot recur, or is caught before it causes damage.",
+        "inputs": [
+          {"name": "systemic-root-causes", "desc": "The 1-3 root causes to fix"},
+          {"name": "event-timeline", "desc": "The context for understanding the system"}
+        ],
+        "outputs": [
+          {"name": "systemic-fixes", "desc": "For each root cause: the specific system change (process, tool, incentive, information flow), the owner, the deadline, and the expected effect"},
+          {"name": "fix-verification-plan", "desc": "How to verify the fix works: the test scenario and the success criterion"}
+        ],
+        "process": [
+          "For each root cause, design the fix hierarchy: 1) Eliminate (remove the possibility of the failure), 2) Automate (have a system catch it), 3) Proceduralize (add a process step), 4) Train (teach people to recognize it). Higher on the hierarchy is more reliable.",
+          "A fix that requires people to remember something is weaker than a fix that makes the wrong action impossible. Example: instead of training people to check the flag before deploying, make the deployment script check the flag automatically.",
+          "Assign an owner and a deadline. The fix must be implemented, not just designed. Set the deadline within 30 days for critical fixes.",
+          "Design the verification: after the fix is in place, simulate the original scenario. Does the fix prevent the failure? If not, iterate."
+        ],
+        "tags": ["post-mortem", "systemic-fix", "design"]
+      },
+      {
+        "flow_name": "post-mortem-follow-through-tracker",
+        "description": "Track the fixes to completion. A post-mortem without follow-through is a therapy session: it feels good but nothing changes.",
+        "inputs": [
+          {"name": "systemic-fixes", "desc": "The fixes with owners and deadlines"},
+          {"name": "fix-verification-plan", "desc": "The verification methods"}
+        ],
+        "outputs": [
+          {"name": "fix-tracking-log", "desc": "The status of each fix: assigned, in progress, implemented, verified. Updated weekly until all fixes are verified."},
+          {"name": "post-mortem-document", "desc": "The complete post-mortem document: timeline, root causes, fixes, and verification results. Stored where future teams can find it."}
+        ],
+        "process": [
+          "Track each fix weekly: is it still on schedule? Has the owner started? Are there blockers?",
+          "When a fix is implemented, run the verification. If it passes, mark it as verified and close it. If it fails, iterate on the design.",
+          "Compile the complete post-mortem document. Store it in a searchable location. When a similar situation arises in the future, the first step should be: 'Has this happened before? What did we learn?'",
+          "Close the post-mortem when all fixes are verified. Report the closure to the participants and stakeholders. The post-mortem cycle is: timeline, root cause, fix, verify, close."
+        ],
+        "tags": ["post-mortem", "follow-through", "tracking"]
+      }
+    ]
+  }
+]
