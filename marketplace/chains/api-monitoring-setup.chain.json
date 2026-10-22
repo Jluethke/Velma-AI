@@ -1,17 +1,17 @@
 {
   "name": "api-monitoring-setup",
-  "description": "Set up API monitoring from metric definition through alerting.",
+  "description": "Set up API monitoring from metric definition through alerting and incident response.",
   "steps": [
     {
       "id": "step_1",
-      "skill_name": "api-health-metric-definer",
+      "skill_name": "api-metric-definer",
       "inputs": {
-        "api-architecture": "from_user_input",
-        "sla-requirements": "from_user_input"
+        "api-inventory": "from_user_input",
+        "sla-targets": "from_user_input"
       },
       "outputs": {
-        "health-metrics": "health-metrics",
-        "metric-thresholds": "metric-thresholds"
+        "metric-definitions": "metric-definitions",
+        "sli-slo-mapping": "sli-slo-mapping"
       },
       "parallel_group": 1
     },
@@ -19,8 +19,8 @@
       "id": "step_2",
       "skill_name": "api-dashboard-builder",
       "inputs": {
-        "health-metrics": "step_1.health-metrics",
-        "metric-thresholds": "step_1.metric-thresholds"
+        "health-metrics": "from_context.health-metrics",
+        "metric-thresholds": "from_context.metric-thresholds"
       },
       "outputs": {
         "monitoring-dashboard": "monitoring-dashboard",
@@ -30,16 +30,29 @@
     },
     {
       "id": "step_3",
-      "skill_name": "api-alert-rule-writer",
+      "skill_name": "api-alert-configurator",
       "inputs": {
-        "metric-thresholds": "step_1.metric-thresholds",
-        "monitoring-dashboard": "step_2.monitoring-dashboard"
+        "sli-slo-mapping": "step_1.sli-slo-mapping",
+        "dashboard-config": "from_context.dashboard-config"
       },
       "outputs": {
         "alert-rules": "alert-rules",
-        "api-monitoring-doc": "api-monitoring-doc"
+        "runbook-stubs": "runbook-stubs"
       },
       "parallel_group": 3
+    },
+    {
+      "id": "step_4",
+      "skill_name": "api-incident-response-planner",
+      "inputs": {
+        "alert-rules": "step_3.alert-rules",
+        "runbook-stubs": "step_3.runbook-stubs"
+      },
+      "outputs": {
+        "incident-response-plan": "incident-response-plan",
+        "api-monitoring-plan": "api-monitoring-plan"
+      },
+      "parallel_group": 4
     }
   ],
   "edges": [
@@ -54,15 +67,21 @@
       "to_step": "step_3",
       "data_type": "object",
       "field_mapping": {}
+    },
+    {
+      "from_step": "step_3",
+      "to_step": "step_4",
+      "data_type": "object",
+      "field_mapping": {}
     }
   ],
   "entry_inputs": [
-    "api-architecture",
-    "sla-requirements"
+    "api-inventory",
+    "sla-targets"
   ],
   "terminal_outputs": [
-    "alert-rules",
-    "api-monitoring-doc"
+    "incident-response-plan",
+    "api-monitoring-plan"
   ],
   "parallel_groups": [
     [
@@ -73,24 +92,28 @@
     ],
     [
       "step_3"
+    ],
+    [
+      "step_4"
     ]
   ],
   "estimated_cost": "low",
   "critical_path": [
     "step_1",
     "step_2",
-    "step_3"
+    "step_3",
+    "step_4"
   ],
   "chain_links": {
     "prerequisites": [],
     "next_chains": [],
     "related_chains": [
       {
-        "chain_name": "auth-flow-design",
+        "chain_name": "endpoint-deprecation-process",
         "relationship": "complement"
       },
       {
-        "chain_name": "incident-response",
+        "chain_name": "industrial-iot-monitoring",
         "relationship": "complement"
       },
       {
@@ -99,10 +122,6 @@
       },
       {
         "chain_name": "rate-limiting-design",
-        "relationship": "complement"
-      },
-      {
-        "chain_name": "service-provisioning-workflow",
         "relationship": "complement"
       },
       {
